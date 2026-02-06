@@ -88,9 +88,25 @@ The full professional tool — map visualization, deal pipeline, document export
 
 ## Traceability
 
+### Milestone 1: Core Intelligence Engine
+
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| (populated by roadmap) | | |
+| PROP-01 | Phase 2 - Core Data Pipeline | Pending |
+| PROP-02 | Phase 2 - Core Data Pipeline | Pending |
+| PROP-03 | Phase 3 - Zoning & Monument Intelligence | Pending |
+| PROP-04 | Phase 3 - Zoning & Monument Intelligence | Pending |
+| PROP-05 | Phase 4 - AI Document Parsing | Pending |
+| PROP-06 | Phase 3 - Zoning & Monument Intelligence | Pending |
+| RPT-01 | Phase 5 - Report Management | Pending |
+| RPT-02 | Phase 5 - Report Management | Pending |
+| RPT-03 | Phase 5 - Report Management | Pending |
+| INFRA-01 | Phase 1 - Foundation & Authentication | Pending |
+| INFRA-02 | Phase 1 - Foundation & Authentication | Pending |
+| INFRA-03 | Phase 2 - Core Data Pipeline | Pending |
+| INFRA-04 | Phase 4 - AI Document Parsing | Pending |
+
+**Coverage:** 14/14 Milestone 1 requirements mapped ✓
 
 ---
-*Last updated: 2026-02-06 after initialization*
+*Last updated: 2026-02-07 after roadmap creation*
