@@ -18,6 +18,13 @@ Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and r
 
 **Requirements:** INFRA-01, INFRA-02
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffolding, DB models, Alembic migrations, RLS policies
+- [ ] 01-02-PLAN.md — Core auth endpoints (register, login, refresh, logout, me) + tenant middleware
+- [ ] 01-03-PLAN.md — Email verification, password reset, Google OAuth, rate limiting
+
 **Success Criteria:**
 1. User can create an account and log in with email/password
 2. User stays logged in across browser sessions
@@ -25,7 +32,7 @@ Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and r
 4. All database queries automatically filter by organization_id
 5. No data leakage between organizations is possible
 
-**Status:** Pending
+**Status:** Planning complete
 
 ---
 
@@ -112,7 +119,7 @@ Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and r
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Pending |
+| 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Planning complete |
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Pending |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Pending |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Pending |
@@ -120,7 +127,7 @@ Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and r
 
 **Current Phase:** 1
 **Completed:** 0/5
-**Coverage:** 14/14 requirements mapped ✓
+**Coverage:** 14/14 requirements mapped
 
 ---
 
