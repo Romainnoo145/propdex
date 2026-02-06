@@ -1,0 +1,30 @@
+"""FastAPI application entry point."""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+
+app = FastAPI(
+    title="CRM Plus API",
+    version="0.1.0",
+    description="Property Intelligence Platform for Dutch Real Estate Developers",
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
+    return {
+        "status": "ok",
+        "service": "crmplus-api",
+    }
