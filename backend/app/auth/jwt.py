@@ -20,7 +20,7 @@ def create_access_token(user_id: str, organization_id: str) -> str:
     Returns:
         Encoded JWT access token (15 minutes expiration)
     """
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.utcnow() + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     payload = {
@@ -44,7 +44,7 @@ def create_refresh_token(user_id: str, organization_id: str) -> tuple[str, str]:
         Tuple of (encoded token, jti) where jti is stored in database
     """
     jti = str(uuid.uuid4())
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.utcnow() + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     payload = {

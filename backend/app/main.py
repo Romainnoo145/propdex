@@ -3,7 +3,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.router import router as auth_router
 from app.core.config import settings
+from app.middleware.tenant import TenantContextMiddleware
 
 app = FastAPI(
     title="CRM Plus API",
@@ -11,7 +13,7 @@ app = FastAPI(
     description="Property Intelligence Platform for Dutch Real Estate Developers",
 )
 
-# Configure CORS
+# Configure CORS (must be first for proper request handling)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -19,6 +21,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add tenant context middleware (after CORS)
+app.add_middleware(TenantContextMiddleware)
+
+# Include routers
+app.include_router(auth_router)
 
 
 @app.get("/")
