@@ -1,6 +1,6 @@
 """Application configuration using pydantic-settings."""
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -75,10 +75,15 @@ class Settings(BaseSettings):
         default="http://localhost:3000",
         description="Frontend URL for CORS and email links",
     )
-    CORS_ORIGINS: list[str] = Field(
-        default=["http://localhost:3000"],
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000",
         description="Allowed CORS origins (comma-separated in env)",
     )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS string into a list."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
 
 # Singleton settings instance
