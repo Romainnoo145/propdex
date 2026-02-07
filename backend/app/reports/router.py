@@ -1,8 +1,11 @@
 """Report management API endpoints."""
 
+import asyncio
+import io
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
@@ -10,9 +13,12 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.reports import service
+from app.reports.freshness import check_report_freshness
+from app.reports.pdf_export import generate_report_pdf
 from app.schemas.report import (
     ReportAssignProject,
     ReportDetailResponse,
+    ReportFreshnessResponse,
     ReportListItem,
     ReportListResponse,
     ReportSaveRequest,
@@ -561,4 +567,132 @@ async def refresh_report(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to refresh report",
+        ) from e
+
+
+@router.get("/{report_id}/export/pdf")
+@limiter.limit("10/minute")
+async def export_report_pdf(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """
+    Export report as professional PDF document.
+
+    Generates a formatted A4 PDF with branded header, all report sections,
+    confidence indicators, and source citations. PDF generation runs in
+    executor to avoid blocking the async event loop.
+
+    Requires JWT authentication. Rate limited to 10 requests per minute
+    (PDF generation is CPU-intensive).
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        StreamingResponse: PDF file with application/pdf content type
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: PDF generation failed
+    """
+    try:
+        # Fetch report (validates tenant + exists + not deleted)
+        report = await service.get_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        # Generate PDF in executor to avoid blocking event loop
+        pdf_bytes = await asyncio.to_thread(
+            generate_report_pdf,
+            report.report_data,
+            report.report_name,
+        )
+
+        # Create filename from postcode (remove space for filesystem compatibility)
+        postcode_clean = report.postcode.replace(" ", "")
+        filename = f"rapport-{postcode_clean}.pdf"
+
+        # Return as streaming response
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate PDF",
+        ) from e
+
+
+@router.get("/{report_id}/freshness", response_model=ReportFreshnessResponse)
+@limiter.limit("30/minute")
+async def get_report_freshness(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportFreshnessResponse:
+    """
+    Check if saved report has fresher data available.
+
+    Compares saved snapshot timestamps with latest cache entries for each
+    section. Uses 24-hour threshold to identify sections with significant
+    updates available.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportFreshnessResponse: Freshness check results with updated sections
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: Freshness check failed
+    """
+    try:
+        # Fetch report (validates tenant + exists + not deleted)
+        report = await service.get_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        # Check freshness
+        freshness_data = await check_report_freshness(
+            report=report,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return ReportFreshnessResponse(**freshness_data)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to check freshness",
         ) from e
