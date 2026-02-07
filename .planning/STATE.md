@@ -92,6 +92,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **11-01 (TEST-11):** Mock internal orchestration functions (resolve_address, fetch_zoning_data, fetch_monument_status, get_cached_or_fetch) rather than external httpx clients following Phase 9 pattern
 - **11-01 (TEST-11):** Use arq_pool=None for all tests since AI parsing is tested separately in Phase 9
 - **11-01 (TEST-11):** Accept database initialization race condition as pre-existing infrastructure issue (affects many test files, not specific to new tests)
+- **11-02 (TEST-14):** Strip timezone info after ISO parsing to match naive fetched_at timestamps (propdex uses naive UTC throughout)
+- **11-02 (TEST-14):** Test 'no organization found' by querying with different UUID (not deletion) to avoid foreign key cascade
 - **11-03 (TEST-12):** Mock aggregate_property_data at router level (not aggregator internals) to test HTTP/auth/validation layer
 - **11-03 (TEST-12):** Set app.state.http_client and app.state.arq_pool as mocks before tests (router accesses these directly)
 - **11-03 (TEST-12):** Follow AsyncClient + JWT pattern from test_auth_flow.py for authenticated requests
@@ -112,20 +114,21 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **11-02 COMPLETE (2026-02-08):** Freshness detection unit tests — 12 tests covering threshold logic, section mappings, edge cases + timezone bug fix
 - **11-04 COMPLETE (2026-02-08):** Reports router HTTP endpoint tests — 12 tests covering save, get, delete, PDF export, freshness, multi-tenant isolation
 - **11-03 COMPLETE (2026-02-08):** Properties router HTTP endpoint tests — 8 tests covering auth, validation, success, error propagation
 - **11-01 COMPLETE (2026-02-07):** Property aggregator integration tests — 10 tests covering orchestration flow, error handling (404/502), partial failures, coordinate extraction, completeness scoring
-- **PHASE 11 COMPLETE (2026-02-08):** 4/4 plans executed, added 30 integration tests, closed reports router coverage gap (44%→80%+)
-- **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 baseline + 30 gap closure tests
+- **PHASE 11 COMPLETE (2026-02-08):** 4/4 plans executed, added 42 tests (30 integration + 12 unit), closed coverage gaps (freshness 20%→100%, reports router 44%→80%+)
+- **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 baseline + 42 gap closure tests
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 11-04-PLAN.md (Phase 11 complete)
-**Stopped At:** Phase 11 complete, ready for Phase 12
+**Last Session:** 2026-02-08 — Completed 11-02-PLAN.md (Phase 11 complete)
+**Stopped At:** Phase 11 complete (all 4 plans), ready for Phase 12
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Completed 11-04: Reports router HTTP endpoint tests — Phase 11 complete)*
+*Last updated: 2026-02-08 (Completed 11-02: Freshness detection unit tests — Phase 11 complete with 4/4 plans)*
