@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ACTIVE **v1.1 Production Hardening** — Phases 6-10 (started 2026-02-07)
+- ACTIVE **v1.1 Production Hardening** — Phases 6-12 (started 2026-02-07)
 - SHIPPED **v1.0 Core Intelligence Engine** — Phases 1-5 (shipped 2026-02-07)
 
 ## Active
@@ -104,6 +104,48 @@ Plans:
 3. Multi-tenant integration tests confirm cross-organization data leaks are impossible (auth tokens, reports, cache, API calls)
 4. All test suites pass with 80%+ coverage of backend modules
 
+#### Phase 11: Coverage Gap Closure
+**Goal:** Close test coverage gaps identified by milestone audit — property aggregator, freshness detection, and router endpoint tests to reach 80% target
+
+**Requirements:** None (gap closure — strengthens TEST-06, CFG-02, TEST-08, TEST-09, TEST-10)
+
+**Gap Closure:** Closes coverage gaps from v1.1-MILESTONE-AUDIT.md
+
+**Dependencies:** Phase 10 (all existing tests established)
+
+Plans:
+- [ ] 11-01-PLAN.md -- Property aggregator integration tests (orchestration flow with mocked API clients)
+- [ ] 11-02-PLAN.md -- Freshness detection unit tests (threshold logic, section mapping, edge cases)
+- [ ] 11-03-PLAN.md -- Properties router HTTP endpoint tests (lookup flow via API)
+- [ ] 11-04-PLAN.md -- Reports router HTTP endpoint tests (save, PDF export, freshness, delete via API)
+
+**Success Criteria:**
+1. Property aggregator orchestration has integration tests covering BAG→parallel fetch→merge flow with mocked clients
+2. Freshness detection has unit tests covering threshold comparison, section mapping, and edge cases
+3. Properties lookup endpoint has HTTP-level tests verifying auth, validation, and response schema
+4. Reports endpoints (save, PDF, freshness, delete) have HTTP-level integration tests
+5. Overall test coverage reaches 80%+ across backend modules
+
+#### Phase 12: Phase Documentation & Verification
+**Goal:** All v1.1 phases have formal VERIFICATION.md and planning documentation is complete
+
+**Requirements:** None (documentation gap closure)
+
+**Gap Closure:** Closes documentation gaps from v1.1-MILESTONE-AUDIT.md
+
+**Dependencies:** Phase 11 (verification should reflect final test state)
+
+Plans:
+- [ ] 12-01-PLAN.md -- Create Phase 8 planning directory, VERIFICATION.md, and Phase 9 VERIFICATION.md
+- [ ] 12-02-PLAN.md -- Update .env.example with app_role config, re-verify Phase 10 coverage target
+
+**Success Criteria:**
+1. Phase 8 has .planning/phases/08-data-pipeline-testing/ directory with VERIFICATION.md confirming TEST-03, TEST-04
+2. Phase 9 has VERIFICATION.md confirming TEST-05, TEST-06, TEST-07, INFRA-01
+3. Phase 10 VERIFICATION.md updated to reflect coverage after Phase 11 gap closure
+4. .env.example documents app_role database configuration
+5. All 7 v1.1 phases (6-12) have VERIFICATION.md
+
 ---
 
 ## Shipped
@@ -133,9 +175,11 @@ Plans:
 | 8 | Data Pipeline Testing | 2 | 2/2 complete | ✓ Complete |
 | 9 | Intelligence Testing | 4 | 3/3 complete | ✓ Complete |
 | 10 | Report & Multi-Tenant Testing | 3 | 3/3 complete | ✓ Complete |
+| 11 | Coverage Gap Closure | 0 (gap closure) | 0/4 | Pending |
+| 12 | Phase Documentation & Verification | 0 (gap closure) | 0/2 | Pending |
 
-**Total:** 15 requirements across 5 phases
+**Total:** 15 requirements across 5 phases + 2 gap closure phases
 
 ---
 
-*Last updated: 2026-02-07 (Phase 10 complete — 33 tests across 3 plans, 233 total. All 5 phases done.)*
+*Last updated: 2026-02-08 (Phases 11-12 added for audit gap closure)*

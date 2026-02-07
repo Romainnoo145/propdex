@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 **Milestone:** v1.1 Production Hardening
-**Phase:** Phase 10 - Report & Multi-Tenant Testing
-**Plan:** 3/3 complete
-**Status:** Milestone complete
+**Phase:** Phase 11 - Coverage Gap Closure
+**Plan:** 0/4 pending
+**Status:** Gap closure phases created from audit
 
-**Progress:** ████████████████████ 100% (15/15 requirements)
+**Progress:** ████████████████░░░░ 15/15 requirements + 0/6 gap plans
 
-**Next Action:** Audit and archive v1.1 milestone
+**Next Action:** Plan Phase 11 (`/gsd:plan-phase 11`)
 
 ---
 
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 - FastAPI + SQLAlchemy 2.x + PostgreSQL + Claude API
 
 **v1.1 Roadmap:**
-- 5 phases, 15 requirements (tech debt / stabilization)
-- Phases 6-10 (continues from v1.0)
+- 7 phases, 15 requirements + 2 gap closure phases (tech debt / stabilization)
+- Phases 6-12 (continues from v1.0)
 
 ---
 
@@ -102,20 +102,18 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
-- **PHASE 10 COMPLETE (2026-02-07):** Report & Multi-Tenant Testing — 33 new tests (15 CRUD + 9 PDF + 9 multi-tenant), 233 total tests passing
-- **Plan 10-03 COMPLETE:** Multi-tenant isolation — 9 tests proving cross-org data leaks impossible (404 responses, cache isolation, API endpoint isolation)
-- **Plan 10-02 COMPLETE:** PDF export — 9 tests covering template rendering (Dutch headings, missing section fallbacks) and WeasyPrint PDF generation
-- **Plan 10-01 COMPLETE:** Report CRUD — 15 tests covering save, list (filtering/search/pagination/sorting), get, soft-delete/restore, update notes, distinct cities
-- **v1.1 MILESTONE COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 tests
+- **AUDIT COMPLETE (2026-02-08):** v1.1 milestone audited — 15/15 requirements, 12 tech debt items identified
+- **GAP PHASES CREATED:** Phases 11-12 added to close coverage (67%→80%) and documentation gaps
+- **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 tests
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Phase 10 complete, v1.1 milestone complete (233 tests)
-**Stopped At:** v1.1 milestone complete — ready for audit
+**Last Session:** 2026-02-08 — Audit complete, gap closure phases 11-12 created
+**Stopped At:** Phase 11 pending — needs planning
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Phase 10 complete — TEST-08, TEST-09, TEST-10 satisfied, 233 total tests passing, v1.1 done)*
+*Last updated: 2026-02-08 (Phases 11-12 created from audit gap closure)*
