@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 3 of 5 (Zoning & Monument Intelligence) — IN PROGRESS
-**Plan:** 2 of 3 completed
+**Plan:** 3 of 4 completed
 **Status:** In progress
 
-**Progress:** [██████░██░░░░░░░░░░░] 8/15 plans complete (53%)
+**Progress:** [██████░███░░░░░░░░░░] 9/15 plans complete (60%)
 
-**Last Activity:** 2026-02-07 — Completed 03-02-PLAN.md (DSO Spatial Plans API Client & Zoning Aggregator)
+**Last Activity:** 2026-02-07 — Completed 03-03-PLAN.md (RCE Monument Client & Multi-source Aggregator)
 
-**Next Action:** Execute 03-03 (Monument Client) or 03-04 (Property Report Aggregator)
+**Next Action:** Execute 03-04 (Property Report Aggregator)
 
 ---
 
@@ -84,6 +84,10 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 41 | Primary bestemming from most common function | 03-02 | When multiple plans overlap, most frequently occurring bestemming selected as primary |
 | 42 | Consolidated dimensions from first available | 03-02 | Building dimensions taken from first rule with data rather than complex merging |
 | 43 | Data gaps in Dutch for transparency | 03-02 | User-facing messages like "Geen bestemmingsvlakken op deze locatie" |
+| 44 | RCE Solr API uses WGS84 coordinates | 03-03 | RCE requires WGS84 for geofilt; pyproj transforms RD (EPSG:28992) to WGS84 (EPSG:4326) |
+| 45 | Monument restrictions are standard guidance text | 03-03 | Restrictions per monument type (not building-specific API data); immediate value without additional complexity |
+| 46 | Conservative multi-source conflict detection | 03-03 | When sources disagree, has_conflict=True and consensus_status=None; better to flag uncertainty than false consensus |
+| 47 | BAG/Kadaster monument indicators unavailable | 03-03 | MVP limitation - no monument fields in standard API; RCE is primary source |
 
 ### Active TODOs
 
@@ -96,7 +100,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement property aggregator and endpoints (02-03)~~ (completed 02-03)
 - [x] ~~Begin Phase 3 planning (Zoning & Monument Intelligence)~~ (completed 03-01)
 - [x] ~~Implement DSO API client and zoning aggregator (03-02)~~ (completed 03-02)
-- [ ] Implement RCE monument API client (03-03)
+- [x] ~~Implement RCE monument API client (03-03)~~ (completed 03-03)
+- [ ] Implement property report aggregator (03-04)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
 ### Blockers
@@ -105,6 +110,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **03-03 RCE Monument Client (2026-02-07):** RCE Rijksmonument Solr API with pyproj coordinate transformation, multi-source aggregator (RCE/BAG/Kadaster), conflict detection, Dutch restriction summaries, 2-minute execution
 - **03-02 DSO Zoning Client (2026-02-07):** DSO Ruimtelijke Plannen v4 client with POST+GeoJSON spatial queries, HAL+JSON pagination, shapely intersection, Dutch maatvoering parsing, 2-minute execution
 - **03-01 Phase 3 Foundation (2026-02-07):** Spatial dependencies (shapely, pyproj), complete Phase 3 schemas (zoning, monuments, map data), force_refresh cache capability, 3-minute execution
 - **Phase 2 Complete (2026-02-07):** Full property data pipeline with parallel API fetching, completeness scoring, and authenticated endpoints
@@ -116,35 +122,34 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 03-02-PLAN.md
-**Stopped At:** Completed 03-02 (DSO Spatial Plans API Client & Zoning Aggregator)
+**Last Session:** 2026-02-07 — Executed 03-03-PLAN.md
+**Stopped At:** Completed 03-03 (RCE Monument Client & Multi-source Aggregator)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Created DSOSpatialPlansClient with POST /plannen/_zoek using GeoJSON Point body
-- Implemented HAL+JSON pagination support (up to 5 pages) for bestemmingsvlakken, bouwvlakken, maatvoeringen
-- Built zoning aggregator with shapely spatial intersection filtering
-- Added Dutch maatvoering field parsing (bouwhoogte, goothoogte, bebouwingspercentage) with regex extraction
-- Implemented plan filtering (vastgesteld > ontwerp) and sorting by datum descending
-- Primary bestemming determination from most common function across plans
-- Consolidated building dimensions from first available rule
-- Data gap tracking in Dutch for user-facing transparency
-- Cache integration with dso source (90d TTL) and force_refresh support
-- All verifications passed, 2 atomic commits created (10a5c21, 3f4eddd)
+- Created RCEMonumentClient with Solr geofilt spatial queries using WGS84 coordinates
+- Implemented pyproj coordinate transformation (RD EPSG:28992 ↔ WGS84 EPSG:4326)
+- Built monument aggregator fetching from RCE, BAG, Kadaster in parallel with asyncio.gather
+- Added multi-source conflict detection comparing definitive sources
+- Implemented consensus status logic (only when all sources agree)
+- Generated plain-language Dutch restriction summaries per monument type
+- Conservative approach: ANY source confirming monument sets is_monument=True
+- Cache integration with rce source (30d TTL) and force_refresh support
+- All verifications passed, 2 atomic commits created (ae34b2b, 527d58d)
 - Execution time: 2 minutes
 
 **Context for Next Session:**
-- **DSO Zoning Client Ready:** Full spatial planning API integration with POST+GeoJSON
-- **Shapely Spatial Operations:** Point-in-polygon filtering for accurate zone matching
-- **Dutch Field Parsing:** Maatvoering dimension extraction with localized field names
-- **Plan Status Filtering:** Vastgesteld (finalized) prioritized over ontwerp (draft)
-- **Data Gap Transparency:** Dutch messages track missing data elements
-- **Cache Integration:** 90-day TTL with force_refresh capability
-- **Next:** Implement RCE monument API client (03-03) or Property Report Aggregator (03-04)
-- Building coordinates from Phase 2 ready for zoning queries
-- Cadastral parcel IDs available for monument lookup
-- ZoningData schema fully populated with plans, rules, dimensions
+- **RCE Monument Client Ready:** Solr API with WGS84 geofilt queries, 50m search radius
+- **Coordinate Transformation:** pyproj module-level transformers for RD↔WGS84 conversion
+- **Multi-Source Aggregation:** Parallel fetch from RCE, BAG, Kadaster with conflict detection
+- **Conservative Monument Detection:** ANY source confirming monument status sets is_monument=True
+- **Dutch Restriction Summaries:** Standard guidance text (4 restrictions for rijksmonument, 3 for gemeentelijk)
+- **Cache Integration:** 30-day TTL with force_refresh capability
+- **Next:** Implement Property Report Aggregator (03-04) to combine address, cadastral, zoning, and monument data
+- Building coordinates from Phase 2 available for RCE spatial queries
+- Zoning data from 03-02 ready for report aggregation
+- Monument status provides critical investment intelligence (€200k-500k renovation impact)
 
 ---
 
-*Last updated: 2026-02-07T07:42:45Z*
+*Last updated: 2026-02-07T07:43:01Z*
