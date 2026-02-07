@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.http_client import create_government_api_client
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
+from app.properties.router import router as properties_router
 
 
 @asynccontextmanager
@@ -70,6 +71,7 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) ->
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(properties_router)
 
 
 @app.get("/")
