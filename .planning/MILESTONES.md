@@ -1,5 +1,14 @@
 # Project Milestones: CRM Plus
 
+## v1.1 Production Hardening (Started: 2026-02-07)
+
+**Goal:** Stabilize the v1.0 backend with comprehensive test coverage, enforce RLS, and clean up configuration debt — making the codebase production-ready before building the frontend.
+
+**Phases:** 6-10 (5 phases)
+**Requirements:** 15 across 5 categories (Testing, Security, Configuration, Infrastructure, Documentation)
+
+---
+
 ## v1.0 Core Intelligence Engine (Shipped: 2026-02-07)
 
 **Delivered:** Backend API for instant Dutch property intelligence — enter any address, get kadaster data, zoning rules, monument status, and AI-parsed bestemmingsplan data in one parallel request.
@@ -22,6 +31,6 @@
 
 **Git range:** `af14fd7` (docs: initialize project) → `c1a702e` (docs: complete Report Management phase)
 
-**What's next:** Milestone 2 — Professional Platform (frontend dashboard, map visualization, deal pipeline, subsidy intelligence)
+**What's next:** v1.1 Production Hardening (tests, RLS, config cleanup)
 
 ---
