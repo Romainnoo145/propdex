@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 4 of 5 (AI Document Parsing)
-**Plan:** 3 of 4 completed
-**Status:** In progress
+**Plan:** 4 of 4 completed
+**Status:** Phase complete
 
-**Progress:** [█████████████░░░░░░░] 13/15 plans complete (87%)
+**Progress:** [██████████████░░░░░░] 14/15 plans complete (93%)
 
-**Last Activity:** 2026-02-07 — Completed 04-03-PLAN.md (ARQ Worker & Plan Aggregator)
+**Last Activity:** 2026-02-07 — Completed 04-04-PLAN.md (API Endpoints)
 
-**Next Action:** Plan 04-04 (API Endpoints)
+**Next Action:** Begin Phase 5 (Frontend UI)
 
 ---
 
@@ -29,8 +29,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 |--------|-------|
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 7 (INFRA-01, INFRA-02, DATA-01, DATA-02, PROP-03, PROP-04, PROP-06) |
-| Phases Completed | 3/5 |
-| Plans Completed | 13/15 |
+| Phases Completed | 4/5 |
+| Plans Completed | 14/15 |
 | Days Since Start | 2 |
 
 ---
@@ -117,6 +117,12 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 74 | Download failures return pdf_not_found | 04-03 | Plan aggregator detects PDFDownloadError, returns upload_required=True; frontend shows upload UI per user decision |
 | 75 | Reusable enqueue_parsing_job function | 04-03 | Callable from both get_or_parse_plan and upload endpoint; avoids duplication of job creation logic |
 | 76 | Job status polling validates tenant ownership | 04-03 | get_job_status checks organization_id matches ParsingJob; prevents cross-tenant job status leakage |
+| 77 | ARQ pool in FastAPI lifespan | 04-04 | Singleton pattern ensures one Redis connection pool per app instance; available via request.app.state.arq_pool |
+| 78 | Progressive loading pattern for AI parsing | 04-04 | Property lookup returns immediately with API data + job_id; frontend polls for AI results; never blocks on Claude API (10-30s) |
+| 79 | Job status endpoint with Dutch progress messages | 04-04 | Returns progress_pct estimates (10% queued, 50% in_progress, 100% complete) with user-facing messages |
+| 80 | PDF upload accepts content_type OR filename | 04-04 | Flexible validation (content_type == "application/pdf" OR filename.endswith(".pdf")); handles different client behaviors |
+| 81 | Completeness score expanded to 6 sections | 04-04 | Was 5 (address/building/parcels/zoning/monuments), now includes ai_parsing when status is "complete" |
+| 82 | AI parsing section source as MEDIUM confidence | 04-04 | Claude AI-parsed data labeled MEDIUM confidence vs HIGH for government APIs; transparent about data reliability |
 
 ### Active TODOs
 
@@ -135,8 +141,9 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Add AI infrastructure foundation (04-01)~~ (completed 04-01)
 - [x] ~~Implement Claude API client with PDF support (04-02)~~ (completed 04-02)
 - [x] ~~Implement ARQ worker for background parsing (04-03)~~ (completed 04-03)
-- [ ] Implement API endpoints with job queueing (04-04)
-- [ ] Test Claude API with real bestemmingsplan PDFs during 04-03/04-04
+- [x] ~~Implement API endpoints with job queueing (04-04)~~ (completed 04-04)
+- [ ] Test Claude API with real bestemmingsplan PDFs (integration testing)
+- [ ] Begin Phase 5 planning (Frontend UI)
 
 ### Blockers
 
@@ -144,6 +151,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 4 Complete (2026-02-07):** AI document parsing infrastructure with progressive loading pattern, job polling, PDF upload fallback, complete end-to-end integration
+- **Phase 4 Plan 4 Complete (2026-02-07):** API endpoints with ARQ pool in FastAPI lifespan, job status polling, PDF upload fallback, property lookup AI integration, 4m 5s execution
 - **Phase 4 Plan 3 Complete (2026-02-07):** ARQ background worker with cache-first plan aggregator, tenant-isolated job tracking, pdf_not_found upload fallback, reusable job enqueue, 2m 19s execution
 - **Phase 4 Plan 2 Complete (2026-02-07):** Claude AI client with PDF parsing, Dutch confidence scoring prompt, Ruimtelijkeplannen.nl download service with IMRO validation, 4m 2s execution
 - **Phase 4 Plan 1 Complete (2026-02-07):** AI infrastructure foundation with anthropic and arq dependencies, Claude structured output schemas, PostgreSQL PDF storage, job tracking with tenant isolation, 2m 40s execution
@@ -161,34 +170,29 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 04-03-PLAN.md
-**Stopped At:** Completed 04-03 (ARQ Worker & Plan Aggregator)
+**Last Session:** 2026-02-07 — Executed 04-04-PLAN.md
+**Stopped At:** Completed Phase 4 (AI Document Parsing)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Created app/jobs/__init__.py, worker.py, pdf_parsing.py
-- ARQ worker with max_tries=1, 5-minute timeout, Redis config
-- pdf_parsing_job: download → Claude parse → cache → update status
-- Worker creates own DB session (runs outside FastAPI)
-- Upsert pattern for CachedAPIResponse (ai_parsed:plan_idn)
-- Created app/services/plan_aggregator.py with cache-first strategy
-- enqueue_parsing_job: reusable job creation + ARQ enqueue
-- get_or_parse_plan: cache → active jobs → download failures → enqueue
-- get_job_status: polling with tenant isolation
-- pdf_not_found status returns upload_required=True
-- All verifications passed, 2 atomic commits created (70b55e2, 26bfa28)
-- Execution time: 2 minutes 19 seconds
+- Extended FastAPI lifespan with ARQ Redis pool (create_pool on startup, close on shutdown)
+- Added GET /api/properties/jobs/{job_id}/status endpoint for job polling
+- Added POST /api/properties/upload-pdf endpoint for PDF upload fallback
+- Integrated AI parsing into property aggregator (get_or_parse_plan after parallel fetch)
+- Added ai_parsing field to PropertyReportResponse (AIParsingSection | None)
+- Expanded completeness score from 5 to 6 sections (includes ai_parsing)
+- Pass arq_pool from request.app.state to aggregate_property_data
+- All verifications passed, 2 atomic commits created (ef74acd, eb69ac1)
+- Execution time: 4 minutes 5 seconds
 
 **Context for Next Session:**
-- **Phase 4 Plan 3 Complete:** ARQ worker and plan aggregator ready for endpoints
-- **Worker Ready:** Launch via `arq app.jobs.worker.WorkerSettings` from backend/
-- **Plan Aggregator Ready:** get_or_parse_plan(plan_idn, org_id, session, arq_pool)
-- **Job Status Polling Ready:** get_job_status(job_id, org_id, session, arq_pool)
-- **Reusable Job Enqueue:** enqueue_parsing_job for upload endpoint
-- **Cache Strategy:** 90-day TTL for ai_parsed cache entries
-- **Next:** Plan 04-04 (API Endpoints) - integrate with property report
-- **Redis Required:** Must be running on localhost:6379 before worker starts
-- **Testing:** Real bestemmingsplan PDFs needed for integration testing in 04-04
+- **Phase 4 Complete:** All AI document parsing infrastructure ready
+- **Progressive Loading Pattern:** Property lookup returns immediately with job_id, frontend polls for results
+- **Endpoints Ready:** Job status polling, PDF upload fallback, all tenant-isolated and rate-limited
+- **Worker Launch:** `arq app.jobs.worker.WorkerSettings` from backend/ (requires Redis on localhost:6379)
+- **Integration Testing Needed:** Test with real bestemmingsplan PDFs end-to-end
+- **Next:** Begin Phase 5 planning (Frontend UI)
+- **Frontend Requirements:** Display ai_parsing section, poll job status, upload PDF fallback UI
 
 ---
 
