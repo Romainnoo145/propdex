@@ -8,10 +8,10 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 
 - [x] **PROP-01**: User can enter a Dutch address and trigger a property intelligence lookup
 - [x] **PROP-02**: Report includes kadaster property data (ownership, transactions, plot boundaries, surface area)
-- [ ] **PROP-03**: Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
-- [ ] **PROP-04**: Report includes monument/heritage status (rijksmonument, gemeentelijk monument, or none) with applicable restrictions
+- [x] **PROP-03**: Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
+- [x] **PROP-04**: Report includes monument/heritage status (rijksmonument, gemeentelijk monument, or none) with applicable restrictions
 - [ ] **PROP-05**: AI parsing of bestemmingsplan PDFs extracts zoning rules when structured API data is insufficient
-- [ ] **PROP-06**: Each data field in the report shows its source (API vs AI-parsed) with confidence indicator
+- [x] **PROP-06**: Each data field in the report shows its source (API vs AI-parsed) with confidence indicator
 
 ### Report Management
 
@@ -94,10 +94,10 @@ The full professional tool — map visualization, deal pipeline, document export
 |--------|-------|--------|
 | PROP-01 | Phase 2 - Core Data Pipeline | Complete |
 | PROP-02 | Phase 2 - Core Data Pipeline | Complete |
-| PROP-03 | Phase 3 - Zoning & Monument Intelligence | Pending |
-| PROP-04 | Phase 3 - Zoning & Monument Intelligence | Pending |
+| PROP-03 | Phase 3 - Zoning & Monument Intelligence | Complete |
+| PROP-04 | Phase 3 - Zoning & Monument Intelligence | Complete |
 | PROP-05 | Phase 4 - AI Document Parsing | Pending |
-| PROP-06 | Phase 3 - Zoning & Monument Intelligence | Pending |
+| PROP-06 | Phase 3 - Zoning & Monument Intelligence | Complete |
 | RPT-01 | Phase 5 - Report Management | Pending |
 | RPT-02 | Phase 5 - Report Management | Pending |
 | RPT-03 | Phase 5 - Report Management | Pending |
@@ -109,4 +109,4 @@ The full professional tool — map visualization, deal pipeline, document export
 **Coverage:** 14/14 Milestone 1 requirements mapped ✓
 
 ---
-*Last updated: 2026-02-07 after Phase 2 completion*
+*Last updated: 2026-02-07 after Phase 3 completion*

@@ -74,10 +74,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Dependencies (shapely, pyproj), config (DSO_API_KEY, cache TTLs), cache force_refresh, all Phase 3 schemas
-- [ ] 03-02-PLAN.md — DSO Spatial Plans API client + zoning aggregation service with spatial intersection
-- [ ] 03-03-PLAN.md — RCE Monument API client + monument aggregation service with multi-source conflict detection
-- [ ] 03-04-PLAN.md — Property aggregator integration (zoning + monuments + map data), endpoint force_refresh support
+- [x] 03-01-PLAN.md — Dependencies (shapely, pyproj), config (DSO_API_KEY, cache TTLs), cache force_refresh, all Phase 3 schemas
+- [x] 03-02-PLAN.md — DSO Spatial Plans API client + zoning aggregation service with spatial intersection
+- [x] 03-03-PLAN.md — RCE Monument API client + monument aggregation service with multi-source conflict detection
+- [x] 03-04-PLAN.md — Property aggregator integration (zoning + monuments + map data), endpoint force_refresh support
 
 **Success Criteria:**
 1. Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
@@ -87,7 +87,7 @@ Plans:
 5. Heritage restrictions are displayed in plain language for monument properties
 6. User can view property location on interactive map with PDOK tile layers
 
-**Status:** In Progress
+**Status:** Complete
 
 ---
 
@@ -136,12 +136,12 @@ Plans:
 |-------|------|--------------|--------|
 | 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Complete |
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Complete |
-| 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | In Progress |
+| 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Complete |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Pending |
 | 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Pending |
 
-**Current Phase:** 3
-**Completed:** 2/5
+**Current Phase:** 4
+**Completed:** 3/5
 **Coverage:** 14/14 requirements mapped
 
 ---
