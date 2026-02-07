@@ -21,9 +21,9 @@ Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and r
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding, DB models, Alembic migrations, RLS policies
-- [ ] 01-02-PLAN.md — Core auth endpoints (register, login, refresh, logout, me) + tenant middleware
-- [ ] 01-03-PLAN.md — Email verification, password reset, Google OAuth, rate limiting
+- [x] 01-01-PLAN.md — Project scaffolding, DB models, Alembic migrations, RLS policies
+- [x] 01-02-PLAN.md — Core auth endpoints (register, login, refresh, logout, me) + tenant middleware
+- [x] 01-03-PLAN.md — Email verification, password reset, Google OAuth, rate limiting
 
 **Success Criteria:**
 1. User can create an account and log in with email/password
@@ -32,7 +32,7 @@ Plans:
 4. All database queries automatically filter by organization_id
 5. No data leakage between organizations is possible
 
-**Status:** Planning complete
+**Status:** Complete
 
 ---
 
@@ -119,14 +119,14 @@ Plans:
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Planning complete |
+| 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Complete |
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Pending |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Pending |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Pending |
 | 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Pending |
 
-**Current Phase:** 1
-**Completed:** 0/5
+**Current Phase:** 2
+**Completed:** 1/5
 **Coverage:** 14/14 requirements mapped
 
 ---

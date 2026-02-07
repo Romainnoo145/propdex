@@ -72,11 +72,11 @@ class Settings(BaseSettings):
 
     # Frontend Configuration
     FRONTEND_URL: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:9300",
         description="Frontend URL for CORS and email links",
     )
     CORS_ORIGINS: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:9300",
         description="Allowed CORS origins (comma-separated in env)",
     )
 

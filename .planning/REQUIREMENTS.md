@@ -21,8 +21,8 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: User can log in and log out securely
-- [ ] **INFRA-02**: All data is isolated by organization (multi-tenant)
+- [x] **INFRA-01**: User can log in and log out securely
+- [x] **INFRA-02**: All data is isolated by organization (multi-tenant)
 - [ ] **INFRA-03**: Government API responses are cached with appropriate TTLs to avoid redundant calls
 - [ ] **INFRA-04**: AI document parsing runs asynchronously (user sees progress, not a timeout)
 
@@ -101,8 +101,8 @@ The full professional tool — map visualization, deal pipeline, document export
 | RPT-01 | Phase 5 - Report Management | Pending |
 | RPT-02 | Phase 5 - Report Management | Pending |
 | RPT-03 | Phase 5 - Report Management | Pending |
-| INFRA-01 | Phase 1 - Foundation & Authentication | Pending |
-| INFRA-02 | Phase 1 - Foundation & Authentication | Pending |
+| INFRA-01 | Phase 1 - Foundation & Authentication | Complete |
+| INFRA-02 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-03 | Phase 2 - Core Data Pipeline | Pending |
 | INFRA-04 | Phase 4 - AI Document Parsing | Pending |
 
