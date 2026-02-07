@@ -265,8 +265,8 @@ class TestPDFExport:
         assert save_response.status_code == 201
         report_id = save_response.json()["id"]
 
-        # Mock PDF generation to avoid WeasyPrint dependency in tests
-        with patch("app.reports.pdf_export.generate_report_pdf") as mock_pdf:
+        # Mock PDF generation at the router import point to avoid WeasyPrint dependency
+        with patch("app.reports.router.generate_report_pdf") as mock_pdf:
             mock_pdf.return_value = b"%PDF-1.4 test content"
 
             # Export PDF
@@ -303,14 +303,15 @@ class TestFreshnessCheck:
         user, org = await create_test_user()
         token = await _get_auth_token(async_client, user.email)
 
-        # Save a report with section_sources
+        # Save a report with section_sources (must be valid SectionSourceInfo schema)
         report_data = _make_report_data()
         report_data["section_sources"] = [
             {
-                "section": "cadastral",
-                "source": "bag",
-                "cache_key": "bag:test:key",
-                "fetched_at": datetime.utcnow().isoformat() + "Z",
+                "section": "zoning",
+                "sources": [
+                    {"source": "DSO Ruimtelijke Plannen API v4", "is_cached": True}
+                ],
+                "cached_at": datetime.utcnow().isoformat() + "Z",
             }
         ]
         save_response = await async_client.post(
