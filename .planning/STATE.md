@@ -11,15 +11,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Current Position
 
-**Phase:** 3 of 5 (Zoning & Monument Intelligence) — COMPLETE
-**Plan:** 4 of 4 completed
-**Status:** Phase complete, verified ✓
+**Phase:** 4 of 5 (AI Document Parsing)
+**Plan:** 1 of 4 completed
+**Status:** In progress
 
-**Progress:** [██████████░░░░░░░░░░] 10/15 plans complete (67%)
+**Progress:** [███████████░░░░░░░░░] 11/15 plans complete (73%)
 
-**Last Activity:** 2026-02-07 — Phase 3 verified (6/6 success criteria passed)
+**Last Activity:** 2026-02-07 — Completed 04-01-PLAN.md (AI Foundation)
 
-**Next Action:** Plan Phase 4 (AI Document Parsing)
+**Next Action:** Plan 04-02 (Claude API Client)
 
 ---
 
@@ -94,6 +94,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 51 | Map data with both RD and WGS84 coordinates | 03-04 | Enables direct use with OpenLayers/Leaflet while preserving Dutch coordinate system |
 | 52 | Completeness score expanded to 5 sections | 03-04 | Was 3 (address/building/parcels), now includes zoning and monuments for transparency |
 | 53 | Coordinate transformation in aggregator layer | 03-04 | RD to WGS84 conversion centralized in property_aggregator, not in individual API clients |
+| 54 | anthropic>=0.40.0 for Claude API | 04-01 | Native PDF support (vision) and structured outputs (type-safe JSON); version 0.40.0+ required for PDF message format |
+| 55 | arq>=0.27.0 for async task queue | 04-01 | Redis-based background job processing for PDF parsing (prevents HTTP timeouts for 10-30s Claude API calls) |
+| 56 | 90-day cache TTL for ai_parsed | 04-01 | Same as bestemmingsplan - parsed plan rules apply to all addresses in zoning area, enables efficient reuse |
+| 57 | Confidence scoring mandatory for AI data | 04-01 | HIGH/MEDIUM/LOW per rule + overall confidence; frontend must display disclaimers for LOW confidence |
+| 58 | pdf_not_found status with upload_required | 04-01 | Signals frontend to show upload UI when auto-download fails; user decision pattern from 04-CONTEXT |
+| 59 | PDF storage in PostgreSQL BYTEA | 04-01 | PDFDocument stores bytes in LargeBinary vs filesystem; enables multi-tenant isolation, transactional consistency |
+| 60 | plan_idn as PDF reuse key | 04-01 | Multiple addresses in same bestemmingsplan share one PDF; keyed by (organization_id, plan_idn) |
+| 61 | ParsingJob for tenant isolation | 04-01 | ARQ job_id stored with organization_id; prevents cross-tenant job status leakage in polling endpoint |
+| 62 | Composite indexes (org, plan_idn) | 04-01 | ix_pdf_documents_org_plan and ix_parsing_jobs_org_plan optimize tenant-scoped queries |
 
 ### Active TODOs
 
@@ -108,8 +117,11 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement DSO API client and zoning aggregator (03-02)~~ (completed 03-02)
 - [x] ~~Implement RCE monument API client (03-03)~~ (completed 03-03)
 - [x] ~~Implement property report aggregator (03-04)~~ (completed 03-04)
-- [ ] Begin Phase 4 planning (Bestemmingsplan AI)
-- [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
+- [x] ~~Begin Phase 4 planning (AI Document Parsing)~~ (completed 04-01)
+- [x] ~~Add AI infrastructure foundation (04-01)~~ (completed 04-01)
+- [ ] Implement Claude API client with PDF support (04-02)
+- [ ] Implement ARQ worker for background parsing (04-03)
+- [ ] Test Claude API with real bestemmingsplan PDFs during 04-02/04-03
 
 ### Blockers
 
@@ -117,6 +129,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 4 Plan 1 Complete (2026-02-07):** AI infrastructure foundation with anthropic and arq dependencies, Claude structured output schemas, PostgreSQL PDF storage, job tracking with tenant isolation, 2m 40s execution
 - **Phase 3 Complete (2026-02-07):** Full property intelligence report with zoning rules, monument status, map data, section-level source attribution, and cache bypass
 - **03-04 Property Report Aggregator (2026-02-07):** Parallel fetch (cadastral+zoning+monuments), WGS84 coordinate transformation, PropertyReportResponse with all Phase 3 sections, 2-minute execution
 - **03-03 RCE Monument Client (2026-02-07):** RCE Rijksmonument Solr API with pyproj coordinate transformation, multi-source aggregator (RCE/BAG/Kadaster), conflict detection, Dutch restriction summaries, 2-minute execution
@@ -131,34 +144,33 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 03-04-PLAN.md
-**Stopped At:** Completed 03-04 (Property Report Aggregator) - Phase 3 Complete
+**Last Session:** 2026-02-07 — Executed 04-01-PLAN.md
+**Stopped At:** Completed 04-01 (AI Document Parsing Foundation)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Extended property_aggregator.py with parallel fetching of cadastral + zoning + monuments via asyncio.gather
-- Added fetch_zoning_data and fetch_monument_status integration with force_refresh propagation
-- Built MapData with RD to WGS84 coordinate transformation for frontend map rendering
-- Assembled section-level source attribution (SectionSourceInfo) with Dutch freshness timestamps
-- Updated completeness score to 5 sections (address, building, parcels, zoning, monuments)
-- Changed endpoint return type from PropertyLookupResponse to PropertyReportResponse
-- Added force_refresh query parameter to POST /api/properties/lookup for cache bypass
-- Updated endpoint docstring to document all Phase 3 intelligence sections
-- All verifications passed, 2 atomic commits created (e8fdc57, de94715)
-- Execution time: 2 minutes
+- Added anthropic>=0.40.0 and arq>=0.27.0 dependencies to pyproject.toml
+- Added ANTHROPIC_API_KEY and REDIS_URL config settings
+- Added CACHE_TTL["ai_parsed"] = 7776000 (90 days)
+- Created app/ai/schemas.py with 6 Pydantic models (BestemmingsplanParsed, BestemmingsregelExtract, BuildingDimensionsAI, AIParsingSection, JobStatusResponse)
+- Created PDFDocument model with LargeBinary storage for PDF files
+- Created ParsingJob model with ARQ job_id tracking for tenant isolation
+- Generated and applied Alembic migration dedfd360f313 (pdf_documents + parsing_jobs tables)
+- All verifications passed, 2 atomic commits created (465e9c9, f2ff7d1)
+- Execution time: 2 minutes 40 seconds
 
 **Context for Next Session:**
-- **Phase 3 Complete:** All 4 plans finished - property intelligence report fully integrated
-- **PropertyReportResponse:** New standard response includes zoning, monuments, map_data, section_sources
-- **Map Data Ready:** Both RD and WGS84 coordinates provided for frontend rendering with OpenLayers/Leaflet
-- **Section Attribution:** Granular cache metadata per section with Dutch relative timestamps
-- **Cache Bypass:** force_refresh parameter enables "Vernieuwen" button UX
-- **Parallel Fetching:** All government APIs (BAG, cadastral, DSO, RCE) called in parallel for optimal performance
-- **Next:** Plan Phase 4 (Bestemmingsplan AI) for Claude API integration when DSO data is insufficient
-- Phase 4 will add AI-parsed data with confidence indicators (MEDIUM/LOW vs HIGH for API sources)
-- PropertyReportResponse schema already supports fallback_used and confidence fields
-- Frontend can now build complete property intelligence dashboard with map visualization
+- **Phase 4 Plan 1 Complete:** AI infrastructure foundation ready
+- **Dependencies Installed:** anthropic and arq packages available for import
+- **Config Ready:** ANTHROPIC_API_KEY and REDIS_URL settings loadable from .env
+- **Schemas Defined:** All Phase 4 Pydantic schemas in app/ai/schemas.py (no iteration needed in future plans)
+- **Database Tables Exist:** pdf_documents and parsing_jobs tables migrated with tenant isolation
+- **Confidence Scoring Pattern:** HIGH/MEDIUM/LOW per rule + overall confidence established
+- **PDF Storage Pattern:** PostgreSQL BYTEA storage, keyed by (organization_id, plan_idn) for cross-address reuse
+- **Job Tracking Pattern:** ParsingJob with ARQ job_id prevents cross-tenant leakage
+- **Next:** Plan 04-02 (Claude API Client) requires ANTHROPIC_API_KEY in .env
+- **Redis Required:** Plan 04-03 (ARQ Worker) requires Redis running on localhost:6379
 
 ---
 
-*Last updated: 2026-02-07T07:43:01Z*
+*Last updated: 2026-02-07T09:08:15Z*
