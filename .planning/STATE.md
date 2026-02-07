@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 2 of 5 (Core Data Pipeline)
-**Plan:** 02-01 of 3 completed
+**Plan:** 02-02 of 3 completed
 **Status:** In progress
 
-**Progress:** [████░░░░░░░░░░░░░░░░] 4/15 plans complete (27%)
+**Progress:** [█████░░░░░░░░░░░░░░░] 5/15 plans complete (33%)
 
-**Last Activity:** 2026-02-07 — Completed 02-01-PLAN.md (HTTP client and cache infrastructure)
+**Last Activity:** 2026-02-07 — Completed 02-02-PLAN.md (Government API clients)
 
-**Next Action:** Execute 02-02 (BAG API Client)
+**Next Action:** Execute 02-03 (Kadaster API Client)
 
 ---
 
@@ -28,9 +28,9 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Metric | Value |
 |--------|-------|
 | Total Requirements (M1) | 14 |
-| Requirements Completed | 2 (INFRA-01, INFRA-02) |
+| Requirements Completed | 3 (INFRA-01, INFRA-02, DATA-01 partial) |
 | Phases Completed | 1/5 |
-| Plans Completed | 4/15 (estimated) |
+| Plans Completed | 5/15 (estimated) |
 | Days Since Start | 2 |
 
 ---
@@ -64,6 +64,10 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 21 | PostgreSQL JSONB cache over Redis | 02-01 | Reduces infrastructure complexity; leverages existing DB; cache survives restarts |
 | 22 | Source-specific TTL per cache entry | 02-01 | Allows runtime tuning without code changes; supports different staleness per source |
 | 23 | Explicit setuptools package discovery | 02-01 | Prevents build errors from multiple top-level folders (app, sql, alembic) |
+| 24 | API clients receive httpx.AsyncClient as parameter | 02-02 | Ensures connection pooling works correctly; clients don't create their own httpx instances |
+| 25 | BAG API calls cached individually (not aggregated) | 02-02 | Verblijfsobjecten and panden can be shared across addresses; caching each API call separately enables cross-address reuse |
+| 26 | Graceful partial failure handling in address resolver | 02-02 | Returns address even if building lookup fails; better UX than complete failure |
+| 27 | Dutch postcode normalized to '1234 AB' format | 02-02 | Consistent canonical format for storage and API calls; accepts both '1234AB' and '1234 AB' as input |
 
 ### Active TODOs
 
@@ -72,7 +76,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement email verification (01-03)~~ (completed 01-03)
 - [x] ~~Begin Phase 2 planning (Address Intelligence)~~ (completed 02-RESEARCH)
 - [x] ~~Implement HTTP client and cache infrastructure (02-01)~~ (completed 02-01)
-- [ ] Implement BAG API client (02-02)
+- [x] ~~Implement BAG API client (02-02)~~ (completed 02-02)
 - [ ] Implement Kadaster API client (02-03)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
@@ -82,38 +86,40 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **02-02 Government API Clients (2026-02-07):** BAG and PDOK clients with Dutch postcode validation, hierarchical address resolution, per-call caching, 2-minute execution
 - **02-01 HTTP Client & Cache (2026-02-07):** Shared httpx AsyncClient with HTTP/2, PostgreSQL JSONB cache with TTL-based invalidation, 3-minute execution
 - **Phase 1 Complete (2026-02-07):** Full authentication system with email verification, password reset, Google OAuth, and rate limiting
 - **01-03 Email Verification (2026-02-07):** JWT-based email verification/reset, Google OAuth, rate limiting on all endpoints
 - **01-02 Authentication Endpoints (2026-02-06):** JWT auth with refresh rotation, Argon2id password hashing, tenant context middleware
-- **01-01 Backend Foundation (2026-02-06):** FastAPI + async PostgreSQL + multi-tenant models with RLS policies
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 02-01-PLAN.md
-**Stopped At:** Completed 02-01 (HTTP client and cache infrastructure)
+**Last Session:** 2026-02-07 — Executed 02-02-PLAN.md
+**Stopped At:** Completed 02-02 (Government API clients)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Shared httpx AsyncClient via FastAPI lifespan (connection pooling, HTTP/2)
-- CachedAPIResponse model with JSONB storage and TTL metadata
-- Cache manager service with get_cached_or_fetch() and invalidate_cache()
-- BAG_API_KEY configuration and CACHE_TTL constants
-- Fixed setuptools package discovery error
-- All verifications passed, 2 atomic commits created (4f2c5c6, 2208c48)
-- Execution time: 3 minutes
+- PDOK Locatieserver client (suggest/lookup methods for address autocomplete)
+- BAG API client (get_address, get_verblijfsobject, get_pand methods)
+- GovernmentAPIError hierarchy with typed exceptions (NotFound, RateLimit, Timeout)
+- AddressInput schema with Dutch postcode validation and normalization ("1234 AB")
+- Address resolver service chaining BAG hierarchy (address → verblijfsobject → pand)
+- Per-call caching for cross-address reuse (shared buildings benefit multiple lookups)
+- Graceful partial failure handling (returns address even if building lookup fails)
+- All verifications passed, 2 atomic commits created (09667c7, 5bb3131)
+- Execution time: 2 minutes
 
 **Context for Next Session:**
-- **HTTP Infrastructure Ready:** Shared httpx client for all government API calls
-- **Cache Layer Ready:** PostgreSQL JSONB cache with source-specific TTLs (bag: 24h, kadaster: 7d, bestemmingsplan: 90d)
-- **Multi-tenant Isolation:** Cache queries filtered by organization_id
-- **Pattern Established:** FastAPI lifespan for shared resources, direct db.add()/flush()/commit() transactions
-- **Next:** Implement BAG API client (02-02) using new infrastructure
-- BAG API endpoints researched in 02-RESEARCH.md
-- Ready to integrate: address search, nummeraanduiding lookup, pand details
+- **Address Resolution Ready:** Can convert postcode + huisnummer to full BAG data
+- **API Client Pattern Established:** Clients receive shared httpx.AsyncClient as parameter
+- **Per-Call Caching Working:** Each BAG API call cached separately for reuse
+- **Dutch Postcode Validation:** Accepts "1234AB" or "1234 AB", normalizes to "1234 AB"
+- **Next:** Implement Kadaster API client (02-03) for ownership data
+- Will use nummeraanduiding_id from address resolution
+- Follow same pattern: client class + caching + error handling
 
 ---
 
-*Last updated: 2026-02-07T03:56:46Z*
+*Last updated: 2026-02-07T05:24:35Z*
