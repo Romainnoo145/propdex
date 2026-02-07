@@ -15,9 +15,9 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 
 ### Report Management
 
-- [ ] **RPT-01**: User can save a property intelligence report for later reference
-- [ ] **RPT-02**: User can view a list of all saved reports
-- [ ] **RPT-03**: User can re-open a saved report and see full details
+- [x] **RPT-01**: User can save a property intelligence report for later reference
+- [x] **RPT-02**: User can view a list of all saved reports
+- [x] **RPT-03**: User can re-open a saved report and see full details
 
 ### Infrastructure
 
@@ -98,9 +98,9 @@ The full professional tool — map visualization, deal pipeline, document export
 | PROP-04 | Phase 3 - Zoning & Monument Intelligence | Complete |
 | PROP-05 | Phase 4 - AI Document Parsing | Complete |
 | PROP-06 | Phase 3 - Zoning & Monument Intelligence | Complete |
-| RPT-01 | Phase 5 - Report Management | Pending |
-| RPT-02 | Phase 5 - Report Management | Pending |
-| RPT-03 | Phase 5 - Report Management | Pending |
+| RPT-01 | Phase 5 - Report Management | Complete |
+| RPT-02 | Phase 5 - Report Management | Complete |
+| RPT-03 | Phase 5 - Report Management | Complete |
 | INFRA-01 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-02 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-03 | Phase 2 - Core Data Pipeline | Complete |
@@ -109,4 +109,4 @@ The full professional tool — map visualization, deal pipeline, document export
 **Coverage:** 14/14 Milestone 1 requirements mapped ✓
 
 ---
-*Last updated: 2026-02-07 after Phase 4 completion*
+*Last updated: 2026-02-07 after Milestone 1 completion*

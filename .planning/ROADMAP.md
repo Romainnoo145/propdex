@@ -130,9 +130,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — SavedReport + Project models, Alembic migration (JSONB, soft-delete, GIN indexes), report/project schemas
-- [ ] 05-02-PLAN.md — Report CRUD endpoints (save, list, get, delete, restore, notes, project assignment) + Project CRUD + search/filter/sort
-- [ ] 05-03-PLAN.md — PDF export (WeasyPrint + Jinja2 template) + data freshness detection service + export/freshness endpoints
+- [x] 05-01-PLAN.md — SavedReport + Project models, Alembic migration (JSONB, soft-delete, GIN indexes), report/project schemas
+- [x] 05-02-PLAN.md — Report CRUD endpoints (save, list, get, delete, restore, notes, project assignment) + Project CRUD + search/filter/sort
+- [x] 05-03-PLAN.md — PDF export (WeasyPrint + Jinja2 template) + data freshness detection service + export/freshness endpoints
 
 **Success Criteria:**
 1. User can save a property intelligence report for later reference
@@ -144,7 +144,7 @@ Plans:
 7. User can organize reports into project folders
 8. User can see if saved report data has fresher cache available
 
-**Status:** Planning complete
+**Status:** Complete
 
 ---
 
@@ -156,12 +156,12 @@ Plans:
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Complete |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Complete |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Complete |
-| 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Planning complete |
+| 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Complete |
 
-**Current Phase:** 5
-**Completed:** 4/5
+**Current Phase:** Complete
+**Completed:** 5/5
 **Coverage:** 14/14 requirements mapped
 
 ---
 
-*Last updated: 2026-02-07 (Phase 5 planned)*
+*Last updated: 2026-02-07 (Milestone 1 complete)*
