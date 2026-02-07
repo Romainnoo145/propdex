@@ -44,6 +44,13 @@ Plans:
 
 **Requirements:** PROP-01, PROP-02, INFRA-03
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — HTTP client infrastructure (httpx lifespan) + cache model/migration + cache manager
+- [ ] 02-02-PLAN.md — Government API clients (PDOK Locatieserver, BAG API) + address resolver service
+- [ ] 02-03-PLAN.md — PDOK Cadastral client, property aggregator (parallel fetch), POST /api/properties/lookup endpoint
+
 **Success Criteria:**
 1. User can enter a Dutch address and trigger property lookup
 2. System fetches kadaster data (ownership, transactions, boundaries, surface area) from PDOK/Kadaster APIs
@@ -52,7 +59,7 @@ Plans:
 5. Report displays kadaster data with clear data source attribution
 6. Cached data shows staleness indicators (e.g., "Updated 2 hours ago")
 
-**Status:** Pending
+**Status:** In Progress
 
 ---
 
@@ -120,7 +127,7 @@ Plans:
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Complete |
-| 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Pending |
+| 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | In Progress |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Pending |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Pending |
 | 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Pending |
