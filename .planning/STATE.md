@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 11 - Coverage Gap Closure
-**Plan:** 0/4 pending
-**Status:** Gap closure phases created from audit
+**Plan:** 1/4 complete
+**Status:** In progress
 
-**Progress:** ████████████████░░░░ 15/15 requirements + 0/6 gap plans
+**Progress:** ████████████████░░░░ 15/15 requirements + 1/6 gap plans
 
-**Next Action:** Plan Phase 11 (`/gsd:plan-phase 11`)
+**Next Action:** Continue Phase 11 plans
 
 ---
 
@@ -88,6 +88,11 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **10-03 (TEST-10):** 404 (not 403) for cross-org access to prevent resource enumeration attacks
 - **10-03 (TEST-10):** Automatic pg_trgm extension installation in conftest.py for SavedReport GIN index
 
+**Phase 11 Decisions:**
+- **11-03 (TEST-11):** Mock aggregate_property_data at router level (not aggregator internals) to test HTTP/auth/validation layer
+- **11-03 (TEST-11):** Set app.state.http_client and app.state.arq_pool as mocks before tests (router accesses these directly)
+- **11-03 (TEST-11):** Follow AsyncClient + JWT pattern from test_auth_flow.py for authenticated requests
+
 ### Active TODOs
 
 - [x] v1.1 Production Hardening: ALL 15 REQUIREMENTS COMPLETE
@@ -102,6 +107,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **11-03 COMPLETE (2026-02-08):** Properties router HTTP endpoint tests — 8 tests covering auth, validation, success, error propagation
 - **AUDIT COMPLETE (2026-02-08):** v1.1 milestone audited — 15/15 requirements, 12 tech debt items identified
 - **GAP PHASES CREATED:** Phases 11-12 added to close coverage (67%→80%) and documentation gaps
 - **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 tests
@@ -110,10 +116,10 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Audit complete, gap closure phases 11-12 created
-**Stopped At:** Phase 11 pending — needs planning
+**Last Session:** 2026-02-08 — Completed 11-03-PLAN.md
+**Stopped At:** Completed 11-03-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phases 11-12 created from audit gap closure)*
+*Last updated: 2026-02-08 (Completed 11-03: Properties router HTTP endpoint tests)*
