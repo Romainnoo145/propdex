@@ -11,15 +11,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Current Position
 
-**Phase:** 1 of 5 (Foundation & Authentication)
-**Plan:** 01-03 of 3 completed
-**Status:** Phase complete
+**Phase:** 2 of 5 (Core Data Pipeline)
+**Plan:** 02-01 of 3 completed
+**Status:** In progress
 
-**Progress:** [████░░░░░░░░░░░░░░░░] 1/5 phases complete (20%)
+**Progress:** [████░░░░░░░░░░░░░░░░] 4/15 plans complete (27%)
 
-**Last Activity:** 2026-02-07 — Phase 1 verified (7/7 PASSED)
+**Last Activity:** 2026-02-07 — Completed 02-01-PLAN.md (HTTP client and cache infrastructure)
 
-**Next Action:** Begin Phase 2 planning (Address Intelligence)
+**Next Action:** Execute 02-02 (BAG API Client)
 
 ---
 
@@ -30,7 +30,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 2 (INFRA-01, INFRA-02) |
 | Phases Completed | 1/5 |
-| Plans Completed | 3/15 (estimated) |
+| Plans Completed | 4/15 (estimated) |
 | Days Since Start | 2 |
 
 ---
@@ -60,14 +60,20 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 17 | Google OAuth no auto-linking | 01-03 | Email conflict returns 400; prevents account takeover via OAuth for MVP |
 | 18 | Rate limiting in-memory for MVP | 01-03 | No Redis dependency for development; can switch to Redis backend later |
 | 19 | Email sending graceful fallback | 01-03 | Logs URLs to console in dev; no SMTP server required for local development |
+| 20 | FastAPI lifespan for shared resources | 02-01 | Modern pattern replaces startup/shutdown events; ensures proper cleanup |
+| 21 | PostgreSQL JSONB cache over Redis | 02-01 | Reduces infrastructure complexity; leverages existing DB; cache survives restarts |
+| 22 | Source-specific TTL per cache entry | 02-01 | Allows runtime tuning without code changes; supports different staleness per source |
+| 23 | Explicit setuptools package discovery | 02-01 | Prevents build errors from multiple top-level folders (app, sql, alembic) |
 
 ### Active TODOs
 
 - [x] ~~Start Phase 1: Foundation & Authentication planning~~ (completed 01-01)
 - [x] ~~Implement authentication endpoints (01-02)~~ (completed 01-02)
 - [x] ~~Implement email verification (01-03)~~ (completed 01-03)
-- [ ] Begin Phase 2 planning (Address Intelligence)
-- [ ] Verify current PDOK/BAG API endpoints and rate limits during Phase 2 planning
+- [x] ~~Begin Phase 2 planning (Address Intelligence)~~ (completed 02-RESEARCH)
+- [x] ~~Implement HTTP client and cache infrastructure (02-01)~~ (completed 02-01)
+- [ ] Implement BAG API client (02-02)
+- [ ] Implement Kadaster API client (02-03)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
 ### Blockers
@@ -76,6 +82,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **02-01 HTTP Client & Cache (2026-02-07):** Shared httpx AsyncClient with HTTP/2, PostgreSQL JSONB cache with TTL-based invalidation, 3-minute execution
 - **Phase 1 Complete (2026-02-07):** Full authentication system with email verification, password reset, Google OAuth, and rate limiting
 - **01-03 Email Verification (2026-02-07):** JWT-based email verification/reset, Google OAuth, rate limiting on all endpoints
 - **01-02 Authentication Endpoints (2026-02-06):** JWT auth with refresh rotation, Argon2id password hashing, tenant context middleware
@@ -85,27 +92,28 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 01-03-PLAN.md
-**Stopped At:** Completed Phase 1 (Foundation & Authentication)
+**Last Session:** 2026-02-07 — Executed 02-01-PLAN.md
+**Stopped At:** Completed 02-01 (HTTP client and cache infrastructure)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Email verification flow with JWT tokens (48h grace period, no DB storage)
-- Password reset flow with JWT tokens (1h expiry, revokes all sessions on reset)
-- Google OAuth sign-in with httpx-oauth (authorization URL + callback)
-- Rate limiting on all auth endpoints (10/min login, 3/hr register/reset)
-- Background email sending with FastMail (graceful dev fallback)
-- All verifications passed, 2 atomic commits created
+- Shared httpx AsyncClient via FastAPI lifespan (connection pooling, HTTP/2)
+- CachedAPIResponse model with JSONB storage and TTL metadata
+- Cache manager service with get_cached_or_fetch() and invalidate_cache()
+- BAG_API_KEY configuration and CACHE_TTL constants
+- Fixed setuptools package discovery error
+- All verifications passed, 2 atomic commits created (4f2c5c6, 2208c48)
+- Execution time: 3 minutes
 
 **Context for Next Session:**
-- **Phase 1 Complete:** Full authentication system production-ready
-- Complete auth flow: email/password, Google OAuth, verification, password recovery
-- Multi-tenant isolation enforced via tenant context middleware + RLS
-- Rate limiting protects against brute force attacks
-- Email infrastructure ready for transactional emails
-- **Ready for Phase 2:** Address Intelligence API integration (PDOK/BAG/Kadaster)
-- Next: Begin Phase 2 planning and research
+- **HTTP Infrastructure Ready:** Shared httpx client for all government API calls
+- **Cache Layer Ready:** PostgreSQL JSONB cache with source-specific TTLs (bag: 24h, kadaster: 7d, bestemmingsplan: 90d)
+- **Multi-tenant Isolation:** Cache queries filtered by organization_id
+- **Pattern Established:** FastAPI lifespan for shared resources, direct db.add()/flush()/commit() transactions
+- **Next:** Implement BAG API client (02-02) using new infrastructure
+- BAG API endpoints researched in 02-RESEARCH.md
+- Ready to integrate: address search, nummeraanduiding lookup, pand details
 
 ---
 
-*Last updated: 2026-02-07T03:30:00Z*
+*Last updated: 2026-02-07T03:56:46Z*
