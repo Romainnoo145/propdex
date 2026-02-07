@@ -35,6 +35,10 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
     "httpx>=0.26.0",
+    "pytest-cov>=4.1.0",
+    "factory-boy>=3.3.0",
+    "pytest-factoryboy>=2.6.0",
+    "faker>=20.0.0",
     "ruff>=0.1.9",
     "mypy>=1.8.0",
 ]
@@ -84,3 +88,10 @@ module = [
     "weasyprint.*",
 ]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
