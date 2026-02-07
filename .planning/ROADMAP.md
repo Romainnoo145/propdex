@@ -37,9 +37,15 @@ Plans:
 
 **Dependencies:** Phase 6 (tests need RLS-enforced connection)
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md -- Test infrastructure setup, auth unit tests, Phase 1 verification
+- [ ] 07-02-PLAN.md -- Auth integration tests (happy paths + error/security cases)
+
 **Success Criteria:**
 1. Auth registration, login, token refresh, and password reset have passing unit tests covering success and error cases
-2. Auth integration tests verify full request flows (registration → login → authenticated call → logout) against the database
+2. Auth integration tests verify full request flows (registration -> login -> authenticated call -> logout) against the database
 3. Phase 1 has VERIFICATION.md confirming all original requirements (JWT auth, multi-tenant RLS, email verification, Google OAuth, rate limiting) were met
 
 #### Phase 8: Data Pipeline Testing
@@ -63,7 +69,7 @@ Plans:
 
 **Success Criteria:**
 1. Zoning and monument aggregators have unit tests covering data transformation, spatial intersection logic, and error handling
-2. Aggregator integration tests verify full flows (API call → cache check → aggregation → response schema)
+2. Aggregator integration tests verify full flows (API call -> cache check -> aggregation -> response schema)
 3. AI document parsing module has unit tests for Claude API client and PDF processing with mocked responses
 4. ARQ worker pool starts with application startup and shuts down cleanly on application shutdown
 
@@ -105,7 +111,7 @@ Plans:
 | Phase | Name | Requirements | Plans | Status |
 |-------|------|--------------|-------|--------|
 | 6 | Security & Configuration | 3 | 3/3 complete | ✓ Complete |
-| 7 | Test Infrastructure & Auth Testing | 3 | Pending | Ready |
+| 7 | Test Infrastructure & Auth Testing | 3 | 2 plans | Ready |
 | 8 | Data Pipeline Testing | 2 | Pending | Blocked by Phase 7 |
 | 9 | Intelligence Testing | 4 | Pending | Blocked by Phase 8 |
 | 10 | Report & Multi-Tenant Testing | 3 | Pending | Blocked by Phase 9 |
@@ -114,4 +120,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-07 (Phase 6 complete — 3/3 plans, verified)*
+*Last updated: 2026-02-07 (Phase 7 planned — 2 plans in 2 waves)*
