@@ -71,7 +71,14 @@ def handle_api_response(response: httpx.Response, source: str) -> dict:
     if response.status_code == 429:
         raise APIRateLimitError(source, f"Rate limit exceeded: {response.url}")
 
-    # Raise for other HTTP errors (4xx, 5xx)
-    response.raise_for_status()
+    # Wrap other HTTP errors as GovernmentAPIError
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise GovernmentAPIError(
+            source,
+            f"HTTP {response.status_code} from {response.url}",
+            status_code=response.status_code,
+        ) from e
 
     return response.json()
