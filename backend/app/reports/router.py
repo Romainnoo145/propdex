@@ -1,0 +1,564 @@
+"""Report management API endpoints."""
+
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.core.database import get_db
+from app.middleware.rate_limit import limiter
+from app.models.user import User
+from app.reports import service
+from app.schemas.report import (
+    ReportAssignProject,
+    ReportDetailResponse,
+    ReportListItem,
+    ReportListResponse,
+    ReportSaveRequest,
+    ReportUpdateNotes,
+    SortField,
+    SortOrder,
+)
+
+router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+@router.post("", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
+async def save_report(
+    request: Request,
+    report_request: ReportSaveRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Save a property intelligence report.
+
+    Stores a complete PropertyReportResponse snapshot with auto-generated
+    name from address, denormalized fields for efficient filtering, and
+    optional project assignment.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_request: Report save request with report_data, notes, project_id
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The saved report with full details
+
+    Raises:
+        HTTPException 400: Invalid report_data
+        HTTPException 404: Project not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.save_report(
+            report_data=report_request.report_data,
+            notes=report_request.notes,
+            project_id=report_request.project_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save report",
+        ) from e
+
+
+@router.get("", response_model=ReportListResponse)
+@limiter.limit("60/minute")
+async def list_reports(
+    request: Request,
+    city: str | None = None,
+    project_id: uuid.UUID | None = None,
+    search: str | None = None,
+    sort_by: SortField = "updated",
+    sort_order: SortOrder = "desc",
+    offset: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportListResponse:
+    """
+    List saved reports with filtering, search, and sorting.
+
+    Supports filtering by city and project, ILIKE search on report_name
+    (address), and sorting by created_at, updated_at, or report_name.
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        city: Optional city filter (exact match)
+        project_id: Optional project filter (exact match)
+        search: Optional search query (ILIKE on report_name)
+        sort_by: Sort field ("created", "updated", "address")
+        sort_order: Sort order ("asc", "desc")
+        offset: Pagination offset (default 0)
+        limit: Pagination limit (default 50, max 100)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportListResponse: List of reports with total count
+
+    Raises:
+        HTTPException 500: Internal server error
+    """
+    try:
+        # Enforce max limit
+        limit = min(limit, 100)
+
+        reports, total = await service.list_reports(
+            organization_id=organization_id,
+            city=city,
+            project_id=project_id,
+            search_query=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            offset=offset,
+            limit=limit,
+            session=db,
+        )
+
+        # Convert to ReportListItem with completeness_score
+        report_items = [
+            ReportListItem(
+                id=report.id,
+                report_name=report.report_name,
+                postcode=report.postcode,
+                city=report.city,
+                notes=report.notes,
+                project_id=report.project_id,
+                completeness_score=report.report_data.get("completeness_score", 0.0),
+                created_at=report.created_at,
+                updated_at=report.updated_at,
+            )
+            for report in reports
+        ]
+
+        return ReportListResponse(reports=report_items, total=total)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list reports",
+        ) from e
+
+
+@router.get("/cities", response_model=list[str])
+@limiter.limit("60/minute")
+async def get_cities(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[str]:
+    """
+    Get distinct cities from saved reports for filter dropdown.
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        list[str]: Sorted list of city names
+
+    Raises:
+        HTTPException 500: Internal server error
+    """
+    try:
+        cities = await service.get_distinct_cities(
+            organization_id=organization_id,
+            session=db,
+        )
+        return cities
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get cities",
+        ) from e
+
+
+@router.get("/{report_id}", response_model=ReportDetailResponse)
+@limiter.limit("60/minute")
+async def get_report(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Get full report details including report_data JSONB.
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: Full report with report_data
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.get_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get report",
+        ) from e
+
+
+@router.delete("/{report_id}")
+@limiter.limit("30/minute")
+async def delete_report(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """
+    Soft-delete a report.
+
+    Sets deleted_at timestamp. Report can be restored later.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        dict: Success message with report_id
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        await service.soft_delete_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return {"message": "Report deleted", "report_id": str(report_id)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete report",
+        ) from e
+
+
+@router.post("/{report_id}/restore", response_model=ReportDetailResponse)
+@limiter.limit("30/minute")
+async def restore_report(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Restore a soft-deleted report.
+
+    Clears deleted_at timestamp.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The restored report
+
+    Raises:
+        HTTPException 404: Deleted report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.restore_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to restore report",
+        ) from e
+
+
+@router.patch("/{report_id}/notes", response_model=ReportDetailResponse)
+@limiter.limit("30/minute")
+async def update_notes(
+    request: Request,
+    report_id: uuid.UUID,
+    update_request: ReportUpdateNotes,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Update report notes.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        update_request: Notes update request
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The updated report
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.update_report_notes(
+            report_id=report_id,
+            organization_id=organization_id,
+            notes=update_request.notes,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update notes",
+        ) from e
+
+
+@router.patch("/{report_id}/project", response_model=ReportDetailResponse)
+@limiter.limit("30/minute")
+async def assign_project(
+    request: Request,
+    report_id: uuid.UUID,
+    assign_request: ReportAssignProject,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Assign report to a project (or remove from project).
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        assign_request: Project assignment request
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The updated report
+
+    Raises:
+        HTTPException 404: Report or project not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.assign_report_to_project(
+            report_id=report_id,
+            organization_id=organization_id,
+            project_id=assign_request.project_id,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to assign project",
+        ) from e
+
+
+@router.put("/{report_id}/refresh", response_model=ReportDetailResponse)
+@limiter.limit("10/minute")
+async def refresh_report(
+    request: Request,
+    report_id: uuid.UUID,
+    refresh_request: ReportSaveRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Update report with fresh property data.
+
+    Updates report_data JSONB with fresh PropertyReportResponse from a
+    new property lookup. This endpoint should be called after using the
+    property lookup endpoint with force_refresh=True.
+
+    Requires JWT authentication. Rate limited to 10 requests per minute
+    (stricter limit as this may trigger API calls).
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        refresh_request: Fresh report data
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The updated report
+
+    Raises:
+        HTTPException 400: Invalid report_data
+        HTTPException 404: Report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        report = await service.update_report_data(
+            report_id=report_id,
+            organization_id=organization_id,
+            fresh_data=refresh_request.report_data,
+            session=db,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh report",
+        ) from e

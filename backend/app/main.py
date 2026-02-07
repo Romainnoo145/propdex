@@ -15,7 +15,9 @@ from app.core.http_client import create_government_api_client
 from app.jobs.worker import get_redis_settings
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
+from app.projects.router import router as projects_router
 from app.properties.router import router as properties_router
+from app.reports.router import router as reports_router
 
 
 @asynccontextmanager
@@ -81,6 +83,8 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) ->
 # Include routers
 app.include_router(auth_router)
 app.include_router(properties_router)
+app.include_router(reports_router)
+app.include_router(projects_router)
 
 
 @app.get("/")
