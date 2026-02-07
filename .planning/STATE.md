@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 10 - Report & Multi-Tenant Testing
-**Plan:** 1/3 complete
-**Status:** In progress
+**Plan:** 3/3 complete
+**Status:** Milestone complete
 
-**Progress:** ███████████████░░░░░ 73% (11/15 requirements)
+**Progress:** ████████████████████ 100% (15/15 requirements)
 
-**Next Action:** Phase 10-02 - PDF Export Testing (TEST-09)
+**Next Action:** Audit and archive v1.1 milestone
 
 ---
 
@@ -83,24 +83,17 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **10-01 (TEST-08):** Test data factory `_make_report_data()` generates PropertyReportResponse-compatible dicts with sensible defaults
 - **10-01 (TEST-08):** Include both 'straat' and 'straatnaam' keys in address data (service accesses both from raw dict)
 - **10-01 (TEST-08):** Direct DB assertions via SQLAlchemy select for CRUD verification (following test_cache_manager.py pattern)
+- **10-02 (TEST-09):** Synchronous test functions (def, not async def) for CPU-bound WeasyPrint operations
+- **10-02 (TEST-09):** Mock HTML class for fast template validation, real WeasyPrint execution for PDF generation tests
+- **10-03 (TEST-10):** 404 (not 403) for cross-org access to prevent resource enumeration attacks
+- **10-03 (TEST-10):** Automatic pg_trgm extension installation in conftest.py for SavedReport GIN index
 
 ### Active TODOs
 
-- [x] Plan 06-01: Configuration Hardening (COMPLETE)
-- [x] Plan 06-02: Configurable Freshness Threshold (COMPLETE)
-- [x] Plan 06-03: RLS Enforcement (COMPLETE)
-- [x] Phase 6 COMPLETE
-- [x] Plan 07-01: Test Infrastructure Setup (COMPLETE)
-- [x] Plan 07-02: Auth Integration Tests (COMPLETE)
-- [x] Phase 7 COMPLETE - Ready for Phase 8
-- [x] Plan 08-01: API Client Unit Tests (COMPLETE)
-- [x] Plan 08-02: Cache Manager Integration Tests (COMPLETE)
-- [x] Phase 8 COMPLETE - Ready for Phase 9
-- [x] Plan 09-01: Aggregator Unit Tests (COMPLETE)
-- [x] Plan 09-02: Claude AI Parsing & ARQ Lifecycle Tests (COMPLETE)
-- [x] Plan 09-03: Aggregator Integration Tests (COMPLETE)
+- [x] v1.1 Production Hardening: ALL 15 REQUIREMENTS COMPLETE
+- [x] Phase 6-10: All 13 plans executed
 - [ ] Frontend integration (deferred to v2.0)
-- [ ] Test Claude API with real bestemmingsplan PDFs (integration testing in Phase 9)
+- [ ] Test Claude API with real bestemmingsplan PDFs (deferred)
 - [ ] Production deployment: Create app_role and switch to RLS-enforced credentials
 
 ### Blockers
@@ -109,23 +102,20 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
-- **Plan 10-01 COMPLETE (2026-02-07):** Report CRUD integration tests — 15 new tests (3 save + 5 list + 2 get + 3 soft-delete + 1 update notes + 1 distinct cities), 215 total tests passing
-- **PHASE 9 COMPLETE (2026-02-07):** Intelligence Testing — 66 new tests (42 aggregator unit + 12 Claude unit + 12 aggregator integration), 200 total tests passing
-- **Plan 09-02 COMPLETE (2026-02-07):** AI parsing & ARQ lifecycle tests — 15 new tests (12 Claude client unit + 3 ARQ lifecycle integration), 191 total tests passing
-- **Plan 09-01 COMPLETE (2026-02-07):** Aggregator unit tests — 42 new tests (28 zoning + 14 monument), spatial filtering, Dutch field variants, multi-source consensus
-- **PHASE 8 COMPLETE (2026-02-07):** Data Pipeline Testing — 83 new tests (63 API client unit + 20 cache integration), 134 total tests passing
-- **Plan 08-02 COMPLETE (2026-02-07):** Cache manager integration tests — 20 tests: CRUD, TTL expiration, force refresh, invalidation, 3 multi-tenant isolation tests
-- **Plan 08-01 COMPLETE (2026-02-07):** API client unit tests — 63 tests across 5 clients (BAG, PDOK Locatieserver, PDOK Cadastral, DSO, RCE) with shared mock helpers
-- **PHASE 7 COMPLETE (2026-02-07):** Test Infrastructure & Auth Testing — 51 total tests (20 unit + 31 integration), pytest async support, full auth lifecycle coverage
+- **PHASE 10 COMPLETE (2026-02-07):** Report & Multi-Tenant Testing — 33 new tests (15 CRUD + 9 PDF + 9 multi-tenant), 233 total tests passing
+- **Plan 10-03 COMPLETE:** Multi-tenant isolation — 9 tests proving cross-org data leaks impossible (404 responses, cache isolation, API endpoint isolation)
+- **Plan 10-02 COMPLETE:** PDF export — 9 tests covering template rendering (Dutch headings, missing section fallbacks) and WeasyPrint PDF generation
+- **Plan 10-01 COMPLETE:** Report CRUD — 15 tests covering save, list (filtering/search/pagination/sorting), get, soft-delete/restore, update notes, distinct cities
+- **v1.1 MILESTONE COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 tests
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Plan 10-01 complete (report CRUD integration tests, 215 tests)
-**Stopped At:** Completed 10-01-PLAN.md
+**Last Session:** 2026-02-07 — Phase 10 complete, v1.1 milestone complete (233 tests)
+**Stopped At:** v1.1 milestone complete — ready for audit
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Plan 10-01 complete — TEST-08 satisfied, 215 total tests passing)*
+*Last updated: 2026-02-07 (Phase 10 complete — TEST-08, TEST-09, TEST-10 satisfied, 233 total tests passing, v1.1 done)*

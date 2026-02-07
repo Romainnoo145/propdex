@@ -15,14 +15,14 @@ Requirements for production hardening. Each maps to roadmap phases.
 
 - [x] **TEST-01**: Auth module has unit tests covering registration, login, token refresh, and password reset
 - [x] **TEST-02**: Auth module has integration tests verifying full request flows against the database
-- [ ] **TEST-03**: API client module (httpx) has unit tests for BAG, PDOK, DSO, and RCE clients with mocked responses
-- [ ] **TEST-04**: Cache manager has integration tests verifying JSONB cache read/write/TTL/invalidation against the database
-- [ ] **TEST-05**: Zoning and monument aggregators have unit tests covering data transformation and error handling
-- [ ] **TEST-06**: Zoning and monument aggregators have integration tests verifying full aggregation flows
-- [ ] **TEST-07**: AI document parsing module has unit tests for Claude API client and PDF processing with mocked responses
-- [ ] **TEST-08**: Report CRUD operations have integration tests covering save, list, search, and delete against the database
-- [ ] **TEST-09**: PDF export has unit tests verifying template rendering and WeasyPrint output
-- [ ] **TEST-10**: Multi-tenant isolation is verified by integration tests confirming cross-organization data is never leaked
+- [x] **TEST-03**: API client module (httpx) has unit tests for BAG, PDOK, DSO, and RCE clients with mocked responses
+- [x] **TEST-04**: Cache manager has integration tests verifying JSONB cache read/write/TTL/invalidation against the database
+- [x] **TEST-05**: Zoning and monument aggregators have unit tests covering data transformation and error handling
+- [x] **TEST-06**: Zoning and monument aggregators have integration tests verifying full aggregation flows
+- [x] **TEST-07**: AI document parsing module has unit tests for Claude API client and PDF processing with mocked responses
+- [x] **TEST-08**: Report CRUD operations have integration tests covering save, list, search, and delete against the database
+- [x] **TEST-09**: PDF export has unit tests verifying template rendering and WeasyPrint output
+- [x] **TEST-10**: Multi-tenant isolation is verified by integration tests confirming cross-organization data is never leaked
 
 ### Security
 
@@ -35,7 +35,7 @@ Requirements for production hardening. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: ARQ worker lifecycle is integrated with main application startup/shutdown
+- [x] **INFRA-01**: ARQ worker lifecycle is integrated with main application startup/shutdown
 
 ### Documentation
 
@@ -67,18 +67,18 @@ Deferred to v2.0 (frontend milestone):
 |-------------|-------|--------|
 | TEST-01 | Phase 7 | Complete |
 | TEST-02 | Phase 7 | Complete |
-| TEST-03 | Phase 8 | Pending |
-| TEST-04 | Phase 8 | Pending |
-| TEST-05 | Phase 9 | Pending |
-| TEST-06 | Phase 9 | Pending |
-| TEST-07 | Phase 9 | Pending |
-| TEST-08 | Phase 10 | Pending |
-| TEST-09 | Phase 10 | Pending |
-| TEST-10 | Phase 10 | Pending |
+| TEST-03 | Phase 8 | Complete |
+| TEST-04 | Phase 8 | Complete |
+| TEST-05 | Phase 9 | Complete |
+| TEST-06 | Phase 9 | Complete |
+| TEST-07 | Phase 9 | Complete |
+| TEST-08 | Phase 10 | Complete |
+| TEST-09 | Phase 10 | Complete |
+| TEST-10 | Phase 10 | Complete |
 | SEC-01 | Phase 6 | Complete |
 | CFG-01 | Phase 6 | Complete |
 | CFG-02 | Phase 6 | Complete |
-| INFRA-01 | Phase 9 | Pending |
+| INFRA-01 | Phase 9 | Complete |
 | DOC-01 | Phase 7 | Complete |
 
 **Coverage:**
@@ -88,4 +88,4 @@ Deferred to v2.0 (frontend milestone):
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 (roadmap traceability mapped)*
+*Last updated: 2026-02-07 (all 15 requirements complete — v1.1 milestone done)*
