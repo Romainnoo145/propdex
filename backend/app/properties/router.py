@@ -12,7 +12,7 @@ from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.schemas.address import AddressInput
-from app.schemas.property import PropertyLookupResponse
+from app.schemas.property import PropertyReportResponse
 from app.services.property_aggregator import aggregate_property_data
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
@@ -21,37 +21,42 @@ router = APIRouter(prefix="/api/properties", tags=["properties"])
 _pdok_client = PDOKLocatieserver()
 
 
-@router.post("/lookup", response_model=PropertyLookupResponse)
+@router.post("/lookup", response_model=PropertyReportResponse)
 @limiter.limit("30/minute")
 async def lookup_property(
     request: Request,
     input_data: AddressInput,
+    force_refresh: bool = False,
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
-) -> PropertyLookupResponse:
+) -> PropertyReportResponse:
     """
     Look up property data by Dutch address.
 
     Aggregates data from multiple government APIs:
     - BAG API: Address and building data
     - PDOK Cadastral API: Parcel/ownership data
+    - DSO Ruimtelijke Plannen API: Zoning and building dimensions
+    - RCE Rijksmonument API: Monument status
 
-    Returns complete property report with source attribution, cache metadata,
-    and completeness scoring. Supports partial failures (returns partial data
-    if some APIs fail).
+    Returns complete property intelligence report with zoning rules,
+    monument status, map data with geometries, section-level source
+    attribution, cache metadata, and completeness scoring. Supports
+    partial failures (returns partial data if some APIs fail).
 
     Requires JWT authentication. Rate limited to 30 requests per minute.
 
     Args:
         request: FastAPI request object
         input_data: Address input (postcode + huisnummer)
+        force_refresh: If True, bypass all caches and fetch fresh data (for "Vernieuwen" button)
         current_user: Authenticated user
         organization_id: Tenant ID for cache isolation
         db: Database session
 
     Returns:
-        PropertyLookupResponse: Aggregated property data
+        PropertyReportResponse: Aggregated property intelligence report
 
     Raises:
         HTTPException 404: Address not found in BAG registry
@@ -67,6 +72,7 @@ async def lookup_property(
             client=client,
             organization_id=organization_id,
             session=db,
+            force_refresh=force_refresh,
         )
         return result
 
