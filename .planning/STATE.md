@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 3 of 5 (Zoning & Monument Intelligence) — IN PROGRESS
-**Plan:** 1 of 3 completed
+**Plan:** 2 of 3 completed
 **Status:** In progress
 
-**Progress:** [██████░█░░░░░░░░░░░░] 7/15 plans complete (47%)
+**Progress:** [██████░██░░░░░░░░░░░] 8/15 plans complete (53%)
 
-**Last Activity:** 2026-02-07 — Completed 03-01-PLAN.md (Foundation for Phase 3)
+**Last Activity:** 2026-02-07 — Completed 03-02-PLAN.md (DSO Spatial Plans API Client & Zoning Aggregator)
 
-**Next Action:** Execute 03-02 (API Clients for DSO and RCE)
+**Next Action:** Execute 03-03 (Monument Client) or 03-04 (Property Report Aggregator)
 
 ---
 
@@ -78,6 +78,12 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 35 | force_refresh defaults to False | 03-01 | Backward compatible; opt-in behavior for explicit cache bypass |
 | 36 | Monument status ANY source confirms | 03-01 | Conservative approach - better to flag potential monument than miss heritage status |
 | 37 | Confidence indicators on DataSourceInfo | 03-01 | Enables HIGH for API data, MEDIUM/LOW for AI-parsed data in Phase 4 |
+| 38 | POST with GeoJSON Point for DSO spatial queries | 03-02 | DSO API requires POST to /plannen/_zoek with GeoJSON body for location-based lookups |
+| 39 | HAL+JSON pagination limited to 5 pages | 03-02 | Prevents excessive API calls and timeouts while covering typical result sets |
+| 40 | Sequential fetches inside cache_manager | 03-02 | Using asyncio.gather inside cache_manager's fetch function can cause issues; sequential is safer |
+| 41 | Primary bestemming from most common function | 03-02 | When multiple plans overlap, most frequently occurring bestemming selected as primary |
+| 42 | Consolidated dimensions from first available | 03-02 | Building dimensions taken from first rule with data rather than complex merging |
+| 43 | Data gaps in Dutch for transparency | 03-02 | User-facing messages like "Geen bestemmingsvlakken op deze locatie" |
 
 ### Active TODOs
 
@@ -89,7 +95,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement BAG API client (02-02)~~ (completed 02-02)
 - [x] ~~Implement property aggregator and endpoints (02-03)~~ (completed 02-03)
 - [x] ~~Begin Phase 3 planning (Zoning & Monument Intelligence)~~ (completed 03-01)
-- [ ] Implement DSO and RCE API clients (03-02)
+- [x] ~~Implement DSO API client and zoning aggregator (03-02)~~ (completed 03-02)
+- [ ] Implement RCE monument API client (03-03)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
 ### Blockers
@@ -98,6 +105,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **03-02 DSO Zoning Client (2026-02-07):** DSO Ruimtelijke Plannen v4 client with POST+GeoJSON spatial queries, HAL+JSON pagination, shapely intersection, Dutch maatvoering parsing, 2-minute execution
 - **03-01 Phase 3 Foundation (2026-02-07):** Spatial dependencies (shapely, pyproj), complete Phase 3 schemas (zoning, monuments, map data), force_refresh cache capability, 3-minute execution
 - **Phase 2 Complete (2026-02-07):** Full property data pipeline with parallel API fetching, completeness scoring, and authenticated endpoints
 - **02-03 Property Aggregator (2026-02-07):** Property lookup endpoint with asyncio.gather parallel fetch, completeness scoring, 3-minute execution
@@ -108,36 +116,35 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 03-01-PLAN.md
-**Stopped At:** Completed 03-01 (Foundation for Phase 3)
+**Last Session:** 2026-02-07 — Executed 03-02-PLAN.md
+**Stopped At:** Completed 03-02 (DSO Spatial Plans API Client & Zoning Aggregator)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Installed spatial dependencies: shapely>=2.0.0 and pyproj>=3.7.0
-- Extended cache configuration with DSO (90d) and RCE (30d) TTLs
-- Added DSO_API_KEY setting to configuration
-- Extended cache_manager.get_cached_or_fetch with force_refresh parameter
-- Created complete Phase 3 Pydantic schemas: ZoningData, MonumentStatus, PropertyReportResponse
-- Added SectionSourceInfo with Dutch freshness timestamps
-- Added MapData with PDOK BRT tile URL
-- Added confidence indicators to DataSourceInfo
-- All verifications passed, 2 atomic commits created (d4d28cd, 2e2cbf1)
-- Execution time: 3 minutes
+- Created DSOSpatialPlansClient with POST /plannen/_zoek using GeoJSON Point body
+- Implemented HAL+JSON pagination support (up to 5 pages) for bestemmingsvlakken, bouwvlakken, maatvoeringen
+- Built zoning aggregator with shapely spatial intersection filtering
+- Added Dutch maatvoering field parsing (bouwhoogte, goothoogte, bebouwingspercentage) with regex extraction
+- Implemented plan filtering (vastgesteld > ontwerp) and sorting by datum descending
+- Primary bestemming determination from most common function across plans
+- Consolidated building dimensions from first available rule
+- Data gap tracking in Dutch for user-facing transparency
+- Cache integration with dso source (90d TTL) and force_refresh support
+- All verifications passed, 2 atomic commits created (10a5c21, 3f4eddd)
+- Execution time: 2 minutes
 
 **Context for Next Session:**
-- **Phase 3 Foundation Complete:** All schemas defined and importable
-- **Spatial Libraries Ready:** shapely for GeoJSON operations, pyproj for coordinate transformations
-- **Cache Infrastructure Extended:** DSO and RCE sources configured with appropriate TTLs
-- **Force Refresh Available:** Cache bypass capability for explicit refresh requests
-- **Data Gap Tracking:** ZoningData.data_gaps field for partial data transparency
-- **Multi-Source Conflict Detection:** MonumentStatus with consensus logic
-- **Dutch Freshness Timestamps:** SectionSourceInfo.freshness_display_nl computed property
-- **Confidence Indicators:** DataSourceInfo.confidence for API vs AI data distinction
-- **Next:** Implement DSO and RCE API clients (03-02)
-- Building coordinates available from Phase 2 for spatial zoning queries
+- **DSO Zoning Client Ready:** Full spatial planning API integration with POST+GeoJSON
+- **Shapely Spatial Operations:** Point-in-polygon filtering for accurate zone matching
+- **Dutch Field Parsing:** Maatvoering dimension extraction with localized field names
+- **Plan Status Filtering:** Vastgesteld (finalized) prioritized over ontwerp (draft)
+- **Data Gap Transparency:** Dutch messages track missing data elements
+- **Cache Integration:** 90-day TTL with force_refresh capability
+- **Next:** Implement RCE monument API client (03-03) or Property Report Aggregator (03-04)
+- Building coordinates from Phase 2 ready for zoning queries
 - Cadastral parcel IDs available for monument lookup
-- PropertyReportResponse schema ready for extended report aggregation
+- ZoningData schema fully populated with plans, rules, dimensions
 
 ---
 
-*Last updated: 2026-02-07T07:36:06Z*
+*Last updated: 2026-02-07T07:42:45Z*
