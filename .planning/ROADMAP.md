@@ -102,10 +102,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Dependencies (anthropic, arq), config (ANTHROPIC_API_KEY, REDIS_URL), AI schemas, DB models (PDFDocument, ParsingJob), migration
-- [ ] 04-02-PLAN.md — Claude AI client with structured PDF parsing + PDF download service with IMRO validation
-- [ ] 04-03-PLAN.md — ARQ background worker + PDF parsing job + plan aggregator (cache-first orchestration)
-- [ ] 04-04-PLAN.md — API integration (job status polling, PDF upload endpoint, property aggregator extension, ARQ lifespan)
+- [x] 04-01-PLAN.md — Dependencies (anthropic, arq), config (ANTHROPIC_API_KEY, REDIS_URL), AI schemas, DB models (PDFDocument, ParsingJob), migration
+- [x] 04-02-PLAN.md — Claude AI client with structured PDF parsing + PDF download service with IMRO validation
+- [x] 04-03-PLAN.md — ARQ background worker + PDF parsing job + plan aggregator (cache-first orchestration)
+- [x] 04-04-PLAN.md — API integration (job status polling, PDF upload endpoint, property aggregator extension, ARQ lifespan)
 
 **Success Criteria:**
 1. System downloads bestemmingsplan PDF when structured API data is unavailable
@@ -115,7 +115,7 @@ Plans:
 5. AI-parsed data includes disclaimers ("Verify with notaris" for ambiguous interpretations)
 6. PDF parsing detects complex structures (tables, footnotes) and flags incompleteness
 
-**Status:** In Progress
+**Status:** Complete
 
 ---
 
@@ -145,11 +145,11 @@ Plans:
 | 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Complete |
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Complete |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Complete |
-| 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Pending |
+| 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Complete |
 | 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Pending |
 
-**Current Phase:** 4
-**Completed:** 3/5
+**Current Phase:** 5
+**Completed:** 4/5
 **Coverage:** 14/14 requirements mapped
 
 ---

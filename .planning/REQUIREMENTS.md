@@ -10,7 +10,7 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 - [x] **PROP-02**: Report includes kadaster property data (ownership, transactions, plot boundaries, surface area)
 - [x] **PROP-03**: Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
 - [x] **PROP-04**: Report includes monument/heritage status (rijksmonument, gemeentelijk monument, or none) with applicable restrictions
-- [ ] **PROP-05**: AI parsing of bestemmingsplan PDFs extracts zoning rules when structured API data is insufficient
+- [x] **PROP-05**: AI parsing of bestemmingsplan PDFs extracts zoning rules when structured API data is insufficient
 - [x] **PROP-06**: Each data field in the report shows its source (API vs AI-parsed) with confidence indicator
 
 ### Report Management
@@ -24,7 +24,7 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 - [x] **INFRA-01**: User can log in and log out securely
 - [x] **INFRA-02**: All data is isolated by organization (multi-tenant)
 - [x] **INFRA-03**: Government API responses are cached with appropriate TTLs to avoid redundant calls
-- [ ] **INFRA-04**: AI document parsing runs asynchronously (user sees progress, not a timeout)
+- [x] **INFRA-04**: AI document parsing runs asynchronously (user sees progress, not a timeout)
 
 ---
 
@@ -96,7 +96,7 @@ The full professional tool — map visualization, deal pipeline, document export
 | PROP-02 | Phase 2 - Core Data Pipeline | Complete |
 | PROP-03 | Phase 3 - Zoning & Monument Intelligence | Complete |
 | PROP-04 | Phase 3 - Zoning & Monument Intelligence | Complete |
-| PROP-05 | Phase 4 - AI Document Parsing | Pending |
+| PROP-05 | Phase 4 - AI Document Parsing | Complete |
 | PROP-06 | Phase 3 - Zoning & Monument Intelligence | Complete |
 | RPT-01 | Phase 5 - Report Management | Pending |
 | RPT-02 | Phase 5 - Report Management | Pending |
@@ -104,9 +104,9 @@ The full professional tool — map visualization, deal pipeline, document export
 | INFRA-01 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-02 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-03 | Phase 2 - Core Data Pipeline | Complete |
-| INFRA-04 | Phase 4 - AI Document Parsing | Pending |
+| INFRA-04 | Phase 4 - AI Document Parsing | Complete |
 
 **Coverage:** 14/14 Milestone 1 requirements mapped ✓
 
 ---
-*Last updated: 2026-02-07 after Phase 3 completion*
+*Last updated: 2026-02-07 after Phase 4 completion*

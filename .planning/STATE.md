@@ -13,7 +13,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 **Phase:** 4 of 5 (AI Document Parsing)
 **Plan:** 4 of 4 completed
-**Status:** Phase complete
+**Status:** Phase complete, verified ✓
 
 **Progress:** [██████████████░░░░░░] 14/15 plans complete (93%)
 
@@ -28,7 +28,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Metric | Value |
 |--------|-------|
 | Total Requirements (M1) | 14 |
-| Requirements Completed | 7 (INFRA-01, INFRA-02, DATA-01, DATA-02, PROP-03, PROP-04, PROP-06) |
+| Requirements Completed | 9 (INFRA-01, INFRA-02, INFRA-04, DATA-01, DATA-02, PROP-03, PROP-04, PROP-05, PROP-06) |
 | Phases Completed | 4/5 |
 | Plans Completed | 14/15 |
 | Days Since Start | 2 |
