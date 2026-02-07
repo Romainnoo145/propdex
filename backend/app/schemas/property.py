@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.ai.schemas import AIParsingSection
 from app.schemas.address import BAGAddressResponse, BuildingData
 from app.schemas.monument import MonumentStatus
 from app.schemas.zoning import ZoningData
@@ -215,4 +216,10 @@ class PropertyReportResponse(BaseModel):
     section_sources: list[SectionSourceInfo] = Field(
         default_factory=list,
         description="Per-section source metadata with freshness",
+    )
+
+    # Phase 4 additions
+    ai_parsing: AIParsingSection | None = Field(
+        default=None,
+        description="AI-parsed bestemmingsplan data (complete, in-progress, or not available)",
     )

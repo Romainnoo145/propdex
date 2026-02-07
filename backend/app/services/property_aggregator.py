@@ -6,9 +6,11 @@ import uuid
 from datetime import datetime
 
 import httpx
+from arq import ArqRedis
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.schemas import AIParsingSection
 from app.government_apis.base import APINotFoundError, GovernmentAPIError
 from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.rce_monuments import rd_to_wgs84
@@ -25,6 +27,7 @@ from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
 from app.services.cache_manager import get_cached_or_fetch
 from app.services.monument_aggregator import fetch_monument_status
+from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
 from app.services.zoning_aggregator import fetch_zoning_data
 
 logger = logging.getLogger(__name__)
@@ -39,6 +42,7 @@ async def aggregate_property_data(
     organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
+    arq_pool: ArqRedis | None = None,
 ) -> PropertyReportResponse:
     """
     Aggregate property data from multiple government APIs with parallel fetching.
@@ -46,6 +50,7 @@ async def aggregate_property_data(
     Flow:
     1. Sequential: Resolve address via BAG (MUST succeed)
     2. Parallel: Fetch cadastral parcels, zoning, and monuments if coordinates available
+    3. Trigger AI bestemmingsplan parsing (always, returns immediately with job status)
 
     Args:
         input_data: Address input with postcode and house number
@@ -53,9 +58,10 @@ async def aggregate_property_data(
         organization_id: Tenant ID for cache isolation
         session: SQLAlchemy async session for cache operations
         force_refresh: If True, bypass all caches and fetch fresh data
+        arq_pool: ARQ Redis pool for job enqueueing (required for AI parsing)
 
     Returns:
-        PropertyReportResponse: Aggregated property data with zoning, monuments, map data, and source attribution
+        PropertyReportResponse: Aggregated property data with zoning, monuments, map data, AI parsing, and source attribution
 
     Raises:
         HTTPException 404: If address not found in BAG
@@ -251,6 +257,36 @@ async def aggregate_property_data(
     else:
         monument_status = monument_result
 
+    # STEP 3: Trigger AI bestemmingsplan parsing (always)
+    ai_parsing_section: AIParsingSection | None = None
+    if arq_pool is not None:
+        plan_idn = get_primary_plan_idn(zoning_data)
+        if plan_idn:
+            try:
+                ai_parsing_section = await get_or_parse_plan(
+                    plan_idn=plan_idn,
+                    organization_id=organization_id,
+                    session=session,
+                    arq_pool=arq_pool,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to trigger AI parsing: {e}")
+                ai_parsing_section = AIParsingSection(
+                    status="not_available",
+                    error_message=f"Bestemmingsplan niet digitaal beschikbaar: {str(e)}",
+                )
+        else:
+            ai_parsing_section = AIParsingSection(
+                status="not_available",
+                error_message="Geen bestemmingsplan gevonden voor deze locatie",
+            )
+    else:
+        logger.warning("ARQ pool not provided, skipping AI parsing trigger")
+        ai_parsing_section = AIParsingSection(
+            status="not_available",
+            error_message="AI parsing niet beschikbaar",
+        )
+
     # Build MapData with WGS84 coordinate transformation
     map_data: MapData | None = None
     if coordinates:
@@ -310,8 +346,23 @@ async def aggregate_property_data(
                 )
             )
 
+    # AI parsing section
+    if ai_parsing_section and ai_parsing_section.status == "complete":
+        section_sources.append(
+            SectionSourceInfo(
+                section="ai_parsing",
+                sources=[
+                    DataSourceInfo(
+                        source="Claude AI (bestemmingsplan PDF)",
+                        confidence="MEDIUM",
+                        is_cached=True,  # Parsed data comes from cache
+                    )
+                ],
+            )
+        )
+
     # Calculate completeness score
-    # Sections: address (always 1), building (0 or 1), parcels (0 or 1), zoning (0 or 1), monuments (0 or 1)
+    # Sections: address (always 1), building (0 or 1), parcels (0 or 1), zoning (0 or 1), monuments (0 or 1), ai_parsing (0 or 1)
     sections_available = 1  # Address always available
     if building:
         sections_available += 1
@@ -321,8 +372,10 @@ async def aggregate_property_data(
         sections_available += 1
     if monument_status:
         sections_available += 1
+    if ai_parsing_section and ai_parsing_section.status == "complete":
+        sections_available += 1
 
-    total_sections = 5
+    total_sections = 6
     completeness_score = sections_available / total_sections
 
     logger.info(
@@ -342,4 +395,5 @@ async def aggregate_property_data(
         completeness_score=completeness_score,
         errors=errors,
         resolved_at=datetime.utcnow().isoformat() + "Z",
+        ai_parsing=ai_parsing_section,
     )

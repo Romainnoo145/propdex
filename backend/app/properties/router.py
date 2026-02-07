@@ -80,6 +80,7 @@ async def lookup_property(
             organization_id=organization_id,
             session=db,
             force_refresh=force_refresh,
+            arq_pool=request.app.state.arq_pool,
         )
         return result
 
