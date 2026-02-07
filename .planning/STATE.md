@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 10 - Report & Multi-Tenant Testing
-**Plan:** 2/3 complete
-**Status:** In progress
+**Plan:** 3/3 complete
+**Status:** Phase complete
 
-**Progress:** ████████████░░░░░░░░ 80% (12/15 requirements)
+**Progress:** ███████████████░░░░░ 93% (14/15 requirements)
 
-**Next Action:** Plan 10-03 - Multi-Tenant Isolation Integration Tests (TEST-10, TEST-11)
+**Next Action:** Phase 11 - Frontend Integration (UI-01 remaining)
 
 ---
 
@@ -83,6 +83,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **10-02 (TEST-09):** Test WeasyPrint synchronously (def test_*) not async - CPU-bound operation
 - **10-02 (TEST-09):** Mock WeasyPrint HTML class for template tests, no mock for full PDF generation tests
 - **10-02 (TEST-09):** Validate PDF structure via magic bytes (b'%PDF') not visual rendering
+- **10-03 (TEST-10):** Return 404 (not 403) for cross-org access to prevent resource enumeration
+- **10-03 (TEST-10):** Install pg_trgm extension automatically in conftest.py test_engine fixture
 
 ### Active TODOs
 
@@ -109,6 +111,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **Plan 10-03 COMPLETE (2026-02-07):** Multi-tenant isolation integration tests — 9 new tests (4 report isolation + 2 soft-delete + 1 cache + 2 API), 404 not 403 pattern, 233 total tests passing
+- **PHASE 10 COMPLETE (2026-02-07):** Report & Multi-Tenant Testing — 33 new tests (15 CRUD integration + 9 PDF unit + 9 multi-tenant), TEST-08/TEST-09/TEST-10 satisfied
 - **Plan 10-02 COMPLETE (2026-02-07):** PDF export unit tests — 9 new tests (5 template rendering + 3 PDF generation + 1 signature), synchronous test pattern for CPU-bound operations
 - **PHASE 9 COMPLETE (2026-02-07):** Intelligence Testing — 66 new tests (42 aggregator unit + 12 Claude unit + 12 aggregator integration), 200 total tests passing
 - **Plan 09-02 COMPLETE (2026-02-07):** AI parsing & ARQ lifecycle tests — 15 new tests (12 Claude client unit + 3 ARQ lifecycle integration), 191 total tests passing
@@ -122,10 +126,10 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Plan 10-02 complete (PDF export unit tests)
-**Stopped At:** Plan 10-02 finalized — ready for Plan 10-03
+**Last Session:** 2026-02-07 — Phase 10 complete (all 3 plans executed, 233 tests)
+**Stopped At:** Phase 10 finalized — ready for Phase 11 (Frontend Integration)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Plan 10-02 complete — TEST-09 satisfied, 209 total tests passing)*
+*Last updated: 2026-02-07 (Phase 10 complete — TEST-08, TEST-09, TEST-10 satisfied, 233 total tests passing)*
