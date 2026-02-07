@@ -3,8 +3,9 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,7 @@ from app.auth.jwt import (
     create_refresh_token,
     decode_token,
 )
+from app.auth.oauth import get_google_user_info, google_oauth_client
 from app.auth.password import hash_password, verify_password
 from app.auth.schemas import (
     EmailVerifyRequest,
@@ -31,6 +33,7 @@ from app.auth.schemas import (
 )
 from app.core.config import settings
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models.organization import Organization
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
@@ -39,7 +42,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/hour")
 async def register(
+    request: Request,
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -115,7 +120,9 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     credentials: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -187,7 +194,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("30/minute")
 async def refresh(
+    request: Request,
     refresh_data: RefreshRequest,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -423,7 +432,9 @@ async def verify_email(
 
 
 @router.post("/resend-verification", response_model=MessageResponse)
+@limiter.limit("3/hour")
 async def resend_verification(
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
 ) -> MessageResponse:
@@ -446,7 +457,9 @@ async def resend_verification(
 
 
 @router.post("/password-reset/request", response_model=MessageResponse)
+@limiter.limit("3/hour")
 async def request_password_reset(
+    request: Request,
     reset_request: PasswordResetRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -540,3 +553,157 @@ async def confirm_password_reset(
     await db.commit()
 
     return MessageResponse(message="Password reset successfully")
+
+
+# Google OAuth schemas
+class GoogleAuthUrlResponse(BaseModel):
+    """Response schema for Google OAuth authorization URL."""
+
+    authorization_url: str
+
+
+class GoogleCallbackRequest(BaseModel):
+    """Request schema for Google OAuth callback."""
+
+    code: str
+    redirect_uri: str
+
+
+@router.get("/google", response_model=GoogleAuthUrlResponse)
+@limiter.limit("10/minute")
+async def google_auth_url(
+    request: Request,
+) -> GoogleAuthUrlResponse:
+    """
+    Get Google OAuth authorization URL.
+
+    Returns authorization URL for frontend to redirect user.
+    Returns 501 if Google OAuth is not configured.
+    """
+    if google_oauth_client is None:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google OAuth not configured",
+        )
+
+    # Generate authorization URL
+    redirect_uri = f"{settings.FRONTEND_URL}/auth/google/callback"
+    authorization_url = await google_oauth_client.get_authorization_url(
+        redirect_uri=redirect_uri,
+        scope=["email", "profile"],
+    )
+
+    return GoogleAuthUrlResponse(authorization_url=authorization_url)
+
+
+@router.post("/google/callback", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def google_callback(
+    request: Request,
+    callback_data: GoogleCallbackRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """
+    Handle Google OAuth callback.
+
+    Exchanges authorization code for access token, fetches user info,
+    and either logs in existing user or creates new user + organization.
+
+    Does NOT auto-link email accounts (returns error if email exists with different provider).
+    """
+    if google_oauth_client is None:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google OAuth not configured",
+        )
+
+    # Exchange code for access token
+    try:
+        token = await google_oauth_client.get_access_token(
+            callback_data.code,
+            callback_data.redirect_uri,
+        )
+        access_token = token["access_token"]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to exchange authorization code: {str(e)}",
+        )
+
+    # Fetch user info from Google
+    try:
+        google_user = await get_google_user_info(access_token)
+        email = google_user.get("email")
+        name = google_user.get("name")
+        google_id = google_user.get("id")
+
+        if not email or not google_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to fetch user email from Google",
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch user info from Google: {str(e)}",
+        )
+
+    # Check if user exists by email
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == email.lower())
+    )
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user:
+        # User exists - check auth provider
+        if existing_user.auth_provider == "google":
+            # Google user logging in - return tokens
+            user = existing_user
+        else:
+            # Email exists with different provider (email/password)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered with email/password. Please sign in with your password.",
+            )
+    else:
+        # New user - create organization and user
+        organization = Organization(name=name or email.split("@")[0])
+        db.add(organization)
+        await db.flush()
+
+        user = User(
+            email=email,
+            hashed_password=None,  # No password for OAuth users
+            full_name=name,
+            organization_id=organization.id,
+            email_verified=True,  # Google already verified email
+            auth_provider="google",
+            google_id=google_id,
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+
+    # Create refresh token
+    refresh_token, jti = create_refresh_token(
+        str(user.id), str(user.organization_id)
+    )
+    expires_at = datetime.utcnow() + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    refresh_token_record = RefreshToken(
+        jti=jti,
+        user_id=user.id,
+        organization_id=user.organization_id,
+        expires_at=expires_at,
+    )
+    db.add(refresh_token_record)
+    await db.commit()
+
+    # Create access token
+    access_token_jwt = create_access_token(str(user.id), str(user.organization_id))
+
+    return TokenResponse(
+        access_token=access_token_jwt,
+        refresh_token=refresh_token,
+    )
