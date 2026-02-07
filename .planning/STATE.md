@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 11 - Coverage Gap Closure
-**Plan:** 1/4 complete
-**Status:** In progress
+**Plan:** 4/4 complete
+**Status:** Phase complete
 
-**Progress:** ████████████████░░░░ 15/15 requirements + 1/6 gap plans
+**Progress:** ████████████████░░░░ 15/15 requirements + 4/6 gap plans
 
-**Next Action:** Continue Phase 11 (plans 02-04)
+**Next Action:** Begin Phase 12 (documentation gaps)
 
 ---
 
@@ -95,6 +95,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **11-03 (TEST-12):** Mock aggregate_property_data at router level (not aggregator internals) to test HTTP/auth/validation layer
 - **11-03 (TEST-12):** Set app.state.http_client and app.state.arq_pool as mocks before tests (router accesses these directly)
 - **11-03 (TEST-12):** Follow AsyncClient + JWT pattern from test_auth_flow.py for authenticated requests
+- **11-04 (TEST-13):** Check key fields from report_data instead of exact dict equality (Pydantic normalizes with defaults)
+- **11-04 (TEST-13):** Mock generate_report_pdf to avoid WeasyPrint dependency in test environment
 
 ### Active TODOs
 
@@ -110,20 +112,20 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
-- **11-01 COMPLETE (2026-02-07):** Property aggregator integration tests — 10 tests covering orchestration flow, error handling (404/502), partial failures, coordinate extraction, completeness scoring
+- **11-04 COMPLETE (2026-02-08):** Reports router HTTP endpoint tests — 12 tests covering save, get, delete, PDF export, freshness, multi-tenant isolation
 - **11-03 COMPLETE (2026-02-08):** Properties router HTTP endpoint tests — 8 tests covering auth, validation, success, error propagation
-- **AUDIT COMPLETE (2026-02-08):** v1.1 milestone audited — 15/15 requirements, 12 tech debt items identified
-- **GAP PHASES CREATED:** Phases 11-12 added to close coverage (67%→80%) and documentation gaps
-- **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 tests
+- **11-01 COMPLETE (2026-02-07):** Property aggregator integration tests — 10 tests covering orchestration flow, error handling (404/502), partial failures, coordinate extraction, completeness scoring
+- **PHASE 11 COMPLETE (2026-02-08):** 4/4 plans executed, added 30 integration tests, closed reports router coverage gap (44%→80%+)
+- **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 baseline + 30 gap closure tests
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Completed 11-01-PLAN.md
-**Stopped At:** Completed 11-01-PLAN.md
+**Last Session:** 2026-02-08 — Completed 11-04-PLAN.md (Phase 11 complete)
+**Stopped At:** Phase 11 complete, ready for Phase 12
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Completed 11-01: Property aggregator integration tests)*
+*Last updated: 2026-02-08 (Completed 11-04: Reports router HTTP endpoint tests — Phase 11 complete)*
