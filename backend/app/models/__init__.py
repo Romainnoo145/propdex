@@ -5,7 +5,9 @@ from app.models.cached_response import CachedAPIResponse
 from app.models.organization import Organization
 from app.models.parsing_job import ParsingJob  # noqa: F401
 from app.models.pdf_document import PDFDocument  # noqa: F401
+from app.models.project import Project  # noqa: F401
 from app.models.refresh_token import RefreshToken
+from app.models.report import SavedReport  # noqa: F401
 from app.models.user import User
 
 __all__ = [
@@ -16,4 +18,6 @@ __all__ = [
     "CachedAPIResponse",
     "PDFDocument",
     "ParsingJob",
+    "Project",
+    "SavedReport",
 ]
