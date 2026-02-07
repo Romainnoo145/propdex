@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report.report_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        :root {
+            --brand-primary: #0066cc;
+            --brand-accent: #00aaff;
+            --confidence-high: #0a8a00;
+            --confidence-medium: #e67e00;
+            --confidence-low: #cc0000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 10pt;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        h1 {
+            font-size: 18pt;
+            color: var(--brand-primary);
+            margin-bottom: 0.5em;
+            border-bottom: 3px solid var(--brand-primary);
+            padding-bottom: 0.3em;
+        }
+
+        h2 {
+            font-size: 14pt;
+            color: var(--brand-primary);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 0.2em;
+            page-break-after: avoid;
+        }
+
+        h3 {
+            font-size: 11pt;
+            color: #333;
+            margin-top: 1em;
+            margin-bottom: 0.3em;
+            page-break-after: avoid;
+        }
+
+        .header {
+            margin-bottom: 2em;
+        }
+
+        .metadata {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+            color: #666;
+            margin-bottom: 1em;
+        }
+
+        .section {
+            margin-bottom: 2em;
+            page-break-inside: avoid;
+        }
+
+        .data-row {
+            display: grid;
+            grid-template-columns: 40% 60%;
+            padding: 0.3em 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .data-value {
+            color: #222;
+        }
+
+        .confidence-indicator {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            font-size: 8pt;
+            font-weight: 600;
+            border-radius: 3px;
+            margin-left: 0.5em;
+        }
+
+        .confidence-high {
+            background-color: var(--confidence-high);
+            color: white;
+        }
+
+        .confidence-medium {
+            background-color: var(--confidence-medium);
+            color: white;
+        }
+
+        .confidence-low {
+            background-color: var(--confidence-low);
+            color: white;
+        }
+
+        .disclaimer {
+            background-color: #fff8e1;
+            border-left: 4px solid var(--confidence-medium);
+            padding: 0.8em;
+            margin: 1em 0;
+            font-size: 9pt;
+        }
+
+        .disclaimer strong {
+            color: var(--confidence-medium);
+        }
+
+        .no-data {
+            color: #999;
+            font-style: italic;
+            padding: 1em 0;
+        }
+
+        .source-citation {
+            font-size: 8pt;
+            color: #888;
+            font-style: italic;
+            margin-top: 0.5em;
+        }
+
+        .sources {
+            background-color: #f5f5f5;
+            padding: 1em;
+            margin-top: 0.5em;
+            border-radius: 4px;
+        }
+
+        .source-item {
+            margin-bottom: 0.5em;
+            padding-bottom: 0.5em;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .source-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .footer {
+            position: running(footer);
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 0.5em;
+        }
+
+        @page {
+            @bottom-center {
+                content: element(footer);
+            }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.5em;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #555;
+        }
+
+        ul {
+            margin-left: 1.5em;
+            margin-top: 0.5em;
+        }
+
+        li {
+            margin-bottom: 0.3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="footer">
+        Gegenereerd door CRM Plus - Property Intelligence Platform | Pagina <span class="page-number"></span>
+    </div>
+
+    <div class="header">
+        <h1>{{ report.report_name }}</h1>
+        <div class="metadata">
+            <div>
+                <strong>Generatiedatum:</strong> {{ generated_at }}
+            </div>
+            <div>
+                <strong>Volledigheid:</strong> {{ "%.0f"|format(report_data.completeness_score * 100) }}%
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 1 - Adresgegevens -->
+    <div class="section">
+        <h2>1. Adresgegevens</h2>
+        {% if report_data.address %}
+        <div class="data-row">
+            <div class="data-label">Straatnaam</div>
+            <div class="data-value">{{ report_data.address.straatnaam or 'Niet beschikbaar' }}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Huisnummer</div>
+            <div class="data-value">{{ report_data.address.huisnummer or 'Niet beschikbaar' }}{% if report_data.address.huisletter %}-{{ report_data.address.huisletter }}{% endif %}{% if report_data.address.toevoeging %} {{ report_data.address.toevoeging }}{% endif %}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Postcode</div>
+            <div class="data-value">{{ report_data.address.postcode or 'Niet beschikbaar' }}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Woonplaats</div>
+            <div class="data-value">{{ report_data.address.woonplaats or 'Niet beschikbaar' }}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Nummeraanduiding ID</div>
+            <div class="data-value"><code>{{ report_data.address.nummeraanduiding_id or 'Niet beschikbaar' }}</code></div>
+        </div>
+        {% if report_data.address.verblijfsobject_id %}
+        <div class="data-row">
+            <div class="data-label">Verblijfsobject ID</div>
+            <div class="data-value"><code>{{ report_data.address.verblijfsobject_id }}</code></div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="no-data">Geen adresgegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 2 - Gebouwgegevens -->
+    <div class="section">
+        <h2>2. Gebouwgegevens</h2>
+        {% if report_data.building %}
+        <div class="data-row">
+            <div class="data-label">Bouwjaar</div>
+            <div class="data-value">{{ report_data.building.bouwjaar or 'Niet beschikbaar' }}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Status</div>
+            <div class="data-value">{{ report_data.building.status or 'Niet beschikbaar' }}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Oppervlakte</div>
+            <div class="data-value">{{ report_data.building.oppervlakte or 'Niet beschikbaar' }}{% if report_data.building.oppervlakte %} m²{% endif %}</div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Gebruiksdoel</div>
+            <div class="data-value">{{ report_data.building.gebruiksdoel or 'Niet beschikbaar' }}</div>
+        </div>
+        {% else %}
+        <div class="no-data">Geen gebouwgegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 3 - Kadastrale Gegevens -->
+    <div class="section">
+        <h2>3. Kadastrale Gegevens</h2>
+        {% if report_data.cadastral_parcels %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Kadastrale Aanduiding</th>
+                    <th>Sectie</th>
+                    <th>Perceelnummer</th>
+                    <th>Oppervlakte (m²)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for parcel in report_data.cadastral_parcels %}
+                <tr>
+                    <td>{{ parcel.kadastrale_aanduiding or 'Niet beschikbaar' }}</td>
+                    <td>{{ parcel.sectie or 'Niet beschikbaar' }}</td>
+                    <td>{{ parcel.perceelnummer or 'Niet beschikbaar' }}</td>
+                    <td>{{ parcel.oppervlakte or 'Niet beschikbaar' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">Geen kadastrale gegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 4 - Bestemmingsplan -->
+    <div class="section">
+        <h2>4. Bestemmingsplan</h2>
+        {% if report_data.zoning %}
+        <div class="data-row">
+            <div class="data-label">Primaire Bestemming</div>
+            <div class="data-value">{{ report_data.zoning.primary_bestemming or 'Niet beschikbaar' }}</div>
+        </div>
+
+        {% if report_data.zoning.building_dimensions %}
+        <h3>Bouwdimensies</h3>
+        {% if report_data.zoning.building_dimensions.max_hoogte %}
+        <div class="data-row">
+            <div class="data-label">Maximale Hoogte</div>
+            <div class="data-value">{{ report_data.zoning.building_dimensions.max_hoogte }}</div>
+        </div>
+        {% endif %}
+        {% if report_data.zoning.building_dimensions.max_bebouwingspercentage %}
+        <div class="data-row">
+            <div class="data-label">Maximaal Bebouwingspercentage</div>
+            <div class="data-value">{{ report_data.zoning.building_dimensions.max_bebouwingspercentage }}%</div>
+        </div>
+        {% endif %}
+        {% if report_data.zoning.building_dimensions.max_goothoogte %}
+        <div class="data-row">
+            <div class="data-label">Maximale Goothoogte</div>
+            <div class="data-value">{{ report_data.zoning.building_dimensions.max_goothoogte }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if report_data.zoning.permitted_functions %}
+        <h3>Toegestane Functies</h3>
+        <ul>
+        {% for func in report_data.zoning.permitted_functions %}
+            <li>{{ func }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if report_data.zoning.restrictions %}
+        <h3>Beperkingen</h3>
+        <ul>
+        {% for restriction in report_data.zoning.restrictions %}
+            <li>{{ restriction }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if report_data.zoning.plan_names %}
+        <div class="source-citation">
+            Bron: {{ report_data.zoning.plan_names|join(', ') }}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="no-data">Geen bestemmingsplan gegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 5 - Monumentstatus -->
+    <div class="section">
+        <h2>5. Monumentstatus</h2>
+        {% if report_data.monuments %}
+        <div class="data-row">
+            <div class="data-label">Monument Status</div>
+            <div class="data-value">
+                {% if report_data.monuments.is_monument %}
+                    <strong style="color: var(--confidence-medium);">Ja - Dit object heeft monumentale status</strong>
+                {% else %}
+                    Geen monumentale status
+                {% endif %}
+            </div>
+        </div>
+
+        {% if report_data.monuments.is_monument and report_data.monuments.monument_type %}
+        <div class="data-row">
+            <div class="data-label">Monument Type</div>
+            <div class="data-value">{{ report_data.monuments.monument_type }}</div>
+        </div>
+        {% endif %}
+
+        {% if report_data.monuments.restrictions %}
+        <h3>Beperkingen bij Monumentstatus</h3>
+        <ul>
+        {% for restriction in report_data.monuments.restrictions %}
+            <li>{{ restriction }}</li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if report_data.monuments.sources %}
+        <div class="source-citation">
+            Bronnen: {{ report_data.monuments.sources|join(', ') }}
+            {% if report_data.monuments.consensus_status %}
+                (Consensus: {{ report_data.monuments.consensus_status }})
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if report_data.monuments.has_conflict %}
+        <div class="disclaimer">
+            <strong>Let op:</strong> Er zijn tegenstrijdige gegevens gevonden tussen verschillende bronnen. Raadpleeg de gemeente of RCE voor definitieve bevestiging.
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="no-data">Geen monumentgegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 6 - AI Analyse Bestemmingsplan -->
+    <div class="section">
+        <h2>6. AI Analyse Bestemmingsplan</h2>
+        {% if report_data.ai_parsing and report_data.ai_parsing.status == 'complete' %}
+
+        {% if report_data.ai_parsing.parsed_rules %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Categorie</th>
+                    <th>Regel</th>
+                    <th>Waarde</th>
+                    <th>Betrouwbaarheid</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in report_data.ai_parsing.parsed_rules %}
+                <tr>
+                    <td>{{ rule.category or 'Overig' }}</td>
+                    <td>{{ rule.rule_name }}</td>
+                    <td>{{ rule.value or 'Niet beschikbaar' }}</td>
+                    <td>
+                        <span class="confidence-indicator confidence-{{ rule.confidence|lower }}">
+                            {{ rule.confidence }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if report_data.ai_parsing.overall_confidence in ['MEDIUM', 'LOW'] %}
+        <div class="disclaimer">
+            <strong>Let op:</strong> Deze gegevens zijn door AI geanalyseerd met {{ 'gemiddelde' if report_data.ai_parsing.overall_confidence == 'MEDIUM' else 'lage' }} betrouwbaarheid. Controleer bij de gemeente of notaris voor definitieve bevestiging.
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if report_data.ai_parsing.plan_idn %}
+        <div class="source-citation">
+            Plan ID: {{ report_data.ai_parsing.plan_idn }} | Vertrouwen: {{ report_data.ai_parsing.overall_confidence }}
+        </div>
+        {% endif %}
+
+        {% elif report_data.ai_parsing and report_data.ai_parsing.status == 'in_progress' %}
+        <div class="no-data">AI analyse wordt momenteel uitgevoerd. PDF wordt gegenereerd met beschikbare gegevens.</div>
+
+        {% elif report_data.ai_parsing and report_data.ai_parsing.status == 'pdf_not_found' %}
+        <div class="no-data">Bestemmingsplan PDF niet beschikbaar voor AI analyse.</div>
+
+        {% else %}
+        <div class="no-data">Geen AI analyse gegevens beschikbaar</div>
+        {% endif %}
+    </div>
+
+    <!-- Section 7 - Bronvermelding -->
+    <div class="section">
+        <h2>7. Bronvermelding</h2>
+        {% if report_data.section_sources %}
+        <div class="sources">
+            {% for section_source in report_data.section_sources %}
+            <div class="source-item">
+                <h3>{{ section_source.section|title }}</h3>
+                {% for source in section_source.sources %}
+                <div style="margin-left: 1em; margin-top: 0.3em;">
+                    <strong>{{ source.source }}</strong>
+                    {% if source.confidence %}
+                    <span class="confidence-indicator confidence-{{ source.confidence|lower }}">
+                        {{ source.confidence }}
+                    </span>
+                    {% endif %}
+                    <br>
+                    {% if source.cached_at %}
+                    <span style="font-size: 8pt; color: #888;">
+                        Opgehaald: {{ source.cached_at[:10] }} | Leeftijd: {{ (source.age_seconds / 3600)|round(1) }} uur
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-data">Geen bronvermelding beschikbaar</div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
