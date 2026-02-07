@@ -3,16 +3,27 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
-from app.auth.jwt import create_access_token, create_refresh_token, decode_token
+from app.auth.email import send_password_reset_email, send_verification_email
+from app.auth.jwt import (
+    create_access_token,
+    create_email_verification_token,
+    create_password_reset_token,
+    create_refresh_token,
+    decode_token,
+)
 from app.auth.password import hash_password, verify_password
 from app.auth.schemas import (
+    EmailVerifyRequest,
     LoginRequest,
     MessageResponse,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshRequest,
     TokenResponse,
     UserCreate,
@@ -30,6 +41,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     """
@@ -39,6 +51,7 @@ async def register(
     Returns JWT access + refresh token pair immediately.
 
     Email verification is NOT enforced at registration - user gets 48h grace period.
+    Verification email is sent in background.
     """
     # Check if email already exists (case-insensitive, globally unique)
     result = await db.execute(
@@ -91,9 +104,9 @@ async def register(
     # Create access token
     access_token = create_access_token(str(user.id), str(user.organization_id))
 
-    # TODO (01-03): Send verification email in background
-    # For now, just log the verification URL
-    print(f"TODO: Send verification email to {user.email}")
+    # Send verification email in background
+    verification_token = create_email_verification_token(str(user.id), user.email)
+    background_tasks.add_task(send_verification_email, user.email, verification_token)
 
     return TokenResponse(
         access_token=access_token,
@@ -337,3 +350,193 @@ async def get_me(
     Serves as "am I still logged in?" check for frontend.
     """
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/verify-email", response_model=MessageResponse)
+async def verify_email(
+    verify_data: EmailVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """
+    Verify user's email address using verification token.
+
+    Idempotent - returns success if already verified.
+    """
+    # Decode and validate token
+    try:
+        payload = decode_token(verify_data.token)
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification link expired. Request a new one.",
+        )
+    except InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification link",
+        )
+
+    # Verify token type
+    if payload.get("type") != "email_verification":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification link",
+        )
+
+    # Extract user_id and email from token
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    if not user_id or not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification link",
+        )
+
+    # Find user
+    result = await db.execute(
+        select(User).where(User.id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification link",
+        )
+
+    # Verify email matches (security check)
+    if user.email.lower() != email.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification link",
+        )
+
+    # If already verified, return success (idempotent)
+    if user.email_verified:
+        return MessageResponse(message="Email already verified")
+
+    # Mark email as verified
+    user.email_verified = True
+    user.email_verified_at = datetime.utcnow()
+    await db.commit()
+
+    return MessageResponse(message="Email verified successfully")
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+async def resend_verification(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+) -> MessageResponse:
+    """
+    Resend email verification link to authenticated user.
+
+    Requires authentication. Idempotent if already verified.
+    """
+    # If already verified, return success
+    if current_user.email_verified:
+        return MessageResponse(message="Email already verified")
+
+    # Create new verification token and send email
+    verification_token = create_email_verification_token(
+        str(current_user.id), current_user.email
+    )
+    background_tasks.add_task(send_verification_email, current_user.email, verification_token)
+
+    return MessageResponse(message="Verification email sent")
+
+
+@router.post("/password-reset/request", response_model=MessageResponse)
+async def request_password_reset(
+    reset_request: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """
+    Request password reset email.
+
+    ALWAYS returns success to prevent user enumeration.
+    Only sends email if user exists and uses email authentication.
+    """
+    # Look up user by email (case-insensitive)
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == reset_request.email.lower())
+    )
+    user = result.scalar_one_or_none()
+
+    # If user exists and uses email auth, send reset email
+    if user is not None and user.auth_provider == "email":
+        reset_token = create_password_reset_token(str(user.id))
+        background_tasks.add_task(send_password_reset_email, user.email, reset_token)
+
+    # ALWAYS return success (prevent enumeration)
+    return MessageResponse(message="If the email exists, a reset link has been sent")
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+async def confirm_password_reset(
+    reset_confirm: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """
+    Confirm password reset and set new password.
+
+    Revokes all refresh tokens for security (forces re-login everywhere).
+    """
+    # Decode and validate token
+    try:
+        payload = decode_token(reset_confirm.token)
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset link expired. Request a new one.",
+        )
+    except InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset link",
+        )
+
+    # Verify token type
+    if payload.get("type") != "password_reset":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset link",
+        )
+
+    # Extract user_id
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset link",
+        )
+
+    # Find user
+    result = await db.execute(
+        select(User).where(User.id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset link",
+        )
+
+    # Update password
+    user.hashed_password = hash_password(reset_confirm.new_password)
+
+    # Revoke ALL refresh tokens for this user (security: force re-login everywhere)
+    stmt = (
+        select(RefreshToken)
+        .where(RefreshToken.user_id == user.id)
+        .where(RefreshToken.revoked == False)
+    )
+    result = await db.execute(stmt)
+    tokens_to_revoke = result.scalars().all()
+    for token in tokens_to_revoke:
+        token.revoked = True
+        token.revoked_at = datetime.utcnow()
+
+    await db.commit()
+
+    return MessageResponse(message="Password reset successfully")

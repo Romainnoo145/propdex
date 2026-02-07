@@ -56,3 +56,22 @@ class MessageResponse(BaseModel):
     """Generic message response schema."""
 
     message: str
+
+
+class EmailVerifyRequest(BaseModel):
+    """Schema for email verification request."""
+
+    token: str
+
+
+class PasswordResetRequest(BaseModel):
+    """Schema for password reset request."""
+
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    """Schema for password reset confirmation."""
+
+    token: str
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")

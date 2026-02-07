@@ -58,6 +58,46 @@ def create_refresh_token(user_id: str, organization_id: str) -> tuple[str, str]:
     return token, jti
 
 
+def create_email_verification_token(user_id: str, email: str) -> str:
+    """
+    Create a JWT token for email verification.
+
+    Args:
+        user_id: User UUID as string
+        email: User's email address
+
+    Returns:
+        Encoded JWT verification token (48 hours expiration)
+    """
+    expire = datetime.utcnow() + timedelta(hours=48)
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "type": "email_verification",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def create_password_reset_token(user_id: str) -> str:
+    """
+    Create a JWT token for password reset.
+
+    Args:
+        user_id: User UUID as string
+
+    Returns:
+        Encoded JWT reset token (1 hour expiration for security)
+    """
+    expire = datetime.utcnow() + timedelta(hours=1)
+    payload = {
+        "sub": user_id,
+        "type": "password_reset",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
 def decode_token(token: str) -> dict:
     """
     Decode and validate a JWT token.
