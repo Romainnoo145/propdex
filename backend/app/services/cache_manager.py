@@ -36,6 +36,7 @@ async def get_cached_or_fetch(
     organization_id: uuid.UUID,
     fetch_fn: Callable[[], Awaitable[dict]],
     session: AsyncSession,
+    force_refresh: bool = False,
 ) -> CacheResult:
     """
     Get cached API response or fetch fresh data if stale/missing.
@@ -49,6 +50,7 @@ async def get_cached_or_fetch(
         organization_id: Tenant ID for multi-tenant isolation
         fetch_fn: Async function to fetch fresh data from external API
         session: SQLAlchemy async session
+        force_refresh: If True, bypass cache and fetch fresh data (default: False)
 
     Returns:
         CacheResult with data, metadata, and cache hit status
@@ -59,25 +61,35 @@ async def get_cached_or_fetch(
     ttl_seconds = CACHE_TTL[source]
     now = datetime.utcnow()
 
-    # Look up cached entry
-    stmt = select(CachedAPIResponse).where(
-        CachedAPIResponse.organization_id == organization_id,
-        CachedAPIResponse.cache_key == cache_key,
-    )
-    result = await session.execute(stmt)
-    cached_entry = result.scalar_one_or_none()
+    # If force_refresh is True, skip cache lookup entirely
+    if not force_refresh:
+        # Look up cached entry
+        stmt = select(CachedAPIResponse).where(
+            CachedAPIResponse.organization_id == organization_id,
+            CachedAPIResponse.cache_key == cache_key,
+        )
+        result = await session.execute(stmt)
+        cached_entry = result.scalar_one_or_none()
 
-    # Check if cache is fresh
-    if cached_entry:
-        age_seconds = int((now - cached_entry.fetched_at).total_seconds())
-        if age_seconds < cached_entry.ttl_seconds:
-            # Cache hit - fresh data
-            return CacheResult(
-                data=cached_entry.response_data,
-                cached_at=cached_entry.fetched_at.isoformat() + "Z",
-                age_seconds=age_seconds,
-                is_cached=True,
-            )
+        # Check if cache is fresh
+        if cached_entry:
+            age_seconds = int((now - cached_entry.fetched_at).total_seconds())
+            if age_seconds < cached_entry.ttl_seconds:
+                # Cache hit - fresh data
+                return CacheResult(
+                    data=cached_entry.response_data,
+                    cached_at=cached_entry.fetched_at.isoformat() + "Z",
+                    age_seconds=age_seconds,
+                    is_cached=True,
+                )
+    else:
+        # Force refresh: look up entry for upsert, but don't return it
+        stmt = select(CachedAPIResponse).where(
+            CachedAPIResponse.organization_id == organization_id,
+            CachedAPIResponse.cache_key == cache_key,
+        )
+        result = await session.execute(stmt)
+        cached_entry = result.scalar_one_or_none()
 
     # Cache miss or stale - fetch fresh data
     fresh_data = await fetch_fn()

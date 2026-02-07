@@ -8,6 +8,8 @@ CACHE_TTL = {
     "bag": 86400,           # 24 hours
     "kadaster": 604800,     # 7 days
     "bestemmingsplan": 7776000,  # 90 days
+    "dso": 7776000,         # 90 days (zoning data changes rarely)
+    "rce": 2592000,         # 30 days (monument status changes infrequently)
 }
 
 
@@ -91,6 +93,10 @@ class Settings(BaseSettings):
     BAG_API_KEY: str = Field(
         default="",
         description="BAG API key for Kadaster Individuele Bevragingen (register at lvbag.github.io)",
+    )
+    DSO_API_KEY: str = Field(
+        default="",
+        description="DSO Ruimtelijke Plannen API key (register at developer.omgevingswet.overheid.nl)",
     )
 
     @property
