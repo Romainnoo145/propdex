@@ -116,7 +116,10 @@ async def check_report_freshness(
 
         # Parse saved timestamp
         try:
+            # Parse ISO timestamp and convert to naive UTC for comparison with fetched_at
             saved_dt = datetime.fromisoformat(saved_cached_at.replace("Z", "+00:00"))
+            # Remove timezone info to match fetched_at (naive UTC)
+            saved_dt = saved_dt.replace(tzinfo=None)
         except (ValueError, AttributeError):
             # Invalid timestamp format, skip
             continue
