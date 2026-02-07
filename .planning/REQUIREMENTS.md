@@ -65,27 +65,27 @@ Deferred to v2.0 (frontend milestone):
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Pending | Pending |
-| TEST-02 | Pending | Pending |
-| TEST-03 | Pending | Pending |
-| TEST-04 | Pending | Pending |
-| TEST-05 | Pending | Pending |
-| TEST-06 | Pending | Pending |
-| TEST-07 | Pending | Pending |
-| TEST-08 | Pending | Pending |
-| TEST-09 | Pending | Pending |
-| TEST-10 | Pending | Pending |
-| SEC-01 | Pending | Pending |
-| CFG-01 | Pending | Pending |
-| CFG-02 | Pending | Pending |
-| INFRA-01 | Pending | Pending |
-| DOC-01 | Pending | Pending |
+| TEST-01 | Phase 7 | Pending |
+| TEST-02 | Phase 7 | Pending |
+| TEST-03 | Phase 8 | Pending |
+| TEST-04 | Phase 8 | Pending |
+| TEST-05 | Phase 9 | Pending |
+| TEST-06 | Phase 9 | Pending |
+| TEST-07 | Phase 9 | Pending |
+| TEST-08 | Phase 10 | Pending |
+| TEST-09 | Phase 10 | Pending |
+| TEST-10 | Phase 10 | Pending |
+| SEC-01 | Phase 6 | Pending |
+| CFG-01 | Phase 6 | Pending |
+| CFG-02 | Phase 6 | Pending |
+| INFRA-01 | Phase 9 | Pending |
+| DOC-01 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15/15 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after initial definition*
+*Last updated: 2026-02-07 (roadmap traceability mapped)*
