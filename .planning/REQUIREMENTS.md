@@ -26,12 +26,12 @@ Requirements for production hardening. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SEC-01**: Database connection uses app_role with enforced RLS policies instead of superuser bypass
+- [x] **SEC-01**: Database connection uses app_role with enforced RLS policies instead of superuser bypass
 
 ### Configuration
 
-- [ ] **CFG-01**: Single .env file in backend/ with root .env removed or symlinked
-- [ ] **CFG-02**: Freshness threshold is configurable per organization (not hardcoded 24h)
+- [x] **CFG-01**: Single .env file in backend/ with root .env removed or symlinked
+- [x] **CFG-02**: Freshness threshold is configurable per organization (not hardcoded 24h)
 
 ### Infrastructure
 
@@ -75,9 +75,9 @@ Deferred to v2.0 (frontend milestone):
 | TEST-08 | Phase 10 | Pending |
 | TEST-09 | Phase 10 | Pending |
 | TEST-10 | Phase 10 | Pending |
-| SEC-01 | Phase 6 | Pending |
-| CFG-01 | Phase 6 | Pending |
-| CFG-02 | Phase 6 | Pending |
+| SEC-01 | Phase 6 | Complete |
+| CFG-01 | Phase 6 | Complete |
+| CFG-02 | Phase 6 | Complete |
 | INFRA-01 | Phase 9 | Pending |
 | DOC-01 | Phase 7 | Pending |
 
