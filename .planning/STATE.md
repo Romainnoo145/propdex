@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 **Milestone:** v1.1 Production Hardening
-**Phase:** Phase 9 - Intelligence Testing
+**Phase:** Phase 10 - Report & Multi-Tenant Testing
 **Plan:** 2/3 complete
 **Status:** In progress
 
-**Progress:** ██████████░░░░░░░░░░ 67% (10/15 requirements)
+**Progress:** ████████████░░░░░░░░ 80% (12/15 requirements)
 
-**Next Action:** `/gsd:execute-phase 09-03` (Aggregator integration tests)
+**Next Action:** Plan 10-03 - Multi-Tenant Isolation Integration Tests (TEST-10, TEST-11)
 
 ---
 
@@ -75,6 +75,14 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **09-01 (TEST-05):** Patch internal _fetch_* functions (not external APIs) for monument aggregator unit tests to isolate aggregation logic
 - **09-02 (TEST-07):** Use MagicMock (not real anthropic.types.Message) for Claude client tests to reduce SDK coupling
 - **09-02 (INFRA-01):** Manual mock injection to app.state for ARQ lifecycle tests (avoids Redis requirement, verifies structure only)
+- **09-03 (TEST-06):** Patch get_dso_client function (not instance) for zoning aggregator since it's called inside fetch closure
+- **09-03 (TEST-06):** Patch _rce_client.query_by_location with new_callable=AsyncMock for proper async handling in monument tests
+- **09-03 (TEST-06):** Real database for cache operations in aggregator integration tests (not mocked) following test_cache_manager.py pattern
+
+**Phase 10 Decisions:**
+- **10-02 (TEST-09):** Test WeasyPrint synchronously (def test_*) not async - CPU-bound operation
+- **10-02 (TEST-09):** Mock WeasyPrint HTML class for template tests, no mock for full PDF generation tests
+- **10-02 (TEST-09):** Validate PDF structure via magic bytes (b'%PDF') not visual rendering
 
 ### Active TODOs
 
@@ -90,7 +98,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - [x] Phase 8 COMPLETE - Ready for Phase 9
 - [x] Plan 09-01: Aggregator Unit Tests (COMPLETE)
 - [x] Plan 09-02: Claude AI Parsing & ARQ Lifecycle Tests (COMPLETE)
-- [ ] Plan 09-03: Aggregator Integration Tests (IN PROGRESS)
+- [x] Plan 09-03: Aggregator Integration Tests (COMPLETE)
 - [ ] Frontend integration (deferred to v2.0)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing in Phase 9)
 - [ ] Production deployment: Create app_role and switch to RLS-enforced credentials
@@ -101,23 +109,23 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **Plan 10-02 COMPLETE (2026-02-07):** PDF export unit tests — 9 new tests (5 template rendering + 3 PDF generation + 1 signature), synchronous test pattern for CPU-bound operations
+- **PHASE 9 COMPLETE (2026-02-07):** Intelligence Testing — 66 new tests (42 aggregator unit + 12 Claude unit + 12 aggregator integration), 200 total tests passing
 - **Plan 09-02 COMPLETE (2026-02-07):** AI parsing & ARQ lifecycle tests — 15 new tests (12 Claude client unit + 3 ARQ lifecycle integration), 191 total tests passing
 - **Plan 09-01 COMPLETE (2026-02-07):** Aggregator unit tests — 42 new tests (28 zoning + 14 monument), spatial filtering, Dutch field variants, multi-source consensus
 - **PHASE 8 COMPLETE (2026-02-07):** Data Pipeline Testing — 83 new tests (63 API client unit + 20 cache integration), 134 total tests passing
 - **Plan 08-02 COMPLETE (2026-02-07):** Cache manager integration tests — 20 tests: CRUD, TTL expiration, force refresh, invalidation, 3 multi-tenant isolation tests
 - **Plan 08-01 COMPLETE (2026-02-07):** API client unit tests — 63 tests across 5 clients (BAG, PDOK Locatieserver, PDOK Cadastral, DSO, RCE) with shared mock helpers
 - **PHASE 7 COMPLETE (2026-02-07):** Test Infrastructure & Auth Testing — 51 total tests (20 unit + 31 integration), pytest async support, full auth lifecycle coverage
-- **Plan 07-01 COMPLETE (2026-02-07):** Test infrastructure with 20 passing auth unit tests, Phase 1 verification document
-- **Plan 06-03 COMPLETE (2026-02-07):** RLS enforcement — fail-closed policies on all 7 tenant tables, SET LOCAL context, app_role separation
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Plan 09-02 execution complete
-**Stopped At:** Completed 09-02-PLAN.md (AI Parsing & ARQ Lifecycle Tests)
+**Last Session:** 2026-02-07 — Plan 10-02 complete (PDF export unit tests)
+**Stopped At:** Plan 10-02 finalized — ready for Plan 10-03
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Plan 09-02 complete — TEST-07 + INFRA-01 requirements satisfied, 15 new tests, 191 total tests passing)*
+*Last updated: 2026-02-07 (Plan 10-02 complete — TEST-09 satisfied, 209 total tests passing)*
