@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 9 - Intelligence Testing
-**Plan:** 1/3 complete
+**Plan:** 2/3 complete
 **Status:** In progress
 
-**Progress:** █████████░░░░░░░░░░░ 60% (9/15 requirements)
+**Progress:** ██████████░░░░░░░░░░ 67% (10/15 requirements)
 
-**Next Action:** Execute 09-02-PLAN.md (Claude AI parsing tests)
+**Next Action:** `/gsd:execute-phase 09-03` (Aggregator integration tests)
 
 ---
 
@@ -73,6 +73,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **09-01 (TEST-05):** Test spatial filtering with real shapely Point/Polygon objects (not mocks) for geometry validation
 - **09-01 (TEST-05):** Use pytest.mark.parametrize for 8 Dutch dimension field variants to ensure comprehensive mapping coverage
 - **09-01 (TEST-05):** Patch internal _fetch_* functions (not external APIs) for monument aggregator unit tests to isolate aggregation logic
+- **09-02 (TEST-07):** Use MagicMock (not real anthropic.types.Message) for Claude client tests to reduce SDK coupling
+- **09-02 (INFRA-01):** Manual mock injection to app.state for ARQ lifecycle tests (avoids Redis requirement, verifies structure only)
 
 ### Active TODOs
 
@@ -87,8 +89,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - [x] Plan 08-02: Cache Manager Integration Tests (COMPLETE)
 - [x] Phase 8 COMPLETE - Ready for Phase 9
 - [x] Plan 09-01: Aggregator Unit Tests (COMPLETE)
-- [ ] Plan 09-02: Claude AI Parsing Tests (IN PROGRESS)
-- [ ] Plan 09-03: Aggregator Integration Tests (PENDING)
+- [x] Plan 09-02: Claude AI Parsing & ARQ Lifecycle Tests (COMPLETE)
+- [ ] Plan 09-03: Aggregator Integration Tests (IN PROGRESS)
 - [ ] Frontend integration (deferred to v2.0)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing in Phase 9)
 - [ ] Production deployment: Create app_role and switch to RLS-enforced credentials
@@ -99,6 +101,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **Plan 09-02 COMPLETE (2026-02-07):** AI parsing & ARQ lifecycle tests — 15 new tests (12 Claude client unit + 3 ARQ lifecycle integration), 191 total tests passing
 - **Plan 09-01 COMPLETE (2026-02-07):** Aggregator unit tests — 42 new tests (28 zoning + 14 monument), spatial filtering, Dutch field variants, multi-source consensus
 - **PHASE 8 COMPLETE (2026-02-07):** Data Pipeline Testing — 83 new tests (63 API client unit + 20 cache integration), 134 total tests passing
 - **Plan 08-02 COMPLETE (2026-02-07):** Cache manager integration tests — 20 tests: CRUD, TTL expiration, force refresh, invalidation, 3 multi-tenant isolation tests
@@ -111,10 +114,10 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Plan 09-01 execution complete
-**Stopped At:** Completed 09-01-PLAN.md (Aggregator Unit Tests)
+**Last Session:** 2026-02-07 — Plan 09-02 execution complete
+**Stopped At:** Completed 09-02-PLAN.md (AI Parsing & ARQ Lifecycle Tests)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Plan 09-01 complete — TEST-05 requirement satisfied, 42 new tests, 176 total tests passing)*
+*Last updated: 2026-02-07 (Plan 09-02 complete — TEST-07 + INFRA-01 requirements satisfied, 15 new tests, 191 total tests passing)*
