@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core Value:** Address → Property Intelligence Report
-**Current Focus:** v1.0 shipped — planning next milestone
+**Current Focus:** v1.1 Production Hardening
 
 ---
 
 ## Current Position
 
-**Phase:** v1.0 complete (5 phases, 17 plans)
-**Status:** Milestone shipped
-**Last Activity:** 2026-02-07 — v1.0 Core Intelligence Engine shipped
+**Phase:** Not started (defining requirements)
+**Status:** Defining requirements
+**Last Activity:** 2026-02-07 — Milestone v1.1 started
 
-**Next Action:** `/gsd:new-milestone` — start Milestone 2
+**Next Action:** Define requirements → create roadmap
 
 ---
 
@@ -23,16 +23,16 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 ### Key Decisions
 
-See `.planning/PROJECT.md` Key Decisions table (10 decisions with outcomes).
+See `.planning/PROJECT.md` Key Decisions table (11 decisions with outcomes).
 
 Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.md`.
 
 ### Active TODOs
 
-- [ ] Start Milestone 2 planning (`/gsd:new-milestone`)
-- [ ] Frontend integration (dashboard, report list, PDF download)
+- [ ] Define v1.1 requirements (10 tech debt items)
+- [ ] Create v1.1 roadmap
+- [ ] Frontend integration (deferred to v2.0)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing)
-- [ ] Address tech debt from v1.0 audit (14 items, primarily: no automated tests)
 
 ### Blockers
 
@@ -46,8 +46,8 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — v1.0 milestone completion
-**Stopped At:** Milestone archived, ready for next milestone
+**Last Session:** 2026-02-07 — v1.1 milestone initialization
+**Stopped At:** Defining requirements for tech debt milestone
 **Resume File:** None
 
 ---

@@ -37,7 +37,18 @@ This is the ONE thing that must work. Everything else is secondary.
 - Report management with save/list/search, project folders, PDF export
 - Multi-tenant isolation enforced at every layer
 
-**What's next:** Frontend dashboard, map visualization, deal pipeline
+**What's next:** Production hardening (tests, RLS enforcement, config cleanup)
+
+## Current Milestone: v1.1 Production Hardening
+
+**Goal:** Stabilize the v1.0 backend with comprehensive test coverage, enforce row-level security properly, and clean up configuration debt — making the codebase production-ready before building the frontend.
+
+**Target features:**
+- Comprehensive automated test suite (unit + integration) across all 5 backend modules
+- RLS enforcement with proper app_role database connection (not superuser bypass)
+- Configuration cleanup (.env deduplication, configurable freshness thresholds)
+- ARQ worker lifecycle integration with main application
+- Phase 1 formal verification
 
 ## Business Model
 
@@ -120,6 +131,7 @@ This is the ONE thing that must work. Everything else is secondary.
 | PostgreSQL JSONB cache (not Redis) | Reduces infrastructure; cache survives restarts; leverages existing DB | Working well, Redis only for ARQ jobs |
 | Progressive loading for AI parsing | Claude API takes 10-30s; never block HTTP response | ARQ worker + polling pattern working |
 | PropertyReportResponse as central schema | One schema flows from aggregator through save to PDF export | Clean data contract across all phases |
+| Tech debt before frontend | Stabilize backend before stacking frontend on top | — Pending |
 
 ## Context
 
@@ -130,4 +142,4 @@ This is the ONE thing that must work. Everything else is secondary.
 - **Key Dutch data sources:** PDOK, BAG, Kadaster, ruimtelijkeplannen.nl, Rijksdienst voor het Cultureel Erfgoed
 
 ---
-*Last updated: 2026-02-07 after v1.0 milestone*
+*Last updated: 2026-02-07 after v1.1 milestone start*
