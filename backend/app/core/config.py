@@ -5,10 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Cache TTL configuration (in seconds)
 CACHE_TTL = {
+    "ai_parsed": 7776000,   # 90 days (parsed plan data reused across addresses)
     "bag": 86400,           # 24 hours
-    "kadaster": 604800,     # 7 days
     "bestemmingsplan": 7776000,  # 90 days
     "dso": 7776000,         # 90 days (zoning data changes rarely)
+    "kadaster": 604800,     # 7 days
     "rce": 2592000,         # 30 days (monument status changes infrequently)
 }
 
@@ -97,6 +98,16 @@ class Settings(BaseSettings):
     DSO_API_KEY: str = Field(
         default="",
         description="DSO Ruimtelijke Plannen API key (register at developer.omgevingswet.overheid.nl)",
+    )
+
+    # AI Configuration
+    ANTHROPIC_API_KEY: str = Field(
+        default="",
+        description="Anthropic API key for Claude AI parsing",
+    )
+    REDIS_URL: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis URL for ARQ task queue",
     )
 
     @property
