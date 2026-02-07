@@ -1,167 +1,25 @@
 # CRM Plus — Roadmap
 
-## Overview
+## Milestones
 
-Milestone 1 delivers the Core Intelligence Engine: enter any Dutch address and receive instant property intelligence reports with kadaster data, zoning rules, monument status, and AI-powered bestemmingsplan parsing. This MVP proves the speed value proposition — compressing 3-6 weeks of manual due diligence into 3-minute structured reports.
+- SHIPPED **v1.0 Core Intelligence Engine** — Phases 1-5 (shipped 2026-02-07)
 
-**Phases:** 5
-**Depth:** Standard
-**Coverage:** 14/14 Milestone 1 requirements mapped
+## Shipped
 
----
+<details>
+<summary>v1.0 Core Intelligence Engine (Phases 1-5) — SHIPPED 2026-02-07</summary>
 
-## Phase 1: Foundation & Authentication
+- [x] Phase 1: Foundation & Authentication (3/3 plans) — JWT auth, multi-tenant RLS, email verification, Google OAuth, rate limiting
+- [x] Phase 2: Core Data Pipeline (3/3 plans) — httpx client, JSONB cache, BAG/PDOK APIs, property aggregator
+- [x] Phase 3: Zoning & Monument Intelligence (4/4 plans) — DSO zoning, RCE monuments, spatial intersection, PropertyReportResponse
+- [x] Phase 4: AI Document Parsing (4/4 plans) — Claude PDF parsing, ARQ worker, job polling, upload fallback
+- [x] Phase 5: Report Management (3/3 plans) — Save/list/search, project folders, PDF export, freshness detection
 
-**Goal:** Users can securely access the platform with multi-tenant data isolation
+**17 plans, 14 requirements, 8,281 LOC Python**
+**Archive:** `.planning/milestones/v1.0-ROADMAP.md`
 
-**Dependencies:** None
-
-**Requirements:** INFRA-01, INFRA-02
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 01-01-PLAN.md — Project scaffolding, DB models, Alembic migrations, RLS policies
-- [x] 01-02-PLAN.md — Core auth endpoints (register, login, refresh, logout, me) + tenant middleware
-- [x] 01-03-PLAN.md — Email verification, password reset, Google OAuth, rate limiting
-
-**Success Criteria:**
-1. User can create an account and log in with email/password
-2. User stays logged in across browser sessions
-3. User can log out from any page
-4. All database queries automatically filter by organization_id
-5. No data leakage between organizations is possible
-
-**Status:** Complete
+</details>
 
 ---
 
-## Phase 2: Core Data Pipeline
-
-**Goal:** System can fetch and aggregate Dutch government property data in parallel
-
-**Dependencies:** Phase 1 (requires authentication and multi-tenant foundation)
-
-**Requirements:** PROP-01, PROP-02, INFRA-03
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 02-01-PLAN.md — HTTP client infrastructure (httpx lifespan) + cache model/migration + cache manager
-- [x] 02-02-PLAN.md — Government API clients (PDOK Locatieserver, BAG API) + address resolver service
-- [x] 02-03-PLAN.md — PDOK Cadastral client, property aggregator (parallel fetch), POST /api/properties/lookup endpoint
-
-**Success Criteria:**
-1. User can enter a Dutch address and trigger property lookup
-2. System fetches kadaster data (ownership, transactions, boundaries, surface area) from PDOK/Kadaster APIs
-3. Multiple government APIs are called in parallel (not sequentially)
-4. API responses are cached with appropriate TTLs to avoid redundant calls
-5. Report displays kadaster data with clear data source attribution
-6. Cached data shows staleness indicators (e.g., "Updated 2 hours ago")
-
-**Status:** Complete
-
----
-
-## Phase 3: Zoning & Monument Intelligence
-
-**Goal:** Reports include bestemmingsplan summary and monument/heritage status
-
-**Dependencies:** Phase 2 (requires core data pipeline working)
-
-**Requirements:** PROP-03, PROP-04, PROP-06
-
-**Plans:** 4 plans
-
-Plans:
-- [x] 03-01-PLAN.md — Dependencies (shapely, pyproj), config (DSO_API_KEY, cache TTLs), cache force_refresh, all Phase 3 schemas
-- [x] 03-02-PLAN.md — DSO Spatial Plans API client + zoning aggregation service with spatial intersection
-- [x] 03-03-PLAN.md — RCE Monument API client + monument aggregation service with multi-source conflict detection
-- [x] 03-04-PLAN.md — Property aggregator integration (zoning + monuments + map data), endpoint force_refresh support
-
-**Success Criteria:**
-1. Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
-2. Report includes monument status (rijksmonument, gemeentelijk monument, or none)
-3. Monument status is checked from multiple sources (RCE, BAG, Kadaster) and conflicts are flagged
-4. Each data field shows its source (API vs AI-parsed) with confidence indicator
-5. Heritage restrictions are displayed in plain language for monument properties
-6. User can view property location on interactive map with PDOK tile layers
-
-**Status:** Complete
-
----
-
-## Phase 4: AI Document Parsing
-
-**Goal:** System extracts zoning rules from PDF bestemmingsplannen when API data is insufficient
-
-**Dependencies:** Phase 3 (requires basic intelligence report working)
-
-**Requirements:** PROP-05, INFRA-04
-
-**Plans:** 4 plans
-
-Plans:
-- [x] 04-01-PLAN.md — Dependencies (anthropic, arq), config (ANTHROPIC_API_KEY, REDIS_URL), AI schemas, DB models (PDFDocument, ParsingJob), migration
-- [x] 04-02-PLAN.md — Claude AI client with structured PDF parsing + PDF download service with IMRO validation
-- [x] 04-03-PLAN.md — ARQ background worker + PDF parsing job + plan aggregator (cache-first orchestration)
-- [x] 04-04-PLAN.md — API integration (job status polling, PDF upload endpoint, property aggregator extension, ARQ lifespan)
-
-**Success Criteria:**
-1. System downloads bestemmingsplan PDF when structured API data is unavailable
-2. AI parsing runs asynchronously in background (user sees progress, not timeout)
-3. User can see job status while AI processes document
-4. Extracted zoning rules are structured and displayed with confidence scores (LOW/MEDIUM/HIGH)
-5. AI-parsed data includes disclaimers ("Verify with notaris" for ambiguous interpretations)
-6. PDF parsing detects complex structures (tables, footnotes) and flags incompleteness
-
-**Status:** Complete
-
----
-
-## Phase 5: Report Management
-
-**Goal:** Users can save, list, and revisit property intelligence reports with project organization, PDF export, and data freshness indicators
-
-**Dependencies:** Phase 3 (requires complete reports to save)
-
-**Requirements:** RPT-01, RPT-02, RPT-03
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 05-01-PLAN.md — SavedReport + Project models, Alembic migration (JSONB, soft-delete, GIN indexes), report/project schemas
-- [x] 05-02-PLAN.md — Report CRUD endpoints (save, list, get, delete, restore, notes, project assignment) + Project CRUD + search/filter/sort
-- [x] 05-03-PLAN.md — PDF export (WeasyPrint + Jinja2 template) + data freshness detection service + export/freshness endpoints
-
-**Success Criteria:**
-1. User can save a property intelligence report for later reference
-2. User can view a list of all saved reports (filtered by their organization)
-3. User can re-open a saved report and see full details
-4. Saved reports show when they were generated and last updated
-5. User can delete saved reports they no longer need
-6. User can export a saved report as a professional PDF document
-7. User can organize reports into project folders
-8. User can see if saved report data has fresher cache available
-
-**Status:** Complete
-
----
-
-## Progress
-
-| Phase | Goal | Requirements | Status |
-|-------|------|--------------|--------|
-| 1 - Foundation & Authentication | Users can securely access platform | INFRA-01, INFRA-02 | Complete |
-| 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Complete |
-| 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Complete |
-| 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Complete |
-| 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Complete |
-
-**Current Phase:** Complete
-**Completed:** 5/5
-**Coverage:** 14/14 requirements mapped
-
----
-
-*Last updated: 2026-02-07 (Milestone 1 complete)*
+*Last updated: 2026-02-07 (v1.0 shipped)*

@@ -24,6 +24,21 @@ Enter any Dutch address and receive within minutes:
 
 This is the ONE thing that must work. Everything else is secondary.
 
+## Current State
+
+**Shipped:** v1.0 Core Intelligence Engine (2026-02-07)
+**Codebase:** 8,281 lines Python (FastAPI backend)
+**Tech Stack:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, anthropic (Claude), arq (Redis), WeasyPrint
+
+**What's working:**
+- Full backend API with 23+ authenticated endpoints
+- Property lookup with parallel government API fetching (PDOK, BAG, DSO, RCE)
+- AI bestemmingsplan parsing via Claude with background processing
+- Report management with save/list/search, project folders, PDF export
+- Multi-tenant isolation enforced at every layer
+
+**What's next:** Frontend dashboard, map visualization, deal pipeline
+
 ## Business Model
 
 - Built for one specific client first (single-tenant MVP)
@@ -39,12 +54,12 @@ This is the ONE thing that must work. Everything else is secondary.
 
 **Hybrid approach:**
 - **API integrations** where available: Kadaster (PDOK), BAG (Basisregistratie Adressen en Gebouwen), ruimtelijkeplannen.nl, Rijksmonumentenregister
-- **AI document parsing** as fallback: upload bestemmingsplan PDFs and extract zoning rules using LLM agents — critical for municipalities without good digital APIs
+- **AI document parsing** as fallback: upload bestemmingsplan PDFs and extract zoning rules using Claude API — critical for municipalities without good digital APIs
 - Gradual improvement: start with the most reliable API sources, expand AI parsing coverage over time
 
 ## Technical Constraints
 
-- Stack to be determined by research phase
+- **Backend:** FastAPI + async PostgreSQL (SQLAlchemy 2.x)
 - Must support Dutch-language content and data sources
 - Must comply with AVG/GDPR for personal data handling
 - Multi-tenant architecture from the start (even if single client initially)
@@ -62,20 +77,24 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Validated
 
-(None yet — ship to validate)
+- User can enter a Dutch address and receive a structured property report — v1.0
+- Report includes kadaster data (ownership, plot, transactions) — v1.0
+- Report includes zoning summary (permitted functions, height, density, parking) — v1.0
+- Report includes monument/heritage status and restrictions — v1.0
+- User can save reports and revisit them — v1.0
+- Property data sourced via Dutch government APIs (PDOK, BAG, ruimtelijkeplannen.nl) — v1.0
+- AI parsing of bestemmingsplan PDFs as fallback for unstructured data — v1.0
+- Authentication and user management for small team — v1.0
+- Organization-based data isolation — v1.0
 
 ### Active
 
-- [ ] User can enter a Dutch address and receive a structured property report
-- [ ] Report includes kadaster data (ownership, plot, transactions)
-- [ ] Report includes zoning summary (permitted functions, height, density, parking)
-- [ ] Report includes monument/heritage status and restrictions
-- [ ] User can save reports and revisit them
 - [ ] User can track multiple properties as opportunities in a simple pipeline
-- [ ] Property data sourced via Dutch government APIs (PDOK, BAG, ruimtelijkeplannen.nl)
-- [ ] AI parsing of bestemmingsplan PDFs as fallback for unstructured data
-- [ ] Authentication and user management for small team
-- [ ] Organization-based data isolation
+- [ ] Address input with BAG autocomplete suggestions
+- [ ] Interactive map visualization with property location on PDOK tile layers
+- [ ] PDF export of property intelligence report (branded, professional layout)
+- [ ] Comparison view — side-by-side comparison of 2-3 properties
+- [ ] Role-based access (admin, analyst, viewer) for larger teams
 
 ### Out of Scope
 
@@ -83,7 +102,6 @@ This is the ONE thing that must work. Everything else is secondary.
 - Subsidy application automation — too complex for v1, possible future integration
 - Financial feasibility calculations — requires market data integrations beyond v1
 - Buyer/investor CRM and marketing automation — different product phase
-- Mobile app — web responsive first, native app post-MVP
 - Automated vergunning (permit) filing — requires government system integration
 - AI-generated photos/videos — marketing feature, not core intelligence
 - Construction/project management — different product category
@@ -92,12 +110,16 @@ This is the ONE thing that must work. Everything else is secondary.
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Due diligence speed is core value, not CRM | Client's biggest pain is research time, not contact management | CRM is a lightweight wrapper around the intelligence engine |
-| Hybrid data sourcing (API + AI parsing) | Not all municipalities have good digital data; APIs alone won't cover everything | Build API integrations first, AI parsing as fallback |
-| One client first, then SaaS | De-risks the product by validating with a real user before scaling | Multi-tenant architecture from day one, single client deployment |
-| Web-first, mobile later | Primary workflow is research/analysis — desktop suits better | Responsive web dashboard, mobile companion post-MVP |
-| MVP = address-to-report | Smallest thing that saves time and proves the concept | Pipeline/CRM features come after the core report works |
-| Stack decided by research | Domain has specific needs (GIS, document parsing, NL APIs) | Research phase will recommend optimal stack |
+| Due diligence speed is core value, not CRM | Client's biggest pain is research time, not contact management | Confirmed — core report pipeline works |
+| Hybrid data sourcing (API + AI parsing) | Not all municipalities have good digital data; APIs alone won't cover everything | Confirmed — 5 API clients + Claude fallback |
+| One client first, then SaaS | De-risks the product by validating with a real user before scaling | Multi-tenant from day one, ready for expansion |
+| Web-first, mobile later | Primary workflow is research/analysis — desktop suits better | Backend-only v1.0, frontend next |
+| MVP = address-to-report | Smallest thing that saves time and proves the concept | Confirmed — full report pipeline working |
+| FastAPI + async PostgreSQL | Domain needs: async I/O for parallel API calls, JSONB for flexible caching, spatial queries | Stack proven across 5 phases |
+| PyJWT + Argon2id (not python-jose/bcrypt) | Security: PyJWT prevents algorithm confusion, Argon2id is memory-hard | Production-ready auth system |
+| PostgreSQL JSONB cache (not Redis) | Reduces infrastructure; cache survives restarts; leverages existing DB | Working well, Redis only for ARQ jobs |
+| Progressive loading for AI parsing | Claude API takes 10-30s; never block HTTP response | ARQ worker + polling pattern working |
+| PropertyReportResponse as central schema | One schema flows from aggregator through save to PDF export | Clean data contract across all phases |
 
 ## Context
 
@@ -108,4 +130,4 @@ This is the ONE thing that must work. Everything else is secondary.
 - **Key Dutch data sources:** PDOK, BAG, Kadaster, ruimtelijkeplannen.nl, Rijksdienst voor het Cultureel Erfgoed
 
 ---
-*Last updated: 2026-02-06 after initialization*
+*Last updated: 2026-02-07 after v1.0 milestone*
