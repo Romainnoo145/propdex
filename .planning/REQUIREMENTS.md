@@ -6,8 +6,8 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 
 ### Property Intelligence
 
-- [ ] **PROP-01**: User can enter a Dutch address and trigger a property intelligence lookup
-- [ ] **PROP-02**: Report includes kadaster property data (ownership, transactions, plot boundaries, surface area)
+- [x] **PROP-01**: User can enter a Dutch address and trigger a property intelligence lookup
+- [x] **PROP-02**: Report includes kadaster property data (ownership, transactions, plot boundaries, surface area)
 - [ ] **PROP-03**: Report includes bestemmingsplan summary (permitted functions, max height, density, parking requirements)
 - [ ] **PROP-04**: Report includes monument/heritage status (rijksmonument, gemeentelijk monument, or none) with applicable restrictions
 - [ ] **PROP-05**: AI parsing of bestemmingsplan PDFs extracts zoning rules when structured API data is insufficient
@@ -23,7 +23,7 @@ The MVP — enter an address, get instant property intelligence. Prove the speed
 
 - [x] **INFRA-01**: User can log in and log out securely
 - [x] **INFRA-02**: All data is isolated by organization (multi-tenant)
-- [ ] **INFRA-03**: Government API responses are cached with appropriate TTLs to avoid redundant calls
+- [x] **INFRA-03**: Government API responses are cached with appropriate TTLs to avoid redundant calls
 - [ ] **INFRA-04**: AI document parsing runs asynchronously (user sees progress, not a timeout)
 
 ---
@@ -92,8 +92,8 @@ The full professional tool — map visualization, deal pipeline, document export
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PROP-01 | Phase 2 - Core Data Pipeline | Pending |
-| PROP-02 | Phase 2 - Core Data Pipeline | Pending |
+| PROP-01 | Phase 2 - Core Data Pipeline | Complete |
+| PROP-02 | Phase 2 - Core Data Pipeline | Complete |
 | PROP-03 | Phase 3 - Zoning & Monument Intelligence | Pending |
 | PROP-04 | Phase 3 - Zoning & Monument Intelligence | Pending |
 | PROP-05 | Phase 4 - AI Document Parsing | Pending |
@@ -103,10 +103,10 @@ The full professional tool — map visualization, deal pipeline, document export
 | RPT-03 | Phase 5 - Report Management | Pending |
 | INFRA-01 | Phase 1 - Foundation & Authentication | Complete |
 | INFRA-02 | Phase 1 - Foundation & Authentication | Complete |
-| INFRA-03 | Phase 2 - Core Data Pipeline | Pending |
+| INFRA-03 | Phase 2 - Core Data Pipeline | Complete |
 | INFRA-04 | Phase 4 - AI Document Parsing | Pending |
 
 **Coverage:** 14/14 Milestone 1 requirements mapped ✓
 
 ---
-*Last updated: 2026-02-07 after roadmap creation*
+*Last updated: 2026-02-07 after Phase 2 completion*
