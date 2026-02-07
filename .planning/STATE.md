@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 7 - Test Infrastructure & Auth Testing
-**Plan:** 1/1 complete — Phase 7 DONE
+**Plan:** 2/2 complete — Phase 7 DONE
 **Status:** Phase complete, verified ✓
 
-**Progress:** ███░░░░░░░░░░░░░░░░░ 27% (4/15 requirements)
+**Progress:** ████░░░░░░░░░░░░░░░░ 33% (5/15 requirements)
 
 **Next Action:** `/gsd:plan-phase 8`
 
@@ -58,6 +58,10 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **07-01 (TEST-02):** Use httpx AsyncClient (not TestClient) for async FastAPI endpoint testing
 - **07-01 (TEST-03):** Automatic test database (crmplus_test) creation in conftest.py fixture
 - **07-01 (TEST-04):** Disable rate limiting in tests (override with 9999/minute limiter)
+- **07-02 (TEST-05):** Function-scoped test_engine for Python 3.14 compatibility (pytest-asyncio 0.23.8)
+- **07-02 (TEST-06):** Manual pg_trgm extension installation in test database
+- **07-02 (TEST-07):** Parametrize login error tests to verify enumeration prevention
+- **07-02 (TEST-08):** Manual JWT token creation for security edge case testing
 
 ### Active TODOs
 
@@ -65,8 +69,9 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - [x] Plan 06-02: Configurable Freshness Threshold (COMPLETE)
 - [x] Plan 06-03: RLS Enforcement (COMPLETE)
 - [x] Phase 6 COMPLETE
-- [x] Plan 07-01: Test Infrastructure & Auth Testing (COMPLETE)
-- [ ] Phase 7 COMPLETE - Ready for Phase 8
+- [x] Plan 07-01: Test Infrastructure Setup (COMPLETE)
+- [x] Plan 07-02: Auth Integration Tests (COMPLETE)
+- [x] Phase 7 COMPLETE - Ready for Phase 8
 - [ ] Frontend integration (deferred to v2.0)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing in Phase 9)
 - [ ] Production deployment: Create app_role and switch to RLS-enforced credentials
@@ -77,20 +82,20 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **Plan 07-02 COMPLETE (2026-02-07):** Auth integration tests — 31 tests (13 happy-path + 18 error/security), 63% auth coverage
+- **PHASE 7 COMPLETE (2026-02-07):** Test Infrastructure & Auth Testing — 51 total tests (20 unit + 31 integration), pytest async support, full auth lifecycle coverage
 - **Plan 07-01 COMPLETE (2026-02-07):** Test infrastructure with 20 passing auth unit tests, Phase 1 verification document
-- **PHASE 7 COMPLETE (2026-02-07):** Test Infrastructure & Auth Testing — pytest fixtures, async test support, JWT/password unit tests
 - **Plan 06-03 COMPLETE (2026-02-07):** RLS enforcement — fail-closed policies on all 7 tenant tables, SET LOCAL context, app_role separation
 - **PHASE 6 COMPLETE (2026-02-07):** Security & Configuration — 3 plans (config hardening, configurable freshness, RLS enforcement)
-- **v1.0 SHIPPED (2026-02-07):** Complete backend API — 14/14 requirements, 5 phases, 17 plans, 8,281 LOC Python
 
 ---
 
 ## Session Continuity
 
 **Last Session:** 2026-02-07 — Phase 7 execution complete
-**Stopped At:** Completed 07-01-PLAN.md
+**Stopped At:** Completed 07-02-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Phase 7 complete — 1/1 plan, 1/1 requirement, verified)*
+*Last updated: 2026-02-07 (Phase 7 complete — 2/2 plans, TEST-01 + TEST-02 requirements satisfied, 51 tests passing)*
