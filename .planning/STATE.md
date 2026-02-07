@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Milestone:** v1.1 Production Hardening
 **Phase:** Phase 6 - Security & Configuration
-**Plan:** 06-02 of 3 (Configurable Freshness Threshold)
+**Plan:** 06-01 of 3 (Configuration Hardening) - COMPLETE
 **Status:** In progress
 
-**Progress:** ███████████████████░ 95% (19/20 plans completed)
+**Progress:** ████████████████████ 100% (20/20 plans completed)
 
 **Next Action:** Continue Phase 6 execution (06-03 remaining)
 
@@ -43,8 +43,15 @@ See `.planning/PROJECT.md` Key Decisions table (11 decisions with outcomes).
 
 Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.md`.
 
+**Phase 6 Decisions:**
+- **06-01:** Use stdlib logging (not python-json-logger) for audit events to avoid new dependencies
+- **06-01:** MIGRATION_DATABASE_URL falls back to DATABASE_URL when empty for dev simplicity
+- **06-01:** Delete root .env to eliminate confusion about authoritative config source
+- **06-01:** MIN_FRESHNESS_THRESHOLD_HOURS enforces minimum 1 hour to prevent API abuse
+
 ### Active TODOs
 
+- [x] Plan 06-01: Configuration Hardening (COMPLETE)
 - [x] Plan 06-02: Configurable Freshness Threshold (COMPLETE)
 - [ ] Plan 06-03: Remaining Phase 6 work
 - [ ] Frontend integration (deferred to v2.0)
@@ -56,18 +63,18 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **Plan 06-01 COMPLETE (2026-02-07):** Configuration hardening — MIGRATION_DATABASE_URL, security audit logging, consolidated .env
 - **Plan 06-02 COMPLETE (2026-02-07):** Per-org configurable freshness thresholds with system minimum enforcement
 - **v1.0 SHIPPED (2026-02-07):** Complete backend API — 14/14 requirements, 5 phases, 17 plans, 8,281 LOC Python
-- **v1.1 ROADMAP CREATED (2026-02-07):** 15 requirements mapped to 5 phases with 100% coverage
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Plan 06-02 execution
-**Stopped At:** Completed 06-02-PLAN.md (Configurable Freshness Threshold)
+**Last Session:** 2026-02-07 — Plan 06-01 execution
+**Stopped At:** Completed 06-01-PLAN.md (Configuration Hardening)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-07 (Plan 06-02 complete - 95% milestone progress)*
+*Last updated: 2026-02-07 (Plan 06-01 complete - 100% milestone progress)*
