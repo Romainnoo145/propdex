@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 1 of 5 (Foundation & Authentication)
-**Plan:** 01-02 of 3 completed
-**Status:** In progress
+**Plan:** 01-03 of 3 completed
+**Status:** Phase complete
 
 **Progress:** [████░░░░░░░░░░░░░░░░] 1/5 phases complete (20%)
 
-**Last Activity:** 2026-02-06 — Completed 01-02-PLAN.md (Authentication Endpoints)
+**Last Activity:** 2026-02-07 — Completed 01-03-PLAN.md (Email Verification)
 
-**Next Action:** Execute 01-03 (Email Verification)
+**Next Action:** Begin Phase 2 planning (Address Intelligence)
 
 ---
 
@@ -29,9 +29,9 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 |--------|-------|
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 0 |
-| Phases Completed | 0/5 |
-| Plans Completed | 2/15 (estimated) |
-| Days Since Start | 1 |
+| Phases Completed | 1/5 |
+| Plans Completed | 3/15 (estimated) |
+| Days Since Start | 2 |
 
 ---
 
@@ -55,12 +55,18 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 12 | Single-use refresh token rotation | 01-02 | Old token revoked on refresh; reuse detection triggers full account revocation |
 | 13 | Naive datetimes for PostgreSQL | 01-02 | Database columns are TIMESTAMP WITHOUT TIME ZONE; timezone-aware causes errors |
 | 14 | Tenant context middleware | 01-02 | Extract organization_id from JWT once per request; silent failure for public endpoints |
+| 15 | JWT-based email verification/reset | 01-03 | No DB storage for verification/reset tokens; self-contained JWT with expiry; simplifies implementation |
+| 16 | Password reset always returns 200 | 01-03 | Prevents user enumeration attacks; security best practice |
+| 17 | Google OAuth no auto-linking | 01-03 | Email conflict returns 400; prevents account takeover via OAuth for MVP |
+| 18 | Rate limiting in-memory for MVP | 01-03 | No Redis dependency for development; can switch to Redis backend later |
+| 19 | Email sending graceful fallback | 01-03 | Logs URLs to console in dev; no SMTP server required for local development |
 
 ### Active TODOs
 
 - [x] ~~Start Phase 1: Foundation & Authentication planning~~ (completed 01-01)
 - [x] ~~Implement authentication endpoints (01-02)~~ (completed 01-02)
-- [ ] Implement email verification (01-03)
+- [x] ~~Implement email verification (01-03)~~ (completed 01-03)
+- [ ] Begin Phase 2 planning (Address Intelligence)
 - [ ] Verify current PDOK/BAG API endpoints and rate limits during Phase 2 planning
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
@@ -70,36 +76,36 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 1 Complete (2026-02-07):** Full authentication system with email verification, password reset, Google OAuth, and rate limiting
+- **01-03 Email Verification (2026-02-07):** JWT-based email verification/reset, Google OAuth, rate limiting on all endpoints
 - **01-02 Authentication Endpoints (2026-02-06):** JWT auth with refresh rotation, Argon2id password hashing, tenant context middleware
 - **01-01 Backend Foundation (2026-02-06):** FastAPI + async PostgreSQL + multi-tenant models with RLS policies
-- Roadmap created with 100% requirement coverage (14/14)
-- Research completed with stack recommendations (FastAPI + PostgreSQL + PostGIS + Claude API)
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-06 — Executed 01-02-PLAN.md
-**Stopped At:** Completed plan 01-02 (Authentication Endpoints)
+**Last Session:** 2026-02-07 — Executed 01-03-PLAN.md
+**Stopped At:** Completed Phase 1 (Foundation & Authentication)
 **Resume File:** None
 
 **What Was Accomplished:**
-- JWT authentication with PyJWT (access + refresh token pair with rotation)
-- Password hashing with pwdlib/Argon2id
-- Auth endpoints: register, login, refresh, logout, me
-- Tenant context middleware extracts organization_id from JWT
-- Pydantic schemas for auth API
-- FastAPI auth dependencies (get_current_user, get_current_active_user)
+- Email verification flow with JWT tokens (48h grace period, no DB storage)
+- Password reset flow with JWT tokens (1h expiry, revokes all sessions on reset)
+- Google OAuth sign-in with httpx-oauth (authorization URL + callback)
+- Rate limiting on all auth endpoints (10/min login, 3/hr register/reset)
+- Background email sending with FastMail (graceful dev fallback)
 - All verifications passed, 2 atomic commits created
 
 **Context for Next Session:**
-- Full authentication system functional and tested
-- Users can register (creates org + user), login, refresh tokens, logout
-- Refresh token rotation with theft detection works
-- 48-hour email verification grace period implemented
-- Ready for email verification system (01-03)
-- Next: Implement email sending with fastapi-mail and verification flow
+- **Phase 1 Complete:** Full authentication system production-ready
+- Complete auth flow: email/password, Google OAuth, verification, password recovery
+- Multi-tenant isolation enforced via tenant context middleware + RLS
+- Rate limiting protects against brute force attacks
+- Email infrastructure ready for transactional emails
+- **Ready for Phase 2:** Address Intelligence API integration (PDOK/BAG/Kadaster)
+- Next: Begin Phase 2 planning and research
 
 ---
 
-*Last updated: 2026-02-06T18:48:13Z*
+*Last updated: 2026-02-07T03:15:09Z*
