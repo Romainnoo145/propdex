@@ -73,6 +73,19 @@ async def test_engine():
                     await conn.execute("CREATE DATABASE crmplus_test")
             finally:
                 await conn.close()
+
+            # Install pg_trgm extension in test database
+            test_conn = await asyncpg.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                database="crmplus_test",
+            )
+            try:
+                await test_conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            finally:
+                await test_conn.close()
     except Exception as e:
         # If database already exists or creation fails, continue
         # (test engine creation will fail if database truly doesn't exist)
