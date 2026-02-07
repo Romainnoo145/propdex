@@ -11,15 +11,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Current Position
 
-**Phase:** 4 of 5 (AI Document Parsing)
-**Plan:** 4 of 4 completed
-**Status:** Phase complete, verified ✓
+**Phase:** 5 of 5 (Report Management)
+**Plan:** 1 of 3 completed
+**Status:** In progress
 
-**Progress:** [██████████████░░░░░░] 14/15 plans complete (93%)
+**Progress:** [███████████████░░░░░] 15/18 plans complete (83%)
 
-**Last Activity:** 2026-02-07 — Completed 04-04-PLAN.md (API Endpoints)
+**Last Activity:** 2026-02-07 — Completed 05-01-PLAN.md (Report Storage Foundation)
 
-**Next Action:** Begin Phase 5 (Frontend UI)
+**Next Action:** Execute 05-02 (CRUD Endpoints)
 
 ---
 
@@ -30,7 +30,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 9 (INFRA-01, INFRA-02, INFRA-04, DATA-01, DATA-02, PROP-03, PROP-04, PROP-05, PROP-06) |
 | Phases Completed | 4/5 |
-| Plans Completed | 14/15 |
+| Plans Completed | 15/18 |
 | Days Since Start | 2 |
 
 ---
@@ -123,6 +123,13 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 80 | PDF upload accepts content_type OR filename | 04-04 | Flexible validation (content_type == "application/pdf" OR filename.endswith(".pdf")); handles different client behaviors |
 | 81 | Completeness score expanded to 6 sections | 04-04 | Was 5 (address/building/parcels/zoning/monuments), now includes ai_parsing when status is "complete" |
 | 82 | AI parsing section source as MEDIUM confidence | 04-04 | Claude AI-parsed data labeled MEDIUM confidence vs HIGH for government APIs; transparent about data reliability |
+| 83 | JSONB storage for full PropertyReportResponse | 05-01 | Complete report snapshots with all sections for historical comparison and PDF export; PostgreSQL JSONB efficient storage |
+| 84 | Denormalized postcode and city fields | 05-01 | Efficient filtering with composite indexes (org, city), (org, postcode) without JSONB extraction overhead |
+| 85 | Soft-delete with deleted_at column | 05-01 | Recoverable deletion for accidental deletes; indexed for efficient "WHERE deleted_at IS NULL" queries |
+| 86 | GIN trigram index on report_name | 05-01 | Fast ILIKE '%address%' searches using pg_trgm extension; handles typos and partial matches |
+| 87 | Optional project_id with SET NULL | 05-01 | Reports can exist without projects; deleting project doesn't delete reports (folder organization, not ownership) |
+| 88 | Auto-generated report_name from address | 05-01 | Consistent naming convention; report_name not user-editable for simplicity and consistency |
+| 89 | Composite indexes with organization_id first | 05-01 | Follows project decision #6; PostgreSQL query planner optimizes tenant-scoped queries across all report indexes |
 
 ### Active TODOs
 
@@ -142,8 +149,10 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement Claude API client with PDF support (04-02)~~ (completed 04-02)
 - [x] ~~Implement ARQ worker for background parsing (04-03)~~ (completed 04-03)
 - [x] ~~Implement API endpoints with job queueing (04-04)~~ (completed 04-04)
+- [x] ~~Begin Phase 5 planning (Report Management)~~ (completed 05-RESEARCH)
+- [x] ~~Create report storage foundation (05-01)~~ (completed 05-01)
+- [ ] Implement report CRUD endpoints (05-02)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing)
-- [ ] Begin Phase 5 planning (Frontend UI)
 
 ### Blockers
 
@@ -151,6 +160,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 5 Plan 1 Complete (2026-02-07):** Report storage foundation with JSONB PropertyReportResponse, denormalized filtering, GIN trigram search, soft-delete, project folders, 3m 6s execution
 - **Phase 4 Complete (2026-02-07):** AI document parsing infrastructure with progressive loading pattern, job polling, PDF upload fallback, complete end-to-end integration
 - **Phase 4 Plan 4 Complete (2026-02-07):** API endpoints with ARQ pool in FastAPI lifespan, job status polling, PDF upload fallback, property lookup AI integration, 4m 5s execution
 - **Phase 4 Plan 3 Complete (2026-02-07):** ARQ background worker with cache-first plan aggregator, tenant-isolated job tracking, pdf_not_found upload fallback, reusable job enqueue, 2m 19s execution
@@ -170,30 +180,29 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 04-04-PLAN.md
-**Stopped At:** Completed Phase 4 (AI Document Parsing)
+**Last Session:** 2026-02-07 — Executed 05-01-PLAN.md
+**Stopped At:** Completed 05-01 (Report Storage Foundation)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Extended FastAPI lifespan with ARQ Redis pool (create_pool on startup, close on shutdown)
-- Added GET /api/properties/jobs/{job_id}/status endpoint for job polling
-- Added POST /api/properties/upload-pdf endpoint for PDF upload fallback
-- Integrated AI parsing into property aggregator (get_or_parse_plan after parallel fetch)
-- Added ai_parsing field to PropertyReportResponse (AIParsingSection | None)
-- Expanded completeness score from 5 to 6 sections (includes ai_parsing)
-- Pass arq_pool from request.app.state to aggregate_property_data
-- All verifications passed, 2 atomic commits created (ef74acd, eb69ac1)
-- Execution time: 4 minutes 5 seconds
+- Created SavedReport model with JSONB report_data, denormalized postcode/city, soft-delete, project FK
+- Created Project model for report folder organization with composite index (org, name)
+- Added Alembic migration creating both tables with pg_trgm extension for GIN trigram search
+- Created 9 indexes including composite (org first), GIN trigram on report_name, soft-delete index
+- Created Project and Report Pydantic schemas (create, update, list, detail, freshness)
+- ReportSaveRequest validates report_data as PropertyReportResponse
+- All verifications passed, 3 atomic commits created (922187c, 98bf446, a037007)
+- Execution time: 3 minutes 6 seconds
 
 **Context for Next Session:**
-- **Phase 4 Complete:** All AI document parsing infrastructure ready
-- **Progressive Loading Pattern:** Property lookup returns immediately with job_id, frontend polls for results
-- **Endpoints Ready:** Job status polling, PDF upload fallback, all tenant-isolated and rate-limited
-- **Worker Launch:** `arq app.jobs.worker.WorkerSettings` from backend/ (requires Redis on localhost:6379)
-- **Integration Testing Needed:** Test with real bestemmingsplan PDFs end-to-end
-- **Next:** Begin Phase 5 planning (Frontend UI)
-- **Frontend Requirements:** Display ai_parsing section, poll job status, upload PDF fallback UI
+- **Phase 5 Started:** Report management infrastructure foundation complete
+- **Database Ready:** saved_reports and projects tables with all indexes, pg_trgm enabled
+- **Schemas Ready:** All CRUD schemas validated, PropertyReportResponse integration working
+- **Next:** Implement CRUD endpoints (05-02) for saving, listing, updating reports
+- **Key Patterns:** report_name from address, completeness_score from JSONB, soft-delete WHERE deleted_at IS NULL
+- **GIN Search:** Use ILIKE '%query%' on report_name for address search (trigram optimized)
+- **Project Count:** Need COUNT subquery for report_count in ProjectResponse
 
 ---
 
-*Last updated: 2026-02-07T09:26:04Z
+*Last updated: 2026-02-07T10:43:29Z
