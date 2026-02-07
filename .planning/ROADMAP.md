@@ -114,10 +114,10 @@ Plans:
 **Dependencies:** Phase 10 (all existing tests established)
 
 Plans:
-- [ ] 11-01-PLAN.md -- Property aggregator integration tests (orchestration flow with mocked API clients)
-- [ ] 11-02-PLAN.md -- Freshness detection unit tests (threshold logic, section mapping, edge cases)
-- [ ] 11-03-PLAN.md -- Properties router HTTP endpoint tests (lookup flow via API)
-- [ ] 11-04-PLAN.md -- Reports router HTTP endpoint tests (save, PDF export, freshness, delete via API)
+- [x] 11-01-PLAN.md -- Property aggregator integration tests (orchestration flow with mocked API clients) — 10 tests
+- [x] 11-02-PLAN.md -- Freshness detection unit tests (threshold logic, section mapping, edge cases) — 12 tests
+- [x] 11-03-PLAN.md -- Properties router HTTP endpoint tests (lookup flow via API) — 8 tests
+- [x] 11-04-PLAN.md -- Reports router HTTP endpoint tests (save, PDF export, freshness, delete via API) — 12 tests
 
 **Success Criteria:**
 1. Property aggregator orchestration has integration tests covering BAG→parallel fetch→merge flow with mocked clients
@@ -175,11 +175,11 @@ Plans:
 | 8 | Data Pipeline Testing | 2 | 2/2 complete | ✓ Complete |
 | 9 | Intelligence Testing | 4 | 3/3 complete | ✓ Complete |
 | 10 | Report & Multi-Tenant Testing | 3 | 3/3 complete | ✓ Complete |
-| 11 | Coverage Gap Closure | 0 (gap closure) | 0/4 planned | Ready |
+| 11 | Coverage Gap Closure | 0 (gap closure) | 4/4 complete | ✓ Complete |
 | 12 | Phase Documentation & Verification | 0 (gap closure) | 0/2 | Pending |
 
 **Total:** 15 requirements across 5 phases + 2 gap closure phases
 
 ---
 
-*Last updated: 2026-02-08 (Phases 11-12 added for audit gap closure)*
+*Last updated: 2026-02-08 (Phase 11 complete — 42 gap closure tests added)*
