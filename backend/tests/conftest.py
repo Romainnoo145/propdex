@@ -16,21 +16,7 @@ from app.main import app
 from app.models import Base
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """
-    Session-scoped event loop for all async fixtures and tests.
-
-    This prevents "event loop is closed" errors and "Task attached to different loop"
-    errors when using session-scoped async fixtures with function-scoped tests.
-    """
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def test_engine():
     """
     Session-scoped test database engine.
