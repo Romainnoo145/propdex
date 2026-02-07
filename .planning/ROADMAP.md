@@ -121,11 +121,18 @@ Plans:
 
 ## Phase 5: Report Management
 
-**Goal:** Users can save, list, and revisit property intelligence reports
+**Goal:** Users can save, list, and revisit property intelligence reports with project organization, PDF export, and data freshness indicators
 
 **Dependencies:** Phase 3 (requires complete reports to save)
 
 **Requirements:** RPT-01, RPT-02, RPT-03
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — SavedReport + Project models, Alembic migration (JSONB, soft-delete, GIN indexes), report/project schemas
+- [ ] 05-02-PLAN.md — Report CRUD endpoints (save, list, get, delete, restore, notes, project assignment) + Project CRUD + search/filter/sort
+- [ ] 05-03-PLAN.md — PDF export (WeasyPrint + Jinja2 template) + data freshness detection service + export/freshness endpoints
 
 **Success Criteria:**
 1. User can save a property intelligence report for later reference
@@ -133,8 +140,11 @@ Plans:
 3. User can re-open a saved report and see full details
 4. Saved reports show when they were generated and last updated
 5. User can delete saved reports they no longer need
+6. User can export a saved report as a professional PDF document
+7. User can organize reports into project folders
+8. User can see if saved report data has fresher cache available
 
-**Status:** Pending
+**Status:** Planning complete
 
 ---
 
@@ -146,7 +156,7 @@ Plans:
 | 2 - Core Data Pipeline | Fetch and aggregate government property data | PROP-01, PROP-02, INFRA-03 | Complete |
 | 3 - Zoning & Monument Intelligence | Reports include bestemmingsplan and monument status | PROP-03, PROP-04, PROP-06 | Complete |
 | 4 - AI Document Parsing | Extract zoning rules from PDF bestemmingsplannen | PROP-05, INFRA-04 | Complete |
-| 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Pending |
+| 5 - Report Management | Save, list, and revisit reports | RPT-01, RPT-02, RPT-03 | Planning complete |
 
 **Current Phase:** 5
 **Completed:** 4/5
@@ -154,4 +164,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-07 (Phase 5 planned)*
