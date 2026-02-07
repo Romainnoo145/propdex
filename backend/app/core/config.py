@@ -1,7 +1,14 @@
 """Application configuration using pydantic-settings."""
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Cache TTL configuration (in seconds)
+CACHE_TTL = {
+    "bag": 86400,           # 24 hours
+    "kadaster": 604800,     # 7 days
+    "bestemmingsplan": 7776000,  # 90 days
+}
 
 
 class Settings(BaseSettings):
@@ -78,6 +85,12 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = Field(
         default="http://localhost:9300",
         description="Allowed CORS origins (comma-separated in env)",
+    )
+
+    # Government API Configuration
+    BAG_API_KEY: str = Field(
+        default="",
+        description="BAG API key for Kadaster Individuele Bevragingen (register at lvbag.github.io)",
     )
 
     @property

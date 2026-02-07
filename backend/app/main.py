@@ -1,20 +1,42 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.auth.router import router as auth_router
 from app.core.config import settings
+from app.core.http_client import create_government_api_client
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """
+    FastAPI lifespan context manager for startup/shutdown.
+
+    Startup: Creates shared httpx AsyncClient for government API requests.
+    Shutdown: Closes the httpx client to release connections.
+    """
+    # Startup: create shared HTTP client
+    app.state.http_client = create_government_api_client()
+
+    yield
+
+    # Shutdown: close HTTP client
+    await app.state.http_client.aclose()
+
 
 app = FastAPI(
     title="CRM Plus API",
     version="0.1.0",
     description="Property Intelligence Platform for Dutch Real Estate Developers",
+    lifespan=lifespan,
 )
 
 # Add rate limiter to app state
