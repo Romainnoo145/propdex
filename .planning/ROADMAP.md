@@ -55,10 +55,14 @@ Plans:
 
 **Dependencies:** Phase 7 (test infrastructure patterns established)
 
+Plans:
+- [x] 08-01-PLAN.md -- API client unit tests (BAG, PDOK Locatieserver, PDOK Cadastral, DSO, RCE) — 63 tests
+- [x] 08-02-PLAN.md -- Cache manager integration tests (CRUD, TTL, isolation) — 20 tests
+
 **Success Criteria:**
-1. BAG, PDOK, DSO, and RCE client modules have unit tests with mocked httpx responses covering successful calls, HTTP errors, and malformed data
-2. Cache manager integration tests verify JSONB cache read/write, TTL expiration, and invalidation against the database
-3. Cache tests confirm organization_id isolation (no cross-tenant cache leaks)
+1. BAG, PDOK, DSO, and RCE client modules have unit tests with mocked httpx responses covering successful calls, HTTP errors, and malformed data ✓
+2. Cache manager integration tests verify JSONB cache read/write, TTL expiration, and invalidation against the database ✓
+3. Cache tests confirm organization_id isolation (no cross-tenant cache leaks) ✓
 
 #### Phase 9: Intelligence Testing
 **Goal:** Aggregators and AI parsing have comprehensive test coverage with ARQ lifecycle integrated
@@ -66,6 +70,13 @@ Plans:
 **Requirements:** TEST-05, TEST-06, TEST-07, INFRA-01
 
 **Dependencies:** Phase 8 (API clients tested)
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md -- Aggregator unit tests (zoning spatial logic + monument conflict detection)
+- [ ] 09-02-PLAN.md -- AI parsing unit tests (Claude client) + ARQ lifecycle integration
+- [ ] 09-03-PLAN.md -- Aggregator integration tests (full flow with cache + DB)
 
 **Success Criteria:**
 1. Zoning and monument aggregators have unit tests covering data transformation, spatial intersection logic, and error handling
@@ -112,12 +123,12 @@ Plans:
 |-------|------|--------------|-------|--------|
 | 6 | Security & Configuration | 3 | 3/3 complete | ✓ Complete |
 | 7 | Test Infrastructure & Auth Testing | 3 | 2/2 complete | ✓ Complete |
-| 8 | Data Pipeline Testing | 2 | Pending | Ready |
-| 9 | Intelligence Testing | 4 | Pending | Blocked by Phase 8 |
+| 8 | Data Pipeline Testing | 2 | 2/2 complete | ✓ Complete |
+| 9 | Intelligence Testing | 4 | 0/3 planned | In Progress |
 | 10 | Report & Multi-Tenant Testing | 3 | Pending | Blocked by Phase 9 |
 
 **Total:** 15 requirements across 5 phases
 
 ---
 
-*Last updated: 2026-02-07 (Phase 7 complete — 2 plans, 51 tests passing, verified)*
+*Last updated: 2026-02-07 (Phase 9 planned — 3 plans in 2 waves)*
