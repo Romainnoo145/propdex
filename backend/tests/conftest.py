@@ -1,4 +1,4 @@
-"""Shared test fixtures for CRM Plus test suite."""
+"""Shared test fixtures for Propdex test suite."""
 
 import asyncio
 from typing import AsyncGenerator
@@ -19,18 +19,18 @@ async def test_engine():
     """
     Session-scoped test database engine.
 
-    Creates a separate test database (crmplus_test) to avoid polluting the
+    Creates a separate test database (propdex_test) to avoid polluting the
     development database. The test database is created if it doesn't exist.
     """
     # Derive test database URL from settings
-    test_db_url = settings.DATABASE_URL.replace("/crmplus", "/crmplus_test")
+    test_db_url = settings.DATABASE_URL.replace("/propdex", "/propdex_test")
 
     # Create test database if it doesn't exist
-    # Connect to default 'crmplus' database to create 'crmplus_test'
+    # Connect to default 'propdex' database to create 'propdex_test'
     try:
         # Extract connection parts from DATABASE_URL
         # Format: postgresql+asyncpg://user:pass@host:port/dbname
-        base_url = settings.DATABASE_URL.replace("/crmplus", "/postgres")
+        base_url = settings.DATABASE_URL.replace("/propdex", "/postgres")
         conn_url = base_url.replace("postgresql+asyncpg://", "")
 
         if "@" in conn_url:
@@ -65,12 +65,12 @@ async def test_engine():
             try:
                 # Check if test database exists
                 exists = await conn.fetchval(
-                    "SELECT 1 FROM pg_database WHERE datname = 'crmplus_test'"
+                    "SELECT 1 FROM pg_database WHERE datname = 'propdex_test'"
                 )
 
                 if not exists:
                     # Create test database
-                    await conn.execute("CREATE DATABASE crmplus_test")
+                    await conn.execute("CREATE DATABASE propdex_test")
             finally:
                 await conn.close()
 
@@ -80,7 +80,7 @@ async def test_engine():
                 port=port,
                 user=user,
                 password=password,
-                database="crmplus_test",
+                database="propdex_test",
             )
             try:
                 await test_conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")

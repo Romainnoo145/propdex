@@ -234,7 +234,7 @@ Features that matter specifically in NL context:
 
 ## Competitive Feature Comparison
 
-| Feature Category | Transect (UK) | Prophetic (US) | Spartner (NL) | CRM Plus Approach |
+| Feature Category | Transect (UK) | Prophetic (US) | Spartner (NL) | Propdex Approach |
 |------------------|---------------|----------------|---------------|-------------------|
 | **Core data** | Land Registry (UK) | County records (US) | Kadaster (NL) | Kadaster + BAG + RCE |
 | **Zoning** | Planning permissions | Local zoning codes | Basic bestemmingsplan | Parsed IMRO with restrictions |
@@ -299,6 +299,6 @@ Features that matter specifically in NL context:
 - Map subsidy programs and eligibility criteria with actual data sources
 
 ---
-**Feature research for:** CRM Plus - Dutch Property Intelligence Platform
+**Feature research for:** Propdex - Dutch Property Intelligence Platform
 **Researched:** 2026-02-07
 **Confidence:** MEDIUM (training data + domain knowledge, no live platform verification)

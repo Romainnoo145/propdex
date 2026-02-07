@@ -36,7 +36,7 @@ brew install pango
 After installation, verify WeasyPrint can generate PDFs:
 
 ```bash
-cd /home/klarifai/Documents/klarifai/clientprojects/crmplus/backend
+cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend
 python -c "from weasyprint import HTML; HTML(string='<h1>Test</h1>').write_pdf(); print('WeasyPrint OK')"
 ```
 

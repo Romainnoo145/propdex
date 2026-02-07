@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="CRM Plus API",
+    title="Propdex API",
     version="0.1.0",
     description="Property Intelligence Platform for Dutch Real Estate Developers",
     lifespan=lifespan,
@@ -92,5 +92,5 @@ async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {
         "status": "ok",
-        "service": "crmplus-api",
+        "service": "propdex-api",
     }

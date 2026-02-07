@@ -1,13 +1,13 @@
 # Project Research Summary
 
-**Project:** CRM Plus — Dutch Property Intelligence Platform
+**Project:** Propdex — Dutch Property Intelligence Platform
 **Domain:** PropTech / Property Intelligence / Government Data Aggregation
 **Researched:** 2026-02-07
 **Confidence:** MEDIUM
 
 ## Executive Summary
 
-CRM Plus is a property intelligence platform for Dutch projectontwikkelaars specializing in heritage redevelopment (churches, monuments, commercial-to-residential). The core value proposition is collapsing 3-6 weeks of manual regulatory research into 3-minute structured reports. This is achieved by orchestrating parallel calls to Dutch government APIs (BAG, PDOK, Kadaster, ruimtelijkeplannen.nl) combined with AI-powered document parsing for bestemmingsplan PDFs where API data is insufficient.
+Propdex is a property intelligence platform for Dutch projectontwikkelaars specializing in heritage redevelopment (churches, monuments, commercial-to-residential). The core value proposition is collapsing 3-6 weeks of manual regulatory research into 3-minute structured reports. This is achieved by orchestrating parallel calls to Dutch government APIs (BAG, PDOK, Kadaster, ruimtelijkeplannen.nl) combined with AI-powered document parsing for bestemmingsplan PDFs where API data is insufficient.
 
 The recommended stack centers on Python (FastAPI) + PostgreSQL (PostGIS) for the backend intelligence engine, with Next.js for the dashboard UI. The critical architectural pattern is fan-out/fan-in data aggregation: fetch all government data sources in parallel, aggregate gracefully with partial failure handling, and fall back to AI parsing only when API data is unavailable. Multi-tenant data isolation must be foundational from day one with `organization_id` filtering on every query.
 

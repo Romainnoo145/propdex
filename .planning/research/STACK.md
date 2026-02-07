@@ -131,14 +131,14 @@ pip install ruff==0.9.1 \
 
 ```bash
 # Create Next.js app with TypeScript
-npx create-next-app@latest crmplus-frontend \
+npx create-next-app@latest propdex-frontend \
   --typescript \
   --tailwind \
   --app \
   --no-src-dir \
   --import-alias "@/*"
 
-cd crmplus-frontend
+cd propdex-frontend
 
 # Mapping libraries
 npm install leaflet@1.9.4 \
@@ -163,11 +163,11 @@ npm install -D @types/react@18.3.18 \
 
 ```bash
 # Install PostgreSQL with PostGIS (via Docker)
-docker run --name crmplus-db \
+docker run --name propdex-db \
   -e POSTGRES_PASSWORD=dev_password \
-  -e POSTGRES_DB=crmplus \
+  -e POSTGRES_DB=propdex \
   -p 5432:5432 \
-  -v crmplus_pgdata:/var/lib/postgresql/data \
+  -v propdex_pgdata:/var/lib/postgresql/data \
   -d postgis/postgis:16-3.4
 
 # Enable PostGIS extension (run in psql)
@@ -349,6 +349,6 @@ All recommendations based on:
 **Recommendation:** Validate all version numbers and API endpoints during Phase 1 setup. Treat this research as HIGH confidence for technology choices, MEDIUM confidence for specific versions, LOW confidence for external API details.
 
 ---
-*Stack research for: CRM Plus (Dutch Property Intelligence Platform)*
+*Stack research for: Propdex (Dutch Property Intelligence Platform)*
 *Researched: 2026-02-07*
 *Confidence: MEDIUM (external verification unavailable)*

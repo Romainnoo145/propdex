@@ -1,1 +1,1 @@
-"""CRM Plus test suite."""
+"""Propdex test suite."""

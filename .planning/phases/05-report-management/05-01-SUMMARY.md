@@ -244,7 +244,7 @@ completed: "2026-02-07"
 - Follows project decision #6
 - PostgreSQL query planner can use index for tenant-filtered queries
 - Prevents full table scans on multi-tenant queries
-- Standard pattern across all CRM Plus models
+- Standard pattern across all Propdex models
 
 **Impact:** Query performance optimal for tenant-scoped operations; indexes structured identically to other models.
 

@@ -110,7 +110,7 @@ metrics:
 
 ### Infrastructure Updates
 - Modified conftest.py: changed test_engine from session-scoped to function-scoped for Python 3.14 compatibility
-- Installed pg_trgm extension in crmplus_test database for GIN index support
+- Installed pg_trgm extension in propdex_test database for GIN index support
 
 ---
 
@@ -144,11 +144,11 @@ metrics:
 ### TEST-06: Manual pg_trgm extension installation
 **Context:** Test database creation doesn't include PostgreSQL extensions. saved_reports table has GIN index using gin_trgm_ops.
 
-**Decision:** Manually install pg_trgm extension in crmplus_test database before running tests.
+**Decision:** Manually install pg_trgm extension in propdex_test database before running tests.
 
 **Command:**
 ```bash
-docker exec klarifai-discover-db sh -c 'psql -U $POSTGRES_USER -d crmplus_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"'
+docker exec klarifai-discover-db sh -c 'psql -U $POSTGRES_USER -d propdex_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"'
 ```
 
 **Rationale:** Extension required for table creation. Auto-installation in conftest.py would require superuser permissions and add complexity.

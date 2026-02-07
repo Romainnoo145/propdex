@@ -155,7 +155,7 @@ MAIL_SERVER=smtp.gmail.com  # or your SMTP server
 MAIL_PORT=587
 MAIL_USERNAME=your-email@example.com
 MAIL_PASSWORD=your-app-password
-MAIL_FROM=noreply@crmplus.nl
+MAIL_FROM=noreply@propdex.nl
 ```
 
 **Optional: Configure Google OAuth**

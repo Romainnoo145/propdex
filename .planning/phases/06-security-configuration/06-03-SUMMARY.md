@@ -118,16 +118,16 @@ To enforce RLS in production:
 
 1. Run `backend/sql/setup_app_role.sql` as superuser (postgres):
    ```bash
-   psql -U postgres -d crmplus -f backend/sql/setup_app_role.sql
+   psql -U postgres -d propdex -f backend/sql/setup_app_role.sql
    ```
 
 2. Update backend/.env with two database URLs:
    ```env
    # Application runtime (RLS enforced)
-   DATABASE_URL=postgresql+asyncpg://app_role:password@localhost:5433/crmplus
+   DATABASE_URL=postgresql+asyncpg://app_role:password@localhost:5433/propdex
 
    # Migrations only (superuser for DDL)
-   MIGRATION_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5433/crmplus
+   MIGRATION_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5433/propdex
    ```
 
 3. Verify RLS enforcement:

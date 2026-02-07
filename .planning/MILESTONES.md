@@ -1,4 +1,4 @@
-# Project Milestones: CRM Plus
+# Project Milestones: Propdex
 
 ## v1.1 Production Hardening (Started: 2026-02-07)
 

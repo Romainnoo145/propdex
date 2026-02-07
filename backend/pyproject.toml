@@ -1,7 +1,7 @@
 [project]
-name = "crmplus-api"
+name = "propdex-api"
 version = "0.1.0"
-description = "CRM Plus API - Property Intelligence Platform"
+description = "Propdex API - Property Intelligence Platform"
 authors = [
     {name = "Klarifai", email = "info@klarifai.nl"}
 ]

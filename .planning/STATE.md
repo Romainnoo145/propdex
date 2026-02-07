@@ -1,4 +1,4 @@
-# CRM Plus — Project State
+# Propdex — Project State
 
 ## Project Reference
 
@@ -56,7 +56,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 **Phase 7 Decisions:**
 - **07-01 (TEST-01):** Session-scoped event loop with function-scoped table drop/recreate for test isolation
 - **07-01 (TEST-02):** Use httpx AsyncClient (not TestClient) for async FastAPI endpoint testing
-- **07-01 (TEST-03):** Automatic test database (crmplus_test) creation in conftest.py fixture
+- **07-01 (TEST-03):** Automatic test database (propdex_test) creation in conftest.py fixture
 - **07-01 (TEST-04):** Disable rate limiting in tests via limiter.enabled=False (not replacement — decorators bind to module-level limiter)
 - **07-02 (TEST-05):** Function-scoped test_engine for Python 3.14 compatibility (pytest-asyncio 0.23.8)
 - **07-02 (TEST-06):** Manual pg_trgm extension installation in test database

@@ -120,7 +120,7 @@ All tests follow established patterns from Phase 8 (test_cache_manager.py):
 **Implementation:**
 ```python
 # After creating test database
-test_conn = await asyncpg.connect(..., database="crmplus_test")
+test_conn = await asyncpg.connect(..., database="propdex_test")
 await test_conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 ```
 
@@ -135,7 +135,7 @@ await test_conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 - Minor flakiness when running individual tests due to table drop/create order
 
 **Test database setup:**
-- Automatic test database creation (crmplus_test)
+- Automatic test database creation (propdex_test)
 - Automatic pg_trgm extension installation
 - Function-scoped table drop/recreate for isolation
 

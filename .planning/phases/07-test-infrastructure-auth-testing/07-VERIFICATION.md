@@ -25,7 +25,7 @@ re_verification: false
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | pytest runs and discovers tests from backend/tests/ | ✓ VERIFIED | 51 tests collected, all pass in 34.10s |
-| 2 | Async tests execute with real PostgreSQL test database (crmplus_test) | ✓ VERIFIED | conftest.py creates test_engine with crmplus_test database, all 31 integration tests use real DB |
+| 2 | Async tests execute with real PostgreSQL test database (propdex_test) | ✓ VERIFIED | conftest.py creates test_engine with propdex_test database, all 31 integration tests use real DB |
 | 3 | Test database tables are created and dropped per test function for isolation | ✓ VERIFIED | test_db fixture (function-scoped) creates/drops all tables via Base.metadata |
 | 4 | JWT unit tests verify token creation, decoding, expiration, and type enforcement | ✓ VERIFIED | 14 JWT unit tests cover all 5 token functions, expiration, invalid tokens, type claims |
 | 5 | Password unit tests verify hashing, verification, and None handling | ✓ VERIFIED | 6 password unit tests cover hash/verify/None edge case |
@@ -65,7 +65,7 @@ re_verification: false
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `backend/tests/conftest.py` | `backend/app/core/database.py` | test engine creation using DATABASE_URL with _test suffix | ✓ WIRED | Line 26: `test_db_url = settings.DATABASE_URL.replace("/crmplus", "/crmplus_test")`, Line 82: `engine = create_async_engine(test_db_url, ...)` |
+| `backend/tests/conftest.py` | `backend/app/core/database.py` | test engine creation using DATABASE_URL with _test suffix | ✓ WIRED | Line 26: `test_db_url = settings.DATABASE_URL.replace("/propdex", "/propdex_test")`, Line 82: `engine = create_async_engine(test_db_url, ...)` |
 | `backend/tests/conftest.py` | `backend/app/main.py` | dependency_overrides for get_db | ✓ WIRED | Lines 12, 145: imports get_db, overrides with `app.dependency_overrides[get_db] = override_get_db` |
 | `backend/tests/unit/test_jwt.py` | `backend/app/auth/jwt.py` | direct function import | ✓ WIRED | Line 8: `from app.auth.jwt import create_access_token, create_refresh_token, create_email_verification_token, create_password_reset_token, decode_token` |
 | `backend/tests/integration/test_auth_flow.py` | `backend/app/auth/router.py` | httpx AsyncClient POST/GET requests to /auth/* endpoints | ✓ WIRED | Multiple calls: POST /auth/register, POST /auth/login, POST /auth/refresh, POST /auth/logout, GET /auth/me, POST /auth/verify-email, POST /auth/password-reset/confirm |
@@ -127,13 +127,13 @@ $ cd backend && python -m pytest tests/ -v --tb=short
 - Average ~0.67 seconds per test
 
 **Test Database:**
-- Database `crmplus_test` created automatically by conftest.py test_engine fixture
-- Separate from development database (crmplus) to prevent data pollution
+- Database `propdex_test` created automatically by conftest.py test_engine fixture
+- Separate from development database (propdex) to prevent data pollution
 - Tables created/dropped per test function for complete isolation (function-scoped test_db fixture)
 - pg_trgm extension installed for GIN index support
 
 **Fixtures:**
-- `test_engine` (function-scoped): Creates async engine connected to crmplus_test
+- `test_engine` (function-scoped): Creates async engine connected to propdex_test
 - `test_db` (function-scoped): Creates all tables, yields session, drops all tables
 - `async_client` (function-scoped): httpx AsyncClient with get_db override and rate limiter disabled
 - `create_test_user` (factory): Creates user + organization with customizable fields

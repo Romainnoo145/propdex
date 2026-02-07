@@ -28,7 +28,7 @@ decisions:
     rationale: FastAPI TestClient cannot handle async dependencies, AsyncClient is official recommendation
     outcome: Proper async support, ready for integration tests in Phase 8
   - id: TEST-03
-    decision: Create test database (crmplus_test) automatically in conftest.py
+    decision: Create test database (propdex_test) automatically in conftest.py
     rationale: Separate test database prevents development data pollution
     outcome: Clean test environment, tests can run destructively
   - id: TEST-04
@@ -57,12 +57,12 @@ metrics:
 - **Directory structure:** Created tests/ with unit/ and integration/ subdirectories
 - **conftest.py:** Implemented shared fixtures:
   - `event_loop` (session-scoped) - prevents "event loop is closed" errors
-  - `test_engine` (session-scoped) - creates crmplus_test database automatically
+  - `test_engine` (session-scoped) - creates propdex_test database automatically
   - `test_db` (function-scoped) - drops/recreates all tables per test for isolation
   - `async_client` (function-scoped) - httpx AsyncClient with dependency overrides
   - `create_test_user` (factory) - flexible user + organization creation helper
 - **factories.py:** Factory Boy factories for Organization, User, RefreshToken models
-- **Test database:** Separate crmplus_test database created automatically on first test run
+- **Test database:** Separate propdex_test database created automatically on first test run
 
 ### Auth Unit Tests
 - **test_jwt.py (14 tests):**
@@ -140,7 +140,7 @@ metrics:
 ### TEST-03: Automatic test database creation
 **Context:** Tests need isolated database to avoid polluting development data.
 
-**Decision:** Create crmplus_test database automatically in conftest.py test_engine fixture using asyncpg connection to postgres database.
+**Decision:** Create propdex_test database automatically in conftest.py test_engine fixture using asyncpg connection to postgres database.
 
 **Alternatives considered:**
 - Manual database creation - requires setup step, error-prone
@@ -179,7 +179,7 @@ None - plan executed exactly as written.
 
 ✅ **Infrastructure established:** conftest.py fixtures, async_client, test_db patterns are reusable
 ✅ **Patterns proven:** 20 unit tests pass, async testing works correctly
-✅ **Test database:** crmplus_test created and functional
+✅ **Test database:** propdex_test created and functional
 ✅ **Dependencies installed:** httpx AsyncClient, pytest-asyncio in auto mode
 
 **Blockers:** None
@@ -228,7 +228,7 @@ Target after Phase 8-10:
 
 ✅ All 20 unit tests pass with 0 failures
 ✅ pytest discovers tests correctly (20 tests collected)
-✅ Test database (crmplus_test) created automatically
+✅ Test database (propdex_test) created automatically
 ✅ Phase 1 VERIFICATION.md exists with 5/5 requirements verified
 ✅ Test infrastructure patterns are reusable for Phase 8-10
 

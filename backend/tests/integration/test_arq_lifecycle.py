@@ -88,7 +88,7 @@ class TestLifecycleIntegration:
                 assert response.status_code == 200
                 data = response.json()
                 assert data["status"] == "ok"
-                assert data["service"] == "crmplus-api"
+                assert data["service"] == "propdex-api"
         finally:
             await app.state.arq_pool.close()
             await app.state.http_client.aclose()

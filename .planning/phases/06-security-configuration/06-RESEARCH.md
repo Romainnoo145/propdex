@@ -186,7 +186,7 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
 CREATE ROLE app_role WITH LOGIN PASSWORD 'app_secret';
 
 -- Grant necessary permissions
-GRANT CONNECT ON DATABASE crmplus TO app_role;
+GRANT CONNECT ON DATABASE propdex TO app_role;
 GRANT USAGE ON SCHEMA public TO app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_role;
@@ -202,10 +202,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 
 ```bash
 # backend/.env (application runtime)
-DATABASE_URL=postgresql+asyncpg://app_role:app_secret@localhost:5433/crmplus
+DATABASE_URL=postgresql+asyncpg://app_role:app_secret@localhost:5433/propdex
 
 # backend/.env.migrations (Alembic only, not in version control)
-MIGRATION_DATABASE_URL=postgresql+asyncpg://superuser:password@localhost:5433/crmplus
+MIGRATION_DATABASE_URL=postgresql+asyncpg://superuser:password@localhost:5433/propdex
 ```
 
 **Alembic env.py adjustment:**

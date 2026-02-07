@@ -1,4 +1,4 @@
-# Requirements: CRM Plus
+# Requirements: Propdex
 
 **Defined:** 2026-02-07
 **Core Value:** Address → Property Intelligence Report

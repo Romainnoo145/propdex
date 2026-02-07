@@ -94,7 +94,7 @@ None. All modified files scanned for TODO/FIXME/XXX/HACK/placeholder patterns â€
 
 **Test:** 
 1. Run `backend/sql/setup_app_role.sql` as superuser to enable LOGIN for app_role
-2. Update backend/.env with DATABASE_URL=postgresql+asyncpg://app_role:password@localhost:5433/crmplus
+2. Update backend/.env with DATABASE_URL=postgresql+asyncpg://app_role:password@localhost:5433/propdex
 3. Start application and make authenticated API calls
 4. Verify cross-tenant access returns 404 (not 403 or data from wrong org)
 

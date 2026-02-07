@@ -100,7 +100,7 @@ None - plan executed exactly as written. All 15 tests implemented as specified w
 **1. PostgreSQL type system conflicts during test isolation**
 - **Problem:** Running individual tests after full suite left type system entries in database, causing "duplicate key value violates unique constraint pg_type_typname_nsp_index"
 - **Root cause:** SQLAlchemy `Base.metadata.drop_all()` doesn't clean up PostgreSQL type catalog entries
-- **Solution:** Manually drop and recreate test database with `DROP DATABASE IF EXISTS crmplus_test WITH (FORCE)` before test runs
+- **Solution:** Manually drop and recreate test database with `DROP DATABASE IF EXISTS propdex_test WITH (FORCE)` before test runs
 - **Impact:** Tests pass cleanly when run as full suite or after database reset - not a code issue
 
 **2. pg_trgm extension already installed in conftest.py**

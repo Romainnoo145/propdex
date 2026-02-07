@@ -1,4 +1,4 @@
-"""SQLAlchemy models for CRM Plus API."""
+"""SQLAlchemy models for Propdex API."""
 
 from app.models.base import Base
 from app.models.cached_response import CachedAPIResponse

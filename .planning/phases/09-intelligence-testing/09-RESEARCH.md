@@ -6,7 +6,7 @@
 
 ## Summary
 
-Phase 9 focuses on testing the intelligence layer of CRM Plus: zoning/monument aggregators (data transformation + spatial logic), AI document parsing (Claude API client + PDF processing), and ARQ worker lifecycle integration with FastAPI startup/shutdown. The project already has 134 passing tests (83 unit + 51 integration) with established patterns: httpx AsyncClient for async testing, unittest.mock for mocking, function-scoped table drop/recreate for isolation, and shared mock helpers in tests/api_mocks.py.
+Phase 9 focuses on testing the intelligence layer of Propdex: zoning/monument aggregators (data transformation + spatial logic), AI document parsing (Claude API client + PDF processing), and ARQ worker lifecycle integration with FastAPI startup/shutdown. The project already has 134 passing tests (83 unit + 51 integration) with established patterns: httpx AsyncClient for async testing, unittest.mock for mocking, function-scoped table drop/recreate for isolation, and shared mock helpers in tests/api_mocks.py.
 
 The standard approach for aggregator testing is to separate unit tests (data transformation, spatial filtering, error handling with mocked API responses) from integration tests (full API call → cache → aggregation → schema validation flows against real database). AI parsing tests use AsyncMock to mock anthropic.AsyncAnthropic.messages.create responses, validating both success and error paths (rate limits, connection failures, malformed JSON). ARQ worker lifecycle integration uses FastAPI's lifespan context manager with create_pool at startup and pool.close at shutdown.
 

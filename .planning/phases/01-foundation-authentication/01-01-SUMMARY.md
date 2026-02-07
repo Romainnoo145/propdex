@@ -223,7 +223,7 @@ metrics:
 - **Issue:** No PostgreSQL database available at expected localhost:5432
 - **Fix:**
   - Discovered existing klarifai-discover-db container on port 5433
-  - Created crmplus database in that container
+  - Created propdex database in that container
   - Updated .env to use correct connection string (user:password@localhost:5433)
   - Copied .env to backend/ directory for config loading
 - **Files modified:** `.env`, `backend/.env`
@@ -268,14 +268,14 @@ All plan verification criteria passed:
 ```bash
 # Health check
 curl http://localhost:8000/
-# Returns: {"status":"ok","service":"crmplus-api"}
+# Returns: {"status":"ok","service":"propdex-api"}
 
 # Database tables
-docker exec klarifai-discover-db psql -U user -d crmplus -c "\dt"
+docker exec klarifai-discover-db psql -U user -d propdex -c "\dt"
 # Shows: organizations, users, refresh_tokens, alembic_version
 
 # RLS status
-docker exec klarifai-discover-db psql -U user -d crmplus -c "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public'"
+docker exec klarifai-discover-db psql -U user -d propdex -c "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public'"
 # Shows: users=true, refresh_tokens=true, organizations=false
 
 # Models import
@@ -332,7 +332,7 @@ None. All prerequisites for auth endpoint implementation are in place.
 
 None critical. Minor considerations:
 
-1. **PostgreSQL connection string:** Currently using klarifai-discover-db container. May want dedicated container for crmplus in production-like environments.
+1. **PostgreSQL connection string:** Currently using klarifai-discover-db container. May want dedicated container for propdex in production-like environments.
 
 2. **.env management:** Currently duplicated between root and backend/. Consider consolidating or documenting the pattern.
 

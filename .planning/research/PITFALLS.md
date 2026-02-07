@@ -408,6 +408,6 @@ How roadmap phases should address these pitfalls.
 - Test with real bestemmingsplannen from target municipalities (churches, monuments)
 
 ---
-*Pitfalls research for: CRM Plus — Dutch PropTech Property Intelligence Platform*
+*Pitfalls research for: Propdex — Dutch PropTech Property Intelligence Platform*
 *Researched: 2026-02-07*
 *Confidence: MEDIUM — Based on domain expertise, should verify specifics with official sources*

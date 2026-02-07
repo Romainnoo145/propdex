@@ -6,7 +6,7 @@
 
 ## Summary
 
-Phase 7 establishes comprehensive test infrastructure for the CRM Plus backend, focusing first on auth module coverage (Phase 1) while building reusable patterns for testing all future phases. The standard stack is pytest + pytest-asyncio + httpx AsyncClient + pytest-cov, following FastAPI's official async testing patterns. Tests must handle SQLAlchemy 2.x async sessions with proper transaction isolation, RLS context injection (critical for multi-tenant testing), and both unit tests (isolated logic) and integration tests (full HTTP request flows against a test database).
+Phase 7 establishes comprehensive test infrastructure for the Propdex backend, focusing first on auth module coverage (Phase 1) while building reusable patterns for testing all future phases. The standard stack is pytest + pytest-asyncio + httpx AsyncClient + pytest-cov, following FastAPI's official async testing patterns. Tests must handle SQLAlchemy 2.x async sessions with proper transaction isolation, RLS context injection (critical for multi-tenant testing), and both unit tests (isolated logic) and integration tests (full HTTP request flows against a test database).
 
 Key architectural insight: FastAPI's TestClient does NOT work with async code — you MUST use httpx AsyncClient with ASGITransport for all async route testing. Database fixtures use session-scoped event loops with function-scoped table recreation for proper isolation. RLS testing requires creating non-superuser test roles because superusers bypass RLS policies, creating false security confidence.
 
@@ -372,7 +372,7 @@ def event_loop():
 async def test_engine():
     """Session-scoped test database engine."""
     # Use separate test database
-    test_db_url = settings.DATABASE_URL.replace("/crmplus", "/crmplus_test")
+    test_db_url = settings.DATABASE_URL.replace("/propdex", "/propdex_test")
     engine = create_async_engine(test_db_url, echo=False, pool_pre_ping=True)
     yield engine
     await engine.dispose()

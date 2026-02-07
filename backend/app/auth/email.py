@@ -70,7 +70,7 @@ async def send_verification_email(email: str, token: str) -> None:
     <body>
         <div class="container">
             <h2>Verify Your Email</h2>
-            <p>Thank you for registering with CRM Plus. Please verify your email address to complete your registration.</p>
+            <p>Thank you for registering with Propdex. Please verify your email address to complete your registration.</p>
             <p>
                 <a href="{verification_url}" class="button">Verify Email Address</a>
             </p>
@@ -79,7 +79,7 @@ async def send_verification_email(email: str, token: str) -> None:
             <p>This link will expire in 48 hours.</p>
             <p>If you didn't create an account, you can safely ignore this email.</p>
             <div class="footer">
-                <p>CRM Plus - Property Intelligence Platform</p>
+                <p>Propdex - Property Intelligence Platform</p>
             </div>
         </div>
     </body>
@@ -88,7 +88,7 @@ async def send_verification_email(email: str, token: str) -> None:
 
     try:
         message = MessageSchema(
-            subject="Verify Your Email - CRM Plus",
+            subject="Verify Your Email - Propdex",
             recipients=[email],
             body=html_body,
             subtype=MessageType.html,
@@ -152,7 +152,7 @@ async def send_password_reset_email(email: str, token: str) -> None:
     <body>
         <div class="container">
             <h2>Reset Your Password</h2>
-            <p>You requested to reset your password for your CRM Plus account.</p>
+            <p>You requested to reset your password for your Propdex account.</p>
             <p>
                 <a href="{reset_url}" class="button">Reset Password</a>
             </p>
@@ -163,7 +163,7 @@ async def send_password_reset_email(email: str, token: str) -> None:
                 If you didn't request this reset, please ignore this email and your password will remain unchanged.
             </div>
             <div class="footer">
-                <p>CRM Plus - Property Intelligence Platform</p>
+                <p>Propdex - Property Intelligence Platform</p>
             </div>
         </div>
     </body>
@@ -172,7 +172,7 @@ async def send_password_reset_email(email: str, token: str) -> None:
 
     try:
         message = MessageSchema(
-            subject="Reset Your Password - CRM Plus",
+            subject="Reset Your Password - Propdex",
             recipients=[email],
             body=html_body,
             subtype=MessageType.html,

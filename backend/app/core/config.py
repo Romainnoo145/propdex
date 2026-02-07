@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/crmplus",
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/propdex",
         description="Async PostgreSQL connection URL",
     )
     MIGRATION_DATABASE_URL: str = Field(
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
         description="SMTP password",
     )
     MAIL_FROM: str = Field(
-        default="noreply@crmplus.nl",
+        default="noreply@propdex.nl",
         description="Default sender email address",
     )
     MAIL_SERVER: str = Field(

@@ -1,1 +1,1 @@
-"""CRM Plus API application package."""
+"""Propdex API application package."""

@@ -92,7 +92,7 @@ External Dependencies:
 ## Recommended Project Structure
 
 ```
-crmplus/
+propdex/
 ├── backend/
 │   ├── app/
 │   │   ├── api/                    # API routes and endpoints
@@ -534,7 +534,7 @@ class BaseGovernmentAPIClient:
 from celery import Celery
 from app.services.orchestration.document_processing import DocumentProcessingOrchestrator
 
-celery_app = Celery('crmplus', broker='redis://localhost:6379/0')
+celery_app = Celery('propdex', broker='redis://localhost:6379/0')
 
 @celery_app.task(bind=True, max_retries=3)
 def process_bestemmingsplan_pdf(
@@ -960,5 +960,5 @@ When multiple sources provide overlapping data (e.g., both BAG and Kadaster have
 - **Phase 3 (AI Fallback):** Research best LLM model for Dutch PDF parsing, prompt engineering for structured extraction, cost optimization strategies
 
 ---
-*Architecture research for: CRM Plus (Dutch PropTech Property Intelligence Platform)*
+*Architecture research for: Propdex (Dutch PropTech Property Intelligence Platform)*
 *Researched: 2026-02-07*
