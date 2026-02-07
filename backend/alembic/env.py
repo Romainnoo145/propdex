@@ -1,5 +1,11 @@
 """Alembic environment configuration for async SQLAlchemy."""
 
+# IMPORTANT: Alembic migrations require superuser privileges for DDL operations
+# (CREATE TABLE, ALTER TABLE, CREATE POLICY, etc.)
+# The application runtime uses app_role (RLS enforced) via DATABASE_URL.
+# Set MIGRATION_DATABASE_URL in backend/.env to a superuser connection string.
+# If MIGRATION_DATABASE_URL is not set, falls back to DATABASE_URL.
+
 import asyncio
 from logging.config import fileConfig
 
@@ -19,8 +25,9 @@ from app.core.config import settings
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override sqlalchemy.url with our DATABASE_URL from settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Use migration URL (superuser) for schema changes
+# Falls back to DATABASE_URL if MIGRATION_DATABASE_URL is not set
+config.set_main_option("sqlalchemy.url", settings.migration_database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
