@@ -6,8 +6,6 @@ from typing import AsyncGenerator
 import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
@@ -146,13 +144,11 @@ async def async_client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, Non
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Override rate limiter to disable in tests
-    test_limiter = Limiter(
-        key_func=get_remote_address,
-        default_limits=["9999/minute"],
-        storage_uri="memory://",
-    )
-    app.state.limiter = test_limiter
+    # Disable rate limiting in tests by setting enabled=False on the actual limiter
+    # The route decorators reference the module-level limiter object directly,
+    # so replacing app.state.limiter has no effect on decorator-level limits.
+    from app.middleware.rate_limit import limiter as app_limiter
+    app_limiter.enabled = False
 
     # Create async client
     async with AsyncClient(
@@ -161,8 +157,10 @@ async def async_client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, Non
     ) as client:
         yield client
 
-    # Clear overrides to prevent leakage between tests
+    # Clear overrides and re-enable rate limiter
     app.dependency_overrides.clear()
+    from app.middleware.rate_limit import limiter as app_limiter
+    app_limiter.enabled = True
 
 
 @pytest.fixture
