@@ -11,15 +11,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Current Position
 
-**Phase:** 2 of 5 (Core Data Pipeline) — COMPLETE
-**Plan:** 3 of 3 completed
-**Status:** Phase complete
+**Phase:** 3 of 5 (Zoning & Monument Intelligence) — IN PROGRESS
+**Plan:** 1 of 3 completed
+**Status:** In progress
 
-**Progress:** [██████░░░░░░░░░░░░░░] 6/15 plans complete (40%)
+**Progress:** [██████░█░░░░░░░░░░░░] 7/15 plans complete (47%)
 
-**Last Activity:** 2026-02-07 — Completed 02-03-PLAN.md (Property Aggregator & Endpoint)
+**Last Activity:** 2026-02-07 — Completed 03-01-PLAN.md (Foundation for Phase 3)
 
-**Next Action:** Begin Phase 3 planning (Zoning & Monument Intelligence)
+**Next Action:** Execute 03-02 (API Clients for DSO and RCE)
 
 ---
 
@@ -30,7 +30,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 4 (INFRA-01, INFRA-02, DATA-01, DATA-02) |
 | Phases Completed | 2/5 |
-| Plans Completed | 6/15 (estimated) |
+| Plans Completed | 7/15 (estimated) |
 | Days Since Start | 2 |
 
 ---
@@ -72,6 +72,12 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 29 | Completeness score as fraction | 02-03 | sections_available / total_sections provides transparency about partial data without failing request |
 | 30 | Source attribution with cache metadata | 02-03 | Each API tracked with source, cache timestamp, age; enables frontend to show freshness |
 | 31 | B008 ruff ignore for FastAPI Depends | 02-03 | Standard dependency injection pattern; false positive from flake8-bugbear |
+| 32 | shapely for GeoJSON parsing | 03-01 | shapely.geometry.shape() handles GeoJSON natively; no need for separate geojson library |
+| 33 | 90-day cache TTL for DSO zoning data | 03-01 | Same as bestemmingsplan - zoning rules change very rarely |
+| 34 | 30-day cache TTL for RCE monument data | 03-01 | Monument status changes more frequently than zoning but still infrequent |
+| 35 | force_refresh defaults to False | 03-01 | Backward compatible; opt-in behavior for explicit cache bypass |
+| 36 | Monument status ANY source confirms | 03-01 | Conservative approach - better to flag potential monument than miss heritage status |
+| 37 | Confidence indicators on DataSourceInfo | 03-01 | Enables HIGH for API data, MEDIUM/LOW for AI-parsed data in Phase 4 |
 
 ### Active TODOs
 
@@ -82,7 +88,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement HTTP client and cache infrastructure (02-01)~~ (completed 02-01)
 - [x] ~~Implement BAG API client (02-02)~~ (completed 02-02)
 - [x] ~~Implement property aggregator and endpoints (02-03)~~ (completed 02-03)
-- [ ] Begin Phase 3 planning (Zoning & Monument Intelligence)
+- [x] ~~Begin Phase 3 planning (Zoning & Monument Intelligence)~~ (completed 03-01)
+- [ ] Implement DSO and RCE API clients (03-02)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
 ### Blockers
@@ -91,43 +98,46 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **03-01 Phase 3 Foundation (2026-02-07):** Spatial dependencies (shapely, pyproj), complete Phase 3 schemas (zoning, monuments, map data), force_refresh cache capability, 3-minute execution
 - **Phase 2 Complete (2026-02-07):** Full property data pipeline with parallel API fetching, completeness scoring, and authenticated endpoints
 - **02-03 Property Aggregator (2026-02-07):** Property lookup endpoint with asyncio.gather parallel fetch, completeness scoring, 3-minute execution
 - **02-02 Government API Clients (2026-02-07):** BAG and PDOK clients with Dutch postcode validation, hierarchical address resolution, per-call caching, 2-minute execution
 - **02-01 HTTP Client & Cache (2026-02-07):** Shared httpx AsyncClient with HTTP/2, PostgreSQL JSONB cache with TTL-based invalidation, 3-minute execution
-- **Phase 1 Complete (2026-02-07):** Full authentication system with email verification, password reset, Google OAuth, and rate limiting
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 02-03-PLAN.md
-**Stopped At:** Completed 02-03 (Property Aggregator & Endpoint) — Phase 2 complete
+**Last Session:** 2026-02-07 — Executed 03-01-PLAN.md
+**Stopped At:** Completed 03-01 (Foundation for Phase 3)
 **Resume File:** None
 
 **What Was Accomplished:**
-- PDOK Cadastral OGC API client for parcel lookup by bbox/point coordinates
-- Property aggregator with asyncio.gather for parallel building + cadastral fetch
-- PropertyLookupResponse schema with completeness score and source attribution
-- DataSourceInfo for cache metadata tracking per API source
-- POST /api/properties/lookup endpoint (authenticated, rate-limited 30/min)
-- GET /api/properties/suggest endpoint for address autocomplete (60/min)
-- Graceful partial failure handling with error collection
-- All verifications passed, 2 atomic commits created (826dd5a, 769913a)
+- Installed spatial dependencies: shapely>=2.0.0 and pyproj>=3.7.0
+- Extended cache configuration with DSO (90d) and RCE (30d) TTLs
+- Added DSO_API_KEY setting to configuration
+- Extended cache_manager.get_cached_or_fetch with force_refresh parameter
+- Created complete Phase 3 Pydantic schemas: ZoningData, MonumentStatus, PropertyReportResponse
+- Added SectionSourceInfo with Dutch freshness timestamps
+- Added MapData with PDOK BRT tile URL
+- Added confidence indicators to DataSourceInfo
+- All verifications passed, 2 atomic commits created (d4d28cd, 2e2cbf1)
 - Execution time: 3 minutes
 
 **Context for Next Session:**
-- **Phase 2 Complete:** Full property data pipeline operational
-- **Parallel Fetching Pattern:** asyncio.gather(return_exceptions=True) for partial failure tolerance
-- **Completeness Scoring:** Transparent about partial data (address/building/parcels)
-- **Source Attribution:** Each API tracked with cache freshness metadata
-- **Coordinates Available:** Building geometry provides coordinates for spatial lookups
-- **Cadastral IDs Available:** Parcel IDs ready for ownership/monument queries
-- **Next:** Plan Phase 3 (Zoning & Monument Intelligence)
-- Will leverage existing coordinates for bestemmingsplan spatial queries
-- Cache infrastructure ready for PDF document storage
-- Error collection pattern ready for AI confidence scores
+- **Phase 3 Foundation Complete:** All schemas defined and importable
+- **Spatial Libraries Ready:** shapely for GeoJSON operations, pyproj for coordinate transformations
+- **Cache Infrastructure Extended:** DSO and RCE sources configured with appropriate TTLs
+- **Force Refresh Available:** Cache bypass capability for explicit refresh requests
+- **Data Gap Tracking:** ZoningData.data_gaps field for partial data transparency
+- **Multi-Source Conflict Detection:** MonumentStatus with consensus logic
+- **Dutch Freshness Timestamps:** SectionSourceInfo.freshness_display_nl computed property
+- **Confidence Indicators:** DataSourceInfo.confidence for API vs AI data distinction
+- **Next:** Implement DSO and RCE API clients (03-02)
+- Building coordinates available from Phase 2 for spatial zoning queries
+- Cadastral parcel IDs available for monument lookup
+- PropertyReportResponse schema ready for extended report aggregation
 
 ---
 
-*Last updated: 2026-02-07T04:26:52Z*
+*Last updated: 2026-02-07T07:36:06Z*
