@@ -99,6 +99,14 @@ Plans:
 
 **Requirements:** PROP-05, INFRA-04
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Dependencies (anthropic, arq), config (ANTHROPIC_API_KEY, REDIS_URL), AI schemas, DB models (PDFDocument, ParsingJob), migration
+- [ ] 04-02-PLAN.md — Claude AI client with structured PDF parsing + PDF download service with IMRO validation
+- [ ] 04-03-PLAN.md — ARQ background worker + PDF parsing job + plan aggregator (cache-first orchestration)
+- [ ] 04-04-PLAN.md — API integration (job status polling, PDF upload endpoint, property aggregator extension, ARQ lifespan)
+
 **Success Criteria:**
 1. System downloads bestemmingsplan PDF when structured API data is unavailable
 2. AI parsing runs asynchronously in background (user sees progress, not timeout)
@@ -107,7 +115,7 @@ Plans:
 5. AI-parsed data includes disclaimers ("Verify with notaris" for ambiguous interpretations)
 6. PDF parsing detects complex structures (tables, footnotes) and flags incompleteness
 
-**Status:** Pending
+**Status:** In Progress
 
 ---
 
