@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import String, text
+from sqlalchemy import Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -27,4 +27,10 @@ class Organization(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
+    )
+    freshness_threshold_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("24"),
+        comment="Hours before cached data is considered stale. Minimum enforced in application code.",
     )
