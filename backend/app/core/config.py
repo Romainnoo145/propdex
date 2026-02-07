@@ -29,6 +29,10 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/crmplus",
         description="Async PostgreSQL connection URL",
     )
+    MIGRATION_DATABASE_URL: str = Field(
+        default="",
+        description="Superuser database URL for Alembic migrations (falls back to DATABASE_URL if empty)",
+    )
 
     # JWT Configuration
     SECRET_KEY: str = Field(
@@ -90,6 +94,13 @@ class Settings(BaseSettings):
         description="Allowed CORS origins (comma-separated in env)",
     )
 
+    # Freshness Configuration
+    MIN_FRESHNESS_THRESHOLD_HOURS: int = Field(
+        default=1,
+        ge=1,
+        description="Minimum freshness threshold in hours to prevent external API abuse (BAG, PDOK, DSO, RCE)",
+    )
+
     # Government API Configuration
     BAG_API_KEY: str = Field(
         default="",
@@ -114,6 +125,11 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS string into a list."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+
+    @property
+    def migration_database_url(self) -> str:
+        """Return migration URL, falling back to DATABASE_URL."""
+        return self.MIGRATION_DATABASE_URL or self.DATABASE_URL
 
 
 # Singleton settings instance
