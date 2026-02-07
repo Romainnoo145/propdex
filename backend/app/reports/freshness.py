@@ -6,7 +6,9 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.cached_response import CachedAPIResponse
+from app.models.organization import Organization
 from app.models.report import SavedReport
 
 
@@ -19,8 +21,9 @@ async def check_report_freshness(
     Check if saved report has fresher data available in cache.
 
     Compares saved snapshot timestamps with latest cache entries for each section.
-    Uses 24-hour threshold: sections with cache data more than 24 hours newer
-    than the saved snapshot are flagged as having updates available.
+    Uses the organization's freshness threshold (with system minimum enforced):
+    sections with cache data more than threshold hours newer than the saved
+    snapshot are flagged as having updates available.
 
     Args:
         report: SavedReport instance with report_data JSONB
@@ -42,6 +45,19 @@ async def check_report_freshness(
                 ]
             }
     """
+    # Query organization for freshness threshold
+    org_stmt = select(Organization).where(Organization.id == organization_id)
+    org_result = await session.execute(org_stmt)
+    organization = org_result.scalar_one_or_none()
+
+    if organization:
+        threshold_hours = max(
+            organization.freshness_threshold_hours,
+            settings.MIN_FRESHNESS_THRESHOLD_HOURS,
+        )
+    else:
+        threshold_hours = max(24, settings.MIN_FRESHNESS_THRESHOLD_HOURS)
+
     # Extract section sources from report_data
     section_sources = report.report_data.get("section_sources", [])
 
@@ -112,8 +128,8 @@ async def check_report_freshness(
         time_diff = latest_dt - saved_dt
         age_hours = int(time_diff.total_seconds() / 3600)
 
-        # 24-hour threshold for "update available"
-        if age_hours > 24:
+        # Check if age exceeds organization's threshold
+        if age_hours > threshold_hours:
             updated_sections.append(
                 {
                     "section": section_name,
