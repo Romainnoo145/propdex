@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 4 of 5 (AI Document Parsing)
-**Plan:** 1 of 4 completed
+**Plan:** 2 of 4 completed
 **Status:** In progress
 
-**Progress:** [███████████░░░░░░░░░] 11/15 plans complete (73%)
+**Progress:** [████████████░░░░░░░░] 12/15 plans complete (80%)
 
-**Last Activity:** 2026-02-07 — Completed 04-01-PLAN.md (AI Foundation)
+**Last Activity:** 2026-02-07 — Completed 04-02-PLAN.md (Claude API Client)
 
-**Next Action:** Plan 04-02 (Claude API Client)
+**Next Action:** Plan 04-03 (ARQ Worker)
 
 ---
 
@@ -30,7 +30,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 7 (INFRA-01, INFRA-02, DATA-01, DATA-02, PROP-03, PROP-04, PROP-06) |
 | Phases Completed | 3/5 |
-| Plans Completed | 7/15 (estimated) |
+| Plans Completed | 12/15 (estimated) |
 | Days Since Start | 2 |
 
 ---
@@ -103,6 +103,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 60 | plan_idn as PDF reuse key | 04-01 | Multiple addresses in same bestemmingsplan share one PDF; keyed by (organization_id, plan_idn) |
 | 61 | ParsingJob for tenant isolation | 04-01 | ARQ job_id stored with organization_id; prevents cross-tenant job status leakage in polling endpoint |
 | 62 | Composite indexes (org, plan_idn) | 04-01 | ix_pdf_documents_org_plan and ix_parsing_jobs_org_plan optimize tenant-scoped queries |
+| 63 | claude-sonnet-4-5-20250929 for PDF parsing | 04-02 | Good balance of cost and quality for document extraction; Sonnet 4.5 has native PDF support via vision and structured outputs |
+| 64 | Ephemeral prompt caching for PDF and system prompt | 04-02 | Reduces API costs for repeated parsing attempts; PDF bytes cached alongside prompt |
+| 65 | JSON extraction with markdown cleanup | 04-02 | Claude may wrap JSON in markdown code blocks; strip ```json and ``` before Pydantic validation |
+| 66 | AIParsingError with retriable flag | 04-02 | Distinguishes temporary failures (rate limit, network) from permanent ones (invalid JSON); enables smart retry logic in ARQ worker |
+| 67 | IMRO regex pattern NL.IMRO.{4 digits}.{plan}-{version} | 04-02 | Standard Dutch zoning plan identifier format; prevents invalid downloads and storage |
+| 68 | Ruimtelijkeplannen.nl URL pattern for auto-download | 04-02 | Official Dutch government repository for bestemmingsplannen; predictable URL structure enables auto-download |
+| 69 | 100MB PDF size limit | 04-02 | Prevents memory issues and excessive API costs; typical bestemmingsplan PDFs are 1-20MB |
+| 70 | is_user_uploaded boolean flag | 04-02 | Distinguishes auto-downloaded from manually uploaded PDFs; enables analytics and fallback workflows |
 
 ### Active TODOs
 
@@ -119,9 +127,10 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement property report aggregator (03-04)~~ (completed 03-04)
 - [x] ~~Begin Phase 4 planning (AI Document Parsing)~~ (completed 04-01)
 - [x] ~~Add AI infrastructure foundation (04-01)~~ (completed 04-01)
-- [ ] Implement Claude API client with PDF support (04-02)
+- [x] ~~Implement Claude API client with PDF support (04-02)~~ (completed 04-02)
 - [ ] Implement ARQ worker for background parsing (04-03)
-- [ ] Test Claude API with real bestemmingsplan PDFs during 04-02/04-03
+- [ ] Implement API endpoints with job queueing (04-04)
+- [ ] Test Claude API with real bestemmingsplan PDFs during 04-03/04-04
 
 ### Blockers
 
@@ -129,6 +138,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 4 Plan 2 Complete (2026-02-07):** Claude AI client with PDF parsing, Dutch confidence scoring prompt, Ruimtelijkeplannen.nl download service with IMRO validation, 4m 2s execution
 - **Phase 4 Plan 1 Complete (2026-02-07):** AI infrastructure foundation with anthropic and arq dependencies, Claude structured output schemas, PostgreSQL PDF storage, job tracking with tenant isolation, 2m 40s execution
 - **Phase 3 Complete (2026-02-07):** Full property intelligence report with zoning rules, monument status, map data, section-level source attribution, and cache bypass
 - **03-04 Property Report Aggregator (2026-02-07):** Parallel fetch (cadastral+zoning+monuments), WGS84 coordinate transformation, PropertyReportResponse with all Phase 3 sections, 2-minute execution
@@ -144,33 +154,34 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 04-01-PLAN.md
-**Stopped At:** Completed 04-01 (AI Document Parsing Foundation)
+**Last Session:** 2026-02-07 — Executed 04-02-PLAN.md
+**Stopped At:** Completed 04-02 (Claude API Client)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Added anthropic>=0.40.0 and arq>=0.27.0 dependencies to pyproject.toml
-- Added ANTHROPIC_API_KEY and REDIS_URL config settings
-- Added CACHE_TTL["ai_parsed"] = 7776000 (90 days)
-- Created app/ai/schemas.py with 6 Pydantic models (BestemmingsplanParsed, BestemmingsregelExtract, BuildingDimensionsAI, AIParsingSection, JobStatusResponse)
-- Created PDFDocument model with LargeBinary storage for PDF files
-- Created ParsingJob model with ARQ job_id tracking for tenant isolation
-- Generated and applied Alembic migration dedfd360f313 (pdf_documents + parsing_jobs tables)
-- All verifications passed, 2 atomic commits created (465e9c9, f2ff7d1)
-- Execution time: 2 minutes 40 seconds
+- Created app/ai/claude_client.py with ClaudeClient async wrapper
+- Implemented parse_bestemmingsplan method with PDF base64 encoding
+- Created app/ai/prompts.py with BESTEMMINGSPLAN_PARSING_PROMPT (2326 chars)
+- Dutch prompt extracts 8 zoning rule fields with confidence scoring
+- Added AIParsingError with retriable flag for ARQ retry logic
+- Created app/services/pdf_downloader.py with IMRO validation
+- Implemented download_and_store_pdf from Ruimtelijkeplannen.nl
+- Implemented store_uploaded_pdf for user uploads
+- PDF validation: magic bytes, 100MB limit, IMRO format
+- All verifications passed, 2 atomic commits created (1f987bf, af271d5)
+- Execution time: 4 minutes 2 seconds
 
 **Context for Next Session:**
-- **Phase 4 Plan 1 Complete:** AI infrastructure foundation ready
-- **Dependencies Installed:** anthropic and arq packages available for import
-- **Config Ready:** ANTHROPIC_API_KEY and REDIS_URL settings loadable from .env
-- **Schemas Defined:** All Phase 4 Pydantic schemas in app/ai/schemas.py (no iteration needed in future plans)
-- **Database Tables Exist:** pdf_documents and parsing_jobs tables migrated with tenant isolation
-- **Confidence Scoring Pattern:** HIGH/MEDIUM/LOW per rule + overall confidence established
-- **PDF Storage Pattern:** PostgreSQL BYTEA storage, keyed by (organization_id, plan_idn) for cross-address reuse
-- **Job Tracking Pattern:** ParsingJob with ARQ job_id prevents cross-tenant leakage
-- **Next:** Plan 04-02 (Claude API Client) requires ANTHROPIC_API_KEY in .env
-- **Redis Required:** Plan 04-03 (ARQ Worker) requires Redis running on localhost:6379
+- **Phase 4 Plan 2 Complete:** Claude API client and PDF download service ready
+- **ClaudeClient Ready:** parse_bestemmingsplan callable with PDF bytes
+- **PDF Download Ready:** download_and_store_pdf and store_uploaded_pdf functional
+- **Error Handling:** AIParsingError.retriable and PDFDownloadError defined
+- **Prompt Defined:** 2326 char Dutch extraction prompt with confidence scoring
+- **Validation Patterns:** IMRO regex, PDF magic bytes, size limits established
+- **Next:** Plan 04-03 (ARQ Worker) requires Redis running on localhost:6379
+- **Redis Required:** Start Redis before 04-03 execution
+- **Testing:** Real bestemmingsplan PDFs needed for integration testing in 04-03/04-04
 
 ---
 
-*Last updated: 2026-02-07T09:08:15Z*
+*Last updated: 2026-02-07T09:16:49Z*
