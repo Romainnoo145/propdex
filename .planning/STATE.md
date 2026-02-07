@@ -11,15 +11,15 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Current Position
 
-**Phase:** 3 of 5 (Zoning & Monument Intelligence) — IN PROGRESS
-**Plan:** 3 of 4 completed
-**Status:** In progress
+**Phase:** 3 of 5 (Zoning & Monument Intelligence) — COMPLETE
+**Plan:** 4 of 4 completed
+**Status:** Phase complete
 
-**Progress:** [██████░███░░░░░░░░░░] 9/15 plans complete (60%)
+**Progress:** [██████████░░░░░░░░░░] 10/15 plans complete (67%)
 
-**Last Activity:** 2026-02-07 — Completed 03-03-PLAN.md (RCE Monument Client & Multi-source Aggregator)
+**Last Activity:** 2026-02-07 — Completed 03-04-PLAN.md (Property Report Aggregator)
 
-**Next Action:** Execute 03-04 (Property Report Aggregator)
+**Next Action:** Plan Phase 4 (Bestemmingsplan AI)
 
 ---
 
@@ -88,6 +88,12 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 45 | Monument restrictions are standard guidance text | 03-03 | Restrictions per monument type (not building-specific API data); immediate value without additional complexity |
 | 46 | Conservative multi-source conflict detection | 03-03 | When sources disagree, has_conflict=True and consensus_status=None; better to flag uncertainty than false consensus |
 | 47 | BAG/Kadaster monument indicators unavailable | 03-03 | MVP limitation - no monument fields in standard API; RCE is primary source |
+| 48 | PropertyReportResponse replaces PropertyLookupResponse | 03-04 | New standard return type includes zoning, monuments, map_data, section_sources while maintaining core field compatibility |
+| 49 | Section-level source attribution | 03-04 | SectionSourceInfo provides granular cache metadata per report section with Dutch relative timestamps |
+| 50 | force_refresh defaults to False | 03-04 | Backward compatible; opt-in cache bypass for frontend "Vernieuwen" button |
+| 51 | Map data with both RD and WGS84 coordinates | 03-04 | Enables direct use with OpenLayers/Leaflet while preserving Dutch coordinate system |
+| 52 | Completeness score expanded to 5 sections | 03-04 | Was 3 (address/building/parcels), now includes zoning and monuments for transparency |
+| 53 | Coordinate transformation in aggregator layer | 03-04 | RD to WGS84 conversion centralized in property_aggregator, not in individual API clients |
 
 ### Active TODOs
 
@@ -101,7 +107,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Begin Phase 3 planning (Zoning & Monument Intelligence)~~ (completed 03-01)
 - [x] ~~Implement DSO API client and zoning aggregator (03-02)~~ (completed 03-02)
 - [x] ~~Implement RCE monument API client (03-03)~~ (completed 03-03)
-- [ ] Implement property report aggregator (03-04)
+- [x] ~~Implement property report aggregator (03-04)~~ (completed 03-04)
+- [ ] Begin Phase 4 planning (Bestemmingsplan AI)
 - [ ] Test Claude API with real bestemmingsplan PDFs during Phase 4 planning
 
 ### Blockers
@@ -110,6 +117,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 3 Complete (2026-02-07):** Full property intelligence report with zoning rules, monument status, map data, section-level source attribution, and cache bypass
+- **03-04 Property Report Aggregator (2026-02-07):** Parallel fetch (cadastral+zoning+monuments), WGS84 coordinate transformation, PropertyReportResponse with all Phase 3 sections, 2-minute execution
 - **03-03 RCE Monument Client (2026-02-07):** RCE Rijksmonument Solr API with pyproj coordinate transformation, multi-source aggregator (RCE/BAG/Kadaster), conflict detection, Dutch restriction summaries, 2-minute execution
 - **03-02 DSO Zoning Client (2026-02-07):** DSO Ruimtelijke Plannen v4 client with POST+GeoJSON spatial queries, HAL+JSON pagination, shapely intersection, Dutch maatvoering parsing, 2-minute execution
 - **03-01 Phase 3 Foundation (2026-02-07):** Spatial dependencies (shapely, pyproj), complete Phase 3 schemas (zoning, monuments, map data), force_refresh cache capability, 3-minute execution
@@ -122,33 +131,33 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 03-03-PLAN.md
-**Stopped At:** Completed 03-03 (RCE Monument Client & Multi-source Aggregator)
+**Last Session:** 2026-02-07 — Executed 03-04-PLAN.md
+**Stopped At:** Completed 03-04 (Property Report Aggregator) - Phase 3 Complete
 **Resume File:** None
 
 **What Was Accomplished:**
-- Created RCEMonumentClient with Solr geofilt spatial queries using WGS84 coordinates
-- Implemented pyproj coordinate transformation (RD EPSG:28992 ↔ WGS84 EPSG:4326)
-- Built monument aggregator fetching from RCE, BAG, Kadaster in parallel with asyncio.gather
-- Added multi-source conflict detection comparing definitive sources
-- Implemented consensus status logic (only when all sources agree)
-- Generated plain-language Dutch restriction summaries per monument type
-- Conservative approach: ANY source confirming monument sets is_monument=True
-- Cache integration with rce source (30d TTL) and force_refresh support
-- All verifications passed, 2 atomic commits created (ae34b2b, 527d58d)
+- Extended property_aggregator.py with parallel fetching of cadastral + zoning + monuments via asyncio.gather
+- Added fetch_zoning_data and fetch_monument_status integration with force_refresh propagation
+- Built MapData with RD to WGS84 coordinate transformation for frontend map rendering
+- Assembled section-level source attribution (SectionSourceInfo) with Dutch freshness timestamps
+- Updated completeness score to 5 sections (address, building, parcels, zoning, monuments)
+- Changed endpoint return type from PropertyLookupResponse to PropertyReportResponse
+- Added force_refresh query parameter to POST /api/properties/lookup for cache bypass
+- Updated endpoint docstring to document all Phase 3 intelligence sections
+- All verifications passed, 2 atomic commits created (e8fdc57, de94715)
 - Execution time: 2 minutes
 
 **Context for Next Session:**
-- **RCE Monument Client Ready:** Solr API with WGS84 geofilt queries, 50m search radius
-- **Coordinate Transformation:** pyproj module-level transformers for RD↔WGS84 conversion
-- **Multi-Source Aggregation:** Parallel fetch from RCE, BAG, Kadaster with conflict detection
-- **Conservative Monument Detection:** ANY source confirming monument status sets is_monument=True
-- **Dutch Restriction Summaries:** Standard guidance text (4 restrictions for rijksmonument, 3 for gemeentelijk)
-- **Cache Integration:** 30-day TTL with force_refresh capability
-- **Next:** Implement Property Report Aggregator (03-04) to combine address, cadastral, zoning, and monument data
-- Building coordinates from Phase 2 available for RCE spatial queries
-- Zoning data from 03-02 ready for report aggregation
-- Monument status provides critical investment intelligence (€200k-500k renovation impact)
+- **Phase 3 Complete:** All 4 plans finished - property intelligence report fully integrated
+- **PropertyReportResponse:** New standard response includes zoning, monuments, map_data, section_sources
+- **Map Data Ready:** Both RD and WGS84 coordinates provided for frontend rendering with OpenLayers/Leaflet
+- **Section Attribution:** Granular cache metadata per section with Dutch relative timestamps
+- **Cache Bypass:** force_refresh parameter enables "Vernieuwen" button UX
+- **Parallel Fetching:** All government APIs (BAG, cadastral, DSO, RCE) called in parallel for optimal performance
+- **Next:** Plan Phase 4 (Bestemmingsplan AI) for Claude API integration when DSO data is insufficient
+- Phase 4 will add AI-parsed data with confidence indicators (MEDIUM/LOW vs HIGH for API sources)
+- PropertyReportResponse schema already supports fallback_used and confidence fields
+- Frontend can now build complete property intelligence dashboard with map visualization
 
 ---
 
