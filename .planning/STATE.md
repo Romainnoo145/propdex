@@ -18,7 +18,7 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Progress:** ████████████████░░░░ 15/15 requirements + 1/6 gap plans
 
-**Next Action:** Continue Phase 11 plans
+**Next Action:** Continue Phase 11 (plans 02-04)
 
 ---
 
@@ -89,9 +89,12 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **10-03 (TEST-10):** Automatic pg_trgm extension installation in conftest.py for SavedReport GIN index
 
 **Phase 11 Decisions:**
-- **11-03 (TEST-11):** Mock aggregate_property_data at router level (not aggregator internals) to test HTTP/auth/validation layer
-- **11-03 (TEST-11):** Set app.state.http_client and app.state.arq_pool as mocks before tests (router accesses these directly)
-- **11-03 (TEST-11):** Follow AsyncClient + JWT pattern from test_auth_flow.py for authenticated requests
+- **11-01 (TEST-11):** Mock internal orchestration functions (resolve_address, fetch_zoning_data, fetch_monument_status, get_cached_or_fetch) rather than external httpx clients following Phase 9 pattern
+- **11-01 (TEST-11):** Use arq_pool=None for all tests since AI parsing is tested separately in Phase 9
+- **11-01 (TEST-11):** Accept database initialization race condition as pre-existing infrastructure issue (affects many test files, not specific to new tests)
+- **11-03 (TEST-12):** Mock aggregate_property_data at router level (not aggregator internals) to test HTTP/auth/validation layer
+- **11-03 (TEST-12):** Set app.state.http_client and app.state.arq_pool as mocks before tests (router accesses these directly)
+- **11-03 (TEST-12):** Follow AsyncClient + JWT pattern from test_auth_flow.py for authenticated requests
 
 ### Active TODOs
 
@@ -107,6 +110,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
+- **11-01 COMPLETE (2026-02-07):** Property aggregator integration tests — 10 tests covering orchestration flow, error handling (404/502), partial failures, coordinate extraction, completeness scoring
 - **11-03 COMPLETE (2026-02-08):** Properties router HTTP endpoint tests — 8 tests covering auth, validation, success, error propagation
 - **AUDIT COMPLETE (2026-02-08):** v1.1 milestone audited — 15/15 requirements, 12 tech debt items identified
 - **GAP PHASES CREATED:** Phases 11-12 added to close coverage (67%→80%) and documentation gaps
@@ -116,10 +120,10 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 11-03-PLAN.md
-**Stopped At:** Completed 11-03-PLAN.md
+**Last Session:** 2026-02-07 — Completed 11-01-PLAN.md
+**Stopped At:** Completed 11-01-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Completed 11-03: Properties router HTTP endpoint tests)*
+*Last updated: 2026-02-07 (Completed 11-01: Property aggregator integration tests)*
