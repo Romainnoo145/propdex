@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from fastapi import Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -30,13 +31,28 @@ async_session_factory = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """
-    FastAPI dependency that provides a database session.
+    FastAPI dependency that provides database session with RLS context.
 
-    Yields an async session that is automatically closed after the request.
+    Extracts organization_id from request.state (set by TenantContextMiddleware)
+    and sets PostgreSQL session variable for RLS policies.
+
+    For authenticated requests: SET LOCAL app.current_tenant_id = org_id
+    For unauthenticated requests: session variable is NOT set, RLS denies access (fail-closed)
     """
     async with async_session_factory() as session:
+        # Get organization_id from middleware (if authenticated request)
+        org_id = getattr(request.state, "organization_id", None)
+
+        if org_id:
+            # Set session variable for RLS policies (transaction-scoped via SET LOCAL)
+            # SET LOCAL is safe with connection pooling — scoped to current transaction only
+            await session.execute(
+                text("SET LOCAL app.current_tenant_id = :org_id"),
+                {"org_id": str(org_id)},
+            )
+
         try:
             yield session
         finally:
