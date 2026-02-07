@@ -74,9 +74,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Aggregator unit tests (zoning spatial logic + monument conflict detection)
-- [ ] 09-02-PLAN.md -- AI parsing unit tests (Claude client) + ARQ lifecycle integration
-- [ ] 09-03-PLAN.md -- Aggregator integration tests (full flow with cache + DB)
+- [x] 09-01-PLAN.md -- Aggregator unit tests (zoning spatial logic + monument conflict detection) — 42 tests
+- [x] 09-02-PLAN.md -- AI parsing unit tests (Claude client) + ARQ lifecycle integration — 15 tests
+- [x] 09-03-PLAN.md -- Aggregator integration tests (full flow with cache + DB) — 9 tests
 
 **Success Criteria:**
 1. Zoning and monument aggregators have unit tests covering data transformation, spatial intersection logic, and error handling
@@ -90,6 +90,13 @@ Plans:
 **Requirements:** TEST-08, TEST-09, TEST-10
 
 **Dependencies:** Phase 9 (all core modules tested)
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md -- Report CRUD integration tests (save, list, search, delete, soft-delete, restore)
+- [ ] 10-02-PLAN.md -- PDF export unit tests (template rendering, WeasyPrint generation)
+- [ ] 10-03-PLAN.md -- Multi-tenant isolation integration tests (cross-org reports, cache, API endpoints)
 
 **Success Criteria:**
 1. Report CRUD operations have integration tests covering save, list, search, and delete against the database
@@ -124,11 +131,11 @@ Plans:
 | 6 | Security & Configuration | 3 | 3/3 complete | ✓ Complete |
 | 7 | Test Infrastructure & Auth Testing | 3 | 2/2 complete | ✓ Complete |
 | 8 | Data Pipeline Testing | 2 | 2/2 complete | ✓ Complete |
-| 9 | Intelligence Testing | 4 | 0/3 planned | In Progress |
-| 10 | Report & Multi-Tenant Testing | 3 | Pending | Blocked by Phase 9 |
+| 9 | Intelligence Testing | 4 | 3/3 complete | ✓ Complete |
+| 10 | Report & Multi-Tenant Testing | 3 | 0/3 planned | Ready |
 
 **Total:** 15 requirements across 5 phases
 
 ---
 
-*Last updated: 2026-02-07 (Phase 9 planned — 3 plans in 2 waves)*
+*Last updated: 2026-02-07 (Phase 9 complete — 66 tests across 3 plans, 200 total)*
