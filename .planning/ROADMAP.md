@@ -18,6 +18,13 @@ Stabilize the v1.0 backend with comprehensive test coverage, enforce row-level s
 
 **Dependencies:** None (changes foundation for all future testing)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md -- Config consolidation, settings hardening, audit logging
+- [ ] 06-02-PLAN.md -- Per-organization freshness threshold
+- [ ] 06-03-PLAN.md -- RLS enforcement with app_role and fail-closed policies
+
 **Success Criteria:**
 1. Database connection uses app_role (not superuser) and RLS policies actively prevent cross-organization data access
 2. Single .env file exists only in backend/ with all config loading from that location
@@ -97,7 +104,7 @@ Stabilize the v1.0 backend with comprehensive test coverage, enforce row-level s
 
 | Phase | Name | Requirements | Plans | Status |
 |-------|------|--------------|-------|--------|
-| 6 | Security & Configuration | 3 | Pending | Ready to plan |
+| 6 | Security & Configuration | 3 | 3 plans (2 waves) | Planned |
 | 7 | Test Infrastructure & Auth Testing | 3 | Pending | Blocked by Phase 6 |
 | 8 | Data Pipeline Testing | 2 | Pending | Blocked by Phase 7 |
 | 9 | Intelligence Testing | 4 | Pending | Blocked by Phase 8 |
@@ -107,4 +114,4 @@ Stabilize the v1.0 backend with comprehensive test coverage, enforce row-level s
 
 ---
 
-*Last updated: 2026-02-07 (v1.1 roadmap created)*
+*Last updated: 2026-02-07 (Phase 6 planned — 3 plans in 2 waves)*
