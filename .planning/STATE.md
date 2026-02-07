@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 5 of 5 (Report Management)
-**Plan:** 1 of 3 completed
+**Plan:** 2 of 3 completed
 **Status:** In progress
 
-**Progress:** [███████████████░░░░░] 15/18 plans complete (83%)
+**Progress:** [████████████████░░░░] 16/18 plans complete (89%)
 
-**Last Activity:** 2026-02-07 — Completed 05-01-PLAN.md (Report Storage Foundation)
+**Last Activity:** 2026-02-07 — Completed 05-02-PLAN.md (CRUD Endpoints)
 
-**Next Action:** Execute 05-02 (CRUD Endpoints)
+**Next Action:** Execute 05-03 (Report Export)
 
 ---
 
@@ -28,9 +28,9 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Metric | Value |
 |--------|-------|
 | Total Requirements (M1) | 14 |
-| Requirements Completed | 9 (INFRA-01, INFRA-02, INFRA-04, DATA-01, DATA-02, PROP-03, PROP-04, PROP-05, PROP-06) |
+| Requirements Completed | 12 (INFRA-01, INFRA-02, INFRA-04, DATA-01, DATA-02, PROP-03, PROP-04, PROP-05, PROP-06, RPT-01, RPT-02, RPT-03) |
 | Phases Completed | 4/5 |
-| Plans Completed | 15/18 |
+| Plans Completed | 16/18 |
 | Days Since Start | 2 |
 
 ---
@@ -130,6 +130,11 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 87 | Optional project_id with SET NULL | 05-01 | Reports can exist without projects; deleting project doesn't delete reports (folder organization, not ownership) |
 | 88 | Auto-generated report_name from address | 05-01 | Consistent naming convention; report_name not user-editable for simplicity and consistency |
 | 89 | Composite indexes with organization_id first | 05-01 | Follows project decision #6; PostgreSQL query planner optimizes tenant-scoped queries across all report indexes |
+| 90 | active_reports_query() centralized helper | 05-02 | All list/get operations use this helper to filter deleted_at IS NULL; prevents deleted report leakage |
+| 91 | Completeness score from JSONB | 05-02 | Report list extracts completeness_score from report_data JSONB field rather than denormalizing to column |
+| 92 | Project list with report count subquery | 05-02 | Efficient aggregation without N+1 queries using scalar_subquery() pattern |
+| 93 | Rate limiting tiers for report endpoints | 05-02 | 30/min writes, 60/min reads, 10/min refresh (stricter for refresh since it may trigger fresh API calls) |
+| 94 | Hard delete projects with FK SET NULL | 05-02 | Projects don't need soft-delete; FK ondelete=SET NULL handles report cleanup automatically |
 
 ### Active TODOs
 
@@ -151,7 +156,8 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Implement API endpoints with job queueing (04-04)~~ (completed 04-04)
 - [x] ~~Begin Phase 5 planning (Report Management)~~ (completed 05-RESEARCH)
 - [x] ~~Create report storage foundation (05-01)~~ (completed 05-01)
-- [ ] Implement report CRUD endpoints (05-02)
+- [x] ~~Implement report CRUD endpoints (05-02)~~ (completed 05-02)
+- [ ] Implement report export functionality (05-03)
 - [ ] Test Claude API with real bestemmingsplan PDFs (integration testing)
 
 ### Blockers
@@ -160,6 +166,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 5 Plan 2 Complete (2026-02-07):** Report CRUD API with 9 endpoints (save, list, get, delete, restore, notes, project assignment, refresh), project folders with report counts, 3m 39s execution
 - **Phase 5 Plan 1 Complete (2026-02-07):** Report storage foundation with JSONB PropertyReportResponse, denormalized filtering, GIN trigram search, soft-delete, project folders, 3m 6s execution
 - **Phase 4 Complete (2026-02-07):** AI document parsing infrastructure with progressive loading pattern, job polling, PDF upload fallback, complete end-to-end integration
 - **Phase 4 Plan 4 Complete (2026-02-07):** API endpoints with ARQ pool in FastAPI lifespan, job status polling, PDF upload fallback, property lookup AI integration, 4m 5s execution
@@ -180,29 +187,30 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 05-01-PLAN.md
-**Stopped At:** Completed 05-01 (Report Storage Foundation)
+**Last Session:** 2026-02-07 — Executed 05-02-PLAN.md
+**Stopped At:** Completed 05-02 (CRUD Endpoints)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Created SavedReport model with JSONB report_data, denormalized postcode/city, soft-delete, project FK
-- Created Project model for report folder organization with composite index (org, name)
-- Added Alembic migration creating both tables with pg_trgm extension for GIN trigram search
-- Created 9 indexes including composite (org first), GIN trigram on report_name, soft-delete index
-- Created Project and Report Pydantic schemas (create, update, list, detail, freshness)
-- ReportSaveRequest validates report_data as PropertyReportResponse
-- All verifications passed, 3 atomic commits created (922187c, 98bf446, a037007)
-- Execution time: 3 minutes 6 seconds
+- Created report service layer with 9 CRUD functions (save, list, get, delete, restore, update notes, assign project, update data, get cities)
+- Implemented active_reports_query() helper for consistent tenant-filtered active report queries
+- Created 9 report API endpoints: POST save, GET list, GET cities, GET detail, DELETE soft-delete, POST restore, PATCH notes, PATCH project, PUT refresh
+- Created 5 project API endpoints: POST create, GET list, GET detail, PATCH update, DELETE hard-delete
+- Report list supports city/project filters, ILIKE search on report_name, sorting by created/updated/address, pagination
+- Project list includes report_count via scalar_subquery aggregation
+- All endpoints authenticated (JWT), tenant-isolated (organization_id), rate-limited (30/min writes, 60/min reads, 10/min refresh)
+- All verifications passed, 2 atomic commits created (c045066, b6d1de3)
+- Execution time: 3 minutes 39 seconds
 
 **Context for Next Session:**
-- **Phase 5 Started:** Report management infrastructure foundation complete
-- **Database Ready:** saved_reports and projects tables with all indexes, pg_trgm enabled
-- **Schemas Ready:** All CRUD schemas validated, PropertyReportResponse integration working
-- **Next:** Implement CRUD endpoints (05-02) for saving, listing, updating reports
-- **Key Patterns:** report_name from address, completeness_score from JSONB, soft-delete WHERE deleted_at IS NULL
-- **GIN Search:** Use ILIKE '%query%' on report_name for address search (trigram optimized)
-- **Project Count:** Need COUNT subquery for report_count in ProjectResponse
+- **Phase 5 Progress:** 2 of 3 plans complete (CRUD endpoints done)
+- **API Ready:** Full report management API with 14 endpoints (9 reports + 5 projects)
+- **Requirements Satisfied:** RPT-01 (save), RPT-02 (list with filters), RPT-03 (get detail)
+- **Next:** Implement report export functionality (05-03) for PDF generation from saved reports
+- **Key Patterns:** active_reports_query() helper, completeness_score from JSONB, project hard-delete with FK SET NULL
+- **Service Layer:** Centralized business logic in app/reports/service.py for all CRUD operations
+- **Ready for Frontend:** All endpoints tested and verified, ready for frontend integration
 
 ---
 
-*Last updated: 2026-02-07T10:43:29Z
+*Last updated: 2026-02-07T10:49:06Z
