@@ -12,14 +12,14 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 ## Current Position
 
 **Phase:** 4 of 5 (AI Document Parsing)
-**Plan:** 2 of 4 completed
+**Plan:** 3 of 4 completed
 **Status:** In progress
 
-**Progress:** [████████████░░░░░░░░] 12/15 plans complete (80%)
+**Progress:** [█████████████░░░░░░░] 13/15 plans complete (87%)
 
-**Last Activity:** 2026-02-07 — Completed 04-02-PLAN.md (Claude API Client)
+**Last Activity:** 2026-02-07 — Completed 04-03-PLAN.md (ARQ Worker & Plan Aggregator)
 
-**Next Action:** Plan 04-03 (ARQ Worker)
+**Next Action:** Plan 04-04 (API Endpoints)
 
 ---
 
@@ -30,7 +30,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | Total Requirements (M1) | 14 |
 | Requirements Completed | 7 (INFRA-01, INFRA-02, DATA-01, DATA-02, PROP-03, PROP-04, PROP-06) |
 | Phases Completed | 3/5 |
-| Plans Completed | 12/15 (estimated) |
+| Plans Completed | 13/15 |
 | Days Since Start | 2 |
 
 ---
@@ -111,6 +111,12 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 | 68 | Ruimtelijkeplannen.nl URL pattern for auto-download | 04-02 | Official Dutch government repository for bestemmingsplannen; predictable URL structure enables auto-download |
 | 69 | 100MB PDF size limit | 04-02 | Prevents memory issues and excessive API costs; typical bestemmingsplan PDFs are 1-20MB |
 | 70 | is_user_uploaded boolean flag | 04-02 | Distinguishes auto-downloaded from manually uploaded PDFs; enables analytics and fallback workflows |
+| 71 | Worker creates own DB session | 04-03 | ARQ worker runs outside FastAPI lifecycle; must create engine from settings.DATABASE_URL with proper lifecycle management |
+| 72 | Upsert pattern for CachedAPIResponse | 04-03 | Check if exists by (organization_id, cache_key), update or create; prevents duplicates while allowing cache refresh |
+| 73 | Cache-first strategy in plan aggregator | 04-03 | Check cache → active jobs → download failures → enqueue; makes repeated lookups instant, reduces Claude API costs |
+| 74 | Download failures return pdf_not_found | 04-03 | Plan aggregator detects PDFDownloadError, returns upload_required=True; frontend shows upload UI per user decision |
+| 75 | Reusable enqueue_parsing_job function | 04-03 | Callable from both get_or_parse_plan and upload endpoint; avoids duplication of job creation logic |
+| 76 | Job status polling validates tenant ownership | 04-03 | get_job_status checks organization_id matches ParsingJob; prevents cross-tenant job status leakage |
 
 ### Active TODOs
 
@@ -128,7 +134,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 - [x] ~~Begin Phase 4 planning (AI Document Parsing)~~ (completed 04-01)
 - [x] ~~Add AI infrastructure foundation (04-01)~~ (completed 04-01)
 - [x] ~~Implement Claude API client with PDF support (04-02)~~ (completed 04-02)
-- [ ] Implement ARQ worker for background parsing (04-03)
+- [x] ~~Implement ARQ worker for background parsing (04-03)~~ (completed 04-03)
 - [ ] Implement API endpoints with job queueing (04-04)
 - [ ] Test Claude API with real bestemmingsplan PDFs during 04-03/04-04
 
@@ -138,6 +144,7 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ### Recent Wins
 
+- **Phase 4 Plan 3 Complete (2026-02-07):** ARQ background worker with cache-first plan aggregator, tenant-isolated job tracking, pdf_not_found upload fallback, reusable job enqueue, 2m 19s execution
 - **Phase 4 Plan 2 Complete (2026-02-07):** Claude AI client with PDF parsing, Dutch confidence scoring prompt, Ruimtelijkeplannen.nl download service with IMRO validation, 4m 2s execution
 - **Phase 4 Plan 1 Complete (2026-02-07):** AI infrastructure foundation with anthropic and arq dependencies, Claude structured output schemas, PostgreSQL PDF storage, job tracking with tenant isolation, 2m 40s execution
 - **Phase 3 Complete (2026-02-07):** Full property intelligence report with zoning rules, monument status, map data, section-level source attribution, and cache bypass
@@ -154,34 +161,35 @@ Enter any Dutch address and receive within minutes: kadaster data, zoning summar
 
 ## Session Continuity
 
-**Last Session:** 2026-02-07 — Executed 04-02-PLAN.md
-**Stopped At:** Completed 04-02 (Claude API Client)
+**Last Session:** 2026-02-07 — Executed 04-03-PLAN.md
+**Stopped At:** Completed 04-03 (ARQ Worker & Plan Aggregator)
 **Resume File:** None
 
 **What Was Accomplished:**
-- Created app/ai/claude_client.py with ClaudeClient async wrapper
-- Implemented parse_bestemmingsplan method with PDF base64 encoding
-- Created app/ai/prompts.py with BESTEMMINGSPLAN_PARSING_PROMPT (2326 chars)
-- Dutch prompt extracts 8 zoning rule fields with confidence scoring
-- Added AIParsingError with retriable flag for ARQ retry logic
-- Created app/services/pdf_downloader.py with IMRO validation
-- Implemented download_and_store_pdf from Ruimtelijkeplannen.nl
-- Implemented store_uploaded_pdf for user uploads
-- PDF validation: magic bytes, 100MB limit, IMRO format
-- All verifications passed, 2 atomic commits created (1f987bf, af271d5)
-- Execution time: 4 minutes 2 seconds
+- Created app/jobs/__init__.py, worker.py, pdf_parsing.py
+- ARQ worker with max_tries=1, 5-minute timeout, Redis config
+- pdf_parsing_job: download → Claude parse → cache → update status
+- Worker creates own DB session (runs outside FastAPI)
+- Upsert pattern for CachedAPIResponse (ai_parsed:plan_idn)
+- Created app/services/plan_aggregator.py with cache-first strategy
+- enqueue_parsing_job: reusable job creation + ARQ enqueue
+- get_or_parse_plan: cache → active jobs → download failures → enqueue
+- get_job_status: polling with tenant isolation
+- pdf_not_found status returns upload_required=True
+- All verifications passed, 2 atomic commits created (70b55e2, 26bfa28)
+- Execution time: 2 minutes 19 seconds
 
 **Context for Next Session:**
-- **Phase 4 Plan 2 Complete:** Claude API client and PDF download service ready
-- **ClaudeClient Ready:** parse_bestemmingsplan callable with PDF bytes
-- **PDF Download Ready:** download_and_store_pdf and store_uploaded_pdf functional
-- **Error Handling:** AIParsingError.retriable and PDFDownloadError defined
-- **Prompt Defined:** 2326 char Dutch extraction prompt with confidence scoring
-- **Validation Patterns:** IMRO regex, PDF magic bytes, size limits established
-- **Next:** Plan 04-03 (ARQ Worker) requires Redis running on localhost:6379
-- **Redis Required:** Start Redis before 04-03 execution
-- **Testing:** Real bestemmingsplan PDFs needed for integration testing in 04-03/04-04
+- **Phase 4 Plan 3 Complete:** ARQ worker and plan aggregator ready for endpoints
+- **Worker Ready:** Launch via `arq app.jobs.worker.WorkerSettings` from backend/
+- **Plan Aggregator Ready:** get_or_parse_plan(plan_idn, org_id, session, arq_pool)
+- **Job Status Polling Ready:** get_job_status(job_id, org_id, session, arq_pool)
+- **Reusable Job Enqueue:** enqueue_parsing_job for upload endpoint
+- **Cache Strategy:** 90-day TTL for ai_parsed cache entries
+- **Next:** Plan 04-04 (API Endpoints) - integrate with property report
+- **Redis Required:** Must be running on localhost:6379 before worker starts
+- **Testing:** Real bestemmingsplan PDFs needed for integration testing in 04-04
 
 ---
 
-*Last updated: 2026-02-07T09:16:49Z*
+*Last updated: 2026-02-07T09:26:04Z
