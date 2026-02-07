@@ -16,7 +16,7 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 **Plan:** 2/2 complete — Phase 7 DONE
 **Status:** Phase complete, verified ✓
 
-**Progress:** ████░░░░░░░░░░░░░░░░ 33% (5/15 requirements)
+**Progress:** ████░░░░░░░░░░░░░░░░ 40% (6/15 requirements)
 
 **Next Action:** `/gsd:plan-phase 8`
 
@@ -57,7 +57,7 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **07-01 (TEST-01):** Session-scoped event loop with function-scoped table drop/recreate for test isolation
 - **07-01 (TEST-02):** Use httpx AsyncClient (not TestClient) for async FastAPI endpoint testing
 - **07-01 (TEST-03):** Automatic test database (crmplus_test) creation in conftest.py fixture
-- **07-01 (TEST-04):** Disable rate limiting in tests (override with 9999/minute limiter)
+- **07-01 (TEST-04):** Disable rate limiting in tests via limiter.enabled=False (not replacement — decorators bind to module-level limiter)
 - **07-02 (TEST-05):** Function-scoped test_engine for Python 3.14 compatibility (pytest-asyncio 0.23.8)
 - **07-02 (TEST-06):** Manual pg_trgm extension installation in test database
 - **07-02 (TEST-07):** Parametrize login error tests to verify enumeration prevention

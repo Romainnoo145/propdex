@@ -13,8 +13,8 @@ Requirements for production hardening. Each maps to roadmap phases.
 
 ### Testing
 
-- [ ] **TEST-01**: Auth module has unit tests covering registration, login, token refresh, and password reset
-- [ ] **TEST-02**: Auth module has integration tests verifying full request flows against the database
+- [x] **TEST-01**: Auth module has unit tests covering registration, login, token refresh, and password reset
+- [x] **TEST-02**: Auth module has integration tests verifying full request flows against the database
 - [ ] **TEST-03**: API client module (httpx) has unit tests for BAG, PDOK, DSO, and RCE clients with mocked responses
 - [ ] **TEST-04**: Cache manager has integration tests verifying JSONB cache read/write/TTL/invalidation against the database
 - [ ] **TEST-05**: Zoning and monument aggregators have unit tests covering data transformation and error handling
@@ -39,7 +39,7 @@ Requirements for production hardening. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOC-01**: Phase 1 has a formal VERIFICATION.md confirming all original requirements were met
+- [x] **DOC-01**: Phase 1 has a formal VERIFICATION.md confirming all original requirements were met
 
 ## Future Requirements
 
@@ -65,8 +65,8 @@ Deferred to v2.0 (frontend milestone):
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 7 | Pending |
-| TEST-02 | Phase 7 | Pending |
+| TEST-01 | Phase 7 | Complete |
+| TEST-02 | Phase 7 | Complete |
 | TEST-03 | Phase 8 | Pending |
 | TEST-04 | Phase 8 | Pending |
 | TEST-05 | Phase 9 | Pending |
@@ -79,7 +79,7 @@ Deferred to v2.0 (frontend milestone):
 | CFG-01 | Phase 6 | Complete |
 | CFG-02 | Phase 6 | Complete |
 | INFRA-01 | Phase 9 | Pending |
-| DOC-01 | Phase 7 | Pending |
+| DOC-01 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 15 total
