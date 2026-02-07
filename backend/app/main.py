@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from arq import create_pool
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.http_client import create_government_api_client
+from app.jobs.worker import get_redis_settings
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
 from app.properties.router import router as properties_router
@@ -21,13 +23,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     FastAPI lifespan context manager for startup/shutdown.
 
-    Startup: Creates shared httpx AsyncClient for government API requests.
-    Shutdown: Closes the httpx client to release connections.
+    Startup: Creates shared httpx AsyncClient for government API requests
+             and ARQ Redis pool for background job enqueueing.
+    Shutdown: Closes the httpx client and ARQ pool to release connections.
     """
     # Startup: create shared HTTP client
     app.state.http_client = create_government_api_client()
 
+    # Startup: create ARQ Redis pool for job enqueueing
+    app.state.arq_pool = await create_pool(get_redis_settings())
+
     yield
+
+    # Shutdown: close ARQ pool
+    await app.state.arq_pool.close()
 
     # Shutdown: close HTTP client
     await app.state.http_client.aclose()
