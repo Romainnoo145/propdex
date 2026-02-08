@@ -94,9 +94,9 @@ Build a map-first web interface where the full-page map IS the app. Users browse
 | R1: Full-Page Interactive Map | Phase 13 | Complete |
 | R2: Authentication Flow | Phase 14 | Complete |
 | R8: Auth Integration with Backend | Phase 14 | Complete |
-| R3: Address Search with Autocomplete | Phase 15 |
-| R4: Property Lookup & Detail Panel | Phase 15 |
-| R5: Parcel Boundaries Layer | Phase 15 |
+| R3: Address Search with Autocomplete | Phase 15 | Complete |
+| R4: Property Lookup & Detail Panel | Phase 15 | Complete |
+| R5: Parcel Boundaries Layer | Phase 15 | Complete |
 | R6: Report Management | Phase 16 |
 | R7: Project Folders | Phase 17 |
 | R9: Polish & Mobile Responsiveness | Phase 17 |
