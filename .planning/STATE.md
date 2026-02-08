@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 14 — Authentication & Security
-**Plan:** 1 of 3
+**Plan:** 2 of 3
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 14-01-PLAN.md (httpOnly cookie auth)
+**Last activity:** 2026-02-08 — Completed 14-02-PLAN.md (TanStack Router setup)
 
-**Progress:** ████░░░░░░░░░░░░░░░░ 4/15 plans (27%)
+**Progress:** █████░░░░░░░░░░░░░░░ 5/15 plans (33%)
 
 ---
 
@@ -45,6 +45,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - secure=False in development: Allows HTTP on localhost (production will use secure=True)
 - path=/api/auth: Limits cookie scope to auth endpoints only for security
 - Cookie-based refresh enables silent token refresh from frontend
+- TanStack Router file-based routing: Type-safe routing with automatic route tree generation
+- RouterContext pattern: Inject auth state into router for beforeLoad guards
+- _authenticated layout route: DRY pattern for protected route authentication checks
+- cookieDomainRewrite in Vite proxy: Enables httpOnly cookies in development
 
 **Phase 13 decisions:**
 - React 19: Latest stable React with concurrent features
@@ -81,10 +85,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 14-01-PLAN.md
-**Stopped At:** Completed 14-01-PLAN.md (cookie-based refresh tokens)
+**Last Session:** 2026-02-08 — Completed 14-02-PLAN.md
+**Stopped At:** Completed 14-02-PLAN.md (TanStack Router setup)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (14-01 complete)*
+*Last updated: 2026-02-08 (14-02 complete)*
