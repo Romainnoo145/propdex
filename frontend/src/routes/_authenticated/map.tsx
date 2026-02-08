@@ -5,7 +5,8 @@ import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
-import PropertyDetailPanel from '@/components/property/PropertyDetailPanel'
+import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
+import { PropertyDetailDrawer } from '@/components/property/PropertyDetailDrawer'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
 import { lookupPdokAddress } from '@/lib/api'
@@ -16,16 +17,18 @@ export const Route = createFileRoute('/_authenticated/map')({
   component: MapPage,
 })
 
+type ViewTier = 'none' | 'quick' | 'drawer'
+
 function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
-  const [showPanel, setShowPanel] = useState(false)
+  const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const lookup = usePropertyLookup()
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
-    // Show panel immediately (for loading state)
-    setShowPanel(true)
+    // Show QuickCard immediately (for loading state)
+    setTier('quick')
     setDemoData(null)
 
     try {
@@ -37,7 +40,7 @@ function MapPage() {
 
       if (!postcode || !huisnummer) {
         console.warn('Could not extract postcode/huisnummer from PDOK lookup:', details)
-        setShowPanel(false)
+        setTier('none')
         return
       }
 
@@ -72,30 +75,59 @@ function MapPage() {
       )
     } catch (err) {
       console.error('PDOK address lookup failed:', err)
-      setShowPanel(false)
+      setTier('none')
     }
   }, [lookup])
 
-  // Handle panel close
-  const handleClosePanel = useCallback(() => {
-    setShowPanel(false)
+  // Handle QuickCard close (clears everything)
+  const handleCloseQuickCard = useCallback(() => {
+    setTier('none')
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
     }
+  }, [])
+
+  // Handle Drawer close (back to QuickCard, keep geometry)
+  const handleCloseDrawer = useCallback(() => {
+    setTier('quick')
+  }, [])
+
+  // Placeholder handlers for save/export (wired in Plan 07)
+  const handleSave = useCallback(() => {
+    console.log('Save functionality - to be implemented in Plan 07')
+  }, [])
+
+  const handleExportPDF = useCallback(() => {
+    console.log('Export PDF functionality - to be implemented in Plan 07')
   }, [])
 
   return (
     <AppLayout>
       <MapView mapRef={mapRef} />
       <AddressSearch onSelect={handleAddressSelect} />
-      {showPanel && (
-        <PropertyDetailPanel
+
+      {/* Tier 1: QuickCard */}
+      {tier === 'quick' && (
+        <PropertyQuickCard
+          data={demoData ?? lookup.data ?? null}
+          isLoading={!demoData && lookup.isPending}
+          onViewDetails={() => setTier('drawer')}
+          onClose={handleCloseQuickCard}
+        />
+      )}
+
+      {/* Tier 2: Drawer */}
+      {tier === 'drawer' && (
+        <PropertyDetailDrawer
           data={demoData ?? lookup.data ?? null}
           isLoading={!demoData && lookup.isPending}
           error={!demoData ? lookup.error : null}
-          onClose={handleClosePanel}
+          onClose={handleCloseDrawer}
+          onExportPDF={handleExportPDF}
+          onSave={handleSave}
         />
       )}
+
       <LayerToggle mapRef={mapRef} />
     </AppLayout>
   )
