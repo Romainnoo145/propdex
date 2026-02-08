@@ -15,9 +15,13 @@ function LayerToggle({ mapRef }: LayerToggleProps) {
 
     const map = mapRef.current;
 
-    // Carto basemap stays always visible (fills ocean + surrounding countries).
-    // We only toggle the aerial overlay on/off.
-    map.setPaintProperty('esri-satellite-layer', 'raster-opacity', layer === 'aerial' ? 1 : 0);
+    if (layer === 'aerial') {
+      map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 1);
+      map.setPaintProperty('carto-light-layer', 'raster-opacity', 0);
+    } else {
+      map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 0);
+      map.setPaintProperty('carto-light-layer', 'raster-opacity', 1);
+    }
 
     setActiveLayer(layer);
   };
