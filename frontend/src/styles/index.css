@@ -1,9 +1,20 @@
 @import "tailwindcss";
 
-/* Hide MapLibre logo (open source, no legal attribution required) */
-/* Tile source attribution (ESRI, CartoDB) is kept as required by their ToS */
+/* Hide MapLibre branding — open source (BSD), no legal attribution required */
+/* Tile provider attribution (ESRI, CartoDB, OSM) is kept per their ToS */
 .maplibregl-ctrl-logo {
   display: none !important;
+}
+
+/* Hide "MapLibre" text link from attribution control */
+.maplibregl-ctrl-attrib-inner a[href*="maplibre"] {
+  display: none;
+}
+
+/* Make attribution compact (small (i) icon, expands on click) */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  opacity: 0.6;
 }
 
 :root {
