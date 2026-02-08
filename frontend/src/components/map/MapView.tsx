@@ -42,16 +42,15 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
         },
         layers: [
           {
+            id: 'carto-light-layer',
+            type: 'raster',
+            source: 'carto-light',
+          },
+          {
             id: 'pdok-aerial-layer',
             type: 'raster',
             source: 'pdok-aerial',
             paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
-          },
-          {
-            id: 'carto-light-layer',
-            type: 'raster',
-            source: 'carto-light',
-            paint: { 'raster-opacity': 1, 'raster-opacity-transition': { duration: 300 } },
           },
         ],
       },
