@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
-  PDOK_AERIAL_TILES,
+  ESRI_SATELLITE_TILES,
   CARTO_LIGHT_TILES,
-  PDOK_AERIAL_ATTRIBUTION,
+  ESRI_SATELLITE_ATTRIBUTION,
   CARTO_ATTRIBUTION,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -27,12 +27,12 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
       style: {
         version: 8,
         sources: {
-          'pdok-aerial': {
+          'esri-satellite': {
             type: 'raster',
-            tiles: [PDOK_AERIAL_TILES],
+            tiles: [ESRI_SATELLITE_TILES],
             tileSize: 256,
-            attribution: PDOK_AERIAL_ATTRIBUTION,
-            bounds: [3.2, 50.7, 7.3, 53.6],
+            attribution: ESRI_SATELLITE_ATTRIBUTION,
+            maxzoom: 19,
           },
           'carto-light': {
             type: 'raster',
@@ -43,20 +43,14 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
         },
         layers: [
           {
-            id: 'background',
-            type: 'background',
-            paint: { 'background-color': '#1a1a2e' },
-          },
-          {
             id: 'carto-light-layer',
             type: 'raster',
             source: 'carto-light',
           },
           {
-            id: 'pdok-aerial-layer',
+            id: 'esri-satellite-layer',
             type: 'raster',
-            source: 'pdok-aerial',
-            minzoom: 7,
+            source: 'esri-satellite',
             paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
           },
         ],

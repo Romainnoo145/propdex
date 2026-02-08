@@ -5,16 +5,17 @@
  * Data APIs (BAG, DSO, Kadaster) must be proxied through the backend.
  */
 
-/** PDOK Aerial imagery (Luchtfoto HR) — latest 8cm orthophotos */
-export const PDOK_AERIAL_TILES =
-  'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg';
+/** ESRI World Imagery — global satellite coverage (no white borders) */
+export const ESRI_SATELLITE_TILES =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 /** CartoDB Positron — modern light greyscale basemap with retina tiles */
 export const CARTO_LIGHT_TILES =
   'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png';
 
 /** Attribution text for tile layers */
-export const PDOK_AERIAL_ATTRIBUTION = '© PDOK - Actuele luchtfoto';
+export const ESRI_SATELLITE_ATTRIBUTION =
+  '© <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
 export const CARTO_ATTRIBUTION =
   '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
