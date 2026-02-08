@@ -12,11 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 **Milestone:** v2.0 Frontend
-**Phase:** Not started (defining requirements)
-**Plan:** —
-**Status:** Defining requirements
+**Phase:** 13 — Map Foundation & Layout
+**Plan:** 01 of 3
+**Status:** In progress
 
-**Last activity:** 2026-02-08 — Milestone v2.0 started
+**Last activity:** 2026-02-08 — Completed 13-01-PLAN.md (Frontend scaffold)
+
+**Progress:** ████░░░░░░░░░░░░░░░░ 1/15 plans (7%)
 
 ---
 
@@ -37,6 +39,14 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ### Key Decisions
 
 See `.planning/PROJECT.md` Key Decisions table.
+
+**Recent decisions (Phase 13-01):**
+- React 19: Latest stable React with concurrent features
+- Tailwind v4: New Vite plugin architecture with @import syntax
+- ESLint 9: Flat config system with typescript-eslint
+- Z-index CSS scale: Steps of 100 for flexibility (0, 10, 100, 200, ...)
+- CSS variables for brand colors: NEVER hardcode colors in components
+- TypeScript strict mode: All safety flags including noUncheckedIndexedAccess
 
 ### Active TODOs
 
@@ -60,10 +70,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — v2.0 milestone started, backend live-tested
-**Stopped At:** Defining requirements for v2.0
+**Last Session:** 2026-02-08 — Completed 13-01 (Frontend scaffold)
+**Stopped At:** Completed 13-01-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (v2.0 milestone started)*
+*Last updated: 2026-02-08 (Phase 13-01 complete)*
