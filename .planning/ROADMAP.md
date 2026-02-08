@@ -135,9 +135,11 @@ Plans:
 
 **Dependencies:** Phase 11 (verification should reflect final test state)
 
+**Plans:** 2 plans
+
 Plans:
-- [ ] 12-01-PLAN.md -- Create Phase 8 planning directory, VERIFICATION.md, and Phase 9 VERIFICATION.md
-- [ ] 12-02-PLAN.md -- Update .env.example with app_role config, re-verify Phase 10 coverage target
+- [ ] 12-01-PLAN.md -- Create Phase 8 VERIFICATION.md and Phase 9 VERIFICATION.md (retroactive verification)
+- [ ] 12-02-PLAN.md -- Re-verify Phase 10 coverage target, update .env.example with app_role config
 
 **Success Criteria:**
 1. Phase 8 has .planning/phases/08-data-pipeline-testing/ directory with VERIFICATION.md confirming TEST-03, TEST-04
@@ -176,7 +178,7 @@ Plans:
 | 9 | Intelligence Testing | 4 | 3/3 complete | ✓ Complete |
 | 10 | Report & Multi-Tenant Testing | 3 | 3/3 complete | ✓ Complete |
 | 11 | Coverage Gap Closure | 0 (gap closure) | 4/4 complete | ✓ Complete |
-| 12 | Phase Documentation & Verification | 0 (gap closure) | 0/2 | Pending |
+| 12 | Phase Documentation & Verification | 0 (gap closure) | 0/2 | Planned |
 
 **Total:** 15 requirements across 5 phases + 2 gap closure phases
 
