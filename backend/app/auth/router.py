@@ -1,9 +1,9 @@
 """Authentication router with register, login, refresh, logout, and me endpoints."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -21,13 +21,12 @@ from app.auth.jwt import (
 from app.auth.oauth import get_google_user_info, google_oauth_client
 from app.auth.password import hash_password, verify_password
 from app.auth.schemas import (
+    CookieTokenResponse,
     EmailVerifyRequest,
     LoginRequest,
     MessageResponse,
     PasswordResetConfirm,
     PasswordResetRequest,
-    RefreshRequest,
-    TokenResponse,
     UserCreate,
     UserResponse,
 )
@@ -41,14 +40,33 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    """Set httpOnly refresh token cookie for secure storage."""
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Allow HTTP in development (localhost)
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/auth",  # Only send cookie to auth endpoints
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """Clear the refresh token cookie on logout."""
+    response.delete_cookie(key="refresh_token", path="/api/auth")
+
+
+@router.post("/register", response_model=CookieTokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("3/hour")
 async def register(
     request: Request,
+    response: Response,
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
+) -> CookieTokenResponse:
     """
     Register a new user and create their organization.
 
@@ -113,19 +131,22 @@ async def register(
     verification_token = create_email_verification_token(str(user.id), user.email)
     background_tasks.add_task(send_verification_email, user.email, verification_token)
 
-    return TokenResponse(
+    # Set refresh token in httpOnly cookie
+    _set_refresh_cookie(response, refresh_token)
+
+    return CookieTokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=CookieTokenResponse)
 @limiter.limit("10/minute")
 async def login(
     request: Request,
+    response: Response,
     credentials: LoginRequest,
     db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
+) -> CookieTokenResponse:
     """
     Authenticate user with email and password.
 
@@ -187,30 +208,40 @@ async def login(
     # Create access token
     access_token = create_access_token(str(user.id), str(user.organization_id))
 
-    return TokenResponse(
+    # Set refresh token in httpOnly cookie
+    _set_refresh_cookie(response, refresh_token)
+
+    return CookieTokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=CookieTokenResponse)
 @limiter.limit("30/minute")
 async def refresh(
     request: Request,
-    refresh_data: RefreshRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
+) -> CookieTokenResponse:
     """
-    Refresh access token using refresh token.
+    Refresh access token using refresh token from httpOnly cookie.
 
     Implements token rotation:
     - Old refresh token is revoked
     - New refresh token is issued
     - Reuse detection triggers full token revocation (security feature)
     """
+    # Read refresh token from httpOnly cookie
+    refresh_token_value = request.cookies.get("refresh_token")
+    if not refresh_token_value:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+
     # Decode refresh token
     try:
-        payload = decode_token(refresh_data.refresh_token)
+        payload = decode_token(refresh_token_value)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -308,25 +339,38 @@ async def refresh(
     # Create new access token
     access_token = create_access_token(str(user.id), str(user.organization_id))
 
-    return TokenResponse(
+    # Set new refresh token in httpOnly cookie
+    _set_refresh_cookie(response, new_refresh_token)
+
+    return CookieTokenResponse(
         access_token=access_token,
-        refresh_token=new_refresh_token,
     )
 
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    refresh_data: RefreshRequest,
+    request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
     """
-    Logout user by revoking refresh token.
+    Logout user by revoking refresh token from httpOnly cookie.
 
-    Idempotent - returns success even if token already revoked.
+    Idempotent - returns success even if token already revoked or no cookie present.
     """
+    # Read refresh token from httpOnly cookie
+    refresh_token_value = request.cookies.get("refresh_token")
+
+    # Clear the cookie regardless of whether we process a token
+    _clear_refresh_cookie(response)
+
+    # If no cookie, return success (already logged out)
+    if not refresh_token_value:
+        return MessageResponse(message="Logged out successfully")
+
     # Decode refresh token (be graceful - if invalid, just return success)
     try:
-        payload = decode_token(refresh_data.refresh_token)
+        payload = decode_token(refresh_token_value)
         jti = payload.get("jti")
     except Exception:
         # Invalid token - consider it already logged out
@@ -596,13 +640,14 @@ async def google_auth_url(
     return GoogleAuthUrlResponse(authorization_url=authorization_url)
 
 
-@router.post("/google/callback", response_model=TokenResponse)
+@router.post("/google/callback", response_model=CookieTokenResponse)
 @limiter.limit("10/minute")
 async def google_callback(
     request: Request,
+    response: Response,
     callback_data: GoogleCallbackRequest,
     db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
+) -> CookieTokenResponse:
     """
     Handle Google OAuth callback.
 
@@ -703,7 +748,9 @@ async def google_callback(
     # Create access token
     access_token_jwt = create_access_token(str(user.id), str(user.organization_id))
 
-    return TokenResponse(
+    # Set refresh token in httpOnly cookie
+    _set_refresh_cookie(response, refresh_token)
+
+    return CookieTokenResponse(
         access_token=access_token_jwt,
-        refresh_token=refresh_token,
     )

@@ -39,6 +39,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class CookieTokenResponse(BaseModel):
+    """Schema for JWT token response with httpOnly cookie for refresh token."""
+
+    access_token: str
+    token_type: str = "bearer"
+
+
 class LoginRequest(BaseModel):
     """Schema for login request."""
 
