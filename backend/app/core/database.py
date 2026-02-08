@@ -48,9 +48,11 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
         if org_id:
             # Set session variable for RLS policies (transaction-scoped via SET LOCAL)
             # SET LOCAL is safe with connection pooling — scoped to current transaction only
+            # Note: SET LOCAL does not support parameterized queries in asyncpg,
+            # so we use string formatting after UUID validation (org_id is already a uuid.UUID)
+            safe_org_id = str(org_id)
             await session.execute(
-                text("SET LOCAL app.current_tenant_id = :org_id"),
-                {"org_id": str(org_id)},
+                text(f"SET LOCAL app.current_tenant_id = '{safe_org_id}'"),
             )
 
         try:
