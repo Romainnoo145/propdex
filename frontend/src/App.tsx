@@ -1,5 +1,16 @@
+import { useRef } from 'react';
+import type maplibregl from 'maplibre-gl';
+import AppLayout from '@/components/layout/AppLayout';
+import MapView from '@/components/map/MapView';
+
 function App() {
-  return <div className="w-full h-screen bg-gray-100" />;
+  const mapRef = useRef<maplibregl.Map | null>(null);
+
+  return (
+    <AppLayout>
+      <MapView mapRef={mapRef} />
+    </AppLayout>
+  );
 }
 
 export default App;
