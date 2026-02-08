@@ -12,8 +12,16 @@ import type {
   PropertyReportResponse,
   SuggestResult,
 } from './types/property'
+import type {
+  ReportFilters,
+  ReportListResponse,
+  ReportDetailResponse,
+  ReportSaveRequest,
+  ReportFreshnessResponse,
+} from './types/report'
 
 const API_BASE = '/api/properties'
+const REPORTS_BASE = '/api/reports'
 const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
 
 /**
@@ -152,5 +160,197 @@ export async function lookupProperty(
     method: 'POST',
     accessToken,
     body: JSON.stringify(input),
+  })
+}
+
+/**
+ * Fetch list of saved reports with optional filters
+ *
+ * GET /api/reports
+ *
+ * @param filters - Optional filters for city, project, search, sort, pagination
+ * @param accessToken - JWT access token from useAuth()
+ * @returns List of reports with total count
+ */
+export async function fetchReports(
+  filters: ReportFilters,
+  accessToken: string | null
+): Promise<ReportListResponse> {
+  const params = new URLSearchParams()
+
+  if (filters.city) params.set('city', filters.city)
+  if (filters.project_id) params.set('project_id', filters.project_id)
+  if (filters.search) params.set('search', filters.search)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_order) params.set('sort_order', filters.sort_order)
+  if (filters.skip !== undefined) params.set('skip', filters.skip.toString())
+  if (filters.limit !== undefined) params.set('limit', filters.limit.toString())
+
+  const url = `${REPORTS_BASE}${params.toString() ? `?${params}` : ''}`
+
+  return apiFetch<ReportListResponse>(url, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/**
+ * Fetch single report by ID
+ *
+ * GET /api/reports/{reportId}
+ *
+ * @param reportId - Report UUID
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Full report details with report_data JSONB
+ */
+export async function fetchReport(
+  reportId: string,
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/${reportId}`, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/**
+ * Save a new property report
+ *
+ * POST /api/reports
+ *
+ * @param request - Report save request with report_data, notes, project_id
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Created report with ID
+ */
+export async function saveReport(
+  request: ReportSaveRequest,
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(REPORTS_BASE, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(request),
+  })
+}
+
+/**
+ * Delete a saved report
+ *
+ * DELETE /api/reports/{reportId}
+ *
+ * @param reportId - Report UUID to delete
+ * @param accessToken - JWT access token from useAuth()
+ */
+export async function deleteReport(
+  reportId: string,
+  accessToken: string | null
+): Promise<void> {
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(`${REPORTS_BASE}/${reportId}`, {
+    method: 'DELETE',
+    headers,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Delete failed with status ${response.status}` }))
+    throw new Error(error.detail || `Delete failed with status ${response.status}`)
+  }
+}
+
+/**
+ * Check if a report has updates (freshness check)
+ *
+ * GET /api/reports/{reportId}/freshness
+ *
+ * @param reportId - Report UUID
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Freshness data with has_updates boolean
+ */
+export async function fetchReportFreshness(
+  reportId: string,
+  accessToken: string | null
+): Promise<ReportFreshnessResponse> {
+  return apiFetch<ReportFreshnessResponse>(`${REPORTS_BASE}/${reportId}/freshness`, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/**
+ * Refresh a report with latest data
+ *
+ * PUT /api/reports/{reportId}/refresh
+ *
+ * @param reportId - Report UUID to refresh
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Updated report detail
+ */
+export async function refreshReport(
+  reportId: string,
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/${reportId}/refresh`, {
+    method: 'PUT',
+    accessToken,
+  })
+}
+
+/**
+ * Export report as PDF
+ *
+ * GET /api/reports/{reportId}/export/pdf
+ *
+ * @param reportId - Report UUID to export
+ * @param accessToken - JWT access token from useAuth()
+ * @returns PDF blob for download
+ */
+export async function exportReportPDF(
+  reportId: string,
+  accessToken: string | null
+): Promise<Blob> {
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(`${REPORTS_BASE}/${reportId}/export/pdf`, {
+    method: 'GET',
+    headers,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Export failed with status ${response.status}` }))
+    throw new Error(error.detail || `Export failed with status ${response.status}`)
+  }
+
+  return response.blob()
+}
+
+/**
+ * Fetch all unique cities from saved reports
+ *
+ * GET /api/reports/cities
+ *
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Array of city names
+ */
+export async function fetchCities(
+  accessToken: string | null
+): Promise<string[]> {
+  return apiFetch<string[]>(`${REPORTS_BASE}/cities`, {
+    method: 'GET',
+    accessToken,
   })
 }
