@@ -53,6 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
+  const loginWithToken = useCallback(async (token: string) => {
+    setAccessToken(token)
+    const userData = await fetchUserApi(token)
+    setUser(userData)
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        loginWithToken,
       }}
     >
       {children}

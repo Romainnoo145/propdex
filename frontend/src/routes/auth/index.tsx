@@ -1,4 +1,6 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { AuthTabs } from '@/components/auth/AuthTabs'
+import { useAuth } from '@/lib/auth/useAuth'
 
 interface AuthSearch {
   redirect?: string
@@ -18,11 +20,32 @@ export const Route = createFileRoute('/auth/')({
 })
 
 function AuthPage() {
+  const { login, register } = useAuth()
+  const search = Route.useSearch()
+  const navigate = useNavigate()
+
+  const handleSuccess = () => {
+    navigate({ to: search.redirect || '/map' })
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface-secondary)]">
-      <div className="w-full max-w-md rounded-xl bg-[var(--color-surface)] p-8 shadow-lg">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">Propdex</h1>
-        <p className="mt-2 text-[var(--color-text-secondary)]">Auth page stub — forms in Plan 04</p>
+      <div className="w-full max-w-md space-y-6">
+        {/* Propdex branding */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-[var(--color-text)]">Propdex</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Property Intelligence Platform
+          </p>
+        </div>
+
+        {/* Auth tabs */}
+        <AuthTabs
+          onLogin={login}
+          onRegister={register}
+          onLoginSuccess={handleSuccess}
+          onRegisterSuccess={handleSuccess}
+        />
       </div>
     </div>
   )
