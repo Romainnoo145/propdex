@@ -68,24 +68,11 @@ export default function ReportSidebar({
   const hasReports = data && data.reports.length > 0
   const hasRecent = recent.length > 0
 
-  return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 md:hidden"
-          style={{ zIndex: 'var(--z-sidebar)' }}
-          onClick={onClose}
-        />
-      )}
+  if (!isOpen) return null
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed bottom-0 left-0 top-0 w-80 border-r border-white/10 bg-black/40 backdrop-blur-xl transition-transform md:left-16 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ zIndex: 'var(--z-sidebar)' }}
-      >
+  return (
+    <aside className="h-full w-80 shrink-0 border-r border-white/10 bg-black/40 backdrop-blur-xl">
+
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
@@ -192,8 +179,7 @@ export default function ReportSidebar({
             )}
           </div>
         </div>
-      </aside>
-    </>
+    </aside>
   )
 }
 
