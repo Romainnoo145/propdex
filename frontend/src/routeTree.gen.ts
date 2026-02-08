@@ -13,7 +13,10 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
+import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
+import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -34,21 +37,43 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   path: '/auth/google-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
+  id: '/projecten',
+  path: '/projecten',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   id: '/map',
   path: '/map',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedInstellingenRoute =
+  AuthenticatedInstellingenRouteImport.update({
+    id: '/instellingen',
+    path: '/instellingen',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
+  '/projecten': typeof AuthenticatedProjectenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
+  '/projecten': typeof AuthenticatedProjectenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
 }
@@ -56,20 +81,40 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
+  '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/map' | '/auth/google-callback' | '/auth/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/instellingen'
+    | '/map'
+    | '/projecten'
+    | '/auth/google-callback'
+    | '/auth/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/map' | '/auth/google-callback' | '/auth'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/instellingen'
+    | '/map'
+    | '/projecten'
+    | '/auth/google-callback'
+    | '/auth'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/instellingen'
     | '/_authenticated/map'
+    | '/_authenticated/projecten'
     | '/auth/google-callback'
     | '/auth/'
   fileRoutesById: FileRoutesById
@@ -111,6 +156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/projecten': {
+      id: '/_authenticated/projecten'
+      path: '/projecten'
+      fullPath: '/projecten'
+      preLoaderRoute: typeof AuthenticatedProjectenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/map': {
       id: '/_authenticated/map'
       path: '/map'
@@ -118,15 +170,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/instellingen': {
+      id: '/_authenticated/instellingen'
+      path: '/instellingen'
+      fullPath: '/instellingen'
+      preLoaderRoute: typeof AuthenticatedInstellingenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
+  AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
+  AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
