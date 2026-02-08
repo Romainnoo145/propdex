@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type maplibregl from 'maplibre-gl';
 
-type LayerType = 'aerial' | 'topo';
+type LayerType = 'aerial' | 'kaart';
 
 interface LayerToggleProps {
   mapRef: React.RefObject<maplibregl.Map | null>;
@@ -11,16 +11,16 @@ function LayerToggle({ mapRef }: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('aerial');
 
   const handleLayerChange = (layer: LayerType) => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || layer === activeLayer) return;
 
     const map = mapRef.current;
 
     if (layer === 'aerial') {
-      map.setLayoutProperty('pdok-aerial-layer', 'visibility', 'visible');
-      map.setLayoutProperty('pdok-topo-layer', 'visibility', 'none');
+      map.setPaintProperty('pdok-aerial-layer', 'raster-opacity', 1);
+      map.setPaintProperty('carto-light-layer', 'raster-opacity', 0);
     } else {
-      map.setLayoutProperty('pdok-aerial-layer', 'visibility', 'none');
-      map.setLayoutProperty('pdok-topo-layer', 'visibility', 'visible');
+      map.setPaintProperty('pdok-aerial-layer', 'raster-opacity', 0);
+      map.setPaintProperty('carto-light-layer', 'raster-opacity', 1);
     }
 
     setActiveLayer(layer);
@@ -39,9 +39,9 @@ function LayerToggle({ mapRef }: LayerToggleProps) {
         Satellite
       </button>
       <button
-        onClick={() => handleLayerChange('topo')}
+        onClick={() => handleLayerChange('kaart')}
         className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-          activeLayer === 'topo'
+          activeLayer === 'kaart'
             ? 'bg-[var(--color-primary)] text-white'
             : 'bg-transparent text-gray-600 hover:bg-gray-100'
         }`}

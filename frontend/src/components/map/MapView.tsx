@@ -3,9 +3,9 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   PDOK_AERIAL_TILES,
-  PDOK_TOPO_TILES,
+  CARTO_LIGHT_TILES,
   PDOK_AERIAL_ATTRIBUTION,
-  PDOK_TOPO_ATTRIBUTION,
+  CARTO_ATTRIBUTION,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from '@/lib/pdok';
@@ -22,7 +22,6 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Initialize map with PDOK aerial and topo sources
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -34,11 +33,11 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
             tileSize: 256,
             attribution: PDOK_AERIAL_ATTRIBUTION,
           },
-          'pdok-topo': {
+          'carto-light': {
             type: 'raster',
-            tiles: [PDOK_TOPO_TILES],
-            tileSize: 256,
-            attribution: PDOK_TOPO_ATTRIBUTION,
+            tiles: [CARTO_LIGHT_TILES],
+            tileSize: 512,
+            attribution: CARTO_ATTRIBUTION,
           },
         },
         layers: [
@@ -46,13 +45,13 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
             id: 'pdok-aerial-layer',
             type: 'raster',
             source: 'pdok-aerial',
-            layout: { visibility: 'visible' },
+            paint: { 'raster-opacity': 1, 'raster-opacity-transition': { duration: 300 } },
           },
           {
-            id: 'pdok-topo-layer',
+            id: 'carto-light-layer',
             type: 'raster',
-            source: 'pdok-topo',
-            layout: { visibility: 'none' },
+            source: 'carto-light',
+            paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
           },
         ],
       },
@@ -60,34 +59,26 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
       zoom: DEFAULT_ZOOM,
     });
 
-    // Add navigation controls (zoom, compass, rotation)
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-    // Add geolocation control
     map.addControl(
       new maplibregl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
+        positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true,
       }),
       'top-right'
     );
 
-    // Store map instance in refs
     internalMapRef.current = map;
     if (externalMapRef) {
       externalMapRef.current = map;
     }
 
-    // Call onMapReady when map is loaded
     map.on('load', () => {
       if (onMapReady) {
         onMapReady(map);
       }
     });
 
-    // Cleanup: remove map instance to prevent memory leaks
     return () => {
       map.remove();
       internalMapRef.current = null;
@@ -95,9 +86,8 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
         externalMapRef.current = null;
       }
     };
-    // externalMapRef and onMapReady are intentionally stable refs/callbacks from parent
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - initialize once on mount
+  }, []);
 
   return <div ref={containerRef} className="w-full h-full" />;
 }
