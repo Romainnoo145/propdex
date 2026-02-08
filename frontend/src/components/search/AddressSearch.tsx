@@ -9,22 +9,40 @@ interface AddressSearchProps {
 
 export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) {
   const [query, setQuery] = useState('');
+  const [expanded, setExpanded] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Use the hook for debounced suggestions
   const { data: suggestions = [], isLoading } = useAddressSuggest(query);
 
-  // Handle keyboard navigation
+  const handleExpand = () => {
+    setExpanded(true);
+    // Focus input after render
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleCollapse = () => {
+    setExpanded(false);
+    setShowDropdown(false);
+    setHighlightedIndex(-1);
+    setQuery('');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown || suggestions.length === 0) {
-      if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (showDropdown) {
         setShowDropdown(false);
         setHighlightedIndex(-1);
+      } else {
+        handleCollapse();
       }
       return;
     }
+
+    if (!showDropdown || suggestions.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
@@ -33,41 +51,30 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           prev < suggestions.length - 1 ? prev + 1 : 0
         );
         break;
-
       case 'ArrowUp':
         e.preventDefault();
         setHighlightedIndex((prev) =>
           prev > 0 ? prev - 1 : suggestions.length - 1
         );
         break;
-
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
           const selected = suggestions[highlightedIndex];
-          if (selected) {
-            handleSelect(selected);
-          }
+          if (selected) handleSelect(selected);
         }
-        break;
-
-      case 'Escape':
-        e.preventDefault();
-        setShowDropdown(false);
-        setHighlightedIndex(-1);
         break;
     }
   };
 
-  // Handle suggestion selection
   const handleSelect = (suggestion: SuggestResult) => {
-    setQuery(suggestion.weergavenaam);
+    setQuery('');
     setShowDropdown(false);
     setHighlightedIndex(-1);
+    setExpanded(false);
     onSelect(suggestion);
   };
 
-  // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
@@ -75,92 +82,80 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
     setHighlightedIndex(-1);
   };
 
-  // Click outside handler
+  // Click outside → collapse
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setShowDropdown(false);
-        setHighlightedIndex(-1);
+        if (expanded && !query) {
+          handleCollapse();
+        } else {
+          setShowDropdown(false);
+          setHighlightedIndex(-1);
+        }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [expanded, query]);
 
-  // Determine if dropdown should be visible
   const isDropdownVisible =
     showDropdown && query.length >= 3 && (suggestions.length > 0 || !isLoading);
 
+  // Collapsed: just the icon button
+  if (!expanded) {
+    return (
+      <div className={`absolute top-4 left-4 z-[var(--z-search-bar)] ${className}`}>
+        <button
+          onClick={handleExpand}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 shadow-lg backdrop-blur-md transition-colors hover:bg-black/50"
+        >
+          <SearchIcon />
+        </button>
+      </div>
+    );
+  }
+
+  // Expanded: input with dropdown
   return (
     <div
       ref={containerRef}
-      className={`absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-search-bar)] w-full max-w-md px-4 ${className}`}
+      className={`absolute top-4 left-4 z-[var(--z-search-bar)] w-80 ${className}`}
     >
-      <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 shadow-lg p-3 flex items-center gap-3">
-        {/* Search icon */}
-        <svg
-          className="w-5 h-5 text-white/70 flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-
-        {/* Input */}
+      <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/30 p-2.5 shadow-lg backdrop-blur-md">
+        <SearchIcon />
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Zoek een adres..."
-          className="flex-1 bg-transparent text-white text-sm placeholder:text-white/50 outline-none"
+          className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 outline-none"
         />
-
-        {/* Loading spinner */}
-        {isLoading && query.length >= 3 && (
-          <svg
-            className="animate-spin w-4 h-4 text-white/50 flex-shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
+        {isLoading && query.length >= 3 && <Spinner />}
+        <button
+          onClick={handleCollapse}
+          className="flex h-6 w-6 items-center justify-center rounded text-white/40 transition-colors hover:text-white"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
-        )}
+        </button>
       </div>
 
-      {/* Dropdown */}
       {isDropdownVisible && (
-        <ul className="bg-black/40 backdrop-blur-md rounded-xl border border-white/20 mt-1 shadow-lg overflow-hidden z-[var(--z-dropdown)] relative">
+        <ul className="relative z-[var(--z-dropdown)] mt-1 overflow-hidden rounded-xl border border-white/20 bg-black/40 shadow-lg backdrop-blur-md">
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
               <li
                 key={suggestion.id}
                 onClick={() => handleSelect(suggestion)}
-                className={`px-4 py-3 text-white/90 text-sm cursor-pointer transition-colors ${
+                className={`cursor-pointer px-4 py-3 text-sm text-white/90 transition-colors ${
                   highlightedIndex === index
                     ? 'bg-white/15'
                     : 'hover:bg-white/10'
@@ -170,12 +165,39 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
               </li>
             ))
           ) : (
-            <li className="px-4 py-3 text-white/50 text-sm">
+            <li className="px-4 py-3 text-sm text-white/50">
               Geen resultaten
             </li>
           )}
         </ul>
       )}
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      className="h-5 w-5 shrink-0 text-white/70"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 shrink-0 animate-spin text-white/50" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
   );
 }
