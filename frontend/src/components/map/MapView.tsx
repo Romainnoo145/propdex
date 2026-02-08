@@ -13,10 +13,9 @@ import {
 interface MapViewProps {
   mapRef?: React.MutableRefObject<maplibregl.Map | null>;
   onMapReady?: (map: maplibregl.Map) => void;
-  onParcelClick?: (lngLat: [number, number]) => void;
 }
 
-export default function MapView({ mapRef: externalMapRef, onMapReady, onParcelClick }: MapViewProps) {
+export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewProps) {
   const internalMapRef = useRef<maplibregl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -80,26 +79,6 @@ export default function MapView({ mapRef: externalMapRef, onMapReady, onParcelCl
     }
 
     map.on('load', () => {
-      // Change cursor to pointer when hovering over parcel boundaries
-      map.on('mouseenter', 'parcel-boundaries-fill', () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', 'parcel-boundaries-fill', () => {
-        map.getCanvas().style.cursor = '';
-      });
-
-      // Handle parcel clicks
-      map.on('click', (e) => {
-        // Check if click is on a parcel boundary
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: ['parcel-boundaries-fill'],
-        });
-
-        if (features.length > 0 && onParcelClick) {
-          onParcelClick([e.lngLat.lng, e.lngLat.lat]);
-        }
-      });
-
       if (onMapReady) {
         onMapReady(map);
       }

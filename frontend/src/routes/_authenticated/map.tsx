@@ -9,7 +9,8 @@ import PropertyDetailPanel from '@/components/property/PropertyDetailPanel'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
 import { lookupPdokAddress } from '@/lib/api'
-import type { SuggestResult } from '@/lib/types/property'
+import { getDemoProperty } from '@/lib/demo-data'
+import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 
 export const Route = createFileRoute('/_authenticated/map')({
   component: MapPage,
@@ -18,12 +19,14 @@ export const Route = createFileRoute('/_authenticated/map')({
 function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [showPanel, setShowPanel] = useState(false)
+  const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const lookup = usePropertyLookup()
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
     // Show panel immediately (for loading state)
     setShowPanel(true)
+    setDemoData(null)
 
     try {
       // PDOK suggest only returns id + weergavenaam, so look up full details
@@ -49,13 +52,20 @@ function MapPage() {
         }
       }
 
-      // Trigger property lookup mutation
+      // Trigger property lookup mutation with demo fallback
       lookup.mutate(
         { postcode, huisnummer },
         {
           onSuccess: (data) => {
             if (mapRef.current) {
               updatePropertyGeometry(mapRef.current, data)
+            }
+          },
+          onError: () => {
+            // Backend unavailable — try demo data fallback
+            const demo = getDemoProperty(postcode, huisnummer)
+            if (demo) {
+              setDemoData(demo)
             }
           },
         }
@@ -80,9 +90,9 @@ function MapPage() {
       <AddressSearch onSelect={handleAddressSelect} />
       {showPanel && (
         <PropertyDetailPanel
-          data={lookup.data ?? null}
-          isLoading={lookup.isPending}
-          error={lookup.error}
+          data={demoData ?? lookup.data ?? null}
+          isLoading={!demoData && lookup.isPending}
+          error={!demoData ? lookup.error : null}
           onClose={handleClosePanel}
         />
       )}
