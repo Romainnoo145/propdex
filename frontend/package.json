@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "check": "tsc -b --noEmit && eslint .",
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "maplibre-gl": "^5.17.0",

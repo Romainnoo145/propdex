@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  /* Z-index scale (steps of 100 for flexibility) */
+  --z-map-canvas: 0;
+  --z-map-controls: 10;
+  --z-search-bar: 100;
+  --z-sidebar: 200;
+  --z-property-panel: 300;
+  --z-dropdown: 400;
+  --z-modal: 1000;
+  --z-toast: 2000;
+
+  /* Brand colors as CSS variables (NEVER hardcode) */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafc;
+  --color-text: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-border: #e2e8f0;
+}
