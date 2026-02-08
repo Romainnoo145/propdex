@@ -8,6 +8,12 @@ export default defineConfig({
   server: {
     port: 9300,
     proxy: {
+      '/api/auth': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        cookieDomainRewrite: 'localhost',
+        rewrite: (path: string) => path.replace(/^\/api\/auth/, '/auth'),
+      },
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
