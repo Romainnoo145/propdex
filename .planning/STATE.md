@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 **Milestone:** v2.0 Frontend
-**Phase:** 14 — Authentication & Security
-**Plan:** 5 of 5
-**Status:** Complete (human-verified)
+**Phase:** 15 — Property Data & Map Interactions
+**Plan:** 2 of 6
+**Status:** In progress
 
-**Last activity:** 2026-02-08 — Phase 14 complete, human-verified auth flow
+**Last activity:** 2026-02-08 — Completed 15-02-PLAN.md (Parcel Boundaries Layer)
 
-**Progress:** ████████░░░░░░░░░░░░ 8/15 plans (53%)
+**Progress:** █████████░░░░░░░░░░░ 9/15 plans (60%)
 
 ---
 
@@ -40,7 +40,14 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-**Recent decisions (Phase 14):**
+**Recent decisions (Phase 15-02):**
+- PDOK kadastrale kaart vector tiles (MVT format) for parcel boundaries: Performance in dense urban areas
+- Minzoom 14 for parcel layer: Prevent cluttering at city scale, only show at street level
+- Blue tint (bg-blue-500/30) for overlay toggle vs white for base layer: Visual distinction between base layers and overlays
+- Lazy-load pattern for parcel source: Add only when first toggled, reduces initial map load
+- Dual layer approach: Line layer (visible) + fill layer (interaction target) for future click handling
+
+**Phase 14 decisions:**
 - httpOnly cookies for refresh tokens: Prevents XSS attacks
 - secure=False in development: Allows HTTP on localhost
 - path=/api/auth for cookies: Limits scope to auth endpoints
@@ -84,10 +91,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Phase 14 complete (human-verified)
-**Stopped At:** Phase 14 complete, ready for Phase 15
+**Last Session:** 2026-02-08 13:11 UTC — Completed 15-02-PLAN.md
+**Stopped At:** Phase 15 plan 02 complete, ready for plan 03
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 14 complete)*
+*Last updated: 2026-02-08 (Phase 15 Plan 02 complete)*
