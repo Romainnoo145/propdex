@@ -3,6 +3,7 @@ import { useState } from 'react';
 interface PropertySectionProps {
   title: string;
   icon?: React.ReactNode;
+  badge?: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }
@@ -10,6 +11,7 @@ interface PropertySectionProps {
 function PropertySection({
   title,
   icon,
+  badge,
   defaultOpen = false,
   children,
 }: PropertySectionProps) {
@@ -21,9 +23,10 @@ function PropertySection({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-4 py-3 text-left text-white/90 hover:bg-white/5 transition-colors"
       >
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {icon && <span className="mr-2 text-white/50">{icon}</span>}
           <span className="font-medium text-sm">{title}</span>
+          {badge}
         </div>
         <svg
           className={`w-4 h-4 text-white/50 transition-transform duration-200 ${

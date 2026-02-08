@@ -21,7 +21,7 @@ export const FRESHNESS_THRESHOLDS = {
 } as const;
 
 export function FreshnessIndicator({
-  sectionName,
+  sectionName: _sectionName,
   ageSeconds,
   freshnessThresholdDays,
   onRefresh,

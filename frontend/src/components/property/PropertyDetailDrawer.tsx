@@ -2,6 +2,8 @@ import type { PropertyReportResponse } from '@/lib/types/property';
 import { Drawer } from '@/components/ui/Drawer';
 import PropertySummary from './PropertySummary';
 import PropertySection from './PropertySection';
+import { FreshnessIndicator, FRESHNESS_THRESHOLDS } from './FreshnessIndicator';
+import { SourceBadge } from './SourceBadge';
 
 interface PropertyDetailDrawerProps {
   data: PropertyReportResponse | null;
@@ -10,6 +12,9 @@ interface PropertyDetailDrawerProps {
   onClose: () => void;
   onExportPDF: () => void;
   onSave: () => void;
+  onRefreshSection?: (section: string) => void;
+  onRefreshAll?: () => void;
+  isRefreshing?: boolean;
 }
 
 /**
@@ -24,6 +29,9 @@ export function PropertyDetailDrawer({
   onClose,
   onExportPDF,
   onSave,
+  onRefreshSection,
+  onRefreshAll,
+  isRefreshing = false,
 }: PropertyDetailDrawerProps) {
   const isOpen = !!data || isLoading;
 
@@ -106,7 +114,14 @@ export function PropertyDetailDrawer({
       <div className="overflow-y-auto flex-1">
         {isLoading && <LoadingState />}
         {error && <ErrorState error={error} data={data} />}
-        {data && !isLoading && !error && <DataState data={data} />}
+        {data && !isLoading && !error && (
+          <DataState
+            data={data}
+            onRefreshSection={onRefreshSection}
+            onRefreshAll={onRefreshAll}
+            isRefreshing={isRefreshing}
+          />
+        )}
       </div>
     </Drawer>
   );
@@ -169,31 +184,124 @@ function ErrorState({
   );
 }
 
-function DataState({ data }: { data: PropertyReportResponse }) {
+function DataState({
+  data,
+  onRefreshSection,
+  onRefreshAll,
+  isRefreshing,
+}: {
+  data: PropertyReportResponse;
+  onRefreshSection?: (section: string) => void;
+  onRefreshAll?: () => void;
+  isRefreshing?: boolean;
+}) {
+  // Helper to find section source info
+  const getSectionSource = (sectionName: string) => {
+    return data.section_sources?.find(
+      (s) => s.section.toLowerCase() === sectionName.toLowerCase()
+    );
+  };
+
+  // Kadaster section metadata
+  const kadasterSource = getSectionSource('kadaster');
+  const kadasterBadge = kadasterSource?.sources?.[0] && (
+    <SourceBadge
+      source="Kadaster"
+      cachedAt={kadasterSource.sources[0].cached_at}
+    />
+  );
+  const kadasterFreshness = kadasterSource?.age_seconds !== undefined && (
+    <FreshnessIndicator
+      sectionName="Kadaster"
+      ageSeconds={kadasterSource.age_seconds}
+      freshnessThresholdDays={FRESHNESS_THRESHOLDS.kadaster}
+      onRefresh={() => onRefreshSection?.('kadaster')}
+      isRefreshing={isRefreshing}
+    />
+  );
+
+  // Bestemming section metadata
+  const bestemmingSource = getSectionSource('bestemming');
+  const bestemmingBadge = bestemmingSource?.sources?.[0] && (
+    <SourceBadge
+      source="DSO / Ruimtelijkeplannen"
+      cachedAt={bestemmingSource.sources[0].cached_at}
+    />
+  );
+  const bestemmingFreshness = bestemmingSource?.age_seconds !== undefined && (
+    <FreshnessIndicator
+      sectionName="Bestemming"
+      ageSeconds={bestemmingSource.age_seconds}
+      freshnessThresholdDays={FRESHNESS_THRESHOLDS.bestemming}
+      onRefresh={() => onRefreshSection?.('bestemming')}
+      isRefreshing={isRefreshing}
+    />
+  );
+
+  // Monument section metadata
+  const monumentSource = getSectionSource('monument');
+  const monumentBadge = monumentSource?.sources?.[0] && (
+    <SourceBadge
+      source="RCE / Erfgoedregister"
+      cachedAt={monumentSource.sources[0].cached_at}
+    />
+  );
+  const monumentFreshness = monumentSource?.age_seconds !== undefined && (
+    <FreshnessIndicator
+      sectionName="Monument"
+      ageSeconds={monumentSource.age_seconds}
+      freshnessThresholdDays={FRESHNESS_THRESHOLDS.monument}
+      onRefresh={() => onRefreshSection?.('monument')}
+      isRefreshing={isRefreshing}
+    />
+  );
+
   return (
     <>
       {/* Summary */}
       <PropertySummary data={data} />
 
       {/* Kadaster Section */}
-      <PropertySection title="Kadaster">
-        <KadasterContent data={data} />
+      <PropertySection title="Kadaster" badge={kadasterFreshness}>
+        <div className="space-y-3">
+          {kadasterBadge}
+          <KadasterContent data={data} />
+        </div>
       </PropertySection>
 
       {/* Bestemming Section */}
-      <PropertySection title="Bestemming">
-        <BestemmingContent data={data} />
+      <PropertySection title="Bestemming" badge={bestemmingFreshness}>
+        <div className="space-y-3">
+          {bestemmingBadge}
+          <BestemmingContent data={data} />
+        </div>
       </PropertySection>
 
       {/* Monument Section */}
-      <PropertySection title="Monument">
-        <MonumentContent data={data} />
+      <PropertySection title="Monument" badge={monumentFreshness}>
+        <div className="space-y-3">
+          {monumentBadge}
+          <MonumentContent data={data} />
+        </div>
       </PropertySection>
 
       {/* Bronnen Section */}
       <PropertySection title="Bronnen">
         <BronnenContent data={data} />
       </PropertySection>
+
+      {/* Update alle bronnen button */}
+      {onRefreshAll && (
+        <div className="px-4 py-4 border-t border-white/10">
+          <button
+            onClick={onRefreshAll}
+            disabled={isRefreshing}
+            className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            {isRefreshing ? 'Bezig met updaten...' : 'Update alle bronnen'}
+          </button>
+        </div>
+      )}
     </>
   );
 }
