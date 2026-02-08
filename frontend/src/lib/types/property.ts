@@ -5,10 +5,8 @@
  * These types use snake_case to match backend exactly.
  */
 
-// Minimal GeoJSON namespace - avoids external dependency
-export namespace GeoJSON {
-  export type Geometry = Record<string, unknown>
-}
+// Minimal GeoJSON type - avoids external dependency
+export type GeoJSONGeometry = Record<string, unknown>
 
 /**
  * Request schema for property lookup by address
@@ -55,7 +53,7 @@ export interface BuildingData {
   status: string | null
   oppervlakte: number | null
   gebruiksdoel: string[]
-  geometry: GeoJSON.Geometry | null
+  geometry: GeoJSONGeometry | null
 }
 
 /**
@@ -66,7 +64,7 @@ export interface CadastralParcel {
   perceelnummer: string | null
   sectie: string | null
   oppervlakte: number | null
-  geometry: GeoJSON.Geometry | null
+  geometry: GeoJSONGeometry | null
 }
 
 /**
@@ -87,7 +85,7 @@ export interface ZoningRule {
   bestemming: string
   omschrijving: string | null
   building_dimensions: BuildingDimensions | null
-  geometry: GeoJSON.Geometry | null
+  geometry: GeoJSONGeometry | null
 }
 
 /**
@@ -144,9 +142,9 @@ export interface MonumentStatus {
 export interface MapData {
   center_rd: number[] | null
   center_wgs84: number[] | null
-  property_geometry: GeoJSON.Geometry | null
-  parcel_geometries: GeoJSON.Geometry[]
-  zoning_geometries: GeoJSON.Geometry[]
+  property_geometry: GeoJSONGeometry | null
+  parcel_geometries: GeoJSONGeometry[]
+  zoning_geometries: GeoJSONGeometry[]
 }
 
 /**
