@@ -32,6 +32,7 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
             tiles: [PDOK_AERIAL_TILES],
             tileSize: 256,
             attribution: PDOK_AERIAL_ATTRIBUTION,
+            bounds: [3.2, 50.7, 7.3, 53.6],
           },
           'carto-light': {
             type: 'raster',
@@ -55,6 +56,7 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
             id: 'pdok-aerial-layer',
             type: 'raster',
             source: 'pdok-aerial',
+            minzoom: 7,
             paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
           },
         ],
