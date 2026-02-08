@@ -34,45 +34,92 @@ function PropertyDetailPanel({
   };
 
   return (
-    <div
-      className="absolute right-4 top-4 bottom-4 w-96 z-[var(--z-property-panel)] md:block hidden"
-      onTouchStart={stopPropagation}
-      onTouchMove={stopPropagation}
-      onTouchEnd={stopPropagation}
-    >
-      {/* Desktop Panel */}
-      <div className="h-full bg-black/40 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
-          <h2 className="text-white font-semibold">Eigendomsinformatie</h2>
-          <button
-            onClick={onClose}
-            className="text-white/50 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+    <>
+      {/* Desktop Panel - Right side */}
+      <div
+        className="absolute right-4 top-4 bottom-4 w-96 z-[var(--z-property-panel)] hidden md:block"
+        onTouchStart={stopPropagation}
+        onTouchMove={stopPropagation}
+        onTouchEnd={stopPropagation}
+      >
+        <div className="h-full bg-black/40 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+            <h2 className="text-white font-semibold">Eigendomsinformatie</h2>
+            <button
+              onClick={onClose}
+              className="text-white/50 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto flex-1">
-          {isLoading && <LoadingState />}
-          {error && <ErrorState error={error} data={data} />}
-          {data && !isLoading && !error && <DataState data={data} />}
+          {/* Content */}
+          <div className="overflow-y-auto flex-1">
+            {isLoading && <LoadingState />}
+            {error && <ErrorState error={error} data={data} />}
+            {data && !isLoading && !error && <DataState data={data} />}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Bottom Sheet - Slides up from bottom */}
+      <div
+        className="absolute left-0 right-0 bottom-0 z-[var(--z-property-panel)] md:hidden max-h-[65vh]"
+        onTouchStart={stopPropagation}
+        onTouchMove={stopPropagation}
+        onTouchEnd={stopPropagation}
+      >
+        <div className="h-full bg-black/40 backdrop-blur-xl rounded-t-2xl border-t border-x border-white/15 shadow-2xl overflow-hidden flex flex-col">
+          {/* Header with drag handle */}
+          <div className="flex flex-col flex-shrink-0">
+            <div className="flex justify-center py-2">
+              <div className="w-12 h-1 bg-white/30 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between px-4 pb-3 border-b border-white/10">
+              <h2 className="text-white font-semibold text-sm">Eigendomsinformatie</h2>
+              <button
+                onClick={onClose}
+                className="text-white/50 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="overflow-y-auto flex-1">
+            {isLoading && <LoadingState />}
+            {error && <ErrorState error={error} data={data} />}
+            {data && !isLoading && !error && <DataState data={data} />}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
