@@ -15,6 +15,8 @@ interface PropertyDetailDrawerProps {
   onRefreshSection?: (section: string) => void;
   onRefreshAll?: () => void;
   isRefreshing?: boolean;
+  isSaving?: boolean;
+  isSaved?: boolean;
 }
 
 /**
@@ -32,6 +34,8 @@ export function PropertyDetailDrawer({
   onRefreshSection,
   onRefreshAll,
   isRefreshing = false,
+  isSaving = false,
+  isSaved = false,
 }: PropertyDetailDrawerProps) {
   const isOpen = !!data || isLoading;
 
@@ -46,13 +50,18 @@ export function PropertyDetailDrawer({
           {/* Save/Bookmark button */}
           <button
             onClick={onSave}
-            className="text-white/50 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
-            aria-label="Opslaan"
-            title="Opslaan"
+            disabled={isSaving}
+            className={`p-2 rounded-lg transition-colors ${
+              isSaved
+                ? 'text-blue-400 hover:text-blue-300'
+                : 'text-white/50 hover:text-white hover:bg-white/10'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            aria-label={isSaved ? 'Opgeslagen' : 'Opslaan'}
+            title={isSaved ? 'Opgeslagen' : 'Opslaan'}
           >
             <svg
               className="w-5 h-5"
-              fill="none"
+              fill={isSaved ? 'currentColor' : 'none'}
               viewBox="0 0 24 24"
               stroke="currentColor"
             >

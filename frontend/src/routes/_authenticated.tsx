@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import SideRailNav from '@/components/layout/SideRailNav'
 import ReportSidebar from '@/components/layout/ReportSidebar'
 import type { RecentItem } from '@/hooks/useRecentViewed'
@@ -19,6 +19,7 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleToggleSidebar = () => {
@@ -26,21 +27,23 @@ function AuthenticatedLayout() {
   }
 
   const handleSelectReport = (reportId: string) => {
-    // TODO: Implement report selection
-    // - Fetch report data
-    // - Extract coordinates from report_data
-    // - Trigger map flyTo
-    // - Open drawer with report details
-    console.log('Selected report:', reportId)
+    // Navigate to map with reportId - map.tsx will handle loading and display
+    navigate({
+      to: '/map',
+      search: { reportId },
+    })
     setSidebarOpen(false)
   }
 
   const handleSelectRecent = (item: RecentItem) => {
-    // TODO: Implement recent item selection
-    // - Fetch property data by nummeraanduiding_id
-    // - Trigger map flyTo
-    // - Open drawer with property details
-    console.log('Selected recent item:', item)
+    // Navigate to map with recent item postcode - triggers new lookup
+    navigate({
+      to: '/map',
+      search: {
+        postcode: item.postcode,
+        nummeraanduiding_id: item.id,
+      },
+    })
     setSidebarOpen(false)
   }
 
