@@ -60,7 +60,7 @@ export default function SideRailNav({
 
   return (
     <nav
-      className="fixed left-0 top-0 hidden h-full w-16 flex-col items-center justify-between border-r border-white/10 bg-black/30 py-4 backdrop-blur-xl md:flex"
+      className="hidden h-full w-16 shrink-0 flex-col items-center justify-between border-r border-white/10 bg-black/30 py-4 backdrop-blur-xl md:flex"
       style={{ zIndex: 'var(--z-side-rail)' }}
     >
       {/* Top section: Main navigation */}
