@@ -17,13 +17,13 @@
   - [x] 13-01-PLAN.md — Vite + React + TypeScript scaffold with tooling, z-index scale, tile constants
   - [x] 13-02-PLAN.md — MapLibre map component with tile layers, imperative state, cleanup, AppLayout
   - [x] 13-03-PLAN.md — Layer toggle (satellite/kaart) and visual verification
-- [ ] Phase 14: Authentication & Security — Login/register flow, JWT in memory + httpOnly refresh cookie, silent refresh, protected routes, CORS config, backend cookie endpoint (R2, R8)
-  **Plans:** 5 plans
-  - [ ] 14-01-PLAN.md — Backend cookie endpoints (httpOnly refresh tokens)
-  - [ ] 14-02-PLAN.md — TanStack Router scaffold + auth dependencies
-  - [ ] 14-03-PLAN.md — AuthContext, silent refresh, loading screen, useAuth
-  - [ ] 14-04-PLAN.md — Auth UI components (login/register forms, Google OAuth, tabs)
-  - [ ] 14-05-PLAN.md — Integration wiring + visual verification
+- [x] Phase 14: Authentication & Security — Login/register flow, JWT in memory + httpOnly refresh cookie, silent refresh, protected routes, CORS config, backend cookie endpoint (R2, R8)
+  **Plans:** 5/5 complete
+  - [x] 14-01-PLAN.md — Backend cookie endpoints (httpOnly refresh tokens)
+  - [x] 14-02-PLAN.md — TanStack Router scaffold + auth dependencies
+  - [x] 14-03-PLAN.md — AuthContext, silent refresh, loading screen, useAuth
+  - [x] 14-04-PLAN.md — Auth UI components (login/register forms, Google OAuth, tabs)
+  - [x] 14-05-PLAN.md — Integration wiring + visual verification
 - [ ] Phase 15: Property Data & Map Interactions — Floating search with autocomplete, address lookup, property detail panel, parcel boundaries, GeoJSON clustering, coordinate projection verification (R3, R4, R5)
 - [ ] Phase 16: Property Details & Reports — Detail panel with progressive disclosure, report save/list/search sidebar, PDF export, freshness indicators, data source badges (R6)
 - [ ] Phase 17: Projects & Polish — Project folders CRUD, report-to-project assignment, mobile bottom sheet, monument badges, AI zoning display, force refresh (R7, R9)
@@ -86,11 +86,11 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 | 11. Coverage Gap Closure | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 12. Phase Documentation & Verification | v1.1 | 2/2 | Complete | 2026-02-08 |
 | 13. Map Foundation & Layout | v2.0 | 3/3 | Complete | 2026-02-08 |
-| 14. Authentication & Security | v2.0 | 0/5 | Pending | — |
+| 14. Authentication & Security | v2.0 | 5/5 | Complete | 2026-02-08 |
 | 15. Property Data & Map Interactions | v2.0 | 0/? | Pending | — |
 | 16. Property Details & Reports | v2.0 | 0/? | Pending | — |
 | 17. Projects & Polish | v2.0 | 0/? | Pending | — |
 
 ---
 
-*Last updated: 2026-02-08 (Phase 13 complete — 3/3 plans verified)*
+*Last updated: 2026-02-08 (Phase 14 complete — 5/5 plans)*
