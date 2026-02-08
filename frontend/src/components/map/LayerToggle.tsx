@@ -26,27 +26,26 @@ function LayerToggle({ mapRef }: LayerToggleProps) {
     setActiveLayer(layer);
   };
 
+  const active = 'bg-white/70 text-gray-900 shadow-sm';
+  const inactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
+
   return (
-    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-white/90 backdrop-blur-sm rounded-lg shadow-md p-1 flex gap-1">
-      <button
-        onClick={() => handleLayerChange('aerial')}
-        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-          activeLayer === 'aerial'
-            ? 'bg-[var(--color-primary)] text-white'
-            : 'bg-transparent text-gray-600 hover:bg-gray-100'
-        }`}
-      >
-        Satellite
-      </button>
+    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-black/30 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/20 shadow-lg">
       <button
         onClick={() => handleLayerChange('kaart')}
-        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-          activeLayer === 'kaart'
-            ? 'bg-[var(--color-primary)] text-white'
-            : 'bg-transparent text-gray-600 hover:bg-gray-100'
+        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+          activeLayer === 'kaart' ? active : inactive
         }`}
       >
         Kaart
+      </button>
+      <button
+        onClick={() => handleLayerChange('aerial')}
+        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+          activeLayer === 'aerial' ? active : inactive
+        }`}
+      >
+        Satellite
       </button>
     </div>
   );
