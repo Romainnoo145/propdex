@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 ## Current Position
 
 **Milestone:** v1.1 Production Hardening
-**Phase:** Phase 11 - Coverage Gap Closure
-**Plan:** 4/4 complete
-**Status:** Phase complete
+**Phase:** Phase 12 - Documentation Verification
+**Plan:** 1 of 1 complete
+**Status:** Plan complete
 
-**Progress:** ████████████████░░░░ 15/15 requirements + 4/6 gap plans
+**Progress:** ████████████████░░░░ 15/15 requirements + 5/6 gap plans
 
-**Next Action:** Begin Phase 12 (documentation gaps)
+**Next Action:** Continue Phase 12 (documentation gaps) or complete v1.1 milestone
 
 ---
 
@@ -100,6 +100,11 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 - **11-04 (TEST-13):** Check key fields from report_data instead of exact dict equality (Pydantic normalizes with defaults)
 - **11-04 (TEST-13):** Mock generate_report_pdf to avoid WeasyPrint dependency in test environment
 
+**Phase 12 Decisions:**
+- **12-01:** Use actual pytest test counts (not estimated from research) for VERIFICATION.md accuracy
+- **12-01:** Document Phase 9 database race condition as pre-existing infrastructure issue (transparent status reporting)
+- **12-01:** Correct Phase 9 integration test file names (test_zoning_integration.py and test_monument_integration.py instead of test_aggregator_integration.py)
+
 ### Active TODOs
 
 - [x] v1.1 Production Hardening: ALL 15 REQUIREMENTS COMPLETE
@@ -114,21 +119,20 @@ Full decision log (98 decisions) archived in `.planning/milestones/v1.0-ROADMAP.
 
 ### Recent Wins
 
-- **11-02 COMPLETE (2026-02-08):** Freshness detection unit tests — 12 tests covering threshold logic, section mappings, edge cases + timezone bug fix
-- **11-04 COMPLETE (2026-02-08):** Reports router HTTP endpoint tests — 12 tests covering save, get, delete, PDF export, freshness, multi-tenant isolation
-- **11-03 COMPLETE (2026-02-08):** Properties router HTTP endpoint tests — 8 tests covering auth, validation, success, error propagation
-- **11-01 COMPLETE (2026-02-07):** Property aggregator integration tests — 10 tests covering orchestration flow, error handling (404/502), partial failures, coordinate extraction, completeness scoring
+- **12-01 COMPLETE (2026-02-08):** Retroactive verification documentation — Phase 8 and Phase 9 VERIFICATION.md created with evidence from 143 tests, confirming 6 requirements (TEST-03, TEST-04, TEST-05, TEST-06, TEST-07, INFRA-01)
 - **PHASE 11 COMPLETE (2026-02-08):** 4/4 plans executed, added 42 tests (30 integration + 12 unit), closed coverage gaps (freshness 20%→100%, reports router 44%→80%+)
 - **v1.1 REQUIREMENTS COMPLETE:** All 15 requirements satisfied across 5 phases, 13 plans, 233 baseline + 42 gap closure tests
+- **11-02 COMPLETE (2026-02-08):** Freshness detection unit tests — 12 tests covering threshold logic, section mappings, edge cases + timezone bug fix
+- **11-04 COMPLETE (2026-02-08):** Reports router HTTP endpoint tests — 12 tests covering save, get, delete, PDF export, freshness, multi-tenant isolation
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 11-02-PLAN.md (Phase 11 complete)
-**Stopped At:** Phase 11 complete (all 4 plans), ready for Phase 12
+**Last Session:** 2026-02-08 — Completed 12-01-PLAN.md
+**Stopped At:** Phase 12 plan 1 complete (retroactive verification docs)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Completed 11-02: Freshness detection unit tests — Phase 11 complete with 4/4 plans)*
+*Last updated: 2026-02-08 (Completed 12-01: Retroactive verification documentation for Phases 8 and 9)*
