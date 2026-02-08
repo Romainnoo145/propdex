@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 14 — Authentication & Security
-**Plan:** 3 of 3
+**Plan:** 4 of 5
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 14-03-PLAN.md (Auth Context & Silent Refresh)
+**Last activity:** 2026-02-08 — Completed 14-04-PLAN.md (Auth Form Components)
 
-**Progress:** ██████░░░░░░░░░░░░░░ 6/15 plans (40%)
+**Progress:** ███████░░░░░░░░░░░░░ 7/15 plans (47%)
 
 ---
 
@@ -52,6 +52,9 @@ See `.planning/PROJECT.md` Key Decisions table.
 - In-memory access token storage: React state only (never localStorage) for XSS prevention
 - Silent redirect to /auth on refresh failure: No error toast per user decision
 - credentials: 'include' on all fetch calls: Required for httpOnly cookie transmission
+- FormField component for DRY form field rendering: Inline error display with React Hook Form
+- Password validation with Zod regex: Min 8 chars + uppercase + lowercase + number
+- AuthTabs accessible pattern: Proper ARIA roles for screen reader support
 
 **Phase 13 decisions:**
 - React 19: Latest stable React with concurrent features
@@ -88,10 +91,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 14-03-PLAN.md
-**Stopped At:** Completed 14-03-PLAN.md (Auth Context & Silent Refresh)
+**Last Session:** 2026-02-08 — Completed 14-04-PLAN.md
+**Stopped At:** Completed 14-04-PLAN.md (Auth Form Components)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (14-03 complete)*
+*Last updated: 2026-02-08 (14-04 complete)*
