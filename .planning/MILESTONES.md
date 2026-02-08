@@ -1,11 +1,28 @@
 # Project Milestones: Propdex
 
-## v1.1 Production Hardening (Started: 2026-02-07)
+## v1.1 Production Hardening (Shipped: 2026-02-08)
 
-**Goal:** Stabilize the v1.0 backend with comprehensive test coverage, enforce RLS, and clean up configuration debt — making the codebase production-ready before building the frontend.
+**Delivered:** Comprehensive test suite (275 tests), row-level security enforcement, and configuration cleanup — making the v1.0 backend production-ready with verified multi-tenant isolation at every layer.
 
-**Phases:** 6-10 (5 phases)
-**Requirements:** 15 across 5 categories (Testing, Security, Configuration, Infrastructure, Documentation)
+**Phases completed:** 6-12 (19 plans total)
+
+**Key accomplishments:**
+- 275-test automated suite covering all 5 backend modules (104 unit + 171 integration), 74% overall coverage with all core business logic >80%
+- Row-level security enforcement with fail-closed NULLIF policies on all 7 tenant tables, app_role deployment ready
+- Multi-tenant isolation verified at 4 layers (HTTP, service, cache, database) with 11 dedicated tests
+- Configuration cleanup: single .env, per-org freshness thresholds, production .env.example
+- 4 complete E2E flows tested: address-to-report, report-to-PDF, auth lifecycle, multi-tenant isolation
+- Formal verification of all 7 phases with evidence-based VERIFICATION.md documents
+
+**Stats:**
+- 123 files created/modified
+- 15,947 lines of Python (7,060 in tests)
+- 7 phases, 19 plans, 71 commits
+- 2 days from v1.0 to v1.1
+
+**Git range:** `9933395` (docs: start milestone v1.1) → `ce97eac` (docs(12): complete phase documentation)
+
+**What's next:** v2.0 Frontend — SvelteKit dashboard with address lookup, interactive maps, and report management UI
 
 ---
 
