@@ -25,6 +25,13 @@
   - [x] 14-04-PLAN.md — Auth UI components (login/register forms, Google OAuth, tabs)
   - [x] 14-05-PLAN.md — Integration wiring + visual verification
 - [ ] Phase 15: Property Data & Map Interactions — Floating search with autocomplete, address lookup, property detail panel, parcel boundaries, GeoJSON clustering, coordinate projection verification (R3, R4, R5)
+  **Plans:** 5 plans
+  Plans:
+  - [ ] 15-01-PLAN.md — TypeScript types, API client, TanStack Query hooks (suggest + lookup)
+  - [ ] 15-02-PLAN.md — PDOK parcel boundaries vector tile layer + percelen toggle
+  - [ ] 15-03-PLAN.md — Floating address search bar with autocomplete + keyboard navigation
+  - [ ] 15-04-PLAN.md — Property detail panel with progressive disclosure + geometry layers
+  - [ ] 15-05-PLAN.md — Integration wiring + visual verification
 - [ ] Phase 16: Property Details & Reports — Detail panel with progressive disclosure, report save/list/search sidebar, PDF export, freshness indicators, data source badges (R6)
 - [ ] Phase 17: Projects & Polish — Project folders CRUD, report-to-project assignment, mobile bottom sheet, monument badges, AI zoning display, force refresh (R7, R9)
 
@@ -87,10 +94,10 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 | 12. Phase Documentation & Verification | v1.1 | 2/2 | Complete | 2026-02-08 |
 | 13. Map Foundation & Layout | v2.0 | 3/3 | Complete | 2026-02-08 |
 | 14. Authentication & Security | v2.0 | 5/5 | Complete | 2026-02-08 |
-| 15. Property Data & Map Interactions | v2.0 | 0/? | Pending | — |
+| 15. Property Data & Map Interactions | v2.0 | 0/5 | Pending | — |
 | 16. Property Details & Reports | v2.0 | 0/? | Pending | — |
 | 17. Projects & Polish | v2.0 | 0/? | Pending | — |
 
 ---
 
-*Last updated: 2026-02-08 (Phase 14 complete — 5/5 plans)*
+*Last updated: 2026-02-08 (Phase 15 planned — 5 plans in 3 waves)*
