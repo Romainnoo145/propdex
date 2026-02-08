@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 13 — Map Foundation & Layout
-**Plan:** 02 of 3
-**Status:** In progress
+**Plan:** 3 of 3
+**Status:** Complete (verified)
 
-**Last activity:** 2026-02-08 — Completed 13-02-PLAN.md (MapView + AppLayout)
+**Last activity:** 2026-02-08 — Phase 13 complete, 9/9 must-haves verified
 
-**Progress:** ████░░░░░░░░░░░░░░░░ 2/15 plans (13%)
+**Progress:** ██░░░░░░░░░░░░░░░░░░ 3/15 plans (20%)
 
 ---
 
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-**Recent decisions (Phase 13-01, 13-02):**
+**Recent decisions (Phase 13):**
 - React 19: Latest stable React with concurrent features
 - Tailwind v4: New Vite plugin architecture with @import syntax
 - ESLint 9: Flat config system with typescript-eslint
@@ -49,7 +49,9 @@ See `.planning/PROJECT.md` Key Decisions table.
 - TypeScript strict mode: All safety flags including noUncheckedIndexedAccess
 - useRef for MapLibre map instance: Prevents re-render loops (NOT useState)
 - map.remove() cleanup: Prevents MapLibre Worker memory leaks
-- Dual PDOK sources: aerial (visible) + topo (hidden) for future layer toggle
+- ESRI World Imagery for satellite: Global coverage (PDOK aerial is NL-only, white JPEG borders)
+- CartoDB Positron for kaart: Modern greyscale basemap
+- Glassmorphism UI controls: Dark blur backdrop, white/70 active states
 
 ### Active TODOs
 
@@ -73,10 +75,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 13-02 (MapView + AppLayout)
-**Stopped At:** Completed 13-02-PLAN.md
+**Last Session:** 2026-02-08 — Phase 13 complete (verified)
+**Stopped At:** Phase 13 verified, ready for Phase 14
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 13-02 complete)*
+*Last updated: 2026-02-08 (Phase 13 complete)*

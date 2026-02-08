@@ -1,0 +1,106 @@
+# Propdex v2.0 Frontend — Requirements
+
+## Goal
+
+Build a map-first web interface where the full-page map IS the app. Users browse PDOK aerial imagery, toggle kadaster parcel boundaries, search addresses, click properties for instant intelligence reports, and manage saved reports via a sidebar.
+
+## Requirements
+
+### R1: Full-Page Interactive Map
+**User story:** As a developer, I want a full-page map with PDOK aerial and topographic tile layers so I can visually browse Dutch properties.
+**Acceptance criteria:**
+- MapLibre GL JS renders full-viewport map with PDOK aerial imagery (Luchtfoto RGB)
+- Layer toggle switches between satellite and topographic views
+- Map controls: zoom, rotation, geolocation
+- Smooth 60fps rendering with proper memory cleanup on unmount
+- Imperative map state management (refs, not useState)
+
+### R2: Authentication Flow
+**User story:** As a user, I want to log in securely so my reports and projects are protected.
+**Acceptance criteria:**
+- Login form with email/password
+- Registration form with email verification flow
+- JWT access token stored in memory (React Context), refresh token in httpOnly cookie
+- Silent token refresh on page reload
+- Protected routes redirect to login when unauthenticated
+- Logout clears tokens and redirects to login
+
+### R3: Address Search with Autocomplete
+**User story:** As a developer, I want to search for any Dutch address and see suggestions so I can quickly find properties.
+**Acceptance criteria:**
+- Floating search bar integrated in map UI (not sidebar)
+- Autocomplete suggestions from PDOK Locatieserver via backend proxy
+- 300ms debounce, minimum 3 characters
+- Select suggestion → map flies to location
+- Keyboard navigation (arrow keys, enter to select)
+
+### R4: Property Lookup & Detail Panel
+**User story:** As a developer, I want to click a property and see its intelligence report so I can make quick go/no-go decisions.
+**Acceptance criteria:**
+- Click map or select search result → fetch property data from backend `/properties/lookup`
+- Floating detail panel (desktop) or bottom sheet (mobile)
+- Progressive disclosure: summary → expandable sections (kadaster, zoning, monument)
+- Loading states during API fetch
+- Error handling with user-friendly messages
+
+### R5: Parcel Boundaries Layer
+**User story:** As a developer, I want to see kadaster parcel boundaries on the map so I can understand exact property lines.
+**Acceptance criteria:**
+- Toggleable parcel boundary overlay from PDOK/Kadaster data
+- Boundaries render as polygons with click interaction
+- Performance handles dense urban areas (clustering or vector tiles)
+- Visual distinction between selected and unselected parcels
+
+### R6: Report Management
+**User story:** As a developer, I want to save, view, and export property reports so I can track my research.
+**Acceptance criteria:**
+- Save report button on detail panel → POST to backend `/reports`
+- Sidebar tab "Rapporten" lists saved reports with search
+- Click saved report → reopens on map with detail panel
+- PDF export button → downloads from backend `/reports/{id}/pdf`
+- Freshness indicators showing data age per source
+
+### R7: Project Folders
+**User story:** As a developer, I want to organize reports into project folders so I can track my property pipeline.
+**Acceptance criteria:**
+- Sidebar tab "Projecten" lists project folders
+- Create, rename, delete projects
+- Assign reports to projects
+- Filter reports by project in sidebar
+
+### R8: Auth Integration with Backend
+**User story:** As the system, authentication must work securely with the existing backend JWT system.
+**Acceptance criteria:**
+- Backend sets httpOnly cookie for refresh token (requires backend endpoint change)
+- CORS configured correctly between frontend (port 9300) and backend (port 8000)
+- Vite dev proxy for development, proper CORS for production
+- Token refresh happens transparently before expiry
+
+### R9: Polish & Mobile Responsiveness
+**User story:** As a mobile user, I want the app to work well on my phone so I can check properties on-site.
+**Acceptance criteria:**
+- Bottom sheet pattern for property details on mobile
+- Touch-friendly map interactions (no conflicts between panel scroll and map pan)
+- Monument badge on property cards
+- AI zoning summary display with confidence indicators
+- Force refresh button for power users
+
+---
+
+## Requirement → Phase Mapping
+
+| Requirement | Phase |
+|------------|-------|
+| R1: Full-Page Interactive Map | Phase 13 | Complete |
+| R2: Authentication Flow | Phase 14 |
+| R8: Auth Integration with Backend | Phase 14 |
+| R3: Address Search with Autocomplete | Phase 15 |
+| R4: Property Lookup & Detail Panel | Phase 15 |
+| R5: Parcel Boundaries Layer | Phase 15 |
+| R6: Report Management | Phase 16 |
+| R7: Project Folders | Phase 17 |
+| R9: Polish & Mobile Responsiveness | Phase 17 |
+
+---
+
+*Created: 2026-02-08 from research synthesis*
