@@ -1,304 +1,464 @@
-# Feature Landscape: Dutch Property Intelligence Platform
+# Feature Landscape: Map-First Property Intelligence Platform
 
-**Domain:** Property intelligence and due diligence for Dutch projectontwikkelaars
-**Researched:** 2026-02-07
-**Confidence:** MEDIUM
+**Domain:** PropTech / Dutch property intelligence for real estate developers
+**Researched:** 2026-02-08
+**Confidence:** MEDIUM (verified with multiple sources, specific Dutch context is LOW)
 
 ## Executive Summary
 
-Property intelligence platforms for Dutch real estate developers fall into three tiers:
+Map-first property platforms prioritize spatial interaction over traditional dashboard navigation. The map IS the interface — users pan, zoom, click properties, and receive contextual information via floating panels. Key patterns: (1) minimal chrome, maximum map real estate, (2) floating search integrated in map view, (3) bottom sheets/slide-up panels for property details on mobile, (4) sidebar for saved items/projects (not primary navigation), (5) layer toggles for data overlays.
 
-1. **Data aggregation platforms** (Kadaster-centric) - Pull official records, present raw data
-2. **Due diligence platforms** (Transect, Prophetic) - Add analysis layers, risk flagging, comparable research
-3. **Decision intelligence platforms** (emerging category) - Predictive models, financial feasibility, development scenarios
+This research categorizes features for Propdex v2.0 frontend, building on the production-ready v1.1 backend (275 tests, full multi-tenant API with kadaster, zoning, monuments, AI parsing, PDF export).
 
-For projectontwikkelaars specializing in heritage redevelopment (churches, monuments, commercial-to-residential), the core intelligence challenge is **synthesizing Dutch regulatory complexity** (bestemmingsplan, monument status, erfpacht, subsidies) into actionable go/no-go insights.
+---
 
-**Key insight:** Speed is the differentiator. Traditional due diligence takes 3-6 weeks because it requires manual synthesis across 8-12 government databases. Platforms that collapse this to minutes win on operational efficiency, not feature breadth.
+## Table Stakes
 
-## Feature Landscape
+Features users expect from a map-first property intelligence platform. Missing these = product feels incomplete.
 
-### Table Stakes (Users Expect These)
+| Feature | Why Expected | Complexity | Backend Ready | Notes |
+|---------|--------------|------------|---------------|-------|
+| **Full-page interactive map** | Industry standard (Google Maps, Regrid, ParcelQuest) — map IS the app | Medium | N/A | MapLibre with PDOK aerial/topo tiles |
+| **Floating search bar** | Google Maps pattern — search integrated in map view, not sidebar | Low | YES (`/property/lookup`) | PDOK autocomplete via BAG API |
+| **Address autocomplete** | Dutch platforms expect zipcode + housenumber or street suggestions | Medium | YES (backend has PDOK) | Must handle "1011 AB 1" and "Dam 1, Amsterdam" |
+| **Click property → instant info** | Core interaction — click map feature, see details immediately | Medium | YES (aggregator ready) | Floating panel with PropertyReportResponse |
+| **Parcel boundaries overlay** | Real estate users need to see exact property lines (kadaster) | High | NO (needs layer data) | Requires kadaster parcel WFS/vector tiles |
+| **Layer toggles** | Satellite vs topographic, boundaries on/off — standard map controls | Low | N/A | MapLibre layer visibility controls |
+| **Saved reports list** | Users expect to revisit properties they've researched | Low | YES (`/reports` CRUD) | Sidebar "Rapporten" tab |
+| **PDF export** | Professional deliverable for sharing with partners/banks | Low | YES (WeasyPrint) | Download button in detail panel |
+| **Mobile-responsive map** | 30%+ users on mobile/tablet — map must work on small screens | High | N/A | Bottom sheet pattern (Google Maps style) |
+| **Login/logout** | Multi-user platform requires auth | Low | YES (JWT + refresh) | Modal or /login route |
+| **Loading states** | API calls take 2-10s; users need feedback | Low | N/A | Skeleton screens, spinners |
+| **Error handling** | Failed API calls, no data found, rate limits — must communicate clearly | Medium | Backend returns 4xx/5xx | Toast notifications + inline messages |
 
-Features projectontwikkelaars assume exist. Missing these = product feels incomplete.
+### Why These Are Table Stakes
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **Kadaster property data** | Foundation of all due diligence in NL | MEDIUM | Eigendomsinformatie, perceelgrenzen, oppervlakte. Requires Kadaster API integration. |
-| **Current ownership info** | Need to know who to contact | LOW | From Kadaster eigendomsinformatie. Public record. |
-| **Zoning summary (bestemmingsplan)** | Determines what can be built | HIGH | Must parse IMRO/RO Standaarden XML. Complex interpretation layer needed. |
-| **Monument status check** | Critical for heritage projects | MEDIUM | Rijksmonument, gemeentelijk monument, beschermd stadsgezicht. From RCE database. |
-| **Address autocomplete** | Expected UX pattern | LOW | BAG (Basisregistratie Adressen en Gebouwen) integration. |
-| **Basic property characteristics** | Age, size, type | LOW | From BAG and Kadaster WOZ data. |
-| **Map visualization** | See property boundaries | MEDIUM | Integration with PDOK (Publieke Dienstverlening Op de Kaart) for cadastral overlay. |
-| **PDF report export** | Share with team/investors | LOW | Formatted output for offline review. Expected for all intelligence platforms. |
-| **Multiple property comparison** | Compare 3-5 opportunities | MEDIUM | Side-by-side view of key metrics. Developers rarely evaluate single property. |
-| **Historical sales data** | Comparable transactions | MEDIUM | From Kadaster verkooptransacties. Needed for valuation sense-check. |
+**Full-page map:** Every modern PropTech platform (Regrid, Transect, ParcelQuest) uses map-first design. Not having this = feels outdated. Source: [Map UI Design Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
 
-### Differentiators (Competitive Advantage)
+**Floating search:** Google Maps established this pattern — search bar floats over map, doesn't consume sidebar space. Controls are stationary widgets at absolute positions. Source: [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls)
 
-Features that set product apart for heritage/complex redevelopment projects.
+**Address autocomplete:** Dutch users type "1011 AB 1" or "Dam 1" and expect instant suggestions. PDOK Locatieserver is the standard (supports BAG, kadaster). Source: [PDOK Locatieserver API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver)
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Instant structured reports** | 3-6 weeks → 3 minutes | HIGH | Core value prop. Requires pre-processing all Dutch planning data + real-time API orchestration. |
-| **Monument restriction summary** | Plain-language what you can/can't change | HIGH | RCE beschrijvingen are technical. Need interpretation layer for "Can I add floors?" "Can I change facade?" |
-| **Subsidy eligibility detection** | Automatic match to Rijksdienst, provincial, municipal subsidies | HIGH | Heritage redevelopment has 20+ subsidy programs. Auto-matching saves weeks of research. |
-| **Church-specific intelligence** | Usage history, community objections, deconsecration status | MEDIUM | Churches are 30% of heritage redevelopment in NL. Specialized data = competitive moat. |
-| **Erfpacht (leasehold) analysis** | Terms, buy-out costs, restrictions | MEDIUM | Complex ownership structure in NL cities. Developers need this synthesized, not raw contracts. |
-| **Development constraint scoring** | Red/yellow/green rating for project complexity | MEDIUM | Synthesize monument + zoning + soil + access into single risk score. Speeds pre-screening. |
-| **Welstandscommissie prediction** | Likelihood of aesthetic board approval | HIGH | Use historical decisions + current guidelines. Unique to NL market. High value, complex ML. |
-| **Bestemmingsplan change history** | Track zoning amendments over time | MEDIUM | Shows if area is liberalizing/restricting. Predicts future flexibility. |
-| **Soil contamination overlay** | Historical industrial use, investigation reports | MEDIUM | From Bodemloket. Critical for old commercial buildings. Often overlooked until late. |
-| **Environmental constraints** | Geluid (noise), luchtkwaliteit, externe veiligheid | HIGH | Required for permits. Synthesizing Atlas Leefomgeving data into "buildable units" estimate is high value. |
-| **Neighborhood development pipeline** | What else is being built nearby | MEDIUM | Market saturation check. Scrape omgevingsvergunningen from gemeente portals. |
-| **Financial feasibility quick calc** | Rough development budget based on constraints | MEDIUM | "With these restrictions, estimated €X/m² extra cost" helps kill bad leads fast. |
+**Parcel boundaries:** Real estate developers MUST see exact property lines to assess plot size, shape, neighbors. Every property platform has this. Source: [Regrid Property App](https://regrid.com/property-app)
 
-### Anti-Features (Deliberately NOT Building)
+**Mobile bottom sheets:** On small screens, full-screen panels block the map. Bottom sheets (Google Maps pattern) allow dragging up for details while keeping map visible. Source: [Bottom Sheet UX Guidelines](https://www.nngroup.com/articles/bottom-sheet/)
 
-Features that seem good but create problems in this domain.
+**PDF export:** Real estate professionals need deliverables for banks, partners, stakeholders. This is non-negotiable. Already built in backend.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Full CRM with pipeline management** | "We need to track deals" | Scope creep. Every developer has existing CRM (Salesforce, HubSpot, custom). Integration hell. | API/webhook to push intelligence reports into their existing CRM. CRM is commodity, intelligence is differentiator. |
-| **3D visualization/renders** | "Cool tech, investors love it" | Enormous complexity. Not decision-critical at pre-acquisition phase. Distracts from core intelligence value. | Partner with visualization firms. Provide data via API, let specialists render. |
-| **Real-time property alerts** | "Notify me when new properties hit market" | Dutch market doesn't work that way. Properties rarely on open market for heritage/commercial. Deals happen via networks. | Focus on analyzing properties they already identified. Intelligence > deal flow for this segment. |
-| **Automated valuation (AVM)** | "What's it worth?" | Heritage properties are never comparable. Monuments, churches, complex buildings = manual valuation always. AVM creates false precision. | Provide comparable transaction data, let user/appraiser value. Don't pretend algorithm knows monument value. |
-| **Full project management** | "Track renovation progress" | Post-acquisition feature. Different buyer (contractors, not developers at that stage). Massive scope expansion. | Hard stop at acquisition decision. Partner with project management tools if needed. |
-| **Social media integration** | "Share properties on LinkedIn" | Developers don't broadcast opportunities. Competitive intelligence risk. B2C thinking applied to B2B. | Private sharing via email/link. No social features. |
-| **Mobile app (native)** | "Need it on the go" | Desktop research workflow. Developers don't make €5M decisions on phone. Mobile dev doubles costs. | Responsive web app. Mobile-friendly, not mobile-first. |
-| **Chat/collaboration features** | "Team needs to discuss" | They use email, WhatsApp, Teams already. Won't switch tools for one use case. | Comments/notes per property. Export to their communication tools. |
+---
+
+## Differentiators
+
+Features that set Propdex apart from competitors. Not expected, but high-value when present.
+
+| Feature | Value Proposition | Complexity | Backend Ready | Notes |
+|---------|-------------------|------------|---------------|-------|
+| **Project folders** | Group related properties (e.g., "Kerkprojecten Q1 2026") — organize pipeline | Low | YES (`project_id` in reports) | Sidebar "Projecten" tab with create/edit |
+| **WOZ waarde display** | Free government data (WOZ = municipal property valuation) — instant value estimate | Medium | NO | New API integration (WOZ Waardeloket?) |
+| **Energielabel badge** | Free via RVO/Kadaster — shows A-G energy rating on property card | Medium | NO | New API integration (EP-Online) |
+| **AI zoning summary** | Most platforms show raw zoning codes; Propdex translates to plain Dutch | Low | YES (Claude parsing) | Already in backend, just display |
+| **Freshness indicators** | "Data from 2 days ago" vs "Data from 6 months ago" — trust signal | Low | YES (per-source timestamps) | Show age per data source |
+| **Monument badge** | Instant visual indicator if property is rijksmonument/gemeentelijk monument | Low | YES (RCE API) | Icon on property card |
+| **Report search** | Find saved reports by address, project, date — not just browsing | Low | YES (`GET /reports?q=`) | Search box in sidebar |
+| **Force refresh button** | "Refresh all data" for stale reports — power user feature | Low | YES (`force_refresh=true`) | Icon button in detail panel |
+| **Parallel data loading** | Fetch kadaster + zoning + monuments simultaneously (not sequential) | N/A | YES (asyncio.gather) | Already implemented, just fast UX |
+| **Background AI parsing** | Zoning analysis doesn't block — shows progress, updates when ready | N/A | YES (ARQ worker) | Polling UI for AI status |
+| **Multi-source confidence** | "Kadaster: verified, Zoning: AI-parsed (85% confidence)" — transparency | Low | YES (confidence scores) | Color-coded badges |
+| **Map measure tool** | Measure distances/areas directly on map — useful for plot analysis | Medium | N/A | MapLibre draw plugin |
+| **Neighborhood context** | Show nearby schools, transit, POIs — helps evaluate location | High | NO | Requires OSM/Google Places API |
+
+### Why These Differentiate
+
+**Project folders:** Most property platforms are search-focused, not project-focused. Real estate developers work in portfolios (e.g., "Q1 church acquisitions"). Organizing by project = workflow match. Source: [Real Estate Project Management](https://www.smartsuite.com/blog/real-estate-project-management-software)
+
+**WOZ waarde + Energielabel:** Free Dutch government data that competitors might not surface prominently. WOZ gives instant value estimate, energielabel shows renovation needs (F/G labels = expensive upgrades). These are table stakes for Dutch buyers but differentiators if shown upfront.
+
+**AI zoning summary:** Bestemmingsplannen are dense PDFs. Most platforms dump raw text. Propdex uses Claude to extract "permitted: residential up to 4 stories, parking: 1.2 spots/unit." This is the killer feature — already built in backend. Source: Already implemented in v1.0
+
+**Freshness indicators:** Property data goes stale. Showing "Kadaster: updated 2 days ago" vs "Zoning: updated 6 months ago" builds trust. Most platforms don't expose data age. Source: Backend already tracks per-source timestamps
+
+**Background AI parsing:** Zoning analysis takes 10-30s (Claude API). Most tools block or fail. Propdex shows "Analyzing bestemmingsplan... 60%" and lets users explore other data. This is a UX win from technical architecture. Source: Already implemented with ARQ worker
+
+---
+
+## Anti-Features
+
+Features to explicitly NOT build in v2.0. Common mistakes in PropTech, or out of scope for this milestone.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Dashboard landing page** | Map-first means NO dashboard — map IS the landing page | Full-page map loads immediately on `/` |
+| **Top navigation bar** | Wastes vertical space; conflicts with map-first philosophy | Left sidebar only (collapsible on mobile) |
+| **Inline map in dashboard** | "Dashboard with embedded map widget" is the wrong pattern | Map fills viewport; sidebar overlays on left |
+| **Multi-step property lookup** | "Step 1: Search, Step 2: Select, Step 3: View" — too many clicks | One-step: search → click suggestion → panel opens |
+| **Modal dialogs for property details** | Blocks the map; forces choice between map and data | Floating panel (desktop) or bottom sheet (mobile) |
+| **Separate "saved reports" page** | Breaking out of map view = context loss | Sidebar panel with list; clicking report pans map + opens panel |
+| **Auto-refresh on every map move** | Loading spinner every time user pans = annoying | Only fetch on explicit click or search |
+| **Overly detailed initial view** | Showing all data fields at once = overwhelming | Progressive disclosure: summary first, expand for details |
+| **Complex filters in main UI** | "Filter by zoning, monument status, WOZ range..." — clutters map-first UX | Defer to v3.0; v2.0 = search + click only |
+| **3D building visualization** | Cool but distracting; not core value (due diligence data) | Future feature, not MVP |
+| **Heatmaps / data layers** | "Show WOZ heatmap, zoning heatmap" — analysis paralysis | Keep it simple: parcel boundaries + property details only |
+| **Social features** | Comments, sharing, collaboration — premature for single-client MVP | Defer until multi-org SaaS validated |
+| **Mobile app** | Separate native app = 2x maintenance, unclear value vs web | Mobile-responsive web app is sufficient |
+| **Infinite scroll reports list** | Endless scrolling = hard to find older reports | Pagination or virtual scroll with search/filter |
+
+### Why These Are Anti-Features
+
+**Dashboard landing page:** The single biggest mistake in map-first apps is defaulting to a dashboard with "View Map" button. Users came for the map. Source: [Map UI Patterns - Task Oriented](https://mapuipatterns.com/task-oriented/)
+
+**Top navigation bar:** Vertical space is precious on maps. Top nav bars (Home, About, Contact) waste 60-80px. Left sidebar is sufficient. Source: [Map UI Design Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
+
+**Modal dialogs:** Modals force "close this to see the map" — breaks flow. Floating panels (desktop) or bottom sheets (mobile) keep map visible. Source: [Bottom Sheets UX](https://www.nngroup.com/articles/bottom-sheet/)
+
+**Auto-refresh on pan/zoom:** Loading data on every map movement = "laggy interactions degrade UX quickly." Only fetch on user intent (click, search). Source: [Map UI Design Patterns](https://bricxlabs.com/blogs/map-ui-design-patterns-examples)
+
+**Complex filters upfront:** Filter UIs (sliders, checkboxes, dropdowns) are powerful but cluttered. For v2.0, simple search + click is enough. Add filters in v3.0 once base workflow proven. Source: [Filter UI Best Practices](https://www.uxpin.com/studio/blog/filter-ui-and-ux/)
+
+**3D buildings:** Looks impressive but distracts from core value (due diligence data). Real estate developers need zoning rules and monument status, not 3D flyovers. Defer to future "marketing features" phase.
+
+---
 
 ## Feature Dependencies
 
 ```
-[Address Input]
-    └──requires──> [BAG API Integration]
-    └──enables──> [Kadaster Lookup]
-                      └──requires──> [Kadaster API Authentication]
-                      └──enables──> [Property Characteristics]
-                      └──enables──> [Ownership Info]
-                      └──enables──> [Cadastral Boundaries]
+Core Dependencies:
+MapLibre + PDOK tiles
+    ├─→ Floating search (autocomplete)
+    ├─→ Click property → detail panel
+    └─→ Layer toggles (boundaries, satellite/topo)
 
-[Cadastral Boundaries]
-    └──enables──> [Zoning Lookup]
-                      └──requires──> [IMRO/Ruimtelijkeplannen.nl Parser]
-                      └──enables──> [Development Constraints Scoring]
+Detail Panel
+    ├─→ PropertyReportResponse from backend (/property/lookup)
+    ├─→ PDF export button (backend WeasyPrint)
+    ├─→ Save report (POST /reports)
+    └─→ Force refresh (force_refresh=true)
 
-[Property Characteristics]
-    └──enables──> [Monument Status Check]
-                      └──requires──> [RCE API Integration]
-                      └──enables──> [Monument Restrictions Summary]
-                      └──enables──> [Subsidy Eligibility Detection]
+Sidebar Tabs
+    ├─→ Rapporten (GET /reports, search)
+    ├─→ Projecten (group by project_id)
+    └─→ Instellingen (user profile, logout)
 
-[Monument Status] + [Zoning] + [Soil] + [Environmental]
-    └──all feed──> [Development Constraint Scoring]
-    └──all feed──> [Financial Feasibility Calc]
+Auth Flow
+    ├─→ Login modal/page (POST /auth/login)
+    ├─→ JWT storage (localStorage or httpOnly cookie)
+    └─→ Refresh token rotation (POST /auth/refresh)
 
-[Structured Report]
-    └──requires──> ALL data sources integrated
-    └──enhances──> [PDF Export]
-    └──enables──> [Property Comparison]
+New Integrations (not in v1.1 backend):
+    ├─→ WOZ waarde API
+    ├─→ Energielabel API (EP-Online)
+    └─→ Kadaster parcel boundaries (WFS or vector tiles)
 ```
 
-### Dependency Notes
+### Critical Path
 
-- **Address Input is the gateway**: Must resolve to valid BAG ID before any other lookups work. Failed address = failed entire workflow.
-- **Zoning parsing blocks constraint scoring**: IMRO XML is complex. Can't do red/yellow/green rating without successfully parsing bestemmingsplan.
-- **Monument status + Zoning are co-dependent for heritage projects**: Monument restrictions override zoning permissions. Need both to give accurate buildability assessment.
-- **Financial feasibility depends on all constraint data**: Can't estimate costs without knowing monument requirements, soil remediation needs, environmental mitigation, zoning restrictions.
-- **Subsidy detection requires monument status + property type + location**: Different programs for rijksmonument vs gemeentelijk monument, churches vs commercial buildings, specific municipalities.
-
-## MVP Definition
-
-### Launch With (v1)
-
-Minimum viable product for single-client validation (projectontwikkelaar with church/monument portfolio).
-
-- [ ] **Address input with BAG autocomplete** — Gateway to all intelligence
-- [ ] **Kadaster property data** — Ownership, boundaries, basic characteristics
-- [ ] **Monument status check** — Rijksmonument, gemeentelijk, beschermd stadsgezicht
-- [ ] **Bestemmingsplan summary** — Current zoning, permitted uses (parsed from IMRO)
-- [ ] **Basic constraint flags** — Monument restrictions, zoning restrictions, soil contamination flag
-- [ ] **Structured report view** — Single-page summary of all findings
-- [ ] **PDF export** — Share with team/advisors
-- [ ] **Property save/list** — Revisit previous lookups
-
-**Rationale**: This is the "3 minutes vs 3 weeks" proof. If a developer can enter a church address and get monument status + zoning restrictions + key blockers instantly, the value is proven. Everything else enhances, but this core loop validates the concept.
-
-### Add After Validation (v1.x)
-
-Features to add once first client is using core product.
-
-- [ ] **Monument restriction detail** — Plain-language interpretation of what can/can't be changed
-- [ ] **Subsidy eligibility** — Match property to applicable heritage subsidy programs
-- [ ] **Property comparison view** — Side-by-side compare 3-5 opportunities
-- [ ] **Erfpacht analysis** — For Amsterdam/Utrecht properties with leasehold
-- [ ] **Historical sales data** — Comparable transactions in area
-- [ ] **Environmental constraints** — Noise, air quality, external safety zones
-- [ ] **Development constraint scoring** — Red/yellow/green rating for project complexity
-- [ ] **User authentication** — Multi-user access for organization
-
-**Triggers**:
-- **Restriction detail**: When user asks "Can I add a floor to this rijksmonument?"
-- **Subsidy eligibility**: When user says "What funding is available for this church?"
-- **Comparison view**: When user says "I'm looking at 5 churches, hard to compare"
-- **Scoring**: When user says "Need to pre-screen 50 properties, which are feasible?"
-
-### Future Consideration (v2+)
-
-Features to defer until product-market fit is established and client base expands.
-
-- [ ] **Welstandscommissie prediction** — Aesthetic board approval likelihood
-- [ ] **Bestemmingsplan change history** — Track zoning evolution over time
-- [ ] **Neighborhood pipeline analysis** — What else is being built nearby
-- [ ] **Financial feasibility calculator** — Rough development budget estimation
-- [ ] **Church-specific data enrichment** — Usage history, community, deconsecration
-- [ ] **API for CRM integration** — Push reports into client's existing systems
-- [ ] **Custom report templates** — Client-specific formatting and branding
-- [ ] **Alert system** — Notify when zoning changes for saved properties
-
-**Why defer**:
-- **v2 features are predictive/advanced**: Require baseline data + ML models. Need transaction history first.
-- **API/integration features**: Only valuable with multiple paying clients. Premature for single-client MVP.
-- **Church-specific data**: High value but requires building proprietary database. Defer until product validated.
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Address input + BAG | HIGH | LOW | P1 |
-| Kadaster property data | HIGH | MEDIUM | P1 |
-| Monument status check | HIGH | MEDIUM | P1 |
-| Bestemmingsplan summary | HIGH | HIGH | P1 |
-| Basic constraint flags | HIGH | MEDIUM | P1 |
-| Structured report view | HIGH | LOW | P1 |
-| PDF export | MEDIUM | LOW | P1 |
-| Property save/list | MEDIUM | LOW | P1 |
-| Monument restriction detail | HIGH | HIGH | P2 |
-| Subsidy eligibility | HIGH | HIGH | P2 |
-| Property comparison | MEDIUM | MEDIUM | P2 |
-| Erfpacht analysis | HIGH | MEDIUM | P2 |
-| Historical sales data | MEDIUM | MEDIUM | P2 |
-| Environmental constraints | MEDIUM | HIGH | P2 |
-| Constraint scoring | MEDIUM | MEDIUM | P2 |
-| User authentication | LOW | LOW | P2 |
-| Welstandscommissie prediction | MEDIUM | HIGH | P3 |
-| Zoning change history | LOW | MEDIUM | P3 |
-| Neighborhood pipeline | LOW | HIGH | P3 |
-| Financial feasibility calc | MEDIUM | HIGH | P3 |
-| Church data enrichment | MEDIUM | HIGH | P3 |
-| CRM API integration | LOW | MEDIUM | P3 |
-| Custom report templates | LOW | LOW | P3 |
-| Alert system | LOW | MEDIUM | P3 |
-
-**Priority key:**
-- **P1**: Must have for launch - Proves core "instant intelligence" value proposition
-- **P2**: Should have when possible - Enhances decision quality, adds stickiness
-- **P3**: Nice to have, future - Predictive features, integrations, advanced analysis
-
-## Dutch Market Specifics
-
-### Heritage Redevelopment Context
-
-Dutch projectontwikkelaars working with churches, monuments, and complex conversions face unique challenges:
-
-1. **Regulatory density**: Must check 8-12 government databases for complete picture (Kadaster, RCE, Bodemloket, Atlas Leefomgeving, gemeentelijke portals, etc.)
-2. **Monument hierarchy**: Rijksmonument (strictest) → Gemeentelijk monument → Beschermd stadsgezicht → Regular building. Each has different restrictions and subsidy access.
-3. **Church surplus**: 1,500+ churches being deconsecrated in NL. Specialized market with community sensitivities, architectural restrictions, often poor condition.
-4. **Subsidies are critical**: Heritage redevelopment is rarely financially feasible without subsidies. BIJ (Besluit Instandhouding Jachten), Subsidieregeling Instandhouding Monumenten (SIM), provincial and municipal programs. Knowing eligibility upfront is decision-critical.
-5. **Erfpacht (leasehold) complexity**: Especially in Amsterdam, Utrecht, The Hague. Ground lease terms can kill project economics. Need to know terms, buy-out costs, restrictions upfront.
-6. **Welstandscommissie (aesthetic board)**: Municipality-specific boards that approve design. Unpredictable. Historical approval patterns in area matter.
-7. **Environmental constraints**: Geluid (noise zones near highways/rail), luchtkwaliteit (air quality), externe veiligheid (safety zones near industrial sites). Can block residential conversion even if zoning allows.
-
-### Table Stakes for Dutch Market
-
-Beyond general property intelligence, Dutch developers expect:
-
-- **Bestemmingsplan parsing**: Not optional. Every property decision starts with "Wat mag er?"
-- **Monument databases**: RCE integration is expected for heritage work
-- **BAG addressing**: Standard addressing system in NL. Must use this, not Google Places
-- **PDOK mapping**: Government standard for cadastral visualization
-- **Dutch units**: Oppervlakte in m², not sq ft. Euros, not dollars. Dutch date formats.
-- **Multi-language support NOT expected**: This is Dutch B2B. Dutch UI, Dutch terminology. English is nice-to-have, not table stakes.
-
-### Differentiators for Dutch Market
-
-Features that matter specifically in NL context:
-
-- **Erfpacht analysis**: Rare in other countries, common pain point in NL
-- **Welstandscommissie prediction**: Doesn't exist elsewhere, high value in NL
-- **Church-specific data**: Large segment of heritage redevelopment
-- **Subsidy program matching**: NL has unusually generous heritage subsidies; knowing eligibility is competitive advantage
-- **Bestemmingsplan change tracking**: NL planning system is dynamic. Historical context predicts future flexibility.
-
-## Competitive Feature Comparison
-
-| Feature Category | Transect (UK) | Prophetic (US) | Spartner (NL) | Propdex Approach |
-|------------------|---------------|----------------|---------------|-------------------|
-| **Core data** | Land Registry (UK) | County records (US) | Kadaster (NL) | Kadaster + BAG + RCE |
-| **Zoning** | Planning permissions | Local zoning codes | Basic bestemmingsplan | Parsed IMRO with restrictions |
-| **Heritage** | Listed buildings | Historic registers | Monument flag | Monument + restriction detail + subsidy matching |
-| **Speed** | Hours to days | Hours to days | Days to weeks | Minutes (target) |
-| **Analysis depth** | Deep (land assembly) | Moderate (risk flags) | Shallow (data aggregation) | Moderate (constraint scoring) |
-| **Specialization** | Land developers | Commercial CRE | General projectontwikkelaar | Heritage/complex conversion |
-| **Report format** | Interactive web | PDF packets | PDF report | Structured web + PDF export |
-| **Pricing model** | Per search | Subscription | Per report | TBD (likely subscription) |
-
-### Our Competitive Position
-
-**Differentiation strategy:**
-1. **Speed over depth**: Get to "go/no-go" decision in minutes, not weeks. Good enough beats comprehensive-but-slow.
-2. **Heritage specialization**: Monument restrictions, subsidy matching, church data. Narrow focus = better product.
-3. **Dutch regulatory fluency**: Bestemmingsplan parsing, erfpacht analysis, welstandscommissie context. Not possible for international competitors.
-4. **Intelligence over CRM**: Solve the hard problem (synthesizing regulatory complexity) not the commodity problem (tracking deals).
-
-**What we WON'T compete on:**
-- Feature breadth (deliberately narrow)
-- International coverage (NL only)
-- CRM capabilities (not our game)
-- 3D visualization (partner/integrate)
-- Mobile-first (desktop workflow)
-
-## Sources and Confidence
-
-**Confidence: MEDIUM**
-
-**Source basis:**
-- Training knowledge of Dutch real estate practices, Kadaster systems, monument regulations (as of Jan 2025)
-- Understanding of property intelligence platform patterns (Transect, Prophetic, similar tools)
-- Knowledge of Dutch regulatory structure (bestemmingsplan, RCE, erfpacht)
-
-**Limitations:**
-- External research tools unavailable during this session
-- Could not verify current state of specific platforms (Spartner, Datagrid, LightBox) in 2026
-- Could not access current Kadaster API documentation or pricing
-- Could not verify current subsidy programs or monument database APIs
-
-**HIGH confidence areas:**
-- Table stakes features (address lookup, Kadaster data, monument status, zoning)
-- Dutch regulatory structure (bestemmingsplan, RCE, erfpacht concepts)
-- Anti-features (CRM scope creep, 3D visualization, mobile-first for B2B)
-
-**MEDIUM confidence areas:**
-- Competitive positioning vs specific platforms
-- Implementation complexity estimates
-- Subsidy program specifics
-- API availability and access patterns
-
-**LOW confidence / needs validation:**
-- Current state of Kadaster API capabilities in 2026
-- Specific features of Spartner, Datagrid, other NL competitors
-- Pricing models in market
-- Welstandscommissie data availability
-
-**Recommended validation:**
-- Interview 3-5 projectontwikkelaars specializing in heritage/church redevelopment
-- Audit current Kadaster, RCE, and gemeente API access and limitations
-- Review 2-3 competitor platforms hands-on
-- Map subsidy programs and eligibility criteria with actual data sources
+1. **MapLibre setup** — everything depends on this
+2. **Floating search + autocomplete** — primary entry point
+3. **Click property → fetch data → detail panel** — core workflow
+4. **Sidebar: Rapporten list** — accessing saved work
+5. **Auth flow** — multi-user requirement
 
 ---
-**Feature research for:** Propdex - Dutch Property Intelligence Platform
-**Researched:** 2026-02-07
-**Confidence:** MEDIUM (training data + domain knowledge, no live platform verification)
+
+## MVP Recommendation (v2.0)
+
+Prioritize features that prove the map-first workflow with minimal new backend work.
+
+### Phase 1: Map Foundation
+1. Full-page MapLibre map with PDOK aerial/topographic tiles
+2. Layer toggle (satellite vs topo)
+3. Floating search bar (no autocomplete yet — manual address entry)
+4. Click map → fetch property data (mock with hardcoded addresses initially)
+
+**Why first:** Proves the map-first UI works. No backend changes needed (can mock data).
+
+### Phase 2: Property Intelligence
+1. Address autocomplete (PDOK Locatieserver suggest API)
+2. Floating detail panel with PropertyReportResponse from `/property/lookup`
+3. PDF export button (download from `/reports/{id}/pdf`)
+4. Save report button (POST `/reports`)
+
+**Why second:** Core workflow = search → view → save. Backend already supports this.
+
+### Phase 3: Saved Work
+1. Sidebar with "Rapporten" tab showing saved reports list
+2. Search saved reports (query backend `/reports?q=`)
+3. Click saved report → pan map + open detail panel
+4. Project folders (group reports by `project_id`)
+
+**Why third:** Users need to access past work. This is table stakes but not blocking MVP.
+
+### Phase 4: Polish
+1. Loading states (skeleton screens, spinners)
+2. Error handling (toasts for API failures)
+3. Mobile-responsive layout (bottom sheet for detail panel)
+4. Auth flow (login modal, logout)
+
+**Why fourth:** UX polish after core workflow proven.
+
+### Defer to v2.1+
+- **WOZ waarde** — new API integration (not in v1.1 backend)
+- **Energielabel** — new API integration
+- **Kadaster parcel boundaries** — complex (WFS parsing or vector tile service)
+- **Monument badges** — data exists in backend but needs visual design
+- **Freshness indicators** — polish feature
+- **Force refresh button** — power user feature
+- **Measure tool** — nice-to-have
+
+---
+
+## Mobile-Specific Patterns
+
+**Challenge:** Maps are hard on small screens — "fat finger syndrome" and limited screen real estate.
+
+| Pattern | Desktop | Mobile | Source |
+|---------|---------|--------|--------|
+| **Detail panel** | Floating panel (300-400px wide, right side) | Bottom sheet (slides up from bottom) | [Bottom Sheet UX](https://www.nngroup.com/articles/bottom-sheet/) |
+| **Search bar** | Top-left, 400px wide | Full-width at top, collapsible | [Mobile Map Patterns](https://mapuipatterns.com/mobile-map/) |
+| **Sidebar** | Always visible (250px, left edge) | Hidden by default, hamburger menu | [Mobile Navigation UX](https://www.designstudiouiux.com/blog/mobile-navigation-ux/) |
+| **Layer toggle** | Icon buttons (top-right) | Bottom tab bar or slide-up menu | [Map UI Patterns](https://bricxlabs.com/blogs/map-ui-design-patterns-examples) |
+| **Touch targets** | 24-32px clickable areas | 44-48px minimum (iOS guideline) | [Mobile UX Best Practices](https://webdesignedindia.medium.com/10-mobile-ux-design-trends-2026-231783d97d28) |
+| **Map controls** | Zoom +/- buttons optional | Must include zoom buttons (pinch unreliable) | [Mobile Map UX](https://www.interaction-design.org/literature/article/getting-lost-and-found-maps-and-the-mobile-user-experience) |
+
+### Key Mobile Considerations
+
+1. **Bottom sheet > Modal:** Google Maps uses bottom sheet — lets users drag up for details while keeping map visible. This is THE pattern for mobile map apps.
+
+2. **Thumb zone:** Place frequent actions in the bottom half of screen (reachable by thumb). Top corners are hard to reach one-handed.
+
+3. **Clustering:** If showing multiple properties, cluster nearby markers when zoomed out. Reveal individual pins when zoomed in.
+
+4. **Performance:** Lazy load map tiles, debounce API calls, compress images. "Slow map loads degrade UX quickly."
+
+5. **Gestures:** Two-finger pan to avoid conflicts with page scroll (or use `touch-action: none` on map container).
+
+---
+
+## Comparison with Competitors
+
+| Feature | Google Maps | Regrid | Transect | Propdex v2.0 |
+|---------|-------------|--------|----------|--------------|
+| **Map-first UI** | YES (industry standard) | YES | YES | YES (planned) |
+| **Floating search** | YES | YES | NO (sidebar) | YES (planned) |
+| **Parcel boundaries** | NO | YES (core feature) | YES | YES (planned) |
+| **Property details panel** | YES (bottom sheet) | YES (sidebar) | YES (modal) | YES (floating/bottom sheet) |
+| **Layer toggles** | YES (satellite, traffic, etc.) | YES (parcels, buildings, zoning) | YES (environmental layers) | YES (aerial/topo, boundaries) |
+| **PDF export** | NO | YES (property reports) | YES (site reports) | YES (already built) |
+| **AI document parsing** | NO | NO | NO | YES (differentiator) |
+| **WOZ waarde** | NO | NO (US platform) | NO (US platform) | YES (planned) |
+| **Energielabel** | NO | NO | NO | YES (planned) |
+| **Mobile app** | YES (native) | YES (native) | YES (web responsive) | NO (web responsive only) |
+
+### Insights
+
+- **Map-first is table stakes:** All three competitors use full-page maps.
+- **Floating search is common:** Google Maps and Regrid use it; Transect uses sidebar (less common).
+- **Parcel boundaries are expected:** Regrid and Transect both show cadastral/parcel data — this is non-negotiable for property platforms.
+- **AI parsing is unique:** None of the competitors advertise AI document parsing for zoning (this is Propdex's differentiator).
+- **Dutch data is niche:** WOZ and energielabel are Netherlands-specific — no direct competitor offering.
+
+---
+
+## Information Hierarchy for Property Detail Panel
+
+Based on real estate platform research, here's the recommended information hierarchy for the property detail panel:
+
+### Level 1: Above the Fold (Always Visible)
+```
+┌─────────────────────────────────────┐
+│ [Address]                      [X]  │ ← Close button
+│ Street 123, 1234 AB Amsterdam       │
+│                                     │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                     │
+│ 🏛️ Rijksmonument                   │ ← Monument badge (if applicable)
+│ 📊 WOZ: €450,000 (2025)            │ ← WOZ waarde
+│ ⚡ Energielabel: C                  │ ← Energy rating
+│                                     │
+│ [Download PDF]  [Save Report]       │ ← Primary actions
+│                                     │
+└─────────────────────────────────────┘
+```
+
+### Level 2: Expandable Sections (Click to Reveal)
+```
+▼ Kadaster Data
+  - Eigenaar: [Redacted per AVG]
+  - Oppervlakte: 350 m²
+  - Kadastraal nr: ASD01-K-1234
+  - Laatste transactie: 2022-03-15
+
+▼ Zoning Summary (AI-Parsed)
+  - Permitted: Residential, max 4 stories
+  - Parking: 1.2 spots per unit required
+  - Max building coverage: 60%
+  - Confidence: 85% (AI-parsed)
+
+▼ Monument Restrictions
+  - Status: Rijksmonument (national)
+  - Restrictions: Facade changes require permit
+  - Subsidies: Eligible for restoration grants
+
+▼ Data Freshness
+  - Kadaster: 2 days ago ✓
+  - Zoning: 3 months ago ⚠
+  - Monument: 1 week ago ✓
+```
+
+**Rationale:**
+- **Most important first:** Address, monument status, value estimate — these drive go/no-go decisions.
+- **Actions upfront:** Download and save are primary CTAs — don't bury them.
+- **Progressive disclosure:** Full kadaster data and zoning details are important but not first-glance. Expand on demand.
+- **Transparency:** Data freshness builds trust — show it, but don't clutter the initial view.
+
+Source: [Real Estate App Information Hierarchy](https://cieden.com/how-to-design-a-powerful-real-estate-platform-complete-guide)
+
+---
+
+## Search UX Patterns
+
+### Search Behavior on Maps
+
+| Pattern | When to Use | Propdex Application | Source |
+|---------|-------------|---------------------|--------|
+| **Floating search (top)** | Primary search action, always accessible | YES — main entry point | [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls) |
+| **Sidebar search** | Secondary filter/refinement of map view | NO — avoid sidebar search in v2.0 | [Map UI Patterns](https://www.uxpin.com/studio/blog/map-ui/) |
+| **Autocomplete dropdown** | <10 results, instant suggestions | YES — PDOK Locatieserver | [Places Search Box](https://developers.google.com/maps/documentation/javascript/examples/places-searchbox) |
+| **Search result highlighting** | Text match highlighting in suggestions | YES — PDOK API supports highlighting | [PDOK API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver) |
+| **Recent searches** | Frequent repeated searches | NO — defer to v2.1 | N/A |
+| **"Search this area" button** | Large map movements, crowded results | NO — single-property focus, not multi-result | [Search This Area Pattern](https://mapuipatterns.com/search-this-area/) |
+
+### Autocomplete Behavior
+
+**Trigger:** User types in search bar
+**Response time:** <200ms (PDOK suggest API is fast)
+**Results shown:** 5-8 suggestions (more = choice paralysis)
+**What happens on select:**
+1. Map pans to selected address
+2. Zoom to appropriate level (18-19 for parcels)
+3. Fetch property data (`/property/lookup`)
+4. Open detail panel with results
+
+**Dutch-specific pattern:** Users may type:
+- Full address: "Dam 1, Amsterdam"
+- Zipcode + number: "1011 AB 1"
+- Street name: "Damstraat" (returns multiple)
+
+PDOK Locatieserver handles all three. Highlight matched text in suggestions.
+
+---
+
+## Saved Reports vs Saved Searches
+
+**Key decision:** Propdex saves REPORTS (specific properties researched), not SEARCHES (query criteria).
+
+| Feature | Saved Reports (Propdex) | Saved Searches (Common Alternative) |
+|---------|--------------------------|-------------------------------------|
+| **What's saved** | "Dam 1, Amsterdam — Report from 2026-02-08" | "Churches in Amsterdam, max €2M" |
+| **Use case** | Revisit specific properties in pipeline | Monitor market for new opportunities |
+| **Notifications** | None (static data) | Alert when new matches found |
+| **Propdex fit** | YES — matches workflow (research specific opportunities) | NO — requires market monitoring (v3.0+) |
+
+**Why reports, not searches:**
+- Real estate developers work with specific opportunities ("we're looking at this church")
+- The backend already supports report CRUD (save, list, search, delete)
+- Saved searches require alert infrastructure (out of scope for v2.0)
+
+**Exception:** Search within saved reports (query by address, project, date) is useful and supported by backend (`GET /reports?q=`).
+
+Source: [Real Estate App Features](https://realogixs.com/top-features-every-real-estate-mobile-app-must-have-in-2026)
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
+|------|------------|-----------|
+| **Map-first patterns** | HIGH | Google Maps, Regrid, Transect all use map-first; well-documented patterns |
+| **Floating search** | HIGH | Google Maps established this; official docs + UI kits confirm |
+| **Bottom sheet (mobile)** | HIGH | Nielsen Norman Group + Material Design guidelines |
+| **Layer toggles** | HIGH | Standard across all map platforms |
+| **Dutch PDOK integration** | MEDIUM | PDOK docs exist, but implementation examples sparse |
+| **WOZ waarde API** | LOW | No clear API found; needs deeper research |
+| **Energielabel API** | LOW | EP-Online mentioned, but integration unclear |
+| **Kadaster parcel boundaries** | LOW | Kadaster offers WFS, but vector tile approach uncertain |
+| **Project folders UX** | MEDIUM | Real estate PM software shows patterns, but map integration unclear |
+
+---
+
+## Open Questions for Phase-Specific Research
+
+### Phase 1: Map Setup
+- [ ] PDOK tile URL format and attribution requirements
+- [ ] MapLibre basemap styling for Netherlands context (hide irrelevant POIs)
+- [ ] Default map center and zoom for Netherlands-wide view
+
+### Phase 2: Parcel Boundaries
+- [ ] Kadaster WFS endpoint for parcel boundaries
+- [ ] Vector tiles vs GeoJSON — performance implications
+- [ ] Parcel boundary click detection (tolerance, multi-polygon handling)
+
+### Phase 3: New APIs
+- [ ] WOZ waarde API — endpoint, auth, rate limits
+- [ ] Energielabel API (EP-Online) — access method, data schema
+- [ ] Both may require accounts/API keys (investigate)
+
+### Phase 4: Mobile UX
+- [ ] Bottom sheet library (react-spring-bottom-sheet vs custom)
+- [ ] Gesture conflicts (map pan vs page scroll)
+- [ ] iOS Safari viewport height issues (100vh problem)
+
+---
+
+## Sources
+
+### Map-First UI Patterns
+- [Map UI Design: Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
+- [5 Map UI Design Patterns That Elevate UX](https://bricxlabs.com/blogs/map-ui-design-patterns-examples)
+- [Map UI Patterns](https://mapuipatterns.com/)
+- [Map UI – The Most Popular Layouts and Design Tips](https://www.uxpin.com/studio/blog/map-ui/)
+
+### Competitor Platforms
+- [Transect Environmental Due Diligence](https://www.transect.com/industries/transect-environmental-due-diligence-for-real-estate-development)
+- [Regrid Property App](https://regrid.com/property-app)
+- [Regrid Parcel Data Updates](https://regrid.com/blog/february-2026-parcel-data-update)
+- [ParcelQuest GIS Features](https://www.parcelquest.com/features/gis/)
+- [OnX Backcountry Basemap Redesign](https://www.onxmaps.com/backcountry/blog/basemap-redesign)
+
+### Google Maps Patterns
+- [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls)
+- [Places Search Box](https://developers.google.com/maps/documentation/javascript/examples/places-searchbox)
+- [Search This Area Pattern](https://mapuipatterns.com/search-this-area/)
+- [Analyzing Google Maps UX/UI](https://medium.com/@jaybreezys/analyzing-google-maps-based-on-ux-ui-functionality-41ea06202b0a)
+
+### Mobile UX
+- [Bottom Sheets: Definition and UX Guidelines](https://www.nngroup.com/articles/bottom-sheet/)
+- [How to Design Bottom Sheets for Optimized UX](https://blog.logrocket.com/ux-design/bottom-sheets-optimized-ux/)
+- [Mobile Navigation UX Best Practices 2026](https://www.designstudiouiux.com/blog/mobile-navigation-ux/)
+- [Mobile Map UX Patterns](https://mapuipatterns.com/mobile-map/)
+- [Getting Lost and Found – Maps and Mobile UX](https://www.interaction-design.org/literature/article/getting-lost-and-found-maps-and-the-mobile-user-experience)
+
+### Real Estate Platform Features
+- [How to Design a Powerful Real Estate Platform 2026](https://cieden.com/how-to-design-a-powerful-real-estate-platform-complete-guide)
+- [Top Features Every Real Estate Mobile App Must Have](https://realogixs.com/top-features-every-real-estate-mobile-app-must-have-in-2026)
+- [Real Estate App Development Guide](https://ascendixtech.com/real-estate-app-development-guide/)
+- [Best Real Estate Project Management Software 2026](https://www.smartsuite.com/blog/real-estate-project-management-software)
+
+### Dutch Data Sources
+- [PDOK Locatieserver API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver)
+- [Dutch Address Autocomplete with Alpine.js](https://vanrossum.dev/27-dutch-address-autocomplete-with-alpinejs)
+- [Kadaster About Us](https://www.kadaster.nl/about-us)
+- [Public Services on the Map (PDOK)](https://www.ogc.org/blog-article/public-services-on-the-map-a-decade-of-success/)
+
+### Anti-Patterns and UX Mistakes
+- [Map UI Patterns: Task Oriented](https://mapuipatterns.com/task-oriented/)
+- [User Interface Anti-Patterns](https://ui-patterns.com/blog/User-Interface-AntiPatterns)
+- [Anti-Patterns of User Experience Design](https://www.ics.com/blog/anti-patterns-user-experience-design)
+- [Avoiding UX Anti-Patterns](https://www.door3.com/blog/avoiding-anti-patterns-with-ux-design)
+
+### Layer Toggles and Controls
+- [Map Layer Toggle Controls Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
+- [11 Innovative Methods for Multi-Layered Map Design](https://www.maplibrary.org/1560/innovative-methods-for-multi-layered-map-design/)
+
+---
+
+**Next Steps:** Use this feature landscape to inform requirements definition and UI wireframing. Priority: prove map-first workflow with minimal new backend work (use existing v1.1 APIs). Defer WOZ, energielabel, and parcel boundaries to later phases if they require significant integration effort.

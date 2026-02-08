@@ -1,316 +1,331 @@
 # Project Research Summary
 
-**Project:** Propdex — Dutch Property Intelligence Platform
-**Domain:** PropTech / Property Intelligence / Government Data Aggregation
-**Researched:** 2026-02-07
-**Confidence:** MEDIUM
+**Project:** Propdex v2.0 Frontend (Map-First React SPA)
+**Domain:** Dutch Property Intelligence Platform (PropTech)
+**Researched:** 2026-02-08
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Propdex is a property intelligence platform for Dutch projectontwikkelaars specializing in heritage redevelopment (churches, monuments, commercial-to-residential). The core value proposition is collapsing 3-6 weeks of manual regulatory research into 3-minute structured reports. This is achieved by orchestrating parallel calls to Dutch government APIs (BAG, PDOK, Kadaster, ruimtelijkeplannen.nl) combined with AI-powered document parsing for bestemmingsplan PDFs where API data is insufficient.
+Propdex v2.0 adds a map-first React frontend to the production-ready v1.1 backend (275 tests, full multi-tenant API). Research confirms that map-first property platforms follow a specific architectural pattern: the map IS the interface, with floating search and overlay panels rather than traditional dashboards. The recommended stack prioritizes performance (MapLibre GL JS with PDOK vector tiles, Vite 7, pnpm), type safety (React 19 + TypeScript strict mode, TanStack Router), and security (HttpOnly cookies for refresh tokens, access tokens in memory only).
 
-The recommended stack centers on Python (FastAPI) + PostgreSQL (PostGIS) for the backend intelligence engine, with Next.js for the dashboard UI. The critical architectural pattern is fan-out/fan-in data aggregation: fetch all government data sources in parallel, aggregate gracefully with partial failure handling, and fall back to AI parsing only when API data is unavailable. Multi-tenant data isolation must be foundational from day one with `organization_id` filtering on every query.
+The critical architectural decisions must be made in Phase 1: memory leak prevention patterns (MapLibre's Worker class leaks require explicit cleanup), imperative map state management (avoid useState for map instances), and z-index layering strategy. Phase 2 establishes security architecture (JWT storage) that's painful to change later. Phase 3 determines data rendering strategy (coordinate projection handling, GeoJSON vs vector tiles, clustering thresholds). These foundational choices prevent rewrites that would otherwise be required after encountering performance walls at 1000+ features or security vulnerabilities from localStorage token storage.
 
-The primary risks are: (1) treating AI-parsed zoning regulations as definitive legal facts when accuracy is 85-95%, (2) assuming Dutch government APIs are always available when they have rate limits and downtime, and (3) fragmented monument data across multiple inconsistent sources. Mitigation requires confidence scoring on all AI outputs, aggressive caching with staleness indicators, and querying all monument sources with explicit conflict detection. The product is an intelligence engine first, CRM second — avoid scope creep into full pipeline management or 3D visualization.
+Key risks are well-documented with mitigation strategies: Dutch coordinate system mismatches (RD New vs WGS84 — solve in backend conversion), MapLibre memory leaks in React SPAs (solve with proper cleanup patterns), and PDOK API integration complexity (solve by proxying through existing backend rather than direct browser calls). The backend's existing multi-source aggregation, caching, and multi-tenant architecture provide a strong foundation — the frontend should leverage these rather than duplicating logic.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Backend:** Python 3.12+ with FastAPI (async-native, type-safe), PostgreSQL 16+ with PostGIS extension (required for spatial queries), and Redis for caching and job queues. Python is ideal for this domain due to excellent GIS libraries (geopandas, shapely) and AI/LLM integration.
+**Verdict:** Modern, performance-oriented stack aligned with 2026 best practices.
+
+The research recommends React 19 + Vite 7 + TypeScript strict mode as the foundation, with pnpm for 50% faster installs and monorepo readiness. MapLibre GL JS 4.x via react-map-gl v8's MapLibre-specific endpoint provides 60fps vector rendering with Dutch government PDOK tiles. TanStack Query v5 handles server state (caching, background updates), while TanStack Router provides type-safe routing with compile-time validation — both superior to alternatives for SPA-only architecture. Tailwind v4's zero-config Vite plugin delivers 100x faster incremental builds compared to v3.
 
 **Core technologies:**
-- **FastAPI + Pydantic 2.10+**: Async-native API framework with automatic validation — essential for orchestrating parallel government API calls with type-safe schemas
-- **PostgreSQL + PostGIS**: Spatial database required for property boundaries, coordinate transformations (Dutch RD to WGS84), and geographic queries
-- **Anthropic Claude API (Opus 4.6 / Sonnet 4.5)**: Best-in-class for Dutch document extraction from bestemmingsplan PDFs with long context (200K tokens)
-- **Leaflet + React-Leaflet**: Lightweight mapping library that integrates natively with PDOK (Dutch government) tile services without API costs
-- **Next.js 15+ (App Router)**: Modern React framework for dashboard, server components for performance, excellent TypeScript support
-- **Celery + Redis**: Background job queue for async PDF processing (10-30s LLM calls can't block HTTP requests)
+- **React 19 + Vite 7**: Sub-second HMR, native ESM, 100x faster builds than Webpack — 2026 standard after CRA deprecation
+- **MapLibre GL JS 4.x**: Open-source WebGL renderer, 60fps vector tiles, 100% feature parity with Mapbox GL v2, no usage limits
+- **TypeScript strict mode**: Non-negotiable for production (catches 70% of runtime bugs at compile time, required since React 19 removed propTypes)
+- **TanStack Query v5**: Server state management with caching/invalidation, handles 80% of SPA state needs
+- **TanStack Router**: Type-safe routing in SPA mode (React Router v7's type safety only works in framework mode)
+- **Tailwind v4**: Zero-config, 5x faster builds than v3, automatic content detection
+- **pnpm**: 50% faster installs than npm, prevents phantom dependencies, monorepo-ready
 
-**Critical integrations:**
-- PDOK APIs (WFS/WMS) for geospatial data — requires Proj4js for RD (EPSG:28992) to WGS84 coordinate transformation
-- BAG API for address validation and building characteristics
-- Kadaster API for ownership data (requires OAuth2, paid service, €0.50-€2.00 per query)
-- ruimtelijkeplannen.nl API for bestemmingsplan metadata and PDF URLs
-
-**What to avoid:**
-- Google Maps API (expensive, poor integration with Dutch PDOK data)
-- Sequential API calls (use asyncio.gather for parallel fetching)
-- SQLite (no PostGIS equivalent, can't handle concurrent writes)
-- LangChain (adds unnecessary abstraction for document extraction)
+**Critical version notes:**
+- MapLibre v4.1-4.7.1 have Worker class memory leaks (fixed in later versions — verify latest)
+- React-map-gl v8.x required for MapLibre separation (`react-map-gl/maplibre` import)
+- PDOK BAG API migration deadline: July 15, 2026 (old endpoints will break)
 
 ### Expected Features
 
+**Map-first pattern:** Industry standard established by Google Maps, Regrid, Transect. Map fills viewport, sidebar overlays (collapsible), floating search, no dashboard landing page.
+
 **Must have (table stakes):**
-- **Address input with BAG autocomplete** — gateway to all intelligence
-- **Kadaster property data** — ownership, boundaries, basic characteristics
-- **Monument status check** — rijksmonument, gemeentelijk monument, beschermd stadsgezicht (from RCE database)
-- **Bestemmingsplan summary** — current zoning, permitted uses, building restrictions (parsed from IMRO/PDF)
-- **Map visualization** — property boundaries with PDOK cadastral overlay
-- **PDF report export** — share findings with team/investors
-- **Property save/list** — revisit previous lookups
+- Full-page interactive map with PDOK aerial/topographic tiles — users expect map IS the app
+- Floating search bar with autocomplete (PDOK Locatieserver via backend) — Google Maps pattern
+- Click property → instant info panel — core interaction, backend aggregator ready
+- Parcel boundaries overlay — real estate users need exact property lines (kadaster)
+- Layer toggles (satellite vs topo, boundaries on/off) — standard map controls
+- Saved reports list — users expect to revisit researched properties (backend `/reports` ready)
+- PDF export — professional deliverable (backend WeasyPrint ready)
+- Mobile-responsive (bottom sheet pattern for panels) — 30%+ mobile traffic expected
+- Auth flow (login/logout with JWT) — backend ready with refresh token rotation
 
-**Should have (competitive advantage):**
-- **Monument restriction detail** — plain-language "what can/can't be changed" for heritage projects
-- **Subsidy eligibility detection** — auto-match to Rijksdienst, provincial, municipal heritage subsidy programs (20+ programs)
-- **Property comparison view** — side-by-side compare 3-5 opportunities
-- **Erfpacht analysis** — leasehold terms, buy-out costs, restrictions (critical for Amsterdam/Utrecht)
-- **Environmental constraints** — geluid (noise), luchtkwaliteit (air quality), externe veiligheid (safety zones)
-- **Development constraint scoring** — red/yellow/green rating for project complexity
-- **Historical sales data** — comparable transactions from Kadaster
+**Should have (competitive differentiators):**
+- Project folders — group properties by pipeline (backend `project_id` field exists)
+- AI zoning summary — already implemented in backend (Claude parsing), just display with confidence indicators
+- Freshness indicators — "Data from 2 days ago" per source, builds trust (backend tracks timestamps)
+- Monument badge — instant visual indicator (backend RCE API ready)
+- Force refresh button — power user feature (backend `force_refresh=true` param)
+- Report search — find by address/project/date (backend `GET /reports?q=` ready)
 
-**Defer (v2+):**
-- **Welstandscommissie prediction** — aesthetic board approval likelihood (requires ML model)
-- **Financial feasibility calculator** — rough development budget estimation
-- **Church-specific data enrichment** — usage history, community objections, deconsecration status
-- **API for CRM integration** — push reports into client's existing systems
-- **Alert system** — notify when zoning changes for saved properties
-
-**Anti-features (deliberately not building):**
-- Full CRM with pipeline management — scope creep, integration hell with existing CRMs
-- 3D visualization/renders — enormous complexity, not decision-critical at pre-acquisition phase
-- Real-time property alerts — Dutch heritage market doesn't work that way (deals via networks, not open listings)
-- Automated valuation models — heritage properties are never comparable, creates false precision
-- Mobile app (native) — desktop research workflow, developers don't make €5M decisions on phone
+**Defer to v2.1+:**
+- WOZ waarde display — new API integration required (no public API found, municipalities only)
+- Energielabel badge — RVO EP-Online API needs verification (key required, endpoint unclear)
+- Measure tool — nice-to-have (MapLibre draw plugin)
+- Neighborhood context (POIs, transit) — requires new OSM/Google Places integration
 
 ### Architecture Approach
 
-The system follows a **layered service architecture** with clear separation: Presentation (Next.js dashboard) → API Gateway (FastAPI with JWT auth) → Orchestration Layer (property intelligence + document processing orchestrators) → Data Services Layer (individual government API clients + AI document parser) → Persistence (PostgreSQL + Redis cache + blob storage for PDFs).
+**Pattern:** Fan-out/fan-in data aggregation with API-first + AI fallback. Backend already implements this (v1.1 complete), frontend consumes aggregated results.
+
+The architecture prioritizes frontend simplicity by leveraging the production-ready backend. The backend handles parallel API calls (BAG, PDOK, Kadaster, RuimtelijkePlannen) with asyncio.gather, cache-aside pattern with Redis (source-specific TTLs), multi-tenant row-level security (organization_id filters), and async job queue for LLM parsing (ARQ workers). Frontend should proxy all data requests through backend endpoints rather than calling PDOK directly (solves CORS, leverages existing cache, respects rate limits).
 
 **Major components:**
-1. **Property Intelligence Orchestrator** — Coordinates fan-out/fan-in pattern for parallel government API calls (BAG, PDOK, Kadaster, ruimtelijkeplannen), aggregates results with graceful partial failure handling, returns unified property report with data source attribution
-2. **Document Processing Orchestrator** — Manages API-first with AI fallback strategy: fetch bestemmingsplan via API if available, else download PDF, parse with LLM in background job, store structured output with confidence scoring
-3. **API Client Abstraction Layer** — Base client with cache-aside pattern, retry logic, rate limiting, circuit breakers; each government API (BAG, PDOK, Kadaster, etc.) gets dedicated client inheriting shared functionality
-4. **Multi-Tenant Middleware** — Extracts `organization_id` from JWT, injects into all queries, enforces row-level security; composite indexes on (organization_id, created_at) for performance
-5. **Cache Manager** — Source-specific TTLs (BAG: 24h, Kadaster: 7d, bestemmingsplan: 90d), staleness indicators, manual refresh capability
+1. **MapLibre GL Map (imperative)** — state managed by MapLibre, not React (avoid useState for map instances to prevent infinite re-render loops)
+2. **TanStack Query client** — server state layer, calls backend `/properties/lookup`, `/reports`, auto-caching with 5-min stale time
+3. **Auth Context (memory + httpOnly)** — access token in React Context, refresh token in httpOnly cookie, no localStorage (XSS protection)
+4. **Floating search with debouncing** — 300ms debounce, min 3 characters, backend proxy to PDOK Locatieserver
+5. **Property detail panel** — floating (desktop) or bottom sheet (mobile), progressive disclosure (summary → expandable sections)
+6. **Sidebar (collapsible)** — Rapporten list, Projecten grouping, Instellingen
 
-**Critical patterns:**
-- **Fan-out/fan-in for parallel API calls** — asyncio.gather() with return_exceptions=True, execute 5 APIs in 2s instead of 10s sequential
-- **Cache-aside with TTL** — check Redis before calling government APIs, cache with source-specific TTLs based on data volatility
-- **Async job queue for heavy processing** — Celery workers for LLM parsing (10-30s operations), return job ID immediately, poll for status
-- **Multi-tenant data isolation** — `organization_id` on every table, injected via dependency, never trust client-provided org ID
-
-**Scaling bottlenecks (in order):**
-1. LLM processing (10-30s per PDF) — scale Celery workers horizontally
-2. Government API rate limits — implement request queuing, cache aggressively
-3. Database write pressure — batch inserts, connection pooling (pgbouncer)
+**Critical architectural decisions:**
+- **Memory management:** MapLibre's Worker class leaks require explicit cleanup in useEffect (map.remove() + event handler removal)
+- **Coordinate projection:** Backend converts RD New (EPSG:28992) to WGS84 (EPSG:4326) before returning GeoJSON — frontend never handles RD
+- **Performance threshold:** GeoJSON clustering required beyond 1,000 features, vector tiles preferred for parcel boundaries (10-50x smaller payload)
+- **Security:** JWT access token in memory (React state), refresh token in httpOnly cookie (backend sets), never localStorage (XSS vulnerability)
 
 ### Critical Pitfalls
 
-1. **Treating AI-parsed bestemmingsplan as 100% accurate** — LLMs achieve 85-95% accuracy on Dutch zoning PDFs, but confident wrong answers can cause €500k+ investment mistakes. Mitigation: always show confidence scores (LOW/MEDIUM/HIGH), flag ambiguous interpretations with "Verify with notaris" warnings, include direct PDF snippets for user verification, never use words like "definitief" for AI-parsed data.
+Research identified 13 pitfalls (6 critical, 4 moderate, 3 minor) with phase-specific warnings.
 
-2. **Assuming Dutch government APIs are always available** — PDOK/BAG/Kadaster have rate limits and downtime. Synchronous report generation fails completely when one API is down. Mitigation: implement aggressive caching with staleness indicators, build async report generation (queue request, fetch in background), display partial reports with "missing data" flags rather than failing completely, store fetched data permanently (never re-fetch same address).
+**Top 5 critical pitfalls to address:**
 
-3. **Monument data is fragmented and inconsistent** — Monument status lives in multiple systems (RCE Monumentenregister, BAG, Kadaster, gemeentelijke databases) with different update cycles. Picking one "authoritative" source misses monuments not synced yet. Mitigation: query ALL monument sources and show results with source attribution, flag conflicts explicitly ("RCE says monument, BAG says no monument — verify with gemeente"), include beschermd stadsgezicht separately (different restrictions than individual monuments).
+1. **MapLibre memory leaks in React SPAs** — Memory grows continuously on route changes. Worker class and AbortController objects persist after component unmount. **Mitigation:** Always call `map.remove()` in useEffect cleanup, remove event handlers explicitly before removal, establish pattern in Phase 1 (foundational).
 
-4. **Ignoring data freshness differences** — BAG updates daily, Kadaster updates weekly-monthly, bestemmingsplannen update irregularly. Uniform 30-day cache causes stale ownership data. Mitigation: source-specific cache strategies (BAG: 24h, Kadaster eigenaar: 7d max, bestemmingsplan: check every 14d), show explicit staleness indicators ("BAG data: Updated 2 hours ago"), allow force-refresh, flag "high risk of staleness" for critical fields like ownership.
+2. **JWT in localStorage = XSS account takeover** — localStorage is JavaScript-readable, any XSS vulnerability steals tokens across all organizations. **Mitigation:** Access token in memory (React Context), refresh token in httpOnly cookie (backend sets), never localStorage. Must decide in Phase 2 (architectural).
 
-5. **PDF parsing fails silently on complex documents** — Bestemmingsplan PDFs have zoning rules in tables, footnotes, appendices. LLM extracts main text body, misses critical restrictions in footnotes. Scanned PDFs with OCR errors cause misreads. Mitigation: detect document type (digital vs scanned), parse structure metadata (tables, footnotes), flag complex structures ("Contains tables — AI parsing may be incomplete"), extract all sections separately (regels, verbeelding, toelichting), validate extracted numbers against physical constraints.
+3. **Coordinate projection mismatch (RD New vs WGS84)** — Dutch Kadaster uses EPSG:28992, MapLibre expects EPSG:4326. Displaying RD coordinates causes features to render 200km+ from actual location. **Mitigation:** Backend converts RD→WGS84 using pyproj before returning GeoJSON, frontend never handles projection. Critical for Phase 3 (data integration).
 
-6. **GDPR violation with cached owner data** — Kadaster eigenaar (owner names) is personal data under AVG. Caching without proper consent and retention policy risks fines. Mitigation: classify eigenaar as personal data requiring AVG compliance, short retention (7-30d) with automatic deletion, don't include in default cached records, require user acceptance before showing, don't include in exported PDFs by default, log access for audit trail.
+4. **Too many GeoJSON features (no clustering)** — 1,000+ polygons cause exponential performance degradation, 10,000+ freeze map for 10-30s. Amsterdam has 200,000+ parcels. **Mitigation:** Enable clustering for point features, use vector tiles for polygons, viewport-based loading. Decide in Phase 3 (architectural).
 
-7. **Multi-jurisdiction properties** — Parcels spanning two gemeenten need bestemmingsplannen from both municipalities. Address lookup returns single gemeente, missing the second jurisdiction's stricter rules. Mitigation: after BAG lookup, query Kadaster for parcel boundaries, check if boundary intersects multiple gemeente borders (PDOK BRT), fetch plans from ALL municipalities, flag clearly ("Property spans 2 municipalities — different rules may apply").
+5. **React state triggers infinite map re-renders** — Storing map state (center, zoom) in useState causes loops: map movement → setState → re-render → map resets → fires event → setState. **Mitigation:** Let MapLibre manage state imperatively via refs, only sync to React when needed (debounced URL persistence). Establish in Phase 1 (foundational).
+
+**Additional phase-specific warnings:**
+- **Phase 4:** Search autocomplete must debounce (300ms) or risk PDOK rate limiting
+- **Phase 5:** Touch events conflict on mobile (panel scroll vs map pan) — use cooperative gestures or event.stopPropagation
+- **Phase 8:** Vite env vars baked into build (requires rebuild per environment unless using runtime config)
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested 5-phase structure with foundation-first ordering:
 
-### Phase 1: Foundation & Core Data Pipeline
-**Rationale:** All intelligence depends on reliable government API integration. Must establish multi-tenant data isolation, caching patterns, and error handling before building features. Parallel API orchestration is the core technical challenge.
-
-**Delivers:**
-- Address input resolves to valid property
-- Parallel fetching from BAG, PDOK, Kadaster APIs
-- Unified property report with data source attribution
-- Basic caching with source-specific TTLs
-- Multi-tenant authentication and data isolation
-
-**Addresses features:**
-- Address input with BAG autocomplete (table stakes)
-- Kadaster property data (table stakes)
-- Basic property characteristics (table stakes)
-- Map visualization with PDOK (table stakes)
-
-**Avoids pitfalls:**
-- API availability assumptions (cache-aside pattern, graceful degradation from day one)
-- Data freshness differences (source-specific TTLs from start)
-- Multi-tenant security (organization_id filtering foundational)
-- GDPR owner data (proper data classification and retention)
-
-**Build order:** Database models → Auth + multi-tenant middleware → Base API client with cache-aside → Individual API clients (BAG → PDOK → Kadaster) → Property Intelligence Orchestrator → Report Generator
-
-### Phase 2: AI Document Parsing & Monument Intelligence
-**Rationale:** Once core API data flows, add AI fallback for bestemmingsplan parsing and comprehensive monument checking. These are the differentiators for heritage redevelopment market. Requires async job infrastructure for slow LLM operations.
+### Phase 1: Map Foundation & Layout
+**Rationale:** Foundational architectural decisions (memory management, state patterns, z-index layering) are hard to change later. MapLibre cleanup patterns and imperative state management must be established before building features on top.
 
 **Delivers:**
-- Bestemmingsplan PDF download and AI parsing
-- Structured zoning extraction with confidence scores
-- Monument status from all sources (RCE, BAG, Kadaster)
-- Conflict detection for inconsistent monument data
-- Background job queue for heavy processing
+- Full-page MapLibre map with PDOK aerial/topographic tiles
+- Layer toggle (satellite vs topo)
+- Proper memory cleanup patterns (map.remove() + event handler removal)
+- Z-index scale for floating elements
+- Imperative map state management (refs, not useState)
 
-**Addresses features:**
-- Bestemmingsplan summary (table stakes, critical differentiator)
-- Monument status check (table stakes)
-- Monument restriction detail (competitive advantage)
+**Addresses:**
+- STACK.md: React 19 + Vite 7 + MapLibre setup
+- FEATURES.md: Full-page map, layer toggles (table stakes)
+- PITFALLS.md: Critical #1 (memory leaks), Critical #6 (React state), Moderate #7 (z-index)
 
-**Avoids pitfalls:**
-- AI parsing accuracy (confidence scoring, verification UI, explicit disclaimers)
-- PDF parsing silent failures (structure detection, complexity indicators)
-- Monument data fragmentation (query all sources, flag conflicts)
-- Synchronous LLM calls (Celery workers, job status polling)
+**Avoids:** Memory leak accumulation, infinite re-render loops, z-index chaos that becomes unmanageable
 
-**Uses stack:**
-- Celery + Redis for async jobs
-- Anthropic Claude API for document extraction
-- PyPDF + pdf2image for PDF processing
-- Pydantic schemas for structured output validation
+**Research flag:** LOW — MapLibre + React patterns well-documented, establish and enforce cleanup patterns
 
-**Implements architecture:**
-- Document Processing Orchestrator
-- AI Document Processing Service (PDF Parser + LLM Client)
-- Async Job Queue setup
-
-### Phase 3: Advanced Intelligence & Differentiation
-**Rationale:** With reliable data foundation and AI parsing working, add features that differentiate for heritage projects. Subsidy matching, erfpacht analysis, and environmental constraints complete the "instant due diligence" value proposition.
+### Phase 2: Authentication & Security
+**Rationale:** Security architecture (JWT storage strategy) requires backend coordination and is painful to change after features are built on top. HttpOnly cookies for refresh tokens must be decided before implementing protected routes.
 
 **Delivers:**
-- Subsidy eligibility detection for heritage programs
-- Erfpacht (leasehold) analysis for Amsterdam/Utrecht properties
-- Environmental constraints (geluid, luchtkwaliteit, externe veiligheid)
-- Development constraint scoring (red/yellow/green rating)
-- Property comparison view (side-by-side 3-5 properties)
-- Historical sales data integration
+- Login/logout flow
+- Auth context (access token in memory, refresh token in httpOnly cookie)
+- Silent token refresh on page reload
+- Protected route wrapper
+- CORS configuration verification (development proxy vs production)
 
-**Addresses features:**
-- Subsidy eligibility (competitive advantage, high value for churches)
-- Erfpacht analysis (competitive advantage, critical for NL cities)
-- Environmental constraints (competitive advantage)
-- Constraint scoring (competitive advantage, speeds pre-screening)
-- Property comparison (should-have, users evaluate multiple opportunities)
-- Historical sales data (table stakes)
+**Addresses:**
+- STACK.md: JWT storage pattern (memory + httpOnly)
+- FEATURES.md: Login/logout (table stakes)
+- PITFALLS.md: Critical #2 (JWT security), Minor #12 (CORS mismatch)
 
-**Avoids pitfalls:**
-- Multi-jurisdiction properties (boundary intersection checks, multi-gemeente plans)
-- Bestemmingsplan complexity (parse special provisions: overgangsrecht, wijzigingsbevoegdheid)
+**Uses:** Backend `/auth/login`, `/auth/refresh` (already implemented in v1.1)
 
-### Phase 4: MVP Refinement & User Validation
-**Rationale:** Core intelligence features complete, now optimize for single-client deployment. Focus on UX polish, error handling, performance, and gathering feedback before expanding feature set.
+**Avoids:** XSS account takeover via localStorage, CORS failures in production
+
+**Research flag:** LOW — JWT patterns well-established, verify backend CORS_ORIGINS includes frontend domain
+
+### Phase 3: Property Data & Map Interactions
+**Rationale:** Data rendering strategy (GeoJSON vs vector tiles, clustering) is architectural. Coordinate projection handling must be in backend to prevent 200km+ rendering errors. Performance decisions made here determine scalability to 10,000+ features.
 
 **Delivers:**
-- Property save/list functionality
-- PDF report export with freshness timestamps
-- User authentication and authorization
-- Error handling improvements
-- Performance optimization (database indexes, query optimization)
-- Admin dashboard for API health monitoring
+- Floating search bar (manual address entry initially)
+- Address autocomplete with debouncing (PDOK Locatieserver via backend)
+- Click map → fetch property data → open detail panel
+- GeoJSON rendering with clustering (points) or vector tiles (polygons)
+- Backend RD→WGS84 coordinate conversion verification
+- Loading states, error handling (toasts)
 
-**Addresses features:**
-- Property save/list (table stakes)
-- PDF export (table stakes)
-- User authentication (should-have for multi-user orgs)
+**Addresses:**
+- FEATURES.md: Search, autocomplete, click-to-info (table stakes)
+- ARCHITECTURE.md: Fan-out/fan-in aggregation via backend
+- PITFALLS.md: Critical #3 (projection), Critical #4 (clustering), Critical #5 (PDOK CORS), Moderate #9 (debouncing)
 
-**Addresses pitfalls:**
-- UX pitfalls (progress indicators, friendly error messages, tooltips for Dutch terms)
-- "Looks done but isn't" items (force-refresh, staleness indicators, verification flows)
+**Uses:** Backend `/properties/lookup` (already aggregates BAG/PDOK/Kadaster/RCE data)
 
-### Phase 5: Multi-Tenant SaaS Expansion
-**Rationale:** After validation with single client, prepare for scale. Add features needed for multiple paying organizations, usage monitoring, and operational excellence.
+**Implements:** PropertyIntelligenceOrchestrator results display, cache-aware fetching
+
+**Avoids:** Coordinate rendering errors, performance walls at 1000+ features, PDOK rate limiting
+
+**Research flag:** MEDIUM — Vector tile endpoints need verification (PDOK cadastral OGC API), clustering thresholds need real-world testing
+
+### Phase 4: Property Details & Reports
+**Rationale:** With data flowing from backend, now build the property detail UI with progressive disclosure. Saved reports leverage existing backend CRUD endpoints.
 
 **Delivers:**
-- Organization management and switching
-- Per-organization rate limiting and quotas
-- Usage analytics and billing integration
-- Enhanced caching strategies
-- Monitoring and alerting for government API SLAs
-- API documentation for potential integrations
+- Property detail panel (floating desktop, bottom sheet mobile)
+- Progressive disclosure (summary → expandable sections for kadaster/zoning/monument)
+- Data source indicators (API vs AI-parsed, confidence scores)
+- Freshness indicators (per-source timestamps)
+- PDF export button (backend WeasyPrint)
+- Save report button
+- Sidebar with saved reports list
+- Report search (backend `/reports?q=`)
 
-**Addresses features:**
-- Custom report templates (v2+)
-- API for CRM integration (v2+, only if multiple clients request)
+**Addresses:**
+- FEATURES.md: PDF export, saved reports, freshness indicators (table stakes + differentiators)
+- PITFALLS.md: Moderate #8 (resize handling), Moderate #10 (touch conflicts)
 
-**Addresses scaling:**
-- Rate limiting per organization
-- Connection pooling (pgbounger)
-- Separate Celery worker fleet
-- Regional deployment if expanding beyond NL
+**Uses:** Backend `/reports` CRUD, `/reports/{id}/pdf` export
+
+**Avoids:** Map resize bugs when panels open/close, mobile touch conflicts between scrolling and panning
+
+**Research flag:** LOW — Backend reports API complete (275 tests), UI patterns standard
+
+### Phase 5: Projects & Polish
+**Rationale:** Project folders add workflow value for real estate developers tracking pipelines. Polish features (force refresh, monument badges) leverage existing backend capabilities without new integrations.
+
+**Delivers:**
+- Project folders (group reports by project_id)
+- Project CRUD (create, rename, delete)
+- Filter reports by project in sidebar
+- Force refresh button (invalidate cache)
+- Monument badge on property cards
+- AI zoning summary display with confidence
+- Mobile responsive refinements
+- Performance monitoring
+
+**Addresses:**
+- FEATURES.md: Project folders, force refresh, monument badge (differentiators)
+- ARCHITECTURE.md: Multi-tenant project grouping
+
+**Uses:** Backend `project_id` field on reports, `force_refresh=true` param, RCE monument data
+
+**Avoids:** Feature bloat (defer WOZ/energielabel to v2.1)
+
+**Research flag:** LOW — Backend data model supports projects, UI patterns straightforward
 
 ### Phase Ordering Rationale
 
-- **Foundation first:** Cannot build intelligence features without reliable government API integration. Caching, async patterns, and multi-tenancy are architectural — retrofitting later requires rewriting data layer.
-- **AI parsing after APIs:** API-first with AI fallback means APIs must work before adding AI layer. Also establishes job queue infrastructure needed for slow LLM operations.
-- **Differentiation after reliability:** Users forgive missing advanced features but not broken core data. Monument intelligence, subsidies, erfpacht analysis only valuable if foundation is trusted.
-- **MVP validation before scale:** Single-client validation proves value proposition before investing in multi-tenant operational features.
+- **Foundation-first:** Phase 1 establishes patterns that prevent technical debt (memory management, state architecture)
+- **Security-second:** Phase 2 JWT architecture must be decided before building features that depend on auth
+- **Data-third:** Phase 3 data rendering strategy determines scalability (can't add clustering/vector tiles retroactively without refactor)
+- **Features-fourth:** Phase 4 builds core workflow once data flow is proven
+- **Value-fifth:** Phase 5 adds differentiators that leverage existing backend without new integrations
+
+**Dependency chain:**
+```
+Phase 1 (Map) → Phase 2 (Auth) → Phase 3 (Data) → Phase 4 (Details) → Phase 5 (Projects)
+         ↓              ↓               ↓                ↓                    ↓
+    Memory &      JWT storage    GeoJSON/tiles    Reports CRUD        Project folders
+   state patterns   architecture   performance      display             organization
+```
+
+**Pitfall prevention mapping:**
+- Phase 1 prevents: Memory leaks, re-render loops, z-index chaos
+- Phase 2 prevents: XSS token theft, CORS failures
+- Phase 3 prevents: Coordinate errors, performance walls, rate limiting
+- Phase 4 prevents: Resize bugs, touch conflicts
+- Phase 5 prevents: (polish phase, no architectural pitfalls)
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 1 (Foundation):** Current PDOK WFS endpoint URLs, BAG API rate limits, Kadaster API authentication flow in 2026 — need live API testing
-- **Phase 2 (AI Parsing):** Claude API behavior with real Dutch bestemmingsplan PDFs (encoding, layout handling), prompt engineering for structured extraction, cost optimization (Opus vs Sonnet)
-- **Phase 3 (Advanced Intelligence):** Current subsidy programs and eligibility criteria, erfpacht contract data availability, Atlas Leefomgeving API for environmental constraints
+**Phases needing deeper research during planning:**
+- **Phase 3:** PDOK cadastral vector tiles endpoint verification (OGC API Tiles format unclear), clustering threshold testing with real Dutch parcel data
+- **Phase 4:** Bottom sheet library evaluation (react-spring-bottom-sheet vs custom), mobile gesture testing on real devices
 
-**Phases with standard patterns (can skip research-phase):**
-- **Phase 4 (Refinement):** Standard CRUD operations, PDF generation, auth flows — well-documented patterns
-- **Phase 5 (SaaS Expansion):** Multi-tenant SaaS patterns are established, monitoring/alerting is standard DevOps
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1:** MapLibre + React patterns well-documented (official docs + GitHub issues)
+- **Phase 2:** JWT security patterns established (WorkOS/Descope authoritative)
+- **Phase 5:** Backend data model complete, UI patterns straightforward
+
+**Future integrations requiring research (v2.1+):**
+- WOZ waarde API: No public API found (municipalities only), needs Kadaster data licensing investigation
+- Energielabel API: RVO EP-Online requires API key, endpoint structure unclear
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | FastAPI + PostgreSQL + PostGIS is proven for GIS data aggregation. Python GIS libraries (geopandas, shapely) are industry standard. Claude API is current best for document extraction. |
-| **Features** | HIGH | Table stakes features (address lookup, Kadaster data, zoning, monument status) are well-understood. Differentiators (subsidies, erfpacht) validated by Dutch PropTech domain knowledge. Anti-features (CRM scope creep) prevent known pitfalls. |
-| **Architecture** | HIGH | Fan-out/fan-in, cache-aside, async job queue, multi-tenant isolation are established patterns. Dutch government API ecosystem (PDOK, BAG, Kadaster) structure is known. |
-| **Pitfalls** | MEDIUM | AI parsing accuracy issues are domain-general knowledge. Dutch-specific pitfalls (monument fragmentation, multi-jurisdiction) based on regulatory structure understanding but not verified with recent production systems. |
+| Stack | HIGH | React 19 + Vite 7 + MapLibre 4.x all stable with official docs, 2026 best practices verified |
+| Features | HIGH | Map-first patterns confirmed across Google Maps/Regrid/Transect, table stakes well-defined |
+| Architecture | HIGH | Backend v1.1 complete (275 tests), fan-out/fan-in proven pattern, multi-tenant security established |
+| Pitfalls | HIGH | MapLibre memory leaks + JWT security + coordinate projection all well-documented with mitigation strategies |
 
-**Overall confidence:** MEDIUM
+**Overall confidence:** HIGH
+
+Research is comprehensive with authoritative sources. The backend foundation (v1.1 complete) significantly de-risks the project — frontend is "just" a consumption layer with map visualization. The recommended stack is proven (React 19 stable, MapLibre 4.x stable, PDOK APIs operational), and critical pitfalls have documented mitigations.
 
 ### Gaps to Address
 
-**During Phase 1 planning:**
-- [ ] Verify current PDOK/BAG API endpoints, authentication, rate limits (may have changed since Jan 2025 training cutoff)
-- [ ] Test Kadaster API access flow, confirm pricing model in 2026
-- [ ] Confirm Next.js 15 stability or stick with Next.js 14 (15 was recent at training cutoff)
-- [ ] Check Vercel pricing for EU-only deployment (GDPR requirement for some clients)
+**MEDIUM confidence areas requiring phase-specific validation:**
 
-**During Phase 2 planning:**
-- [ ] Test Claude API with 5-10 real bestemmingsplan PDFs (various vintages, municipalities) to validate accuracy assumptions
-- [ ] Verify pdf2image system dependencies (requires poppler-utils)
-- [ ] Benchmark Claude Opus 4.6 vs Sonnet 4.5 for extraction quality/cost trade-off
-- [ ] Map all monument data sources (RCE, BAG, gemeentelijke portals) and test API access
+1. **PDOK vector tile endpoints:** OGC API Tiles spec is flexible, exact collection IDs and tile URL templates need verification in Phase 3. Mitigation: Test `/collections` endpoint, inspect `links` for MVT URLs.
 
-**During Phase 3 planning:**
-- [ ] Audit current heritage subsidy programs (Rijksdienst, provincial, municipal) — programs change annually
-- [ ] Verify erfpacht data availability from Kadaster API (contract terms, buy-out calculations)
-- [ ] Research Atlas Leefomgeving API for environmental constraint data (geluid, luchtkwaliteit)
+2. **Clustering thresholds:** Research indicates 1,000 features as slowdown point, but needs real-world testing with Dutch parcel density (Amsterdam: 200,000+ parcels). Mitigation: Performance profiling in Phase 3 with actual Kadaster data.
 
-**During Phase 5 planning:**
-- [ ] Validate PostgreSQL row-level security approach for organization_id filtering
-- [ ] Confirm NextAuth.js v5 stability (was beta at training cutoff)
+3. **MapLibre v4.x memory leak status:** Issues documented for v4.1-4.7.1, need to verify fixed in latest version. Mitigation: Test cleanup pattern effectiveness in Phase 1, monitor memory usage in dev.
+
+**LOW confidence areas deferred to v2.1+:**
+
+1. **WOZ waarde access:** No public API found, Kadaster WOZ API Bevragen is municipalities only. Needs commercial licensing investigation or wait for government API expansion.
+
+2. **Energielabel API structure:** RVO EP-Online mentioned but integration unclear. Need to request API key during v2.1 planning, test realtime vs batch-only access.
+
+**Validation strategy:**
+- Phase 3 research task: Verify PDOK vector tile endpoints
+- Phase 1 monitoring: Track memory usage during development with cleanup patterns
+- v2.1 research: WOZ/energielabel API access investigation
 
 ## Sources
 
-### PRIMARY (HIGH confidence)
-- **Klarifai global coding standards** (CLAUDE.md) — multi-tenant security patterns, async/await requirements, validation standards
-- **Dutch government API ecosystem knowledge** — PDOK (WFS/WMS), BAG (Basisregistratie Adressen en Gebouwen), Kadaster structure, ruimtelijkeplannen.nl
-- **FastAPI + PostgreSQL + PostGIS architecture patterns** — established for GIS data aggregation platforms
-- **Multi-tenant SaaS patterns** — row-level security with organization_id, standard for Klarifai projects
-- **AI document parsing best practices** — Claude API for structured extraction, confidence scoring, human-in-the-loop verification
+### Primary (HIGH confidence)
+- Official documentation: Vite, React 19, MapLibre GL JS, TanStack Query v5, TanStack Router, Tailwind v4, TypeScript
+- PDOK government APIs: Luchtfoto RGB, Kadastrale Kaart OGC API, Vector Tiles documentation
+- MapLibre GitHub issues: Memory leak #4811, Worker cleanup #3733, GeoJSON performance #6154, #4364
+- Security guides: WorkOS, Descope, JWT storage best practices (multiple authoritative sources)
 
-### SECONDARY (MEDIUM confidence)
-- **Dutch PropTech domain knowledge** — heritage redevelopment challenges, bestemmingsplan complexity, monument regulations
-- **Property intelligence platform patterns** — data aggregation, due diligence automation (e.g., Transect UK, Prophetic US)
-- **Fan-out/fan-in async patterns** — asyncio.gather() for parallel API calls, graceful partial failure handling
-- **Cache-aside with TTL strategies** — Redis patterns for government data with varying volatility
+### Secondary (MEDIUM confidence)
+- Map-first UI patterns: Multiple sources (Eleken, BricXlabs, MapUIPatterns.com, UXPin) with consistent recommendations
+- Competitor analysis: Regrid, Transect, ParcelQuest feature sets and patterns
+- Dutch coordinate systems: EPSG.io, Kadaster GDAL documentation, TU Delft wiki
+- Performance thresholds: MapLibre performance guide (official), MDPI research paper (50,000 feature analysis)
 
-### TERTIARY (LOW confidence, needs validation)
-- **Specific government API versions and rate limits** — Kadaster API pricing (€0.50-€2.00 per query), PDOK rate limits, BAG API authentication
-- **Monument data source availability** — Rijksmonumentenregister API status, gemeentelijke monument databases
-- **Subsidy program specifics** — BIJ (Besluit Instandhouding Jachten), SIM (Subsidieregeling Instandhouding Monumenten), current eligibility
-- **Omgevingswet transition** — New regulatory framework launched July 2024, parallel systems for bestemmingsplan vs omgevingsplan
+### Tertiary (LOW confidence — needs validation)
+- PDOK rate limits: Undocumented, needs testing or PDOK support contact
+- BAG API CORS after July 2026: Migration notice found, but new API CORS behavior needs browser testing
+- WOZ API access: Confirmed municipalities only, but commercial licensing path unclear
 
-**Recommendation:** Treat technology choices and architectural patterns as HIGH confidence. Treat external API specifics, rate limits, and Dutch regulatory details as MEDIUM confidence requiring validation during Phase 1-2 implementation.
+### Context from Backend (v1.1)
+- 275 tests passing (104 unit + 171 integration)
+- Multi-tenant security with app_role + RLS policies enforced
+- API clients for BAG, PDOK, DSO, RCE with caching and rate limiting
+- Property aggregator with asyncio.gather parallel fetching
+- AI parsing with Claude via ARQ workers
+- PDF export with WeasyPrint
+- JWT auth with refresh token rotation
 
 ---
-*Research completed: 2026-02-07*
-*Ready for roadmap: yes*
-*Files synthesized: STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md*
+
+**Research completed:** 2026-02-08
+**Ready for roadmap:** Yes
+
+**Next steps for orchestrator:**
+1. Use phase structure as roadmap foundation
+2. Expand each phase into requirements (user stories, acceptance criteria)
+3. Flag Phase 3 for PDOK vector tile endpoint verification
+4. Note v2.1 research needs (WOZ/energielabel APIs)
