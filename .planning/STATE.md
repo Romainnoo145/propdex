@@ -5,19 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core Value:** Address -> Property Intelligence Report
-**Current Focus:** Planning next milestone
+**Current Focus:** v2.0 Frontend
 
 ---
 
 ## Current Position
 
-**Milestone:** v1.1 Production Hardening — SHIPPED
-**Phase:** 12 of 12 — Complete
-**Status:** Milestone archived
+**Milestone:** v2.0 Frontend
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
 
-**Progress:** 12 phases, 36 plans shipped across v1.0 + v1.1
-
-**Next Action:** `/gsd:new-milestone` to start v2.0
+**Last activity:** 2026-02-08 — Milestone v2.0 started
 
 ---
 
@@ -25,12 +24,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **v1.1 Shipped:** 2026-02-08
 - 7 phases, 19 plans, 15 requirements
-- 275 tests (104 unit + 171 integration), 74% coverage
-- 15,947 LOC Python (7,060 in tests)
+- 275 tests, 15,947 LOC Python
 
 **v1.0 Shipped:** 2026-02-07
 - 5 phases, 17 plans, 14 requirements
-- 8,281 LOC Python backend
+- 8,281 LOC Python
 
 ---
 
@@ -38,30 +36,34 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ### Key Decisions
 
-See `.planning/PROJECT.md` Key Decisions table (14 decisions with outcomes).
-
-Full decision logs archived:
-- `.planning/milestones/v1.0-ROADMAP.md` (98 decisions)
-- `.planning/milestones/v1.1-ROADMAP.md` (v1.1 decisions)
+See `.planning/PROJECT.md` Key Decisions table.
 
 ### Active TODOs
 
-- [ ] Frontend integration (next milestone)
+- [ ] Frontend integration (this milestone)
+- [ ] Production deployment: Create app_role
 - [ ] Test Claude API with real bestemmingsplan PDFs
-- [ ] Production deployment: Create app_role and switch to RLS-enforced credentials
+- [ ] BAG API key aanvragen (gratis)
+- [ ] DSO API key aanvragen (gratis)
 
 ### Blockers
 
 (None)
 
+### Known Issues
+
+- SET LOCAL asyncpg parameter binding fixed (use f-string with validated UUID)
+- Kadaster eigendomsdata requires paid API (deferred to post-v2.0)
+- Monument restrictions are generic boilerplate (not property-specific)
+
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — v1.1 milestone completed and archived
-**Stopped At:** Milestone complete
+**Last Session:** 2026-02-08 — v2.0 milestone started, backend live-tested
+**Stopped At:** Defining requirements for v2.0
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (v1.1 milestone shipped and archived)*
+*Last updated: 2026-02-08 (v2.0 milestone started)*

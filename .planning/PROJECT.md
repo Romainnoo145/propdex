@@ -40,7 +40,21 @@ This is the ONE thing that must work. Everything else is secondary.
 - Row-level security with fail-closed NULLIF policies on all 7 tenant tables
 - Comprehensive test suite with formal verification across all phases
 
-**What's next:** Frontend dashboard (SvelteKit) with address lookup, interactive maps, and report management
+**What's next:** v2.0 Frontend — map-first web interface
+
+## Current Milestone: v2.0 Frontend
+
+**Goal:** Build a map-first web interface where the full-page map IS the app — users browse PDOK aerial imagery, toggle kadaster parcel boundaries, click properties for instant intelligence reports in a floating panel, and manage saved reports via a sidebar.
+
+**Target features:**
+- Full-page MapLibre map with PDOK aerial/topographic tile layers
+- Kadaster parcel boundaries as toggleable map layer
+- Floating search bar with BAG autocomplete (integrated in map, not sidebar)
+- Floating detail panel (Google Maps-style) when clicking a property
+- Sidebar with tab navigation: Rapporten, Projecten, Instellingen (no navigation headers)
+- Report viewing, saving, and PDF export from the frontend
+- WOZ waarde and energielabel data integration (free government sources)
+- Auth flow (login/register) integrated in the frontend
 
 ## Business Model
 
@@ -98,12 +112,22 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-- [ ] User can track multiple properties as opportunities in a simple pipeline
-- [ ] Address input with BAG autocomplete suggestions
-- [ ] Interactive map visualization with property location on PDOK tile layers
-- [ ] PDF export of property intelligence report (branded, professional layout — frontend)
-- [ ] Comparison view — side-by-side comparison of 2-3 properties
-- [ ] Role-based access (admin, analyst, viewer) for larger teams
+- [ ] Full-page interactive map with PDOK aerial imagery and topographic layers
+- [ ] Kadaster parcel boundaries as toggleable map layer
+- [ ] Address search with BAG autocomplete integrated in map UI
+- [ ] Floating detail panel showing property intelligence report on click
+- [ ] Sidebar with tab navigation (Rapporten, Projecten, Instellingen)
+- [ ] PDF export of property intelligence report from frontend
+- [ ] WOZ waarde integration (free government data)
+- [ ] Energielabel integration (free via RVO/Kadaster)
+- [ ] Auth flow (login/register) in frontend
+
+### Future (post v2.0)
+
+- [ ] Property pipeline tracking (opportunities)
+- [ ] Comparison view — side-by-side 2-3 properties
+- [ ] Role-based access (admin, analyst, viewer)
+- [ ] Kadaster eigendom/koopprijs integration (betaald)
 
 ### Out of Scope
 
@@ -130,6 +154,10 @@ This is the ONE thing that must work. Everything else is secondary.
 | Progressive loading for AI parsing | Claude API takes 10-30s; never block HTTP response | ARQ worker + polling pattern working |
 | PropertyReportResponse as central schema | One schema flows from aggregator through save to PDF export | Clean data contract across all phases |
 | Tech debt before frontend | Stabilize backend before stacking frontend on top | Confirmed — 275 tests, RLS enforced, config clean |
+| React + Vite (not SvelteKit) | Simpler, no SSR needed for dashboard app, wider ecosystem | — Pending |
+| MapLibre (not Mapbox) | Free, same API as Mapbox, PDOK tiles for NL aerial imagery | — Pending |
+| Map-first UI (not dashboard) | The map IS the app — floating panels over full-page map | — Pending |
+| SET LOCAL f-string (not params) | asyncpg doesn't support parameterized SET statements | Confirmed — bug found in live testing |
 | NULLIF fail-closed RLS | Default-deny instead of default-allow for tenant isolation | Verified via 11 multi-tenant tests |
 | 404 not 403 for cross-org access | Prevents resource enumeration attacks | Standard pattern in all isolation tests |
 | Test isolation via function-scoped drop/recreate | Direct commit pattern prevents transaction rollback | 275 tests passing with clean isolation |
@@ -143,4 +171,4 @@ This is the ONE thing that must work. Everything else is secondary.
 - **Key Dutch data sources:** PDOK, BAG, Kadaster, ruimtelijkeplannen.nl, Rijksdienst voor het Cultureel Erfgoed
 
 ---
-*Last updated: 2026-02-08 after v1.1 milestone*
+*Last updated: 2026-02-08 after v2.0 milestone start*
