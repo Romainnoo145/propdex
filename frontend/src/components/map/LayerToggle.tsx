@@ -8,7 +8,7 @@ interface LayerToggleProps {
 }
 
 function LayerToggle({ mapRef }: LayerToggleProps) {
-  const [activeLayer, setActiveLayer] = useState<LayerType>('aerial');
+  const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
 
   const handleLayerChange = (layer: LayerType) => {
     if (!mapRef.current || layer === activeLayer) return;
