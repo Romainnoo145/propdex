@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 16 — Property Details Reports
-**Plan:** 2 of 7
+**Plan:** 4 of 7
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 16-01-PLAN.md (UI Primitives & Dependencies) and 16-02-PLAN.md (Side-Rail Navigation & App Shell)
+**Last activity:** 2026-02-08 — Completed 16-04-PLAN.md (Report API Client & Hooks)
 
-**Progress:** ████████████████████ 50/54 plans (93%)
+**Progress:** ████████████████████ 51/54 plans (94%)
 
 ---
 
@@ -77,6 +77,14 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Glassmorphism design (bg-black/30 backdrop-blur-xl): Consistent with Phase 15 map controls, allows map to show through
 - Default route redirects to /map (not /dashboard): Map is the primary interface, dashboard has no content yet
 
+**Phase 16-04 decisions:**
+- 5-minute stale time for report lists: Reports don't change frequently
+- 10-minute stale time for city list: Very stable data
+- Lazy initialization for localStorage: Avoids setState in useEffect ESLint warning
+- Raw fetch for non-JSON responses: deleteReport (204 No Content), exportReportPDF (Blob)
+- useSaveReport invalidates all report lists: Filters may vary across cached queries
+- useRefreshReport invalidates both specific report and all lists: Completeness score may change
+
 **Phase 15-05 decisions:**
 - Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
 - Two-step PDOK flow (suggest → lookup): Extract postcode/huisnummer from suggestion ID
@@ -130,10 +138,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 17:33 UTC — Completed 16-01-PLAN.md
-**Stopped At:** Phase 16 plans 1 and 2 of 7 complete (executed out of order)
+**Last Session:** 2026-02-08 17:41 UTC — Completed 16-04-PLAN.md
+**Stopped At:** Phase 16 plan 4 of 7 complete
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 16 in progress — 2/7 plans complete)*
+*Last updated: 2026-02-08 (Phase 16 in progress — 4/7 plans complete)*
