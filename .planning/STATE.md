@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 16 — Property Details Reports
-**Plan:** 3 of 7
+**Plan:** 6 of 7
 **Status:** In progress
 
-**Last activity:** 2026-02-09 — Completed 16-03-PLAN.md (Progressive Disclosure - Tier 1 & 2)
+**Last activity:** 2026-02-09 — Completed 16-06-PLAN.md (Freshness Indicators & Source Badges)
 
-**Progress:** ████████████████████ 51/54 plans (94%)
+**Progress:** ████████████████████ 52/54 plans (96%)
 
 ---
 
@@ -91,6 +91,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - useSaveReport invalidates all report lists: Filters may vary across cached queries
 - useRefreshReport invalidates both specific report and all lists: Completeness score may change
 
+**Phase 16-06 decisions:**
+- Trust but Verify freshness: Fresh data shows nothing, only stale data gets amber warning
+- Freshness thresholds: Kadaster 7 days, Bestemming 30 days, Monument 180 days (based on update frequency)
+- Hover-reveal tooltip: Amber icon with "Update nu" button on hover
+- Per-section refresh: Independent refresh per section via onRefreshSection callback reduces API load
+
 **Phase 15-05 decisions:**
 - Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
 - Two-step PDOK flow (suggest → lookup): Extract postcode/huisnummer from suggestion ID
@@ -144,10 +150,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-09 — Completed 16-03-PLAN.md
-**Stopped At:** Phase 16 plan 3 of 7 complete
+**Last Session:** 2026-02-09 — Completed 16-06-PLAN.md
+**Stopped At:** Phase 16 plan 6 of 7 complete
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-09 (Phase 16 in progress — 3/7 plans complete)*
+*Last updated: 2026-02-09 (Phase 16 in progress — 6/7 plans complete)*
