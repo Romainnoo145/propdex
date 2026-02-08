@@ -4,7 +4,6 @@ import { useRecentViewed, type RecentItem } from '@/hooks/useRecentViewed'
 import ReportCard from '@/components/reports/ReportCard'
 import ReportSearch from '@/components/reports/ReportSearch'
 import RecentViewed from '@/components/reports/RecentViewed'
-import EmptyState from '@/components/reports/EmptyState'
 
 interface ReportSidebarProps {
   isOpen: boolean
@@ -68,7 +67,6 @@ export default function ReportSidebar({
 
   const hasReports = data && data.reports.length > 0
   const hasRecent = recent.length > 0
-  const showEmptyState = !hasReports && !hasRecent && !isLoading
 
   return (
     <>
@@ -179,8 +177,12 @@ export default function ReportSidebar({
               </div>
             )}
 
-            {/* Empty State */}
-            {showEmptyState && <EmptyState />}
+            {/* Empty state — minimal */}
+            {!hasReports && !hasRecent && !isLoading && (
+              <div className="px-4 py-8 text-center text-sm text-white/30">
+                Geen opgeslagen rapporten
+              </div>
+            )}
 
             {/* Loading state */}
             {isLoading && (
