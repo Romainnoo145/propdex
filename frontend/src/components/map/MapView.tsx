@@ -43,6 +43,11 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
         },
         layers: [
           {
+            id: 'background',
+            type: 'background',
+            paint: { 'background-color': '#1a1a2e' },
+          },
+          {
             id: 'carto-light-layer',
             type: 'raster',
             source: 'carto-light',
