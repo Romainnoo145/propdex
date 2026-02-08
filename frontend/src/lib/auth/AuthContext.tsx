@@ -59,6 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData)
   }, [])
 
+  const loginAsDemo = useCallback(() => {
+    setAccessToken('demo-token')
+    setUser({
+      id: 'demo-user-id',
+      email: 'info@klarifai.nl',
+      full_name: 'Klarifai Demo',
+      organization_id: 'demo-org-id',
+      email_verified: true,
+      auth_provider: 'email',
+      created_at: new Date().toISOString(),
+    })
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -70,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         loginWithToken,
+        loginAsDemo,
       }}
     >
       {children}

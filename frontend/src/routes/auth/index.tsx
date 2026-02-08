@@ -20,12 +20,17 @@ export const Route = createFileRoute('/auth/')({
 })
 
 function AuthPage() {
-  const { login, register } = useAuth()
+  const { login, register, loginAsDemo } = useAuth()
   const search = Route.useSearch()
   const navigate = useNavigate()
 
   const handleSuccess = () => {
     navigate({ to: search.redirect || '/map' })
+  }
+
+  const handleDemo = () => {
+    loginAsDemo()
+    handleSuccess()
   }
 
   return (
@@ -46,6 +51,16 @@ function AuthPage() {
           onLoginSuccess={handleSuccess}
           onRegisterSuccess={handleSuccess}
         />
+
+        {/* Demo login */}
+        <div className="text-center">
+          <button
+            onClick={handleDemo}
+            className="text-sm text-[var(--color-text-secondary)] underline hover:text-[var(--color-text)]"
+          >
+            Demo login as info@klarifai.nl
+          </button>
+        </div>
       </div>
     </div>
   )
