@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 15 — Property Data & Map Interactions
-**Plan:** 4 of 5
-**Status:** In progress
+**Plan:** 5 of 5
+**Status:** Complete
 
-**Last activity:** 2026-02-08 — Completed 15-04-PLAN.md (Property Detail Panel & Geometry Layer)
+**Last activity:** 2026-02-08 — Completed 15-05-PLAN.md (Integration Wiring & Visual Verification)
 
-**Progress:** ██████████████████░░ 46/47 plans (98%)
+**Progress:** ███████████████████░ 47/47 plans (100%)
 
 ---
 
@@ -64,6 +64,13 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Desktop right sidebar, mobile bottom sheet: Maximizes map visibility on mobile
 - Touch event stopPropagation on panel: Prevents map panning when scrolling panel content
 
+**Phase 15-05 decisions:**
+- Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
+- Two-step PDOK flow (suggest → lookup): Extract postcode/huisnummer from suggestion ID
+- Replace vector tiles with WMS raster: Vector tile endpoint broken, WMS is stable and documented
+- Demo data with verified Venlo addresses: Real BAG/Kadaster/RCE data enables frontend dev without backend
+- Parcel click/highlight deferred: Not possible with WMS raster tiles, requires vector features (Phase 17)
+
 **Phase 14 decisions:**
 - httpOnly cookies for refresh tokens: Prevents XSS attacks
 - secure=False in development: Allows HTTP on localhost
@@ -103,15 +110,16 @@ See `.planning/PROJECT.md` Key Decisions table.
 - SET LOCAL asyncpg parameter binding fixed (use f-string with validated UUID)
 - Kadaster eigendomsdata requires paid API (deferred to post-v2.0)
 - Monument restrictions are generic boilerplate (not property-specific)
+- Parcel click/highlight not possible with WMS raster tiles (requires vector features or WFS, deferred to Phase 17)
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 13:20 UTC — Completed 15-04-PLAN.md
-**Stopped At:** Phase 15 plan 04 complete, ready for plan 05
+**Last Session:** 2026-02-08 17:08 UTC — Completed 15-05-PLAN.md
+**Stopped At:** Phase 15 complete (5/5 plans), ready for Phase 16
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 15 Plan 04 complete)*
+*Last updated: 2026-02-08 (Phase 15 complete — all 5 plans shipped)*
