@@ -8,6 +8,7 @@ import { AddressSearch } from '@/components/search/AddressSearch'
 import PropertyDetailPanel from '@/components/property/PropertyDetailPanel'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
+import { lookupPdokAddress } from '@/lib/api'
 import type { SuggestResult } from '@/lib/types/property'
 
 export const Route = createFileRoute('/_authenticated/map')({
@@ -20,35 +21,49 @@ function MapPage() {
   const lookup = usePropertyLookup()
 
   // Handle address selection from search
-  const handleAddressSelect = useCallback((suggestion: SuggestResult) => {
-    // Extract postcode and huisnummer from PDOK suggestion
-    // PDOK suggest docs include postcode, huis_nlt fields
-    const postcode = (suggestion as Record<string, unknown>).postcode as string | undefined
-    const huisnummer = parseInt(
-      String((suggestion as Record<string, unknown>).huis_nlt ?? '0'),
-      10
-    )
-
-    if (!postcode || !huisnummer) {
-      console.warn('Could not extract postcode/huisnummer from suggestion:', suggestion)
-      return
-    }
-
-    // Trigger property lookup mutation
-    lookup.mutate(
-      { postcode, huisnummer },
-      {
-        onSuccess: (data) => {
-          setShowPanel(true)
-          if (mapRef.current) {
-            updatePropertyGeometry(mapRef.current, data)
-          }
-        },
-      }
-    )
-
+  const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
     // Show panel immediately (for loading state)
     setShowPanel(true)
+
+    try {
+      // PDOK suggest only returns id + weergavenaam, so look up full details
+      const details = await lookupPdokAddress(suggestion.id)
+
+      const postcode = details.postcode?.replace(/\s/g, '')
+      const huisnummer = details.huisnummer
+
+      if (!postcode || !huisnummer) {
+        console.warn('Could not extract postcode/huisnummer from PDOK lookup:', details)
+        setShowPanel(false)
+        return
+      }
+
+      // Fly to address location if we have coordinates
+      if (details.centroide_ll && mapRef.current) {
+        const match = details.centroide_ll.match(/POINT\(([^ ]+) ([^ ]+)\)/)
+        if (match) {
+          mapRef.current.flyTo({
+            center: [parseFloat(match[1]!), parseFloat(match[2]!)],
+            zoom: 17,
+          })
+        }
+      }
+
+      // Trigger property lookup mutation
+      lookup.mutate(
+        { postcode, huisnummer },
+        {
+          onSuccess: (data) => {
+            if (mapRef.current) {
+              updatePropertyGeometry(mapRef.current, data)
+            }
+          },
+        }
+      )
+    } catch (err) {
+      console.error('PDOK address lookup failed:', err)
+      setShowPanel(false)
+    }
   }, [lookup])
 
   // Handle panel close

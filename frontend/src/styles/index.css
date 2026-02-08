@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Hide MapLibre logo (open source, no legal attribution required) */
+/* Tile source attribution (ESRI, CartoDB) is kept as required by their ToS */
+.maplibregl-ctrl-logo {
+  display: none !important;
+}
+
 :root {
   /* Z-index scale (steps of 100 for flexibility) */
   --z-map-canvas: 0;
