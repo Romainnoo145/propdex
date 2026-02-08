@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 15 — Property Data & Map Interactions
-**Plan:** 2 of 6
+**Plan:** 2 of 5
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 15-02-PLAN.md (Parcel Boundaries Layer)
+**Last activity:** 2026-02-08 — Completed 15-01-PLAN.md (Frontend Data Layer) and 15-02-PLAN.md (Parcel Boundaries Layer)
 
-**Progress:** █████████░░░░░░░░░░░ 9/15 plans (60%)
+**Progress:** ██████████████████░░ 44/47 plans (94%)
 
 ---
 
@@ -40,7 +40,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-**Recent decisions (Phase 15-02):**
+**Recent decisions (Phase 15-01):**
+- snake_case TypeScript types: Match backend JSON exactly without camelCase transformation
+- GeoJSONGeometry type alias: Avoid ESLint namespace warning, no external dependency
+- 300ms debounce with 3+ char minimum: Balance responsive UX with 60/minute rate limit
+- Cache by nummeraanduiding_id: Instant loading on navigation, reduced API calls
+
+**Phase 15-02 decisions:**
 - PDOK kadastrale kaart vector tiles (MVT format) for parcel boundaries: Performance in dense urban areas
 - Minzoom 14 for parcel layer: Prevent cluttering at city scale, only show at street level
 - Blue tint (bg-blue-500/30) for overlay toggle vs white for base layer: Visual distinction between base layers and overlays
@@ -91,10 +97,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 13:11 UTC — Completed 15-02-PLAN.md
-**Stopped At:** Phase 15 plan 02 complete, ready for plan 03
+**Last Session:** 2026-02-08 13:12 UTC — Completed 15-01-PLAN.md and 15-02-PLAN.md
+**Stopped At:** Phase 15 plans 01-02 complete, ready for plan 03
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 15 Plan 02 complete)*
+*Last updated: 2026-02-08 (Phase 15 Plans 01-02 complete)*
