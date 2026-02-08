@@ -17,6 +17,27 @@
   opacity: 0.6;
 }
 
+/* Property popup — glassmorphism "te koop" sign anchored to parcel */
+.propdex-property-popup {
+  z-index: var(--z-property-panel);
+}
+
+.propdex-property-popup .maplibregl-popup-content {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  padding: 6px 10px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.propdex-property-popup .maplibregl-popup-tip {
+  border-top-color: rgba(0, 0, 0, 0.55);
+}
+
 :root {
   /* Z-index scale (steps of 100 for flexibility) */
   --z-map-canvas: 0;

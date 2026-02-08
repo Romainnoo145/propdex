@@ -26,6 +26,7 @@ function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
+  const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -39,6 +40,7 @@ function MapPage() {
     // Show QuickCard immediately (for loading state)
     setTier('quick')
     setDemoData(null)
+    setPropertyLngLat(null)
 
     try {
       // PDOK suggest only returns id + weergavenaam, so look up full details
@@ -57,8 +59,10 @@ function MapPage() {
       if (details.centroide_ll && mapRef.current) {
         const match = details.centroide_ll.match(/POINT\(([^ ]+) ([^ ]+)\)/)
         if (match) {
+          const coords: [number, number] = [parseFloat(match[1]!), parseFloat(match[2]!)]
+          setPropertyLngLat(coords)
           mapRef.current.flyTo({
-            center: [parseFloat(match[1]!), parseFloat(match[2]!)],
+            center: coords,
             zoom: 17,
           })
         }
@@ -105,6 +109,7 @@ function MapPage() {
   // Handle QuickCard close (clears everything)
   const handleCloseQuickCard = useCallback(() => {
     setTier('none')
+    setPropertyLngLat(null)
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
     }
@@ -138,13 +143,15 @@ function MapPage() {
       <MapView mapRef={mapRef} />
       <AddressSearch onSelect={handleAddressSelect} />
 
-      {/* Tier 1: QuickCard */}
+      {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
       {tier === 'quick' && (
         <PropertyQuickCard
           data={demoData ?? lookup.data ?? null}
           isLoading={!demoData && lookup.isPending}
           onViewDetails={() => setTier('drawer')}
           onClose={handleCloseQuickCard}
+          mapRef={mapRef}
+          lngLat={propertyLngLat}
         />
       )}
 
