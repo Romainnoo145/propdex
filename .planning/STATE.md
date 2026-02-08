@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 **Milestone:** v2.0 Frontend
-**Phase:** 13 — Map Foundation & Layout
-**Plan:** 3 of 3
-**Status:** Complete (verified)
+**Phase:** 14 — Authentication & Security
+**Plan:** 1 of 3
+**Status:** In progress
 
-**Last activity:** 2026-02-08 — Phase 13 complete, 9/9 must-haves verified
+**Last activity:** 2026-02-08 — Completed 14-01-PLAN.md (httpOnly cookie auth)
 
-**Progress:** ██░░░░░░░░░░░░░░░░░░ 3/15 plans (20%)
+**Progress:** ████░░░░░░░░░░░░░░░░ 4/15 plans (27%)
 
 ---
 
@@ -40,7 +40,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-**Recent decisions (Phase 13):**
+**Recent decisions (Phase 14):**
+- httpOnly cookies for refresh tokens: Prevents XSS attacks from stealing refresh tokens
+- secure=False in development: Allows HTTP on localhost (production will use secure=True)
+- path=/api/auth: Limits cookie scope to auth endpoints only for security
+- Cookie-based refresh enables silent token refresh from frontend
+
+**Phase 13 decisions:**
 - React 19: Latest stable React with concurrent features
 - Tailwind v4: New Vite plugin architecture with @import syntax
 - ESLint 9: Flat config system with typescript-eslint
@@ -75,10 +81,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Phase 13 complete (verified)
-**Stopped At:** Phase 13 verified, ready for Phase 14
+**Last Session:** 2026-02-08 — Completed 14-01-PLAN.md
+**Stopped At:** Completed 14-01-PLAN.md (cookie-based refresh tokens)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 13 complete)*
+*Last updated: 2026-02-08 (14-01 complete)*
