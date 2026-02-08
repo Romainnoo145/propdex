@@ -51,11 +51,6 @@ export default function SideRailNav({
       label: 'Projecten',
       to: '/projecten',
     },
-    {
-      icon: <SettingsIcon />,
-      label: 'Instellingen',
-      to: '/instellingen',
-    },
   ]
 
   return (
@@ -114,14 +109,27 @@ export default function SideRailNav({
         </button>
       </div>
 
-      {/* Bottom section: Logout */}
-      <div className="mt-auto">
+      {/* Bottom section: Settings + Logout */}
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <Link to="/instellingen" className="group relative">
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
+              matchRoute({ to: '/instellingen' })
+                ? 'bg-white/15 text-white'
+                : 'text-white/50 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <SettingsIcon />
+          </div>
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+            Instellingen
+          </span>
+        </Link>
         <button
           onClick={handleLogout}
           className="group relative flex h-12 w-12 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
         >
           <LogoutIcon />
-          {/* Hover tooltip */}
           <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
             Uitloggen
           </span>
