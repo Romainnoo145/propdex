@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 **Milestone:** v2.0 Frontend
-**Phase:** 15 — Property Data & Map Interactions
-**Plan:** 5 of 5
-**Status:** Complete
+**Phase:** 16 — Property Details Reports
+**Plan:** 2 of 7
+**Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 15-05-PLAN.md (Integration Wiring & Visual Verification)
+**Last activity:** 2026-02-08 — Completed 16-02-PLAN.md (Side-Rail Navigation & App Shell)
 
-**Progress:** ███████████████████░ 47/47 plans (100%)
+**Progress:** ███████████████████░ 49/54 plans (91%)
 
 ---
 
@@ -63,6 +63,13 @@ See `.planning/PROJECT.md` Key Decisions table.
 - max-height transition for sections: CSS-only animation, smooth and performant
 - Desktop right sidebar, mobile bottom sheet: Maximizes map visibility on mobile
 - Touch event stopPropagation on panel: Prevents map panning when scrolling panel content
+
+**Phase 16-02 decisions:**
+- Side-rail width 64px (w-16): Icon-only navigation, standard touch target size (48px + padding)
+- Z-index 250 (between sidebar 200 and property-panel 300): Side-rail should be above map controls but below property panels
+- Hide side-rail on mobile (md:flex): Thin icon-only rail isn't mobile-friendly, saves screen space
+- Glassmorphism design (bg-black/30 backdrop-blur-xl): Consistent with Phase 15 map controls, allows map to show through
+- Default route redirects to /map (not /dashboard): Map is the primary interface, dashboard has no content yet
 
 **Phase 15-05 decisions:**
 - Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
@@ -111,15 +118,17 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Kadaster eigendomsdata requires paid API (deferred to post-v2.0)
 - Monument restrictions are generic boilerplate (not property-specific)
 - Parcel click/highlight not possible with WMS raster tiles (requires vector features or WFS, deferred to Phase 17)
+- Pre-existing Drawer.tsx type error: "Not all code paths return a value" (will fix in Phase 16-03)
+- Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet (deferred to future phase)
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 17:08 UTC — Completed 15-05-PLAN.md
-**Stopped At:** Phase 15 complete (5/5 plans), ready for Phase 16
+**Last Session:** 2026-02-08 17:29 UTC — Completed 16-02-PLAN.md
+**Stopped At:** Phase 16 plan 2 of 7 complete
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 15 complete — all 5 plans shipped)*
+*Last updated: 2026-02-08 (Phase 16 in progress — 2/7 plans complete)*
