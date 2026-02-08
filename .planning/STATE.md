@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 15 — Property Data & Map Interactions
-**Plan:** 2 of 5
+**Plan:** 3 of 5
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 15-01-PLAN.md (Frontend Data Layer) and 15-02-PLAN.md (Parcel Boundaries Layer)
+**Last activity:** 2026-02-08 — Completed 15-03-PLAN.md (Floating Address Search)
 
-**Progress:** ██████████████████░░ 44/47 plans (94%)
+**Progress:** ██████████████████░░ 45/47 plans (96%)
 
 ---
 
@@ -52,6 +52,11 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Blue tint (bg-blue-500/30) for overlay toggle vs white for base layer: Visual distinction between base layers and overlays
 - Lazy-load pattern for parcel source: Add only when first toggled, reduces initial map load
 - Dual layer approach: Line layer (visible) + fill layer (interaction target) for future click handling
+
+**Phase 15-03 decisions:**
+- No aria-* attributes or role="combobox": Keep implementation simple with basic semantic HTML
+- Focus always stays on input: Dropdown items not focusable, highlighted state is visual only
+- "Geen resultaten" only when not loading: Prevents flash during debounce/loading period
 
 **Phase 14 decisions:**
 - httpOnly cookies for refresh tokens: Prevents XSS attacks
@@ -97,10 +102,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 13:12 UTC — Completed 15-01-PLAN.md and 15-02-PLAN.md
-**Stopped At:** Phase 15 plans 01-02 complete, ready for plan 03
+**Last Session:** 2026-02-08 13:17 UTC — Completed 15-03-PLAN.md
+**Stopped At:** Phase 15 plan 03 complete, ready for plan 04
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 15 Plans 01-02 complete)*
+*Last updated: 2026-02-08 (Phase 15 Plan 03 complete)*
