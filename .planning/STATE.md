@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 15 — Property Data & Map Interactions
-**Plan:** 3 of 5
+**Plan:** 4 of 5
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 15-03-PLAN.md (Floating Address Search)
+**Last activity:** 2026-02-08 — Completed 15-04-PLAN.md (Property Detail Panel & Geometry Layer)
 
-**Progress:** ██████████████████░░ 45/47 plans (96%)
+**Progress:** ██████████████████░░ 46/47 plans (98%)
 
 ---
 
@@ -57,6 +57,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - No aria-* attributes or role="combobox": Keep implementation simple with basic semantic HTML
 - Focus always stays on input: Dropdown items not focusable, highlighted state is visual only
 - "Geen resultaten" only when not loading: Prevents flash during debounce/loading period
+
+**Phase 15-04 decisions:**
+- No external accordion/disclosure library: Simple controlled state, avoid Headless UI dependency
+- max-height transition for sections: CSS-only animation, smooth and performant
+- Desktop right sidebar, mobile bottom sheet: Maximizes map visibility on mobile
+- Touch event stopPropagation on panel: Prevents map panning when scrolling panel content
 
 **Phase 14 decisions:**
 - httpOnly cookies for refresh tokens: Prevents XSS attacks
@@ -102,10 +108,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 13:17 UTC — Completed 15-03-PLAN.md
-**Stopped At:** Phase 15 plan 03 complete, ready for plan 04
+**Last Session:** 2026-02-08 13:20 UTC — Completed 15-04-PLAN.md
+**Stopped At:** Phase 15 plan 04 complete, ready for plan 05
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 15 Plan 03 complete)*
+*Last updated: 2026-02-08 (Phase 15 Plan 04 complete)*
