@@ -7,9 +7,9 @@
  * @see https://www.pdok.nl/introductie/-/article/pdok-luchtfoto-rgb-open-
  */
 
-/** PDOK Aerial imagery (Luchtfoto RGB) — latest orthophotos */
+/** PDOK Aerial imagery (Luchtfoto HR) — latest 8cm orthophotos */
 export const PDOK_AERIAL_TILES =
-  'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho8RGB/EPSG:3857/{z}/{x}/{y}.jpeg';
+  'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg';
 
 /** PDOK Topographic map (BRT Achtergrondkaart) — standard Dutch topo */
 export const PDOK_TOPO_TILES =
