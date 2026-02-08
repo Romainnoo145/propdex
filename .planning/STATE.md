@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 16 — Property Details Reports
-**Plan:** 4 of 7
+**Plan:** 3 of 7
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 16-04-PLAN.md (Report API Client & Hooks)
+**Last activity:** 2026-02-09 — Completed 16-03-PLAN.md (Progressive Disclosure - Tier 1 & 2)
 
 **Progress:** ████████████████████ 51/54 plans (94%)
 
@@ -76,6 +76,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Hide side-rail on mobile (md:flex): Thin icon-only rail isn't mobile-friendly, saves screen space
 - Glassmorphism design (bg-black/30 backdrop-blur-xl): Consistent with Phase 15 map controls, allows map to show through
 - Default route redirects to /map (not /dashboard): Map is the primary interface, dashboard has no content yet
+
+**Phase 16-03 decisions:**
+- Tier state machine over boolean flags: Single enum (ViewTier = 'none' | 'quick' | 'drawer') prevents invalid states
+- QuickCard bottom-center positioning: Desktop centered at 6rem from bottom, mobile full width
+- Drawer close returns to QuickCard: Keeps geometry visible, user can review summary
+- Duplicated section content functions: PropertyDetailPanel is legacy reference, new components independent
 
 **Phase 16-04 decisions:**
 - 5-minute stale time for report lists: Reports don't change frequently
@@ -138,10 +144,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 17:41 UTC — Completed 16-04-PLAN.md
-**Stopped At:** Phase 16 plan 4 of 7 complete
+**Last Session:** 2026-02-09 — Completed 16-03-PLAN.md
+**Stopped At:** Phase 16 plan 3 of 7 complete
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 16 in progress — 4/7 plans complete)*
+*Last updated: 2026-02-09 (Phase 16 in progress — 3/7 plans complete)*
