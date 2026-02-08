@@ -16,9 +16,9 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 **Plan:** 2 of 7
 **Status:** In progress
 
-**Last activity:** 2026-02-08 — Completed 16-02-PLAN.md (Side-Rail Navigation & App Shell)
+**Last activity:** 2026-02-08 — Completed 16-01-PLAN.md (UI Primitives & Dependencies) and 16-02-PLAN.md (Side-Rail Navigation & App Shell)
 
-**Progress:** ███████████████████░ 49/54 plans (91%)
+**Progress:** ████████████████████ 50/54 plans (93%)
 
 ---
 
@@ -63,6 +63,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - max-height transition for sections: CSS-only animation, smooth and performant
 - Desktop right sidebar, mobile bottom sheet: Maximizes map visibility on mobile
 - Touch event stopPropagation on panel: Prevents map panning when scrolling panel content
+
+**Phase 16-01 decisions:**
+- cmdk + sonner + react-focus-lock: Three new dependencies for command palette, toasts, and focus management
+- Simplified animation pattern: Avoid setState in useEffect to satisfy ESLint rule, use CSS transitions directly
+- Glassmorphism styling: bg-black/40 backdrop-blur-xl border-white/15 matching existing design system
+- Drawer/Modal patterns: Reusable primitives with FocusLock, useEscapeKey, backdrop click-to-close, 3 size options
 
 **Phase 16-02 decisions:**
 - Side-rail width 64px (w-16): Icon-only navigation, standard touch target size (48px + padding)
@@ -118,15 +124,14 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Kadaster eigendomsdata requires paid API (deferred to post-v2.0)
 - Monument restrictions are generic boilerplate (not property-specific)
 - Parcel click/highlight not possible with WMS raster tiles (requires vector features or WFS, deferred to Phase 17)
-- Pre-existing Drawer.tsx type error: "Not all code paths return a value" (will fix in Phase 16-03)
 - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet (deferred to future phase)
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 17:29 UTC — Completed 16-02-PLAN.md
-**Stopped At:** Phase 16 plan 2 of 7 complete
+**Last Session:** 2026-02-08 17:33 UTC — Completed 16-01-PLAN.md
+**Stopped At:** Phase 16 plans 1 and 2 of 7 complete (executed out of order)
 **Resume File:** None
 
 ---
