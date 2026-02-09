@@ -44,6 +44,7 @@ function MapPage() {
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
+  const [mapReady, setMapReady] = useState(false)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -54,6 +55,21 @@ function MapPage() {
   const currentData = demoData ?? lookup.data ?? null
   const saveFlow = useSaveReportFlow(currentData)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
+
+  // Fly to property whenever coordinates are set and map is ready
+  useEffect(() => {
+    if (!propertyLngLat || !mapReady || !mapRef.current) return
+    mapRef.current.flyTo({ center: propertyLngLat, zoom: 17 })
+  }, [propertyLngLat, mapReady])
+
+  // Update geometry whenever data changes and map is ready
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+    const data = demoData ?? lookup.data ?? null
+    if (data) {
+      updatePropertyGeometry(mapRef.current, data)
+    }
+  }, [demoData, lookup.data, mapReady])
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
@@ -76,15 +92,10 @@ function MapPage() {
     setTier('drawer')
     /* eslint-enable react-hooks/set-state-in-effect */
 
-    // Fly to property location if coordinates available
+    // Set coordinates — flyTo handled by dedicated effect
     const coords = propertyData.map_data?.center_wgs84
     if (coords && coords.length === 2) {
-      const lngLat: [number, number] = [coords[0]!, coords[1]!]
-      setPropertyLngLat(lngLat)
-      if (mapRef.current) {
-        mapRef.current.flyTo({ center: lngLat, zoom: 17 })
-        updatePropertyGeometry(mapRef.current, propertyData)
-      }
+      setPropertyLngLat([coords[0]!, coords[1]!])
     }
 
     // Clear reportId from URL so it doesn't re-trigger
@@ -119,14 +130,7 @@ function MapPage() {
         onSuccess: (data) => {
           const coords = data.map_data?.center_wgs84
           if (coords && coords.length === 2) {
-            const lngLat: [number, number] = [coords[0]!, coords[1]!]
-            setPropertyLngLat(lngLat)
-            if (mapRef.current) {
-              mapRef.current.flyTo({ center: lngLat, zoom: 17 })
-            }
-          }
-          if (mapRef.current) {
-            updatePropertyGeometry(mapRef.current, data)
+            setPropertyLngLat([coords[0]!, coords[1]!])
           }
         },
         onError: () => {
@@ -135,12 +139,7 @@ function MapPage() {
             setDemoData(demo)
             const coords = demo.map_data?.center_wgs84
             if (coords && coords.length === 2) {
-              const lngLat: [number, number] = [coords[0]!, coords[1]!]
-              setPropertyLngLat(lngLat)
-              if (mapRef.current) {
-                mapRef.current.flyTo({ center: lngLat, zoom: 17 })
-                updatePropertyGeometry(mapRef.current, demo)
-              }
+              setPropertyLngLat([coords[0]!, coords[1]!])
             }
           }
         },
@@ -168,16 +167,11 @@ function MapPage() {
         return
       }
 
-      // Fly to address location if we have coordinates
-      if (details.centroide_ll && mapRef.current) {
+      // Extract coordinates — flyTo handled by dedicated effect
+      if (details.centroide_ll) {
         const match = details.centroide_ll.match(/POINT\(([^ ]+) ([^ ]+)\)/)
         if (match) {
-          const coords: [number, number] = [parseFloat(match[1]!), parseFloat(match[2]!)]
-          setPropertyLngLat(coords)
-          mapRef.current.flyTo({
-            center: coords,
-            zoom: 17,
-          })
+          setPropertyLngLat([parseFloat(match[1]!), parseFloat(match[2]!)])
         }
       }
 
@@ -186,9 +180,6 @@ function MapPage() {
         { postcode: pc, huisnummer: hn },
         {
           onSuccess: (data) => {
-            if (mapRef.current) {
-              updatePropertyGeometry(mapRef.current, data)
-            }
             addRecentItem({
               id: data.address.nummeraanduiding_id,
               report_name: `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter || ''}${data.address.toevoeging || ''}`,
@@ -270,7 +261,7 @@ function MapPage() {
 
   return (
     <AppLayout>
-      <MapView mapRef={mapRef} />
+      <MapView mapRef={mapRef} onMapReady={() => setMapReady(true)} />
       <AddressSearch onSelect={handleAddressSelect} />
 
       {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
