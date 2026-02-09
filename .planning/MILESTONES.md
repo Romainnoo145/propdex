@@ -51,3 +51,33 @@
 **What's next:** v1.1 Production Hardening (tests, RLS, config cleanup)
 
 ---
+
+## v2.0 Frontend (Shipped: 2026-02-09)
+
+**Delivered:** Map-first web interface for Dutch property intelligence — full-page MapLibre map with PDOK aerial/topographic tiles, floating address search with autocomplete, three-tier progressive disclosure property panels, report management sidebar, project folders, and responsive mobile support.
+
+**Phases completed:** 13-17 (24 plans total)
+
+**Key accomplishments:**
+- Full-page MapLibre map with PDOK aerial imagery, topographic tiles, layer toggle, and kadaster parcel boundary overlay (WMS)
+- JWT authentication with httpOnly refresh cookies, silent token refresh, protected routes, and backend cookie endpoint
+- Floating address search with PDOK Locatieserver autocomplete, keyboard navigation, and fly-to-location
+- Three-tier progressive disclosure (QuickCard → Drawer → Modal) with property geometry rendering and freshness indicators
+- Report management sidebar with cmdk search, save/export flows, PDF modal, and recent viewed tracking
+- Project folders with CRUD operations, report-to-project assignment, and sidebar filtering
+- Responsive Drawer (desktop right panel, mobile bottom sheet), confidence badges, force refresh, and full detail report page
+
+**Stats:**
+- 149 files created/modified
+- 8,804 lines of TypeScript/React
+- 5 phases, 24 plans, 117 commits
+- 2 days (2026-02-08 → 2026-02-09)
+
+**Stack:** React 19, Vite 7, TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, Tailwind v4, pnpm
+
+**Git range:** v1.1 → v2.0
+
+**What's next:** TBD — run `/gsd:new-milestone`
+
+---
+

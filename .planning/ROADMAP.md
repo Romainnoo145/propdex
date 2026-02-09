@@ -2,62 +2,28 @@
 
 ## Milestones
 
-- ACTIVE **v2.0 Frontend** — Phases 13-17 (map-first React SPA)
-- SHIPPED **v1.1 Production Hardening** — Phases 6-12 (shipped 2026-02-08)
-- SHIPPED **v1.0 Core Intelligence Engine** — Phases 1-5 (shipped 2026-02-07)
+- ✅ **v2.0 Frontend** — Phases 13-17 (shipped 2026-02-09)
+- ✅ **v1.1 Production Hardening** — Phases 6-12 (shipped 2026-02-08)
+- ✅ **v1.0 Core Intelligence Engine** — Phases 1-5 (shipped 2026-02-07)
 
-## Active: v2.0 Frontend (Phases 13-17)
-
-**Goal:** Map-first web interface — full-page MapLibre map with PDOK tiles, floating search, property detail panels, and report management sidebar.
-
-**Stack:** React 19, Vite 7, TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, Tailwind v4, pnpm
-
-- [x] Phase 13: Map Foundation & Layout — React/Vite scaffold, full-page MapLibre map, ESRI/CartoDB tiles, layer toggle, memory cleanup patterns, z-index scale (R1)
-  **Plans:** 3/3 complete
-  - [x] 13-01-PLAN.md — Vite + React + TypeScript scaffold with tooling, z-index scale, tile constants
-  - [x] 13-02-PLAN.md — MapLibre map component with tile layers, imperative state, cleanup, AppLayout
-  - [x] 13-03-PLAN.md — Layer toggle (satellite/kaart) and visual verification
-- [x] Phase 14: Authentication & Security — Login/register flow, JWT in memory + httpOnly refresh cookie, silent refresh, protected routes, CORS config, backend cookie endpoint (R2, R8)
-  **Plans:** 5/5 complete
-  - [x] 14-01-PLAN.md — Backend cookie endpoints (httpOnly refresh tokens)
-  - [x] 14-02-PLAN.md — TanStack Router scaffold + auth dependencies
-  - [x] 14-03-PLAN.md — AuthContext, silent refresh, loading screen, useAuth
-  - [x] 14-04-PLAN.md — Auth UI components (login/register forms, Google OAuth, tabs)
-  - [x] 14-05-PLAN.md — Integration wiring + visual verification
-- [x] Phase 15: Property Data & Map Interactions — Floating search with autocomplete, address lookup, property detail panel, parcel boundaries, property geometry rendering (R3, R4, R5)
-  **Plans:** 5/5 complete
-  - [x] 15-01-PLAN.md — TypeScript types, API client, TanStack Query hooks (suggest + lookup)
-  - [x] 15-02-PLAN.md — PDOK parcel boundaries WMS layer + percelen toggle
-  - [x] 15-03-PLAN.md — Floating address search bar with autocomplete + keyboard navigation
-  - [x] 15-04-PLAN.md — Property detail panel with progressive disclosure + geometry layers
-  - [x] 15-05-PLAN.md — Integration wiring + visual verification
-- [x] Phase 16: Property Details & Reports — Three-tier progressive disclosure (QuickCard → Drawer → Modal), side-rail navigation, report save/list/search sidebar, PDF export, freshness indicators, source badges (R6)
-  **Plans:** 7/7 complete
-  - [x] 16-01-PLAN.md — Dependencies (cmdk, sonner, react-focus-lock), UI primitives (Drawer, Modal), report types
-  - [x] 16-02-PLAN.md — Side-rail navigation, app shell restructure, placeholder routes
-  - [x] 16-03-PLAN.md — PropertyQuickCard (Tier 1) + PropertyDetailDrawer (Tier 2) with tier state machine
-  - [x] 16-04-PLAN.md — Report API client, TanStack Query hooks, recent viewed localStorage hook
-  - [x] 16-05-PLAN.md — Report sidebar with cmdk search, report cards, recent viewed, empty state
-  - [x] 16-06-PLAN.md — Freshness indicators + source badges per section in drawer
-  - [x] 16-07-PLAN.md — Save/export flow, PDF modal, sidebar → map navigation, integration wiring
-- [ ] Phase 17: Projects & Polish — Project folders CRUD, report-to-project assignment, mobile bottom sheet, monument badges, AI zoning display, force refresh (R7, R9)
-  **Plans:** 4 plans
-  - [ ] 17-01-PLAN.md — Project types, API client functions, TanStack Query hooks
-  - [ ] 17-02-PLAN.md — ConfidenceBadge, monument badge on QuickCard, mobile bottom sheet, AI zoning display
-  - [ ] 17-03-PLAN.md — Project CRUD UI (Projecten page), sidebar project filter + report assignment
-  - [ ] 17-04-PLAN.md — Responsive Drawer integration, force refresh wiring, visual verification
-
-**Dependency chain:**
-```
-Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) → Phase 17 (Polish)
-```
-
-**Requirements:** See REQUIREMENTS.md (9 requirements)
-
-## Shipped
+## Phases
 
 <details>
-<summary>v1.1 Production Hardening (Phases 6-12) — SHIPPED 2026-02-08</summary>
+<summary>✅ v2.0 Frontend (Phases 13-17) — SHIPPED 2026-02-09</summary>
+
+- [x] Phase 13: Map Foundation & Layout (3/3 plans) — React/Vite scaffold, full-page MapLibre map, layer toggle
+- [x] Phase 14: Authentication & Security (5/5 plans) — JWT httpOnly cookies, silent refresh, protected routes
+- [x] Phase 15: Property Data & Map Interactions (5/5 plans) — Address search, property lookup, parcel boundaries
+- [x] Phase 16: Property Details & Reports (7/7 plans) — Three-tier disclosure, report sidebar, PDF export
+- [x] Phase 17: Projects & Polish (4/4 plans) — Project CRUD, responsive drawer, force refresh, report detail page
+
+**24 plans, 9 requirements, 8,804 LOC TypeScript/React**
+**Archive:** `.planning/milestones/v2.0-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v1.1 Production Hardening (Phases 6-12) — SHIPPED 2026-02-08</summary>
 
 - [x] Phase 6: Security & Configuration (3/3 plans) — RLS enforcement, config consolidation, per-org freshness
 - [x] Phase 7: Test Infrastructure & Auth Testing (2/2 plans) — test framework, 51 auth tests, Phase 1 verification
@@ -73,7 +39,7 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 </details>
 
 <details>
-<summary>v1.0 Core Intelligence Engine (Phases 1-5) — SHIPPED 2026-02-07</summary>
+<summary>✅ v1.0 Core Intelligence Engine (Phases 1-5) — SHIPPED 2026-02-07</summary>
 
 - [x] Phase 1: Foundation & Authentication (3/3 plans) — JWT auth, multi-tenant RLS, email verification, Google OAuth, rate limiting
 - [x] Phase 2: Core Data Pipeline (3/3 plans) — httpx client, JSONB cache, BAG/PDOK APIs, property aggregator
@@ -108,8 +74,8 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 | 14. Authentication & Security | v2.0 | 5/5 | Complete | 2026-02-08 |
 | 15. Property Data & Map Interactions | v2.0 | 5/5 | Complete | 2026-02-09 |
 | 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
-| 17. Projects & Polish | v2.0 | 0/4 | In Progress | — |
+| 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
 
 ---
 
-*Last updated: 2026-02-09 (Phase 17 planned — 4 plans in 3 waves)*
+*Last updated: 2026-02-09 (v2.0 Frontend milestone complete)*
