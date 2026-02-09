@@ -136,7 +136,7 @@ export default function ProjectCreateModal({
               <button
                 type="submit"
                 disabled={createMutation.isPending || !name.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {createMutation.isPending ? 'Aanmaken...' : 'Aanmaken'}
               </button>
