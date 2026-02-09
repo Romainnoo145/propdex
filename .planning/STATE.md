@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 16 — Property Details Reports
-**Plan:** 5 of 7
-**Status:** In progress
+**Plan:** 7 of 7
+**Status:** Complete
 
-**Last activity:** 2026-02-08 — Completed 16-05-PLAN.md (Report Sidebar & Search)
+**Last activity:** 2026-02-09 — Completed 16-07-PLAN.md (Save/Export/Navigate Integration)
 
-**Progress:** ████████████████████ 52/54 plans (96%)
+**Progress:** ████████████████████ 53/54 plans (98%)
 
 ---
 
@@ -97,6 +97,13 @@ See `.planning/PROJECT.md` Key Decisions table.
 - "Geen project" section expanded by default: Most reports start without project assignment
 - Sidebar z-index var(--z-sidebar) (200): Consistent with CSS variable scale, below side-rail (250)
 
+**Phase 16-07 decisions:**
+- ViewTier state machine over boolean flags: Single enum ('none' | 'quick' | 'drawer' | 'modal') prevents invalid states
+- Search param navigation (reportId/postcode/huisnummer): Type-safe deep linking with TanStack Router, enables back/forward and URL sharing
+- Ref-based duplicate prevention (handledSearchRef/handledReportRef): Prevent re-triggers when effects run multiple times
+- Toast ID pattern for loading → success/error transitions: Single morphing toast instead of multiple toasts for better UX
+- Saved report ID in local state: Persist across renders for PDF export, separate from mutation result that clears on unmount
+
 **Phase 15-05 decisions:**
 - Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
 - Two-step PDOK flow (suggest → lookup): Extract postcode/huisnummer from suggestion ID
@@ -150,10 +157,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-08 — Completed 16-05-PLAN.md
-**Stopped At:** Phase 16 plan 5 of 7 complete
+**Last Session:** 2026-02-09 — Completed 16-07-PLAN.md
+**Stopped At:** Phase 16 complete (7/7 plans)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-08 (Phase 16 in progress — 5/7 plans complete)*
+*Last updated: 2026-02-09 (Phase 16 complete — ready for next phase)*
