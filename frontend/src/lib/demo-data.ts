@@ -220,7 +220,88 @@ const DEMO_PROPERTIES: Record<string, PropertyReportResponse> = {
     completeness_score: 0.95,
     errors: [],
     resolved_at: recentTimestamp(0),
-    ai_parsing: null,
+    ai_parsing: {
+      parsed_plan: {
+        plan_naam: 'Centrum Venlo',
+        plan_idn: 'NL.IMRO.0983.BP201227CENTRVENLO-VA02',
+        regels: [
+          {
+            artikel: 'Art. 6',
+            bestemming: 'Centrum',
+            toegestane_gebruiken: [
+              'Detailhandel',
+              'Horeca categorie 1',
+              'Dienstverlening',
+              'Kantoren',
+              'Wonen op verdiepingen',
+              'Maatschappelijke voorzieningen',
+            ],
+            verboden_gebruiken: [
+              'Industrie',
+              'Autowasstraat',
+              'Seksinrichting',
+              'Zelfstandige opslag',
+            ],
+            bouwregels: {
+              max_bouwhoogte: 15,
+              max_goothoogte: 12,
+              max_bebouwingspercentage: 100,
+              max_oppervlakte: null,
+              max_inhoud: null,
+              overige: {
+                'Minimale dakhelling': '30°',
+                'Voorgevelrooilijn': 'Bestaand',
+              },
+            },
+            parkeereis: 'Conform gemeentelijk parkeerbeleid (1,3 pp/woning, 1 pp/100m² commercieel)',
+            milieu_restricties: [
+              'Geluidzone industrielawaai — max. 50 dB(A) op gevel',
+              'Beschermd stadsgezicht — geen afwijking vormgeving zonder welstandsadvies',
+            ],
+            bijzondere_voorwaarden: [
+              'Monumentenvergunning vereist (Wabo art. 2.1 lid 1 sub f)',
+              'Archeologisch onderzoek bij bodemingrepen dieper dan 30cm',
+              'Beeldkwaliteitsplan centrum van toepassing',
+            ],
+            confidence: 'HIGH',
+            disclaimer: null,
+          },
+          {
+            artikel: 'Art. 28',
+            bestemming: 'Waarde - Beschermd stadsgezicht',
+            toegestane_gebruiken: [
+              'Behoud cultuurhistorische waarden',
+              'Herstel karakteristieke panden',
+            ],
+            verboden_gebruiken: [
+              'Sloop zonder vergunning',
+              'Wijziging gevelbeeld',
+              'Aanbouwen zichtbaar vanaf openbaar gebied',
+            ],
+            bouwregels: null,
+            parkeereis: null,
+            milieu_restricties: [],
+            bijzondere_voorwaarden: [
+              'Advies Rijksdienst voor het Cultureel Erfgoed vereist bij verbouwing',
+              'Oorspronkelijke materialen en kleurstellingen handhaven',
+            ],
+            confidence: 'HIGH',
+            disclaimer: null,
+          },
+        ],
+        overall_confidence: 'HIGH',
+        disclaimers: [
+          'Deze analyse is gebaseerd op digitaal beschikbare bestemmingsplannen en kan afwijken van de meest recente wijzigingen.',
+          'Raadpleeg altijd de gemeente voor de actuele juridische status.',
+        ],
+        samenvatting: 'Het pand ligt in het bestemmingsplan Centrum Venlo met een centrumbestemming die detailhandel, horeca en wonen toestaat. Als Rijksmonument gelden aanvullende beperkingen op verbouwingen. Bouwregels staan maximaal 15 meter bouwhoogte toe bij 100% bebouwingspercentage.',
+      },
+      job_id: 'demo-job-001',
+      status: 'complete',
+      upload_required: false,
+      error_message: null,
+      disclaimer_banner: 'AI-gegenereerde analyse — verifieer bij de gemeente',
+    },
   },
 
   /**

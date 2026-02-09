@@ -109,8 +109,9 @@ export default function ProjectList() {
     const streetPart = report.report_name.split(',')[0] ?? ''
     const hn = streetPart.match(/\d+/)?.[0] ?? '1'
     navigate({
-      to: '/map',
-      search: { postcode: report.postcode, huisnummer: hn },
+      to: '/rapport/$id',
+      params: { id: report.id },
+      search: { postcode: report.postcode, huisnummer: parseInt(hn, 10) },
     })
   }
 
