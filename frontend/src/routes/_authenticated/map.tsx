@@ -11,6 +11,7 @@ import { PDFExportModal } from '@/components/reports/PDFExportModal'
 import { useSaveReportFlow } from '@/components/reports/SaveReportFlow'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { useRecentViewed } from '@/hooks/useRecentViewed'
+import { useReport } from '@/hooks/useReports'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
 import { lookupPdokAddress } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
@@ -38,12 +39,15 @@ type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
 function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const navigate = useNavigate()
-  const { postcode, huisnummer } = Route.useSearch()
+  const { postcode, huisnummer, reportId } = Route.useSearch()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
+
+  // Fetch saved report if reportId provided
+  const savedReport = useReport(reportId || null)
 
   // Save/export flow
   const currentData = demoData ?? lookup.data ?? null
@@ -52,6 +56,39 @@ function MapPage() {
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
+  const handledReportRef = useRef<string | null>(null)
+
+  // Handle saved report loading (from sidebar report selection)
+  useEffect(() => {
+    if (!reportId || !savedReport.data) return
+
+    // Prevent re-triggering for the same report
+    if (handledReportRef.current === reportId) return
+    handledReportRef.current = reportId
+
+    // Extract PropertyReportResponse from saved report's report_data
+    const propertyData = savedReport.data.report_data as unknown as PropertyReportResponse
+
+    /* eslint-disable react-hooks/set-state-in-effect -- intentional sync reset */
+    setDemoData(propertyData)
+    setSavedReportId(reportId)
+    setTier('drawer')
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    // Fly to property location if coordinates available
+    const coords = propertyData.map_data?.center_wgs84
+    if (coords && coords.length === 2) {
+      const lngLat: [number, number] = [coords[0]!, coords[1]!]
+      setPropertyLngLat(lngLat)
+      if (mapRef.current) {
+        mapRef.current.flyTo({ center: lngLat, zoom: 17 })
+        updatePropertyGeometry(mapRef.current, propertyData)
+      }
+    }
+
+    // Clear reportId from URL so it doesn't re-trigger
+    navigate({ to: '/map', search: {}, replace: true })
+  }, [reportId, savedReport.data, navigate])
 
   // Handle incoming search params (from recent viewed / report sidebar)
   useEffect(() => {
