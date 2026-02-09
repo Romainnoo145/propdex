@@ -19,9 +19,16 @@ import type {
   ReportSaveRequest,
   ReportFreshnessResponse,
 } from './types/report'
+import type {
+  ProjectCreate,
+  ProjectUpdate,
+  ProjectResponse,
+  ProjectListResponse,
+} from './types/project'
 
 const API_BASE = '/api/properties'
 const REPORTS_BASE = '/api/reports'
+const PROJECTS_BASE = '/api/projects'
 const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
 
 /**
@@ -352,5 +359,121 @@ export async function fetchCities(
   return apiFetch<string[]>(`${REPORTS_BASE}/cities`, {
     method: 'GET',
     accessToken,
+  })
+}
+
+/**
+ * Fetch list of projects
+ *
+ * GET /api/projects
+ *
+ * @param accessToken - JWT access token from useAuth()
+ * @returns List of projects with report counts
+ */
+export async function fetchProjects(
+  accessToken: string | null
+): Promise<ProjectListResponse> {
+  return apiFetch<ProjectListResponse>(PROJECTS_BASE, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/**
+ * Create a new project
+ *
+ * POST /api/projects
+ *
+ * @param data - Project creation data (name + optional description)
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Created project with report_count=0
+ */
+export async function createProject(
+  data: ProjectCreate,
+  accessToken: string | null
+): Promise<ProjectResponse> {
+  return apiFetch<ProjectResponse>(PROJECTS_BASE, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * Update an existing project
+ *
+ * PATCH /api/projects/{projectId}
+ *
+ * @param projectId - Project UUID
+ * @param data - Project update data (name and/or description)
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Updated project with report_count
+ */
+export async function updateProject(
+  projectId: string,
+  data: ProjectUpdate,
+  accessToken: string | null
+): Promise<ProjectResponse> {
+  return apiFetch<ProjectResponse>(`${PROJECTS_BASE}/${projectId}`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * Delete a project
+ *
+ * DELETE /api/projects/{projectId}
+ *
+ * Sets all reports' project_id to NULL (FK ondelete=SET NULL).
+ * Hard deletes the project.
+ *
+ * @param projectId - Project UUID to delete
+ * @param accessToken - JWT access token from useAuth()
+ */
+export async function deleteProject(
+  projectId: string,
+  accessToken: string | null
+): Promise<void> {
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(`${PROJECTS_BASE}/${projectId}`, {
+    method: 'DELETE',
+    headers,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Delete failed with status ${response.status}` }))
+    throw new Error(error.detail || `Delete failed with status ${response.status}`)
+  }
+}
+
+/**
+ * Assign a report to a project (or remove from project)
+ *
+ * PATCH /api/reports/{reportId}/project
+ *
+ * @param reportId - Report UUID
+ * @param projectId - Project UUID (or null to remove from project)
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Updated report detail
+ */
+export async function assignReportToProject(
+  reportId: string,
+  projectId: string | null,
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/${reportId}/project`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify({ project_id: projectId }),
   })
 }
