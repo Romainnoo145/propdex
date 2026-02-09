@@ -4,6 +4,7 @@ import PropertySummary from './PropertySummary';
 import PropertySection from './PropertySection';
 import { FreshnessIndicator, FRESHNESS_THRESHOLDS } from './FreshnessIndicator';
 import { SourceBadge } from './SourceBadge';
+import { ConfidenceBadge } from './ConfidenceBadge';
 
 interface PropertyDetailDrawerProps {
   data: PropertyReportResponse | null;
@@ -47,6 +48,28 @@ export function PropertyDetailDrawer({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
+          {/* Force refresh button */}
+          {onRefreshAll && (
+            <button
+              onClick={onRefreshAll}
+              disabled={isRefreshing}
+              className="text-xs text-white/50 hover:text-white hover:bg-white/10 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Alle data opnieuw ophalen"
+              title="Alle data opnieuw ophalen"
+            >
+              {isRefreshing ? (
+                'Bezig...'
+              ) : (
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Ververs
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Save/Bookmark button */}
           <button
             onClick={onSave}
@@ -440,6 +463,47 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* AI Interpretation Section */}
+      {data.ai_parsing?.parsed_plan && data.ai_parsing.status === 'complete' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-white/70 text-xs uppercase tracking-wide">
+              AI Interpretatie
+            </span>
+            <ConfidenceBadge confidence={data.ai_parsing.parsed_plan.overall_confidence} />
+          </div>
+
+          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+            <p className="text-white/80 text-sm">
+              {data.ai_parsing.parsed_plan.samenvatting}
+            </p>
+          </div>
+
+          {/* LOW confidence warning */}
+          {data.ai_parsing.parsed_plan.overall_confidence === 'LOW' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
+              <svg className="w-4 h-4 text-yellow-200 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-yellow-200/90 text-xs">
+                Verifieer handmatig -- AI interpretatie mogelijk onvolledig
+              </span>
+            </div>
+          )}
+
+          {/* Disclaimers */}
+          {data.ai_parsing.parsed_plan.disclaimers && data.ai_parsing.parsed_plan.disclaimers.length > 0 && (
+            <div className="space-y-1">
+              {data.ai_parsing.parsed_plan.disclaimers.map((disclaimer, idx) => (
+                <p key={idx} className="text-white/40 text-xs italic">
+                  {disclaimer}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
