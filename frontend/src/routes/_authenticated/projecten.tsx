@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/router'
 import AppLayout from '@/components/layout/AppLayout'
+import ProjectList from '@/components/projects/ProjectList'
 
 export const Route = createFileRoute('/_authenticated/projecten')({
   component: ProjectenPage,
@@ -8,11 +10,17 @@ export const Route = createFileRoute('/_authenticated/projecten')({
 function ProjectenPage() {
   return (
     <AppLayout>
-      <div className="flex h-full items-center justify-center">
-        <div className="rounded-xl border border-white/10 bg-black/30 p-8 text-center backdrop-blur-xl">
+      <div className="mx-auto h-full max-w-4xl overflow-y-auto px-8 py-6">
+        {/* Header */}
+        <div className="mb-6">
           <h1 className="text-2xl font-semibold text-white">Projecten</h1>
-          <p className="mt-2 text-white/70">Binnenkort beschikbaar</p>
+          <p className="mt-1 text-white/50">
+            Organiseer je rapporten in projectmappen
+          </p>
         </div>
+
+        {/* Project list */}
+        <ProjectList />
       </div>
     </AppLayout>
   )
