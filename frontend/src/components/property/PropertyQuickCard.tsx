@@ -51,6 +51,9 @@ export function PropertyQuickCard({
     popup.on('close', onClose);
 
     return () => {
+      // Unsubscribe BEFORE removing to prevent cascading setTier('none')
+      // when unmount is triggered by a tier change (e.g. 'quick' → 'drawer')
+      popup.off('close', onClose);
       popup.remove();
       popupRef.current = null;
     };

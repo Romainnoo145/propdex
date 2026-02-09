@@ -36,12 +36,11 @@ function AuthenticatedLayout() {
   }
 
   const handleSelectRecent = (item: RecentItem) => {
-    // Navigate to map with recent item postcode - triggers new lookup
     navigate({
       to: '/map',
       search: {
         postcode: item.postcode,
-        nummeraanduiding_id: item.id,
+        huisnummer: item.huisnummer,
       },
     })
     setSidebarOpen(false)

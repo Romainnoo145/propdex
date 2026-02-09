@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useRef, useState, useCallback } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import type maplibregl from 'maplibre-gl'
 import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
@@ -16,14 +16,29 @@ import { lookupPdokAddress } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 
+interface MapSearchParams {
+  postcode?: string
+  huisnummer?: number
+  reportId?: string
+}
+
 export const Route = createFileRoute('/_authenticated/map')({
   component: MapPage,
+  validateSearch: (search: Record<string, unknown>): MapSearchParams => ({
+    postcode: typeof search.postcode === 'string' ? search.postcode : undefined,
+    huisnummer: typeof search.huisnummer === 'number' ? search.huisnummer
+      : typeof search.huisnummer === 'string' ? parseInt(search.huisnummer, 10) || undefined
+      : undefined,
+    reportId: typeof search.reportId === 'string' ? search.reportId : undefined,
+  }),
 })
 
 type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
 
 function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const navigate = useNavigate()
+  const { postcode, huisnummer } = Route.useSearch()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
@@ -34,6 +49,62 @@ function MapPage() {
   const currentData = demoData ?? lookup.data ?? null
   const saveFlow = useSaveReportFlow(currentData)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
+
+  // Track whether we've already handled the current search params
+  const handledSearchRef = useRef<string | null>(null)
+
+  // Handle incoming search params (from recent viewed / report sidebar)
+  useEffect(() => {
+    if (!postcode || !huisnummer) return
+
+    // Prevent re-triggering for the same params
+    const key = `${postcode}-${huisnummer}`
+    if (handledSearchRef.current === key) return
+    handledSearchRef.current = key
+
+    /* eslint-disable react-hooks/set-state-in-effect -- intentional sync reset before async mutation */
+    setTier('quick')
+    setDemoData(null)
+    setPropertyLngLat(null)
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    lookup.mutate(
+      { postcode, huisnummer },
+      {
+        onSuccess: (data) => {
+          const coords = data.map_data?.center_wgs84
+          if (coords && coords.length === 2) {
+            const lngLat: [number, number] = [coords[0]!, coords[1]!]
+            setPropertyLngLat(lngLat)
+            if (mapRef.current) {
+              mapRef.current.flyTo({ center: lngLat, zoom: 17 })
+            }
+          }
+          if (mapRef.current) {
+            updatePropertyGeometry(mapRef.current, data)
+          }
+        },
+        onError: () => {
+          const demo = getDemoProperty(postcode, huisnummer)
+          if (demo) {
+            setDemoData(demo)
+            const coords = demo.map_data?.center_wgs84
+            if (coords && coords.length === 2) {
+              const lngLat: [number, number] = [coords[0]!, coords[1]!]
+              setPropertyLngLat(lngLat)
+              if (mapRef.current) {
+                mapRef.current.flyTo({ center: lngLat, zoom: 17 })
+                updatePropertyGeometry(mapRef.current, demo)
+              }
+            }
+          }
+        },
+      }
+    )
+
+    // Clear search params so they don't re-trigger
+    navigate({ to: '/map', search: {}, replace: true })
+  }, [postcode, huisnummer, lookup, navigate])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
@@ -46,10 +117,10 @@ function MapPage() {
       // PDOK suggest only returns id + weergavenaam, so look up full details
       const details = await lookupPdokAddress(suggestion.id)
 
-      const postcode = details.postcode?.replace(/\s/g, '')
-      const huisnummer = details.huisnummer
+      const pc = details.postcode?.replace(/\s/g, '')
+      const hn = details.huisnummer
 
-      if (!postcode || !huisnummer) {
+      if (!pc || !hn) {
         console.warn('Could not extract postcode/huisnummer from PDOK lookup:', details)
         setTier('none')
         return
@@ -70,30 +141,29 @@ function MapPage() {
 
       // Trigger property lookup mutation with demo fallback
       lookup.mutate(
-        { postcode, huisnummer },
+        { postcode: pc, huisnummer: hn },
         {
           onSuccess: (data) => {
             if (mapRef.current) {
               updatePropertyGeometry(mapRef.current, data)
             }
-            // Track in recent viewed
             addRecentItem({
               id: data.address.nummeraanduiding_id,
               report_name: `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter || ''}${data.address.toevoeging || ''}`,
               postcode: data.address.postcode,
+              huisnummer: data.address.huisnummer,
               woonplaats: data.address.woonplaats,
             })
           },
           onError: () => {
-            // Backend unavailable — try demo data fallback
-            const demo = getDemoProperty(postcode, huisnummer)
+            const demo = getDemoProperty(pc, hn)
             if (demo) {
               setDemoData(demo)
-              // Track demo data in recent viewed
               addRecentItem({
                 id: demo.address.nummeraanduiding_id,
                 report_name: `${demo.address.straat} ${demo.address.huisnummer}${demo.address.huisletter || ''}${demo.address.toevoeging || ''}`,
                 postcode: demo.address.postcode,
+                huisnummer: demo.address.huisnummer,
                 woonplaats: demo.address.woonplaats,
               })
             }

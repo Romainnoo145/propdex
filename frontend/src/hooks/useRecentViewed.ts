@@ -31,6 +31,7 @@ export interface RecentItem {
   id: string              // nummeraanduiding_id
   report_name: string     // "Straat Huisnummer"
   postcode: string
+  huisnummer: number
   woonplaats: string
   viewed_at: number       // Date.now() timestamp
 }
