@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 **Milestone:** v2.0 Frontend
-**Phase:** 16 — Property Details Reports
-**Plan:** 7 of 7
-**Status:** Complete
+**Phase:** 17 — Projects & Polish
+**Plan:** 1 of 7
+**Status:** In Progress
 
-**Last activity:** 2026-02-09 — Completed 16-07-PLAN.md (Save/Export/Navigate Integration)
+**Last activity:** 2026-02-09 — Completed 17-01-PLAN.md (Project Data Layer)
 
-**Progress:** ████████████████████ 53/54 plans (98%)
+**Progress:** ████████████████████ 54/54 plans (100%)
 
 ---
 
@@ -104,6 +104,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Toast ID pattern for loading → success/error transitions: Single morphing toast instead of multiple toasts for better UX
 - Saved report ID in local state: Persist across renders for PDF export, separate from mutation result that clears on unmount
 
+**Phase 17-01 decisions:**
+- 10-minute stale time for projects: Longer than reports (5 min) because projects change less frequently
+- useUpdateProject invalidates report lists: Project name changes affect report grouping labels in sidebar
+- useDeleteProject invalidates report lists: Reports move to "Geen project" section when project deleted
+- useAssignReportToProject invalidates all three caches: Specific report, all reports, all projects (report counts change)
+
 **Phase 15-05 decisions:**
 - Direct PDOK Locatieserver calls from frontend: No backend proxy needed, PDOK is public, faster autocomplete
 - Two-step PDOK flow (suggest → lookup): Extract postcode/huisnummer from suggestion ID
@@ -157,10 +163,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-09 — Completed 16-07-PLAN.md
-**Stopped At:** Phase 16 complete (7/7 plans)
+**Last Session:** 2026-02-09 — Completed 17-01-PLAN.md
+**Stopped At:** Phase 17 plan 1 complete (1/7 plans)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-09 (Phase 16 complete — ready for next phase)*
+*Last updated: 2026-02-09 (Phase 17 started — project data layer complete)*
