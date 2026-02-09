@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 17 — Projects & Polish
-**Plan:** 2 of 7
+**Plan:** 3 of 7
 **Status:** In Progress
 
-**Last activity:** 2026-02-09 — Completed 17-02-PLAN.md (Mobile Polish & Confidence Indicators)
+**Last activity:** 2026-02-09 — Completed 17-03-PLAN.md (Project UI)
 
-**Progress:** ████████████████████ 55/55 plans (100%)
+**Progress:** [██████████] 98%
 
 ---
 
@@ -104,6 +104,13 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Toast ID pattern for loading → success/error transitions: Single morphing toast instead of multiple toasts for better UX
 - Saved report ID in local state: Persist across renders for PDF export, separate from mutation result that clears on unmount
 
+**Phase 17-03 decisions:**
+- Project name lookup map: Convert project_id UUIDs to names for display, prevents showing raw UUIDs in UI
+- Sorted groups with "Geen project" first: Always show unassigned reports at top, then alphabetical project order
+- Inline assignment dropdowns: Quick project assignment directly in sidebar without modal or extra clicks
+- Increased maxHeight per report: Changed from 100px to 150px to accommodate assignment dropdown below each ReportCard
+- Centered modal pattern: Reuse glassmorphism styling but center on screen (not right-sliding drawer)
+
 **Phase 17-02 decisions:**
 - ConfidenceBadge color scheme (green/yellow/red): Semantic color mapping with 20% bg opacity and 40% border opacity provides clear visual hierarchy on glassmorphism backgrounds
 - Monument badge inline placement in QuickCard: Compact horizontal layout fits popup constraints without disrupting "te koop" sign aesthetic
@@ -170,8 +177,8 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-09 — Completed 17-02-PLAN.md
-**Stopped At:** Phase 17 plan 2 complete (2/7 plans)
+**Last Session:** 2026-02-09T09:56:16.425Z
+**Stopped At:** Completed 17-03-PLAN.md (Project UI)
 **Resume File:** None
 
 ---
