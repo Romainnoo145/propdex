@@ -4,20 +4,21 @@
 
 See: .planning/PROJECT.md (updated 2026-02-09)
 
-**Core value:** Address -> Property Intelligence Report
-**Current focus:** Planning next milestone
+**Core value:** Area -> Opportunity Intelligence
+**Current focus:** v3.0 Area Intelligence
 
 ---
 
 ## Current Position
 
-**Milestone:** v2.0 Frontend — SHIPPED 2026-02-09
-**Status:** Milestone complete, awaiting next milestone definition
-**Next step:** `/gsd:new-milestone`
+**Milestone:** v3.0 Area Intelligence
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
 
-**Last activity:** 2026-02-09 — Archived v2.0 milestone
+**Last activity:** 2026-02-09 — Milestone v3.0 started
 
-**Progress:** All 3 milestones shipped (v1.0, v1.1, v2.0)
+**Progress:** ░░░░░░░░░░ 0%
 
 ---
 
@@ -51,6 +52,7 @@ See `.planning/PROJECT.md` Key Decisions table.
 - [ ] BAG API key aanvragen (gratis)
 - [ ] DSO API key aanvragen (gratis)
 - [ ] ProjectList live mode: fetch reports per expanded project card
+- [ ] Kadaster BRK Bevragen API toegang regelen (betaald)
 
 ### Blockers
 
@@ -59,9 +61,9 @@ See `.planning/PROJECT.md` Key Decisions table.
 ### Known Issues
 
 - Backend register endpoint returns 500 (needs investigation)
-- Kadaster eigendomsdata requires paid API (deferred)
+- Kadaster eigendomsdata requires paid API
 - Monument restrictions are generic boilerplate (not property-specific)
-- Parcel click/highlight not possible with WMS raster tiles (requires vector features or WFS)
+- Parcel click/highlight not possible with WMS raster tiles (v3.0 must address)
 - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
 
 ---
@@ -69,9 +71,9 @@ See `.planning/PROJECT.md` Key Decisions table.
 ## Session Continuity
 
 **Last Session:** 2026-02-09
-**Stopped At:** v2.0 milestone archived, git tag pending
+**Stopped At:** v3.0 milestone started, defining requirements
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-09 (v2.0 milestone complete)*
+*Last updated: 2026-02-09 (v3.0 milestone started)*

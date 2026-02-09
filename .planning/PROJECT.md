@@ -14,13 +14,9 @@ A property intelligence platform for Dutch projectontwikkelaars (real estate dev
 
 ## Core Value
 
-**Address -> Property Intelligence Report**
+**Area -> Opportunity Intelligence**
 
-Enter any Dutch address and receive within minutes:
-- Kadaster data: ownership, transactions, plot boundaries, surface area
-- Zoning summary: permitted functions (wonen, zorg, horeca), max height, density, parking requirements — extracted from bestemmingsplannen
-- Monument/heritage status: rijksmonument, gemeentelijk monument, or none — with applicable restrictions
-- Key restrictions and opportunities identified
+Scan any Dutch municipality or neighborhood and instantly find unused building opportunities — parcels with residential zoning but no buildings, no recent permits, and reachable owners. From area scan to qualified lead list in minutes instead of weeks.
 
 This is the ONE thing that must work. Everything else is secondary.
 
@@ -46,6 +42,20 @@ This is the ONE thing that must work. Everything else is secondary.
 - Multi-tenant isolation enforced at every layer (HTTP, service, cache, database)
 - Row-level security with fail-closed NULLIF policies on all 7 tenant tables
 
+## Current Milestone: v3.0 Area Intelligence
+
+**Goal:** Transform Propdex from address-based property lookup into area-based opportunity discovery — scan entire municipalities to find parcels with building zoning but no buildings, cross-reference with permits and municipal decisions, and surface qualified leads with owner information.
+
+**Target features:**
+- Area scanning with gemeente/wijk selection on the map
+- Multi-source cross-referencing: parcelen + BAG panden + bestemmingsplan + vergunningen + raadsinformatie
+- Smart filtering pipeline: 2000 percelen → 50 qualified opportunities (97.5% cost reduction on paid APIs)
+- Perceel detail modal with AI summary + expandable source cards
+- Kadaster BRK eigendomsdata integration (paid, only for top opportunities)
+- Vergunningen monitoring via Officiële Bekendmakingen SRU API
+- Open Raadsinformatie integration for municipal council decisions
+- Opportunity scoring and ranking
+
 ## Business Model
 
 - Built for one specific client first (single-tenant MVP)
@@ -59,10 +69,12 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Data Strategy
 
-**Hybrid approach:**
-- **API integrations** where available: Kadaster (PDOK), BAG (Basisregistratie Adressen en Gebouwen), ruimtelijkeplannen.nl, Rijksmonumentenregister
-- **AI document parsing** as fallback: upload bestemmingsplan PDFs and extract zoning rules using Claude API — critical for municipalities without good digital APIs
-- Gradual improvement: start with the most reliable API sources, expand AI parsing coverage over time
+**Multi-source intelligence with smart caching:**
+- **Tier 1 — Lightweight pre-scan (stored in DB):** Perceel geometrie + has_pand boolean + bestemming naam. ~1KB per perceel, entire gemeente fits in ~15MB
+- **Tier 2 — On-demand details (JSONB cache):** Vergunningen, raadsinformatie, full bestemmingsplan, eigendomsdata. Fetched when user clicks, cached with source-specific TTLs
+- **Tier 3 — Paid APIs (only for qualified leads):** Kadaster BRK eigendomsdata. Only queried after free filters reduce 2000+ percelen to ~50 top opportunities
+- **AI document parsing** as fallback: bestemmingsplan PDFs via Claude API for municipalities without good digital APIs
+- **Government data sources:** PDOK, BAG, DSO, RCE, Officiële Bekendmakingen (SRU), Open Raadsinformatie, Kadaster BRK Bevragen
 
 ## Technical Constraints
 
@@ -111,26 +123,36 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-(None — define in next milestone via `/gsd:new-milestone`)
+- [ ] Area scanning: select gemeente/wijk on map, scan all parcels in bbox
+- [ ] BAG bulk query: cross-reference parcels with buildings to find empty land
+- [ ] Bestemming filter: identify parcels with "Wonen" zoning + bouwvlak
+- [ ] Vergunningen monitoring: track omgevingsvergunningen via Officiële Bekendmakingen SRU API
+- [ ] Gemeenteraad integration: surface relevant municipal decisions via Open Raadsinformatie
+- [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
+- [ ] Smart caching pipeline: lightweight pre-scan in DB, details on-demand in JSONB
+- [ ] Perceel detail modal: AI summary + expandable source cards per data topic
+- [ ] Opportunity scoring: automated ranking of parcels by development potential
+- [ ] Per-gemeente filtering: interactive map-based municipality selection
 
-### Future (post v2.0)
+### Future (post v3.0)
 
 - [ ] WOZ waarde integration (free government data)
 - [ ] Energielabel integration (free via RVO/Kadaster)
-- [ ] Property pipeline tracking (opportunities)
 - [ ] Comparison view — side-by-side 2-3 properties
 - [ ] Role-based access (admin, analyst, viewer)
-- [ ] Kadaster eigendom/koopprijs integration (betaald)
 
 ### Out of Scope
 
 - 3D visualization / virtual tours — separate product domain
-- Subsidy application automation — too complex for v1, possible future integration
-- Financial feasibility calculations — requires market data integrations beyond v1
+- Subsidy application automation — too complex, possible future integration
+- Financial feasibility calculations — requires market data integrations
 - Buyer/investor CRM and marketing automation — different product phase
 - Automated vergunning (permit) filing — requires government system integration
 - AI-generated photos/videos — marketing feature, not core intelligence
 - Construction/project management — different product category
+- AirDNA / short-term rental analytics — not core to development opportunity identification
+- Linked Data Overheid SPARQL — too complex for real-time queries, existing APIs suffice
+- data.overheid.nl CKAN — aggregate statistics only, not address-level data
 
 ## Key Decisions
 
@@ -176,4 +198,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - ProjectList live mode: TODO for fetching reports per expanded project card
 
 ---
-*Last updated: 2026-02-09 after v2.0 milestone*
+*Last updated: 2026-02-09 after v3.0 milestone start*
