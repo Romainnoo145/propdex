@@ -31,16 +31,15 @@
   - [x] 15-03-PLAN.md — Floating address search bar with autocomplete + keyboard navigation
   - [x] 15-04-PLAN.md — Property detail panel with progressive disclosure + geometry layers
   - [x] 15-05-PLAN.md — Integration wiring + visual verification
-- [ ] Phase 16: Property Details & Reports — Three-tier progressive disclosure (QuickCard → Drawer → Modal), side-rail navigation, report save/list/search sidebar, PDF export, freshness indicators, source badges (R6)
-  **Plans:** 7 plans
-  Plans:
-  - [ ] 16-01-PLAN.md — Dependencies (cmdk, sonner, react-focus-lock), UI primitives (Drawer, Modal), report types
-  - [ ] 16-02-PLAN.md — Side-rail navigation, app shell restructure, placeholder routes
-  - [ ] 16-03-PLAN.md — PropertyQuickCard (Tier 1) + PropertyDetailDrawer (Tier 2) with tier state machine
-  - [ ] 16-04-PLAN.md — Report API client, TanStack Query hooks, recent viewed localStorage hook
-  - [ ] 16-05-PLAN.md — Report sidebar with cmdk search, report cards, recent viewed, empty state
-  - [ ] 16-06-PLAN.md — Freshness indicators + source badges per section in drawer
-  - [ ] 16-07-PLAN.md — Save/export flow, PDF modal, sidebar → map navigation, integration wiring
+- [x] Phase 16: Property Details & Reports — Three-tier progressive disclosure (QuickCard → Drawer → Modal), side-rail navigation, report save/list/search sidebar, PDF export, freshness indicators, source badges (R6)
+  **Plans:** 7/7 complete
+  - [x] 16-01-PLAN.md — Dependencies (cmdk, sonner, react-focus-lock), UI primitives (Drawer, Modal), report types
+  - [x] 16-02-PLAN.md — Side-rail navigation, app shell restructure, placeholder routes
+  - [x] 16-03-PLAN.md — PropertyQuickCard (Tier 1) + PropertyDetailDrawer (Tier 2) with tier state machine
+  - [x] 16-04-PLAN.md — Report API client, TanStack Query hooks, recent viewed localStorage hook
+  - [x] 16-05-PLAN.md — Report sidebar with cmdk search, report cards, recent viewed, empty state
+  - [x] 16-06-PLAN.md — Freshness indicators + source badges per section in drawer
+  - [x] 16-07-PLAN.md — Save/export flow, PDF modal, sidebar → map navigation, integration wiring
 - [ ] Phase 17: Projects & Polish — Project folders CRUD, report-to-project assignment, mobile bottom sheet, monument badges, AI zoning display, force refresh (R7, R9)
 
 **Dependency chain:**
@@ -103,9 +102,9 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 | 13. Map Foundation & Layout | v2.0 | 3/3 | Complete | 2026-02-08 |
 | 14. Authentication & Security | v2.0 | 5/5 | Complete | 2026-02-08 |
 | 15. Property Data & Map Interactions | v2.0 | 5/5 | Complete | 2026-02-09 |
-| 16. Property Details & Reports | v2.0 | 0/7 | Pending | — |
+| 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
 | 17. Projects & Polish | v2.0 | 0/? | Pending | — |
 
 ---
 
-*Last updated: 2026-02-09 (Phase 15 complete — 5/5 plans, verified)*
+*Last updated: 2026-02-09 (Phase 16 complete — 7/7 plans, verified)*
