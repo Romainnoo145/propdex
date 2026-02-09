@@ -91,14 +91,21 @@ function MapPage() {
     navigate({ to: '/map', search: {}, replace: true })
   }, [reportId, savedReport.data, navigate])
 
-  // Handle incoming search params (from recent viewed / report sidebar)
+  // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
     if (!postcode || !huisnummer) return
 
-    // Prevent re-triggering for the same params
+    // Use timestamp-based key to allow re-navigation to same address
     const key = `${postcode}-${huisnummer}`
     if (handledSearchRef.current === key) return
     handledSearchRef.current = key
+
+    // Clear search params immediately so back-button doesn't re-trigger
+    navigate({ to: '/map', search: {}, replace: true })
+
+    // Capture values before async — navigate may clear them
+    const pc = postcode
+    const hn = huisnummer
 
     /* eslint-disable react-hooks/set-state-in-effect -- intentional sync reset before async mutation */
     setTier('quick')
@@ -107,7 +114,7 @@ function MapPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
 
     lookup.mutate(
-      { postcode, huisnummer },
+      { postcode: pc, huisnummer: hn },
       {
         onSuccess: (data) => {
           const coords = data.map_data?.center_wgs84
@@ -123,7 +130,7 @@ function MapPage() {
           }
         },
         onError: () => {
-          const demo = getDemoProperty(postcode, huisnummer)
+          const demo = getDemoProperty(pc, hn)
           if (demo) {
             setDemoData(demo)
             const coords = demo.map_data?.center_wgs84
@@ -139,9 +146,6 @@ function MapPage() {
         },
       }
     )
-
-    // Clear search params so they don't re-trigger
-    navigate({ to: '/map', search: {}, replace: true })
   }, [postcode, huisnummer, lookup, navigate])
 
   // Handle address selection from search

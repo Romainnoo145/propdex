@@ -105,9 +105,12 @@ export default function ProjectList() {
   }
 
   const handleReportClick = (report: ReportListItem) => {
+    // Extract huisnummer from "Straat 10, Stad" format
+    const streetPart = report.report_name.split(',')[0] ?? ''
+    const hn = streetPart.match(/\d+/)?.[0] ?? '1'
     navigate({
       to: '/map',
-      search: { postcode: report.postcode, huisnummer: report.report_name.match(/\d+/)?.[1] || '1' },
+      search: { postcode: report.postcode, huisnummer: hn },
     })
   }
 
