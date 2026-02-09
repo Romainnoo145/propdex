@@ -41,6 +41,11 @@
   - [x] 16-06-PLAN.md — Freshness indicators + source badges per section in drawer
   - [x] 16-07-PLAN.md — Save/export flow, PDF modal, sidebar → map navigation, integration wiring
 - [ ] Phase 17: Projects & Polish — Project folders CRUD, report-to-project assignment, mobile bottom sheet, monument badges, AI zoning display, force refresh (R7, R9)
+  **Plans:** 4 plans
+  - [ ] 17-01-PLAN.md — Project types, API client functions, TanStack Query hooks
+  - [ ] 17-02-PLAN.md — ConfidenceBadge, monument badge on QuickCard, mobile bottom sheet, AI zoning display
+  - [ ] 17-03-PLAN.md — Project CRUD UI (Projecten page), sidebar project filter + report assignment
+  - [ ] 17-04-PLAN.md — Responsive Drawer integration, force refresh wiring, visual verification
 
 **Dependency chain:**
 ```
@@ -103,8 +108,8 @@ Phase 13 (Map) → Phase 14 (Auth) → Phase 15 (Data) → Phase 16 (Reports) �
 | 14. Authentication & Security | v2.0 | 5/5 | Complete | 2026-02-08 |
 | 15. Property Data & Map Interactions | v2.0 | 5/5 | Complete | 2026-02-09 |
 | 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
-| 17. Projects & Polish | v2.0 | 0/? | Pending | — |
+| 17. Projects & Polish | v2.0 | 0/4 | In Progress | — |
 
 ---
 
-*Last updated: 2026-02-09 (Phase 16 complete — 7/7 plans, verified)*
+*Last updated: 2026-02-09 (Phase 17 planned — 4 plans in 3 waves)*
