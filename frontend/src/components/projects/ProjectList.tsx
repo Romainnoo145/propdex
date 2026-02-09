@@ -5,12 +5,41 @@ import type { ProjectResponse } from '@/lib/types/project'
 import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 
+// Demo projects shown when API is unavailable (no auth)
+const DEMO_PROJECTS: ProjectResponse[] = [
+  {
+    id: 'demo-1',
+    name: 'Herontwikkeling Venlo Centrum',
+    description: 'Haalbaarheidsonderzoek voor 12 panden in het kernwinkelgebied',
+    created_at: '2026-02-01T10:00:00Z',
+    updated_at: '2026-02-08T14:30:00Z',
+    report_count: 8,
+  },
+  {
+    id: 'demo-2',
+    name: 'Woningbouw Maastricht Zuid',
+    description: 'Nieuwbouwlocaties rondom Randwyck station',
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-02-05T16:00:00Z',
+    report_count: 5,
+  },
+  {
+    id: 'demo-3',
+    name: 'Monumenten Inventarisatie Utrecht',
+    description: null,
+    created_at: '2026-02-06T11:00:00Z',
+    updated_at: '2026-02-06T11:00:00Z',
+    report_count: 3,
+  },
+]
+
 /**
  * Project list component with CRUD operations.
- * Shows flat list of projects with report counts and edit/delete actions.
+ * Light theme — off-white background with dark typography.
+ * Falls back to demo data when API is unavailable.
  */
 export default function ProjectList() {
-  const { data, isLoading } = useProjects()
+  const { data, isLoading, isError } = useProjects()
   const deleteMutation = useDeleteProject()
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -18,12 +47,18 @@ export default function ProjectList() {
     null
   )
 
+  // Use demo data when API unavailable (no auth or error)
+  const isDemo = !data && !isLoading
+  const projects = data?.projects ?? (isDemo ? DEMO_PROJECTS : [])
+
   const handleEdit = (project: ProjectResponse) => {
+    if (isDemo) return
     setSelectedProject(project)
     setEditModalOpen(true)
   }
 
   const handleDelete = (project: ProjectResponse) => {
+    if (isDemo) return
     const confirmed = window.confirm(
       'Project verwijderen? Rapporten worden niet verwijderd.'
     )
@@ -41,26 +76,34 @@ export default function ProjectList() {
 
   if (isLoading) {
     return (
-      <div className="py-8 text-center text-white/40">
+      <div className="py-8 text-center text-gray-400">
         <p>Laden...</p>
       </div>
     )
   }
 
-  const hasProjects = data && data.projects.length > 0
+  const hasProjects = projects.length > 0
 
   return (
     <div className="space-y-4">
+      {/* Demo banner */}
+      {isDemo && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Voorbeelddata — start de backend om projecten te beheren
+        </div>
+      )}
+
       {/* Header with create button */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white/60">
+        <h3 className="text-sm font-medium text-gray-500">
           {hasProjects
-            ? `${data.projects.length} ${data.projects.length === 1 ? 'project' : 'projecten'}`
+            ? `${projects.length} ${projects.length === 1 ? 'project' : 'projecten'}`
             : 'Nog geen projecten'}
         </h3>
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+          disabled={isDemo}
+          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Nieuw project +
         </button>
@@ -69,56 +112,58 @@ export default function ProjectList() {
       {/* Project list */}
       {hasProjects ? (
         <div className="space-y-2">
-          {data.projects.map((project) => (
+          {projects.map((project) => (
             <div
               key={project.id}
-              className="flex items-start justify-between gap-3 rounded-lg border border-white/5 bg-white/5 px-4 py-3 transition-colors hover:bg-white/10"
+              className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm transition-colors hover:bg-gray-50"
             >
               {/* Project info */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-medium text-white">{project.name}</h4>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">
-                    {project.report_count}
+                  <h4 className="font-medium text-gray-900">{project.name}</h4>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                    {project.report_count} {project.report_count === 1 ? 'rapport' : 'rapporten'}
                   </span>
                 </div>
                 {project.description && (
-                  <p className="mt-1 truncate text-sm text-white/50">
+                  <p className="mt-1 truncate text-sm text-gray-500">
                     {project.description}
                   </p>
                 )}
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleEdit(project)}
-                  className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Bewerk project"
-                  title="Bewerk project"
-                >
-                  <PencilIcon />
-                </button>
-                <button
-                  onClick={() => handleDelete(project)}
-                  disabled={deleteMutation.isPending}
-                  className="rounded p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-50"
-                  aria-label="Verwijder project"
-                  title="Verwijder project"
-                >
-                  <TrashIcon />
-                </button>
-              </div>
+              {!isDemo && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEdit(project)}
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                    aria-label="Bewerk project"
+                    title="Bewerk project"
+                  >
+                    <PencilIcon />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(project)}
+                    disabled={deleteMutation.isPending}
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                    aria-label="Verwijder project"
+                    title="Verwijder project"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
         // Empty state
-        <div className="rounded-xl border border-white/10 bg-white/5 px-6 py-12 text-center">
-          <p className="mb-4 text-white/50">Nog geen projecten aangemaakt</p>
+        <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center shadow-sm">
+          <p className="mb-4 text-gray-500">Nog geen projecten aangemaakt</p>
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
           >
             Maak je eerste project
           </button>

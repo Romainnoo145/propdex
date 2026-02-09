@@ -11,7 +11,7 @@ interface ProjectCreateModalProps {
 
 /**
  * Modal for creating a new project.
- * Centered glassmorphism modal with backdrop blur.
+ * Light theme — white card with shadow on dimmed backdrop.
  */
 export default function ProjectCreateModal({
   isOpen,
@@ -59,7 +59,7 @@ export default function ProjectCreateModal({
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/20"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={handleCancel}
         />
@@ -68,15 +68,15 @@ export default function ProjectCreateModal({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-black/60 p-6 shadow-2xl backdrop-blur-xl"
+          className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
           style={{ zIndex: 'calc(var(--z-modal) + 1)' }}
         >
           {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Nieuw project</h2>
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Nieuw project</h2>
             <button
               onClick={handleCancel}
-              className="rounded-lg p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               aria-label="Sluit"
             >
               <XIcon />
@@ -89,7 +89,7 @@ export default function ProjectCreateModal({
             <div>
               <label
                 htmlFor="project-name"
-                className="mb-1.5 block text-sm font-medium text-white/80"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
               >
                 Naam
               </label>
@@ -100,7 +100,7 @@ export default function ProjectCreateModal({
                 onChange={(e) => setName(e.target.value)}
                 maxLength={100}
                 required
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30 focus:border-white/20 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
                 placeholder="Projectnaam..."
                 autoFocus
               />
@@ -110,7 +110,7 @@ export default function ProjectCreateModal({
             <div>
               <label
                 htmlFor="project-description"
-                className="mb-1.5 block text-sm font-medium text-white/80"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
               >
                 Omschrijving (optioneel)
               </label>
@@ -119,7 +119,7 @@ export default function ProjectCreateModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30 focus:border-white/20 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
                 placeholder="Projectomschrijving..."
               />
             </div>
@@ -129,14 +129,14 @@ export default function ProjectCreateModal({
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
               >
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={createMutation.isPending || !name.trim()}
-                className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-gray-200 bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {createMutation.isPending ? 'Aanmaken...' : 'Aanmaken'}
               </button>
