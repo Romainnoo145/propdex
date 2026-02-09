@@ -58,7 +58,7 @@ function AuthenticatedLayout() {
         onSelectReport={handleSelectReport}
         onSelectRecent={handleSelectRecent}
       />
-      <main className="flex-1 relative overflow-hidden">
+      <main className="flex-1 relative overflow-hidden bg-gray-950">
         <Outlet />
       </main>
     </div>
