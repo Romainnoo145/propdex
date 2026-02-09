@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Milestone:** v2.0 Frontend
 **Phase:** 17 — Projects & Polish
-**Plan:** 1 of 7
+**Plan:** 2 of 7
 **Status:** In Progress
 
-**Last activity:** 2026-02-09 — Completed 17-01-PLAN.md (Project Data Layer)
+**Last activity:** 2026-02-09 — Completed 17-02-PLAN.md (Mobile Polish & Confidence Indicators)
 
-**Progress:** ████████████████████ 54/54 plans (100%)
+**Progress:** ████████████████████ 55/55 plans (100%)
 
 ---
 
@@ -104,6 +104,13 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Toast ID pattern for loading → success/error transitions: Single morphing toast instead of multiple toasts for better UX
 - Saved report ID in local state: Persist across renders for PDF export, separate from mutation result that clears on unmount
 
+**Phase 17-02 decisions:**
+- ConfidenceBadge color scheme (green/yellow/red): Semantic color mapping with 20% bg opacity and 40% border opacity provides clear visual hierarchy on glassmorphism backgrounds
+- Monument badge inline placement in QuickCard: Compact horizontal layout fits popup constraints without disrupting "te koop" sign aesthetic
+- Touch stopPropagation in PropertyBottomSheet: Prevents map pan during scroll on mobile, critical for UX
+- Force refresh button in drawer header: Groups all data actions together, maintains visual hierarchy (refresh → save → export → close)
+- AI interpretation after building dimensions: Creates logical information flow (overview → details) before raw zoning plan data
+
 **Phase 17-01 decisions:**
 - 10-minute stale time for projects: Longer than reports (5 min) because projects change less frequently
 - useUpdateProject invalidates report lists: Project name changes affect report grouping labels in sidebar
@@ -163,10 +170,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-09 — Completed 17-01-PLAN.md
-**Stopped At:** Phase 17 plan 1 complete (1/7 plans)
+**Last Session:** 2026-02-09 — Completed 17-02-PLAN.md
+**Stopped At:** Phase 17 plan 2 complete (2/7 plans)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-09 (Phase 17 started — project data layer complete)*
+*Last updated: 2026-02-09 (Phase 17-02 complete — Mobile Polish & Confidence Indicators)*
