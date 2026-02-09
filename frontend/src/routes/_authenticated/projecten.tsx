@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createFileRoute } from '@tanstack/router'
 import AppLayout from '@/components/layout/AppLayout'
 import ProjectList from '@/components/projects/ProjectList'
 

@@ -157,13 +157,22 @@ export async function lookupPdokAddress(
  *
  * @param input - Address input (postcode + huisnummer + optional letter/addition)
  * @param accessToken - JWT access token from useAuth()
+ * @param options - Optional settings (forceRefresh to bypass cache)
  * @returns Complete property report
  */
 export async function lookupProperty(
   input: AddressInput,
-  accessToken: string | null
+  accessToken: string | null,
+  options?: { forceRefresh?: boolean }
 ): Promise<PropertyReportResponse> {
-  return apiFetch<PropertyReportResponse>(`${API_BASE}/lookup`, {
+  const params = new URLSearchParams()
+  if (options?.forceRefresh) {
+    params.set('force_refresh', 'true')
+  }
+  const queryString = params.toString()
+  const url = `${API_BASE}/lookup${queryString ? `?${queryString}` : ''}`
+
+  return apiFetch<PropertyReportResponse>(url, {
     method: 'POST',
     accessToken,
     body: JSON.stringify(input),

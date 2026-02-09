@@ -50,14 +50,26 @@ export function Drawer({ isOpen, onClose, children, width = 'md' }: DrawerProps)
           onClick={onClose}
         />
 
-        {/* Drawer panel */}
+        {/* Drawer panel - bottom sheet on mobile, right drawer on desktop */}
         <div
           role="dialog"
           aria-modal="true"
-          className={`fixed right-0 top-0 bottom-0 ${widthClasses[width]} w-full bg-black/40 backdrop-blur-xl border-l border-white/15 shadow-2xl flex flex-col transition-transform duration-300 ease-out translate-x-0`}
+          className={`fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[85vh] border-t border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl flex flex-col md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:rounded-none md:max-h-none md:border-t-0 md:border-l md:border-white/15 ${widthClasses[width]} md:w-full transition-transform duration-300 ease-out translate-x-0`}
           style={{ zIndex: 'calc(var(--z-property-panel) + 1)' }}
         >
-          {children}
+          {/* Drag handle - mobile only */}
+          <div className="flex justify-center py-2 md:hidden flex-shrink-0">
+            <div className="w-10 h-1 bg-white/30 rounded-full" />
+          </div>
+
+          {/* Scrollable content with touch-safe events */}
+          <div
+            className="flex-1 overflow-y-auto flex flex-col"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </FocusLock>

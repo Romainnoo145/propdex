@@ -20,9 +20,9 @@ export function usePropertyLookup() {
   const { accessToken } = useAuth()
   const queryClient = useQueryClient()
 
-  return useMutation<PropertyReportResponse, Error, AddressInput>({
-    mutationFn: async (input: AddressInput) => {
-      return lookupProperty(input, accessToken)
+  return useMutation<PropertyReportResponse, Error, AddressInput & { forceRefresh?: boolean }>({
+    mutationFn: async ({ forceRefresh, ...input }) => {
+      return lookupProperty(input, accessToken, { forceRefresh })
     },
     onSuccess: (data) => {
       // Cache the report by address ID for future lookups

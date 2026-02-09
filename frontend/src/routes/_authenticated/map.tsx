@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import type maplibregl from 'maplibre-gl'
+import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
 import LayerToggle from '@/components/map/LayerToggle'
@@ -15,7 +16,7 @@ import { useReport } from '@/hooks/useReports'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
 import { lookupPdokAddress } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
-import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
+import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
 
 interface MapSearchParams {
   postcode?: string
@@ -245,6 +246,24 @@ function MapPage() {
     setTier('drawer')
   }, [])
 
+  // Force refresh handler
+  const handleForceRefresh = useCallback(() => {
+    if (!currentData?.address) return
+    const input: AddressInput = {
+      postcode: currentData.address.postcode,
+      huisnummer: currentData.address.huisnummer,
+      huisletter: currentData.address.huisletter || undefined,
+      toevoeging: currentData.address.toevoeging || undefined,
+    }
+    lookup.mutate(
+      { ...input, forceRefresh: true },
+      {
+        onSuccess: () => toast.success('Gegevens bijgewerkt met laatste bronnen'),
+        onError: (err: Error) => toast.error(err.message),
+      }
+    )
+  }, [currentData, lookup])
+
   return (
     <AppLayout>
       <MapView mapRef={mapRef} />
@@ -273,6 +292,8 @@ function MapPage() {
           onSave={handleSave}
           isSaving={saveFlow.isSaving}
           isSaved={!!savedReportId}
+          onRefreshAll={handleForceRefresh}
+          isRefreshing={lookup.isPending}
         />
       )}
 

@@ -27,8 +27,10 @@ export default function ProjectEditModal({
   // Pre-fill form when project changes
   useEffect(() => {
     if (project) {
+      /* eslint-disable react-hooks/set-state-in-effect -- intentional form pre-fill on modal open */
       setName(project.name)
       setDescription(project.description || '')
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [project])
 
