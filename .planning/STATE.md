@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
-**Phase:** 18 of 22 (Spatial Foundation)
-**Plan:** 4 of 4 complete
-**Status:** Phase complete
+**Phase:** 19 of 22 (Government API Clients)
+**Plan:** 1 of 5 complete
+**Status:** In progress
 
-**Last activity:** 2026-02-10 -- 18-04 RLS Multi-Tenant Spatial Isolation complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 19-01 Rate Limiter & Dependencies complete (2 tasks, 2 commits)
 
-**Progress:** [██████████] 100%
+**Progress:** [█████████░] 94%
 
 ---
 
@@ -58,6 +58,10 @@ Phase 18 implementation decisions:
 - **18-03:** Module-level pyproj Transformer singletons for 100x coordinate transformation speedup
 - **18-04:** Test RLS via policy existence checks and organization_id filtering (test DB uses superuser which bypasses RLS)
 
+Phase 19 implementation decisions:
+- **19-01:** Use dual-layer rate limiting (semaphore for concurrency, token bucket for time-based)
+- **19-01:** Conservative BRK limits (2 concurrent, 200/hour) as it's a paid API
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -85,14 +89,10 @@ Phase 18 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10
-**Stopped At:** Phase 18 complete — verified 5/5 must-haves. Phase 19 ready to plan.
+**Last Session:** 2026-02-10T12:46:26.497Z
+**Stopped At:** Completed 19-01-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 18 Spatial Foundation complete - 4/4 plans)*
-
-**18-02 decisions:**
-- Use join table (ScanResult) instead of JSONB array for scan results to maintain FK integrity
-- Store bounding box as 4 floats for EPSG:28992 coordinates
+*Last updated: 2026-02-10 (Phase 19 Government API Clients in progress - 1/5 plans)*
