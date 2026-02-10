@@ -52,6 +52,7 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     current_phase: Mapped[str | None] = mapped_column(String(50), nullable=True)
     parcels_total: Mapped[int] = mapped_column(default=0, nullable=False)
     parcels_processed: Mapped[int] = mapped_column(default=0, nullable=False)
+    parcels_failed: Mapped[int] = mapped_column(default=0, nullable=False)
 
     # Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
