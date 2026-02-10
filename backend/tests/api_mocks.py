@@ -9,12 +9,27 @@ def make_mock_response(
     status_code: int = 200,
     json_data: dict | None = None,
     url: str = "https://example.com/test",
+    content: bytes | None = None,
 ) -> MagicMock:
-    """Create a mock httpx.Response with controlled attributes."""
+    """Create a mock httpx.Response with controlled attributes.
+
+    Args:
+        status_code: HTTP status code (default: 200)
+        json_data: JSON data to return from .json() (default: {})
+        url: URL of the response (default: test URL)
+        content: Raw bytes content for .content attribute (e.g., XML)
+
+    Returns:
+        MagicMock: Mock response with spec=httpx.Response
+    """
     response = MagicMock(spec=httpx.Response)
     response.status_code = status_code
     response.url = httpx.URL(url)
     response.json.return_value = json_data or {}
+
+    # Set content attribute if provided (for XML/binary responses)
+    if content is not None:
+        response.content = content
 
     if status_code >= 400:
         response.raise_for_status.side_effect = httpx.HTTPStatusError(
