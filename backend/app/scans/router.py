@@ -14,7 +14,13 @@ from app.middleware.rate_limit import limiter
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
-from app.scans.schemas import ScanCreateRequest, ScanResponse, ScanStatusResponse
+from app.scans.schemas import (
+    ScanCreateRequest,
+    ScanResponse,
+    ScanResultItem,
+    ScanResultsResponse,
+    ScanStatusResponse,
+)
 from app.services.gemeente_service import get_gemeente_bbox
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
@@ -259,3 +265,116 @@ async def cancel_scan(
         "message": "Scan cancellation requested",
         "scan_id": str(scan_id),
     }
+
+
+@router.get("/{scan_id}/results", response_model=ScanResultsResponse)
+@limiter.limit("60/minute")
+async def list_results(
+    request: Request,
+    scan_id: uuid.UUID,
+    has_pand: bool | None = None,
+    bestemming_type: str | None = None,
+    min_area_m2: float | None = None,
+    max_area_m2: float | None = None,
+    score_category: str | None = None,
+    sort_by: str = "score",
+    sort_order: str = "desc",
+    offset: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ScanResultsResponse:
+    """
+    List paginated scan results with filtering and sorting.
+
+    Returns paginated scan results with server-side filtering by parcel
+    characteristics and sorting. Default sort is by score DESC (most promising
+    first). Includes score breakdown for transparency.
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        scan_id: Scan UUID
+        has_pand: Filter by building presence
+        bestemming_type: Filter by zoning type substring
+        min_area_m2: Minimum parcel area
+        max_area_m2: Maximum parcel area
+        score_category: Filter by score category (High/Medium/Low)
+        sort_by: Sort field (score/area_m2/address)
+        sort_order: Sort direction (asc/desc)
+        offset: Pagination offset
+        limit: Page size (max 100)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ScanResultsResponse: Paginated results with metadata
+
+    Raises:
+        HTTPException 404: Scan not found
+    """
+    # Validate and cap limit
+    limit = min(limit, 100)
+
+    # Get scan by ID with multi-tenant isolation
+    scan = await service.get_scan_by_id(scan_id, organization_id, db)
+
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    # Query results with filters and pagination
+    rows, total = await service.list_scan_results(
+        scan_id=scan_id,
+        organization_id=organization_id,
+        has_pand=has_pand,
+        bestemming_type=bestemming_type,
+        min_area_m2=min_area_m2,
+        max_area_m2=max_area_m2,
+        score_category=score_category,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        offset=offset,
+        limit=limit,
+        session=db,
+    )
+
+    # Map to ScanResultItem
+    result_items = []
+    for result, parcel in rows:
+        # Extract score_category from flags
+        score_category_value = None
+        score_breakdown = {}
+        if result.flags:
+            score_category_value = result.flags.get("category")
+            score_breakdown = {k: v for k, v in result.flags.items() if k != "category"}
+
+        result_items.append(
+            ScanResultItem(
+                parcel_id=parcel.id,
+                parcel_code=parcel.parcel_id,
+                address=parcel.address,
+                gemeente_code=parcel.gemeente_code,
+                area_m2=parcel.area_m2,
+                has_pand=parcel.has_pand,
+                bestemmingen=parcel.bestemmingen,
+                score=result.score,
+                score_category=score_category_value,
+                score_breakdown=score_breakdown if score_breakdown else None,
+            )
+        )
+
+    return ScanResultsResponse(
+        scan_id=scan.id,
+        gemeente_naam=scan.gemeente_naam,
+        scan_date=scan.created_at,
+        total=total,
+        offset=offset,
+        limit=limit,
+        results=result_items,
+    )

@@ -2,10 +2,11 @@
 
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import asc, delete, desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
+from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
 
 
@@ -138,3 +139,99 @@ async def get_scan_by_id(
 
     result = await session.execute(query)
     return result.scalar_one_or_none()
+
+
+async def list_scan_results(
+    scan_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    has_pand: bool | None,
+    bestemming_type: str | None,
+    min_area_m2: float | None,
+    max_area_m2: float | None,
+    score_category: str | None,
+    sort_by: str,
+    sort_order: str,
+    offset: int,
+    limit: int,
+    session: AsyncSession,
+) -> tuple[list[tuple], int]:
+    """
+    List scan results with server-side filtering, sorting, and pagination.
+
+    Args:
+        scan_id: Scan UUID
+        organization_id: Tenant organization ID
+        has_pand: Filter by building presence (True/False/None)
+        bestemming_type: Filter by zoning type substring (e.g., "Wonen")
+        min_area_m2: Minimum parcel area in square meters
+        max_area_m2: Maximum parcel area in square meters
+        score_category: Filter by score category ("High" >=70, "Medium" 40-69, "Low" <40)
+        sort_by: Sort field (score, area_m2, address)
+        sort_order: Sort direction (asc, desc)
+        offset: Pagination offset
+        limit: Page size
+        session: Database session
+
+    Returns:
+        tuple[list[tuple], int]: List of (ScanResult, ParcelCache) tuples and total count
+    """
+    # Base query: join ScanResult to ParcelCache
+    query = (
+        select(ScanResult, ParcelCache)
+        .join(ParcelCache, ScanResult.parcel_id == ParcelCache.id)
+        .where(
+            ScanResult.scan_id == scan_id,
+            ScanResult.organization_id == organization_id,
+        )
+    )
+
+    # Apply filters
+    if has_pand is not None:
+        query = query.where(ParcelCache.has_pand == has_pand)
+
+    if bestemming_type is not None:
+        # Use JSONB text cast with LIKE for display filtering
+        query = query.where(
+            text("bestemmingen::text LIKE :pattern").bindparams(
+                pattern=f"%{bestemming_type}%"
+            )
+        )
+
+    if min_area_m2 is not None:
+        query = query.where(ParcelCache.area_m2 >= min_area_m2)
+
+    if max_area_m2 is not None:
+        query = query.where(ParcelCache.area_m2 <= max_area_m2)
+
+    if score_category is not None:
+        if score_category == "High":
+            query = query.where(ScanResult.score >= 70)
+        elif score_category == "Medium":
+            query = query.where(ScanResult.score >= 40, ScanResult.score < 70)
+        elif score_category == "Low":
+            query = query.where(ScanResult.score < 40)
+
+    # Count total before pagination
+    count_query = select(func.count()).select_from(query.subquery())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+
+    # Apply sorting
+    sort_field_map = {
+        "score": ScanResult.score,
+        "area_m2": ParcelCache.area_m2,
+        "address": ParcelCache.address,
+    }
+
+    sort_field = sort_field_map.get(sort_by, ScanResult.score)
+    sort_func = desc if sort_order == "desc" else asc
+    query = query.order_by(sort_func(sort_field))
+
+    # Apply pagination
+    query = query.offset(offset).limit(limit)
+
+    # Execute query
+    result = await session.execute(query)
+    rows = result.all()
+
+    return rows, total
