@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
-**Phase:** 20 of 22 (Area Scanner REST API)
-**Plan:** 6 of 6
-**Status:** Complete
+**Phase:** 21 of 22 (Map Visualization)
+**Plan:** 2 of 5
+**Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 20-06 Excel Export Endpoint complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 21-02 Scan API Types and Hooks complete (2 tasks, 2 commits)
 
-**Progress:** [██████████] 100%
+**Progress:** [████████████████░░░░░] 40%
 
 ---
 
@@ -82,6 +82,11 @@ Phase 20 implementation decisions:
 - **20-06:** .xlsx export format (not CSV) for NL/BE real estate developers
 - **20-06:** Export respects active filters (exports what user sees)
 
+Phase 21 implementation decisions:
+- **21-02:** Snake_case TypeScript types match backend JSON exactly (no camelCase conversion)
+- **21-02:** TanStack Query v5 function-form refetchInterval signature for conditional polling
+- **21-02:** 30-second staleTime for scan results (immutable after completion)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -109,10 +114,10 @@ Phase 20 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T15:13:05.125Z
-**Stopped At:** Completed 20-06-PLAN.md
+**Last Session:** 2026-02-10T15:50:29.675Z
+**Stopped At:** Completed 21-01-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API complete - 6/6 plans)*
+*Last updated: 2026-02-10 (Phase 21 Map Visualization in progress - 2/5 plans)*
