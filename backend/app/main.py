@@ -18,6 +18,7 @@ from app.middleware.tenant import TenantContextMiddleware
 from app.projects.router import router as projects_router
 from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
+from app.scans.router import router as scans_router
 
 
 @asynccontextmanager
@@ -85,6 +86,7 @@ app.include_router(auth_router)
 app.include_router(properties_router)
 app.include_router(reports_router)
 app.include_router(projects_router)
+app.include_router(scans_router)
 
 
 @app.get("/")
