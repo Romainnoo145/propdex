@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 18 of 22 (Spatial Foundation)
-**Plan:** --
-**Status:** Ready to plan
+**Plan:** 1 of 4 complete
+**Status:** In progress
 
-**Last activity:** 2026-02-10 -- Roadmap created (5 phases, 29 requirements, 28 plans)
+**Last activity:** 2026-02-10 -- 18-01 PostGIS Foundation complete (2 tasks, 2 commits)
 
-**Progress:** ░░░░░░░░░░ 0%
+**Progress:** [██████████] 95%
 
 ---
 
@@ -51,10 +51,15 @@ v3.0 architecture decisions:
 - Three-tier cache (DB pre-scan / JSONB on-demand / BRK never-store)
 - CBS gemeente boundaries for area selection
 
+Phase 18 implementation decisions:
+- **18-01:** Use postgis/postgis:16-3.5 Docker image (Alpine's PostGIS is PostgreSQL 18-only)
+- **18-01:** Create GIST spatial index via raw SQL in migration (Alembic doesn't auto-detect geometry indexes)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
 - [ ] Production deployment: Create app_role
+- [ ] Production deployment: Update Docker container to postgis/postgis:16-3.5
 - [ ] Test Claude API with real bestemmingsplan PDFs
 - [ ] BAG API key aanvragen (gratis)
 - [ ] DSO API key aanvragen (gratis)
@@ -77,10 +82,10 @@ v3.0 architecture decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10
-**Stopped At:** v3.0 roadmap created, Phase 18 ready to plan
+**Last Session:** 2026-02-10T11:57:42.177Z
+**Stopped At:** Completed 18-01-PLAN.md (PostGIS Foundation)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (v3.0 roadmap created)*
+*Last updated: 2026-02-10 (18-01 PostGIS foundation complete)*
