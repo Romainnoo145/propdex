@@ -2,8 +2,6 @@
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from app.services.parcel_scoring import (
     SCORING_WEIGHTS,
     ScoreBreakdown,
@@ -124,7 +122,7 @@ def test_low_score_has_pand_small():
 
 
 def test_medium_score_large_parcel_one_permit():
-    """Vacant + large (5000m²) + Wonen + 1 permit → Medium (60)."""
+    """Vacant + large (5000m²) + Wonen + 1 permit → High (70) - at threshold."""
     now = datetime.utcnow()
     enrichment_data = {
         "vergunningen": [
@@ -141,8 +139,9 @@ def test_medium_score_large_parcel_one_permit():
 
     result = compute_opportunity_score(parcel)
 
-    assert result.total_score == 60.0
-    assert result.category == "Medium"
+    # Actual math: 30 (vacant) + 5 (large size) + 25 (wonen) + 10 (1 permit) = 70
+    assert result.total_score == 70.0
+    assert result.category == "High"
     assert result.factors["vacant_land"] == 30.0
     assert result.factors["size_optimal"] == 5.0
     assert result.factors["zoning_residential"] == 25.0
