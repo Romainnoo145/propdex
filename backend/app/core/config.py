@@ -110,6 +110,22 @@ class Settings(BaseSettings):
         default="",
         description="DSO Ruimtelijke Plannen API key (register at developer.omgevingswet.overheid.nl)",
     )
+    BRK_API_KEY: str = Field(
+        default="",
+        description="Kadaster BRK Bevragen API key",
+    )
+    BRK_CLIENT_CERT_PATH: str = Field(
+        default="",
+        description="Path to PKIOverheid client certificate for BRK mTLS",
+    )
+    BRK_CLIENT_KEY_PATH: str = Field(
+        default="",
+        description="Path to PKIOverheid private key for BRK mTLS",
+    )
+    BRK_CA_BUNDLE_PATH: str = Field(
+        default="",
+        description="Path to PKIOverheid CA bundle for BRK server verification",
+    )
 
     # AI Configuration
     ANTHROPIC_API_KEY: str = Field(
