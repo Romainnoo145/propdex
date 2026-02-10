@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 20 of 22 (Area Scanner REST API)
-**Plan:** 4 of 6
+**Plan:** 5 of 6
 **Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 20-04 Area Scan Background Job complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 20-05 Scan Management Endpoints complete (2 tasks, 2 commits)
 
-**Progress:** [██████████] 97%
+**Progress:** [██████████] 99%
 
 ---
 
@@ -77,6 +77,8 @@ Phase 20 implementation decisions:
 - **20-02:** Four-factor weighted model (vacant_land 30, size_optimal 25, zoning_residential 25, recent_permits 20)
 - **20-04:** Skip DSO bestemming queries during bulk scan (add as on-demand Tier 2)
 - **20-04:** Process BAG WFS features as buildings with has_pand=True (MVP approach)
+- **20-05:** Default sort by score DESC (most promising first per user decision)
+- **20-05:** Use Job(job_id, pool).abort() for cancellation (status update in job handler)
 
 ### Active TODOs
 
@@ -105,10 +107,10 @@ Phase 20 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T15:04:06.048Z
-**Stopped At:** Completed 20-04-PLAN.md
+**Last Session:** 2026-02-10T15:08:47.311Z
+**Stopped At:** Completed 20-05-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 4/6 plans)*
+*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 5/6 plans)*
