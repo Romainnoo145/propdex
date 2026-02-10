@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from arq.connections import RedisSettings
 
 from app.core.config import settings
+from app.jobs.area_scan import area_scan_job
 from app.jobs.pdf_parsing import pdf_parsing_job
 
 
@@ -28,14 +29,15 @@ def get_redis_settings() -> RedisSettings:
 
 class WorkerSettings:
     """
-    ARQ worker configuration for PDF parsing jobs.
+    ARQ worker configuration for PDF parsing and area scan jobs.
 
     Run worker via: arq app.jobs.worker.WorkerSettings
     """
 
-    functions = [pdf_parsing_job]
+    functions = [pdf_parsing_job, area_scan_job]
     redis_settings = get_redis_settings()
-    max_jobs = 5  # Max concurrent parsing jobs (limited by Claude API rate)
-    job_timeout = 300  # 5 minutes for download + parse + store
+    max_jobs = 5  # Max concurrent jobs
+    job_timeout = 3600  # 1 hour for large area scans
     max_tries = 1  # No auto-retry per user decision
+    allow_abort_jobs = True  # Enable job cancellation for area scans
     health_check_interval = 30  # Seconds between health checks
