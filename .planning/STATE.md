@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 19 of 22 (Government API Clients)
-**Plan:** 1 of 5 complete
+**Plan:** 2 of 5 complete
 **Status:** In progress
 
-**Last activity:** 2026-02-10 -- 19-01 Rate Limiter & Dependencies complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 19-02 BAG WFS Client complete (1 task, 1 commit)
 
-**Progress:** [█████████░] 94%
+**Progress:** [██████████] 96%
 
 ---
 
@@ -61,6 +61,8 @@ Phase 18 implementation decisions:
 Phase 19 implementation decisions:
 - **19-01:** Use dual-layer rate limiting (semaphore for concurrency, token bucket for time-based)
 - **19-01:** Conservative BRK limits (2 concurrent, 200/hour) as it's a paid API
+- **19-02:** Rate limit each WFS page request individually (not just the initial request) to prevent quota exhaustion during long-running pagination
+- **19-02:** Use numberMatched vs numberReturned comparison for truncation detection (not just feature count < PAGE_SIZE)
 
 ### Active TODOs
 
@@ -89,10 +91,10 @@ Phase 19 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T12:46:26.497Z
-**Stopped At:** Completed 19-01-PLAN.md
+**Last Session:** 2026-02-10T12:50:11.858Z
+**Stopped At:** Completed 19-02-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 19 Government API Clients in progress - 1/5 plans)*
+*Last updated: 2026-02-10 (Phase 19 Government API Clients in progress - 2/5 plans)*
