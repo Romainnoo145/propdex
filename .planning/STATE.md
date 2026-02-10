@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 21 of 22 (Map Visualization)
-**Plan:** 2 of 5
+**Plan:** 3 of 5
 **Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 21-02 Scan API Types and Hooks complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 21-03 Vector Tile Layers complete (2 tasks, 2 commits)
 
-**Progress:** [████████████████░░░░░] 40%
+**Progress:** [████████████████████░] 60%
 
 ---
 
@@ -87,6 +87,10 @@ Phase 21 implementation decisions:
 - **21-01:** Insert gemeente layers before property layers (property click precedence)
 - **21-01:** Feature-state hover pattern for gemeente boundaries (more performant than paint updates)
 - **21-02:** Snake_case TypeScript types match backend JSON exactly (no camelCase conversion)
+- **21-03:** Configurable tile URL pattern for vector tile layers (not PDOK-specific, enables reuse for Martin tile server)
+- **21-03:** Feature-state hover effects for both parcel and score layers (module-level ID tracking)
+- **21-03:** Five-stop color gradient for scores: red (0) → orange (25) → yellow (50) → green (75) → dark green (100)
+- **21-03:** Minimal fill layer (opacity 0.01) for click detection without visual interference
 - **21-02:** TanStack Query v5 function-form refetchInterval signature for conditional polling
 - **21-02:** 30-second staleTime for scan results (immutable after completion)
 
@@ -117,10 +121,10 @@ Phase 21 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T15:50:29.675Z
-**Stopped At:** Completed 21-01-PLAN.md
+**Last Session:** 2026-02-10T15:48:43Z
+**Stopped At:** Completed 21-03-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 21 Map Visualization in progress - 2/5 plans)*
+*Last updated: 2026-02-10 (Phase 21 Map Visualization in progress - 3/5 plans)*
