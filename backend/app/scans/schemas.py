@@ -1,0 +1,174 @@
+"""Pydantic schemas for area scan operations."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+
+class ScanCreateRequest(BaseModel):
+    """Schema for triggering a new area scan."""
+
+    gemeente_code: str = Field(
+        description="CBS gemeentecode (e.g., '0363' for Amsterdam)",
+        min_length=4,
+        max_length=10,
+    )
+    gemeente_naam: str = Field(
+        description="Display name (e.g., 'Amsterdam')",
+        min_length=1,
+        max_length=100,
+    )
+    force_rescan: bool = Field(
+        default=False,
+        description="Override existing scan and start fresh",
+    )
+
+
+class ScanResponse(BaseModel):
+    """Schema returned after triggering a scan."""
+
+    scan_id: uuid.UUID = Field(
+        description="Scan UUID",
+    )
+    status: str = Field(
+        description="Scan status: pending, running, completed, failed, cancelled, existing",
+    )
+    gemeente_naam: str = Field(
+        description="Gemeente display name",
+    )
+    gemeente_code: str = Field(
+        description="CBS gemeentecode",
+    )
+    scan_date: datetime | None = Field(
+        default=None,
+        description="Scan creation timestamp (for existing scans)",
+    )
+    needs_rescan: bool = Field(
+        default=False,
+        description="True if scan is >30 days old",
+    )
+    message: str | None = Field(
+        default=None,
+        description="Additional context message",
+    )
+
+
+class ScanStatusResponse(BaseModel):
+    """Schema for polling scan progress."""
+
+    scan_id: uuid.UUID = Field(
+        description="Scan UUID",
+    )
+    status: str = Field(
+        description="Scan status",
+    )
+    progress_pct: int = Field(
+        description="Overall progress percentage (0-100)",
+        ge=0,
+        le=100,
+    )
+    current_phase: str | None = Field(
+        default=None,
+        description="Current processing phase: fetching_parcels, cross_referencing_bag, querying_bestemmingen",
+    )
+    parcels_total: int = Field(
+        description="Total parcels discovered",
+        ge=0,
+    )
+    parcels_processed: int = Field(
+        description="Parcels processed so far",
+        ge=0,
+    )
+    parcels_failed: int = Field(
+        description="Parcels that failed processing",
+        ge=0,
+    )
+    results_count: int = Field(
+        description="Number of ScanResult rows created",
+        ge=0,
+    )
+    started_at: datetime | None = Field(
+        default=None,
+        description="Job start timestamp",
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        description="Job completion timestamp",
+    )
+
+
+class ScanResultItem(BaseModel):
+    """Schema for a single parcel result in scan list."""
+
+    parcel_id: uuid.UUID = Field(
+        description="ParcelCache UUID",
+    )
+    parcel_code: str = Field(
+        description="Kadaster parcel identifier",
+    )
+    address: str | None = Field(
+        default=None,
+        description="Street address from BAG",
+    )
+    gemeente_code: str | None = Field(
+        default=None,
+        description="CBS gemeentecode",
+    )
+    area_m2: float | None = Field(
+        default=None,
+        description="Parcel area in square meters",
+        ge=0,
+    )
+    has_pand: bool = Field(
+        description="Whether parcel has existing building",
+    )
+    bestemmingen: list[dict] | None = Field(
+        default=None,
+        description="Zoning designations from DSO",
+    )
+    score: float | None = Field(
+        default=None,
+        description="Development opportunity score (0-100)",
+        ge=0,
+        le=100,
+    )
+    score_category: str | None = Field(
+        default=None,
+        description="Score category: High, Medium, Low",
+    )
+    score_breakdown: dict | None = Field(
+        default=None,
+        description="Per-factor score contributions for transparency",
+    )
+
+
+class ScanResultsResponse(BaseModel):
+    """Schema for paginated scan results list."""
+
+    scan_id: uuid.UUID = Field(
+        description="Scan UUID",
+    )
+    gemeente_naam: str = Field(
+        description="Gemeente display name",
+    )
+    scan_date: datetime = Field(
+        description="Scan creation timestamp",
+    )
+    total: int = Field(
+        description="Total matching results (before pagination)",
+        ge=0,
+    )
+    offset: int = Field(
+        description="Current offset",
+        ge=0,
+    )
+    limit: int = Field(
+        description="Page size",
+        ge=0,
+    )
+    results: list[ScanResultItem] = Field(
+        description="Paginated result items",
+    )
