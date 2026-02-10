@@ -24,3 +24,16 @@ export const DEFAULT_CENTER: [number, number] = [4.9, 52.37];
 
 /** Default zoom level (shows Amsterdam metro area) */
 export const DEFAULT_ZOOM = 12;
+
+/** Geographic center of Netherlands (for gemeente overview) */
+export const NL_CENTER: [number, number] = [5.2913, 52.1326];
+
+/** Zoom level showing all of Netherlands */
+export const NL_ZOOM = 7;
+
+/**
+ * CBS WFS endpoint for gemeente boundaries (2024 version)
+ * Returns GeoJSON FeatureCollection with properties: statcode, statnaam
+ */
+export const CBS_GEMEENTEN_WFS =
+  'https://service.pdok.nl/cbs/gebiedsindelingen/2024/wfs/v1_0?service=WFS&version=2.0.0&request=GetFeature&typeName=gebiedsindelingen:gemeente_gegeneraliseerd&outputFormat=application/json&srsName=EPSG:4326';

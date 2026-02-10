@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import FocusLock from 'react-focus-lock'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useUpdateProject } from '@/hooks/useProjects'
@@ -20,15 +20,20 @@ export default function ProjectEditModal({
   onClose,
   project,
 }: ProjectEditModalProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  // Initialize state from project prop (avoid setState in effect)
+  const [name, setName] = useState(project?.name ?? '')
+  const [description, setDescription] = useState(project?.description ?? '')
   const updateMutation = useUpdateProject()
+  const previousProjectIdRef = useRef<string | null>(null)
 
-  // Pre-fill form when project changes
+  // Reset form when project ID changes (different project opened)
   useEffect(() => {
-    if (project) {
+    if (project && project.id !== previousProjectIdRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- form reset
       setName(project.name)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- form reset
       setDescription(project.description || '')
+      previousProjectIdRef.current = project.id
     }
   }, [project])
 
