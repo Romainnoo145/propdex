@@ -88,14 +88,13 @@ Phase 18 (Spatial Foundation) --> Phase 19 (API Clients) --> Phase 20 (Scanner +
   3. Area scan records track status and progress, and scan results link to individual cached parcels (not bulk JSONB blobs)
   4. Dubbele bestemming is stored as a JSONB array per parcel, preserving multiple overlapping zonings without data loss
   5. All new tables enforce multi-tenant isolation via RLS policies matching existing NULLIF fail-closed pattern
-**Plans**: TBD (estimated 4-5 plans)
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 18-01: PostGIS extension + GeoAlchemy2 setup with Alembic migration
-- [ ] 18-02: Parcel cache table with GIST-indexed geometry and three-tier cache schema
-- [ ] 18-03: Area scan + scan results tables with progress tracking
-- [ ] 18-04: Spatial query helpers (bbox query, coordinate transformation, geometry validation)
-- [ ] 18-05: RLS policies + multi-tenant isolation tests for all new tables
+- [ ] 18-01: PostGIS extension + GeoAlchemy2 + parcel cache model with GIST-indexed geometry (Wave 1)
+- [ ] 18-02: Area scan + scan results tables with progress tracking (Wave 2)
+- [ ] 18-03: Spatial query helpers -- bbox query, coordinate transformation, geometry validation (Wave 2)
+- [ ] 18-04: RLS policies + multi-tenant isolation tests for all new tables (Wave 3)
 
 ### Phase 19: Government API Clients
 **Goal**: All government data sources are accessible as tested async clients with pagination, rate limiting, and error handling -- ready for the scanner to orchestrate
@@ -200,7 +199,7 @@ Plans:
 | 15. Property Data & Map Interactions | v2.0 | 5/5 | Complete | 2026-02-09 |
 | 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
 | 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
-| 18. Spatial Foundation | v3.0 | 0/5 | Not started | - |
+| 18. Spatial Foundation | v3.0 | 0/4 | Planned | - |
 | 19. Government API Clients | v3.0 | 0/5 | Not started | - |
 | 20. Area Scanner + REST API | v3.0 | 0/7 | Not started | - |
 | 21. Map Visualization | v3.0 | 0/5 | Not started | - |
