@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 21 of 22 (Map Visualization)
-**Plan:** 3 of 5
+**Plan:** 4 of 5
 **Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 21-03 Vector Tile Layers complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 21-04 PostGIS MVT Tile Endpoint complete (2 tasks, 2 commits)
 
-**Progress:** [████████████████████░] 60%
+**Progress:** [████████████████████████░] 80%
 
 ---
 
@@ -93,6 +93,9 @@ Phase 21 implementation decisions:
 - **21-03:** Minimal fill layer (opacity 0.01) for click detection without visual interference
 - **21-02:** TanStack Query v5 function-form refetchInterval signature for conditional polling
 - **21-02:** 30-second staleTime for scan results (immutable after completion)
+- **21-04:** PostGIS ST_AsMVT directly instead of Martin proxy (better multi-tenant security)
+- **21-04:** Martin kept in docker-compose as optional dev tool (not used in production tile path)
+- **21-04:** 1-hour Cache-Control on tile responses (scan results are immutable)
 
 ### Active TODOs
 
