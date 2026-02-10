@@ -116,7 +116,7 @@ Plans:
 - [x] 19-05: Unit tests for all API clients and rate limiter (Wave 3)
 
 ### Phase 20: Area Scanner + REST API
-**Goal**: A complete scan pipeline runs as a background job -- from gemeente bbox to filtered parcel list -- with REST endpoints for triggering, polling, paginating results, and exporting CSV
+**Goal**: A complete scan pipeline runs as a background job -- from gemeente bbox to filtered parcel list -- with REST endpoints for triggering, polling, paginating results, and exporting Excel
 **Depends on**: Phase 19
 **Requirements**: SCAN-02, SCAN-03, SCAN-04, SCAN-05, SCAN-06, LIST-02, LIST-03
 **Success Criteria** (what must be TRUE):
@@ -124,17 +124,16 @@ Plans:
   2. Scan progress is queryable via polling endpoint, showing current phase (fetching parcels / cross-referencing BAG / querying bestemmingen) and percentage complete
   3. Scans exceeding 10,000 parcels are rejected before enqueueing, with a clear error message returned to the caller
   4. Completed scan results are available via paginated API (50 per page) with server-side sorting and filtering by bestemming, has_pand, and parcel size
-  5. Filtered scan results can be exported as CSV containing address, size, bestemming, and has_pand (no owner information)
-**Plans**: TBD (estimated 5-7 plans)
+  5. Filtered scan results can be exported as Excel (.xlsx) containing address, size, bestemming, has_pand, and score (no owner information)
+**Plans**: 6 plans in 4 waves
 
 Plans:
-- [ ] 20-01: Area scanner service (gemeente to bbox, scan record creation, ARQ job enqueue)
-- [ ] 20-02: Scan pipeline stage 1: bulk parcel fetch with WFS pagination
-- [ ] 20-03: Scan pipeline stage 2: BAG cross-reference (has_pand) + DSO bestemming query
-- [ ] 20-04: Progress tracking and scan status polling endpoint
-- [ ] 20-05: Paginated results endpoint with server-side sort and filter
-- [ ] 20-06: CSV export endpoint
-- [ ] 20-07: Scan size validation + duplicate scan prevention
+- [ ] 20-01: Foundation schemas, Alembic migration (parcels_failed), gemeente bbox helper (Wave 1)
+- [ ] 20-02: Parcel scoring service with weighted factors and category labels -- TDD (Wave 1)
+- [ ] 20-03: Scan CRUD service + trigger endpoint + main.py wiring (Wave 2)
+- [ ] 20-04: Area scan ARQ job -- full pipeline: fetch, cross-ref, score, store (Wave 2)
+- [ ] 20-05: Status polling + cancel + paginated results endpoints (Wave 3)
+- [ ] 20-06: Excel export endpoint with openpyxl (Wave 4)
 
 ### Phase 21: Map Visualization
 **Goal**: Users can select a gemeente on the map and see scan results rendered as interactive colored parcels -- the visual entry point for area intelligence
@@ -201,10 +200,10 @@ Plans:
 | 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
-| 20. Area Scanner + REST API | v3.0 | 0/7 | Not started | - |
+| 20. Area Scanner + REST API | v3.0 | 0/6 | Not started | - |
 | 21. Map Visualization | v3.0 | 0/5 | Not started | - |
 | 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
 
 ---
 
-*Last updated: 2026-02-10 (Phase 19 complete)*
+*Last updated: 2026-02-10 (Phase 20 planned)*
