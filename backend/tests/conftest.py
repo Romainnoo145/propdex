@@ -74,7 +74,7 @@ async def test_engine():
             finally:
                 await conn.close()
 
-            # Install pg_trgm extension in test database
+            # Install pg_trgm and postgis extensions in test database
             test_conn = await asyncpg.connect(
                 host=host,
                 port=port,
@@ -84,6 +84,7 @@ async def test_engine():
             )
             try:
                 await test_conn.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+                await test_conn.execute("CREATE EXTENSION IF NOT EXISTS postgis")
             finally:
                 await test_conn.close()
     except Exception as e:
