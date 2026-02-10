@@ -144,14 +144,14 @@ Plans:
   2. PDOK vector tiles display parcel boundaries with click and hover interaction (replacing WMS raster tiles for scan areas)
   3. Martin tile server serves the parcel_cache table as a vector tile layer with score-based color coding (green/yellow/red gradient)
   4. During an active scan, the map shows a progress bar and phase indicator so the user knows the scan is running and how far along it is
-**Plans**: TBD (estimated 5-6 plans)
+**Plans**: 5 plans in 2 waves
 
 Plans:
-- [ ] 21-01: CBS gemeente boundary layer (fetch, render, click-to-select interaction)
-- [ ] 21-02: Gemeente selection triggers scan + connects to polling API
-- [ ] 21-03: PDOK vector tile layer for parcel boundaries (replace WMS for scan areas)
-- [ ] 21-04: Martin tile server setup + score-based color overlay from parcel_cache
-- [ ] 21-05: Scan progress UI (progress bar, phase indicators, completion state)
+- [ ] 21-01-PLAN.md -- CBS gemeente boundary layer with click/hover interaction (Wave 1)
+- [ ] 21-02-PLAN.md -- Scan TypeScript types and TanStack Query hooks (Wave 1)
+- [ ] 21-03-PLAN.md -- Vector tile layer modules for parcels and score overlay (Wave 1)
+- [ ] 21-04-PLAN.md -- PostGIS MVT tile endpoint with multi-tenant filtering (Wave 2)
+- [ ] 21-05-PLAN.md -- Scan progress overlay + full map integration (Wave 2)
 
 ### Phase 22: Parcel List + Detail
 **Goal**: Users can browse, filter, and drill into scan results -- from sortable table to AI-generated detail modal with expandable source cards and BRK owner lookup
@@ -201,7 +201,7 @@ Plans:
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
-| 21. Map Visualization | v3.0 | 0/5 | Not started | - |
+| 21. Map Visualization | v3.0 | 0/5 | Planned | - |
 | 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
 
 ---
