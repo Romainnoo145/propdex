@@ -4,6 +4,7 @@ import uuid
 
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +22,7 @@ from app.scans.schemas import (
     ScanResultsResponse,
     ScanStatusResponse,
 )
+from app.services.excel_exporter import export_scan_results_to_excel
 from app.services.gemeente_service import get_gemeente_bbox
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
@@ -377,4 +379,103 @@ async def list_results(
         offset=offset,
         limit=limit,
         results=result_items,
+    )
+
+
+@router.get("/{scan_id}/export")
+@limiter.limit("10/minute")
+async def export_results(
+    request: Request,
+    scan_id: uuid.UUID,
+    has_pand: bool | None = None,
+    bestemming_type: str | None = None,
+    min_area_m2: float | None = None,
+    max_area_m2: float | None = None,
+    score_category: str | None = None,
+    sort_by: str = "score",
+    sort_order: str = "desc",
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Export filtered scan results to Excel .xlsx file.
+
+    Generates a downloadable Excel file containing all results matching the active
+    filters (no pagination limit). Includes scan metadata, Dutch column names,
+    styled headers, and score transparency columns.
+
+    User decision: .xlsx format (not CSV) as NL/BE real estate developers work in Excel.
+    Export respects active filters -- exports what the user sees, not all results.
+
+    Requires JWT authentication. Rate limited to 10 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        scan_id: Scan UUID
+        has_pand: Filter by building presence
+        bestemming_type: Filter by zoning type substring
+        min_area_m2: Minimum parcel area
+        max_area_m2: Maximum parcel area
+        score_category: Filter by score category (High/Medium/Low)
+        sort_by: Sort field (score/area_m2/address)
+        sort_order: Sort direction (asc/desc)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        StreamingResponse: Excel file download with Content-Disposition header
+
+    Raises:
+        HTTPException 404: Scan not found
+    """
+    # Get scan by ID with multi-tenant isolation
+    scan = await service.get_scan_by_id(scan_id, organization_id, db)
+
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    # Fetch ALL filtered results (no pagination -- export everything)
+    rows, _total = await service.list_scan_results(
+        scan_id=scan_id,
+        organization_id=organization_id,
+        has_pand=has_pand,
+        bestemming_type=bestemming_type,
+        min_area_m2=min_area_m2,
+        max_area_m2=max_area_m2,
+        score_category=score_category,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        offset=0,
+        limit=10000,  # Effectively all (scan limit is 10k parcels)
+        session=db,
+    )
+
+    # Build filters_applied dict for metadata
+    filters_applied = {}
+    if has_pand is not None:
+        filters_applied["has_pand"] = has_pand
+    if bestemming_type is not None:
+        filters_applied["bestemming_type"] = bestemming_type
+    if min_area_m2 is not None:
+        filters_applied["min_area_m2"] = min_area_m2
+    if max_area_m2 is not None:
+        filters_applied["max_area_m2"] = max_area_m2
+    if score_category is not None:
+        filters_applied["score_category"] = score_category
+
+    # Generate Excel file
+    excel_buffer = await export_scan_results_to_excel(rows, scan, filters_applied)
+
+    # Generate filename with gemeente name and date
+    filename = f"propdex-scan-{scan.gemeente_naam}-{scan.created_at.strftime('%Y%m%d')}.xlsx"
+
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
