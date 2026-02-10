@@ -14,6 +14,11 @@ import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { useRecentViewed } from '@/hooks/useRecentViewed'
 import { useReport } from '@/hooks/useReports'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
+import {
+  fetchGemeenteGeoJSON,
+  addGemeenteBoundariesLayer,
+  setGemeenteBoundariesVisibility,
+} from '@/components/map/GemeenteBoundariesLayer'
 import { lookupPdokAddress } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
@@ -45,6 +50,10 @@ function MapPage() {
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  // selectedGemeente will be used in Plan 21-02 to trigger area scan
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedGemeente, setSelectedGemeente] = useState<{ code: string; naam: string } | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -259,6 +268,38 @@ function MapPage() {
     )
   }, [currentData, lookup])
 
+  // Gemeenten layer toggle handler
+  const handleGemeentenToggle = useCallback(async (visible: boolean) => {
+    if (!mapRef.current) return
+
+    const map = mapRef.current
+
+    if (visible) {
+      // Fetch GeoJSON if not cached
+      if (!gemeenteGeojson) {
+        try {
+          const geojson = await fetchGemeenteGeoJSON()
+          setGemeenteGeojson(geojson)
+
+          // Add layer with click handler
+          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam) => {
+            console.log('Gemeente selected:', gemeenteCode, gemeenteNaam)
+            setSelectedGemeente({ code: gemeenteCode, naam: gemeenteNaam })
+          })
+        } catch (err) {
+          console.error('Failed to fetch gemeente boundaries:', err)
+          toast.error('Kon gemeentegrenzen niet laden')
+        }
+      } else {
+        // Layer already exists, just show it
+        setGemeenteBoundariesVisibility(map, true)
+      }
+    } else {
+      // Hide layer
+      setGemeenteBoundariesVisibility(map, false)
+    }
+  }, [gemeenteGeojson])
+
   return (
     <AppLayout>
       <MapView mapRef={mapRef} onMapReady={() => setMapReady(true)} />
@@ -303,7 +344,7 @@ function MapPage() {
         />
       )}
 
-      <LayerToggle mapRef={mapRef} />
+      <LayerToggle mapRef={mapRef} onGemeentenToggle={handleGemeentenToggle} />
     </AppLayout>
   )
 }

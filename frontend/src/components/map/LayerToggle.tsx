@@ -10,11 +10,13 @@ type LayerType = 'aerial' | 'kaart';
 interface LayerToggleProps {
   mapRef: React.RefObject<maplibregl.Map | null>;
   onParcelsToggle?: (visible: boolean) => void;
+  onGemeentenToggle?: (visible: boolean) => void;
 }
 
-function LayerToggle({ mapRef, onParcelsToggle }: LayerToggleProps) {
+function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle }: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
   const [showParcels, setShowParcels] = useState(false);
+  const [showGemeenten, setShowGemeenten] = useState(false);
 
   const handleLayerChange = (layer: LayerType) => {
     if (!mapRef.current || layer === activeLayer) return;
@@ -53,10 +55,24 @@ function LayerToggle({ mapRef, onParcelsToggle }: LayerToggleProps) {
     }
   };
 
+  const handleGemeentenToggle = () => {
+    if (!mapRef.current) return;
+
+    const newShowGemeenten = !showGemeenten;
+    setShowGemeenten(newShowGemeenten);
+
+    // Notify parent component to handle layer addition/removal
+    if (onGemeentenToggle) {
+      onGemeentenToggle(newShowGemeenten);
+    }
+  };
+
   const active = 'bg-white/70 text-gray-900 shadow-sm';
   const inactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
   const parcelActive = 'bg-blue-500/30 text-white shadow-sm';
   const parcelInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
+  const gemeenteActive = 'bg-emerald-500/30 text-white shadow-sm';
+  const gemeenteInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
 
   return (
     <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-black/30 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/20 shadow-lg">
@@ -86,6 +102,17 @@ function LayerToggle({ mapRef, onParcelsToggle }: LayerToggleProps) {
         }`}
       >
         Percelen
+      </button>
+
+      <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+
+      <button
+        onClick={handleGemeentenToggle}
+        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+          showGemeenten ? gemeenteActive : gemeenteInactive
+        }`}
+      >
+        Gemeenten
       </button>
     </div>
   );
