@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 18 of 22 (Spatial Foundation)
-**Plan:** 1 of 4 complete
+**Plan:** 3 of 4 complete
 **Status:** In progress
 
-**Last activity:** 2026-02-10 -- 18-01 PostGIS Foundation complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 18-03 Spatial Query Helpers complete (2 tasks, 1 commit)
 
-**Progress:** [██████████] 95%
+**Progress:** [██████████] 98%
 
 ---
 
@@ -54,6 +54,8 @@ v3.0 architecture decisions:
 Phase 18 implementation decisions:
 - **18-01:** Use postgis/postgis:16-3.5 Docker image (Alpine's PostGIS is PostgreSQL 18-only)
 - **18-01:** Create GIST spatial index via raw SQL in migration (Alembic doesn't auto-detect geometry indexes)
+- **18-03:** Use func.ST_* pattern for PostGIS function access instead of direct geoalchemy2.functions imports
+- **18-03:** Module-level pyproj Transformer singletons for 100x coordinate transformation speedup
 
 ### Active TODOs
 
@@ -82,10 +84,10 @@ Phase 18 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T11:57:42.177Z
-**Stopped At:** Completed 18-01-PLAN.md (PostGIS Foundation)
+**Last Session:** 2026-02-10T12:02:12.281Z
+**Stopped At:** Completed 18-03-PLAN.md (Spatial Query Helpers)
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (18-01 PostGIS foundation complete)*
+*Last updated: 2026-02-10 (18-03 Spatial Query Helpers complete)*
