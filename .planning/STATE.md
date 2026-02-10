@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Area -> Opportunity Intelligence
-**Current focus:** v3.0 Area Intelligence -- Phase 18 complete, Phase 19 next
+**Current focus:** v3.0 Area Intelligence -- Phase 20 complete, Phase 21 next
 
 ---
 

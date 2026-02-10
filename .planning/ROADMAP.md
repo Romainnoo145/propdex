@@ -128,12 +128,12 @@ Plans:
 **Plans**: 6 plans in 4 waves
 
 Plans:
-- [ ] 20-01: Foundation schemas, Alembic migration (parcels_failed), gemeente bbox helper (Wave 1)
-- [ ] 20-02: Parcel scoring service with weighted factors and category labels -- TDD (Wave 1)
-- [ ] 20-03: Scan CRUD service + trigger endpoint + main.py wiring (Wave 2)
-- [ ] 20-04: Area scan ARQ job -- full pipeline: fetch, cross-ref, score, store (Wave 2)
-- [ ] 20-05: Status polling + cancel + paginated results endpoints (Wave 3)
-- [ ] 20-06: Excel export endpoint with openpyxl (Wave 4)
+- [x] 20-01: Foundation schemas, Alembic migration (parcels_failed), gemeente bbox helper (Wave 1)
+- [x] 20-02: Parcel scoring service with weighted factors and category labels -- TDD (Wave 1)
+- [x] 20-03: Scan CRUD service + trigger endpoint + main.py wiring (Wave 2)
+- [x] 20-04: Area scan ARQ job -- full pipeline: fetch, cross-ref, score, store (Wave 2)
+- [x] 20-05: Status polling + cancel + paginated results endpoints (Wave 3)
+- [x] 20-06: Excel export endpoint with openpyxl (Wave 4)
 
 ### Phase 21: Map Visualization
 **Goal**: Users can select a gemeente on the map and see scan results rendered as interactive colored parcels -- the visual entry point for area intelligence
@@ -200,10 +200,10 @@ Plans:
 | 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
-| 20. Area Scanner + REST API | v3.0 | 0/6 | Not started | - |
+| 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
 | 21. Map Visualization | v3.0 | 0/5 | Not started | - |
 | 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 planned)*
+*Last updated: 2026-02-10 (Phase 20 complete)*
