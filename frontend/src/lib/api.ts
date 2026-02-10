@@ -593,3 +593,16 @@ export async function fetchScanResults(
     accessToken,
   })
 }
+
+/**
+ * Get vector tile URL for scan results
+ *
+ * Returns MapLibre-compatible tile URL template for MVT tiles.
+ * Tiles are served by Martin tile server at /api/scans/{scanId}/tiles/{z}/{x}/{y}.pbf
+ *
+ * @param scanId - Scan UUID
+ * @returns Tile URL template with {z}/{x}/{y} placeholders
+ */
+export function getScanTileUrl(scanId: string): string {
+  return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf`
+}

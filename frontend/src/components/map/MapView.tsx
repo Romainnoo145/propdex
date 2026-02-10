@@ -13,9 +13,14 @@ import {
 interface MapViewProps {
   mapRef?: React.MutableRefObject<maplibregl.Map | null>;
   onMapReady?: (map: maplibregl.Map) => void;
+  transformRequest?: maplibregl.RequestTransformFunction;
 }
 
-export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewProps) {
+export default function MapView({
+  mapRef: externalMapRef,
+  onMapReady,
+  transformRequest,
+}: MapViewProps) {
   const internalMapRef = useRef<maplibregl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -24,6 +29,7 @@ export default function MapView({ mapRef: externalMapRef, onMapReady }: MapViewP
 
     const map = new maplibregl.Map({
       container: containerRef.current,
+      transformRequest,
       style: {
         version: 8,
         sources: {

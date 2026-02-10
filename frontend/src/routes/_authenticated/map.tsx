@@ -19,7 +19,11 @@ import {
   addGemeenteBoundariesLayer,
   setGemeenteBoundariesVisibility,
 } from '@/components/map/GemeenteBoundariesLayer'
-import { lookupPdokAddress } from '@/lib/api'
+import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
+import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
+import { useAuth } from '@/lib/auth/useAuth'
+import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
+import { lookupPdokAddress, getScanTileUrl } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
 
@@ -46,16 +50,20 @@ function MapPage() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const navigate = useNavigate()
   const { postcode, huisnummer, reportId } = Route.useSearch()
+  const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  // selectedGemeente will be used in Plan 21-02 to trigger area scan
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedGemeente, setSelectedGemeente] = useState<{ code: string; naam: string } | null>(null)
+  const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
+
+  // Scan hooks
+  const triggerScan = useTriggerScan()
+  const scanStatus = useScanPolling(activeScanId)
+  const cancelScan = useCancelScan()
 
   // Fetch saved report if reportId provided
   const savedReport = useReport(reportId || null)
@@ -155,6 +163,31 @@ function MapPage() {
       }
     )
   }, [postcode, huisnummer, lookup, navigate])
+
+  // Show score layer when scan completes
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !scanStatus.data) return
+
+    if (scanStatus.data.status === 'completed' && activeScanId) {
+      // Add score overlay tiles from backend proxy
+      const tileUrl = getScanTileUrl(activeScanId)
+      addParcelScoreLayer(mapRef.current, tileUrl, 'parcel_scores')
+    }
+  }, [scanStatus.data, activeScanId, mapReady])
+
+  // Handle scan completion and failure
+  useEffect(() => {
+    if (!scanStatus.data) return
+    /* eslint-disable react-hooks/set-state-in-effect -- Intentional: Update local state based on external scan status */
+    if (scanStatus.data.status === 'completed') {
+      toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
+      // Keep activeScanId to show score layer
+    } else if (scanStatus.data.status === 'failed') {
+      toast.error('Scan mislukt')
+      setActiveScanId(null) // Clear scan
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [scanStatus.data])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
@@ -268,8 +301,29 @@ function MapPage() {
     )
   }, [currentData, lookup])
 
+  // MapLibre transformRequest for authenticated tile requests
+  const transformRequest = useCallback(
+    (url: string, resourceType?: string) => {
+      // Add auth for tile requests to our backend
+      if (url.startsWith('/api/') && resourceType === 'Tile') {
+        const headers: Record<string, string> = {}
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`
+        }
+        return {
+          url,
+          headers,
+          credentials: 'include' as const,
+        }
+      }
+      return { url }
+    },
+    [accessToken]
+  )
+
   // Gemeenten layer toggle handler
-  const handleGemeentenToggle = useCallback(async (visible: boolean) => {
+  const handleGemeentenToggle = useCallback(
+    async (visible: boolean) => {
     if (!mapRef.current) return
 
     const map = mapRef.current
@@ -284,7 +338,26 @@ function MapPage() {
           // Add layer with click handler
           addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam) => {
             console.log('Gemeente selected:', gemeenteCode, gemeenteNaam)
-            setSelectedGemeente({ code: gemeenteCode, naam: gemeenteNaam })
+
+            // Trigger scan
+            triggerScan.mutate(
+              { gemeente_code: gemeenteCode, gemeente_naam: gemeenteNaam },
+              {
+                onSuccess: (data) => {
+                  if (data.status === 'existing' && !data.needs_rescan) {
+                    // Existing scan found - show results from existing scan
+                    setActiveScanId(data.scan_id)
+                    toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
+                  } else {
+                    // New scan started
+                    setActiveScanId(data.scan_id)
+                  }
+                },
+                onError: (err) => {
+                  toast.error(`Scan starten mislukt: ${err.message}`)
+                },
+              }
+            )
           })
         } catch (err) {
           console.error('Failed to fetch gemeente boundaries:', err)
@@ -298,12 +371,27 @@ function MapPage() {
       // Hide layer
       setGemeenteBoundariesVisibility(map, false)
     }
-  }, [gemeenteGeojson])
+    },
+    [gemeenteGeojson, triggerScan]
+  )
 
   return (
     <AppLayout>
-      <MapView mapRef={mapRef} onMapReady={() => setMapReady(true)} />
+      <MapView
+        mapRef={mapRef}
+        onMapReady={() => setMapReady(true)}
+        transformRequest={transformRequest}
+      />
       <AddressSearch onSelect={handleAddressSelect} />
+
+      {/* Scan progress overlay */}
+      {activeScanId && scanStatus.data && scanStatus.data.status !== 'completed' && (
+        <ScanProgressOverlay
+          status={scanStatus.data}
+          onCancel={() => cancelScan.mutate(activeScanId)}
+          isCancelling={cancelScan.isPending}
+        />
+      )}
 
       {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
       {tier === 'quick' && (
