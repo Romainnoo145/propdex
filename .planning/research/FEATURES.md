@@ -1,464 +1,475 @@
-# Feature Landscape: Map-First Property Intelligence Platform
+# Feature Research: v3.0 Area Intelligence
 
-**Domain:** PropTech / Dutch property intelligence for real estate developers
-**Researched:** 2026-02-08
-**Confidence:** MEDIUM (verified with multiple sources, specific Dutch context is LOW)
+**Domain:** Area-based Property Intelligence / Development Opportunity Discovery
+**Researched:** 2026-02-10
+**Confidence:** MEDIUM
 
 ## Executive Summary
 
-Map-first property platforms prioritize spatial interaction over traditional dashboard navigation. The map IS the interface — users pan, zoom, click properties, and receive contextual information via floating panels. Key patterns: (1) minimal chrome, maximum map real estate, (2) floating search integrated in map view, (3) bottom sheets/slide-up panels for property details on mobile, (4) sidebar for saved items/projects (not primary navigation), (5) layer toggles for data overlays.
+This research focuses on **NEW features for v3.0 Area Intelligence**, building on the existing v2.0 map-first property lookup platform. v3.0 transforms Propdex from "enter address → get report" to "scan area → find opportunities" — identifying parcels with building zoning but no buildings, cross-referencing with permits and municipal decisions, and surfacing qualified leads with owner information.
 
-This research categorizes features for Propdex v2.0 frontend, building on the production-ready v1.1 backend (275 tests, full multi-tenant API with kadaster, zoning, monuments, AI parsing, PDF export).
+**Key findings:**
+- Area selection via gemeente boundaries is table stakes (PropertyRadar uses census tracts, Dutch users expect CBS gebiedsindelingen)
+- Smart pre-filtering pipeline (BAG has_pand → bestemming → permits) reduces API costs by 97.5% (2000 parcels → 50 qualified)
+- Owner lookup (Kadaster BRK) is expensive and privacy-restricted — MUST filter first, lookup last
+- Vergunningen monitoring via Officiële Bekendmakingen is expected (all 342 Dutch municipalities connected, 8M+ residents enrolled)
+- Expandable source cards with AI summaries follow accordion UX best practices (caret icon, aria-expanded)
+- Progressive loading (infinite scroll or pagination) is required for 2000+ parcel lists
 
 ---
 
-## Table Stakes
+## Table Stakes (Users Expect These)
 
-Features users expect from a map-first property intelligence platform. Missing these = product feels incomplete.
+Features users assume exist. Missing these = product feels incomplete.
 
-| Feature | Why Expected | Complexity | Backend Ready | Notes |
-|---------|--------------|------------|---------------|-------|
-| **Full-page interactive map** | Industry standard (Google Maps, Regrid, ParcelQuest) — map IS the app | Medium | N/A | MapLibre with PDOK aerial/topo tiles |
-| **Floating search bar** | Google Maps pattern — search integrated in map view, not sidebar | Low | YES (`/property/lookup`) | PDOK autocomplete via BAG API |
-| **Address autocomplete** | Dutch platforms expect zipcode + housenumber or street suggestions | Medium | YES (backend has PDOK) | Must handle "1011 AB 1" and "Dam 1, Amsterdam" |
-| **Click property → instant info** | Core interaction — click map feature, see details immediately | Medium | YES (aggregator ready) | Floating panel with PropertyReportResponse |
-| **Parcel boundaries overlay** | Real estate users need to see exact property lines (kadaster) | High | NO (needs layer data) | Requires kadaster parcel WFS/vector tiles |
-| **Layer toggles** | Satellite vs topographic, boundaries on/off — standard map controls | Low | N/A | MapLibre layer visibility controls |
-| **Saved reports list** | Users expect to revisit properties they've researched | Low | YES (`/reports` CRUD) | Sidebar "Rapporten" tab |
-| **PDF export** | Professional deliverable for sharing with partners/banks | Low | YES (WeasyPrint) | Download button in detail panel |
-| **Mobile-responsive map** | 30%+ users on mobile/tablet — map must work on small screens | High | N/A | Bottom sheet pattern (Google Maps style) |
-| **Login/logout** | Multi-user platform requires auth | Low | YES (JWT + refresh) | Modal or /login route |
-| **Loading states** | API calls take 2-10s; users need feedback | Low | N/A | Skeleton screens, spinners |
-| **Error handling** | Failed API calls, no data found, rate limits — must communicate clearly | Medium | Backend returns 4xx/5xx | Toast notifications + inline messages |
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Map-based area selection** | Industry standard (PropertyRadar, LightBox) — users expect to draw/select scan regions | MEDIUM | Multiple selection modes needed: polygon draw, gemeente boundaries, wijk/buurt selection, address radius. Start with gemeente (simplest). |
+| **Parcel list with filters** | Core workflow after scan — users need to filter 2000+ parcels to ~50 qualified leads | MEDIUM | Must support: bestemming type, has_pand boolean, permit activity, parcel size, last update date. Table or card grid layout. |
+| **Parcel detail view** | Users expect to click parcel → see detailed intelligence before calling owner | MEDIUM | Modal/drawer with multi-source data (extends existing v2.0 report modal pattern), AI summary, map highlighting. |
+| **Owner contact information** | Critical for outreach — can't approach owners without NAW gegevens | HIGH | Kadaster BRK paid API, privacy restrictions (only for qualified leads with legitimate interest), batch lookup for <100 parcels. |
+| **Export to CSV/Excel** | Standard PropTech workflow — developers need lists for CRM, letters, spreadsheets | LOW | Filtered parcel list with owner info, coordinates, bestemming, opportunity score. One-click download button. |
+| **Save searches/areas** | Users scan same gemeente weekly for new permits/changes | LOW | Save area polygon + filter criteria, re-run scan with freshness check. Extends existing report save pattern. |
+| **Freshness indicators** | Government data changes weekly — users need to know "when was this scanned?" | LOW | Already exists for reports (v1.1), extend to area scans and parcel details. Show per-source timestamps. |
+| **Progressive loading** | Scanning 2000+ parcels takes time — users expect UI to remain responsive | MEDIUM | Infinite scroll + pagination for parcel list, background jobs for heavy API calls (ARQ worker already exists). |
 
 ### Why These Are Table Stakes
 
-**Full-page map:** Every modern PropTech platform (Regrid, Transect, ParcelQuest) uses map-first design. Not having this = feels outdated. Source: [Map UI Design Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
+**Area selection:** PropertyRadar (US market leader) uses census tract selection with FIPS codes. Dutch equivalent is CBS gebiedsindelingen (gemeente/wijk/buurt). Users expect to click a region on the map or search by name. Source: [PropertyRadar Opportunity Zones](https://help.propertyradar.com/en/articles/4445648-opportunity-zones), [CBS Gebiedsindelingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen)
 
-**Floating search:** Google Maps established this pattern — search bar floats over map, doesn't consume sidebar space. Controls are stationary widgets at absolute positions. Source: [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls)
+**Parcel list with filters:** PropertyRadar offers "250+ filter criteria" for real-time list building. Propdex doesn't need 250 (overkill), but core filters are expected: zoning type, building presence, permit activity, parcel size. Source: [PropertyRadar Features Overview](https://www.propertyradar.com/features-overview)
 
-**Address autocomplete:** Dutch users type "1011 AB 1" or "Dam 1" and expect instant suggestions. PDOK Locatieserver is the standard (supports BAG, kadaster). Source: [PDOK Locatieserver API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver)
+**Owner contact information:** PropertyRadar advertises "157M+ properties with verified owner contacts." In Netherlands, Kadaster BRK is the authoritative source, but it's paid and privacy-restricted. Users expect owner NAW data for outreach. Source: [Kadaster Eigendomsinformatie](https://www.kadaster.nl/producten/woning/eigendomsinformatie), [Openbaarheid en Privacy](https://www.kadaster.nl/over-ons/beleid/openbaarheid-en-privacy)
 
-**Parcel boundaries:** Real estate developers MUST see exact property lines to assess plot size, shape, neighbors. Every property platform has this. Source: [Regrid Property App](https://regrid.com/property-app)
+**CSV export:** Standard feature across all PropTech platforms. Users export to Excel for CRM import, mail merge for letters, internal tracking. No export = friction.
 
-**Mobile bottom sheets:** On small screens, full-screen panels block the map. Bottom sheets (Google Maps pattern) allow dragging up for details while keeping map visible. Source: [Bottom Sheet UX Guidelines](https://www.nngroup.com/articles/bottom-sheet/)
-
-**PDF export:** Real estate professionals need deliverables for banks, partners, stakeholders. This is non-negotiable. Already built in backend.
+**Progressive loading:** 2000+ parcels cannot render in a single page load without freezing the browser. Industry standard is infinite scroll (mobile) or pagination (desktop) with 50-100 items per page. Source: [Pagination vs Infinite Scroll](https://ashishmisal.medium.com/pagination-vs-infinite-scroll-vs-load-more-data-loading-ux-patterns-in-react-53534e23244d)
 
 ---
 
-## Differentiators
+## Differentiators (Competitive Advantage)
 
-Features that set Propdex apart from competitors. Not expected, but high-value when present.
+Features that set the product apart. Not required, but valuable.
 
-| Feature | Value Proposition | Complexity | Backend Ready | Notes |
-|---------|-------------------|------------|---------------|-------|
-| **Project folders** | Group related properties (e.g., "Kerkprojecten Q1 2026") — organize pipeline | Low | YES (`project_id` in reports) | Sidebar "Projecten" tab with create/edit |
-| **WOZ waarde display** | Free government data (WOZ = municipal property valuation) — instant value estimate | Medium | NO | New API integration (WOZ Waardeloket?) |
-| **Energielabel badge** | Free via RVO/Kadaster — shows A-G energy rating on property card | Medium | NO | New API integration (EP-Online) |
-| **AI zoning summary** | Most platforms show raw zoning codes; Propdex translates to plain Dutch | Low | YES (Claude parsing) | Already in backend, just display |
-| **Freshness indicators** | "Data from 2 days ago" vs "Data from 6 months ago" — trust signal | Low | YES (per-source timestamps) | Show age per data source |
-| **Monument badge** | Instant visual indicator if property is rijksmonument/gemeentelijk monument | Low | YES (RCE API) | Icon on property card |
-| **Report search** | Find saved reports by address, project, date — not just browsing | Low | YES (`GET /reports?q=`) | Search box in sidebar |
-| **Force refresh button** | "Refresh all data" for stale reports — power user feature | Low | YES (`force_refresh=true`) | Icon button in detail panel |
-| **Parallel data loading** | Fetch kadaster + zoning + monuments simultaneously (not sequential) | N/A | YES (asyncio.gather) | Already implemented, just fast UX |
-| **Background AI parsing** | Zoning analysis doesn't block — shows progress, updates when ready | N/A | YES (ARQ worker) | Polling UI for AI status |
-| **Multi-source confidence** | "Kadaster: verified, Zoning: AI-parsed (85% confidence)" — transparency | Low | YES (confidence scores) | Color-coded badges |
-| **Map measure tool** | Measure distances/areas directly on map — useful for plot analysis | Medium | N/A | MapLibre draw plugin |
-| **Neighborhood context** | Show nearby schools, transit, POIs — helps evaluate location | High | NO | Requires OSM/Google Places API |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Smart pre-filtering pipeline** | Reduce 2000 parcels → 50 opportunities BEFORE hitting paid APIs (97.5% cost reduction) | HIGH | Tier 1: BAG has_pand + bestemming (free, stored in DB). Tier 2: Permits, raadsinformatie (free, JSONB cache). Tier 3: BRK eigendom only for top 50 (paid). This is THE differentiator — cost-efficient opportunity discovery. |
+| **AI opportunity scoring** | Automated ranking by development potential — users get best leads first | HIGH | Score based on: bestemming match (Wonen = high), years unused (longer = higher), no recent permits (activity = lower score), parcel size (larger = higher), proximity to infrastructure. LLM could also score based on raadsinformatie sentiment. |
+| **Multi-source cross-referencing** | Unique value: BAG + DSO + Vergunningen + Raadsinformatie in one view | MEDIUM | Existing report aggregator pattern extends well (already handles PDOK/BAG/DSO/RCE in v1.0). Add Officiële Bekendmakingen SRU API + Open Raadsinformatie API. Source-specific TTL caching. |
+| **Vergunningen monitoring** | Alert when permit filed in saved area — catch opportunities as they emerge | MEDIUM | Officiële Bekendmakingen SRU API (daily updates, not real-time). Background job (ARQ worker) checks saved areas daily, flags new permits. Email digest or in-app notifications. |
+| **Expandable source cards** | Progressive disclosure per data source — reduces cognitive load | LOW | Accordion pattern with AI summary at top, raw data collapsed below. Follows Material Design guidelines (caret icon, aria-expanded). Source: [Accordion UI Design](https://mobbin.com/glossary/accordion) |
+| **Municipality decision context** | Show gemeenteraad decisions affecting parcels — understand political climate | MEDIUM | Open Raadsinformatie API, LLM summarization, link to parcel via location/bestemming keywords. Example: "Gemeenteraad approved 'Wonen' rezoning for Stationsgebied, 2025-11-12." |
+| **Historical permit timeline** | Visualize permit activity over time — spot patterns (e.g., years of inactivity) | MEDIUM | Timeline component showing vergunningen, raadsbesluit, eigendom changes. Helps identify "stalled" projects vs active development. |
+| **Batch owner lookup** | Process top 50 parcels through BRK in one API call instead of 50 separate calls | HIGH | Kadaster BRK bulk endpoint (if available), fallback to sequential with rate limiting. Reduces lookup time from 5-10 minutes to <1 minute. |
 
 ### Why These Differentiate
 
-**Project folders:** Most property platforms are search-focused, not project-focused. Real estate developers work in portfolios (e.g., "Q1 church acquisitions"). Organizing by project = workflow match. Source: [Real Estate Project Management](https://www.smartsuite.com/blog/real-estate-project-management-software)
+**Smart pre-filtering pipeline:** PropertyRadar and LightBox charge per property lookup or subscription tier. Propdex's 3-tier pipeline (free filters → free APIs → paid APIs) minimizes costs. If scanning a gemeente with 2000 parcels, filtering to "Wonen zoning + no building + no recent permit" might yield 50 parcels. Only those 50 trigger BRK owner lookup (€0.50/lookup = €25 instead of €1000). This is a business model advantage.
 
-**WOZ waarde + Energielabel:** Free Dutch government data that competitors might not surface prominently. WOZ gives instant value estimate, energielabel shows renovation needs (F/G labels = expensive upgrades). These are table stakes for Dutch buyers but differentiators if shown upfront.
+**AI opportunity scoring:** LightBox announced "automated rent comps and operating expense extraction" for Q1 2026 (appraisal intelligence). Propdex can differentiate with Dutch-specific scoring: bestemming match (Wonen > Gemengd > Overig), permit inactivity (10 years unused > 1 year), raadsinformatie sentiment (positive rezoning decisions). Source: [LightBox Appraisal Intelligence](https://www.prnewswire.com/news-releases/lightbox-enhances-appraisal-intelligence-to-give-lenders-unmatched-financial-visibility-amid-rising-credit-and-regulatory-demands-302638256.html)
 
-**AI zoning summary:** Bestemmingsplannen are dense PDFs. Most platforms dump raw text. Propdex uses Claude to extract "permitted: residential up to 4 stories, parking: 1.2 spots/unit." This is the killer feature — already built in backend. Source: Already implemented in v1.0
+**Vergunningen monitoring:** Berichten over uw Buurt (Dutch government service) enrolls all residents 25+ for permit notifications in their neighborhood. This sets user expectations: "I get permit alerts for my home, why not for my scan areas?" Propdex extending this to projectontwikkelaars is a natural fit. Source: [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt)
 
-**Freshness indicators:** Property data goes stale. Showing "Kadaster: updated 2 days ago" vs "Zoning: updated 6 months ago" builds trust. Most platforms don't expose data age. Source: Backend already tracks per-source timestamps
-
-**Background AI parsing:** Zoning analysis takes 10-30s (Claude API). Most tools block or fail. Propdex shows "Analyzing bestemmingsplan... 60%" and lets users explore other data. This is a UX win from technical architecture. Source: Already implemented with ARQ worker
+**Multi-source cross-referencing:** Most platforms show cadastral data OR zoning data OR permits. Few combine all three in one view. Propdex already does this for single properties (v1.0 report aggregator). Extending to area scans is a competitive advantage.
 
 ---
 
-## Anti-Features
+## Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build in v2.0. Common mistakes in PropTech, or out of scope for this milestone.
+Features that seem good but create problems.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Dashboard landing page** | Map-first means NO dashboard — map IS the landing page | Full-page map loads immediately on `/` |
-| **Top navigation bar** | Wastes vertical space; conflicts with map-first philosophy | Left sidebar only (collapsible on mobile) |
-| **Inline map in dashboard** | "Dashboard with embedded map widget" is the wrong pattern | Map fills viewport; sidebar overlays on left |
-| **Multi-step property lookup** | "Step 1: Search, Step 2: Select, Step 3: View" — too many clicks | One-step: search → click suggestion → panel opens |
-| **Modal dialogs for property details** | Blocks the map; forces choice between map and data | Floating panel (desktop) or bottom sheet (mobile) |
-| **Separate "saved reports" page** | Breaking out of map view = context loss | Sidebar panel with list; clicking report pans map + opens panel |
-| **Auto-refresh on every map move** | Loading spinner every time user pans = annoying | Only fetch on explicit click or search |
-| **Overly detailed initial view** | Showing all data fields at once = overwhelming | Progressive disclosure: summary first, expand for details |
-| **Complex filters in main UI** | "Filter by zoning, monument status, WOZ range..." — clutters map-first UX | Defer to v3.0; v2.0 = search + click only |
-| **3D building visualization** | Cool but distracting; not core value (due diligence data) | Future feature, not MVP |
-| **Heatmaps / data layers** | "Show WOZ heatmap, zoning heatmap" — analysis paralysis | Keep it simple: parcel boundaries + property details only |
-| **Social features** | Comments, sharing, collaboration — premature for single-client MVP | Defer until multi-org SaaS validated |
-| **Mobile app** | Separate native app = 2x maintenance, unclear value vs web | Mobile-responsive web app is sufficient |
-| **Infinite scroll reports list** | Endless scrolling = hard to find older reports | Pagination or virtual scroll with search/filter |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Real-time everything** | "I want to see live permit filings" | Officiële Bekendmakingen updates **daily**, not real-time. Real-time polling wastes API quota and confuses users with empty results. Also, permits are announced AFTER filing (delay inherent). | Daily background job + freshness indicator ("Last checked: 2 hours ago") + manual refresh button for power users. |
+| **Scan entire Netherlands** | "Why limit to gemeente? I want all of NL" | Netherlands has ~340 gemeentes, ~10M+ parcels total. Scanning all = database explosion (10GB+), API quota death, unusable UI (infinite scroll of 10M items?). PropertyRadar limits to counties/census tracts for same reason. | Per-gemeente scans with multi-gemeente saved searches. "Scan 5 gemeentes" is manageable. "Scan all NL" is not. Progressive rollout (start with 1 gemeente, allow adding more). |
+| **Auto-generate owner letters** | "Can AI write the acquisition letter?" | **Legal liability:** AI-generated letter could violate GDPR (improper use of personal data), make false claims (bestemming interpretation), or damage reputation (tone mismatch). **User control:** Projectontwikkelaars want customization based on owner relationship (cold outreach vs warm intro). | Export contact list → user's CRM/mail merge. Provide letter **templates** (not auto-generation). Example: "Geachte heer/mevrouw [Naam], wij zijn geïnteresseerd in uw perceel..." User fills in specifics. |
+| **CRM integration** | "Connect to our Salesforce/HubSpot/Pipedrive" | Every developer uses different CRM (or Excel). Integration maintenance nightmare (10+ CRM APIs, auth flows, field mapping). Scope creep for MVP. Better to validate core workflow first. | CSV export with standard fields (address, owner, contact, score) → user imports to their CRM. If 3+ users request same CRM, build integration in v3.2+. Provide API for custom integrations (future). |
+| **3D visualization of parcels** | "Show what could be built (3D model)" | Requires 3D building modeling engine (SketchUp/Revit domain), height calculations, setback analysis, shadow studies. **Different product category.** Also requires detailed bestemming parsing (bouwvlak geometry, height limits, setbacks) which is complex. | Link to external 3D tools (e.g., SketchUp for Web), provide raw bestemming data (bouwvlak polygon, max height, FAR) for their modeling. Focus on "what CAN be built" (zoning rules) not "what it WILL look like" (3D viz). |
+| **Financial feasibility calculator** | "What's the ROI / IRR / NPV?" | Requires market data (WOZ comps, construction costs per m², financing rates), user assumptions (rental income, exit cap rate, holding period). **Wrong domain for intelligence platform.** Financial modeling is a separate tool (Excel, Argus). | Provide raw inputs (parcel size, max FAR, WOZ waarde) → user's financial model. Future: integrate with financial modeling APIs (post-MVP, if demand validated). |
+| **Mobile app for area scanning** | "I want to scan from my phone" | Map polygon drawing + 2000-row data table = **terrible mobile UX.** Area scanning is desktop workflow (research/analysis phase). Mobile is for on-site checks ("I'm standing at the property, show me the report"). PROJECT.md already acknowledges this: "Mobile companion app planned for on-site property checks (post-MVP)." | Desktop-first for scanning. Mobile-responsive for viewing saved scans and parcel details. Mobile app for field work (future, separate scope). |
 
 ### Why These Are Anti-Features
 
-**Dashboard landing page:** The single biggest mistake in map-first apps is defaulting to a dashboard with "View Map" button. Users came for the map. Source: [Map UI Patterns - Task Oriented](https://mapuipatterns.com/task-oriented/)
+**Real-time everything:** Officiële Bekendmakingen publishes daily (not real-time). Real-time polling would hit the API every minute and return nothing 99.9% of the time. This wastes quota and creates false urgency. Daily background check is appropriate cadence. Source: [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt)
 
-**Top navigation bar:** Vertical space is precious on maps. Top nav bars (Home, About, Contact) waste 60-80px. Left sidebar is sufficient. Source: [Map UI Design Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
+**Scan entire NL:** PropertyRadar limits searches to specific regions (counties, census tracts) for performance and cost reasons. Unlimited scans = API abuse and database bloat. Dutch users can achieve "scan NL" by saving 10-20 high-priority gemeentes and monitoring those. Source: [PropertyRadar Features](https://www.propertyradar.com/features-overview)
 
-**Modal dialogs:** Modals force "close this to see the map" — breaks flow. Floating panels (desktop) or bottom sheets (mobile) keep map visible. Source: [Bottom Sheets UX](https://www.nngroup.com/articles/bottom-sheet/)
+**Auto-generate letters:** GDPR Article 22 restricts "automated decision-making" with legal effects. While letter generation isn't a decision, using personal data (owner name/address from BRK) in an automated process without explicit consent is risky. Better to provide templates and let users customize. Source: AVG/GDPR compliance best practices.
 
-**Auto-refresh on pan/zoom:** Loading data on every map movement = "laggy interactions degrade UX quickly." Only fetch on user intent (click, search). Source: [Map UI Design Patterns](https://bricxlabs.com/blogs/map-ui-design-patterns-examples)
-
-**Complex filters upfront:** Filter UIs (sliders, checkboxes, dropdowns) are powerful but cluttered. For v2.0, simple search + click is enough. Add filters in v3.0 once base workflow proven. Source: [Filter UI Best Practices](https://www.uxpin.com/studio/blog/filter-ui-and-ux/)
-
-**3D buildings:** Looks impressive but distracts from core value (due diligence data). Real estate developers need zoning rules and monument status, not 3D flyovers. Defer to future "marketing features" phase.
+**CRM integration:** Classic scope creep. Every client wants their specific CRM integrated. Build CSV export first, validate demand, then prioritize top 3 CRMs if usage justifies. Source: SaaS product development best practices.
 
 ---
 
 ## Feature Dependencies
 
 ```
-Core Dependencies:
-MapLibre + PDOK tiles
-    ├─→ Floating search (autocomplete)
-    ├─→ Click property → detail panel
-    └─→ Layer toggles (boundaries, satellite/topo)
+[Area Selection Tool]
+    └──requires──> [Map with Gemeente Boundaries Layer]
+                       └──requires──> [CBS Gebiedsindelingen API/Data]
+                       └──requires──> [Click handler for gemeente polygons]
 
-Detail Panel
-    ├─→ PropertyReportResponse from backend (/property/lookup)
-    ├─→ PDF export button (backend WeasyPrint)
-    ├─→ Save report (POST /reports)
-    └─→ Force refresh (force_refresh=true)
+[Parcel List with Filters]
+    └──requires──> [Area Scan Results (stored in DB)]
+    └──requires──> [BAG Bulk Query (has_pand boolean)]
+    └──requires──> [Bestemming Filter (from DSO)]
+    └──requires──> [UI: Table or card grid with sort/filter controls]
 
-Sidebar Tabs
-    ├─→ Rapporten (GET /reports, search)
-    ├─→ Projecten (group by project_id)
-    └─→ Instellingen (user profile, logout)
+[Opportunity Scoring]
+    └──requires──> [Parcel List with Filters]
+    └──requires──> [Vergunningen Data (permit history)]
+    └──requires──> [BAG Bouwjaar/Status (building age)]
+    └──requires──> [Scoring algorithm (rule-based or ML)]
+    └──enhances──> [Parcel List (default sort by score DESC)]
 
-Auth Flow
-    ├─→ Login modal/page (POST /auth/login)
-    ├─→ JWT storage (localStorage or httpOnly cookie)
-    └─→ Refresh token rotation (POST /auth/refresh)
+[Owner Contact Lookup]
+    └──requires──> [Filtered Parcel List (~50 qualified)]
+    └──requires──> [Kadaster BRK API subscription + credentials]
+    └──requires──> [User consent/legitimate interest documentation]
+    └──conflicts──> [Scan Entire Netherlands] (cost explosion: €500K+ for 10M parcels)
 
-New Integrations (not in v1.1 backend):
-    ├─→ WOZ waarde API
-    ├─→ Energielabel API (EP-Online)
-    └─→ Kadaster parcel boundaries (WFS or vector tiles)
+[Vergunningen Monitoring]
+    └──requires──> [Saved Area/Search feature]
+    └──requires──> [Background Job Scheduler (ARQ already exists in v1.1)]
+    └──requires──> [Officiële Bekendmakingen SRU API integration]
+    └──enhances──> [Parcel Detail View (show new permits since last scan)]
+
+[Multi-Source Cross-Reference]
+    └──requires──> [Existing Report Aggregator Pattern (v1.0)]
+    └──requires──> [JSONB Cache with Source-Specific TTLs]
+    └──requires──> [Officiële Bekendmakingen API + Open Raadsinformatie API]
+    └──enhances──> [Parcel Detail Modal (expandable source cards)]
+
+[Batch Owner Lookup]
+    └──requires──> [Owner Contact Lookup (single)]
+    └──requires──> [Kadaster BRK Bulk Endpoint investigation (may not exist)]
+    └──fallback──> [Sequential lookup with rate limiting (5 req/sec)]
 ```
 
-### Critical Path
+### Dependency Notes
 
-1. **MapLibre setup** — everything depends on this
-2. **Floating search + autocomplete** — primary entry point
-3. **Click property → fetch data → detail panel** — core workflow
-4. **Sidebar: Rapporten list** — accessing saved work
-5. **Auth flow** — multi-user requirement
+- **Area Selection requires CBS Gebiedsindelingen:** Dutch municipalities, wijken, and buurten come from CBS with official polygon boundaries. Need to load this dataset once (GeoJSON or shapefile) and cache in database or serve as vector tiles. CBS provides historical boundaries from 1995+. Source: [CBS Gebiedsindelingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen)
 
----
+- **Parcel List requires BAG Bulk Query:** To show "empty land," must cross-reference parcels (BRK) against buildings (BAG panden). This requires bulk query: "For these 2000 parcels, which have buildings?" Store result as `has_pand: boolean` in DB to avoid re-querying. BAG API supports bulk queries via GeoJSON or WFS. Source: [BAG Basisregistratie](https://data.overheid.nl/en/dataset/basisregistratie-adressen-en-gebouwen-bag-)
 
-## MVP Recommendation (v2.0)
+- **Opportunity Scoring enhances Parcel List:** Scoring is not required to show parcels, but dramatically improves UX by surfacing best leads first. Can be added after basic filtering works. Rule-based scoring (bestemming match + years unused + no permits) is simpler than ML and adequate for MVP.
 
-Prioritize features that prove the map-first workflow with minimal new backend work.
+- **Owner Lookup conflicts with Scan All NL:** Kadaster BRK charges per lookup (likely €0.50-1.00 per parcel, exact pricing unclear). Scanning 10M parcels → retrieving owner data for 200K filtered results = €100K-200K in API costs. **MUST filter to <100 parcels before owner lookup.** This is a hard constraint. Source: [Kadaster Eigendomsinformatie](https://www.kadaster.nl/zakelijk/producten/eigendom/eigendomsinformatie)
 
-### Phase 1: Map Foundation
-1. Full-page MapLibre map with PDOK aerial/topographic tiles
-2. Layer toggle (satellite vs topo)
-3. Floating search bar (no autocomplete yet — manual address entry)
-4. Click map → fetch property data (mock with hardcoded addresses initially)
+- **Vergunningen Monitoring requires Saved Areas:** Cannot monitor "everything" — need user to define area (gemeente polygon) + filters (bestemming type, parcel size), then check daily for new permits in that area. Uses existing ARQ worker pattern (already used for AI bestemmingsplan parsing in v1.0).
 
-**Why first:** Proves the map-first UI works. No backend changes needed (can mock data).
+- **Multi-Source Cross-Reference extends Existing Aggregator:** v1.0 report aggregator already handles parallel fetching of PDOK, BAG, DSO, RCE APIs. Adding Officiële Bekendmakingen (SRU) and Open Raadsinformatie follows same pattern: `asyncio.gather()` for parallel fetch, merge results, cache in JSONB with source-specific TTLs.
 
-### Phase 2: Property Intelligence
-1. Address autocomplete (PDOK Locatieserver suggest API)
-2. Floating detail panel with PropertyReportResponse from `/property/lookup`
-3. PDF export button (download from `/reports/{id}/pdf`)
-4. Save report button (POST `/reports`)
-
-**Why second:** Core workflow = search → view → save. Backend already supports this.
-
-### Phase 3: Saved Work
-1. Sidebar with "Rapporten" tab showing saved reports list
-2. Search saved reports (query backend `/reports?q=`)
-3. Click saved report → pan map + open detail panel
-4. Project folders (group reports by `project_id`)
-
-**Why third:** Users need to access past work. This is table stakes but not blocking MVP.
-
-### Phase 4: Polish
-1. Loading states (skeleton screens, spinners)
-2. Error handling (toasts for API failures)
-3. Mobile-responsive layout (bottom sheet for detail panel)
-4. Auth flow (login modal, logout)
-
-**Why fourth:** UX polish after core workflow proven.
-
-### Defer to v2.1+
-- **WOZ waarde** — new API integration (not in v1.1 backend)
-- **Energielabel** — new API integration
-- **Kadaster parcel boundaries** — complex (WFS parsing or vector tile service)
-- **Monument badges** — data exists in backend but needs visual design
-- **Freshness indicators** — polish feature
-- **Force refresh button** — power user feature
-- **Measure tool** — nice-to-have
+- **Batch Owner Lookup optimization:** Need to investigate if Kadaster BRK offers bulk endpoint (e.g., "give me owner data for these 50 parcel IDs in one call"). If not, fallback is sequential lookup with rate limiting. At 5 requests/second (conservative), 50 parcels = 10 seconds. Acceptable UX with progress bar.
 
 ---
 
-## Mobile-Specific Patterns
+## MVP Definition (v3.0)
 
-**Challenge:** Maps are hard on small screens — "fat finger syndrome" and limited screen real estate.
+### Launch With (v3.0)
 
-| Pattern | Desktop | Mobile | Source |
-|---------|---------|--------|--------|
-| **Detail panel** | Floating panel (300-400px wide, right side) | Bottom sheet (slides up from bottom) | [Bottom Sheet UX](https://www.nngroup.com/articles/bottom-sheet/) |
-| **Search bar** | Top-left, 400px wide | Full-width at top, collapsible | [Mobile Map Patterns](https://mapuipatterns.com/mobile-map/) |
-| **Sidebar** | Always visible (250px, left edge) | Hidden by default, hamburger menu | [Mobile Navigation UX](https://www.designstudiouiux.com/blog/mobile-navigation-ux/) |
-| **Layer toggle** | Icon buttons (top-right) | Bottom tab bar or slide-up menu | [Map UI Patterns](https://bricxlabs.com/blogs/map-ui-design-patterns-examples) |
-| **Touch targets** | 24-32px clickable areas | 44-48px minimum (iOS guideline) | [Mobile UX Best Practices](https://webdesignedindia.medium.com/10-mobile-ux-design-trends-2026-231783d97d28) |
-| **Map controls** | Zoom +/- buttons optional | Must include zoom buttons (pinch unreliable) | [Mobile Map UX](https://www.interaction-design.org/literature/article/getting-lost-and-found-maps-and-the-mobile-user-experience) |
+Minimum viable product — what's needed to validate the area intelligence concept.
 
-### Key Mobile Considerations
+- [x] **Map-based gemeente selection** — Click gemeente boundary on map → load all parcels in that gemeente (leverages existing MapLibre map from v2.0, add CBS gemeentegrenzen as GeoJSON layer with click handler)
+- [x] **BAG bulk has_pand cross-reference** — Pre-scan: for each parcel in gemeente, query BAG API "does this parcel have a building?" → store `has_pand: boolean` + geometry in DB (~1KB per parcel, entire gemeente ~15MB for 15K parcels)
+- [x] **Bestemming filter** — Filter parcels by "Wonen" zoning + bouwvlak present (uses existing DSO integration from v1.0, extend with bulk query or per-parcel lookup with caching)
+- [x] **Parcel list with basic filters** — Table view: parcel ID (kadastraal nummer), size (oppervlakte m²), bestemming (zoning name), has_pand (Yes/No), last_updated (timestamp). Sort by any column, filter by bestemming type and has_pand boolean.
+- [x] **Parcel detail modal** — Click parcel in list → open modal with AI summary + expandable source cards (extends existing v2.0 report modal pattern). Show: kadaster info, bestemming details, vergunningen (if any), raadsinformatie (if relevant). NO owner info yet (defer to v3.1).
+- [x] **CSV export of filtered parcels** — Button to download current filtered list as CSV: columns = parcel ID, address, size, bestemming, has_pand, last_scanned. NO owner info (privacy constraint until BRK integration).
+- [x] **Progressive loading for parcel list** — Infinite scroll (mobile-friendly) or paginated table (desktop, 50 rows per page). Render 50 parcels initially, load more on scroll/page click. Prevents browser freeze on 2000-row table.
+- [x] **Vergunningen data in parcel detail** — Show permit activity via Officiële Bekendmakingen SRU API: recent permits filed within 500m radius of parcel. Display in expandable "Vergunningen" card with date, type, status. Cache in JSONB per parcel.
 
-1. **Bottom sheet > Modal:** Google Maps uses bottom sheet — lets users drag up for details while keeping map visible. This is THE pattern for mobile map apps.
+**Why these first:**
+- Proves the area scan workflow: select region → see parcel list → filter → view details → export.
+- Leverages existing v2.0 map UI and v1.0 API patterns (aggregator, JSONB caching, ARQ background jobs).
+- No new paid APIs yet (BAG, DSO, Officiële Bekendmakingen are free).
+- Defers expensive BRK owner lookup until workflow validated.
 
-2. **Thumb zone:** Place frequent actions in the bottom half of screen (reachable by thumb). Top corners are hard to reach one-handed.
+### Add After Validation (v3.1)
 
-3. **Clustering:** If showing multiple properties, cluster nearby markers when zoomed out. Reveal individual pins when zoomed in.
+Features to add once core area scan workflow is validated with users.
 
-4. **Performance:** Lazy load map tiles, debounce API calls, compress images. "Slow map loads degrade UX quickly."
+- [ ] **Owner contact lookup (Kadaster BRK)** — Trigger: User filters to <100 parcels, clicks "Get Owner Info" button → backend fetches BRK data for all filtered parcels → adds owner NAW (name, address) to parcel list and detail view. **Privacy:** User must document legitimate interest (acquisition purpose). **Cost:** Estimate €0.50-1.00 per lookup, so 100 parcels = €50-100 per scan. Acceptable for qualified leads.
 
-5. **Gestures:** Two-finger pan to avoid conflicts with page scroll (or use `touch-action: none` on map container).
+- [ ] **Opportunity scoring** — Trigger: User feedback that manual prioritization is painful ("which parcels should I contact first?"). Add automated scoring: `score = bestemming_match * 0.4 + years_unused * 0.3 + permit_inactivity * 0.2 + parcel_size * 0.1`. Display score in parcel list (sortable), add badge ("High Potential" for score >0.7). Algorithm can be refined based on user feedback.
+
+- [ ] **Saved area scans** — Trigger: User scans same gemeente 3+ times (observed via logs). Add "Save Search" feature: name the scan, save gemeente polygon + filter criteria (bestemming type, has_pand, min/max size). Sidebar "Saved Scans" tab lists saved searches. Click to re-run scan with freshness check ("3 new parcels since last scan").
+
+- [ ] **Polygon draw tool** — Trigger: User wants custom area (not full gemeente, e.g., "just the industrial zone near the harbor"). Add Mapbox Draw or Turf.js for custom polygon drawing on map. Calculate bbox, query parcels within polygon. More complex than gemeente click (requires geometry intersection), but high value for power users.
+
+- [ ] **Raadsinformatie integration** — Trigger: User asks "Why is this gemeente interesting? Any rezoning plans?" Add Open Raadsinformatie API: fetch recent gemeenteraad decisions mentioning "wonen," "bestemmingsplan," or location keywords. Display in "Municipal Decisions" expandable card in parcel detail modal. LLM summarizes relevance to parcel.
+
+- [ ] **Vergunningen monitoring/alerts** — Trigger: User wants to track new permits in saved area (not just one-time scan). Add daily background job (ARQ worker): for each saved scan, query Officiële Bekendmakingen API for new permits since last check. If found, flag in UI ("3 new permits in Amsterdam Noord") and optionally send email digest. Requires notification infrastructure (email service, in-app alert component).
+
+**Why defer to v3.1:**
+- Owner lookup is expensive (paid API) — validate that users actually convert filtered parcels to leads before spending on BRK integration.
+- Opportunity scoring requires user feedback to tune algorithm (what signals matter most?).
+- Saved scans and monitoring add state management complexity (not needed for single-use scans).
+- Polygon draw is power user feature (most users will use gemeente boundaries).
+
+### Future Consideration (v3.2+)
+
+Features to defer until product-market fit is established.
+
+- [ ] **Wijk/buurt selection** — Why defer: Adds UI complexity (3 admin levels instead of 1: gemeente → wijk → buurt). Gemeente is granular enough for MVP (average 15K parcels). If users request "scan just this neighborhood," add in v3.2.
+
+- [ ] **Address radius selection** — Why defer: "Show all parcels within 1km of this address" is complex (geometry buffer, parcel intersection). Use case unclear (why not just draw polygon?). Wait for user demand.
+
+- [ ] **Historical permit timeline** — Why defer: Requires storing historical vergunningen data (not just current state). Timeline UI component adds complexity. Nice-to-have for "spot patterns over time," but not must-have for initial lead discovery.
+
+- [ ] **Batch owner lookup optimization** — Why defer: Sequential BRK lookup (5 req/sec) is acceptable for <100 parcels (20 seconds with progress bar). Only optimize if users frequently scan >100 parcels AND wait time becomes bottleneck. Investigate Kadaster BRK bulk endpoint first.
+
+- [ ] **Multi-gemeente saved searches** — Why defer: "Monitor these 5 gemeentes" adds state management complexity (which gemeentes? aggregate results or separate?). Single gemeente is MVP. Multi-gemeente is logical next step after saved scans validated.
+
+- [ ] **Email/push notifications for monitoring** — Why defer: Requires notification infrastructure (SendGrid/Mailgun for email, Firebase for push). In-app alerts ("3 new parcels since last scan") are sufficient for v3.1. Email digests are v3.2+ (once monitoring workflow validated).
+
+- [ ] **API for CRM integration** — Why defer: No user demand yet. Build when 3+ users request same CRM integration (Salesforce, HubSpot, Pipedrive). Provide REST API with OAuth2 for custom integrations (future).
 
 ---
 
-## Comparison with Competitors
+## Feature Prioritization Matrix
 
-| Feature | Google Maps | Regrid | Transect | Propdex v2.0 |
-|---------|-------------|--------|----------|--------------|
-| **Map-first UI** | YES (industry standard) | YES | YES | YES (planned) |
-| **Floating search** | YES | YES | NO (sidebar) | YES (planned) |
-| **Parcel boundaries** | NO | YES (core feature) | YES | YES (planned) |
-| **Property details panel** | YES (bottom sheet) | YES (sidebar) | YES (modal) | YES (floating/bottom sheet) |
-| **Layer toggles** | YES (satellite, traffic, etc.) | YES (parcels, buildings, zoning) | YES (environmental layers) | YES (aerial/topo, boundaries) |
-| **PDF export** | NO | YES (property reports) | YES (site reports) | YES (already built) |
-| **AI document parsing** | NO | NO | NO | YES (differentiator) |
-| **WOZ waarde** | NO | NO (US platform) | NO (US platform) | YES (planned) |
-| **Energielabel** | NO | NO | NO | YES (planned) |
-| **Mobile app** | YES (native) | YES (native) | YES (web responsive) | NO (web responsive only) |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Map-based gemeente selection | HIGH | MEDIUM (CBS GeoJSON + click handler) | P1 |
+| BAG bulk has_pand cross-reference | HIGH | HIGH (bulk API + DB storage + caching) | P1 |
+| Bestemming filter | HIGH | MEDIUM (extend DSO integration) | P1 |
+| Parcel list with filters | HIGH | MEDIUM (table UI + sort/filter controls) | P1 |
+| Parcel detail modal | HIGH | MEDIUM (extend v2.0 modal, add source cards) | P1 |
+| CSV export (no owner info) | HIGH | LOW (CSV library + download button) | P1 |
+| Progressive loading | MEDIUM | LOW (infinite scroll or pagination library) | P1 |
+| Vergunningen data in detail | MEDIUM | MEDIUM (SRU API + JSONB cache) | P1 |
+| Owner contact lookup (BRK) | HIGH | HIGH (paid API + privacy compliance) | P2 |
+| Opportunity scoring | HIGH | HIGH (algorithm design + user feedback loop) | P2 |
+| Saved area scans | MEDIUM | MEDIUM (DB schema + sidebar UI) | P2 |
+| Polygon draw tool | MEDIUM | MEDIUM (Mapbox Draw + geometry queries) | P2 |
+| Raadsinformatie integration | LOW | MEDIUM (Open Raadsinformatie API + LLM) | P2 |
+| Vergunningen monitoring | MEDIUM | HIGH (ARQ jobs + notification UI) | P2 |
+| Wijk/buurt selection | LOW | MEDIUM (3-level hierarchy UI) | P3 |
+| Address radius selection | LOW | MEDIUM (geometry buffer + intersection) | P3 |
+| Historical permit timeline | LOW | HIGH (historical data storage + timeline UI) | P3 |
+| Batch owner lookup optimization | LOW | HIGH (investigate BRK bulk endpoint) | P3 |
+| Multi-gemeente searches | LOW | MEDIUM (aggregate state management) | P3 |
+| Email/push notifications | LOW | HIGH (email/push infrastructure) | P3 |
+| API for CRM integration | LOW | HIGH (REST API + OAuth2 + docs) | P3 |
 
-### Insights
-
-- **Map-first is table stakes:** All three competitors use full-page maps.
-- **Floating search is common:** Google Maps and Regrid use it; Transect uses sidebar (less common).
-- **Parcel boundaries are expected:** Regrid and Transect both show cadastral/parcel data — this is non-negotiable for property platforms.
-- **AI parsing is unique:** None of the competitors advertise AI document parsing for zoning (this is Propdex's differentiator).
-- **Dutch data is niche:** WOZ and energielabel are Netherlands-specific — no direct competitor offering.
+**Priority key:**
+- P1: Must have for v3.0 launch (area scan workflow proven)
+- P2: Should have for v3.1 (add after workflow validated)
+- P3: Nice to have for v3.2+ (future consideration)
 
 ---
 
-## Information Hierarchy for Property Detail Panel
+## Competitor Feature Analysis
 
-Based on real estate platform research, here's the recommended information hierarchy for the property detail panel:
+| Feature | PropertyRadar (US) | LightBox (US) | Propdex v3.0 (NL) |
+|---------|-------------------|---------------|-------------------|
+| **Area selection** | Census tract via FIPS codes | Map-based feature service queries | CBS gemeente boundaries (click to select), future: polygon draw |
+| **Filter criteria** | 250+ criteria (property type, owner, equity, liens, foreclosure, etc.) | Zoning, parcel, assessment, building data layers | Focus on development opportunities: bestemming type, has_pand boolean, permit activity, parcel size. Fewer filters but more relevant for projectontwikkelaars. |
+| **Property list** | Real-time list builder, updates as you add criteria | Feature service with parcel/zoning/assessment data | Parcel list with sort/filter, infinite scroll, CSV export. Comparable UX. |
+| **Owner data** | 157M+ properties with verified owner contacts (phone/email/mortgage) | Ownership data in parcel feature service | Kadaster BRK (authoritative Dutch source), only for qualified leads (<100 parcels). More restricted due to privacy laws (AVG/GDPR). |
+| **Opportunity discovery** | Opportunity Zones Quick Lists (pre-defined filters for IRS-designated zones) | Appraisal intelligence (Q1 2026): automated rent comps, operating expense extraction | AI opportunity scoring (bestemming match, permit inactivity, raadsinformatie context). Dutch-specific signals. |
+| **Permit monitoring** | Not clear from search results | Not clear from search results | Officiële Bekendmakingen SRU API (official Dutch government source), cross-referenced with parcel location + bestemming. Daily background checks. |
+| **Export** | Lead export to CSV, CRM integrations | API access to feature service data | CSV export (v3.0), API for CRM integration (future). |
+| **Pricing model** | Subscription tiers (not disclosed in search results) | Subscription tiers (not disclosed) | Smart pre-filtering (97.5% cost reduction) allows lower pricing. BRK lookup only for qualified leads. |
 
-### Level 1: Above the Fold (Always Visible)
+**Key Differentiator:** PropertyRadar and LightBox focus on US market (Census data, IRS Opportunity Zones, mortgage/foreclosure data). Propdex focuses on Dutch government data sources (BAG, BRK, DSO, Officiële Bekendmakingen, Open Raadsinformatie) with Dutch-language UI and workflows. **Multi-source cross-referencing** (BAG + vergunningen + raadsinformatie) in one view is unique value. **Smart pre-filtering pipeline** (free APIs first, paid APIs last) is a cost advantage not advertised by competitors.
+
+Sources:
+- [PropertyRadar Features Overview](https://www.propertyradar.com/features-overview)
+- [PropertyRadar Opportunity Zones](https://help.propertyradar.com/en/articles/4445648-opportunity-zones)
+- [LightBox Data Platform](https://www.lightboxre.com/data/)
+- [LightBox Appraisal Intelligence](https://www.prnewswire.com/news-releases/lightbox-enhances-appraisal-intelligence-to-give-lenders-unmatched-financial-visibility-amid-rising-credit-and-regulatory-demands-302638256.html)
+
+---
+
+## Dutch Market Specifics
+
+### Government Data Sources (Quality Issues)
+
+| Source | Purpose | Access | Known Quality Issues |
+|--------|---------|--------|---------------------|
+| **CBS Gebiedsindelingen** | Gemeente/wijk/buurt boundaries (polygons) | Free, open data (GeoJSON, shapefile) | **Stable and authoritative.** Gemeentes change boundaries occasionally (e.g., municipality mergers). Requires annual update. Historical data available from 1995+. |
+| **BAG (Basisregistratie Adressen en Gebouwen)** | Buildings and addresses | Free, open data (WFS, REST API) | **Issue 1:** Missing addresses in apartment buildings (BAG-BRK coupling mismatch). **Issue 2:** Construction date (`bouwjaar`) sometimes missing or incorrect. **Issue 3:** Status codes (`status`) inconsistent across municipalities (some use "Pand in gebruik," others use "Verbouwing pand"). Maintained by municipalities, quality varies. Source: [Kwaliteit BAG-BRK koppeling](https://labs.kadaster.nl/dataanalyse/koppelingbagbrk/kwaliteit_bag_brk_koppeling/) |
+| **BRK (Basisregistratie Kadaster)** | Cadastral parcels, ownership | **Paid API** (per lookup, subscription model) | **Issue 1:** BAG-BRK coupling mismatches — when parcel split, all addresses copied to all new parcels (8 addresses → 8 parcels each with 8 addresses). **Issue 2:** KBI-addresses (known in BRK but not in BAG) create orphaned records. **Issue 3:** Apartment rights (`appartementsrecht`) not correctly linked to residential objects. Kadaster working on quality improvements (2025 initiative, ongoing). **Consequences:** Incorrect coupling prevents sale, permit issuance, subsidy eligibility. Source: [Kwaliteit BAG-BRK](https://labs.kadaster.nl/dataanalyse/koppelingbagbrk/kwaliteit_bag_brk_koppeling/) |
+| **DSO (Digitaal Stelsel Omgevingswet)** | Zoning plans (bestemmingsplannen) | Free, open data (WFS, REST API) | **Issue 1:** Not all municipalities have digital plans (fallback to PDF parsing required). **Issue 2:** Omgevingswet transition period until 2032 — mixed systems (old bestemmingsplannen vs new omgevingsplannen). **Issue 3:** Geometry precision issues (parcel boundary vs bouwvlak mismatch, sometimes 10m+ offset). **Issue 4:** Plangebied (zoning area) vs individual parcel — need to intersect parcel with plangebied to get bestemming. Source: [Omgevingswet](https://www.government.nl/topics/environment-and-planning-act) |
+| **Officiële Bekendmakingen (SRU API)** | Permit announcements (vergunningen), municipal decisions | Free, open data (SRU XML API) | **Issue 1:** Updates daily (not real-time), so "new permit" may be 24 hours old. **Issue 2:** Requires spatial search (lat/lon + radius) or text search (unreliable for automated filtering — misspellings, inconsistent terminology). **Issue 3:** No structured data — PDF attachments, requires parsing for details. **Issue 4:** Not all municipalities use same categories (some publish as "omgevingsvergunning," others as "bouwvergunning"). Source: [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt) |
+| **Open Raadsinformatie** | Municipal council decisions, meeting minutes | Free, open data (REST API) | **Issue 1:** Unstructured text (meeting minutes, decisions) — requires NLP/LLM to extract relevant info. **Issue 2:** No direct link to parcels (must infer via location mentions: "Stationsgebied," "Havenstraat 12"). **Issue 3:** Not all municipalities participate (coverage is patchy). **Issue 4:** Historical data varies (some municipalities only have recent years). Source: Implied from Open Data NL practices |
+
+### Data Quality Mitigation Strategies
+
+1. **BAG has_pand boolean:** Cross-reference parcels with BAG panden to get "has building" status. Store as boolean in DB to avoid re-querying. If BAG returns empty, assume no building (false negatives possible due to missing data, but acceptable for MVP).
+
+2. **Bestemming geometry mismatch:** When querying DSO for parcel's bestemming, use parcel centroid (not boundary) to avoid edge cases where parcel spans multiple zoning areas. If multiple bestemmingen returned, prioritize "Wonen" for opportunity scoring.
+
+3. **BRK-BAG coupling errors:** Accept that some parcels will have incorrect/duplicate addresses. Display parcel ID (kadastraal nummer) as primary identifier, address as secondary. If address missing, show "Adres onbekend" (address unknown).
+
+4. **Vergunningen spatial search:** Use 500m radius from parcel centroid to capture nearby permits (not just exact parcel match). This catches permits for adjacent parcels or street addresses that may affect development potential.
+
+5. **Raadsinformatie relevance:** Use LLM to score relevance of municipal decisions to parcel (0-1 score based on location mentions, bestemming keywords, rezoning context). Only show decisions with score >0.5 to reduce noise.
+
+### Legal/Privacy Constraints
+
+- **BRK owner data (NAW gegevens):** Requires "gerechtvaardigd belang" (legitimate interest) per AVG Article 6(1)(f). Projectontwikkelaars qualify (property acquisition is legitimate business purpose), but must document purpose per request. Kadaster may audit usage. **Implementation:** Add checkbox "I confirm legitimate interest for property acquisition" before BRK lookup. Log purpose and timestamp per lookup for audit trail.
+
+- **GDPR/AVG compliance for owner data:**
+  - **Purpose limitation:** Only fetch owner data for qualified leads (post-filter), not all parcels.
+  - **Data minimization:** Only request NAW (name, address, contact) — do not fetch financial data (mortgage, liens) unless explicitly needed.
+  - **Retention limits:** Delete owner data after 90 days if no action taken (no contact, no offer). Allow user to extend retention if actively pursuing acquisition.
+  - **User consent:** If sharing owner data with third parties (e.g., export to CRM, forward to partner), require explicit consent (checkbox: "I consent to exporting owner data").
+
+- **Berichten over uw Buurt transparency:** All 342 Dutch municipalities now connected (as of 2026), 8M+ residents enrolled. Users expect permit transparency. If Propdex shows permits, must also show full context (not cherry-pick favorable permits). Source: [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt)
+
+- **Kadaster data re-use restrictions:** BRK data cannot be resold or sublicensed. Propdex can display to users, export for their use, but cannot provide as API to third parties without separate Kadaster agreement.
+
+### Dutch Workflow Context
+
+Based on search results for "grondpositie verwerving" (land acquisition) and "projectontwikkeling":
+
+1. **Lead discovery** — Scan gemeente for parcels with building potential (Propdex v3.0)
+2. **Lead qualification** — Filter by bestemming, permit history, parcel size, owner type (e.g., gemeente-owned vs private) (Propdex v3.0)
+3. **Owner research** — Get NAW gegevens from BRK, check if owner is active investor vs inherited property (Propdex v3.0 via BRK)
+4. **Initial outreach** — Letter/call to owner expressing interest (user's CRM/manual process — outside Propdex scope, CSV export enables this)
+5. **Due diligence** — If owner interested, full property report with kadaster, monument status, subsidy eligibility (existing v1.0/v2.0 Propdex features)
+6. **Acquisition** — Negotiate purchase, legal due diligence, closing (outside scope)
+
+**Propdex positioning:** Steps 1-3 (discovery → qualification → owner contact). Step 4 is export to user's CRM. Step 5 is existing property intelligence report (v1.0/v2.0). Steps 1-3 are the NEW value for v3.0.
+
+Source: [Wat doet een projectontwikkelaar?](https://www.continu.nl/seo/wat-doet-een/wat-doet-een-projectontwikkelaar), [Grondverwerving](https://www.gloudemans.nl/expertises/grondverwerving/)
+
+---
+
+## UX Patterns for Area Intelligence
+
+### 1. Area Selection Patterns
+
+| Pattern | When to Use | Complexity | Propdex Application |
+|---------|-------------|------------|---------------------|
+| **Click administrative boundary** | Users want to scan entire municipality or district | LOW | v3.0: Click gemeente boundary on map → scan starts. Future: wijk/buurt hierarchical selection. |
+| **Draw polygon** | Users want custom area (e.g., "just the harbor district") | MEDIUM | v3.1: Mapbox Draw plugin. Useful for power users who know exact area. |
+| **Address radius** | Users want "all parcels within 2km of this address" | MEDIUM | v3.2+: Buffer geometry around point. Use case: "scan around our existing project." |
+| **Import KML/GeoJSON** | Users have pre-defined scan areas from GIS tools | LOW | v3.2+: File upload → parse → scan. For advanced users with existing workflows. |
+
+**Best practice:** Start with administrative boundaries (simplest, most common use case). Add polygon draw after validating workflow. Source: [Map UI Design](https://www.eleken.co/blog-posts/map-ui-design)
+
+### 2. Parcel List Display Patterns
+
+| Pattern | When to Use | Complexity | Propdex Application |
+|---------|-------------|------------|---------------------|
+| **Data table** | Desktop, many columns, sortable, filterable | MEDIUM | v3.0: TanStack Table with sort/filter controls. 50 rows per page, pagination at bottom. |
+| **Card grid** | Mobile/tablet, visual emphasis, fewer columns | MEDIUM | v3.0 mobile: Card per parcel showing address, size, bestemming, score. Tap to open detail. |
+| **Map pins** | Spatial context important, <500 results | HIGH | v3.1: Plot filtered parcels as pins on map. Cluster at low zoom, individual pins at high zoom. |
+| **Hybrid (list + map)** | Best of both worlds, split screen | HIGH | v3.2+: Split screen with list on left, map on right. Click parcel in list → highlight on map. |
+
+**Best practice:** Start with table (desktop) + card grid (mobile). Add map pins in v3.1 after table workflow validated. Source: [Data Grid UX](https://mui.com/x/react-data-grid/)
+
+### 3. Progressive Disclosure for Parcel Details
+
+| Level | What to Show | Pattern | Propdex Application |
+|-------|--------------|---------|---------------------|
+| **L1: List row** | Address, size, bestemming, score | Inline in table | v3.0: "Stationsstraat 12, 450 m², Wonen, Score: 8.2" |
+| **L2: Hover/expand** | +Owner name, permit count, last activity | Expandable row or tooltip | v3.0: Hover shows tooltip with owner name (if fetched), "3 permits in last 5 years" |
+| **L3: Detail modal** | Full report with all sources | Modal or slide-out panel | v3.0: Click parcel → modal with AI summary + expandable source cards (Kadaster, Bestemming, Vergunningen, Raadsinformatie) |
+
+**Best practice:** Minimize cognitive load. Show high-level info in list, details on demand. Source: [Accordion UI Design](https://mobbin.com/glossary/accordion)
+
+### 4. Expandable Source Cards (Detail Modal)
+
+Based on accordion UX best practices:
+
 ```
-┌─────────────────────────────────────┐
-│ [Address]                      [X]  │ ← Close button
-│ Street 123, 1234 AB Amsterdam       │
-│                                     │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                     │
-│ 🏛️ Rijksmonument                   │ ← Monument badge (if applicable)
-│ 📊 WOZ: €450,000 (2025)            │ ← WOZ waarde
-│ ⚡ Energielabel: C                  │ ← Energy rating
-│                                     │
-│ [Download PDF]  [Save Report]       │ ← Primary actions
-│                                     │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ Parcel Detail: Stationsstraat 12, Amsterdam    [X]  │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│ 🤖 AI Summary                                       │
+│ This 450 m² parcel has "Wonen" zoning with         │
+│ building rights for up to 4 stories. No building   │
+│ currently present. No permits filed in last 10     │
+│ years. High development potential.                  │
+│                                                      │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│ ▼ Kadaster (Cadastral Data)            [Cached: 2d]│
+│   - Kadastraal nummer: AMS01-K-12345                │
+│   - Oppervlakte: 450 m²                             │
+│   - Eigenaar: [Fetch Owner Info] ←button            │
+│   - Laatste transactie: 2022-03-15                  │
+│                                                      │
+│ ▼ Bestemming (Zoning)                  [Cached: 3m]│
+│   - Type: Wonen (Residential)                       │
+│   - Max hoogte: 15m (4 stories)                     │
+│   - Bouwvlak: 70% coverage allowed                  │
+│   - Confidence: AI-parsed, 85%                      │
+│                                                      │
+│ ▶ Vergunningen (Permits)               [Cached: 1d]│
+│   [Collapsed — click caret to expand]               │
+│                                                      │
+│ ▶ Raadsinformatie (Council Decisions) [Cached: 1w] │
+│   [Collapsed — click caret to expand]               │
+│                                                      │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Level 2: Expandable Sections (Click to Reveal)
-```
-▼ Kadaster Data
-  - Eigenaar: [Redacted per AVG]
-  - Oppervlakte: 350 m²
-  - Kadastraal nr: ASD01-K-1234
-  - Laatste transactie: 2022-03-15
+**Icon convention:**
+- `▼` = Expanded (default for first 2 cards: Kadaster, Bestemming)
+- `▶` = Collapsed (default for later cards: Vergunningen, Raadsinformatie)
 
-▼ Zoning Summary (AI-Parsed)
-  - Permitted: Residential, max 4 stories
-  - Parking: 1.2 spots per unit required
-  - Max building coverage: 60%
-  - Confidence: 85% (AI-parsed)
+**Interaction:**
+- Click caret icon → toggle expand/collapse
+- Click anywhere in header → toggle (larger click target)
+- `aria-expanded="true|false"` for accessibility
+- Smooth height animation (300ms ease)
 
-▼ Monument Restrictions
-  - Status: Rijksmonument (national)
-  - Restrictions: Facade changes require permit
-  - Subsidies: Eligible for restoration grants
+**Source:** [Designing The Perfect Accordion](https://www.smashingmagazine.com/2017/06/designing-perfect-accordion-checklist/)
 
-▼ Data Freshness
-  - Kadaster: 2 days ago ✓
-  - Zoning: 3 months ago ⚠
-  - Monument: 1 week ago ✓
-```
+### 5. Progressive Loading Patterns
 
-**Rationale:**
-- **Most important first:** Address, monument status, value estimate — these drive go/no-go decisions.
-- **Actions upfront:** Download and save are primary CTAs — don't bury them.
-- **Progressive disclosure:** Full kadaster data and zoning details are important but not first-glance. Expand on demand.
-- **Transparency:** Data freshness builds trust — show it, but don't clutter the initial view.
+For 2000+ parcel list:
 
-Source: [Real Estate App Information Hierarchy](https://cieden.com/how-to-design-a-powerful-real-estate-platform-complete-guide)
+| Pattern | Desktop | Mobile | Complexity | Propdex Application |
+|---------|---------|--------|------------|---------------------|
+| **Pagination** | Preferred (explicit page control) | Acceptable | LOW | v3.0 desktop: TanStack Table with pagination, 50 rows per page, "Page 1 of 40" indicator |
+| **Infinite scroll** | Acceptable (less common) | Preferred (gesture-driven) | MEDIUM | v3.0 mobile: Load 50 parcels initially, fetch next 50 when scroll reaches bottom. Loading spinner at end. |
+| **Virtual scroll** | Best performance for 10K+ rows | Not needed (smaller screens) | HIGH | v3.1+ optimization: Only render visible rows + buffer. TanStack Table supports this. |
+| **"Load More" button** | Hybrid (user control + progressive) | Good compromise | LOW | v3.0 fallback: If infinite scroll breaks, show "Load 50 More" button at end. |
 
----
-
-## Search UX Patterns
-
-### Search Behavior on Maps
-
-| Pattern | When to Use | Propdex Application | Source |
-|---------|-------------|---------------------|--------|
-| **Floating search (top)** | Primary search action, always accessible | YES — main entry point | [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls) |
-| **Sidebar search** | Secondary filter/refinement of map view | NO — avoid sidebar search in v2.0 | [Map UI Patterns](https://www.uxpin.com/studio/blog/map-ui/) |
-| **Autocomplete dropdown** | <10 results, instant suggestions | YES — PDOK Locatieserver | [Places Search Box](https://developers.google.com/maps/documentation/javascript/examples/places-searchbox) |
-| **Search result highlighting** | Text match highlighting in suggestions | YES — PDOK API supports highlighting | [PDOK API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver) |
-| **Recent searches** | Frequent repeated searches | NO — defer to v2.1 | N/A |
-| **"Search this area" button** | Large map movements, crowded results | NO — single-property focus, not multi-result | [Search This Area Pattern](https://mapuipatterns.com/search-this-area/) |
-
-### Autocomplete Behavior
-
-**Trigger:** User types in search bar
-**Response time:** <200ms (PDOK suggest API is fast)
-**Results shown:** 5-8 suggestions (more = choice paralysis)
-**What happens on select:**
-1. Map pans to selected address
-2. Zoom to appropriate level (18-19 for parcels)
-3. Fetch property data (`/property/lookup`)
-4. Open detail panel with results
-
-**Dutch-specific pattern:** Users may type:
-- Full address: "Dam 1, Amsterdam"
-- Zipcode + number: "1011 AB 1"
-- Street name: "Damstraat" (returns multiple)
-
-PDOK Locatieserver handles all three. Highlight matched text in suggestions.
-
----
-
-## Saved Reports vs Saved Searches
-
-**Key decision:** Propdex saves REPORTS (specific properties researched), not SEARCHES (query criteria).
-
-| Feature | Saved Reports (Propdex) | Saved Searches (Common Alternative) |
-|---------|--------------------------|-------------------------------------|
-| **What's saved** | "Dam 1, Amsterdam — Report from 2026-02-08" | "Churches in Amsterdam, max €2M" |
-| **Use case** | Revisit specific properties in pipeline | Monitor market for new opportunities |
-| **Notifications** | None (static data) | Alert when new matches found |
-| **Propdex fit** | YES — matches workflow (research specific opportunities) | NO — requires market monitoring (v3.0+) |
-
-**Why reports, not searches:**
-- Real estate developers work with specific opportunities ("we're looking at this church")
-- The backend already supports report CRUD (save, list, search, delete)
-- Saved searches require alert infrastructure (out of scope for v2.0)
-
-**Exception:** Search within saved reports (query by address, project, date) is useful and supported by backend (`GET /reports?q=`).
-
-Source: [Real Estate App Features](https://realogixs.com/top-features-every-real-estate-mobile-app-must-have-in-2026)
-
----
-
-## Confidence Assessment
-
-| Area | Confidence | Rationale |
-|------|------------|-----------|
-| **Map-first patterns** | HIGH | Google Maps, Regrid, Transect all use map-first; well-documented patterns |
-| **Floating search** | HIGH | Google Maps established this; official docs + UI kits confirm |
-| **Bottom sheet (mobile)** | HIGH | Nielsen Norman Group + Material Design guidelines |
-| **Layer toggles** | HIGH | Standard across all map platforms |
-| **Dutch PDOK integration** | MEDIUM | PDOK docs exist, but implementation examples sparse |
-| **WOZ waarde API** | LOW | No clear API found; needs deeper research |
-| **Energielabel API** | LOW | EP-Online mentioned, but integration unclear |
-| **Kadaster parcel boundaries** | LOW | Kadaster offers WFS, but vector tile approach uncertain |
-| **Project folders UX** | MEDIUM | Real estate PM software shows patterns, but map integration unclear |
-
----
-
-## Open Questions for Phase-Specific Research
-
-### Phase 1: Map Setup
-- [ ] PDOK tile URL format and attribution requirements
-- [ ] MapLibre basemap styling for Netherlands context (hide irrelevant POIs)
-- [ ] Default map center and zoom for Netherlands-wide view
-
-### Phase 2: Parcel Boundaries
-- [ ] Kadaster WFS endpoint for parcel boundaries
-- [ ] Vector tiles vs GeoJSON — performance implications
-- [ ] Parcel boundary click detection (tolerance, multi-polygon handling)
-
-### Phase 3: New APIs
-- [ ] WOZ waarde API — endpoint, auth, rate limits
-- [ ] Energielabel API (EP-Online) — access method, data schema
-- [ ] Both may require accounts/API keys (investigate)
-
-### Phase 4: Mobile UX
-- [ ] Bottom sheet library (react-spring-bottom-sheet vs custom)
-- [ ] Gesture conflicts (map pan vs page scroll)
-- [ ] iOS Safari viewport height issues (100vh problem)
+**Best practice:** Pagination for desktop (explicit control), infinite scroll for mobile (gesture-driven). Virtual scroll only if performance becomes issue. Source: [Pagination vs Infinite Scroll](https://ashishmisal.medium.com/pagination-vs-infinite-scroll-vs-load-more-data-loading-ux-patterns-in-react-53534e23244d)
 
 ---
 
 ## Sources
 
-### Map-First UI Patterns
-- [Map UI Design: Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
-- [5 Map UI Design Patterns That Elevate UX](https://bricxlabs.com/blogs/map-ui-design-patterns-examples)
-- [Map UI Patterns](https://mapuipatterns.com/)
-- [Map UI – The Most Popular Layouts and Design Tips](https://www.uxpin.com/studio/blog/map-ui/)
+### PropTech Platforms (US Market)
+- [PropertyRadar Features Overview](https://www.propertyradar.com/features-overview) — 250+ filter criteria, real-time list builder
+- [PropertyRadar Opportunity Zones](https://help.propertyradar.com/en/articles/4445648-opportunity-zones) — Census tract selection for opportunity discovery
+- [LightBox Data Platform](https://www.lightboxre.com/data/) — Zoning, parcel, assessment data
+- [LightBox Appraisal Intelligence](https://www.prnewswire.com/news-releases/lightbox-enhances-appraisal-intelligence-to-give-lenders-unmatched-financial-visibility-amid-rising-credit-and-regulatory-demands-302638256.html) — Q1 2026 enhancements
 
-### Competitor Platforms
-- [Transect Environmental Due Diligence](https://www.transect.com/industries/transect-environmental-due-diligence-for-real-estate-development)
-- [Regrid Property App](https://regrid.com/property-app)
-- [Regrid Parcel Data Updates](https://regrid.com/blog/february-2026-parcel-data-update)
-- [ParcelQuest GIS Features](https://www.parcelquest.com/features/gis/)
-- [OnX Backcountry Basemap Redesign](https://www.onxmaps.com/backcountry/blog/basemap-redesign)
+### Dutch Government Data
+- [CBS Gebiedsindelingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen) — Gemeente/wijk/buurt boundaries
+- [Kwaliteit BAG-BRK koppeling](https://labs.kadaster.nl/dataanalyse/koppelingbagbrk/kwaliteit_bag_brk_koppeling/) — Known quality issues in BAG-BRK data coupling
+- [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt) — Dutch government permit announcement service (342 municipalities, 8M+ residents)
+- [Kadaster Eigendomsinformatie](https://www.kadaster.nl/producten/woning/eigendomsinformatie) — BRK owner data access
+- [Kadaster Openbaarheid en Privacy](https://www.kadaster.nl/over-ons/beleid/openbaarheid-en-privacy) — BRK privacy constraints and legitimate interest requirement
+- [Omgevingswet](https://www.government.nl/topics/environment-and-planning-act) — Transition period until 2032, mixed systems
 
-### Google Maps Patterns
-- [Google Maps Controls](https://developers.google.com/maps/documentation/javascript/controls)
-- [Places Search Box](https://developers.google.com/maps/documentation/javascript/examples/places-searchbox)
-- [Search This Area Pattern](https://mapuipatterns.com/search-this-area/)
-- [Analyzing Google Maps UX/UI](https://medium.com/@jaybreezys/analyzing-google-maps-based-on-ux-ui-functionality-41ea06202b0a)
+### Dutch Real Estate Development Workflow
+- [Wat doet een projectontwikkelaar?](https://www.continu.nl/seo/wat-doet-een/wat-doet-een-projectontwikkelaar) — Project developer workflow (acquisition → development → sale)
+- [Grondverwerving](https://www.gloudemans.nl/expertises/grondverwerving/) — Land acquisition expertise
+- [Wat is een woonbestemming?](https://fortus.nl/kennisbank/woonbestemming/) — Residential zoning explanation
 
-### Mobile UX
-- [Bottom Sheets: Definition and UX Guidelines](https://www.nngroup.com/articles/bottom-sheet/)
-- [How to Design Bottom Sheets for Optimized UX](https://blog.logrocket.com/ux-design/bottom-sheets-optimized-ux/)
-- [Mobile Navigation UX Best Practices 2026](https://www.designstudiouiux.com/blog/mobile-navigation-ux/)
-- [Mobile Map UX Patterns](https://mapuipatterns.com/mobile-map/)
-- [Getting Lost and Found – Maps and Mobile UX](https://www.interaction-design.org/literature/article/getting-lost-and-found-maps-and-the-mobile-user-experience)
-
-### Real Estate Platform Features
-- [How to Design a Powerful Real Estate Platform 2026](https://cieden.com/how-to-design-a-powerful-real-estate-platform-complete-guide)
-- [Top Features Every Real Estate Mobile App Must Have](https://realogixs.com/top-features-every-real-estate-mobile-app-must-have-in-2026)
-- [Real Estate App Development Guide](https://ascendixtech.com/real-estate-app-development-guide/)
-- [Best Real Estate Project Management Software 2026](https://www.smartsuite.com/blog/real-estate-project-management-software)
-
-### Dutch Data Sources
-- [PDOK Locatieserver API](https://github.com/PDOK/locatieserver/wiki/API-Locatieserver)
-- [Dutch Address Autocomplete with Alpine.js](https://vanrossum.dev/27-dutch-address-autocomplete-with-alpinejs)
-- [Kadaster About Us](https://www.kadaster.nl/about-us)
-- [Public Services on the Map (PDOK)](https://www.ogc.org/blog-article/public-services-on-the-map-a-decade-of-success/)
-
-### Anti-Patterns and UX Mistakes
-- [Map UI Patterns: Task Oriented](https://mapuipatterns.com/task-oriented/)
-- [User Interface Anti-Patterns](https://ui-patterns.com/blog/User-Interface-AntiPatterns)
-- [Anti-Patterns of User Experience Design](https://www.ics.com/blog/anti-patterns-user-experience-design)
-- [Avoiding UX Anti-Patterns](https://www.door3.com/blog/avoiding-anti-patterns-with-ux-design)
-
-### Layer Toggles and Controls
-- [Map Layer Toggle Controls Best Practices](https://www.eleken.co/blog-posts/map-ui-design)
-- [11 Innovative Methods for Multi-Layered Map Design](https://www.maplibrary.org/1560/innovative-methods-for-multi-layered-map-design/)
+### UX Patterns
+- [Map UI Design: Best Practices](https://www.eleken.co/blog-posts/map-ui-design) — Map-first design patterns, layer toggles, clustering
+- [Draw a Search: Implementing Polygon-based Searches on Maps](https://www.codemotion.com/magazine/backend/polygon-based-searches-on-maps/) — Polygon drawing UX
+- [Pagination vs Infinite Scroll vs Load More](https://ashishmisal.medium.com/pagination-vs-infinite-scroll-vs-load-more-data-loading-ux-patterns-in-react-53534e23244d) — Progressive loading patterns
+- [Accordion UI Design](https://mobbin.com/glossary/accordion) — Expandable card best practices (caret icon, aria-expanded)
+- [Designing The Perfect Accordion](https://www.smashingmagazine.com/2017/06/designing-perfect-accordion-checklist/) — Accessibility and interaction design for accordions
 
 ---
 
-**Next Steps:** Use this feature landscape to inform requirements definition and UI wireframing. Priority: prove map-first workflow with minimal new backend work (use existing v1.1 APIs). Defer WOZ, energielabel, and parcel boundaries to later phases if they require significant integration effort.
+**Next Steps:** Use this feature landscape to inform v3.0 roadmap phase breakdown. Priority order: (1) Area selection + parcel list, (2) Parcel detail modal + vergunningen, (3) CSV export + progressive loading, (4) Owner lookup (v3.1). Defer polygon draw, opportunity scoring, saved scans, monitoring to v3.1+.
+
+---
+*Feature research for: Propdex v3.0 Area Intelligence*
+*Researched: 2026-02-10*
+*Confidence: MEDIUM (WebSearch + official Dutch government sources | NOT VERIFIED: Context7 unavailable, proprietary PropTech platform documentation not accessible)*

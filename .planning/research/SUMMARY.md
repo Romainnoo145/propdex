@@ -1,331 +1,243 @@
 # Project Research Summary
 
-**Project:** Propdex v2.0 Frontend (Map-First React SPA)
-**Domain:** Dutch Property Intelligence Platform (PropTech)
-**Researched:** 2026-02-08
-**Confidence:** HIGH
+**Project:** Propdex v3.0 Area Intelligence
+**Domain:** Area-based Property Opportunity Discovery (Dutch PropTech)
+**Researched:** 2026-02-10
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Propdex v2.0 adds a map-first React frontend to the production-ready v1.1 backend (275 tests, full multi-tenant API). Research confirms that map-first property platforms follow a specific architectural pattern: the map IS the interface, with floating search and overlay panels rather than traditional dashboards. The recommended stack prioritizes performance (MapLibre GL JS with PDOK vector tiles, Vite 7, pnpm), type safety (React 19 + TypeScript strict mode, TanStack Router), and security (HttpOnly cookies for refresh tokens, access tokens in memory only).
+Propdex v3.0 transforms the platform from address-based property lookup to area-based opportunity scanning. Users select a gemeente, the system bulk-fetches all parcels in the bounding box, applies a smart filtering pipeline (BAG has_pand + bestemming + vergunningen), and surfaces ~50 qualified development leads from ~2000 raw parcels. The critical innovation is the three-tier cost optimization: free PDOK/BAG data eliminates 97.5% of parcels before triggering any paid Kadaster BRK owner lookups. This is both the core differentiator and the architectural constraint that shapes every design decision.
 
-The critical architectural decisions must be made in Phase 1: memory leak prevention patterns (MapLibre's Worker class leaks require explicit cleanup), imperative map state management (avoid useState for map instances), and z-index layering strategy. Phase 2 establishes security architecture (JWT storage) that's painful to change later. Phase 3 determines data rendering strategy (coordinate projection handling, GeoJSON vs vector tiles, clustering thresholds). These foundational choices prevent rewrites that would otherwise be required after encountering performance walls at 1000+ features or security vulnerabilities from localStorage token storage.
+The recommended approach extends the existing v1.1/v2.0 architecture rather than replacing it. Four new government API clients (BAG WFS, SRU Bekendmakingen, Open Raadsinformatie, BRK Bevragen) follow the established `government_apis/` pattern. PostGIS enables spatial joins (10x faster than Python Shapely with GIST indexes). The existing ARQ worker handles background scan jobs with progress polling via TanStack Query. Vector tiles (via Martin tile server or PDOK services) solve the 2000+ polygon rendering problem that would crash MapLibre with raw GeoJSON. The database adds 3-4 new tables (area_scans, parcel_cache with PostGIS geometry, scan_results, opportunities) with RLS policies matching existing multi-tenant patterns.
 
-Key risks are well-documented with mitigation strategies: Dutch coordinate system mismatches (RD New vs WGS84 — solve in backend conversion), MapLibre memory leaks in React SPAs (solve with proper cleanup patterns), and PDOK API integration complexity (solve by proxying through existing backend rather than direct browser calls). The backend's existing multi-source aggregation, caching, and multi-tenant architecture provide a strong foundation — the frontend should leverage these rather than duplicating logic.
+The top risks are: (1) WFS 1000-feature silent truncation -- pagination must be implemented from day one, not retrofitted; (2) EPSG:28992/4326 coordinate mismatches across APIs that cause parcels to render in the ocean; (3) rate limit exhaustion from naive `asyncio.gather()` on 2000 parcels -- requires per-API semaphore rate limiting; (4) JSONB cache bloat from storing entire scan results as single rows -- must cache individual parcels, not bulk scan payloads; and (5) dubbele bestemming (multiple zoning overlays) data model confusion that leads to false "developable" signals. All five have documented prevention strategies but require correct implementation in the first phase they appear -- retrofitting is expensive.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Verdict:** Modern, performance-oriented stack aligned with 2026 best practices.
+v3.0 requires 7 new dependencies (5 backend, 2 frontend) integrated with the existing stack. No infrastructure rewrites needed.
 
-The research recommends React 19 + Vite 7 + TypeScript strict mode as the foundation, with pnpm for 50% faster installs and monorepo readiness. MapLibre GL JS 4.x via react-map-gl v8's MapLibre-specific endpoint provides 60fps vector rendering with Dutch government PDOK tiles. TanStack Query v5 handles server state (caching, background updates), while TanStack Router provides type-safe routing with compile-time validation — both superior to alternatives for SPA-only architecture. Tailwind v4's zero-config Vite plugin delivers 100x faster incremental builds compared to v3.
+**Backend additions:**
+- **OWSLib 0.35.0**: OGC API Features client for PDOK BAG bulk queries -- handles 1000-feature pagination natively, actively maintained (Oct 2025 release)
+- **lxml 5.3.0**: XML parsing for SRU Bekendmakingen API -- use with `resolve_entities=False, no_network=True` for XXE prevention. Replaces unmaintained defusedxml and sruthi
+- **elasticsearch-py 9.3.0**: Official client for Open Raadsinformatie Elasticsearch endpoint -- async-capable, Feb 2026 release
+- **geojson 3.1.0**: Serialize Shapely geometries to GeoJSON for OWSLib feature conversion
+- **PostGIS extension**: Spatial joins via ST_Intersects/ST_Within with GIST indexes -- 5-40x faster than Python Shapely
 
-**Core technologies:**
-- **React 19 + Vite 7**: Sub-second HMR, native ESM, 100x faster builds than Webpack — 2026 standard after CRA deprecation
-- **MapLibre GL JS 4.x**: Open-source WebGL renderer, 60fps vector tiles, 100% feature parity with Mapbox GL v2, no usage limits
-- **TypeScript strict mode**: Non-negotiable for production (catches 70% of runtime bugs at compile time, required since React 19 removed propTypes)
-- **TanStack Query v5**: Server state management with caching/invalidation, handles 80% of SPA state needs
-- **TanStack Router**: Type-safe routing in SPA mode (React Router v7's type safety only works in framework mode)
-- **Tailwind v4**: Zero-config, 5x faster builds than v3, automatic content detection
-- **pnpm**: 50% faster installs than npm, prevents phantom dependencies, monorepo-ready
+**Frontend additions:**
+- **@watergis/maplibre-gl-terradraw 1.10.0**: Drawing controls for area selection (polygon, rectangle) -- most actively maintained MapLibre drawing plugin
+- **@turf/turf 7.3.0**: Client-side spatial operations (bbox calculation, area validation, containment checks)
 
-**Critical version notes:**
-- MapLibre v4.1-4.7.1 have Worker class memory leaks (fixed in later versions — verify latest)
-- React-map-gl v8.x required for MapLibre separation (`react-map-gl/maplibre` import)
-- PDOK BAG API migration deadline: July 15, 2026 (old endpoints will break)
+**What NOT to add:** sruthi (unmaintained since 2023), defusedxml (unmaintained since 2021), Celery/RQ (extend existing ARQ instead), MapLibre Geoman (commercial, overkill), separate GeoJSON library (use Shapely 2.x native support).
+
+**Critical deadline:** PDOK BAG OGC API v1 discontinued July 15, 2026 -- must use v2 endpoint from the start.
 
 ### Expected Features
 
-**Map-first pattern:** Industry standard established by Google Maps, Regrid, Transect. Map fills viewport, sidebar overlays (collapsible), floating search, no dashboard landing page.
+**Must have (v3.0 -- proves the area scan workflow):**
+- Map-based gemeente selection via CBS gebiedsindelingen boundaries
+- BAG bulk has_pand cross-reference (parcel has building: yes/no)
+- Bestemming filter (Wonen zoning + bouwvlak present)
+- Parcel list with basic filters (sort by size, bestemming, has_pand)
+- Parcel detail modal with AI summary + expandable source cards
+- CSV export of filtered parcels (no owner info yet)
+- Progressive loading (pagination for 2000+ row tables)
+- Vergunningen data in parcel detail via SRU API
 
-**Must have (table stakes):**
-- Full-page interactive map with PDOK aerial/topographic tiles — users expect map IS the app
-- Floating search bar with autocomplete (PDOK Locatieserver via backend) — Google Maps pattern
-- Click property → instant info panel — core interaction, backend aggregator ready
-- Parcel boundaries overlay — real estate users need exact property lines (kadaster)
-- Layer toggles (satellite vs topo, boundaries on/off) — standard map controls
-- Saved reports list — users expect to revisit researched properties (backend `/reports` ready)
-- PDF export — professional deliverable (backend WeasyPrint ready)
-- Mobile-responsive (bottom sheet pattern for panels) — 30%+ mobile traffic expected
-- Auth flow (login/logout with JWT) — backend ready with refresh token rotation
+**Should have (v3.1 -- add after workflow validated):**
+- Kadaster BRK owner contact lookup (paid API, privacy-restricted, only for filtered <100 parcels)
+- AI opportunity scoring (bestemming match + years unused + permit inactivity + parcel size)
+- Saved area scans with re-run capability
+- Polygon draw tool for custom areas (power users)
+- Open Raadsinformatie integration (municipal council decisions)
+- Vergunningen monitoring/alerts (daily background check via ARQ)
 
-**Should have (competitive differentiators):**
-- Project folders — group properties by pipeline (backend `project_id` field exists)
-- AI zoning summary — already implemented in backend (Claude parsing), just display with confidence indicators
-- Freshness indicators — "Data from 2 days ago" per source, builds trust (backend tracks timestamps)
-- Monument badge — instant visual indicator (backend RCE API ready)
-- Force refresh button — power user feature (backend `force_refresh=true` param)
-- Report search — find by address/project/date (backend `GET /reports?q=` ready)
+**Defer (v3.2+):**
+- Wijk/buurt hierarchical selection, address radius, historical permit timeline, batch BRK optimization, multi-gemeente searches, email notifications, CRM API integration
 
-**Defer to v2.1+:**
-- WOZ waarde display — new API integration required (no public API found, municipalities only)
-- Energielabel badge — RVO EP-Online API needs verification (key required, endpoint unclear)
-- Measure tool — nice-to-have (MapLibre draw plugin)
-- Neighborhood context (POIs, transit) — requires new OSM/Google Places integration
+**Anti-features to avoid:** Real-time permit polling (APIs update daily, not real-time), scan entire Netherlands (API cost/DB explosion), auto-generate owner letters (GDPR liability), 3D visualization (different product category), financial feasibility calculator (wrong domain).
 
 ### Architecture Approach
 
-**Pattern:** Fan-out/fan-in data aggregation with API-first + AI fallback. Backend already implements this (v1.1 complete), frontend consumes aggregated results.
-
-The architecture prioritizes frontend simplicity by leveraging the production-ready backend. The backend handles parallel API calls (BAG, PDOK, Kadaster, RuimtelijkePlannen) with asyncio.gather, cache-aside pattern with Redis (source-specific TTLs), multi-tenant row-level security (organization_id filters), and async job queue for LLM parsing (ARQ workers). Frontend should proxy all data requests through backend endpoints rather than calling PDOK directly (solves CORS, leverages existing cache, respects rate limits).
+v3.0 adds area scanning alongside existing property lookup. The two systems share infrastructure (auth, multi-tenant RLS, cache, ARQ workers) but have distinct orchestration patterns. Property lookup is synchronous (single address, parallel API fetch, immediate response). Area scanning is asynchronous (municipality bbox, background job, progress polling).
 
 **Major components:**
-1. **MapLibre GL Map (imperative)** — state managed by MapLibre, not React (avoid useState for map instances to prevent infinite re-render loops)
-2. **TanStack Query client** — server state layer, calls backend `/properties/lookup`, `/reports`, auto-caching with 5-min stale time
-3. **Auth Context (memory + httpOnly)** — access token in React Context, refresh token in httpOnly cookie, no localStorage (XSS protection)
-4. **Floating search with debouncing** — 300ms debounce, min 3 characters, backend proxy to PDOK Locatieserver
-5. **Property detail panel** — floating (desktop) or bottom sheet (mobile), progressive disclosure (summary → expandable sections)
-6. **Sidebar (collapsible)** — Rapporten list, Projecten grouping, Instellingen
+1. **Area Scanner Service** (`area_scanner.py`) -- orchestrates municipality scan: resolve bbox, create scan record, enqueue ARQ job, return scan_id for polling
+2. **4 New API Clients** (`bag_wfs_client.py`, `sru_bekendmakingen.py`, `open_raadsinformatie.py`, `brk_bevragen_client.py`) -- follow existing `government_apis/` pattern with httpx async clients
+3. **Spatial Query Layer** (`spatial_queries.py`) -- PostGIS functions (ST_Contains, ST_DWithin, ST_AsGeoJSON) with GIST-indexed geometry columns
+4. **Three-Tier Cache** -- Tier 1: parcel_cache table (PostGIS geometry, 90-day TTL), Tier 2: cached_api_responses JSONB (source-specific TTLs), Tier 3: BRK ownership (never cache, privacy-sensitive)
+5. **Batch Rate Limiter** (`batch_rate_limiter.py`) -- asyncio.Semaphore + token bucket per API (BAG=50, DSO=10, BRK=5 concurrent)
+6. **Vector Tile Rendering** -- Martin tile server (PostGIS to MVT) or PDOK vector tile services for 2000+ parcel polygons on MapLibre
 
-**Critical architectural decisions:**
-- **Memory management:** MapLibre's Worker class leaks require explicit cleanup in useEffect (map.remove() + event handler removal)
-- **Coordinate projection:** Backend converts RD New (EPSG:28992) to WGS84 (EPSG:4326) before returning GeoJSON — frontend never handles RD
-- **Performance threshold:** GeoJSON clustering required beyond 1,000 features, vector tiles preferred for parcel boundaries (10-50x smaller payload)
-- **Security:** JWT access token in memory (React state), refresh token in httpOnly cookie (backend sets), never localStorage (XSS vulnerability)
+**Key architectural decisions already made:**
+- PostGIS for spatial joins, not Python Shapely (10x performance)
+- ARQ for batch processing, not WebSockets for progress (polling is sufficient for 5-30 min jobs)
+- Vector tiles for map rendering, not GeoJSON (browser memory protection)
+- Three-tier cache with BRK in "never-store" tier (GDPR compliance)
+- Polling via TanStack Query refetchInterval, not SSE/WebSocket (simpler, sufficient)
 
 ### Critical Pitfalls
 
-Research identified 13 pitfalls (6 critical, 4 moderate, 3 minor) with phase-specific warnings.
+Research identified 10 pitfalls (7 critical, 3 major). The top 5 that must be addressed in architecture:
 
-**Top 5 critical pitfalls to address:**
+1. **WFS 1000-feature silent truncation** -- PDOK returns max 1000 features per request without error. Implement pagination from day one: use `resultType=hits` to get total count, paginate with `startIndex`, verify counts match. Log warning if response contains exactly 1000 features. Address in Phase 1.
 
-1. **MapLibre memory leaks in React SPAs** — Memory grows continuously on route changes. Worker class and AbortController objects persist after component unmount. **Mitigation:** Always call `map.remove()` in useEffect cleanup, remove event handlers explicitly before removal, establish pattern in Phase 1 (foundational).
+2. **EPSG coordinate mismatch** -- BAG/PDOK use EPSG:28992 (RD New), MapLibre expects EPSG:4326 (WGS84). Transform at API boundary using pyproj. Store in PostGIS as EPSG:28992, convert to 4326 for GeoJSON responses. Validate: Netherlands bbox is [50.7, 3.2, 53.6, 7.2] in EPSG:4326. Address in Phase 1.
 
-2. **JWT in localStorage = XSS account takeover** — localStorage is JavaScript-readable, any XSS vulnerability steals tokens across all organizations. **Mitigation:** Access token in memory (React Context), refresh token in httpOnly cookie (backend sets), never localStorage. Must decide in Phase 2 (architectural).
+3. **Parallel API rate limit exhaustion** -- 2000 parcels x 3 APIs = 6000 requests. Use per-API semaphore rate limiting (10 concurrent max) + token bucket (800/hour). Implement exponential backoff on 429. Monitor `X-RateLimit-Remaining` headers. Address in Phase 2.
 
-3. **Coordinate projection mismatch (RD New vs WGS84)** — Dutch Kadaster uses EPSG:28992, MapLibre expects EPSG:4326. Displaying RD coordinates causes features to render 200km+ from actual location. **Mitigation:** Backend converts RD→WGS84 using pyproj before returning GeoJSON, frontend never handles projection. Critical for Phase 3 (data integration).
+4. **JSONB cache bloat** -- Storing 2000 parcels as single JSONB row causes TOAST storage degradation (2-10x slower queries). Cache individual parcels only, link to scans via junction table. Monitor `pg_total_relation_size`. Address in Phase 1 schema design.
 
-4. **Too many GeoJSON features (no clustering)** — 1,000+ polygons cause exponential performance degradation, 10,000+ freeze map for 10-30s. Amsterdam has 200,000+ parcels. **Mitigation:** Enable clustering for point features, use vector tiles for polygons, viewport-based loading. Decide in Phase 3 (architectural).
+5. **Dubbele bestemming (multiple zoning)** -- Dutch parcels can have primary + overlay zonings (Wonen + Waarde-Archeologie + Waterstaat). Store as JSONB array, check ALL zonings in scoring. Single `zoning` string field = data loss and false positives. Address in Phase 1 schema + Phase 4 scoring.
 
-5. **React state triggers infinite map re-renders** — Storing map state (center, zoom) in useState causes loops: map movement → setState → re-render → map resets → fires event → setState. **Mitigation:** Let MapLibre manage state imperatively via refs, only sync to React when needed (debounced URL persistence). Establish in Phase 1 (foundational).
-
-**Additional phase-specific warnings:**
-- **Phase 4:** Search autocomplete must debounce (300ms) or risk PDOK rate limiting
-- **Phase 5:** Touch events conflict on mobile (panel scroll vs map pan) — use cooperative gestures or event.stopPropagation
-- **Phase 8:** Vite env vars baked into build (requires rebuild per environment unless using runtime config)
+**Additional critical pitfalls:** Invalid geometries from WFS breaking spatial operations (auto-repair with `shapely.make_valid()`), MapLibre memory exhaustion with 2000+ GeoJSON polygons (use vector tiles), GML version inconsistencies between WFS services (request JSON output format), long-running scan timeouts without progress feedback (ARQ background jobs with polling), multi-tenant cache isolation breach (always include organization_id in cache keys).
 
 ## Implications for Roadmap
 
-Based on research, suggested 5-phase structure with foundation-first ordering:
+Based on combined research, suggested 7-phase structure with foundation-first ordering:
 
-### Phase 1: Map Foundation & Layout
-**Rationale:** Foundational architectural decisions (memory management, state patterns, z-index layering) are hard to change later. MapLibre cleanup patterns and imperative state management must be established before building features on top.
+### Phase 1: PostGIS Foundation + Database Schema
+**Rationale:** All subsequent phases depend on the spatial database schema. PostGIS extension, geometry columns, GIST indexes, and RLS policies must exist before any API client can store data. The schema design decision (individual parcel cache vs bulk JSONB) is irreversible once data accumulates.
+**Delivers:** PostGIS extension enabled, parcel_cache table with GIST-indexed geometry columns, area_scans table, scan_results table, RLS policies on all new tables, Alembic migrations, spatial query helpers (ST_Contains, ST_DWithin)
+**Addresses:** FEATURES: parcel storage infrastructure; PITFALLS: JSONB bloat prevention (individual parcels, not bulk), coordinate system standardization (EPSG:28992 for storage), multi-tenant isolation (RLS from day one)
+**Avoids:** JSONB TOAST bloat, multi-tenant cache leaks, schema migration pain after data exists
+**Stack:** PostGIS, GeoAlchemy2, existing SQLAlchemy 2.x patterns
 
-**Delivers:**
-- Full-page MapLibre map with PDOK aerial/topographic tiles
-- Layer toggle (satellite vs topo)
-- Proper memory cleanup patterns (map.remove() + event handler removal)
-- Z-index scale for floating elements
-- Imperative map state management (refs, not useState)
+### Phase 2: Government API Clients
+**Rationale:** API clients are independent of each other and can be built in parallel. They follow the established `government_apis/` pattern. Having all 4 clients ready before the scanner service avoids blocking the orchestration layer.
+**Delivers:** BAG WFS client (bulk bbox queries with pagination), SRU Bekendmakingen client (httpx + lxml XML parsing), Open Raadsinformatie client (elasticsearch-py async), BRK Bevragen client (httpx mTLS with PKIOverheid cert), batch rate limiter (semaphore + token bucket), integration tests for each client
+**Addresses:** FEATURES: vergunningen data, raadsinformatie context, owner lookup capability; PITFALLS: WFS pagination (1000-feature limit), rate limit exhaustion (per-API semaphore), GML version handling, geometry validation
+**Stack:** OWSLib, lxml, elasticsearch-py, httpx mTLS, aiolimiter
 
-**Addresses:**
-- STACK.md: React 19 + Vite 7 + MapLibre setup
-- FEATURES.md: Full-page map, layer toggles (table stakes)
-- PITFALLS.md: Critical #1 (memory leaks), Critical #6 (React state), Moderate #7 (z-index)
+### Phase 3: Area Scanner Service + Background Jobs
+**Rationale:** The scanner orchestrates API clients (Phase 2) against the database schema (Phase 1). It introduces the ARQ background job pattern for long-running scans and the three-tier caching strategy. This must work end-to-end before building any frontend.
+**Delivers:** Area scanner service (municipality to bbox, create scan, enqueue ARQ job), ARQ job for batch processing (paginated WFS fetch, rate-limited enrichment, progress tracking), three-tier cache integration, scan status polling endpoint, duplicate scan prevention
+**Addresses:** FEATURES: BAG bulk has_pand cross-reference, bestemming filter, smart pre-filtering pipeline; PITFALLS: long-running scan timeouts (ARQ + polling), parallel rate limit exhaustion (batch limiter), invalid geometry handling (make_valid)
+**Avoids:** Synchronous HTTP timeout on 5-30 min scans, duplicate scan cost waste
 
-**Avoids:** Memory leak accumulation, infinite re-render loops, z-index chaos that becomes unmanageable
+### Phase 4: REST API Endpoints + Opportunity Scoring
+**Rationale:** With the scanner producing results, expose them via REST API. Add opportunity scoring here because it shapes the default sort order for all result views. The scoring algorithm uses data from multiple API sources and must handle dubbele bestemming correctly.
+**Delivers:** POST /area-scans (start scan), GET /area-scans/{id}/status (polling), GET /area-scans/{id}/results (paginated, sorted by score), DELETE /area-scans/{id}, opportunity scoring algorithm (bestemming match + years unused + permit inactivity + parcel size), CSV export endpoint
+**Addresses:** FEATURES: parcel list with filters, CSV export, opportunity scoring; PITFALLS: dubbele bestemming in scoring (check ALL zonings), progressive loading (server-side pagination)
+**Stack:** FastAPI routers following existing patterns, Pydantic response schemas
 
-**Research flag:** LOW — MapLibre + React patterns well-documented, establish and enforce cleanup patterns
+### Phase 5: Frontend -- Municipality Selection + Map Rendering
+**Rationale:** The map is the entry point for area scanning. Municipality selection via CBS gebiedsindelingen boundaries and parcel rendering with vector tiles are the two frontend decisions that are hardest to change later. Vector tile rendering must be decided upfront (Martin tile server vs PDOK services vs client-side clustering).
+**Delivers:** CBS gemeente boundary layer on MapLibre map, click-to-select gemeente interaction, vector tile rendering for 2000+ parcel polygons (score-based color coding), area scan trigger from map selection, scan progress dashboard (progress bar, phase indicators)
+**Addresses:** FEATURES: map-based gemeente selection (table stakes), progressive loading on map; PITFALLS: MapLibre memory exhaustion (vector tiles, not GeoJSON), coordinate mismatch (backend converts before serving)
+**Stack:** @watergis/maplibre-gl-terradraw, @turf/turf, Martin tile server or PDOK vector tiles
 
-### Phase 2: Authentication & Security
-**Rationale:** Security architecture (JWT storage strategy) requires backend coordination and is painful to change after features are built on top. HttpOnly cookies for refresh tokens must be decided before implementing protected routes.
+### Phase 6: Frontend -- Parcel List + Detail Modal
+**Rationale:** With map rendering working, build the list-and-detail views that complete the scan workflow. Parcel detail modal extends the existing v2.0 report drawer pattern with expandable source cards and AI summary.
+**Delivers:** Parcel list table (TanStack Table, sortable, filterable, paginated 50/page), parcel detail modal (AI summary + expandable Kadaster/Bestemming/Vergunningen/Raadsinformatie cards), TanStack Query hooks (useAreaScan, useAreaScanStatus, useAreaScanResults), CSV download button, filter controls (bestemming type, has_pand, min size, score threshold)
+**Addresses:** FEATURES: parcel list with filters, parcel detail view, expandable source cards, CSV export; PITFALLS: frontend re-rendering cascade (TanStack Query manages server state, not Redux/Zustand)
 
-**Delivers:**
-- Login/logout flow
-- Auth context (access token in memory, refresh token in httpOnly cookie)
-- Silent token refresh on page reload
-- Protected route wrapper
-- CORS configuration verification (development proxy vs production)
-
-**Addresses:**
-- STACK.md: JWT storage pattern (memory + httpOnly)
-- FEATURES.md: Login/logout (table stakes)
-- PITFALLS.md: Critical #2 (JWT security), Minor #12 (CORS mismatch)
-
-**Uses:** Backend `/auth/login`, `/auth/refresh` (already implemented in v1.1)
-
-**Avoids:** XSS account takeover via localStorage, CORS failures in production
-
-**Research flag:** LOW — JWT patterns well-established, verify backend CORS_ORIGINS includes frontend domain
-
-### Phase 3: Property Data & Map Interactions
-**Rationale:** Data rendering strategy (GeoJSON vs vector tiles, clustering) is architectural. Coordinate projection handling must be in backend to prevent 200km+ rendering errors. Performance decisions made here determine scalability to 10,000+ features.
-
-**Delivers:**
-- Floating search bar (manual address entry initially)
-- Address autocomplete with debouncing (PDOK Locatieserver via backend)
-- Click map → fetch property data → open detail panel
-- GeoJSON rendering with clustering (points) or vector tiles (polygons)
-- Backend RD→WGS84 coordinate conversion verification
-- Loading states, error handling (toasts)
-
-**Addresses:**
-- FEATURES.md: Search, autocomplete, click-to-info (table stakes)
-- ARCHITECTURE.md: Fan-out/fan-in aggregation via backend
-- PITFALLS.md: Critical #3 (projection), Critical #4 (clustering), Critical #5 (PDOK CORS), Moderate #9 (debouncing)
-
-**Uses:** Backend `/properties/lookup` (already aggregates BAG/PDOK/Kadaster/RCE data)
-
-**Implements:** PropertyIntelligenceOrchestrator results display, cache-aware fetching
-
-**Avoids:** Coordinate rendering errors, performance walls at 1000+ features, PDOK rate limiting
-
-**Research flag:** MEDIUM — Vector tile endpoints need verification (PDOK cadastral OGC API), clustering thresholds need real-world testing
-
-### Phase 4: Property Details & Reports
-**Rationale:** With data flowing from backend, now build the property detail UI with progressive disclosure. Saved reports leverage existing backend CRUD endpoints.
-
-**Delivers:**
-- Property detail panel (floating desktop, bottom sheet mobile)
-- Progressive disclosure (summary → expandable sections for kadaster/zoning/monument)
-- Data source indicators (API vs AI-parsed, confidence scores)
-- Freshness indicators (per-source timestamps)
-- PDF export button (backend WeasyPrint)
-- Save report button
-- Sidebar with saved reports list
-- Report search (backend `/reports?q=`)
-
-**Addresses:**
-- FEATURES.md: PDF export, saved reports, freshness indicators (table stakes + differentiators)
-- PITFALLS.md: Moderate #8 (resize handling), Moderate #10 (touch conflicts)
-
-**Uses:** Backend `/reports` CRUD, `/reports/{id}/pdf` export
-
-**Avoids:** Map resize bugs when panels open/close, mobile touch conflicts between scrolling and panning
-
-**Research flag:** LOW — Backend reports API complete (275 tests), UI patterns standard
-
-### Phase 5: Projects & Polish
-**Rationale:** Project folders add workflow value for real estate developers tracking pipelines. Polish features (force refresh, monument badges) leverage existing backend capabilities without new integrations.
-
-**Delivers:**
-- Project folders (group reports by project_id)
-- Project CRUD (create, rename, delete)
-- Filter reports by project in sidebar
-- Force refresh button (invalidate cache)
-- Monument badge on property cards
-- AI zoning summary display with confidence
-- Mobile responsive refinements
-- Performance monitoring
-
-**Addresses:**
-- FEATURES.md: Project folders, force refresh, monument badge (differentiators)
-- ARCHITECTURE.md: Multi-tenant project grouping
-
-**Uses:** Backend `project_id` field on reports, `force_refresh=true` param, RCE monument data
-
-**Avoids:** Feature bloat (defer WOZ/energielabel to v2.1)
-
-**Research flag:** LOW — Backend data model supports projects, UI patterns straightforward
+### Phase 7: Integration Testing + Performance Optimization
+**Rationale:** End-to-end validation with realistic data volumes (2000+ parcels). Catches integration issues between phases, validates rate limiting under load, confirms PostGIS query performance, and benchmarks vector tile rendering.
+**Delivers:** Load test: 2000-parcel municipality scan end-to-end, PostGIS EXPLAIN ANALYZE optimization, vector tile rendering benchmarks (<3s for 2000 parcels, <200MB memory), cache hit rate monitoring, rate limit behavior verification, multi-tenant isolation integration tests
+**Addresses:** All PITFALLS verification checklist items; FEATURES: progressive loading at scale
 
 ### Phase Ordering Rationale
 
-- **Foundation-first:** Phase 1 establishes patterns that prevent technical debt (memory management, state architecture)
-- **Security-second:** Phase 2 JWT architecture must be decided before building features that depend on auth
-- **Data-third:** Phase 3 data rendering strategy determines scalability (can't add clustering/vector tiles retroactively without refactor)
-- **Features-fourth:** Phase 4 builds core workflow once data flow is proven
-- **Value-fifth:** Phase 5 adds differentiators that leverage existing backend without new integrations
+- **Database first (Phase 1):** Every other phase writes to or reads from the spatial database. Schema mistakes compound.
+- **API clients second (Phase 2):** Independent of each other, can be built in parallel. Needed by scanner service.
+- **Scanner third (Phase 3):** Orchestrates clients + database. Must work E2E before any frontend.
+- **REST API fourth (Phase 4):** Exposes scanner results. Scoring shapes default sort for all views.
+- **Map fifth (Phase 5):** Vector tile decision is architectural. Municipality selection is entry point for entire workflow.
+- **List/detail sixth (Phase 6):** Consumes API endpoints. Extends existing v2.0 drawer pattern.
+- **Testing seventh (Phase 7):** Validates all integration points under realistic load.
 
 **Dependency chain:**
 ```
-Phase 1 (Map) → Phase 2 (Auth) → Phase 3 (Data) → Phase 4 (Details) → Phase 5 (Projects)
-         ↓              ↓               ↓                ↓                    ↓
-    Memory &      JWT storage    GeoJSON/tiles    Reports CRUD        Project folders
-   state patterns   architecture   performance      display             organization
+Phase 1 (DB Schema) --> Phase 2 (API Clients) --> Phase 3 (Scanner) --> Phase 4 (REST API)
+                                                                             |
+                                                         Phase 5 (Map) --> Phase 6 (List/Detail)
+                                                                             |
+                                                                      Phase 7 (Testing)
 ```
 
-**Pitfall prevention mapping:**
-- Phase 1 prevents: Memory leaks, re-render loops, z-index chaos
-- Phase 2 prevents: XSS token theft, CORS failures
-- Phase 3 prevents: Coordinate errors, performance walls, rate limiting
-- Phase 4 prevents: Resize bugs, touch conflicts
-- Phase 5 prevents: (polish phase, no architectural pitfalls)
+Note: Phases 1 and 2 can run in parallel. Phases 5 and 4 can overlap (frontend starts once status endpoint exists).
 
 ### Research Flags
 
 **Phases needing deeper research during planning:**
-- **Phase 3:** PDOK cadastral vector tiles endpoint verification (OGC API Tiles format unclear), clustering threshold testing with real Dutch parcel data
-- **Phase 4:** Bottom sheet library evaluation (react-spring-bottom-sheet vs custom), mobile gesture testing on real devices
+- **Phase 2 (API Clients):** BRK Bevragen requires PKIOverheid certificate and Kadaster authorization -- government-only access, limited public documentation. Validate: do we have API access? If not, defer BRK integration to v3.1.
+- **Phase 5 (Map Rendering):** Vector tile server decision (Martin vs PDOK native vs client-side clustering) needs performance testing with real Dutch parcel data. Martin adds infrastructure (Docker container). Alternative: use PDOK Kadastrale Kaart vector tiles directly.
+- **Phase 3 (Scanner):** Rate limits for PDOK/DSO APIs are undocumented. Need empirical testing to set semaphore limits. Start conservative (10 concurrent) and tune.
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1:** MapLibre + React patterns well-documented (official docs + GitHub issues)
-- **Phase 2:** JWT security patterns established (WorkOS/Descope authoritative)
-- **Phase 5:** Backend data model complete, UI patterns straightforward
+- **Phase 1 (DB Schema):** PostGIS patterns well-documented. GeoAlchemy2 + Alembic standard approach.
+- **Phase 4 (REST API):** Follows existing FastAPI router patterns from v1.0/v1.1 with 275 tests as reference.
+- **Phase 6 (List/Detail):** Extends existing v2.0 PropertyDetailDrawer. TanStack Table + TanStack Query standard patterns.
 
-**Future integrations requiring research (v2.1+):**
-- WOZ waarde API: No public API found (municipalities only), needs Kadaster data licensing investigation
-- Energielabel API: RVO EP-Online requires API key, endpoint structure unclear
+## Critical Decisions for Requirements Phase
+
+These decisions must be made during requirements definition, not deferred to implementation:
+
+1. **BRK API access:** Do we have Kadaster authorization + PKIOverheid certificate? If no, defer owner lookup to v3.1 entirely and focus v3.0 on free-API opportunity discovery.
+
+2. **Vector tile server:** Martin (self-hosted, full control, adds Docker container) vs PDOK Kadastrale Kaart tiles (no infrastructure, but less control over styling/filtering). Decision impacts Phase 5 scope and infrastructure requirements.
+
+3. **Scan size limits:** Maximum gemeente size to allow (Amsterdam = 50,000+ addresses, takes hours). Recommend hard limit of 10,000 parcels per scan for v3.0 with frontend area size validation via Turf.js.
+
+4. **Parcel cache sharing:** Should raw PDOK/BAG parcel geometries be shared across tenants (same government data, different scans) or fully isolated? Recommendation: share raw geometry cache (government data is public), isolate enriched results (tenant-specific metadata). Requires two-layer cache key design.
+
+5. **Omgevingswet transition:** DSO is in transition period until 2032 (old bestemmingsplannen vs new omgevingsplannen). Must support both or pick one. Recommendation: support both with a unified bestemming model that normalizes the differences.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | React 19 + Vite 7 + MapLibre 4.x all stable with official docs, 2026 best practices verified |
-| Features | HIGH | Map-first patterns confirmed across Google Maps/Regrid/Transect, table stakes well-defined |
-| Architecture | HIGH | Backend v1.1 complete (275 tests), fan-out/fan-in proven pattern, multi-tenant security established |
-| Pitfalls | HIGH | MapLibre memory leaks + JWT security + coordinate projection all well-documented with mitigation strategies |
+| Stack | MEDIUM-HIGH | All packages verified with recent releases. OWSLib and elasticsearch-py confirmed. Terra Draw has limited production usage reports but active maintenance. |
+| Features | MEDIUM | Based on US competitor analysis (PropertyRadar, LightBox) adapted to Dutch market. No direct Dutch PropTech competitor analysis available. Feature prioritization relies on inferred Dutch developer workflow. |
+| Architecture | HIGH | Extends proven v1.1/v2.0 patterns (275 tests, 15,947 LOC). PostGIS spatial patterns well-documented. ARQ background jobs already proven at scale. |
+| Pitfalls | MEDIUM-HIGH | Government API limitations verified from official docs. Performance thresholds based on documented benchmarks. Rate limits for PDOK/DSO estimated (undocumented). |
 
-**Overall confidence:** HIGH
+**Overall confidence:** MEDIUM-HIGH
 
-Research is comprehensive with authoritative sources. The backend foundation (v1.1 complete) significantly de-risks the project — frontend is "just" a consumption layer with map visualization. The recommended stack is proven (React 19 stable, MapLibre 4.x stable, PDOK APIs operational), and critical pitfalls have documented mitigations.
+The architecture is high-confidence because it extends proven patterns. The features are medium-confidence because Dutch PropTech competitor intelligence is limited -- we are inferring from US market leaders. The stack is solid except for Terra Draw (limited production evidence) and BRK API access (government authorization required).
 
 ### Gaps to Address
 
-**MEDIUM confidence areas requiring phase-specific validation:**
+1. **BRK API authorization status:** Government-only access. Unknown if Propdex/Klarifai has or can obtain PKIOverheid certificate and Kadaster approval. This gates the entire owner lookup feature. Must resolve before requirements finalize.
 
-1. **PDOK vector tile endpoints:** OGC API Tiles spec is flexible, exact collection IDs and tile URL templates need verification in Phase 3. Mitigation: Test `/collections` endpoint, inspect `links` for MVT URLs.
+2. **PDOK/DSO rate limits:** Undocumented. Estimated at 10-50 req/sec based on community reports. Need empirical testing in Phase 3 to calibrate semaphore limits. Start conservative.
 
-2. **Clustering thresholds:** Research indicates 1,000 features as slowdown point, but needs real-world testing with Dutch parcel density (Amsterdam: 200,000+ parcels). Mitigation: Performance profiling in Phase 3 with actual Kadaster data.
+3. **ORI municipality coverage:** Open Raadsinformatie covers 265 of 344 municipalities (77%). Must handle missing municipalities gracefully (empty result, not error). Need to test specific target gemeentes.
 
-3. **MapLibre v4.x memory leak status:** Issues documented for v4.1-4.7.1, need to verify fixed in latest version. Mitigation: Test cleanup pattern effectiveness in Phase 1, monitor memory usage in dev.
+4. **Omgevingswet data model:** Transition period until 2032. Some municipalities on old bestemmingsplannen, others on new omgevingsplannen. DSO API may return different response structures. Need to test with municipalities in both states.
 
-**LOW confidence areas deferred to v2.1+:**
+5. **Terra Draw production readiness:** Active maintenance confirmed (Feb 2026 update), but limited production usage case studies. Fallback: use @mapbox/mapbox-gl-draw fork if Terra Draw has issues.
 
-1. **WOZ waarde access:** No public API found, Kadaster WOZ API Bevragen is municipalities only. Needs commercial licensing investigation or wait for government API expansion.
-
-2. **Energielabel API structure:** RVO EP-Online mentioned but integration unclear. Need to request API key during v2.1 planning, test realtime vs batch-only access.
-
-**Validation strategy:**
-- Phase 3 research task: Verify PDOK vector tile endpoints
-- Phase 1 monitoring: Track memory usage during development with cleanup patterns
-- v2.1 research: WOZ/energielabel API access investigation
+6. **Vector tile rendering performance:** Martin tile server vs PDOK native tiles vs client-side approaches. Need real-world benchmark with 2000+ Dutch parcels before committing to infrastructure.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Official documentation: Vite, React 19, MapLibre GL JS, TanStack Query v5, TanStack Router, Tailwind v4, TypeScript
-- PDOK government APIs: Luchtfoto RGB, Kadastrale Kaart OGC API, Vector Tiles documentation
-- MapLibre GitHub issues: Memory leak #4811, Worker cleanup #3733, GeoJSON performance #6154, #4364
-- Security guides: WorkOS, Descope, JWT storage best practices (multiple authoritative sources)
+- [PDOK BAG OGC API v2](https://www.pdok.nl/-/nieuwe-bag-ogc-api-features) -- v2 endpoint confirmed, v1 deprecation July 15, 2026
+- [PostGIS Spatial Joins](https://postgis.net/workshops/postgis-intro/joins.html) -- ST_Within, ST_Intersects, GIST index patterns
+- [BRK Bevragen API](https://kadaster.github.io/BRK-bevragen/) -- PKI certificate + API key authentication
+- [OWSLib PyPI](https://pypi.org/project/OWSLib/) -- v0.35.0, Oct 2025
+- [elasticsearch-py PyPI](https://pypi.org/project/elasticsearch/) -- v9.3.0, Feb 2026
+- [CBS Gebiedsindelingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen) -- Municipality boundary polygons
+- [Kadaster BAG-BRK Quality](https://labs.kadaster.nl/dataanalyse/koppelingbagbrk/kwaliteit_bag_brk_koppeling/) -- Known data quality issues
 
 ### Secondary (MEDIUM confidence)
-- Map-first UI patterns: Multiple sources (Eleken, BricXlabs, MapUIPatterns.com, UXPin) with consistent recommendations
-- Competitor analysis: Regrid, Transect, ParcelQuest feature sets and patterns
-- Dutch coordinate systems: EPSG.io, Kadaster GDAL documentation, TU Delft wiki
-- Performance thresholds: MapLibre performance guide (official), MDPI research paper (50,000 feature analysis)
+- [PropertyRadar Features](https://www.propertyradar.com/features-overview) -- US competitor feature set (250+ filters, census tract selection)
+- [LightBox Appraisal Intelligence](https://www.prnewswire.com/news-releases/lightbox-enhances-appraisal-intelligence-302638256.html) -- Q1 2026 competitor enhancements
+- [@watergis/maplibre-gl-terradraw npm](https://www.npmjs.com/package/@watergis/maplibre-gl-terradraw) -- v1.10.0, Feb 2026
+- [MapLibre Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) -- Vector tiles, clustering patterns
+- [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt) -- 342 municipalities, 8M+ residents
+- [Open Raadsinformatie](https://vng.nl/projecten/open-raadsinformatie) -- 265/344 municipality coverage
 
-### Tertiary (LOW confidence — needs validation)
-- PDOK rate limits: Undocumented, needs testing or PDOK support contact
-- BAG API CORS after July 2026: Migration notice found, but new API CORS behavior needs browser testing
-- WOZ API access: Confirmed municipalities only, but commercial licensing path unclear
-
-### Context from Backend (v1.1)
-- 275 tests passing (104 unit + 171 integration)
-- Multi-tenant security with app_role + RLS policies enforced
-- API clients for BAG, PDOK, DSO, RCE with caching and rate limiting
-- Property aggregator with asyncio.gather parallel fetching
-- AI parsing with Claude via ARQ workers
-- PDF export with WeasyPrint
-- JWT auth with refresh token rotation
+### Tertiary (LOW confidence -- needs validation)
+- PDOK/DSO rate limits -- undocumented, community estimates only
+- BRK API pricing -- "likely EUR 0.50-1.00 per lookup" based on Kadaster product pages, exact pricing requires account
+- Terra Draw production usage -- limited case studies, active maintenance confirmed
+- sruthi library status -- confirmed unmaintained (July 2023 last PyPI release)
 
 ---
-
-**Research completed:** 2026-02-08
-**Ready for roadmap:** Yes
-
-**Next steps for orchestrator:**
-1. Use phase structure as roadmap foundation
-2. Expand each phase into requirements (user stories, acceptance criteria)
-3. Flag Phase 3 for PDOK vector tile endpoint verification
-4. Note v2.1 research needs (WOZ/energielabel APIs)
+*Research completed: 2026-02-10*
+*Ready for roadmap: yes*
