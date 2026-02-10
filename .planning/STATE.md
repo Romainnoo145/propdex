@@ -91,3 +91,7 @@ Phase 18 implementation decisions:
 ---
 
 *Last updated: 2026-02-10 (18-03 Spatial Query Helpers complete)*
+
+**18-02 decisions:**
+- Use join table (ScanResult) instead of JSONB array for scan results to maintain FK integrity
+- Store bounding box as 4 floats for EPSG:28992 coordinates
