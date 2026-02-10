@@ -83,6 +83,9 @@ Phase 20 implementation decisions:
 - **20-06:** Export respects active filters (exports what user sees)
 
 Phase 21 implementation decisions:
+- **21-01:** Module-level GeoJSON cache in GemeenteBoundariesLayer (avoid redundant fetches)
+- **21-01:** Insert gemeente layers before property layers (property click precedence)
+- **21-01:** Feature-state hover pattern for gemeente boundaries (more performant than paint updates)
 - **21-02:** Snake_case TypeScript types match backend JSON exactly (no camelCase conversion)
 - **21-02:** TanStack Query v5 function-form refetchInterval signature for conditional polling
 - **21-02:** 30-second staleTime for scan results (immutable after completion)
