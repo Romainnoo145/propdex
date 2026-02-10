@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
-**Phase:** 19 of 22 (Government API Clients)
-**Plan:** 5 of 5
-**Status:** Complete
+**Phase:** 20 of 22 (Area Scanner REST API)
+**Plan:** 2 of 6
+**Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 19-05 Government API Client Tests complete (2 tasks, 2 commits, 22 tests)
+**Last activity:** 2026-02-10 -- 20-02 Parcel Opportunity Scoring complete (1 task, 2 commits, 15 tests)
 
-**Progress:** [██████████] 100%
+**Progress:** [█████████░] 93%
 
 ---
 
@@ -69,6 +69,10 @@ Phase 19 implementation decisions:
 - **19-04:** Create separate httpx.AsyncClient for BRK with mTLS SSLContext (not shared app client)
 - **19-04:** Gracefully disable BRK client in dev without certificates (logs warning, allows app startup)
 
+Phase 20 implementation decisions:
+- **20-01:** Use CQL_FILTER for CBS WFS queries (simpler than XML Filter)
+- **20-01:** Use 2024 CBS WFS endpoint (latest stable, 2026 may not exist)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -96,10 +100,10 @@ Phase 19 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T12:59:17.675Z
-**Stopped At:** Completed 19-05-PLAN.md (Phase 19 complete)
+**Last Session:** 2026-02-10T14:58:49.706Z
+**Stopped At:** Completed 20-01-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 19 Government API Clients complete - 5/5 plans)*
+*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 1/6 plans)*
