@@ -4,7 +4,7 @@ import uuid
 
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -379,6 +379,60 @@ async def list_results(
         offset=offset,
         limit=limit,
         results=result_items,
+    )
+
+
+@router.get("/{scan_id}/tiles/{z}/{x}/{y}.pbf")
+@limiter.limit("120/minute")
+async def get_scan_tiles(
+    request: Request,
+    scan_id: uuid.UUID,
+    z: int,
+    x: int,
+    y: int,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Serve MVT vector tiles for scan results with score overlay.
+
+    Generates Mapbox Vector Tiles (MVT) directly from PostGIS using
+    ST_AsMVT. Tiles contain parcel geometry, score, and metadata
+    filtered by organization_id for multi-tenant isolation.
+
+    Rate limited to 120/minute (map loads trigger many tile requests).
+
+    Returns:
+        Response with MVT binary and proper content-type
+    """
+    scan = await service.get_scan_by_id(scan_id, organization_id, db)
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    from app.services.tile_proxy import generate_mvt_tile
+
+    tile_data = await generate_mvt_tile(
+        z=z,
+        x=x,
+        y=y,
+        organization_id=organization_id,
+        scan_id=scan_id,
+        db=db,
+    )
+
+    if tile_data is None:
+        return Response(status_code=204)
+
+    return Response(
+        content=tile_data,
+        media_type="application/vnd.mapbox-vector-tile",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+        },
     )
 
 
