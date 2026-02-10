@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 19 of 22 (Government API Clients)
-**Plan:** 2 of 5 complete
+**Plan:** 4 of 5 complete
 **Status:** In progress
 
-**Last activity:** 2026-02-10 -- 19-02 BAG WFS Client complete (1 task, 1 commit)
+**Last activity:** 2026-02-10 -- 19-04 BRK Bevragen Client complete (1 task, 1 commit)
 
-**Progress:** [██████████] 96%
+**Progress:** [██████████] 99%
 
 ---
 
@@ -63,6 +63,8 @@ Phase 19 implementation decisions:
 - **19-01:** Conservative BRK limits (2 concurrent, 200/hour) as it's a paid API
 - **19-02:** Rate limit each WFS page request individually (not just the initial request) to prevent quota exhaustion during long-running pagination
 - **19-02:** Use numberMatched vs numberReturned comparison for truncation detection (not just feature count < PAGE_SIZE)
+- **19-04:** Create separate httpx.AsyncClient for BRK with mTLS SSLContext (not shared app client)
+- **19-04:** Gracefully disable BRK client in dev without certificates (logs warning, allows app startup)
 
 ### Active TODOs
 
@@ -91,10 +93,10 @@ Phase 19 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T12:50:11.858Z
-**Stopped At:** Completed 19-02-PLAN.md
+**Last Session:** 2026-02-10T12:50:39.170Z
+**Stopped At:** Completed 19-04-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 19 Government API Clients in progress - 2/5 plans)*
+*Last updated: 2026-02-10 (Phase 19 Government API Clients in progress - 4/5 plans)*
