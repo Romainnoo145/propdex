@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 20 of 22 (Area Scanner REST API)
-**Plan:** 2 of 6
+**Plan:** 4 of 6
 **Status:** In Progress
 
-**Last activity:** 2026-02-10 -- 20-02 Parcel Opportunity Scoring complete (1 task, 2 commits, 15 tests)
+**Last activity:** 2026-02-10 -- 20-04 Area Scan Background Job complete (2 tasks, 2 commits)
 
-**Progress:** [█████████░] 93%
+**Progress:** [██████████] 97%
 
 ---
 
@@ -75,6 +75,8 @@ Phase 20 implementation decisions:
 - **20-02:** Fixed scoring formula for all organizations (per-org weights deferred to future phase)
 - **20-02:** Protocol-based parcel_data parameter (not ORM model) for improved testability
 - **20-02:** Four-factor weighted model (vacant_land 30, size_optimal 25, zoning_residential 25, recent_permits 20)
+- **20-04:** Skip DSO bestemming queries during bulk scan (add as on-demand Tier 2)
+- **20-04:** Process BAG WFS features as buildings with has_pand=True (MVP approach)
 
 ### Active TODOs
 
@@ -103,10 +105,10 @@ Phase 20 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T14:59:30Z
-**Stopped At:** Completed 20-02-PLAN.md
+**Last Session:** 2026-02-10T15:04:06.048Z
+**Stopped At:** Completed 20-04-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 2/6 plans)*
+*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 4/6 plans)*
