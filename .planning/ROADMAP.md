@@ -109,11 +109,11 @@ Plans:
 **Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 19-01: Per-API rate limiter + new dependencies (lxml, aiolimiter) + BRK config settings (Wave 1)
-- [ ] 19-02: BAG WFS client with httpx pagination and 1000-feature truncation prevention (Wave 2)
-- [ ] 19-03: SRU Bekendmakingen client with lxml XML parsing (XXE-safe) (Wave 2)
-- [ ] 19-04: BRK Bevragen client with mTLS authentication (Wave 2)
-- [ ] 19-05: Unit tests for all API clients and rate limiter (Wave 3)
+- [x] 19-01: Per-API rate limiter + new dependencies (lxml, aiolimiter) + BRK config settings (Wave 1)
+- [x] 19-02: BAG WFS client with httpx pagination and 1000-feature truncation prevention (Wave 2)
+- [x] 19-03: SRU Bekendmakingen client with lxml XML parsing (XXE-safe) (Wave 2)
+- [x] 19-04: BRK Bevragen client with mTLS authentication (Wave 2)
+- [x] 19-05: Unit tests for all API clients and rate limiter (Wave 3)
 
 ### Phase 20: Area Scanner + REST API
 **Goal**: A complete scan pipeline runs as a background job -- from gemeente bbox to filtered parcel list -- with REST endpoints for triggering, polling, paginating results, and exporting CSV
@@ -200,11 +200,11 @@ Plans:
 | 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
 | 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
-| 19. Government API Clients | v3.0 | 0/5 | Planned | - |
+| 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
 | 20. Area Scanner + REST API | v3.0 | 0/7 | Not started | - |
 | 21. Map Visualization | v3.0 | 0/5 | Not started | - |
 | 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
 
 ---
 
-*Last updated: 2026-02-10 (Phase 18 complete)*
+*Last updated: 2026-02-10 (Phase 19 complete)*
