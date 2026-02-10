@@ -137,6 +137,12 @@ class Settings(BaseSettings):
         description="Redis URL for ARQ task queue",
     )
 
+    # Tile Server Configuration
+    MARTIN_TILE_URL: str = Field(
+        default="http://localhost:3000",
+        description="Martin tile server URL (optional, PostGIS ST_AsMVT is primary tile path)",
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS string into a list."""

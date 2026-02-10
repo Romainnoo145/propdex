@@ -18,5 +18,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Martin vector tile server for Propdex parcel score overlay
+  # Optional: PostGIS ST_AsMVT endpoint is the primary tile path (multi-tenant safe)
+  # Martin is available for development/debugging of raw tile data
+  martin:
+    image: ghcr.io/maplibre/martin:v0.14.2
+    container_name: propdex-martin
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5433/propdex
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Martin auto-discovers tables with geometry columns
+    # parcel_cache table with GIST index on geometry column will be detected
+    # Tiles served at: http://localhost:3000/parcel_cache/{z}/{x}/{y}
+    # WARNING: Martin serves unfiltered data -- use backend tile proxy for production
+
 volumes:
   postgres_data:
