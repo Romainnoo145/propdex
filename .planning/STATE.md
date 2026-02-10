@@ -72,6 +72,9 @@ Phase 19 implementation decisions:
 Phase 20 implementation decisions:
 - **20-01:** Use CQL_FILTER for CBS WFS queries (simpler than XML Filter)
 - **20-01:** Use 2024 CBS WFS endpoint (latest stable, 2026 may not exist)
+- **20-02:** Fixed scoring formula for all organizations (per-org weights deferred to future phase)
+- **20-02:** Protocol-based parcel_data parameter (not ORM model) for improved testability
+- **20-02:** Four-factor weighted model (vacant_land 30, size_optimal 25, zoning_residential 25, recent_permits 20)
 
 ### Active TODOs
 
@@ -100,10 +103,10 @@ Phase 20 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T14:58:49.706Z
-**Stopped At:** Completed 20-01-PLAN.md
+**Last Session:** 2026-02-10T14:59:30Z
+**Stopped At:** Completed 20-02-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 1/6 plans)*
+*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 2/6 plans)*
