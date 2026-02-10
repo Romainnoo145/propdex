@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v3.0 Area Intelligence (Phases 18-22)
 **Phase:** 20 of 22 (Area Scanner REST API)
-**Plan:** 5 of 6
-**Status:** In Progress
+**Plan:** 6 of 6
+**Status:** Complete
 
-**Last activity:** 2026-02-10 -- 20-05 Scan Management Endpoints complete (2 tasks, 2 commits)
+**Last activity:** 2026-02-10 -- 20-06 Excel Export Endpoint complete (2 tasks, 2 commits)
 
-**Progress:** [██████████] 99%
+**Progress:** [██████████] 100%
 
 ---
 
@@ -79,6 +79,8 @@ Phase 20 implementation decisions:
 - **20-04:** Process BAG WFS features as buildings with has_pand=True (MVP approach)
 - **20-05:** Default sort by score DESC (most promising first per user decision)
 - **20-05:** Use Job(job_id, pool).abort() for cancellation (status update in job handler)
+- **20-06:** .xlsx export format (not CSV) for NL/BE real estate developers
+- **20-06:** Export respects active filters (exports what user sees)
 
 ### Active TODOs
 
@@ -107,10 +109,10 @@ Phase 20 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T15:08:47.311Z
-**Stopped At:** Completed 20-05-PLAN.md
+**Last Session:** 2026-02-10T15:13:05.125Z
+**Stopped At:** Completed 20-06-PLAN.md
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API in progress - 5/6 plans)*
+*Last updated: 2026-02-10 (Phase 20 Area Scanner REST API complete - 6/6 plans)*
