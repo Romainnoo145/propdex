@@ -25,10 +25,18 @@ import type {
   ProjectResponse,
   ProjectListResponse,
 } from './types/project'
+import type {
+  ScanCreateRequest,
+  ScanResponse,
+  ScanStatusResponse,
+  ScanResultsResponse,
+  ScanResultsFilters,
+} from './types/scan'
 
 const API_BASE = '/api/properties'
 const REPORTS_BASE = '/api/reports'
 const PROJECTS_BASE = '/api/projects'
+const SCANS_BASE = '/api/scans'
 const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
 
 /**
@@ -484,5 +492,104 @@ export async function assignReportToProject(
     method: 'PATCH',
     accessToken,
     body: JSON.stringify({ project_id: projectId }),
+  })
+}
+
+/**
+ * Trigger a new area scan for a gemeente
+ *
+ * POST /api/scans
+ *
+ * @param request - Scan creation request with gemeente_code, gemeente_naam, and optional force_rescan
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Scan response with scan_id for polling
+ */
+export async function triggerScan(
+  request: ScanCreateRequest,
+  accessToken: string | null
+): Promise<ScanResponse> {
+  return apiFetch<ScanResponse>(SCANS_BASE, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(request),
+  })
+}
+
+/**
+ * Fetch scan status and progress
+ *
+ * GET /api/scans/{scanId}
+ *
+ * @param scanId - Scan UUID
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Scan status with progress details
+ */
+export async function fetchScanStatus(
+  scanId: string,
+  accessToken: string | null
+): Promise<ScanStatusResponse> {
+  return apiFetch<ScanStatusResponse>(`${SCANS_BASE}/${scanId}`, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/**
+ * Cancel a running scan
+ *
+ * POST /api/scans/{scanId}/cancel
+ *
+ * @param scanId - Scan UUID to cancel
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Confirmation message with scan_id
+ */
+export async function cancelScan(
+  scanId: string,
+  accessToken: string | null
+): Promise<{ message: string; scan_id: string }> {
+  return apiFetch<{ message: string; scan_id: string }>(
+    `${SCANS_BASE}/${scanId}/cancel`,
+    {
+      method: 'POST',
+      accessToken,
+    }
+  )
+}
+
+/**
+ * Fetch scan results with optional filters and pagination
+ *
+ * GET /api/scans/{scanId}/results
+ *
+ * @param scanId - Scan UUID
+ * @param filters - Optional filters for has_pand, bestemming_type, area range, score, sort, pagination
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Paginated scan results with total count
+ */
+export async function fetchScanResults(
+  scanId: string,
+  filters: ScanResultsFilters,
+  accessToken: string | null
+): Promise<ScanResultsResponse> {
+  const params = new URLSearchParams()
+
+  if (filters.has_pand !== undefined)
+    params.set('has_pand', filters.has_pand.toString())
+  if (filters.bestemming_type) params.set('bestemming_type', filters.bestemming_type)
+  if (filters.min_area_m2 !== undefined)
+    params.set('min_area_m2', filters.min_area_m2.toString())
+  if (filters.max_area_m2 !== undefined)
+    params.set('max_area_m2', filters.max_area_m2.toString())
+  if (filters.score_category) params.set('score_category', filters.score_category)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_order) params.set('sort_order', filters.sort_order)
+  if (filters.offset !== undefined) params.set('offset', filters.offset.toString())
+  if (filters.limit !== undefined) params.set('limit', filters.limit.toString())
+
+  const url = `${SCANS_BASE}/${scanId}/results${params.toString() ? `?${params}` : ''}`
+
+  return apiFetch<ScanResultsResponse>(url, {
+    method: 'GET',
+    accessToken,
   })
 }

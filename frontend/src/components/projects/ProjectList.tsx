@@ -247,7 +247,12 @@ export default function ProjectList() {
       )}
 
       <ProjectCreateModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} />
-      <ProjectEditModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} project={selectedProject} />
+      <ProjectEditModal
+        key={selectedProject?.id}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        project={selectedProject}
+      />
     </div>
   )
 }
