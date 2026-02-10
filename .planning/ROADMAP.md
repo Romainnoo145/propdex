@@ -106,14 +106,14 @@ Plans:
   3. BRK Bevragen client fetches eigendomsdata with proper authentication (mTLS + API key), respecting the never-store cache tier
   4. Per-API rate limiting prevents exhaustion: concurrent request semaphores and requests-per-hour token buckets are enforced across all clients
   5. All clients transform coordinates at the API boundary (EPSG:28992 internally, EPSG:4326 for external GeoJSON)
-**Plans**: TBD (estimated 5-6 plans)
+**Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 19-01: BAG WFS client with OWSLib pagination and 1000-feature truncation prevention
-- [ ] 19-02: SRU Bekendmakingen client with lxml XML parsing (XXE-safe)
-- [ ] 19-03: BRK Bevragen client with mTLS authentication
-- [ ] 19-04: Batch rate limiter (per-API semaphore + token bucket + exponential backoff)
-- [ ] 19-05: Integration tests with mock responses for all API clients
+- [ ] 19-01: Per-API rate limiter + new dependencies (lxml, aiolimiter) + BRK config settings (Wave 1)
+- [ ] 19-02: BAG WFS client with httpx pagination and 1000-feature truncation prevention (Wave 2)
+- [ ] 19-03: SRU Bekendmakingen client with lxml XML parsing (XXE-safe) (Wave 2)
+- [ ] 19-04: BRK Bevragen client with mTLS authentication (Wave 2)
+- [ ] 19-05: Unit tests for all API clients and rate limiter (Wave 3)
 
 ### Phase 20: Area Scanner + REST API
 **Goal**: A complete scan pipeline runs as a background job -- from gemeente bbox to filtered parcel list -- with REST endpoints for triggering, polling, paginating results, and exporting CSV
@@ -200,7 +200,7 @@ Plans:
 | 16. Property Details & Reports | v2.0 | 7/7 | Complete | 2026-02-09 |
 | 17. Projects & Polish | v2.0 | 4/4 | Complete | 2026-02-09 |
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
-| 19. Government API Clients | v3.0 | 0/5 | Not started | - |
+| 19. Government API Clients | v3.0 | 0/5 | Planned | - |
 | 20. Area Scanner + REST API | v3.0 | 0/7 | Not started | - |
 | 21. Map Visualization | v3.0 | 0/5 | Not started | - |
 | 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
