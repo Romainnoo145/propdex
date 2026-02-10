@@ -63,6 +63,9 @@ Phase 19 implementation decisions:
 - **19-01:** Conservative BRK limits (2 concurrent, 200/hour) as it's a paid API
 - **19-02:** Rate limit each WFS page request individually (not just the initial request) to prevent quota exhaustion during long-running pagination
 - **19-02:** Use numberMatched vs numberReturned comparison for truncation detection (not just feature count < PAGE_SIZE)
+- **19-03:** Use TypedDict for BekendmakingRecord instead of Pydantic model (no validation needed for read-only API responses)
+- **19-03:** Defensive field extraction with default='' fallback for all XML fields (SRU namespaces vary between response types)
+- **19-03:** Return tuple (records, total_count) from query_by_municipality to enable pagination decisions by caller
 - **19-04:** Create separate httpx.AsyncClient for BRK with mTLS SSLContext (not shared app client)
 - **19-04:** Gracefully disable BRK client in dev without certificates (logs warning, allows app startup)
 
@@ -93,8 +96,8 @@ Phase 19 implementation decisions:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T12:50:39.170Z
-**Stopped At:** Completed 19-04-PLAN.md
+**Last Session:** 2026-02-10T12:51:30.146Z
+**Stopped At:** Completed 19-03-PLAN.md
 **Resume File:** None
 
 ---
