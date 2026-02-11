@@ -22,6 +22,7 @@ import {
 import {
   addBestemmingsplanLayer,
   setBestemmingsplanVisibility,
+  setupBestemmingsplanClickHandler,
 } from '@/components/map/BestemmingsplanLayer'
 import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
@@ -31,6 +32,7 @@ import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
 import { lookupPdokAddress, getScanTileUrl } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
+import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
 
 interface MapSearchParams {
   postcode?: string
@@ -63,6 +65,8 @@ function MapPage() {
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
+  const [zoneInfo, setZoneInfo] = useState<{ info: ZoneFeatureInfo; lngLat: [number, number] } | null>(null)
+  const [zoneLoading, setZoneLoading] = useState(false)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -194,6 +198,17 @@ function MapPage() {
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [scanStatus.data])
+
+  // Setup bestemmingsplan click handler
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+    const cleanup = setupBestemmingsplanClickHandler(
+      mapRef.current,
+      (info, lngLat) => setZoneInfo({ info, lngLat }),
+      (loading) => setZoneLoading(loading)
+    )
+    return cleanup
+  }, [mapReady])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
@@ -400,6 +415,7 @@ function MapPage() {
         // Hide layer
         setBestemmingsplanVisibility(map, false)
         setShowBestemmingsplan(false)
+        setZoneInfo(null)
       }
     },
     []
@@ -425,6 +441,54 @@ function MapPage() {
 
       {/* Bestemmingsplan legend */}
       <BestemmingsplanLegend visible={showBestemmingsplan} />
+
+      {/* Zone info card */}
+      {zoneLoading && (
+        <div className="absolute bottom-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+            <p className="text-sm text-gray-600">Zone info laden...</p>
+          </div>
+        </div>
+      )}
+      {zoneInfo && !zoneLoading && (
+        <div className="absolute bottom-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-900">Bestemmingsplan</h3>
+            <button
+              onClick={() => setZoneInfo(null)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Sluiten"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-bold text-gray-900">{zoneInfo.info.planNaam}</p>
+            <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+              {zoneInfo.info.bestemmingType}
+            </div>
+            {zoneInfo.info.planStatus && (
+              <p className="text-xs text-gray-600">Status: {zoneInfo.info.planStatus}</p>
+            )}
+            {zoneInfo.info.planLink && (
+              <a
+                href={zoneInfo.info.planLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                Bekijk officieel document
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
       {tier === 'quick' && (
