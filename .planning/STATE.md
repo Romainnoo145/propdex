@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 23 of 26 (Area Selection Tools)
-**Plan:** 2 of 3
-**Status:** In progress
+**Plan:** Awaiting re-plan (drawing tools reverted)
+**Status:** Re-planning — pivot to click-based area selection
 
-**Last activity:** 2026-02-11 — Plans 23-01 and 23-02 complete (drawing tools + backend bbox acceptance)
+**Last activity:** 2026-02-11 — Plan 23-02 complete (backend bbox support), plans 23-01/23-03 reverted (drawing tools UX rejected)
 
-**Progress:** [██████████] 96%
+**Progress:** [██░░░░░░░░] 20% (v3.1)
 
 ---
 
@@ -60,10 +60,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
 
 **Phase 23 decisions:**
-- Terra Draw MapLibre adapter requires separate package (terra-draw-maplibre-gl-adapter)
-- Drawing completion clears shape and resets mode for clean UX
+- REVERTED: Drawing tools (terra-draw) removed — not natural UX for real estate developers
+- PIVOT: Click-based area selection using existing map features (bestemmingsplan zones, gemeente boundaries)
+- KEPT: Backend bbox support (23-02) — coordinate conversion, area validation, 10 km² limit
 - Server-side coordinate conversion (no frontend proj4 dependency)
-- 10 km² area limit enforced in RD New (conformal projection)
 
 **Phase 22 decisions:**
 - Minzoom 10 for bestemmingsplan layer (gemeente overview context, not parcel-only)
@@ -110,12 +110,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-11T09:19:14Z
-**Stopped At:** Completed 23-01-PLAN.md (drawing tools control)
+**Last Session:** 2026-02-11
+**Stopped At:** Reverted drawing tools, pivot to click-based area selection
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-plan 23 03` to wire drawing tools to map and scan API
+**Next Action:** `/gsd:plan-phase 23` to re-plan with click-based area selection UX
 
 ---
 
-*State updated: 2026-02-11 (Plans 23-01 and 23-02 complete)*
+*State updated: 2026-02-11 (Plans 23-01/23-03 reverted, re-planning Phase 23)*
