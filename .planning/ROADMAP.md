@@ -104,12 +104,12 @@ Phase 22 (Visual Foundation) --> Phase 23 (Area Selection) --> Phase 24 (Zone-En
   2. User can click a zoning area to see plan name, bestemming type, and link to official document
   3. User can view bestemmingsplan layer simultaneously with aerial imagery and kadaster parcels
   4. Layer legend displays hoofdgroepen with color key matching SVBP2012 standard
-**Plans**: TBD (estimated 3 plans)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 22-01: TBD (PDOK WMS layer integration)
-- [ ] 22-02: TBD (Click zone → GetFeatureInfo)
-- [ ] 22-03: TBD (Legend component)
+- [ ] 22-01-PLAN.md -- WMS layer + SVBP2012 colors + LayerToggle integration
+- [ ] 22-02-PLAN.md -- GetFeatureInfo click handler + zone info popup
+- [ ] 22-03-PLAN.md -- SVBP2012 legend component + visual verification
 
 ---
 
@@ -217,7 +217,7 @@ Plans:
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
 | 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
-| 22. Bestemmingsplan Base Layer | v3.1 | 0/? | Not started | - |
+| 22. Bestemmingsplan Base Layer | v3.1 | 0/3 | Planned | - |
 | 23. Area Selection Tools | v3.1 | 0/? | Not started | - |
 | 24. Zone-Enriched Scanning | v3.1 | 0/? | Not started | - |
 | 25. Results Interface | v3.1 | 0/? | Not started | - |
