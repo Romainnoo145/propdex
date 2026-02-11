@@ -1,243 +1,337 @@
 # Project Research Summary
 
-**Project:** Propdex v3.0 Area Intelligence
-**Domain:** Area-based Property Opportunity Discovery (Dutch PropTech)
-**Researched:** 2026-02-10
+**Project:** Propdex v3.1 Smart Area Intelligence
+**Domain:** Dutch proptech GIS - zoning visualization, area-based property scanning, change monitoring
+**Researched:** 2026-02-11
 **Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Propdex v3.0 transforms the platform from address-based property lookup to area-based opportunity scanning. Users select a gemeente, the system bulk-fetches all parcels in the bounding box, applies a smart filtering pipeline (BAG has_pand + bestemming + vergunningen), and surfaces ~50 qualified development leads from ~2000 raw parcels. The critical innovation is the three-tier cost optimization: free PDOK/BAG data eliminates 97.5% of parcels before triggering any paid Kadaster BRK owner lookups. This is both the core differentiator and the architectural constraint that shapes every design decision.
+Propdex v3.1 adds three capabilities to transform from address-first to area-first intelligence: bestemmingsplan (zoning) base layer visualization, focused area deep-dive scanning via user-drawn bbox, and change monitoring for permits and zoning updates. The milestone leverages existing v3.0 infrastructure (MapLibre, ARQ, PostGIS MVT) with zero new dependencies, making it a low-risk extension of proven patterns.
 
-The recommended approach extends the existing v1.1/v2.0 architecture rather than replacing it. Four new government API clients (BAG WFS, SRU Bekendmakingen, Open Raadsinformatie, BRK Bevragen) follow the established `government_apis/` pattern. PostGIS enables spatial joins (10x faster than Python Shapely with GIST indexes). The existing ARQ worker handles background scan jobs with progress polling via TanStack Query. Vector tiles (via Martin tile server or PDOK services) solve the 2000+ polygon rendering problem that would crash MapLibre with raw GeoJSON. The database adds 3-4 new tables (area_scans, parcel_cache with PostGIS geometry, scan_results, opportunities) with RLS policies matching existing multi-tenant patterns.
+The recommended approach pivots from "scan entire gemeente" (15K+ parcels, expensive) to "bestemmingsplan-first browsing with targeted deep-dives" (hundreds of parcels, efficient). PDOK Ruimtelijke Plannen WMS provides the base layer using MapLibre native raster source. Area selection via MapLibre-Geoman drawing tools (rectangle/polygon) defines scan boundaries, filtering BAG API queries by bbox to reduce API load by 90%+. ARQ cron jobs monitor daily changes (vergunningen via Officiële Bekendmakingen SRU, bestemmingsplan changes via Ruimtelijkeplannen.nl REST API v4). Zoning-aware opportunity scoring adds intelligence by factoring bestemmingsplan hoofdgroep into existing scoring system.
 
-The top risks are: (1) WFS 1000-feature silent truncation -- pagination must be implemented from day one, not retrofitted; (2) EPSG:28992/4326 coordinate mismatches across APIs that cause parcels to render in the ocean; (3) rate limit exhaustion from naive `asyncio.gather()` on 2000 parcels -- requires per-API semaphore rate limiting; (4) JSONB cache bloat from storing entire scan results as single rows -- must cache individual parcels, not bulk scan payloads; and (5) dubbele bestemming (multiple zoning overlays) data model confusion that leads to false "developable" signals. All five have documented prevention strategies but require correct implementation in the first phase they appear -- retrofitting is expensive.
+Key risks center on API deprecation and data quality variance. The Ruimtelijkeplannen.nl WFS service was discontinued July 1, 2024 - the new REST API v4 must be used instead. TAM-IMRO (old format) ends January 1, 2026, requiring dual parser support for legacy IMRO and new STOP/TPOD formats. Municipality-level data quality varies wildly (incorrect coordinates, missing status fields). Mitigation: use official DSO REST API endpoints, validate coordinates against Netherlands bbox, implement format detection, add municipality quality indicators in UI. PostGIS spatial performance requires simple RLS policies, attribute reduction in MVT tiles, and regular VACUUM ANALYZE. PDOK WFS 1000-feature pagination is critical - existing bag_wfs.py handles this correctly.
 
 ## Key Findings
 
 ### Recommended Stack
 
-v3.0 requires 7 new dependencies (5 backend, 2 frontend) integrated with the existing stack. No infrastructure rewrites needed.
+v3.1 requires ZERO new backend dependencies and ZERO new frontend dependencies. All capabilities are covered by existing packages already integrated in v1.0-v3.0.
 
-**Backend additions:**
-- **OWSLib 0.35.0**: OGC API Features client for PDOK BAG bulk queries -- handles 1000-feature pagination natively, actively maintained (Oct 2025 release)
-- **lxml 5.3.0**: XML parsing for SRU Bekendmakingen API -- use with `resolve_entities=False, no_network=True` for XXE prevention. Replaces unmaintained defusedxml and sruthi
-- **elasticsearch-py 9.3.0**: Official client for Open Raadsinformatie Elasticsearch endpoint -- async-capable, Feb 2026 release
-- **geojson 3.1.0**: Serialize Shapely geometries to GeoJSON for OWSLib feature conversion
-- **PostGIS extension**: Spatial joins via ST_Intersects/ST_Within with GIST indexes -- 5-40x faster than Python Shapely
+**Core technologies:**
+- **httpx 0.28.1+**: Direct WMS GetMap requests to PDOK, Ruimtelijkeplannen.nl REST API calls — async-native HTTP client already used for BAG/SRU, handles custom tile URLs without OWSLib sync/async conflicts
+- **lxml 5.3.0+**: IMRO GML parsing with XPath for bestemmingsplan data extraction — fast C parser already used for SRU, handles full IMRO schema unlike narrow-scope pygml
+- **shapely 2.0.0+**: Bbox to polygon conversion for WFS geometry validation — already required for GeoAlchemy2, provides .box() constructor and GeoJSON mapping
+- **ARQ 0.27.0+**: Cron jobs for daily change monitoring (vergunningen, bestemmingsplannen) — already integrated with Redis from v1.0, supports cron_jobs in WorkerSettings, proven in 275 tests
+- **MapLibre GL JS 5.17.0**: Native WMS raster layer support for bestemmingsplan tiles — type: 'raster' source with tile URL template, PDOK supports CORS so no backend proxy needed
+- **@turf/turf 7.3.0+ (from v3.0)**: Bbox calculation for area selection geometry — already added, supports turf.bbox()
+- **@watergis/maplibre-gl-terradraw 1.10.0+ (from v3.0)**: Rectangle/polygon drawing tools for area deep-dive — already added, provides full Terra Draw integration
 
-**Frontend additions:**
-- **@watergis/maplibre-gl-terradraw 1.10.0**: Drawing controls for area selection (polygon, rectangle) -- most actively maintained MapLibre drawing plugin
-- **@turf/turf 7.3.0**: Client-side spatial operations (bbox calculation, area validation, containment checks)
-
-**What NOT to add:** sruthi (unmaintained since 2023), defusedxml (unmaintained since 2021), Celery/RQ (extend existing ARQ instead), MapLibre Geoman (commercial, overkill), separate GeoJSON library (use Shapely 2.x native support).
-
-**Critical deadline:** PDOK BAG OGC API v1 discontinued July 15, 2026 -- must use v2 endpoint from the start.
+**Integration patterns critical for success:**
+- PDOK WMS layer via MapLibre raster source (NOT OWSLib - sync/async conflict)
+- Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS endpoints)
+- Existing BAG client extended with bbox query method using OWSLib from v3.0
+- ARQ cron_jobs pattern for periodic monitoring (daily at 2-3 AM off-peak)
+- PostGIS MVT with attribute reduction (NOT SELECT *) to keep tiles under 500KB
 
 ### Expected Features
 
-**Must have (v3.0 -- proves the area scan workflow):**
-- Map-based gemeente selection via CBS gebiedsindelingen boundaries
-- BAG bulk has_pand cross-reference (parcel has building: yes/no)
-- Bestemming filter (Wonen zoning + bouwvlak present)
-- Parcel list with basic filters (sort by size, bestemming, has_pand)
-- Parcel detail modal with AI summary + expandable source cards
-- CSV export of filtered parcels (no owner info yet)
-- Progressive loading (pagination for 2000+ row tables)
-- Vergunningen data in parcel detail via SRU API
+Research identifies clear MVP boundaries: visual foundation and area scanning are table stakes, monitoring is nice-to-have that can be deferred post-launch.
 
-**Should have (v3.1 -- add after workflow validated):**
-- Kadaster BRK owner contact lookup (paid API, privacy-restricted, only for filtered <100 parcels)
-- AI opportunity scoring (bestemming match + years unused + permit inactivity + parcel size)
-- Saved area scans with re-run capability
-- Polygon draw tool for custom areas (power users)
-- Open Raadsinformatie integration (municipal council decisions)
-- Vergunningen monitoring/alerts (daily background check via ARQ)
+**Must have (table stakes):**
+- **Bestemmingsplan WMS layer** — colored zones (wonen, bedrijven, agrarisch) with SVBP2012 standard styling, toggleable layer control with legend. Users expect this from ruimtelijkeplannen.nl, DSO Omgevingsloket, 3D Cityplanner
+- **Click zone → show plan details** — WMS GetFeatureInfo on click displays plan name, hoofdgroep, link to official doc in QuickCard/toast
+- **Rectangle/polygon drawing tools** — MapLibre-Geoman for area selection (all GIS platforms support this: Google Earth, ArcGIS, QGIS)
+- **Bbox → BAG panden query** — replace current "scan ALL panden in gemeente" with user-drawn bbox only, reduces API load by 90%+
+- **Scan progress indicator** — reuse existing ScanProgressOverlay from v2.0 for new scan type
+- **Parcel boundary highlighting** — visual confirmation of scan area using existing Kadaster parcel WFS layer
+- **Filter by zone type** — dropdown filter in results table for bestemmingsplan hoofdgroep
 
-**Defer (v3.2+):**
-- Wijk/buurt hierarchical selection, address radius, historical permit timeline, batch BRK optimization, multi-gemeente searches, email notifications, CRM API integration
+**Should have (competitive advantage):**
+- **Zoning-aware opportunity scoring** — existing v2.0 scoring system extended to factor bestemmingsplan hoofdgroep (wonen=high, agrarisch=medium for residential dev), weight 0.3. Unique intelligence competitors lack
+- **Bestemmingsplan + Kadaster overlay** — simultaneous display of parcel boundaries + zone colors + score heatmap with z-index stacking and opacity controls. Rare combination
+- **Historical vergunning density heatmap** — MVT tile layer showing permit concentration reveals hot development areas (complex, storage-heavy)
 
-**Anti-features to avoid:** Real-time permit polling (APIs update daily, not real-time), scan entire Netherlands (API cost/DB explosion), auto-generate owner letters (GDPR liability), 3D visualization (different product category), financial feasibility calculator (wrong domain).
+**Defer (v2+ / anti-features):**
+- **Real-time vergunning webhooks** — no gemeente offers webhooks, Officiële Bekendmakingen updates daily not real-time, use daily polling with morning digest instead
+- **User-generated zone annotations** — liability risk if wrong info leads to bad investment, stick to official data only, provide private notes feature
+- **Funda listing integration** — licensing complexity, Propdex's value is PRE-listing intelligence not aggregation
+- **3D building visualization** — different product category (3D Cityplanner focus), Propdex is data intelligence not architectural modeling
+- **Custom bestemmingsplan drawing** — requires legal knowledge, introduces liability, out of scope for intelligence platform
 
 ### Architecture Approach
 
-v3.0 adds area scanning alongside existing property lookup. The two systems share infrastructure (auth, multi-tenant RLS, cache, ARQ workers) but have distinct orchestration patterns. Property lookup is synchronous (single address, parallel API fetch, immediate response). Area scanning is asynchronous (municipality bbox, background job, progress polling).
+The milestone is ADDITIVE - existing scan pipeline (AreaScan → ARQ job → ParcelCache → ScanResult) already supports arbitrary bboxes. New capabilities layer on top without core changes.
 
 **Major components:**
-1. **Area Scanner Service** (`area_scanner.py`) -- orchestrates municipality scan: resolve bbox, create scan record, enqueue ARQ job, return scan_id for polling
-2. **4 New API Clients** (`bag_wfs_client.py`, `sru_bekendmakingen.py`, `open_raadsinformatie.py`, `brk_bevragen_client.py`) -- follow existing `government_apis/` pattern with httpx async clients
-3. **Spatial Query Layer** (`spatial_queries.py`) -- PostGIS functions (ST_Contains, ST_DWithin, ST_AsGeoJSON) with GIST-indexed geometry columns
-4. **Three-Tier Cache** -- Tier 1: parcel_cache table (PostGIS geometry, 90-day TTL), Tier 2: cached_api_responses JSONB (source-specific TTLs), Tier 3: BRK ownership (never cache, privacy-sensitive)
-5. **Batch Rate Limiter** (`batch_rate_limiter.py`) -- asyncio.Semaphore + token bucket per API (BAG=50, DSO=10, BRK=5 concurrent)
-6. **Vector Tile Rendering** -- Martin tile server (PostGIS to MVT) or PDOK vector tile services for 2000+ parcel polygons on MapLibre
 
-**Key architectural decisions already made:**
-- PostGIS for spatial joins, not Python Shapely (10x performance)
-- ARQ for batch processing, not WebSockets for progress (polling is sufficient for 5-30 min jobs)
-- Vector tiles for map rendering, not GeoJSON (browser memory protection)
-- Three-tier cache with BRK in "never-store" tier (GDPR compliance)
-- Polling via TanStack Query refetchInterval, not SSE/WebSocket (simpler, sufficient)
+1. **Bestemmingsplan WMS Proxy (Frontend)** — MapLibre raster source fetching PDOK Ruimtelijke Plannen WMS tiles directly (CORS-enabled), toggleable layer with SVBP2012 SLD styling for standard colors per hoofdgroep
+
+2. **Ruimtelijkeplannen API Client (Backend)** — new httpx AsyncClient for REST API v4 at ruimte.omgevingswet.overheid.nl with methods: get_plan_by_id, get_plans_by_bbox, get_plans_by_date_range. Requires API key from Informatiehuis Ruimte
+
+3. **IMRO GML Parser (Backend)** — new lxml-based parser for bestemmingsvlakken extraction from IMRO GML using XPath with security flags (resolve_entities=False, no_network=True to prevent XXE attacks), converts GML polygons to GeoJSON
+
+4. **Extended BAG Client (Backend)** — add fetch_panden_by_bbox method to existing BAGClient, validates bbox area (<10 km²), uses OGC API Features bbox parameter with 1000-feature pagination
+
+5. **ARQ Cron Jobs (Backend)** — extend existing WorkerSettings with two daily jobs: check_vergunningen_changes (2 AM via SRU Bekendmakingen) and check_bestemmingsplan_changes (3 AM via Ruimtelijkeplannen API), both with idempotent UPSERT pattern
+
+6. **Drawing Tools Integration (Frontend)** — MapLibre-Geoman for rectangle + polygon modes, calculate bbox from drawn geometry via Turf.js, visual confirmation with selected parcels highlight
+
+7. **Zoning-Aware Scoring (Backend)** — extend existing opportunity scoring system to include bestemmingsplan hoofdgroep factor with weight 0.3, requires zone data in scan results
+
+**Data flow:** User draws bbox → frontend calculates bounds → backend fetches BAG panden in bbox → ARQ job enriches each pand (existing pipeline) + fetches bestemmingsplan per pand → stores in scan_results with zone data → frontend renders results with filters → user applies zone-based scoring.
+
+**Key architectural decisions:**
+- Reuse existing area scan pipeline (AreaScan model, ARQ job, progress tracking)
+- Direct PDOK WMS from frontend (no backend proxy needed due to CORS)
+- PostGIS MVT tiles for score heatmap + bestemmingsplan polygons (unified tile endpoint)
+- ARQ cron for monitoring (NOT pg_cron - more portable, already integrated)
+- Dual format support (IMRO + STOP/TPOD parsers) via format detection
 
 ### Critical Pitfalls
 
-Research identified 10 pitfalls (7 critical, 3 major). The top 5 that must be addressed in architecture:
+Research identifies 16 pitfalls with 7 critical (cause rewrites), 6 moderate (impact quality), 3 minor (performance). Top 5 by impact:
 
-1. **WFS 1000-feature silent truncation** -- PDOK returns max 1000 features per request without error. Implement pagination from day one: use `resultType=hits` to get total count, paginate with `startIndex`, verify counts match. Log warning if response contains exactly 1000 features. Address in Phase 1.
+1. **Ruimtelijkeplannen.nl WFS discontinued July 1, 2024** — using deprecated WFS endpoints causes service unavailability and incorrect data. Prevention: Use REST API v4 at ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4, verify endpoint before integration, plan for TAM-IMRO end January 1, 2026
 
-2. **EPSG coordinate mismatch** -- BAG/PDOK use EPSG:28992 (RD New), MapLibre expects EPSG:4326 (WGS84). Transform at API boundary using pyproj. Store in PostGIS as EPSG:28992, convert to 4326 for GeoJSON responses. Validate: Netherlands bbox is [50.7, 3.2, 53.6, 7.2] in EPSG:4326. Address in Phase 1.
+2. **IMRO vs STOP/TPOD format fragmentation** — bestemmingsplan data exists in two incompatible formats causing inconsistent visualization and parsing failures across municipalities. Prevention: Build dual format parsers from start, format detection via metadata, municipality-level feature flags tracking which format, graceful degradation with UI indicators
 
-3. **Parallel API rate limit exhaustion** -- 2000 parcels x 3 APIs = 6000 requests. Use per-API semaphore rate limiting (10 concurrent max) + token bucket (800/hour). Implement exponential backoff on 429. Monitor `X-RateLimit-Remaining` headers. Address in Phase 2.
+3. **PDOK WFS 1000-feature hard limit** — silent data truncation when bbox matches more features, incomplete scans miss 90%+ parcels. Prevention: Always paginate with count/startIndex parameters (existing bag_wfs.py correct), verify numberReturned vs numberMatched, log "fetched X/Y panden (page N)", pre-check with resultType=hits
 
-4. **JSONB cache bloat** -- Storing 2000 parcels as single JSONB row causes TOAST storage degradation (2-10x slower queries). Cache individual parcels only, link to scans via junction table. Monitor `pg_total_relation_size`. Address in Phase 1 schema design.
+4. **PostGIS MVT performance degrades with SELECT *** — including all columns causes 9x slower tile generation and 50-100x bigger tiles (>500KB), map freezes. Prevention: Select only display columns (existing tile_proxy.py pattern correct), NEVER use SELECT *, zoom-level LOD (fewer attributes at low zoom), target <500KB per tile
 
-5. **Dubbele bestemming (multiple zoning)** -- Dutch parcels can have primary + overlay zonings (Wonen + Waarde-Archeologie + Waterstaat). Store as JSONB array, check ALL zonings in scoring. Single `zoning` string field = data loss and false positives. Address in Phase 1 schema + Phase 4 scoring.
+5. **Multi-tenant RLS policies degrade spatial queries** — RLS executed for every row before spatial index causes 10-100x slowdown. Prevention: Simple RLS conditions (direct organization_id comparison only), use session variable pattern (existing rls_policies.sql optimal), no joins in USING clause, force index hints with && operator, test with RLS enabled
 
-**Additional critical pitfalls:** Invalid geometries from WFS breaking spatial operations (auto-repair with `shapely.make_valid()`), MapLibre memory exhaustion with 2000+ GeoJSON polygons (use vector tiles), GML version inconsistencies between WFS services (request JSON output format), long-running scan timeouts without progress feedback (ARQ background jobs with polling), multi-tenant cache isolation breach (always include organization_id in cache keys).
+**Other critical pitfalls:** BAG WFS coordinate system mismatch (EPSG:28992 vs 4326), ARQ job failure recovery without idempotency (use UPSERT not INSERT), MapLibre layer z-order without beforeId parameter, bestemmingsplan data quality variance across municipalities, notification fatigue from naive change monitoring.
 
 ## Implications for Roadmap
 
-Based on combined research, suggested 7-phase structure with foundation-first ordering:
+Based on research, recommended 4-phase structure focuses on visual foundation first, then scanning, then intelligence layers. Monitoring deferred to post-MVP.
 
-### Phase 1: PostGIS Foundation + Database Schema
-**Rationale:** All subsequent phases depend on the spatial database schema. PostGIS extension, geometry columns, GIST indexes, and RLS policies must exist before any API client can store data. The schema design decision (individual parcel cache vs bulk JSONB) is irreversible once data accumulates.
-**Delivers:** PostGIS extension enabled, parcel_cache table with GIST-indexed geometry columns, area_scans table, scan_results table, RLS policies on all new tables, Alembic migrations, spatial query helpers (ST_Contains, ST_DWithin)
-**Addresses:** FEATURES: parcel storage infrastructure; PITFALLS: JSONB bloat prevention (individual parcels, not bulk), coordinate system standardization (EPSG:28992 for storage), multi-tenant isolation (RLS from day one)
-**Avoids:** JSONB TOAST bloat, multi-tenant cache leaks, schema migration pain after data exists
-**Stack:** PostGIS, GeoAlchemy2, existing SQLAlchemy 2.x patterns
+### Phase 1: Visual Foundation (Must Have)
+**Rationale:** Bestemmingsplan visualization is table stakes - users expect colored zones like ruimtelijkeplannen.nl and DSO Omgevingsloket. Provides context for area selection in Phase 2.
 
-### Phase 2: Government API Clients
-**Rationale:** API clients are independent of each other and can be built in parallel. They follow the established `government_apis/` pattern. Having all 4 clients ready before the scanner service avoids blocking the orchestration layer.
-**Delivers:** BAG WFS client (bulk bbox queries with pagination), SRU Bekendmakingen client (httpx + lxml XML parsing), Open Raadsinformatie client (elasticsearch-py async), BRK Bevragen client (httpx mTLS with PKIOverheid cert), batch rate limiter (semaphore + token bucket), integration tests for each client
-**Addresses:** FEATURES: vergunningen data, raadsinformatie context, owner lookup capability; PITFALLS: WFS pagination (1000-feature limit), rate limit exhaustion (per-API semaphore), GML version handling, geometry validation
-**Stack:** OWSLib, lxml, elasticsearch-py, httpx mTLS, aiolimiter
+**Delivers:**
+- PDOK WMS bestemmingsplan raster layer with SVBP2012 standard colors
+- Layer toggle UI control (aerial/topo + bestemmingsplan + kadaster + scores)
+- Click zone → plan details (WMS GetFeatureInfo → QuickCard)
+- Legend showing hoofdgroepen (wonen, bedrijven, agrarisch, groen)
 
-### Phase 3: Area Scanner Service + Background Jobs
-**Rationale:** The scanner orchestrates API clients (Phase 2) against the database schema (Phase 1). It introduces the ARQ background job pattern for long-running scans and the three-tier caching strategy. This must work end-to-end before building any frontend.
-**Delivers:** Area scanner service (municipality to bbox, create scan, enqueue ARQ job), ARQ job for batch processing (paginated WFS fetch, rate-limited enrichment, progress tracking), three-tier cache integration, scan status polling endpoint, duplicate scan prevention
-**Addresses:** FEATURES: BAG bulk has_pand cross-reference, bestemming filter, smart pre-filtering pipeline; PITFALLS: long-running scan timeouts (ARQ + polling), parallel rate limit exhaustion (batch limiter), invalid geometry handling (make_valid)
-**Avoids:** Synchronous HTTP timeout on 5-30 min scans, duplicate scan cost waste
+**Addresses features:** Bestemmingsplan WMS layer, click zone details, layer toggle (all table stakes from FEATURES.md)
 
-### Phase 4: REST API Endpoints + Opportunity Scoring
-**Rationale:** With the scanner producing results, expose them via REST API. Add opportunity scoring here because it shapes the default sort order for all result views. The scoring algorithm uses data from multiple API sources and must handle dubbele bestemming correctly.
-**Delivers:** POST /area-scans (start scan), GET /area-scans/{id}/status (polling), GET /area-scans/{id}/results (paginated, sorted by score), DELETE /area-scans/{id}, opportunity scoring algorithm (bestemming match + years unused + permit inactivity + parcel size), CSV export endpoint
-**Addresses:** FEATURES: parcel list with filters, CSV export, opportunity scoring; PITFALLS: dubbele bestemming in scoring (check ALL zonings), progressive loading (server-side pagination)
-**Stack:** FastAPI routers following existing patterns, Pydantic response schemas
+**Uses stack:** MapLibre raster source (existing), httpx for GetFeatureInfo (existing), PDOK WMS endpoint
 
-### Phase 5: Frontend -- Municipality Selection + Map Rendering
-**Rationale:** The map is the entry point for area scanning. Municipality selection via CBS gebiedsindelingen boundaries and parcel rendering with vector tiles are the two frontend decisions that are hardest to change later. Vector tile rendering must be decided upfront (Martin tile server vs PDOK services vs client-side clustering).
-**Delivers:** CBS gemeente boundary layer on MapLibre map, click-to-select gemeente interaction, vector tile rendering for 2000+ parcel polygons (score-based color coding), area scan trigger from map selection, scan progress dashboard (progress bar, phase indicators)
-**Addresses:** FEATURES: map-based gemeente selection (table stakes), progressive loading on map; PITFALLS: MapLibre memory exhaustion (vector tiles, not GeoJSON), coordinate mismatch (backend converts before serving)
-**Stack:** @watergis/maplibre-gl-terradraw, @turf/turf, Martin tile server or PDOK vector tiles
+**Avoids pitfalls:**
+- Pitfall 1 (use REST API v4 not deprecated WFS)
+- Pitfall 2 (add format detection for IMRO/STOP)
+- Pitfall 4 (attribute reduction if adding MVT polygon layer)
+- Pitfall 10 (layer ordering with beforeId)
+- Pitfall 11 (hardcoded colors not CSS vars)
 
-### Phase 6: Frontend -- Parcel List + Detail Modal
-**Rationale:** With map rendering working, build the list-and-detail views that complete the scan workflow. Parcel detail modal extends the existing v2.0 report drawer pattern with expandable source cards and AI summary.
-**Delivers:** Parcel list table (TanStack Table, sortable, filterable, paginated 50/page), parcel detail modal (AI summary + expandable Kadaster/Bestemming/Vergunningen/Raadsinformatie cards), TanStack Query hooks (useAreaScan, useAreaScanStatus, useAreaScanResults), CSV download button, filter controls (bestemming type, has_pand, min size, score threshold)
-**Addresses:** FEATURES: parcel list with filters, parcel detail view, expandable source cards, CSV export; PITFALLS: frontend re-rendering cascade (TanStack Query manages server state, not Redux/Zustand)
+**Research flag:** LOW - PDOK WMS is well-documented, MapLibre raster source is standard pattern. Skip phase research.
 
-### Phase 7: Integration Testing + Performance Optimization
-**Rationale:** End-to-end validation with realistic data volumes (2000+ parcels). Catches integration issues between phases, validates rate limiting under load, confirms PostGIS query performance, and benchmarks vector tile rendering.
-**Delivers:** Load test: 2000-parcel municipality scan end-to-end, PostGIS EXPLAIN ANALYZE optimization, vector tile rendering benchmarks (<3s for 2000 parcels, <200MB memory), cache hit rate monitoring, rate limit behavior verification, multi-tenant isolation integration tests
-**Addresses:** All PITFALLS verification checklist items; FEATURES: progressive loading at scale
+---
+
+### Phase 2: Area Selection & Focused Scanning (Must Have)
+**Rationale:** Replaces inefficient "scan all gemeente panden" with user-drawn bbox, reduces API load by 90%+. Drawing tools + bbox calculation enable targeted deep-dives. Core value proposition shift from address-first to area-first.
+
+**Delivers:**
+- MapLibre-Geoman drawing tools (rectangle + polygon modes)
+- Bbox calculation from drawn geometry via Turf.js
+- Selected parcels highlight (visual confirmation)
+- Extended BAG client with fetch_panden_by_bbox method
+- Replace existing area scan logic with bbox-filtered scan
+- Reuse ScanProgressOverlay for new scan type
+- Scan results with bestemmingsplan hoofdgroep column
+
+**Addresses features:** Drawing tools, bbox BAG query, scan progress, parcel highlighting, filter by zone (all table stakes)
+
+**Uses stack:** @watergis/maplibre-gl-terradraw (v3.0), @turf/turf (v3.0), shapely for bbox validation, existing BAG client with OWSLib (v3.0), ARQ for bulk enrichment (v1.0)
+
+**Implements architecture:** Extended BAG Client component, reuses existing scan pipeline
+
+**Avoids pitfalls:**
+- Pitfall 3 (WFS pagination - existing bag_wfs.py correct)
+- Pitfall 6 (EPSG:28992 explicit SRID in bbox)
+- Pitfall 7 (UPSERT not INSERT for scan_results)
+- Pitfall 8 (XML parser for resultType=hits)
+- Pitfall 12 (ARQ for scans not BackgroundTasks)
+
+**Research flag:** LOW - Extends existing proven patterns (area scan pipeline, BAG client, ARQ jobs). Spatial queries are well-documented. Skip phase research.
+
+---
+
+### Phase 3: Zoning Intelligence (Should Have)
+**Rationale:** Adding bestemmingsplan hoofdgroep as scoring factor provides Dutch-specific intelligence competitors lack. Differentiates from simple data aggregation platforms. Requires Phase 2 (scan with zone data) to be complete.
+
+**Delivers:**
+- Zoning-aware opportunity scoring (hoofdgroep factor, weight 0.3)
+- Filter scan results by zone type dropdown
+- Bestemmingsplan + Kadaster + scores simultaneous overlay
+- Score recalculation with zone context
+
+**Addresses features:** Zoning-aware scoring, filter by zone type (competitive advantage), bestemmingsplan + kadaster overlay (differentiator)
+
+**Uses stack:** Existing scoring system (v2.0), PostgreSQL JSONB for zone storage
+
+**Implements architecture:** Zoning-Aware Scoring component extending existing opportunity model
+
+**Avoids pitfalls:** None directly, but Phase 2 must avoid Pitfall 7 (idempotency) for score recalculation reliability
+
+**Research flag:** LOW - Scoring system exists, just adding factor. SVBP2012 hoofdgroep mapping is documented. Skip phase research.
+
+---
+
+### Phase 4: Change Monitoring Foundation (Nice to Have - DEFER)
+**Rationale:** Monitoring requires saved scans (user account feature) and notification infrastructure. Adds significant complexity. Value unproven until users validate scan workflow (Phases 1-3). Defer post-MVP.
+
+**Delivers:**
+- Save scan areas (bbox + filters stored in DB)
+- ARQ cron job: daily vergunning check via SRU Bekendmakingen (2 AM)
+- ARQ cron job: daily bestemmingsplan change check via Ruimtelijkeplannen API (3 AM)
+- Notification UI (in-app badges for "3 new permits", "1 plan changed")
+- Change tracking tables (BestemmingsplanChange, VergunningChange)
+
+**Addresses features:** Vergunning monitoring, bestemmingsplan change monitoring (nice-to-have, not table stakes)
+
+**Uses stack:** ARQ cron_jobs, SRU client (v3.0), new Ruimtelijkeplannen API client
+
+**Implements architecture:** ARQ Cron Jobs component, Ruimtelijkeplannen API Client component, IMRO GML Parser component
+
+**Avoids pitfalls:**
+- Pitfall 7 (idempotent periodic jobs with UPSERT)
+- Pitfall 9 (municipality quality dashboard integration)
+- Pitfall 13 (scheduled VACUUM ANALYZE for spatial tables)
+- Pitfall 14 (request spacing to avoid rate limits)
+- Pitfall 15 (significance filtering to prevent notification fatigue)
+
+**Research flag:** MEDIUM - Ruimtelijkeplannen.nl API v4 endpoint found but WebFetch denied verification (needs API key request to validate). IMRO GML parsing is documented but complex. Consider `/gsd:research-phase` if API integration unclear during planning.
+
+---
 
 ### Phase Ordering Rationale
 
-- **Database first (Phase 1):** Every other phase writes to or reads from the spatial database. Schema mistakes compound.
-- **API clients second (Phase 2):** Independent of each other, can be built in parallel. Needed by scanner service.
-- **Scanner third (Phase 3):** Orchestrates clients + database. Must work E2E before any frontend.
-- **REST API fourth (Phase 4):** Exposes scanner results. Scoring shapes default sort for all views.
-- **Map fifth (Phase 5):** Vector tile decision is architectural. Municipality selection is entry point for entire workflow.
-- **List/detail sixth (Phase 6):** Consumes API endpoints. Extends existing v2.0 drawer pattern.
-- **Testing seventh (Phase 7):** Validates all integration points under realistic load.
+- **Phase 1 first:** Visual layer provides context for all subsequent features. Users need to see zones before selecting areas. Zero backend changes, low risk, immediate value.
+- **Phase 2 depends on Phase 1:** Drawing tools make sense when bestemmingsplan layer shows what to target. Bbox scans need zone context for filtering.
+- **Phase 3 depends on Phase 2:** Scoring requires scan results with zone data. Can't score without scan pipeline complete.
+- **Phase 4 deferred:** Monitoring is orthogonal enhancement, not critical path. Requires user accounts + notification infrastructure = significant scope. Validate core workflow (Phases 1-3) before investing in monitoring.
 
-**Dependency chain:**
-```
-Phase 1 (DB Schema) --> Phase 2 (API Clients) --> Phase 3 (Scanner) --> Phase 4 (REST API)
-                                                                             |
-                                                         Phase 5 (Map) --> Phase 6 (List/Detail)
-                                                                             |
-                                                                      Phase 7 (Testing)
-```
+**Dependency chain:** Phase 1 (visual) → Phase 2 (scanning) → Phase 3 (intelligence) → Phase 4 (monitoring)
 
-Note: Phases 1 and 2 can run in parallel. Phases 5 and 4 can overlap (frontend starts once status endpoint exists).
+**Risk mitigation:** Front-load table stakes (Phases 1-2) to deliver core value early. Defer competitive features (Phase 3) until foundation proven. Postpone nice-to-haves (Phase 4) post-MVP.
 
 ### Research Flags
 
 **Phases needing deeper research during planning:**
-- **Phase 2 (API Clients):** BRK Bevragen requires PKIOverheid certificate and Kadaster authorization -- government-only access, limited public documentation. Validate: do we have API access? If not, defer BRK integration to v3.1.
-- **Phase 5 (Map Rendering):** Vector tile server decision (Martin vs PDOK native vs client-side clustering) needs performance testing with real Dutch parcel data. Martin adds infrastructure (Docker container). Alternative: use PDOK Kadastrale Kaart vector tiles directly.
-- **Phase 3 (Scanner):** Rate limits for PDOK/DSO APIs are undocumented. Need empirical testing to set semaphore limits. Start conservative (10 concurrent) and tune.
+- **Phase 4 (Change Monitoring):** Ruimtelijkeplannen.nl REST API v4 endpoint documentation incomplete, WebFetch denied verification. Requires API key request to Informatiehuis Ruimte to validate endpoint. IMRO GML parsing is complex (XPath namespaces, geometry extraction). Consider `/gsd:research-phase` for API integration + GML parsing patterns if uncertainty blocks planning.
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (DB Schema):** PostGIS patterns well-documented. GeoAlchemy2 + Alembic standard approach.
-- **Phase 4 (REST API):** Follows existing FastAPI router patterns from v1.0/v1.1 with 275 tests as reference.
-- **Phase 6 (List/Detail):** Extends existing v2.0 PropertyDetailDrawer. TanStack Table + TanStack Query standard patterns.
+- **Phase 1 (Visual Foundation):** PDOK WMS integration is well-documented with official MapLibre examples. Raster source pattern is standard. Skip phase research.
+- **Phase 2 (Area Scanning):** Extends existing proven patterns (area scan job, BAG client, ARQ infrastructure). Spatial queries follow PostGIS best practices. Skip phase research.
+- **Phase 3 (Zoning Intelligence):** Scoring system exists, SVBP2012 hoofdgroep mapping is documented standard. Skip phase research.
 
-## Critical Decisions for Requirements Phase
-
-These decisions must be made during requirements definition, not deferred to implementation:
-
-1. **BRK API access:** Do we have Kadaster authorization + PKIOverheid certificate? If no, defer owner lookup to v3.1 entirely and focus v3.0 on free-API opportunity discovery.
-
-2. **Vector tile server:** Martin (self-hosted, full control, adds Docker container) vs PDOK Kadastrale Kaart tiles (no infrastructure, but less control over styling/filtering). Decision impacts Phase 5 scope and infrastructure requirements.
-
-3. **Scan size limits:** Maximum gemeente size to allow (Amsterdam = 50,000+ addresses, takes hours). Recommend hard limit of 10,000 parcels per scan for v3.0 with frontend area size validation via Turf.js.
-
-4. **Parcel cache sharing:** Should raw PDOK/BAG parcel geometries be shared across tenants (same government data, different scans) or fully isolated? Recommendation: share raw geometry cache (government data is public), isolate enriched results (tenant-specific metadata). Requires two-layer cache key design.
-
-5. **Omgevingswet transition:** DSO is in transition period until 2032 (old bestemmingsplannen vs new omgevingsplannen). Must support both or pick one. Recommendation: support both with a unified bestemming model that normalizes the differences.
+**Overall:** Only Phase 4 potentially needs `/gsd:research-phase`. Phases 1-3 are well-understood extensions of existing codebase.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM-HIGH | All packages verified with recent releases. OWSLib and elasticsearch-py confirmed. Terra Draw has limited production usage reports but active maintenance. |
-| Features | MEDIUM | Based on US competitor analysis (PropertyRadar, LightBox) adapted to Dutch market. No direct Dutch PropTech competitor analysis available. Feature prioritization relies on inferred Dutch developer workflow. |
-| Architecture | HIGH | Extends proven v1.1/v2.0 patterns (275 tests, 15,947 LOC). PostGIS spatial patterns well-documented. ARQ background jobs already proven at scale. |
-| Pitfalls | MEDIUM-HIGH | Government API limitations verified from official docs. Performance thresholds based on documented benchmarks. Rate limits for PDOK/DSO estimated (undocumented). |
+| Stack | HIGH | Zero new dependencies, all capabilities covered by existing packages. httpx/lxml/shapely/ARQ proven in v1.0-v3.0 with 275 tests. MapLibre WMS is native feature with official examples |
+| Features | MEDIUM-HIGH | Table stakes (bestemmingsplan layer, drawing tools, bbox scans) validated by competitor analysis (3D Cityplanner, Assetmaps, ruimtelijkeplannen.nl). MVP boundaries clear (visual + scanning = must, monitoring = defer). Anti-features identified (real-time webhooks, UGC) |
+| Architecture | HIGH | ADDITIVE approach reusing existing scan pipeline, MapLibre setup, ARQ worker, PostGIS MVT. Minimal core changes. Proven patterns from 275 tests + 8,804 LOC v2.0 + 15,947 LOC v1.1 |
+| Pitfalls | MEDIUM-HIGH | 16 pitfalls identified from Dutch GIS community sources (Geoforum), official documentation, and PostGIS/MapLibre performance research. Top 5 critical pitfalls have clear prevention strategies. Phase-specific warnings mapped |
 
 **Overall confidence:** MEDIUM-HIGH
 
-The architecture is high-confidence because it extends proven patterns. The features are medium-confidence because Dutch PropTech competitor intelligence is limited -- we are inferring from US market leaders. The stack is solid except for Terra Draw (limited production evidence) and BRK API access (government authorization required).
-
 ### Gaps to Address
 
-1. **BRK API authorization status:** Government-only access. Unknown if Propdex/Klarifai has or can obtain PKIOverheid certificate and Kadaster approval. This gates the entire owner lookup feature. Must resolve before requirements finalize.
+**Gap 1: Ruimtelijkeplannen.nl REST API v4 authentication and endpoint validation**
+- Research found API endpoint via Ontwikkelaarsportaal but WebFetch was denied verification
+- Requires API key request to Informatiehuis Ruimte to confirm endpoint structure, authentication method, and response format
+- Mitigation: Request API key during Phase 4 planning, use documented WMS GetFeatureInfo as fallback for Phase 1-3 (provides plan ID, can link to external viewer)
 
-2. **PDOK/DSO rate limits:** Undocumented. Estimated at 10-50 req/sec based on community reports. Need empirical testing in Phase 3 to calibrate semaphore limits. Start conservative.
+**Gap 2: TAM-IMRO to STOP/TPOD transition timeline per municipality**
+- TAM-IMRO ends January 1, 2026 but municipality adoption of STOP/TPOD varies
+- Some software fixes arriving spring 2026, conversion deadline is 2032
+- Gap: No central registry of which gemeenten use which format
+- Mitigation: Implement format detection via metadata inspection, maintain municipality format mapping via background job, display UI indicator "Data format: IMRO (converting to STOP 2027)"
 
-3. **ORI municipality coverage:** Open Raadsinformatie covers 265 of 344 municipalities (77%). Must handle missing municipalities gracefully (empty result, not error). Need to test specific target gemeentes.
+**Gap 3: PDOK WMS service availability SLA**
+- Service URL verified, CORS support confirmed, but no public SLA found
+- Unknown: uptime guarantees, rate limits, performance during peak hours
+- Mitigation: Implement client-side tile caching (MapLibre built-in), add retry logic with exponential backoff, monitor PDOK status via existing health check infrastructure
 
-4. **Omgevingswet data model:** Transition period until 2032. Some municipalities on old bestemmingsplannen, others on new omgevingsplannen. DSO API may return different response structures. Need to test with municipalities in both states.
+**Gap 4: Bestemmingsplan data quality variance quantification**
+- Research confirms quality varies wildly across municipalities (incorrect coordinates, missing status) but no quantitative baseline
+- Gap: Which gemeenten have HIGH vs LOW quality data?
+- Mitigation: Integrate ruimtelijkeplannen.nl quality dashboard API during Phase 4, add coordinate validation (reject geometries outside Netherlands bbox), display municipality quality badges in UI
 
-5. **Terra Draw production readiness:** Active maintenance confirmed (Feb 2026 update), but limited production usage case studies. Fallback: use @mapbox/mapbox-gl-draw fork if Terra Draw has issues.
-
-6. **Vector tile rendering performance:** Martin tile server vs PDOK native tiles vs client-side approaches. Need real-world benchmark with 2000+ Dutch parcels before committing to infrastructure.
+**Gap 5: SVBP2012 to new Omgevingswet symbology transition**
+- SVBP2012 defines standard colors for TAM-IMRO bestemmingsplannen
+- STOP/TPOD omgevingsplannen may use different symbology standards
+- Gap: Are old SVBP2012 colors still valid for new plans?
+- Mitigation: Use PDOK WMS default styling (they handle symbology updates), allow custom opacity/blending in UI, defer custom styling until Omgevingswet symbology stabilizes
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [PDOK BAG OGC API v2](https://www.pdok.nl/-/nieuwe-bag-ogc-api-features) -- v2 endpoint confirmed, v1 deprecation July 15, 2026
-- [PostGIS Spatial Joins](https://postgis.net/workshops/postgis-intro/joins.html) -- ST_Within, ST_Intersects, GIST index patterns
-- [BRK Bevragen API](https://kadaster.github.io/BRK-bevragen/) -- PKI certificate + API key authentication
-- [OWSLib PyPI](https://pypi.org/project/OWSLib/) -- v0.35.0, Oct 2025
-- [elasticsearch-py PyPI](https://pypi.org/project/elasticsearch/) -- v9.3.0, Feb 2026
-- [CBS Gebiedsindelingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen) -- Municipality boundary polygons
-- [Kadaster BAG-BRK Quality](https://labs.kadaster.nl/dataanalyse/koppelingbagbrk/kwaliteit_bag_brk_koppeling/) -- Known data quality issues
+
+**Dutch Government APIs:**
+- [PDOK Ruimtelijke Plannen WMS](https://www.pdok.nl/ogc-webservices/-/article/ruimtelijke-plannen) — WMS service URL, layers (bestemmingsplangebied, enkelbestemming, dubbelbestemming), update frequency (monthly)
+- [Ruimtelijke Plannen API - Ontwikkelaarsportaal](https://aandeslagmetdeomgevingswet.nl/ontwikkelaarsportaal/api-register/api/rp-opvragen/) — REST API v4 endpoint (WebFetch denied, needs validation)
+- [BAG API Individuele Bevragingen](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/bag-api-individuele-bevragingen) — bbox parameter support
+- [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt) — Officiële Bekendmakingen SRU endpoint, 342 gemeenten, daily updates
+
+**Standards & Documentation:**
+- [IMRO2012 Documentation](https://docs.geostandaarden.nl/ro/imro/) — Official IMRO schema, namespace definitions
+- [IMRO XSD Schema (GitHub)](https://github.com/Geonovum/imro/blob/master/xmlschema/2012-v1.3/20120209-IMRO2012-Schema-Lokaal/IMRO2012.xsd) — XML schema reference
+- [SVBP2012 v1.3.1 PDF](https://ro-standaarden.geonovum.nl/2012/SVBP/1.3/SVBP2012-v1.3.1.pdf) — Standard colors per hoofdgroep (wonen, bedrijven, agrarisch, groen)
+- [TAM-IMRO eindigt per 1 januari 2026 | VNG](https://vng.nl/nieuws/tam-imro-eindigt-per-1-januari-2026) — Transition timeline
+- [Afnemersservices ruimtelijkeplannen.nl vanaf 1 juli 2024 niet beschikbaar](https://aandeslagmetdeomgevingswet.nl/actueel/nieuws-digitaal-stelsel-omgevingswet-dso/nieuws-2024/mei/ruimtelijkeplannen-vanaf-1-juli-niet-beschikbaar/) — WFS discontinuation confirmation
+
+**Technical Documentation:**
+- [MapLibre Add WMS Source](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/) — Official WMS raster source integration pattern
+- [MapLibre RasterTileSource API](https://maplibre.org/maplibre-gl-js/docs/API/classes/RasterTileSource/) — TypeScript types, tile options
+- [ARQ Cron Documentation](https://arq-docs.helpmanual.io/) — cron_jobs configuration in WorkerSettings
+- [Shapely Documentation](https://shapely.readthedocs.io/en/stable/geometry.html) — box(), to_geojson(), mapping() methods
+- [PostGIS Spatial Indexing](https://postgis.net/workshops/postgis-intro/indexing.html) — GIST indexes, 5-40x speedup
+
+**Performance Research:**
+- [Serving Dynamic Vector Tiles from PostGIS | Crunchy Data](https://www.crunchydata.com/blog/dynamic-vector-tiles-from-postgis) — SELECT * causes 9x slowdown, 50-100x tile bloat
+- [Heavy Map Visualizations Fundamentals](https://advena.hashnode.dev/heavy-map-visualizations-fundamentals-for-web-developers) — Tile size budget <500KB
+- [Row Level Security for Tenants | Crunchy Data](https://www.crunchydata.com/blog/row-level-security-for-tenants-in-postgres) — Simple RLS policies for spatial performance
 
 ### Secondary (MEDIUM confidence)
-- [PropertyRadar Features](https://www.propertyradar.com/features-overview) -- US competitor feature set (250+ filters, census tract selection)
-- [LightBox Appraisal Intelligence](https://www.prnewswire.com/news-releases/lightbox-enhances-appraisal-intelligence-302638256.html) -- Q1 2026 competitor enhancements
-- [@watergis/maplibre-gl-terradraw npm](https://www.npmjs.com/package/@watergis/maplibre-gl-terradraw) -- v1.10.0, Feb 2026
-- [MapLibre Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) -- Vector tiles, clustering patterns
-- [Berichten over uw Buurt](https://www.overheid.nl/berichten-over-uw-buurt) -- 342 municipalities, 8M+ residents
-- [Open Raadsinformatie](https://vng.nl/projecten/open-raadsinformatie) -- 265/344 municipality coverage
 
-### Tertiary (LOW confidence -- needs validation)
-- PDOK/DSO rate limits -- undocumented, community estimates only
-- BRK API pricing -- "likely EUR 0.50-1.00 per lookup" based on Kadaster product pages, exact pricing requires account
-- Terra Draw production usage -- limited case studies, active maintenance confirmed
-- sruthi library status -- confirmed unmaintained (July 2023 last PyPI release)
+**Community & Forums:**
+- [DSO Omgevingsloket API Discussion - Geoforum](https://geoforum.nl/t/hoe-vraag-ik-omgevingsplannen-op-met-dso-api/9216) — No public API for omgevingsplannen by location (community confirmation)
+- [BAG bbox querying - Geoforum](https://geoforum.nl/t/perceel-in-bbox/4600) — Bbox parameter usage patterns
+- [Bestemmingsplan data quality - Quarant](https://www.quarant.nl/worden-onze-bestemmingsplannen-straks-wel-getoond-in-de-dso-viewer/) — Quality variance across municipalities (incorrect coords, missing status)
+
+**Competitors & Tools:**
+- [3D Cityplanner](https://3dcityplanner.com/) — Bestemmingsplan layers + drawing tools (table stakes validation)
+- [Assetmaps](https://www.assetmaps.nl/en/) — Interactive real estate info platform (polygon drawing expected)
+- [OmgevingsAlert](https://www.omgevingsalert.nl/) — Permit monitoring service (list/notifications, not heatmap visualization)
+- [Ruimtelijkeplannen.nl viewer](https://www.ruimtelijkeplannen.nl/viewer/view) — Standard for plan viewing (colored zones, click for details)
+
+**Drawing Tools:**
+- [MapLibre-Geoman Docs](https://geoman.io/docs/maplibre/category/draw-modes) — Rectangle + polygon modes, active maintenance 2025+
+- [Draw geometries with terra-draw](https://maplibre.org/maplibre-gl-js/docs/examples/draw-geometries-with-terra-draw/) — Alternative drawing library
+- [mapbox-gl-draw](https://github.com/mapbox/mapbox-gl-draw) — Legacy (EOL, no longer maintained)
+
+**Background Tasks:**
+- [Building Resilient Task Queues in FastAPI with ARQ Retries](https://davidmuraya.com/blog/fastapi-arq-retries/) — Idempotency patterns, retry configuration
+- [Managing Background Tasks: BackgroundTasks vs ARQ](https://davidmuraya.com/blog/fastapi-background-tasks-arq-vs-built-in/) — Decision matrix: <1s → BackgroundTasks, >1s → ARQ
+
+### Tertiary (LOW confidence - needs validation)
+
+- Ruimtelijkeplannen.nl API authentication process — not documented, requires validation via API key request
+- DSO Omgevingsloket roadmap for future public API — unknown
+- PDOK WMS SLA and rate limits — not found in public docs, needs operational testing
+- STOP/TPOD symbology standards for new omgevingsplannen — transition in progress, standards may not be finalized
 
 ---
-*Research completed: 2026-02-10*
+
+*Research completed: 2026-02-11*
 *Ready for roadmap: yes*
