@@ -16,7 +16,7 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 **Plan:** 2 of 3
 **Status:** In progress
 
-**Last activity:** 2026-02-11 — Plan 23-02 complete (backend bbox acceptance with validation)
+**Last activity:** 2026-02-11 — Plans 23-01 and 23-02 complete (drawing tools + backend bbox acceptance)
 
 **Progress:** [██████████] 96%
 
@@ -60,6 +60,8 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
 
 **Phase 23 decisions:**
+- Terra Draw MapLibre adapter requires separate package (terra-draw-maplibre-gl-adapter)
+- Drawing completion clears shape and resets mode for clean UX
 - Server-side coordinate conversion (no frontend proj4 dependency)
 - 10 km² area limit enforced in RD New (conformal projection)
 
@@ -108,12 +110,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-11T09:17:03.863Z
-**Stopped At:** Completed 23-02-PLAN.md
+**Last Session:** 2026-02-11T09:19:14Z
+**Stopped At:** Completed 23-01-PLAN.md (drawing tools control)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-plan 23 03` to implement frontend draw tools
+**Next Action:** `/gsd:execute-plan 23 03` to wire drawing tools to map and scan API
 
 ---
 
-*State updated: 2026-02-11 (Plan 23-02 complete)*
+*State updated: 2026-02-11 (Plans 23-01 and 23-02 complete)*
