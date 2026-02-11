@@ -107,9 +107,9 @@ Phase 22 (Visual Foundation) --> Phase 23 (Area Selection) --> Phase 24 (Zone-En
 **Plans**: 3 plans
 
 Plans:
-- [ ] 22-01-PLAN.md -- WMS layer + SVBP2012 colors + LayerToggle integration
-- [ ] 22-02-PLAN.md -- GetFeatureInfo click handler + zone info popup
-- [ ] 22-03-PLAN.md -- SVBP2012 legend component + visual verification
+- [x] 22-01-PLAN.md -- WMS layer + SVBP2012 colors + LayerToggle integration
+- [x] 22-02-PLAN.md -- GetFeatureInfo click handler + zone info popup
+- [x] 22-03-PLAN.md -- SVBP2012 legend component + visual verification
 
 ---
 
@@ -217,7 +217,7 @@ Plans:
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
 | 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
-| 22. Bestemmingsplan Base Layer | v3.1 | 0/3 | Planned | - |
+| 22. Bestemmingsplan Base Layer | v3.1 | 3/3 | Complete | 2026-02-11 |
 | 23. Area Selection Tools | v3.1 | 0/? | Not started | - |
 | 24. Zone-Enriched Scanning | v3.1 | 0/? | Not started | - |
 | 25. Results Interface | v3.1 | 0/? | Not started | - |
@@ -226,4 +226,4 @@ Plans:
 ---
 
 *Roadmap created for v3.1: 2026-02-11*
-*Last updated: 2026-02-11 (v3.1 milestone roadmap created)*
+*Last updated: 2026-02-11 (Phase 22 complete)*
