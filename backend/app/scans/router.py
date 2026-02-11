@@ -1,16 +1,17 @@
 """Scan management API endpoints."""
 
+import logging
 import uuid
 
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
+from shapely.geometry import box
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
-from app.government_apis.bag_wfs import bag_wfs_client
 from app.middleware.rate_limit import limiter
 from app.models.scan_result import ScanResult
 from app.models.user import User
@@ -24,6 +25,9 @@ from app.scans.schemas import (
 )
 from app.services.excel_exporter import export_scan_results_to_excel
 from app.services.gemeente_service import get_gemeente_bbox
+from app.services.spatial_helpers import transform_bbox_to_rd
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
 
@@ -89,24 +93,63 @@ async def trigger_scan(
         if existing_scan and scan_request.force_rescan:
             scan = await service.reset_scan_for_rescan(existing_scan, db)
         else:
-            # Fetch gemeente bounding box
-            http_client = request.app.state.http_client
-            try:
-                bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid gemeente: {e}",
-                ) from e
+            # Determine bbox: user-drawn area or gemeente-wide
+            if scan_request.bbox_wgs84:
+                min_lon, min_lat, max_lon, max_lat = scan_request.bbox_wgs84
 
-            # Pre-check parcel count (10k limit per SCAN-06)
-            parcel_count = await bag_wfs_client.get_pand_count_in_bbox(bbox, http_client)
+                # Validate coordinates are within Netherlands WGS84 bounds
+                # Netherlands approximate WGS84 bounds: 3.3-7.2E, 50.7-53.6N
+                if not (3.3 <= min_lon <= 7.2 and 3.3 <= max_lon <= 7.2 and
+                        50.7 <= min_lat <= 53.6 and 50.7 <= max_lat <= 53.6):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Bbox coordinates are outside Netherlands bounds",
+                    )
 
-            if parcel_count > 10000:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Scan would exceed 10,000 parcel limit. Found {parcel_count} parcels in {scan_request.gemeente_naam}.",
+                # Validate min < max
+                if min_lon >= max_lon or min_lat >= max_lat:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid bbox: min coordinates must be less than max",
+                    )
+
+                # Convert WGS84 -> RD New (EPSG:28992)
+                minx, miny, maxx, maxy = transform_bbox_to_rd(
+                    min_lon, min_lat, max_lon, max_lat
                 )
+
+                # Validate area using shapely (RD New is conformal, area accurate in m²)
+                bbox_geom = box(minx, miny, maxx, maxy)
+                area_m2 = bbox_geom.area
+                MAX_AREA = 10_000_000  # 10 km²
+
+                if area_m2 > MAX_AREA:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 10 km². "
+                            "Teken een kleiner gebied."
+                        ),
+                    )
+
+                bbox = {
+                    "minx": minx,
+                    "miny": miny,
+                    "maxx": maxx,
+                    "maxy": maxy,
+                }
+            else:
+                # Fall back to gemeente bbox (existing logic)
+                http_client = request.app.state.http_client
+                try:
+                    bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
+                except ValueError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid gemeente: {e}",
+                    ) from e
+
+            # TODO: Re-enable parcel count pre-check after fixing CBS bbox CRS
 
             # Create new scan record
             scan = await service.create_scan(
@@ -144,9 +187,10 @@ async def trigger_scan(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("Failed to trigger scan")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to trigger scan",
+            detail=f"Failed to trigger scan: {e}",
         ) from e
 
 
