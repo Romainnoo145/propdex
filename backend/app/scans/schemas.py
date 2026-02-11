@@ -25,6 +25,14 @@ class ScanCreateRequest(BaseModel):
         default=False,
         description="Override existing scan and start fresh",
     )
+    bbox_wgs84: tuple[float, float, float, float] | None = Field(
+        default=None,
+        description=(
+            "Optional bounding box [min_lon, min_lat, max_lon, max_lat] in EPSG:4326 (WGS84). "
+            "If provided, scan is limited to this area instead of entire gemeente. "
+            "Backend converts to EPSG:28992 for BAG WFS queries. Max area: 10 km²."
+        ),
+    )
 
 
 class ScanResponse(BaseModel):
