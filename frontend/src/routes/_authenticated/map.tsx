@@ -27,6 +27,7 @@ import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
 import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
+import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
 import { lookupPdokAddress, getScanTileUrl } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
@@ -61,6 +62,7 @@ function MapPage() {
   const [mapReady, setMapReady] = useState(false)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
+  const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -393,9 +395,11 @@ function MapPage() {
         }
         // Show layer
         setBestemmingsplanVisibility(map, true)
+        setShowBestemmingsplan(true)
       } else {
         // Hide layer
         setBestemmingsplanVisibility(map, false)
+        setShowBestemmingsplan(false)
       }
     },
     []
@@ -418,6 +422,9 @@ function MapPage() {
           isCancelling={cancelScan.isPending}
         />
       )}
+
+      {/* Bestemmingsplan legend */}
+      <BestemmingsplanLegend visible={showBestemmingsplan} />
 
       {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
       {tier === 'quick' && (
