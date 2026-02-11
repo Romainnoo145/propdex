@@ -16,6 +16,10 @@ export interface ScanCreateRequest {
   gemeente_naam: string
   /** Override existing scan and start fresh */
   force_rescan?: boolean
+  /** Optional bounding box [minLon, minLat, maxLon, maxLat] in EPSG:4326 (WGS84).
+   *  If provided, scan is limited to this area instead of entire gemeente.
+   *  Backend converts to EPSG:28992 for BAG WFS queries. */
+  bbox_wgs84?: [number, number, number, number]
 }
 
 /**
