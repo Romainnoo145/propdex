@@ -85,32 +85,32 @@ These are now validated infrastructure for v3.1.
 
 ## Traceability
 
-*Updated during roadmap creation*
+*Updated: 2026-02-11 after v3.1 roadmap creation*
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ZONE-01 | TBD | Pending |
-| ZONE-02 | TBD | Pending |
-| ZONE-03 | TBD | Pending |
-| DIVE-01 | TBD | Pending |
-| DIVE-02 | TBD | Pending |
-| DIVE-03 | TBD | Pending |
-| DIVE-04 | TBD | Pending |
-| SCORE-01 | TBD | Pending |
-| SCORE-02 | TBD | Pending |
-| LIST-01 | TBD | Pending |
-| LIST-02 | TBD | Pending |
-| LIST-03 | TBD | Pending |
-| MON-01 | TBD | Pending |
-| MON-02 | TBD | Pending |
-| MON-03 | TBD | Pending |
-| MON-04 | TBD | Pending |
+| ZONE-01 | Phase 22 | Pending |
+| ZONE-02 | Phase 22 | Pending |
+| ZONE-03 | Phase 22 | Pending |
+| DIVE-01 | Phase 23 | Pending |
+| DIVE-02 | Phase 23 | Pending |
+| DIVE-03 | Phase 23 | Pending |
+| DIVE-04 | Phase 24 | Pending |
+| SCORE-01 | Phase 24 | Pending |
+| SCORE-02 | Phase 25 | Pending |
+| LIST-01 | Phase 25 | Pending |
+| LIST-02 | Phase 25 | Pending |
+| LIST-03 | Phase 25 | Pending |
+| MON-01 | Phase 26 | Pending |
+| MON-02 | Phase 26 | Pending |
+| MON-03 | Phase 26 | Pending |
+| MON-04 | Phase 26 | Pending |
 
 **Coverage:**
 - v3.1 requirements: 16 total
-- Mapped to phases: 0 (awaiting roadmap)
-- Unmapped: 16
+- Mapped to phases: 16 (100% coverage ✓)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after v3.1 definition*
+*Last updated: 2026-02-11 after v3.1 roadmap creation*

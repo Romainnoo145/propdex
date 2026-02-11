@@ -4,38 +4,43 @@
 
 See: .planning/PROJECT.md (updated 2026-02-11)
 
-**Core value:** Area -> Opportunity Intelligence
-**Current focus:** v3.1 Smart Area Intelligence -- Defining requirements
+**Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
+**Current focus:** v3.1 Smart Area Intelligence -- Bestemmingsplan Base Layer (Phase 22)
 
 ---
 
 ## Current Position
 
 **Milestone:** v3.1 Smart Area Intelligence
-**Phase:** Not started (defining requirements)
-**Plan:** —
-**Status:** Defining requirements
+**Phase:** 22 of 26 (Bestemmingsplan Base Layer)
+**Plan:** Awaiting planning
+**Status:** Ready to plan
 
-**Last activity:** 2026-02-11 — Milestone v3.1 started
+**Last activity:** 2026-02-11 — v3.1 roadmap created, 5 phases (22-26) derived from 16 requirements, 100% coverage validated
+
+**Progress:** [░░░░░░░░░░] 0% (v3.1)
 
 ---
 
 ## Performance Metrics
 
-**v3.0 Infrastructure (Shipped: 2026-02-11)**
-- 4 phases (18-21), ~20 plans, infrastructure for area intelligence
-- PostGIS, government API clients, scan pipeline, map visualization
-- Pivoted: "scan all panden" approach replaced by bestemmingsplan-first
+**v3.1 Smart Area Intelligence (In Progress)**
+- 5 phases (22-26), ~15-20 plans estimated, 16 requirements
+- Built on v3.0 infrastructure (PostGIS, API clients, scan pipeline, map)
 
-**v2.0 Shipped:** 2026-02-09
+**v3.0 Spatial Foundation (Shipped: 2026-02-11)**
+- 4 phases (18-21), 20 plans, 14 requirements
+- PostGIS, government API clients, scan pipeline, map visualization
+
+**v2.0 Frontend (Shipped: 2026-02-09)**
 - 5 phases (13-17), 24 plans, 9 requirements
 - 8,804 LOC TypeScript/React, 117 commits
 
-**v1.1 Shipped:** 2026-02-08
+**v1.1 Production Hardening (Shipped: 2026-02-08)**
 - 7 phases (6-12), 19 plans, 15 requirements
 - 275 tests, 15,947 LOC Python
 
-**v1.0 Shipped:** 2026-02-07
+**v1.0 Core Intelligence Engine (Shipped: 2026-02-07)**
 - 5 phases (1-5), 17 plans, 14 requirements
 - 8,281 LOC Python
 
@@ -47,23 +52,22 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-v3.0 architecture decisions (still valid):
+**v3.1 architecture approach (from roadmap):**
+- ADDITIVE extension of existing scan pipeline (no core rewrites)
+- Zero new dependencies (httpx, lxml, shapely, ARQ, MapLibre, terradraw, turf all present)
+- Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
+- Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
+- Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**v3.0 foundations (still valid):**
 - PostGIS for spatial joins (not Python Shapely)
 - ARQ for batch processing with polling (not WebSockets)
 - Three-tier cache (DB pre-scan / JSONB on-demand / BRK never-store)
-- CBS gemeente boundaries for area selection
 - EPSG:28992 storage, EPSG:4326 for GeoJSON responses
-
-v3.1 pivot decisions:
-- Bestemmingsplan as base layer (not all panden) — developers need zoning view first
-- Area deep-dive on user-selected bbox (not whole gemeente) — manageable parcel counts
-- Change monitoring as ongoing value (not one-time scan) — the recurring revenue feature
-- CBS WFS uses gebiedsindelingen:gemeente_gegeneraliseerd typeName with statcode filter
-- BAG WFS resultType=hits returns XML (not JSON) — need XML parsing for count pre-checks
-- MapLibre WebGL doesn't support CSS variables in paint properties — use hex colors
 
 ### Active TODOs
 
+From STATE.md before v3.1:
 - [ ] Fix backend register endpoint 500 error
 - [ ] Production deployment: Create app_role
 - [ ] Production deployment: Update Docker container to postgis/postgis:16-3.5
@@ -72,29 +76,35 @@ v3.1 pivot decisions:
 - [ ] DSO API key aanvragen (gratis)
 - [ ] ProjectList live mode: fetch reports per expanded project card
 - [ ] Kadaster BRK Bevragen API toegang regelen (betaald)
-- [ ] Fix parcel count pre-check CRS mismatch (CBS bbox EPSG:28992 vs BAG WFS EPSG:4326)
+
+**New for v3.1:**
+- [ ] Ruimtelijkeplannen.nl REST API v4 key (needed for Phase 26)
 
 ### Blockers
 
-(None)
+**Phase 26 (Change Monitoring):**
+- Ruimtelijkeplannen.nl REST API v4 requires API key — request from Informatiehuis Ruimte before Phase 26 planning
+- IMRO vs STOP/TPOD format fragmentation — requires dual parser support (TAM-IMRO ends January 1, 2026)
 
 ### Known Issues
 
+From v3.0:
 - Backend register endpoint returns 500 (needs investigation)
 - Kadaster eigendomsdata requires paid API
 - Monument restrictions are generic boilerplate (not property-specific)
 - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
 - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
-- BAG WFS pagination limit of 1000 features per request
 
 ---
 
 ## Session Continuity
 
 **Last Session:** 2026-02-11
-**Stopped At:** Starting v3.1 milestone
+**Stopped At:** v3.1 roadmap creation complete — 5 phases (22-26) derived from 16 requirements
 **Resume File:** None
+
+**Next Action:** `/gsd:plan-phase 22` to create execution plans for Bestemmingsplan Base Layer
 
 ---
 
-*Last updated: 2026-02-11 (Milestone v3.1 Smart Area Intelligence started)*
+*State updated: 2026-02-11 (v3.1 roadmap created)*

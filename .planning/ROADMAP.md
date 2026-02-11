@@ -2,12 +2,26 @@
 
 ## Milestones
 
-- 🚧 **v3.0 Area Intelligence** -- Phases 18-22 (in progress)
+- 🚧 **v3.1 Smart Area Intelligence** -- Phases 22-26 (in progress)
+- ✅ **v3.0 Spatial Foundation** -- Phases 18-21 (shipped 2026-02-11)
 - ✅ **v2.0 Frontend** -- Phases 13-17 (shipped 2026-02-09)
 - ✅ **v1.1 Production Hardening** -- Phases 6-12 (shipped 2026-02-08)
 - ✅ **v1.0 Core Intelligence Engine** -- Phases 1-5 (shipped 2026-02-07)
 
 ## Phases
+
+<details>
+<summary>✅ v3.0 Spatial Foundation (Phases 18-21) -- SHIPPED 2026-02-11</summary>
+
+- [x] Phase 18: Spatial Foundation (4/4 plans) -- PostGIS, parcel cache, spatial queries, RLS
+- [x] Phase 19: Government API Clients (5/5 plans) -- BAG WFS, SRU Bekendmakingen, BRK Bevragen, rate limiting
+- [x] Phase 20: Area Scanner + REST API (6/6 plans) -- Scan pipeline, ARQ job, scoring, Excel export
+- [x] Phase 21: Map Visualization (5/5 plans) -- CBS gemeente layer, vector tiles, MVT endpoint, scan progress overlay
+
+**20 plans, 14 requirements, PostGIS + government API clients + scan pipeline + map visualization**
+**Archive:** `.planning/milestones/v3.0-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ v2.0 Frontend (Phases 13-17) -- SHIPPED 2026-02-09</summary>
@@ -55,129 +69,130 @@
 
 ---
 
-### 🚧 v3.0 Area Intelligence (Phases 18-22)
+### 🚧 v3.1 Smart Area Intelligence (Phases 22-26)
 
-**Milestone Goal:** Transform Propdex from address-based property lookup to area-based opportunity discovery. Users select a gemeente, the system scans all parcels via government APIs, cross-references with buildings and zoning, and surfaces qualified development leads -- from municipality scan to actionable parcel list in minutes instead of weeks.
+**Milestone Goal:** Transform from address-first to area-first intelligence with bestemmingsplan base layer visualization, focused area deep-dive scanning via user-drawn bbox, zoning-aware opportunity scoring, and change monitoring for permits and zoning updates.
 
-**Architecture Decisions:**
-- PostGIS for spatial joins (not Python Shapely)
-- ARQ for batch processing with progress polling (not WebSockets)
-- PDOK vector tiles for base parcel layer + Martin for custom score overlay
-- Three-tier cache: DB pre-scan (Tier 1) / JSONB on-demand (Tier 2) / BRK never-store (Tier 3)
-- CBS gemeente boundaries for area selection
-- EPSG:28992 storage, EPSG:4326 for GeoJSON responses
+**Built on v3.0 infrastructure:** PostGIS spatial DB (Phase 18), government API clients (Phase 19), scan pipeline + scoring (Phase 20), map gemeente boundaries + MVT tiles (Phase 21)
+
+**Architecture Approach:**
+- ADDITIVE extension of existing scan pipeline (AreaScan model, ARQ worker, progress tracking)
+- Zero new backend dependencies (httpx, lxml, shapely, ARQ all present)
+- Zero new frontend dependencies (MapLibre, @watergis/maplibre-gl-terradraw, @turf/turf all present from v3.0)
+- Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
+- Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 
 **Dependency Chain:**
 ```
-Phase 18 (Spatial Foundation) --> Phase 19 (API Clients) --> Phase 20 (Scanner + REST API)
-                                                                       |
-                                                          Phase 21 (Map) --> Phase 22 (List + Detail)
+Phase 22 (Visual Foundation) --> Phase 23 (Area Selection) --> Phase 24 (Zone-Enriched Scanning)
+                                                                           |
+                                                              Phase 25 (Results Interface)
+                                                                           |
+                                                              Phase 26 (Change Monitoring)
 ```
 
 ---
 
 ## Phase Details
 
-### Phase 18: Spatial Foundation
-**Goal**: PostGIS spatial database is operational with parcel cache, scan tracking, and multi-tenant isolation -- the data layer everything else builds on
-**Depends on**: Phase 17 (existing v2.0 codebase)
-**Requirements**: DATA-01, DATA-02, DATA-03, DATA-05, DATA-06, API-05
+### Phase 22: Bestemmingsplan Base Layer
+**Goal**: User can visualize zoning plans as colored zones on the map and understand plan context
+**Depends on**: Phase 21 (Map visualization infrastructure)
+**Requirements**: ZONE-01, ZONE-02, ZONE-03
 **Success Criteria** (what must be TRUE):
-  1. PostGIS extension is enabled and spatial functions (ST_Contains, ST_Intersects, ST_DWithin, ST_AsGeoJSON) execute successfully against the database
-  2. Parcel geometries stored in EPSG:28992 can be inserted, queried by bounding box, and returned as EPSG:4326 GeoJSON via a coordinate transformation helper
-  3. Area scan records track status and progress, and scan results link to individual cached parcels (not bulk JSONB blobs)
-  4. Dubbele bestemming is stored as a JSONB array per parcel, preserving multiple overlapping zonings without data loss
-  5. All new tables enforce multi-tenant isolation via RLS policies matching existing NULLIF fail-closed pattern
-**Plans**: 4 plans in 3 waves
+  1. User can toggle a bestemmingsplan layer showing colored zones per SVBP2012 standard (wonen, bedrijven, agrarisch, groen)
+  2. User can click a zoning area to see plan name, bestemming type, and link to official document
+  3. User can view bestemmingsplan layer simultaneously with aerial imagery and kadaster parcels
+  4. Layer legend displays hoofdgroepen with color key matching SVBP2012 standard
+**Plans**: TBD (estimated 3 plans)
 
 Plans:
-- [x] 18-01: PostGIS extension + GeoAlchemy2 + parcel cache model with GIST-indexed geometry (Wave 1)
-- [x] 18-02: Area scan + scan results tables with progress tracking (Wave 2)
-- [x] 18-03: Spatial query helpers -- bbox query, coordinate transformation, geometry validation (Wave 2)
-- [x] 18-04: RLS policies + multi-tenant isolation tests for all new tables (Wave 3)
+- [ ] 22-01: TBD (PDOK WMS layer integration)
+- [ ] 22-02: TBD (Click zone → GetFeatureInfo)
+- [ ] 22-03: TBD (Legend component)
 
-### Phase 19: Government API Clients
-**Goal**: All government data sources are accessible as tested async clients with pagination, rate limiting, and error handling -- ready for the scanner to orchestrate
-**Depends on**: Phase 18
-**Requirements**: API-01, API-02, API-03, API-04, DATA-04
+---
+
+### Phase 23: Area Selection Tools
+**Goal**: User can draw custom areas on the map to define scan boundaries
+**Depends on**: Phase 22 (Visual context for selection)
+**Requirements**: DIVE-01, DIVE-02, DIVE-03
 **Success Criteria** (what must be TRUE):
-  1. BAG WFS client fetches buildings within a bounding box, correctly paginating past the PDOK 1000-feature limit with count verification
-  2. SRU Bekendmakingen client retrieves vergunningen for a given parcel identifier, parsing XML responses into structured data
-  3. BRK Bevragen client fetches eigendomsdata with proper authentication (mTLS + API key), respecting the never-store cache tier
-  4. Per-API rate limiting prevents exhaustion: concurrent request semaphores and requests-per-hour token buckets are enforced across all clients
-  5. All clients transform coordinates at the API boundary (EPSG:28992 internally, EPSG:4326 for external GeoJSON)
-**Plans**: 5 plans in 3 waves
+  1. User can draw a rectangle or polygon on the map to define a scan area
+  2. User can trigger a focused BAG scan on the drawn area (hundreds of parcels, not full gemeente)
+  3. User sees scan progress with phase indicator and percentage during area deep-dive
+  4. Selected parcels are highlighted on the map for visual confirmation
+**Plans**: TBD (estimated 3-4 plans)
 
 Plans:
-- [x] 19-01: Per-API rate limiter + new dependencies (lxml, aiolimiter) + BRK config settings (Wave 1)
-- [x] 19-02: BAG WFS client with httpx pagination and 1000-feature truncation prevention (Wave 2)
-- [x] 19-03: SRU Bekendmakingen client with lxml XML parsing (XXE-safe) (Wave 2)
-- [x] 19-04: BRK Bevragen client with mTLS authentication (Wave 2)
-- [x] 19-05: Unit tests for all API clients and rate limiter (Wave 3)
+- [ ] 23-01: TBD (MapLibre-Geoman drawing tools integration)
+- [ ] 23-02: TBD (Bbox calculation + scan trigger)
+- [ ] 23-03: TBD (Parcel highlight layer)
+- [ ] 23-04: TBD (Progress overlay reuse)
 
-### Phase 20: Area Scanner + REST API
-**Goal**: A complete scan pipeline runs as a background job -- from gemeente bbox to filtered parcel list -- with REST endpoints for triggering, polling, paginating results, and exporting Excel
-**Depends on**: Phase 19
-**Requirements**: SCAN-02, SCAN-03, SCAN-04, SCAN-05, SCAN-06, LIST-02, LIST-03
+---
+
+### Phase 24: Zone-Enriched Scanning
+**Goal**: Scan results include bestemmingsplan context and zoning-aware scoring
+**Depends on**: Phase 23 (Area selection triggers scans)
+**Requirements**: DIVE-04, SCORE-01
 **Success Criteria** (what must be TRUE):
-  1. Starting a scan for a gemeente enqueues an ARQ background job that fetches all parcels in the bbox, cross-references with BAG panden, and queries bestemmingen via DSO
-  2. Scan progress is queryable via polling endpoint, showing current phase (fetching parcels / cross-referencing BAG / querying bestemmingen) and percentage complete
-  3. Scans exceeding 10,000 parcels are rejected before enqueueing, with a clear error message returned to the caller
-  4. Completed scan results are available via paginated API (50 per page) with server-side sorting and filtering by bestemming, has_pand, and parcel size
-  5. Filtered scan results can be exported as Excel (.xlsx) containing address, size, bestemming, has_pand, and score (no owner information)
-**Plans**: 6 plans in 4 waves
+  1. Scan results include bestemmingsplan hoofdgroep per parcel from zoning context
+  2. Opportunity score factors in bestemmingsplan type (wonen = high, agrarisch = medium for residential developers)
+  3. Scoring weights are configurable and visible to users
+**Plans**: TBD (estimated 2-3 plans)
 
 Plans:
-- [x] 20-01: Foundation schemas, Alembic migration (parcels_failed), gemeente bbox helper (Wave 1)
-- [x] 20-02: Parcel scoring service with weighted factors and category labels -- TDD (Wave 1)
-- [x] 20-03: Scan CRUD service + trigger endpoint + main.py wiring (Wave 2)
-- [x] 20-04: Area scan ARQ job -- full pipeline: fetch, cross-ref, score, store (Wave 2)
-- [x] 20-05: Status polling + cancel + paginated results endpoints (Wave 3)
-- [x] 20-06: Excel export endpoint with openpyxl (Wave 4)
+- [ ] 24-01: TBD (Extend scan pipeline with zone lookup)
+- [ ] 24-02: TBD (Zoning-aware scoring)
+- [ ] 24-03: TBD (Scoring weight configuration)
 
-### Phase 21: Map Visualization
-**Goal**: Users can select a gemeente on the map and see scan results rendered as interactive colored parcels -- the visual entry point for area intelligence
-**Depends on**: Phase 20
-**Requirements**: SCAN-01, MAP-01, MAP-02, MAP-03, MAP-04
+---
+
+### Phase 25: Results Interface
+**Goal**: User can browse, filter, and explore scan results with zone intelligence
+**Depends on**: Phase 24 (Zone-enriched scan data)
+**Requirements**: LIST-01, LIST-02, LIST-03, SCORE-02
 **Success Criteria** (what must be TRUE):
-  1. CBS gemeente boundary polygons are rendered as a selectable layer on the map, and clicking a gemeente initiates an area scan
-  2. PDOK vector tiles display parcel boundaries with click and hover interaction (replacing WMS raster tiles for scan areas)
-  3. Martin tile server serves the parcel_cache table as a vector tile layer with score-based color coding (green/yellow/red gradient)
-  4. During an active scan, the map shows a progress bar and phase indicator so the user knows the scan is running and how far along it is
-**Plans**: 5 plans in 2 waves
+  1. User can view scan results in a sortable table (address, size, zone type, score)
+  2. User can filter results by bestemmingsplan type, has_pand status, and minimum score
+  3. User can click a parcel in list or on map to see detail modal with expandable source cards
+  4. Scan results are colored on the map by score (green/yellow/red gradient)
+**Plans**: TBD (estimated 4-5 plans)
 
 Plans:
-- [ ] 21-01-PLAN.md -- CBS gemeente boundary layer with click/hover interaction (Wave 1)
-- [ ] 21-02-PLAN.md -- Scan TypeScript types and TanStack Query hooks (Wave 1)
-- [ ] 21-03-PLAN.md -- Vector tile layer modules for parcels and score overlay (Wave 1)
-- [ ] 21-04-PLAN.md -- PostGIS MVT tile endpoint with multi-tenant filtering (Wave 2)
-- [ ] 21-05-PLAN.md -- Scan progress overlay + full map integration (Wave 2)
+- [ ] 25-01: TBD (Parcel list table)
+- [ ] 25-02: TBD (Filter controls)
+- [ ] 25-03: TBD (Score-based map coloring)
+- [ ] 25-04: TBD (Parcel detail modal)
+- [ ] 25-05: TBD (Expandable source cards)
 
-### Phase 22: Parcel List + Detail
-**Goal**: Users can browse, filter, and drill into scan results -- from sortable table to AI-generated detail modal with expandable source cards and BRK owner lookup
-**Depends on**: Phase 21
-**Requirements**: LIST-01, LIST-04, DETAIL-01, DETAIL-02, DETAIL-03, DETAIL-04
+---
+
+### Phase 26: Change Monitoring
+**Goal**: User stays informed of new permits and zoning changes in watched areas
+**Depends on**: Phase 25 (Complete scan workflow to establish monitoring baseline)
+**Requirements**: MON-01, MON-02, MON-03, MON-04
 **Success Criteria** (what must be TRUE):
-  1. Scan results display in a sortable, paginated table (TanStack Table) with columns for address, size, bestemming, has_pand, and score
-  2. Filter controls narrow results by bestemming type, has_pand status, and minimum parcel size, with filters applied server-side
-  3. Clicking a parcel in the list or on the map opens a detail modal with an AI-generated summary of the development opportunity
-  4. The detail modal contains expandable source cards for Kadaster, Bestemming, and Vergunningen data, each showing structured data from the respective API
-  5. BRK eigendomsdata is available in the detail modal behind a legitimate interest confirmation dialog, fetched on-demand and never cached
-**Plans**: TBD (estimated 5-6 plans)
+  1. System checks daily for new omgevingsvergunningen in user's watched gemeentes via SRU Bekendmakingen
+  2. System checks daily for bestemmingsplan changes in watched gemeentes via Ruimtelijkeplannen.nl REST API v4
+  3. User sees in-app notification badges for new changes since last visit
+  4. User can save scan areas for ongoing monitoring
+  5. User can view change history for monitored areas
+**Plans**: TBD (estimated 4-5 plans)
 
 Plans:
-- [ ] 22-01: Parcel list table (TanStack Table, sortable columns, pagination)
-- [ ] 22-02: Filter controls (bestemming type, has_pand toggle, minimum size slider)
-- [ ] 22-03: Parcel detail modal with AI-generated summary
-- [ ] 22-04: Expandable source cards (Kadaster, Bestemming, Vergunningen)
-- [ ] 22-05: BRK eigendomsdata integration with legitimate interest confirmation
-- [ ] 22-06: List-to-map and map-to-list bidirectional navigation
+- [ ] 26-01: TBD (Ruimtelijkeplannen.nl REST API client)
+- [ ] 26-02: TBD (ARQ cron jobs for daily checks)
+- [ ] 26-03: TBD (Change tracking tables + service)
+- [ ] 26-04: TBD (Save scan areas for monitoring)
+- [ ] 26-05: TBD (Notification UI + badges)
 
 ---
 
 ## Progress
 
-**Execution Order:** 18 --> 19 --> 20 --> 21 --> 22
+**Execution Order:** 22 --> 23 --> 24 --> 25 --> 26
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -201,9 +216,14 @@ Plans:
 | 18. Spatial Foundation | v3.0 | 4/4 | Complete | 2026-02-10 |
 | 19. Government API Clients | v3.0 | 5/5 | Complete | 2026-02-10 |
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
-| 21. Map Visualization | v3.0 | 0/5 | Planned | - |
-| 22. Parcel List + Detail | v3.0 | 0/6 | Not started | - |
+| 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
+| 22. Bestemmingsplan Base Layer | v3.1 | 0/? | Not started | - |
+| 23. Area Selection Tools | v3.1 | 0/? | Not started | - |
+| 24. Zone-Enriched Scanning | v3.1 | 0/? | Not started | - |
+| 25. Results Interface | v3.1 | 0/? | Not started | - |
+| 26. Change Monitoring | v3.1 | 0/? | Not started | - |
 
 ---
 
-*Last updated: 2026-02-10 (Phase 20 complete)*
+*Roadmap created for v3.1: 2026-02-11*
+*Last updated: 2026-02-11 (v3.1 milestone roadmap created)*
