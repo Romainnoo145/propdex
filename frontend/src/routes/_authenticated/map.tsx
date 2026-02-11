@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
 import LayerToggle from '@/components/map/LayerToggle'
+import DrawingToolsControl from '@/components/map/DrawingToolsControl'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
 import { PropertyDetailDrawer } from '@/components/property/PropertyDetailDrawer'
@@ -24,6 +25,11 @@ import {
   setBestemmingsplanVisibility,
   setupBestemmingsplanClickHandler,
 } from '@/components/map/BestemmingsplanLayer'
+import {
+  addBboxOutline,
+  removeBboxOutline,
+  addScanAreaHighlight,
+} from '@/components/map/ScanAreaHighlightLayer'
 import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -62,11 +68,13 @@ function MapPage() {
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
   const [zoneInfo, setZoneInfo] = useState<{ info: ZoneFeatureInfo; lngLat: [number, number] } | null>(null)
   const [zoneLoading, setZoneLoading] = useState(false)
+  const [areaScanBbox, setAreaScanBbox] = useState<[number, number, number, number] | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -82,6 +90,13 @@ function MapPage() {
   const currentData = demoData ?? lookup.data ?? null
   const saveFlow = useSaveReportFlow(currentData)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
+
+  // Sync mapInstance state with mapRef when map becomes ready
+  useEffect(() => {
+    if (mapReady && mapRef.current) {
+      setMapInstance(mapRef.current)
+    }
+  }, [mapReady])
 
   // Fly to property whenever coordinates are set and map is ready
   useEffect(() => {
@@ -192,12 +207,24 @@ function MapPage() {
     if (scanStatus.data.status === 'completed') {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
       // Keep activeScanId to show score layer
+
+      // Remove bbox outline for area scans, score layer takes over
+      if (areaScanBbox && mapRef.current) {
+        addScanAreaHighlight(mapRef.current)
+        setAreaScanBbox(null)
+      }
     } else if (scanStatus.data.status === 'failed') {
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
+
+      // Remove bbox outline on failure
+      if (areaScanBbox && mapRef.current) {
+        removeBboxOutline(mapRef.current)
+        setAreaScanBbox(null)
+      }
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [scanStatus.data])
+  }, [scanStatus.data, areaScanBbox])
 
   // Setup bestemmingsplan click handler
   useEffect(() => {
@@ -421,6 +448,48 @@ function MapPage() {
     []
   )
 
+  // Area drawing handler - show bbox outline immediately
+  const handleAreaDrawn = useCallback(
+    (bbox: [number, number, number, number], _geometry: GeoJSON.Geometry) => {
+      if (!mapRef.current) return
+
+      // Show bbox outline immediately for visual feedback
+      addBboxOutline(mapRef.current, bbox)
+      setAreaScanBbox(bbox)
+    },
+    []
+  )
+
+  // Area scan trigger handler
+  const handleAreaScanTrigger = useCallback(() => {
+    if (!areaScanBbox) return
+
+    triggerScan.mutate(
+      {
+        gemeente_code: 'AREA',
+        gemeente_naam: 'Gebiedsscan',
+        bbox_wgs84: areaScanBbox,
+        force_rescan: true, // Always create new scan for area selections
+      },
+      {
+        onSuccess: (data) => {
+          setActiveScanId(data.scan_id)
+        },
+        onError: (err) => {
+          toast.error(`Scan starten mislukt: ${err.message}`)
+          if (mapRef.current) removeBboxOutline(mapRef.current)
+          setAreaScanBbox(null)
+        },
+      }
+    )
+  }, [areaScanBbox, triggerScan])
+
+  // Cancel area selection handler
+  const handleCancelAreaSelection = useCallback(() => {
+    if (mapRef.current) removeBboxOutline(mapRef.current)
+    setAreaScanBbox(null)
+  }, [])
+
   return (
     <AppLayout>
       <MapView
@@ -429,6 +498,39 @@ function MapPage() {
         transformRequest={transformRequest}
       />
       <AddressSearch onSelect={handleAddressSelect} />
+
+      {/* Drawing tools for area selection */}
+      <DrawingToolsControl
+        map={mapInstance}
+        onAreaDrawn={handleAreaDrawn}
+        disabled={!!activeScanId && scanStatus.data?.status !== 'completed' && scanStatus.data?.status !== 'failed'}
+      />
+
+      {/* Area scan confirmation panel */}
+      {areaScanBbox && !activeScanId && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-white shadow-lg rounded-lg p-4 min-w-[300px]">
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              Gebied geselecteerd
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAreaScanTrigger}
+                disabled={triggerScan.isPending}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {triggerScan.isPending ? 'Starten...' : 'Scan dit gebied'}
+              </button>
+              <button
+                onClick={handleCancelAreaSelection}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scan progress overlay */}
       {activeScanId && scanStatus.data && scanStatus.data.status !== 'completed' && (
