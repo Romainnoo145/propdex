@@ -2,27 +2,30 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-09)
+See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Area -> Opportunity Intelligence
-**Current focus:** v3.0 Area Intelligence -- Phase 20 complete, Phase 21 next
+**Current focus:** v3.1 Smart Area Intelligence -- Defining requirements
 
 ---
 
 ## Current Position
 
-**Milestone:** v3.0 Area Intelligence (Phases 18-22)
-**Phase:** 21 of 22 (Map Visualization)
-**Plan:** 4 of 5
-**Status:** In Progress
+**Milestone:** v3.1 Smart Area Intelligence
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
 
-**Last activity:** 2026-02-10 -- 21-04 PostGIS MVT Tile Endpoint complete (2 tasks, 2 commits)
-
-**Progress:** [████████████████████████░] 80%
+**Last activity:** 2026-02-11 — Milestone v3.1 started
 
 ---
 
 ## Performance Metrics
+
+**v3.0 Infrastructure (Shipped: 2026-02-11)**
+- 4 phases (18-21), ~20 plans, infrastructure for area intelligence
+- PostGIS, government API clients, scan pipeline, map visualization
+- Pivoted: "scan all panden" approach replaced by bestemmingsplan-first
 
 **v2.0 Shipped:** 2026-02-09
 - 5 phases (13-17), 24 plans, 9 requirements
@@ -44,58 +47,20 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 See `.planning/PROJECT.md` Key Decisions table.
 
-v3.0 architecture decisions:
+v3.0 architecture decisions (still valid):
 - PostGIS for spatial joins (not Python Shapely)
 - ARQ for batch processing with polling (not WebSockets)
-- PDOK vector tiles + Martin tile server for map rendering
 - Three-tier cache (DB pre-scan / JSONB on-demand / BRK never-store)
 - CBS gemeente boundaries for area selection
+- EPSG:28992 storage, EPSG:4326 for GeoJSON responses
 
-Phase 18 implementation decisions:
-- **18-01:** Use postgis/postgis:16-3.5 Docker image (Alpine's PostGIS is PostgreSQL 18-only)
-- **18-01:** Create GIST spatial index via raw SQL in migration (Alembic doesn't auto-detect geometry indexes)
-- **18-03:** Use func.ST_* pattern for PostGIS function access instead of direct geoalchemy2.functions imports
-- **18-03:** Module-level pyproj Transformer singletons for 100x coordinate transformation speedup
-- **18-04:** Test RLS via policy existence checks and organization_id filtering (test DB uses superuser which bypasses RLS)
-
-Phase 19 implementation decisions:
-- **19-01:** Use dual-layer rate limiting (semaphore for concurrency, token bucket for time-based)
-- **19-01:** Conservative BRK limits (2 concurrent, 200/hour) as it's a paid API
-- **19-02:** Rate limit each WFS page request individually (not just the initial request) to prevent quota exhaustion during long-running pagination
-- **19-02:** Use numberMatched vs numberReturned comparison for truncation detection (not just feature count < PAGE_SIZE)
-- **19-03:** Use TypedDict for BekendmakingRecord instead of Pydantic model (no validation needed for read-only API responses)
-- **19-03:** Defensive field extraction with default='' fallback for all XML fields (SRU namespaces vary between response types)
-- **19-03:** Return tuple (records, total_count) from query_by_municipality to enable pagination decisions by caller
-- **19-04:** Create separate httpx.AsyncClient for BRK with mTLS SSLContext (not shared app client)
-- **19-04:** Gracefully disable BRK client in dev without certificates (logs warning, allows app startup)
-
-Phase 20 implementation decisions:
-- **20-01:** Use CQL_FILTER for CBS WFS queries (simpler than XML Filter)
-- **20-01:** Use 2024 CBS WFS endpoint (latest stable, 2026 may not exist)
-- **20-02:** Fixed scoring formula for all organizations (per-org weights deferred to future phase)
-- **20-02:** Protocol-based parcel_data parameter (not ORM model) for improved testability
-- **20-02:** Four-factor weighted model (vacant_land 30, size_optimal 25, zoning_residential 25, recent_permits 20)
-- **20-04:** Skip DSO bestemming queries during bulk scan (add as on-demand Tier 2)
-- **20-04:** Process BAG WFS features as buildings with has_pand=True (MVP approach)
-- **20-05:** Default sort by score DESC (most promising first per user decision)
-- **20-05:** Use Job(job_id, pool).abort() for cancellation (status update in job handler)
-- **20-06:** .xlsx export format (not CSV) for NL/BE real estate developers
-- **20-06:** Export respects active filters (exports what user sees)
-
-Phase 21 implementation decisions:
-- **21-01:** Module-level GeoJSON cache in GemeenteBoundariesLayer (avoid redundant fetches)
-- **21-01:** Insert gemeente layers before property layers (property click precedence)
-- **21-01:** Feature-state hover pattern for gemeente boundaries (more performant than paint updates)
-- **21-02:** Snake_case TypeScript types match backend JSON exactly (no camelCase conversion)
-- **21-03:** Configurable tile URL pattern for vector tile layers (not PDOK-specific, enables reuse for Martin tile server)
-- **21-03:** Feature-state hover effects for both parcel and score layers (module-level ID tracking)
-- **21-03:** Five-stop color gradient for scores: red (0) → orange (25) → yellow (50) → green (75) → dark green (100)
-- **21-03:** Minimal fill layer (opacity 0.01) for click detection without visual interference
-- **21-02:** TanStack Query v5 function-form refetchInterval signature for conditional polling
-- **21-02:** 30-second staleTime for scan results (immutable after completion)
-- **21-04:** PostGIS ST_AsMVT directly instead of Martin proxy (better multi-tenant security)
-- **21-04:** Martin kept in docker-compose as optional dev tool (not used in production tile path)
-- **21-04:** 1-hour Cache-Control on tile responses (scan results are immutable)
+v3.1 pivot decisions:
+- Bestemmingsplan as base layer (not all panden) — developers need zoning view first
+- Area deep-dive on user-selected bbox (not whole gemeente) — manageable parcel counts
+- Change monitoring as ongoing value (not one-time scan) — the recurring revenue feature
+- CBS WFS uses gebiedsindelingen:gemeente_gegeneraliseerd typeName with statcode filter
+- BAG WFS resultType=hits returns XML (not JSON) — need XML parsing for count pre-checks
+- MapLibre WebGL doesn't support CSS variables in paint properties — use hex colors
 
 ### Active TODOs
 
@@ -107,6 +72,7 @@ Phase 21 implementation decisions:
 - [ ] DSO API key aanvragen (gratis)
 - [ ] ProjectList live mode: fetch reports per expanded project card
 - [ ] Kadaster BRK Bevragen API toegang regelen (betaald)
+- [ ] Fix parcel count pre-check CRS mismatch (CBS bbox EPSG:28992 vs BAG WFS EPSG:4326)
 
 ### Blockers
 
@@ -117,17 +83,18 @@ Phase 21 implementation decisions:
 - Backend register endpoint returns 500 (needs investigation)
 - Kadaster eigendomsdata requires paid API
 - Monument restrictions are generic boilerplate (not property-specific)
-- Parcel click/highlight not possible with WMS raster tiles (v3.0 Phase 21 addresses this)
 - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
+- Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
+- BAG WFS pagination limit of 1000 features per request
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-02-10T15:48:43Z
-**Stopped At:** Completed 21-03-PLAN.md
+**Last Session:** 2026-02-11
+**Stopped At:** Starting v3.1 milestone
 **Resume File:** None
 
 ---
 
-*Last updated: 2026-02-10 (Phase 21 Map Visualization in progress - 3/5 plans)*
+*Last updated: 2026-02-11 (Milestone v3.1 Smart Area Intelligence started)*

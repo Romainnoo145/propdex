@@ -42,19 +42,18 @@ This is the ONE thing that must work. Everything else is secondary.
 - Multi-tenant isolation enforced at every layer (HTTP, service, cache, database)
 - Row-level security with fail-closed NULLIF policies on all 7 tenant tables
 
-## Current Milestone: v3.0 Area Intelligence
+## Current Milestone: v3.1 Smart Area Intelligence
 
-**Goal:** Transform Propdex from address-based property lookup into area-based opportunity discovery — scan entire municipalities to find parcels with building zoning but no buildings, cross-reference with permits and municipal decisions, and surface qualified leads with owner information.
+**Goal:** Transform the area scan from "fetch all buildings" into a bestemmingsplan-first workflow — show zoning as the base layer, let users deep-dive into selected areas with enriched parcel data, and monitor for permit/zoning changes over time.
 
 **Target features:**
-- Area scanning with gemeente/wijk selection on the map
-- Multi-source cross-referencing: parcelen + BAG panden + bestemmingsplan + vergunningen + raadsinformatie
-- Smart filtering pipeline: 2000 percelen → 50 qualified opportunities (97.5% cost reduction on paid APIs)
-- Perceel detail modal with AI summary + expandable source cards
-- Kadaster BRK eigendomsdata integration (paid, only for top opportunities)
-- Vergunningen monitoring via Officiële Bekendmakingen SRU API
-- Open Raadsinformatie integration for municipal council decisions
-- Opportunity scoring and ranking
+- Bestemmingsplan base layer: load zoning plans from Ruimtelijkeplannen.nl as colored zones on the map
+- Area deep-dive: user selects zone/draws box → fetch BAG panden for that smaller area, enrich with kadaster/monument, score with zoning context
+- Change monitoring: track new vergunningen and bestemmingsplan changes per gemeente, surface as actionable alerts
+- Refined opportunity scoring: weighted factors including zoning type, vacant land, recent permits, parcel size
+- Parcel detail with expandable source cards per data topic
+
+**Built on v3.0 infrastructure:** PostGIS spatial DB (Phase 18), government API clients (Phase 19), scan pipeline + scoring (Phase 20), map gemeente boundaries + MVT tiles (Phase 21)
 
 ## Business Model
 
@@ -123,16 +122,14 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-- [ ] Area scanning: select gemeente/wijk on map, scan all parcels in bbox
-- [ ] BAG bulk query: cross-reference parcels with buildings to find empty land
-- [ ] Bestemming filter: identify parcels with "Wonen" zoning + bouwvlak
-- [ ] Vergunningen monitoring: track omgevingsvergunningen via Officiële Bekendmakingen SRU API
-- [ ] Gemeenteraad integration: surface relevant municipal decisions via Open Raadsinformatie
+- [ ] Bestemmingsplan base layer: render zoning plans as colored zones on the map per gemeente
+- [ ] Area deep-dive: user-selected bbox triggers focused BAG scan with enrichment
+- [ ] Refined scoring: opportunity score using zoning type + vacant land + permits + parcel size
+- [ ] Parcel detail modal: AI summary + expandable source cards per data topic
+- [ ] Change monitoring: track new vergunningen per gemeente via SRU Bekendmakingen
+- [ ] Bestemmingsplan wijzigingen: detect zoning changes and surface as alerts
 - [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
-- [ ] Smart caching pipeline: lightweight pre-scan in DB, details on-demand in JSONB
-- [ ] Perceel detail modal: AI summary + expandable source cards per data topic
-- [ ] Opportunity scoring: automated ranking of parcels by development potential
-- [ ] Per-gemeente filtering: interactive map-based municipality selection
+- [ ] Parcel list with filtering: sortable table with bestemming, size, score filters
 
 ### Future (post v3.0)
 
@@ -198,4 +195,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - ProjectList live mode: TODO for fetching reports per expanded project card
 
 ---
-*Last updated: 2026-02-09 after v3.0 milestone start*
+*Last updated: 2026-02-11 after v3.1 milestone start*
