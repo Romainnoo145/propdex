@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 22 of 26 (Bestemmingsplan Base Layer)
-**Plan:** Awaiting planning
-**Status:** Ready to plan
+**Plan:** 1 of 3 complete
+**Status:** In progress
 
-**Last activity:** 2026-02-11 — v3.1 roadmap created, 5 phases (22-26) derived from 16 requirements, 100% coverage validated
+**Last activity:** 2026-02-11 — Completed Plan 22-01 (WMS bestemmingsplan base layer with toggle control)
 
-**Progress:** [░░░░░░░░░░] 0% (v3.1)
+**Progress:** [██████████] 96%
 
 ---
 
@@ -58,6 +58,11 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
 - Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**Phase 22 decisions:**
+- Minzoom 10 for bestemmingsplan layer (gemeente overview context, not parcel-only)
+- WMS raster tiles for enkelbestemming (PDOK vector tiles not available)
+- Opacity 0.6 for zone overlay (balance visibility with basemap coexistence)
 
 **v3.0 foundations (still valid):**
 - PostGIS for spatial joins (not Python Shapely)
@@ -99,12 +104,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-11
-**Stopped At:** v3.1 roadmap creation complete — 5 phases (22-26) derived from 16 requirements
+**Last Session:** 2026-02-11T08:33:13.258Z
+**Stopped At:** Completed 22-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 22` to create execution plans for Bestemmingsplan Base Layer
+**Next Action:** `/gsd:execute-plan 22-02` to add zone click interactions
 
 ---
 
-*State updated: 2026-02-11 (v3.1 roadmap created)*
+*State updated: 2026-02-11 (completed Plan 22-01)*
