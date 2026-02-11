@@ -19,6 +19,10 @@ import {
   addGemeenteBoundariesLayer,
   setGemeenteBoundariesVisibility,
 } from '@/components/map/GemeenteBoundariesLayer'
+import {
+  addBestemmingsplanLayer,
+  setBestemmingsplanVisibility,
+} from '@/components/map/BestemmingsplanLayer'
 import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -375,6 +379,28 @@ function MapPage() {
     [gemeenteGeojson, triggerScan]
   )
 
+  // Bestemmingsplan layer toggle handler
+  const handleBestemmingsplanToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+
+      const map = mapRef.current
+
+      if (visible) {
+        // Add source if it doesn't exist
+        if (!map.getSource('pdok-bestemmingsplan')) {
+          addBestemmingsplanLayer(map)
+        }
+        // Show layer
+        setBestemmingsplanVisibility(map, true)
+      } else {
+        // Hide layer
+        setBestemmingsplanVisibility(map, false)
+      }
+    },
+    []
+  )
+
   return (
     <AppLayout>
       <MapView
@@ -432,7 +458,11 @@ function MapPage() {
         />
       )}
 
-      <LayerToggle mapRef={mapRef} onGemeentenToggle={handleGemeentenToggle} />
+      <LayerToggle
+        mapRef={mapRef}
+        onGemeentenToggle={handleGemeentenToggle}
+        onBestemmingsplanToggle={handleBestemmingsplanToggle}
+      />
     </AppLayout>
   )
 }

@@ -19,10 +19,10 @@ export const ESRI_SATELLITE_ATTRIBUTION =
 export const CARTO_ATTRIBUTION =
   '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-/** Default map center: Netherlands (Amsterdam area) */
-export const DEFAULT_CENTER: [number, number] = [4.9, 52.37];
+/** Default map center: Venlo */
+export const DEFAULT_CENTER: [number, number] = [6.1724, 51.3704];
 
-/** Default zoom level (shows Amsterdam metro area) */
+/** Default zoom level (shows Venlo metro area) */
 export const DEFAULT_ZOOM = 12;
 
 /** Geographic center of Netherlands (for gemeente overview) */
@@ -37,3 +37,12 @@ export const NL_ZOOM = 7;
  */
 export const CBS_GEMEENTEN_WFS =
   'https://service.pdok.nl/cbs/gebiedsindelingen/2024/wfs/v1_0?service=WFS&version=2.0.0&request=GetFeature&typeName=gebiedsindelingen:gemeente_gegeneraliseerd&outputFormat=application/json&srsName=EPSG:4326';
+
+/** PDOK WMS Ruimtelijke Plannen — enkelbestemming layer (SVBP2012 colored zoning areas). Free, no API key. */
+export const PDOK_BESTEMMINGSPLAN_WMS =
+  'https://service.pdok.nl/kadaster/plu/wms/v1_0' +
+  '?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap' +
+  '&LAYERS=enkelbestemming&STYLES=' +
+  '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}' +
+  '&WIDTH=256&HEIGHT=256' +
+  '&FORMAT=image/png&TRANSPARENT=true';
