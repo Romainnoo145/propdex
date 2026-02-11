@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 23 of 26 (Area Selection Tools)
-**Plan:** Awaiting planning
-**Status:** Ready to plan
+**Plan:** 2 of 3
+**Status:** In progress
 
-**Last activity:** 2026-02-11 — Phase 22 complete (3/3 plans, verification passed, ZONE-01/02/03 satisfied)
+**Last activity:** 2026-02-11 — Plan 23-02 complete (backend bbox acceptance with validation)
 
-**Progress:** [██░░░░░░░░] 20% (v3.1)
+**Progress:** [██████████] 96%
 
 ---
 
@@ -58,6 +58,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
 - Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**Phase 23 decisions:**
+- Server-side coordinate conversion (no frontend proj4 dependency)
+- 10 km² area limit enforced in RD New (conformal projection)
 
 **Phase 22 decisions:**
 - Minzoom 10 for bestemmingsplan layer (gemeente overview context, not parcel-only)
@@ -104,12 +108,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-11
-**Stopped At:** Phase 22 complete — all 3 plans executed, verification passed
+**Last Session:** 2026-02-11T09:17:03.863Z
+**Stopped At:** Completed 23-02-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 23` to create execution plans for Area Selection Tools
+**Next Action:** `/gsd:execute-plan 23 03` to implement frontend draw tools
 
 ---
 
-*State updated: 2026-02-11 (Phase 22 complete)*
+*State updated: 2026-02-11 (Plan 23-02 complete)*
