@@ -122,13 +122,12 @@ Plans:
   2. User can trigger a focused BAG scan on the drawn area (hundreds of parcels, not full gemeente)
   3. User sees scan progress with phase indicator and percentage during area deep-dive
   4. Selected parcels are highlighted on the map for visual confirmation
-**Plans**: TBD (estimated 3-4 plans)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 23-01: TBD (MapLibre-Geoman drawing tools integration)
-- [ ] 23-02: TBD (Bbox calculation + scan trigger)
-- [ ] 23-03: TBD (Parcel highlight layer)
-- [ ] 23-04: TBD (Progress overlay reuse)
+- [ ] 23-01-PLAN.md -- Terra Draw drawing tools + bbox calculation (frontend)
+- [ ] 23-02-PLAN.md -- Backend bbox scan support with area validation + coordinate conversion
+- [ ] 23-03-PLAN.md -- End-to-end wiring + scan area highlight + visual verification
 
 ---
 
