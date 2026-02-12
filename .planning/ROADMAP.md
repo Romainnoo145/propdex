@@ -114,20 +114,20 @@ Plans:
 ---
 
 ### Phase 23: Area Selection Tools
-**Goal**: User can draw custom areas on the map to define scan boundaries
+**Goal**: User can select areas on the map via click interaction to define scan boundaries
 **Depends on**: Phase 22 (Visual context for selection)
 **Requirements**: DIVE-01, DIVE-02, DIVE-03
 **Success Criteria** (what must be TRUE):
-  1. User can draw a rectangle or polygon on the map to define a scan area
-  2. User can trigger a focused BAG scan on the drawn area (hundreds of parcels, not full gemeente)
+  1. User can click on a bestemmingsplan zone or gemeente boundary to select a scan area
+  2. User can trigger a focused BAG scan on the selected area (hundreds of parcels, not full gemeente)
   3. User sees scan progress with phase indicator and percentage during area deep-dive
-  4. Selected parcels are highlighted on the map for visual confirmation
+  4. Selected area is highlighted on the map for visual confirmation before scanning
 **Plans**: 3 plans
 
 Plans:
-- [ ] 23-01-PLAN.md -- Terra Draw drawing tools + bbox calculation (frontend)
-- [ ] 23-02-PLAN.md -- Backend bbox scan support with area validation + coordinate conversion
-- [ ] 23-03-PLAN.md -- End-to-end wiring + scan area highlight + visual verification
+- [ ] 23-01-PLAN.md -- Bbox extraction utilities + ScanAreaHighlightLayer component
+- [x] 23-02-PLAN.md -- Backend bbox scan support with area validation + coordinate conversion (DONE)
+- [ ] 23-03-PLAN.md -- Wire click-to-scan flow with confirmation UX + visual verification
 
 ---
 
@@ -217,7 +217,7 @@ Plans:
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
 | 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
 | 22. Bestemmingsplan Base Layer | v3.1 | 3/3 | Complete | 2026-02-11 |
-| 23. Area Selection Tools | v3.1 | 0/? | Not started | - |
+| 23. Area Selection Tools | v3.1 | 1/3 | In progress | - |
 | 24. Zone-Enriched Scanning | v3.1 | 0/? | Not started | - |
 | 25. Results Interface | v3.1 | 0/? | Not started | - |
 | 26. Change Monitoring | v3.1 | 0/? | Not started | - |
