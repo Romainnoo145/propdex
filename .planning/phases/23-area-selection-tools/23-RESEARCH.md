@@ -1,668 +1,559 @@
 # Phase 23: Area Selection Tools - Research
 
-**Researched:** 2026-02-11
-**Domain:** MapLibre drawing tools + bbox-based area scanning + user-defined scan boundaries
+**Researched:** 2026-02-12
+**Domain:** Frontend map interactions (click-based area selection), backend scan triggering with bbox
 **Confidence:** HIGH
 
 ## Summary
 
-Phase 23 enables user-defined area scanning by adding drawing tools to the MapLibre map, calculating bounding boxes from drawn geometries, and triggering focused BAG scans on custom areas (hundreds of parcels) instead of entire gemeenten (thousands of parcels). This transforms Propdex from "gemeente-wide batch scanning" to "area-first targeted intelligence."
+Phase 23 enables users to click on existing map features (bestemmingsplan zones or gemeente boundaries) to define scan areas, replacing the reverted drawing tools approach. The backend bbox support (Plan 23-02) is already shipped and handles WGS84→RD New coordinate conversion, Netherlands bounds validation, and 10 km² area limits.
 
-The implementation leverages existing v3.0 infrastructure with minimal new dependencies: the scan pipeline (AreaScan model, ARQ worker, progress tracking) already supports arbitrary bboxes, the BAG WFS client already handles bbox queries with pagination, and the frontend already has MapLibre and scan progress UI. The core gaps are drawing tool integration and bbox calculation, both solvable with well-maintained libraries (@watergis/maplibre-gl-terradraw for drawing, @turf/bbox for geometry calculations).
+This is a REPLAN focusing on **click-based selection** rather than drawing tools. The infrastructure exists:
+- Backend accepts `bbox_wgs84` in `ScanCreateRequest` (Plan 23-02 ✓)
+- GemeenteBoundariesLayer with GeoJSON features and click handlers (Phase 21 ✓)
+- BestemmingsplanLayer with WMS tiles and GetFeatureInfo click handlers (Phase 22 ✓)
+- ScanProgressOverlay component for progress tracking (Phase 20 ✓)
+- Scan polling hooks and ARQ worker pipeline (Phase 20 ✓)
 
-Architecture approach is ADDITIVE: extend existing ScanCreateRequest schema with optional bbox parameter, add frontend drawing UI that calculates bbox and passes to trigger endpoint, reuse ScanProgressOverlay component without modification. Backend scan flow unchanged (area_scan_job already uses AreaScan.bbox_* fields). Zero breaking changes to existing gemeente scan workflow.
+**Primary recommendation:** Extract bounding boxes from clicked GeoJSON features (gemeente boundaries) and WMS-queried bestemmingsplan zones, send to backend scan API, highlight selected area on map before triggering scan.
 
-**Primary recommendation:** Use @watergis/maplibre-gl-terradraw (1.0.1+) for drawing tools and @turf/bbox (7.2.0+) for bbox calculation. Both libraries are actively maintained, lightweight, and designed for MapLibre integration. Extend ScanCreateRequest with optional bbox field and add frontend DrawingToolsControl component.
+**Critical insight from revert:** Drawing rectangles/polygons is not how real estate developers think about areas. They think in terms of existing boundaries (gemeentes, bestemmingsplan zones, neighborhoods). The click-based approach aligns with user mental models.
 
 ## Standard Stack
 
-### Core Libraries (NEW DEPENDENCIES)
-
+### Core (Already Present)
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| **@watergis/maplibre-gl-terradraw** | 1.0.1+ | Rectangle/polygon drawing on MapLibre map | Official MapLibre plugin, actively maintained (2025+), wraps Terra Draw library, replaces deprecated mapbox-gl-draw |
-| **terra-draw** | 1.24.0+ | Core drawing engine | Peer dependency of maplibre-gl-terradraw, supports MapLibre/Mapbox/Leaflet/OpenLayers adapters |
-| **@turf/bbox** | 7.2.0+ | Calculate bounding box from GeoJSON geometry | Industry standard for geospatial calculations in JavaScript, 8M+ weekly downloads, minimal bundle size (~2KB) |
+| maplibre-gl | 5.17.0 | Map rendering + interactions | Industry standard for web maps, fork of Mapbox GL |
+| @tanstack/react-query | 5.90.20 | Server state + mutations | Caching, polling, optimistic updates out of the box |
+| React | 19.2.0 | UI framework | Component model, hooks for side effects |
 
-### Supporting Libraries (ALREADY IN PROJECT)
-
-| Library | Version | Purpose | Existing Use |
-|---------|---------|---------|---------------|
-| **maplibre-gl** | 5.17.0 | Base map library | v2.0 Phase 13, full-page map with layer controls |
-| **shapely** | 2.0.0+ | Backend bbox validation | v3.0 Phase 18, PostGIS geometry operations |
-| **httpx** | 0.28.1+ | Backend BAG WFS queries | v1.0 Phase 2, existing BAG client |
-| **ARQ** | 0.27.0+ | Background scan jobs | v1.0 Phase 4, existing area_scan_job |
+### Supporting (Already Present)
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| TypeScript | 5.9.3 | Type safety | All frontend code (strict mode enforced) |
+| Tailwind | 4.1.18 | Styling | Layout, spacing, UI components |
 
 ### Alternatives Considered
+| Instead of | Could Use | Tradeoff |
+|------------|-----------|----------|
+| Click-based selection | Drawing tools (terra-draw) | **REVERTED** — drawing UX not natural for real estate developers who think in existing boundaries |
+| Native MapLibre | react-map-gl wrapper | Wrapper adds abstraction but codebase uses native MapLibre (already integrated in v2.0/v3.0) |
+| Client-side proj4 | Server-side conversion | Backend already has pyproj+shapely, frontend stays dependency-light |
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| **@watergis/maplibre-gl-terradraw** | **mapbox-gl-draw** | NEVER - deprecated, no longer maintained as of 2024 |
-| **@watergis/maplibre-gl-terradraw** | **@geoman-io/maplibre-geoman-free** | If need advanced features (circle radius, cutting, snapping) - heavier bundle but more features |
-| **@turf/bbox** | **Manual bbox calculation** | NEVER - edge cases like antimeridian crossing, degenerate geometries |
-
-**Installation:**
-```bash
-# Frontend (new dependencies)
-cd frontend
-npm install @watergis/maplibre-gl-terradraw@^1.0.1 terra-draw@^1.24.0 @turf/bbox@^7.2.0
-
-# Backend (no new dependencies)
-# Existing shapely, httpx, ARQ cover all requirements
-```
+**Installation:** No new dependencies needed — all libraries already present in package.json
 
 ## Architecture Patterns
 
-### Pattern 1: Drawing Tools Integration
+### Recommended Component Structure
+```
+frontend/src/components/map/
+├── GemeenteBoundariesLayer.tsx    # GeoJSON features, queryRenderedFeatures
+├── BestemmingsplanLayer.tsx       # WMS raster, GetFeatureInfo
+├── ScanAreaHighlightLayer.tsx     # NEW: Show selected bbox outline before scan
+└── ScanProgressOverlay.tsx        # Existing: Progress UI during scan
+```
 
-**What:** Add drawing controls to MapLibre map with rectangle and polygon modes, extract drawn geometry, calculate bbox.
-
-**When to use:** User-initiated area selection for focused scanning (alternative to gemeente-wide scans).
+### Pattern 1: GeoJSON Feature Click → Bbox Extraction
+**What:** User clicks gemeente boundary (GeoJSON polygon), extract bbox from feature geometry, trigger scan
+**When to use:** For vector features with client-side geometry (gemeente boundaries from Phase 21)
+**How it works:**
+1. MapLibre `queryRenderedFeatures()` at click point returns GeoJSON feature
+2. Iterate polygon coordinates to find [minLon, minLat, maxLon, maxLat]
+3. Send bbox to backend via `triggerScan` mutation with `bbox_wgs84` field
+4. Highlight selected area on map using outline layer
 
 **Example:**
 ```typescript
-// frontend/src/components/map/DrawingToolsControl.tsx
-import { TerraDraw, TerraDrawMapLibreGLAdapter } from 'terra-draw'
-import { TerraDrawRectangleMode, TerraDrawPolygonMode } from 'terra-draw/modes'
-import bbox from '@turf/bbox'
-import type { Map } from 'maplibre-gl'
+// Based on GemeenteBoundariesLayer.tsx existing pattern
+map.on('click', GEMEENTE_FILL_LAYER, (e) => {
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: [GEMEENTE_FILL_LAYER]
+  })
 
-interface DrawingToolsControlProps {
-  map: Map
-  onAreaDrawn: (bbox: [number, number, number, number], geometry: GeoJSON.Geometry) => void
-}
+  if (features && features[0]) {
+    const geometry = features[0].geometry
+    if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+      const bbox = calculateBboxFromGeometry(geometry) // [minLon, minLat, maxLon, maxLat]
 
-export function DrawingToolsControl({ map, onAreaDrawn }: DrawingToolsControlProps) {
-  const [draw, setDraw] = useState<TerraDraw | null>(null)
-  const [activeMode, setActiveMode] = useState<'rectangle' | 'polygon' | null>(null)
-
-  useEffect(() => {
-    // Initialize Terra Draw with MapLibre adapter
-    const terraDraw = new TerraDraw({
-      adapter: new TerraDrawMapLibreGLAdapter({ map }),
-      modes: [
-        new TerraDrawRectangleMode(),
-        new TerraDrawPolygonMode(),
-      ],
-    })
-
-    terraDraw.start()
-    setDraw(terraDraw)
-
-    return () => {
-      terraDraw.stop()
+      // Trigger scan with bbox
+      triggerScan.mutate({
+        gemeente_code,
+        gemeente_naam,
+        bbox_wgs84: bbox
+      })
     }
-  }, [map])
+  }
+})
+```
 
-  const handleRectangleClick = () => {
-    if (!draw) return
-    draw.setMode('rectangle')
-    setActiveMode('rectangle')
+### Pattern 2: WMS GetFeatureInfo → Bbox from Map Bounds
+**What:** User clicks bestemmingsplan zone (WMS raster), query GetFeatureInfo for zone details, extract visible area bbox
+**When to use:** For WMS raster layers without client-side geometry (bestemmingsplan zones)
+**How it works:**
+1. WMS GetFeatureInfo returns zone metadata (plan name, bestemming type) but NO geometry
+2. Cannot extract exact zone polygon — WMS is raster tiles, not vector features
+3. Two approaches:
+   - **A) Current map viewport bbox** (simple but coarse)
+   - **B) Approximate zone bbox from nearby WMS clicks** (complex, error-prone)
+4. Recommend **Approach A** for v3.1: use current visible area as bbox constraint
 
-    // Listen for completion
-    draw.on('finish', (feature: GeoJSON.Feature) => {
-      const bounds = bbox(feature) // [minX, minY, maxX, maxY]
-      onAreaDrawn(bounds as [number, number, number, number], feature.geometry)
-      draw.clear() // Clear drawn shapes
-      setActiveMode(null)
+**Example:**
+```typescript
+// When user clicks bestemmingsplan zone (existing handler in BestemmingsplanLayer.tsx)
+const handleBestemmingsplanClick = async (e: maplibregl.MapMouseEvent) => {
+  const zoneInfo = await fetchGetFeatureInfo(map, e.lngLat)
+
+  if (zoneInfo) {
+    // Option A: Use visible map bounds as scan bbox
+    const bounds = map.getBounds()
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth()
+    ]
+
+    // Show confirmation UI: "Scan visible area for {zone.planNaam}?"
+    // User confirms → trigger scan with bbox
+    triggerScan.mutate({
+      gemeente_code,
+      gemeente_naam,
+      bbox_wgs84: bbox
     })
   }
-
-  return (
-    <div className="maplibre-ctrl maplibre-ctrl-group">
-      <button
-        onClick={handleRectangleClick}
-        className={activeMode === 'rectangle' ? 'active' : ''}
-        title="Draw Rectangle"
-      >
-        <RectangleIcon />
-      </button>
-      <button
-        onClick={handlePolygonClick}
-        className={activeMode === 'polygon' ? 'active' : ''}
-        title="Draw Polygon"
-      >
-        <PolygonIcon />
-      </button>
-    </div>
-  )
 }
 ```
 
-**Key principles:**
-- Terra Draw handles mode state, geometry validation, map interaction
-- Use `@turf/bbox` for coordinate extraction (handles all geometry types)
-- Call `draw.clear()` after scan trigger to remove drawn shape
-- Store geometry along with bbox for future parcel highlight
+**Important caveat:** WMS GetFeatureInfo returns zone metadata but NOT geometry. For precise zone boundaries, would need to switch to Ruimtelijkeplannen.nl REST API v4 (Phase 26 blocker) or PDOK WFS (check availability). For v3.1, viewport-based bbox is pragmatic compromise.
 
-### Pattern 2: Bbox-Filtered Scan Trigger
-
-**What:** Extend existing scan endpoint to accept optional bbox parameter, backend validates bbox area (<10 km²), frontend passes bbox from drawing tools.
-
-**When to use:** User draws area on map and clicks "Scan this area" button.
-
-**Example:**
-```python
-# backend/app/scans/schemas.py
-class ScanCreateRequest(BaseModel):
-    """Schema for triggering a new area scan."""
-
-    gemeente_code: str = Field(...)
-    gemeente_naam: str = Field(...)
-    force_rescan: bool = Field(default=False)
-
-    # NEW: Optional bbox for user-defined area scans
-    bbox: tuple[float, float, float, float] | None = Field(
-        default=None,
-        description="Optional bounding box [minx, miny, maxx, maxy] in EPSG:28992 (RD New). "
-                    "If provided, scan is limited to this area instead of entire gemeente. "
-                    "Max area: 10 km².",
-    )
-```
-
-```python
-# backend/app/scans/router.py
-@router.post("", response_model=ScanResponse)
-async def trigger_scan(
-    request: Request,
-    scan_request: ScanCreateRequest,
-    ...
-) -> ScanResponse:
-    # If bbox provided, validate area
-    if scan_request.bbox:
-        minx, miny, maxx, maxy = scan_request.bbox
-
-        # Validate bbox is within Netherlands (RD New bounds)
-        if not (0 < minx < 300000 and 0 < maxx < 300000 and
-                300000 < miny < 650000 and 300000 < maxy < 650000):
-            raise HTTPException(400, "Bbox outside Netherlands bounds")
-
-        # Validate area (use shapely for accurate calculation)
-        from shapely.geometry import box
-        bbox_geom = box(minx, miny, maxx, maxy)
-        area_m2 = bbox_geom.area
-
-        MAX_AREA = 10_000_000  # 10 km²
-        if area_m2 > MAX_AREA:
-            raise HTTPException(
-                400,
-                f"Scan area {area_m2:.0f} m² exceeds max {MAX_AREA} m² (10 km²). "
-                "Please draw a smaller area."
-            )
-
-        bbox = scan_request.bbox
-    else:
-        # Fall back to gemeente bbox (existing logic)
-        http_client = request.app.state.http_client
-        bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
-
-    # Create scan record (existing logic)
-    scan = await service.create_scan(
-        organization_id=organization_id,
-        gemeente_code=scan_request.gemeente_code,
-        gemeente_naam=scan_request.gemeente_naam,
-        bbox=bbox,  # Can be user-drawn or gemeente-wide
-        session=db,
-    )
-
-    # Enqueue ARQ job (unchanged)
-    ...
-```
-
-**Key principles:**
-- Bbox optional = backward compatible with existing gemeente scans
-- Validate Netherlands bounds (EPSG:28992 RD New: 0-300000 X, 300000-650000 Y)
-- Validate area limit BEFORE creating scan record (prevent wasted ARQ jobs)
-- Reuse existing scan pipeline (area_scan_job already uses AreaScan.bbox_* fields)
-
-### Pattern 3: Parcel Highlight Layer
-
-**What:** After scan completes, highlight parcels on map by querying Kadaster WFS with scan bbox, apply highlight style.
-
-**When to use:** Visual confirmation of scan coverage after deep-dive scan completes.
+### Pattern 3: Scan Trigger with Bbox Field
+**What:** Send optional `bbox_wgs84` field to backend scan API, backend handles coordinate conversion and area validation
+**When to use:** Every scan triggered from click-based selection (both gemeente and bestemmingsplan clicks)
+**Already implemented:** Plan 23-02 ✓
 
 **Example:**
 ```typescript
-// frontend/src/components/map/ScanAreaHighlightLayer.tsx
-export function addScanAreaHighlightLayer(
-  map: Map,
-  bbox: [number, number, number, number]
-) {
-  const SOURCE_ID = 'scan-area-highlight'
-  const LAYER_ID = 'scan-area-highlight-layer'
+// From useScans.ts hook
+triggerScan.mutate({
+  gemeente_code: '0363',
+  gemeente_naam: 'Amsterdam',
+  bbox_wgs84: [4.8, 52.3, 4.9, 52.4] // Optional WGS84 bbox
+})
+```
 
-  // Remove existing highlight if present
-  if (map.getLayer(LAYER_ID)) {
-    map.removeLayer(LAYER_ID)
-  }
-  if (map.getSource(SOURCE_ID)) {
-    map.removeSource(SOURCE_ID)
-  }
+Backend validates:
+- Netherlands bounds: 3.3-7.2°E, 50.7-53.6°N
+- Min < max coordinates
+- Area < 10 km² (in EPSG:28992 for accuracy)
+- Returns 400 error with Dutch message if validation fails
 
-  // Add WFS vector source (Kadaster parcel boundaries)
-  map.addSource(SOURCE_ID, {
-    type: 'vector',
-    tiles: [
-      `https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0?` +
-      `service=WMS&request=GetMap&layers=Perceel&` +
-      `styles=&format=application/vnd.mapbox-vector-tile&` +
-      `transparent=true&version=1.3.0&` +
-      `width=256&height=256&crs=EPSG:3857&` +
-      `bbox={bbox-epsg-3857}`
-    ],
-    minzoom: 12,
-    maxzoom: 19,
-  })
+### Pattern 4: Visual Feedback Before Scan
+**What:** Highlight selected area on map before triggering scan, let user confirm or cancel
+**When to use:** After clicking feature but before scan mutation, prevent accidental large scans
+**How it works:**
+1. Calculate bbox from clicked feature
+2. Add temporary outline layer showing selected area
+3. Show confirmation toast/modal: "Scan {area} km² in {zone name}?"
+4. User confirms → trigger scan, user cancels → remove highlight
 
-  // Add highlight layer (yellow outline + semi-transparent fill)
-  map.addLayer({
-    id: LAYER_ID,
-    type: 'fill',
-    source: SOURCE_ID,
-    'source-layer': 'Perceel',
-    paint: {
-      'fill-color': '#FFD700',    // Gold
-      'fill-opacity': 0.2,
-      'fill-outline-color': '#FFA500', // Orange
+**Example:**
+```typescript
+// In map.tsx
+const [selectedBbox, setSelectedBbox] = useState<[number, number, number, number] | null>(null)
+
+const handleGemeenteClick = (bbox: [number, number, number, number], naam: string) => {
+  setSelectedBbox(bbox) // Triggers ScanAreaHighlightLayer render
+
+  // Show confirmation (sonner toast with action buttons)
+  toast.info(`Scan ${calculateArea(bbox)} km² in ${naam}?`, {
+    action: {
+      label: 'Scan starten',
+      onClick: () => {
+        triggerScan.mutate({ gemeente_code, gemeente_naam, bbox_wgs84: bbox })
+        setSelectedBbox(null)
+      }
     },
-    // Add before labels for better visibility
-  }, 'place-label')
-
-  // Fit map to scan bbox
-  const [minx, miny, maxx, maxy] = bbox
-  map.fitBounds([[minx, miny], [maxx, maxy]], { padding: 50 })
+    cancel: {
+      label: 'Annuleren',
+      onClick: () => setSelectedBbox(null)
+    }
+  })
 }
 ```
 
-**Key principles:**
-- Reuse Kadaster WFS parcels layer (already available in Phase 15)
-- Apply distinct highlight style (different from score layer colors)
-- Fit map to bbox after adding layer (zoom to scan area)
-- Clean up previous highlights before adding new one
-
-### Pattern 4: Progress Overlay Reuse
-
-**What:** Reuse existing ScanProgressOverlay component without modification for area deep-dive scans.
-
-**When to use:** User triggers area scan, progress overlay shows phases and percentage.
-
-**Example:**
-```typescript
-// frontend/src/routes/_authenticated/map.tsx
-const [activeScan, setActiveScan] = useState<{
-  scanId: string
-  type: 'gemeente' | 'area'
-  bbox?: [number, number, number, number]
-} | null>(null)
-
-const handleAreaScanTrigger = async (
-  bbox: [number, number, number, number],
-  geometry: GeoJSON.Geometry
-) => {
-  // Trigger scan with bbox
-  const response = await api.triggerScan({
-    gemeente_code: currentGemeente.code,
-    gemeente_naam: currentGemeente.naam,
-    bbox,
-  })
-
-  // Start polling (existing hook)
-  setActiveScan({
-    scanId: response.scan_id,
-    type: 'area',
-    bbox,
-  })
-}
-
-// Existing polling hook works unchanged
-const { status, cancel } = useScans(activeScan?.scanId)
-
-return (
-  <>
-    <DrawingToolsControl
-      map={map}
-      onAreaDrawn={handleAreaScanTrigger}
-    />
-
-    {/* Existing component, no modifications needed */}
-    {activeScan && status && (
-      <ScanProgressOverlay
-        status={status}
-        onCancel={() => cancel()}
-        isCancelling={false}
-      />
-    )}
-  </>
-)
-```
-
-**Key principles:**
-- ScanProgressOverlay is type-agnostic (works for gemeente or area scans)
-- Polling logic unchanged (GET /api/scans/{scan_id}/status)
-- Backend scan phases identical (fetching_parcels → cross_referencing_bag → querying_bestemmingen)
-- Only difference: parcel count (hundreds vs thousands)
+### Anti-Patterns to Avoid
+- **Drawing tools for arbitrary shapes:** REVERTED — users don't think in rectangles/polygons, they think in existing boundaries
+- **Client-side coordinate conversion:** Backend already has pyproj+shapely, don't duplicate with proj4 on frontend
+- **Scanning without bbox validation:** Backend enforces 10 km² limit, but frontend should show estimated area BEFORE triggering scan to prevent user frustration
+- **Tight coupling between layer handlers:** Keep gemeente click handler separate from bestemmingsplan click handler, even if both trigger scans — different UX flows
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| **Drawing UI state management** | Custom mouse event handlers, geometry validation, mode switching | Terra Draw library via maplibre-gl-terradraw | Handles edge cases: self-intersecting polygons, incomplete drawings, touch events on mobile, undo/redo |
-| **Bbox calculation from geometry** | Manual coordinate iteration to find min/max | @turf/bbox | Handles antimeridian crossing, degenerate geometries (points, lines), all GeoJSON types |
-| **Coordinate projection** | Custom RD New ↔ Web Mercator transforms | MapLibre built-in projection | MapLibre handles projection automatically, Terra Draw works in map CRS |
-| **Area validation** | String-based coordinate parsing and manual area math | shapely.geometry.box + .area property | Handles non-rectangular shapes, validates topology, prevents floating point errors |
+| Bbox calculation from polygon | Custom coordinate iteration | Simple min/max reducer over coordinates | GeoJSON polygons are [[[lon, lat], ...]] arrays — iterate once, track min/max |
+| WMS feature geometry extraction | Custom WMS parsing, proxy server | Accept WMS limitation: use viewport bbox or defer to Phase 26 | WMS GetFeatureInfo returns metadata only, not geometries. Parsing WMS XML/GeoJSON is complex and fragile. |
+| Coordinate projection | Frontend proj4/turf.js | Backend pyproj (already implemented in 23-02) | Backend has PostGIS + pyproj + shapely for all spatial ops, frontend stays simple |
+| Scan progress UI | Custom polling + progress bar | Existing ScanProgressOverlay + useScanPolling hook | Already built in Phase 20, reuse component |
+| Area calculation | Custom Haversine formula | Backend shapely in RD New (conformal projection) | WGS84 area distorted at high latitudes, RD New is accurate for Netherlands |
 
-**Key insight:** Drawing tools seem simple ("just click two corners for rectangle") but production-ready implementation requires handling: touch events, pinch-zoom conflicts, self-intersecting polygons, incomplete drawings, undo/redo, multi-geometry types, coordinate validation. Terra Draw solves all of this. @turf/bbox handles bbox extraction edge cases (antimeridian, degenerate geometries). Don't reinvent these wheels.
+**Key insight:** Phase 22 created bestemmingsplan WMS layer, but WMS is raster — no client-side geometry. Extracting precise zone boundaries requires either:
+1. Ruimtelijkeplannen.nl REST API v4 with GML/GeoJSON geometry (requires API key, Phase 26 blocker)
+2. PDOK WFS for bestemmingsplangebied layer (check if available, may have same data)
+3. Pragmatic compromise: use visible map viewport as bbox when clicking bestemmingsplan zone
+
+**Recommendation for v3.1:** Accept WMS limitation, use viewport bbox for bestemmingsplan clicks. Phase 26 can upgrade to precise zone boundaries once REST API v4 key is obtained.
 
 ## Common Pitfalls
 
-### Pitfall 1: Forgetting to Validate Bbox Area Before Scan
-
-**What goes wrong:** User draws huge area (50 km²), scan attempts to fetch 100K+ parcels, BAG WFS times out or returns incomplete data, ARQ job runs for hours, frontend polls forever.
-
-**Why it happens:** Drawing tools don't enforce area limits. Calculating area requires projection math (Web Mercator distorts area at high latitudes).
-
+### Pitfall 1: WMS Raster vs Vector Feature Confusion
+**What goes wrong:** Clicking WMS bestemmingsplan layer returns feature info (metadata) but not geometry. Developers expect polygon coordinates like GeoJSON features.
+**Why it happens:** WMS serves raster tiles, not vector features. GetFeatureInfo is metadata lookup, not geometry query.
 **How to avoid:**
-1. Calculate area server-side using shapely (EPSG:28992 is conformal, area calculation accurate)
-2. Reject scans >10 km² with clear error message ("Please draw a smaller area")
-3. Add client-side preview: show estimated parcel count based on Netherlands density (~2000 parcels per km² in urban areas)
+- Accept WMS limitation for v3.1
+- Use `map.getBounds()` to get viewport bbox when user clicks bestemmingsplan zone
+- Show clear UI messaging: "Scan visible area within {zone name}"
+- Phase 26 can upgrade to precise boundaries via REST API v4
+**Warning signs:** Trying to parse WMS XML responses for polygon coordinates, searching for WMS-to-GeoJSON converters
 
-**Warning signs:**
-- Frontend loading spinner never completes
-- Backend logs show "fetched 1000/150000 panden (page 1)" (huge mismatch)
-- Redis memory usage spikes (ARQ job storing massive feature list)
-
-```python
-# GOOD: Validate before creating scan
-from shapely.geometry import box
-bbox_geom = box(*scan_request.bbox)
-if bbox_geom.area > 10_000_000:  # 10 km² in m²
-    raise HTTPException(400, "Area too large")
-
-# BAD: No validation, scan proceeds with massive bbox
-scan = await service.create_scan(bbox=scan_request.bbox)
-```
-
-### Pitfall 2: Not Handling Drawing Tool Cleanup on Mode Switch
-
-**What goes wrong:** User draws rectangle, switches to polygon mode, previous rectangle remains on map as ghost layer, user confused about what will be scanned.
-
-**Why it happens:** Terra Draw stores drawn features in internal state, switching modes doesn't auto-clear previous features unless explicitly told.
-
+### Pitfall 2: Bbox Coordinate Order Confusion
+**What goes wrong:** MapLibre `getBounds()` returns LngLatBounds object, but backend expects flat array `[minLon, minLat, maxLon, maxLat]`
+**Why it happens:** MapLibre API uses LngLatBounds class with methods like `getWest()`, `getSouth()`, etc. Backend expects simple tuple.
 **How to avoid:**
-1. Call `draw.clear()` when switching modes
-2. Clear on successful scan trigger (don't leave drawn shape on map after scan starts)
-3. Provide "Cancel Drawing" button that calls `draw.cancel()` + `draw.clear()`
-
-**Warning signs:**
-- Multiple rectangles/polygons visible on map
-- User reports "I drew a new area but old one is still there"
-- Bbox calculation uses first geometry, not latest
-
 ```typescript
-// GOOD: Clear on mode switch
-const handleRectangleClick = () => {
-  draw.clear() // Remove previous drawings
-  draw.setMode('rectangle')
-}
-
-// BAD: Doesn't clear, accumulates shapes
-const handleRectangleClick = () => {
-  draw.setMode('rectangle') // Ghost layers remain
-}
-```
-
-### Pitfall 3: Using Web Mercator Coordinates for Backend Bbox
-
-**What goes wrong:** Frontend sends bbox in EPSG:3857 (Web Mercator), backend expects EPSG:28992 (RD New), BAG WFS queries return empty results, scan completes with 0 parcels.
-
-**Why it happens:** MapLibre map uses Web Mercator (lat/lon → meters), but Dutch government APIs (BAG WFS, PDOK) use RD New coordinate system.
-
-**How to avoid:**
-1. Convert bbox to RD New in frontend BEFORE sending to backend
-2. Use proj4js with EPSG:28992 definition
-3. Backend validates bbox is within Netherlands bounds (RD New: 0-300000 X, 300000-650000 Y)
-4. Log coordinate system in API requests for debugging
-
-**Warning signs:**
-- Scan completes instantly with 0 parcels
-- Backend logs show "BAG WFS returned 0 features for bbox"
-- Bbox coordinates are 7-digit numbers (Web Mercator) instead of 6-digit (RD New)
-
-```typescript
-// GOOD: Convert to RD New before sending
-import proj4 from 'proj4'
-proj4.defs('EPSG:28992', '+proj=sterea +lat_0=52.15616055555555 ...')
-
-const bboxWebMercator = bbox(feature) // [minX_3857, minY_3857, maxX_3857, maxY_3857]
-const bboxRDNew = [
-  ...proj4('EPSG:3857', 'EPSG:28992', [bboxWebMercator[0], bboxWebMercator[1]]),
-  ...proj4('EPSG:3857', 'EPSG:28992', [bboxWebMercator[2], bboxWebMercator[3]])
+const bounds = map.getBounds()
+const bbox: [number, number, number, number] = [
+  bounds.getWest(),  // minLon
+  bounds.getSouth(), // minLat
+  bounds.getEast(),  // maxLon
+  bounds.getNorth()  // maxLat
 ]
-
-// BAD: Send Web Mercator coordinates directly
-await api.triggerScan({ bbox: bbox(feature) })
 ```
+**Warning signs:** Backend 400 errors about "min > max" when bbox looks correct in frontend logs
 
-### Pitfall 4: Not Showing Scan Area Highlight Until Scan Completes
-
-**What goes wrong:** User draws area, triggers scan, sees progress overlay but can't remember what area they selected, tries to navigate map to check but overlay blocks view.
-
-**Why it happens:** No visual feedback of scan area boundaries during scan execution.
-
+### Pitfall 3: GeoJSON MultiPolygon Edge Case
+**What goes wrong:** Gemeente boundaries can be MultiPolygon (e.g., islands, exclaves). Extracting bbox from first polygon only misses other parts.
+**Why it happens:** `geometry.coordinates` is `[Polygon1, Polygon2, ...]` for MultiPolygon, not single array
 **How to avoid:**
-1. Add semi-transparent bbox rectangle to map immediately after drawing (before scan starts)
-2. Keep bbox visible during scan progress
-3. Convert to full parcel highlight layer only after scan completes (requires WFS query)
-4. Allow map panning/zooming while scan progresses (overlay is fixed position, doesn't block map)
-
-**Warning signs:**
-- User asks "What area am I scanning?" during progress
-- User tries to click map to remind themselves (but overlay covers map controls)
-- Multiple support requests about "I don't know what I selected"
-
 ```typescript
-// GOOD: Show bbox immediately, upgrade to parcels later
-const handleAreaDrawn = (bbox, geometry) => {
-  // 1. Add bbox outline immediately (fast, no API call)
-  addBboxOutline(map, bbox)
+function calculateBboxFromGeometry(geometry: GeoJSON.Geometry): [number, number, number, number] {
+  let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity
 
-  // 2. Trigger scan
-  const scanId = await api.triggerScan({ bbox })
+  const coords = geometry.type === 'Polygon'
+    ? [geometry.coordinates]  // Wrap Polygon in array
+    : geometry.coordinates     // MultiPolygon already array of Polygons
 
-  // 3. Poll for completion
-  // 4. On complete: remove bbox outline, add parcel highlight layer
-  addScanAreaHighlightLayer(map, bbox)
-}
+  for (const polygon of coords) {
+    for (const ring of polygon) {
+      for (const [lon, lat] of ring) {
+        minLon = Math.min(minLon, lon)
+        minLat = Math.min(minLat, lat)
+        maxLon = Math.max(maxLon, lon)
+        maxLat = Math.max(maxLat, lat)
+      }
+    }
+  }
 
-// BAD: No visual feedback until scan completes
-const handleAreaDrawn = (bbox) => {
-  const scanId = await api.triggerScan({ bbox })
-  // User has no idea what area they selected
+  return [minLon, minLat, maxLon, maxLat]
 }
 ```
+**Warning signs:** Bbox too small for island gemeentes, scan results missing features
+
+### Pitfall 4: Event Handler Memory Leaks
+**What goes wrong:** Adding MapLibre event handlers in useEffect without cleanup causes duplicate handlers on re-render
+**Why it happens:** MapLibre `map.on()` registers handler but doesn't auto-remove on component unmount
+**How to avoid:**
+```typescript
+useEffect(() => {
+  if (!mapReady || !mapRef.current) return
+
+  const handleClick = (e: maplibregl.MapMouseEvent) => {
+    // handler logic
+  }
+
+  const map = mapRef.current
+  map.on('click', LAYER_ID, handleClick)
+
+  // Cleanup function
+  return () => {
+    map.off('click', LAYER_ID, handleClick)
+  }
+}, [mapReady, /* other deps */])
+```
+**Warning signs:** Click handlers firing multiple times, console warnings about too many listeners
+
+### Pitfall 5: Scan Trigger Race Condition
+**What goes wrong:** User clicks multiple features rapidly, triggering overlapping scans. Backend creates multiple scan records, frontend shows wrong scan progress.
+**Why it happens:** No debouncing or loading state check before mutation
+**How to avoid:**
+- Check `triggerScan.isPending` before allowing new click
+- Show loading cursor/overlay during mutation
+- Disable layer interaction while scan is pending
+**Example:**
+```typescript
+const handleClick = (e) => {
+  if (triggerScan.isPending || activeScanId) {
+    toast.info('Scan al bezig, wacht even...')
+    return
+  }
+  // proceed with scan trigger
+}
+```
+**Warning signs:** Multiple scan progress overlays appearing, backend logs show duplicate scans for same gemeente
 
 ## Code Examples
 
-Verified patterns from official sources:
+Verified patterns from existing codebase and MapLibre documentation:
 
-### MapLibre Terra Draw Integration
-
+### Bbox Calculation from GeoJSON Feature
 ```typescript
-// Source: https://github.com/watergis/maplibre-gl-terradraw
-// Official example from @watergis/maplibre-gl-terradraw
-import { TerraDraw, TerraDrawMapLibreGLAdapter } from 'terra-draw'
-import {
-  TerraDrawRectangleMode,
-  TerraDrawPolygonMode,
-  TerraDrawSelectMode
-} from 'terra-draw/modes'
+// Source: GeoJSON RFC 7946 + existing GemeenteBoundariesLayer.tsx pattern
+function calculateBboxFromGeometry(
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
+): [number, number, number, number] {
+  let minLon = Infinity
+  let minLat = Infinity
+  let maxLon = -Infinity
+  let maxLat = -Infinity
 
-const draw = new TerraDraw({
-  adapter: new TerraDrawMapLibreGLAdapter({ map: maplibreMap }),
-  modes: [
-    new TerraDrawRectangleMode(),
-    new TerraDrawPolygonMode({
-      snapping: true,        // Snap to existing features
-      pointerDistance: 10,   // Click tolerance in pixels
-    }),
-    new TerraDrawSelectMode({
-      flags: {
-        arbitary: {
-          feature: {},
-          delete: null,   // Disable delete (we handle via clear())
-        }
-      }
-    }),
-  ],
-})
+  // Handle both Polygon and MultiPolygon
+  const polygons = geometry.type === 'Polygon'
+    ? [geometry.coordinates]
+    : geometry.coordinates
 
-draw.start()
+  for (const polygon of polygons) {
+    // First ring is exterior, others are holes (ignore for bbox)
+    const exteriorRing = polygon[0]
+    for (const [lon, lat] of exteriorRing) {
+      minLon = Math.min(minLon, lon)
+      minLat = Math.min(minLat, lat)
+      maxLon = Math.max(maxLon, lon)
+      maxLat = Math.max(maxLat, lat)
+    }
+  }
 
-// Set active drawing mode
-draw.setMode('rectangle')
+  return [minLon, minLat, maxLon, maxLat]
+}
+```
 
-// Listen for feature completion
-draw.on('finish', (id: string) => {
-  const features = draw.getSnapshot()
-  const feature = features.find(f => f.id === id)
-  if (feature) {
-    handleDrawingComplete(feature)
+### Gemeente Click Handler with Bbox Extraction
+```typescript
+// Source: Existing GemeenteBoundariesLayer.tsx + new bbox logic
+// In addGemeenteBoundariesLayer function
+map.on('click', GEMEENTE_FILL_LAYER, (e) => {
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: [GEMEENTE_FILL_LAYER]
+  })
+
+  if (features && features.length > 0) {
+    const feature = features[0]
+    const statcode = feature.properties?.statcode
+    const statnaam = feature.properties?.statnaam
+
+    // Extract bbox from feature geometry
+    const bbox = calculateBboxFromGeometry(feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)
+
+    // Call handler with bbox
+    onGemeenteClick(statcode, statnaam, bbox)
   }
 })
-
-// Clear all drawings
-draw.clear()
-
-// Cleanup
-draw.stop()
 ```
 
-### Turf.js Bbox Calculation
-
+### Bestemmingsplan Click Handler with Viewport Bbox
 ```typescript
-// Source: https://turfjs.org/docs/api/bbox
-// Official Turf.js bbox example
-import bbox from '@turf/bbox'
-import { lineString, polygon } from '@turf/helpers'
+// Source: Existing BestemmingsplanLayer.tsx + new bbox logic
+const handleBestemmingsplanClick = async (e: maplibregl.MapMouseEvent) => {
+  const layer = map.getLayer(BESTEMMINGSPLAN_LAYER_ID)
+  if (!layer) return
 
-// Works with any GeoJSON geometry type
-const line = lineString([[-74, 40], [-78, 42], [-82, 35]])
-const bounds = bbox(line)
-// => [-82, 35, -74, 42] (minX, minY, maxX, maxY)
+  const visibility = map.getLayoutProperty(BESTEMMINGSPLAN_LAYER_ID, 'visibility')
+  if (visibility !== 'visible') return
 
-// Works with polygons (common for area selection)
-const poly = polygon([[
-  [121000, 487000],
-  [122000, 487000],
-  [122000, 488000],
-  [121000, 488000],
-  [121000, 487000]
-]])
-const polyBounds = bbox(poly)
-// => [121000, 487000, 122000, 488000]
+  // Query WMS GetFeatureInfo for zone metadata
+  const zoneInfo = await fetchGetFeatureInfo(map, e.lngLat)
 
-// Works with FeatureCollections
-const featureCollection = {
-  type: 'FeatureCollection',
-  features: [line, poly]
+  if (zoneInfo) {
+    // Extract viewport bbox (WMS doesn't provide feature geometry)
+    const bounds = map.getBounds()
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth()
+    ]
+
+    // Call handler with zone info + viewport bbox
+    onBestemmingsplanClick(zoneInfo, bbox)
+  }
 }
-const collectionBounds = bbox(featureCollection)
-// Returns bbox encompassing all features
 ```
 
-### Backend Bbox Validation with Shapely
+### Scan Trigger with Bbox
+```typescript
+// Source: Existing useScans.ts + ScanCreateRequest schema
+const handleConfirmScan = (
+  gemeenteCode: string,
+  gemeenteNaam: string,
+  bbox: [number, number, number, number]
+) => {
+  triggerScan.mutate({
+    gemeente_code: gemeenteCode,
+    gemeente_naam: gemeenteNaam,
+    bbox_wgs84: bbox
+  }, {
+    onSuccess: (data) => {
+      setActiveScanId(data.scan_id)
+      toast.success('Scan gestart')
+    },
+    onError: (err) => {
+      toast.error(`Scan starten mislukt: ${err.message}`)
+    }
+  })
+}
+```
 
-```python
-# Source: https://shapely.readthedocs.io/en/stable/geometry.html
-# Official shapely box() example
-from shapely.geometry import box
+### Highlight Selected Area Before Scan
+```typescript
+// Source: New component pattern, similar to PropertyGeometryLayer.tsx
+export function addScanAreaHighlight(
+  map: maplibregl.Map,
+  bbox: [number, number, number, number]
+): void {
+  const [minLon, minLat, maxLon, maxLat] = bbox
 
-# Create bbox polygon from coordinates
-minx, miny, maxx, maxy = 121000, 487000, 122000, 488000
-bbox_geom = box(minx, miny, maxx, maxy)
+  // Create GeoJSON box for highlight
+  const geojson: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [minLon, minLat],
+          [maxLon, minLat],
+          [maxLon, maxLat],
+          [minLon, maxLat],
+          [minLon, minLat]
+        ]]
+      },
+      properties: {}
+    }]
+  }
 
-# Calculate area (accurate for EPSG:28992)
-area_m2 = bbox_geom.area  # Square meters
+  // Add or update source
+  const source = map.getSource('scan-area-highlight')
+  if (source && source.type === 'geojson') {
+    source.setData(geojson)
+  } else {
+    map.addSource('scan-area-highlight', {
+      type: 'geojson',
+      data: geojson
+    })
 
-# Validate area limit
-MAX_AREA = 10_000_000  # 10 km²
-if area_m2 > MAX_AREA:
-    raise ValueError(f"Area {area_m2:.0f} m² exceeds max {MAX_AREA} m²")
+    // Add line layer for outline
+    map.addLayer({
+      id: 'scan-area-outline',
+      type: 'line',
+      source: 'scan-area-highlight',
+      paint: {
+        'line-color': '#8b5cf6', // Purple
+        'line-width': 3,
+        'line-dasharray': [2, 2]
+      }
+    })
 
-# Convert to GeoJSON for storage
-import json
-geojson = json.dumps(bbox_geom.__geo_interface__)
+    // Add fill layer for tint
+    map.addLayer({
+      id: 'scan-area-fill',
+      type: 'fill',
+      source: 'scan-area-highlight',
+      paint: {
+        'fill-color': '#8b5cf6',
+        'fill-opacity': 0.15
+      }
+    }, 'scan-area-outline') // Insert before outline
+  }
+}
 
-# Validate bbox is within Netherlands bounds (RD New)
-NL_BOUNDS = box(0, 300000, 300000, 650000)
-if not NL_BOUNDS.contains(bbox_geom):
-    raise ValueError("Bbox outside Netherlands bounds")
+export function removeScanAreaHighlight(map: maplibregl.Map): void {
+  if (map.getLayer('scan-area-fill')) {
+    map.removeLayer('scan-area-fill')
+  }
+  if (map.getLayer('scan-area-outline')) {
+    map.removeLayer('scan-area-outline')
+  }
+  if (map.getSource('scan-area-highlight')) {
+    map.removeSource('scan-area-highlight')
+  }
+}
 ```
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| **mapbox-gl-draw** | **terra-draw** | 2024 | mapbox-gl-draw unmaintained, terra-draw actively developed with modern API, better MapLibre support |
-| **Manual WFS pagination** | **Automatic via bag_wfs_client** | v3.0 Phase 19 | Existing BAG WFS client handles 1000-feature pagination automatically, prevents silent truncation |
-| **Gemeente-wide scans only** | **User-defined bbox scans** | This phase | 90%+ reduction in API calls, faster scan times (seconds vs minutes), enables area-first workflow |
-| **Turf.js full bundle (600KB)** | **Modular @turf/bbox (2KB)** | 2020+ | Tree-shaking support, only import needed functions |
+| Drawing tools (terra-draw) | Click-based selection on existing features | Phase 23 revert (2026-02-12) | UX aligned with user mental models — developers think in zones/gemeentes, not arbitrary rectangles |
+| Full gemeente scans only | Bbox-constrained scans | Phase 23 Plan 02 (2026-02-11) | Enables focused scans on hundreds of parcels instead of thousands |
+| WMS GetMap only | WMS GetFeatureInfo for zone metadata | Phase 22 (2026-02-11) | Click-to-inspect zoning, but no geometry extraction |
 
 **Deprecated/outdated:**
-- **mapbox-gl-draw:** No longer maintained as of 2024, compatibility issues with MapLibre 3.0+. Use terra-draw instead.
-- **turf (full bundle):** Deprecated in favor of modular packages like @turf/bbox. Full bundle is 600KB+, modular is <10KB.
-- **OWSLib for WFS queries:** Sync-only library, incompatible with FastAPI async. Use httpx directly (already in project).
+- **terra-draw integration**: Removed in commit 42be8fb (2026-02-12). Drawing rectangles/polygons not natural UX for real estate developers.
+- **DrawingToolsControl component**: Removed in revert commit. Replaced by click handlers on existing layers.
+- **Frontend proj4/turf dependency**: Never added. Backend handles all coordinate conversion via pyproj.
 
 ## Open Questions
 
-1. **Coordinate Projection in Frontend**
-   - What we know: MapLibre uses Web Mercator (EPSG:3857), Dutch APIs use RD New (EPSG:28992)
-   - What's unclear: Does @watergis/maplibre-gl-terradraw return geometries in map CRS (Web Mercator) or source CRS?
-   - Recommendation: Test with console.log(feature.geometry.coordinates) after drawing. If coordinates are 6-7 digits, likely Web Mercator. Convert to RD New using proj4js before sending to backend.
+1. **Bestemmingsplan zone geometry precision**
+   - What we know: Phase 22 uses WMS raster tiles, GetFeatureInfo returns metadata only (no geometry)
+   - What's unclear: Is PDOK WFS bestemmingsplangebied layer available for vector features? Or must wait for Ruimtelijkeplannen.nl REST API v4 key (Phase 26)?
+   - Recommendation: Accept viewport bbox limitation for v3.1, investigate WFS in parallel as stretch goal
 
-2. **Drawing Tool UI Placement**
-   - What we know: LayerToggle exists in top-right corner, plenty of space
-   - What's unclear: Should drawing tools be separate control group or integrated into LayerToggle?
-   - Recommendation: Separate control group for visual distinction (drawing is action, layers are visibility toggles). Place below LayerToggle.
+2. **Area estimation before scan trigger**
+   - What we know: Backend validates area < 10 km² in RD New coordinates (accurate)
+   - What's unclear: Should frontend show area estimate before scan? Calculate in WGS84 (inaccurate but simple) or send bbox to backend validation endpoint?
+   - Recommendation: Show simple bbox area estimate using Haversine formula in WGS84, accept ~5% error for Netherlands. Backend is source of truth for validation.
 
-3. **Mobile Drawing Experience**
-   - What we know: Terra Draw supports touch events
-   - What's unclear: How usable is polygon drawing on mobile (small screen, finger precision)?
-   - Recommendation: Start with rectangle mode only on mobile (2 taps), defer polygon mode to desktop. Detect screen size and conditionally show polygon button.
+3. **Multi-select for large areas**
+   - What we know: Single click = single bbox, 10 km² limit enforced
+   - What's unclear: What if user wants to scan multiple disconnected zones? Hold Shift to add to selection? Or defer to Phase 24+?
+   - Recommendation: Single-selection for v3.1, defer multi-select to future phase
+
+4. **Confirmation toast vs modal**
+   - What we know: Scan trigger is async mutation, can be cancelled via ScanProgressOverlay
+   - What's unclear: Is sonner toast with action buttons sufficient for scan confirmation, or does this need dedicated modal with area preview?
+   - Recommendation: Toast for gemeente clicks (familiar boundary), modal for bestemmingsplan clicks (viewport bbox may surprise user)
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- [MapLibre GL JS Draw Geometries with Terra Draw](https://maplibre.org/maplibre-gl-js/docs/examples/draw-geometries-with-terra-draw/) — Official MapLibre example
-- [maplibre-gl-terradraw announcement - FOSS4G Europe 2025](https://talks.osgeo.org/foss4g-europe-2025/talk/UTUW8Z/) — Official plugin announcement
-- [GitHub: watergis/maplibre-gl-terradraw](https://github.com/watergis/maplibre-gl-terradraw) — Plugin source code and examples
-- [npm: @watergis/maplibre-gl-terradraw](https://www.npmjs.com/package/@watergis/maplibre-gl-terradraw) — Version 1.0.1, published 2025
-- [GitHub: JamesLMilner/terra-draw](https://github.com/JamesLMilner/terra-draw) — Core Terra Draw library
-- [npm: terra-draw](https://www.npmjs.com/package/terra-draw) — Version 1.24.0, actively maintained
-- [Turf.js bbox Documentation](https://turfjs.org/docs/api/bbox) — Official API reference
-- [npm: @turf/bbox](https://www.npmjs.com/package/@turf/bbox) — Version 7.2.0, 8M+ weekly downloads
-- [Shapely Documentation - box()](https://shapely.readthedocs.io/en/stable/geometry.html) — Official Python library docs
+- [MapLibre GL JS Documentation](https://maplibre.org/maplibre-gl-js/docs/) - API reference for map interactions, event handling, LngLatBounds
+- [MapLibre GL JS Map Class](https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/) - getBounds(), queryRenderedFeatures(), event handlers
+- [MapLibre GL JS LngLatBounds](https://maplibre.org/maplibre-gl-js/docs/API/classes/LngLatBounds/) - Bounding box representation and conversion
+- [GeoJSON RFC 7946](https://datatracker.ietf.org/doc/html/rfc7946) - Polygon/MultiPolygon coordinate structure, bbox format
+- Existing codebase Phase 21-22 components (GemeenteBoundariesLayer.tsx, BestemmingsplanLayer.tsx, useScans.ts)
+- Backend Plan 23-02 implementation (ScanCreateRequest.bbox_wgs84, coordinate conversion, validation)
 
 ### Secondary (MEDIUM confidence)
+- [MapLibre GL JS Examples](https://maplibre.org/maplibre-gl-js/docs/examples/) - Polygon click interaction patterns
+- [React useCallback documentation](https://react.dev/reference/react/useCallback) - Memoization patterns for map event handlers
+- Phase 23 STATE.md revert context (click-based UX rationale)
 
-- [MapLibre-Geoman Documentation](https://geoman.io/docs/maplibre) — Alternative drawing library (heavier but more features)
-- [npm: @geoman-io/maplibre-geoman-free](https://www.npmjs.com/package/@geoman-io/maplibre-geoman-free) — Free version of MapLibre-Geoman
-- [MapLibre-Geoman vs Mapbox-GL-Draw](https://geoman.io/blog/maplibre-geoman-vs-mapbox-gl-draw) — Comparison blog post
-- [MapLibre Draw Polygon with mapbox-gl-draw](https://maplibre.org/maplibre-gl-js/docs/examples/draw-polygon-with-mapbox-gl-draw/) — Legacy example (deprecated library)
-
-### Tertiary (LOW confidence - needs validation)
-
-- EPSG:28992 proj4 definition — Need to verify official EPSG registry definition for RD New
-- Mobile touch event handling in Terra Draw — No official mobile documentation found, needs testing
+### Tertiary (LOW confidence)
+- [react-map-gl State Management](https://visgl.github.io/react-map-gl/docs/get-started/state-management) - React patterns with MapLibre (library not used in this codebase, but patterns transferable)
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH - All libraries actively maintained, official MapLibre integration, npm versions verified
-- Architecture patterns: HIGH - Existing scan pipeline already supports bbox queries, minimal backend changes needed
-- Pitfalls: MEDIUM-HIGH - Coordinate projection needs testing, mobile UX needs validation, area validation critical
-- Drawing libraries: HIGH - terra-draw is official recommendation from MapLibre docs, @turf/bbox is industry standard
+- Standard stack: HIGH - All libraries already present in codebase, no new dependencies needed
+- Architecture: HIGH - Two existing click handler patterns (GeoJSON + WMS), bbox extraction is standard min/max iteration
+- Pitfalls: HIGH - WMS raster limitation is well-documented, coordinate order confusion is common MapLibre gotcha, event cleanup is standard React pattern
+- Backend integration: HIGH - Plan 23-02 already shipped with bbox_wgs84 field, validation, and coordinate conversion
 
-**Research date:** 2026-02-11
-**Valid until:** 2026-04-11 (60 days - stable ecosystem, slow-moving GIS standards)
+**Research date:** 2026-02-12
+**Valid until:** 60 days (stable domain — MapLibre API stable, GeoJSON spec unchanged, backend contract fixed)
+
+**Key unknowns requiring validation during planning:**
+1. PDOK WFS bestemmingsplangebied availability for vector features (alternative to viewport bbox)
+2. Confirmation UX flow (toast vs modal) — user testing needed
+3. Area estimation accuracy tradeoff (simple WGS84 Haversine vs backend round-trip)
