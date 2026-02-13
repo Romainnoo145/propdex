@@ -33,13 +33,26 @@ async def get_gemeente_bbox(
     # CBS gebiedsindelingen WFS 2024 (latest stable year)
     wfs_url = "https://service.pdok.nl/cbs/gebiedsindelingen/2024/wfs/v1_0"
 
+    # CBS statcode uses GM prefix (e.g., "GM0983" for Venlo)
+    statcode = gemeente_code if gemeente_code.startswith("GM") else f"GM{gemeente_code}"
+
+    # Use OGC XML FILTER (CQL_FILTER is silently ignored by this PDOK WFS)
+    ogc_filter = (
+        f"<Filter><PropertyIsEqualTo>"
+        f"<PropertyName>statcode</PropertyName>"
+        f"<Literal>{statcode}</Literal>"
+        f"</PropertyIsEqualTo></Filter>"
+    )
+
     params = {
         "service": "WFS",
         "version": "2.0.0",
         "request": "GetFeature",
-        "typeName": "gemeenten",
-        "outputFormat": "application/json",  # Request GeoJSON for easy parsing
-        "CQL_FILTER": f"gemeentecode='{gemeente_code}'",  # CQL filter syntax
+        "typeName": "gebiedsindelingen:gemeente_gegeneraliseerd",
+        "outputFormat": "application/json",
+        "srsName": "EPSG:28992",
+        "FILTER": ogc_filter,
+        "count": "1",
     }
 
     response = await client.get(wfs_url, params=params, timeout=30.0)
