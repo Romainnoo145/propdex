@@ -112,8 +112,10 @@ def _score_zoning_residential(bestemmingen: list | None) -> float:
         return 0.0
 
     for bestemming in bestemmingen:
-        if isinstance(bestemming, dict) and bestemming.get("type") == "Wonen":
-            return 25.0
+        if isinstance(bestemming, dict):
+            btype = (bestemming.get("type") or "").lower()
+            if btype == "wonen":
+                return 25.0
 
     return 0.0
 

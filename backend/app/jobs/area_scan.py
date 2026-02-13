@@ -12,12 +12,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 from app.government_apis.bag_wfs import bag_wfs_client
+from app.government_apis.plu_wfs import plu_wms_client
 from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
 from app.services.parcel_scoring import compute_opportunity_score
 
 logger = logging.getLogger(__name__)
+
+# Concurrent WMS GetFeatureInfo requests for bestemmingen
+WMS_CONCURRENCY = 15
 
 
 async def area_scan_job(
@@ -26,10 +30,13 @@ async def area_scan_job(
     organization_id: str,
 ) -> dict:
     """
-    Background job: Scan area for parcels, fetch BAG data, compute scores.
+    Background job: Scan area for parcels, fetch bestemmingen, compute scores.
 
-    Runs in ARQ worker process. Job state tracked in Redis,
-    scan progress and results stored in PostgreSQL.
+    Pipeline:
+        Phase 1 (0-25%):  Fetch BAG panden in bbox
+        Phase 2 (25-50%): Fetch bestemmingen per parcel via WMS GetFeatureInfo
+        Phase 3 (50-90%): Upsert parcels + compute scores
+        Phase 4 (90-100%): Finalize
 
     Args:
         ctx: ARQ context (contains redis connection, etc.)
@@ -39,7 +46,6 @@ async def area_scan_job(
     Returns:
         dict with scan_id and status for ARQ result storage
     """
-    # Create a new database session (worker runs outside FastAPI)
     engine = create_async_engine(
         settings.DATABASE_URL,
         pool_size=5,
@@ -62,10 +68,9 @@ async def area_scan_job(
         http_client = httpx.AsyncClient(timeout=30.0)
 
         async with session_factory() as session:
-            # Phase 1: Setup (0% progress)
+            # Load AreaScan record
             logger.info(f"Starting area scan {scan_id} for org {org_id}")
 
-            # Load AreaScan record
             stmt = select(AreaScan).where(
                 AreaScan.id == scan_uuid,
                 AreaScan.organization_id == org_id,
@@ -86,9 +91,9 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
+            # ── Phase 1: Fetch BAG panden (0-25%) ──
             logger.info(f"Scan {scan_id}: fetching parcels from BAG WFS")
 
-            # Phase 2: Fetch parcels (0-30% progress)
             try:
                 features = await bag_wfs_client.get_panden_in_bbox(
                     scan.bbox_minx,
@@ -107,34 +112,59 @@ async def area_scan_job(
                 return {"scan_id": scan_id, "status": "failed", "error": str(e)}
 
             scan.parcels_total = len(features)
-            scan.progress_pct = 30
+            scan.progress_pct = 25
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            logger.info(f"Scan {scan_id}: fetched {len(features)} panden")
+
+            # ── Phase 2: Fetch bestemmingen per parcel via WMS (25-50%) ──
+            scan.current_phase = "fetching_bestemmingen"
+            scan.progress_pct = 25
             session.add(scan)
             await session.flush()
             await session.commit()
 
             logger.info(
-                f"Scan {scan_id}: fetched {len(features)} panden, processing..."
+                f"Scan {scan_id}: fetching bestemmingen via WMS GetFeatureInfo "
+                f"({len(features)} parcels, concurrency={WMS_CONCURRENCY})"
             )
 
-            # Phase 3: Process parcels and cross-reference (30-90% progress)
-            scan.current_phase = "cross_referencing_bag"
+            bestemmingen_list = await _batch_fetch_bestemmingen(
+                features, http_client
+            )
+
+            enriched_count = sum(1 for b in bestemmingen_list if b is not None)
+            scan.progress_pct = 50
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            logger.info(
+                f"Scan {scan_id}: enriched {enriched_count}/{len(features)} "
+                f"parcels with bestemmingen"
+            )
+
+            # ── Phase 3: Upsert parcels + compute scores (50-90%) ──
+            scan.current_phase = "processing_parcels"
             session.add(scan)
             await session.flush()
             await session.commit()
 
             failed_count = 0
 
-            for idx, feature in enumerate(features):
+            for idx, (feature, bestemmingen) in enumerate(
+                zip(features, bestemmingen_list, strict=True)
+            ):
                 try:
-                    # Upsert parcel into cache
                     parcel = await _upsert_parcel_cache(
-                        feature, org_id, scan.gemeente_code, session
+                        feature, org_id, scan.gemeente_code, session,
+                        bestemmingen=bestemmingen,
                     )
 
-                    # Compute opportunity score
                     score_breakdown = compute_opportunity_score(parcel)
 
-                    # Create ScanResult linking scan to parcel
                     scan_result = ScanResult(
                         organization_id=org_id,
                         scan_id=scan.id,
@@ -149,9 +179,9 @@ async def area_scan_job(
 
                     # Update progress every 10 parcels
                     if (idx + 1) % 10 == 0 or (idx + 1) == len(features):
-                        progress_pct = 30 + int((idx + 1) / len(features) * 60)
+                        progress_pct = 50 + int((idx + 1) / len(features) * 40)
                         await _update_scan_progress(
-                            scan, "cross_referencing_bag", progress_pct, idx + 1, session
+                            scan, "processing_parcels", progress_pct, idx + 1, session
                         )
 
                 except Exception as e:
@@ -161,18 +191,13 @@ async def area_scan_job(
                     failed_count += 1
                     continue
 
-            # Phase 4: Finalize (90-100%)
-            scan.current_phase = "querying_bestemmingen"
+            # ── Phase 4: Finalize (90-100%) ──
+            scan.current_phase = "finalizing"
             scan.progress_pct = 90
             session.add(scan)
             await session.flush()
             await session.commit()
 
-            # Note: DSO queries skipped for MVP (per task instructions)
-            # bestemmingen field stays NULL on ParcelCache
-            # Add DSO enrichment as on-demand Tier 2 in future phases
-
-            # Mark scan complete
             scan.status = "completed"
             scan.completed_at = datetime.utcnow()
             scan.progress_pct = 100
@@ -182,14 +207,14 @@ async def area_scan_job(
             await session.commit()
 
             logger.info(
-                f"Scan {scan_id}: completed successfully ({scan.parcels_processed} processed, {failed_count} failed)"
+                f"Scan {scan_id}: completed ({scan.parcels_processed} processed, "
+                f"{enriched_count} enriched, {failed_count} failed)"
             )
 
             return {"scan_id": scan_id, "status": "completed"}
 
     except asyncio.CancelledError:
         logger.warning(f"Scan {scan_id}: cancelled by user")
-        # Use fresh session to update status (original may be in bad state)
         try:
             async with session_factory() as session:
                 stmt = select(AreaScan).where(
@@ -210,7 +235,6 @@ async def area_scan_job(
 
     except Exception as e:
         logger.exception(f"Unexpected error in area_scan_job for {scan_id}: {e}")
-        # Try to update scan status to failed
         try:
             async with session_factory() as session:
                 stmt = select(AreaScan).where(
@@ -231,10 +255,45 @@ async def area_scan_job(
         return {"scan_id": scan_id, "status": "error", "error": str(e)}
 
     finally:
-        # Clean up resources
         if http_client:
             await http_client.aclose()
         await engine.dispose()
+
+
+async def _batch_fetch_bestemmingen(
+    features: list[dict],
+    client: httpx.AsyncClient,
+) -> list[list[dict] | None]:
+    """
+    Batch-fetch bestemmingen for all parcels using WMS GetFeatureInfo.
+
+    Uses asyncio.Semaphore to limit concurrent requests to PDOK WMS.
+    Each parcel's centroid is queried for its bestemmingshoofdgroep.
+
+    Args:
+        features: List of GeoJSON features from BAG WFS
+        client: Shared httpx AsyncClient
+
+    Returns:
+        List aligned with features, each element is bestemmingen list or None.
+    """
+    semaphore = asyncio.Semaphore(WMS_CONCURRENCY)
+
+    async def fetch_one(feature: dict) -> list[dict] | None:
+        async with semaphore:
+            geom_data = feature.get("geometry")
+            if not geom_data:
+                return None
+            try:
+                geom = shape(geom_data)
+                centroid = geom.centroid
+                return await plu_wms_client.get_bestemming_at_point(
+                    centroid.x, centroid.y, client
+                )
+            except Exception:
+                return None
+
+    return await asyncio.gather(*[fetch_one(f) for f in features])
 
 
 async def _upsert_parcel_cache(
@@ -242,6 +301,7 @@ async def _upsert_parcel_cache(
     org_id: uuid.UUID,
     gemeente_code: str | None,
     session: AsyncSession,
+    bestemmingen: list[dict] | None = None,
 ) -> ParcelCache:
     """
     Upsert BAG WFS feature into ParcelCache.
@@ -251,6 +311,7 @@ async def _upsert_parcel_cache(
         org_id: Organization UUID
         gemeente_code: Municipality code for this scan
         session: Database session
+        bestemmingen: Matched bestemmingsplan data from WMS GetFeatureInfo
 
     Returns:
         ParcelCache entry (created or updated)
@@ -276,24 +337,31 @@ async def _upsert_parcel_cache(
     result = await session.execute(stmt)
     parcel = result.scalar_one_or_none()
 
+    # Convert GeoJSON geometry to PostGIS geometry
+    import json
+
+    from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
+    geojson_str = json.dumps(geometry)
+    # BAG WFS returns RD coordinates (EPSG:28992)
+    geom_expr = ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 28992))
+
     if parcel:
-        # Update existing entry
-        parcel.geometry = f"SRID=28992;{geometry}"
+        parcel.geometry = geom_expr
         parcel.area_m2 = area_m2
-        parcel.has_pand = True  # BAG WFS returns buildings, so building exists
+        parcel.has_pand = True
         parcel.gemeente_code = gemeente_code
+        parcel.bestemmingen = bestemmingen
         parcel.updated_at = datetime.utcnow()
         session.add(parcel)
     else:
-        # Create new entry
         parcel = ParcelCache(
             organization_id=org_id,
             parcel_id=identificatie,
-            geometry=f"SRID=28992;{geometry}",
+            geometry=geom_expr,
             area_m2=area_m2,
-            has_pand=True,  # BAG WFS returns buildings
+            has_pand=True,
             gemeente_code=gemeente_code,
-            bestemmingen=None,  # Will be populated in Tier 2 enrichment
+            bestemmingen=bestemmingen,
             enrichment_data=None,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -311,16 +379,7 @@ async def _update_scan_progress(
     processed: int,
     session: AsyncSession,
 ) -> None:
-    """
-    Update scan progress and commit to database.
-
-    Args:
-        scan: AreaScan instance to update
-        phase: Current processing phase
-        pct: Progress percentage (0-100)
-        processed: Number of parcels processed so far
-        session: Database session
-    """
+    """Update scan progress and commit to database."""
     scan.current_phase = phase
     scan.progress_pct = pct
     scan.parcels_processed = processed

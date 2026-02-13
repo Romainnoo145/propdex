@@ -83,6 +83,9 @@ class APIRateLimiter:
 # BAG WFS (PDOK) is public and has generous limits
 bag_wfs_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
 
+# PLU WFS (PDOK) is public, same limits as BAG WFS
+plu_wfs_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
 # SRU (PDOK Search) is less tolerant of heavy usage
 sru_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
