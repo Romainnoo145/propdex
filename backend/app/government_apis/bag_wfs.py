@@ -53,6 +53,7 @@ class BAGWFSClient:
 
     BASE_URL = "https://service.pdok.nl/lv/bag/wfs/v2_0"
     PAGE_SIZE = 1000  # PDOK maximum features per request
+    MAX_FEATURES = 10000  # Cap to prevent scanning 100k+ parcels
 
     async def get_panden_in_bbox(
         self,
@@ -114,20 +115,27 @@ class BAGWFSClient:
                 data = handle_api_response(response, source="bag-wfs")
 
             features = data.get("features", [])
-            number_returned = data.get("numberReturned", len(features))
-            number_matched = data.get("numberMatched", number_returned)
-
             all_features.extend(features)
 
             logger.info(
-                f"BAG WFS: fetched {len(all_features)}/{number_matched} panden (page {page_num})"
+                f"BAG WFS: fetched {len(all_features)} panden (page {page_num})"
             )
 
-            # Stop if we've fetched all available features
-            if number_returned < self.PAGE_SIZE or len(all_features) >= number_matched:
+            # Stop conditions:
+            # 1. Received fewer features than page size (last page)
+            # 2. Hit the max features cap
+            # Note: PDOK JSON responses don't include numberMatched/numberReturned,
+            # so we rely on partial page detection for pagination termination.
+            if len(features) < self.PAGE_SIZE:
                 break
 
-            # More pages available
+            if len(all_features) >= self.MAX_FEATURES:
+                logger.warning(
+                    f"BAG WFS: capped at {self.MAX_FEATURES} panden "
+                    f"(more available in bbox)"
+                )
+                break
+
             start_index += self.PAGE_SIZE
 
         return all_features

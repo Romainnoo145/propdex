@@ -121,14 +121,14 @@ async def trigger_scan(
                 # Validate area using shapely (RD New is conformal, area accurate in m²)
                 bbox_geom = box(minx, miny, maxx, maxy)
                 area_m2 = bbox_geom.area
-                MAX_AREA = 10_000_000  # 10 km²
+                MAX_AREA = 500_000_000  # 500 km² (allows all Dutch gemeentes)
 
                 if area_m2 > MAX_AREA:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=(
-                            f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 10 km². "
-                            "Teken een kleiner gebied."
+                            f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 500 km². "
+                            "Selecteer een kleiner gebied."
                         ),
                     )
 
