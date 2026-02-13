@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 23 of 26 (Area Selection Tools)
-**Plan:** Awaiting re-plan (drawing tools reverted)
-**Status:** Re-planning — pivot to click-based area selection
+**Plan:** 23-01 complete (bbox utilities and highlight layer)
+**Status:** Active — building click-based area selection
 
-**Last activity:** 2026-02-11 — Plan 23-02 complete (backend bbox support), plans 23-01/23-03 reverted (drawing tools UX rejected)
+**Last activity:** 2026-02-13 — Plan 23-01 complete (geo-utils, ScanAreaHighlightLayer)
 
-**Progress:** [██░░░░░░░░] 20% (v3.1)
+**Progress:** [██████████] 98%
 
 ---
 
@@ -64,6 +64,8 @@ See `.planning/PROJECT.md` Key Decisions table.
 - PIVOT: Click-based area selection using existing map features (bestemmingsplan zones, gemeente boundaries)
 - KEPT: Backend bbox support (23-02) — coordinate conversion, area validation, 10 km² limit
 - Server-side coordinate conversion (no frontend proj4 dependency)
+- Plan 23-01: Imperative layer management pattern for ScanAreaHighlightLayer (consistent with PropertyGeometryLayer)
+- Plan 23-01: Client-side bbox calculation from GeoJSON geometry (not available in CBS WFS properties)
 
 **Phase 22 decisions:**
 - Minzoom 10 for bestemmingsplan layer (gemeente overview context, not parcel-only)
@@ -110,12 +112,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-11
-**Stopped At:** Reverted drawing tools, pivot to click-based area selection
+**Last Session:** 2026-02-13T15:35:52.926Z
+**Stopped At:** Completed 23-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 23` to re-plan with click-based area selection UX
+**Next Action:** `/gsd:execute-plan 23-03` to wire bbox utilities into map scan flow
 
 ---
 
-*State updated: 2026-02-11 (Plans 23-01/23-03 reverted, re-planning Phase 23)*
+*State updated: 2026-02-13 (Plan 23-01 complete: bbox utilities and highlight layer)*
