@@ -379,15 +379,16 @@ function MapPage() {
           setGemeenteGeojson(geojson)
 
           // Add layer with click handler
-          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam, bbox) => {
+          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam, bbox, geometry) => {
             // Guard: prevent selection during active scan
             if (triggerScan.isPending || activeScanId) {
               toast.info('Scan al bezig, wacht even...')
               return
             }
 
-            // Show bbox highlight on map
-            addScanAreaHighlight(map, bbox)
+            // Replace any existing highlight, then show actual gemeente shape
+            removeScanAreaHighlight(map)
+            addScanAreaHighlight(map, geometry)
 
             // Store selection state
             setSelectedArea({ bbox, name: gemeenteNaam, source: 'gemeente' })
@@ -504,7 +505,13 @@ function MapPage() {
       bounds.getNorth(),
     ]
 
-    addScanAreaHighlight(mapRef.current, bbox)
+    const bboxPolygon: GeoJSON.Polygon = {
+      type: 'Polygon',
+      coordinates: [[
+        [bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]], [bbox[0], bbox[1]],
+      ]],
+    }
+    addScanAreaHighlight(mapRef.current, bboxPolygon)
     setSelectedArea({ bbox, name: `${zoneInfo.info.bestemmingType} - ${zoneInfo.info.planNaam}`, source: 'bestemmingsplan' })
 
     // Trigger scan directly (bestemmingsplan click is already a deliberate action)

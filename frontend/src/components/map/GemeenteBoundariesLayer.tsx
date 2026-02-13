@@ -55,7 +55,8 @@ export function addGemeenteBoundariesLayer(
   onGemeenteClick: (
     gemeenteCode: string,
     gemeenteNaam: string,
-    bbox: [number, number, number, number]
+    bbox: [number, number, number, number],
+    geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
   ) => void
 ): void {
   // Guard: source already exists
@@ -117,18 +118,25 @@ export function addGemeenteBoundariesLayer(
 
       const statcode = feature.properties?.statcode as string | undefined;
       const statnaam = feature.properties?.statnaam as string | undefined;
-      const geometry = feature.geometry as
-        | GeoJSON.Polygon
-        | GeoJSON.MultiPolygon;
 
-      // Only process Polygon and MultiPolygon geometries
+      if (!statcode || !statnaam) return;
+
+      // Look up full geometry from cached GeoJSON — NOT from rendered feature,
+      // because MapLibre clips rendered features to tile boundaries when zoomed in
+      const fullFeature = gemeenteGeoJSONCache?.features.find(
+        (f) => f.properties?.statcode === statcode
+      );
+      const geometry = fullFeature?.geometry as
+        | GeoJSON.Polygon
+        | GeoJSON.MultiPolygon
+        | undefined;
+
       if (
-        statcode &&
-        statnaam &&
+        geometry &&
         (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon')
       ) {
         const bbox = calculateBboxFromGeometry(geometry);
-        onGemeenteClick(statcode, statnaam, bbox);
+        onGemeenteClick(statcode, statnaam, bbox, geometry);
       }
     }
   };
