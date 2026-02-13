@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useRef, useState, useCallback, useEffect } from 'react'
-import type maplibregl from 'maplibre-gl'
+import maplibregl from 'maplibre-gl'
+import type { Map as MapLibreMap } from 'maplibre-gl'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
@@ -24,6 +25,10 @@ import {
   setBestemmingsplanVisibility,
   setupBestemmingsplanClickHandler,
 } from '@/components/map/BestemmingsplanLayer'
+import {
+  addScanAreaHighlight,
+  removeScanAreaHighlight,
+} from '@/components/map/ScanAreaHighlightLayer'
 import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -54,7 +59,7 @@ export const Route = createFileRoute('/_authenticated/map')({
 type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
 
 function MapPage() {
-  const mapRef = useRef<maplibregl.Map | null>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
   const navigate = useNavigate()
   const { postcode, huisnummer, reportId } = Route.useSearch()
   const { accessToken } = useAuth()
@@ -67,6 +72,13 @@ function MapPage() {
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
   const [zoneInfo, setZoneInfo] = useState<{ info: ZoneFeatureInfo; lngLat: [number, number] } | null>(null)
   const [zoneLoading, setZoneLoading] = useState(false)
+  // Track selected area for confirmation flow (used for state management, not rendering)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedArea, setSelectedArea] = useState<{
+    bbox: [number, number, number, number]
+    name: string
+    source: 'gemeente' | 'bestemmingsplan'
+  } | null>(null)
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -209,6 +221,16 @@ function MapPage() {
     )
     return cleanup
   }, [mapReady])
+
+  // Cleanup highlight on unmount
+  useEffect(() => {
+    const map = mapRef.current
+    return () => {
+      if (map) {
+        removeScanAreaHighlight(map)
+      }
+    }
+  }, [])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
@@ -357,28 +379,55 @@ function MapPage() {
           setGemeenteGeojson(geojson)
 
           // Add layer with click handler
-          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam) => {
-            console.log('Gemeente selected:', gemeenteCode, gemeenteNaam)
+          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam, bbox) => {
+            // Guard: prevent selection during active scan
+            if (triggerScan.isPending || activeScanId) {
+              toast.info('Scan al bezig, wacht even...')
+              return
+            }
 
-            // Trigger scan
-            triggerScan.mutate(
-              { gemeente_code: gemeenteCode, gemeente_naam: gemeenteNaam },
-              {
-                onSuccess: (data) => {
-                  if (data.status === 'existing' && !data.needs_rescan) {
-                    // Existing scan found - show results from existing scan
-                    setActiveScanId(data.scan_id)
-                    toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
-                  } else {
-                    // New scan started
-                    setActiveScanId(data.scan_id)
-                  }
+            // Show bbox highlight on map
+            addScanAreaHighlight(map, bbox)
+
+            // Store selection state
+            setSelectedArea({ bbox, name: gemeenteNaam, source: 'gemeente' })
+
+            // Show confirmation toast with action buttons
+            toast.info(`${gemeenteNaam} geselecteerd`, {
+              description: 'Klik op "Scan starten" om percelen te scannen',
+              duration: 10000,
+              action: {
+                label: 'Scan starten',
+                onClick: () => {
+                  triggerScan.mutate(
+                    { gemeente_code: gemeenteCode, gemeente_naam: gemeenteNaam, bbox_wgs84: bbox },
+                    {
+                      onSuccess: (data) => {
+                        if (data.status === 'existing' && !data.needs_rescan) {
+                          setActiveScanId(data.scan_id)
+                          toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
+                        } else {
+                          setActiveScanId(data.scan_id)
+                        }
+                        // Remove highlight after scan starts (progress overlay takes over)
+                        if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+                        setSelectedArea(null)
+                      },
+                      onError: (err) => {
+                        toast.error(`Scan starten mislukt: ${err.message}`)
+                        if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+                        setSelectedArea(null)
+                      },
+                    }
+                  )
                 },
-                onError: (err) => {
-                  toast.error(`Scan starten mislukt: ${err.message}`)
-                },
-              }
-            )
+              },
+              onDismiss: () => {
+                // Clear highlight if toast auto-dismisses or is manually dismissed
+                if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+                setSelectedArea(null)
+              },
+            })
           })
         } catch (err) {
           console.error('Failed to fetch gemeente boundaries:', err)
@@ -393,7 +442,7 @@ function MapPage() {
       setGemeenteBoundariesVisibility(map, false)
     }
     },
-    [gemeenteGeojson, triggerScan]
+    [gemeenteGeojson, triggerScan, activeScanId]
   )
 
   // Bestemmingsplan layer toggle handler
@@ -420,6 +469,62 @@ function MapPage() {
     },
     []
   )
+
+  // Handle "Scan dit gebied" from bestemmingsplan zone
+  const handleScanZone = useCallback(() => {
+    if (!mapRef.current || !zoneInfo) return
+
+    // Guard: prevent scan during active scan
+    if (triggerScan.isPending || activeScanId) {
+      toast.info('Scan al bezig, wacht even...')
+      return
+    }
+
+    // Try to find gemeente at zone click location
+    const point = mapRef.current.project(new maplibregl.LngLat(zoneInfo.lngLat[0], zoneInfo.lngLat[1]))
+    const features = mapRef.current.queryRenderedFeatures(point, { layers: ['gemeente-fill'] })
+
+    if (features.length === 0) {
+      toast.info('Zet de gemeentegrenzen aan om een scan te starten')
+      return
+    }
+
+    const gemeenteFeature = features[0]
+    const gemeenteCode = gemeenteFeature?.properties?.statcode as string
+    const gemeenteNaam = gemeenteFeature?.properties?.statnaam as string
+
+    if (!gemeenteCode || !gemeenteNaam) return
+
+    // Use viewport bbox
+    const bounds = mapRef.current.getBounds()
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ]
+
+    addScanAreaHighlight(mapRef.current, bbox)
+    setSelectedArea({ bbox, name: `${zoneInfo.info.bestemmingType} - ${zoneInfo.info.planNaam}`, source: 'bestemmingsplan' })
+
+    // Trigger scan directly (bestemmingsplan click is already a deliberate action)
+    triggerScan.mutate(
+      { gemeente_code: gemeenteCode, gemeente_naam: gemeenteNaam, bbox_wgs84: bbox },
+      {
+        onSuccess: (data) => {
+          setActiveScanId(data.scan_id)
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+          setZoneInfo(null) // Close zone info card
+        },
+        onError: (err) => {
+          toast.error(`Scan starten mislukt: ${err.message}`)
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+        },
+      }
+    )
+  }, [zoneInfo, triggerScan, activeScanId])
 
   return (
     <AppLayout>
@@ -486,6 +591,13 @@ function MapPage() {
                 </svg>
               </a>
             )}
+            <button
+              onClick={handleScanZone}
+              disabled={triggerScan.isPending || !!activeScanId}
+              className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+            >
+              {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
+            </button>
           </div>
         </div>
       )}
