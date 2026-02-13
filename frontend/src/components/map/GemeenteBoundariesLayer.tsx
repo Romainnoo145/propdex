@@ -1,5 +1,6 @@
 import type maplibregl from 'maplibre-gl';
 import { CBS_GEMEENTEN_WFS } from '@/lib/pdok';
+import { calculateBboxFromGeometry } from '@/lib/geo-utils';
 
 const GEMEENTE_SOURCE_ID = 'cbs-gemeenten';
 const GEMEENTE_FILL_LAYER = 'gemeente-fill';
@@ -41,17 +42,21 @@ export async function fetchGemeenteGeoJSON(): Promise<GeoJSON.FeatureCollection>
  * Layers are inserted before 'selected-property-fill' if it exists, ensuring
  * property click handlers take precedence.
  *
- * Click handler extracts statcode and statnaam from feature properties and
- * invokes the provided callback.
+ * Click handler extracts statcode, statnaam, and bbox from feature properties
+ * and geometry, then invokes the provided callback.
  *
  * @param map - MapLibre GL JS map instance
  * @param geojson - CBS gemeente GeoJSON FeatureCollection
- * @param onGemeenteClick - Callback invoked on gemeente click with code and name
+ * @param onGemeenteClick - Callback invoked on gemeente click with code, name, and bbox
  */
 export function addGemeenteBoundariesLayer(
   map: maplibregl.Map,
   geojson: GeoJSON.FeatureCollection,
-  onGemeenteClick: (gemeenteCode: string, gemeenteNaam: string) => void
+  onGemeenteClick: (
+    gemeenteCode: string,
+    gemeenteNaam: string,
+    bbox: [number, number, number, number]
+  ) => void
 ): void {
   // Guard: source already exists
   if (map.getSource(GEMEENTE_SOURCE_ID)) {
@@ -77,7 +82,7 @@ export function addGemeenteBoundariesLayer(
       type: 'fill',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'fill-color': 'var(--color-primary)',
+        'fill-color': '#3b82f6',
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'hover'], false],
@@ -96,7 +101,7 @@ export function addGemeenteBoundariesLayer(
       type: 'line',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'line-color': 'var(--color-primary)',
+        'line-color': '#3b82f6',
         'line-width': 1,
         'line-opacity': 0.5,
       },
@@ -104,7 +109,7 @@ export function addGemeenteBoundariesLayer(
     beforeLayer
   );
 
-  // Click handler - extract statcode and statnaam
+  // Click handler - extract statcode, statnaam, and bbox
   const handleClick = (e: maplibregl.MapLayerMouseEvent) => {
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
@@ -112,9 +117,18 @@ export function addGemeenteBoundariesLayer(
 
       const statcode = feature.properties?.statcode as string | undefined;
       const statnaam = feature.properties?.statnaam as string | undefined;
+      const geometry = feature.geometry as
+        | GeoJSON.Polygon
+        | GeoJSON.MultiPolygon;
 
-      if (statcode && statnaam) {
-        onGemeenteClick(statcode, statnaam);
+      // Only process Polygon and MultiPolygon geometries
+      if (
+        statcode &&
+        statnaam &&
+        (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon')
+      ) {
+        const bbox = calculateBboxFromGeometry(geometry);
+        onGemeenteClick(statcode, statnaam, bbox);
       }
     }
   };
