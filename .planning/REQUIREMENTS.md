@@ -39,8 +39,8 @@ These are now validated infrastructure for v3.1.
 
 ### Area Deep-Dive
 
-- [ ] **DIVE-01**: User can draw a rectangle or polygon on the map to define a scan area
-- [ ] **DIVE-02**: User can trigger a focused BAG scan on the drawn area (hundreds of parcels, not full gemeente)
+- [ ] **DIVE-01**: User can click on a bestemmingsplan zone or gemeente boundary on the map to select a scan area
+- [ ] **DIVE-02**: User can trigger a focused BAG scan on the selected area (hundreds of parcels, not full gemeente)
 - [ ] **DIVE-03**: User sees scan progress with phase indicator and percentage during area deep-dive
 - [ ] **DIVE-04**: Scan results include bestemmingsplan hoofdgroep per parcel from zoning context
 

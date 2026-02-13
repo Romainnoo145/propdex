@@ -84,11 +84,9 @@
 
 **Dependency Chain:**
 ```
-Phase 22 (Visual Foundation) --> Phase 23 (Area Selection) --> Phase 24 (Zone-Enriched Scanning)
-                                                                           |
-                                                              Phase 25 (Results Interface)
-                                                                           |
-                                                              Phase 26 (Change Monitoring)
+Phase 23 (Working Gemeente Scan) --> Phase 24 (Progressive Scan UX) --> Phase 25 (Results Interface)
+                                                                                    |
+                                                                          Phase 26 (Change Monitoring)
 ```
 
 ---
@@ -113,79 +111,84 @@ Plans:
 
 ---
 
-### Phase 23: Area Selection Tools
-**Goal**: User can select areas on the map via click interaction to define scan boundaries
-**Depends on**: Phase 22 (Visual context for selection)
-**Requirements**: DIVE-01, DIVE-02, DIVE-03
+### Phase 23: Working Gemeente Scan (REVISED)
+**Goal**: User clicks a gemeente, triggers a full scan, and gets results with bestemmingsplan-enriched scores
+**Depends on**: Phase 22 (Bestemmingsplan visualization)
+**Requirements**: DIVE-01, DIVE-02, DIVE-03, DIVE-04, SCORE-01
 **Success Criteria** (what must be TRUE):
-  1. User can click on a bestemmingsplan zone or gemeente boundary to select a scan area
-  2. User can trigger a focused BAG scan on the selected area (hundreds of parcels, not full gemeente)
-  3. User sees scan progress with phase indicator and percentage during area deep-dive
-  4. Selected area is highlighted on the map for visual confirmation before scanning
-**Plans**: 3 plans
+  1. User can click a gemeente boundary to trigger a full-municipality scan (no 10 km² limit)
+  2. Scan fetches BAG buildings AND bestemmingsplan polygons via PDOK PLU WFS
+  3. PostGIS spatial join assigns bestemmingen to each parcel during scan
+  4. Opportunity scores are meaningful (zoning factor produces 0 or 25 based on actual bestemming data)
+  5. Colored parcels appear on map via existing MVT tile infrastructure after scan completes
+  6. Results API filtering by bestemming_type works with real data
+**Plans**: 4 plans
 
 Plans:
-- [ ] 23-01-PLAN.md -- Bbox extraction utilities + ScanAreaHighlightLayer component
-- [x] 23-02-PLAN.md -- Backend bbox scan support with area validation + coordinate conversion (DONE)
-- [ ] 23-03-PLAN.md -- Wire click-to-scan flow with confirmation UX + visual verification
+- [x] 23-01-PLAN.md -- Bbox extraction utilities + ScanAreaHighlightLayer (DONE, being revised)
+- [x] 23-02-PLAN.md -- Backend bbox scan support with coordinate conversion (DONE)
+- [ ] 23-03-PLAN.md -- Wire click-to-scan flow
+- [ ] 23-04-PLAN.md -- PDOK PLU WFS client + bestemmingsplan enrichment in scan job
 
 ---
 
-### Phase 24: Zone-Enriched Scanning
-**Goal**: Scan results include bestemmingsplan context and zoning-aware scoring
-**Depends on**: Phase 23 (Area selection triggers scans)
-**Requirements**: DIVE-04, SCORE-01
+### Phase 24: Progressive Scan UX (REVISED - was Zone-Enriched Scanning)
+**Goal**: Scan feels fast and responsive with parcels appearing on map in real-time
+**Depends on**: Phase 23 (Working scan with real data)
+**Requirements**: DIVE-03 (enhanced), MAP-04 (enhanced)
 **Success Criteria** (what must be TRUE):
-  1. Scan results include bestemmingsplan hoofdgroep per parcel from zoning context
-  2. Opportunity score factors in bestemmingsplan type (wonen = high, agrarisch = medium for residential developers)
-  3. Scoring weights are configurable and visible to users
-**Plans**: TBD (estimated 2-3 plans)
+  1. Parcels appear on the map progressively as they are processed (not all at once after completion)
+  2. Live counters show: "327 / 2,145 percelen — 12 hoog, 89 midden, 226 laag"
+  3. Score distribution updates in real-time during scan
+  4. Scan cancellation remains responsive
+**Plans**: TBD (estimated 3 plans)
 
 Plans:
-- [ ] 24-01: TBD (Extend scan pipeline with zone lookup)
-- [ ] 24-02: TBD (Zoning-aware scoring)
-- [ ] 24-03: TBD (Scoring weight configuration)
+- [ ] 24-01: SSE endpoint + Redis pub/sub for scan progress streaming
+- [ ] 24-02: Modify area_scan_job to publish batch events
+- [ ] 24-03: Frontend SSE hook, progressive tile refresh, live counters
 
 ---
 
-### Phase 25: Results Interface
+### Phase 25: Results Interface (UNCHANGED scope, now has real data)
 **Goal**: User can browse, filter, and explore scan results with zone intelligence
-**Depends on**: Phase 24 (Zone-enriched scan data)
+**Depends on**: Phase 24 (Progressive scan UX)
 **Requirements**: LIST-01, LIST-02, LIST-03, SCORE-02
 **Success Criteria** (what must be TRUE):
-  1. User can view scan results in a sortable table (address, size, zone type, score)
-  2. User can filter results by bestemmingsplan type, has_pand status, and minimum score
-  3. User can click a parcel in list or on map to see detail modal with expandable source cards
-  4. Scan results are colored on the map by score (green/yellow/red gradient)
-**Plans**: TBD (estimated 4-5 plans)
+  1. Split-panel layout: results table + map side by side
+  2. Sortable table (parcel code, address, area, bestemming type, score)
+  3. Filter panel: bestemming type, has_pand, area range, score category
+  4. Map-table bidirectional linking (click parcel on map highlights row, click row flies to parcel)
+  5. Parcel detail modal with Tier 2 on-demand enrichment (vergunningen via SRU)
+**Plans**: TBD (estimated 5 plans)
 
 Plans:
-- [ ] 25-01: TBD (Parcel list table)
-- [ ] 25-02: TBD (Filter controls)
-- [ ] 25-03: TBD (Score-based map coloring)
-- [ ] 25-04: TBD (Parcel detail modal)
-- [ ] 25-05: TBD (Expandable source cards)
+- [ ] 25-01: Split-panel layout with resizable table + map
+- [ ] 25-02: Results table with sorting, pagination, score badges
+- [ ] 25-03: Filter panel (bestemming type, area range, score category)
+- [ ] 25-04: Map-table bidirectional linking
+- [ ] 25-05: Parcel detail modal with Tier 2 enrichment
 
 ---
 
-### Phase 26: Change Monitoring
+### Phase 26: Change Monitoring (UNCHANGED, reuses PLU WFS)
 **Goal**: User stays informed of new permits and zoning changes in watched areas
-**Depends on**: Phase 25 (Complete scan workflow to establish monitoring baseline)
+**Depends on**: Phase 25 (Complete scan workflow)
 **Requirements**: MON-01, MON-02, MON-03, MON-04
 **Success Criteria** (what must be TRUE):
-  1. System checks daily for new omgevingsvergunningen in user's watched gemeentes via SRU Bekendmakingen
-  2. System checks daily for bestemmingsplan changes in watched gemeentes via Ruimtelijkeplannen.nl REST API v4
-  3. User sees in-app notification badges for new changes since last visit
+  1. System checks daily for new omgevingsvergunningen via SRU Bekendmakingen
+  2. System checks daily for bestemmingsplan changes via PDOK PLU WFS (reuses Phase 23 client)
+  3. User sees in-app notification badges for changes since last visit
   4. User can save scan areas for ongoing monitoring
   5. User can view change history for monitored areas
-**Plans**: TBD (estimated 4-5 plans)
+**Plans**: TBD (estimated 5 plans)
 
 Plans:
-- [ ] 26-01: TBD (Ruimtelijkeplannen.nl REST API client)
-- [ ] 26-02: TBD (ARQ cron jobs for daily checks)
-- [ ] 26-03: TBD (Change tracking tables + service)
-- [ ] 26-04: TBD (Save scan areas for monitoring)
-- [ ] 26-05: TBD (Notification UI + badges)
+- [ ] 26-01: WatchedArea model + save/list endpoints
+- [ ] 26-02: Change detection service (SRU + PLU WFS delta)
+- [ ] 26-03: ARQ cron job for daily monitoring
+- [ ] 26-04: ChangeNotification model + badge API
+- [ ] 26-05: Frontend notification UI (badge, timeline, save-to-watch)
 
 ---
 
@@ -217,12 +220,12 @@ Plans:
 | 20. Area Scanner + REST API | v3.0 | 6/6 | Complete | 2026-02-10 |
 | 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
 | 22. Bestemmingsplan Base Layer | v3.1 | 3/3 | Complete | 2026-02-11 |
-| 23. Area Selection Tools | v3.1 | 1/3 | In progress | - |
-| 24. Zone-Enriched Scanning | v3.1 | 0/? | Not started | - |
-| 25. Results Interface | v3.1 | 0/? | Not started | - |
-| 26. Change Monitoring | v3.1 | 0/? | Not started | - |
+| 23. Working Gemeente Scan | v3.1 | 2/4 | In progress | - |
+| 24. Progressive Scan UX | v3.1 | 0/3 | Not started | - |
+| 25. Results Interface | v3.1 | 0/5 | Not started | - |
+| 26. Change Monitoring | v3.1 | 0/5 | Not started | - |
 
 ---
 
 *Roadmap created for v3.1: 2026-02-11*
-*Last updated: 2026-02-11 (Phase 22 complete)*
+*Last updated: 2026-02-14 (Phase 23-26 structure revised)*
