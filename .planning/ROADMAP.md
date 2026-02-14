@@ -171,14 +171,14 @@ Plans:
   3. Filter panel: bestemming type, has_pand, area range, score category
   4. Map-table bidirectional linking (click parcel on map highlights row, click row flies to parcel)
   5. Parcel detail modal with Tier 2 on-demand enrichment (vergunningen via SRU)
-**Plans**: TBD (estimated 5 plans)
+**Plans**: 5 plans
 
 Plans:
-- [ ] 25-01: Split-panel layout with resizable table + map
-- [ ] 25-02: Results table with sorting, pagination, score badges
-- [ ] 25-03: Filter panel (bestemming type, area range, score category)
-- [ ] 25-04: Map-table bidirectional linking
-- [ ] 25-05: Parcel detail modal with Tier 2 enrichment
+- [ ] 25-01-PLAN.md -- Split-panel layout with resizable table + map (react-resizable-panels)
+- [ ] 25-02-PLAN.md -- Results table with TanStack Table sorting, pagination, score badges
+- [ ] 25-03-PLAN.md -- Filter panel (bestemming type, has_pand, area range, score category)
+- [ ] 25-04-PLAN.md -- Map-table bidirectional linking (click sync + flyTo + scrollIntoView)
+- [ ] 25-05-PLAN.md -- Parcel detail modal with Tier 2 SRU enrichment endpoint
 
 ---
 
