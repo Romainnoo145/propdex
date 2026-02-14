@@ -5,6 +5,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import MapView from '@/components/map/MapView'
+import ResultsLayout from '@/components/results/ResultsLayout'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
@@ -94,6 +95,7 @@ function MapPage() {
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [wijkLoading, setWijkLoading] = useState(false)
+  const [showResults, setShowResults] = useState(false)
 
   // Refs for fresh values in gemeente click handler (avoid stale closure)
   const activeGemeenteRef = useRef(activeGemeente)
@@ -222,10 +224,12 @@ function MapPage() {
     if (!scanStatus.data) return
     if (scanStatus.data.status === 'completed') {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
-      // Keep activeScanId to show score layer
+      // Keep activeScanId to show score layer and results panel
+      setShowResults(true)
     } else if (scanStatus.data.status === 'failed') {
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
+      setShowResults(false)
     }
   }, [scanStatus.data])
 
@@ -684,11 +688,13 @@ function MapPage() {
 
   return (
     <AppLayout>
-      <MapView
-        mapRef={mapRef}
-        onMapReady={() => setMapReady(true)}
-        transformRequest={transformRequest}
-      />
+      <ResultsLayout scanId={activeScanId} collapsed={!showResults || !activeScanId}>
+        <MapView
+          mapRef={mapRef}
+          onMapReady={() => setMapReady(true)}
+          transformRequest={transformRequest}
+        />
+      </ResultsLayout>
       <AddressSearch onSelect={handleAddressSelect} />
 
       {/* Active gemeente context header */}
