@@ -1,12 +1,14 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import ResultsTable from './ResultsTable'
 
 interface ResultsLayoutProps {
   scanId: string | null
   children: React.ReactNode
   collapsed: boolean
+  onClose?: () => void
 }
 
-export default function ResultsLayout({ scanId, children, collapsed }: ResultsLayoutProps) {
+export default function ResultsLayout({ scanId, children, collapsed, onClose }: ResultsLayoutProps) {
   // When collapsed, just render the map without panel structure
   if (collapsed || !scanId) {
     return <>{children}</>
@@ -16,12 +18,27 @@ export default function ResultsLayout({ scanId, children, collapsed }: ResultsLa
   return (
     <div className="h-full w-full">
       <PanelGroup direction="horizontal" autoSaveId="propdex-results">
-        {/* Left panel: Results table (placeholder for now) */}
+        {/* Left panel: Results table */}
         <Panel defaultSize={45} minSize={25} maxSize={70}>
-          <div className="h-full w-full bg-black/40 backdrop-blur-xl p-6 flex flex-col items-center justify-center text-white">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
-            <p className="text-lg font-medium">Resultaten laden...</p>
-            <p className="text-sm text-white/70 mt-2">Scan ID: {scanId}</p>
+          <div className="h-full w-full bg-black/40 backdrop-blur-xl flex flex-col overflow-hidden">
+            {/* Sticky header with title and close button */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+              <h2 className="text-lg font-semibold text-white">Scanresultaten</h2>
+              <button
+                onClick={onClose}
+                className="text-white/60 hover:text-white transition-colors"
+                aria-label="Resultaten sluiten"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Table scrolls within remaining space */}
+            <div className="flex-1 overflow-hidden">
+              <ResultsTable scanId={scanId} />
+            </div>
           </div>
         </Panel>
 
