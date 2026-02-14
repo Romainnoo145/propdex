@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 24 of 26 (Wijk-Based Area Selection)
-**Plan:** 24-03 complete (Gemeente Click to Wijk Loading)
-**Status:** Active — building wijk-based area selection
+**Plan:** 24-04 complete (Wijk Click to Scan Trigger)
+**Status:** Active — wijk-based area selection complete
 
-**Last activity:** 2026-02-15 — Plan 24-03 complete (gemeente click -> wijk loading flow with layer toggle)
+**Last activity:** 2026-02-15 — Plan 24-04 complete (wijk click -> scan trigger + viewport scan button)
 
-**Progress:** [██████████] 97%
+**Progress:** [██████████] 98%
 
 ---
 
@@ -126,12 +126,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-15T05:45:40Z
-**Stopped At:** Completed 24-03-PLAN.md
+**Last Session:** 2026-02-14T22:45:58.505Z
+**Stopped At:** Completed 24-04-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-plan 24-04` to wire wijk click -> scan trigger
+**Next Action:** Phase 24 complete — proceed to Phase 25 planning
 
 ---
 
-*State updated: 2026-02-15 (Plan 24-03 complete: Gemeente Click to Wijk Loading)*
+*State updated: 2026-02-15 (Plan 24-04 complete: Wijk Click to Scan Trigger)*
