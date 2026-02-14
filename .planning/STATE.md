@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 25 of 26 (Results Interface) — IN PROGRESS
-**Plan:** 2/5 plans complete
-**Status:** Plan 25-02 complete (ResultsTable Component)
+**Plan:** 3/5 plans complete
+**Status:** Plan 25-03 complete (Filters Panel)
 
-**Last activity:** 2026-02-15 — Plan 25-02 complete (2 tasks, 2 commits, 5 min)
+**Last activity:** 2026-02-15 — Plan 25-03 complete (2 tasks, 2 commits, 9 min)
 
-**Progress:** [████░░░░░░] 40% (Phase 25)
+**Progress:** [██████████] 96%
 
 ---
 
@@ -68,6 +68,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - 50 results per page (balance overview vs performance) (25-02)
 - ScoreBadge as inline component (co-located with columns for clarity) (25-02)
 - Bestemming column shows first type only, truncated to 25 chars (25-02)
+- 500ms debounce on area input (prevent excessive API calls while typing) (25-03)
+- Reset pagination to page 0 when filters change (avoid empty page state) (25-03)
+- Clear button preserves sort/pagination (filters distinct from view settings) (25-03)
+- SVBP2012 hoofdgroepen for bestemming dropdown (matches PDOK layer data) (25-03)
 
 **Phase 24 decisions:**
 - Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
@@ -137,11 +141,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Completed 25-02-PLAN.md
-**Resume File:** .planning/phases/25-results-interface/25-02-SUMMARY.md
+**Stopped At:** Completed 25-03-PLAN.md
+**Resume File:** .planning/phases/25-results-interface/25-03-SUMMARY.md
 
-**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-03 (Filters Panel)
+**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-04 (Bidirectional Linking)
 
 ---
 
-*State updated: 2026-02-15 (Plan 25-02 complete — sortable results table with pagination and score badges)*
+*State updated: 2026-02-15 (Plan 25-03 complete — live filter panel with 4 filter types and debounced area input)*
