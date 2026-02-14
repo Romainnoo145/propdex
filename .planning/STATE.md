@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 25 of 26 (Results Interface) — IN PROGRESS
-**Plan:** 1/5 plans complete
-**Status:** Plan 25-01 complete (Split-Panel Layout Foundation)
+**Plan:** 2/5 plans complete
+**Status:** Plan 25-02 complete (ResultsTable Component)
 
-**Last activity:** 2026-02-15 — Plan 25-01 complete (2 tasks, 2 commits, 5.5 min)
+**Last activity:** 2026-02-15 — Plan 25-02 complete (2 tasks, 2 commits, 5 min)
 
-**Progress:** [██░░░░░░░░] 20% (Phase 25)
+**Progress:** [████░░░░░░] 40% (Phase 25)
 
 ---
 
@@ -64,6 +64,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - 45/55 default split (results/map) - balances visibility with map dominance (25-01)
 - Glassmorphism placeholder styling (bg-black/40 backdrop-blur-xl) consistent with Propdex aesthetic (25-01)
 - Panel sizes persist in localStorage via autoSaveId="propdex-results" (25-01)
+- Default sort: score descending (most promising parcels first) (25-02)
+- 50 results per page (balance overview vs performance) (25-02)
+- ScoreBadge as inline component (co-located with columns for clarity) (25-02)
+- Bestemming column shows first type only, truncated to 25 chars (25-02)
 
 **Phase 24 decisions:**
 - Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
@@ -133,11 +137,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Plan 25-01 complete (Split-Panel Layout Foundation)
-**Resume File:** .planning/phases/25-results-interface/25-01-SUMMARY.md
+**Stopped At:** Completed 25-02-PLAN.md
+**Resume File:** .planning/phases/25-results-interface/25-02-SUMMARY.md
 
-**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-02 (ResultsTable Component)
+**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-03 (Filters Panel)
 
 ---
 
-*State updated: 2026-02-15 (Plan 25-01 complete — split-panel layout foundation with resizable panels)*
+*State updated: 2026-02-15 (Plan 25-02 complete — sortable results table with pagination and score badges)*
