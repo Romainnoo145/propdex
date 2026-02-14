@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 **Milestone:** v3.1 Smart Area Intelligence
-**Phase:** 24 of 26 (Wijk-Based Area Selection) — COMPLETE
-**Plan:** All 4/4 plans complete, verified
-**Status:** Phase 24 verified and complete
+**Phase:** 25 of 26 (Results Interface) — IN PROGRESS
+**Plan:** 1/5 plans complete
+**Status:** Plan 25-01 complete (Split-Panel Layout Foundation)
 
-**Last activity:** 2026-02-15 — Phase 24 verified (6/6 success criteria met)
+**Last activity:** 2026-02-15 — Plan 25-01 complete (2 tasks, 2 commits, 5.5 min)
 
-**Progress:** [██████████] 100% (Phase 24)
+**Progress:** [██░░░░░░░░] 20% (Phase 25)
 
 ---
 
@@ -58,6 +58,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
 - Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**Phase 25 decisions:**
+- Collapsed prop pattern to prevent MapView re-mount when showing results panel (25-01)
+- 45/55 default split (results/map) - balances visibility with map dominance (25-01)
+- Glassmorphism placeholder styling (bg-black/40 backdrop-blur-xl) consistent with Propdex aesthetic (25-01)
+- Panel sizes persist in localStorage via autoSaveId="propdex-results" (25-01)
 
 **Phase 24 decisions:**
 - Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
@@ -127,11 +133,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Phase 24 verified and complete
-**Resume File:** None
+**Stopped At:** Plan 25-01 complete (Split-Panel Layout Foundation)
+**Resume File:** .planning/phases/25-results-interface/25-01-SUMMARY.md
 
-**Next Action:** `/gsd:plan-phase 25` — Results Interface
+**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-02 (ResultsTable Component)
 
 ---
 
-*State updated: 2026-02-15 (Phase 24 complete — wijk-based area selection verified)*
+*State updated: 2026-02-15 (Plan 25-01 complete — split-panel layout foundation with resizable panels)*
