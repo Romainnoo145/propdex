@@ -691,6 +691,7 @@ function MapPage() {
       <ResultsLayout
         scanId={activeScanId}
         collapsed={!showResults || !activeScanId}
+        mapRef={mapRef}
         onClose={() => setShowResults(false)}
       >
         <MapView

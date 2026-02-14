@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -13,6 +13,7 @@ import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 interface ResultsTableProps {
   scanId: string
   filters?: ScanResultsFilters
+  selectedParcelId?: string | null
   onRowClick?: (parcelId: string) => void
   onTotalChange?: (total: number) => void
 }
@@ -114,6 +115,7 @@ const columns = [
 export default function ResultsTable({
   scanId,
   filters = {},
+  selectedParcelId,
   onRowClick,
   onTotalChange,
 }: ResultsTableProps) {
@@ -124,6 +126,7 @@ export default function ResultsTable({
     pageIndex: 0,
     pageSize: 50,
   })
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map())
 
   // Reset pagination to page 0 when filters change
   useEffect(() => {
@@ -147,6 +150,15 @@ export default function ResultsTable({
       onTotalChange?.(data.total)
     }
   }, [data?.total, onTotalChange])
+
+  // Auto-scroll to selected row when selection changes
+  useEffect(() => {
+    if (!selectedParcelId) return
+    const rowEl = rowRefs.current.get(selectedParcelId)
+    if (rowEl) {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [selectedParcelId])
 
   const table = useReactTable({
     data: data?.results ?? [],
@@ -285,7 +297,14 @@ export default function ResultsTable({
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                ref={(el) => {
+                  if (el) rowRefs.current.set(row.original.parcel_id, el)
+                }}
+                className={`border-b border-white/5 transition-colors cursor-pointer ${
+                  row.original.parcel_id === selectedParcelId
+                    ? 'bg-white/15 ring-1 ring-white/30'
+                    : 'hover:bg-white/5'
+                }`}
                 onClick={() => onRowClick?.(row.original.parcel_id)}
               >
                 {row.getVisibleCells().map((cell) => (

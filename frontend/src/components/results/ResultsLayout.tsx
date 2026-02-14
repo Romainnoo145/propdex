@@ -1,19 +1,75 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import type maplibregl from 'maplibre-gl'
 import ResultsTable from './ResultsTable'
 import ResultsFilterPanel from './ResultsFilterPanel'
+import { setupParcelScoreClickHandler, setParcelScoreSelection } from '@/components/map/ParcelScoreLayer'
 import type { ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsLayoutProps {
   scanId: string | null
   children: React.ReactNode
   collapsed: boolean
+  mapRef: React.RefObject<maplibregl.Map | null>
   onClose?: () => void
 }
 
-export default function ResultsLayout({ scanId, children, collapsed, onClose }: ResultsLayoutProps) {
+export default function ResultsLayout({ scanId, children, collapsed, mapRef, onClose }: ResultsLayoutProps) {
   const [filters, setFilters] = useState<ScanResultsFilters>({})
   const [total, setTotal] = useState(0)
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
+  const selectionSourceRef = useRef<'table' | 'map' | null>(null)
+
+  // Setup map click handler for parcel selection
+  useEffect(() => {
+    if (collapsed || !mapRef.current) return
+    const map = mapRef.current
+
+    // Only setup if score layer exists
+    if (!map.getSource('parcel-scores')) return
+
+    const cleanup = setupParcelScoreClickHandler(map, (parcelId, featureId) => {
+      selectionSourceRef.current = 'map'
+      setSelectedParcelId(parcelId)
+      // Highlight on map
+      setParcelScoreSelection(map, featureId ?? null, 'parcel_scores')
+    })
+
+    return cleanup
+  }, [collapsed, mapRef])
+
+  // When selectedParcelId changes FROM TABLE (not map), fly to parcel and highlight
+  useEffect(() => {
+    if (!selectedParcelId || selectionSourceRef.current !== 'table') return
+    if (!mapRef.current) return
+
+    const map = mapRef.current
+    const features = map.querySourceFeatures('parcel-scores', {
+      sourceLayer: 'parcel_scores',
+      filter: ['==', ['get', 'parcel_id'], selectedParcelId],
+    })
+
+    if (features.length > 0 && features[0]?.geometry) {
+      // Get centroid of the first feature
+      const geom = features[0].geometry
+      if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+        // Calculate simple centroid from first ring
+        const coords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0]?.[0]
+        if (coords && coords.length > 0) {
+          const sumLng = coords.reduce((s, c) => s + (c[0] ?? 0), 0)
+          const sumLat = coords.reduce((s, c) => s + (c[1] ?? 0), 0)
+          map.flyTo({
+            center: [sumLng / coords.length, sumLat / coords.length],
+            zoom: Math.max(map.getZoom(), 16),
+            duration: 800,
+          })
+        }
+      }
+
+      // Highlight on map
+      setParcelScoreSelection(map, features[0].id ?? null, 'parcel_scores')
+    }
+  }, [selectedParcelId, mapRef])
 
   // When collapsed, just render the map without panel structure
   if (collapsed || !scanId) {
@@ -53,6 +109,11 @@ export default function ResultsLayout({ scanId, children, collapsed, onClose }: 
               <ResultsTable
                 scanId={scanId}
                 filters={filters}
+                selectedParcelId={selectedParcelId}
+                onRowClick={(parcelId) => {
+                  selectionSourceRef.current = 'table'
+                  setSelectedParcelId(parcelId)
+                }}
                 onTotalChange={setTotal}
               />
             </div>
