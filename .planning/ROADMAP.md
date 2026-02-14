@@ -154,10 +154,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 24-01-PLAN.md -- Backend wijk service (CBS WFS wijk lookup + GET /api/scans/wijken endpoint)
-- [ ] 24-02-PLAN.md -- Frontend WijkBoundariesLayer (clickable polygons with names, hover, labels)
-- [ ] 24-03-PLAN.md -- Gemeente context state + wijk loading + LayerToggle wijken button
-- [ ] 24-04-PLAN.md -- Wire wijk click to scan trigger + "Scan zichtbaar gebied" viewport button + MAX_FEATURES raise
+- [x] 24-01-PLAN.md -- Backend wijk service (CBS WFS wijk lookup + GET /api/scans/wijken endpoint)
+- [x] 24-02-PLAN.md -- Frontend WijkBoundariesLayer (clickable polygons with names, hover, labels)
+- [x] 24-03-PLAN.md -- Gemeente context state + wijk loading + LayerToggle wijken button
+- [x] 24-04-PLAN.md -- Wire wijk click to scan trigger + "Scan zichtbaar gebied" viewport button + MAX_FEATURES raise
 
 ---
 
@@ -232,11 +232,11 @@ Plans:
 | 21. Map Visualization | v3.0 | 5/5 | Complete | 2026-02-11 |
 | 22. Bestemmingsplan Base Layer | v3.1 | 3/3 | Complete | 2026-02-11 |
 | 23. Working Scan Pipeline | v3.1 | 4/4 | Complete | 2026-02-15 |
-| 24. Wijk-Based Area Selection | v3.1 | 0/4 | Not started | - |
+| 24. Wijk-Based Area Selection | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 25. Results Interface | v3.1 | 0/5 | Not started | - |
 | 26. Change Monitoring | v3.1 | 0/5 | Not started | - |
 
 ---
 
 *Roadmap created for v3.1: 2026-02-11*
-*Last updated: 2026-02-15 (Phase 23 complete, Phase 24 revised to wijk-based selection)*
+*Last updated: 2026-02-15 (Phase 24 complete — wijk-based area selection)*
