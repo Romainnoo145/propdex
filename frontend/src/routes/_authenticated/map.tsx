@@ -21,6 +21,11 @@ import {
   setGemeenteBoundariesVisibility,
 } from '@/components/map/GemeenteBoundariesLayer'
 import {
+  addWijkBoundariesLayer,
+  removeWijkBoundariesLayer,
+  setWijkBoundariesVisibility,
+} from '@/components/map/WijkBoundariesLayer'
+import {
   addBestemmingsplanLayer,
   setBestemmingsplanVisibility,
   setupBestemmingsplanClickHandler,
@@ -34,8 +39,9 @@ import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
 import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
 import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
-import { lookupPdokAddress, getScanTileUrl } from '@/lib/api'
+import { lookupPdokAddress, getScanTileUrl, fetchWijken } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
+import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
 
@@ -79,6 +85,24 @@ function MapPage() {
     name: string
     source: 'gemeente' | 'bestemmingsplan'
   } | null>(null)
+
+  const [activeGemeente, setActiveGemeente] = useState<{
+    code: string;
+    naam: string;
+    bbox: [number, number, number, number];
+  } | null>(null)
+
+  const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [wijkLoading, setWijkLoading] = useState(false)
+
+  // Refs for fresh values in gemeente click handler (avoid stale closure)
+  const activeGemeenteRef = useRef(activeGemeente)
+  activeGemeenteRef.current = activeGemeente
+  const activeScanIdRef = useRef(activeScanId)
+  activeScanIdRef.current = activeScanId
+  const wijkGeojsonRef = useRef(wijkGeojson)
+  wijkGeojsonRef.current = wijkGeojson
+
   const lookup = usePropertyLookup()
   const { addRecentItem } = useRecentViewed()
 
@@ -125,11 +149,9 @@ function MapPage() {
     // Extract PropertyReportResponse from saved report's report_data
     const propertyData = savedReport.data.report_data as unknown as PropertyReportResponse
 
-    /* eslint-disable react-hooks/set-state-in-effect -- intentional sync reset */
     setDemoData(propertyData)
     setSavedReportId(reportId)
     setTier('drawer')
-    /* eslint-enable react-hooks/set-state-in-effect */
 
     // Set coordinates — flyTo handled by dedicated effect
     const coords = propertyData.map_data?.center_wgs84
@@ -157,11 +179,9 @@ function MapPage() {
     const pc = postcode
     const hn = huisnummer
 
-    /* eslint-disable react-hooks/set-state-in-effect -- intentional sync reset before async mutation */
     setTier('quick')
     setDemoData(null)
     setPropertyLngLat(null)
-    /* eslint-enable react-hooks/set-state-in-effect */
 
     lookup.mutate(
       { postcode: pc, huisnummer: hn },
@@ -200,7 +220,6 @@ function MapPage() {
   // Handle scan completion and failure
   useEffect(() => {
     if (!scanStatus.data) return
-    /* eslint-disable react-hooks/set-state-in-effect -- Intentional: Update local state based on external scan status */
     if (scanStatus.data.status === 'completed') {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
       // Keep activeScanId to show score layer
@@ -208,7 +227,6 @@ function MapPage() {
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [scanStatus.data])
 
   // Setup bestemmingsplan click handler
@@ -379,56 +397,56 @@ function MapPage() {
           setGemeenteGeojson(geojson)
 
           // Add layer with click handler
-          addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam, bbox, geometry) => {
+          addGemeenteBoundariesLayer(map, geojson, async (gemeenteCode, gemeenteNaam, bbox, _geometry) => {
             // Guard: prevent selection during active scan
-            if (triggerScan.isPending || activeScanId) {
+            if (activeScanIdRef.current) {
               toast.info('Scan al bezig, wacht even...')
               return
             }
 
-            // Replace any existing highlight, then show actual gemeente shape
+            // If clicking same gemeente, do nothing
+            if (activeGemeenteRef.current?.code === gemeenteCode) return
+
+            // Clear previous wijk layer if switching gemeente
+            if (wijkGeojsonRef.current && mapRef.current) {
+              removeWijkBoundariesLayer(mapRef.current)
+              setWijkGeojson(null)
+            }
+
+            // Remove any existing scan area highlight
             removeScanAreaHighlight(map)
-            addScanAreaHighlight(map, geometry)
+            setSelectedArea(null)
 
-            // Store selection state
-            setSelectedArea({ bbox, name: gemeenteNaam, source: 'gemeente' })
+            // Set active gemeente context
+            setActiveGemeente({ code: gemeenteCode, naam: gemeenteNaam, bbox })
 
-            // Show confirmation toast with action buttons
-            toast.info(`${gemeenteNaam} geselecteerd`, {
-              description: 'Klik op "Scan starten" om percelen te scannen',
-              duration: 10000,
-              action: {
-                label: 'Scan starten',
-                onClick: () => {
-                  triggerScan.mutate(
-                    { gemeente_code: gemeenteCode, gemeente_naam: gemeenteNaam, bbox_wgs84: bbox },
-                    {
-                      onSuccess: (data) => {
-                        if (data.status === 'existing' && !data.needs_rescan) {
-                          setActiveScanId(data.scan_id)
-                          toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
-                        } else {
-                          setActiveScanId(data.scan_id)
-                        }
-                        // Remove highlight after scan starts (progress overlay takes over)
-                        if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-                        setSelectedArea(null)
-                      },
-                      onError: (err) => {
-                        toast.error(`Scan starten mislukt: ${err.message}`)
-                        if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-                        setSelectedArea(null)
-                      },
-                    }
-                  )
-                },
-              },
-              onDismiss: () => {
-                // Clear highlight if toast auto-dismisses or is manually dismissed
-                if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-                setSelectedArea(null)
-              },
-            })
+            // Zoom into gemeente
+            map.fitBounds(
+              [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
+              { padding: 50, duration: 800 }
+            )
+
+            // Fetch wijken from backend
+            setWijkLoading(true)
+            try {
+              const geojson = await fetchWijken(gemeenteCode, accessToken)
+              setWijkGeojson(geojson)
+
+              // Add wijk layer to map (click handler is a no-op for now, wired in plan 24-04)
+              if (mapRef.current) {
+                addWijkBoundariesLayer(mapRef.current, geojson, (_code, _naam, _bbox, _geometry) => {
+                  // Wijk click -> scan trigger will be wired in plan 24-04
+                })
+              }
+
+              toast.success(`${gemeenteNaam}: ${geojson.features.length} wijken geladen`)
+            } catch (err) {
+              console.error('Failed to fetch wijken:', err)
+              toast.error('Kon wijken niet laden')
+              setActiveGemeente(null) // Clear context on error
+            } finally {
+              setWijkLoading(false)
+            }
           })
         } catch (err) {
           console.error('Failed to fetch gemeente boundaries:', err)
@@ -441,9 +459,15 @@ function MapPage() {
     } else {
       // Hide layer
       setGemeenteBoundariesVisibility(map, false)
+      // Also clear gemeente context and wijk layer
+      if (wijkGeojsonRef.current && map) {
+        removeWijkBoundariesLayer(map)
+        setWijkGeojson(null)
+      }
+      setActiveGemeente(null)
     }
     },
-    [gemeenteGeojson, triggerScan, activeScanId]
+    [gemeenteGeojson, accessToken]
   )
 
   // Bestemmingsplan layer toggle handler
@@ -467,6 +491,15 @@ function MapPage() {
         setShowBestemmingsplan(false)
         setZoneInfo(null)
       }
+    },
+    []
+  )
+
+  // Wijken layer toggle handler
+  const handleWijkenToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+      setWijkBoundariesVisibility(mapRef.current, visible)
     },
     []
   )
@@ -541,6 +574,39 @@ function MapPage() {
         transformRequest={transformRequest}
       />
       <AddressSearch onSelect={handleAddressSelect} />
+
+      {/* Active gemeente context header */}
+      {activeGemeente && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-white/95 backdrop-blur-sm rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <span className="text-sm font-medium text-gray-900">
+              {activeGemeente.naam}
+            </span>
+          </div>
+          {wijkLoading && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+          )}
+          <button
+            onClick={() => {
+              setActiveGemeente(null)
+              if (wijkGeojsonRef.current && mapRef.current) {
+                removeWijkBoundariesLayer(mapRef.current)
+                setWijkGeojson(null)
+              }
+              if (mapRef.current) {
+                mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+              }
+            }}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Gemeente deselecteren"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Scan progress overlay */}
       {activeScanId && scanStatus.data && scanStatus.data.status !== 'completed' && (
@@ -652,6 +718,8 @@ function MapPage() {
         mapRef={mapRef}
         onGemeentenToggle={handleGemeentenToggle}
         onBestemmingsplanToggle={handleBestemmingsplanToggle}
+        onWijkenToggle={handleWijkenToggle}
+        showWijkenToggle={!!activeGemeente}
       />
     </AppLayout>
   )

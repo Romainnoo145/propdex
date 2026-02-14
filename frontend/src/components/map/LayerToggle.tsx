@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type maplibregl from 'maplibre-gl';
 import {
   addParcelBoundariesLayer,
@@ -12,13 +12,16 @@ interface LayerToggleProps {
   onParcelsToggle?: (visible: boolean) => void;
   onGemeentenToggle?: (visible: boolean) => void;
   onBestemmingsplanToggle?: (visible: boolean) => void;
+  onWijkenToggle?: (visible: boolean) => void;
+  showWijkenToggle?: boolean; // Only show when gemeente is active
 }
 
-function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle }: LayerToggleProps) {
+function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle, onWijkenToggle, showWijkenToggle }: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
   const [showParcels, setShowParcels] = useState(false);
   const [showGemeenten, setShowGemeenten] = useState(false);
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false);
+  const [showWijken, setShowWijken] = useState(true); // Wijken default to visible when loaded
 
   const handleLayerChange = (layer: LayerType) => {
     if (!mapRef.current || layer === activeLayer) return;
@@ -79,6 +82,26 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     }
   };
 
+  const handleWijkenToggle = () => {
+    const newShowWijken = !showWijken;
+    setShowWijken(newShowWijken);
+    if (onWijkenToggle) {
+      onWijkenToggle(newShowWijken);
+    }
+  };
+
+  // Track when wijken toggle appears/disappears to reset state to default (visible)
+  const prevShowWijkenToggleRef = useRef(showWijkenToggle);
+  useEffect(() => {
+    // Only reset when transitioning from hidden -> visible (gemeente just became active)
+    if (showWijkenToggle && !prevShowWijkenToggleRef.current) {
+      // Intentional: Reset toggle state to match layer visibility when gemeente becomes active
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowWijken(true);
+    }
+    prevShowWijkenToggleRef.current = showWijkenToggle;
+  }, [showWijkenToggle]);
+
   const active = 'bg-white/70 text-gray-900 shadow-sm';
   const inactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
   const parcelActive = 'bg-blue-500/30 text-white shadow-sm';
@@ -87,6 +110,8 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
   const gemeenteInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
   const bestemmingsplanActive = 'bg-purple-500/30 text-white shadow-sm';
   const bestemmingsplanInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
+  const wijkenActive = 'bg-emerald-500/30 text-white shadow-sm';
+  const wijkenInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
 
   return (
     <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-black/30 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/20 shadow-lg">
@@ -139,6 +164,20 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
       >
         Bestemmingsplan
       </button>
+
+      {showWijkenToggle && (
+        <>
+          <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleWijkenToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showWijken ? wijkenActive : wijkenInactive
+            }`}
+          >
+            Wijken
+          </button>
+        </>
+      )}
     </div>
   );
 }

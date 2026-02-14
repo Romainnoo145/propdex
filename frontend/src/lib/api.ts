@@ -606,3 +606,25 @@ export async function fetchScanResults(
 export function getScanTileUrl(scanId: string): string {
   return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf`
 }
+
+/**
+ * Fetch wijk boundaries for a gemeente from CBS WFS via backend
+ *
+ * GET /api/scans/wijken?gemeente_code={code}
+ *
+ * @param gemeenteCode - CBS gemeentecode (e.g., '0983' for Venlo)
+ * @param accessToken - JWT access token
+ * @returns GeoJSON FeatureCollection with wijk polygons
+ */
+export async function fetchWijken(
+  gemeenteCode: string,
+  accessToken: string | null
+): Promise<GeoJSON.FeatureCollection> {
+  return apiFetch<GeoJSON.FeatureCollection>(
+    `${SCANS_BASE}/wijken?gemeente_code=${encodeURIComponent(gemeenteCode)}`,
+    {
+      method: 'GET',
+      accessToken,
+    }
+  )
+}
