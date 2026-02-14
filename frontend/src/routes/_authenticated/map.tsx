@@ -382,6 +382,122 @@ function MapPage() {
     [accessToken]
   )
 
+  // Wijk click handler
+  const handleWijkClick = useCallback(
+    (
+      wijkCode: string,
+      wijkNaam: string,
+      bbox: [number, number, number, number],
+      geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
+    ) => {
+      const currentGemeente = activeGemeenteRef.current
+      if (!currentGemeente || !mapRef.current) return
+
+      // Guard: prevent during active scan
+      if (activeScanIdRef.current) {
+        toast.info('Scan al bezig, wacht even...')
+        return
+      }
+
+      // Highlight selected wijk
+      removeScanAreaHighlight(mapRef.current)
+      addScanAreaHighlight(mapRef.current, geometry)
+
+      // Trigger scan directly (wijk click is a deliberate action -- no confirmation needed)
+      triggerScan.mutate(
+        {
+          gemeente_code: currentGemeente.code,
+          gemeente_naam: currentGemeente.naam,
+          bbox_wgs84: bbox,
+        },
+        {
+          onSuccess: (data) => {
+            if (data.status === 'existing' && !data.needs_rescan) {
+              setActiveScanId(data.scan_id)
+              toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
+            } else {
+              setActiveScanId(data.scan_id)
+            }
+            // Remove highlight after scan starts (progress overlay takes over)
+            if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+            setSelectedArea(null)
+            toast.success(`Scan gestart voor ${wijkNaam}`)
+          },
+          onError: (err) => {
+            toast.error(`Scan starten mislukt: ${err.message}`)
+            if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+            setSelectedArea(null)
+          },
+        }
+      )
+    },
+    [triggerScan]
+  )
+
+  // Ref for wijk click handler to avoid stale closure
+  const handleWijkClickRef = useRef(handleWijkClick)
+  handleWijkClickRef.current = handleWijkClick
+
+  // Viewport scan handler
+  const handleScanViewport = useCallback(() => {
+    const currentGemeente = activeGemeenteRef.current
+    if (!mapRef.current || !currentGemeente) {
+      toast.info('Selecteer eerst een gemeente')
+      return
+    }
+
+    if (activeScanIdRef.current) {
+      toast.info('Scan al bezig, wacht even...')
+      return
+    }
+
+    const bounds = mapRef.current.getBounds()
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ]
+
+    // Create bbox polygon for highlight
+    const bboxPolygon: GeoJSON.Polygon = {
+      type: 'Polygon',
+      coordinates: [[
+        [bbox[0], bbox[1]], [bbox[2], bbox[1]],
+        [bbox[2], bbox[3]], [bbox[0], bbox[3]],
+        [bbox[0], bbox[1]],
+      ]],
+    }
+
+    removeScanAreaHighlight(mapRef.current)
+    addScanAreaHighlight(mapRef.current, bboxPolygon)
+
+    triggerScan.mutate(
+      {
+        gemeente_code: currentGemeente.code,
+        gemeente_naam: currentGemeente.naam,
+        bbox_wgs84: bbox,
+      },
+      {
+        onSuccess: (data) => {
+          if (data.status === 'existing' && !data.needs_rescan) {
+            setActiveScanId(data.scan_id)
+            toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
+          } else {
+            setActiveScanId(data.scan_id)
+          }
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+        },
+        onError: (err) => {
+          toast.error(`Scan starten mislukt: ${err.message}`)
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+        },
+      }
+    )
+  }, [triggerScan])
+
   // Gemeenten layer toggle handler
   const handleGemeentenToggle = useCallback(
     async (visible: boolean) => {
@@ -432,10 +548,10 @@ function MapPage() {
               const geojson = await fetchWijken(gemeenteCode, accessToken)
               setWijkGeojson(geojson)
 
-              // Add wijk layer to map (click handler is a no-op for now, wired in plan 24-04)
+              // Add wijk layer to map with click handler
               if (mapRef.current) {
-                addWijkBoundariesLayer(mapRef.current, geojson, (_code, _naam, _bbox, _geometry) => {
-                  // Wijk click -> scan trigger will be wired in plan 24-04
+                addWijkBoundariesLayer(mapRef.current, geojson, (code, naam, bbox, geometry) => {
+                  handleWijkClickRef.current(code, naam, bbox, geometry)
                 })
               }
 
@@ -587,6 +703,14 @@ function MapPage() {
           {wijkLoading && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
           )}
+          {/* Viewport scan button */}
+          <button
+            onClick={handleScanViewport}
+            disabled={!!activeScanId || triggerScan.isPending}
+            className="px-3 py-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          >
+            {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
+          </button>
           <button
             onClick={() => {
               setActiveGemeente(null)
