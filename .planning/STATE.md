@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 24 of 26 (Wijk-Based Area Selection)
-**Plan:** 24-02 complete (WijkBoundariesLayer)
+**Plan:** 24-03 complete (Gemeente Click to Wijk Loading)
 **Status:** Active — building wijk-based area selection
 
-**Last activity:** 2026-02-15 — Plan 24-02 complete (WijkBoundariesLayer with emerald styling and labels)
+**Last activity:** 2026-02-15 — Plan 24-03 complete (gemeente click -> wijk loading flow with layer toggle)
 
-**Progress:** [██████████] 95%
+**Progress:** [██████████] 97%
 
 ---
 
@@ -68,6 +68,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Labels visible at minzoom 12 (gemeente detail level, not NL overview)
 - Insert wijken before gemeente-fill layer (smaller areas render on top)
 - Cache GeoJSON at module level for full geometry lookup (not from rendered features)
+- Gemeente click no longer triggers scan directly — now loads wijken for user selection (24-03)
+- Wijken toggle defaults to visible when gemeente becomes active (24-03)
+- Use refs for activeScanId, activeGemeente, wijkGeojson to avoid stale closure in click handlers (24-03)
+- Gemeente context header at top-center with close button (24-03)
 
 **Phase 23 decisions:**
 - REVERTED: Drawing tools (terra-draw) removed — not natural UX for real estate developers
@@ -122,12 +126,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-14T22:33:46.711Z
-**Stopped At:** Completed 24-02-PLAN.md
+**Last Session:** 2026-02-15T05:45:40Z
+**Stopped At:** Completed 24-03-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-plan 24-03` to add CBS wijken WFS fetching
+**Next Action:** `/gsd:execute-plan 24-04` to wire wijk click -> scan trigger
 
 ---
 
-*State updated: 2026-02-15 (Plan 24-02 complete: WijkBoundariesLayer)*
+*State updated: 2026-02-15 (Plan 24-03 complete: Gemeente Click to Wijk Loading)*
