@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 **Milestone:** v3.1 Smart Area Intelligence
-**Phase:** 23 of 26 (Area Selection Tools)
-**Plan:** 23-01 complete (bbox utilities and highlight layer)
-**Status:** Active — building click-based area selection
+**Phase:** 24 of 26 (Wijk-Based Area Selection)
+**Plan:** 24-01 complete (wijk boundaries service)
+**Status:** Active — building wijk-based area selection
 
-**Last activity:** 2026-02-13 — Plan 23-01 complete (geo-utils, ScanAreaHighlightLayer)
+**Last activity:** 2026-02-14 — Plan 24-01 complete (wijk_service, wijken endpoint)
 
-**Progress:** [██████████] 98%
+**Progress:** [██████████] 95%
 
 ---
 
@@ -58,6 +58,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
 - Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**Phase 24 decisions:**
+- Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
+- OGC XML FILTER with PropertyIsLike for wijk lookup (CQL_FILTER ignored)
+- Return full GeoJSON FeatureCollection wrapper (frontend needs it)
+- EPSG:4326 output for direct MapLibre consumption
 
 **Phase 23 decisions:**
 - REVERTED: Drawing tools (terra-draw) removed — not natural UX for real estate developers
@@ -112,12 +118,12 @@ From v3.0:
 
 ## Session Continuity
 
-**Last Session:** 2026-02-13T15:35:52.926Z
-**Stopped At:** Completed 23-01-PLAN.md
+**Last Session:** 2026-02-14T22:33:12.355Z
+**Stopped At:** Completed 24-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-plan 23-03` to wire bbox utilities into map scan flow
+**Next Action:** `/gsd:execute-plan 24-02` to continue wijk-based area selection
 
 ---
 
-*State updated: 2026-02-13 (Plan 23-01 complete: bbox utilities and highlight layer)*
+*State updated: 2026-02-14 (Plan 24-01 complete: wijk boundaries service)*
