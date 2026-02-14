@@ -53,7 +53,7 @@ class BAGWFSClient:
 
     BASE_URL = "https://service.pdok.nl/lv/bag/wfs/v2_0"
     PAGE_SIZE = 1000  # PDOK maximum features per request
-    MAX_FEATURES = 10000  # Cap to prevent scanning 100k+ parcels
+    MAX_FEATURES = 50000  # Cap raised for wijk-based scans (wijken typically 200-2000 parcels)
 
     async def get_panden_in_bbox(
         self,
