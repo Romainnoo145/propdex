@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -14,6 +14,7 @@ interface ResultsTableProps {
   scanId: string
   filters?: ScanResultsFilters
   onRowClick?: (parcelId: string) => void
+  onTotalChange?: (total: number) => void
 }
 
 // Score badge component for visual indicators
@@ -114,6 +115,7 @@ export default function ResultsTable({
   scanId,
   filters = {},
   onRowClick,
+  onTotalChange,
 }: ResultsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'score', desc: true },
@@ -122,6 +124,11 @@ export default function ResultsTable({
     pageIndex: 0,
     pageSize: 50,
   })
+
+  // Reset pagination to page 0 when filters change
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }, [filters])
 
   // Build API filters with sorting and pagination
   const apiFilters: ScanResultsFilters = {
@@ -133,6 +140,13 @@ export default function ResultsTable({
   }
 
   const { data, isLoading, error } = useScanResults(scanId, apiFilters)
+
+  // Update total count when data changes
+  useEffect(() => {
+    if (data?.total !== undefined) {
+      onTotalChange?.(data.total)
+    }
+  }, [data?.total, onTotalChange])
 
   const table = useReactTable({
     data: data?.results ?? [],

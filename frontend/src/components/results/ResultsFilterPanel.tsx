@@ -27,12 +27,8 @@ export default function ResultsFilterPanel({
     }, 500)
 
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localMinArea])
-
-  // Sync local state when filters change externally (e.g., clear button)
-  useEffect(() => {
-    setLocalMinArea(filters.min_area_m2?.toString() ?? '')
-  }, [filters.min_area_m2])
 
   const hasActiveFilters =
     filters.bestemming_type ||

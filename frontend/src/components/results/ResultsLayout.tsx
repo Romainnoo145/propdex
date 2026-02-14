@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import ResultsTable from './ResultsTable'
+import ResultsFilterPanel from './ResultsFilterPanel'
+import type { ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsLayoutProps {
   scanId: string | null
@@ -9,6 +12,9 @@ interface ResultsLayoutProps {
 }
 
 export default function ResultsLayout({ scanId, children, collapsed, onClose }: ResultsLayoutProps) {
+  const [filters, setFilters] = useState<ScanResultsFilters>({})
+  const [total, setTotal] = useState(0)
+
   // When collapsed, just render the map without panel structure
   if (collapsed || !scanId) {
     return <>{children}</>
@@ -35,9 +41,20 @@ export default function ResultsLayout({ scanId, children, collapsed, onClose }: 
               </button>
             </div>
 
+            {/* Filter panel */}
+            <ResultsFilterPanel
+              filters={filters}
+              onChange={setFilters}
+              total={total}
+            />
+
             {/* Table scrolls within remaining space */}
             <div className="flex-1 overflow-hidden">
-              <ResultsTable scanId={scanId} />
+              <ResultsTable
+                scanId={scanId}
+                filters={filters}
+                onTotalChange={setTotal}
+              />
             </div>
           </div>
         </Panel>
