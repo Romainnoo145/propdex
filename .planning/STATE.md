@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Milestone:** v3.1 Smart Area Intelligence
 **Phase:** 25 of 26 (Results Interface) — IN PROGRESS
-**Plan:** 3/5 plans complete
-**Status:** Plan 25-03 complete (Filters Panel)
+**Plan:** 4/5 plans complete
+**Status:** Plan 25-04 complete (Bidirectional Linking)
 
-**Last activity:** 2026-02-15 — Plan 25-03 complete (2 tasks, 2 commits, 9 min)
+**Last activity:** 2026-02-15 — Plan 25-04 complete (2 tasks, 2 commits, 4 min)
 
-**Progress:** [██████████] 96%
+**Progress:** [██████████] 97%
 
 ---
 
@@ -72,6 +72,10 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Reset pagination to page 0 when filters change (avoid empty page state) (25-03)
 - Clear button preserves sort/pagination (filters distinct from view settings) (25-03)
 - SVBP2012 hoofdgroepen for bestemming dropdown (matches PDOK layer data) (25-03)
+- Track selection source (table vs map) with ref to prevent infinite loops (25-04)
+- Selected state separate from hover state for clarity (25-04)
+- Always scrollIntoView on selection change (simpler, no edge cases) (25-04)
+- FlyTo with Math.max(currentZoom, 16) to preserve user context (25-04)
 
 **Phase 24 decisions:**
 - Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
@@ -141,11 +145,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Completed 25-03-PLAN.md
-**Resume File:** .planning/phases/25-results-interface/25-03-SUMMARY.md
+**Stopped At:** Completed 25-04-PLAN.md
+**Resume File:** .planning/phases/25-results-interface/25-04-SUMMARY.md
 
-**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-04 (Bidirectional Linking)
+**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-05 (Export & URL State)
 
 ---
 
-*State updated: 2026-02-15 (Plan 25-03 complete — live filter panel with 4 filter types and debounced area input)*
+*State updated: 2026-02-15 (Plan 25-04 complete — bidirectional selection sync between map and table)*
