@@ -3,9 +3,13 @@ import type maplibregl from 'maplibre-gl';
 const SOURCE_ID = 'parcel-scores';
 const FILL_LAYER_ID = 'parcel-score-fill';
 const OUTLINE_LAYER_ID = 'parcel-score-outline';
+const SELECTED_OUTLINE_LAYER_ID = 'parcel-score-selected-outline';
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
+
+// Track selected parcel separately from hover
+let selectedScoreParcelId: string | number | null = null;
 
 /**
  * Add a score-based color overlay layer for parcel visualization.
@@ -60,6 +64,8 @@ export function addParcelScoreLayer(
       ],
       'fill-opacity': [
         'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.95, // Selected: almost fully opaque
         ['boolean', ['feature-state', 'hover'], false],
         0.85, // Hover opacity
         0.6, // Default opacity
@@ -79,6 +85,31 @@ export function addParcelScoreLayer(
       'line-color': '#ffffff',
       'line-width': 0.5,
       'line-opacity': 0.8,
+    },
+    minzoom: 14,
+  });
+
+  // Add selected parcel outline layer (thick white outline for selected parcel)
+  map.addLayer({
+    id: SELECTED_OUTLINE_LAYER_ID,
+    type: 'line',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        3, // Selected: thick white outline
+        0, // Default: no outline (regular outline layer handles this)
+      ],
+      'line-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        1.0,
+        0,
+      ],
     },
     minzoom: 14,
   });
@@ -131,6 +162,60 @@ export function addParcelScoreLayer(
 }
 
 /**
+ * Setup click handler for parcel selection.
+ *
+ * Returns parcel_id (string) and feature.id (numeric) for selection state management.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param onParcelClick - Callback with (parcelId: string, featureId: number | string | undefined)
+ * @returns Cleanup function to remove event listener
+ */
+export function setupParcelScoreClickHandler(
+  map: maplibregl.Map,
+  onParcelClick: (parcelId: string, featureId: string | number | undefined) => void
+): () => void {
+  const handler = (e: maplibregl.MapMouseEvent & { features?: maplibregl.GeoJSONFeature[] }) => {
+    const feature = e.features?.[0];
+    if (feature?.properties?.parcel_id) {
+      onParcelClick(feature.properties.parcel_id as string, feature.id);
+    }
+  };
+
+  map.on('click', FILL_LAYER_ID, handler);
+  return () => map.off('click', FILL_LAYER_ID, handler);
+}
+
+/**
+ * Set selected parcel highlight using feature-state.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param featureId - Numeric feature ID from MVT (or null to clear)
+ * @param sourceLayer - Name of the layer in the MVT tile
+ */
+export function setParcelScoreSelection(
+  map: maplibregl.Map,
+  featureId: string | number | null,
+  sourceLayer: string
+): void {
+  // Clear previous selection
+  if (selectedScoreParcelId !== null) {
+    map.setFeatureState(
+      { source: SOURCE_ID, sourceLayer, id: selectedScoreParcelId },
+      { selected: false }
+    );
+  }
+
+  // Set new selection
+  selectedScoreParcelId = featureId;
+  if (featureId !== null) {
+    map.setFeatureState(
+      { source: SOURCE_ID, sourceLayer, id: featureId },
+      { selected: true }
+    );
+  }
+}
+
+/**
  * Remove score overlay layer from the map.
  *
  * Cleans up layers and source.
@@ -138,8 +223,9 @@ export function addParcelScoreLayer(
  * @param map - MapLibre GL JS map instance
  */
 export function removeParcelScoreLayer(map: maplibregl.Map): void {
-  // Clear hover state
+  // Clear hover and selection state
   hoveredScoreParcelId = null;
+  selectedScoreParcelId = null;
 
   // Reset cursor
   const canvas = map.getCanvas();
@@ -148,6 +234,10 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
   }
 
   // Remove layers (this also removes layer-specific event handlers)
+  if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
+    map.removeLayer(SELECTED_OUTLINE_LAYER_ID);
+  }
+
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.removeLayer(OUTLINE_LAYER_ID);
   }
