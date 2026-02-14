@@ -3,6 +3,7 @@
 import logging
 import uuid
 
+import httpx
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
@@ -26,6 +27,7 @@ from app.scans.schemas import (
 from app.services.excel_exporter import export_scan_results_to_excel
 from app.services.gemeente_service import get_gemeente_bbox
 from app.services.spatial_helpers import transform_bbox_to_rd
+from app.services.wijk_service import get_wijken_in_gemeente
 
 logger = logging.getLogger(__name__)
 
@@ -577,3 +579,65 @@ async def export_results(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/wijken")
+@limiter.limit("30/minute")
+async def get_wijken(
+    request: Request,
+    gemeente_code: str,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+) -> dict:
+    """
+    Get wijk (district) boundaries for a gemeente.
+
+    Fetches wijk polygons from CBS gebiedsindelingen WFS and returns them
+    as a GeoJSON FeatureCollection. Used by frontend to render clickable
+    wijk boundaries when user selects a gemeente for area selection.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        gemeente_code: CBS gemeentecode (e.g., "0983" for Venlo)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+
+    Returns:
+        dict: GeoJSON FeatureCollection with wijk polygons in EPSG:4326
+
+    Raises:
+        HTTPException 404: No wijken found for gemeente
+        HTTPException 502: CBS WFS service unavailable
+        HTTPException 500: Internal server error
+    """
+    try:
+        # Get shared HTTP client from app state
+        http_client = request.app.state.http_client
+
+        # Fetch wijken from CBS WFS
+        geojson = await get_wijken_in_gemeente(gemeente_code, http_client)
+
+        return geojson
+
+    except ValueError as e:
+        # No wijken found for gemeente
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No wijken found for gemeente {gemeente_code}: {e}",
+        ) from e
+    except httpx.HTTPError as e:
+        # CBS WFS service error
+        logger.exception("CBS WFS service error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="CBS WFS service unavailable",
+        ) from e
+    except Exception as e:
+        # Generic error
+        logger.exception("Failed to fetch wijken")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch wijken: {e}",
+        ) from e
