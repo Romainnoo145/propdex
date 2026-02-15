@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 **Milestone:** v3.1 Smart Area Intelligence
-**Phase:** 25 of 26 (Results Interface) — IN PROGRESS
-**Plan:** 4/5 plans complete
-**Status:** Plan 25-04 complete (Bidirectional Linking)
+**Phase:** 25 of 26 (Results Interface) — COMPLETE
+**Plan:** 5/5 plans complete
+**Status:** Phase 25 complete (Parcel Detail Modal)
 
-**Last activity:** 2026-02-15 — Plan 25-04 complete (2 tasks, 2 commits, 4 min)
+**Last activity:** 2026-02-15 — Plan 25-05 complete (2 tasks, 2 commits, 5 min)
 
-**Progress:** [██████████] 97%
+**Progress:** [██████████] 98%
 
 ---
 
@@ -76,6 +76,11 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Selected state separate from hover state for clarity (25-04)
 - Always scrollIntoView on selection change (simpler, no edge cases) (25-04)
 - FlyTo with Math.max(currentZoom, 16) to preserve user context (25-04)
+- On-demand enrichment (not pre-loaded) - fetch only when user opens detail modal (25-05)
+- 7-day cache for vergunningen enrichment (balances freshness vs API load) (25-05)
+- Postcode extraction from address via regex (no separate field needed) (25-05)
+- Native details/summary for expandable sections (accessible, performant) (25-05)
+- Double-click to open modal (single-click already used for selection) (25-05)
 
 **Phase 24 decisions:**
 - Use CBS WFS 2024 (not 2026) for wijk data - 2026 incomplete
@@ -145,11 +150,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Completed 25-04-PLAN.md
-**Resume File:** .planning/phases/25-results-interface/25-04-SUMMARY.md
+**Stopped At:** Completed 25-05-PLAN.md (Phase 25 complete)
+**Resume File:** .planning/phases/25-results-interface/25-05-SUMMARY.md
 
-**Next Action:** `/gsd:execute-phase 25` — Continue with Plan 25-05 (Export & URL State)
+**Next Action:** `/gsd:plan-phase 26` — Begin Phase 26 (Change Monitoring) planning
 
 ---
 
-*State updated: 2026-02-15 (Plan 25-04 complete — bidirectional selection sync between map and table)*
+*State updated: 2026-02-15 (Phase 25 complete — Results interface with parcel detail modal and on-demand enrichment)*
