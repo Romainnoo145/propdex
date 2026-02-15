@@ -39,14 +39,18 @@ These are now validated infrastructure for v3.1.
 
 ### Area Deep-Dive
 
-- [ ] **DIVE-01**: User can click on a bestemmingsplan zone or gemeente boundary on the map to select a scan area
-- [ ] **DIVE-02**: User can trigger a focused BAG scan on the selected area (hundreds of parcels, not full gemeente)
-- [ ] **DIVE-03**: User sees scan progress with phase indicator and percentage during area deep-dive
-- [ ] **DIVE-04**: Scan results include bestemmingsplan hoofdgroep per parcel from zoning context
+- [ ] **DIVE-01**: User can select a wijk within a gemeente to trigger a focused area scan
+- [ ] **DIVE-02**: User can trigger a focused BAG scan on the selected wijk (typically 1-5k parcels)
+- [x] **DIVE-03**: User sees scan progress with phase indicator and percentage during area deep-dive
+- [x] **DIVE-04**: Scan results include bestemmingsplan hoofdgroep per parcel via WMS GetFeatureInfo
+
+### Area Navigation
+
+- [ ] **NAV-01**: User can click a gemeente to zoom in, then see and click wijk boundaries within it (CBS gebiedsindelingen WFS)
 
 ### Opportunity Scoring
 
-- [ ] **SCORE-01**: Opportunity score factors in bestemmingsplan type (wonen = high for residential developers)
+- [x] **SCORE-01**: Opportunity score factors in bestemmingsplan type (wonen = high for residential developers)
 - [ ] **SCORE-02**: Scan results are colored on the map by score (green/yellow/red gradient)
 
 ### Parcel List & Detail
@@ -66,7 +70,7 @@ These are now validated infrastructure for v3.1.
 
 - **DETAIL-04**: BRK eigendomsdata for qualified leads (behind legitimate interest confirmation) — requires paid API access
 - **MON-05**: Email digest for weekly monitoring summaries
-- **MON-06**: Wijk/buurt hierarchical selection within gemeente
+- **MON-06**: Buurt-level hierarchical selection within wijk (drill-down beyond wijk)
 - **SCAN-13**: Open Raadsinformatie integration for gemeenteraad decisions
 - **LIST-04**: Excel export of filtered scan results
 
@@ -89,14 +93,15 @@ These are now validated infrastructure for v3.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ZONE-01 | Phase 22 | Pending |
-| ZONE-02 | Phase 22 | Pending |
-| ZONE-03 | Phase 22 | Pending |
-| DIVE-01 | Phase 23 | Pending |
-| DIVE-02 | Phase 23 | Pending |
-| DIVE-03 | Phase 23 | Pending |
-| DIVE-04 | Phase 24 | Pending |
-| SCORE-01 | Phase 24 | Pending |
+| ZONE-01 | Phase 22 | Complete |
+| ZONE-02 | Phase 22 | Complete |
+| ZONE-03 | Phase 22 | Complete |
+| DIVE-03 | Phase 23 | Complete |
+| DIVE-04 | Phase 23 | Complete |
+| SCORE-01 | Phase 23 | Complete |
+| DIVE-01 | Phase 24 | Pending |
+| DIVE-02 | Phase 24 | Pending |
+| NAV-01 | Phase 24 | Pending |
 | SCORE-02 | Phase 25 | Pending |
 | LIST-01 | Phase 25 | Pending |
 | LIST-02 | Phase 25 | Pending |
@@ -107,10 +112,11 @@ These are now validated infrastructure for v3.1.
 | MON-04 | Phase 26 | Pending |
 
 **Coverage:**
-- v3.1 requirements: 16 total
-- Mapped to phases: 16 (100% coverage ✓)
-- Unmapped: 0
+- v3.1 requirements: 17 total (added NAV-01)
+- Mapped to phases: 17 (100% coverage)
+- Complete: 6 (Phase 22-23)
+- Pending: 11 (Phase 24-26)
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after v3.1 roadmap creation*
+*Last updated: 2026-02-15 (Phase 23 complete, Phase 24 revised to wijk-based, added NAV-01)*

@@ -174,11 +174,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 25-01-PLAN.md -- Split-panel layout with resizable table + map (react-resizable-panels)
-- [ ] 25-02-PLAN.md -- Results table with TanStack Table sorting, pagination, score badges
-- [ ] 25-03-PLAN.md -- Filter panel (bestemming type, has_pand, area range, score category)
-- [ ] 25-04-PLAN.md -- Map-table bidirectional linking (click sync + flyTo + scrollIntoView)
-- [ ] 25-05-PLAN.md -- Parcel detail modal with Tier 2 SRU enrichment endpoint
+- [x] 25-01-PLAN.md -- Split-panel layout with resizable table + map (react-resizable-panels)
+- [x] 25-02-PLAN.md -- Results table with TanStack Table sorting, pagination, score badges
+- [x] 25-03-PLAN.md -- Filter panel (bestemming type, has_pand, area range, score category)
+- [x] 25-04-PLAN.md -- Map-table bidirectional linking (click sync + flyTo + scrollIntoView)
+- [x] 25-05-PLAN.md -- Parcel detail modal with Tier 2 SRU enrichment endpoint
 
 ---
 
@@ -233,10 +233,10 @@ Plans:
 | 22. Bestemmingsplan Base Layer | v3.1 | 3/3 | Complete | 2026-02-11 |
 | 23. Working Scan Pipeline | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 24. Wijk-Based Area Selection | v3.1 | 4/4 | Complete | 2026-02-15 |
-| 25. Results Interface | v3.1 | 0/5 | Not started | - |
+| 25. Results Interface | v3.1 | 5/5 | Complete | 2026-02-15 |
 | 26. Change Monitoring | v3.1 | 0/5 | Not started | - |
 
 ---
 
 *Roadmap created for v3.1: 2026-02-11*
-*Last updated: 2026-02-15 (Phase 24 complete — wijk-based area selection)*
+*Last updated: 2026-02-15 (Phase 25 complete — results interface)*
