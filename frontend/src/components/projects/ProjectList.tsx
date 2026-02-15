@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
+import { useUnreadCounts } from '@/hooks/useNotifications'
 import { toast } from 'sonner'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { ReportListItem } from '@/lib/types/report'
 import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
+import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 
 // Demo reports per project
 const DEMO_REPORTS: Record<string, ReportListItem[]> = {
@@ -73,6 +75,7 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
  */
 export default function ProjectList() {
   const { data, isLoading } = useProjects()
+  const { data: unreadData } = useUnreadCounts()
   const deleteMutation = useDeleteProject()
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -150,6 +153,11 @@ export default function ProjectList() {
               ? DEMO_REPORTS[project.id] ?? []
               : [] // TODO: fetch from useReports({ project_id }) when live
 
+            // Get unread count for this project
+            const unreadCount = unreadData?.per_project.find(
+              (p) => p.project_id === project.id
+            )?.unread_count ?? 0
+
             return (
               <div
                 key={project.id}
@@ -169,6 +177,12 @@ export default function ProjectList() {
                       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
                         {project.report_count}
                       </span>
+                      {/* Unread badge */}
+                      {unreadCount > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                          {unreadCount > 9 ? unreadCount : ''}
+                        </span>
+                      )}
                     </div>
                     {project.description && (
                       <p className="mt-0.5 truncate text-sm text-gray-500">
@@ -198,37 +212,45 @@ export default function ProjectList() {
                   )}
                 </button>
 
-                {/* Expanded report list */}
-                {isExpanded && reports.length > 0 && (
-                  <div className="border-t border-gray-100 bg-gray-50/50">
-                    {reports.map((report) => (
-                      <button
-                        key={report.id}
-                        onClick={() => handleReportClick(report)}
-                        className="flex w-full items-center gap-3 border-b border-gray-100 px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
-                      >
-                        <DocumentIcon />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-800">
-                            {report.report_name}
-                          </p>
-                          {report.notes && (
-                            <p className="truncate text-xs text-gray-400">{report.notes}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-400">
-                          <span>{Math.round(report.completeness_score * 100)}%</span>
-                          <span>{dateFmt.format(new Date(report.created_at))}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Expanded content: reports + change timeline */}
+                {isExpanded && (
+                  <>
+                    {/* Reports section */}
+                    {reports.length > 0 && (
+                      <div className="border-t border-gray-100 bg-gray-50/50">
+                        {reports.map((report) => (
+                          <button
+                            key={report.id}
+                            onClick={() => handleReportClick(report)}
+                            className="flex w-full items-center gap-3 border-b border-gray-100 px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
+                          >
+                            <DocumentIcon />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-800">
+                                {report.report_name}
+                              </p>
+                              {report.notes && (
+                                <p className="truncate text-xs text-gray-400">{report.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-400">
+                              <span>{Math.round(report.completeness_score * 100)}%</span>
+                              <span>{dateFmt.format(new Date(report.created_at))}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                {isExpanded && reports.length === 0 && (
-                  <div className="border-t border-gray-100 px-5 py-4 text-center text-sm text-gray-400">
-                    Geen rapporten in dit project
-                  </div>
+                    {reports.length === 0 && (
+                      <div className="border-t border-gray-100 px-5 py-4 text-center text-sm text-gray-400">
+                        Geen rapporten in dit project
+                      </div>
+                    )}
+
+                    {/* Change timeline section */}
+                    {!isDemo && <ChangeTimeline projectId={project.id} />}
+                  </>
                 )}
               </div>
             )
