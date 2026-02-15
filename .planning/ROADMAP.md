@@ -192,14 +192,14 @@ Plans:
   3. User sees in-app notification badges for changes since last visit
   4. User can save scan areas (wijken) for ongoing monitoring
   5. User can view change history for monitored areas
-**Plans**: TBD (estimated 5 plans)
+**Plans**: 5 plans
 
 Plans:
-- [ ] 26-01: WatchedArea model + save/list endpoints
-- [ ] 26-02: Change detection service (SRU + PLU WMS delta)
-- [ ] 26-03: ARQ cron job for daily monitoring
-- [ ] 26-04: ChangeNotification model + badge API
-- [ ] 26-05: Frontend notification UI (badge, timeline, save-to-watch)
+- [ ] 26-01-PLAN.md -- Project hierarchy + ChangeRecord + UserNotificationState models + Alembic migration
+- [ ] 26-02-PLAN.md -- Change detection service (SRU + PLU WMS delta) + monitoring REST API
+- [ ] 26-03-PLAN.md -- ARQ cron job for daily monitoring (03:00 UTC)
+- [ ] 26-04-PLAN.md -- Frontend notification UI (badge, timeline, unread hook, SideRailNav + ProjectList)
+- [ ] 26-05-PLAN.md -- Scan integration (hierarchical projects) + monitored wijk overlay + verification
 
 ---
 
@@ -234,7 +234,7 @@ Plans:
 | 23. Working Scan Pipeline | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 24. Wijk-Based Area Selection | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 25. Results Interface | v3.1 | 5/5 | Complete | 2026-02-15 |
-| 26. Change Monitoring | v3.1 | 0/5 | Not started | - |
+| 26. Change Monitoring | v3.1 | 0/5 | Planned | - |
 
 ---
 
