@@ -33,11 +33,16 @@ import type {
   ScanResultsResponse,
   ScanResultsFilters,
 } from './types/scan'
+import type {
+  ChangeRecordListResponse,
+  UnreadDetailResponse,
+} from './types/monitoring'
 
 const API_BASE = '/api/properties'
 const REPORTS_BASE = '/api/reports'
 const PROJECTS_BASE = '/api/projects'
 const SCANS_BASE = '/api/scans'
+const MONITORING_BASE = '/api/monitoring'
 const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
 
 /**
@@ -650,4 +655,62 @@ export async function fetchParcelEnrichment(
     `${SCANS_BASE}/parcels/${parcelId}/enrich`,
     { method: 'GET', accessToken }
   )
+}
+
+/**
+ * Fetch unread change notification counts
+ *
+ * GET /api/monitoring/unread
+ *
+ * @param accessToken - JWT access token
+ * @returns Total unread count and per-project breakdown
+ */
+export async function fetchUnreadCounts(
+  accessToken: string | null
+): Promise<UnreadDetailResponse> {
+  return apiFetch<UnreadDetailResponse>(`${MONITORING_BASE}/unread`, {
+    accessToken,
+    method: 'GET',
+  })
+}
+
+/**
+ * Fetch change history for a specific project
+ *
+ * GET /api/monitoring/changes
+ *
+ * @param projectId - Project UUID
+ * @param accessToken - JWT access token
+ * @param limit - Number of changes to fetch (default 50)
+ * @param offset - Pagination offset (default 0)
+ * @returns Paginated list of change records
+ */
+export async function fetchProjectChanges(
+  projectId: string,
+  accessToken: string | null,
+  limit = 50,
+  offset = 0
+): Promise<ChangeRecordListResponse> {
+  return apiFetch<ChangeRecordListResponse>(
+    `${MONITORING_BASE}/changes?project_id=${projectId}&limit=${limit}&offset=${offset}`,
+    { accessToken, method: 'GET' }
+  )
+}
+
+/**
+ * Mark a project's changes as viewed (clears unread badge)
+ *
+ * POST /api/monitoring/viewed/{projectId}
+ *
+ * @param projectId - Project UUID
+ * @param accessToken - JWT access token
+ */
+export async function markProjectViewed(
+  projectId: string,
+  accessToken: string | null
+): Promise<void> {
+  await apiFetch(`${MONITORING_BASE}/viewed/${projectId}`, {
+    accessToken,
+    method: 'POST',
+  })
 }
