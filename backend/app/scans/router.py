@@ -202,6 +202,200 @@ async def trigger_scan(
         ) from e
 
 
+# --- Static path routes MUST come before /{scan_id} to avoid UUID parsing ---
+
+
+@router.get("/wijken")
+@limiter.limit("30/minute")
+async def get_wijken(
+    request: Request,
+    gemeente_code: str,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+) -> dict:
+    """
+    Get wijk (district) boundaries for a gemeente.
+
+    Fetches wijk polygons from CBS gebiedsindelingen WFS and returns them
+    as a GeoJSON FeatureCollection. Used by frontend to render clickable
+    wijk boundaries when user selects a gemeente for area selection.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        gemeente_code: CBS gemeentecode (e.g., "0983" for Venlo)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+
+    Returns:
+        dict: GeoJSON FeatureCollection with wijk polygons in EPSG:4326
+
+    Raises:
+        HTTPException 404: No wijken found for gemeente
+        HTTPException 502: CBS WFS service unavailable
+        HTTPException 500: Internal server error
+    """
+    try:
+        # Get shared HTTP client from app state
+        http_client = request.app.state.http_client
+
+        # Fetch wijken from CBS WFS
+        geojson = await get_wijken_in_gemeente(gemeente_code, http_client)
+
+        return geojson
+
+    except ValueError as e:
+        # No wijken found for gemeente
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No wijken found for gemeente {gemeente_code}: {e}",
+        ) from e
+    except httpx.HTTPError as e:
+        # CBS WFS service error
+        logger.exception("CBS WFS service error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="CBS WFS service unavailable",
+        ) from e
+    except Exception as e:
+        # Generic error
+        logger.exception("Failed to fetch wijken")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch wijken: {e}",
+        ) from e
+
+
+@router.get("/parcels/{parcel_id}/enrich", response_model=ParcelEnrichmentResponse)
+@limiter.limit("30/minute")
+async def enrich_parcel(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ParcelEnrichmentResponse:
+    """
+    Fetch on-demand Tier 2 enrichment for a parcel (vergunningen via SRU).
+
+    Returns cached enrichment if available and fresh (< 7 days old).
+    Otherwise fetches fresh data from SRU API using parcel postcode.
+
+    Tier 2 enrichment includes:
+    - Vergunningen (permits) from Officiele Bekendmakingen SRU
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        parcel_id: ParcelCache UUID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ParcelEnrichmentResponse: Enrichment data with cache status
+
+    Raises:
+        HTTPException 404: Parcel not found
+    """
+    # Query ParcelCache by id and organization_id (multi-tenant isolation)
+    query = select(ParcelCache).where(
+        ParcelCache.id == parcel_id,
+        ParcelCache.organization_id == organization_id,
+    )
+    result = await db.execute(query)
+    parcel = result.scalar_one_or_none()
+
+    if not parcel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found",
+        )
+
+    # Check if enrichment is fresh (< 7 days old)
+    if parcel.enriched_at:
+        days_old = (datetime.utcnow() - parcel.enriched_at).days
+        if days_old < 7:
+            # Return cached enrichment
+            return ParcelEnrichmentResponse(
+                parcel_id=parcel.id,
+                enrichment_data=parcel.enrichment_data,
+                enriched_at=parcel.enriched_at,
+                is_cached=True,
+            )
+
+    # Enrichment is stale or missing - fetch fresh data
+
+    # Extract postcode from address (pattern: last 7 chars like "1234 AB" or "1234AB")
+    postcode = None
+    if parcel.address:
+        # Find Dutch postcode pattern: 4 digits + optional space + 2 uppercase letters
+        match = re.search(r'\b(\d{4}\s?[A-Z]{2})\b', parcel.address)
+        if match:
+            # Remove space for SRU query (expects "1234AB" format)
+            postcode = match.group(1).replace(' ', '')
+
+    if not postcode:
+        # No postcode extractable - return empty enrichment with note
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data={
+                "vergunningen": [],
+                "error": "Postcode niet gevonden in adres",
+            },
+            enriched_at=None,
+            is_cached=False,
+        )
+
+    # Fetch vergunningen from SRU API
+    http_client = request.app.state.http_client
+
+    try:
+        records = await sru_client.query_by_postcode(
+            postcode=postcode,
+            client=http_client,
+            max_records=20,
+        )
+
+        # Store enrichment result
+        parcel.enrichment_data = {
+            "vergunningen": [dict(r) for r in records],
+        }
+        parcel.enriched_at = datetime.utcnow()
+        db.add(parcel)
+        await db.commit()
+
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data=parcel.enrichment_data,
+            enriched_at=parcel.enriched_at,
+            is_cached=False,
+        )
+
+    except GovernmentAPIError as e:
+        # SRU API error - log and return error in enrichment_data
+        logger.warning(f"SRU API error for postcode {postcode}: {e}")
+        parcel.enrichment_data = {
+            "vergunningen": [],
+            "error": f"Kon vergunningen niet ophalen: {e}",
+        }
+        parcel.enriched_at = datetime.utcnow()
+        db.add(parcel)
+        await db.commit()
+
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data=parcel.enrichment_data,
+            enriched_at=parcel.enriched_at,
+            is_cached=False,
+        )
+
+
+# --- Dynamic path routes (/{scan_id}) ---
+
+
 @router.get("/{scan_id}", response_model=ScanStatusResponse)
 @limiter.limit("60/minute")
 async def get_scan_status(
@@ -585,191 +779,3 @@ async def export_results(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-@router.get("/wijken")
-@limiter.limit("30/minute")
-async def get_wijken(
-    request: Request,
-    gemeente_code: str,
-    current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
-) -> dict:
-    """
-    Get wijk (district) boundaries for a gemeente.
-
-    Fetches wijk polygons from CBS gebiedsindelingen WFS and returns them
-    as a GeoJSON FeatureCollection. Used by frontend to render clickable
-    wijk boundaries when user selects a gemeente for area selection.
-
-    Requires JWT authentication. Rate limited to 30 requests per minute.
-
-    Args:
-        request: FastAPI request object
-        gemeente_code: CBS gemeentecode (e.g., "0983" for Venlo)
-        current_user: Authenticated user
-        organization_id: Tenant ID
-
-    Returns:
-        dict: GeoJSON FeatureCollection with wijk polygons in EPSG:4326
-
-    Raises:
-        HTTPException 404: No wijken found for gemeente
-        HTTPException 502: CBS WFS service unavailable
-        HTTPException 500: Internal server error
-    """
-    try:
-        # Get shared HTTP client from app state
-        http_client = request.app.state.http_client
-
-        # Fetch wijken from CBS WFS
-        geojson = await get_wijken_in_gemeente(gemeente_code, http_client)
-
-        return geojson
-
-    except ValueError as e:
-        # No wijken found for gemeente
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No wijken found for gemeente {gemeente_code}: {e}",
-        ) from e
-    except httpx.HTTPError as e:
-        # CBS WFS service error
-        logger.exception("CBS WFS service error")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="CBS WFS service unavailable",
-        ) from e
-    except Exception as e:
-        # Generic error
-        logger.exception("Failed to fetch wijken")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch wijken: {e}",
-        ) from e
-
-
-@router.get("/parcels/{parcel_id}/enrich", response_model=ParcelEnrichmentResponse)
-@limiter.limit("30/minute")
-async def enrich_parcel(
-    request: Request,
-    parcel_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
-    db: AsyncSession = Depends(get_db),
-) -> ParcelEnrichmentResponse:
-    """
-    Fetch on-demand Tier 2 enrichment for a parcel (vergunningen via SRU).
-
-    Returns cached enrichment if available and fresh (< 7 days old).
-    Otherwise fetches fresh data from SRU API using parcel postcode.
-
-    Tier 2 enrichment includes:
-    - Vergunningen (permits) from Officiele Bekendmakingen SRU
-
-    Requires JWT authentication. Rate limited to 30 requests per minute.
-
-    Args:
-        request: FastAPI request object
-        parcel_id: ParcelCache UUID
-        current_user: Authenticated user
-        organization_id: Tenant ID
-        db: Database session
-
-    Returns:
-        ParcelEnrichmentResponse: Enrichment data with cache status
-
-    Raises:
-        HTTPException 404: Parcel not found
-    """
-    # Query ParcelCache by id and organization_id (multi-tenant isolation)
-    query = select(ParcelCache).where(
-        ParcelCache.id == parcel_id,
-        ParcelCache.organization_id == organization_id,
-    )
-    result = await db.execute(query)
-    parcel = result.scalar_one_or_none()
-
-    if not parcel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Parcel not found",
-        )
-
-    # Check if enrichment is fresh (< 7 days old)
-    if parcel.enriched_at:
-        days_old = (datetime.utcnow() - parcel.enriched_at).days
-        if days_old < 7:
-            # Return cached enrichment
-            return ParcelEnrichmentResponse(
-                parcel_id=parcel.id,
-                enrichment_data=parcel.enrichment_data,
-                enriched_at=parcel.enriched_at,
-                is_cached=True,
-            )
-
-    # Enrichment is stale or missing - fetch fresh data
-
-    # Extract postcode from address (pattern: last 7 chars like "1234 AB" or "1234AB")
-    postcode = None
-    if parcel.address:
-        # Find Dutch postcode pattern: 4 digits + optional space + 2 uppercase letters
-        match = re.search(r'\b(\d{4}\s?[A-Z]{2})\b', parcel.address)
-        if match:
-            # Remove space for SRU query (expects "1234AB" format)
-            postcode = match.group(1).replace(' ', '')
-
-    if not postcode:
-        # No postcode extractable - return empty enrichment with note
-        return ParcelEnrichmentResponse(
-            parcel_id=parcel.id,
-            enrichment_data={
-                "vergunningen": [],
-                "error": "Postcode niet gevonden in adres",
-            },
-            enriched_at=None,
-            is_cached=False,
-        )
-
-    # Fetch vergunningen from SRU API
-    http_client = request.app.state.http_client
-
-    try:
-        records = await sru_client.query_by_postcode(
-            postcode=postcode,
-            client=http_client,
-            max_records=20,
-        )
-
-        # Store enrichment result
-        parcel.enrichment_data = {
-            "vergunningen": [dict(r) for r in records],
-        }
-        parcel.enriched_at = datetime.utcnow()
-        db.add(parcel)
-        await db.commit()
-
-        return ParcelEnrichmentResponse(
-            parcel_id=parcel.id,
-            enrichment_data=parcel.enrichment_data,
-            enriched_at=parcel.enriched_at,
-            is_cached=False,
-        )
-
-    except GovernmentAPIError as e:
-        # SRU API error - log and return error in enrichment_data
-        logger.warning(f"SRU API error for postcode {postcode}: {e}")
-        parcel.enrichment_data = {
-            "vergunningen": [],
-            "error": f"Kon vergunningen niet ophalen: {e}",
-        }
-        parcel.enriched_at = datetime.utcnow()
-        db.add(parcel)
-        await db.commit()
-
-        return ParcelEnrichmentResponse(
-            parcel_id=parcel.id,
-            enrichment_data=parcel.enrichment_data,
-            enriched_at=parcel.enriched_at,
-            is_cached=False,
-        )
