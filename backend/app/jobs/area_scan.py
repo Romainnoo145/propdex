@@ -1,27 +1,39 @@
 """Area scan background job for ARQ worker."""
 
 import asyncio
+import json
 import logging
 import uuid
 from datetime import datetime
 
 import httpx
+from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
 from shapely.geometry import shape
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 from app.government_apis.bag_wfs import bag_wfs_client
+from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.plu_wfs import plu_wms_client
 from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
+from app.models.project import Project
 from app.models.scan_result import ScanResult
-from app.services.parcel_scoring import compute_opportunity_score
+from app.services.parcel_scoring import (
+    MAX_QUALIFYING,
+    QUALIFICATION_THRESHOLD,
+    compute_opportunity_score,
+)
 
 logger = logging.getLogger(__name__)
 
 # Concurrent WMS GetFeatureInfo requests for bestemmingen
 WMS_CONCURRENCY = 15
+# Concurrent reverse geocode requests
+REVERSE_GEOCODE_CONCURRENCY = 10
+
+locatieserver = PDOKLocatieserver()
 
 
 async def area_scan_job(
@@ -30,13 +42,15 @@ async def area_scan_job(
     organization_id: str,
 ) -> dict:
     """
-    Background job: Scan area for parcels, fetch bestemmingen, compute scores.
+    Background job: Scan area for parcels, qualify, resolve addresses, create project.
 
     Pipeline:
-        Phase 1 (0-25%):  Fetch BAG panden in bbox
-        Phase 2 (25-50%): Fetch bestemmingen per parcel via WMS GetFeatureInfo
-        Phase 3 (50-90%): Upsert parcels + compute scores
-        Phase 4 (90-100%): Finalize
+        Phase 1 (0-20%):   Fetch BAG panden in bbox
+        Phase 2 (20-40%):  Fetch bestemmingen per parcel via WMS GetFeatureInfo
+        Phase 3 (40-70%):  Upsert ALL parcels + compute scores (cache everything)
+        Phase 4 (70-80%):  Qualify — filter score >= 40, cap at 150, create ScanResult
+        Phase 5 (80-95%):  Addresses — batch reverse geocode qualifying parcels
+        Phase 6 (95-100%): Project — auto-create wijk project, link scan, finalize
 
     Args:
         ctx: ARQ context (contains redis connection, etc.)
@@ -91,7 +105,7 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
-            # ── Phase 1: Fetch BAG panden (0-25%) ──
+            # ── Phase 1: Fetch BAG panden (0-20%) ──
             logger.info(f"Scan {scan_id}: fetching parcels from BAG WFS")
 
             try:
@@ -112,16 +126,16 @@ async def area_scan_job(
                 return {"scan_id": scan_id, "status": "failed", "error": str(e)}
 
             scan.parcels_total = len(features)
-            scan.progress_pct = 25
+            scan.progress_pct = 20
             session.add(scan)
             await session.flush()
             await session.commit()
 
             logger.info(f"Scan {scan_id}: fetched {len(features)} panden")
 
-            # ── Phase 2: Fetch bestemmingen per parcel via WMS (25-50%) ──
+            # ── Phase 2: Fetch bestemmingen per parcel via WMS (20-40%) ──
             scan.current_phase = "fetching_bestemmingen"
-            scan.progress_pct = 25
+            scan.progress_pct = 20
             session.add(scan)
             await session.flush()
             await session.commit()
@@ -136,7 +150,7 @@ async def area_scan_job(
             )
 
             enriched_count = sum(1 for b in bestemmingen_list if b is not None)
-            scan.progress_pct = 50
+            scan.progress_pct = 40
             session.add(scan)
             await session.flush()
             await session.commit()
@@ -146,40 +160,38 @@ async def area_scan_job(
                 f"parcels with bestemmingen"
             )
 
-            # ── Phase 3: Upsert parcels + compute scores (50-90%) ──
+            # ── Phase 3: Upsert ALL parcels + compute scores (40-70%) ──
             scan.current_phase = "processing_parcels"
             session.add(scan)
             await session.flush()
             await session.commit()
 
             failed_count = 0
+            # Collect (parcel, score_breakdown, centroid_xy) for qualification
+            scored_parcels: list[tuple[ParcelCache, float, str, dict, tuple[float, float] | None]] = []
 
             for idx, (feature, bestemmingen) in enumerate(
                 zip(features, bestemmingen_list, strict=True)
             ):
                 try:
-                    parcel = await _upsert_parcel_cache(
+                    parcel, centroid_xy = await _upsert_parcel_cache(
                         feature, org_id, scan.gemeente_code, session,
                         bestemmingen=bestemmingen,
                     )
 
                     score_breakdown = compute_opportunity_score(parcel)
 
-                    scan_result = ScanResult(
-                        organization_id=org_id,
-                        scan_id=scan.id,
-                        parcel_id=parcel.id,
-                        score=score_breakdown.total_score,
-                        flags={
-                            "category": score_breakdown.category,
-                            "factors": score_breakdown.factors,
-                        },
-                    )
-                    session.add(scan_result)
+                    scored_parcels.append((
+                        parcel,
+                        score_breakdown.total_score,
+                        score_breakdown.category,
+                        score_breakdown.factors,
+                        centroid_xy,
+                    ))
 
                     # Update progress every 10 parcels
                     if (idx + 1) % 10 == 0 or (idx + 1) == len(features):
-                        progress_pct = 50 + int((idx + 1) / len(features) * 40)
+                        progress_pct = 40 + int((idx + 1) / len(features) * 30)
                         await _update_scan_progress(
                             scan, "processing_parcels", progress_pct, idx + 1, session
                         )
@@ -191,12 +203,77 @@ async def area_scan_job(
                     failed_count += 1
                     continue
 
-            # ── Phase 4: Finalize (90-100%) ──
-            scan.current_phase = "finalizing"
-            scan.progress_pct = 90
+            # ── Phase 4: Qualify — filter and create ScanResult (70-80%) ──
+            scan.current_phase = "qualifying"
+            scan.progress_pct = 70
             session.add(scan)
             await session.flush()
             await session.commit()
+
+            # Sort by score desc, filter >= threshold, cap at MAX_QUALIFYING
+            qualifying = sorted(
+                scored_parcels,
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            qualifying = [
+                p for p in qualifying if p[1] >= QUALIFICATION_THRESHOLD
+            ][:MAX_QUALIFYING]
+
+            logger.info(
+                f"Scan {scan_id}: {len(qualifying)}/{len(scored_parcels)} parcels "
+                f"qualify (threshold={QUALIFICATION_THRESHOLD}, cap={MAX_QUALIFYING})"
+            )
+
+            for parcel, score, category, factors, _centroid in qualifying:
+                scan_result = ScanResult(
+                    organization_id=org_id,
+                    scan_id=scan.id,
+                    parcel_id=parcel.id,
+                    score=score,
+                    flags={
+                        "category": category,
+                        "factors": factors,
+                    },
+                )
+                session.add(scan_result)
+
+            await session.flush()
+            await session.commit()
+
+            scan.progress_pct = 80
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            # ── Phase 5: Addresses — batch reverse geocode (80-95%) ──
+            scan.current_phase = "resolving_addresses"
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            await _batch_resolve_addresses(
+                [(p, c) for p, _s, _cat, _f, c in qualifying],
+                http_client,
+                session,
+            )
+
+            scan.progress_pct = 95
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            # ── Phase 6: Project — auto-create wijk project (95-100%) ──
+            scan.current_phase = "finalizing"
+            session.add(scan)
+            await session.flush()
+            await session.commit()
+
+            if scan.wijk_naam:
+                project = await _get_or_create_wijk_project(
+                    org_id, scan.wijk_naam, scan.gemeente_naam, session
+                )
+                scan.project_id = project.id
 
             scan.status = "completed"
             scan.completed_at = datetime.utcnow()
@@ -208,7 +285,8 @@ async def area_scan_job(
 
             logger.info(
                 f"Scan {scan_id}: completed ({scan.parcels_processed} processed, "
-                f"{enriched_count} enriched, {failed_count} failed)"
+                f"{enriched_count} enriched, {len(qualifying)} qualifying, "
+                f"{failed_count} failed)"
             )
 
             return {"scan_id": scan_id, "status": "completed"}
@@ -302,7 +380,7 @@ async def _upsert_parcel_cache(
     gemeente_code: str | None,
     session: AsyncSession,
     bestemmingen: list[dict] | None = None,
-) -> ParcelCache:
+) -> tuple[ParcelCache, tuple[float, float] | None]:
     """
     Upsert BAG WFS feature into ParcelCache.
 
@@ -314,18 +392,25 @@ async def _upsert_parcel_cache(
         bestemmingen: Matched bestemmingsplan data from WMS GetFeatureInfo
 
     Returns:
-        ParcelCache entry (created or updated)
+        Tuple of (ParcelCache entry, centroid_xy in RD coords or None)
     """
     properties = feature.get("properties", {})
     identificatie = properties.get("identificatie", "")
 
-    # Compute area from geometry
+    # Extract BAG building attributes
+    bouwjaar = properties.get("bouwjaar")  # int or None
+    pand_status = properties.get("status", "")  # str
+
+    # Compute area and centroid from geometry
     geometry = feature.get("geometry")
     area_m2 = None
+    centroid_xy: tuple[float, float] | None = None
     if geometry:
         try:
             geom_shape = shape(geometry)
             area_m2 = geom_shape.area
+            centroid = geom_shape.centroid
+            centroid_xy = (centroid.x, centroid.y)
         except Exception as e:
             logger.warning(f"Failed to compute area for {identificatie}: {e}")
 
@@ -338,9 +423,6 @@ async def _upsert_parcel_cache(
     parcel = result.scalar_one_or_none()
 
     # Convert GeoJSON geometry to PostGIS geometry
-    import json
-
-    from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
     geojson_str = json.dumps(geometry)
     # BAG WFS returns RD coordinates (EPSG:28992)
     geom_expr = ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 28992))
@@ -351,6 +433,8 @@ async def _upsert_parcel_cache(
         parcel.has_pand = True
         parcel.gemeente_code = gemeente_code
         parcel.bestemmingen = bestemmingen
+        parcel.bouwjaar = bouwjaar
+        parcel.pand_status = pand_status
         parcel.updated_at = datetime.utcnow()
         session.add(parcel)
     else:
@@ -362,6 +446,8 @@ async def _upsert_parcel_cache(
             has_pand=True,
             gemeente_code=gemeente_code,
             bestemmingen=bestemmingen,
+            bouwjaar=bouwjaar,
+            pand_status=pand_status,
             enrichment_data=None,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -369,7 +455,86 @@ async def _upsert_parcel_cache(
         session.add(parcel)
 
     await session.flush()
-    return parcel
+    return parcel, centroid_xy
+
+
+async def _batch_resolve_addresses(
+    parcels_with_centroids: list[tuple[ParcelCache, tuple[float, float] | None]],
+    client: httpx.AsyncClient,
+    session: AsyncSession,
+) -> None:
+    """
+    Batch reverse geocode qualifying parcels to resolve addresses.
+
+    Only called for qualifying parcels (~50-150), not all 10k.
+    Uses PDOK Locatieserver /reverse with RD coordinates.
+
+    Args:
+        parcels_with_centroids: List of (parcel, centroid_xy) tuples
+        client: Shared httpx AsyncClient
+        session: Database session
+    """
+    semaphore = asyncio.Semaphore(REVERSE_GEOCODE_CONCURRENCY)
+
+    async def resolve_one(parcel: ParcelCache, centroid: tuple[float, float] | None) -> None:
+        if centroid is None:
+            return
+        async with semaphore:
+            address = await locatieserver.reverse(centroid[0], centroid[1], client)
+            if address:
+                parcel.address = address
+                session.add(parcel)
+
+    tasks = [
+        resolve_one(parcel, centroid)
+        for parcel, centroid in parcels_with_centroids
+    ]
+    await asyncio.gather(*tasks)
+    await session.flush()
+    await session.commit()
+
+
+async def _get_or_create_wijk_project(
+    org_id: uuid.UUID,
+    wijk_naam: str,
+    gemeente_naam: str,
+    session: AsyncSession,
+) -> Project:
+    """
+    Find or create a Project folder for a wijk scan.
+
+    Project name format: "{wijk_naam} ({gemeente_naam})"
+
+    Args:
+        org_id: Organization UUID
+        wijk_naam: CBS wijk name
+        gemeente_naam: Gemeente display name
+        session: Database session
+
+    Returns:
+        Project instance (existing or newly created)
+    """
+    project_name = f"{wijk_naam} ({gemeente_naam})"
+
+    stmt = select(Project).where(
+        Project.organization_id == org_id,
+        Project.name == project_name,
+    )
+    result = await session.execute(stmt)
+    project = result.scalar_one_or_none()
+
+    if project:
+        return project
+
+    project = Project(
+        organization_id=org_id,
+        name=project_name,
+        description=f"Automatisch aangemaakt voor wijkscan {wijk_naam}",
+    )
+    session.add(project)
+    await session.flush()
+    await session.commit()
+    return project
 
 
 async def _update_scan_progress(

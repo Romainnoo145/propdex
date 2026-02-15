@@ -119,9 +119,15 @@ export function ParcelDetailModal({
             </p>
           </div>
           <div className="bg-white/5 rounded-lg border border-white/10 p-4">
-            <p className="text-xs text-white/50 mb-1">Bebouwd</p>
+            <p className="text-xs text-white/50 mb-1">Bouwjaar</p>
             <p className="text-sm font-medium text-white/80">
-              {parcel.has_pand ? 'Ja' : 'Nee'}
+              {parcel.bouwjaar ?? 'Onbekend'}
+            </p>
+          </div>
+          <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+            <p className="text-xs text-white/50 mb-1">Status</p>
+            <p className="text-sm font-medium text-white/80">
+              {parcel.pand_status || 'Onbekend'}
             </p>
           </div>
           {parcel.gemeente_code && (

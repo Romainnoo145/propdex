@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Index, String, Text, text
+from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TenantMixin, TimestampMixin
@@ -33,6 +33,14 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     # Gemeente identification
     gemeente_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     gemeente_naam: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    # Wijk (district) identification
+    wijk_naam: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    # Link to auto-created project folder
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True,
+    )
 
     # Bounding box used for the scan (EPSG:28992, stored as 4 floats)
     bbox_minx: Mapped[float] = mapped_column(nullable=False)

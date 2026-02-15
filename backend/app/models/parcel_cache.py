@@ -61,6 +61,10 @@ class ParcelCache(Base, TenantMixin, TimestampMixin):
     # BAG cross-reference flag
     has_pand: Mapped[bool] = mapped_column(default=False, nullable=False)
 
+    # BAG building attributes (from WFS properties)
+    bouwjaar: Mapped[int | None] = mapped_column(nullable=True)
+    pand_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     # --- Tier 1: Bestemming data (dubbele bestemming as JSONB array) ---
 
     # Stores multiple overlapping zonings as JSONB array

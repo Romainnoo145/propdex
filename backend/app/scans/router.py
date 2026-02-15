@@ -163,6 +163,7 @@ async def trigger_scan(
                 gemeente_naam=scan_request.gemeente_naam,
                 bbox=bbox,
                 session=db,
+                wijk_naam=scan_request.wijk_naam,
             )
 
         # Enqueue ARQ job
@@ -522,6 +523,7 @@ async def list_results(
     min_area_m2: float | None = None,
     max_area_m2: float | None = None,
     score_category: str | None = None,
+    pand_status: str | None = None,
     sort_by: str = "score",
     sort_order: str = "desc",
     offset: int = 0,
@@ -547,7 +549,8 @@ async def list_results(
         min_area_m2: Minimum parcel area
         max_area_m2: Maximum parcel area
         score_category: Filter by score category (High/Medium/Low)
-        sort_by: Sort field (score/area_m2/address)
+        pand_status: Filter by building status
+        sort_by: Sort field (score/area_m2/address/bouwjaar)
         sort_order: Sort direction (asc/desc)
         offset: Pagination offset
         limit: Page size (max 100)
@@ -587,6 +590,7 @@ async def list_results(
         offset=offset,
         limit=limit,
         session=db,
+        pand_status=pand_status,
     )
 
     # Map to ScanResultItem
@@ -607,6 +611,8 @@ async def list_results(
                 gemeente_code=parcel.gemeente_code,
                 area_m2=parcel.area_m2,
                 has_pand=parcel.has_pand,
+                bouwjaar=parcel.bouwjaar,
+                pand_status=parcel.pand_status,
                 bestemmingen=parcel.bestemmingen,
                 score=result.score,
                 score_category=score_category_value,
@@ -618,6 +624,7 @@ async def list_results(
         scan_id=scan.id,
         gemeente_naam=scan.gemeente_naam,
         scan_date=scan.created_at,
+        parcels_total=scan.parcels_total,
         total=total,
         offset=offset,
         limit=limit,
@@ -689,6 +696,7 @@ async def export_results(
     min_area_m2: float | None = None,
     max_area_m2: float | None = None,
     score_category: str | None = None,
+    pand_status: str | None = None,
     sort_by: str = "score",
     sort_order: str = "desc",
     current_user: User = Depends(get_current_active_user),
@@ -750,6 +758,7 @@ async def export_results(
         offset=0,
         limit=10000,  # Effectively all (scan limit is 10k parcels)
         session=db,
+        pand_status=pand_status,
     )
 
     # Build filters_applied dict for metadata

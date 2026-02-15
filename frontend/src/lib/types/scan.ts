@@ -20,6 +20,8 @@ export interface ScanCreateRequest {
    *  If provided, scan is limited to this area instead of entire gemeente.
    *  Backend converts to EPSG:28992 for BAG WFS queries. */
   bbox_wgs84?: [number, number, number, number]
+  /** CBS wijk name (for auto-creating project folder) */
+  wijk_naam?: string
 }
 
 /**
@@ -87,6 +89,10 @@ export interface ScanResultItem {
   area_m2: number | null
   /** Whether parcel has existing building */
   has_pand: boolean
+  /** BAG construction year */
+  bouwjaar: number | null
+  /** BAG building status */
+  pand_status: string | null
   /** Zoning designations from DSO */
   bestemmingen: Record<string, unknown>[] | null
   /** Development opportunity score (0-100) */
@@ -108,7 +114,9 @@ export interface ScanResultsResponse {
   gemeente_naam: string
   /** Scan creation timestamp (ISO 8601 string) */
   scan_date: string
-  /** Total matching results (before pagination) */
+  /** Total parcels scanned (before qualification) */
+  parcels_total: number
+  /** Total qualifying results (before pagination) */
   total: number
   /** Current offset */
   offset: number
@@ -133,6 +141,8 @@ export interface ScanResultsFilters {
   max_area_m2?: number
   /** Filter by score category */
   score_category?: string
+  /** Filter by building status */
+  pand_status?: string
   /** Sort field name */
   sort_by?: string
   /** Sort direction: asc | desc */

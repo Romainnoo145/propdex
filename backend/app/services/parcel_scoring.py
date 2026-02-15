@@ -1,21 +1,26 @@
 """Parcel opportunity scoring service.
 
-Provides weighted scoring with transparent per-factor breakdowns for client conversations.
-Fixed scoring formula for all organizations (per-org weights deferred per user decision).
+5-factor scoring formula targeting "leeg/onderbenut" (empty/underutilized) parcels.
+Uses BAG building status, construction year, zoning, size, and combination bonuses
+to identify promising development opportunities.
 
 Scoring factors determine default sort order (most promising parcels first).
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 
 # Scoring weights exported for documentation and client transparency
 SCORING_WEIGHTS = {
-    "vacant_land": 30,  # max points: 30
-    "size_optimal": 25,  # max points: 25
-    "zoning_residential": 25,  # max points: 25
-    "recent_permits": 20,  # max points: 20
+    "pand_status_signal": 30,
+    "building_age": 20,
+    "zoning_value": 25,
+    "footprint_size": 15,
+    "underutilization": 10,
 }
+
+# Qualification thresholds
+QUALIFICATION_THRESHOLD = 40.0
+MAX_QUALIFYING = 150
 
 
 @dataclass
@@ -32,42 +37,38 @@ def compute_opportunity_score(parcel_data) -> ScoreBreakdown:
     Compute opportunity score for a parcel with transparent per-factor breakdown.
 
     Args:
-        parcel_data: Object with attributes: has_pand, area_m2, bestemmingen, enrichment_data
+        parcel_data: Object with attributes: has_pand, area_m2, bestemmingen,
+                     bouwjaar, pand_status.
                      Works with both ParcelCache ORM instances and test mocks.
 
     Returns:
         ScoreBreakdown with total_score, category, and factors dict.
-
-    Scoring factors:
-        - vacant_land (30 points max): has_pand=False → 30, has_pand=True → 0
-        - size_optimal (25 points max): 500-2000m² → 25, 300-500 or 2000-3000m² → 15, else → 5
-        - zoning_residential (25 points max): bestemmingen contains type "Wonen" → 25, else → 0
-        - recent_permits (20 points max): >=3 permits in last 3 years → 20, 1-2 permits → 10, 0 → 0
-
-    Category thresholds:
-        - High >= 70
-        - Medium >= 40
-        - Low < 40
     """
     factors: dict[str, float] = {}
 
-    # Factor 1: Vacant land (30 points max)
-    factors["vacant_land"] = 0.0 if parcel_data.has_pand else 30.0
+    pand_status = getattr(parcel_data, "pand_status", None) or ""
+    bouwjaar = getattr(parcel_data, "bouwjaar", None)
 
-    # Factor 2: Size optimal (25 points max)
-    factors["size_optimal"] = _score_size_optimal(parcel_data.area_m2)
+    # Factor 1: Pand status signal (30 points max)
+    factors["pand_status_signal"] = _score_pand_status(pand_status)
 
-    # Factor 3: Zoning residential (25 points max)
-    factors["zoning_residential"] = _score_zoning_residential(parcel_data.bestemmingen)
+    # Factor 2: Building age (20 points max)
+    factors["building_age"] = _score_building_age(bouwjaar)
 
-    # Factor 4: Recent permits (20 points max)
-    factors["recent_permits"] = _score_recent_permits(parcel_data.enrichment_data)
+    # Factor 3: Zoning value (25 points max)
+    factors["zoning_value"] = _score_zoning_value(parcel_data.bestemmingen)
 
-    # Calculate total score
+    # Factor 4: Footprint size (15 points max)
+    factors["footprint_size"] = _score_footprint_size(parcel_data.area_m2)
+
+    # Factor 5: Underutilization combo bonus (10 points max)
+    factors["underutilization"] = _score_underutilization(
+        pand_status, bouwjaar, parcel_data.area_m2
+    )
+
     total_score = sum(factors.values())
 
-    # Determine category
-    if total_score >= 70:
+    if total_score >= 65:
         category = "High"
     elif total_score >= 40:
         category = "Medium"
@@ -81,85 +82,148 @@ def compute_opportunity_score(parcel_data) -> ScoreBreakdown:
     )
 
 
-def _score_size_optimal(area_m2: float | None) -> float:
+def _score_pand_status(pand_status: str) -> float:
     """
-    Score parcel size optimality.
+    Score based on BAG building status.
 
-    - 500-2000m² → 25 points (optimal for development)
-    - 300-500m² or 2000-3000m² → 15 points (suboptimal but viable)
-    - else → 5 points (too small or too large)
-    - None → 0 points
+    Sloopvergunning/niet in gebruik → 30
+    Buiten gebruik → 25
+    Bouwvergunning verleend → 20
+    Verbouwing → 10
+    In gebruik → 0
+    Unknown/empty → 15
     """
-    if area_m2 is None:
+    status_lower = pand_status.lower().strip() if pand_status else ""
+
+    if not status_lower:
+        return 15.0
+
+    if "sloop" in status_lower or "niet in gebruik" in status_lower:
+        return 30.0
+    if "buiten gebruik" in status_lower:
+        return 25.0
+    if "bouwvergunning" in status_lower:
+        return 20.0
+    if "verbouw" in status_lower:
+        return 10.0
+    if "in gebruik" in status_lower:
         return 0.0
 
-    if 500 <= area_m2 <= 2000:
-        return 25.0
-    elif (300 <= area_m2 < 500) or (2000 < area_m2 <= 3000):
-        return 15.0
-    else:
-        return 5.0
+    return 15.0
 
 
-def _score_zoning_residential(bestemmingen: list | None) -> float:
+def _score_building_age(bouwjaar: int | None) -> float:
     """
-    Score residential zoning.
+    Score based on construction year. Older = higher opportunity.
 
-    - Contains type "Wonen" → 25 points
-    - else → 0 points
+    Pre-1940 → 20
+    1940-1970 → 15
+    1970-1990 → 10
+    1990-2010 → 5
+    2010+ → 0
+    Unknown → 10
+    """
+    if bouwjaar is None:
+        return 10.0
+
+    if bouwjaar < 1940:
+        return 20.0
+    if bouwjaar < 1970:
+        return 15.0
+    if bouwjaar < 1990:
+        return 10.0
+    if bouwjaar < 2010:
+        return 5.0
+    return 0.0
+
+
+def _score_zoning_value(bestemmingen: list | None) -> float:
+    """
+    Score based on zoning type. Higher-value zones score more.
+
+    Gemengd/Centrum → 25
+    Wonen → 20
+    Maatschappelijk → 15
+    Bedrijven → 10
+    Agrarisch → 5
+    None/unknown → 0
     """
     if not bestemmingen:
         return 0.0
 
+    best_score = 0.0
     for bestemming in bestemmingen:
-        if isinstance(bestemming, dict):
-            btype = (bestemming.get("type") or "").lower()
-            if btype == "wonen":
-                return 25.0
+        if not isinstance(bestemming, dict):
+            continue
+        btype = (bestemming.get("type") or "").lower()
 
-    return 0.0
+        if "gemengd" in btype or "centrum" in btype:
+            best_score = max(best_score, 25.0)
+        elif "wonen" in btype:
+            best_score = max(best_score, 20.0)
+        elif "maatschappelijk" in btype:
+            best_score = max(best_score, 15.0)
+        elif "bedrijven" in btype or "bedrijf" in btype:
+            best_score = max(best_score, 10.0)
+        elif "agrarisch" in btype:
+            best_score = max(best_score, 5.0)
+
+    return best_score
 
 
-def _score_recent_permits(enrichment_data: dict | None) -> float:
+def _score_footprint_size(area_m2: float | None) -> float:
     """
-    Score recent permits activity.
+    Score based on parcel size. Larger = higher opportunity.
 
-    - >=3 permits in last 3 years → 20 points
-    - 1-2 permits in last 3 years → 10 points
-    - 0 permits → 0 points
-
-    Args:
-        enrichment_data: Dict with optional "vergunningen" list containing
-                        dicts with "publicatiedatum" field (YYYY-MM-DD format)
+    >5000m² → 15
+    2000-5000 → 12
+    1000-2000 → 10
+    500-1000 → 7
+    200-500 → 4
+    <200 → 1
+    None → 0
     """
-    if not enrichment_data:
+    if area_m2 is None:
         return 0.0
 
-    vergunningen = enrichment_data.get("vergunningen", [])
-    if not vergunningen:
-        return 0.0
-
-    # Count permits in last 3 years
-    now = datetime.utcnow()
-    three_years_ago = now - timedelta(days=3 * 365)
-
-    recent_count = 0
-    for vergunning in vergunningen:
-        pub_date_str = vergunning.get("publicatiedatum")
-        if not pub_date_str:
-            continue
-
-        try:
-            pub_date = datetime.strptime(pub_date_str, "%Y-%m-%d")
-            if pub_date >= three_years_ago:
-                recent_count += 1
-        except (ValueError, TypeError):
-            # Skip invalid dates
-            continue
-
-    if recent_count >= 3:
-        return 20.0
-    elif recent_count >= 1:
+    if area_m2 > 5000:
+        return 15.0
+    if area_m2 >= 2000:
+        return 12.0
+    if area_m2 >= 1000:
         return 10.0
-    else:
-        return 0.0
+    if area_m2 >= 500:
+        return 7.0
+    if area_m2 >= 200:
+        return 4.0
+    return 1.0
+
+
+def _score_underutilization(
+    pand_status: str, bouwjaar: int | None, area_m2: float | None
+) -> float:
+    """
+    Combination bonus for underutilization signals.
+
+    Vacant + large (>1000m²) → +5
+    Vacant + old (pre-1970) → +3
+    Old (pre-1970) + large (>1000m²) → +2
+    Capped at 10.
+    """
+    status_lower = (pand_status or "").lower().strip()
+    is_vacant = any(
+        kw in status_lower
+        for kw in ("sloop", "niet in gebruik", "buiten gebruik")
+    )
+    is_old = bouwjaar is not None and bouwjaar < 1970
+    is_large = area_m2 is not None and area_m2 > 1000
+
+    bonus = 0.0
+    if is_vacant and is_large:
+        bonus += 5.0
+    if is_vacant and is_old:
+        bonus += 3.0
+    if is_old and is_large:
+        bonus += 2.0
+
+    return min(bonus, 10.0)

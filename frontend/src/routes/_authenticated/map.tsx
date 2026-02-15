@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import maplibregl from 'maplibre-gl'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -109,6 +110,7 @@ function MapPage() {
   const { addRecentItem } = useRecentViewed()
 
   // Scan hooks
+  const queryClient = useQueryClient()
   const triggerScan = useTriggerScan()
   const scanStatus = useScanPolling(activeScanId)
   const cancelScan = useCancelScan()
@@ -224,6 +226,8 @@ function MapPage() {
     if (!scanStatus.data) return
     if (scanStatus.data.status === 'completed') {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
+      // Invalidate stale results cache so fresh data is fetched
+      queryClient.invalidateQueries({ queryKey: ['scan-results', activeScanId] })
       // Keep activeScanId to show score layer and results panel
       setShowResults(true)
     } else if (scanStatus.data.status === 'failed') {
@@ -231,7 +235,7 @@ function MapPage() {
       setActiveScanId(null) // Clear scan
       setShowResults(false)
     }
-  }, [scanStatus.data])
+  }, [scanStatus.data, activeScanId, queryClient])
 
   // Setup bestemmingsplan click handler
   useEffect(() => {
@@ -413,6 +417,7 @@ function MapPage() {
           gemeente_code: currentGemeente.code,
           gemeente_naam: currentGemeente.naam,
           bbox_wgs84: bbox,
+          wijk_naam: wijkNaam,
         },
         {
           onSuccess: (data) => {

@@ -80,3 +80,40 @@ class PDOKLocatieserver:
             raise APINotFoundError("pdok", f"Object not found: {object_id}")
 
         return docs[0]
+
+    async def reverse(
+        self, rd_x: float, rd_y: float, client: httpx.AsyncClient
+    ) -> str | None:
+        """
+        Reverse geocode RD coordinates to a display address.
+
+        Uses PDOK Locatieserver /reverse endpoint with RD New (EPSG:28992)
+        coordinates. Free, no API key required.
+
+        Args:
+            rd_x: X coordinate in EPSG:28992 (RD New)
+            rd_y: Y coordinate in EPSG:28992 (RD New)
+            client: Shared httpx AsyncClient
+
+        Returns:
+            Display address string (e.g., "Kerkstraat 42, 5911AA Venlo") or None
+        """
+        url = f"{self.BASE_URL}/reverse"
+        params = {
+            "X": rd_x,
+            "Y": rd_y,
+            "type": "adres",
+            "rows": 1,
+            "distance": 100,
+        }
+
+        try:
+            response = await client.get(url, params=params)
+            data = handle_api_response(response, source="pdok")
+            docs = data.get("response", {}).get("docs", [])
+            if docs:
+                return docs[0].get("weergavenaam")
+        except Exception as e:
+            logger.debug(f"PDOK reverse geocode failed for ({rd_x}, {rd_y}): {e}")
+
+        return None

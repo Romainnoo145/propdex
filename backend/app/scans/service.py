@@ -62,6 +62,7 @@ async def create_scan(
     gemeente_naam: str,
     bbox: dict,
     session: AsyncSession,
+    wijk_naam: str | None = None,
 ) -> AreaScan:
     """
     Create a new area scan record.
@@ -72,6 +73,7 @@ async def create_scan(
         gemeente_naam: Gemeente display name
         bbox: Bounding box dict with minx, miny, maxx, maxy keys
         session: Database session
+        wijk_naam: Optional CBS wijk name
 
     Returns:
         AreaScan: The created scan
@@ -80,6 +82,7 @@ async def create_scan(
         organization_id=organization_id,
         gemeente_code=gemeente_code,
         gemeente_naam=gemeente_naam,
+        wijk_naam=wijk_naam,
         bbox_minx=bbox["minx"],
         bbox_miny=bbox["miny"],
         bbox_maxx=bbox["maxx"],
@@ -170,6 +173,7 @@ async def list_scan_results(
     offset: int,
     limit: int,
     session: AsyncSession,
+    pand_status: str | None = None,
 ) -> tuple[list[tuple], int]:
     """
     List scan results with server-side filtering, sorting, and pagination.
@@ -181,12 +185,13 @@ async def list_scan_results(
         bestemming_type: Filter by zoning type substring (e.g., "Wonen")
         min_area_m2: Minimum parcel area in square meters
         max_area_m2: Maximum parcel area in square meters
-        score_category: Filter by score category ("High" >=70, "Medium" 40-69, "Low" <40)
-        sort_by: Sort field (score, area_m2, address)
+        score_category: Filter by score category ("High" >=65, "Medium" 40-64, "Low" <40)
+        sort_by: Sort field (score, area_m2, address, bouwjaar)
         sort_order: Sort direction (asc, desc)
         offset: Pagination offset
         limit: Page size
         session: Database session
+        pand_status: Filter by building status substring
 
     Returns:
         tuple[list[tuple], int]: List of (ScanResult, ParcelCache) tuples and total count
@@ -221,11 +226,16 @@ async def list_scan_results(
 
     if score_category is not None:
         if score_category == "High":
-            query = query.where(ScanResult.score >= 70)
+            query = query.where(ScanResult.score >= 65)
         elif score_category == "Medium":
-            query = query.where(ScanResult.score >= 40, ScanResult.score < 70)
+            query = query.where(ScanResult.score >= 40, ScanResult.score < 65)
         elif score_category == "Low":
             query = query.where(ScanResult.score < 40)
+
+    if pand_status is not None:
+        query = query.where(
+            ParcelCache.pand_status.ilike(f"%{pand_status}%")
+        )
 
     # Count total before pagination
     count_query = select(func.count()).select_from(query.subquery())
@@ -237,6 +247,7 @@ async def list_scan_results(
         "score": ScanResult.score,
         "area_m2": ParcelCache.area_m2,
         "address": ParcelCache.address,
+        "bouwjaar": ParcelCache.bouwjaar,
     }
 
     sort_field = sort_field_map.get(sort_by, ScanResult.score)

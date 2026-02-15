@@ -33,6 +33,11 @@ class ScanCreateRequest(BaseModel):
             "Backend converts to EPSG:28992 for BAG WFS queries. Max area: 10 km²."
         ),
     )
+    wijk_naam: str | None = Field(
+        default=None,
+        description="CBS wijk name (for auto-creating project folder)",
+        max_length=200,
+    )
 
 
 class ScanResponse(BaseModel):
@@ -133,6 +138,14 @@ class ScanResultItem(BaseModel):
     has_pand: bool = Field(
         description="Whether parcel has existing building",
     )
+    bouwjaar: int | None = Field(
+        default=None,
+        description="BAG construction year",
+    )
+    pand_status: str | None = Field(
+        default=None,
+        description="BAG building status (e.g., 'Pand in gebruik', 'Sloopvergunning verleend')",
+    )
     bestemmingen: list[dict] | None = Field(
         default=None,
         description="Zoning designations from DSO",
@@ -165,8 +178,12 @@ class ScanResultsResponse(BaseModel):
     scan_date: datetime = Field(
         description="Scan creation timestamp",
     )
+    parcels_total: int = Field(
+        description="Total parcels scanned (before qualification)",
+        ge=0,
+    )
     total: int = Field(
-        description="Total matching results (before pagination)",
+        description="Total qualifying results (before pagination)",
         ge=0,
     )
     offset: int = Field(

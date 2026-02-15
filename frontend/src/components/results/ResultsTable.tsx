@@ -89,16 +89,12 @@ const columns = [
       return text.length > 25 ? `${text.substring(0, 25)}...` : text
     },
   }),
-  columnHelper.accessor('has_pand', {
-    header: 'Bebouwd',
-    enableSorting: false,
+  columnHelper.accessor('bouwjaar', {
+    header: 'Bouwjaar',
+    enableSorting: true,
     cell: (info) => {
       const value = info.getValue()
-      return (
-        <span className={value ? 'text-green-400' : 'text-red-400'}>
-          {value ? 'Ja' : 'Nee'}
-        </span>
-      )
+      return value !== null ? String(value) : '-'
     },
   }),
   columnHelper.accessor('score', {
@@ -219,7 +215,13 @@ export default function ResultsTable({
           {data.gemeente_naam}
         </h3>
         <p className="text-white/60 text-sm mt-1">
-          {data.total.toLocaleString('nl-NL')} percelen
+          {data.total.toLocaleString('nl-NL')} kansrijk van{' '}
+          {data.parcels_total.toLocaleString('nl-NL')} gescand
+          <span className="text-white/40 ml-1">
+            ({data.parcels_total > 0
+              ? Math.round(((data.parcels_total - data.total) / data.parcels_total) * 100)
+              : 0}% afgevallen)
+          </span>
         </p>
       </div>
 

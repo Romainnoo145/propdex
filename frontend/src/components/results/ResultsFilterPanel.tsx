@@ -32,7 +32,7 @@ export default function ResultsFilterPanel({
 
   const hasActiveFilters =
     filters.bestemming_type ||
-    filters.has_pand !== undefined ||
+    filters.pand_status ||
     filters.min_area_m2 ||
     filters.score_category
 
@@ -81,28 +81,31 @@ export default function ResultsFilterPanel({
           </select>
         </div>
 
-        {/* Vacant land toggle */}
+        {/* Pand status dropdown */}
         <div className="flex items-center gap-2">
           <label
-            htmlFor="vacant-filter"
-            className="flex items-center gap-2 cursor-pointer"
+            htmlFor="status-filter"
+            className="text-white/60 text-sm font-medium"
           >
-            <input
-              id="vacant-filter"
-              type="checkbox"
-              checked={filters.has_pand === false}
-              onChange={(e) =>
-                onChange({
-                  ...filters,
-                  has_pand: e.target.checked ? false : undefined,
-                })
-              }
-              className="w-4 h-4 rounded border-white/15 bg-black/40 text-emerald-500 focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-0"
-            />
-            <span className="text-white/60 text-sm font-medium">
-              Onbebouwd
-            </span>
+            Status
           </label>
+          <select
+            id="status-filter"
+            value={filters.pand_status ?? ''}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                pand_status: e.target.value || undefined,
+              })
+            }
+            className="bg-black/40 border border-white/15 text-white/80 text-sm rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+          >
+            <option value="">Alle</option>
+            <option value="niet in gebruik">Niet in gebruik</option>
+            <option value="sloop">Sloopvergunning</option>
+            <option value="buiten gebruik">Buiten gebruik</option>
+            <option value="bouwvergunning">Bouwvergunning</option>
+          </select>
         </div>
 
         {/* Min area input */}
