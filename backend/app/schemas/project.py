@@ -59,6 +59,31 @@ class ProjectResponse(BaseModel):
         default=0,
         description="Number of reports in this project",
     )
+    # Phase 26: Hierarchical project grouping and change monitoring
+    parent_id: str | None = Field(
+        default=None,
+        description="Parent project ID for gemeente/wijk hierarchy",
+    )
+    gemeente_code: str | None = Field(
+        default=None,
+        description="CBS gemeente code",
+    )
+    wijk_naam: str | None = Field(
+        default=None,
+        description="Wijk (neighborhood) name",
+    )
+    is_monitored: bool = Field(
+        default=False,
+        description="Whether this project is actively monitored for changes",
+    )
+    unread_count: int = Field(
+        default=0,
+        description="Number of unread changes for this project",
+    )
+    children: list["ProjectResponse"] = Field(
+        default=[],
+        description="Child projects in hierarchy",
+    )
 
 
 class ProjectListResponse(BaseModel):
@@ -70,3 +95,7 @@ class ProjectListResponse(BaseModel):
     total: int = Field(
         description="Total number of projects",
     )
+
+
+# Rebuild model to handle forward reference in children field
+ProjectResponse.model_rebuild()

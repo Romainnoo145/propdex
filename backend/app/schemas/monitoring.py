@@ -1,0 +1,49 @@
+"""Pydantic schemas for change monitoring API responses."""
+
+from pydantic import BaseModel, ConfigDict
+
+
+class ChangeRecordResponse(BaseModel):
+    """Schema for a single change record (permit or zoning change)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str  # UUID as string
+    project_id: str
+    change_type: str  # "permit" | "zoning"
+    external_id: str
+    title: str
+    detected_at: str  # ISO datetime
+    change_date: str  # ISO datetime
+    gemeente_naam: str
+    address: str | None
+    source_url: str | None
+
+
+class ChangeRecordListResponse(BaseModel):
+    """Schema for paginated list of change records."""
+
+    changes: list[ChangeRecordResponse]
+    total: int
+
+
+class UnreadCountResponse(BaseModel):
+    """Schema for unread change count summary."""
+
+    unread_count: int
+    projects_with_changes: int
+
+
+class ProjectUnreadCount(BaseModel):
+    """Schema for per-project unread count."""
+
+    project_id: str
+    unread_count: int
+
+
+class UnreadDetailResponse(BaseModel):
+    """Schema for detailed unread counts per project."""
+
+    total_unread: int
+    projects_with_changes: int
+    per_project: list[ProjectUnreadCount]
