@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 **Milestone:** v3.1 Smart Area Intelligence
-**Phase:** 25 of 26 (Results Interface) — COMPLETE
-**Plan:** 5/5 plans complete
-**Status:** Phase 25 complete (Parcel Detail Modal)
+**Phase:** 26 of 26 (Change Monitoring) — IN PROGRESS
+**Plan:** 1/5 plans complete
+**Status:** Phase 26 in progress (Change Monitoring Data Layer)
 
-**Last activity:** 2026-02-15 — Completed quick task 2: Redesign scoring, add qualification filter, and resolve addresses
+**Last activity:** 2026-02-15 — Completed 26-01-PLAN.md (Change Monitoring Data Layer)
 
-**Progress:** [██████████] 98%
+**Progress:** [██████████] 99%
 
 ---
 
@@ -58,6 +58,12 @@ See `.planning/PROJECT.md` Key Decisions table.
 - Direct PDOK WMS from frontend (CORS-enabled, no backend proxy)
 - Ruimtelijkeplannen.nl REST API v4 (NOT deprecated WFS from July 2024)
 - Bestemmingsplan-first workflow (show zones, let user select areas, scan on-demand)
+
+**Phase 26 decisions:**
+- Self-referential Project relationships for gemeente/wijk hierarchy (26-01)
+- JSONB metadata_json field mapped to change_metadata column to avoid SQLAlchemy collision (26-01)
+- Unique constraint on (change_type, external_id, gemeente_naam) prevents duplicate change records (26-01)
+- Naive UTC datetimes (not timezone-aware) following project convention (26-01)
 
 **Phase 25 decisions:**
 - Collapsed prop pattern to prevent MapView re-mount when showing results panel (25-01)
@@ -156,11 +162,11 @@ From v3.0:
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Completed quick task 2 (scoring redesign + qualification)
-**Resume File:** .planning/quick/2-redesign-scoring-add-qualification-filte/2-SUMMARY.md
+**Stopped At:** Completed 26-01-PLAN.md (Change Monitoring Data Layer)
+**Resume File:** .planning/phases/26-change-monitoring/26-01-SUMMARY.md
 
-**Next Action:** `/gsd:plan-phase 26` — Begin Phase 26 (Change Monitoring) planning
+**Next Action:** `/gsd:execute-plan 26 02` — Execute Plan 26-02 (Change Detection Workers)
 
 ---
 
-*State updated: 2026-02-15 — Completed quick task 2: Redesign scoring, add qualification filter, and resolve addresses*
+*State updated: 2026-02-15 — Completed 26-01-PLAN.md (Change Monitoring Data Layer)*
