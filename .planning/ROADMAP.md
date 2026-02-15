@@ -200,7 +200,7 @@ Plans:
 - [x] 26-03-PLAN.md -- ARQ cron job for daily monitoring (03:00 UTC)
 - [x] 26-04-PLAN.md -- Frontend notification UI (badge, timeline, unread hook, SideRailNav + ProjectList)
 - [x] 26-05-PLAN.md -- Scan integration (hierarchical projects) + monitored wijk overlay + verification
-- [ ] 26-06-PLAN.md -- Gap closure: wire MonitoredWijkOverlay into map + populate hierarchical children
+- [x] 26-06-PLAN.md -- Gap closure: wire MonitoredWijkOverlay into map + populate hierarchical children
 
 ---
 
@@ -235,9 +235,9 @@ Plans:
 | 23. Working Scan Pipeline | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 24. Wijk-Based Area Selection | v3.1 | 4/4 | Complete | 2026-02-15 |
 | 25. Results Interface | v3.1 | 5/5 | Complete | 2026-02-15 |
-| 26. Change Monitoring | v3.1 | 0/5 | Planned | - |
+| 26. Change Monitoring | v3.1 | 6/6 | Complete | 2026-02-15 |
 
 ---
 
 *Roadmap created for v3.1: 2026-02-11*
-*Last updated: 2026-02-15 (Phase 25 complete — results interface)*
+*Last updated: 2026-02-15 (Phase 26 complete — change monitoring)*
