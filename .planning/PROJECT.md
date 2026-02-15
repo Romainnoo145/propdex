@@ -22,38 +22,27 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v2.0 Frontend (2026-02-09)
-**Codebase:** 15,947 lines Python (7,060 in tests) + 8,804 lines TypeScript/React
-**Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, anthropic (Claude), arq (Redis), WeasyPrint
-**Frontend:** React 19, Vite 7, TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, Tailwind v4, pnpm
+**Shipped:** v3.1 Smart Area Intelligence (2026-02-15)
+**Codebase:** 13,756 lines Python + 13,444 lines TypeScript/React (~27,200 LOC total)
+**Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
+**Frontend:** React 19, Vite 7, TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, react-resizable-panels, pnpm
 **Tests:** 275 backend (104 unit + 171 integration), 74% coverage, 80%+ core modules
 
 **What's working:**
-- Full-page MapLibre map with PDOK aerial/topographic tiles and kadaster parcel boundaries
+- Full-page MapLibre map with PDOK aerial/topographic tiles, kadaster parcel boundaries, and bestemmingsplan zones
+- CBS gemeente boundaries with click-to-zoom, wijk boundaries with click-to-scan
+- Bestemmingsplan WMS layer with SVBP2012 colored zones, GetFeatureInfo click, and interactive legend
+- Area scan pipeline: BAG WFS → WMS bestemmingsplan enrichment → opportunity scoring → vector tiles
+- Split-panel results interface with TanStack Table sorting/filtering, map-table bidirectional linking
+- Parcel detail modal with on-demand SRU vergunningen enrichment (7-day cache)
+- Change monitoring: SRU Bekendmakingen + PLU WMS delta detection, ARQ daily cron, notification badges
+- Hierarchical project model (gemeente→wijk) with monitored wijk overlay on map
 - Floating address search with PDOK Locatieserver autocomplete and fly-to-location
 - Three-tier progressive disclosure (QuickCard → Drawer → Modal) for property intelligence
 - Report management sidebar with search, save, PDF export, freshness indicators
-- Project folders with CRUD, report assignment, and sidebar filtering
-- Responsive drawer (desktop right panel, mobile bottom sheet) with force refresh
 - JWT auth with httpOnly cookies, silent refresh, protected routes
-- Full backend API with 23+ authenticated endpoints
-- Property lookup with parallel government API fetching (PDOK, BAG, DSO, RCE)
-- AI bestemmingsplan parsing via Claude with background processing
 - Multi-tenant isolation enforced at every layer (HTTP, service, cache, database)
-- Row-level security with fail-closed NULLIF policies on all 7 tenant tables
-
-## Current Milestone: v3.1 Smart Area Intelligence
-
-**Goal:** Transform the area scan from "fetch all buildings" into a bestemmingsplan-first workflow — show zoning as the base layer, let users deep-dive into selected areas with enriched parcel data, and monitor for permit/zoning changes over time.
-
-**Target features:**
-- Bestemmingsplan base layer: load zoning plans from Ruimtelijkeplannen.nl as colored zones on the map
-- Area deep-dive: user selects zone/draws box → fetch BAG panden for that smaller area, enrich with kadaster/monument, score with zoning context
-- Change monitoring: track new vergunningen and bestemmingsplan changes per gemeente, surface as actionable alerts
-- Refined opportunity scoring: weighted factors including zoning type, vacant land, recent permits, parcel size
-- Parcel detail with expandable source cards per data topic
-
-**Built on v3.0 infrastructure:** PostGIS spatial DB (Phase 18), government API clients (Phase 19), scan pipeline + scoring (Phase 20), map gemeente boundaries + MVT tiles (Phase 21)
+- Row-level security with fail-closed NULLIF policies on all tenant tables
 
 ## Business Model
 
@@ -119,19 +108,19 @@ This is the ONE thing that must work. Everything else is secondary.
 - Sidebar with tab navigation (Rapporten, Projecten, Instellingen) — v2.0
 - PDF export of property intelligence report from frontend — v2.0
 - Auth flow (login/register) in frontend — v2.0
+- Bestemmingsplan base layer: render zoning plans as colored zones on the map per gemeente — v3.1
+- Area deep-dive: wijk-based selection triggers focused BAG scan with bestemmingsplan enrichment — v3.1
+- Refined scoring: opportunity score using zoning type + vacant land + permits + parcel size — v3.1
+- Parcel detail modal with on-demand SRU vergunningen enrichment — v3.1
+- Change monitoring: track new vergunningen per gemeente via SRU Bekendmakingen — v3.1
+- Bestemmingsplan wijzigingen: detect zoning changes via PLU WMS delta (needs live validation) — v3.1
+- Parcel list with filtering: sortable table with bestemming, size, score filters — v3.1
 
 ### Active
 
-- [ ] Bestemmingsplan base layer: render zoning plans as colored zones on the map per gemeente
-- [ ] Area deep-dive: user-selected bbox triggers focused BAG scan with enrichment
-- [ ] Refined scoring: opportunity score using zoning type + vacant land + permits + parcel size
-- [ ] Parcel detail modal: AI summary + expandable source cards per data topic
-- [ ] Change monitoring: track new vergunningen per gemeente via SRU Bekendmakingen
-- [ ] Bestemmingsplan wijzigingen: detect zoning changes and surface as alerts
 - [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
-- [ ] Parcel list with filtering: sortable table with bestemming, size, score filters
 
-### Future (post v3.0)
+### Future
 
 - [ ] WOZ waarde integration (free government data)
 - [ ] Energielabel integration (free via RVO/Kadaster)
@@ -178,6 +167,14 @@ This is the ONE thing that must work. Everything else is secondary.
 | SET LOCAL f-string (not params) | asyncpg doesn't support parameterized SET statements | ✓ Good — bug found in live testing |
 | NULLIF fail-closed RLS | Default-deny instead of default-allow for tenant isolation | ✓ Good — verified via 11 tests |
 | 404 not 403 for cross-org access | Prevents resource enumeration attacks | ✓ Good — standard security pattern |
+| PostGIS for spatial joins (not Python Shapely) | Database-level geo operations for performance and consistency | ✓ Good — spatial queries proven across v3.0+v3.1 |
+| PDOK WMS raster for bestemmingsplan (not vector) | PDOK PLU WFS doesn't exist; WMS is the only option | ✓ Good — works for visualization + GetFeatureInfo enrichment |
+| CBS WFS for gemeente/wijk boundaries | Public, CORS-enabled, same service for both layers | ✓ Good — reliable Dutch geo data |
+| Wijk-based selection (not drawing tools) | Terra-draw removed — click-based flow more natural for real estate users | ✓ Good — simpler UX, leverages existing map features |
+| Three-tier data cache (DB/JSONB/BRK) | Pre-scan in DB, on-demand in JSONB, paid APIs never stored | ✓ Good — balances freshness vs API load |
+| SVBP2012 standard for bestemming colors | National standard for zoning plan visualization | ✓ Good — consistent with official plans |
+| Self-referential Project hierarchy | gemeente→wijk parent-child using same model, no new tables | ✓ Good — clean monitoring structure |
+| ARQ daily cron for change detection | Reuses existing job infrastructure, runs at 03:00 UTC | ✓ Good — simple, proven pattern |
 
 ## Context
 
@@ -190,9 +187,9 @@ This is the ONE thing that must work. Everything else is secondary.
   - Backend register endpoint returns 500 (needs investigation)
   - Kadaster eigendomsdata requires paid API (deferred)
   - Monument restrictions are generic boilerplate (not property-specific)
-  - Parcel click/highlight not possible with WMS raster tiles
   - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
-  - ProjectList live mode: TODO for fetching reports per expanded project card
+  - PLU WMS change detection needs live data validation (MON-02)
+  - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-11 after v3.1 milestone start*
+*Last updated: 2026-02-15 after v3.1 milestone shipped*
