@@ -1,7 +1,9 @@
 """Scan management API endpoints."""
 
 import logging
+import re
 import uuid
+from datetime import datetime
 
 import httpx
 from arq.jobs import Job
@@ -13,11 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
+from app.government_apis.base import GovernmentAPIError
+from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
+from app.models.parcel_cache import ParcelCache
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
 from app.scans.schemas import (
+    ParcelEnrichmentResponse,
     ScanCreateRequest,
     ScanResponse,
     ScanResultItem,
@@ -641,3 +647,129 @@ async def get_wijken(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch wijken: {e}",
         ) from e
+
+
+@router.get("/parcels/{parcel_id}/enrich", response_model=ParcelEnrichmentResponse)
+@limiter.limit("30/minute")
+async def enrich_parcel(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ParcelEnrichmentResponse:
+    """
+    Fetch on-demand Tier 2 enrichment for a parcel (vergunningen via SRU).
+
+    Returns cached enrichment if available and fresh (< 7 days old).
+    Otherwise fetches fresh data from SRU API using parcel postcode.
+
+    Tier 2 enrichment includes:
+    - Vergunningen (permits) from Officiele Bekendmakingen SRU
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        parcel_id: ParcelCache UUID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ParcelEnrichmentResponse: Enrichment data with cache status
+
+    Raises:
+        HTTPException 404: Parcel not found
+    """
+    # Query ParcelCache by id and organization_id (multi-tenant isolation)
+    query = select(ParcelCache).where(
+        ParcelCache.id == parcel_id,
+        ParcelCache.organization_id == organization_id,
+    )
+    result = await db.execute(query)
+    parcel = result.scalar_one_or_none()
+
+    if not parcel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found",
+        )
+
+    # Check if enrichment is fresh (< 7 days old)
+    if parcel.enriched_at:
+        days_old = (datetime.utcnow() - parcel.enriched_at).days
+        if days_old < 7:
+            # Return cached enrichment
+            return ParcelEnrichmentResponse(
+                parcel_id=parcel.id,
+                enrichment_data=parcel.enrichment_data,
+                enriched_at=parcel.enriched_at,
+                is_cached=True,
+            )
+
+    # Enrichment is stale or missing - fetch fresh data
+
+    # Extract postcode from address (pattern: last 7 chars like "1234 AB" or "1234AB")
+    postcode = None
+    if parcel.address:
+        # Find Dutch postcode pattern: 4 digits + optional space + 2 uppercase letters
+        match = re.search(r'\b(\d{4}\s?[A-Z]{2})\b', parcel.address)
+        if match:
+            # Remove space for SRU query (expects "1234AB" format)
+            postcode = match.group(1).replace(' ', '')
+
+    if not postcode:
+        # No postcode extractable - return empty enrichment with note
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data={
+                "vergunningen": [],
+                "error": "Postcode niet gevonden in adres",
+            },
+            enriched_at=None,
+            is_cached=False,
+        )
+
+    # Fetch vergunningen from SRU API
+    http_client = request.app.state.http_client
+
+    try:
+        records = await sru_client.query_by_postcode(
+            postcode=postcode,
+            client=http_client,
+            max_records=20,
+        )
+
+        # Store enrichment result
+        parcel.enrichment_data = {
+            "vergunningen": [dict(r) for r in records],
+        }
+        parcel.enriched_at = datetime.utcnow()
+        db.add(parcel)
+        await db.commit()
+
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data=parcel.enrichment_data,
+            enriched_at=parcel.enriched_at,
+            is_cached=False,
+        )
+
+    except GovernmentAPIError as e:
+        # SRU API error - log and return error in enrichment_data
+        logger.warning(f"SRU API error for postcode {postcode}: {e}")
+        parcel.enrichment_data = {
+            "vergunningen": [],
+            "error": f"Kon vergunningen niet ophalen: {e}",
+        }
+        parcel.enriched_at = datetime.utcnow()
+        db.add(parcel)
+        await db.commit()
+
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data=parcel.enrichment_data,
+            enriched_at=parcel.enriched_at,
+            is_cached=False,
+        )

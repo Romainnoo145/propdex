@@ -180,3 +180,23 @@ class ScanResultsResponse(BaseModel):
     results: list[ScanResultItem] = Field(
         description="Paginated result items",
     )
+
+
+class ParcelEnrichmentResponse(BaseModel):
+    """On-demand Tier 2 enrichment data for a parcel."""
+
+    parcel_id: uuid.UUID = Field(
+        description="ParcelCache UUID",
+    )
+    enrichment_data: dict | None = Field(
+        default=None,
+        description="Tier 2 enrichment data (vergunningen, etc.)",
+    )
+    enriched_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when enrichment was last updated",
+    )
+    is_cached: bool = Field(
+        default=False,
+        description="True if returned from cache, False if freshly fetched",
+    )
