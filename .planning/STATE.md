@@ -16,7 +16,7 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 **Plan:** 5/5 plans complete
 **Status:** Phase 25 complete (Parcel Detail Modal)
 
-**Last activity:** 2026-02-15 — Plan 25-05 complete (2 tasks, 2 commits, 5 min)
+**Last activity:** 2026-02-15 — Completed quick task 2: Redesign scoring, add qualification filter, and resolve addresses
 
 **Progress:** [██████████] 98%
 
@@ -145,16 +145,22 @@ From v3.0:
 - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
 - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 2 | Redesign scoring, add qualification filter, and resolve addresses | 2026-02-15 | 265aa49 | [2-redesign-scoring-add-qualification-filte](./quick/2-redesign-scoring-add-qualification-filte/) |
+
 ---
 
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Completed 25-05-PLAN.md (Phase 25 complete)
-**Resume File:** .planning/phases/25-results-interface/25-05-SUMMARY.md
+**Stopped At:** Completed quick task 2 (scoring redesign + qualification)
+**Resume File:** .planning/quick/2-redesign-scoring-add-qualification-filte/2-SUMMARY.md
 
 **Next Action:** `/gsd:plan-phase 26` — Begin Phase 26 (Change Monitoring) planning
 
 ---
 
-*State updated: 2026-02-15 (Phase 25 complete — Results interface with parcel detail modal and on-demand enrichment)*
+*State updated: 2026-02-15 — Completed quick task 2: Redesign scoring, add qualification filter, and resolve addresses*
