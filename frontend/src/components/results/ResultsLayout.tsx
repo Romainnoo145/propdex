@@ -3,8 +3,9 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import type maplibregl from 'maplibre-gl'
 import ResultsTable from './ResultsTable'
 import ResultsFilterPanel from './ResultsFilterPanel'
+import { ParcelDetailModal } from './ParcelDetailModal'
 import { setupParcelScoreClickHandler, setParcelScoreSelection } from '@/components/map/ParcelScoreLayer'
-import type { ScanResultsFilters } from '@/lib/types/scan'
+import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsLayoutProps {
   scanId: string | null
@@ -19,6 +20,7 @@ export default function ResultsLayout({ scanId, children, collapsed, mapRef, onC
   const [total, setTotal] = useState(0)
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
   const selectionSourceRef = useRef<'table' | 'map' | null>(null)
+  const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
 
   // Setup map click handler for parcel selection
   useEffect(() => {
@@ -114,6 +116,9 @@ export default function ResultsLayout({ scanId, children, collapsed, mapRef, onC
                   selectionSourceRef.current = 'table'
                   setSelectedParcelId(parcelId)
                 }}
+                onRowDoubleClick={(parcel) => {
+                  setModalParcel(parcel)
+                }}
                 onTotalChange={setTotal}
               />
             </div>
@@ -137,6 +142,13 @@ export default function ResultsLayout({ scanId, children, collapsed, mapRef, onC
           </div>
         </Panel>
       </PanelGroup>
+
+      {/* Parcel detail modal */}
+      <ParcelDetailModal
+        parcel={modalParcel}
+        isOpen={!!modalParcel}
+        onClose={() => setModalParcel(null)}
+      />
     </div>
   )
 }

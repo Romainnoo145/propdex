@@ -142,3 +142,42 @@ export interface ScanResultsFilters {
   /** Page size limit */
   limit?: number
 }
+
+/**
+ * Bekendmaking record from SRU API
+ * Backend: BekendmakingRecord
+ */
+export interface BekendmakingRecord {
+  /** Title of the announcement */
+  title: string
+  /** Unique identifier for the publication */
+  identifier: string
+  /** Type of announcement (e.g., "Omgevingsvergunning") */
+  type: string
+  /** Publication date as ISO date string */
+  date: string
+  /** Municipality name (gemeente) */
+  municipality: string
+  /** Link to official publication */
+  url: string
+}
+
+/**
+ * Response schema for parcel enrichment
+ * Backend: ParcelEnrichmentResponse
+ */
+export interface ParcelEnrichmentResponse {
+  /** ParcelCache UUID (serialized as string) */
+  parcel_id: string
+  /** Tier 2 enrichment data (vergunningen, etc.) */
+  enrichment_data: {
+    /** List of vergunningen from SRU API */
+    vergunningen: BekendmakingRecord[]
+    /** Error message if enrichment failed */
+    error?: string
+  } | null
+  /** Timestamp when enrichment was last updated (ISO 8601 string) */
+  enriched_at: string | null
+  /** True if returned from cache, False if freshly fetched */
+  is_cached: boolean
+}

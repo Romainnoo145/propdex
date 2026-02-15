@@ -26,6 +26,7 @@ import type {
   ProjectListResponse,
 } from './types/project'
 import type {
+  ParcelEnrichmentResponse,
   ScanCreateRequest,
   ScanResponse,
   ScanStatusResponse,
@@ -626,5 +627,27 @@ export async function fetchWijken(
       method: 'GET',
       accessToken,
     }
+  )
+}
+
+/**
+ * Fetch on-demand enrichment for a parcel (vergunningen via SRU)
+ *
+ * GET /api/scans/parcels/{parcelId}/enrich
+ *
+ * Returns cached enrichment if available and fresh (< 7 days old).
+ * Otherwise fetches fresh data from SRU API.
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns Parcel enrichment with vergunningen and cache status
+ */
+export async function fetchParcelEnrichment(
+  parcelId: string,
+  accessToken: string | null
+): Promise<ParcelEnrichmentResponse> {
+  return apiFetch<ParcelEnrichmentResponse>(
+    `${SCANS_BASE}/parcels/${parcelId}/enrich`,
+    { method: 'GET', accessToken }
   )
 }

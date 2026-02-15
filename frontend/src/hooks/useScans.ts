@@ -17,8 +17,10 @@ import {
   fetchScanStatus,
   cancelScan,
   fetchScanResults,
+  fetchParcelEnrichment,
 } from '@/lib/api'
 import type {
+  ParcelEnrichmentResponse,
   ScanCreateRequest,
   ScanResponse,
   ScanStatusResponse,
@@ -121,5 +123,28 @@ export function useScanResults(
     queryFn: () => fetchScanResults(scanId!, filters, accessToken),
     enabled: !!scanId && !!accessToken,
     staleTime: 30 * 1000, // 30 seconds - results don't change after scan completes
+  })
+}
+
+/**
+ * Fetch on-demand enrichment for a parcel (vergunningen via SRU)
+ *
+ * Query key: ['parcel-enrichment', parcelId]
+ * Stale time: 7 days (matches backend cache duration)
+ *
+ * @param parcelId - ParcelCache UUID or null (disabled when null)
+ * @param options - Query options (enabled flag)
+ */
+export function useParcelEnrichment(
+  parcelId: string | null,
+  options?: { enabled?: boolean }
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ParcelEnrichmentResponse, Error>({
+    queryKey: ['parcel-enrichment', parcelId],
+    queryFn: () => fetchParcelEnrichment(parcelId!, accessToken),
+    enabled: (options?.enabled ?? true) && !!parcelId && !!accessToken,
+    staleTime: 7 * 24 * 60 * 60 * 1000, // 7 days (matches backend cache)
   })
 }

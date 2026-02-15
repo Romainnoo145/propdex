@@ -15,6 +15,7 @@ interface ResultsTableProps {
   filters?: ScanResultsFilters
   selectedParcelId?: string | null
   onRowClick?: (parcelId: string) => void
+  onRowDoubleClick?: (parcel: ScanResultItem) => void
   onTotalChange?: (total: number) => void
 }
 
@@ -117,6 +118,7 @@ export default function ResultsTable({
   filters = {},
   selectedParcelId,
   onRowClick,
+  onRowDoubleClick,
   onTotalChange,
 }: ResultsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
@@ -306,6 +308,7 @@ export default function ResultsTable({
                     : 'hover:bg-white/5'
                 }`}
                 onClick={() => onRowClick?.(row.original.parcel_id)}
+                onDoubleClick={() => onRowDoubleClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="px-4 py-3 text-sm text-white/80">
