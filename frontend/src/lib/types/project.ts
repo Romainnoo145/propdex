@@ -23,6 +23,12 @@ export interface ProjectResponse {
   created_at: string // ISO datetime
   updated_at: string // ISO datetime
   report_count: number
+  parent_id: string | null      // Phase 26: Hierarchical projects
+  gemeente_code: string | null  // Phase 26: CBS gemeente code
+  wijk_naam: string | null      // Phase 26: CBS wijk name
+  is_monitored: boolean         // Phase 26: Change monitoring flag
+  unread_count: number          // Phase 26: Unread changes (computed)
+  children: ProjectResponse[]   // Phase 26: Nested children for hierarchical display
 }
 
 // ProjectListResponse — GET /api/projects

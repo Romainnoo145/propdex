@@ -271,7 +271,7 @@ async def area_scan_job(
 
             if scan.wijk_naam:
                 project = await _get_or_create_wijk_project(
-                    org_id, scan.wijk_naam, scan.gemeente_naam, session
+                    org_id, scan.wijk_naam, scan.gemeente_naam, scan.gemeente_code, session
                 )
                 scan.project_id = project.id
 
@@ -498,43 +498,69 @@ async def _get_or_create_wijk_project(
     org_id: uuid.UUID,
     wijk_naam: str,
     gemeente_naam: str,
+    gemeente_code: str,
     session: AsyncSession,
 ) -> Project:
     """
-    Find or create a Project folder for a wijk scan.
+    Find or create hierarchical Project structure (gemeente parent + wijk child).
 
-    Project name format: "{wijk_naam} ({gemeente_naam})"
+    Hierarchy: gemeente (top-level) -> wijk (child)
 
     Args:
         org_id: Organization UUID
         wijk_naam: CBS wijk name
         gemeente_naam: Gemeente display name
+        gemeente_code: CBS gemeente code
         session: Database session
 
     Returns:
-        Project instance (existing or newly created)
+        Wijk Project instance (child of gemeente parent)
     """
-    project_name = f"{wijk_naam} ({gemeente_naam})"
-
-    stmt = select(Project).where(
+    # 1. Find or create gemeente parent project
+    parent_stmt = select(Project).where(
         Project.organization_id == org_id,
-        Project.name == project_name,
+        Project.gemeente_code == gemeente_code,
+        Project.parent_id.is_(None),  # Top-level = gemeente
     )
-    result = await session.execute(stmt)
-    project = result.scalar_one_or_none()
+    result = await session.execute(parent_stmt)
+    gemeente_project = result.scalar_one_or_none()
 
-    if project:
-        return project
+    if not gemeente_project:
+        gemeente_project = Project(
+            organization_id=org_id,
+            name=gemeente_naam,
+            description=f"Monitoring voor gemeente {gemeente_naam}",
+            gemeente_code=gemeente_code,
+            is_monitored=True,
+            parent_id=None,
+        )
+        session.add(gemeente_project)
+        await session.flush()
 
-    project = Project(
-        organization_id=org_id,
-        name=project_name,
-        description=f"Automatisch aangemaakt voor wijkscan {wijk_naam}",
+    # 2. Find or create wijk child project
+    wijk_stmt = select(Project).where(
+        Project.organization_id == org_id,
+        Project.parent_id == gemeente_project.id,
+        Project.wijk_naam == wijk_naam,
     )
-    session.add(project)
-    await session.flush()
-    await session.commit()
-    return project
+    result = await session.execute(wijk_stmt)
+    wijk_project = result.scalar_one_or_none()
+
+    if not wijk_project:
+        wijk_project = Project(
+            organization_id=org_id,
+            name=wijk_naam,
+            description=f"Wijkscan {wijk_naam}",
+            parent_id=gemeente_project.id,
+            gemeente_code=gemeente_code,
+            wijk_naam=wijk_naam,
+            is_monitored=True,
+        )
+        session.add(wijk_project)
+        await session.flush()
+        await session.commit()
+
+    return wijk_project
 
 
 async def _update_scan_progress(

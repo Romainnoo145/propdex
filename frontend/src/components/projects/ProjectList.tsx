@@ -44,6 +44,12 @@ const DEMO_PROJECTS: ProjectResponse[] = [
     created_at: '2026-02-01T10:00:00Z',
     updated_at: '2026-02-08T14:30:00Z',
     report_count: 8,
+    parent_id: null,
+    gemeente_code: null,
+    wijk_naam: null,
+    is_monitored: false,
+    unread_count: 0,
+    children: [],
   },
   {
     id: 'demo-2',
@@ -52,6 +58,12 @@ const DEMO_PROJECTS: ProjectResponse[] = [
     created_at: '2026-01-15T09:00:00Z',
     updated_at: '2026-02-05T16:00:00Z',
     report_count: 5,
+    parent_id: null,
+    gemeente_code: null,
+    wijk_naam: null,
+    is_monitored: false,
+    unread_count: 0,
+    children: [],
   },
   {
     id: 'demo-3',
@@ -60,6 +72,12 @@ const DEMO_PROJECTS: ProjectResponse[] = [
     created_at: '2026-02-06T11:00:00Z',
     updated_at: '2026-02-06T11:00:00Z',
     report_count: 3,
+    parent_id: null,
+    gemeente_code: null,
+    wijk_naam: null,
+    is_monitored: false,
+    unread_count: 0,
+    children: [],
   },
 ]
 

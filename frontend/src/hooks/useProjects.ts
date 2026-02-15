@@ -19,6 +19,7 @@ import {
   updateProject,
   deleteProject,
   assignReportToProject,
+  apiFetch,
 } from '@/lib/api'
 import type {
   ProjectCreate,
@@ -41,6 +42,25 @@ export function useProjects() {
     queryKey: ['projects'],
     queryFn: () => fetchProjects(accessToken),
     staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!accessToken,
+  })
+}
+
+/**
+ * Fetch hierarchical monitored projects (gemeente -> wijk)
+ *
+ * Query key: ['projects', 'monitored']
+ * Stale time: 5 minutes (monitoring state changes more frequently)
+ */
+export function useMonitoredProjects() {
+  const { accessToken } = useAuth()
+  return useQuery<ProjectListResponse, Error>({
+    queryKey: ['projects', 'monitored'],
+    queryFn: () => apiFetch<ProjectListResponse>(
+      '/api/monitoring/projects',
+      { accessToken, method: 'GET' }
+    ),
+    staleTime: 5 * 60 * 1000,
     enabled: !!accessToken,
   })
 }
