@@ -187,48 +187,71 @@ async def get_unread(
         HTTPException 500: Internal server error
     """
     try:
-        # Get all monitored projects for this organization
-        projects_query = select(Project).where(
-            Project.organization_id == organization_id,
-            Project.is_monitored == True,  # noqa: E712
+        # Efficient single query using subquery and LEFT JOIN
+        # For each monitored project, count changes detected after user's last_viewed_at
+        # (or ALL changes if user has never viewed the project)
+
+        # Subquery: Get last_viewed_at for each project the user has viewed
+        notification_subquery = (
+            select(
+                UserNotificationState.project_id,
+                UserNotificationState.last_viewed_at,
+            )
+            .where(UserNotificationState.user_id == current_user.id)
+            .subquery()
         )
-        projects_result = await db.execute(projects_query)
-        projects = projects_result.scalars().all()
+
+        # Main query: Count unread changes per monitored project
+        # Uses CASE to handle "never viewed" vs "viewed with new changes"
+        from sqlalchemy import case
+
+        unread_count_expr = func.count(
+            case(
+                (
+                    notification_subquery.c.last_viewed_at.is_(None),
+                    ChangeRecord.id,
+                ),  # Never viewed - count all
+                (
+                    ChangeRecord.detected_at > notification_subquery.c.last_viewed_at,
+                    ChangeRecord.id,
+                ),  # Viewed but has newer changes
+                else_=None,  # Viewed and no new changes
+            )
+        )
+
+        query = (
+            select(
+                Project.id,
+                unread_count_expr.label("unread_count"),
+            )
+            .select_from(Project)
+            .outerjoin(
+                ChangeRecord,
+                (ChangeRecord.project_id == Project.id)
+                & (ChangeRecord.organization_id == organization_id),
+            )
+            .outerjoin(
+                notification_subquery,
+                notification_subquery.c.project_id == Project.id,
+            )
+            .where(
+                Project.organization_id == organization_id,
+                Project.is_monitored == True,  # noqa: E712
+            )
+            .group_by(Project.id)
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
 
         per_project_counts: list[ProjectUnreadCount] = []
         total_unread = 0
 
-        # For each project, count unread changes
-        for project in projects:
-            # Get user's last_viewed_at for this project
-            notification_query = select(UserNotificationState).where(
-                UserNotificationState.user_id == current_user.id,
-                UserNotificationState.project_id == project.id,
-            )
-            notification_result = await db.execute(notification_query)
-            notification_state = notification_result.scalar_one_or_none()
-
-            if notification_state is None:
-                # Never viewed - count ALL changes
-                count_query = select(func.count(ChangeRecord.id)).where(
-                    ChangeRecord.project_id == project.id,
-                    ChangeRecord.organization_id == organization_id,
-                )
-            else:
-                # Count changes detected after last_viewed_at
-                count_query = select(func.count(ChangeRecord.id)).where(
-                    ChangeRecord.project_id == project.id,
-                    ChangeRecord.organization_id == organization_id,
-                    ChangeRecord.detected_at > notification_state.last_viewed_at,
-                )
-
-            count_result = await db.execute(count_query)
-            unread_count = count_result.scalar() or 0
-
+        for project_id, unread_count in rows:
             if unread_count > 0:
                 per_project_counts.append(
                     ProjectUnreadCount(
-                        project_id=str(project.id),
+                        project_id=str(project_id),
                         unread_count=unread_count,
                     )
                 )
