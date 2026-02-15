@@ -97,12 +97,18 @@ export default function ProjectList() {
   const deleteMutation = useDeleteProject()
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedGemeenteId, setExpandedGemeenteId] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null)
 
   const isDemo = !data && !isLoading
-  const projects = data?.projects ?? (isDemo ? DEMO_PROJECTS : [])
+  const allProjects = data?.projects ?? (isDemo ? DEMO_PROJECTS : [])
+
+  // Separate top-level projects (no parent) from hierarchical projects
+  const topLevelProjects = allProjects.filter((p) => p.parent_id === null)
+  const monitoringProjects = topLevelProjects.filter((p) => p.is_monitored)
+  const regularProjects = topLevelProjects.filter((p) => !p.is_monitored)
 
   const handleToggle = (projectId: string) => {
     setExpandedId((prev) => (prev === projectId ? null : projectId))
@@ -150,8 +156,8 @@ export default function ProjectList() {
 
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-500">
-          {projects.length > 0
-            ? `${projects.length} ${projects.length === 1 ? 'project' : 'projecten'}`
+          {allProjects.length > 0
+            ? `${allProjects.length} ${allProjects.length === 1 ? 'project' : 'projecten'}`
             : 'Nog geen projecten'}
         </h3>
         <button
@@ -163,9 +169,143 @@ export default function ProjectList() {
         </button>
       </div>
 
-      {projects.length > 0 ? (
+      {allProjects.length > 0 ? (
         <div className="space-y-2">
-          {projects.map((project) => {
+          {/* Monitoring projects (hierarchical gemeente -> wijk) */}
+          {monitoringProjects.map((gemeente) => {
+            const isGemeenteExpanded = expandedGemeenteId === gemeente.id
+            const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
+            const totalUnread = wijkChildren.reduce((sum, wijk) => {
+              const wijkUnread = unreadData?.per_project.find(
+                (p) => p.project_id === wijk.id
+              )?.unread_count ?? 0
+              return sum + wijkUnread
+            }, 0)
+
+            return (
+              <div
+                key={gemeente.id}
+                className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+              >
+                {/* Gemeente group header */}
+                <button
+                  onClick={() => setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+                >
+                  <ChevronIcon
+                    className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isGemeenteExpanded ? 'rotate-90' : ''}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-gray-900">{gemeente.name}</h4>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">
+                        {wijkChildren.length} {wijkChildren.length === 1 ? 'wijk' : 'wijken'}
+                      </span>
+                      {totalUnread > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                          {totalUnread}
+                        </span>
+                      )}
+                    </div>
+                    {gemeente.description && (
+                      <p className="mt-0.5 truncate text-sm text-gray-500">
+                        {gemeente.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+
+                {/* Wijk children */}
+                {isGemeenteExpanded && wijkChildren.length > 0 && (
+                  <div className="border-t border-gray-100 bg-gray-50/30">
+                    {wijkChildren.map((wijk) => {
+                      const isWijkExpanded = expandedId === wijk.id
+                      const reports = isDemo
+                        ? DEMO_REPORTS[wijk.id] ?? []
+                        : [] // TODO: fetch from useReports({ project_id }) when live
+
+                      const wijkUnread = unreadData?.per_project.find(
+                        (p) => p.project_id === wijk.id
+                      )?.unread_count ?? 0
+
+                      return (
+                        <div key={wijk.id} className="border-b border-gray-100 last:border-b-0">
+                          {/* Wijk project header */}
+                          <button
+                            onClick={() => handleToggle(wijk.id)}
+                            className="flex w-full items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-gray-100/50"
+                          >
+                            <ChevronIcon
+                              className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-sm font-medium text-gray-800">{wijk.name}</h5>
+                                {wijk.report_count > 0 && (
+                                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                                    {wijk.report_count}
+                                  </span>
+                                )}
+                                {wijkUnread > 0 && (
+                                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                                    {wijkUnread > 9 ? wijkUnread : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Wijk expanded content */}
+                          {isWijkExpanded && (
+                            <>
+                              {/* Reports section */}
+                              {reports.length > 0 && (
+                                <div className="border-t border-gray-100 bg-gray-50/50">
+                                  {reports.map((report) => (
+                                    <button
+                                      key={report.id}
+                                      onClick={() => handleReportClick(report)}
+                                      className="flex w-full items-center gap-3 border-b border-gray-100 px-10 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
+                                    >
+                                      <DocumentIcon />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-800">
+                                          {report.report_name}
+                                        </p>
+                                        {report.notes && (
+                                          <p className="truncate text-xs text-gray-400">{report.notes}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3 text-xs text-gray-400">
+                                        <span>{Math.round(report.completeness_score * 100)}%</span>
+                                        <span>{dateFmt.format(new Date(report.created_at))}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {reports.length === 0 && (
+                                <div className="border-t border-gray-100 px-10 py-4 text-center text-sm text-gray-400">
+                                  Geen rapporten in dit project
+                                </div>
+                              )}
+
+                              {/* Change timeline section */}
+                              {!isDemo && <ChangeTimeline projectId={wijk.id} />}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Regular projects (non-monitoring) */}
+          {regularProjects.map((project) => {
             const isExpanded = expandedId === project.id
             const reports = isDemo
               ? DEMO_REPORTS[project.id] ?? []
