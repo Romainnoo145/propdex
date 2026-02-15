@@ -37,7 +37,12 @@ import {
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
 import { addParcelScoreLayer, removeParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
+import {
+  addMonitoredWijkOverlay,
+  removeMonitoredWijkOverlay,
+} from '@/components/map/MonitoredWijkOverlay'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
+import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
 import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
 import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
@@ -122,6 +127,9 @@ function MapPage() {
   const currentData = demoData ?? lookup.data ?? null
   const saveFlow = useSaveReportFlow(currentData)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
+
+  // Monitored projects for wijk overlay
+  const { data: monitoredProjects } = useMonitoredProjects()
 
   // Fly to property whenever coordinates are set and map is ready
   useEffect(() => {
@@ -257,6 +265,40 @@ function MapPage() {
       }
     }
   }, [])
+
+  // Show monitored wijk overlay when wijk GeoJSON loads and monitored projects exist
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !wijkGeojson) return
+
+    // Extract monitored wijk names from projects data
+    const monitoredWijkNames: string[] = []
+    if (monitoredProjects?.projects) {
+      for (const project of monitoredProjects.projects) {
+        // Children are wijk projects with wijk_naam
+        if (project.children) {
+          for (const child of project.children) {
+            if (child.wijk_naam) {
+              monitoredWijkNames.push(child.wijk_naam)
+            }
+          }
+        }
+        // Also check top-level wijk projects (flat response fallback)
+        if (project.wijk_naam) {
+          monitoredWijkNames.push(project.wijk_naam)
+        }
+      }
+    }
+
+    if (monitoredWijkNames.length === 0) return
+
+    addMonitoredWijkOverlay(mapRef.current, wijkGeojson, monitoredWijkNames)
+
+    return () => {
+      if (mapRef.current) {
+        removeMonitoredWijkOverlay(mapRef.current)
+      }
+    }
+  }, [mapReady, wijkGeojson, monitoredProjects])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {

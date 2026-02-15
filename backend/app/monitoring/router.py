@@ -436,14 +436,30 @@ async def get_monitored_projects(
                 wijk_naam=project.wijk_naam,
                 is_monitored=project.is_monitored,
                 unread_count=unread_count,
-                children=[],  # TODO: Populate hierarchical children in future plan
+                children=[],  # Populated after loop
             )
 
             project_responses.append(project_response)
 
+        # Group children under their parent projects
+        # Build lookup: parent_id -> list of child responses
+        children_by_parent: dict[uuid.UUID, list[ProjectResponse]] = {}
+        root_projects: list[ProjectResponse] = []
+
+        for proj_resp in project_responses:
+            if proj_resp.parent_id is not None:
+                parent_uuid = uuid.UUID(proj_resp.parent_id)
+                children_by_parent.setdefault(parent_uuid, []).append(proj_resp)
+            else:
+                root_projects.append(proj_resp)
+
+        # Populate children arrays on root projects
+        for root in root_projects:
+            root.children = children_by_parent.get(root.id, [])
+
         return ProjectListResponse(
-            projects=project_responses,
-            total=len(project_responses),
+            projects=root_projects,
+            total=len(root_projects),
         )
 
     except Exception as e:
