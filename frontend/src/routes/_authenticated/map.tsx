@@ -35,7 +35,7 @@ import {
   addScanAreaHighlight,
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
-import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
+import { addParcelScoreLayer, removeParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
 import { useAuth } from '@/lib/auth/useAuth'
 import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
@@ -416,16 +416,16 @@ function MapPage() {
         },
         {
           onSuccess: (data) => {
-            if (data.status === 'existing' && !data.needs_rescan) {
-              setActiveScanId(data.scan_id)
-              toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
-            } else {
-              setActiveScanId(data.scan_id)
-            }
-            // Remove highlight after scan starts (progress overlay takes over)
+            setActiveScanId(data.scan_id)
             if (mapRef.current) removeScanAreaHighlight(mapRef.current)
             setSelectedArea(null)
-            toast.success(`Scan gestart voor ${wijkNaam}`)
+            if (data.status === 'existing' && !data.needs_rescan) {
+              // Existing completed scan — show results immediately
+              setShowResults(true)
+              toast.info(`Bestaande scan gevonden — resultaten laden`)
+            } else {
+              toast.success(`Scan gestart voor ${wijkNaam}`)
+            }
           },
           onError: (err) => {
             toast.error(`Scan starten mislukt: ${err.message}`)
@@ -484,14 +484,15 @@ function MapPage() {
       },
       {
         onSuccess: (data) => {
-          if (data.status === 'existing' && !data.needs_rescan) {
-            setActiveScanId(data.scan_id)
-            toast.info(`Bestaande scan van ${data.scan_date} gevonden`)
-          } else {
-            setActiveScanId(data.scan_id)
-          }
+          setActiveScanId(data.scan_id)
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
+          if (data.status === 'existing' && !data.needs_rescan) {
+            setShowResults(true)
+            toast.info(`Bestaande scan gevonden — resultaten laden`)
+          } else {
+            toast.success(`Scan gestart voor ${currentGemeente.naam}`)
+          }
         },
         onError: (err) => {
           toast.error(`Scan starten mislukt: ${err.message}`)
@@ -676,6 +677,12 @@ function MapPage() {
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           setZoneInfo(null) // Close zone info card
+          if (data.status === 'existing' && !data.needs_rescan) {
+            setShowResults(true)
+            toast.info(`Bestaande scan gevonden — resultaten laden`)
+          } else {
+            toast.success('Scan gestart')
+          }
         },
         onError: (err) => {
           toast.error(`Scan starten mislukt: ${err.message}`)
@@ -692,7 +699,14 @@ function MapPage() {
         scanId={activeScanId}
         collapsed={!showResults || !activeScanId}
         mapRef={mapRef}
-        onClose={() => setShowResults(false)}
+        onClose={() => {
+          setShowResults(false)
+          setActiveScanId(null)
+          // Clean up score layer from map
+          if (mapRef.current) {
+            removeParcelScoreLayer(mapRef.current)
+          }
+        }}
       >
         <MapView
           mapRef={mapRef}
