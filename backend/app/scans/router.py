@@ -73,17 +73,72 @@ async def trigger_scan(
         HTTPException 500: Internal server error
     """
     try:
-        # Check for existing scan
+        # Determine bbox first (needed for existing scan matching)
+        if scan_request.bbox_wgs84:
+            min_lon, min_lat, max_lon, max_lat = scan_request.bbox_wgs84
+
+            # Validate coordinates are within Netherlands WGS84 bounds
+            # Netherlands approximate WGS84 bounds: 3.3-7.2E, 50.7-53.6N
+            if not (3.3 <= min_lon <= 7.2 and 3.3 <= max_lon <= 7.2 and
+                    50.7 <= min_lat <= 53.6 and 50.7 <= max_lat <= 53.6):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bbox coordinates are outside Netherlands bounds",
+                )
+
+            # Validate min < max
+            if min_lon >= max_lon or min_lat >= max_lat:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid bbox: min coordinates must be less than max",
+                )
+
+            # Convert WGS84 -> RD New (EPSG:28992)
+            minx, miny, maxx, maxy = transform_bbox_to_rd(
+                min_lon, min_lat, max_lon, max_lat
+            )
+
+            # Validate area using shapely (RD New is conformal, area accurate in m²)
+            bbox_geom = box(minx, miny, maxx, maxy)
+            area_m2 = bbox_geom.area
+            MAX_AREA = 500_000_000  # 500 km² (allows all Dutch gemeentes)
+
+            if area_m2 > MAX_AREA:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 500 km². "
+                        "Selecteer een kleiner gebied."
+                    ),
+                )
+
+            bbox = {
+                "minx": minx,
+                "miny": miny,
+                "maxx": maxx,
+                "maxy": maxy,
+            }
+        else:
+            # Fall back to gemeente bbox (existing logic)
+            http_client = request.app.state.http_client
+            try:
+                bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid gemeente: {e}",
+                ) from e
+
+        # Check for existing scan with matching bbox
         existing_scan = await service.get_existing_scan(
             organization_id=organization_id,
             gemeente_code=scan_request.gemeente_code,
+            bbox=bbox,
             session=db,
         )
 
         # If existing scan found and not forcing rescan, return existing
         if existing_scan and not scan_request.force_rescan:
-            from datetime import datetime
-
             days_old = (datetime.utcnow() - existing_scan.created_at).days
             needs_rescan = days_old > 30
 
@@ -101,64 +156,6 @@ async def trigger_scan(
         if existing_scan and scan_request.force_rescan:
             scan = await service.reset_scan_for_rescan(existing_scan, db)
         else:
-            # Determine bbox: user-drawn area or gemeente-wide
-            if scan_request.bbox_wgs84:
-                min_lon, min_lat, max_lon, max_lat = scan_request.bbox_wgs84
-
-                # Validate coordinates are within Netherlands WGS84 bounds
-                # Netherlands approximate WGS84 bounds: 3.3-7.2E, 50.7-53.6N
-                if not (3.3 <= min_lon <= 7.2 and 3.3 <= max_lon <= 7.2 and
-                        50.7 <= min_lat <= 53.6 and 50.7 <= max_lat <= 53.6):
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Bbox coordinates are outside Netherlands bounds",
-                    )
-
-                # Validate min < max
-                if min_lon >= max_lon or min_lat >= max_lat:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Invalid bbox: min coordinates must be less than max",
-                    )
-
-                # Convert WGS84 -> RD New (EPSG:28992)
-                minx, miny, maxx, maxy = transform_bbox_to_rd(
-                    min_lon, min_lat, max_lon, max_lat
-                )
-
-                # Validate area using shapely (RD New is conformal, area accurate in m²)
-                bbox_geom = box(minx, miny, maxx, maxy)
-                area_m2 = bbox_geom.area
-                MAX_AREA = 500_000_000  # 500 km² (allows all Dutch gemeentes)
-
-                if area_m2 > MAX_AREA:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 500 km². "
-                            "Selecteer een kleiner gebied."
-                        ),
-                    )
-
-                bbox = {
-                    "minx": minx,
-                    "miny": miny,
-                    "maxx": maxx,
-                    "maxy": maxy,
-                }
-            else:
-                # Fall back to gemeente bbox (existing logic)
-                http_client = request.app.state.http_client
-                try:
-                    bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
-                except ValueError as e:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Invalid gemeente: {e}",
-                    ) from e
-
-            # TODO: Re-enable parcel count pre-check after fixing CBS bbox CRS
-
             # Create new scan record
             scan = await service.create_scan(
                 organization_id=organization_id,

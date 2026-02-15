@@ -14,13 +14,19 @@ async def get_existing_scan(
     organization_id: uuid.UUID,
     gemeente_code: str,
     session: AsyncSession,
+    bbox: dict | None = None,
 ) -> AreaScan | None:
     """
-    Get most recent scan for organization + gemeente.
+    Get most recent scan for organization + gemeente + bbox.
+
+    When bbox is provided, only matches scans with the same bounding box
+    (within 1m tolerance in RD coordinates). This prevents a gemeente-wide
+    scan from matching when a wijk-specific scan is requested.
 
     Args:
         organization_id: Tenant organization ID
         gemeente_code: CBS gemeentecode
+        bbox: Optional bounding box dict with minx, miny, maxx, maxy (EPSG:28992)
         session: Database session
 
     Returns:
@@ -32,9 +38,19 @@ async def get_existing_scan(
             AreaScan.organization_id == organization_id,
             AreaScan.gemeente_code == gemeente_code,
         )
-        .order_by(AreaScan.created_at.desc())
-        .limit(1)
     )
+
+    if bbox is not None:
+        # Match bbox within 1m tolerance (RD coordinates are in meters)
+        tolerance = 1.0
+        query = query.where(
+            func.abs(AreaScan.bbox_minx - bbox["minx"]) < tolerance,
+            func.abs(AreaScan.bbox_miny - bbox["miny"]) < tolerance,
+            func.abs(AreaScan.bbox_maxx - bbox["maxx"]) < tolerance,
+            func.abs(AreaScan.bbox_maxy - bbox["maxy"]) < tolerance,
+        )
+
+    query = query.order_by(AreaScan.created_at.desc()).limit(1)
 
     result = await session.execute(query)
     return result.scalar_one_or_none()
