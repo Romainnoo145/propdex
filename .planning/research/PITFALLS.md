@@ -1,409 +1,639 @@
-# Domain Pitfalls
+# Domain Pitfalls: UX Redesign for PropTech Map Application
 
-**Domain:** Bestemmingsplan visualization, area deep-dive scanning, and change monitoring for Dutch proptech
-**Researched:** 2026-02-11
+**Domain:** PropTech Map Application (MapLibre + React)
+**Migration scope:** Design system addition + navigation restructure
+**Researched:** 2026-02-16
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
-
-### Pitfall 1: Ruimtelijkeplannen.nl WFS Services Are Discontinued
-**What goes wrong:** Attempting to integrate bestemmingsplan data from ruimtelijkeplannen.nl WFS endpoints fails with service unavailability or incomplete/incorrect data.
-
-**Why it happens:** As of January 1, 2024, the information provision from ruimtelijkeplannen.nl (including INSPIRE/PDOK data delivery) became incomplete and possibly incorrect. As of July 1, 2024, the WMS/WFS consumer services of ruimtelijkeplannen.nl are no longer available.
-
-**Consequences:**
-- Bestemmingsplan base layer fails to load or displays outdated data
-- Development effort wasted on integrating deprecated services
-- No migration path if built on legacy WFS endpoints
-- User-facing feature becomes unreliable
-
-**Prevention:**
-- **Use the replacement REST API:** Existing spatial plans can now be retrieved from `https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4`
-- **Verify service status:** Check PDOK/DSO documentation for current endpoint availability before integration
-- **Plan for TAM-IMRO transition:** TAM-IMRO ends January 1, 2026 - municipalities must use STOP/TPOD instead
-- **Architecture decision:** Choose DSO REST API (forward-compatible) over PDOK WFS (deprecated)
-
-**Detection:**
-- 404/503 errors on ruimtelijkeplannen.nl WFS GetFeature requests
-- GetCapabilities responses missing expected layers
-- Data freshness checks returning stale data (pre-2024)
-- Community forum posts reporting "WFS service not available"
-
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Must use correct API from day 1 to avoid rewrite.
+Mistakes that cause rewrites, full map re-renders, or major performance issues.
 
 ---
 
-### Pitfall 2: Omgevingswet Data Format Fragmentation (IMRO vs STOP/TPOD)
-**What goes wrong:** Bestemmingsplan data exists in two incompatible formats (legacy TAM-IMRO and new STOP/TPOD), causing inconsistent visualization, parsing failures, or missing data for some municipalities.
+### Pitfall 1: MapLibre Instance Re-mount on Route Change
 
-**Why it happens:** The Omgevingswet transition is ongoing. TAM-IMRO ends January 1, 2026, but municipalities transition at different rates. Not all municipalities had STOP/TPOD software ready (some fixes arriving spring 2026). Some bestemmingsplannen remain in old IMRO format until converted by 2032.
+**What goes wrong:**
+When restructuring navigation to use separate route pages (Map, Data/Results, Projects), the MapLibre map container gets unmounted and re-mounted on route transitions. This causes the map to fully reload: all layers, sources, event handlers, and WebGL context are destroyed and recreated. User experiences a flash of empty map, loss of camera position, and 2-5 second reload time. In SPAs with frequent navigation, memory consumption increases with each map creation/destruction cycle.
+
+**Why it happens:**
+React Router (and TanStack Router) unmount components when navigating between routes by default. If the `<MapView>` component lives inside a route file (like `map.tsx`), React destroys it when switching to another route. The MapLibre cleanup (`map.remove()`) runs, but the WebGL context and tile cache are lost. MapLibre React libraries use ref-based lifecycle patterns that don't survive route unmounts without explicit state management.
 
 **Consequences:**
-- Map displays bestemmingsplannen for some gemeenten but not others
-- Parser built for one format fails on the other
-- User confusion ("Why can't I see plans for municipality X?")
-- Data quality varies wildly across municipalities
-- Silent data loss if only one format is supported
+- Map flashes blank on every route change
+- 2-5 second reload for tiles, layers, sources
+- Loss of camera position, zoom level, selected layers
+- Increased memory consumption in SPAs (MapLibre GitHub issue #4811 documents memory leaks on `map.remove()`)
+- User frustration ("Why does the map keep resetting?")
+- Breaking change for existing map-centric workflows
 
 **Prevention:**
-- **Dual format support:** Build parsers for both TAM-IMRO and STOP/TPOD from the start
-- **Format detection:** Check metadata fields to identify data format and route to appropriate parser
-- **Graceful degradation:** Display partial data with clear UI indicators when one format is unavailable
-- **Municipality-level feature flags:** Track which gemeenten use which format, update via background job
-- **User messaging:** "Bestemmingsplan data for [gemeente] is being migrated to new format (available Q2 2026)"
+
+1. **Persistent Layout Pattern (recommended):** Use TanStack Router's layout routes with `<Outlet />`. Keep `<MapView>` in a persistent layout component that wraps all navigation targets. Only the outlet content (panels, tables, modals) changes; map stays mounted.
+
+   ```tsx
+   // _authenticated.tsx (layout)
+   export function AuthLayout() {
+     const mapRef = useRef<MapLibreMap | null>(null)
+     return (
+       <div className="flex h-screen">
+         <MapView mapRef={mapRef} /> {/* Never unmounts */}
+         <Outlet context={{ mapRef }} /> {/* Content swaps here */}
+       </div>
+     )
+   }
+
+   // map.tsx (route)
+   export function MapRoute() {
+     const { mapRef } = useOutletContext()
+     // Use shared map ref, map never re-mounts
+   }
+   ```
+
+2. **Router Context for Map State:** Pass map ref through TanStack Router context (not React Context, which re-renders). Use `context` prop on route definitions to share map instance without re-creating it.
+
+3. **Conditional Visibility vs Unmount:** For panels/overlays, use CSS `display: none` or `visibility: hidden` instead of conditional rendering (`{showPanel && <Panel />}`). This keeps components mounted but hidden, preserving their state.
+
+4. **Guard against re-initialization:** In `MapView` component, use empty dependency array `useEffect([], [])` to ensure map is created exactly once. Do NOT include `transformRequest` or other props in dependencies unless you want a full re-mount.
 
 **Detection:**
-- GeoJSON/XML parsing errors for specific municipalities
-- Empty bestemmingsplan layers despite API returning 200 OK
-- Metadata fields indicating TAM-IMRO vs STOP/TPOD
-- User reports of missing data for specific regions
+- Map flashes white/blank when clicking navigation links
+- DevTools React Profiler shows `MapView` unmounting on route change
+- Browser DevTools Performance tab shows repeated MapLibre initialization
+- Console warnings: "Cannot read property 'remove' of null" (stale map ref)
+- Memory Profiler shows increasing heap usage with navigation
+- User reports: "Map keeps resetting when I switch views"
 
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Format detection and dual parser support required in initial implementation.
+**Phase to address:** Phase 1 (Navigation restructure foundation)
+**Urgency:** CRITICAL — must be solved before any route splitting begins
 
 ---
 
-### Pitfall 3: PDOK WFS 1000-Feature Hard Limit Causes Silent Data Truncation
-**What goes wrong:** PDOK WFS requests silently return only first 1000 features even when thousands exist in bounding box, causing incomplete scans and missing parcels.
+### Pitfall 2: CSS Variable Migration Breaking Cascade Specificity
 
-**Why it happens:** PDOK enforces a 1000-feature maximum per request. If a WFS GetFeature query matches more features, only the first 1000 are returned. Without checking `numberReturned` vs `numberMatched`, developers assume all data was retrieved.
+**What goes wrong:**
+When replacing hardcoded glassmorphism colors with design token CSS variables, existing component styles break due to cascade and specificity conflicts. Inline styles that previously used `background: rgba(0, 0, 0, 0.55)` now use `background: var(--color-surface-dark)`, but Tailwind utility classes with higher specificity override the variable, causing panels to render with wrong backgrounds. Nested components inherit wrong token values from parent scopes. Buttons, modals, and panels render with broken colors or transparency.
+
+**Why it happens:**
+CSS custom properties follow cascade rules but are evaluated at computed-value time, not declaration time. When you define `--color-primary: #2563eb` in `:root` and override it in `.dark-mode { --color-primary: #1e40af }`, components using `var(--color-primary)` resolve to different values based on DOM hierarchy. This differs from Sass variables (compile-time) or Tailwind classes (specificity-based). Proximity matters for inheritance, but NOT for selectors. A deeply nested component can accidentally inherit a token from an intermediate parent, not the root design system.
+
+Additionally, Tailwind's utility classes have high specificity (often `.class` or `.class.class`). When migrating from inline styles to token-based classes, the old Tailwind utilities remain in JSX. These override the new token-based variables unless you use Tailwind's `@layer` system or cascade layers to control ordering.
 
 **Consequences:**
-- Area scans appear complete but miss 90%+ of parcels
-- Users see empty patches on map in dense urban areas
-- Scoring/analytics based on incomplete data (garbage in → garbage out)
-- Legal risk if investment decisions made on incomplete data
-- Production rewrite required to implement pagination
+- Panels render with wrong background colors (opaque instead of transparent)
+- Text becomes unreadable (wrong contrast ratios)
+- Dark mode / light mode tokens conflict, causing visual chaos
+- Components deep in tree inherit wrong token values from intermediate parents
+- Animations break (CSS transitions on `var()` values behave differently than hardcoded colors)
+- Design tokens don't cascade as expected, requiring extensive debugging
 
 **Prevention:**
-- **Always paginate:** Use `count` and `startIndex` parameters in WFS 2.0 requests (existing `bag_wfs.py` implementation is correct)
-- **Verify completion:** Compare `numberReturned` vs `numberMatched` in FeatureCollection response
-- **Pre-check counts:** Use `resultType=hits` to get total count before full fetch, warn users if area too large
-- **Batch size awareness:** Keep PAGE_SIZE at 1000 (PDOK maximum)
-- **Logging:** Log "fetched X/Y panden (page N)" to detect pagination issues early
+
+1. **Incremental Migration Strategy:**
+   Migrate one component category at a time: buttons → cards → panels → modals. Use codemods or manual refactoring to replace hardcoded values with tokens. Do NOT mix old and new systems in the same component.
+
+2. **Alias Old Tokens During Transition:**
+   Create temporary aliases for old values to reduce blast radius:
+   ```css
+   :root {
+     /* New design system */
+     --color-amber-500: #f59e0b;
+
+     /* Legacy aliases (deprecate in Phase 3) */
+     --color-primary: var(--color-amber-500);
+   }
+   ```
+
+3. **Use Cascade Layers (2026 best practice):**
+   Leverage CSS `@layer` to control token ordering without specificity wars:
+   ```css
+   @layer base, tokens, components, utilities;
+
+   @layer tokens {
+     :root {
+       --color-surface-dark: rgba(0, 0, 0, 0.55);
+     }
+   }
+
+   @layer utilities {
+     .bg-surface-dark {
+       background: var(--color-surface-dark);
+     }
+   }
+   ```
+   This ensures utilities always win, regardless of source order.
+
+4. **Prevent Regression with Linting:**
+   Add ESLint rule to prevent hardcoded colors in new code:
+   ```json
+   {
+     "rules": {
+       "no-restricted-syntax": [
+         "error",
+         {
+           "selector": "Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
+           "message": "Use design tokens instead of hardcoded colors"
+         }
+       ]
+     }
+   }
+   ```
+
+5. **Test in Isolation:**
+   Create a Storybook/component playground to test token changes without full app context. Verify cascade behavior in nested components before deploying.
 
 **Detection:**
-- `numberReturned` < `numberMatched` in WFS response
-- Same number of parcels (1000) returned for different bbox sizes
-- User reports of missing buildings in known dense areas
-- Scan result counts suspiciously low for urban gemeenten
+- Visual regression: panels render with wrong colors
+- DevTools Computed tab shows `var(--color-primary)` resolving to unexpected value
+- Contrast checker fails (text unreadable against background)
+- Dark mode switches cause color flashes or incorrect themes
+- CSS transitions "jump" instead of animating smoothly
+- Console warnings: `CSSStyleDeclaration` shows overridden variables
 
-**Phase impact:** Phase 2 (Area Deep-Dive) - Pagination is critical for MVP. Existing `bag_wfs.py` handles this correctly, but new WFS integrations (bestemmingsplan) must follow same pattern.
+**Phase to address:** Phase 2 (Design token migration)
+**Urgency:** HIGH — causes visual regression if not handled incrementally
 
 ---
 
-### Pitfall 4: PostGIS MVT Tile Generation Performance Degrades with SELECT *
-**What goes wrong:** Vector tile endpoint becomes slow (multi-second responses) and generates massive tiles (>500KB), causing map to freeze during pan/zoom.
+### Pitfall 3: Mobile Breakpoint "Tablet Purgatory"
 
-**Why it happens:** Using `SELECT *` to include all columns in ST_AsMVT moves unnecessary data and bloats tile size. According to research, a point tile takes **9x longer** when including 42 properties vs 5 properties. Tiles become 50-100x bigger than recommended (<500KB).
+**What goes wrong:**
+When adding mobile-responsive design to the existing desktop-first map application, the tablet breakpoint (768px - 1024px) renders in a broken hybrid state. The map is too small for desktop patterns (side-by-side panels), but slide-over drawers cover 80% of the screen, making the map unusable. Touch targets are too small for mobile but laid out for desktop. Users on iPad or small laptops experience a degraded UI that's worse than either mobile or desktop versions.
 
-**Consequences:**
-- Map becomes unusable (multi-second lag on every tile request)
-- Database CPU spikes to 100% during map interactions
-- PostgreSQL parallelism triggered for large queries, consuming extra resources
-- Mobile users on slow connections see blank map tiles
-- Horizontal scaling doesn't help (bottleneck is per-query efficiency)
+**Why it happens:**
+The existing app is desktop-first (designed for 1366px+). When adding mobile responsiveness, developers often focus on extremes: small phone (360px) and desktop (1366px+). Tablet breakpoints (768px - 1024px) are treated as "scaled-down desktop" instead of a distinct layout. Tailwind's default breakpoints (`md: 768px`) encourage binary mobile/desktop thinking.
 
-**Prevention:**
-- **Select only needed columns:** In `tile_proxy.py`, existing query selects `parcel_id, address, area_m2, has_pand, score, score_category` - good pattern
-- **Never use SELECT *:** Explicitly list columns needed for map display
-- **Tile size budget:** Target <500KB per tile, log tile sizes in development
-- **Attribute reduction:** Strip non-essential metadata before ST_AsMVT
-- **Zoom-level LOD:** Include fewer attributes at low zoom levels (e.g., only score_category at z<12, full details at z>14)
-
-**Detection:**
-- Slow query logs showing ST_AsMVT queries >500ms
-- Network tab showing tile responses >500KB
-- Database CPU usage correlates with map panning
-- EXPLAIN ANALYZE showing parallel query execution for tiles
-
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Tile endpoint must follow attribute reduction pattern from day 1. Adding bestemmingsplan polygons to MVT? Simplify geometry and limit attributes.
-
----
-
-### Pitfall 5: Multi-Tenant RLS Policies Degrade PostGIS Spatial Query Performance
-**What goes wrong:** Spatial tile queries become 10-100x slower after enabling RLS policies, causing map lag despite spatial indexes.
-
-**Why it happens:** RLS policies are executed **for every row** before spatial index is applied. If policy condition is complex (e.g., joins to verify organization_id), it destroys spatial index efficiency. The query planner may choose to filter by RLS policy first, then by spatial predicate, instead of the reverse.
+Additionally, the app's core pattern (map + side panels) doesn't scale down gracefully. At 768px width, a 400px drawer leaves only 368px for the map—too cramped for meaningful interaction. The "industrial amber" design system likely uses fixed-width components (buttons, inputs) that overflow on tablets.
 
 **Consequences:**
-- Map tiles that loaded in 50ms now take 5 seconds
-- ST_Intersects queries with GIST indexes become table scans
-- Database CPU usage spikes during map usage
-- Spatial index appears unused in EXPLAIN ANALYZE
-- Horizontal scaling doesn't help (per-query inefficiency)
+- Tablet users see broken layout (panels overlap map, content overflows)
+- Touch targets too small for fingers (buttons designed for mouse precision)
+- Slide-over panels cover entire viewport, hiding map context
+- Navigation becomes unusable (icon sidebar too small, text truncated)
+- Landscape orientation (1024x768) breaks differently than portrait (768x1024)
+- User abandonment on iPad (common device for real estate professionals)
 
 **Prevention:**
-- **Simple RLS conditions:** Use direct column comparison only (e.g., `organization_id = current_setting('app.current_tenant_id')::uuid`)
-- **No joins in RLS policies:** Avoid joining to other tables in USING clause
-- **Session variable pattern:** Existing `rls_policies.sql` uses optimal pattern - replicate for new spatial tables
-- **Force index hints:** Add `AND pc.geometry && bounds.geom` before `ST_Intersects` to ensure GIST index usage
-- **Test with RLS enabled:** All spatial query performance tests must run with `SET LOCAL app.current_tenant_id`
+
+1. **Design for Three Tiers, Not Two:**
+   - **Mobile (320px - 768px):** Full-screen views with bottom sheet panels, stack navigation
+   - **Tablet (768px - 1280px):** Slide-over panels with map visible, larger touch targets, hybrid nav
+   - **Desktop (1280px+):** Side-by-side panels, icon sidebar, mouse-optimized
+
+2. **Map-First Layout on Tablet:**
+   Keep map visible at all times. Use narrower slide-over panels (max 360px) or collapsible panels that start minimized. Never cover more than 40% of viewport width on tablet.
+
+3. **Responsive Breakpoints for PropTech:**
+   ```css
+   /* Tailwind config */
+   theme: {
+     screens: {
+       'sm': '640px',   // Large phone
+       'md': '768px',   // Tablet portrait
+       'lg': '1024px',  // Tablet landscape / small laptop
+       'xl': '1280px',  // Desktop
+       '2xl': '1536px', // Large desktop
+     }
+   }
+   ```
+   Design distinct layouts for `md` and `lg`, don't assume `md === desktop`.
+
+4. **Touch Target Minimum:**
+   On `md` and below, enforce 44px minimum touch target (Apple HIG standard):
+   ```css
+   @media (max-width: 1024px) {
+     button, a, input {
+       min-height: 44px;
+       min-width: 44px;
+     }
+   }
+   ```
+
+5. **Test on Real Devices:**
+   iPad (10.2", 1620x2160), iPad Pro (12.9", 2048x2732), Surface (1368x912). Emulators don't catch touch interaction issues.
 
 **Detection:**
-- EXPLAIN ANALYZE showing Seq Scan instead of Index Scan
-- Query times increase linearly with table size despite GIST index
-- Index usage stats show low usage (`pg_stat_user_indexes`)
-- Queries fast as superuser, slow as app_role
+- Panels overlap map on tablet (768px - 1024px)
+- Touch targets fail "fat finger" test (< 44px)
+- Content overflows horizontally on tablet
+- Navigation icons unreadable at `md` breakpoint
+- Landscape vs portrait tablet render differently (aspect ratio not handled)
+- User complaints from iPad users
 
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - New `bestemmingsplan_cache` table needs RLS policy. Phase 2 (Area Deep-Dive) - `parcel_cache` already has correct RLS pattern, new spatial tables must follow.
-
----
-
-### Pitfall 6: BAG WFS Coordinate System Mismatch (EPSG:28992 vs EPSG:4326)
-**What goes wrong:** Building footprints appear in wrong location (e.g., middle of ocean, foreign countries) or bbox queries return zero results despite data existing in area.
-
-**Why it happens:** BAG WFS returns coordinates in EPSG:28992 (RD New, Dutch projection) but developers assume EPSG:4326 (WGS84). Using RD coordinates as lat/lon puts features at wrong location. Additionally, `srsName` parameter can cause lat/lon axis swap bugs.
-
-**Consequences:**
-- Map shows parcels in completely wrong locations
-- Bbox queries miss all features due to coordinate mismatch
-- Existing v3.0 attempt failed due to CBS bbox in EPSG:28992 used with BAG WFS expecting WGS84
-- User sees empty map despite data existing
-- Geometry calculations (area, distance) are wildly incorrect
-
-**Prevention:**
-- **Explicit SRID in bbox:** Use `bbox=minx,miny,maxx,maxy,urn:ogc:def:crs:EPSG::28992` in WFS requests (existing `bag_wfs.py` does this correctly)
-- **Transform coordinates early:** If frontend uses WGS84, transform in PostGIS via `ST_Transform(geometry, 4326)` before sending to client
-- **Validate coordinate ranges:** EPSG:28992 X is ~0-300k, Y is ~300k-600k. EPSG:4326 lon is 3-8°E, lat is 50-54°N for NL
-- **Consistent storage:** Store geometries in EPSG:28992 (native BAG format), transform to 4326 only for MVT tiles or client API
-- **Test with known locations:** Hardcode test for Amsterdam Centraal (EPSG:28992: 121000, 487000) to verify coordinate handling
-
-**Detection:**
-- Features render outside Netherlands bounding box
-- Municipality in documentation says coordinates are abroad
-- Geometry area calculations off by orders of magnitude (m² vs degrees²)
-- `ST_Intersects` queries return no results despite overlapping bbox
-
-**Phase impact:** Phase 2 (Area Deep-Dive) - Existing `bag_wfs.py` handles EPSG:28992 correctly. Phase 1 (Bestemmingsplan) - Verify which CRS bestemmingsplan API returns, transform explicitly.
-
----
-
-### Pitfall 7: ARQ Job Failure Recovery Causes Duplicate Scans Without Idempotency
-**What goes wrong:** Area scan job fails mid-execution (worker restart, database timeout), ARQ automatically requeues job, resulting in duplicate `ScanResult` entries and incorrect progress tracking.
-
-**Why it happens:** ARQ guarantees at-least-once delivery. If a worker is stopped during job execution (deployment, Ctrl+C, crash), the job is automatically requeued. Without idempotent job design, the rerun creates duplicate database entries.
-
-**Consequences:**
-- Same parcel appears multiple times in scan results
-- Progress percentage goes above 100% or resets
-- Score aggregations double-count parcels
-- User sees duplicate parcels on map
-- Database bloat from duplicate entries
-- Export/reporting shows wrong totals
-
-**Prevention:**
-- **Idempotent job design:** Use UPSERT (`ON CONFLICT` clause) instead of INSERT for all database writes
-- **Unique constraints:** Add `UNIQUE(organization_id, scan_id, parcel_id)` on `scan_results` table
-- **Status check on restart:** Job checks `AreaScan.status` at start - if already 'completed', exit early
-- **Transaction boundaries:** Commit progress updates frequently (existing code does this) so partial work is visible
-- **Retry limits:** Configure `max_tries=3` in ARQ to prevent infinite retry loops
-- **Explicit idempotency tokens:** Include `scan_id` in all database writes to scope operations
-
-**Detection:**
-- Duplicate entries in `scan_results` for same scan + parcel combination
-- Progress percentage exceeds 100%
-- ARQ logs showing job running multiple times for same `scan_id`
-- Redis key `arq:retry:job_id` exists with count > 0
-
-**Phase impact:** Phase 2 (Area Deep-Dive) - Existing `area_scan_job` uses INSERT, should use UPSERT for `scan_results`. Phase 3 (Change Monitoring) - Periodic jobs must be idempotent by design.
+**Phase to address:** Phase 3 (Mobile responsiveness)
+**Urgency:** HIGH — iPad is common for real estate professionals
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 8: PDOK resultType=hits Returns XML Instead of JSON
-**What goes wrong:** Pre-flight count check using `resultType=hits` fails to parse response, causing code to crash before full data fetch.
-
-**Why it happens:** BAG WFS `resultType=hits` returns XML format even when `outputFormat=application/json` is specified. Existing v3.0 attempt failed due to parsing XML as JSON.
-
-**Prevention:**
-- **XML parsing for hits:** Use XML parser (lxml, xmltodict) for `resultType=hits` responses
-- **Extract from XML:** Parse `<wfs:FeatureCollection numberMatched="12345">` attribute
-- **JSON only for features:** Only expect JSON when `resultType=results` (default)
-- **Test both formats:** Unit tests must cover both hits (XML) and features (JSON) requests
-
-**Detection:**
-- JSON parse errors on `resultType=hits` responses
-- Response starts with `<?xml` instead of `{`
-- 200 OK response but parsing exception
-
-**Phase impact:** Phase 2 (Area Deep-Dive) - Existing `bag_wfs.py` doesn't specify `outputFormat` for hits query (relies on default). Should explicitly handle XML response or omit `resultType=hits` pre-checks.
+These cause user experience issues or technical debt but don't require rewrites.
 
 ---
 
-### Pitfall 9: Bestemmingsplan Data Quality Varies Wildly Across Municipalities
-**What goes wrong:** Bestemmingsplan layer displays correctly for some gemeenten but shows incorrect coordinates (abroad), missing status, or incomplete data for others.
+### Pitfall 4: Slide-Over Panel Animations Block Map Interactions
 
-**Why it happens:** Geonovum/Kadaster analysis shows many errors in bestemmingsplan data - often involving incorrect coordinates (some plans positioned abroad), wrong status, or incomplete fields. Quality varies from zero errors (some municipalities) to 10+ errors (others).
+**What goes wrong:**
+When adding slide-over panel animations (slide-in drawers, bottom sheets) to the design system, the CSS transitions cause map interactions to lag or freeze during animation. Panning the map while a drawer is animating feels janky. Touch/click events on the map are blocked or delayed by the animating panel overlay, even when the panel doesn't visually cover the map area.
+
+**Why it happens:**
+MapLibre runs on WebGL (GPU-accelerated), while CSS animations run on the main thread (unless using `transform` and `opacity` only). When a panel animates with `width`, `left`, or `background` transitions, it triggers layout recalculation (reflow) on every frame. This blocks the main thread, preventing MapLibre from processing map interactions. Additionally, slide-over panels often use `position: fixed` with high `z-index`, creating a stacking context that captures pointer events even when the panel is translucent or off-screen.
 
 **Prevention:**
-- **Municipality-level quality dashboard:** Track data quality per gemeente using ruimtelijkeplannen.nl quality dashboard API
-- **Coordinate validation:** Reject geometries outside Netherlands bbox (EPSG:28992: X 0-300k, Y 300k-600k)
-- **Status field validation:** Verify status field matches expected enum values (onherroepelijk, ontwerp, vastgesteld)
-- **UI quality indicators:** Show data quality badge per gemeente ("Data laatste check: 2026-02-10, 3 warnings")
-- **Fallback messaging:** "Bestemmingsplan data for [gemeente] may be incomplete (last updated 2023-11-02)"
+
+1. **GPU-Accelerated Animations Only:**
+   Use `transform` and `opacity` for all panel animations. Never animate `width`, `height`, `left`, `top`, or `background`.
+   ```css
+   /* BAD: triggers reflow */
+   .drawer {
+     transition: width 300ms;
+     width: 400px;
+   }
+
+   /* GOOD: GPU-accelerated */
+   .drawer {
+     transition: transform 300ms;
+     transform: translateX(0);
+     width: 400px; /* fixed, not animated */
+   }
+   ```
+
+2. **Pointer Events Control:**
+   Use `pointer-events: none` on animating elements, enable only when animation completes:
+   ```css
+   .drawer {
+     pointer-events: none;
+   }
+   .drawer[data-state="open"] {
+     pointer-events: auto;
+   }
+   ```
+
+3. **Will-Change Hint:**
+   Tell browser to optimize for animation:
+   ```css
+   .drawer {
+     will-change: transform, opacity;
+   }
+   ```
+   Remove after animation completes to avoid memory overhead.
+
+4. **Debounce Map Interactions During Transition:**
+   Disable map gestures during panel animation:
+   ```tsx
+   const [isAnimating, setIsAnimating] = useState(false)
+
+   function openDrawer() {
+     setIsAnimating(true)
+     if (mapRef.current) {
+       mapRef.current.dragPan.disable()
+     }
+     setTimeout(() => {
+       setIsAnimating(false)
+       mapRef.current?.dragPan.enable()
+     }, 300) // Match animation duration
+   }
+   ```
+
+5. **Test with Performance Profiler:**
+   Use Chrome DevTools Performance tab. Record while opening/closing panel. Look for "Recalculate Style" or "Layout" in the timeline—these indicate main thread blocking.
 
 **Detection:**
-- Quality dashboard API returns errors for specific gemeenten
-- Geometries render outside Netherlands
-- Status field NULL or unexpected values
-- User reports of incorrect bestemmingsplan boundaries
+- Map panning feels laggy when drawer opens/closes
+- Performance Profiler shows layout recalculation spikes
+- Mobile devices show stuttering (60fps → 30fps during animation)
+- Clicks on map are delayed or don't register during panel animation
+- DevTools FPS meter shows dropped frames during transitions
 
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Add coordinate validation before rendering. Phase 3 (Change Monitoring) - Monitor data quality changes, alert on degradation.
+**Phase to address:** Phase 4 (Panel animations)
+**Urgency:** MEDIUM — affects UX but not blocking
 
 ---
 
-### Pitfall 10: MapLibre Layer Ordering Without z-index Causes Stacking Issues
-**What goes wrong:** Bestemmingsplan polygons render on top of parcel boundaries, or parcel scores are hidden beneath satellite imagery, making map unreadable.
+### Pitfall 5: Design Token Proliferation (Too Many Tokens)
 
-**Why it happens:** MapLibre doesn't support CSS-like `z-index`. Layer stacking is controlled by definition order in style. Layers defined later render on top. Dynamic layer addition can insert layers in wrong order.
+**What goes wrong:**
+When creating the "Industrial Amber" design system, the team creates hundreds of highly specific tokens: `--color-amber-button-hover-border`, `--spacing-panel-header-left`, `--font-size-card-subtitle-mobile`. The token file grows to 500+ lines. Developers struggle to find the right token, guess wrong, or create duplicates. The design system becomes rigid—adding a new component requires 20 new tokens. Design iteration slows to a crawl.
+
+**Why it happens:**
+Teams treat design tokens like a database schema, creating a token for every possible value. This stems from fear of inconsistency or cargo-culting design system examples (Material Design has 100+ color tokens). Without a clear token hierarchy (primitive → semantic → component), tokens multiply uncontrollably.
 
 **Prevention:**
-- **Define layer order constant:** Create enum/array defining canonical layer order (background → satellite → bestemmingsplan → parcels → labels)
-- **Use beforeId parameter:** When adding layers dynamically, specify `beforeId` to insert at correct position
-- **sort-key for features:** Use `layout: { 'sort-key': ['get', 'score'] }` to control feature ordering within a layer
-- **Test layer combinations:** Verify rendering with all layer combinations enabled (satellite + bestemmingsplan + parcels)
-- **Documentation:** Comment expected z-order in MapView.tsx
+
+1. **Three-Tier Token Hierarchy:**
+   - **Primitives:** Raw values (`--amber-500: #f59e0b`)
+   - **Semantic:** Purpose-based (`--color-accent: var(--amber-500)`)
+   - **Component:** Scoped overrides (`--button-bg: var(--color-accent)`)
+
+   Most components use semantic tokens. Component tokens are rare, only for complex components.
+
+2. **80/20 Rule:**
+   80% of the UI should use 20% of tokens. If you need a new token for every component, your system is too specific.
+
+3. **Alias Aggressively:**
+   ```css
+   :root {
+     /* Primitives */
+     --amber-500: #f59e0b;
+     --gray-900: #111827;
+
+     /* Semantic (used by 80% of components) */
+     --color-accent: var(--amber-500);
+     --color-text: var(--gray-900);
+     --spacing-md: 1rem;
+
+     /* Component overrides (rare) */
+     --button-padding: var(--spacing-md);
+   }
+   ```
+
+4. **Start Minimal, Add on Demand:**
+   Launch with 20-30 tokens. Add new tokens only when the same hardcoded value appears 3+ times in the codebase.
+
+5. **Document Decision Tree:**
+   ```
+   "What token for button background?"
+   → Is it an accent action? → --color-accent
+   → Is it destructive? → --color-error
+   → Is it neutral? → --color-surface
+   ```
 
 **Detection:**
-- Visual inspection: parcels hidden beneath other layers
-- User reports of "can't see parcel boundaries"
-- Layer toggle doesn't reveal expected features
+- Token file exceeds 200 lines
+- Developers ask "Which token should I use?" frequently
+- Multiple tokens with same computed value (duplication)
+- New components require 5+ new tokens
+- Design changes require updating 10+ token references
 
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Must insert below parcel layers. Use `beforeId: 'parcel-scores-layer'` when adding bestemmingsplan source.
+**Phase to address:** Phase 2 (Design token creation)
+**Urgency:** MEDIUM — causes tech debt if unchecked
 
 ---
 
-### Pitfall 11: MapLibre WebGL Doesn't Support CSS Variables in Paint Properties
-**What goes wrong:** Attempting to use CSS variables like `var(--color-high)` in MapLibre paint properties causes layer to not render or throws WebGL errors.
+### Pitfall 6: Imperative Map Layer Logic in useEffect Cleanup Hell
 
-**Why it happens:** MapLibre evaluates paint properties in WebGL shader, which doesn't have access to CSS custom properties. Known issue from v3.0 milestone context.
+**What goes wrong:**
+The current codebase uses imperative `useEffect` + ref patterns for all map layers (see `map.tsx` lines 249-257 for bestemmingsplan click handler, lines 269-301 for monitored wijk overlay). When restructuring navigation, components mount/unmount more frequently. Cleanup functions run out of order, layers are removed before their dependencies, causing "Cannot read property 'getLayer' of undefined" errors. Memory leaks appear (event handlers not removed, layers not cleaned up). Adding new layers becomes a minefield of dependency arrays and cleanup race conditions.
 
-**Prevention:**
-- **Hardcode colors in MapLibre:** Use literal hex values in paint properties: `'fill-color': '#10b981'`
-- **JS constants file:** Define color constants in TypeScript, import into both CSS and MapLibre code
-- **Runtime interpolation:** Use data-driven styling: `['match', ['get', 'score_category'], 'high', '#10b981', ...]`
-- **Theme function:** Create `getMapThemeColors()` function that returns current theme colors as object
+**Why it happens:**
+MapLibre's API is imperative (`map.addLayer()`, `map.removeLayer()`), but React's model is declarative. The current code bridges this with `useEffect`:
+```tsx
+useEffect(() => {
+  if (!mapReady || !mapRef.current) return
+  addBestemmingsplanLayer(mapRef.current)
+  return () => removeBestemmingsplanLayer(mapRef.current)
+}, [mapReady])
+```
 
-**Detection:**
-- Layer not rendering despite source having data
-- Browser console warnings about invalid color values
-- WebGL errors in DevTools
-
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Use hardcoded colors or data-driven expressions, not CSS vars.
-
----
-
-### Pitfall 12: FastAPI BackgroundTasks vs ARQ Worker Queue Misuse
-**What goes wrong:** Using FastAPI `BackgroundTasks` for area scanning causes API server to hang during large scans, blocking other requests.
-
-**Why it happens:** `BackgroundTasks` runs in the same process as the API server. CPU-intensive tasks (processing thousands of parcels) block the event loop. If the server crashes, background tasks are lost.
+When navigation causes remounts, these effects run in unpredictable order. A layer's cleanup runs after the map is removed, or before a dependent layer is cleaned up. The dependency array (`[mapReady, wijkGeojson, monitoredProjects]`) triggers re-runs when unintended, causing layers to flicker or duplicate.
 
 **Consequences:**
-- API unresponsive during scans
-- Scan progress lost on server restart
-- Cannot scale workers independently
-- No retry mechanism for failed tasks
+- Console errors: "Cannot read property 'getLayer' of undefined"
+- Map layers duplicate on route change (2x gemeente boundaries)
+- Memory leaks (event handlers persist after component unmount)
+- Race conditions (cleanup runs before async layer load completes)
+- Adding new layers requires understanding 5+ useEffect interactions
 
 **Prevention:**
-- **Use ARQ for long-running tasks:** Area scans, change monitoring, bulk enrichment
-- **Use BackgroundTasks only for:** Sending emails, logging, cache updates (<1s duration)
-- **Decision matrix:**
-  - <1s duration + non-critical → BackgroundTasks
-  - >1s duration OR critical OR needs retry → ARQ
-- **Existing pattern is correct:** `area_scan_job` uses ARQ worker
+
+1. **Centralize Layer Management:**
+   Create a `useMapLayers` hook that manages all layers in one place:
+   ```tsx
+   function useMapLayers(mapRef: RefObject<MapLibreMap>) {
+     const [layers, setLayers] = useState<LayerConfig[]>([])
+
+     useEffect(() => {
+       if (!mapRef.current) return
+
+       layers.forEach(layer => {
+         if (layer.visible) addLayer(mapRef.current, layer)
+         else removeLayer(mapRef.current, layer.id)
+       })
+
+       return () => {
+         layers.forEach(layer => removeLayer(mapRef.current, layer.id))
+       }
+     }, [layers, mapRef])
+   }
+   ```
+
+2. **Guard Cleanup Functions:**
+   Always check if map/layer exists before cleanup:
+   ```tsx
+   return () => {
+     if (mapRef.current && mapRef.current.getLayer('layer-id')) {
+       mapRef.current.removeLayer('layer-id')
+     }
+   }
+   ```
+
+3. **Use Refs for Mutable State (Not Dependency Arrays):**
+   Avoid triggering re-runs with refs for values that shouldn't cause layer re-render:
+   ```tsx
+   const activeGemeenteRef = useRef(activeGemeente)
+   activeGemeenteRef.current = activeGemeente
+   // Use in handler without triggering useEffect
+   ```
+
+4. **Consider Declarative Wrapper:**
+   Evaluate `react-map-components-maplibre` or `react-maplibre` for declarative layer API:
+   ```tsx
+   <RMap>
+     <RSource id="gemeenten" {...sourceProps} />
+     <RLayer id="gemeente-fill" {...layerProps} />
+   </RMap>
+   ```
+   This eliminates cleanup hell entirely.
+
+5. **Document Layer Dependencies:**
+   Create a layer dependency graph:
+   ```
+   map (base)
+   ├── gemeente-boundaries (independent)
+   ├── wijk-boundaries (depends on gemeente selection)
+   │   └── monitored-wijk-overlay (depends on wijk-boundaries)
+   └── bestemmingsplan (independent)
+   ```
 
 **Detection:**
-- API response times spike during background tasks
-- Scan progress resets on server restart
-- Server logs showing event loop blocked warnings
+- Console errors on navigation: "Cannot read property 'getLayer' of undefined"
+- Map layers persist after component unmount (visible in DevTools)
+- Browser Memory Profiler shows increasing heap on route change
+- Layers duplicate (2x boundaries after navigating back to /map)
+- Event handlers fire multiple times (indicates duplicate listeners)
 
-**Phase impact:** Phase 2 (Area Deep-Dive) - Existing ARQ usage is correct. Phase 3 (Change Monitoring) - Periodic monitoring jobs must use ARQ scheduler.
-
----
-
-### Pitfall 13: PostGIS GIST Index Performance Degrades Without VACUUM
-**What goes wrong:** Spatial queries with GIST indexes become progressively slower over time despite indexes existing.
-
-**Why it happens:** PostgreSQL doesn't maintain BRIN indexes dynamically; changes append to end of index, degrading search performance. GIST indexes also fragment with many updates. Without regular VACUUM ANALYZE, query planner uses stale statistics.
-
-**Prevention:**
-- **Regular VACUUM ANALYZE:** Schedule daily `VACUUM ANALYZE parcel_cache, bestemmingsplan_cache`
-- **Auto-vacuum tuning:** Ensure autovacuum is enabled and aggressive enough for spatial tables
-- **REINDEX on major updates:** After bulk imports (area scans), run `REINDEX TABLE parcel_cache`
-- **Monitor bloat:** Track index size growth, alert if >50% bloat
-- **Avoid BRIN for frequently updated tables:** Use GIST for parcel_cache (frequent updates), consider BRIN only for append-only bestemmingsplan cache
-
-**Detection:**
-- Spatial query times increasing over weeks/months
-- `pg_stat_user_indexes` showing low index scans
-- EXPLAIN ANALYZE preferring seq scans over index scans
-- Index size grows but row count stable
-
-**Phase impact:** Phase 2 (Area Deep-Dive) - Add VACUUM ANALYZE to ARQ maintenance job. Phase 3 (Change Monitoring) - Include REINDEX in periodic maintenance.
+**Phase to address:** Phase 1 (Navigation foundation) or Phase 5 (Refactor to declarative)
+**Urgency:** MEDIUM — manageable with guards, but grows with complexity
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 14: PDOK API Rate Limiting Causes Intermittent Failures
-**What goes wrong:** Area scans fail with 429 Too Many Requests during pagination, causing partial data loss.
-
-**Why it happens:** PDOK enforces rate limits (exact limits not publicly documented). Rapid-fire requests during WFS pagination or concurrent scans trigger throttling.
-
-**Prevention:**
-- **Rate limiting in client:** Existing `bag_wfs_limiter` (correct pattern) - replicate for all PDOK endpoints
-- **Exponential backoff:** Catch 429 errors, retry with exponential delay (1s, 2s, 4s, 8s)
-- **Concurrent scan limits:** Limit ARQ workers to 2-3 concurrent area scan jobs
-- **Request spacing:** Add 100-200ms delay between pagination requests
-
-**Detection:**
-- 429 HTTP status codes in logs
-- ARQ job failures with "Too Many Requests" error
-- Scan failures during peak usage times
-
-**Phase impact:** Phase 2 (Area Deep-Dive) - Extend rate limiting to concurrent job limit. Phase 3 (Change Monitoring) - Space periodic checks across time to avoid burst requests.
+These cause annoyance or minor bugs but are easily fixable.
 
 ---
 
-### Pitfall 15: Change Monitoring Notification Fatigue
-**What goes wrong:** Users receive dozens of change notifications per day for minor updates, disable notifications, then miss critical changes.
+### Pitfall 7: Glassmorphism Backdrop-Filter Performance on Mobile
 
-**Why it happens:** Every bestemmingsplan metadata update, vergunning status change, or boundary tweak triggers notification. Naive implementation sends all changes.
+**What goes wrong:**
+The current glassmorphism design (`backdrop-filter: blur(16px)`) performs well on desktop but causes severe performance issues on mobile. Scrolling slide-over panels feels janky (30fps), animations stutter, battery drains faster. On older Android devices (< 2022), backdrop-filter may not render at all, showing opaque panels instead.
+
+**Why it happens:**
+`backdrop-filter` requires the browser to re-render everything behind the element on every frame. On desktop GPUs this is cheap, but mobile GPUs (especially in mid-range phones) struggle. Safari on iOS handles it better than Chrome on Android, creating inconsistent behavior.
 
 **Prevention:**
-- **Significance filtering:** Only notify on "significant" changes (status: ontwerp→vastgesteld, new vergunning, geometry change >10%)
-- **Batching:** Daily/weekly digest instead of instant notifications
-- **User preferences:** Let users configure notification frequency and significance threshold
-- **Smart defaults:** New vergunningen (instant), bestemmingsplan updates (daily digest), minor changes (weekly)
+
+1. **Disable Backdrop-Filter on Mobile:**
+   ```css
+   .panel {
+     background: rgba(0, 0, 0, 0.95); /* Fallback */
+   }
+
+   @media (min-width: 1024px) {
+     .panel {
+       background: rgba(0, 0, 0, 0.55);
+       backdrop-filter: blur(16px);
+     }
+   }
+   ```
+
+2. **Use `@supports` for Feature Detection:**
+   ```css
+   @supports (backdrop-filter: blur(16px)) {
+     .panel {
+       backdrop-filter: blur(16px);
+     }
+   }
+   ```
+
+3. **Reduce Blur Radius on Mobile:**
+   ```css
+   .panel {
+     backdrop-filter: blur(8px); /* Less expensive */
+   }
+
+   @media (min-width: 1024px) {
+     .panel {
+       backdrop-filter: blur(16px);
+     }
+   }
+   ```
+
+4. **Test on Real Devices:**
+   iPhone SE (2020), Samsung Galaxy A series, older Android (5+ years). Emulators don't show performance issues.
 
 **Detection:**
-- High notification opt-out rate
-- User feedback: "too many emails"
-- Low notification click-through rate
+- Scrolling panel feels laggy on mobile
+- Performance Profiler shows GPU usage spikes
+- Battery drains faster when panel is open
+- Backdrop-filter doesn't render on older Android
 
-**Phase impact:** Phase 3 (Change Monitoring) - Implement significance scoring from day 1 to avoid user backlash.
+**Phase to address:** Phase 3 (Mobile responsiveness)
+**Urgency:** LOW — visual polish, not blocking
 
 ---
 
-### Pitfall 16: Bestemmingsplan Geometry Complexity Causes Browser Rendering Lag
-**What goes wrong:** Bestemmingsplan polygons with thousands of vertices cause browser to freeze during rendering or tile decoding.
+### Pitfall 8: Icon Sidebar Touch Targets Too Small on Mobile
 
-**Why it happens:** Detailed bestemmingsplan geometries can have 10k+ vertices. MapLibre must decode and render all vertices, overwhelming GPU on mobile devices.
+**What goes wrong:**
+The current side-rail navigation (`SideRailNav.tsx`) uses 48px (`h-12 w-12`) icon buttons, which meet the minimum touch target size. However, when the design system adds visual flourishes (smaller icons, tighter spacing for "industrial" aesthetic), touch targets shrink to 32px-36px. Mobile users miss taps, accidentally hit wrong buttons, or struggle to navigate.
+
+**Why it happens:**
+Designers prioritize visual aesthetics (compact, industrial look) over accessibility. The "industrial amber" design likely uses smaller, more precise iconography. Developers implement the design without checking touch target guidelines (Apple HIG: 44px, Material: 48px).
 
 **Prevention:**
-- **Server-side simplification:** Use ST_Simplify in tile query, tolerance based on zoom level (z<10: 10m, z10-14: 5m, z>14: 1m)
-- **Douglas-Peucker algorithm:** `ST_SimplifyPreserveTopology` maintains topology while reducing vertices
-- **Zoom-dependent LOD:** Only include detailed geometries at high zoom levels
-- **Vertex budget:** Log geometries with >1000 vertices, investigate if common
+
+1. **Enforce Minimum Touch Target:**
+   ```tsx
+   // tailwind.config.ts
+   theme: {
+     extend: {
+       spacing: {
+         'touch-target': '44px', // Named token
+       }
+     }
+   }
+
+   // Component
+   <button className="h-touch-target w-touch-target">
+   ```
+
+2. **Visual Icon ≠ Touch Target:**
+   Icon can be 24px, but button remains 44px:
+   ```tsx
+   <button className="h-11 w-11 flex items-center justify-center">
+     <Icon className="h-6 w-6" />
+   </button>
+   ```
+
+3. **Add Spacing Between Buttons:**
+   Ensure 8px minimum gap between touch targets (prevents fat-finger errors):
+   ```tsx
+   <div className="flex flex-col gap-2">
+   ```
+
+4. **Test with "Fat Finger" Method:**
+   Use thumb (not index finger) on real device. If you miss > 10% of taps, target is too small.
 
 **Detection:**
-- Mobile browser freezing when panning over bestemmingsplan layer
-- Tile decode times >500ms in Chrome DevTools
-- Memory usage spikes when layer enabled
+- Users report "hard to tap" navigation on mobile
+- Accessibility audit fails (touch target < 44px)
+- High rate of accidental taps (analytics show mis-clicks)
+- Designers complain icons look "too big" (visual vs functional tension)
 
-**Phase impact:** Phase 1 (Bestemmingsplan Base Layer) - Add ST_Simplify to MVT query based on zoom level.
+**Phase to address:** Phase 3 (Mobile responsiveness)
+**Urgency:** LOW — affects UX but easily fixed
+
+---
+
+### Pitfall 9: TanStack Router `navigate()` Stale Closure in Map Click Handlers
+
+**What goes wrong:**
+When restructuring navigation, map click handlers (gemeente click, wijk click, bestemmingsplan click) use `navigate()` from TanStack Router to transition routes. These handlers are defined in `useCallback` with dependencies, but when navigation logic changes, the handlers don't update. Clicking a gemeente uses an old navigation function, causing navigation to fail or navigate to wrong route.
+
+**Why it happens:**
+The current code uses refs to avoid stale closures for map state (`activeGemeenteRef`, `activeScanIdRef`). But `navigate()` from `useNavigate()` is a stable function—it doesn't change. The issue arises when navigation logic changes (adding search params, changing route structure) but callbacks aren't updated because `navigate` isn't in the dependency array.
+
+**Prevention:**
+
+1. **Always Include `navigate` in Dependencies:**
+   ```tsx
+   const navigate = useNavigate()
+
+   const handleClick = useCallback(() => {
+     navigate({ to: '/map', search: { gemeente: code } })
+   }, [navigate, code])
+   ```
+
+2. **Use Ref Pattern for Navigation Logic:**
+   ```tsx
+   const navigationLogicRef = useRef((code: string) => {
+     navigate({ to: '/map', search: { gemeente: code } })
+   })
+   // Update ref when logic changes, callbacks stay stable
+   ```
+
+3. **Extract Navigation Logic to Custom Hook:**
+   ```tsx
+   function useMapNavigation() {
+     const navigate = useNavigate()
+     return useCallback((type: 'gemeente' | 'wijk', code: string) => {
+       // Centralized navigation logic
+       navigate({ to: '/map', search: { [type]: code } })
+     }, [navigate])
+   }
+   ```
+
+4. **Test Navigation Changes:**
+   After route restructure, manually test all map click handlers (gemeente, wijk, bestemmingsplan, parcel) to ensure they navigate correctly.
+
+**Detection:**
+- Map click doesn't navigate (handler uses stale navigate function)
+- Navigation goes to wrong route (old route structure)
+- Console warning: "Cannot update component while rendering" (stale closure side effect)
+- Clicking same feature twice behaves differently (closure captured different state)
+
+**Phase to address:** Phase 1 (Navigation restructure)
+**Urgency:** LOW — easy to catch in testing
 
 ---
 
@@ -411,62 +641,62 @@ Mistakes that cause rewrites or major issues.
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Phase 1: Bestemmingsplan Base Layer | Pitfall 1 (Deprecated WFS), Pitfall 2 (IMRO/STOP dual format), Pitfall 4 (MVT performance), Pitfall 10 (Layer ordering), Pitfall 11 (CSS vars) | Use DSO REST API v4, dual format parsers, attribute reduction in tiles, beforeId for layers, hardcoded colors |
-| Phase 2: Area Deep-Dive Scanning | Pitfall 3 (WFS 1000 limit), Pitfall 6 (CRS mismatch), Pitfall 7 (ARQ idempotency), Pitfall 8 (XML hits), Pitfall 12 (BackgroundTasks misuse) | Pagination (existing code correct), EPSG:28992 explicit, UPSERT not INSERT, XML parser for hits, ARQ for scans |
-| Phase 3: Change Monitoring | Pitfall 7 (ARQ idempotency), Pitfall 9 (Data quality variance), Pitfall 13 (GIST degradation), Pitfall 14 (Rate limits), Pitfall 15 (Notification fatigue) | Idempotent periodic jobs, quality dashboard integration, scheduled VACUUM, request spacing, significance filtering |
-| Phase 4: Integration Hardening | Pitfall 5 (RLS spatial performance), Pitfall 13 (Index maintenance), Pitfall 16 (Geometry complexity) | Simple RLS policies, REINDEX schedule, ST_Simplify in queries |
+| Phase 1: Navigation Foundation | MapLibre re-mount on route change (Pitfall 1) | Use persistent layout with `<Outlet />`, keep `<MapView>` in layout component |
+| Phase 1: Navigation Foundation | TanStack Router stale closures (Pitfall 9) | Include `navigate` in all callback dependencies |
+| Phase 2: Design Token Migration | Cascade specificity conflicts (Pitfall 2) | Use cascade layers, migrate incrementally, alias old tokens |
+| Phase 2: Design Token Migration | Token proliferation (Pitfall 5) | Start with 20-30 tokens, three-tier hierarchy, add on demand |
+| Phase 3: Mobile Responsiveness | Tablet purgatory (Pitfall 3) | Design distinct tablet layout, test on iPad, 44px touch targets |
+| Phase 3: Mobile Responsiveness | Glassmorphism performance (Pitfall 7) | Disable backdrop-filter on mobile, reduce blur radius |
+| Phase 3: Mobile Responsiveness | Touch target size (Pitfall 8) | Enforce 44px minimum, separate visual icon from touch target |
+| Phase 4: Panel Animations | Animation blocking map (Pitfall 4) | Use transform/opacity only, pointer-events control, test with Profiler |
+| Phase 5: Layer Management Refactor | useEffect cleanup hell (Pitfall 6) | Centralize layer management, guard cleanup, consider declarative wrapper |
 
 ---
 
 ## Sources
 
-**Dutch Government API Services:**
-- [WFS service van Ruimtelijke Plannen geeft af en toe aan GML 3.1.1 niet te ondersteunen - Geoforum](https://geoforum.nl/t/wfs-service-van-ruimtelijke-plannen-geeft-af-en-toe-aan-gml-3-1-1-niet-te-ondersteunen/3713)
-- [Uitfasering ruimtelijkeplannen.nl - GeoBusiness](https://www.geobusiness.nl/nieuws/nieuwsberichten/1354-uitfasering-ruimtelijkeplannen-nl)
-- [Afnemersservices ruimtelijkeplannen.nl vanaf 1 juli 2024 niet beschikbaar](https://aandeslagmetdeomgevingswet.nl/actueel/nieuws-digitaal-stelsel-omgevingswet-dso/nieuws-2024/mei/ruimtelijkeplannen-vanaf-1-juli-niet-beschikbaar/)
-- [Ruimtelijke plannen opvragen - Developer Overheid](https://apis.developer.overheid.nl/apis/dso-ruimtelijke-plannen-opvragen)
-- [Geo services en APIs — PDOK / NGR documentatie](https://pdok-ngr.readthedocs.io/services.html)
+### MapLibre + React Patterns
+- [MapLibre React Components Tutorial](https://maplibre-react-components.pentatrion.com/tutorial)
+- [visgl/react-map-gl Issue #2166: Map resizing breaks with `reuseMaps`](https://github.com/visgl/react-map-gl/issues/2166)
+- [MapLibre GL JS Memory Leak Issue #4811](https://github.com/maplibre/maplibre-gl-js/issues/4811)
+- [MapLibre React Native Memory Leak Issue #873](https://github.com/maplibre/maplibre-react-native/issues/873)
+- [How to display MapLibre GL JS using React](https://docs.maptiler.com/react/maplibre-gl-js/how-to-use-maplibre-gl-js/)
 
-**Omgevingswet Transition:**
-- [TAM-IMRO eindigt per 1 januari 2026 | VNG](https://vng.nl/nieuws/tam-imro-eindigt-per-1-januari-2026)
-- [Omgevingswet: nog knelpunten bij uitfaseren TAM-IMRO - Gemeente.nu](https://www.gemeente.nu/ruimte-milieu/omgevingswet/omgevingswet-nog-knelpunten-bij-uitfaseren-tam-imro/)
-- [Einde TAM-IMRO | Informatiepunt Leefomgeving](https://iplo.nl/regelgeving/instrumenten/omgevingsplan/wijzigen-omgevingsplan/einde-tam-imro-per-1-januari-2026/)
-- [Tijdelijke Alternatieve Maatregelen (TAM) stoppen definitief per 1 januari 2026 | Geonovum](https://www.geonovum.nl/nieuws/tijdelijke-alternatieve-maatregelen-tam-stoppen-definitief-per-1-januari-2026)
+### React Router + State Preservation
+- [Understanding Layout Components and React Router Outlet](https://medium.com/@jackpritomsoren/understanding-layout-components-and-react-router-outlet-in-react-03b8f96ac551)
+- [TanStack Router Discussion #131: useState always using initial value on route change](https://github.com/TanStack/router/discussions/131)
+- [TanStack Router: Render Optimizations](https://tanstack.com/router/v1/docs/framework/react/guide/render-optimizations)
+- [React Navigation: Navigator Hierarchy Issues](https://reactnavigation.org/)
 
-**Coordinate Systems and WFS:**
-- [Verblijfsobject geeft coordinaten in EPSG28992 - Geoforum](https://geoforum.nl/t/verblijfsobject-geeft-coordinaten-in-epsg28992-hoe-krijg-ik-ze-in-epsg4326-latlong/6388)
-- [Handleidingen — PDOK / NGR documentatie](https://pdok-ngr.readthedocs.io/handleidingen.html)
-- [Axis ordering — GeoServer 2.28.0 User Manual](https://docs.geoserver.org/main/en/user/services/wfs/axis_order.html)
+### Design System Migration
+- [Migrations are the hardest part of design systems work](https://maecapozzi.com/newsletter/75)
+- [Tips and tricks for Design System migrations](https://medium.com/@nonisnilukshi/tips-and-tricks-for-design-system-migrations-5beafb8e58c5)
+- [How to Manage Breaking Changes in Design Tokens](https://designtokens.substack.com/p/how-to-manage-breaking-changes-in)
+- [Design Tokens: The Foundation of Your UI Architecture](https://feature-sliced.design/blog/design-tokens-architecture)
 
-**PostGIS Performance:**
-- [Serving Dynamic Vector Tiles from PostGIS | Crunchy Data Blog](https://www.crunchydata.com/blog/dynamic-vector-tiles-from-postgis)
-- [An update on MVT encoders - Carto](https://carto.com/blog/an-update-on-mvt-encoders-c)
-- [Heavy Map Visualizations Fundamentals for Web Developers](https://advena.hashnode.dev/heavy-map-visualizations-fundamentals-for-web-developers)
-- [The Many Spatial Indexes of PostGIS | Crunchy Data Blog](https://www.crunchydata.com/blog/the-many-spatial-indexes-of-postgis)
-- [PostgreSQL Best Practices: PostGIS Spatial Indexes (GiST, BRIN) - Alibaba Cloud](https://www.alibabacloud.com/blog/postgresql-best-practices-selection-and-optimization-of-postgis-spatial-indexes-gist-brin-and-r-tree_597034)
+### CSS Variables + Cascade
+- [CSS Custom Properties In The Cascade](https://www.smashingmagazine.com/2019/07/css-custom-properties-cascade/)
+- [CSS Custom Properties Guide 2026](https://devtoolbox.dedyn.io/blog/css-variables-complete-guide)
+- [Using Custom Property "Stacks" to Tame the Cascade](https://css-tricks.com/using-custom-property-stacks-to-tame-the-cascade/)
+- [How to use CSS variables with React](https://www.joshwcomeau.com/css/css-variables-for-react-devs/)
 
-**MapLibre Performance:**
-- [Optimising MapLibre Performance: Tips for Large GeoJSON Datasets](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/)
-- [Layers - MapLibre Style Spec](https://maplibre.org/maplibre-style-spec/layers/)
-- [Dynamic z-ordering across groups of style layers · Issue #2108](https://github.com/maplibre/maplibre-gl-js/issues/2108)
+### Mobile-First vs Desktop-First
+- [Mobile-First Design: What It Is & Why It Matters in 2026](https://seizemarketingagency.com/mobile-first-design/)
+- [Mobile-First vs Desktop-First: Choosing the Right Strategy](https://www.digittrix.com/blogs/mobile-first-vs-desktop-first-choose-the-right-approach)
+- [The State Of Mobile First and Desktop First](https://ishadeed.com/article/the-state-of-mobile-first-and-desktop-first/)
 
-**ARQ and Background Tasks:**
-- [Building Resilient Task Queues in FastAPI with ARQ Retries](https://davidmuraya.com/blog/fastapi-arq-retries/)
-- [The Inner Workings of: Arq](https://threeofwands.com/the-inner-workings-of-arq/)
-- [Managing Background Tasks in FastAPI: BackgroundTasks vs ARQ + Redis](https://davidmuraya.com/blog/fastapi-background-tasks-arq-vs-built-in/)
+### Performance: Animations + WebGL
+- [Comparing the best React animation libraries for 2026](https://blog.logrocket.com/best-react-animation-libraries/)
+- [Progressive Enhancement with WebGL and React](https://www.14islands.com/journal/progressive-enhancement-with-webgl-and-react)
+- [WebGL Overlay View (Google Maps)](https://developers.google.com/maps/documentation/javascript/webgl/webgl-overlay-view)
+- [Mastering Web Transitions: From CSS Transitions to WebGL](https://www.awwwards.com/mastering-web-transitions.html)
 
-**Multi-Tenant Security:**
-- [Row Level Security for Tenants in Postgres | Crunchy Data Blog](https://www.crunchydata.com/blog/row-level-security-for-tenants-in-postgres)
-- [Multi-tenant data isolation with PostgreSQL Row Level Security | AWS](https://aws.amazon.com/blogs/database/multi-tenant-data-isolation-with-postgresql-row-level-security/)
-- [Postgres RLS Implementation Guide - Best Practices, and Common Pitfalls](https://www.permit.io/blog/postgres-rls-implementation-guide)
+### React Memory Leaks + Cleanup
+- [How to Fix Memory Leaks in React Applications](https://www.freecodecamp.org/news/fix-memory-leaks-in-react-apps/)
+- [Avoiding race conditions and memory leaks in React useEffect](https://www.wisdomgeek.com/development/web-development/react/avoiding-race-conditions-memory-leaks-react-useeffect/)
+- [Understanding Memory Leaks in React](https://medium.com/@ignatovich.dm/understanding-memory-leaks-in-react-how-to-find-and-fix-them-fc782cf182be)
 
-**Data Quality:**
-- [Worden onze bestemmingsplannen straks wel getoond in de DSO-viewer? - Quarant](https://www.quarant.nl/worden-onze-bestemmingsplannen-straks-wel-getoond-in-de-dso-viewer/)
-
-**Change Monitoring Services:**
-- [Kan ik een melding krijgen als er wat gaat veranderen in mijn wijk? | Planviewer](https://www.planviewer.nl/artikelen/toekomst/kan-ik-een-melding-krijgen-als-er-wat-gaat-veranderen-in-mijn-wijk)
-- [Mobiele app met buurt- en vergunningsinformatie - OmgevingsAlert](https://www.omgevingsalert.nl/app)
-
-**Geometry Simplification:**
-- [Line simplification algorithms | Martin Fleischmann](https://martinfleischmann.net/line-simplification-algorithms/)
-- [Ramer–Douglas–Peucker algorithm - Wikipedia](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm)
+### Responsive Breakpoints
+- [Breakpoint: Responsive Design Breakpoints in 2025](https://www.browserstack.com/guide/responsive-design-breakpoints)
+- [Breakpoints in Responsive Design - Nielsen Norman Group](https://www.nngroup.com/articles/breakpoints-in-responsive-design/)
+- [Responsive design - Tailwind CSS](https://tailwindcss.com/docs/responsive-design)

@@ -1,582 +1,547 @@
-# Technology Stack — Bestemmingsplan Visualization + Monitoring
+# Technology Stack — v4.0 UX Redesign
 
-**Project:** Propdex v3.1 (Subsequent Milestone)
-**Researched:** 2026-02-11
-**Overall Confidence:** MEDIUM-HIGH
-
-## Executive Summary
-
-v3.1 adds bestemmingsplan (zoning plan) visualization, area deep-dive scanning, and change monitoring with **ZERO new backend dependencies** and **NO new frontend dependencies**. Existing stack (httpx, lxml, shapely, ARQ, MapLibre) covers all requirements.
-
-**Key decisions:**
-- **httpx direct WMS calls** for bestemmingsplan tiles (NOT OWSLib — sync/async conflict)
-- **Existing lxml** for IMRO GML parsing (NO pygml needed)
-- **ARQ cron_jobs** for change monitoring (already integrated)
-- **MapLibre raster source** for WMS layer (native support)
-- **Existing BAG client** extended with bbox query method
-
-**What changed from v3.0 research:** v3.0 added OWSLib, elasticsearch-py, Terra Draw. v3.1 leverages those additions WITHOUT new dependencies.
+**Project:** Propdex v4.0 (Industrial Amber Design System)
+**Researched:** 2026-02-16
+**Focus:** Design system tooling, map styling, animations, and feedback systems for UX polish
+**Context:** Subsequent milestone adding design system to existing React 19 + Tailwind v4 + MapLibre application
 
 ---
 
-## Stack Additions for v3.1
+## Overview
 
-### Backend: New Dependencies
+This stack analysis focuses ONLY on additions/changes needed for v4.0 UX redesign. The existing validated stack (React 19, Vite 7, TypeScript, TanStack ecosystem, MapLibre GL JS 5.x, Tailwind v4) remains unchanged.
 
-**NONE.** All capabilities covered by existing dependencies:
+**Key additions:**
+1. **Icon library** for sidebar navigation
+2. **Animation library** for slide-over panels and transitions
+3. **Map style customization** for desaturated silver theme
+4. **Toast system** (already installed: Sonner 2.0.7)
 
-| Existing Dependency | v3.1 Use Case | Why Sufficient |
-|---------------------|---------------|----------------|
-| httpx 0.28.1+ | WMS GetMap requests to PDOK | Async HTTP client, supports custom tile URLs, already used for BAG/SRU |
-| lxml 5.3.0+ | Parse IMRO GML bestemmingsplan data | Fast C parser, XPath support for IMRO namespaces, already used for SRU |
-| shapely 2.0.0+ | Bbox to polygon conversion for WFS | Already used for geometry ops, has `.box()` constructor |
-| ARQ 0.27.0+ | Periodic monitoring jobs (cron) | Already integrated with Redis, supports `cron_jobs` in WorkerSettings |
-
-### Frontend: New Dependencies
-
-**NONE.** MapLibre GL JS 5.17.0 natively supports WMS raster layers.
-
-| Existing Dependency | v3.1 Use Case | Why Sufficient |
-|---------------------|---------------|----------------|
-| maplibre-gl 5.17.0 | WMS raster layer for bestemmingsplan tiles | Native `type: 'raster'` source with tile URL template |
-| @turf/turf 7.3.0+ (from v3.0) | Bbox calculation for area selection | Already added in v3.0, supports `turf.bbox()` |
-| @watergis/maplibre-gl-terradraw 1.10.0+ (from v3.0) | Drawing tool for area deep-dive bbox | Already added in v3.0, provides polygon/rectangle drawing |
+**Key insight:** Tailwind v4's native `@theme` directive handles design token system — no additional tooling needed.
 
 ---
 
-## Integration Patterns
+## NEW Dependencies to Add
 
-### 1. PDOK Bestemmingsplan WMS Layer (Frontend)
+### Icons: Lucide React
 
-**Data Source:** PDOK Ruimtelijke Plannen WMS
-**Service URL:** `https://service.pdok.nl/kadaster/ruimtelijke-plannen/wms/v1_0`
-**Update Frequency:** Monthly (PDOK docs)
-**Limitation:** NOT real-time — for legally current data, Ruimtelijkeplannen.nl is authoritative
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| lucide-react | ^0.564.0 | Icon library for navigation sidebar | Lightweight (tree-shakeable SVGs), 1,671+ icons, consistent design, TypeScript native, active maintenance (updated Feb 2026) |
 
-**Implementation:**
-```typescript
-// frontend/src/components/map.tsx
-map.addSource('bestemmingsplan', {
-  type: 'raster',
-  tiles: [
-    'https://service.pdok.nl/kadaster/ruimtelijke-plannen/wms/v1_0?' +
-    'SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&' +
-    'LAYERS=bestemmingsplangebied&' +  // Zoning plan boundaries
-    'BBOX={bbox-epsg-3857}&' +
-    'WIDTH=256&HEIGHT=256&' +
-    'CRS=EPSG:3857&' +
-    'FORMAT=image/png&' +
-    'TRANSPARENT=true'
-  ],
-  tileSize: 256
-});
-
-map.addLayer({
-  id: 'bestemmingsplan-layer',
-  type: 'raster',
-  source: 'bestemmingsplan',
-  paint: {
-    'raster-opacity': 0.7,
-    'raster-fade-duration': 300  // Smooth fade-in
-  }
-});
+**Installation:**
+```bash
+pnpm add lucide-react
 ```
 
-**Available Layers:**
-- `bestemmingsplangebied` — Plan boundaries (recommended base layer)
-- `enkelbestemming` — Single destination zones
-- `dubbelbestemming` — Double destination zones
+**Why Lucide over alternatives:**
+- Tree-shakeable (only bundle icons you use)
+- Consistent 24x24 grid design system
+- TypeScript-first with excellent DX
+- Community-maintained fork of Feather Icons (more icons, active development)
+- Already widely adopted in React ecosystem (9,931 dependent packages)
+- Zero runtime dependencies
 
-**Performance Notes:**
-- PDOK supports CORS, no backend proxy needed
-- MapLibre handles tile caching automatically
-- Use `raster-opacity` for blending, NOT `visibility` toggle (causes refetch)
+**Usage pattern:**
+```tsx
+import { Search, Map, Settings } from 'lucide-react';
 
-**Confidence:** HIGH
-**Sources:**
-- [PDOK Ruimtelijke Plannen WMS](https://www.pdok.nl/ogc-webservices/-/article/ruimtelijke-plannen) — Official service URL, layers, update frequency
-- [MapLibre Add WMS Source Example](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/) — Official WMS integration pattern
-
-### 2. Ruimtelijkeplannen.nl API Integration (Backend)
-
-**API Endpoint:** `https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4/`
-**Purpose:** Fetch detailed IMRO bestemmingsplan data (rules, geometries, plan texts)
-**Authentication:** API key required (request from Informatiehuis Ruimte)
-**Response Format:** JSON with GeoJSON geometries, plan texts in XHTML
-
-**Implementation:**
-```python
-# backend/app/clients/ruimtelijkeplannen.py (NEW FILE)
-import httpx
-from lxml import etree
-
-class RuimtelijkeplannenClient:
-    def __init__(self, api_key: str):
-        self.client = httpx.AsyncClient(
-            base_url="https://ruimte.omgevingswet.overheid.nl/ruimtelijke-plannen/api/opvragen/v4",
-            headers={"X-Api-Key": api_key},
-            timeout=30.0
-        )
-
-    async def get_plan_by_id(self, plan_id: str) -> dict:
-        """Fetch bestemmingsplan details by IMRO plan ID."""
-        response = await self.client.get(f"/plannen/{plan_id}")
-        response.raise_for_status()
-        return response.json()
-
-    async def get_plans_by_bbox(self, bbox: tuple[float, float, float, float]) -> list[dict]:
-        """Find bestemmingsplannen intersecting bbox (RD New coords)."""
-        response = await self.client.get(
-            "/plannen",
-            params={
-                "bbox": f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}",
-                "crs": "EPSG:28992"
-            }
-        )
-        response.raise_for_status()
-        return response.json()["plannen"]
+<Search className="w-5 h-5 text-gray-500" />
 ```
 
-**Use Cases:**
-- User clicks bestemmingsplan on map → fetch plan details by ID
-- Area deep-dive → fetch all plans intersecting bbox
-- Change monitoring → query plans by last modification date
+**Confidence:** HIGH (official npm package, verified current version)
 
-**Confidence:** MEDIUM
-**Reason:** API endpoint found via [Ontwikkelaarsportaal](https://aandeslagmetdeomgevingswet.nl/ontwikkelaarsportaal/api-register/api/rp-opvragen/) but WebFetch denied verification. Requires API key request to validate.
+---
 
-**Sources:**
-- [Ruimtelijke Plannen API - Ontwikkelaarsportaal](https://aandeslagmetdeomgevingswet.nl/ontwikkelaarsportaal/api-register/api/rp-opvragen/) — API endpoint reference
+### Animation: Motion for React
 
-### 3. IMRO GML Parsing with lxml (Backend)
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| motion | ^12.34.0 | Declarative animations for slide-over panels, page transitions | React 19 compatible, 120fps GPU-accelerated, declarative API, 18M+ monthly downloads, hybrid Web Animations API + JavaScript engine |
 
-**Problem:** IMRO bestemmingsplan data is GML (XML with geometries), need to extract zoning rules and boundaries.
+**Installation:**
+```bash
+pnpm add motion
+```
 
-**Solution:** Use existing lxml with XPath for IMRO namespace.
+**Import pattern (NOT framer-motion):**
+```tsx
+import { motion, AnimatePresence } from 'motion/react';
+```
 
-```python
-# backend/app/parsers/imro.py (NEW FILE)
-from lxml import etree
-import shapely.geometry as geom
+**Why Motion over alternatives:**
+- **React 19 compatibility:** framer-motion has compatibility issues; motion is the successor package
+- **Performance:** Hybrid engine (Web Animations API + JavaScript) delivers 120fps
+- **Declarative API:** Natural fit for React (state-driven animations)
+- **Production-grade:** Used by OpenAI, Vercel, Cursor, X
+- **Gestures included:** Tap, drag, hover recognizers built-in
+- **Small bundle impact:** Tree-shakeable, only import what you use
 
-IMRO_NS = {
-    'gml': 'http://www.opengis.net/gml/3.2',
-    'imro': 'http://www.geonovum.nl/imro/2012/1.1'
+**Slide-over panel pattern:**
+```tsx
+<AnimatePresence>
+  {isOpen && (
+    <motion.div
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+    >
+      {/* Panel content */}
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+**Alternative considered:**
+- **CSS View Transitions API:** Browser-native, excellent performance, but limited browser support (no Firefox, Safari experimental). Best for 2027+ projects. For 2026, Motion provides cross-browser reliability.
+
+**Confidence:** HIGH (official npm package, verified React 19 compatibility via motion.dev docs)
+
+---
+
+## Design System Implementation
+
+### Tailwind v4 @theme Directive (NO NEW DEPENDENCIES)
+
+**Existing:** Tailwind v4.1.18 (already installed)
+
+**What's new in Tailwind v4:** Native design token system via `@theme` directive replaces JavaScript config.
+
+**Industrial Amber token system:**
+
+Edit `/frontend/src/styles/index.css`:
+
+```css
+@import "tailwindcss";
+
+@theme {
+  /* Color system — Industrial Amber */
+  --color-base-white: #FFFFFF;
+  --color-base-50: #FAFAFA;
+  --color-base-100: #F5F5F5;
+  --color-base-200: #E5E5E5;
+  --color-base-300: #D4D4D4;
+  --color-base-400: #A3A3A3;
+  --color-base-500: #737373;
+  --color-base-600: #525252;
+  --color-base-700: #404040;
+  --color-base-800: #262626;
+  --color-base-900: #171717;
+  --color-base-black: #000000;
+
+  --color-amber: #EBCB4B;
+  --color-amber-hover: #D4B743;
+  --color-amber-active: #BDA33B;
+
+  /* Semantic tokens */
+  --color-primary: var(--color-amber);
+  --color-primary-hover: var(--color-amber-hover);
+  --color-surface: var(--color-base-white);
+  --color-surface-secondary: var(--color-base-50);
+  --color-text: var(--color-base-900);
+  --color-text-secondary: var(--color-base-600);
+  --color-border: var(--color-base-200);
+
+  /* Z-index scale */
+  --z-map-canvas: 0;
+  --z-map-controls: 10;
+  --z-search-bar: 100;
+  --z-sidebar: 200;
+  --z-side-rail: 250;
+  --z-property-panel: 300;
+  --z-dropdown: 400;
+  --z-modal: 1000;
+  --z-toast: 2000;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Spacing scale (if custom needed beyond Tailwind defaults) */
+  --space-sidebar-width: 64px;
+  --space-search-height: 64px;
 }
-
-def parse_imro_gml(gml_xml: str) -> dict:
-    """Parse IMRO GML to extract bestemmingsvlakken and rules."""
-    parser = etree.XMLParser(
-        resolve_entities=False,  # Security: prevent XXE
-        no_network=True
-    )
-    tree = etree.fromstring(gml_xml.encode(), parser)
-
-    # Extract bestemmingsvlakken (zoning areas)
-    vlakken = []
-    for vlak in tree.xpath('//imro:Bestemmingsvlak', namespaces=IMRO_NS):
-        vlakken.append({
-            'id': vlak.get('{http://www.opengis.net/gml/3.2}id'),
-            'bestemming': vlak.findtext('.//imro:naam', namespaces=IMRO_NS),
-            'geometry': _parse_gml_polygon(vlak.find('.//gml:Polygon', namespaces=IMRO_NS))
-        })
-
-    return {'bestemmingsvlakken': vlakken}
-
-def _parse_gml_polygon(polygon_elem) -> dict:
-    """Convert GML Polygon to GeoJSON."""
-    # Extract coordinates from gml:posList
-    coords_text = polygon_elem.findtext('.//gml:posList', namespaces=IMRO_NS)
-    coords = [float(x) for x in coords_text.split()]
-    # GML posList is flat: x1 y1 x2 y2... -> pairs
-    coord_pairs = [(coords[i], coords[i+1]) for i in range(0, len(coords), 2)]
-    polygon = geom.Polygon(coord_pairs)
-    return geom.mapping(polygon)  # Convert to GeoJSON
 ```
 
-**Why NOT pygml:** pygml (v0.7.0) is a specialized OGC GML geometry parser. IMRO GML includes custom elements (bestemming, regels) outside pygml scope. lxml + XPath handles full IMRO schema.
+**How Tailwind v4 consumes tokens:**
+- Automatically generates utilities: `bg-[--color-primary]`, `text-[--color-text-secondary]`
+- Available as CSS variables: `var(--color-primary)` in custom CSS
+- Runtime themeable (swap values via CSS, no rebuild)
+- Single source of truth (design tokens, utilities, and runtime all use same variables)
 
-**Confidence:** HIGH
-**Sources:**
-- [IMRO2012 Documentation](https://docs.geostandaarden.nl/ro/imro/) — Official IMRO schema, namespace definitions
-- [IMRO XSD Schema (GitHub)](https://github.com/Geonovum/imro/blob/master/xmlschema/2012-v1.3/20120209-IMRO2012-Schema-Lokaal/IMRO2012.xsd) — XML schema reference
+**Why no additional tooling:**
+- Tailwind v4 natively converts `@theme` tokens → utilities + CSS variables
+- No need for design token libraries (Style Dictionary, Theo)
+- No need for CSS variable generators
+- Lightning CSS built-in (5x faster builds)
 
-### 4. Area Deep-Dive with Bbox BAG Query (Backend)
-
-**Extension:** Add bbox query method to existing BAG client.
-
-```python
-# backend/app/clients/bag.py (EXTEND EXISTING)
-from shapely.geometry import box
-
-class BAGClient:
-    # ... existing methods ...
-
-    async def fetch_panden_by_bbox(
-        self,
-        bbox: tuple[float, float, float, float]  # minx, miny, maxx, maxy (RD New)
-    ) -> list[dict]:
-        """
-        Fetch BAG panden within bbox using WFS BBOX filter.
-        Bbox must be in EPSG:28992 (RD New) coordinates.
-        """
-        # Convert bbox tuple to shapely polygon for validation
-        bbox_geom = box(*bbox)
-        area_m2 = bbox_geom.area
-
-        # Validate area size (prevent massive queries)
-        MAX_AREA_M2 = 10_000_000  # 10 km²
-        if area_m2 > MAX_AREA_M2:
-            raise ValueError(f"Bbox area {area_m2:.0f} m² exceeds max {MAX_AREA_M2} m²")
-
-        # Use OGC API Features with bbox filter (v3.0 already has OWSLib)
-        features = await self._fetch_ogc_features(
-            collection="pand",
-            bbox=bbox,
-            limit=1000  # PDOK max per request
-        )
-
-        return features
-```
-
-**Integration with v3.0:** v3.0 added OWSLib for OGC API Features. Extend BAGClient to use existing OWSLib client with bbox parameter.
-
-**Confidence:** HIGH
-**Sources:**
-- [Shapely box() Documentation](https://shapely.readthedocs.io/en/stable/geometry.html) — bbox to polygon conversion
-- [PDOK BAG OGC API v2](https://www.pdok.nl/-/nieuwe-bag-ogc-api-features) — bbox parameter support
-
-### 5. Change Monitoring with ARQ Cron Jobs (Backend)
-
-**Pattern:** Use ARQ's `cron_jobs` feature for daily monitoring scans.
-
-```python
-# backend/app/worker.py (EXTEND EXISTING WorkerSettings)
-from arq import cron
-
-async def check_bestemmingsplan_changes(ctx):
-    """
-    Daily job: Check for new/updated bestemmingsplannen.
-    Runs at 3 AM daily.
-    """
-    from app.clients.ruimtelijkeplannen import RuimtelijkeplannenClient
-    from app.models import BestemmingsplanChange
-    from datetime import datetime, timedelta
-
-    client = RuimtelijkeplannenClient(ctx['settings'].RUIMTELIJKEPLANNEN_API_KEY)
-
-    # Query plans modified in last 24 hours
-    yesterday = datetime.utcnow() - timedelta(days=1)
-    changes = await client.get_plans_by_date_range(
-        start_date=yesterday,
-        end_date=datetime.utcnow()
-    )
-
-    # Store changes in PostgreSQL
-    async with ctx['db'].begin():
-        for change in changes:
-            ctx['db'].add(BestemmingsplanChange(
-                plan_id=change['identificatie'],
-                change_type=change['status'],  # 'vastgesteld', 'ontwerp', etc.
-                changed_at=change['datum'],
-                detected_at=datetime.utcnow()
-            ))
-
-async def check_vergunningen_changes(ctx):
-    """
-    Daily job: Check for new vergunningen (permits) via SRU Bekendmakingen.
-    Runs at 2 AM daily.
-    """
-    from app.clients.sru import SRUClient  # v3.0 already has this
-    from app.models import VergunningChange
-    from datetime import datetime, timedelta
-
-    client = SRUClient()
-
-    # Query bekendmakingen published in last 24 hours
-    yesterday = datetime.utcnow() - timedelta(days=1)
-    bekendmakingen = await client.search(
-        query=f"type:vergunning AND publicatiedatum:[{yesterday.isoformat()}Z TO NOW]"
-    )
-
-    # Store in PostgreSQL
-    async with ctx['db'].begin():
-        for bm in bekendmakingen:
-            ctx['db'].add(VergunningChange(
-                document_id=bm['identifier'],
-                title=bm['title'],
-                published_at=bm['publicatiedatum'],
-                detected_at=datetime.utcnow()
-            ))
-
-# Add to WorkerSettings
-class WorkerSettings:
-    # ... existing settings ...
-
-    cron_jobs = [
-        cron(check_vergunningen_changes, hour=2, run_at_startup=False),
-        cron(check_bestemmingsplan_changes, hour=3, run_at_startup=False)
-    ]
-```
-
-**Why ARQ cron over pg_cron:**
-- ARQ already integrated with Redis (v1.0)
-- No PostgreSQL extension required (more portable)
-- Consistent with existing job patterns (275 tests cover ARQ)
-- Runs once per schedule slot (no parallel execution)
-
-**Confidence:** HIGH
-**Sources:**
-- [ARQ Cron Documentation](https://arq-docs.helpmanual.io/) — cron_jobs in WorkerSettings, scheduling patterns
-- [ARQ GitHub](https://github.com/python-arq/arq) — Active maintenance (maintenance-only mode but stable)
-
-### 6. DSO Omgevingsloket Limitation
-
-**Status:** DSO Omgevingsloket does NOT provide a public API for querying omgevingsplannen by location.
-
-**Implication:** For post-Omgevingswet plans (post-2024), must rely on:
-1. Ruimtelijkeplannen.nl API (receives DSO plans eventually)
-2. PDOK WMS (displays both old bestemmingsplannen and new omgevingsplannen)
-
-**Workaround:** Use PDOK WMS for visualization, Ruimtelijkeplannen.nl API for detailed data. Accept data lag (monthly PDOK updates).
-
-**Confidence:** MEDIUM
-**Sources:**
-- [DSO Omgevingsloket API Discussion - Geoforum](https://geoforum.nl/t/hoe-vraag-ik-omgevingsplannen-op-met-dso-api/9216) — Community confirmation of no public API
-- [DSO Ontwikkelaarsportaal](https://developer.omgevingswet.overheid.nl/dso/dso/omgeving-specifieke-informatie/) — API list (no location-based plan query)
+**Confidence:** HIGH (official Tailwind v4 documentation, released January 2025)
 
 ---
 
-## What NOT to Use
+## Map Styling
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| **OWSLib for WMS GetMap** | OWSLib uses synchronous `requests`, not async-compatible with FastAPI | Direct httpx with WMS URL construction (async-native) |
-| **pygml** | Narrow scope (GML geometries only), doesn't handle IMRO-specific elements | lxml with XPath for full IMRO schema |
-| **MapProxy** (WMS tile cache) | Adds separate service complexity, MapLibre has built-in caching | MapLibre GL JS native tile cache |
-| **pg_cron** (PostgreSQL scheduler) | Requires PostgreSQL extension, less portable | ARQ cron_jobs (already integrated) |
-| **Separate tile proxy** | PDOK supports CORS, no backend proxy needed | Direct WMS calls from frontend |
-| **python-geojson** | Less powerful than shapely, no PostGIS integration | shapely with `.to_geojson()` |
+### MapLibre Style JSON (NO NEW DEPENDENCIES)
+
+**Existing:** maplibre-gl 5.17.0 (already installed)
+
+**Requirement:** Desaturated silver map to match Industrial Amber monochrome aesthetic
+
+**Approach:** Custom MapLibre Style JSON
+
+**Options:**
+
+#### Option 1: Use MapTiler Basic/Dataviz Style (RECOMMENDED)
+
+MapTiler provides minimalist basemap styles designed for overlaying data:
+
+- **Basic style:** Minimal distracting colors, simplified for data overlay focus
+- **Dataviz style:** Maximum simplicity, no POIs, minimal features
+
+**Implementation:**
+```tsx
+import maplibregl from 'maplibre-gl';
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://api.maptiler.com/maps/dataviz/style.json?key=YOUR_API_KEY',
+  // or 'https://api.maptiler.com/maps/basic/style.json?key=YOUR_API_KEY'
+});
+```
+
+**Customization:** Modify color scheme via style JSON overrides to desaturate further
+
+**Cost:** MapTiler free tier: 100,000 map loads/month
+
+#### Option 2: OpenMapTiles Basic Style (Open Source)
+
+- GitHub: `openmaptiles/maptiler-basic-gl-style`
+- Self-hosted, fully customizable
+- Requires tile server setup
+
+#### Option 3: Maputnik Visual Editor (Development Tool)
+
+For creating/editing custom styles:
+
+- Web editor: https://maplibre.org/maputnik/
+- Visual style editor for MapLibre Style Spec
+- Export to JSON
+- TypeScript + React based
+- Actively maintained (updated Jan 2026)
+
+**Recommended workflow:**
+1. Start with MapTiler Basic/Dataviz
+2. Use Maputnik to customize colors (desaturate, adjust to silver/grey palette)
+3. Export style JSON
+4. Host JSON or inline in application
+
+**Desaturation technique:**
+```json
+{
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#F5F5F5"
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "paint": {
+        "fill-color": "#E5E5E5"
+      }
+    },
+    {
+      "id": "landuse",
+      "type": "fill",
+      "paint": {
+        "fill-color": "#FAFAFA"
+      }
+    },
+    {
+      "id": "roads",
+      "type": "line",
+      "paint": {
+        "line-color": "#D4D4D4",
+        "line-width": 1
+      }
+    }
+  ]
+}
+```
+
+**Confidence:** MEDIUM (MapTiler/OpenMapTiles docs verified, Maputnik confirmed active, desaturation approach standard but needs testing)
 
 ---
 
-## Installation
+## Toast Notifications (ALREADY INSTALLED)
 
-### Backend
+### Sonner
+
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| sonner | 2.0.7 | Toast notification system | ✅ Already installed |
+
+**Why Sonner:**
+- Opinionated, minimal API (`<Toaster />` once, call `toast()` anywhere)
+- 8M+ downloads/week
+- Default toast component in shadcn/ui
+- Used by OpenAI, Sonos, Adobe, Vercel
+- Lightweight, excellent DX
+- No context/hooks needed
+
+**Usage:**
+```tsx
+import { Toaster, toast } from 'sonner';
+
+// In root component
+<Toaster position="top-right" />
+
+// Anywhere in app
+toast.success('Property scan complete');
+toast.error('Failed to load kadaster data');
+toast.loading('Scanning address...');
+```
+
+**No action needed:** Already installed in package.json
+
+**Confidence:** HIGH (verified in package.json, official npm version confirmed)
+
+---
+
+## What NOT to Add
+
+| Library | Category | Why Avoid |
+|---------|----------|-----------|
+| Style Dictionary / Theo | Design tokens | Tailwind v4 `@theme` handles this natively |
+| react-spring | Animation | Motion provides better DX and performance |
+| framer-motion | Animation | Deprecated in favor of `motion` package (React 19 compatibility issues) |
+| React Icons | Icons | Larger bundle, less tree-shakeable than Lucide |
+| react-toastify | Toasts | Sonner already installed, better DX |
+| HeadlessUI | Component primitives | Not needed for this milestone (no new complex components) |
+| Radix UI | Component primitives | Not needed for this milestone (no new complex components) |
+| GSAP | Animation | Great library but overkill; Motion's declarative API better for React |
+| Anime.js | Animation | Imperative API, not React-idiomatic |
+
+**Key principle:** Leverage Tailwind v4's native capabilities before adding dependencies.
+
+---
+
+## Integration Points
+
+### Tailwind v4 + Motion
+
+Motion respects Tailwind utilities for styling:
+
+```tsx
+<motion.div
+  className="bg-[--color-surface] shadow-lg rounded-lg"
+  initial={{ opacity: 0, scale: 0.95 }}
+  animate={{ opacity: 1, scale: 1 }}
+>
+  {/* Content */}
+</motion.div>
+```
+
+### TanStack Router + Motion
+
+Page transitions with AnimatePresence:
+
+```tsx
+import { AnimatePresence } from 'motion/react';
+import { useLocation } from '@tanstack/react-router';
+
+function AnimatedOutlet() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+      >
+        <Outlet />
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+```
+
+### MapLibre + Tailwind Tokens
+
+Reference CSS variables in MapLibre paint properties:
+
+```tsx
+map.setPaintProperty('cadastral-parcels', 'fill-color', 'var(--color-amber)');
+```
+
+### Lucide + Tailwind
+
+Icons use Tailwind utilities for sizing/colors:
+
+```tsx
+import { Map, Search, Settings } from 'lucide-react';
+
+<Map className="w-5 h-5 text-[--color-primary]" />
+<Search className="w-6 h-6 text-[--color-text-secondary]" />
+```
+
+---
+
+## Installation Commands
+
 ```bash
-# NO NEW DEPENDENCIES NEEDED
-# Verify existing dependencies sufficient
-cd backend
-pip list | grep -E "(httpx|lxml|shapely|arq)"
-```
+# New dependencies
+pnpm add lucide-react motion
 
-### Frontend
-```bash
-# NO NEW DEPENDENCIES NEEDED
-# MapLibre 5.17.0 already supports WMS
-cd frontend
-npm list maplibre-gl
-```
-
-### New Files to Create
-```bash
-# Backend
-backend/app/clients/ruimtelijkeplannen.py  # Ruimtelijkeplannen.nl API client
-backend/app/parsers/imro.py                # IMRO GML parser with lxml
-
-# Frontend
-# Extend existing frontend/src/components/map.tsx with WMS layer
+# Verify existing (should already be installed)
+pnpm list sonner maplibre-gl tailwindcss
 ```
 
 ---
 
-## Alternatives Considered
+## Migration Notes
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| httpx direct WMS | OWSLib WMS client | Never for async FastAPI (OWSLib uses sync requests) |
-| lxml + XPath | pygml parser | If only parsing GML geometries (not full IMRO schema) |
-| MapLibre native | MapProxy tile cache | If PDOK performance inadequate (unlikely, PDOK is fast) |
-| ARQ cron_jobs | pg_cron extension | If already using pg_cron for other tasks |
-| Client-side WMS | Backend WMS proxy | If PDOK blocks frontend CORS (currently supports CORS) |
+### From Glassmorphism to Industrial Amber
 
----
+1. **Update @theme tokens** in `src/styles/index.css`
+2. **Replace color references** throughout components:
+   - `#2563eb` → `var(--color-primary)` or `bg-[--color-primary]`
+   - Hardcoded greys → base scale variables
+3. **Remove glassmorphism CSS** (`backdrop-filter: blur()`, `rgba()` backgrounds)
+4. **Update MapLibre style** to silver/desaturated theme
 
-## Stack Patterns by Use Case
+### Add Animation to Existing Panels
 
-**For bestemmingsplan base layer visualization:**
-- Frontend: MapLibre `type: 'raster'` source with PDOK WMS
-- Backend: None (frontend fetches tiles directly)
-- Caching: MapLibre GL JS built-in tile cache
+Current panels use static CSS. Wrap with Motion:
 
-**For area deep-dive scanning (user-drawn bbox):**
-- Frontend: @watergis/maplibre-gl-terradraw (from v3.0) for bbox drawing
-- Frontend: @turf/turf (from v3.0) for bbox calculation
-- Backend: Extended BAGClient with `fetch_panden_by_bbox()` method
-- Backend: ARQ job for bulk pand enrichment (existing pattern)
+```tsx
+// Before
+<div className={cn("fixed right-0 w-96", isOpen && "block")}>
 
-**For detailed bestemmingsplan lookup (map click):**
-- Frontend: MapLibre queryRenderedFeatures on WMS layer (gets bbox, not plan ID)
-- Backend: RuimtelijkeplannenClient fetches plans by bbox
-- Backend: IMRO parser extracts rules, geometries, texts
-- Storage: PostgreSQL with JSONB (existing pattern)
-
-**For change monitoring:**
-- Backend: ARQ cron_jobs (daily at 2 AM, 3 AM)
-- Backend: SRUClient for vergunningen (already exists from v3.0)
-- Backend: RuimtelijkeplannenClient for bestemmingsplan changes (new)
-- Storage: PostgreSQL change tracking tables
+// After
+<AnimatePresence>
+  {isOpen && (
+    <motion.div
+      className="fixed right-0 w-96"
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+    >
+```
 
 ---
 
-## Version Compatibility
+## Browser Compatibility
 
-| Package | Version | v3.1 Use | Notes |
-|---------|---------|----------|-------|
-| httpx | 0.28.1+ | WMS GetMap, Ruimtelijkeplannen.nl API | Already in project, async-native |
-| lxml | 5.3.0+ | IMRO GML parsing | Already in project, C extension for performance |
-| shapely | 2.0.0+ | Bbox to polygon, GML to GeoJSON | Already in project, required for GeoAlchemy2 0.15+ |
-| arq | 0.27.0+ | Cron jobs for monitoring | Already in project, maintenance-only but stable |
-| maplibre-gl | 5.17.0 | WMS raster layer | Already in project, native WMS support |
-| @turf/turf | 7.3.0+ | Bbox calculation | Added in v3.0, pure JS library |
-| @watergis/maplibre-gl-terradraw | 1.10.0+ | Bbox drawing | Added in v3.0, Terra Draw integration |
+| Feature | Chrome | Firefox | Safari | Edge |
+|---------|--------|---------|--------|------|
+| Tailwind v4 CSS | ✅ | ✅ | ✅ | ✅ |
+| Motion animations | ✅ | ✅ | ✅ | ✅ |
+| MapLibre GL JS | ✅ | ✅ | ✅ | ✅ |
+| Lucide SVG icons | ✅ | ✅ | ✅ | ✅ |
+| Sonner toasts | ✅ | ✅ | ✅ | ✅ |
 
-**No version conflicts.** All v3.1 features use existing dependencies.
+**Note:** CSS View Transitions API (future alternative to Motion) not supported in Firefox, experimental in Safari. Motion provides better cross-browser support for 2026.
 
 ---
 
 ## Performance Considerations
 
-### WMS Tile Loading
-- PDOK WMS tiles: 256x256 PNG with transparency
-- MapLibre loads max 6 tiles in parallel (default `maxParallelImageRequests`)
-- Use `raster-opacity` for layer blending (changing `visibility` forces refetch)
-- PDOK response time: ~100-300ms per tile (tested 2026-02-11)
+| Technology | Bundle Impact | Performance Notes |
+|------------|---------------|-------------------|
+| lucide-react | Minimal (tree-shakeable, ~1KB per icon) | Only bundle icons imported |
+| motion | ~30KB gzipped | Hybrid engine (Web Animations API + JS), 120fps animations |
+| sonner | ~4KB gzipped | Lightweight toast implementation |
+| Tailwind v4 | CSS only (no JS runtime) | Lightning CSS compiler (5x faster builds) |
 
-### Bbox BAG Queries
-- Limit bbox area to 10 km² max (prevents timeout)
-- BAG OGC API Features: max 1000 features per request (PDOK limit)
-- Use pagination for large areas (OWSLib handles this, added in v3.0)
-- Batch pand enrichment via ARQ (don't block HTTP response)
-
-### IMRO GML Parsing
-- IMRO GML files: 10-50 MB for large bestemmingsplannen
-- Use lxml `iterparse()` for incremental parsing if memory constrained
-- Cache parsed results in PostgreSQL (planId → JSONB)
-- Parse on-demand (not at scan time) to reduce latency
-
-### Change Monitoring Jobs
-- Run during off-peak hours (2-4 AM)
-- Use Redis for deduplication (track processed document IDs)
-- Limit queries to last 24 hours (avoid full corpus scan)
-- SRU API: ~1-5 seconds per query (acceptable for background jobs)
-
-### PostGIS Spatial Indexes
-- Create GIST index on all geometry columns
-- Use `ST_Intersects` with bbox for bestemmingsplan queries
-- 5-40x speedup with GIST indexes (PostGIS docs)
+**Total addition:** ~35KB gzipped for animation + icons (acceptable for UX polish milestone)
 
 ---
 
-## Security Considerations
+## Development Workflow
 
-### XML Parsing (lxml)
-```python
-# ALWAYS use security flags for untrusted IMRO GML
-parser = etree.XMLParser(
-    resolve_entities=False,  # Prevent XXE attacks
-    no_network=True,         # Block external DTD loading
-    remove_comments=True,
-    remove_pis=True
-)
-```
+### Design Token Workflow
 
-### API Keys
-- Store Ruimtelijkeplannen.nl API key in environment (NOT repository)
-- Environment variable: `RUIMTELIJKEPLANNEN_API_KEY`
-- Rotate annually or per Informatiehuis Ruimte policy
+1. **Define tokens** in `@theme` block (`src/styles/index.css`)
+2. **Reference in components:**
+   - Tailwind utilities: `bg-[--color-primary]`
+   - Custom CSS: `background: var(--color-primary);`
+3. **No rebuild needed** for color changes (CSS variables update at runtime)
 
-### CORS and WMS
-- PDOK WMS supports CORS (no backend proxy needed)
-- If frontend must proxy WMS, validate tile params to prevent SSRF
+### Map Style Workflow
 
-### SQL Injection in PostGIS
-- Use SQLAlchemy parameterized queries
-- NEVER construct spatial SQL with f-strings
-- Validate geometry input before `ST_GeomFromGeoJSON`
+1. **Start with base style** (MapTiler Basic/Dataviz)
+2. **Customize in Maputnik** (https://maplibre.org/maputnik/)
+3. **Export JSON** and save to `src/styles/map-style.json`
+4. **Import in map component:**
+   ```tsx
+   import mapStyle from './styles/map-style.json';
 
----
+   const map = new maplibregl.Map({
+     style: mapStyle as StyleSpecification
+   });
+   ```
 
-## Migration Checklist
+### Animation Development
 
-### Backend
-- [ ] Create `app/clients/ruimtelijkeplannen.py` (Ruimtelijkeplannen.nl API client)
-- [ ] Create `app/parsers/imro.py` (IMRO GML parser with lxml)
-- [ ] Extend `app/clients/bag.py` with `fetch_panden_by_bbox()` method
-- [ ] Add ARQ cron jobs to `app/worker.py` WorkerSettings
-- [ ] Add PostgreSQL tables for change tracking (BestemmingsplanChange, VergunningChange)
-- [ ] Add API endpoints: GET /api/v1/bestemmingsplannen, GET /api/v1/changes
-- [ ] Request API key from Informatiehuis Ruimte
-
-### Frontend
-- [ ] Add WMS raster source to `map.tsx` (PDOK bestemmingsplan layer)
-- [ ] Add layer toggle control for bestemmingsplan visibility
-- [ ] Wire bbox drawing tool (already have @watergis/maplibre-gl-terradraw from v3.0)
-- [ ] Add bestemmingsplan click handler (queryRenderedFeatures → backend API)
-- [ ] Add change feed UI (GET /api/v1/changes)
-
-### Database
-- [ ] Create migration for BestemmingsplanChange table
-- [ ] Create migration for VergunningChange table
-- [ ] Create GIST indexes on geometry columns (if not already exist)
-
-### Infrastructure
-- [ ] Add RUIMTELIJKEPLANNEN_API_KEY to environment (.env, secrets management)
-- [ ] Verify PDOK WMS accessible from frontend (test CORS)
-- [ ] Verify Redis capacity for ARQ cron job payloads
-
----
-
-## Research Confidence
-
-| Component | Confidence | Evidence |
-|-----------|------------|----------|
-| PDOK WMS integration | HIGH | Official PDOK docs, MapLibre official example, service URL verified |
-| httpx for WMS GetMap | HIGH | Already used in project, async-native, HTTP/2 support confirmed |
-| lxml for IMRO GML | HIGH | Official IMRO schema on GitHub, lxml security patterns documented |
-| ARQ cron_jobs | HIGH | Already proven in v1.0-v1.1 (275 tests), official docs clear |
-| MapLibre WMS layer | HIGH | Official MapLibre docs, native raster source support |
-| Ruimtelijkeplannen.nl API | MEDIUM | API endpoint found via Ontwikkelaarsportaal, but WebFetch denied verification. Requires API key request to validate. |
-| DSO Omgevingsloket limitation | MEDIUM | Community confirmation (Geoforum), but no official statement found |
+1. **Start simple:** `initial`, `animate`, `exit` states
+2. **Test performance:** Monitor FPS in DevTools
+3. **Prefer transforms** (`x`, `y`, `scale`, `rotate`) over position properties
+4. **Use spring physics** for natural feel: `transition={{ type: 'spring' }}`
 
 ---
 
 ## Sources
 
-### High Confidence (Official Documentation)
-- [PDOK Ruimtelijke Plannen WMS](https://www.pdok.nl/ogc-webservices/-/article/ruimtelijke-plannen) — WMS service URL, layers, update frequency
-- [MapLibre Add WMS Source](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/) — Official WMS integration pattern
-- [MapLibre RasterTileSource API](https://maplibre.org/maplibre-gl-js/docs/API/classes/RasterTileSource/) — TypeScript types, tile options
-- [ARQ Cron Documentation](https://arq-docs.helpmanual.io/) — cron_jobs configuration, scheduling
-- [IMRO2012 Documentation](https://docs.geostandaarden.nl/ro/imro/) — Official IMRO schema
-- [IMRO XSD Schema (GitHub)](https://github.com/Geonovum/imro/blob/master/xmlschema/2012-v1.3/20120209-IMRO2012-Schema-Lokaal/IMRO2012.xsd) — XML schema
-- [Shapely Documentation](https://shapely.readthedocs.io/en/stable/geometry.html) — box(), to_geojson(), mapping()
-- [PostGIS Spatial Indexing](https://postgis.net/workshops/postgis-intro/indexing.html) — GIST indexes, performance
+### Design Tokens & Tailwind v4
+- [Tailwind CSS v4.0 Release](https://tailwindcss.com/blog/tailwindcss-v4)
+- [Tailwind v4 Theme Variables Documentation](https://tailwindcss.com/docs/theme)
+- [Tailwind CSS 4 @theme Directive Guide](https://medium.com/@sureshdotariya/tailwind-css-4-theme-the-future-of-design-tokens-at-2025-guide-48305a26af06)
+- [Tailwind CSS Best Practices 2025-2026](https://www.frontendtools.tech/blog/tailwind-css-best-practices-design-system-patterns)
 
-### Medium Confidence (WebSearch, Community Sources)
-- [Ruimtelijke Plannen API - Ontwikkelaarsportaal](https://aandeslagmetdeomgevingswet.nl/ontwikkelaarsportaal/api-register/api/rp-opvragen/) — API endpoint (WebFetch denied, needs validation)
-- [DSO Omgevingsloket API Limitation - Geoforum](https://geoforum.nl/t/hoe-vraag-ik-omgevingsplannen-op-met-dso-api/9216) — No public API (community confirmation)
-- [OWSLib PyPI](https://pypi.org/project/OWSLib/) — Version 0.36.0, sync requests backend
-- [pygml PyPI](https://pypi.org/project/pygml/) — Version 0.7.0, GML geometry parser
-- [MapProxy GitHub](https://github.com/mapproxy/mapproxy) — WMS tile cache alternative
+### Animation Libraries
+- [Motion for React Official Docs](https://motion.dev/docs/react)
+- [Motion npm Package](https://www.npmjs.com/package/motion)
+- [Motion Installation Guide](https://motion.dev/docs/react-installation)
+- [React Animation Libraries 2026](https://www.syncfusion.com/blogs/post/top-react-animation-libraries)
+- [Framer Motion Examples](https://egghead.io/blog/how-to-create-a-sliding-sidebar-menu-with-framer-motion)
+- [CSS View Transitions API Guide](https://devtoolbox.dedyn.io/blog/css-view-transitions-complete-guide)
 
-### Low Confidence (Requires Validation)
-- Ruimtelijkeplannen.nl API authentication — API key request process not documented
-- DSO Omgevingsloket roadmap — Future public API availability unknown
-- PDOK WMS SLA — Service availability guarantees not found in public docs
+### Toast Notifications
+- [Sonner Official Docs (shadcn/ui)](https://ui.shadcn.com/docs/components/radix/sonner)
+- [Sonner npm Package](https://www.npmjs.com/package/sonner)
+- [Top React Toast Libraries 2026](https://knock.app/blog/the-top-notification-libraries-for-react)
+- [React Toast Libraries Comparison](https://blog.logrocket.com/react-toast-libraries-compared-2025/)
+
+### Icon Libraries
+- [Lucide React Official Docs](https://lucide.dev/guide/packages/lucide-react)
+- [Lucide Icons npm Package](https://www.npmjs.com/package/lucide-react)
+- [Lucide Icons Library](https://lucide.dev/icons)
+
+### Map Styling
+- [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/)
+- [MapTiler Basic Map Style](https://www.maptiler.com/maps/basic/)
+- [Maputnik Style Editor](https://maplibre.org/maputnik/)
+- [Maputnik GitHub Repository](https://github.com/maplibre/maputnik)
+- [OpenMapTiles Basic Style](https://github.com/openmaptiles/maptiler-basic-gl-style)
 
 ---
 
-*Stack research for: Bestemmingsplan visualization + area deep-dive + change monitoring*
-*Researched: 2026-02-11*
-*Researcher: GSD Project Research Agent*
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
+|------|------------|-----------|
+| Design tokens (Tailwind v4 @theme) | HIGH | Official Tailwind v4 docs, released Jan 2025, widely adopted |
+| Motion animation library | HIGH | Official npm package, verified React 19 compatibility, 18M+ downloads/month |
+| Lucide icons | HIGH | Official npm package, current version verified (0.564.0), active maintenance |
+| Sonner toasts | HIGH | Already installed in package.json, verified version matches npm |
+| MapLibre style customization | MEDIUM | Approach is standard, tools verified, but desaturated silver theme needs design validation |
+
+**Overall confidence:** HIGH — All recommendations based on official documentation, current npm versions verified, compatibility confirmed.
