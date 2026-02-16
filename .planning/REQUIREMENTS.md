@@ -89,43 +89,45 @@ Requirements for v4.0 UX Redesign. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DS-01 | — | Pending |
-| DS-02 | — | Pending |
-| DS-03 | — | Pending |
-| DS-04 | — | Pending |
-| DS-05 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| NAV-04 | — | Pending |
-| FB-01 | — | Pending |
-| FB-02 | — | Pending |
-| FB-03 | — | Pending |
-| FB-04 | — | Pending |
-| FB-05 | — | Pending |
-| FB-06 | — | Pending |
-| DT-01 | — | Pending |
-| DT-02 | — | Pending |
-| DT-03 | — | Pending |
-| DT-04 | — | Pending |
-| DT-05 | — | Pending |
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SET-01 | — | Pending |
-| SET-02 | — | Pending |
-| SET-03 | — | Pending |
-| SET-04 | — | Pending |
-| MOB-01 | — | Pending |
-| MOB-02 | — | Pending |
-| MOB-03 | — | Pending |
-| MIG-01 | — | Pending |
-| MIG-02 | — | Pending |
+| DS-01 | Phase 27 | Pending |
+| DS-02 | Phase 27 | Pending |
+| DS-03 | Phase 29 | Pending |
+| DS-04 | Phase 29 | Pending |
+| DS-05 | Phase 27 | Pending |
+| NAV-01 | Phase 28 | Pending |
+| NAV-02 | Phase 28 | Pending |
+| NAV-03 | Phase 28 | Pending |
+| NAV-04 | Phase 30 | Pending |
+| FB-01 | Phase 32 | Pending |
+| FB-02 | Phase 32 | Pending |
+| FB-03 | Phase 32 | Pending |
+| FB-04 | Phase 32 | Pending |
+| FB-05 | Phase 32 | Pending |
+| FB-06 | Phase 32 | Pending |
+| DT-01 | Phase 33 | Pending |
+| DT-02 | Phase 33 | Pending |
+| DT-03 | Phase 33 | Pending |
+| DT-04 | Phase 33 | Pending |
+| DT-05 | Phase 33 | Pending |
+| SCAN-01 | Phase 33 | Pending |
+| SCAN-02 | Phase 33 | Pending |
+| SET-01 | Phase 35 | Pending |
+| SET-02 | Phase 35 | Pending |
+| SET-03 | Phase 35 | Pending |
+| SET-04 | Phase 35 | Pending |
+| MOB-01 | Phase 34 | Pending |
+| MOB-02 | Phase 34 | Pending |
+| MOB-03 | Phase 34 | Pending |
+| MIG-01 | Phase 31 | Pending |
+| MIG-02 | Phase 31 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 (awaiting roadmap creation)
+- Mapped to phases: 31
+- Unmapped: 0
+
+**Validation:** 100% requirement coverage achieved ✓
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation*
