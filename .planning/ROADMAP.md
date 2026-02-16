@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 27 (Design System Foundation) — Planning
+**Status:** Phase 27 (Design System Foundation) — Planned
 
 ### Phase 27: Design System Foundation
 
@@ -28,6 +28,13 @@
 - DS-01: Industrial Amber color palette consistency
 - DS-02: Tailwind v4 @theme design tokens
 - DS-05: Lucide-react icons
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 27-01-PLAN.md — Design tokens, fonts, cn() utility, ESLint enforcement
+- [ ] 27-02-PLAN.md — UI primitives (Button, Card, Badge, Input, Select)
+- [ ] 27-03-PLAN.md — Storybook setup, stories, visual verification
 
 **Success Criteria:**
 1. Developer can reference design tokens via Tailwind utilities (e.g., `bg-amber-accent`, `text-grey-800`) throughout codebase
