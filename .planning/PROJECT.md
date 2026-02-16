@@ -44,6 +44,29 @@ This is the ONE thing that must work. Everything else is secondary.
 - Multi-tenant isolation enforced at every layer (HTTP, service, cache, database)
 - Row-level security with fail-closed NULLIF policies on all tenant tables
 
+## Current Milestone: v4.0 UX Redesign
+
+**Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
+
+**Design Principles:**
+- **Industrial Amber palette:** Mustard accent (#EBCB4B) on monochrome grey/white base (#F0F2F5 canvas, #FFFFFF surfaces)
+- **Floating Concrete layers:** Z-layered depth (basis → cards with shadows → glassmorphism controls), consistent border-radius (12px small, 20-24px large)
+- **Data-first typography:** Sans-serif (Inter/Manrope), bold oversized numbers, uppercase labels with letter-spacing
+- **Generous whitespace:** 24-32px padding in cards, light separators (#E5E7EB)
+- **Silver Map:** Desaturated/greyscale base map layer for visual harmony with design system
+
+**Navigation restructure:**
+- Icon sidebar: Kaart (Explore) | Data (Results) | Projecten (Reports) | Settings
+- 3 main views as separate pages (not overlays)
+- "Toon Lijst" button on map for inline split-view to Results
+- Inspector slide-over (right panel) for detail on map click
+
+**Polish scope:**
+- Scan-to-results flow: reduce clicks, maintain context, clear state indication
+- Feedback: scan progress, action confirmations, error states throughout
+- Visual consistency: apply design system to every component
+- Mobile: view-only mode (browse projects, view map) — no editing/analyzing on mobile
+
 ## Business Model
 
 - Built for one specific client first (single-tenant MVP)
@@ -158,7 +181,7 @@ This is the ONE thing that must work. Everything else is secondary.
 | React 19 + Vite 7 (not SvelteKit) | Simpler, no SSR needed for dashboard app, wider ecosystem | ✓ Good — fast dev velocity |
 | MapLibre (not Mapbox) | Free, same API as Mapbox, PDOK tiles for NL aerial imagery | ✓ Good — excellent Dutch coverage |
 | Map-first UI (not dashboard) | The map IS the app — floating panels over full-page map | ✓ Good — intuitive spatial workflow |
-| Glassmorphism design system | Transparent glass panels over map background | ✓ Good — distinctive, consistent look |
+| Glassmorphism design system | Transparent glass panels over map background | ⚠️ Revisit — replacing with Industrial Amber in v4.0 |
 | TanStack Router + Query | Type-safe routing with file-based routes, data fetching with cache | ✓ Good — clean separation of concerns |
 | Three-tier progressive disclosure | QuickCard → Drawer → Modal prevents information overload | ✓ Good — natural exploration flow |
 | httpOnly cookies for refresh tokens | Prevents XSS attacks on auth tokens | ✓ Good — secure token lifecycle |
@@ -192,4 +215,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-15 after v3.1 milestone shipped*
+*Last updated: 2026-02-15 after v4.0 milestone started*

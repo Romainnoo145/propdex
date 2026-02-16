@@ -5,16 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Between milestones — v3.1 shipped, next milestone TBD
+**Current focus:** v4.0 UX Redesign — Industrial Amber design system, navigation restructure, flow polish
 
 ---
 
 ## Current Position
 
-**Milestone:** None active (v3.1 shipped 2026-02-15)
-**Status:** Ready for next milestone
+**Milestone:** v4.0 UX Redesign
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
 
-**Last activity:** 2026-02-15 — Shipped v3.1 Smart Area Intelligence
+**Last activity:** 2026-02-15 — Milestone v4.0 started
 
 ---
 
@@ -77,11 +79,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-15
-**Stopped At:** Shipped v3.1 milestone
+**Stopped At:** Starting v4.0 milestone
 **Resume File:** None
 
-**Next Action:** Run `/gsd:new-milestone` to start next milestone
+**Next Action:** Define requirements and create roadmap
 
 ---
 
-*State updated: 2026-02-15 — v3.1 milestone shipped*
+*State updated: 2026-02-15 — v4.0 milestone started*
