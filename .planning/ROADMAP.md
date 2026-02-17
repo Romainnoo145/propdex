@@ -56,6 +56,12 @@ Plans:
 - NAV-02: Map preserves camera position during navigation
 - NAV-03: Inspector slide-over panel for parcel details
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 28-01-PLAN.md — MapContext + persistent MapView hoist to layout
+- [ ] 28-02-PLAN.md — SideRailNav update + InspectorPanel slide-over
+
 **Success Criteria:**
 1. User clicks sidebar icons to navigate between Kaart, Resultaten, and Projecten without map reload
 2. Map camera position, zoom level, and selected parcel persist when switching views
