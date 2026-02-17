@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 31 in progress (Plan 01 complete)
-**Plan:** 31-01 complete — Modal, Drawer, SideRailNav, ReportSidebar migrated
-**Status:** Glassmorphism migration started — 4 highest-visibility components using Industrial Amber tokens
+**Phase:** Phase 31 in progress (Plan 02 complete)
+**Plan:** 31-02 complete — ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migrated
+**Status:** Glassmorphism migration ongoing — 8 components now using Industrial Amber tokens
 
 **Progress:** [████░░░░░░] 40% (4/10 phases complete, Phase 31 in progress)
 
-**Last activity:** 2026-02-18 — Phase 31 Plan 01 executed (Modal, Drawer, SideRailNav, ReportSidebar)
+**Last activity:** 2026-02-18 — Phase 31 Plan 02 executed (ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal)
 
 ---
 
@@ -45,6 +45,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - scan_id in MapSearchParams, navigate to /resultaten on scan completion (4 paths), urlScanId restoration effect, Toon Lijst button, ResultsLayout overlay removed
 - Phase 31 Plan 01: ~179s, 2 tasks, 2 commits, 4 files
 - Modal, Drawer, SideRailNav, ReportSidebar migrated from glassmorphism to Industrial Amber solid tokens
+- Phase 31 Plan 02: ~195s, 2 tasks, 2 commits, 4 files
+- ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migrated; Select + Badge primitives replace raw styled elements
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -121,6 +123,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ReportSidebar close button migrated to Button ghost variant + X lucide-react icon; raw select → Select primitive
 - Text hierarchy established: text-grey-100 (primary), text-grey-400 (secondary), text-grey-600 (muted)
 
+**Phase 31-02 (Glassmorphism Migration — results/ components):**
+- Amber-accent used for selected table row ring (ring-amber-accent/30) — data-layer selection uses accent, not neutral
+- Score circle gradient kept semantic green (score indicator not glassmorphism); border softened from /30 to /20
+- Badge variant="teal" replaces inline blue glassmorphism chips for bestemmingen tags (teal = zoning/land-use semantic)
+- Filter panel background bg-grey-850 (slightly lighter than bg-grey-900 main panel) creates visual separation without glassmorphism
+- Loading skeletons: bg-grey-800 animate-pulse (was bg-white/5 animate-pulse)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -153,11 +162,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 31-01-PLAN.md (Modal, Drawer, SideRailNav, ReportSidebar migration)
+**Stopped At:** Completed 31-02-PLAN.md (ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migration)
 **Resume File:** None
 
-**Next Action:** Continue Phase 31 — execute Plan 02 (next component migration batch)
+**Next Action:** Continue Phase 31 — execute Plan 03 (next component migration batch)
 
 ---
 
-*State updated: 2026-02-18 — Phase 31 Plan 01 complete (glassmorphism migration batch 1)*
+*State updated: 2026-02-18 — Phase 31 Plan 02 complete (glassmorphism migration batch 2: results/ components)*
