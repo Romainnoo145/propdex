@@ -67,8 +67,8 @@ export function FreshnessIndicator({
 
       {/* Hover tooltip with refresh action */}
       <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-50 min-w-[200px]">
-        <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-lg p-3 shadow-xl">
-          <p className="text-white/90 text-xs mb-2">
+        <div className="bg-grey-950 border border-grey-700 rounded-lg p-3 shadow-xl">
+          <p className="text-grey-100 text-xs mb-2">
             Deze data is <strong>{ageDisplay}</strong> oud
           </p>
           {onRefresh && (

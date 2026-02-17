@@ -24,7 +24,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
   return (
     <div
       className={`absolute right-0 top-0 h-full w-80 max-w-[90vw]
-                  bg-grey-900/90 backdrop-blur-xl border-l border-white/10
+                  bg-grey-900 border-l border-grey-800
                   shadow-lg flex flex-col
                   transition-transform duration-300 ease-out
                   ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
@@ -32,11 +32,11 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
       aria-hidden={!isOpen}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-grey-800 shrink-0">
         <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
         <button
           onClick={onClose}
-          className="text-grey-400 hover:text-white transition-colors p-1 rounded hover:bg-white/10"
+          className="text-grey-400 hover:text-white transition-colors p-1 rounded hover:bg-grey-800"
           aria-label="Sluiten"
         >
           <X size={16} />
