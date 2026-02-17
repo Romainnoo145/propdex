@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 31 in progress (Plan 02 complete)
-**Plan:** 31-02 complete — ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migrated
-**Status:** Glassmorphism migration ongoing — 8 components now using Industrial Amber tokens
+**Phase:** Phase 31 in progress (Plan 03 complete)
+**Plan:** 31-03 complete — PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen migrated
+**Status:** Glassmorphism migration advanced — 15 components now using Industrial Amber tokens across Phases 31-01/02/03
 
 **Progress:** [████░░░░░░] 40% (4/10 phases complete, Phase 31 in progress)
 
-**Last activity:** 2026-02-18 — Phase 31 Plan 02 executed (ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal)
+**Last activity:** 2026-02-18 — Phase 31 Plan 03 executed (PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen)
 
 ---
 
@@ -47,6 +47,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Modal, Drawer, SideRailNav, ReportSidebar migrated from glassmorphism to Industrial Amber solid tokens
 - Phase 31 Plan 02: ~195s, 2 tasks, 2 commits, 4 files
 - ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migrated; Select + Badge primitives replace raw styled elements
+- Phase 31 Plan 03: ~5min, 2 tasks, 2 commits, 7 files
+- PropertyDetailPanel, PropertyDetailDrawer (773 lines), PropertyQuickCard, LayerToggle (DS-04 blur), AddressSearch, dashboard, instellingen migrated
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -130,6 +132,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Filter panel background bg-grey-850 (slightly lighter than bg-grey-900 main panel) creates visual separation without glassmorphism
 - Loading skeletons: bg-grey-800 animate-pulse (was bg-white/5 animate-pulse)
 
+**Phase 31-03 (Glassmorphism Migration — property/ + map controls + placeholder pages):**
+- PropertyDetailPanel and PropertyDetailDrawer use solid bg-grey-900 (data panels, not map-floating) — no backdrop-blur per DS-04
+- LayerToggle active tab uses bg-amber-accent text-grey-950 (accent on interactive map controls is correct; persistent nav indicators use neutral per Phase 31-01)
+- AddressSearch dropdown uses solid bg-grey-950 without backdrop-blur — dropdown is UI layer, not rendered over map canvas
+- PropertyDetailDrawer file splitting deferred — 773-line file exceeds 300-line limit but glassmorphism migration prioritized first
+- Semantic amber/green monument badges (bg-amber-500/N, bg-green-500/N) preserved unchanged in PropertyQuickCard and PropertyDetailPanel/Drawer
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -162,11 +171,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 31-02-PLAN.md (ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migration)
+**Stopped At:** Completed 31-03-PLAN.md (PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen migration)
 **Resume File:** None
 
-**Next Action:** Continue Phase 31 — execute Plan 03 (next component migration batch)
+**Next Action:** Continue Phase 31 — execute Plan 04 (if defined) or next phase
 
 ---
 
-*State updated: 2026-02-18 — Phase 31 Plan 02 complete (glassmorphism migration batch 2: results/ components)*
+*State updated: 2026-02-18 — Phase 31 Plan 03 complete (glassmorphism migration batch 3: property/ + map controls + placeholder pages)*
