@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 27 complete, Phase 28 next
+**Status:** Phase 28 complete, Phase 29 next
 
 ### Phase 27: Design System Foundation
 
@@ -59,8 +59,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 28-01-PLAN.md — MapContext + persistent MapView hoist to layout
-- [ ] 28-02-PLAN.md — SideRailNav update + InspectorPanel slide-over
+- [x] 28-01-PLAN.md — MapContext + persistent MapView hoist to layout
+- [x] 28-02-PLAN.md — SideRailNav update + InspectorPanel slide-over
 
 **Success Criteria:**
 1. User clicks sidebar icons to navigate between Kaart, Resultaten, and Projecten without map reload
@@ -239,7 +239,7 @@ Plans:
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 27 | Design System Foundation | DS-01, DS-02, DS-05 | ✓ Complete (2026-02-16) |
-| 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | Pending |
+| 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | ✓ Complete (2026-02-18) |
 | 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | Pending |
 | 30 | View Separation | NAV-04 | Pending |
 | 31 | Component Migration | MIG-01, MIG-02 | Pending |
@@ -329,4 +329,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-16 (Phase 27 complete)*
+*Last updated: 2026-02-18 (Phase 28 complete)*

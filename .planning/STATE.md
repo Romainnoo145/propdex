@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 28 in progress
-**Plan:** Phase 28 Plan 02 complete — SideRailNav three-view nav + InspectorPanel
-**Status:** Three-view navigation operational, InspectorPanel slide-over wired to parcel clicks
+**Phase:** Phase 28 complete, Phase 29 next
+**Plan:** Phase 28 verified and complete
+**Status:** Persistent MapView + three-view navigation + InspectorPanel shipped
 
-**Progress:** [██████████] 98%
+**Progress:** [██░░░░░░░░] 20% (2/10 phases complete)
 
-**Last activity:** 2026-02-17 — Phase 28 Plan 02 complete
+**Last activity:** 2026-02-18 — Phase 28 verified and marked complete
 
 ---
 
@@ -113,12 +113,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-17T20:50:46.424Z
-**Stopped At:** Completed 28-02-PLAN.md — SideRailNav three-view nav + InspectorPanel
+**Last Session:** 2026-02-18
+**Stopped At:** Phase 28 verified and complete
 **Resume File:** None
 
-**Next Action:** Continue Phase 28 — run next plan in phase
+**Next Action:** Run `/gsd:plan-phase 29` to plan Silver Map Theme + Layout Shells
 
 ---
 
-*State updated: 2026-02-17 — Phase 28 Plan 02 SideRailNav three-view nav + InspectorPanel complete*
+*State updated: 2026-02-18 — Phase 28 Navigation + Persistent MapView verified and complete*
