@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 28 complete, Phase 29 next
-**Plan:** Phase 28 verified and complete
-**Status:** Persistent MapView + three-view navigation + InspectorPanel shipped
+**Phase:** Phase 29 in progress
+**Plan:** Phase 29 Plan 01 complete
+**Status:** Silver map theme + layout shells shipped
 
 **Progress:** [██░░░░░░░░] 20% (2/10 phases complete)
 
-**Last activity:** 2026-02-18 — Phase 28 verified and marked complete
+**Last activity:** 2026-02-18 — Phase 29 Plan 01 complete
 
 ---
 
@@ -35,6 +35,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - MapView hoisted to _authenticated.tsx, MapContext created, ResultsLayout refactored to overlay
 - Phase 28 Plan 02: 250s, 2 tasks, 2 commits, 3 files
 - SideRailNav three-view nav (Kaart/Resultaten/Projecten), lucide-react icons, InspectorPanel slide-over
+- Phase 29 Plan 01: 61s, 2 tasks, 2 commits, 3 files
+- Silver raster paint on CartoDB Positron, MapShell + ResultsShell layout components
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -82,6 +84,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - [Phase 28-02]: InspectorPanel click handler registered once on mapReady — MapLibre silently ignores clicks on non-existent layers
 - [Phase 28-02]: panel search param on /map route enables Resultaten nav link to auto-open results panel
 
+**Phase 29-01 (Silver Map Theme + Layout Shells):**
+- Silver map: raster-saturation -0.85, brightness-min 0.08, brightness-max 0.92, contrast -0.05 for desaturated CartoDB Positron
+- Paint properties baked into initial style definition — not setPaintProperty() to avoid state management complexity
+- MapShell uses div (not main) — AppLayout.tsx uses main; differentiated to avoid duplicate landmark elements before Plan 02 migration
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -114,11 +121,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Phase 28 verified and complete
+**Stopped At:** Completed 29-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** Run `/gsd:plan-phase 29` to plan Silver Map Theme + Layout Shells
+**Next Action:** Execute Phase 29 Plan 02 (route migration: adopt MapShell and ResultsShell)
 
 ---
 
-*State updated: 2026-02-18 — Phase 28 Navigation + Persistent MapView verified and complete*
+*State updated: 2026-02-18 — Phase 29 Plan 01 Silver Map Theme + Layout Shells complete*
