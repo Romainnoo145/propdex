@@ -102,19 +102,19 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     prevShowWijkenToggleRef.current = showWijkenToggle;
   }, [showWijkenToggle]);
 
-  const active = 'bg-white/70 text-gray-900 shadow-sm';
-  const inactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
-  const parcelActive = 'bg-blue-500/30 text-white shadow-sm';
-  const parcelInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
-  const gemeenteActive = 'bg-emerald-500/30 text-white shadow-sm';
-  const gemeenteInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
-  const bestemmingsplanActive = 'bg-purple-500/30 text-white shadow-sm';
-  const bestemmingsplanInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
-  const wijkenActive = 'bg-emerald-500/30 text-white shadow-sm';
-  const wijkenInactive = 'bg-transparent text-white/70 hover:text-white hover:bg-white/10';
+  const active = 'bg-amber-accent text-grey-950 shadow-sm';
+  const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  const parcelActive = 'bg-blue-500/30 text-grey-100 shadow-sm';
+  const parcelInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  const gemeenteActive = 'bg-emerald-500/30 text-grey-100 shadow-sm';
+  const gemeenteInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  const bestemmingsplanActive = 'bg-purple-500/30 text-grey-100 shadow-sm';
+  const bestemmingsplanInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  const wijkenActive = 'bg-emerald-500/30 text-grey-100 shadow-sm';
+  const wijkenInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
 
   return (
-    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-black/30 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/20 shadow-lg">
+    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
       <button
         onClick={() => handleLayerChange('kaart')}
         className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
@@ -132,7 +132,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
         Satellite
       </button>
 
-      <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
 
       <button
         onClick={handleParcelsToggle}
@@ -143,7 +143,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
         Percelen
       </button>
 
-      <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
 
       <button
         onClick={handleGemeentenToggle}
@@ -154,7 +154,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
         Gemeenten
       </button>
 
-      <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
 
       <button
         onClick={handleBestemmingsplanToggle}
@@ -167,7 +167,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
 
       {showWijkenToggle && (
         <>
-          <div className="border-l border-white/20 h-6 self-center mx-0.5" />
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
           <button
             onClick={handleWijkenToggle}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${

@@ -23,7 +23,7 @@ interface PropertyDetailDrawerProps {
 /**
  * PropertyDetailDrawer (Tier 2)
  * Full-height drawer sliding in from right with all property sections
- * Uses Drawer primitive with glassmorphism styling
+ * Uses Drawer primitive with Industrial Amber solid tokens
  */
 export function PropertyDetailDrawer({
   data,
@@ -43,8 +43,8 @@ export function PropertyDetailDrawer({
   return (
     <Drawer isOpen={isOpen} onClose={onClose} width="md">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-        <h2 className="text-white font-semibold text-lg">Eigendomsinformatie</h2>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-grey-800 flex-shrink-0">
+        <h2 className="text-grey-100 font-semibold text-lg">Eigendomsinformatie</h2>
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
@@ -53,7 +53,7 @@ export function PropertyDetailDrawer({
             <button
               onClick={onRefreshAll}
               disabled={isRefreshing}
-              className="text-xs text-white/50 hover:text-white hover:bg-white/10 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs text-grey-400 hover:text-grey-100 hover:bg-grey-850 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Alle data opnieuw ophalen"
               title="Alle data opnieuw ophalen"
             >
@@ -77,7 +77,7 @@ export function PropertyDetailDrawer({
             className={`p-2 rounded-lg transition-colors ${
               isSaved
                 ? 'text-blue-400 hover:text-blue-300'
-                : 'text-white/50 hover:text-white hover:bg-white/10'
+                : 'text-grey-400 hover:text-grey-100 hover:bg-grey-850'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             aria-label={isSaved ? 'Opgeslagen' : 'Opslaan'}
             title={isSaved ? 'Opgeslagen' : 'Opslaan'}
@@ -100,7 +100,7 @@ export function PropertyDetailDrawer({
           {/* Export PDF button */}
           <button
             onClick={onExportPDF}
-            className="text-white/50 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="text-grey-400 hover:text-grey-100 p-2 rounded-lg hover:bg-grey-850 transition-colors"
             aria-label="Exporteren naar PDF"
             title="Exporteren naar PDF"
           >
@@ -122,7 +122,7 @@ export function PropertyDetailDrawer({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="text-white/50 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="text-grey-400 hover:text-grey-100 p-2 rounded-lg hover:bg-grey-850 transition-colors"
             aria-label="Sluiten"
           >
             <svg
@@ -164,20 +164,20 @@ function LoadingState() {
     <div className="p-4 space-y-4">
       {/* Skeleton for address */}
       <div className="space-y-2">
-        <div className="h-5 bg-white/10 animate-pulse rounded w-3/4" />
-        <div className="h-4 bg-white/10 animate-pulse rounded w-1/2" />
+        <div className="h-5 bg-grey-800 animate-pulse rounded w-3/4" />
+        <div className="h-4 bg-grey-800 animate-pulse rounded w-1/2" />
       </div>
 
       {/* Skeleton for metrics */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="h-16 bg-white/10 animate-pulse rounded-lg" />
-        <div className="h-16 bg-white/10 animate-pulse rounded-lg" />
-        <div className="h-16 bg-white/10 animate-pulse rounded-lg" />
+        <div className="h-16 bg-grey-800 animate-pulse rounded-lg" />
+        <div className="h-16 bg-grey-800 animate-pulse rounded-lg" />
+        <div className="h-16 bg-grey-800 animate-pulse rounded-lg" />
       </div>
 
       {/* Skeleton for sections */}
       {[1, 2, 3].map((i) => (
-        <div key={i} className="h-12 bg-white/10 animate-pulse rounded" />
+        <div key={i} className="h-12 bg-grey-800 animate-pulse rounded" />
       ))}
     </div>
   );
@@ -210,8 +210,8 @@ function ErrorState({
           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
         />
       </svg>
-      <p className="text-white/70 text-sm mb-2">{errorMessage}</p>
-      <p className="text-white/40 text-xs">Probeer opnieuw</p>
+      <p className="text-grey-400 text-sm mb-2">{errorMessage}</p>
+      <p className="text-grey-600 text-xs">Probeer opnieuw</p>
     </div>
   );
 }
@@ -324,11 +324,11 @@ function DataState({
 
       {/* Update alle bronnen button */}
       {onRefreshAll && (
-        <div className="px-4 py-4 border-t border-white/10">
+        <div className="px-4 py-4 border-t border-grey-800">
           <button
             onClick={onRefreshAll}
             disabled={isRefreshing}
-            className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            className="w-full py-2 px-4 bg-grey-850 hover:bg-grey-800 text-grey-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
           >
             {isRefreshing ? 'Bezig met updaten...' : 'Update alle bronnen'}
           </button>
@@ -343,7 +343,7 @@ function KadasterContent({ data }: { data: PropertyReportResponse }) {
 
   if (parcels.length === 0) {
     return (
-      <p className="text-white/50 italic">
+      <p className="text-grey-400 italic">
         Geen kadastrale gegevens beschikbaar
       </p>
     );
@@ -354,14 +354,14 @@ function KadasterContent({ data }: { data: PropertyReportResponse }) {
       {parcels.map((parcel, idx) => (
         <div
           key={idx}
-          className="bg-white/5 rounded-lg p-3 space-y-1 border border-white/10"
+          className="bg-grey-850 rounded-lg p-3 space-y-1 border border-grey-800"
         >
           {parcel.kadastrale_aanduiding && (
             <div>
-              <span className="text-white/40 text-xs uppercase tracking-wide">
+              <span className="text-grey-600 text-xs uppercase tracking-wide">
                 Aanduiding
               </span>
-              <div className="text-white/90 font-medium">
+              <div className="text-grey-100 font-medium">
                 {parcel.kadastrale_aanduiding}
               </div>
             </div>
@@ -369,23 +369,23 @@ function KadasterContent({ data }: { data: PropertyReportResponse }) {
           <div className="grid grid-cols-2 gap-2 mt-2">
             {parcel.perceelnummer && (
               <div>
-                <span className="text-white/40 text-xs">Perceelnummer</span>
-                <div className="text-white/80 text-sm">
+                <span className="text-grey-600 text-xs">Perceelnummer</span>
+                <div className="text-grey-100 text-sm">
                   {parcel.perceelnummer}
                 </div>
               </div>
             )}
             {parcel.sectie && (
               <div>
-                <span className="text-white/40 text-xs">Sectie</span>
-                <div className="text-white/80 text-sm">{parcel.sectie}</div>
+                <span className="text-grey-600 text-xs">Sectie</span>
+                <div className="text-grey-100 text-sm">{parcel.sectie}</div>
               </div>
             )}
           </div>
           {parcel.oppervlakte && (
             <div className="mt-2">
-              <span className="text-white/40 text-xs">Oppervlakte</span>
-              <div className="text-white/80 text-sm">
+              <span className="text-grey-600 text-xs">Oppervlakte</span>
+              <div className="text-grey-100 text-sm">
                 {parcel.oppervlakte} m²
               </div>
             </div>
@@ -401,7 +401,7 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
 
   if (!zoning) {
     return (
-      <p className="text-white/50 italic">
+      <p className="text-grey-400 italic">
         Geen bestemmingsplangegevens beschikbaar
       </p>
     );
@@ -412,10 +412,10 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       {/* Primary bestemming */}
       {zoning.primary_bestemming && (
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-          <span className="text-white/40 text-xs uppercase tracking-wide">
+          <span className="text-grey-600 text-xs uppercase tracking-wide">
             Hoofdbestemming
           </span>
-          <div className="text-white/90 font-medium text-base">
+          <div className="text-grey-100 font-medium text-base">
             {zoning.primary_bestemming}
           </div>
         </div>
@@ -424,40 +424,40 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       {/* Building dimensions */}
       {zoning.building_dimensions && (
         <div className="space-y-2">
-          <div className="text-white/60 text-xs uppercase tracking-wide font-medium">
+          <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
             Bouwregels
           </div>
-          <div className="bg-white/5 rounded-lg p-3 space-y-1.5">
+          <div className="bg-grey-850 rounded-lg p-3 space-y-1.5">
             {zoning.building_dimensions.max_hoogte && (
               <div className="flex justify-between">
-                <span className="text-white/40 text-xs">Max. hoogte</span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-grey-600 text-xs">Max. hoogte</span>
+                <span className="text-grey-100 text-sm font-medium">
                   {zoning.building_dimensions.max_hoogte} m
                 </span>
               </div>
             )}
             {zoning.building_dimensions.max_goothoogte && (
               <div className="flex justify-between">
-                <span className="text-white/40 text-xs">Max. goothoogte</span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-grey-600 text-xs">Max. goothoogte</span>
+                <span className="text-grey-100 text-sm font-medium">
                   {zoning.building_dimensions.max_goothoogte} m
                 </span>
               </div>
             )}
             {zoning.building_dimensions.max_bebouwingspercentage && (
               <div className="flex justify-between">
-                <span className="text-white/40 text-xs">
+                <span className="text-grey-600 text-xs">
                   Max. bebouwingspercentage
                 </span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-grey-100 text-sm font-medium">
                   {zoning.building_dimensions.max_bebouwingspercentage}%
                 </span>
               </div>
             )}
             {zoning.building_dimensions.max_floor_area_ratio && (
               <div className="flex justify-between">
-                <span className="text-white/40 text-xs">Max. FSI</span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-grey-600 text-xs">Max. FSI</span>
+                <span className="text-grey-100 text-sm font-medium">
                   {zoning.building_dimensions.max_floor_area_ratio}
                 </span>
               </div>
@@ -470,14 +470,14 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       {data.ai_parsing?.parsed_plan && data.ai_parsing.status === 'complete' && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-white/70 text-xs uppercase tracking-wide">
+            <span className="text-grey-400 text-xs uppercase tracking-wide">
               AI Interpretatie
             </span>
             <ConfidenceBadge confidence={data.ai_parsing.parsed_plan.overall_confidence} />
           </div>
 
-          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-            <p className="text-white/80 text-sm">
+          <div className="bg-grey-850 rounded-lg p-3 border border-grey-800">
+            <p className="text-grey-100 text-sm">
               {data.ai_parsing.parsed_plan.samenvatting}
             </p>
           </div>
@@ -498,7 +498,7 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
           {data.ai_parsing.parsed_plan.disclaimers && data.ai_parsing.parsed_plan.disclaimers.length > 0 && (
             <div className="space-y-1">
               {data.ai_parsing.parsed_plan.disclaimers.map((disclaimer, idx) => (
-                <p key={idx} className="text-white/40 text-xs italic">
+                <p key={idx} className="text-grey-600 text-xs italic">
                   {disclaimer}
                 </p>
               ))}
@@ -510,38 +510,38 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       {/* Zoning plans */}
       {zoning.plans && zoning.plans.length > 0 && (
         <div className="space-y-2">
-          <div className="text-white/60 text-xs uppercase tracking-wide font-medium">
+          <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
             Bestemmingsplannen
           </div>
           {zoning.plans.map((plan, idx) => (
             <div
               key={idx}
-              className="bg-white/5 rounded-lg p-3 space-y-2 border border-white/10"
+              className="bg-grey-850 rounded-lg p-3 space-y-2 border border-grey-800"
             >
               <div>
-                <div className="text-white/90 font-medium text-sm">
+                <div className="text-grey-100 font-medium text-sm">
                   {plan.plan_naam}
                 </div>
                 {plan.plan_status && (
-                  <div className="text-white/50 text-xs mt-0.5">
+                  <div className="text-grey-400 text-xs mt-0.5">
                     Status: {plan.plan_status}
                   </div>
                 )}
                 {plan.plan_datum && (
-                  <div className="text-white/40 text-xs">
+                  <div className="text-grey-600 text-xs">
                     Datum: {new Date(plan.plan_datum).toLocaleDateString('nl-NL')}
                   </div>
                 )}
               </div>
               {plan.rules && plan.rules.length > 0 && (
-                <div className="space-y-1.5 pt-2 border-t border-white/10">
+                <div className="space-y-1.5 pt-2 border-t border-grey-800">
                   {plan.rules.map((rule, ruleIdx) => (
                     <div key={ruleIdx} className="text-xs">
-                      <div className="text-white/80 font-medium">
+                      <div className="text-grey-100 font-medium">
                         {rule.bestemming}
                       </div>
                       {rule.omschrijving && (
-                        <div className="text-white/50 mt-0.5">
+                        <div className="text-grey-400 mt-0.5">
                           {rule.omschrijving}
                         </div>
                       )}
@@ -576,7 +576,7 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
 
   if (!monuments) {
     return (
-      <p className="text-white/50 italic">
+      <p className="text-grey-400 italic">
         Geen monumentgegevens beschikbaar
       </p>
     );
@@ -624,11 +624,11 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
       {monuments.restrictions_summary &&
         monuments.restrictions_summary.length > 0 && (
           <div className="space-y-2">
-            <div className="text-white/60 text-xs uppercase tracking-wide font-medium">
+            <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
               Beperkingen
             </div>
-            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-              <ul className="text-white/70 text-xs space-y-1">
+            <div className="bg-grey-850 rounded-lg p-3 border border-grey-800">
+              <ul className="text-grey-400 text-xs space-y-1">
                 {monuments.restrictions_summary.map((restriction, idx) => (
                   <li key={idx}>• {restriction}</li>
                 ))}
@@ -640,7 +640,7 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
       {/* Sources */}
       {monuments.sources && monuments.sources.length > 0 && (
         <div className="space-y-1">
-          <div className="text-white/40 text-xs uppercase tracking-wide">
+          <div className="text-grey-600 text-xs uppercase tracking-wide">
             Bronnen
           </div>
           {monuments.sources.map((source, idx) => (
@@ -648,7 +648,7 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
               key={idx}
               className="flex items-center justify-between text-xs py-1"
             >
-              <span className="text-white/60">{source.source}</span>
+              <span className="text-grey-400">{source.source}</span>
               <span
                 className={`text-xs ${
                   source.is_monument
@@ -671,7 +671,7 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
 
   if (sectionSources.length === 0) {
     return (
-      <p className="text-white/50 italic">Geen broninformatie beschikbaar</p>
+      <p className="text-grey-400 italic">Geen broninformatie beschikbaar</p>
     );
   }
 
@@ -696,7 +696,7 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
       case 'LOW':
         return { color: 'text-red-400', text: 'Laag' };
       default:
-        return { color: 'text-white/40', text: 'Onbekend' };
+        return { color: 'text-grey-600', text: 'Onbekend' };
     }
   };
 
@@ -704,21 +704,21 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
     <div className="space-y-3">
       {sectionSources.map((section, idx) => (
         <div key={idx} className="space-y-2">
-          <div className="text-white/60 text-xs uppercase tracking-wide font-medium">
+          <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
             {section.section}
           </div>
           <div className="space-y-1.5">
             {section.sources.map((source, sourceIdx) => (
               <div
                 key={sourceIdx}
-                className="bg-white/5 rounded-lg p-2.5 border border-white/10"
+                className="bg-grey-850 rounded-lg p-2.5 border border-grey-800"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="text-white/80 text-sm font-medium">
+                    <div className="text-grey-100 text-sm font-medium">
                       {source.source}
                     </div>
-                    <div className="text-white/40 text-xs mt-0.5">
+                    <div className="text-grey-600 text-xs mt-0.5">
                       {formatAge(source.age_seconds)}
                     </div>
                   </div>
@@ -740,8 +740,8 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
 
       {/* Overall data sources */}
       {data.data_sources && data.data_sources.length > 0 && (
-        <div className="pt-2 border-t border-white/10 space-y-1">
-          <div className="text-white/40 text-xs uppercase tracking-wide">
+        <div className="pt-2 border-t border-grey-800 space-y-1">
+          <div className="text-grey-600 text-xs uppercase tracking-wide">
             Alle bronnen
           </div>
           {data.data_sources.map((source, idx) => (
@@ -749,9 +749,9 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
               key={idx}
               className="flex items-center justify-between text-xs py-1"
             >
-              <span className="text-white/60">{source.source}</span>
+              <span className="text-grey-400">{source.source}</span>
               <div className="flex items-center gap-2">
-                <span className="text-white/40">
+                <span className="text-grey-600">
                   {formatAge(source.age_seconds)}
                 </span>
                 {source.confidence && (
