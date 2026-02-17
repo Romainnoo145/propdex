@@ -32,7 +32,7 @@ function ResultatenPage() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
           <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
           <button
-            onClick={() => navigate({ to: '/map' })}
+            onClick={() => navigate({ to: '/map', search: scan_id ? { scan_id } : {} })}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-grey-300 hover:text-white transition-colors"
           >
             <Map size={16} />

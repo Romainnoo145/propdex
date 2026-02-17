@@ -5,7 +5,6 @@ import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
 import MapShell from '@/components/layout/MapShell'
 import { InspectorPanel } from '@/components/layout/InspectorPanel'
-import ResultsLayout from '@/components/results/ResultsLayout'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
@@ -35,7 +34,7 @@ import {
   addScanAreaHighlight,
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
-import { addParcelScoreLayer, removeParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
+import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
 import {
   addMonitoredWijkOverlay,
   removeMonitoredWijkOverlay,
@@ -57,7 +56,8 @@ interface MapSearchParams {
   postcode?: string
   huisnummer?: number
   reportId?: string
-  panel?: 'results'
+  panel?: 'results'     // KEEP for now — unused but harmless
+  scan_id?: string      // Restore scan context when returning from /resultaten
 }
 
 export const Route = createFileRoute('/_authenticated/map')({
@@ -69,6 +69,7 @@ export const Route = createFileRoute('/_authenticated/map')({
       : undefined,
     reportId: typeof search.reportId === 'string' ? search.reportId : undefined,
     panel: search.panel === 'results' ? 'results' : undefined,
+    scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
   }),
 })
 
@@ -78,7 +79,7 @@ function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
   const { mapRef, mapReady } = useMapContext()
   const navigate = useNavigate()
-  const { postcode, huisnummer, reportId, panel } = Route.useSearch()
+  const { postcode, huisnummer, reportId, scan_id: urlScanId } = Route.useSearch()
   const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
@@ -104,7 +105,6 @@ function MapPage() {
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [wijkLoading, setWijkLoading] = useState(false)
-  const [showResults, setShowResults] = useState(false)
   const [inspectorParcel, setInspectorParcel] = useState<ScanResultItem | null>(null)
 
   // Refs for fresh values in gemeente click handler (avoid stale closure)
@@ -179,15 +179,13 @@ function MapPage() {
     navigate({ to: '/map', search: {}, replace: true })
   }, [reportId, savedReport.data, navigate])
 
-  // Auto-open results panel when navigated with ?panel=results
+  // Restore scan context when returning from /resultaten with ?scan_id=...
   useEffect(() => {
-    if (panel !== 'results') return
-    if (activeScanId) {
-      setShowResults(true)
-    }
-    // Clear search param so it doesn't persist on reload
+    if (!urlScanId || activeScanId) return
+    setActiveScanId(urlScanId)
+    // Clear from URL to prevent re-trigger on hot reload
     navigate({ to: '/map', search: {}, replace: true })
-  }, [panel, activeScanId, navigate])
+  }, [urlScanId, activeScanId, navigate])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
@@ -250,12 +248,11 @@ function MapPage() {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
       // Invalidate stale results cache so fresh data is fetched
       queryClient.invalidateQueries({ queryKey: ['scan-results', activeScanId] })
-      // Keep activeScanId to show score layer and results panel
-      setShowResults(true)
+      // Navigate to standalone results route
+      navigate({ to: '/resultaten', search: { scan_id: activeScanId! } })
     } else if (scanStatus.data.status === 'failed') {
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
-      setShowResults(false)
     }
   }, [scanStatus.data, activeScanId, queryClient])
 
@@ -496,8 +493,8 @@ function MapPage() {
             if (mapRef.current) removeScanAreaHighlight(mapRef.current)
             setSelectedArea(null)
             if (data.status === 'existing' && !data.needs_rescan) {
-              // Existing completed scan — show results immediately
-              setShowResults(true)
+              // Existing completed scan — navigate to results immediately
+              navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
               toast.info(`Bestaande scan gevonden — resultaten laden`)
             } else {
               toast.success(`Scan gestart voor ${wijkNaam}`)
@@ -564,7 +561,7 @@ function MapPage() {
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
-            setShowResults(true)
+            navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
             toast.info(`Bestaande scan gevonden — resultaten laden`)
           } else {
             toast.success(`Scan gestart voor ${currentGemeente.naam}`)
@@ -754,7 +751,7 @@ function MapPage() {
           setSelectedArea(null)
           setZoneInfo(null) // Close zone info card
           if (data.status === 'existing' && !data.needs_rescan) {
-            setShowResults(true)
+            navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
             toast.info(`Bestaande scan gevonden — resultaten laden`)
           } else {
             toast.success('Scan gestart')
@@ -771,20 +768,6 @@ function MapPage() {
 
   return (
     <MapShell>
-      {/* Results panel — overlay that slides in from left over the persistent map */}
-      <ResultsLayout
-        scanId={activeScanId}
-        collapsed={!showResults || !activeScanId}
-        mapRef={mapRef}
-        onClose={() => {
-          setShowResults(false)
-          setActiveScanId(null)
-          // Clean up score layer from map
-          if (mapRef.current) {
-            removeParcelScoreLayer(mapRef.current)
-          }
-        }}
-      />
       <AddressSearch onSelect={handleAddressSelect} />
 
       {/* Active gemeente context header */}
@@ -807,6 +790,15 @@ function MapPage() {
           >
             {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
           </button>
+          {/* Toon Lijst button — visible when a scan is active */}
+          {activeScanId && (
+            <button
+              onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
+              className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
+            >
+              Toon Lijst
+            </button>
+          )}
           <button
             onClick={() => {
               setActiveGemeente(null)
