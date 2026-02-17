@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 30 complete, Phase 31 next
+**Status:** Phase 31 complete, Phase 32 next
 
 ### Phase 27: Design System Foundation
 
@@ -130,12 +130,13 @@ Plans:
 - MIG-01: Glassmorphism components migrated to Industrial Amber
 - MIG-02: Legacy glassmorphism CSS removed
 
-**Plans:** 3 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] 31-01-PLAN.md — Migrate Modal, Drawer, SideRailNav, ReportSidebar to Industrial Amber tokens
-- [ ] 31-02-PLAN.md — Migrate ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal
-- [ ] 31-03-PLAN.md — Migrate PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, placeholders
+- [x] 31-01-PLAN.md — Migrate Modal, Drawer, SideRailNav, ReportSidebar to Industrial Amber tokens
+- [x] 31-02-PLAN.md — Migrate ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal
+- [x] 31-03-PLAN.md — Migrate PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, placeholders
+- [x] 31-04-PLAN.md — Gap closure: 14 remaining files (PropertySection, PropertySummary, InspectorPanel, reports, routes)
 
 **Success Criteria:**
 1. Drawer, Modal, and SideRailNav components render with Industrial Amber styling
@@ -268,7 +269,7 @@ Plans:
 | 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | ✓ Complete (2026-02-18) |
 | 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | ✓ Complete (2026-02-18) |
 | 30 | View Separation | NAV-04 | ✓ Complete (2026-02-18) |
-| 31 | Component Migration | MIG-01, MIG-02 | Pending |
+| 31 | Component Migration | MIG-01, MIG-02 | ✓ Complete (2026-02-18) |
 | 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | Pending |
 | 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | Pending |
 | 34 | Mobile Responsiveness | MOB-01, MOB-02, MOB-03 | Pending |
@@ -355,4 +356,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (Phase 30 complete)*
+*Last updated: 2026-02-18 (Phase 31 complete)*
