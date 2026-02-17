@@ -175,7 +175,7 @@ export default function ResultsTable({
 
   if (error) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-white/60">
+      <div className="h-full w-full flex items-center justify-center text-grey-400">
         <div className="text-center">
           <p className="text-lg mb-2">Fout bij laden van resultaten</p>
           <p className="text-sm">{error.message}</p>
@@ -191,7 +191,7 @@ export default function ResultsTable({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-12 bg-white/5 rounded animate-pulse"
+              className="h-12 bg-grey-800 rounded animate-pulse"
             ></div>
           ))}
         </div>
@@ -201,7 +201,7 @@ export default function ResultsTable({
 
   if (!data || data.results.length === 0) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-white/60">
+      <div className="h-full w-full flex items-center justify-center text-grey-400">
         <p className="text-lg">Geen resultaten gevonden</p>
       </div>
     )
@@ -210,14 +210,14 @@ export default function ResultsTable({
   return (
     <div className="h-full w-full flex flex-col">
       {/* Header with summary */}
-      <div className="px-6 py-4 border-b border-white/10">
-        <h3 className="text-white font-semibold text-lg">
+      <div className="px-6 py-4 border-b border-grey-800">
+        <h3 className="text-grey-100 font-semibold text-lg">
           {data.gemeente_naam}
         </h3>
-        <p className="text-white/60 text-sm mt-1">
+        <p className="text-grey-400 text-sm mt-1">
           {data.total.toLocaleString('nl-NL')} kansrijk van{' '}
           {data.parcels_total.toLocaleString('nl-NL')} gescand
-          <span className="text-white/40 ml-1">
+          <span className="text-grey-600 ml-1">
             ({data.parcels_total > 0
               ? Math.round(((data.parcels_total - data.total) / data.parcels_total) * 100)
               : 0}% afgevallen)
@@ -228,13 +228,13 @@ export default function ResultsTable({
       {/* Table container with scroll */}
       <div className="flex-1 overflow-y-auto">
         <table className="w-full">
-          <thead className="sticky top-0 bg-black/60 backdrop-blur-sm">
+          <thead className="sticky top-0 bg-grey-900">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`px-4 py-3 text-left text-xs font-medium text-white/60 uppercase tracking-wider ${
+                    className={`px-4 py-3 text-left text-xs font-medium text-grey-400 uppercase tracking-wider ${
                       header.column.getCanSort() ? 'cursor-pointer select-none' : ''
                     }`}
                     onClick={header.column.getToggleSortingHandler()}
@@ -245,7 +245,7 @@ export default function ResultsTable({
                         header.getContext()
                       )}
                       {header.column.getCanSort() && (
-                        <span className="text-white/40">
+                        <span className="text-grey-600">
                           {header.column.getIsSorted() === 'desc' ? (
                             <svg
                               className="w-4 h-4"
@@ -304,16 +304,16 @@ export default function ResultsTable({
                 ref={(el) => {
                   if (el) rowRefs.current.set(row.original.parcel_id, el)
                 }}
-                className={`border-b border-white/5 transition-colors cursor-pointer ${
+                className={`border-b border-grey-800 transition-colors cursor-pointer ${
                   row.original.parcel_id === selectedParcelId
-                    ? 'bg-white/15 ring-1 ring-white/30'
-                    : 'hover:bg-white/5'
+                    ? 'bg-grey-850 ring-1 ring-amber-accent/30'
+                    : 'hover:bg-grey-850'
                 }`}
                 onClick={() => onRowClick?.(row.original.parcel_id)}
                 onDoubleClick={() => onRowDoubleClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-sm text-white/80">
+                  <td key={cell.id} className="px-4 py-3 text-sm text-grey-100">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -324,8 +324,8 @@ export default function ResultsTable({
       </div>
 
       {/* Pagination controls */}
-      <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between">
-        <div className="text-sm text-white/60">
+      <div className="px-6 py-4 border-t border-grey-800 flex items-center justify-between">
+        <div className="text-sm text-grey-400">
           Toont{' '}
           {Math.min(
             pagination.pageIndex * pagination.pageSize + 1,
@@ -340,14 +340,14 @@ export default function ResultsTable({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white/60">
+          <span className="text-sm text-grey-400">
             Pagina {pagination.pageIndex + 1} van {table.getPageCount()}
           </span>
 
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/80 px-3 py-1.5 rounded text-sm transition-colors"
+            className="bg-grey-850 hover:bg-grey-800 disabled:opacity-30 disabled:cursor-not-allowed text-grey-100 px-3 py-1.5 rounded text-sm transition-colors"
           >
             Vorige
           </button>
@@ -355,7 +355,7 @@ export default function ResultsTable({
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/80 px-3 py-1.5 rounded text-sm transition-colors"
+            className="bg-grey-850 hover:bg-grey-800 disabled:opacity-30 disabled:cursor-not-allowed text-grey-100 px-3 py-1.5 rounded text-sm transition-colors"
           >
             Volgende
           </button>
