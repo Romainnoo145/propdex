@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
+import { InspectorPanel } from '@/components/layout/InspectorPanel'
 import ResultsLayout from '@/components/results/ResultsLayout'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
@@ -50,6 +51,7 @@ import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
+import type { ScanResultItem } from '@/lib/types/scan'
 
 interface MapSearchParams {
   postcode?: string
@@ -103,6 +105,7 @@ function MapPage() {
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [wijkLoading, setWijkLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [inspectorParcel, setInspectorParcel] = useState<ScanResultItem | null>(null)
 
   // Refs for fresh values in gemeente click handler (avoid stale closure)
   const activeGemeenteRef = useRef(activeGemeente)
@@ -265,6 +268,41 @@ function MapPage() {
       (loading) => setZoneLoading(loading)
     )
     return cleanup
+  }, [mapReady])
+
+  // Open inspector when a scored parcel is clicked on the map.
+  // Register once map is ready — MapLibre silently ignores clicks on layers that
+  // don't exist yet, so we don't need to guard against missing source/layer here.
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+    const map = mapRef.current
+
+    const handleParcelClick = (e: maplibregl.MapLayerMouseEvent) => {
+      const feature = e.features?.[0]
+      if (!feature?.properties) return
+
+      const props = feature.properties
+      const parcel: ScanResultItem = {
+        parcel_id: (props.parcel_id as string) ?? '',
+        parcel_code: (props.parcel_code as string) ?? '',
+        address: (props.address as string | null) ?? null,
+        gemeente_code: (props.gemeente_code as string | null) ?? null,
+        area_m2: (props.area_m2 as number | null) ?? null,
+        has_pand: Boolean(props.has_pand),
+        bouwjaar: (props.bouwjaar as number | null) ?? null,
+        pand_status: (props.pand_status as string | null) ?? null,
+        bestemmingen: null,
+        score: (props.score as number | null) ?? null,
+        score_category: (props.score_category as string | null) ?? null,
+        score_breakdown: null,
+      }
+      setInspectorParcel(parcel)
+    }
+
+    map.on('click', 'parcel-score-fill', handleParcelClick)
+    return () => {
+      map.off('click', 'parcel-score-fill', handleParcelClick)
+    }
   }, [mapReady])
 
   // Cleanup highlight on unmount
@@ -902,6 +940,13 @@ function MapPage() {
         onBestemmingsplanToggle={handleBestemmingsplanToggle}
         onWijkenToggle={handleWijkenToggle}
         showWijkenToggle={!!activeGemeente}
+      />
+
+      {/* Inspector panel — right-edge slide-over for parcel details */}
+      <InspectorPanel
+        isOpen={!!inspectorParcel}
+        onClose={() => setInspectorParcel(null)}
+        parcel={inspectorParcel}
       />
     </AppLayout>
   )
