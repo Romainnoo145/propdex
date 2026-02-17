@@ -105,6 +105,12 @@ Plans:
 **Requirements:**
 - NAV-04: Results view as separate route
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 30-01-PLAN.md — Create /resultaten route, update SideRailNav, add ResultsShell fullWidth
+- [ ] 30-02-PLAN.md — Wire map.tsx navigation to /resultaten, remove overlay, add scan_id restoration
+
 **Success Criteria:**
 1. User accesses results view via sidebar icon or "Toon Lijst" button from map
 2. Results route displays scan data in dedicated page with full-width table
