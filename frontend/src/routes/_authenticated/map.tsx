@@ -772,7 +772,7 @@ function MapPage() {
 
       {/* Active gemeente context header */}
       {activeGemeente && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md border border-grey-800 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-amber-accent"></div>
             <span className="text-sm font-medium text-grey-100">
@@ -834,7 +834,7 @@ function MapPage() {
 
       {/* Zone info card */}
       {zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-grey-800 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-accent"></div>
             <p className="text-sm text-grey-400">Zone info laden...</p>
@@ -842,7 +842,7 @@ function MapPage() {
         </div>
       )}
       {zoneInfo && !zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-grey-800 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-start justify-between mb-2">
             <h3 className="text-sm font-semibold text-grey-100">Bestemmingsplan</h3>
             <button

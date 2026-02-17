@@ -65,11 +65,11 @@ export function PDFExportModal({
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="space-y-2">
-          <h2 className="text-white text-xl font-semibold">
+          <h2 className="text-grey-100 text-xl font-semibold">
             Rapport exporteren als PDF
           </h2>
           {propertyData?.address && (
-            <p className="text-white/60 text-sm">
+            <p className="text-grey-400 text-sm">
               {propertyData.address.straat} {propertyData.address.huisnummer}
               {propertyData.address.huisletter || ''}
               {propertyData.address.toevoeging || ''}
@@ -98,11 +98,11 @@ export function PDFExportModal({
         ) : (
           // Saved - show export options
           <div className="space-y-4">
-            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-              <p className="text-white/70 text-sm">
+            <div className="bg-grey-850 rounded-lg p-4 border border-grey-800">
+              <p className="text-grey-300 text-sm">
                 De PDF bevat alle secties van dit rapport:
               </p>
-              <ul className="mt-2 space-y-1 text-white/60 text-sm">
+              <ul className="mt-2 space-y-1 text-grey-400 text-sm">
                 <li>• Adresgegevens en bouwjaar</li>
                 <li>• Kadastrale informatie</li>
                 <li>• Bestemmingsplangegevens</li>
@@ -115,7 +115,7 @@ export function PDFExportModal({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="flex-1 py-2 px-4 bg-grey-850 hover:bg-grey-700 text-grey-100 rounded-lg transition-colors"
               >
                 Annuleren
               </button>

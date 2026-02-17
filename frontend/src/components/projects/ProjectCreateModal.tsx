@@ -59,7 +59,7 @@ export default function ProjectCreateModal({
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black/20"
+          className="fixed inset-0 bg-grey-950/80"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={handleCancel}
         />

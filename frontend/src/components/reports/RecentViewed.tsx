@@ -20,7 +20,7 @@ export default function RecentViewed({ items, onItemClick }: RecentViewedProps) 
   return (
     <div className="mb-4">
       {/* Section header */}
-      <h3 className="mb-2 flex items-center gap-2 px-4 text-xs uppercase tracking-wide text-white/40">
+      <h3 className="mb-2 flex items-center gap-2 px-4 text-xs uppercase tracking-wide text-grey-500">
         <ClockIcon />
         Recent bekeken
       </h3>
@@ -31,12 +31,12 @@ export default function RecentViewed({ items, onItemClick }: RecentViewedProps) 
           <button
             key={item.id}
             onClick={() => onItemClick(item)}
-            className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/5"
+            className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-grey-850"
           >
-            <ClockIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-white/30" />
+            <ClockIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-grey-600" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm text-white/70">{item.report_name}</p>
-              <p className="text-xs text-white/40">
+              <p className="truncate text-sm text-grey-300">{item.report_name}</p>
+              <p className="text-xs text-grey-500">
                 {item.postcode}, {item.woonplaats}
               </p>
             </div>

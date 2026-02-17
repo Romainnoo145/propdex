@@ -11,34 +11,34 @@ export default function EmptyState() {
     <div className="px-4 py-8">
       <div className="space-y-4">
         {/* Step 1: Ontdek */}
-        <div className="rounded-lg bg-white/5 p-4 opacity-70">
+        <div className="rounded-lg bg-grey-850 p-4 opacity-70">
           <div className="mb-2 flex items-center gap-3">
             <SearchIcon />
-            <h3 className="text-sm font-medium text-white/90">Ontdek</h3>
+            <h3 className="text-sm font-medium text-grey-100">Ontdek</h3>
           </div>
-          <p className="text-xs text-white/60">
+          <p className="text-xs text-grey-400">
             Zoek een adres op de kaart
           </p>
         </div>
 
         {/* Step 2: Analyseer */}
-        <div className="rounded-lg bg-white/5 p-4 opacity-70">
+        <div className="rounded-lg bg-grey-850 p-4 opacity-70">
           <div className="mb-2 flex items-center gap-3">
             <ChartIcon />
-            <h3 className="text-sm font-medium text-white/90">Analyseer</h3>
+            <h3 className="text-sm font-medium text-grey-100">Analyseer</h3>
           </div>
-          <p className="text-xs text-white/60">
+          <p className="text-xs text-grey-400">
             Bekijk kadaster, bestemming en monument data
           </p>
         </div>
 
         {/* Step 3: Organiseer */}
-        <div className="rounded-lg bg-white/5 p-4 opacity-70">
+        <div className="rounded-lg bg-grey-850 p-4 opacity-70">
           <div className="mb-2 flex items-center gap-3">
             <FolderIcon />
-            <h3 className="text-sm font-medium text-white/90">Organiseer</h3>
+            <h3 className="text-sm font-medium text-grey-100">Organiseer</h3>
           </div>
-          <p className="text-xs text-white/60">
+          <p className="text-xs text-grey-400">
             Sla rapporten op in projecten
           </p>
         </div>
@@ -59,7 +59,7 @@ function SearchIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-white/70"
+      className="text-grey-300"
     >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.35-4.35" />
@@ -78,7 +78,7 @@ function ChartIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-white/70"
+      className="text-grey-300"
     >
       <line x1="12" y1="20" x2="12" y2="10" />
       <line x1="18" y1="20" x2="18" y2="4" />
@@ -98,7 +98,7 @@ function FolderIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-white/70"
+      className="text-grey-300"
     >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>

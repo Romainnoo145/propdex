@@ -10,7 +10,7 @@ interface ReportCardProps {
 /**
  * Rich card for saved report with address, date, and freshness badge.
  *
- * Design: Glassmorphism card with:
+ * Design: Industrial Amber card with:
  * - Freshness dot (gray for fresh, amber for stale)
  * - Report name (address)
  * - Postcode + city
@@ -36,17 +36,17 @@ export default function ReportCard({
   return (
     <div
       onClick={onClick}
-      className="group cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
+      className="group cursor-pointer rounded-lg border border-grey-800 bg-grey-850 p-3 transition-colors hover:bg-grey-800"
     >
       {/* Top line: Freshness dot + Report name */}
       <div className="flex items-start gap-2">
         <div
           className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
-            isStale ? 'bg-amber-400' : 'bg-white/30'
+            isStale ? 'bg-amber-400' : 'bg-grey-800'
           }`}
         />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-medium text-white/90">
+          <h3 className="truncate text-sm font-medium text-grey-100">
             {report.report_name}
           </h3>
         </div>
@@ -62,12 +62,12 @@ export default function ReportCard({
       </div>
 
       {/* Second line: Postcode + City */}
-      <p className="mt-1 text-xs text-white/50">
+      <p className="mt-1 text-xs text-grey-400">
         {report.postcode}, {report.city}
       </p>
 
       {/* Bottom row: Date | Completeness */}
-      <div className="mt-2 flex items-center justify-between text-xs text-white/40">
+      <div className="mt-2 flex items-center justify-between text-xs text-grey-500">
         <span>{formattedDate}</span>
         <span>{Math.round(report.completeness_score * 100)}% compleet</span>
       </div>
@@ -87,7 +87,7 @@ function TrashIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-white/40 hover:text-red-400"
+      className="text-grey-500 hover:text-red-400"
     >
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
