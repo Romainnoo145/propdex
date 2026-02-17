@@ -28,7 +28,7 @@ export function SourceBadge({ source, cachedAt, tooltip }: SourceBadgeProps) {
     : `Bron: ${source}`;
 
   return (
-    <div className="text-xs text-white/40" title={tooltip}>
+    <div className="text-xs text-grey-500" title={tooltip}>
       {displayText}
     </div>
   );
