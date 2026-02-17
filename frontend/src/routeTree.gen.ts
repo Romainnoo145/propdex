@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
+import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
@@ -37,6 +38,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google-callback',
   path: '/auth/google-callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedResultatenRoute = AuthenticatedResultatenRouteImport.update({
+  id: '/resultaten',
+  path: '/resultaten',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
   id: '/projecten',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/projecten': typeof AuthenticatedProjectenRoute
+  '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/projecten': typeof AuthenticatedProjectenRoute
+  '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
+  '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/projecten'
+    | '/resultaten'
     | '/auth/google-callback'
     | '/auth/'
     | '/rapport/$id'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/projecten'
+    | '/resultaten'
     | '/auth/google-callback'
     | '/auth'
     | '/rapport/$id'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen'
     | '/_authenticated/map'
     | '/_authenticated/projecten'
+    | '/_authenticated/resultaten'
     | '/auth/google-callback'
     | '/auth/'
     | '/_authenticated/rapport/$id'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRapportIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/resultaten': {
+      id: '/_authenticated/resultaten'
+      path: '/resultaten'
+      fullPath: '/resultaten'
+      preLoaderRoute: typeof AuthenticatedResultatenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -211,6 +230,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
+  AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
 }
 
@@ -219,6 +239,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
+  AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
 }
 

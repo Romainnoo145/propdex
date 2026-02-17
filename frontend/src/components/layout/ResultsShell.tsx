@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 interface ResultsShellProps {
   children: React.ReactNode
   className?: string
+  fullWidth?: boolean // bypass inner max-w-5xl container for full-width data views
 }
 
 /**
@@ -11,14 +12,16 @@ interface ResultsShellProps {
  * Uses solid bg-grey-950 background (NOT glassmorphism) per DS-04:
  * data content areas use solid backgrounds for readability.
  *
- * Routes using this: /projecten, /instellingen, /rapport/:id
+ * Routes using this: /projecten, /instellingen, /rapport/:id, /resultaten (fullWidth)
  */
-export default function ResultsShell({ children, className }: ResultsShellProps) {
+export default function ResultsShell({ children, className, fullWidth }: ResultsShellProps) {
   return (
     <div className={cn('w-full h-full overflow-y-auto bg-grey-950', className)}>
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        {children}
-      </div>
+      {fullWidth ? children : (
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {children}
+        </div>
+      )}
     </div>
   )
 }
