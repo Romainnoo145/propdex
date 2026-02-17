@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Milestone:** v4.0 UX Redesign
 **Phase:** Phase 28 in progress
-**Plan:** Phase 28 Plan 01 complete — Persistent MapView + MapContext
-**Status:** MapLibre hoisted to layout, CSS display toggle, MapContext ready for child routes
+**Plan:** Phase 28 Plan 02 complete — SideRailNav three-view nav + InspectorPanel
+**Status:** Three-view navigation operational, InspectorPanel slide-over wired to parcel clicks
 
-**Progress:** [█░░░░░░░░░] 10% (1/10 phases complete, Phase 28 plan 1/N underway)
+**Progress:** [██████████] 98%
 
-**Last activity:** 2026-02-17 — Phase 28 Plan 01 complete
+**Last activity:** 2026-02-17 — Phase 28 Plan 02 complete
 
 ---
 
@@ -33,6 +33,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Storybook documentation for all 5 primitives, user-verified Industrial Amber design system
 - Phase 28 Plan 01: 368s, 2 tasks, 2 commits, 4 files
 - MapView hoisted to _authenticated.tsx, MapContext created, ResultsLayout refactored to overlay
+- Phase 28 Plan 02: 250s, 2 tasks, 2 commits, 3 files
+- SideRailNav three-view nav (Kaart/Resultaten/Projecten), lucide-react icons, InspectorPanel slide-over
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -76,6 +78,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - useEffect to sync accessToken ref instead of render mutation (ESLint react-hooks/refs compliance)
 - ResultsLayout converted from react-resizable-panels split-view to CSS transform left-edge overlay
 - map.resize() called after 50ms delay post display:block to allow layout recalculation
+- [Phase 28-02]: Custom SVG icons replaced with lucide-react imports (Map, ListOrdered, FolderOpen, Bell, FileText, Settings, LogOut)
+- [Phase 28-02]: InspectorPanel click handler registered once on mapReady — MapLibre silently ignores clicks on non-existent layers
+- [Phase 28-02]: panel search param on /map route enables Resultaten nav link to auto-open results panel
 
 ### Active TODOs
 
@@ -108,12 +113,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-17
-**Stopped At:** Completed 28-01-PLAN.md — Persistent MapView + MapContext
+**Last Session:** 2026-02-17T20:50:46.424Z
+**Stopped At:** Completed 28-02-PLAN.md — SideRailNav three-view nav + InspectorPanel
 **Resume File:** None
 
 **Next Action:** Continue Phase 28 — run next plan in phase
 
 ---
 
-*State updated: 2026-02-17 — Phase 28 Plan 01 Persistent MapView complete*
+*State updated: 2026-02-17 — Phase 28 Plan 02 SideRailNav three-view nav + InspectorPanel complete*
