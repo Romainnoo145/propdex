@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
-import AppLayout from '@/components/layout/AppLayout'
+import MapShell from '@/components/layout/MapShell'
 import { InspectorPanel } from '@/components/layout/InspectorPanel'
 import ResultsLayout from '@/components/results/ResultsLayout'
 import LayerToggle from '@/components/map/LayerToggle'
@@ -770,7 +770,7 @@ function MapPage() {
   }, [zoneInfo, triggerScan, activeScanId])
 
   return (
-    <AppLayout>
+    <MapShell>
       {/* Results panel — overlay that slides in from left over the persistent map */}
       <ResultsLayout
         scanId={activeScanId}
@@ -789,21 +789,21 @@ function MapPage() {
 
       {/* Active gemeente context header */}
       {activeGemeente && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-white/95 backdrop-blur-sm rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-sm font-medium text-gray-900">
+            <div className="w-2 h-2 rounded-full bg-amber-accent"></div>
+            <span className="text-sm font-medium text-grey-100">
               {activeGemeente.naam}
             </span>
           </div>
           {wijkLoading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-accent"></div>
           )}
           {/* Viewport scan button */}
           <button
             onClick={handleScanViewport}
             disabled={!!activeScanId || triggerScan.isPending}
-            className="px-3 py-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+            className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
           >
             {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
           </button>
@@ -818,7 +818,7 @@ function MapPage() {
                 mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
               }
             }}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-grey-400 hover:text-grey-100 transition-colors"
             aria-label="Gemeente deselecteren"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -842,20 +842,20 @@ function MapPage() {
 
       {/* Zone info card */}
       {zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-            <p className="text-sm text-gray-600">Zone info laden...</p>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-accent"></div>
+            <p className="text-sm text-grey-400">Zone info laden...</p>
           </div>
         </div>
       )}
       {zoneInfo && !zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-grey-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Bestemmingsplan</h3>
+            <h3 className="text-sm font-semibold text-grey-100">Bestemmingsplan</h3>
             <button
               onClick={() => setZoneInfo(null)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-grey-400 hover:text-grey-100 transition-colors"
               aria-label="Sluiten"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -864,19 +864,19 @@ function MapPage() {
             </button>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-bold text-gray-900">{zoneInfo.info.planNaam}</p>
-            <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+            <p className="text-sm font-bold text-grey-100">{zoneInfo.info.planNaam}</p>
+            <div className="inline-block px-2 py-1 bg-amber-accent/20 text-amber-accent text-xs font-medium rounded">
               {zoneInfo.info.bestemmingType}
             </div>
             {zoneInfo.info.planStatus && (
-              <p className="text-xs text-gray-600">Status: {zoneInfo.info.planStatus}</p>
+              <p className="text-xs text-grey-400">Status: {zoneInfo.info.planStatus}</p>
             )}
             {zoneInfo.info.planLink && (
               <a
                 href={zoneInfo.info.planLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-amber-accent hover:text-amber-accent-hover transition-colors"
               >
                 Bekijk officieel document
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -887,7 +887,7 @@ function MapPage() {
             <button
               onClick={handleScanZone}
               disabled={triggerScan.isPending || !!activeScanId}
-              className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+              className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
             >
               {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
             </button>
@@ -948,6 +948,6 @@ function MapPage() {
         onClose={() => setInspectorParcel(null)}
         parcel={inspectorParcel}
       />
-    </AppLayout>
+    </MapShell>
   )
 }
