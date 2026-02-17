@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 29 complete, Phase 30 next
+**Status:** Phase 30 complete, Phase 31 next
 
 ### Phase 27: Design System Foundation
 
@@ -108,8 +108,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 30-01-PLAN.md — Create /resultaten route, update SideRailNav, add ResultsShell fullWidth
-- [ ] 30-02-PLAN.md — Wire map.tsx navigation to /resultaten, remove overlay, add scan_id restoration
+- [x] 30-01-PLAN.md — Create /resultaten route, update SideRailNav, add ResultsShell fullWidth
+- [x] 30-02-PLAN.md — Wire map.tsx navigation to /resultaten, remove overlay, add scan_id restoration
 
 **Success Criteria:**
 1. User accesses results view via sidebar icon or "Toon Lijst" button from map
@@ -253,7 +253,7 @@ Plans:
 | 27 | Design System Foundation | DS-01, DS-02, DS-05 | ✓ Complete (2026-02-16) |
 | 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | ✓ Complete (2026-02-18) |
 | 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | ✓ Complete (2026-02-18) |
-| 30 | View Separation | NAV-04 | Pending |
+| 30 | View Separation | NAV-04 | ✓ Complete (2026-02-18) |
 | 31 | Component Migration | MIG-01, MIG-02 | Pending |
 | 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | Pending |
 | 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | Pending |
@@ -341,4 +341,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (Phase 29 complete)*
+*Last updated: 2026-02-18 (Phase 30 complete)*

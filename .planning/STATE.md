@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 30 in progress
-**Plan:** Phase 30 Plan 02 complete
-**Status:** View separation complete — map navigates to /resultaten on scan completion, scan_id preserved bidirectionally
+**Phase:** Phase 30 complete, Phase 31 next
+**Plan:** Phase 30 verified and complete
+**Status:** View separation shipped — /resultaten route, scan_id bidirectional navigation, overlay removed
 
-**Progress:** [███░░░░░░░] 30% (3/10 phases complete, Phase 30 in progress)
+**Progress:** [████░░░░░░] 40% (4/10 phases complete)
 
-**Last activity:** 2026-02-17 — Phase 30 Plan 02 complete (scan_id navigation wiring, view separation complete)
+**Last activity:** 2026-02-18 — Phase 30 verified and marked complete
 
 ---
 
@@ -143,12 +143,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-17
-**Stopped At:** Completed 30-02-PLAN.md (scan_id navigation wiring, view separation complete)
+**Last Session:** 2026-02-18
+**Stopped At:** Phase 30 verified and complete
 **Resume File:** None
 
-**Next Action:** Phase 30 complete — run /gsd:new-milestone or continue with next phase
+**Next Action:** Run `/gsd:plan-phase 31` to plan Component Migration (Glassmorphism → Industrial Amber)
 
 ---
 
-*State updated: 2026-02-17 — Phase 30 Plan 02 scan_id navigation wiring complete, view separation done*
+*State updated: 2026-02-18 — Phase 30 View Separation verified and complete*
