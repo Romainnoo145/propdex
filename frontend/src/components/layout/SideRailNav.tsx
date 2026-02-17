@@ -49,8 +49,7 @@ export default function SideRailNav({
     {
       icon: <ListOrdered size={20} />,
       label: 'Resultaten',
-      to: '/map',
-      search: { panel: 'results' },
+      to: '/resultaten',
     },
     {
       icon: <FolderOpen size={20} />,
