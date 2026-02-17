@@ -81,6 +81,12 @@ Plans:
 - DS-03: Silver/desaturated map base layer
 - DS-04: Glassmorphism refinement for navigation chrome
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — Silver raster map style + MapShell/ResultsShell creation
+- [ ] 29-02-PLAN.md — Adopt layout shells in routes + dark theme card corrections
+
 **Success Criteria:**
 1. Map base layer displays with desaturated silver aesthetic that provides neutral backdrop
 2. Zoning overlays and parcel boundaries stand out clearly against silver map background
