@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Milestone:** v4.0 UX Redesign
 **Phase:** Phase 29 in progress
-**Plan:** Phase 29 Plan 01 complete
-**Status:** Silver map theme + layout shells shipped
+**Plan:** Phase 29 Plan 02 complete
+**Status:** Route shell migration + dark theme cards shipped
 
 **Progress:** [██░░░░░░░░] 20% (2/10 phases complete)
 
-**Last activity:** 2026-02-18 — Phase 29 Plan 01 complete
+**Last activity:** 2026-02-18 — Phase 29 Plan 02 complete
 
 ---
 
@@ -37,6 +37,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - SideRailNav three-view nav (Kaart/Resultaten/Projecten), lucide-react icons, InspectorPanel slide-over
 - Phase 29 Plan 01: 61s, 2 tasks, 2 commits, 3 files
 - Silver raster paint on CartoDB Positron, MapShell + ResultsShell layout components
+- Phase 29 Plan 02: ~146s, 2 tasks, 2 commits, 6 files
+- All routes on MapShell/ResultsShell, floating map cards dark glassmorphism, AppLayout re-export
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -89,6 +91,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Paint properties baked into initial style definition — not setPaintProperty() to avoid state management complexity
 - MapShell uses div (not main) — AppLayout.tsx uses main; differentiated to avoid duplicate landmark elements before Plan 02 migration
 
+**Phase 29-02 (Route Shell Migration):**
+- AppLayout.tsx reduced to single-line re-export of MapShell — backward compatible, can be deleted in future cleanup
+- Floating map cards use bg-grey-900/90 backdrop-blur-md (semi-transparent dark glass) — distinct from ResultsShell solid bg-grey-950
+- ResultsShell wraps instellingen/dashboard — inner flex centering preserved inside ResultsShell content area
+- projecten.tsx max-w-4xl wrapper removed in favor of ResultsShell max-w-5xl for consistency
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -121,11 +129,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 29-01-PLAN.md
+**Stopped At:** Completed 29-02-PLAN.md
 **Resume File:** None
 
-**Next Action:** Execute Phase 29 Plan 02 (route migration: adopt MapShell and ResultsShell)
+**Next Action:** Execute Phase 29 Plan 03 (if exists) or next phase
 
 ---
 
-*State updated: 2026-02-18 — Phase 29 Plan 01 Silver Map Theme + Layout Shells complete*
+*State updated: 2026-02-18 — Phase 29 Plan 02 Route Shell Migration + Dark Theme Cards complete*
