@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 31 in progress (Plan 03 complete)
-**Plan:** 31-03 complete — PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen migrated
-**Status:** Glassmorphism migration advanced — 15 components now using Industrial Amber tokens across Phases 31-01/02/03
+**Phase:** Phase 31 complete (Plan 04 complete)
+**Plan:** 31-04 complete — all 14 remaining glassmorphism files migrated (PropertySection, PropertySummary, InspectorPanel, FreshnessIndicator, ParcelEnrichmentCard, ReportCard, ReportSearch, PDFExportModal, EmptyState, RecentViewed, ProjectEditModal, ProjectCreateModal, resultaten.tsx, map.tsx)
+**Status:** Phase 31 glassmorphism migration complete — all 29 components now using Industrial Amber design tokens
 
 **Progress:** [████░░░░░░] 40% (4/10 phases complete, Phase 31 in progress)
 
-**Last activity:** 2026-02-18 — Phase 31 Plan 03 executed (PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen)
+**Last activity:** 2026-02-18 — Phase 31 Plan 04 executed (14 remaining glassmorphism files: property, layout, results, reports, projects, routes)
 
 ---
 
@@ -49,6 +49,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal migrated; Select + Badge primitives replace raw styled elements
 - Phase 31 Plan 03: ~5min, 2 tasks, 2 commits, 7 files
 - PropertyDetailPanel, PropertyDetailDrawer (773 lines), PropertyQuickCard, LayerToggle (DS-04 blur), AddressSearch, dashboard, instellingen migrated
+- Phase 31 Plan 04: ~4min, 2 tasks, 2 commits, 14 files
+- All 14 remaining glassmorphism files migrated; MIG-02 and visual consistency gaps closed
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -139,6 +141,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - PropertyDetailDrawer file splitting deferred — 773-line file exceeds 300-line limit but glassmorphism migration prioritized first
 - Semantic amber/green monument badges (bg-amber-500/N, bg-green-500/N) preserved unchanged in PropertyQuickCard and PropertyDetailPanel/Drawer
 
+**Phase 31-04 (Glassmorphism Gap Closure — 14 remaining files):**
+- FreshnessIndicator tooltip: bg-black/90 backdrop-blur-xl → bg-grey-950 (tooltip is UI layer, not map-floating)
+- map.tsx floating controls: kept bg-grey-900/90 backdrop-blur-md per DS-04, only border-white/10 → border-grey-800
+- ProjectEditModal/CreateModal: light-theme white card content preserved; only dark overlay backdrop migrated (bg-black/20 → bg-grey-950/80)
+- ReportCard freshness dot: bg-white/30 → bg-grey-800 (non-stale indicator is neutral grey, not white opacity)
+- cmdk data-[selected=true] states: bg-white/10 → bg-grey-800, text-white → text-grey-100
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -171,11 +180,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 31-03-PLAN.md (PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, dashboard, instellingen migration)
+**Stopped At:** Completed 31-04-PLAN.md (glassmorphism gap closure — 14 remaining files, Phase 31 complete)
 **Resume File:** None
 
-**Next Action:** Continue Phase 31 — execute Plan 04 (if defined) or next phase
+**Next Action:** Phase 31 complete — proceed to Phase 32 (Feedback Systems)
 
 ---
 
-*State updated: 2026-02-18 — Phase 31 Plan 03 complete (glassmorphism migration batch 3: property/ + map controls + placeholder pages)*
+*State updated: 2026-02-18 — Phase 31 Plan 04 complete (glassmorphism gap closure: 14 remaining files, Phase 31 complete)*
