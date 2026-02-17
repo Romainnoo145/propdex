@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 27 complete, Phase 28 next
-**Plan:** Phase 27 verified and complete
-**Status:** Design system foundation shipped — tokens, primitives, Storybook verified
+**Phase:** Phase 28 in progress
+**Plan:** Phase 28 Plan 01 complete — Persistent MapView + MapContext
+**Status:** MapLibre hoisted to layout, CSS display toggle, MapContext ready for child routes
 
-**Progress:** [█░░░░░░░░░] 10% (1/10 phases complete)
+**Progress:** [█░░░░░░░░░] 10% (1/10 phases complete, Phase 28 plan 1/N underway)
 
-**Last activity:** 2026-02-16 — Phase 27 verified and marked complete
+**Last activity:** 2026-02-17 — Phase 28 Plan 01 complete
 
 ---
 
@@ -31,6 +31,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Core UI primitives (Button, Card, Badge, Input, Select) with CVA variants
 - Phase 27 Plan 03: ~1276s, 2 tasks, 1 commit, 8 files, 21 stories
 - Storybook documentation for all 5 primitives, user-verified Industrial Amber design system
+- Phase 28 Plan 01: 368s, 2 tasks, 2 commits, 4 files
+- MapView hoisted to _authenticated.tsx, MapContext created, ResultsLayout refactored to overlay
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -68,6 +70,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - [Phase 27-03]: Dark background (#111111) as Storybook default to match production environment
 - [Phase 27-03]: viteFinal in main.ts required to resolve @/ path aliases in Storybook stories
 
+**Phase 28-01 (Persistent MapView):**
+- CSS display:none toggle (not conditional rendering) to keep MapLibre instance alive across route changes
+- React Context (not Zustand) for mapRef sharing — Context sufficient for single map instance
+- useEffect to sync accessToken ref instead of render mutation (ESLint react-hooks/refs compliance)
+- ResultsLayout converted from react-resizable-panels split-view to CSS transform left-edge overlay
+- map.resize() called after 50ms delay post display:block to allow layout recalculation
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -99,12 +108,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-16
-**Stopped At:** Phase 27 verified and complete
+**Last Session:** 2026-02-17
+**Stopped At:** Completed 28-01-PLAN.md — Persistent MapView + MapContext
 **Resume File:** None
 
-**Next Action:** Run `/gsd:plan-phase 28` to plan Navigation Structure + Persistent MapView
+**Next Action:** Continue Phase 28 — run next plan in phase
 
 ---
 
-*State updated: 2026-02-16 — Phase 27 Design System Foundation verified and complete*
+*State updated: 2026-02-17 — Phase 28 Plan 01 Persistent MapView complete*
