@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 29 complete, Phase 30 next
-**Plan:** Phase 29 verified and complete
-**Status:** Silver map theme + layout shells + dark glassmorphism cards shipped
+**Phase:** Phase 30 in progress
+**Plan:** Phase 30 Plan 01 complete
+**Status:** /resultaten route created, SideRailNav updated to point to /resultaten
 
-**Progress:** [███░░░░░░░] 30% (3/10 phases complete)
+**Progress:** [███░░░░░░░] 30% (3/10 phases complete, Phase 30 in progress)
 
-**Last activity:** 2026-02-18 — Phase 29 verified and marked complete
+**Last activity:** 2026-02-18 — Phase 30 Plan 01 complete (/resultaten route + SideRailNav update)
 
 ---
 
@@ -39,6 +39,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Silver raster paint on CartoDB Positron, MapShell + ResultsShell layout components
 - Phase 29 Plan 02: ~146s, 2 tasks, 2 commits, 6 files
 - All routes on MapShell/ResultsShell, floating map cards dark glassmorphism, AppLayout re-export
+- Phase 30 Plan 01: ~166s, 2 tasks, 2 commits, 4 files
+- /resultaten route (standalone results page), ResultsShell fullWidth prop, SideRailNav pointing to /resultaten
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -97,6 +99,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ResultsShell wraps instellingen/dashboard — inner flex centering preserved inside ResultsShell content area
 - projecten.tsx max-w-4xl wrapper removed in favor of ResultsShell max-w-5xl for consistency
 
+**Phase 30-01 (/resultaten Route):**
+- Toon Kaart button navigates to /map without scan_id — Plan 02 will add scan_id to MapSearchParams and wire passthrough
+- routeTree.gen.ts updated manually (tsr generate requires config file not present in project)
+- /resultaten route: fullWidth ResultsShell, shows empty state when no scan_id, full results layout when scan_id present
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -129,11 +136,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Phase 29 verified and complete
+**Stopped At:** Completed 30-01-PLAN.md (/resultaten route + SideRailNav update)
 **Resume File:** None
 
-**Next Action:** Run `/gsd:plan-phase 30` to plan View Separation (Results Route)
+**Next Action:** Execute Phase 30 Plan 02 (scan_id passthrough from /map to /resultaten)
 
 ---
 
-*State updated: 2026-02-18 — Phase 29 Silver Map Theme + Layout Shells verified and complete*
+*State updated: 2026-02-18 — Phase 30 Plan 01 /resultaten route + SideRailNav update complete*
