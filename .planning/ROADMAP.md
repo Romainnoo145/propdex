@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 28 complete, Phase 29 next
+**Status:** Phase 29 complete, Phase 30 next
 
 ### Phase 27: Design System Foundation
 
@@ -84,8 +84,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 29-01-PLAN.md — Silver raster map style + MapShell/ResultsShell creation
-- [ ] 29-02-PLAN.md — Adopt layout shells in routes + dark theme card corrections
+- [x] 29-01-PLAN.md — Silver raster map style + MapShell/ResultsShell creation
+- [x] 29-02-PLAN.md — Adopt layout shells in routes + dark theme card corrections
 
 **Success Criteria:**
 1. Map base layer displays with desaturated silver aesthetic that provides neutral backdrop
@@ -246,7 +246,7 @@ Plans:
 |-------|------|--------------|--------|
 | 27 | Design System Foundation | DS-01, DS-02, DS-05 | ✓ Complete (2026-02-16) |
 | 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | ✓ Complete (2026-02-18) |
-| 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | Pending |
+| 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | ✓ Complete (2026-02-18) |
 | 30 | View Separation | NAV-04 | Pending |
 | 31 | Component Migration | MIG-01, MIG-02 | Pending |
 | 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | Pending |
@@ -335,4 +335,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (Phase 28 complete)*
+*Last updated: 2026-02-18 (Phase 29 complete)*
