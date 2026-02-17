@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 27 (Design System Foundation) — Planned
+**Status:** Phase 27 complete, Phase 28 next
 
 ### Phase 27: Design System Foundation
 
@@ -32,9 +32,9 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 27-01-PLAN.md — Design tokens, fonts, cn() utility, ESLint enforcement
-- [ ] 27-02-PLAN.md — UI primitives (Button, Card, Badge, Input, Select)
-- [ ] 27-03-PLAN.md — Storybook setup, stories, visual verification
+- [x] 27-01-PLAN.md — Design tokens, fonts, cn() utility, ESLint enforcement
+- [x] 27-02-PLAN.md — UI primitives (Button, Card, Badge, Input, Select)
+- [x] 27-03-PLAN.md — Storybook setup, stories, visual verification
 
 **Success Criteria:**
 1. Developer can reference design tokens via Tailwind utilities (e.g., `bg-amber-accent`, `text-grey-800`) throughout codebase
@@ -232,7 +232,7 @@ Plans:
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 27 | Design System Foundation | DS-01, DS-02, DS-05 | Pending |
+| 27 | Design System Foundation | DS-01, DS-02, DS-05 | ✓ Complete (2026-02-16) |
 | 28 | Navigation + Persistent MapView | NAV-01, NAV-02, NAV-03 | Pending |
 | 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | Pending |
 | 30 | View Separation | NAV-04 | Pending |
@@ -323,4 +323,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-16 (v4.0 roadmap created)*
+*Last updated: 2026-02-16 (Phase 27 complete)*
