@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Select } from '@/components/primitives'
 import type { ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsFilterPanelProps {
@@ -48,17 +49,17 @@ export default function ResultsFilterPanel({
   }
 
   return (
-    <div className="bg-white/5 border-b border-white/10 px-4 py-3">
+    <div className="bg-grey-850 border-b border-grey-800 px-4 py-3">
       <div className="flex flex-wrap items-center gap-4">
         {/* Bestemming type dropdown */}
         <div className="flex items-center gap-2">
           <label
             htmlFor="bestemming-filter"
-            className="text-white/60 text-sm font-medium"
+            className="text-grey-400 text-sm font-medium"
           >
             Bestemming
           </label>
-          <select
+          <Select
             id="bestemming-filter"
             value={filters.bestemming_type ?? ''}
             onChange={(e) =>
@@ -67,7 +68,6 @@ export default function ResultsFilterPanel({
                 bestemming_type: e.target.value || undefined,
               })
             }
-            className="bg-black/40 border border-white/15 text-white/80 text-sm rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
             <option value="">Alle</option>
             <option value="Wonen">Wonen</option>
@@ -78,18 +78,18 @@ export default function ResultsFilterPanel({
             <option value="Groen">Groen</option>
             <option value="Verkeer">Verkeer</option>
             <option value="Water">Water</option>
-          </select>
+          </Select>
         </div>
 
         {/* Pand status dropdown */}
         <div className="flex items-center gap-2">
           <label
             htmlFor="status-filter"
-            className="text-white/60 text-sm font-medium"
+            className="text-grey-400 text-sm font-medium"
           >
             Status
           </label>
-          <select
+          <Select
             id="status-filter"
             value={filters.pand_status ?? ''}
             onChange={(e) =>
@@ -98,21 +98,20 @@ export default function ResultsFilterPanel({
                 pand_status: e.target.value || undefined,
               })
             }
-            className="bg-black/40 border border-white/15 text-white/80 text-sm rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
             <option value="">Alle</option>
             <option value="niet in gebruik">Niet in gebruik</option>
             <option value="sloop">Sloopvergunning</option>
             <option value="buiten gebruik">Buiten gebruik</option>
             <option value="bouwvergunning">Bouwvergunning</option>
-          </select>
+          </Select>
         </div>
 
         {/* Min area input */}
         <div className="flex items-center gap-2">
           <label
             htmlFor="area-filter"
-            className="text-white/60 text-sm font-medium"
+            className="text-grey-400 text-sm font-medium"
           >
             Min. opp. (m²)
           </label>
@@ -122,7 +121,7 @@ export default function ResultsFilterPanel({
             value={localMinArea}
             onChange={(e) => setLocalMinArea(e.target.value)}
             placeholder="0"
-            className="w-20 bg-black/40 border border-white/15 text-white/80 text-sm rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="w-20 bg-grey-950 border border-grey-800 text-grey-100 text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-teal-accent"
           />
         </div>
 
@@ -130,11 +129,11 @@ export default function ResultsFilterPanel({
         <div className="flex items-center gap-2">
           <label
             htmlFor="score-filter"
-            className="text-white/60 text-sm font-medium"
+            className="text-grey-400 text-sm font-medium"
           >
             Score
           </label>
-          <select
+          <Select
             id="score-filter"
             value={filters.score_category ?? ''}
             onChange={(e) =>
@@ -143,20 +142,19 @@ export default function ResultsFilterPanel({
                 score_category: e.target.value || undefined,
               })
             }
-            className="bg-black/40 border border-white/15 text-white/80 text-sm rounded px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
             <option value="">Alle</option>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
-          </select>
+          </Select>
         </div>
 
         {/* Clear filters button */}
         {hasActiveFilters && (
           <button
             onClick={handleClearFilters}
-            className="text-white/50 hover:text-white/80 text-xs underline transition-colors"
+            className="text-grey-400 hover:text-grey-100 text-xs underline transition-colors"
           >
             Wis filters
           </button>
@@ -164,7 +162,7 @@ export default function ResultsFilterPanel({
 
         {/* Results count badge (right-aligned) */}
         <div className="ml-auto">
-          <span className="text-white/50 text-xs">
+          <span className="text-grey-400 text-xs">
             {total.toLocaleString('nl-NL')} resultaten
           </span>
         </div>
