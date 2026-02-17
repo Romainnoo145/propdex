@@ -55,6 +55,7 @@ interface MapSearchParams {
   postcode?: string
   huisnummer?: number
   reportId?: string
+  panel?: 'results'
 }
 
 export const Route = createFileRoute('/_authenticated/map')({
@@ -65,6 +66,7 @@ export const Route = createFileRoute('/_authenticated/map')({
       : typeof search.huisnummer === 'string' ? parseInt(search.huisnummer, 10) || undefined
       : undefined,
     reportId: typeof search.reportId === 'string' ? search.reportId : undefined,
+    panel: search.panel === 'results' ? 'results' : undefined,
   }),
 })
 
@@ -74,7 +76,7 @@ function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
   const { mapRef, mapReady } = useMapContext()
   const navigate = useNavigate()
-  const { postcode, huisnummer, reportId } = Route.useSearch()
+  const { postcode, huisnummer, reportId, panel } = Route.useSearch()
   const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
@@ -173,6 +175,16 @@ function MapPage() {
     // Clear reportId from URL so it doesn't re-trigger
     navigate({ to: '/map', search: {}, replace: true })
   }, [reportId, savedReport.data, navigate])
+
+  // Auto-open results panel when navigated with ?panel=results
+  useEffect(() => {
+    if (panel !== 'results') return
+    if (activeScanId) {
+      setShowResults(true)
+    }
+    // Clear search param so it doesn't persist on reload
+    navigate({ to: '/map', search: {}, replace: true })
+  }, [panel, activeScanId, navigate])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
