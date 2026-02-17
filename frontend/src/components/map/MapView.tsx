@@ -57,6 +57,12 @@ export default function MapView({
             id: 'carto-light-layer',
             type: 'raster',
             source: 'carto-light',
+            paint: {
+              'raster-saturation': -0.85,
+              'raster-brightness-min': 0.08,
+              'raster-brightness-max': 0.92,
+              'raster-contrast': -0.05,
+            },
           },
           {
             id: 'esri-satellite-layer',
