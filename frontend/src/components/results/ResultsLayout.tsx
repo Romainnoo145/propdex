@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from 'react-resizable-panels'
 import type maplibregl from 'maplibre-gl'
 import ResultsTable from './ResultsTable'
 import ResultsFilterPanel from './ResultsFilterPanel'
@@ -9,29 +8,17 @@ import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsLayoutProps {
   scanId: string | null
-  children: React.ReactNode
   collapsed: boolean
   mapRef: React.RefObject<maplibregl.Map | null>
   onClose?: () => void
 }
 
-export default function ResultsLayout({ scanId, children, collapsed, mapRef, onClose }: ResultsLayoutProps) {
+export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: ResultsLayoutProps) {
   const [filters, setFilters] = useState<ScanResultsFilters>({})
   const [total, setTotal] = useState(0)
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
   const selectionSourceRef = useRef<'table' | 'map' | null>(null)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
-  const leftPanelRef = useRef<ImperativePanelHandle>(null)
-
-  // Collapse/expand left panel based on collapsed prop
-  // This keeps the VDOM tree stable so MapView never re-mounts
-  useEffect(() => {
-    if (collapsed) {
-      leftPanelRef.current?.collapse()
-    } else {
-      leftPanelRef.current?.expand()
-    }
-  }, [collapsed])
 
   // Setup map click handler for parcel selection
   useEffect(() => {
@@ -85,79 +72,58 @@ export default function ResultsLayout({ scanId, children, collapsed, mapRef, onC
   }, [selectedParcelId, mapRef])
 
   return (
-    <div className="h-full w-full">
-      <PanelGroup direction="horizontal" autoSaveId="propdex-results">
-        {/* Left panel: Results table — collapsible to avoid VDOM tree change */}
-        <Panel
-          ref={leftPanelRef}
-          defaultSize={collapsed ? 0 : 45}
-          minSize={0}
-          maxSize={70}
-          collapsible
-          collapsedSize={0}
-        >
-          <div className="h-full w-full bg-black/40 backdrop-blur-xl flex flex-col overflow-hidden">
-            {/* Sticky header with title and close button */}
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
-              <h2 className="text-lg font-semibold text-white">Scanresultaten</h2>
-              <button
-                onClick={onClose}
-                className="text-white/60 hover:text-white transition-colors"
-                aria-label="Resultaten sluiten"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+    <>
+      {/* Left overlay panel — slides in from left over the persistent map */}
+      <div
+        className={`absolute left-0 top-0 h-full w-[45%] max-w-2xl
+                    bg-black/40 backdrop-blur-xl border-r border-white/10
+                    flex flex-col overflow-hidden
+                    transition-transform duration-300 ease-out
+                    ${collapsed ? '-translate-x-full' : 'translate-x-0'}`}
+        style={{ zIndex: 'var(--z-sidebar)' }}
+      >
+        {/* Sticky header with title and close button */}
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-semibold text-white">Scanresultaten</h2>
+          <button
+            onClick={onClose}
+            className="text-white/60 hover:text-white transition-colors"
+            aria-label="Resultaten sluiten"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-            {/* Filter panel */}
-            {scanId && (
-              <ResultsFilterPanel
-                filters={filters}
-                onChange={setFilters}
-                total={total}
-              />
-            )}
+        {/* Filter panel */}
+        {scanId && (
+          <ResultsFilterPanel
+            filters={filters}
+            onChange={setFilters}
+            total={total}
+          />
+        )}
 
-            {/* Table scrolls within remaining space */}
-            <div className="flex-1 overflow-hidden">
-              {scanId && (
-                <ResultsTable
-                  scanId={scanId}
-                  filters={filters}
-                  selectedParcelId={selectedParcelId}
-                  onRowClick={(parcelId) => {
-                    selectionSourceRef.current = 'table'
-                    setSelectedParcelId(parcelId)
-                  }}
-                  onRowDoubleClick={(parcel) => {
-                    setModalParcel(parcel)
-                  }}
-                  onTotalChange={setTotal}
-                />
-              )}
-            </div>
-          </div>
-        </Panel>
-
-        {/* Resize handle — hidden when collapsed */}
-        <PanelResizeHandle className={`w-1.5 transition-colors cursor-col-resize relative group ${collapsed ? 'hidden' : 'bg-white/10 hover:bg-white/30'}`}>
-          {/* Grip indicator (3 vertical dots) */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-1 h-1 rounded-full bg-white"></div>
-            <div className="w-1 h-1 rounded-full bg-white"></div>
-            <div className="w-1 h-1 rounded-full bg-white"></div>
-          </div>
-        </PanelResizeHandle>
-
-        {/* Right panel: Map — always rendered in same VDOM position */}
-        <Panel defaultSize={collapsed ? 100 : 55} minSize={30}>
-          <div className="h-full w-full">
-            {children}
-          </div>
-        </Panel>
-      </PanelGroup>
+        {/* Table scrolls within remaining space */}
+        <div className="flex-1 overflow-hidden">
+          {scanId && (
+            <ResultsTable
+              scanId={scanId}
+              filters={filters}
+              selectedParcelId={selectedParcelId}
+              onRowClick={(parcelId) => {
+                selectionSourceRef.current = 'table'
+                setSelectedParcelId(parcelId)
+              }}
+              onRowDoubleClick={(parcel) => {
+                setModalParcel(parcel)
+              }}
+              onTotalChange={setTotal}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Parcel detail modal */}
       <ParcelDetailModal
@@ -165,6 +131,6 @@ export default function ResultsLayout({ scanId, children, collapsed, mapRef, onC
         isOpen={!!modalParcel}
         onClose={() => setModalParcel(null)}
       />
-    </div>
+    </>
   )
 }

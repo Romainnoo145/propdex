@@ -2,10 +2,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import maplibregl from 'maplibre-gl'
-import type { Map as MapLibreMap } from 'maplibre-gl'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
-import MapView from '@/components/map/MapView'
 import ResultsLayout from '@/components/results/ResultsLayout'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
@@ -49,6 +47,7 @@ import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
 import { lookupPdokAddress, getScanTileUrl, fetchWijken } from '@/lib/api'
 import { getDemoProperty } from '@/lib/demo-data'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
+import { useMapContext } from '@/lib/MapContext'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
 
@@ -72,14 +71,14 @@ export const Route = createFileRoute('/_authenticated/map')({
 type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
 
 function MapPage() {
-  const mapRef = useRef<MapLibreMap | null>(null)
+  // MapView is now in the parent layout — get mapRef/mapReady from context
+  const { mapRef, mapReady } = useMapContext()
   const navigate = useNavigate()
   const { postcode, huisnummer, reportId } = Route.useSearch()
   const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
   const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
-  const [mapReady, setMapReady] = useState(false)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
@@ -412,26 +411,6 @@ function MapPage() {
     )
   }, [currentData, lookup])
 
-  // MapLibre transformRequest for authenticated tile requests
-  const transformRequest = useCallback(
-    (url: string, resourceType?: string) => {
-      // Add auth for tile requests to our backend
-      if (url.startsWith('/api/') && resourceType === 'Tile') {
-        const headers: Record<string, string> = {}
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`
-        }
-        return {
-          url,
-          headers,
-          credentials: 'include' as const,
-        }
-      }
-      return { url }
-    },
-    [accessToken]
-  )
-
   // Wijk click handler
   const handleWijkClick = useCallback(
     (
@@ -742,6 +721,7 @@ function MapPage() {
 
   return (
     <AppLayout>
+      {/* Results panel — overlay that slides in from left over the persistent map */}
       <ResultsLayout
         scanId={activeScanId}
         collapsed={!showResults || !activeScanId}
@@ -754,13 +734,7 @@ function MapPage() {
             removeParcelScoreLayer(mapRef.current)
           }
         }}
-      >
-        <MapView
-          mapRef={mapRef}
-          onMapReady={() => setMapReady(true)}
-          transformRequest={transformRequest}
-        />
-      </ResultsLayout>
+      />
       <AddressSearch onSelect={handleAddressSelect} />
 
       {/* Active gemeente context header */}
