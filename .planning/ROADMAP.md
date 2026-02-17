@@ -160,6 +160,13 @@ Plans:
 - FB-05: Step-based progress indicator for multi-step operations
 - FB-06: Real-time scan progress details
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — Create Skeleton, EmptyState, ErrorState feedback primitives
+- [ ] 32-02-PLAN.md — Adopt feedback primitives in ProjectList, ChangeTimeline, ResultsTable, resultaten, ResultsFilterPanel
+- [ ] 32-03-PLAN.md — Redesign ScanProgressOverlay with step stepper + Industrial Amber tokens
+
 **Success Criteria:**
 1. User sees skeleton screens while data loads, never blank white screens
 2. Empty states display helpful guidance ("No scans yet. Click a wijk to start scanning.")
