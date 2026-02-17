@@ -15,7 +15,7 @@ const sizeClasses = {
 };
 
 /**
- * Centered modal with glassmorphism styling
+ * Centered modal with Industrial Amber design tokens
  * - Focus trap when open
  * - Escape key to close
  * - Backdrop click to close
@@ -31,7 +31,7 @@ export function Modal({ isOpen, onClose, children, size = 'md' }: ModalProps) {
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm opacity-100"
+          className="fixed inset-0 bg-grey-950/60 opacity-100"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={onClose}
         />
@@ -44,7 +44,7 @@ export function Modal({ isOpen, onClose, children, size = 'md' }: ModalProps) {
           <div
             role="dialog"
             aria-modal="true"
-            className={`${sizeClasses[size]} w-full max-h-[85vh] bg-black/60 backdrop-blur-xl rounded-2xl border border-white/15 shadow-2xl overflow-y-auto`}
+            className={`${sizeClasses[size]} w-full max-h-[85vh] bg-grey-900 rounded-lg border border-grey-800 shadow-2xl overflow-y-auto`}
             onClick={(e) => e.stopPropagation()}
           >
             {children}

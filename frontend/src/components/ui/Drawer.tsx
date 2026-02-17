@@ -16,7 +16,7 @@ const widthClasses = {
 };
 
 /**
- * Right-sliding drawer with glassmorphism styling
+ * Right-sliding drawer with Industrial Amber design tokens
  * - Focus trap when open
  * - Escape key to close
  * - Backdrop click to close
@@ -45,7 +45,7 @@ export function Drawer({ isOpen, onClose, children, width = 'md' }: DrawerProps)
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 opacity-100"
+          className="fixed inset-0 bg-grey-950/40 transition-opacity duration-300 opacity-100"
           style={{ zIndex: 'var(--z-property-panel)' }}
           onClick={onClose}
         />
@@ -54,12 +54,12 @@ export function Drawer({ isOpen, onClose, children, width = 'md' }: DrawerProps)
         <div
           role="dialog"
           aria-modal="true"
-          className={`fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[85vh] border-t border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl flex flex-col md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:rounded-none md:max-h-none md:border-t-0 md:border-l md:border-white/15 ${widthClasses[width]} md:w-full transition-transform duration-300 ease-out translate-x-0`}
+          className={`fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[85vh] border-t border-grey-800 bg-grey-900 shadow-2xl flex flex-col md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:rounded-none md:max-h-none md:border-t-0 md:border-l md:border-grey-800 ${widthClasses[width]} md:w-full transition-transform duration-300 ease-out translate-x-0`}
           style={{ zIndex: 'calc(var(--z-property-panel) + 1)' }}
         >
           {/* Drag handle - mobile only */}
           <div className="flex justify-center py-2 md:hidden flex-shrink-0">
-            <div className="w-10 h-1 bg-white/30 rounded-full" />
+            <div className="w-10 h-1 bg-grey-700 rounded-full" />
           </div>
 
           {/* Scrollable content with touch-safe events */}
