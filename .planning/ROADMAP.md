@@ -130,6 +130,13 @@ Plans:
 - MIG-01: Glassmorphism components migrated to Industrial Amber
 - MIG-02: Legacy glassmorphism CSS removed
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 31-01-PLAN.md — Migrate Modal, Drawer, SideRailNav, ReportSidebar to Industrial Amber tokens
+- [ ] 31-02-PLAN.md — Migrate ResultsLayout, ResultsTable, ResultsFilterPanel, ParcelDetailModal
+- [ ] 31-03-PLAN.md — Migrate PropertyDetailPanel, PropertyDetailDrawer, PropertyQuickCard, LayerToggle, AddressSearch, placeholders
+
 **Success Criteria:**
 1. Drawer, Modal, and SideRailNav components render with Industrial Amber styling
 2. ReportSidebar and PropertyCard use design tokens instead of hardcoded glassmorphism colors
