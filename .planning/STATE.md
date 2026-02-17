@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 30 complete, Phase 31 next
-**Plan:** Phase 30 verified and complete
-**Status:** View separation shipped — /resultaten route, scan_id bidirectional navigation, overlay removed
+**Phase:** Phase 31 in progress (Plan 01 complete)
+**Plan:** 31-01 complete — Modal, Drawer, SideRailNav, ReportSidebar migrated
+**Status:** Glassmorphism migration started — 4 highest-visibility components using Industrial Amber tokens
 
-**Progress:** [████░░░░░░] 40% (4/10 phases complete)
+**Progress:** [████░░░░░░] 40% (4/10 phases complete, Phase 31 in progress)
 
-**Last activity:** 2026-02-18 — Phase 30 verified and marked complete
+**Last activity:** 2026-02-18 — Phase 31 Plan 01 executed (Modal, Drawer, SideRailNav, ReportSidebar)
 
 ---
 
@@ -43,6 +43,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - /resultaten route (standalone results page), ResultsShell fullWidth prop, SideRailNav pointing to /resultaten
 - Phase 30 Plan 02: ~153s, 1 task, 1 commit, 2 files
 - scan_id in MapSearchParams, navigate to /resultaten on scan completion (4 paths), urlScanId restoration effect, Toon Lijst button, ResultsLayout overlay removed
+- Phase 31 Plan 01: ~179s, 2 tasks, 2 commits, 4 files
+- Modal, Drawer, SideRailNav, ReportSidebar migrated from glassmorphism to Industrial Amber solid tokens
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -112,6 +114,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Toon Lijst ghost button (border + amber text) visually differentiated from primary solid scan button
 - removeParcelScoreLayer removed from map.tsx — score layer persists for lifetime of activeScanId (not cleared on navigation)
 
+**Phase 31-01 (Glassmorphism Migration — Modal/Drawer/SideRailNav/ReportSidebar):**
+- DS-04 rule applied: navigation chrome + data panels = solid bg-grey-900; floating map cards keep backdrop-blur
+- Active nav items use bg-grey-800 text-grey-100 (neutral) not amber-accent — persistent nav indicators should not use accent color (Pitfall 7)
+- Tooltip style updated to include border-grey-800 for crisper edge on solid dark bg-grey-950 background
+- ReportSidebar close button migrated to Button ghost variant + X lucide-react icon; raw select → Select primitive
+- Text hierarchy established: text-grey-100 (primary), text-grey-400 (secondary), text-grey-600 (muted)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -144,11 +153,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Phase 30 verified and complete
+**Stopped At:** Completed 31-01-PLAN.md (Modal, Drawer, SideRailNav, ReportSidebar migration)
 **Resume File:** None
 
-**Next Action:** Run `/gsd:plan-phase 31` to plan Component Migration (Glassmorphism → Industrial Amber)
+**Next Action:** Continue Phase 31 — execute Plan 02 (next component migration batch)
 
 ---
 
-*State updated: 2026-02-18 — Phase 30 View Separation verified and complete*
+*State updated: 2026-02-18 — Phase 31 Plan 01 complete (glassmorphism migration batch 1)*
