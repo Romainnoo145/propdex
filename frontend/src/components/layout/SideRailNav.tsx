@@ -23,7 +23,7 @@ interface SideRailNavProps {
  * Thin left-side icon-based navigation with Kaart, Resultaten, Projecten primary views
  * plus notification bell, Rapporten toggle, settings, and logout at bottom.
  *
- * Design: Glassmorphism (bg-black/30 backdrop-blur-xl), fixed position,
+ * Design: Industrial Amber (bg-grey-900 solid), fixed position,
  * z-index --z-side-rail (250).
  */
 export default function SideRailNav({
@@ -60,7 +60,7 @@ export default function SideRailNav({
 
   return (
     <nav
-      className="hidden h-full w-16 shrink-0 flex-col items-center justify-between border-r border-white/10 bg-black/30 py-4 backdrop-blur-xl md:flex"
+      className="hidden h-full w-16 shrink-0 flex-col items-center justify-between border-r border-grey-800 bg-grey-900 py-4 md:flex"
       style={{ zIndex: 'var(--z-side-rail)' }}
     >
       {/* Top section: Main navigation */}
@@ -77,14 +77,14 @@ export default function SideRailNav({
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/50 hover:bg-white/10 hover:text-white'
+                    ? 'bg-grey-800 text-grey-100'
+                    : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
                 }`}
               >
                 {item.icon}
               </div>
               {/* Hover tooltip */}
-              <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
                 {item.label}
               </span>
             </Link>
@@ -92,16 +92,16 @@ export default function SideRailNav({
         })}
 
         {/* Divider */}
-        <div className="my-2 h-px w-8 bg-white/10" />
+        <div className="my-2 h-px w-8 bg-grey-800" />
 
         {/* Notification bell */}
         <Link to="/projecten" className="group relative">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-850 hover:text-grey-100">
             <Bell size={20} />
             <NotificationBadge count={unreadData?.total_unread ?? 0} />
           </div>
           {/* Hover tooltip */}
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Meldingen
           </span>
         </Link>
@@ -114,14 +114,14 @@ export default function SideRailNav({
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               sidebarOpen
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:bg-white/10 hover:text-white'
+                ? 'bg-grey-800 text-grey-100'
+                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
             }`}
           >
             <FileText size={20} />
           </div>
           {/* Hover tooltip */}
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Rapporten
           </span>
         </button>
@@ -133,22 +133,22 @@ export default function SideRailNav({
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/instellingen' })
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:bg-white/10 hover:text-white'
+                ? 'bg-grey-800 text-grey-100'
+                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
             }`}
           >
             <Settings size={20} />
           </div>
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Instellingen
           </span>
         </Link>
         <button
           onClick={handleLogout}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+          className="group relative flex h-12 w-12 items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-850 hover:text-grey-100"
         >
           <LogOut size={20} />
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Uitloggen
           </span>
         </button>

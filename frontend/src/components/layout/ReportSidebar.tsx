@@ -6,6 +6,8 @@ import ReportCard from '@/components/reports/ReportCard'
 import ReportSearch from '@/components/reports/ReportSearch'
 import RecentViewed from '@/components/reports/RecentViewed'
 import { toast } from 'sonner'
+import { Button, Select } from '@/components/primitives'
+import { X, ChevronRight } from 'lucide-react'
 
 interface ReportSidebarProps {
   isOpen: boolean
@@ -19,7 +21,7 @@ interface ReportSidebarProps {
  *
  * Position: Fixed left-16 (after 64px side-rail), full height, w-80
  * Z-index: var(--z-sidebar) (200)
- * Design: Glassmorphism with slide-in animation
+ * Design: Industrial Amber solid surface with slide-in animation
  *
  * Structure:
  * - Header with close button
@@ -109,39 +111,39 @@ export default function ReportSidebar({
   if (!isOpen) return null
 
   return (
-    <aside className="h-full w-80 shrink-0 border-r border-white/10 bg-black/40 backdrop-blur-xl">
+    <aside className="h-full w-80 shrink-0 border-r border-grey-800 bg-grey-900">
 
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-            <h2 className="text-lg font-medium text-white">Rapporten</h2>
-            <button
+          <div className="flex items-center justify-between border-b border-grey-800 px-4 py-4">
+            <h2 className="text-lg font-medium text-grey-100">Rapporten</h2>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="rounded-lg p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Sluit sidebar"
             >
-              <XIcon />
-            </button>
+              <X size={20} />
+            </Button>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {/* Project filter */}
             {hasReports && projectsData && projectsData.projects.length > 0 && (
-              <div className="border-b border-white/10 px-4 py-3">
+              <div className="border-b border-grey-800 px-4 py-3">
                 <label
                   htmlFor="project-filter"
-                  className="mb-1.5 block text-xs font-medium text-white/60"
+                  className="mb-1.5 block text-xs font-medium text-grey-400"
                 >
                   Filter op project
                 </label>
-                <select
+                <Select
                   id="project-filter"
                   value={projectFilter || ''}
                   onChange={(e) =>
                     setProjectFilter(e.target.value || undefined)
                   }
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white focus:border-white/20 focus:outline-none"
                 >
                   <option value="">Alle projecten</option>
                   {projectsData.projects.map((project) => (
@@ -149,7 +151,7 @@ export default function ReportSidebar({
                       {project.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
 
@@ -165,7 +167,7 @@ export default function ReportSidebar({
 
             {/* Recent Viewed */}
             {hasRecent && (
-              <div className="border-b border-white/10 pb-4">
+              <div className="border-b border-grey-800 pb-4">
                 <RecentViewed items={recent} onItemClick={onSelectRecent} />
               </div>
             )}
@@ -173,7 +175,7 @@ export default function ReportSidebar({
             {/* Saved Reports */}
             {hasReports && (
               <div className="p-4">
-                <h3 className="mb-3 px-1 text-xs uppercase tracking-wide text-white/40">
+                <h3 className="mb-3 px-1 text-xs uppercase tracking-wide text-grey-600">
                   Opgeslagen rapporten
                 </h3>
                 <div className="space-y-2">
@@ -184,17 +186,18 @@ export default function ReportSidebar({
                         {/* Accordion header */}
                         <button
                           onClick={() => toggleProject(projectName)}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/5"
+                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-grey-850"
                         >
-                          <span className="text-sm font-medium text-white/80">
+                          <span className="text-sm font-medium text-grey-400">
                             {projectName}
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-white/40">
+                            <span className="text-xs text-grey-600">
                               {projectReports.length}
                             </span>
-                            <ChevronIcon
-                              className={`h-4 w-4 text-white/40 transition-transform ${
+                            <ChevronRight
+                              size={16}
+                              className={`text-grey-600 transition-transform ${
                                 isExpanded ? 'rotate-90' : ''
                               }`}
                             />
@@ -220,7 +223,7 @@ export default function ReportSidebar({
                                 {/* Project assignment dropdown */}
                                 {projectsData &&
                                   projectsData.projects.length > 0 && (
-                                    <select
+                                    <Select
                                       value={report.project_id || ''}
                                       onChange={(e) =>
                                         handleAssignReport(
@@ -230,7 +233,7 @@ export default function ReportSidebar({
                                       }
                                       onClick={(e) => e.stopPropagation()}
                                       disabled={assignMutation.isPending}
-                                      className="mt-1 w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/60 focus:border-white/20 focus:outline-none disabled:opacity-50"
+                                      className="mt-1"
                                     >
                                       <option value="">Geen project</option>
                                       {projectsData.projects.map((project) => (
@@ -238,7 +241,7 @@ export default function ReportSidebar({
                                           {project.name}
                                         </option>
                                       ))}
-                                    </select>
+                                    </Select>
                                   )}
                               </div>
                             ))}
@@ -253,54 +256,19 @@ export default function ReportSidebar({
 
             {/* Empty state — minimal */}
             {!hasReports && !hasRecent && !isLoading && (
-              <div className="px-4 py-8 text-center text-sm text-white/30">
+              <div className="px-4 py-8 text-center text-sm text-grey-600">
                 Geen opgeslagen rapporten
               </div>
             )}
 
             {/* Loading state */}
             {isLoading && (
-              <div className="py-8 text-center text-sm text-white/40">
+              <div className="py-8 text-center text-sm text-grey-400">
                 Laden...
               </div>
             )}
           </div>
         </div>
     </aside>
-  )
-}
-
-// Icons
-function XIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
-
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
   )
 }
