@@ -81,17 +81,17 @@ export function PropertyQuickCard({
     <div className="flex items-center gap-2 whitespace-nowrap">
       {isLoading && (
         <div className="flex items-center gap-2 px-1">
-          <div className="h-3.5 w-24 animate-pulse rounded bg-white/20" />
+          <div className="h-3.5 w-24 animate-pulse rounded bg-grey-800" />
         </div>
       )}
 
       {data && !isLoading && (
         <>
-          <svg className="h-4 w-4 shrink-0 text-white/60" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="h-4 w-4 shrink-0 text-grey-400" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
           </svg>
 
-          <span className="text-sm font-medium text-white">
+          <span className="text-sm font-medium text-grey-100">
             {addressLine}
           </span>
 
@@ -99,14 +99,14 @@ export function PropertyQuickCard({
 
           <button
             onClick={onViewDetails}
-            className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium text-white transition-colors hover:bg-white/30"
+            className="rounded-full bg-grey-800 px-2.5 py-0.5 text-xs font-medium text-grey-100 transition-colors hover:bg-grey-700"
           >
             Details &rarr;
           </button>
 
           <button
             onClick={onClose}
-            className="flex h-5 w-5 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white"
+            className="flex h-5 w-5 items-center justify-center rounded-full text-grey-600 transition-colors hover:text-grey-100"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
