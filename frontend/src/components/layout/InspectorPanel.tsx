@@ -29,7 +29,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
       className={`fixed inset-x-0 bottom-0 max-h-[65vh] rounded-t-xl border-t border-grey-800
                   md:absolute md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-80 md:max-h-none md:rounded-none md:border-t-0 md:border-l
                   bg-grey-900 border-grey-800 flex flex-col shadow-lg
-                  transition-transform duration-300 ease-out
+                  transition-transform duration-300 ease-out motion-reduce:transition-none
                   ${isOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
       style={{ zIndex: 'var(--z-property-panel)' }}
       aria-hidden={!isOpen}
@@ -44,7 +44,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
         <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
         <button
           onClick={onClose}
-          className="text-grey-400 hover:text-white transition-colors p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-grey-400 hover:text-white transition-colors motion-reduce:transition-none p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Sluiten"
         >
           <X size={16} />
@@ -122,7 +122,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex-1 h-2 bg-grey-800 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-accent rounded-full transition-all"
+                      className="h-full bg-amber-accent rounded-full transition-all motion-reduce:transition-none"
                       style={{ width: `${Math.round(parcel.score)}%` }}
                     />
                   </div>
