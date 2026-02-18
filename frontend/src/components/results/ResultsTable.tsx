@@ -6,6 +6,7 @@ import {
   useReactTable,
   type SortingState,
   type PaginationState,
+  type RowSelectionState,
   type Updater,
 } from '@tanstack/react-table'
 import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react'
@@ -25,6 +26,8 @@ interface ResultsTableProps {
   onPageChange?: (page: number) => void
   currentPage?: number
   onRowHover?: (parcelId: string | null) => void
+  onSelectionChange?: (selectedParcelIds: string[]) => void
+  selectionKey?: number
 }
 
 // Score badge component for visual indicators
@@ -62,61 +65,6 @@ function ScoreBadge({
 
 const columnHelper = createColumnHelper<ScanResultItem>()
 
-const columns = [
-  columnHelper.accessor('parcel_code', {
-    header: 'Perceelcode',
-    enableSorting: false,
-    cell: (info) => (
-      <span className="font-mono text-xs">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor('address', {
-    header: 'Adres',
-    enableSorting: true,
-    cell: (info) => info.getValue() ?? 'Onbekend',
-  }),
-  columnHelper.accessor('area_m2', {
-    header: 'Oppervlak (m²)',
-    enableSorting: true,
-    cell: (info) => {
-      const value = info.getValue()
-      return value !== null ? value.toLocaleString('nl-NL') : '-'
-    },
-  }),
-  columnHelper.display({
-    id: 'bestemming',
-    header: 'Bestemming',
-    cell: (info) => {
-      const bestemmingen = info.row.original.bestemmingen
-      if (!bestemmingen || bestemmingen.length === 0) return '-'
-
-      const first = bestemmingen[0] as { type?: string; naam?: string }
-      const text = first.type ?? first.naam ?? '-'
-
-      // Truncate to 25 chars
-      return text.length > 25 ? `${text.substring(0, 25)}...` : text
-    },
-  }),
-  columnHelper.accessor('bouwjaar', {
-    header: 'Bouwjaar',
-    enableSorting: true,
-    cell: (info) => {
-      const value = info.getValue()
-      return value !== null ? String(value) : '-'
-    },
-  }),
-  columnHelper.accessor('score', {
-    header: 'Score',
-    enableSorting: true,
-    cell: (info) => (
-      <ScoreBadge
-        score={info.getValue()}
-        category={info.row.original.score_category}
-      />
-    ),
-  }),
-]
-
 export default function ResultsTable({
   scanId,
   filters = {},
@@ -128,6 +76,8 @@ export default function ResultsTable({
   onPageChange,
   currentPage,
   onRowHover,
+  onSelectionChange,
+  selectionKey,
 }: ResultsTableProps) {
   // Initialize sorting from URL-derived filters
   const [sorting, setSorting] = useState<SortingState>(() => {
@@ -143,6 +93,9 @@ export default function ResultsTable({
     pageSize: 50,
   })
 
+  // Row selection state — keyed by parcel UUID (not row index)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map())
 
   // Sync pagination when currentPage prop changes (URL navigation)
@@ -156,6 +109,17 @@ export default function ResultsTable({
       setSorting([{ id: filters.sort_by, desc: filters.sort_order === 'desc' }])
     }
   }, [filters.sort_by, filters.sort_order])
+
+  // Reset row selection when scan, filters, or selectionKey change
+  useEffect(() => {
+    setRowSelection({})
+  }, [scanId, filters, selectionKey])
+
+  // Notify parent when selection changes
+  useEffect(() => {
+    const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k])
+    onSelectionChange?.(selectedIds)
+  }, [rowSelection, onSelectionChange])
 
   // Handle sorting changes — propagate primary sort to URL
   const handleSortingChange = (updater: Updater<SortingState>) => {
@@ -203,6 +167,88 @@ export default function ResultsTable({
     }
   }, [selectedParcelId])
 
+  // Columns defined inside component to access table instance for checkbox column
+  const columns = [
+    // Checkbox column — FIRST, keyed by parcel UUID via getRowId
+    columnHelper.display({
+      id: 'select',
+      size: 40,
+      enableSorting: false,
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          ref={(el) => {
+            if (el) el.indeterminate = table.getIsSomePageRowsSelected()
+          }}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="w-4 h-4 rounded border-grey-700 bg-grey-900 accent-amber-accent cursor-pointer"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 rounded border-grey-700 bg-grey-900 accent-amber-accent cursor-pointer"
+        />
+      ),
+    }),
+    columnHelper.accessor('parcel_code', {
+      header: 'Perceelcode',
+      enableSorting: false,
+      cell: (info) => (
+        <span className="font-mono text-xs">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor('address', {
+      header: 'Adres',
+      enableSorting: true,
+      cell: (info) => info.getValue() ?? 'Onbekend',
+    }),
+    columnHelper.accessor('area_m2', {
+      header: 'Oppervlak (m²)',
+      enableSorting: true,
+      cell: (info) => {
+        const value = info.getValue()
+        return value !== null ? value.toLocaleString('nl-NL') : '-'
+      },
+    }),
+    columnHelper.display({
+      id: 'bestemming',
+      header: 'Bestemming',
+      cell: (info) => {
+        const bestemmingen = info.row.original.bestemmingen
+        if (!bestemmingen || bestemmingen.length === 0) return '-'
+
+        const first = bestemmingen[0] as { type?: string; naam?: string }
+        const text = first.type ?? first.naam ?? '-'
+
+        // Truncate to 25 chars
+        return text.length > 25 ? `${text.substring(0, 25)}...` : text
+      },
+    }),
+    columnHelper.accessor('bouwjaar', {
+      header: 'Bouwjaar',
+      enableSorting: true,
+      cell: (info) => {
+        const value = info.getValue()
+        return value !== null ? String(value) : '-'
+      },
+    }),
+    columnHelper.accessor('score', {
+      header: 'Score',
+      enableSorting: true,
+      cell: (info) => (
+        <ScoreBadge
+          score={info.getValue()}
+          category={info.row.original.score_category}
+        />
+      ),
+    }),
+  ]
+
   const table = useReactTable({
     data: data?.results ?? [],
     columns,
@@ -210,15 +256,19 @@ export default function ResultsTable({
     manualPagination: true,
     manualSorting: true,
     enableMultiSort: true,
+    enableRowSelection: true,
+    getRowId: (row) => row.parcel_id, // Key by parcel UUID, not row index
     isMultiSortEvent: (e) => (e as MouseEvent).shiftKey,
     maxMultiSortColCount: 3,
     pageCount: Math.ceil((data?.total ?? 0) / pagination.pageSize),
     state: {
       sorting,
       pagination,
+      rowSelection,
     },
     onSortingChange: handleSortingChange,
     onPaginationChange: handlePaginationChange,
+    onRowSelectionChange: setRowSelection,
   })
 
   if (error) {

@@ -5,6 +5,7 @@ import ResultsShell from '@/components/layout/ResultsShell'
 import ResultsTable from '@/components/results/ResultsTable'
 import ResultsFilterPanel from '@/components/results/ResultsFilterPanel'
 import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
+import { BulkActionBar } from '@/components/results/BulkActionBar'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import type { ScanResultsFilters, ScanResultItem } from '@/lib/types/scan'
 
@@ -52,6 +53,8 @@ function ResultatenPage() {
   const navigate = useNavigate()
   const [total, setTotal] = useState(0)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
+  const [selectedParcelIds, setSelectedParcelIds] = useState<string[]>([])
+  const [selectionKey, setSelectionKey] = useState(0)
 
   const { scan_id } = search
 
@@ -138,8 +141,28 @@ function ResultatenPage() {
                 onSortChange={handleSortChange}
                 onPageChange={handlePageChange}
                 currentPage={search.page ?? 0}
+                onSelectionChange={setSelectedParcelIds}
+                selectionKey={selectionKey}
               />
             </div>
+
+            {/* Bulk action bar — appears when parcels are selected */}
+            <BulkActionBar
+              selectedCount={selectedParcelIds.length}
+              onExport={() => {
+                const params = new URLSearchParams({
+                  parcel_ids: selectedParcelIds.join(','),
+                })
+                window.open(
+                  `/api/scans/${scan_id}/export/selection?${params.toString()}`,
+                  '_blank',
+                )
+              }}
+              onClearSelection={() => {
+                setSelectedParcelIds([])
+                setSelectionKey((k) => k + 1)
+              }}
+            />
           </>
         ) : (
           /* Empty state */
