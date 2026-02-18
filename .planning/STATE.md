@@ -61,6 +61,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - URL search params for sort/filter/page in /resultaten, multi-column sort indicators in ResultsTable
 - Phase 33 Plan 02: ~2min, 1 task, 1 commit, 2 files
 - ScanProgressOverlay CTA button (SCAN-01), step-specific running labels (SCAN-02), navigatedRef double-nav guard
+- Phase 33 Plan 03: ~4min, 2 tasks, 2 commits, 6 files
+- Checkbox row selection (UUID-keyed RowSelectionState), BulkActionBar, backend export/selection endpoint (DT-03)
 - Phase 33 Plan 04: ~2min, 2 tasks, 2 commits, 4 files
 - Category-grouped collapsible filter panel (Oppervlak/Bestemming/Score), max_area_m2 exposed, table-to-map hover sync via setFeatureState
 
@@ -185,6 +187,14 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Scan completion useEffect deps simplified to [scanStatus.data?.status] — prevents stale closures without unnecessary re-runs
 - Pre-existing TS2532 fixed: SCAN_STEPS[index - 1] possibly undefined via safe prevStep variable
 
+**Phase 33-03 (Multi-Select Checkboxes + Bulk Export):**
+- getRowId keyed by parcel_id UUID (not row index) — essential for paginated tables so selection persists across page changes
+- selectionKey counter pattern: parent increments key to force-clear table RowSelectionState — without this, Deselecteren only resets parent array but checkboxes remain visually checked
+- Column definitions moved inside component (not module-level const) to access table API methods in header checkbox
+- window.open on GET export endpoint — works because export/selection is GET returning a file attachment
+- BulkActionBar returns null when selectedCount===0 (not CSS hidden) — prevents empty bar layout shift
+- Toevoegen aan project disabled with cursor-not-allowed opacity-60 — no parcel-to-project data model yet
+
 **Phase 33-04 (Filter Groups + Hover Sync):**
 - FILTER_GROUPS omits Locatie group — no location filters in scope, empty group avoided
 - All 3 filter groups default to open (all groups in initial openGroups Set)
@@ -225,11 +235,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 33-04-PLAN.md — Category-grouped filter panel (DT-05) + table-to-map hover sync (DT-02)
+**Stopped At:** Completed 33-03-PLAN.md — Multi-select checkboxes + BulkActionBar + backend export/selection (DT-03)
 **Resume File:** None
 
-**Next Action:** Continue Phase 33 (Data Table Polish) — Plan 33-03 (multi-select checkboxes + bulk export)
+**Next Action:** Continue Phase 33 (Data Table Polish) — all plans executed
 
 ---
 
-*State updated: 2026-02-18 — Phase 33 Plan 04 complete (DT-05: category filter groups + DT-02: table-to-map hover sync)*
+*State updated: 2026-02-18 — Phase 33 Plan 03 complete (DT-03: checkbox selection + bulk Excel export)*
