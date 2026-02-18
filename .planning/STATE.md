@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 35 in progress — Settings Page (Plan 02/03 complete)
-**Plan:** 35-02 shipped (settings hooks + AuthContext.updateUser)
-**Status:** Active — Phase 35 Plan 03 (settings UI sections) next
+**Phase:** Phase 35 complete — Settings Page (all 3 plans shipped)
+**Plan:** 35-03 shipped (AccountSection, PasswordSection, NotificationsSection, AppearanceSection)
+**Status:** Phase 35 complete — v4.0 UX Redesign milestone complete
 
-**Progress:** [██████████] 99%
+**Progress:** [██████████] 100%
 
-**Last activity:** 2026-02-18 — Phase 35 Plan 02 shipped (useSettings.ts hooks, settings.ts types, AuthContext.updateUser, 2 tasks, 4 files)
+**Last activity:** 2026-02-18 — Phase 35 Plan 03 shipped (4 settings UI section components, wired /instellingen route, 2 tasks, 5 files)
 
 ---
 
@@ -76,6 +76,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - preferences JSONB migration (b7a8c9d0e1f2), users module (schemas + router), 4 endpoints: PATCH /me, PUT /me/password, GET+PATCH /me/preferences
 - Phase 35 Plan 02: 98s, 2 tasks, 2 commits, 4 files
 - settings.ts types, useSettings.ts hooks (4 TanStack Query hooks), AuthContext.updateUser callback
+- Phase 35 Plan 03: ~8min, 2 tasks, 2 commits, 5 files
+- AccountSection (name/email form, updateUser sync), PasswordSection (auth_provider guard, eye toggle), NotificationsSection (instant-save toggle), AppearanceSection (card selector), /instellingen wired
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -242,6 +244,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - [Phase 35-01]: PATCH /me/preferences uses model_dump(exclude_unset=True) for true partial merge of JSONB preferences
 - [Phase 35-01]: OAuth users blocked from password change: auth_provider \!= 'email' returns 400 with Dutch error message
 
+**Phase 35-03 (Settings Page UI):**
+- useForm defaultValues from useAuth().user at mount — no reactive reset needed since updateUser updates context
+- AppearanceSection defaults to 'light' when map_style is undefined (null-safe fallback)
+- NotificationsSection toggle uses role=switch + aria-checked for accessibility
+- Eye/eye-off toggle on new_password field only (not current_password or confirm_password) per spec
+- Settings section pattern: icon + h2 header, description text, form/controls, toast feedback
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -277,11 +286,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 35-02-PLAN.md (settings hooks and AuthContext.updateUser)
+**Stopped At:** Completed 35-03-PLAN.md (settings UI sections — Phase 35 complete)
 **Resume File:** None
 
-**Next Action:** Execute Phase 35 Plan 03 (settings UI sections: AccountSection, PasswordSection, PreferencesSection)
+**Next Action:** Define next milestone via `/gsd:new-milestone` — v4.0 UX Redesign complete
 
 ---
 
-*State updated: 2026-02-18 — Phase 35 Plan 02 complete (settings hooks + AuthContext.updateUser, 2 tasks, 2 commits, 4 files)*
+*State updated: 2026-02-18 — Phase 35 Plan 03 complete (settings UI sections, 2 tasks, 2 commits, 5 files). Phase 35 and v4.0 milestone complete.*
