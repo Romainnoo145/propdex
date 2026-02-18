@@ -5,7 +5,7 @@ import type { ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsFilterPanelProps {
   filters: ScanResultsFilters
-  onChange: (filters: ScanResultsFilters) => void
+  onChange: (filters: Partial<ScanResultsFilters>) => void
   total: number
 }
 
@@ -18,6 +18,11 @@ export default function ResultsFilterPanel({
   const [localMinArea, setLocalMinArea] = useState(
     filters.min_area_m2?.toString() ?? ''
   )
+
+  // Sync local area state when URL-derived filter changes (e.g. clear all)
+  useEffect(() => {
+    setLocalMinArea(filters.min_area_m2?.toString() ?? '')
+  }, [filters.min_area_m2])
 
   // Debounce area input (500ms delay)
   useEffect(() => {
@@ -41,11 +46,11 @@ export default function ResultsFilterPanel({
   const handleClearFilters = () => {
     setLocalMinArea('')
     onChange({
-      // Preserve sort and pagination
-      sort_by: filters.sort_by,
-      sort_order: filters.sort_order,
-      offset: filters.offset,
-      limit: filters.limit,
+      bestemming_type: undefined,
+      pand_status: undefined,
+      min_area_m2: undefined,
+      max_area_m2: undefined,
+      score_category: undefined,
     })
     toast.info('Filters toegepast', { duration: 2000 })
   }
