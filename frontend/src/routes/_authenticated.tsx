@@ -104,7 +104,7 @@ function AuthenticatedLayout() {
         onSelectReport={handleSelectReport}
         onSelectRecent={handleSelectRecent}
       />
-      <main className="flex-1 relative overflow-hidden pb-14 md:pb-0">
+      <main className="flex-1 relative overflow-hidden">
         {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
         <div
           className="absolute inset-0"
