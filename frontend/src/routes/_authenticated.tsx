@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, redirect, useNavigate, useMatchRoute } from '@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
 import ReportSidebar from '@/components/layout/ReportSidebar'
+import BottomTabNav from '@/components/layout/BottomTabNav'
 import MapView from '@/components/map/MapView'
 import { MapContext } from '@/lib/MapContext'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -103,7 +104,7 @@ function AuthenticatedLayout() {
         onSelectReport={handleSelectReport}
         onSelectRecent={handleSelectRecent}
       />
-      <main className="flex-1 relative overflow-hidden">
+      <main className="flex-1 relative overflow-hidden pb-14 md:pb-0">
         {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
         <div
           className="absolute inset-0"
@@ -120,6 +121,7 @@ function AuthenticatedLayout() {
           <Outlet />
         </MapContext.Provider>
       </main>
+      <BottomTabNav />
     </div>
   )
 }
