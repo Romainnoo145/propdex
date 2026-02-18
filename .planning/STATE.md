@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 32 in progress (Plan 01 complete)
-**Plan:** 32-01 complete — Skeleton, EmptyState, ErrorState feedback primitives created in components/feedback/
-**Status:** Phase 32 Plan 01 done — three shared feedback primitives ready for Plan 02 component upgrades
+**Phase:** Phase 32 in progress (Plan 03 complete)
+**Plan:** 32-03 complete — ScanProgressOverlay redesigned with three-step stepper (Kadaster ophalen, BAG controleren, Bestemmingen) and Industrial Amber token migration
+**Status:** Phase 32 Plan 03 done — FB-05 step progress indicator and FB-06 real-time scan details complete
 
 **Progress:** [█████░░░░░] 50% (5/10 phases complete)
 
-**Last activity:** 2026-02-18 — Phase 32 Plan 01 executed (Skeleton, EmptyState, ErrorState primitives using Industrial Amber tokens)
+**Last activity:** 2026-02-18 — Phase 32 Plan 03 executed (ScanProgressOverlay: three-step stepper, Industrial Amber tokens, real-time sublabels)
 
 ---
 
@@ -53,6 +53,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - All 14 remaining glassmorphism files migrated; MIG-02 and visual consistency gaps closed
 - Phase 32 Plan 01: ~1min, 1 task, 1 commit, 3 files
 - Skeleton, EmptyState, ErrorState feedback primitives; Industrial Amber tokens; lucide-react AlertTriangle; Button CVA integration
+- Phase 32 Plan 03: ~2min, 1 task, 1 commit, 1 file
+- ScanProgressOverlay redesign: three-step stepper (Kadaster/BAG/Bestemmingen), Industrial Amber tokens, real-time sublabels (FB-05 + FB-06)
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -156,6 +158,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ErrorState uses AlertTriangle from lucide-react (already installed), not custom SVG
 - Default error message is Dutch: 'Er is iets misgegaan.' per project language standard
 
+**Phase 32-03 (ScanProgressOverlay Redesign):**
+- SCAN_STEPS array defined inline in ScanProgressOverlay.tsx, not extracted to separate config — keeps scan-specific stepper data co-located
+- Running state shows stepper + progress bar; completed/failed states hide stepper and show single semantic icon only
+- text-warning token used for parcels_failed count (was raw text-amber-600) — warning is correct semantic for partial scan failure
+- Queued state (current_phase=null) shows all steps pending with 'Scan starten...' label
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -188,10 +196,10 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 32-01-PLAN.md (Feedback Primitives)
+**Stopped At:** Completed 32-03-PLAN.md (ScanProgressOverlay Redesign)
 **Resume File:** None
 
-**Next Action:** Execute Phase 32 Plan 02 — component upgrades using Skeleton, EmptyState, ErrorState primitives
+**Next Action:** Execute Phase 32 Plan 04 (if exists) or next phase
 
 ---
 
