@@ -20,6 +20,7 @@ from app.projects.router import router as projects_router
 from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
 from app.scans.router import router as scans_router
+from app.users.router import router as users_router
 
 
 @asynccontextmanager
@@ -89,6 +90,7 @@ app.include_router(reports_router)
 app.include_router(projects_router)
 app.include_router(scans_router)
 app.include_router(monitoring_router)
+app.include_router(users_router)
 
 
 @app.get("/")
