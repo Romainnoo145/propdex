@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Planning next milestone
+**Current focus:** v5.0 Lead Pipeline
 
 ---
 
 ## Current Position
 
-**Milestone:** v4.0 UX Redesign — SHIPPED 2026-02-18
-**Status:** Milestone complete, no active milestone
-
-**Next Action:** Define next milestone via `/gsd:new-milestone`
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-18 — Milestone v5.0 started
 
 ---
 
@@ -83,11 +83,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** v4.0 milestone complete
+**Stopped At:** v5.0 milestone started, defining requirements
 **Resume File:** None
 
-**Next Action:** Define next milestone via `/gsd:new-milestone`
+**Next Action:** Define requirements and create roadmap
 
 ---
 
-*State updated: 2026-02-18 — v4.0 UX Redesign milestone shipped (10 phases, 31 plans, 129 commits)*
+*State updated: 2026-02-18 — v5.0 Lead Pipeline milestone started*

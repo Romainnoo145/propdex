@@ -20,6 +20,17 @@ Scan any Dutch municipality or neighborhood and instantly find unused building o
 
 This is the ONE thing that must work. Everything else is secondary.
 
+## Current Milestone: v5.0 Lead Pipeline
+
+**Goal:** Transform scan results from throwaway data into persistent, actionable lead intelligence — scan persistence, map visualization of results, and a Dutch-language deal pipeline for tracking parcels from discovery to acquisition.
+
+**Target features:**
+- Scan results persistence — revisit any previous scan from Projecten view
+- Map scan layers — scanned wijken highlighted + parcel results on map with score/status coloring
+- Lead pipeline — select parcels → track through Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
+- Report integration — generate full property reports for lead parcels
+- Bug fixes — register 500 error and known issues cleanup
+
 ## Current State
 
 **Shipped:** v4.0 UX Redesign (2026-02-18)
@@ -126,14 +137,21 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-- [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
+- [ ] Scan results persist and are browsable from Projecten view
+- [ ] Map shows scanned wijken and individual parcel results with score/status coloring
+- [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
+- [ ] Full property reports can be generated for lead parcels
+- [ ] Backend register endpoint fixed
+- [ ] Known bugs and tech debt resolved
 
 ### Future
 
+- [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
 - [ ] WOZ waarde integration (free government data)
 - [ ] Energielabel integration (free via RVO/Kadaster)
 - [ ] Comparison view — side-by-side 2-3 properties
 - [ ] Role-based access (admin, analyst, viewer)
+- [ ] Lead status visualization on map (color-coded pins by pipeline stage)
 
 ### Out of Scope
 
@@ -200,4 +218,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-18 after v4.0 milestone shipped*
+*Last updated: 2026-02-18 after v5.0 Lead Pipeline milestone started*
