@@ -36,7 +36,7 @@ export function updatePropertyGeometry(
       type: 'fill',
       source: PROPERTY_SOURCE,
       paint: {
-        'fill-color': 'var(--color-primary)',
+        'fill-color': '#d97706',
         'fill-opacity': 0.15,
       },
     });
@@ -47,7 +47,7 @@ export function updatePropertyGeometry(
       type: 'line',
       source: PROPERTY_SOURCE,
       paint: {
-        'line-color': 'var(--color-primary)',
+        'line-color': '#d97706',
         'line-width': 2,
         'line-opacity': 0.8,
       },
