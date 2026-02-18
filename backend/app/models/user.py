@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Index, String, text
+from sqlalchemy import JSON, Boolean, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TenantMixin, TimestampMixin
@@ -65,6 +65,12 @@ class User(Base, TenantMixin, TimestampMixin):
         Boolean,
         default=True,
         nullable=False,
+    )
+    preferences: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+        comment="User preferences (notification, appearance)",
     )
 
     __table_args__ = (
