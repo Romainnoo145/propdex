@@ -108,7 +108,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
   const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
 
   return (
-    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
+    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
       <button
         onClick={() => handleLayerChange('kaart')}
         className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${

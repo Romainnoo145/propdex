@@ -111,7 +111,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
       <div className={`absolute top-4 left-4 z-[var(--z-search-bar)] ${className}`}>
         <button
           onClick={handleExpand}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-grey-800 bg-grey-900/90 shadow-lg backdrop-blur-md transition-colors hover:bg-grey-900"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-grey-800 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md shadow-lg transition-colors hover:bg-grey-900"
         >
           <SearchIcon />
         </button>
@@ -125,7 +125,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
       ref={containerRef}
       className={`absolute top-4 left-4 z-[var(--z-search-bar)] w-80 ${className}`}
     >
-      <div className="flex items-center gap-2 rounded-xl border border-grey-800 bg-grey-900/90 p-2.5 shadow-lg backdrop-blur-md">
+      <div className="flex items-center gap-2 rounded-xl border border-grey-800 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md p-2.5 shadow-lg">
         <SearchIcon />
         <input
           ref={inputRef}

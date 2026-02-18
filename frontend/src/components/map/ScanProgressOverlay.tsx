@@ -53,7 +53,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
 
   return (
     <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)]">
-      <div className="bg-grey-900/90 backdrop-blur-md border border-grey-800 shadow-lg rounded-lg p-4 min-w-[380px]">
+      <div className="bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md border border-grey-800 shadow-lg rounded-lg p-4 min-w-[380px]">
 
         {/* Terminal states: icon + message */}
         {(isCompleted || isFailed) && (
