@@ -86,6 +86,7 @@ function MapPage() {
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
+  const navigatedRef = useRef(false)
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
   const [zoneInfo, setZoneInfo] = useState<{ info: ZoneFeatureInfo; lngLat: [number, number] } | null>(null)
   const [zoneLoading, setZoneLoading] = useState(false)
@@ -123,6 +124,18 @@ function MapPage() {
   const triggerScan = useTriggerScan()
   const scanStatus = useScanPolling(activeScanId)
   const cancelScan = useCancelScan()
+
+  // Reset navigatedRef when activeScanId changes (new scan = fresh navigation guard)
+  useEffect(() => {
+    navigatedRef.current = false
+  }, [activeScanId])
+
+  // Shared navigation handler for CTA button and completion useEffect
+  const handleViewResults = useCallback(() => {
+    if (navigatedRef.current || !activeScanId) return
+    navigatedRef.current = true
+    navigate({ to: '/resultaten', search: { scan_id: activeScanId } })
+  }, [activeScanId, navigate])
 
   // Fetch saved report if reportId provided
   const savedReport = useReport(reportId || null)
@@ -248,13 +261,13 @@ function MapPage() {
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
       // Invalidate stale results cache so fresh data is fetched
       queryClient.invalidateQueries({ queryKey: ['scan-results', activeScanId] })
-      // Navigate to standalone results route
-      navigate({ to: '/resultaten', search: { scan_id: activeScanId! } })
+      // Navigate via shared handler (prevents double-navigation with CTA button)
+      handleViewResults()
     } else if (scanStatus.data.status === 'failed') {
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
     }
-  }, [scanStatus.data, activeScanId, queryClient])
+  }, [scanStatus.data?.status])
 
   // Setup bestemmingsplan click handler
   useEffect(() => {
@@ -820,12 +833,13 @@ function MapPage() {
         </div>
       )}
 
-      {/* Scan progress overlay */}
-      {activeScanId && scanStatus.data && scanStatus.data.status !== 'completed' && (
+      {/* Scan progress overlay — shown for running and completed states (until user navigates or auto-nav fires) */}
+      {activeScanId && scanStatus.data && !navigatedRef.current && scanStatus.data.status !== 'cancelled' && (
         <ScanProgressOverlay
           status={scanStatus.data}
           onCancel={() => cancelScan.mutate(activeScanId)}
           isCancelling={cancelScan.isPending}
+          onViewResults={handleViewResults}
         />
       )}
 

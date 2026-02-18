@@ -6,6 +6,7 @@ interface ScanProgressOverlayProps {
   status: ScanStatusResponse
   onCancel: () => void
   isCancelling: boolean
+  onViewResults?: () => void
 }
 
 const SCAN_STEPS = [
@@ -39,9 +40,9 @@ function StepCircle({ number, state }: { number: number; state: StepState }) {
  * Scan progress overlay — three-step stepper with Industrial Amber tokens
  *
  * Shows Kadaster / BAG / Bestemmingen progress stepper during running state.
- * Completed/failed states show a semantic icon + message.
+ * Completed/failed states show a semantic icon + message + CTA/dismiss.
  */
-export default function ScanProgressOverlay({ status, onCancel, isCancelling }: ScanProgressOverlayProps) {
+export default function ScanProgressOverlay({ status, onCancel, isCancelling, onViewResults }: ScanProgressOverlayProps) {
   const isCompleted = status.status === 'completed'
   const isFailed = status.status === 'failed'
   const isRunning = !isCompleted && !isFailed
@@ -72,13 +73,34 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling }: 
           </div>
         )}
 
+        {/* Completed: CTA button to view results */}
+        {isCompleted && onViewResults && (
+          <button
+            onClick={onViewResults}
+            className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
+          >
+            Bekijk resultaten
+          </button>
+        )}
+
+        {/* Failed: dismiss link */}
+        {isFailed && (
+          <button
+            onClick={onCancel}
+            className="mt-2 text-xs text-grey-400 hover:text-grey-100 underline transition-colors"
+          >
+            Sluiten
+          </button>
+        )}
+
         {/* Running: three-step stepper */}
         {isRunning && (
           <div className="flex items-center mb-3">
             {SCAN_STEPS.map((step, index) => {
               const state = getStepState(step.id, status.current_phase, false, false)
-              const prevCompleted = index > 0
-                ? getStepState(SCAN_STEPS[index - 1].id, status.current_phase, false, false) === 'completed'
+              const prevStep = index > 0 ? SCAN_STEPS[index - 1] : undefined
+              const prevCompleted = prevStep
+                ? getStepState(prevStep.id, status.current_phase, false, false) === 'completed'
                 : false
               return (
                 <div key={step.id} className="flex items-center flex-1 last:flex-none">
@@ -103,7 +125,9 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling }: 
         {isRunning && (
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-grey-100">
-              {status.current_phase === null ? 'Scan starten...' : 'Verwerken...'}
+              {status.current_phase === null
+                ? 'Scan starten...'
+                : SCAN_STEPS.find((s) => s.id === status.current_phase)?.label ?? 'Verwerken...'}
             </span>
             <span className="text-sm font-semibold text-amber-accent">
               {Math.round(status.progress_pct)}%
