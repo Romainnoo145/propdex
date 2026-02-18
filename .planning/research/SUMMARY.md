@@ -1,261 +1,213 @@
 # Project Research Summary
 
-**Project:** Propdex v4.0 UX Redesign
-**Domain:** PropTech Map Application UX Transformation
-**Researched:** 2026-02-16
+**Project:** Propdex v5.0 — Lead Pipeline, Scan History & Map Visualization
+**Domain:** Dutch PropTech SaaS — property intelligence with acquisition pipeline
+**Researched:** 2026-02-18
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Propdex v4.0 is a pure frontend UX redesign milestone—transforming from glassmorphism to an "Industrial Amber" design system with restructured navigation and comprehensive user feedback. This is NOT a data feature milestone. The research reveals a clear path: adopt a shadcn/ui-inspired copy-paste component architecture, leverage Tailwind v4's native @theme directive for design tokens, add minimal dependencies (only lucide-react and motion), and restructure navigation while keeping the MapLibre instance persistent.
+Propdex v5.0 adds three interconnected capabilities to a mature existing platform: a lead acquisition pipeline for tracking parcels through a Dutch deal workflow, a browsable scan history so users can return to previous scans without losing context, and map-level lead status coloring. All three features integrate cleanly with the v4.0 stack (FastAPI + SQLAlchemy 2.x + PostgreSQL/PostGIS + MapLibre GL JS + TanStack ecosystem) and require zero new backend dependencies and zero new frontend dependencies for MVP. The existing MVT tile infrastructure, TanStack Query patterns, and service layer conventions are sufficient to deliver the full milestone.
 
-The recommended approach is incremental migration: establish design tokens first, build UI primitives, create layout shells, then refactor existing components progressively. The existing React 19 + TanStack Router + MapLibre stack remains unchanged—we're adding UX polish, not replacing infrastructure. This keeps the technical risk low while delivering high visual impact.
+The recommended approach is model-first, API-second, frontend-last. The Lead model is the single most important new artifact — everything in the pipeline depends on it. The scan history gap is a missing `GET /api/scans` list endpoint only; the underlying `AreaScan` table already stores all needed data. Map lead-status coloring is achieved by extending the existing MVT tile query with a LEFT JOIN on the new `lead_statuses` table, not by building a separate GeoJSON endpoint. The decisive architectural choice across all three features: extend the MVT pipeline everywhere, never introduce a GeoJSON fallback for parcel geometry.
 
-The critical risk is MapLibre instance re-mounting during navigation restructure (Pitfall #1). The mitigation is clear: use TanStack Router's layout routes to keep `<MapView>` persistently mounted, letting only the outlet content change. Secondary risks—CSS cascade conflicts during token migration and tablet breakpoint "purgatory"—are well-documented with proven solutions. Overall, this is a well-trodden path in modern React applications with 2026-current best practices.
+The critical risks are multi-tenant data isolation on the new `leads` table (RLS policy is not automatic — must be written explicitly per table), parcel cache lifecycle mismatch (leads must survive parcel cache eviction via `ON DELETE SET NULL` and denormalized `parcel_code`), and coordinate system errors if any GeoJSON endpoint is added without `ST_Transform(geometry, 4326)`. All three pitfalls are pre-empted by the architecture research, which documents exact prevention patterns grounded in the existing codebase.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Only 2 new dependencies needed: lucide-react for icon library (tree-shakeable, 1,671+ icons) and motion for animations (React 19 compatible successor to framer-motion). Sonner for toast notifications is already installed. Tailwind v4's @theme directive handles design token system natively—no additional tooling (Style Dictionary, Theo) required. MapLibre style customization uses inline paint properties for silver/desaturated theme—no external style JSON dependencies.
+The v4.0 stack handles everything. No new packages are required for MVP delivery. The only optional addition is `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` for kanban drag-and-drop, but research strongly recommends deferring kanban — a dropdown stage selector delivers full pipeline functionality with far less complexity, and the dnd-kit packages are stale (last published ~Feb 2024). See `STACK.md` for full version compatibility table.
 
-**Core technologies:**
-- **Tailwind v4 @theme** — Design token system via CSS variables, auto-generates utilities, runtime themeable
-- **lucide-react ^0.564.0** — Tree-shakeable icon library, 1,671+ icons, TypeScript native, zero runtime dependencies
-- **motion ^12.34.0** — React 19 compatible animation library, 120fps GPU-accelerated, declarative API
-- **Sonner 2.0.7** — Toast notifications (already installed, no action needed)
-- **MapLibre GL JS 5.x** — Existing, add raster paint properties for silver theme (no new dependencies)
+**Core technologies (no changes to existing stack):**
+- FastAPI + SQLAlchemy 2.x: new Lead model follows `Mapped[]` + `mapped_column()` pattern throughout
+- PostgreSQL/PostGIS: Lead status as `String(30)` + `CheckConstraint` (NOT PostgreSQL native ENUM — adding new statuses to a native ENUM requires `ALTER TYPE` outside transaction, incompatible with Alembic transaction-wrapped migrations)
+- MapLibre GL JS 5.x: existing `ParcelScoreLayer` extended via data-driven `['get', 'lead_status']` expressions — supported since MapLibre 2.x
+- TanStack Query v5: `useQuery` with page param for scan history (NOT `useInfiniteQuery` — scan history lists are dozens of entries, not thousands)
+- TanStack Router + TanStack Table: new `/leads` route via `createFileRoute`, reuse existing table patterns for scan history
 
-**What NOT to add:** Style Dictionary (Tailwind handles tokens), framer-motion (deprecated for React 19), react-spring (motion is better), Radix/HeadlessUI (not needed for this milestone—no new complex components).
+**What NOT to add:**
+- PostgreSQL native ENUM for lead status — migration pain when stages evolve
+- Martin tile server — no multi-tenant auth, cross-org data leakage risk
+- Separate GeoJSON geometry endpoint for parcel polygons — memory-intensive, no streaming, viewport-unaware
+- `fastapi-pagination` PyPI package — simple limit/offset is 3 lines of SQLAlchemy
+- `react-beautiful-dnd` (end-of-life) or `react-dnd` (no React 19 support)
 
 ### Expected Features
 
-**Must have (table stakes):**
-- Icon-based sidebar navigation — Standard in 2026 professional dashboards
-- Loading/empty/error states — Users expect clear feedback in professional tools
-- Success confirmations via toasts — Industry standard for async operations
-- Settings page — Users expect control over account, appearance, notifications
-- Data table sorting/filtering — Core feature for property intelligence platform
-- List-map sync (data brushing) — Hovering row highlights marker, standard in map apps
-- Progress indicators for scans — Multi-step processes need steppers, users want to know what's ahead
+**Must have (table stakes — users expect these):**
+- Scan history list + scan picker — highest-priority gap; users lose access to all previous scan results without this; data already exists, just needs `GET /api/scans` list endpoint
+- Lead model with Dutch pipeline stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
+- Lead status in results table — dropdown per row, no need to open InspectorPanel
+- Lead status in InspectorPanel — full detail with notes text area
+- Pipeline summary view — count-per-stage dashboard ("6 Nieuw, 3 Onderzoek, 1 Gekocht"), not kanban
+- Filter results by lead status — hide Afgewezen by default; essential noise reduction in large scans
+- Restore scan tile layer on map when returning from results page (already partially implemented; solidify)
 
 **Should have (competitive differentiators):**
-- Inspector slide-over panel — Modern detail disclosure pattern, maintains map context
-- Industrial Amber design system — Distinctive mustard/amber accent + desaturated base sets premium tone
-- Silver/desaturated map style — Professional neutral base lets data overlays (zoning, boundaries) stand out
-- Streamlined scan flow — Fewer clicks than competitors, context preserved throughout
-- Real-time scan progress visibility — Transparency builds trust ("Fetching kadaster...", "Analyzing 247 parcels...")
-- Multi-select + bulk actions — Power user efficiency feature (export selected, add to project)
-- Persistent filter state — Filters survive navigation, reduces frustration
+- Lead status visible on map — color parcels by pipeline stage, toggle vs score-coloring
+- Dutch pipeline stage labels throughout — resonates with NL/BE developers vs generic English CRM
+- Scan history with contextual metadata (gemeente name, wijk, date, parcel count, lead count)
+- Lead notes per parcel — free-text field; no full timestamped audit log for MVP
+- "Voeg toe aan pipeline" bulk action in results table and from InspectorPanel
 
-**Defer (v2+):**
-- Spatial filter interaction (click-to-define on map) — High complexity, nice-to-have
-- Project organization enhancements — If exists, polish later; if not, defer
-- Contextual help/tooltips system — Add after core UX is solid
-- AI-driven filtering — Adds unpredictability, not needed for professional tool
+**Defer to v5.x:**
+- Lead status color layer on map — validate after leads exist in production use
+- Lead notes history (timestamped log) — upgrade from single text field after validation
+- Report linked to lead in InspectorPanel UI
+- Lead count badge on wijk overlay
+
+**Defer to v6+:**
+- Scan comparison across time — meaningful only after 6+ months of production scan data
+- Multi-user lead collaboration — WebSockets, presence, conflict resolution
+- Kanban drag-and-drop — not needed at tens of leads; reconsider at hundreds
+- Scheduled re-scan triggers — overlaps with existing change monitoring feature
 
 ### Architecture Approach
 
-Use a **shadcn/ui-inspired copy-paste component architecture** layered over existing glassmorphism foundation. Build primitives in `components/ui/` (button, card, badge, input, select) styled with Industrial Amber tokens. Create layout shells (`components/layout/map-shell.tsx`, `results-shell.tsx`, `inspector-panel.tsx`) that wrap page content. Use TanStack Router's layout routes to keep MapLibre instance persistent—`<MapView>` lives in `_authenticated.tsx` layout, only `<Outlet />` content swaps.
-
-Manage cross-view state with NavigationContext (React Context for ephemeral UI state like inspector panel open/closed) + search params (TanStack Router type-safe search params for shareable route state like `gemeente_code`, `scan_id`). MapLibre styling uses inline paint properties (`raster-opacity: 0.6`, `raster-saturation: -0.5`) for silver theme—no external style JSON.
+The v5.0 architecture is strictly additive. All new components follow established patterns (service.py → router.py → schemas.py per domain module). The Lead model is the central new entity, linking `ParcelCache` → `Project` with a pipeline stage. Scan history reuses the existing `AreaScan` table — no new storage model. The MVT tile pipeline is extended by one LEFT JOIN, not replaced. The frontend gets one new route (`/leads`), one new nav icon, and several component modifications — all following existing TanStack Query hook patterns. See `ARCHITECTURE.md` for the complete new/modified file list.
 
 **Major components:**
-1. **Design Token System** (`@theme` in `index.css`) — Single source of truth, auto-generates Tailwind utilities, runtime themeable
-2. **UI Primitives** (`components/ui/`) — Copy-paste shadcn/ui pattern, full ownership, customized with Industrial Amber
-3. **Layout Shells** (`components/layout/`) — Map shell, results shell, inspector panel wrapper—composition layer
-4. **Navigation Context** (`lib/navigation-context.tsx`) — Cross-view state management without prop drilling
-5. **Persistent MapView** (in `_authenticated.tsx` layout) — Never unmounts during navigation, shared via outlet context
+1. `backend/app/models/lead.py` (NEW) — Lead model with `parcel_id`, `project_id`, `stage`, `source_scan_id`, `notes`; `ON DELETE SET NULL` for parcel cache resilience; `ON DELETE CASCADE` for project deletion; `UniqueConstraint` per org+project+parcel
+2. `backend/app/leads/` module (NEW) — router + service + schemas for full Lead CRUD (6 endpoints: POST, GET list, GET single, PATCH, DELETE, POST report)
+3. `GET /api/scans` list endpoint (NEW) — paginated `AreaScan` list with `results_count` + `lead_count` subqueries; existing scans router modified
+4. `GET /api/projects/{id}/scans` subresource (NEW) — feeds Projecten scan history view; replaces hardcoded `DEMO_REPORTS`
+5. `POST /api/reports/from-parcel` (NEW) — generates report from `ParcelCache.address`, reusing existing property aggregator pipeline without duplication
+6. `tile_proxy.py` LEFT JOIN extension (MODIFIED) — adds `lead_status` property to MVT tiles via LEFT JOIN on `lead_statuses`
+7. `/leads` route + `LeadKanbanBoard` (NEW) — pipeline page with stage columns, dropdown stage selectors (no drag-and-drop library)
+8. `PromoteParcelModal` (NEW) — parcel → lead conversion flow, invoked from `BulkActionBar` and `InspectorPanel`
+9. `ProjectList` (MODIFIED) — replace hardcoded `DEMO_REPORTS` with real `useProjectScans()` data
 
-**Key patterns:**
-- Tailwind v4 @theme directive for design tokens (primitives → semantic → component tokens)
-- shadcn/ui copy-paste for UI primitives (no npm packages, full source ownership)
-- TanStack Router layout routes for persistent MapView (avoid re-mount pitfall)
-- NavigationContext for ephemeral state + search params for shareable URLs
-- Incremental migration strategy (coexist during transition, migrate high-visibility components first)
+**Build order:** Lead model (A) → Lead API (B) → Types + Hooks (C) → Projecten scan history quick win (D) → Pipeline UI (E) → Report integration (F) → Bug fixes (G, parallel throughout).
 
 ### Critical Pitfalls
 
-1. **MapLibre instance re-mount on route change** — When restructuring navigation to separate route pages (Map, Results, Projects), MapLibre container gets unmounted/re-mounted, causing full reload (2-5 sec), loss of camera position, memory leaks. **Prevention:** Use TanStack Router layout routes with `<Outlet />`, keep `<MapView>` in persistent `_authenticated.tsx` layout, only outlet content changes.
+1. **Cross-tenant data leak on leads table** — `TenantMixin` provides the column but does NOT create the RLS policy. Every new table needs an explicit `ALTER TABLE leads ENABLE ROW LEVEL SECURITY; CREATE POLICY ...` in the migration. Write a multi-tenant integration test (create lead as org A, assert org B sees 0 rows) before any lead endpoint ships. Prevention: follow existing RLS pattern from `parcel_cache` migration.
 
-2. **CSS variable migration breaking cascade specificity** — Replacing hardcoded glassmorphism colors with design token CSS variables causes cascade conflicts. Existing Tailwind utilities override variables, nested components inherit wrong token values from parents. **Prevention:** Incremental migration (one component category at a time), use CSS cascade layers (`@layer`), alias old tokens during transition, ESLint rule to prevent hardcoded colors in new code.
+2. **Parcel cache eviction silently deletes leads** — `parcel_cache` is a cache, not a stable reference table. Lead FK to `parcel_cache.id` must use `ON DELETE SET NULL`, and the lead record must denormalize `parcel_code` (kadaster ID) + `address` for identity after cache eviction. Never use `ON DELETE CASCADE` from leads to parcel cache — this would silently delete user's pipeline data on force-rescan.
 
-3. **Tablet breakpoint "purgatory" (768px-1024px)** — Tablet renders in broken hybrid state: map too small for desktop patterns, slide-over drawers cover 80% of screen, touch targets too small. **Prevention:** Design for three tiers (mobile/tablet/desktop), keep map visible at all times on tablet, enforce 44px touch targets, test on real iPad devices.
+3. **GeoJSON coordinate system error** — `parcel_cache.geometry` is EPSG:28992 (RD New). Any new GeoJSON endpoint that serializes geometry without `ST_Transform(geometry, 4326)` renders parcels in the North Sea with no error. Always use `ST_AsGeoJSON(ST_Transform(geometry, 4326), 6)` in SQL; never transform in Python. The existing MVT endpoint handles this correctly — the solution is to use MVT and avoid new GeoJSON geometry endpoints.
 
-4. **Slide-over panel animations block map interactions** — CSS transitions with `width`/`left` trigger layout recalculation, blocking main thread, making map interactions laggy. **Prevention:** Use GPU-accelerated animations only (`transform`, `opacity`), use `pointer-events: none` during animation, add `will-change` hint.
+4. **PostgreSQL ENUM blocks pipeline evolution** — Lead stage must be `VARCHAR(30)` + `CheckConstraint`, not a PostgreSQL native `ENUM`. All existing Propdex models (`AreaScan.status` = `String(20)`) follow this pattern. Alembic cannot run `ALTER TYPE ... ADD VALUE` inside a transaction — the migration fails at the first stage rename or addition.
 
-5. **Design token proliferation (too many tokens)** — Creating hundreds of hyper-specific tokens (`--color-amber-button-hover-border`) makes system rigid and slow. **Prevention:** Three-tier hierarchy (primitive → semantic → component), start with 20-30 tokens, add only when same value appears 3+ times.
+5. **MapLibre feature-state fails silently with UUID IDs** — Any new GeoJSON source without `generateId: true` or `promoteId` will silently break hover and selection highlighting. `setFeatureState()` accepts UUIDs but does nothing with them — no console error. Use `generateId: true` on any new GeoJSON source; clear stale states with `map.removeFeatureState()` before `setData()` calls. The existing MVT tile endpoint avoids this because PostGIS generates integer rowids automatically.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure follows dependency order: design system foundation → layout structure → view separation → component refactoring → polish.
+Based on combined research, the natural phase structure follows the explicit dependency chain identified in ARCHITECTURE.md (Phases A→G). Features and pitfall mitigations cluster cleanly into 5-6 roadmap phases.
 
-### Phase 1: Design System Foundation
-**Rationale:** All subsequent work depends on design tokens being established first. Without tokens, UI primitives can't be built, and migration can't start.
-**Delivers:** Industrial Amber color scale + semantic tokens in `@theme`, navigation context for cross-view state, initial UI primitives (button, card, badge).
-**Addresses:** Design token system (FEATURES.md: table stakes), visual identity foundation (FEATURES.md: differentiator).
-**Avoids:** Token proliferation (PITFALLS.md #5) by starting with minimal 20-30 tokens, three-tier hierarchy.
-**Research flag:** SKIP research — Tailwind v4 @theme is well-documented, standard pattern.
+### Phase 1: Data Foundation
+**Rationale:** Every frontend and API feature depends on the Lead model existing and scan history being queryable. Nothing else can be built without this layer.
+**Delivers:** Lead model + Alembic migration + RLS policy; `GET /api/scans` list endpoint; `GET /api/projects/{id}/scans` subresource
+**Addresses features:** Scan history (backend), Lead pipeline (backend foundation)
+**Avoids pitfalls:** Cross-tenant data leak (Pitfall 1 — RLS written in this migration), Parcel cache eviction (Pitfall 6 — `ON DELETE SET NULL` + `parcel_code` denormalization), PostgreSQL ENUM (Pitfall 7 — `String(30)` + `CheckConstraint` from the start)
+**Research flag:** No deeper research needed — patterns derived directly from existing codebase migrations
 
-### Phase 2: Navigation Structure + Persistent MapView
-**Rationale:** Must solve MapLibre re-mount pitfall before splitting routes. This is the critical risk area—get it wrong and map UX breaks.
-**Delivers:** `_authenticated.tsx` layout with persistent `<MapView>`, NavigationProvider wrapping outlet, InspectorPanel in layout.
-**Addresses:** Inspector slide-over panel (FEATURES.md: differentiator), cross-view state management (ARCHITECTURE.md: Pattern 4).
-**Avoids:** MapLibre re-mount (PITFALLS.md #1 CRITICAL) by keeping map in layout, only outlet changes.
-**Research flag:** SKIP research — TanStack Router layout routes well-documented, MapLibre persistence pattern proven.
+### Phase 2: Lead Pipeline API
+**Rationale:** All 6 lead endpoints + `POST /api/reports/from-parcel` must exist before frontend hooks can be written. Backend tests can be written against these endpoints before any frontend work.
+**Delivers:** `backend/app/leads/` module (router + service + schemas), `POST /api/reports/from-parcel`
+**Addresses features:** Lead CRUD, pipeline stage transitions, report generation from parcel
+**Uses:** SQLAlchemy 2.x `Mapped[]` pattern, `db.add()/flush()/commit()` (NOT `async with db.begin()` — causes "transaction already begun" per MEMORY.md)
+**Research flag:** No deeper research needed — follows established scan/project service patterns exactly
 
-### Phase 3: Silver Map Theme + Layout Shells
-**Rationale:** With navigation stable, customize map appearance and build composition layer for views.
-**Delivers:** MapLibre silver theme via paint properties, MapShell + ResultsShell wrappers.
-**Addresses:** Silver/desaturated map style (FEATURES.md: differentiator), professional neutral base for data overlays.
-**Uses:** MapLibre raster paint properties (STACK.md: map styling), no external style JSON.
-**Avoids:** External style dependencies, slow load times, limited customization control.
-**Research flag:** SKIP research — MapLibre paint properties documented, desaturation approach standard.
+### Phase 3: Frontend Types, Hooks & Scan History UI
+**Rationale:** Components depend on typed hooks, not raw fetch calls. The scan history UI is the fastest visible deliverable (replaces hardcoded demo data with real data, zero new components).
+**Delivers:** Lead TypeScript types, `useLeads` hook, `useScanHistory` / `useProjectScans` hooks; updated `ProjectList.tsx` with real scan history + "Toon kaart" navigation to `/map?scan_id=X`
+**Addresses features:** Scan history list with metadata, revisit old scan on map (wires the existing map `useEffect` handler to real data)
+**Uses:** TanStack Query `useQuery` with page param, existing `apiFetch()` wrapper
+**Research flag:** No deeper research needed — identical pattern to existing `useScans.ts` and `useProjects.ts`
 
-### Phase 4: View Separation (Results Route)
-**Rationale:** Navigation foundation stable, now extract results logic from monolithic map.tsx to separate route.
-**Delivers:** `routes/_authenticated/resultaten.tsx` as separate route, refactored map.tsx using MapShell.
-**Addresses:** Streamlined navigation (FEATURES.md: differentiator), separation of concerns (ARCHITECTURE.md: anti-pattern #3).
-**Implements:** Results shell wrapper (ARCHITECTURE.md: Pattern 7), TanStack Router search params for scan_id.
-**Avoids:** Monolithic map page (PITFALLS.md: prevents testing, poor separation).
-**Research flag:** SKIP research — File-based routing is standard TanStack Router pattern.
+### Phase 4: Lead Pipeline UI
+**Rationale:** Requires all data plumbing from Phases 1-3 verified. The Kanban board is the most visible deliverable — build it after the foundation is solid and tested.
+**Delivers:** `PromoteParcelModal`, `LeadKanbanBoard`, `LeadCard` with dropdown stage selector, `LeadDetailModal`, `/leads` route, updated `BulkActionBar` and `InspectorPanel`, new `SideRailNav` icon (Briefcase or Target)
+**Addresses features:** Lead status in results table, lead status in InspectorPanel, pipeline summary view, "Voeg toe aan pipeline" bulk action
+**Avoids pitfalls:** No drag-and-drop library (ARCHITECTURE.md Anti-Pattern 2 — select dropdown is accessible, mobile-friendly, sufficient at current lead volume)
+**Research flag:** No deeper research needed — standard TanStack Table + Modal + Query pattern
 
-### Phase 5: Component Migration (High Visibility)
-**Rationale:** Design system + navigation stable, now migrate existing glassmorphism components to Industrial Amber.
-**Delivers:** Updated Drawer/Modal with Industrial Amber tokens, SideRailNav using ui/button, ReportSidebar using ui/card.
-**Addresses:** Design system consistency (FEATURES.md: Industrial Amber as differentiator).
-**Avoids:** CSS cascade conflicts (PITFALLS.md #2) via incremental migration, cascade layers, aliased tokens.
-**Research flag:** SKIP research — Incremental migration strategies well-documented.
+### Phase 5: Map Lead Status Integration & MVT Extension
+**Rationale:** Depends on leads existing in the system (Phase 1). Extends the MVT tile query rather than building new infrastructure. The `ParcelScoreLayer` paint expression toggle is a frontend-only change once the tile includes `lead_status`.
+**Delivers:** Extended `tile_proxy.py` with LEFT JOIN on `lead_statuses`; `ParcelScoreLayer` mode toggle (score | lead_status); map layer toggle "Toon leadstatus"
+**Addresses features:** Lead status visible on map, score/lead-status toggle
+**Avoids pitfalls:** GeoJSON coordinate system error (Pitfall 2 — MVT avoids this entirely), GeoJSON setData bottleneck at 2000 parcels (Pitfall 5 — MVT is viewport-aware), MapLibre UUID feature-state (Pitfall 3 — MVT uses PostGIS integer IDs)
+**Research flag:** No deeper research needed — direct extension of existing `tile_proxy.py` with documented SQL pattern in STACK.md
 
-### Phase 6: Feedback Systems
-**Rationale:** Core UX structure complete, now add comprehensive user feedback.
-**Delivers:** Loading states (spinners + skeletons), error states with recovery, success toasts, empty states, progress indicators for scans.
-**Addresses:** All table stakes feedback features (FEATURES.md: loading/error/empty/success/progress).
-**Uses:** Sonner for toasts (already installed), motion for skeleton animations.
-**Avoids:** Toast notifications for errors (PITFALLS.md: use banners/modals for errors requiring action).
-**Research flag:** SKIP research — Feedback patterns well-established (PatternFly, Carbon Design System).
-
-### Phase 7: Data Table Polish
-**Rationale:** Feedback systems in place, now enhance core data interaction patterns.
-**Delivers:** List-map sync (hover highlighting), multi-select + bulk actions, advanced filters, persistent filter state.
-**Addresses:** Table stakes data table features + power user efficiency (FEATURES.md).
-**Implements:** TanStack Table integration with MapLibre (ARCHITECTURE.md: data flow).
-**Research flag:** SKIP research — Data table patterns documented (Pencil & Paper UX, PatternFly bulk selection).
-
-### Phase 8: Mobile Responsiveness
-**Rationale:** Desktop UX polished, now adapt for mobile/tablet field use.
-**Delivers:** Three-tier responsive design (mobile/tablet/desktop), 44px touch targets, mobile view-only mode, bottom sheet inspector on mobile.
-**Addresses:** Responsive mobile view (FEATURES.md: table stakes), field work support.
-**Avoids:** Tablet purgatory (PITFALLS.md #3) via distinct tablet layout, touch target issues (PITFALLS.md #8) via 44px minimum.
-**Research flag:** SKIP research — Responsive patterns well-documented (Toptal, Dundas BI, ArcGIS dashboards).
-
-### Phase 9: Settings Page
-**Rationale:** Core UX complete, add user preferences and configuration.
-**Delivers:** Settings page with categories (account, notifications, appearance, data management).
-**Addresses:** Settings page (FEATURES.md: table stakes).
-**Research flag:** SKIP research — Settings patterns standard (Material Design, SetProduct examples).
-
-### Phase 10: Polish + Performance Audit
-**Rationale:** All features implemented, now optimize and remove legacy code.
-**Delivers:** Animation performance tuning, glassmorphism disabled on mobile (PITFALLS.md #7), bundle size optimization, legacy CSS removal, Storybook documentation.
-**Avoids:** Glassmorphism performance issues (PITFALLS.md #7) via mobile disable, animation blocking (PITFALLS.md #4) via GPU-only transforms.
-**Research flag:** SKIP research — Performance profiling is implementation-specific.
+### Phase 6: Bug Fixes & Hardening
+**Rationale:** Independent of feature development; can run in parallel with any phase. Final hardening round before milestone close.
+**Delivers:** Backend register endpoint 500 fix; ARQ idempotency (`ON CONFLICT DO NOTHING` for ScanResult re-runs on worker restart); Redis tile cache using existing ARQ Redis connection; batch flush pattern for scan jobs (Python `uuid4()` + `add_all()` every 100 rows)
+**Avoids pitfalls:** ARQ re-run crashes on duplicate ScanResult (Pitfall 4), MVT tile DB overload at 5+ concurrent users (Pitfall 8), N+1 flush pattern for 2000-parcel scans (Pitfall 9)
+**Research flag:** No research needed — all mitigations are code-level patterns with exact implementations in PITFALLS.md
 
 ### Phase Ordering Rationale
 
-- **Phase 1-2 are foundational:** Design tokens and navigation structure MUST come first. All other work depends on these.
-- **Phase 3-4 stabilize architecture:** Map theme and view separation establish the structural patterns.
-- **Phase 5 enables visual migration:** With structure stable, migrate components from glassmorphism to Industrial Amber.
-- **Phase 6-7 add UX polish:** Feedback systems and table interactions can run in parallel after Phase 5.
-- **Phase 8 adapts for mobile:** Defer until desktop UX is polished to avoid designing twice.
-- **Phase 9-10 are optional polish:** Settings and performance can be deferred if timeline pressured.
-
-**Dependencies:**
-- Phase 2 requires Phase 1 (needs design tokens)
-- Phase 3-4 require Phase 2 (need persistent MapView)
-- Phase 5 requires Phase 1 (needs design tokens to migrate to)
-- Phase 6-7 can run in parallel after Phase 5
-- Phase 8 requires Phase 5 (visual system stable)
-- Phase 9-10 require all previous phases
-
-**Critical path:** Phase 1 → Phase 2 → Phase 5 (foundation → navigation → migration)
-
-**Parallelization opportunities:**
-- Phase 3 can start while Phase 2 testing completes (map theme independent of navigation)
-- Phase 6-7 can run in parallel (feedback systems vs data table interactions)
+- Phases 1 → 2 → 3 → 4 are strictly sequential due to model → API → hooks → UI dependency chain
+- Phase 5 (MVT extension) can begin after Phase 1 (Lead model exists for the LEFT JOIN), but the UI toggle requires Phase 4 complete
+- Phase 6 is fully parallel — bug fixes have no dependencies and can absorb slack time between other phases
+- Phase 3 delivers the first user-visible feature (scan history) before the full kanban pipeline (Phase 4) — enables early validation
+- Report integration (`POST /api/reports/from-parcel`) is built in Phase 2 but wired into the UI in Phase 4 (`LeadDetailModal`) — correctly deferred until leads are usable
 
 ### Research Flags
 
-**All phases: SKIP research** — This is a well-trodden UX redesign path. All technologies (Tailwind v4, TanStack Router, MapLibre, Motion, Lucide) have current 2026 documentation. All patterns (shadcn/ui copy-paste, layout routes, design tokens, incremental migration, responsive design) are established best practices. The research conducted provides comprehensive guidance—no phase needs deeper research during planning.
+Phases with standard patterns (no `/gsd:research-phase` needed during planning):
+- **Phase 1:** TenantMixin + RLS pattern documented in existing migrations; Lead model follows existing `AreaScan` pattern exactly
+- **Phase 2:** Exact replica of scan/project service structure; report-from-parcel reuses existing aggregator
+- **Phase 3:** Identical to existing `useScans.ts` + `useProjects.ts` patterns
+- **Phase 4:** Standard TanStack Table + Modal + Query pattern; dropdown stage selector avoids dnd-kit complexity
+- **Phase 5:** Extends `tile_proxy.py` — documented in STACK.md with exact SQL including the LEFT JOIN
+- **Phase 6:** All mitigations are code-level; ARQ + Redis patterns are established in existing codebase
 
-**Validation during execution:**
-- Phase 2: Test MapLibre persistence with DevTools Profiler (confirm no re-mount)
-- Phase 3: Visual QA for silver map theme (ensure data overlays still pop)
-- Phase 5: Visual regression testing during component migration
-- Phase 8: Real device testing on iPad, iPhone SE, Android mid-range
+No phases require deeper research. All patterns are grounded in direct codebase inspection (HIGH confidence) or official documentation.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All dependencies verified current (npm versions, React 19 compatibility). Tailwind v4 @theme released Jan 2025, widely adopted. Motion is official successor to framer-motion. |
-| Features | HIGH | Feature landscape based on 2026 PropTech dashboard trends, established UX patterns (PatternFly, Carbon Design System, NN/g), real-world PropTech examples (LightBox, Transect). Table stakes vs differentiators clearly categorized. |
-| Architecture | HIGH | shadcn/ui pattern proven, TanStack Router layout routes documented, MapLibre + React integration patterns established. Incremental migration strategy standard for design system updates. |
-| Pitfalls | HIGH | All pitfalls sourced from official docs (MapLibre memory leak issue #4811, TanStack Router render optimization docs, CSS cascade specs) + real-world migration experiences. Prevention strategies proven (cascade layers 2026 best practice, layout routes prevent re-mount). |
+| Stack | HIGH | Zero new dependencies for MVP confirmed. All compatibility checked against installed versions. dnd-kit defer decision backed by React 19 peer dep analysis and library staleness. |
+| Features | HIGH | What exists vs. what is missing determined by direct codebase reading (no guessing). Dutch pipeline stages are standard NL real estate practice confirmed across multiple sources. Competitor analysis (Dealpath, Northspyre) is MEDIUM confidence but not decision-critical for this milestone. |
+| Architecture | HIGH | All patterns derived from direct inspection of existing working code. Build order confirmed by explicit dependency graph. No external API dependencies introduced. Report-from-parcel reuses existing aggregator — verified by reading `reports/router.py`. |
+| Pitfalls | HIGH | Critical pitfalls (RLS, coordinate system, parcel cache lifecycle) verified with official sources and existing codebase examples. MVT-over-GeoJSON recommendation is technically grounded in MapLibre documentation and PostGIS capabilities. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Design aesthetic validation:** "Industrial Amber" is a custom interpretation of color trends 2026 (mustard/amber accent + desaturated base). While color psychology and trend research support this, visual design is subjective. **Mitigation:** Create design mockups in Phase 1, validate with stakeholders before full migration.
+- **"Afgewezen" vs. "Verloren" stage naming inconsistency:** STACK.md uses `verloren` while FEATURES.md and ARCHITECTURE.md use `afgewezen`. Both mean "rejected/lost" in Dutch but have different connotations. This must be resolved before the Lead model migration is written — it cannot be changed without a subsequent migration. Recommend `afgewezen` (rejected — implies a decision about the property) over `verloren` (lost — implies a failure of the salesperson).
 
-**MapLibre silver theme specifics:** Desaturation approach (raster-opacity, raster-saturation) is standard, but exact values (0.6 opacity, -0.5 saturation) need visual tuning. **Mitigation:** Start with documented ranges, iterate in Phase 3 based on data overlay visibility.
+- **Report-from-parcel: synchronous vs. async:** `POST /api/reports/from-parcel` makes multiple external API calls (BAG, PDOK, DSO, RCE, SRU) that can take 10-30 seconds. The synchronous approach is acceptable for MVP, but the planning phase should flag this for measurement during Phase 2 implementation. If response times exceed 15 seconds consistently, wrap in an ARQ background job with polling — the same pattern used elsewhere.
 
-**Tablet breakpoint values:** Recommended 768px (portrait) and 1024px (landscape) are industry standard, but optimal panel widths on tablet need testing. **Mitigation:** Design for 360px max panel width on tablet, validate with real iPad in Phase 8.
+- **Lead history table (Pitfall 12 — LOW urgency):** Omitting a `lead_history` table for stage transition timestamps is hard to retrofit. The roadmapper should make an explicit decision: include a minimal `lead_history` table in Phase 1 (adds ~30 minutes of work, prevents a painful future migration) or consciously defer with a "will not have in v5.0" note. Research recommends including it from day one.
 
-**Animation performance on low-end mobile:** Motion library performs well on modern devices, but older Android (< 2022) may struggle with concurrent animations. **Mitigation:** Test on mid-range Android in Phase 10, add `prefers-reduced-motion` support if needed.
-
-No research gaps require resolution before roadmap creation—all findings are actionable.
+- **`project_id` NOT NULL on leads — empty project state:** ARCHITECTURE.md establishes that `project_id` is NOT NULL (leads without a project are orphaned and unbrowsable). The UI must handle the empty-projects state gracefully when a user tries to add their first parcel to the pipeline. The `PromoteParcelModal` needs a "Create project first" path or inline project creation.
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence — direct codebase inspection)
+- `backend/app/models/area_scan.py` — `String(20)` status precedent, AreaScan field inventory
+- `backend/app/scans/router.py` — existing scan endpoints, tile proxy pattern, organization scoping
+- `backend/app/services/tile_proxy.py` — ST_AsMVT JOIN pattern, geometry handling
+- `frontend/src/components/map/ParcelScoreLayer.tsx` — data-driven paint expression pattern to extend
+- `frontend/src/components/layout/InspectorPanel.tsx` — parcel detail panel extend point
+- `frontend/src/components/projects/ProjectList.tsx` — DEMO_REPORTS TODO identifying the gap
+- `frontend/src/routes/_authenticated/map.tsx` — historical scan restoration existing `useEffect` pattern
+- `frontend/src/hooks/useScans.ts` — TanStack Query pattern to replicate for leads
 
-**Stack:**
-- [Tailwind CSS v4.0 Release](https://tailwindcss.com/blog/tailwindcss-v4) — @theme directive, design token system
-- [Motion for React Official Docs](https://motion.dev/docs/react) — React 19 compatibility, animation API
-- [Lucide React Official Docs](https://lucide.dev/guide/packages/lucide-react) — Icon library, tree-shaking
-- [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/) — Paint properties, raster layers
-- [Sonner Official Docs (shadcn/ui)](https://ui.shadcn.com/docs/components/radix/sonner) — Toast notifications
-
-**Features:**
-- [9 Dashboard Design Principles (2026) | DesignRush](https://www.designrush.com/agency/ui-ux-design/dashboard/trends/dashboard-design-principles)
-- [Data Table Design UX Patterns & Best Practices - Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-enterprise-data-tables)
-- [PatternFly Design System](https://www.patternfly.org/) — Empty states, bulk selection, progress stepper
-- [UI best practices for loading, error, and empty states - LogRocket](https://blog.logrocket.com/ui-design-best-practices-loading-error-empty-state-react/)
-- [Map interaction | Axis Maps](https://www.axismaps.com/guide/map-interaction) — List-map sync patterns
-
-**Architecture:**
-- [The anatomy of shadcn/ui | Manupa](https://manupa.dev/blog/anatomy-of-shadcn-ui) — Copy-paste component pattern
-- [TanStack Router Layout Routes](https://tanstack.com/router/v1/docs/framework/react/routing/routing-concepts)
-- [TanStack Router Search Params](https://tanstack.com/router/v1/docs/framework/react/guide/search-params)
-- [Tailwind CSS v4 @theme directive](https://tailwindcss.com/docs/theme)
-- [Incremental migration approaches | CircleCI](https://circleci.com/blog/incremental-migration-approaches-for-legacy-applications/)
-
-**Pitfalls:**
-- [MapLibre GL JS Memory Leak Issue #4811](https://github.com/maplibre/maplibre-gl-js/issues/4811) — Map re-mount memory issues
-- [CSS Custom Properties In The Cascade | Smashing Magazine](https://www.smashingmagazine.com/2019/07/css-custom-properties-cascade/)
-- [TanStack Router: Render Optimizations](https://tanstack.com/router/v1/docs/framework/react/guide/render-optimizations)
-- [Migrations are the hardest part of design systems work | Mae Capozzi](https://maecapozzi.com/newsletter/75)
-- [Breakpoints in Responsive Design - Nielsen Norman Group](https://www.nngroup.com/articles/breakpoints-in-responsive-design/)
+### Primary (HIGH confidence — official documentation)
+- [MapLibre GL JS Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) — MVT over GeoJSON recommendation for large parcel datasets
+- [MapLibre feature-state integer ID requirement #1043](https://github.com/maplibre/maplibre-gl-js/issues/1043) — UUID feature-state silent failure pitfall
+- [PostGIS ST_AsGeoJSON](https://postgis.net/docs/ST_AsGeoJSON.html) — coordinate projection with `ST_Transform`
+- [PostGIS ST_Transform](https://postgis.net/docs/ST_Transform.html) — EPSG:28992 → 4326 pattern
+- [GeoAlchemy2 + Alembic](https://geoalchemy-2.readthedocs.io/en/latest/alembic.html) — GIST index autogenerate gap
+- [TanStack Query v5 Paginated Queries](https://tanstack.com/query/v5/docs/react/guides/paginated-queries) — `useQuery` vs `useInfiniteQuery` decision
+- [MapLibre GL JS GeoJSONSource — setData](https://maplibre.org/maplibre-gl-js/docs/API/classes/GeoJSONSource/) — performance characteristics for GeoJSON vs MVT
 
 ### Secondary (MEDIUM confidence)
-
-- [LightBox Vision℠](https://www.lightboxre.com/data/lightbox-vision/) — PropTech design system example
-- [Transect Environmental Platform](https://www.transect.com/) — Map-centric PropTech UX patterns
-- [Glassmorphism UI Design Trend 2026](https://www.designstudiouiux.com/blog/what-is-glassmorphism-ui-trend/)
-- [Mobile-First vs Desktop-First 2026 Strategy](https://www.digittrix.com/blogs/mobile-first-vs-desktop-first-choose-the-right-approach)
+- [Alembic PostgreSQL Enum complexity](https://roman.pt/posts/alembic-enums/) — confirms `VARCHAR` + `CheckConstraint` is preferable for evolving status values
+- [Dealpath deal pipeline management](https://www.dealpath.com/deal-pipeline-management/) — competitor feature comparison for Dutch pipeline stage decisions
+- [reSPACio real estate pipeline stages](https://respacio.com/real-estate-software/contact-management/guide-to-real-estate-pipeline-stages/) — Dutch acquisition stage reference
+- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — version 6.3.1, React 19 peer dep confirmation, staleness assessment
+- [ARQ documentation — idempotency](https://arq-docs.helpmanual.io/) — at-least-once delivery, re-run handling
+- [MapLibre GL JS Memory Leak #6154](https://github.com/maplibre/maplibre-gl-js/issues/6154) — GeoJSON source update memory behavior
+- [MapLibre Expressions & Data-Driven Styling (DeepWiki)](https://deepwiki.com/maplibre/maplibre-gl-js/3.2-expressions-and-data-driven-styling) — `feature-state` vs data-driven property comparison
 
 ---
-*Research completed: 2026-02-16*
-*Ready for roadmap: YES*
+*Research completed: 2026-02-18*
+*Ready for roadmap: yes*

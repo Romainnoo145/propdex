@@ -1,639 +1,604 @@
-# Domain Pitfalls: UX Redesign for PropTech Map Application
+# Domain Pitfalls: Lead Pipeline, Scan Persistence, Map Parcel Visualization
 
-**Domain:** PropTech Map Application (MapLibre + React)
-**Migration scope:** Design system addition + navigation restructure
-**Researched:** 2026-02-16
+**Domain:** PropTech SaaS — adding lead CRM pipeline, persistent scan storage, and GeoJSON parcel map layer to an existing property intelligence platform
+**Researched:** 2026-02-18
+**Scope:** Pitfalls specific to adding these features to Propdex (existing ~40k LOC, PostgreSQL + FastAPI + MapLibre)
+
+---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, full map re-renders, or major performance issues.
+Mistakes that cause rewrites, data leakage, or major architectural breaks.
 
 ---
 
-### Pitfall 1: MapLibre Instance Re-mount on Route Change
+### Pitfall 1: Lead Table Missing organization_id Causes Cross-Tenant Data Leak
 
 **What goes wrong:**
-When restructuring navigation to use separate route pages (Map, Data/Results, Projects), the MapLibre map container gets unmounted and re-mounted on route transitions. This causes the map to fully reload: all layers, sources, event handlers, and WebGL context are destroyed and recreated. User experiences a flash of empty map, loss of camera position, and 2-5 second reload time. In SPAs with frequent navigation, memory consumption increases with each map creation/destruction cycle.
+A new `leads` or `deals` table is added without `organization_id NOT NULL` and a corresponding RLS policy. The existing `get_db()` dependency sets `app.current_tenant_id` via `SET LOCAL`, but this only blocks access if RLS is active on the table. A new table without a policy silently returns all tenants' leads to anyone who authenticates.
 
 **Why it happens:**
-React Router (and TanStack Router) unmount components when navigating between routes by default. If the `<MapView>` component lives inside a route file (like `map.tsx`), React destroys it when switching to another route. The MapLibre cleanup (`map.remove()`) runs, but the WebGL context and tile cache are lost. MapLibre React libraries use ref-based lifecycle patterns that don't survive route unmounts without explicit state management.
+RLS is not default-active for new tables. The pattern `TenantMixin` (from `app/models/base.py`) provides the column, but the developer must also write the migration, create the policy, and add the index. When moving fast, the policy step is skipped because the column is there and queries seem to work fine (they do — they just return everything).
 
 **Consequences:**
-- Map flashes blank on every route change
-- 2-5 second reload for tiles, layers, sources
-- Loss of camera position, zoom level, selected layers
-- Increased memory consumption in SPAs (MapLibre GitHub issue #4811 documents memory leaks on `map.remove()`)
-- User frustration ("Why does the map keep resetting?")
-- Breaking change for existing map-centric workflows
+- One organization sees another's leads and deal pipeline — GDPR violation
+- Multi-tenant isolation completely broken for lead data
+- Silent failure: no errors, tests may pass if test DB is single-tenant
 
 **Prevention:**
 
-1. **Persistent Layout Pattern (recommended):** Use TanStack Router's layout routes with `<Outlet />`. Keep `<MapView>` in a persistent layout component that wraps all navigation targets. Only the outlet content (panels, tables, modals) changes; map stays mounted.
-
-   ```tsx
-   // _authenticated.tsx (layout)
-   export function AuthLayout() {
-     const mapRef = useRef<MapLibreMap | null>(null)
-     return (
-       <div className="flex h-screen">
-         <MapView mapRef={mapRef} /> {/* Never unmounts */}
-         <Outlet context={{ mapRef }} /> {/* Content swaps here */}
-       </div>
-     )
-   }
-
-   // map.tsx (route)
-   export function MapRoute() {
-     const { mapRef } = useOutletContext()
-     // Use shared map ref, map never re-mounts
-   }
+1. Use `TenantMixin` on every new model — enforces `organization_id` column.
+2. Every new table needs a matching migration with explicit RLS:
+   ```sql
+   ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+   CREATE POLICY leads_tenant_isolation ON leads
+     USING (organization_id::text = current_setting('app.current_tenant_id'));
    ```
-
-2. **Router Context for Map State:** Pass map ref through TanStack Router context (not React Context, which re-renders). Use `context` prop on route definitions to share map instance without re-creating it.
-
-3. **Conditional Visibility vs Unmount:** For panels/overlays, use CSS `display: none` or `visibility: hidden` instead of conditional rendering (`{showPanel && <Panel />}`). This keeps components mounted but hidden, preserving their state.
-
-4. **Guard against re-initialization:** In `MapView` component, use empty dependency array `useEffect([], [])` to ensure map is created exactly once. Do NOT include `transformRequest` or other props in dependencies unless you want a full re-mount.
+3. Add `organization_id` composite index:
+   ```sql
+   CREATE INDEX ix_leads_org_status ON leads(organization_id, status);
+   ```
+4. Write a multi-tenant integration test that logs in as org A and asserts it cannot read org B's leads.
 
 **Detection:**
-- Map flashes white/blank when clicking navigation links
-- DevTools React Profiler shows `MapView` unmounting on route change
-- Browser DevTools Performance tab shows repeated MapLibre initialization
-- Console warnings: "Cannot read property 'remove' of null" (stale map ref)
-- Memory Profiler shows increasing heap usage with navigation
-- User reports: "Map keeps resetting when I switch views"
+- Integration test: create lead as org A, query as org B — should return 0 rows
+- Check `pg_policies` view: every new table should have at least one policy
+- Code review: any `select(Lead)` without `.where(Lead.organization_id == org_id)` is a bug
 
-**Phase to address:** Phase 1 (Navigation restructure foundation)
-**Urgency:** CRITICAL — must be solved before any route splitting begins
+**Phase to address:** First phase that adds the `leads` table (database schema)
+**Urgency:** CRITICAL — must be verified before any lead endpoint ships
 
 ---
 
-### Pitfall 2: CSS Variable Migration Breaking Cascade Specificity
+### Pitfall 2: GeoJSON Endpoint Serializes EPSG:28992 Coordinates — MapLibre Silently Renders Wrong Location
 
 **What goes wrong:**
-When replacing hardcoded glassmorphism colors with design token CSS variables, existing component styles break due to cascade and specificity conflicts. Inline styles that previously used `background: rgba(0, 0, 0, 0.55)` now use `background: var(--color-surface-dark)`, but Tailwind utility classes with higher specificity override the variable, causing panels to render with wrong backgrounds. Nested components inherit wrong token values from parent scopes. Buttons, modals, and panels render with broken colors or transparency.
+The `parcel_cache.geometry` column stores polygons in EPSG:28992 (RD New — Dutch national grid). When building a GeoJSON endpoint to serve parcel polygons to the frontend, the geometry is fetched from SQLAlchemy and serialized without coordinate transformation. MapLibre expects WGS84 (EPSG:4326). The polygons are rendered at the wrong geographic position (in the North Sea or near Africa), but no error is thrown.
 
 **Why it happens:**
-CSS custom properties follow cascade rules but are evaluated at computed-value time, not declaration time. When you define `--color-primary: #2563eb` in `:root` and override it in `.dark-mode { --color-primary: #1e40af }`, components using `var(--color-primary)` resolve to different values based on DOM hierarchy. This differs from Sass variables (compile-time) or Tailwind classes (specificity-based). Proximity matters for inheritance, but NOT for selectors. A deeply nested component can accidentally inherit a token from an intermediate parent, not the root design system.
-
-Additionally, Tailwind's utility classes have high specificity (often `.class` or `.class.class`). When migrating from inline styles to token-based classes, the old Tailwind utilities remain in JSX. These override the new token-based variables unless you use Tailwind's `@layer` system or cascade layers to control ordering.
+GeoAlchemy2 returns `WKBElement` objects. When you call `json.dumps(geometry)` or Pydantic serializes the geometry, it may output raw coordinate values in RD New (x/y values like `[115000, 485000]`). MapLibre interprets these as longitude/latitude, placing the polygon far outside the Netherlands.
 
 **Consequences:**
-- Panels render with wrong background colors (opaque instead of transparent)
-- Text becomes unreadable (wrong contrast ratios)
-- Dark mode / light mode tokens conflict, causing visual chaos
-- Components deep in tree inherit wrong token values from intermediate parents
-- Animations break (CSS transitions on `var()` values behave differently than hardcoded colors)
-- Design tokens don't cascade as expected, requiring extensive debugging
+- Parcels render thousands of kilometers from their real location
+- No error in browser or backend — silent bad data
+- MVT tile endpoint (already built) avoids this by using `ST_AsMVTGeom` with correct transformation, but a new GeoJSON endpoint would not
 
 **Prevention:**
 
-1. **Incremental Migration Strategy:**
-   Migrate one component category at a time: buttons → cards → panels → modals. Use codemods or manual refactoring to replace hardcoded values with tokens. Do NOT mix old and new systems in the same component.
+Always project to WGS84 in the SQL query, never in Python:
+```sql
+SELECT ST_AsGeoJSON(ST_Transform(geometry, 4326), 6) AS geom
+FROM parcel_cache
+WHERE ...
+```
 
-2. **Alias Old Tokens During Transition:**
-   Create temporary aliases for old values to reduce blast radius:
-   ```css
-   :root {
-     /* New design system */
-     --color-amber-500: #f59e0b;
+The `maxdecimaldigits=6` argument is sufficient for map display and reduces payload size. Never use more than 6 decimal places for display (sub-meter precision, ~10cm).
 
-     /* Legacy aliases (deprecate in Phase 3) */
-     --color-primary: var(--color-amber-500);
-   }
-   ```
+In FastAPI endpoints that return GeoJSON:
+```python
+# BAD: raw WKBElement (EPSG:28992)
+geom_json = json.loads(to_shape(parcel.geometry).geojson)
 
-3. **Use Cascade Layers (2026 best practice):**
-   Leverage CSS `@layer` to control token ordering without specificity wars:
-   ```css
-   @layer base, tokens, components, utilities;
-
-   @layer tokens {
-     :root {
-       --color-surface-dark: rgba(0, 0, 0, 0.55);
-     }
-   }
-
-   @layer utilities {
-     .bg-surface-dark {
-       background: var(--color-surface-dark);
-     }
-   }
-   ```
-   This ensures utilities always win, regardless of source order.
-
-4. **Prevent Regression with Linting:**
-   Add ESLint rule to prevent hardcoded colors in new code:
-   ```json
-   {
-     "rules": {
-       "no-restricted-syntax": [
-         "error",
-         {
-           "selector": "Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
-           "message": "Use design tokens instead of hardcoded colors"
-         }
-       ]
-     }
-   }
-   ```
-
-5. **Test in Isolation:**
-   Create a Storybook/component playground to test token changes without full app context. Verify cascade behavior in nested components before deploying.
+# GOOD: PostGIS projects to WGS84 in query
+result = await db.execute(
+    text("SELECT ST_AsGeoJSON(ST_Transform(geometry, 4326), 6) FROM parcel_cache WHERE id = :id"),
+    {"id": str(parcel_id)}
+)
+```
 
 **Detection:**
-- Visual regression: panels render with wrong colors
-- DevTools Computed tab shows `var(--color-primary)` resolving to unexpected value
-- Contrast checker fails (text unreadable against background)
-- Dark mode switches cause color flashes or incorrect themes
-- CSS transitions "jump" instead of animating smoothly
-- Console warnings: `CSSStyleDeclaration` shows overridden variables
+- Rendered polygons appear far outside Netherlands bounds in MapLibre
+- Coordinate values in GeoJSON response are in the 100,000–200,000 range (RD New), not -180–180 (WGS84)
+- `console.log(feature.geometry.coordinates)` shows unexpected large values
 
-**Phase to address:** Phase 2 (Design token migration)
-**Urgency:** HIGH — causes visual regression if not handled incrementally
+**Phase to address:** Any phase adding a GeoJSON API endpoint for parcel boundaries
+**Urgency:** CRITICAL — guaranteed wrong output if not handled from the start
 
 ---
 
-### Pitfall 3: Mobile Breakpoint "Tablet Purgatory"
+### Pitfall 3: MapLibre feature-state with UUID String IDs Silently Fails
 
 **What goes wrong:**
-When adding mobile-responsive design to the existing desktop-first map application, the tablet breakpoint (768px - 1024px) renders in a broken hybrid state. The map is too small for desktop patterns (side-by-side panels), but slide-over drawers cover 80% of the screen, making the map unusable. Touch targets are too small for mobile but laid out for desktop. Users on iPad or small laptops experience a degraded UI that's worse than either mobile or desktop versions.
+When adding hover and selection effects to GeoJSON parcel polygons (e.g., highlight on hover, select on click), `map.setFeatureState()` is called with the parcel UUID as the feature id. It appears to work — no errors — but the hover/selection highlight never renders. This is because MapLibre's `setFeatureState()` requires feature ids to be integers or strings castable to integers, and UUIDs (`"3f7a...c2"`) are not.
 
 **Why it happens:**
-The existing app is desktop-first (designed for 1366px+). When adding mobile responsiveness, developers often focus on extremes: small phone (360px) and desktop (1366px+). Tablet breakpoints (768px - 1024px) are treated as "scaled-down desktop" instead of a distinct layout. Tailwind's default breakpoints (`md: 768px`) encourage binary mobile/desktop thinking.
-
-Additionally, the app's core pattern (map + side panels) doesn't scale down gracefully. At 768px width, a 400px drawer leaves only 368px for the map—too cramped for meaningful interaction. The "industrial amber" design system likely uses fixed-width components (buttons, inputs) that overflow on tablets.
+The GeoJSON spec allows any JSON value as a feature `id`. MapLibre internally requires integer-compatible ids for feature-state. The error is silent: `setFeatureState()` accepts any value but does nothing if the id doesn't match. Existing code (`ParcelScoreLayer.tsx`) correctly sidesteps this for MVT tiles because PostGIS generates integer rowids. A new GeoJSON source won't have integer ids by default.
 
 **Consequences:**
-- Tablet users see broken layout (panels overlap map, content overflows)
-- Touch targets too small for fingers (buttons designed for mouse precision)
-- Slide-over panels cover entire viewport, hiding map context
-- Navigation becomes unusable (icon sidebar too small, text truncated)
-- Landscape orientation (1024x768) breaks differently than portrait (768x1024)
-- User abandonment on iPad (common device for real estate professionals)
+- Hover highlight never appears on parcel polygons
+- Click selection never visually highlights selected parcel
+- No console error — debugging is time-consuming
+- Developer assumes feature-state is broken, may introduce workarounds that add complexity
 
 **Prevention:**
 
-1. **Design for Three Tiers, Not Two:**
-   - **Mobile (320px - 768px):** Full-screen views with bottom sheet panels, stack navigation
-   - **Tablet (768px - 1280px):** Slide-over panels with map visible, larger touch targets, hybrid nav
-   - **Desktop (1280px+):** Side-by-side panels, icon sidebar, mouse-optimized
+Use either `generateId` (auto-assign sequential integers) or `promoteId` (use a numeric property as id) when adding GeoJSON sources:
 
-2. **Map-First Layout on Tablet:**
-   Keep map visible at all times. Use narrower slide-over panels (max 360px) or collapsible panels that start minimized. Never cover more than 40% of viewport width on tablet.
+```typescript
+// Option A: generateId (auto-assigns 0, 1, 2, ... — but resets on setData)
+map.addSource('parcel-geojson', {
+  type: 'geojson',
+  data: featureCollection,
+  generateId: true,  // MapLibre assigns integer IDs automatically
+});
 
-3. **Responsive Breakpoints for PropTech:**
-   ```css
-   /* Tailwind config */
-   theme: {
-     screens: {
-       'sm': '640px',   // Large phone
-       'md': '768px',   // Tablet portrait
-       'lg': '1024px',  // Tablet landscape / small laptop
-       'xl': '1280px',  // Desktop
-       '2xl': '1536px', // Large desktop
-     }
-   }
-   ```
-   Design distinct layouts for `md` and `lg`, don't assume `md === desktop`.
+// Option B: promoteId (use a property value as the feature id)
+map.addSource('parcel-geojson', {
+  type: 'geojson',
+  data: featureCollection,
+  promoteId: 'parcel_index',  // numeric property pre-assigned in backend response
+});
+```
 
-4. **Touch Target Minimum:**
-   On `md` and below, enforce 44px minimum touch target (Apple HIG standard):
-   ```css
-   @media (max-width: 1024px) {
-     button, a, input {
-       min-height: 44px;
-       min-width: 44px;
-     }
-   }
-   ```
+For `generateId: true`, ids reset to 0 on `setData()` — which means previously set feature states become invalid. Use a stale-state cleanup before calling `setData()`:
+```typescript
+// Clear all selections before data refresh
+map.removeFeatureState({ source: 'parcel-geojson' });
+source.setData(newData);
+```
 
-5. **Test on Real Devices:**
-   iPad (10.2", 1620x2160), iPad Pro (12.9", 2048x2732), Surface (1368x912). Emulators don't catch touch interaction issues.
+For MVT tiles (existing `ParcelScoreLayer`), the tile already contains integer feature ids from PostGIS — no change needed.
 
 **Detection:**
-- Panels overlap map on tablet (768px - 1024px)
-- Touch targets fail "fat finger" test (< 44px)
-- Content overflows horizontally on tablet
-- Navigation icons unreadable at `md` breakpoint
-- Landscape vs portrait tablet render differently (aspect ratio not handled)
-- User complaints from iPad users
+- `map.setFeatureState(...)` called without error, but layer fill-opacity paint expression `['feature-state', 'hover']` never activates
+- Add `console.log(feature.id)` in mousemove handler — if `undefined` or string UUID, source lacks integer ids
+- Try `generateId: true` and re-test
 
-**Phase to address:** Phase 3 (Mobile responsiveness)
-**Urgency:** HIGH — iPad is common for real estate professionals
+**Phase to address:** Phase adding GeoJSON scan result visualization to map
+**Urgency:** HIGH — selection and hover UX broken without this
 
 ---
 
 ## Moderate Pitfalls
 
-These cause user experience issues or technical debt but don't require rewrites.
+These cause bugs, performance problems, or significant debugging time, but don't require architectural rewrites.
 
 ---
 
-### Pitfall 4: Slide-Over Panel Animations Block Map Interactions
+### Pitfall 4: ARQ Job Re-runs Scan on Restart — Upsert Not Idempotent for ScanResult
 
 **What goes wrong:**
-When adding slide-over panel animations (slide-in drawers, bottom sheets) to the design system, the CSS transitions cause map interactions to lag or freeze during animation. Panning the map while a drawer is animating feels janky. Touch/click events on the map are blocked or delayed by the animating panel overlay, even when the panel doesn't visually cover the map area.
+ARQ uses at-least-once delivery. If the worker restarts mid-scan (e.g., during Phase 4: qualifying), the `area_scan_job` re-runs from the start. Phase 3 (upsert parcels into `parcel_cache`) is idempotent due to `ON CONFLICT (organization_id, parcel_id)`. But Phase 4 creates `ScanResult` rows. On re-run, the `ScanResult` inserts fail with `UniqueViolation` on `uq_scan_results_scan_parcel`, crashing the job with status `failed`.
 
 **Why it happens:**
-MapLibre runs on WebGL (GPU-accelerated), while CSS animations run on the main thread (unless using `transform` and `opacity` only). When a panel animates with `width`, `left`, or `background` transitions, it triggers layout recalculation (reflow) on every frame. This blocks the main thread, preventing MapLibre from processing map interactions. Additionally, slide-over panels often use `position: fixed` with high `z-index`, creating a stacking context that captures pointer events even when the panel is translucent or off-screen.
+The scan job does not checkpoint progress. On re-run after restart, it re-fetches BAG WFS data (which may return slightly different features due to API variability) and tries to re-insert `ScanResult` rows that already exist. The unique constraint prevents duplicates correctly, but the exception surfaces as a job failure rather than graceful resumption.
 
 **Prevention:**
 
-1. **GPU-Accelerated Animations Only:**
-   Use `transform` and `opacity` for all panel animations. Never animate `width`, `height`, `left`, `top`, or `background`.
-   ```css
-   /* BAD: triggers reflow */
-   .drawer {
-     transition: width 300ms;
-     width: 400px;
-   }
+In the ScanResult insert loop (Phase 4), use `INSERT ... ON CONFLICT DO NOTHING` via SQLAlchemy:
+```python
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-   /* GOOD: GPU-accelerated */
-   .drawer {
-     transition: transform 300ms;
-     transform: translateX(0);
-     width: 400px; /* fixed, not animated */
-   }
-   ```
-
-2. **Pointer Events Control:**
-   Use `pointer-events: none` on animating elements, enable only when animation completes:
-   ```css
-   .drawer {
-     pointer-events: none;
-   }
-   .drawer[data-state="open"] {
-     pointer-events: auto;
-   }
-   ```
-
-3. **Will-Change Hint:**
-   Tell browser to optimize for animation:
-   ```css
-   .drawer {
-     will-change: transform, opacity;
-   }
-   ```
-   Remove after animation completes to avoid memory overhead.
-
-4. **Debounce Map Interactions During Transition:**
-   Disable map gestures during panel animation:
-   ```tsx
-   const [isAnimating, setIsAnimating] = useState(false)
-
-   function openDrawer() {
-     setIsAnimating(true)
-     if (mapRef.current) {
-       mapRef.current.dragPan.disable()
-     }
-     setTimeout(() => {
-       setIsAnimating(false)
-       mapRef.current?.dragPan.enable()
-     }, 300) // Match animation duration
-   }
-   ```
-
-5. **Test with Performance Profiler:**
-   Use Chrome DevTools Performance tab. Record while opening/closing panel. Look for "Recalculate Style" or "Layout" in the timeline—these indicate main thread blocking.
-
-**Detection:**
-- Map panning feels laggy when drawer opens/closes
-- Performance Profiler shows layout recalculation spikes
-- Mobile devices show stuttering (60fps → 30fps during animation)
-- Clicks on map are delayed or don't register during panel animation
-- DevTools FPS meter shows dropped frames during transitions
-
-**Phase to address:** Phase 4 (Panel animations)
-**Urgency:** MEDIUM — affects UX but not blocking
-
----
-
-### Pitfall 5: Design Token Proliferation (Too Many Tokens)
-
-**What goes wrong:**
-When creating the "Industrial Amber" design system, the team creates hundreds of highly specific tokens: `--color-amber-button-hover-border`, `--spacing-panel-header-left`, `--font-size-card-subtitle-mobile`. The token file grows to 500+ lines. Developers struggle to find the right token, guess wrong, or create duplicates. The design system becomes rigid—adding a new component requires 20 new tokens. Design iteration slows to a crawl.
-
-**Why it happens:**
-Teams treat design tokens like a database schema, creating a token for every possible value. This stems from fear of inconsistency or cargo-culting design system examples (Material Design has 100+ color tokens). Without a clear token hierarchy (primitive → semantic → component), tokens multiply uncontrollably.
-
-**Prevention:**
-
-1. **Three-Tier Token Hierarchy:**
-   - **Primitives:** Raw values (`--amber-500: #f59e0b`)
-   - **Semantic:** Purpose-based (`--color-accent: var(--amber-500)`)
-   - **Component:** Scoped overrides (`--button-bg: var(--color-accent)`)
-
-   Most components use semantic tokens. Component tokens are rare, only for complex components.
-
-2. **80/20 Rule:**
-   80% of the UI should use 20% of tokens. If you need a new token for every component, your system is too specific.
-
-3. **Alias Aggressively:**
-   ```css
-   :root {
-     /* Primitives */
-     --amber-500: #f59e0b;
-     --gray-900: #111827;
-
-     /* Semantic (used by 80% of components) */
-     --color-accent: var(--amber-500);
-     --color-text: var(--gray-900);
-     --spacing-md: 1rem;
-
-     /* Component overrides (rare) */
-     --button-padding: var(--spacing-md);
-   }
-   ```
-
-4. **Start Minimal, Add on Demand:**
-   Launch with 20-30 tokens. Add new tokens only when the same hardcoded value appears 3+ times in the codebase.
-
-5. **Document Decision Tree:**
-   ```
-   "What token for button background?"
-   → Is it an accent action? → --color-accent
-   → Is it destructive? → --color-error
-   → Is it neutral? → --color-surface
-   ```
-
-**Detection:**
-- Token file exceeds 200 lines
-- Developers ask "Which token should I use?" frequently
-- Multiple tokens with same computed value (duplication)
-- New components require 5+ new tokens
-- Design changes require updating 10+ token references
-
-**Phase to address:** Phase 2 (Design token creation)
-**Urgency:** MEDIUM — causes tech debt if unchecked
-
----
-
-### Pitfall 6: Imperative Map Layer Logic in useEffect Cleanup Hell
-
-**What goes wrong:**
-The current codebase uses imperative `useEffect` + ref patterns for all map layers (see `map.tsx` lines 249-257 for bestemmingsplan click handler, lines 269-301 for monitored wijk overlay). When restructuring navigation, components mount/unmount more frequently. Cleanup functions run out of order, layers are removed before their dependencies, causing "Cannot read property 'getLayer' of undefined" errors. Memory leaks appear (event handlers not removed, layers not cleaned up). Adding new layers becomes a minefield of dependency arrays and cleanup race conditions.
-
-**Why it happens:**
-MapLibre's API is imperative (`map.addLayer()`, `map.removeLayer()`), but React's model is declarative. The current code bridges this with `useEffect`:
-```tsx
-useEffect(() => {
-  if (!mapReady || !mapRef.current) return
-  addBestemmingsplanLayer(mapRef.current)
-  return () => removeBestemmingsplanLayer(mapRef.current)
-}, [mapReady])
+stmt = pg_insert(ScanResult).values(
+    organization_id=org_id,
+    scan_id=scan.id,
+    parcel_id=parcel.id,
+    score=score,
+    flags={"category": category, "factors": factors},
+)
+stmt = stmt.on_conflict_do_nothing(
+    index_elements=["scan_id", "parcel_id"]  # Matches uq_scan_results_scan_parcel
+)
+await session.execute(stmt)
 ```
 
-When navigation causes remounts, these effects run in unpredictable order. A layer's cleanup runs after the map is removed, or before a dependent layer is cleaned up. The dependency array (`[mapReady, wijkGeojson, monitoredProjects]`) triggers re-runs when unintended, causing layers to flicker or duplicate.
+Also reset the scan status to `running` at job start (already done in current code), but add a check: if results already exist, skip Phase 4 entirely.
 
-**Consequences:**
-- Console errors: "Cannot read property 'getLayer' of undefined"
-- Map layers duplicate on route change (2x gemeente boundaries)
-- Memory leaks (event handlers persist after component unmount)
-- Race conditions (cleanup runs before async layer load completes)
-- Adding new layers requires understanding 5+ useEffect interactions
+**Detection:**
+- Worker logs: `UniqueViolation` on `scan_results` during re-run
+- Scan status goes to `failed` with error message containing `uq_scan_results_scan_parcel`
+- ARQ job history shows repeated runs with same scan_id
+
+**Phase to address:** Phase adding scan persistence (or as part of data model hardening)
+**Urgency:** HIGH — ARQ restart is realistic in production (Docker restart, OOM kill)
+
+---
+
+### Pitfall 5: GeoJSON Source setData Replaces Entire Dataset on Every Filter Change — Main Thread Serialization Bottleneck
+
+**What goes wrong:**
+When adding map visualization for scan results, the React component calls `source.setData(newGeoJSON)` whenever the user filters parcels (e.g., by bestemming type or score range). For 2,000 parcels, each `setData()` call serializes the entire FeatureCollection to a string via `JSON.stringify()` on the main thread, then transfers it to a MapLibre web worker. On a mid-range laptop, this takes 50-200ms per filter change, causing UI stuttering and sluggish filter interaction.
+
+**Why it happens:**
+MapLibre's GeoJSON source has no partial update mechanism for feature properties. `setData()` replaces the full dataset. The serialization cost scales linearly with feature count and vertex count per polygon. Dutch cadastral parcels can have complex boundaries with 50+ vertices each — a 2,000 parcel set may be 2-5MB of GeoJSON.
 
 **Prevention:**
 
-1. **Centralize Layer Management:**
-   Create a `useMapLayers` hook that manages all layers in one place:
-   ```tsx
-   function useMapLayers(mapRef: RefObject<MapLibreMap>) {
-     const [layers, setLayers] = useState<LayerConfig[]>([])
+Use the MVT tile endpoint (already built at `/api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf`) for parcel visualization instead of a GeoJSON source. The tile approach:
+- Only loads geometry for the current viewport — not 2,000 parcels at once
+- Already handles reprojection, clipping, and scoring via `ST_AsMVTGeom`
+- Feature-state for hover/selection works because MVT tiles include integer feature ids via PostGIS rowids
 
-     useEffect(() => {
-       if (!mapRef.current) return
+If GeoJSON is required for a specific feature (e.g., showing all selected parcels at once), use `generateId: true` and `source.updateData()` for incremental changes where possible (MapLibre >= 3.x).
 
-       layers.forEach(layer => {
-         if (layer.visible) addLayer(mapRef.current, layer)
-         else removeLayer(mapRef.current, layer.id)
-       })
-
-       return () => {
-         layers.forEach(layer => removeLayer(mapRef.current, layer.id))
-       }
-     }, [layers, mapRef])
-   }
-   ```
-
-2. **Guard Cleanup Functions:**
-   Always check if map/layer exists before cleanup:
-   ```tsx
-   return () => {
-     if (mapRef.current && mapRef.current.getLayer('layer-id')) {
-       mapRef.current.removeLayer('layer-id')
-     }
-   }
-   ```
-
-3. **Use Refs for Mutable State (Not Dependency Arrays):**
-   Avoid triggering re-runs with refs for values that shouldn't cause layer re-render:
-   ```tsx
-   const activeGemeenteRef = useRef(activeGemeente)
-   activeGemeenteRef.current = activeGemeente
-   // Use in handler without triggering useEffect
-   ```
-
-4. **Consider Declarative Wrapper:**
-   Evaluate `react-map-components-maplibre` or `react-maplibre` for declarative layer API:
-   ```tsx
-   <RMap>
-     <RSource id="gemeenten" {...sourceProps} />
-     <RLayer id="gemeente-fill" {...layerProps} />
-   </RMap>
-   ```
-   This eliminates cleanup hell entirely.
-
-5. **Document Layer Dependencies:**
-   Create a layer dependency graph:
-   ```
-   map (base)
-   ├── gemeente-boundaries (independent)
-   ├── wijk-boundaries (depends on gemeente selection)
-   │   └── monitored-wijk-overlay (depends on wijk-boundaries)
-   └── bestemmingsplan (independent)
-   ```
+For filter-driven updates: implement server-side filtering (already done via `list_results` endpoint) and use the MVT approach where the tile query joins on `scan_results` for the active scan — changing filter means changing which tile endpoint URL is used.
 
 **Detection:**
-- Console errors on navigation: "Cannot read property 'getLayer' of undefined"
-- Map layers persist after component unmount (visible in DevTools)
-- Browser Memory Profiler shows increasing heap on route change
-- Layers duplicate (2x boundaries after navigating back to /map)
-- Event handlers fire multiple times (indicates duplicate listeners)
+- Browser DevTools Performance tab shows `JSON.stringify` taking > 50ms on filter change
+- UI freezes or drops frames when filter sliders are moved
+- MapLibre web worker receiving messages > 1MB (visible in Network DevTools)
 
-**Phase to address:** Phase 1 (Navigation foundation) or Phase 5 (Refactor to declarative)
-**Urgency:** MEDIUM — manageable with guards, but grows with complexity
+**Phase to address:** Phase adding parcel map visualization
+**Urgency:** HIGH — 2,000 parcels is within Propdex's documented scan range (200-2000)
+
+---
+
+### Pitfall 6: Lead-to-Parcel FK Violates on Parcel Cache Eviction
+
+**What goes wrong:**
+The `parcel_cache` table uses `ON DELETE CASCADE` for `scan_results`. If a lead model adds a foreign key to `parcel_cache.id`, deleting or re-scanning a gemeente (which deletes old scan results) could cascade to delete leads — losing user's pipeline data. Alternatively, if `parcel_cache` entries are evicted as a maintenance task, leads lose their parcel reference without warning.
+
+**Why it happens:**
+`parcel_cache` is named "cache" — it was designed as mutable infrastructure, not as a stable reference table. Leads are long-lived business records. A FK from a business entity to a cache table creates a lifecycle mismatch.
+
+**Consequences:**
+- Force re-scan deletes scan results (cascade) which cascades to leads — user's pipeline disappears
+- Cache maintenance (future) silently orphans lead records
+- FK constraint errors when trying to evict stale parcel entries
+
+**Prevention:**
+
+Use one of two approaches (choose based on roadmap direction):
+
+**Option A: Denormalize parcel identity into the lead record (safer)**
+```python
+class Lead(Base, TenantMixin, TimestampMixin):
+    parcel_cache_id: Mapped[uuid.UUID | None]  # Nullable FK, SET NULL on delete
+    parcel_code: Mapped[str]                   # Denormalized kadaster ID (stable, no FK)
+    address: Mapped[str]                       # Denormalized address string
+    gemeente_code: Mapped[str]                 # For filtering
+```
+Set the FK as `ON DELETE SET NULL` so deleting the parcel cache entry nulls the reference without deleting the lead. The `parcel_code` (kadaster ID) remains as a stable identifier.
+
+**Option B: Promote parcel_cache to a stable reference table**
+Remove the "cache" semantics: never delete parcel entries, only update them. This requires adding an explicit TTL/eviction strategy — more work but cleaner architecture.
+
+**Detection:**
+- Test: create lead for parcel, force re-scan, verify lead still exists
+- Check migration: `ON DELETE CASCADE` on lead's parcel FK is almost always wrong
+- Code review: any `parcel_cache` delete or bulk purge logic must not cascade to leads
+
+**Phase to address:** Lead database schema design phase
+**Urgency:** HIGH — data loss bug that appears only weeks after deployment
+
+---
+
+### Pitfall 7: PostgreSQL ENUM for Lead Status Blocks Adding New Stages Without Full Migration
+
+**What goes wrong:**
+Lead pipeline status is defined as a `sa.Enum('prospect', 'qualified', 'negotiating', 'closed', name='lead_status')`. Six months later, the client wants to add a "due_diligence" stage between negotiating and closed. `ALTER TYPE lead_status ADD VALUE` cannot be run inside a transaction block, and the new value cannot be used until after commit. Alembic migrations run inside transactions by default — the migration fails.
+
+**Why it happens:**
+PostgreSQL enum types cannot add values inside a transaction in a way that lets the same transaction use the new value. Alembic wraps each migration in a transaction. The workaround (`op.execute('COMMIT')` before `ALTER TYPE`) is fragile and breaks migration rollback capability.
+
+**Consequences:**
+- Production migration fails — requires manual intervention
+- Cannot add new pipeline stages without complex migration surgery
+- Rollback is impossible if migration partially ran
+
+**Prevention:**
+
+Use `VARCHAR(50)` with a `CHECK CONSTRAINT` for lead status instead of a PostgreSQL enum:
+```sql
+CREATE TABLE leads (
+    ...
+    status VARCHAR(50) NOT NULL DEFAULT 'prospect'
+        CHECK (status IN ('prospect', 'qualified', 'negotiating', 'closed')),
+    ...
+);
+```
+
+Adding a new status is a simple `ALTER TABLE leads DROP CONSTRAINT ...; ALTER TABLE leads ADD CONSTRAINT ... CHECK (status IN (..., 'due_diligence'))` — runs inside a transaction, rollback-safe.
+
+In the SQLAlchemy model:
+```python
+VALID_STATUSES = {'prospect', 'qualified', 'negotiating', 'closed'}
+
+status: Mapped[str] = mapped_column(
+    String(50),
+    nullable=False,
+    default="prospect",
+)
+```
+
+Validate at the Pydantic schema level, not at the database enum level. All existing Propdex models (e.g., `AreaScan.status`) already use `String(20)` — follow this established pattern.
+
+**Detection:**
+- Alembic migration with `ALTER TYPE ... ADD VALUE` fails in CI with: `ERROR: cannot add enum value inside a transaction`
+- Rollback fails after partial migration
+
+**Phase to address:** Lead table schema design (before the first migration is written)
+**Urgency:** MEDIUM — not painful immediately, becomes painful at first pipeline evolution
+
+---
+
+### Pitfall 8: MVT Tile Endpoint Missing Tile Cache — 120 Tile Requests Per Map Move Hit Database
+
+**What goes wrong:**
+The existing tile endpoint `/api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf` is rate-limited to 120/minute but has no tile caching. Every map pan and zoom fires 6-12 tile requests. A single user panning across a wijk generates hundreds of database queries per minute. At 5 concurrent users each with a scan open, this is 600+ ST_AsMVT queries/minute against the database.
+
+**Why it happens:**
+The current implementation sets `Cache-Control: public, max-age=3600` in the response header, which enables browser-level caching for repeat tile requests within the same session. However, it does not cache at the server level — each unique tile URL hits the FastAPI endpoint and runs a full PostGIS query.
+
+**Consequences:**
+- Database CPU spikes during active map use
+- Slow tile load times when multiple users pan simultaneously
+- ST_AsMVT with ST_Intersects and ST_Transform is expensive on large geometry tables
+
+**Prevention:**
+
+Scan tiles are immutable once the scan is `completed` (scan results don't change). Add tile caching at the endpoint level using the existing Redis connection:
+
+```python
+# In generate_mvt_tile()
+cache_key = f"tile:{scan_id}:{z}:{x}:{y}"
+
+# Check cache first
+cached = await redis.get(cache_key)
+if cached:
+    return bytes(cached)
+
+# Generate tile
+tile_data = await _generate_tile_from_postgis(...)
+
+# Cache for 1 hour (scan results are immutable)
+if tile_data:
+    await redis.setex(cache_key, 3600, tile_data)
+
+return tile_data
+```
+
+The ARQ/Redis connection is already part of the app infrastructure — no new dependency needed. Cache invalidation: when a scan is re-run (`force_rescan=True`), delete the tile cache keys for that `scan_id` using `redis.delete("tile:{scan_id}:*")` pattern.
+
+**Detection:**
+- Database monitoring shows spikes in `ST_AsMVT` query execution time during map use
+- PostgreSQL `pg_stat_activity` shows many concurrent geometry queries
+- Response time for tile endpoint > 200ms consistently
+
+**Phase to address:** Phase adding MVT tile visualization, or as a hardening follow-up
+**Urgency:** MEDIUM — manageable for single user, becomes critical at 5+ concurrent users
+
+---
+
+### Pitfall 9: SQLAlchemy Async Session in ARQ Job Creates Per-Parcel Flush — N+1 Commit Pattern
+
+**What goes wrong:**
+The area scan job (`jobs/area_scan.py`) calls `_upsert_parcel_cache()` in a loop, and each call does `session.add(parcel); await session.flush()`. For 2,000 parcels, this is 2,000 individual flush round-trips to the database — each one blocking the async loop waiting for the database response. The scan that should take 5 minutes takes 20+ minutes.
+
+**Why it happens:**
+The flush-per-parcel pattern exists because subsequent code needs the `parcel.id` after flush (to create `ScanResult` rows). However, PostgreSQL's `gen_random_uuid()` as a `server_default` requires a round-trip to get the generated id. The current code tolerates this for the existing scan scale, but as scan sizes grow or if lead-creation is added to the scan pipeline, the pattern compounds.
+
+**Consequences:**
+- Scan job runtime grows linearly with parcel count
+- Database connection pool exhaustion under concurrent scans
+- Timeouts on large gemeentes
+
+**Prevention:**
+
+For the parcel cache upsert, generate UUIDs in Python rather than relying on `server_default`:
+```python
+import uuid
+
+parcel = ParcelCache(
+    id=uuid.uuid4(),  # Generate in Python, no flush needed for ID
+    organization_id=org_id,
+    ...
+)
+session.add(parcel)
+# No flush here — ID is already known
+```
+
+Then use `session.add_all([...])` for batch inserts, with a single `await session.flush()` after each batch of 100:
+```python
+batch_size = 100
+for i in range(0, len(parcels), batch_size):
+    batch = parcels[i:i + batch_size]
+    session.add_all(batch)
+    await session.flush()
+```
+
+For the lead pipeline, never flush inside a row-creation loop. Collect all new lead records, then batch insert.
+
+**Detection:**
+- Database monitoring shows 2000+ sequential `INSERT` statements per scan
+- Scan job runtime > 10 minutes for medium-sized wijk (500+ parcels)
+- `asyncio` event loop shows repeated short waits on database I/O
+
+**Phase to address:** Scan persistence optimization, or lead pipeline if lead creation is batched
+**Urgency:** MEDIUM — current scale tolerable, becomes a bottleneck at wijk sizes > 500
+
+---
+
+### Pitfall 10: GeoJSON Parcel Endpoint Returns 5MB Response — No Bounding Box Filtering
+
+**What goes wrong:**
+A new endpoint `GET /api/scans/{scan_id}/geojson` returns all parcel polygons for a completed scan. For a medium-sized wijk (500 parcels, each with complex MULTIPOLYGON geometry at full precision), the uncompressed GeoJSON is 3-8MB. The browser downloads 3-8MB per scan view, even when the user has zoomed in and only sees 20 parcels. Slow connections fail the request.
+
+**Why it happens:**
+The endpoint fetches all `ParcelCache` entries for the scan, calls `ST_AsGeoJSON(ST_Transform(geometry, 4326))` for each, and builds a FeatureCollection. The query doesn't filter by viewport bounds. Frontend code doesn't paginate or bounds-filter requests.
+
+**Prevention:**
+
+Either use the existing MVT tile endpoint (tiles are already viewport-aware), or add mandatory bbox filtering to any GeoJSON endpoint:
+
+```python
+@router.get("/{scan_id}/geojson")
+async def get_scan_geojson(
+    scan_id: uuid.UUID,
+    # Required bbox parameters (WGS84)
+    min_lon: float = Query(...),
+    min_lat: float = Query(...),
+    max_lon: float = Query(...),
+    max_lat: float = Query(...),
+    ...
+```
+
+And in SQL, filter with a spatial intersection:
+```sql
+WHERE ST_Intersects(
+    pc.geometry,
+    ST_Transform(ST_MakeEnvelope(:min_lon, :min_lat, :max_lon, :max_lat, 4326), 28992)
+)
+```
+
+Also reduce coordinate precision:
+```sql
+ST_AsGeoJSON(ST_Transform(geometry, 4326), 6)  -- 6 decimal places = ~10cm precision
+```
+
+**Detection:**
+- Network DevTools shows response > 1MB for GeoJSON endpoint
+- Slow initial load on connections < 50Mbps
+- ST_AsGeoJSON query time > 500ms for > 200 parcels
+
+**Phase to address:** Phase adding GeoJSON parcel endpoint (if GeoJSON approach is chosen over MVT)
+**Urgency:** MEDIUM — use MVT tiles to avoid this problem entirely
 
 ---
 
 ## Minor Pitfalls
 
-These cause annoyance or minor bugs but are easily fixable.
+Small issues that require 1-2 hours to fix but are easy to miss.
 
 ---
 
-### Pitfall 7: Glassmorphism Backdrop-Filter Performance on Mobile
+### Pitfall 11: Alembic Autogenerate Misses GIST Index on New Geometry Columns
 
 **What goes wrong:**
-The current glassmorphism design (`backdrop-filter: blur(16px)`) performs well on desktop but causes severe performance issues on mobile. Scrolling slide-over panels feels janky (30fps), animations stutter, battery drains faster. On older Android devices (< 2022), backdrop-filter may not render at all, showing opaque panels instead.
+If a new table is added with a GeoAlchemy2 `Geometry` column (e.g., a `lead_geometry` column for optional polygon sketching), `alembic revision --autogenerate` creates the table and column but does not generate the spatial GIST index. The index is silently omitted. Spatial queries (`ST_Intersects`, `ST_Within`) run sequentially without the index — 100x slower.
 
 **Why it happens:**
-`backdrop-filter` requires the browser to re-render everything behind the element on every frame. On desktop GPUs this is cheap, but mobile GPUs (especially in mid-range phones) struggle. Safari on iOS handles it better than Chrome on Android, creating inconsistent behavior.
+GeoAlchemy2's GIST index auto-creation during `CREATE TABLE` is not reverse-engineered by Alembic's autogenerate. The `parcel_cache` table already hit this — its GIST index is created manually in the migration, as noted in the model comment: "GIST index created explicitly in migration (not auto-detected by Alembic)."
 
 **Prevention:**
 
-1. **Disable Backdrop-Filter on Mobile:**
-   ```css
-   .panel {
-     background: rgba(0, 0, 0, 0.95); /* Fallback */
-   }
+Always manually add the GIST index in migrations for any geometry column:
+```python
+def upgrade() -> None:
+    op.create_table('leads', ...)
+    # Manual GIST index — Alembic autogenerate misses this
+    op.execute(
+        "CREATE INDEX ix_leads_geometry_gist ON leads USING GIST (geometry)"
+    )
+```
 
-   @media (min-width: 1024px) {
-     .panel {
-       background: rgba(0, 0, 0, 0.55);
-       backdrop-filter: blur(16px);
-     }
-   }
-   ```
-
-2. **Use `@supports` for Feature Detection:**
-   ```css
-   @supports (backdrop-filter: blur(16px)) {
-     .panel {
-       backdrop-filter: blur(16px);
-     }
-   }
-   ```
-
-3. **Reduce Blur Radius on Mobile:**
-   ```css
-   .panel {
-     backdrop-filter: blur(8px); /* Less expensive */
-   }
-
-   @media (min-width: 1024px) {
-     .panel {
-       backdrop-filter: blur(16px);
-     }
-   }
-   ```
-
-4. **Test on Real Devices:**
-   iPhone SE (2020), Samsung Galaxy A series, older Android (5+ years). Emulators don't show performance issues.
+Check migration output: if a `Geometry` column is present and no `GIST` index appears, it was missed.
 
 **Detection:**
-- Scrolling panel feels laggy on mobile
-- Performance Profiler shows GPU usage spikes
-- Battery drains faster when panel is open
-- Backdrop-filter doesn't render on older Android
+- `\d leads` in psql shows no GIST index on geometry column
+- `EXPLAIN ANALYZE SELECT ... WHERE ST_Intersects(geometry, ...)` shows `Seq Scan` instead of `Index Scan using ix_..._gist`
 
-**Phase to address:** Phase 3 (Mobile responsiveness)
-**Urgency:** LOW — visual polish, not blocking
+**Phase to address:** Any phase adding spatial columns to new tables
+**Urgency:** LOW — won't cause errors, causes slowness
 
 ---
 
-### Pitfall 8: Icon Sidebar Touch Targets Too Small on Mobile
+### Pitfall 12: Lead Status History Missing — Impossible to Reconstruct Pipeline Timeline
 
 **What goes wrong:**
-The current side-rail navigation (`SideRailNav.tsx`) uses 48px (`h-12 w-12`) icon buttons, which meet the minimum touch target size. However, when the design system adds visual flourishes (smaller icons, tighter spacing for "industrial" aesthetic), touch targets shrink to 32px-36px. Mobile users miss taps, accidentally hit wrong buttons, or struggle to navigate.
+The `leads` table stores only `status` (current state). When a lead moves from `prospect` to `qualified` to `negotiating`, there is no record of when transitions occurred. Reporting queries ("How long do leads stay in qualified?", "Which scans generate the most conversions?") cannot be answered. The audit trail for GDPR is also missing.
 
 **Why it happens:**
-Designers prioritize visual aesthetics (compact, industrial look) over accessibility. The "industrial amber" design likely uses smaller, more precise iconography. Developers implement the design without checking touch target guidelines (Apple HIG: 44px, Material: 48px).
+Status history is treated as "nice to have" and deferred. It is trivial to skip when building the initial model but expensive to retrofit (requires a new `lead_status_history` table and backfilling historical transitions from `created_at`/`updated_at` — which don't capture intermediate states).
 
 **Prevention:**
 
-1. **Enforce Minimum Touch Target:**
-   ```tsx
-   // tailwind.config.ts
-   theme: {
-     extend: {
-       spacing: {
-         'touch-target': '44px', // Named token
-       }
-     }
-   }
+From day one, add a `lead_history` join table:
+```python
+class LeadHistory(Base, TenantMixin):
+    __tablename__ = "lead_history"
 
-   // Component
-   <button className="h-touch-target w-touch-target">
-   ```
+    id: Mapped[uuid.UUID]
+    lead_id: Mapped[uuid.UUID]  # FK to leads
+    from_status: Mapped[str | None]  # NULL for initial creation
+    to_status: Mapped[str]
+    changed_at: Mapped[datetime]
+    changed_by_user_id: Mapped[uuid.UUID | None]
+    note: Mapped[str | None]  # Optional transition note
+```
 
-2. **Visual Icon ≠ Touch Target:**
-   Icon can be 24px, but button remains 44px:
-   ```tsx
-   <button className="h-11 w-11 flex items-center justify-center">
-     <Icon className="h-6 w-6" />
-   </button>
-   ```
-
-3. **Add Spacing Between Buttons:**
-   Ensure 8px minimum gap between touch targets (prevents fat-finger errors):
-   ```tsx
-   <div className="flex flex-col gap-2">
-   ```
-
-4. **Test with "Fat Finger" Method:**
-   Use thumb (not index finger) on real device. If you miss > 10% of taps, target is too small.
+Insert a history record whenever `lead.status` changes. This can be done in the update endpoint or via a SQLAlchemy event listener.
 
 **Detection:**
-- Users report "hard to tap" navigation on mobile
-- Accessibility audit fails (touch target < 44px)
-- High rate of accidental taps (analytics show mis-clicks)
-- Designers complain icons look "too big" (visual vs functional tension)
+- User asks "When did this lead move to negotiating?" — cannot answer
+- Business analytics dashboard needs conversion rates — cannot compute without timestamps
+- GDPR audit requires showing when personal data was first associated — not trackable
 
-**Phase to address:** Phase 3 (Mobile responsiveness)
-**Urgency:** LOW — affects UX but easily fixed
+**Phase to address:** Lead table design phase (before first migration)
+**Urgency:** LOW — not urgent for MVP, but very hard to add retroactively
 
 ---
 
-### Pitfall 9: TanStack Router `navigate()` Stale Closure in Map Click Handlers
+### Pitfall 13: Report-to-Lead FK Direction Confusion Causes Circular Dependency
 
 **What goes wrong:**
-When restructuring navigation, map click handlers (gemeente click, wijk click, bestemmingsplan click) use `navigate()` from TanStack Router to transition routes. These handlers are defined in `useCallback` with dependencies, but when navigation logic changes, the handlers don't update. Clicking a gemeente uses an old navigation function, causing navigation to fail or navigate to wrong route.
+When connecting `saved_reports` to the lead pipeline, there is ambiguity about the FK direction. If `saved_reports.lead_id` (report FK → lead) is added, deleting a lead would need to decide what to do with reports. If `leads.report_id` (lead FK → report) is added, creating a lead from a scan result requires a report to already exist. The wrong direction causes foreign key constraint violations at the wrong time.
 
 **Why it happens:**
-The current code uses refs to avoid stale closures for map state (`activeGemeenteRef`, `activeScanIdRef`). But `navigate()` from `useNavigate()` is a stable function—it doesn't change. The issue arises when navigation logic changes (adding search params, changing route structure) but callbacks aren't updated because `navigate` isn't in the dependency array.
+The entity relationship is genuinely bi-directional in the user's mental model ("a lead can have a report, a report can be promoted to a lead"). Developers model this ambiguity incorrectly on the first attempt.
+
+**Consequences:**
+- Report deletion fails because a lead FK prevents it
+- Lead creation fails because no report exists yet
+- Circular FK dependency confuses Alembic migration ordering
 
 **Prevention:**
 
-1. **Always Include `navigate` in Dependencies:**
-   ```tsx
-   const navigate = useNavigate()
+Model the relationship as report → lead (report is the anchor):
+```python
+# saved_reports.lead_id is nullable FK to leads
+# ON DELETE SET NULL — deleting lead disconnects report but doesn't delete it
+```
 
-   const handleClick = useCallback(() => {
-     navigate({ to: '/map', search: { gemeente: code } })
-   }, [navigate, code])
-   ```
+This reflects reality: a report can exist without a lead (user saved a report but hasn't started a deal), and a lead can exist without a report (created manually). Adding a report to an existing lead is an update to `saved_reports.lead_id`.
 
-2. **Use Ref Pattern for Navigation Logic:**
-   ```tsx
-   const navigationLogicRef = useRef((code: string) => {
-     navigate({ to: '/map', search: { gemeente: code } })
-   })
-   // Update ref when logic changes, callbacks stay stable
-   ```
+Never add `leads.report_id` — leads can have multiple reports (re-reports over time).
 
-3. **Extract Navigation Logic to Custom Hook:**
-   ```tsx
-   function useMapNavigation() {
-     const navigate = useNavigate()
-     return useCallback((type: 'gemeente' | 'wijk', code: string) => {
-       // Centralized navigation logic
-       navigate({ to: '/map', search: { [type]: code } })
-     }, [navigate])
+**Detection:**
+- FK constraint error when deleting a report that has an associated lead
+- Migration ordering error (`leads` table not yet created when adding FK from `saved_reports`)
+
+**Phase to address:** Phase connecting reports to lead pipeline
+**Urgency:** LOW — a design decision that needs to be correct from the start
+
+---
+
+### Pitfall 14: MapLibre GeoJSON Source Memory Leak on Component Unmount
+
+**What goes wrong:**
+When the scan results map component unmounts (user navigates to another route), the GeoJSON source cleanup removes the layer and source correctly, but MapLibre's web worker retains a reference to the serialized GeoJSON data. `AbortController` objects that were created for tile requests are not garbage collected. Memory consumption grows with each map mount/unmount cycle. Reproduced at ~5 mount cycles.
+
+**Why it happens:**
+MapLibre GL JS has documented memory leak issues (GitHub issue #4650, #4811, #6154) related to GeoJSON source updates and worker memory. The React cleanup function (`return () => removeParcelGeoJsonLayer(map)`) removes the layer from the DOM, but the serialized data in the worker thread is not released until the worker is explicitly terminated.
+
+**Prevention:**
+
+1. Keep the map instance alive across route changes (already recommended in the existing navigation pitfall from the v4.0 research — persistent layout pattern). If the map never unmounts, the worker never accumulates orphaned data.
+
+2. When updating GeoJSON sources frequently (filter-driven updates), use `source.setData(null)` before removing the source to signal the worker to release memory:
+   ```typescript
+   function removeParcelGeoJsonLayer(map: maplibregl.Map): void {
+     if (map.getSource(SOURCE_ID)) {
+       // Signal worker to release data before removing source
+       (map.getSource(SOURCE_ID) as GeoJSONSource).setData({
+         type: 'FeatureCollection',
+         features: [],
+       });
+     }
+     // Then remove layer and source
+     ...
    }
    ```
 
-4. **Test Navigation Changes:**
-   After route restructure, manually test all map click handlers (gemeente, wijk, bestemmingsplan, parcel) to ensure they navigate correctly.
+3. Prefer the MVT tile approach over GeoJSON for large datasets — MVT tiles are managed by the tile cache, not loaded in full into the worker.
 
 **Detection:**
-- Map click doesn't navigate (handler uses stale navigate function)
-- Navigation goes to wrong route (old route structure)
-- Console warning: "Cannot update component while rendering" (stale closure side effect)
-- Clicking same feature twice behaves differently (closure captured different state)
+- Chrome Memory Profiler shows heap growth with each map unmount/remount cycle
+- `maplibregl.Map` instances in memory snapshot after component unmount
+- Browser tab memory usage grows over a session with frequent navigation
 
-**Phase to address:** Phase 1 (Navigation restructure)
-**Urgency:** LOW — easy to catch in testing
+**Phase to address:** Phase adding GeoJSON parcel map layer
+**Urgency:** LOW — single-session impact is manageable; long sessions or many navigations cause issues
 
 ---
 
@@ -641,62 +606,51 @@ The current code uses refs to avoid stale closures for map state (`activeGemeent
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Phase 1: Navigation Foundation | MapLibre re-mount on route change (Pitfall 1) | Use persistent layout with `<Outlet />`, keep `<MapView>` in layout component |
-| Phase 1: Navigation Foundation | TanStack Router stale closures (Pitfall 9) | Include `navigate` in all callback dependencies |
-| Phase 2: Design Token Migration | Cascade specificity conflicts (Pitfall 2) | Use cascade layers, migrate incrementally, alias old tokens |
-| Phase 2: Design Token Migration | Token proliferation (Pitfall 5) | Start with 20-30 tokens, three-tier hierarchy, add on demand |
-| Phase 3: Mobile Responsiveness | Tablet purgatory (Pitfall 3) | Design distinct tablet layout, test on iPad, 44px touch targets |
-| Phase 3: Mobile Responsiveness | Glassmorphism performance (Pitfall 7) | Disable backdrop-filter on mobile, reduce blur radius |
-| Phase 3: Mobile Responsiveness | Touch target size (Pitfall 8) | Enforce 44px minimum, separate visual icon from touch target |
-| Phase 4: Panel Animations | Animation blocking map (Pitfall 4) | Use transform/opacity only, pointer-events control, test with Profiler |
-| Phase 5: Layer Management Refactor | useEffect cleanup hell (Pitfall 6) | Centralize layer management, guard cleanup, consider declarative wrapper |
+| Lead table schema | Cross-tenant data leak (Pitfall 1) | TenantMixin + RLS policy + composite index |
+| Lead table schema | No status history (Pitfall 12) | Add lead_history table from day one |
+| Lead table schema | ENUM for status (Pitfall 7) | Use VARCHAR(50) + CHECK constraint, not PostgreSQL enum |
+| Lead-report connection | FK direction confusion (Pitfall 13) | saved_reports.lead_id = nullable FK to leads |
+| Lead-parcel connection | Parcel cache eviction deletes leads (Pitfall 6) | ON DELETE SET NULL + denormalize parcel_code |
+| Parcel GeoJSON endpoint | Wrong coordinate system (Pitfall 2) | Always ST_Transform to 4326 in SQL query |
+| Parcel GeoJSON endpoint | 5MB unfiltered response (Pitfall 10) | Add mandatory bbox parameter or use MVT tiles |
+| MapLibre GeoJSON layer | UUID feature-state fails silently (Pitfall 3) | Use generateId: true or promoteId on source |
+| MapLibre GeoJSON layer | setData bottleneck at 2000 parcels (Pitfall 5) | Use existing MVT tile endpoint instead |
+| MapLibre GeoJSON layer | Memory leak on unmount (Pitfall 14) | Persistent map layout pattern + setData(empty) on cleanup |
+| MVT tile endpoint | No tile cache, 600+ DB queries/minute (Pitfall 8) | Redis tile cache using existing ARQ Redis connection |
+| Scan persistence | ARQ re-run crashes on duplicate ScanResult (Pitfall 4) | INSERT ... ON CONFLICT DO NOTHING |
+| Scan persistence | Per-parcel flush causes 2000 DB round-trips (Pitfall 9) | Python uuid4() + batch flush every 100 rows |
+| Registration bug fixes | RLS SET LOCAL with asyncpg (known pitfall) | Keep f-string pattern, never use $1 parameter in SET LOCAL |
 
 ---
 
 ## Sources
 
-### MapLibre + React Patterns
-- [MapLibre React Components Tutorial](https://maplibre-react-components.pentatrion.com/tutorial)
-- [visgl/react-map-gl Issue #2166: Map resizing breaks with `reuseMaps`](https://github.com/visgl/react-map-gl/issues/2166)
-- [MapLibre GL JS Memory Leak Issue #4811](https://github.com/maplibre/maplibre-gl-js/issues/4811)
-- [MapLibre React Native Memory Leak Issue #873](https://github.com/maplibre/maplibre-react-native/issues/873)
-- [How to display MapLibre GL JS using React](https://docs.maptiler.com/react/maplibre-gl-js/how-to-use-maplibre-gl-js/)
+### MapLibre Feature State and GeoJSON
+- [Feature id can only be positive integer when using feature-state · maplibre/maplibre-gl-js #1043](https://github.com/maplibre/maplibre-gl-js/issues/1043)
+- [Optimising MapLibre Performance: Tips for Large GeoJSON Datasets](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/)
+- [Partial updates for GeoJSON sources · maplibre/maplibre-gl-js #1236](https://github.com/maplibre/maplibre-gl-js/issues/1236)
+- [Memory leak when updating a GeoJSON source faster than can be processed · #6154](https://github.com/maplibre/maplibre-gl-js/issues/6154)
+- [Memory leak on map.remove() · maplibre/maplibre-gl-js #4811](https://github.com/maplibre/maplibre-gl-js/issues/4811)
+- [Large number of feature state keys leads to zoom lag when loading cached tiles · #6633](https://github.com/maplibre/maplibre-gl-js/issues/6633)
+- [GeoJSON & Vector Data Visualization — DeepWiki](https://deepwiki.com/maplibre/maplibre-gl-js/3.3-geojson-and-vector-data-visualization)
 
-### React Router + State Preservation
-- [Understanding Layout Components and React Router Outlet](https://medium.com/@jackpritomsoren/understanding-layout-components-and-react-router-outlet-in-react-03b8f96ac551)
-- [TanStack Router Discussion #131: useState always using initial value on route change](https://github.com/TanStack/router/discussions/131)
-- [TanStack Router: Render Optimizations](https://tanstack.com/router/v1/docs/framework/react/guide/render-optimizations)
-- [React Navigation: Navigator Hierarchy Issues](https://reactnavigation.org/)
+### PostGIS Geometry and Coordinate Projection
+- [ST_AsGeoJSON — PostGIS Documentation](https://postgis.net/docs/ST_AsGeoJSON.html)
+- [ST_Transform — PostGIS Documentation](https://postgis.net/docs/ST_Transform.html)
+- [Projecting Data — Introduction to PostGIS](https://www.postgis.net/workshops/postgis-intro/projection.html)
 
-### Design System Migration
-- [Migrations are the hardest part of design systems work](https://maecapozzi.com/newsletter/75)
-- [Tips and tricks for Design System migrations](https://medium.com/@nonisnilukshi/tips-and-tricks-for-design-system-migrations-5beafb8e58c5)
-- [How to Manage Breaking Changes in Design Tokens](https://designtokens.substack.com/p/how-to-manage-breaking-changes-in)
-- [Design Tokens: The Foundation of Your UI Architecture](https://feature-sliced.design/blog/design-tokens-architecture)
+### GeoAlchemy2 + Alembic
+- [Use Alembic with GeoAlchemy2](https://geoalchemy-2.readthedocs.io/en/latest/alembic.html)
 
-### CSS Variables + Cascade
-- [CSS Custom Properties In The Cascade](https://www.smashingmagazine.com/2019/07/css-custom-properties-cascade/)
-- [CSS Custom Properties Guide 2026](https://devtoolbox.dedyn.io/blog/css-variables-complete-guide)
-- [Using Custom Property "Stacks" to Tame the Cascade](https://css-tricks.com/using-custom-property-stacks-to-tame-the-cascade/)
-- [How to use CSS variables with React](https://www.joshwcomeau.com/css/css-variables-for-react-devs/)
+### PostgreSQL ENUM vs VARCHAR
+- [Database ENUMs vs Constrained VARCHAR: A Technical Deep Dive](https://medium.com/@zulfikarditya/database-enums-vs-constrained-varchar-a-technical-deep-dive-for-modern-applications-30d9d6bba9f8)
+- [ALTER TYPE enum migrations fail in PostgreSQL · prisma/prisma #5290](https://github.com/prisma/prisma/issues/5290)
+- [Is It Time to Migrate from PostgreSQL Enum to String?](https://araqev.com/migrate-from-postgres-enum-to-string/)
 
-### Mobile-First vs Desktop-First
-- [Mobile-First Design: What It Is & Why It Matters in 2026](https://seizemarketingagency.com/mobile-first-design/)
-- [Mobile-First vs Desktop-First: Choosing the Right Strategy](https://www.digittrix.com/blogs/mobile-first-vs-desktop-first-choose-the-right-approach)
-- [The State Of Mobile First and Desktop First](https://ishadeed.com/article/the-state-of-mobile-first-and-desktop-first/)
+### ARQ Background Jobs
+- [ARQ Documentation — idempotency and at-least-once delivery](https://arq-docs.helpmanual.io/)
+- [Building Resilient Task Queues in FastAPI with ARQ Retries](https://davidmuraya.com/blog/fastapi-arq-retries/)
 
-### Performance: Animations + WebGL
-- [Comparing the best React animation libraries for 2026](https://blog.logrocket.com/best-react-animation-libraries/)
-- [Progressive Enhancement with WebGL and React](https://www.14islands.com/journal/progressive-enhancement-with-webgl-and-react)
-- [WebGL Overlay View (Google Maps)](https://developers.google.com/maps/documentation/javascript/webgl/webgl-overlay-view)
-- [Mastering Web Transitions: From CSS Transitions to WebGL](https://www.awwwards.com/mastering-web-transitions.html)
-
-### React Memory Leaks + Cleanup
-- [How to Fix Memory Leaks in React Applications](https://www.freecodecamp.org/news/fix-memory-leaks-in-react-apps/)
-- [Avoiding race conditions and memory leaks in React useEffect](https://www.wisdomgeek.com/development/web-development/react/avoiding-race-conditions-memory-leaks-react-useeffect/)
-- [Understanding Memory Leaks in React](https://medium.com/@ignatovich.dm/understanding-memory-leaks-in-react-how-to-find-and-fix-them-fc782cf182be)
-
-### Responsive Breakpoints
-- [Breakpoint: Responsive Design Breakpoints in 2025](https://www.browserstack.com/guide/responsive-design-breakpoints)
-- [Breakpoints in Responsive Design - Nielsen Norman Group](https://www.nngroup.com/articles/breakpoints-in-responsive-design/)
-- [Responsive design - Tailwind CSS](https://tailwindcss.com/docs/responsive-design)
+### SQLAlchemy Async + Bulk Operations
+- [Using staging tables for faster bulk upserts with Python and PostgreSQL](https://overflow.no/blog/2025/1/5/using-staging-tables-for-faster-bulk-upserts-with-python-and-postgresql/)
+- [SQLAlchemy Relationship Loading Techniques](https://docs.sqlalchemy.org/en/20/orm/queryguide/relationships.html)

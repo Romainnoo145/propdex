@@ -1,734 +1,706 @@
-# Architecture Patterns: v4.0 UX Redesign
+# Architecture Patterns: v5.0 Lead Pipeline
 
-**Domain:** PropTech map application UX redesign
-**Researched:** 2026-02-16
-**Confidence:** HIGH
+**Domain:** PropTech — lead pipeline, scan persistence, parcel-level map visualization
+**Researched:** 2026-02-18
+**Confidence:** HIGH (direct codebase analysis, no external dependencies introduced)
 
-## Recommended Architecture
+---
 
-The v4.0 design system integrates with the existing React 19 + TanStack Router + MapLibre codebase through a **shadcn/ui-inspired copy-paste component architecture** layered over the current glassmorphism foundation. This approach provides full component ownership while maintaining existing routing and state management patterns.
+## Executive Summary
+
+The v5.0 Lead Pipeline milestone adds four capabilities on top of the existing architecture:
+
+1. **Scan persistence** — AreaScan records already exist in the DB; the gap is a browsable index in the Projecten view so users can return to any previous scan without knowing the `scan_id`.
+2. **Lead pipeline** — a new `Lead` model linking `ParcelCache` → a pipeline stage (Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht), attached to an owning `Project`.
+3. **Map scan layers** — the MVT tile endpoint (`/api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf`) and `ParcelScoreLayer` already work for the active scan; the gap is restoring score tiles for any previously completed scan from the Projecten view.
+4. **Report integration** — `SavedReport` already has `project_id`; the gap is generating a report for a lead parcel from the `ParcelCache` (not from an address search), and surfacing those reports inside the lead card.
+
+All new features integrate with existing patterns and require no new infrastructure, no new external APIs, and no new npm packages. The build order respects model-first → API-second → frontend-last dependency ordering.
+
+---
+
+## Existing Architecture (What v5.0 Integrates With)
+
+### Data Model (as shipped in v4.0)
 
 ```
-frontend/src/
-├── components/
-│   ├── ui/                    # Design system primitives (copy-paste)
-│   │   ├── button.tsx         # NEW: Industrial Amber styled button
-│   │   ├── card.tsx           # NEW: Industrial Amber styled card
-│   │   ├── badge.tsx          # NEW: Industrial Amber styled badge
-│   │   ├── input.tsx          # NEW: Form input primitive
-│   │   ├── select.tsx         # NEW: Form select primitive
-│   │   ├── drawer.tsx         # MODIFIED: Existing → Industrial Amber theme
-│   │   ├── modal.tsx          # MODIFIED: Existing → Industrial Amber theme
-│   │   └── form-field.tsx     # MODIFIED: Existing → Industrial Amber theme
-│   ├── layout/                # Page-level layouts
-│   │   ├── app-layout.tsx     # MODIFIED: Root layout (exists)
-│   │   ├── side-rail-nav.tsx  # MODIFIED: Navigation rail (exists)
-│   │   ├── report-sidebar.tsx # MODIFIED: Left sidebar (exists)
-│   │   ├── map-shell.tsx      # NEW: Map page shell wrapper
-│   │   ├── results-shell.tsx  # NEW: Results page shell wrapper
-│   │   └── inspector-panel.tsx # NEW: Right slide-over inspector
-│   ├── map/                   # Map-specific components (existing)
-│   ├── property/              # Property-specific components (existing)
-│   ├── results/               # Results-specific components (existing)
-│   └── ...
-├── routes/
-│   ├── __root.tsx             # MODIFIED: Inject theme provider
-│   ├── _authenticated.tsx     # MODIFIED: Layout with side-rail
-│   ├── _authenticated/
-│   │   ├── map.tsx            # MODIFIED: Map view (refactor to use shells)
-│   │   ├── resultaten.tsx     # NEW: Results view (replaces inline ResultsLayout)
-│   │   ├── projecten.tsx      # MODIFIED: Projects view (exists)
-│   │   └── instellingen.tsx   # MODIFIED: Settings view (exists)
-└── styles/
-    └── index.css              # MODIFIED: Add @theme tokens
+Organization
+  └── Project (self-referential, gemeente → wijk hierarchy)
+        ├── SavedReport (project_id FK, nullable — reports can be unassigned)
+        ├── AreaScan (project_id FK, nullable — auto-created wijk projects)
+        └── ChangeRecord (project_id FK — permit/zoning change alerts)
+
+AreaScan
+  └── ScanResult (scan_id FK + parcel_id FK — join table)
+        └── ParcelCache (geometry, score, bestemmingen, enrichment_data)
 ```
 
-### Component Boundaries
+### Backend Request Path
+
+```
+HTTP request
+  → FastAPI router (/api/scans, /api/projects, /api/reports, /api/monitoring)
+  → service layer (CRUD, queries)
+  → SQLAlchemy 2.x async models
+  → PostgreSQL/PostGIS (EPSG:28992 geometry, JSONB fields)
+```
+
+ARQ background jobs handle the scan pipeline (BAG WFS → bestemmingen WMS → scoring → ParcelCache insert). The job writes directly to `parcel_cache` and `scan_results` tables.
+
+### Frontend Request Path
+
+```
+TanStack Router (file-based routes under _authenticated/)
+  → TanStack Query (useQuery / useMutation hooks in src/hooks/)
+  → apiFetch() wrapper in src/lib/api.ts (Bearer token injection)
+  → FastAPI backend
+```
+
+MapLibre GL JS lives in `MapContext` (persistent, never unmounts). Map layers are imperative functions in `src/components/map/` — they call `map.addSource()` / `map.addLayer()` directly.
+
+### Existing Gap: Project ↔ Scan Linkage
+
+The `AreaScan.project_id` FK exists but the `projects/router.py` does not expose an endpoint to list scans for a project. The `ProjectList` frontend component contains hardcoded `DEMO_REPORTS` and a `// TODO: fetch from useReports({ project_id }) when live` comment. The `ProjectResponse` schema does not include scan history.
+
+---
+
+## New Components Required
+
+### New Backend: Lead Model
+
+The single most important new backend model. Connects a parcel to a project with a pipeline stage.
+
+```python
+# backend/app/models/lead.py (NEW)
+
+class Lead(Base, TenantMixin, TimestampMixin):
+    """
+    Lead model — a parcel tracked through the acquisition pipeline.
+
+    Links a ParcelCache entry to a Project with a pipeline stage.
+    A lead is created when a user promotes a scan result to the pipeline.
+
+    Stage flow: nieuw → onderzoek → contact → onderhandeling → afgewezen | gekocht
+    """
+    __tablename__ = "leads"
+
+    id: Mapped[uuid.UUID]
+
+    parcel_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("parcel_cache.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Pipeline stage — one of the Dutch acquisition stages
+    stage: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="nieuw",
+    )
+
+    # Source scan — for traceability (which scan found this parcel)
+    source_scan_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("area_scans.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Free-text notes per lead
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Link to generated report (nullable — report is optional)
+    report_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("saved_reports.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    __table_args__ = (
+        # Unique: one lead per parcel per project (no duplicates)
+        UniqueConstraint("organization_id", "project_id", "parcel_id",
+                         name="uq_leads_org_project_parcel"),
+        Index("ix_leads_org_project", "organization_id", "project_id"),
+        Index("ix_leads_org_stage", "organization_id", "stage"),
+    )
+```
+
+Valid stage values: `nieuw`, `onderzoek`, `contact`, `onderhandeling`, `afgewezen`, `gekocht`.
+
+### New Backend: Leads Router
+
+```
+/api/leads
+  POST   /                          # Create lead (promote parcel from scan)
+  GET    /                          # List leads (filter by project_id, stage)
+  GET    /{lead_id}                 # Get single lead with parcel + report data
+  PATCH  /{lead_id}                 # Update stage or notes
+  DELETE /{lead_id}                 # Remove from pipeline
+  POST   /{lead_id}/report          # Generate report for lead parcel
+```
+
+The `POST /` body accepts `parcel_id`, `project_id`, `source_scan_id`, and optional `stage` (defaults to `nieuw`). The stage progression is unconstrained on the backend — any stage can transition to any other stage (frontend enforces the visual Kanban flow).
+
+### New Backend: Scans History Endpoint
+
+```
+/api/scans
+  GET /                             # NEW: List completed scans for org
+  GET /{scan_id}                    # EXISTING: Status poll
+  ...
+```
+
+The `GET /api/scans` endpoint returns completed scans for the authenticated organization, ordered by `created_at` DESC. This feeds the Projecten scan history view.
+
+Response shape:
+```python
+class ScanListResponse(BaseModel):
+    scans: list[ScanListItem]
+    total: int
+
+class ScanListItem(BaseModel):
+    scan_id: uuid.UUID
+    gemeente_naam: str
+    gemeente_code: str
+    wijk_naam: str | None
+    status: str
+    parcels_total: int
+    results_count: int
+    scan_date: datetime
+    project_id: uuid.UUID | None
+    lead_count: int   # JOIN COUNT on leads table
+```
+
+### Project Router: Add Scans Subresource
+
+Add `GET /api/projects/{project_id}/scans` to the existing projects router. Returns the scan history for a specific project (where `area_scans.project_id = :project_id`). This is the entry point for the "Toon kaart" button in the Projecten view.
+
+### Modified Backend: Reports Router
+
+The existing `/api/reports` accepts a postcode + huisnummer address. To generate a report for a lead parcel, add a new endpoint that derives the address from the `ParcelCache.address` field and dispatches the same aggregator pipeline:
+
+```
+POST /api/reports/from-parcel
+  Body: { parcel_id: uuid, project_id: uuid | null, report_name: str | null }
+```
+
+This endpoint:
+1. Looks up `ParcelCache` by `parcel_id` (tenant-scoped)
+2. Extracts postcode + huisnummer from `ParcelCache.address` (existing regex in enrich endpoint)
+3. Calls the same `property_aggregator` service as the address-based flow
+4. Saves as `SavedReport` with `project_id` set
+
+This avoids duplicating the aggregator — it reuses the entire existing report generation stack.
+
+---
+
+## New Frontend Components
+
+### New Route: `/leads` (or Kanban inside Projecten)
+
+Decision: embed the lead pipeline as a sub-view within `/projecten` (not a new top-level route) to avoid adding a fourth icon to `SideRailNav`. The Projecten view becomes a tabbed view: "Scans" (existing project list) | "Leads" (Kanban board).
+
+Alternative (simpler): A dedicated `/leads` route with its own nav icon. Given the Kanban board is the primary delivery artifact of v5.0, a dedicated route is more discoverable. Add a `Briefcase` icon to `SideRailNav`.
+
+**Recommended: Add `/leads` as a new route with its own SideRailNav icon.** The `projecten` route stays focused on project/scan organization. This keeps each view single-purpose.
+
+```
+routes/_authenticated/
+  leads.tsx      # NEW: Kanban board — list leads, drag or click to change stage
+  resultaten.tsx # EXISTING: scan result table
+  map.tsx        # EXISTING: map
+  projecten.tsx  # EXISTING: project + scan history
+```
+
+### New Frontend Hook: `useLeads`
+
+```typescript
+// src/hooks/useLeads.ts (NEW)
+export function useLeads(projectId?: string, stage?: string)
+export function useCreateLead()
+export function useUpdateLead()
+export function useDeleteLead()
+export function useGenerateLeadReport()
+```
+
+Pattern follows existing `useScans.ts` and `useProjects.ts`: TanStack Query wrapping `apiFetch()`, query key includes filters for correct cache scoping.
+
+### New Frontend Hook: `useScansHistory`
+
+```typescript
+// src/hooks/useScans.ts (EXTEND EXISTING)
+export function useScanHistory()   // GET /api/scans (list of completed scans)
+export function useProjectScans(projectId: string)  // GET /api/projects/{id}/scans
+```
+
+### Modified Component: `ProjectList`
+
+Remove the `DEMO_REPORTS` hardcoded data. Replace with `useProjectScans(project.id)` for real scan history. Show each scan as a clickable row that navigates to `/map?scan_id=X` (restores the score layer for that scan).
+
+### New Component: `LeadKanbanBoard`
+
+```
+src/components/leads/
+  LeadKanbanBoard.tsx   # Stage columns: Nieuw | Onderzoek | Contact | Onderhandeling | Afgewezen | Gekocht
+  LeadCard.tsx          # Single lead card: parcel address, score badge, notes
+  LeadDetailModal.tsx   # Expanded lead view: parcel data, notes editor, report CTA, stage selector
+  LeadStageSelector.tsx # Dropdown for stage change
+  PromoteParcelModal.tsx  # Appears in scan results — "Add to Pipeline" flow
+```
+
+The Kanban board does not require a drag-and-drop library. Stage changes happen via a dropdown in `LeadCard` — simpler, mobile-friendly, avoids the complexity and accessibility issues of drag-and-drop.
+
+### Modified Component: `ResultsTable` / `BulkActionBar`
+
+Add "Voeg toe aan pipeline" as a bulk action alongside the existing Excel export. The `BulkActionBar` gets a new button that opens a project selector modal, then creates Lead records for all selected parcels.
+
+### Modified Component: `InspectorPanel`
+
+Add a "Voeg toe aan pipeline" button at the bottom of the inspector. Opens an inline project selector (using existing `useProjects()` hook). On confirm: `POST /api/leads` with `parcel_id` from the current inspector parcel.
+
+### Modified: Map Score Layer for Historical Scans
+
+The `ParcelScoreLayer` and tile endpoint already work. The gap is wiring up the "Toon kaart" button from the Projecten scan history to navigate to `/map?scan_id=X`. The map page already handles `urlScanId` in its `useEffect` and calls `addParcelScoreLayer(tileUrl, 'parcel_scores')`.
+
+No new map layer code is needed. The existing `addParcelScoreLayer` function is reused.
+
+---
+
+## Data Flow Changes
+
+### New: Parcel → Lead Promotion Flow
+
+```
+User selects parcel in scan results table
+  → Clicks "Voeg toe aan pipeline" (BulkActionBar or InspectorPanel)
+  → PromoteParcelModal: choose project, optionally set stage
+  → POST /api/leads { parcel_id, project_id, source_scan_id, stage }
+  → Lead record created in DB (organization-scoped)
+  → TanStack Query invalidates ['leads'] cache
+  → LeadKanbanBoard re-renders with new lead card
+```
+
+### New: Lead Report Generation Flow
+
+```
+User opens lead card → clicks "Genereer rapport"
+  → POST /api/reports/from-parcel { parcel_id, project_id }
+  → Backend: reads ParcelCache.address → extracts postcode/huisnummer
+  → Dispatches property_aggregator (same as address search path)
+  → SavedReport created, Lead.report_id updated
+  → useQuery invalidates ['lead', lead_id] and ['reports']
+  → Lead card shows "Rapport bekijken" link
+```
+
+### Modified: Projecten → Previous Scan Flow
+
+```
+User opens Projecten view
+  → ProjectList renders project rows with scan history (useProjectScans)
+  → User clicks a completed scan row
+  → navigate({ to: '/map', search: { scan_id } })
+  → map.tsx useEffect detects urlScanId → sets activeScanId
+  → Existing addParcelScoreLayer() renders score tiles
+  → Existing "Toon Lijst" button links to /resultaten?scan_id=X
+```
+
+---
+
+## Component Boundaries
 
 | Component | Responsibility | Communicates With |
 |-----------|---------------|-------------------|
-| **ui/** | Design system primitives, owns Industrial Amber tokens, reusable across all views | All feature components |
-| **layout/** | Page shells, navigation structure, view-level composition | routes/, ui/, feature components |
-| **map/** | MapLibre integration, layer management, imperative map operations | MapView shell, ui/ |
-| **property/** | Property detail panels, inspection UI, data display | Inspector panel, ui/ |
-| **results/** | Results table, filters, parcel cards | Results shell, ui/ |
-| **routes/** | Route definitions, search param validation, page composition | layout/, TanStack Router |
+| `leads/` router (NEW) | Lead CRUD, stage transitions, report linking | `parcel_cache`, `projects`, `saved_reports`, `area_scans` |
+| `scans/` router (MODIFIED) | Add `GET /api/scans` list endpoint | `area_scans`, `scan_results`, `leads` (for lead_count) |
+| `projects/` router (MODIFIED) | Add `GET /api/projects/{id}/scans` subresource | `area_scans` |
+| `reports/` router (MODIFIED) | Add `POST /api/reports/from-parcel` | `parcel_cache`, `property_aggregator`, `saved_reports` |
+| `LeadKanbanBoard` (NEW) | Kanban UI for pipeline stages | `useLeads`, `LeadCard`, `LeadDetailModal` |
+| `LeadCard` (NEW) | Single lead display, stage change | `useUpdateLead`, parcel data from lead response |
+| `PromoteParcelModal` (NEW) | Parcel → Lead conversion flow | `useLeads`, `useProjects`, scan context |
+| `BulkActionBar` (MODIFIED) | Add "Voeg toe aan pipeline" bulk action | `PromoteParcelModal`, `useLeads` |
+| `InspectorPanel` (MODIFIED) | Add "Voeg toe aan pipeline" button | `PromoteParcelModal`, `useLeads` |
+| `ProjectList` (MODIFIED) | Replace demo data with real scan history | `useProjectScans`, `useProjects` |
+| `/leads` route (NEW) | Lead pipeline page | `LeadKanbanBoard`, TanStack Router |
+
+---
 
 ## Patterns to Follow
 
-### Pattern 1: Design Token System with Tailwind v4 @theme
+### Pattern 1: Lead API Follows Scan Service Pattern
 
-**What:** Define Industrial Amber tokens once in CSS using @theme, generate utilities automatically, expose as CSS variables.
+The leads service follows the same structure as `app/scans/service.py`:
+- Separate `service.py` with CRUD functions
+- Router imports service functions (not SQLAlchemy directly)
+- All queries filter by `organization_id` first
 
-**When:** Use for all color, spacing, typography, and radius values in the design system.
-
-**Example:**
-```css
-/* frontend/src/styles/index.css */
-@import "tailwindcss";
-
-@theme {
-  /* Industrial Amber color scale */
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fef3c7;
-  --color-amber-200: #fde68a;
-  --color-amber-300: #fcd34d;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b; /* Primary brand */
-  --color-amber-600: #d97706;
-  --color-amber-700: #b45309;
-  --color-amber-800: #92400e;
-  --color-amber-900: #78350f;
-
-  /* Neutral silver scale (desaturated) */
-  --color-silver-50: #f8f9fa;
-  --color-silver-100: #e9ecef;
-  --color-silver-200: #dee2e6;
-  --color-silver-300: #ced4da;
-  --color-silver-400: #adb5bd;
-  --color-silver-500: #6c757d;
-  --color-silver-600: #495057;
-  --color-silver-700: #343a40;
-  --color-silver-800: #212529;
-  --color-silver-900: #0d1117;
-
-  /* Semantic tokens */
-  --color-primary: var(--color-amber-500);
-  --color-primary-hover: var(--color-amber-600);
-  --color-surface: var(--color-silver-50);
-  --color-text: var(--color-silver-900);
-
-  /* Spacing scale (8px base) */
-  --spacing-1: 0.25rem; /* 4px */
-  --spacing-2: 0.5rem;  /* 8px */
-  --spacing-3: 0.75rem; /* 12px */
-  --spacing-4: 1rem;    /* 16px */
-  --spacing-6: 1.5rem;  /* 24px */
-  --spacing-8: 2rem;    /* 32px */
-
-  /* Border radius */
-  --radius-sm: 0.375rem; /* 6px */
-  --radius-md: 0.5rem;   /* 8px */
-  --radius-lg: 0.75rem;  /* 12px */
-  --radius-xl: 1rem;     /* 16px */
-}
-
-/* Z-index scale (existing, keep for compatibility) */
-:root {
-  --z-map-canvas: 0;
-  --z-map-controls: 10;
-  --z-search-bar: 100;
-  --z-sidebar: 200;
-  --z-side-rail: 250;
-  --z-property-panel: 300;
-  --z-dropdown: 400;
-  --z-modal: 1000;
-  --z-toast: 2000;
-}
-```
-
-**Result:** Utilities like `bg-amber-500`, `text-silver-900`, `p-4`, `rounded-md` are auto-generated. Tokens available as `var(--color-amber-500)` for custom CSS.
-
-**Source:** [Tailwind CSS v4 @theme directive](https://tailwindcss.com/docs/theme), [Tailwind CSS 4 design tokens guide](https://medium.com/@sureshdotariya/tailwind-css-4-theme-the-future-of-design-tokens-at-2025-guide-48305a26af06)
-
-### Pattern 2: shadcn/ui Copy-Paste Component Pattern
-
-**What:** Own component source code in `components/ui/`, not npm packages. Copy primitives from Radix UI + Tailwind, customize with Industrial Amber tokens.
-
-**When:** For all reusable UI primitives (buttons, cards, badges, inputs, selects).
-
-**Example:**
-```tsx
-// frontend/src/components/ui/button.tsx
-import * as React from 'react'
-
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
-}
-
-const variantClasses = {
-  primary: 'bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700',
-  secondary: 'bg-silver-200 text-silver-900 hover:bg-silver-300',
-  ghost: 'text-silver-700 hover:bg-silver-100',
-}
-
-const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
-}
-
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', className, ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={`
-          inline-flex items-center justify-center rounded-md font-medium
-          transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500
-          disabled:opacity-50 disabled:pointer-events-none
-          ${variantClasses[variant]}
-          ${sizeClasses[size]}
-          ${className || ''}
-        `}
-        {...props}
-      />
+```python
+# backend/app/leads/service.py (NEW)
+async def list_leads(
+    organization_id: uuid.UUID,
+    project_id: uuid.UUID | None,
+    stage: str | None,
+    session: AsyncSession,
+) -> list[tuple[Lead, ParcelCache]]:
+    """JOIN leads with parcel_cache for display data."""
+    query = (
+        select(Lead, ParcelCache)
+        .join(ParcelCache, Lead.parcel_id == ParcelCache.id)
+        .where(Lead.organization_id == organization_id)
     )
-  }
-)
-Button.displayName = 'Button'
+    if project_id:
+        query = query.where(Lead.project_id == project_id)
+    if stage:
+        query = query.where(Lead.stage == stage)
+    ...
 ```
 
-**Result:** Full component ownership, no breaking changes from upstream, customizable per project needs.
+The response schema embeds the parcel data inline (denormalized) — the client does not need to make separate parcel requests to render the Kanban board.
 
-**Source:** [shadcn/ui architecture](https://manupa.dev/blog/anatomy-of-shadcn-ui), [shadcn/ui adoption guide](https://blog.logrocket.com/shadcn-ui-adoption-guide/)
+### Pattern 2: DB Transaction Pattern
 
-### Pattern 3: TanStack Router Layout Routes for View Structure
+Follow the established pattern from `MEMORY.md`:
 
-**What:** Use file-based routing with layout routes to wrap 3 main views (Map, Results, Projects) with shared navigation shell.
+```python
+# CORRECT (existing pattern)
+lead = Lead(organization_id=organization_id, parcel_id=..., ...)
+db.add(lead)
+await db.flush()
+await db.commit()
 
-**When:** Organizing page-level navigation and shared layout components.
-
-**Example:**
-```tsx
-// frontend/src/routes/_authenticated.tsx (MODIFIED)
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import SideRailNav from '@/components/layout/SideRailNav'
-import ReportSidebar from '@/components/layout/ReportSidebar'
-import InspectorPanel from '@/components/layout/InspectorPanel'
-import { useNavigationContext } from '@/lib/navigation-context'
-
-export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.isAuthenticated) {
-      throw redirect({ to: '/auth', search: { redirect: location.href } })
-    }
-  },
-  component: AuthenticatedLayout,
-})
-
-function AuthenticatedLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { inspectorState } = useNavigationContext() // NEW: Cross-view state
-
-  return (
-    <div className="flex h-screen">
-      <SideRailNav
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-      />
-      <ReportSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      <main className="flex-1 relative overflow-hidden">
-        <Outlet /> {/* Map, Results, Projects pages render here */}
-      </main>
-      {inspectorState.isOpen && (
-        <InspectorPanel
-          type={inspectorState.type}
-          data={inspectorState.data}
-          onClose={() => inspectorState.close()}
-        />
-      )}
-    </div>
-  )
-}
+# WRONG — causes "transaction already begun"
+async with db.begin():
+    ...
 ```
 
-**Result:** Shared navigation shell across all authenticated views, inspector panel available from any page.
+### Pattern 3: Scan History Uses Existing `area_scans` Table
 
-**Source:** [TanStack Router layout routes](https://tanstack.com/router/v1/docs/framework/react/routing/routing-concepts), [TanStack Router file-based routing](https://tanstack.com/router/v1/docs/framework/react/routing/file-based-routing)
+Do not create a new scan history table. The `area_scans` table already contains all needed fields: `gemeente_naam`, `gemeente_code`, `wijk_naam`, `status`, `parcels_total`, `created_at`, `project_id`. Add `results_count` via a `COUNT` subquery on `scan_results`.
 
-### Pattern 4: Navigation Context via Search Params + React Context
+```python
+# backend/app/scans/service.py (NEW function)
+async def list_completed_scans(
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    results_count_sq = (
+        select(func.count(ScanResult.id))
+        .where(ScanResult.scan_id == AreaScan.id)
+        .scalar_subquery()
+    )
+    lead_count_sq = (
+        select(func.count(Lead.id))
+        .where(Lead.source_scan_id == AreaScan.id)
+        .scalar_subquery()
+    )
+    query = (
+        select(AreaScan, results_count_sq.label("results_count"), lead_count_sq.label("lead_count"))
+        .where(
+            AreaScan.organization_id == organization_id,
+            AreaScan.status == "completed",
+        )
+        .order_by(AreaScan.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    ...
+```
 
-**What:** Store route-specific state in search params (type-safe, shareable URLs), store ephemeral UI state in React Context (inspector open/closed, active filters).
+### Pattern 4: Report from Parcel Reuses Aggregator
 
-**When:** Managing cross-view state like "active gemeente", "active scan", "inspector panel state".
+The `POST /api/reports/from-parcel` endpoint does not duplicate logic. It extracts postcode/huisnummer from `ParcelCache.address` (reusing the existing regex already in `scans/router.py:enrich_parcel`) and calls the same `property_aggregator` service used by the existing address-based report flow.
 
-**Example:**
+```python
+# backend/app/reports/router.py (NEW endpoint in existing file)
+@router.post("/from-parcel", response_model=SaveReportResponse)
+async def create_report_from_parcel(
+    request: Request,
+    body: ReportFromParcelRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Fetch ParcelCache
+    parcel = await db.execute(select(ParcelCache).where(
+        ParcelCache.id == body.parcel_id,
+        ParcelCache.organization_id == organization_id,
+    ))
+    # 2. Extract postcode/huisnummer from address
+    # 3. Call property_aggregator (same as /api/properties/{postcode}/{huisnummer})
+    # 4. Save as SavedReport (same as POST /api/reports)
+    # 5. Optionally link to Lead via PATCH /api/leads/{lead_id}
+```
+
+### Pattern 5: Kanban Without Drag-and-Drop
+
+The Kanban board renders stage columns as flex containers. Stage transitions happen via a `<select>` dropdown in the `LeadCard` header — no drag-and-drop library required.
+
 ```tsx
-// frontend/src/lib/navigation-context.tsx (NEW)
-import { createContext, useContext, useState } from 'react'
-
-interface InspectorState {
-  isOpen: boolean
-  type: 'property' | 'parcel' | 'project' | null
-  data: unknown | null
-}
-
-interface NavigationContextValue {
-  inspectorState: InspectorState & {
-    open: (type: 'property' | 'parcel' | 'project', data: unknown) => void
-    close: () => void
-  }
-}
-
-const NavigationContext = createContext<NavigationContextValue | null>(null)
-
-export function NavigationProvider({ children }: { children: React.ReactNode }) {
-  const [inspectorState, setInspectorState] = useState<InspectorState>({
-    isOpen: false,
-    type: null,
-    data: null,
-  })
-
+// src/components/leads/LeadCard.tsx (NEW)
+function StageSelector({ lead, onStageChange }: ...) {
   return (
-    <NavigationContext.Provider
-      value={{
-        inspectorState: {
-          ...inspectorState,
-          open: (type, data) => setInspectorState({ isOpen: true, type, data }),
-          close: () => setInspectorState({ isOpen: false, type: null, data: null }),
-        },
-      }}
+    <select
+      value={lead.stage}
+      onChange={(e) => onStageChange(lead.id, e.target.value)}
+      className="text-xs ..."
     >
-      {children}
-    </NavigationContext.Provider>
+      {STAGES.map(stage => (
+        <option key={stage.value} value={stage.value}>{stage.label}</option>
+      ))}
+    </select>
   )
 }
 
-export function useNavigationContext() {
-  const ctx = useContext(NavigationContext)
-  if (!ctx) throw new Error('useNavigationContext must be used within NavigationProvider')
-  return ctx
-}
+const STAGES = [
+  { value: 'nieuw',        label: 'Nieuw' },
+  { value: 'onderzoek',    label: 'Onderzoek' },
+  { value: 'contact',      label: 'Contact' },
+  { value: 'onderhandeling', label: 'Onderhandeling' },
+  { value: 'afgewezen',    label: 'Afgewezen' },
+  { value: 'gekocht',      label: 'Gekocht' },
+]
 ```
 
+### Pattern 6: Map Score Layer Reuse for Historical Scans
+
+No new map layer code is needed. The flow is:
+
 ```tsx
-// frontend/src/routes/_authenticated/map.tsx (search params example)
-export const Route = createFileRoute('/_authenticated/map')({
-  component: MapPage,
-  validateSearch: (search: Record<string, unknown>): MapSearchParams => ({
-    gemeente_code: typeof search.gemeente_code === 'string' ? search.gemeente_code : undefined,
-    scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
-    // Type-safe, shareable via URL
-  }),
-})
-```
-
-**Result:** Inspector panel state shared across views without prop drilling. Route state shareable via URL.
-
-**Source:** [TanStack Router search params](https://tanstack.com/router/v1/docs/framework/react/guide/search-params), [TanStack Router route context](https://github.com/TanStack/router/discussions/1207)
-
-### Pattern 5: MapLibre Silver Theme via Style Customization
-
-**What:** Desaturate base map colors using MapLibre style layer paint properties, not external style JSON.
-
-**When:** Customizing the existing CartoDB light layer for silver/desaturated aesthetic.
-
-**Example:**
-```tsx
-// frontend/src/components/map/MapView.tsx (MODIFIED)
-const map = new maplibregl.Map({
-  container: containerRef.current,
-  transformRequest,
-  style: {
-    version: 8,
-    sources: {
-      'carto-light': {
-        type: 'raster',
-        tiles: [CARTO_LIGHT_TILES],
-        tileSize: 512,
-        attribution: CARTO_ATTRIBUTION,
-      },
-    },
-    layers: [
-      {
-        id: 'background',
-        type: 'background',
-        paint: { 'background-color': '#f8f9fa' }, // Silver-50
-      },
-      {
-        id: 'carto-light-layer',
-        type: 'raster',
-        source: 'carto-light',
-        paint: {
-          'raster-opacity': 0.6,           // Reduce visibility
-          'raster-saturation': -0.5,       // Desaturate colors
-          'raster-contrast': -0.1,         // Soften contrast
-          'raster-brightness-min': 0.3,    // Lighten dark areas
-        },
-      },
-    ],
-  },
-  // ...
-})
-```
-
-**Result:** Silver/desaturated base map without external style dependencies.
-
-**Source:** [MapLibre Style Spec layers](https://maplibre.org/maplibre-style-spec/layers/), [MapLibre GL JS style customization](https://developers.arcgis.com/maplibre-gl-js/maps/vector-tile-basemaps/change-the-basemap-style/)
-
-### Pattern 6: Incremental Migration Strategy
-
-**What:** Migrate existing components to Industrial Amber design system incrementally, prioritizing high-visibility components first.
-
-**When:** Refactoring existing glassmorphism components to new design tokens.
-
-**Example migration order:**
-1. **Phase 1: Design tokens** (index.css @theme) — establishes foundation
-2. **Phase 2: UI primitives** (Button, Card, Badge) — copy-paste new components
-3. **Phase 3: Layout shells** (MapShell, ResultsShell, InspectorPanel) — new wrappers
-4. **Phase 4: High-visibility refactor** (PropertyDetailDrawer, ResultsTable) — update existing
-5. **Phase 5: Low-visibility refactor** (Modals, forms, minor components) — complete migration
-
-**Coexistence pattern:**
-```tsx
-// During migration, both systems coexist
-import { Button } from '@/components/ui/button' // NEW: Industrial Amber
-import { Drawer } from '@/components/ui/Drawer' // OLD: Glassmorphism (not migrated yet)
-
-// Gradually replace old components with new as features are updated
-```
-
-**Result:** No "big bang" rewrite, continuous delivery, reduced risk.
-
-**Source:** [Incremental migration approaches](https://circleci.com/blog/incremental-migration-approaches-for-legacy-applications/), [Design system migration tips](https://medium.com/@houhoucoop/pro-tips-for-ui-library-migration-in-large-projects-d54f0fbcd083)
-
-### Pattern 7: Inspector Panel Architecture (Right Slide-Over)
-
-**What:** Unified right-side panel for property details, parcel inspection, project details — shared across all views.
-
-**When:** Displaying detail views without navigating away from current page.
-
-**Example:**
-```tsx
-// frontend/src/components/layout/InspectorPanel.tsx (NEW)
-import { Drawer } from '@/components/ui/drawer'
-import { PropertyInspector } from '@/components/property/PropertyInspector'
-import { ParcelInspector } from '@/components/results/ParcelInspector'
-import { ProjectInspector } from '@/components/projects/ProjectInspector'
-
-interface InspectorPanelProps {
-  type: 'property' | 'parcel' | 'project'
-  data: unknown
-  onClose: () => void
+// In ProjectList, scan row click handler:
+const handleScanClick = (scan: ScanListItem) => {
+  navigate({ to: '/map', search: { scan_id: scan.scan_id } })
 }
 
-export function InspectorPanel({ type, data, onClose }: InspectorPanelProps) {
-  return (
-    <Drawer isOpen onClose={onClose} width="lg">
-      {type === 'property' && <PropertyInspector data={data} />}
-      {type === 'parcel' && <ParcelInspector data={data} />}
-      {type === 'project' && <ProjectInspector data={data} />}
-    </Drawer>
-  )
-}
+// In map.tsx, existing useEffect handles it:
+useEffect(() => {
+  if (!urlScanId || activeScanId) return
+  setActiveScanId(urlScanId)
+  navigate({ to: '/map', search: {}, replace: true })
+}, [urlScanId, activeScanId, navigate])
+
+// Existing useEffect renders score tiles when activeScanId is set + scan status is completed:
+useEffect(() => {
+  if (!mapReady || !mapRef.current || !scanStatus.data) return
+  if (scanStatus.data.status === 'completed' && activeScanId) {
+    const tileUrl = getScanTileUrl(activeScanId)
+    addParcelScoreLayer(mapRef.current, tileUrl, 'parcel_scores')
+  }
+}, [scanStatus.data, activeScanId, mapReady])
 ```
 
-**Usage from any view:**
-```tsx
-// In Map view, Results view, or Projects view
-const { inspectorState } = useNavigationContext()
+The only issue: for historical scans, `useScanPolling` polls status but immediately gets `completed` — triggering the score layer on first poll. This already works correctly. No changes needed to `map.tsx` for historical scan display.
 
-function handleParcelClick(parcel: Parcel) {
-  inspectorState.open('parcel', parcel) // Opens inspector panel
-}
-```
-
-**Result:** Consistent inspector experience across all views, single source of truth for panel state.
-
-**Source:** [React sliding panels guide](https://copyprogramming.com/howto/react-sliding-up-panel-for-web), [React sidebar patterns](https://primereact.org/sidebar/)
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: CSS-in-JS for Design Tokens
+### Anti-Pattern 1: New Lead-Specific Map Layer
 
-**What:** Using styled-components or emotion to define design tokens in JavaScript objects.
+Do not create a `LeadMapLayer` that shows lead status on the map using pins. This is listed as a Future requirement, not v5.0. Adding it now would require new PostGIS queries, new MVT tile endpoints, and complex map state management for lead status colors. The existing score overlay is sufficient for v5.0.
 
-**Why bad:** Incompatible with Tailwind v4 @theme directive, loses CSS variable runtime flexibility, increases bundle size.
+### Anti-Pattern 2: Drag-and-Drop Kanban Library
 
-**Instead:** Define all tokens in index.css using @theme, consume via Tailwind utilities or var() in custom CSS.
+Do not add `react-dnd`, `@dnd-kit/core`, or similar libraries. They add bundle weight (~30-60KB), complex accessibility handling, and drag-and-drop is not natural on mobile (where the project must work). A select dropdown for stage changes is simpler, accessible, and consistent with the existing mobile-first approach.
 
-### Anti-Pattern 2: Prop Drilling for Cross-View State
+### Anti-Pattern 3: Separate Lead History Table
 
-**What:** Passing inspector state through multiple component layers via props.
+Do not create a `lead_history` audit table for tracking stage transitions. This is a future feature (audit trail). For v5.0, the `updated_at` timestamp on the Lead model is sufficient. The TimestampMixin provides this automatically.
 
-**Why bad:** Couples components tightly, makes refactoring difficult, clutters component APIs.
+### Anti-Pattern 4: Blocking Report Generation
 
-**Instead:** Use NavigationContext for ephemeral UI state, search params for shareable route state.
+Do not make `POST /api/reports/from-parcel` synchronous-blocking. The existing property aggregator makes multiple external API calls (BAG, PDOK, DSO, RCE, SRU) that can take 10-30 seconds. Follow the existing pattern: trigger the report generation in the request, return immediately with the `report_id`, and let the frontend poll for the report to finish loading (or use the ARQ background job pattern if needed).
 
-### Anti-Pattern 3: Monolithic Map Page with Inline View Logic
+For simplicity in v5.0, the synchronous approach is acceptable (the endpoint already uses `httpx.AsyncClient` with `await`). If performance is a concern, wrap in ARQ later.
 
-**What:** Keeping all map, results, and inspector logic in a single 900-line map.tsx file.
+### Anti-Pattern 5: `project_id` on Lead as Optional
 
-**Why bad:** Hard to test, poor separation of concerns, difficult to add new views.
+The `project_id` FK on `Lead` should be `NOT NULL`. Leads without a project are orphaned and unbrowsable — there is no UI flow that creates a lead outside of a project context. If the project is deleted, `ondelete="CASCADE"` cleans up the leads.
 
-**Instead:** Extract view-specific logic to separate route files (map.tsx, resultaten.tsx), use layout shells for composition.
+### Anti-Pattern 6: Separate Scan History API
 
-### Anti-Pattern 4: Global CSS Overrides for Component Styling
+Do not create a new `/api/scan-history` endpoint. Use the existing `/api/scans` path with a `GET /` list action — follows REST convention where `GET /api/scans` returns the collection. The frontend already imports from `SCANS_BASE = '/api/scans'`.
 
-**What:** Overriding component styles with global CSS classes or !important rules.
+---
 
-**Why bad:** Breaks component encapsulation, creates specificity wars, hard to debug.
+## New vs Modified Explicit List
 
-**Instead:** Use design tokens in @theme, variant props on components, className composition with cn() utility.
+### New Backend Files
 
-### Anti-Pattern 5: Hardcoding MapLibre Style JSON URLs
+| File | Purpose |
+|------|---------|
+| `backend/app/models/lead.py` | Lead model (parcel → project + stage) |
+| `backend/app/leads/__init__.py` | Package init |
+| `backend/app/leads/router.py` | Lead CRUD endpoints |
+| `backend/app/leads/service.py` | Lead CRUD service layer |
+| `backend/app/leads/schemas.py` | Lead Pydantic schemas |
+| `backend/alembic/versions/{hash}_add_leads_table.py` | DB migration |
 
-**What:** Loading external style JSON files for base map styling.
+### Modified Backend Files
 
-**Why bad:** External dependency, slow load times, limited customization control.
+| File | Change |
+|------|--------|
+| `backend/app/scans/router.py` | Add `GET /` list endpoint for completed scans |
+| `backend/app/scans/service.py` | Add `list_completed_scans()` function |
+| `backend/app/scans/schemas.py` | Add `ScanListItem`, `ScanListResponse` schemas |
+| `backend/app/projects/router.py` | Add `GET /{project_id}/scans` subresource |
+| `backend/app/schemas/project.py` | Add `scan_count` to `ProjectResponse` |
+| `backend/app/reports/router.py` | Add `POST /from-parcel` endpoint |
+| `backend/app/reports/schemas.py` (or `backend/app/schemas/report.py`) | Add `ReportFromParcelRequest` |
+| `backend/app/core/main.py` (or `app.py`) | Include leads router |
+| `backend/app/models/__init__.py` | Import Lead model for Alembic discovery |
 
-**Instead:** Define style inline in MapView component, use paint properties for desaturation.
+### New Frontend Files
 
-## Data Flow
+| File | Purpose |
+|------|---------|
+| `frontend/src/routes/_authenticated/leads.tsx` | Leads pipeline route |
+| `frontend/src/components/leads/LeadKanbanBoard.tsx` | Kanban board layout |
+| `frontend/src/components/leads/LeadCard.tsx` | Single lead card with stage selector |
+| `frontend/src/components/leads/LeadDetailModal.tsx` | Lead expanded view + report CTA |
+| `frontend/src/components/leads/PromoteParcelModal.tsx` | Add parcel to pipeline flow |
+| `frontend/src/hooks/useLeads.ts` | TanStack Query hooks for leads |
+| `frontend/src/lib/types/lead.ts` | Lead TypeScript types |
+
+### Modified Frontend Files
+
+| File | Change |
+|------|--------|
+| `frontend/src/components/layout/SideRailNav.tsx` | Add Leads nav icon (Briefcase or Target) |
+| `frontend/src/components/projects/ProjectList.tsx` | Replace demo data with `useProjectScans()` |
+| `frontend/src/components/results/BulkActionBar.tsx` | Add "Voeg toe aan pipeline" action |
+| `frontend/src/components/layout/InspectorPanel.tsx` | Add "Voeg toe aan pipeline" button |
+| `frontend/src/hooks/useScans.ts` | Add `useScanHistory()`, `useProjectScans()` |
+| `frontend/src/lib/api.ts` | Add `fetchScanHistory()`, `fetchProjectScans()`, lead API calls |
+| `frontend/src/lib/types/scan.ts` | Add `ScanListItem`, `ScanListResponse` types |
+| `frontend/src/routeTree.gen.ts` | Auto-regenerated when leads.tsx is added |
+
+---
+
+## Suggested Build Order
+
+The ordering below respects data dependencies (model before API before UI) and ensures each phase is independently testable.
+
+### Phase A: Data Layer (Build First — Everything Else Depends On It)
+
+1. Create `backend/app/models/lead.py` — Lead model with all fields
+2. Update `backend/app/models/__init__.py` — import Lead for Alembic
+3. Generate Alembic migration (`alembic revision --autogenerate -m "add_leads_table"`)
+4. Run migration against dev DB
+5. Add `GET /api/scans` list endpoint to `scans/router.py` + service function
+6. Add `GET /api/projects/{project_id}/scans` to `projects/router.py`
+
+**Why first:** All frontend and subsequent API work depends on the Lead table existing and scan history being queryable. Backend tests can be written against these endpoints before any frontend work.
+
+### Phase B: Lead Pipeline API (Builds on Phase A)
+
+7. Create `backend/app/leads/schemas.py` — Pydantic schemas
+8. Create `backend/app/leads/service.py` — CRUD functions (list, create, update, delete)
+9. Create `backend/app/leads/router.py` — all 6 endpoints
+10. Register leads router in `main.py`
+11. Add `POST /api/reports/from-parcel` to `reports/router.py`
+
+**Why second:** API endpoints must exist before frontend hooks can be written against them.
+
+### Phase C: Frontend Types and Hooks (Builds on Phase B)
+
+12. Create `frontend/src/lib/types/lead.ts` — Lead TypeScript types
+13. Update `frontend/src/lib/types/scan.ts` — add `ScanListItem`, `ScanListResponse`
+14. Update `frontend/src/lib/api.ts` — add lead API calls and scan history calls
+15. Create `frontend/src/hooks/useLeads.ts` — TanStack Query hooks
+16. Update `frontend/src/hooks/useScans.ts` — add `useScanHistory()`, `useProjectScans()`
+
+**Why third:** Components depend on typed hooks, not raw fetch calls.
+
+### Phase D: Projecten Scan History (Quick Win — Unblocks Map Reuse)
+
+17. Update `ProjectList.tsx` — replace demo data with `useProjectScans()`, add scan history rows with "Toon kaart" button
+18. Verify map reuse: "Toon kaart" → `/map?scan_id=X` → score tiles appear (existing code handles this)
+
+**Why fourth:** This is the smallest deliverable — replaces demo data with real data, unblocks validation of the scan history flow. No new components needed.
+
+### Phase E: Lead Pipeline UI (Builds on Phase C)
+
+19. Create `PromoteParcelModal.tsx` — project selector + stage picker
+20. Modify `BulkActionBar.tsx` — add "Voeg toe aan pipeline" action
+21. Modify `InspectorPanel.tsx` — add promote button
+22. Create `LeadCard.tsx` — card with stage selector dropdown
+23. Create `LeadDetailModal.tsx` — expanded lead view + report generation CTA
+24. Create `LeadKanbanBoard.tsx` — stage column layout + `useLeads()` data
+25. Create `leads.tsx` route — Kanban board page
+26. Update `SideRailNav.tsx` — add Leads icon
+
+**Why fifth:** Pipeline UI requires all the preceding pieces. The Kanban board is the most visible deliverable and should be built after the data plumbing is verified.
+
+### Phase F: Report Integration for Leads (Builds on Phase E)
+
+27. Wire "Genereer rapport" button in `LeadDetailModal` to `POST /api/reports/from-parcel`
+28. After report generation, show "Rapport bekijken" link → `/rapport/{id}`
+29. Verify the from-parcel report flow end-to-end
+
+**Why sixth:** Report generation is valuable but not blocking for pipeline usability. The lead card shows parcel data (address, score, bestemmingen) even without a report.
+
+### Phase G: Bug Fixes (Can Run in Parallel with Any Phase)
+
+- Backend register endpoint 500 error (investigate and fix independently)
+- Known issues cleanup (PLU WMS validation, parcel count pre-check)
+
+**Why parallel:** Bug fixes are independent of feature development. Can be done between phases or at the end.
+
+---
+
+## Dependency Graph
 
 ```
-User Interaction
-    ↓
-Route Component (map.tsx, resultaten.tsx, projecten.tsx)
-    ↓
-Layout Shell (MapShell, ResultsShell) — composition layer
-    ↓
-Feature Components (PropertyCard, ResultsTable) — domain logic
-    ↓
-UI Primitives (Button, Card, Badge) — design system
-    ↓
-Design Tokens (@theme CSS variables) — single source of truth
+Lead model (A)
+  ↓
+Lead API (B)
+  ↓
+Lead types + hooks (C)
+  ↓
+Projecten scan history (D) ← can start in parallel with E after C
+  ↓
+Pipeline UI: PromoteParcelModal → BulkActionBar + InspectorPanel (E)
+  ↓
+LeadCard → LeadKanbanBoard → /leads route (E continued)
+  ↓
+Report integration for leads (F)
 ```
 
-**Cross-cutting concerns:**
-- **Navigation Context** → Inspector panel state, ephemeral UI state
-- **Search Params** → Route state, shareable URLs (gemeente_code, scan_id)
-- **TanStack Query** → Server state, cache management
-- **MapLibre Map Ref** → Imperative map operations, shared across map layers
+Bug fixes (G) have no dependency and can run at any point.
 
-## Integration Points
-
-### 1. Existing TanStack Router → New Layout Structure
-
-**Current:**
-```
-routes/
-├── _authenticated.tsx (layout with side-rail + sidebar)
-└── _authenticated/map.tsx (monolithic map page)
-```
-
-**After v4.0:**
-```
-routes/
-├── _authenticated.tsx (layout with side-rail + sidebar + inspector)
-└── _authenticated/
-    ├── map.tsx (map view, uses MapShell)
-    ├── resultaten.tsx (results view, uses ResultsShell)
-    └── projecten.tsx (projects view, uses ProjectsShell)
-```
-
-**Integration:** Add `InspectorPanel` to `_authenticated.tsx` layout, wrap `<Outlet />` with `NavigationProvider`.
-
-### 2. Existing MapLibre Setup → Silver Theme
-
-**Current:**
-```tsx
-// MapView.tsx uses CARTO_LIGHT_TILES with default opacity
-layers: [
-  { id: 'carto-light-layer', type: 'raster', source: 'carto-light' }
-]
-```
-
-**After v4.0:**
-```tsx
-// Add desaturation paint properties
-layers: [
-  {
-    id: 'carto-light-layer',
-    type: 'raster',
-    source: 'carto-light',
-    paint: {
-      'raster-opacity': 0.6,
-      'raster-saturation': -0.5,
-      'raster-contrast': -0.1,
-      'raster-brightness-min': 0.3,
-    }
-  }
-]
-```
-
-**Integration:** Modify MapView.tsx style object, no external dependencies.
-
-### 3. Existing Glassmorphism CSS → Industrial Amber Tokens
-
-**Current:**
-```css
-:root {
-  --color-primary: #2563eb; /* Blue */
-  --color-surface: #ffffff;
-}
-```
-
-**After v4.0:**
-```css
-@theme {
-  --color-primary: #f59e0b; /* Amber */
-  --color-surface: #f8f9fa; /* Silver */
-}
-```
-
-**Integration:** Replace `:root` variables with `@theme` tokens, update references in components.
-
-### 4. Existing Drawer Component → Inspector Panel Wrapper
-
-**Current:**
-```tsx
-// PropertyDetailDrawer.tsx renders Drawer directly
-<Drawer isOpen={isOpen} onClose={onClose}>
-  <PropertyDetails />
-</Drawer>
-```
-
-**After v4.0:**
-```tsx
-// InspectorPanel wraps Drawer, routes content by type
-<InspectorPanel type="property" data={propertyData} onClose={onClose} />
-```
-
-**Integration:** Refactor PropertyDetailDrawer to PropertyInspector (content only), use InspectorPanel wrapper.
-
-### 5. Existing ResultsLayout → New Results Route
-
-**Current:**
-```tsx
-// map.tsx includes ResultsLayout inline
-<ResultsLayout scanId={scanId} collapsed={!showResults}>
-  <MapView />
-</ResultsLayout>
-```
-
-**After v4.0:**
-```tsx
-// resultaten.tsx as separate route
-export const Route = createFileRoute('/_authenticated/resultaten')({
-  validateSearch: (search) => ({ scan_id: search.scan_id }),
-  component: ResultsPage,
-})
-```
-
-**Integration:** Extract ResultsLayout to `routes/_authenticated/resultaten.tsx`, navigate via `/resultaten?scan_id=X`.
+---
 
 ## Scalability Considerations
 
-| Concern | At 100 users | At 10K users | At 1M users |
-|---------|--------------|--------------|-------------|
-| **Design token updates** | Update index.css @theme, rebuild frontend | Same (CSS variables, no runtime cost) | Same (CSS variables, no runtime cost) |
-| **Component library size** | ~15 UI primitives in components/ui/ | ~30 UI primitives (add composites) | ~50 UI primitives (split by domain) |
-| **Route complexity** | 3 main views (Map, Results, Projects) | +5 views (Analytics, Reports, Admin) | Lazy-load routes, code-split by view |
-| **Inspector panel performance** | Render on open, unmount on close | Same (React 19 concurrent rendering) | Virtualize lists in inspector, memoize heavy components |
-| **MapLibre style size** | Inline style object (~100 LOC) | Same (raster layers, no vector tile bloat) | Vector tile layers for parcels, separate style modules |
+| Concern | At Current Scale | At Scale (10k leads/org) |
+|---------|-----------------|--------------------------|
+| Lead list query | Simple index scan on `(organization_id, project_id)` | Add cursor pagination (currently offset-based is fine) |
+| Kanban board render | All leads per project in one request | Add per-stage lazy loading if >100 leads per stage |
+| Score tile generation | PostGIS ST_AsMVT per request | Add tile caching (Redis or HTTP cache headers) |
+| Scan history list | `ORDER BY created_at DESC LIMIT 50` | Existing index `ix_area_scans_org_status` covers this |
+| Report from parcel | Synchronous aggregator (10-30s) | Move to ARQ background job, poll for completion |
 
-## New vs Modified Components
-
-### New Components
-
-| Component | Purpose | Dependencies |
-|-----------|---------|--------------|
-| `components/ui/button.tsx` | Primary button primitive | @theme tokens |
-| `components/ui/card.tsx` | Card container primitive | @theme tokens |
-| `components/ui/badge.tsx` | Status badge primitive | @theme tokens |
-| `components/ui/input.tsx` | Form input primitive | @theme tokens |
-| `components/ui/select.tsx` | Form select primitive | @theme tokens |
-| `components/layout/map-shell.tsx` | Map view wrapper | MapView, LayerToggle |
-| `components/layout/results-shell.tsx` | Results view wrapper | ResultsTable, ResultsFilterPanel |
-| `components/layout/inspector-panel.tsx` | Unified inspector wrapper | Drawer, inspector components |
-| `lib/navigation-context.tsx` | Cross-view state context | React Context API |
-| `routes/_authenticated/resultaten.tsx` | Results page route | ResultsShell, TanStack Router |
-
-### Modified Components
-
-| Component | Change | Reason |
-|-----------|--------|--------|
-| `components/ui/drawer.tsx` | Update colors to Industrial Amber tokens | Design system consistency |
-| `components/ui/modal.tsx` | Update colors to Industrial Amber tokens | Design system consistency |
-| `components/ui/form-field.tsx` | Update colors to Industrial Amber tokens | Design system consistency |
-| `components/layout/app-layout.tsx` | No change (already minimal wrapper) | — |
-| `components/layout/side-rail-nav.tsx` | Update button styles to use ui/button.tsx | Design system consistency |
-| `components/layout/report-sidebar.tsx` | Update card styles to use ui/card.tsx | Design system consistency |
-| `components/map/MapView.tsx` | Add raster paint properties for silver theme | Base map desaturation |
-| `routes/__root.tsx` | Wrap with NavigationProvider | Cross-view state |
-| `routes/_authenticated.tsx` | Add InspectorPanel to layout | Unified inspector across views |
-| `routes/_authenticated/map.tsx` | Refactor to use MapShell, extract results to separate route | View separation |
-
-## Build Order for Migration
-
-**Phase 1: Foundation (Week 1)**
-1. Add @theme tokens to `styles/index.css`
-2. Create `lib/navigation-context.tsx`
-3. Update `routes/__root.tsx` with NavigationProvider
-4. Create `components/ui/button.tsx`
-5. Create `components/ui/card.tsx`
-6. Create `components/ui/badge.tsx`
-
-**Phase 2: Layout Structure (Week 2)**
-1. Create `components/layout/inspector-panel.tsx`
-2. Update `routes/_authenticated.tsx` with InspectorPanel
-3. Create `components/layout/map-shell.tsx`
-4. Create `components/layout/results-shell.tsx`
-5. Modify `components/map/MapView.tsx` for silver theme
-
-**Phase 3: View Separation (Week 3)**
-1. Create `routes/_authenticated/resultaten.tsx`
-2. Refactor `routes/_authenticated/map.tsx` to use MapShell
-3. Extract PropertyDetailDrawer → PropertyInspector
-4. Update navigation in SideRailNav to route to /resultaten
-
-**Phase 4: Component Refactoring (Week 4)**
-1. Update `components/ui/drawer.tsx` with Industrial Amber
-2. Update `components/ui/modal.tsx` with Industrial Amber
-3. Update `components/layout/side-rail-nav.tsx` to use ui/button
-4. Update `components/layout/report-sidebar.tsx` to use ui/card
-5. Create `components/ui/input.tsx`
-6. Create `components/ui/select.tsx`
-
-**Phase 5: Polish (Week 5)**
-1. Update remaining feature components with new primitives
-2. Remove old glassmorphism CSS variables
-3. Add storybook/documentation for ui/ components
-4. Performance audit (bundle size, runtime)
-
-**Dependencies:**
-- Phase 2 depends on Phase 1 (needs @theme tokens)
-- Phase 3 depends on Phase 2 (needs layout shells)
-- Phase 4 can run in parallel with Phase 3
-- Phase 5 depends on all previous phases
+---
 
 ## Sources
 
-### Design System Architecture
-- [React Component Libraries in 2026](https://www.builder.io/blog/react-component-libraries-2026)
-- [Implementing Design Systems in React](https://www.mindfulchase.com/deep-dives/design-system-framework/implementing-your-design-system-in-react-best-practices-and-patterns.html)
-- [React component library organization](https://blog.webdevsimplified.com/2022-07/react-folder-structure/)
-- [Radix UI primitives](https://yakhil25.medium.com/react-component-libraries-in-2026-the-definitive-guide-to-choosing-your-stack-fa7ae0368077)
+All findings are based on direct codebase inspection (HIGH confidence). No external sources required for architecture decisions — patterns are derived from existing working code.
 
-### Tailwind v4 Design Tokens
-- [Tailwind CSS v4.0 theme variables](https://tailwindcss.com/docs/theme)
-- [Tailwind CSS v4 @theme directive](https://tailwindcss.com/blog/tailwindcss-v4)
-- [Tailwind CSS 4 design tokens guide](https://medium.com/@sureshdotariya/tailwind-css-4-theme-the-future-of-design-tokens-at-2025-guide-48305a26af06)
-- [Tailwind v4 best practices](https://www.frontendtools.tech/blog/tailwind-css-best-practices-design-system-patterns)
-
-### shadcn/ui Pattern
-- [The anatomy of shadcn/ui](https://manupa.dev/blog/anatomy-of-shadcn-ui)
-- [shadcn/ui adoption guide](https://blog.logrocket.com/shadcn-ui-adoption-guide/)
-- [shadcn/ui customization](https://ui.spectrumhq.in/blog/shadcn-customization-guide)
-
-### TanStack Router
-- [TanStack Router routing concepts](https://tanstack.com/router/v1/docs/framework/react/routing/routing-concepts)
-- [TanStack Router file-based routing](https://tanstack.com/router/v1/docs/framework/react/routing/file-based-routing)
-- [TanStack Router search params](https://tanstack.com/router/v1/docs/framework/react/guide/search-params)
-- [TanStack Router navigation](https://tanstack.com/router/v1/docs/framework/react/guide/navigation)
-- [Passing data between routes](https://helloadel.com/blog/passing-data-between-routes-in-tanstack-router/)
-
-### MapLibre Styling
-- [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/)
-- [MapLibre layers](https://maplibre.org/maplibre-style-spec/layers/)
-- [Change basemap style](https://developers.arcgis.com/maplibre-gl-js/maps/vector-tile-basemaps/change-the-basemap-style/)
-
-### Migration Strategy
-- [Incremental migration approaches](https://circleci.com/blog/incremental-migration-approaches-for-legacy-applications/)
-- [Design system migration tips](https://medium.com/@houhoucoop/pro-tips-for-ui-library-migration-in-large-projects-d54f0fbcd083)
-- [Design system versioning](https://www.supernova.io/blog/8-examples-of-versioning-in-leading-design-systems)
-
-### Inspector Panel Patterns
-- [React sliding panels guide](https://copyprogramming.com/howto/react-sliding-up-panel-for-web)
-- [React sidebar component](https://primereact.org/sidebar/)
+- `backend/app/models/parcel_cache.py` — Three-tier data model
+- `backend/app/models/area_scan.py` — Scan status flow
+- `backend/app/models/scan_result.py` — Scan↔Parcel join table
+- `backend/app/models/project.py` — Self-referential hierarchy
+- `backend/app/models/report.py` — SavedReport + project_id FK
+- `backend/app/scans/router.py` — All existing scan endpoints + tile proxy
+- `backend/app/scans/service.py` — Service layer patterns
+- `backend/app/services/tile_proxy.py` — PostGIS MVT generation
+- `frontend/src/components/map/ParcelScoreLayer.tsx` — Score overlay implementation
+- `frontend/src/components/layout/InspectorPanel.tsx` — Parcel detail panel
+- `frontend/src/components/projects/ProjectList.tsx` — TODO comments identifying gaps
+- `frontend/src/routes/_authenticated/map.tsx` — Historical scan restoration pattern
+- `frontend/src/hooks/useScans.ts` — TanStack Query patterns
+- `.planning/PROJECT.md` — v5.0 requirements

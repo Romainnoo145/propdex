@@ -1,547 +1,353 @@
-# Technology Stack — v4.0 UX Redesign
+# Stack Research — v5.0 Lead Pipeline, Scan History & Map Visualization
 
-**Project:** Propdex v4.0 (Industrial Amber Design System)
-**Researched:** 2026-02-16
-**Focus:** Design system tooling, map styling, animations, and feedback systems for UX polish
-**Context:** Subsequent milestone adding design system to existing React 19 + Tailwind v4 + MapLibre application
-
----
-
-## Overview
-
-This stack analysis focuses ONLY on additions/changes needed for v4.0 UX redesign. The existing validated stack (React 19, Vite 7, TypeScript, TanStack ecosystem, MapLibre GL JS 5.x, Tailwind v4) remains unchanged.
-
-**Key additions:**
-1. **Icon library** for sidebar navigation
-2. **Animation library** for slide-over panels and transitions
-3. **Map style customization** for desaturated silver theme
-4. **Toast system** (already installed: Sonner 2.0.7)
-
-**Key insight:** Tailwind v4's native `@theme` directive handles design token system — no additional tooling needed.
+**Project:** Propdex v5.0
+**Domain:** Dutch property intelligence SaaS — lead pipeline, scan persistence, map visualization
+**Researched:** 2026-02-18
+**Confidence:** HIGH
+**Focus:** Additions and changes ONLY — existing v4.0 stack is validated and unchanged.
 
 ---
 
-## NEW Dependencies to Add
+## Context: What This Milestone Adds
 
-### Icons: Lucide React
+The existing stack (React 19 + Vite 7 + MapLibre GL JS 5.x + TanStack ecosystem + FastAPI + SQLAlchemy 2.x + PostgreSQL/PostGIS + Alembic) handles everything already built. This document covers only the delta needed for three new capability areas:
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| lucide-react | ^0.564.0 | Icon library for navigation sidebar | Lightweight (tree-shakeable SVGs), 1,671+ icons, consistent design, TypeScript native, active maintenance (updated Feb 2026) |
+1. **Lead pipeline** — status tracking per scan result parcel (new SQLAlchemy model, PATCH endpoint, frontend status badge/board)
+2. **Scan history** — browsable list of past scans with persist-to-DB results (new `GET /api/scans` list endpoint, frontend history view)
+3. **Map visualization of scan results** — parcel polygons colored by score/lead-status on the map (existing MVT tile infrastructure is sufficient; only new GeoJSON endpoint needed for small result sets)
 
-**Installation:**
+---
+
+## Backend: No New Dependencies Required
+
+All three features can be built entirely with the existing backend stack. No new Python packages needed.
+
+### Lead Pipeline Model — String Column over PostgreSQL Enum
+
+**Decision:** Use `String(30)` with a Python `Literal` type for the lead status column, NOT a PostgreSQL native `ENUM` type.
+
+**Rationale:**
+- PostgreSQL `ENUM` types require `ALTER TYPE ... ADD VALUE` for new statuses, which cannot run inside a transaction (requires `autocommit_block` in Alembic). Lead stages evolve — we will add statuses.
+- `String` columns validated at the Pydantic schema layer provide the same application-level integrity without migration complexity.
+- The existing pattern in the codebase (`AreaScan.status` is `String(20)`, `ScanResult.flags` is `JSONB`) confirms this preference.
+- SQLAlchemy 2.x `Mapped[str]` with a `String(30)` column maps cleanly; add a `__table_args__` `CheckConstraint` for DB-level enforcement without enum rigidity.
+
+**Lead status values (initial set):**
+```
+nieuw | contact_opgenomen | interesse | voorstel | gewonnen | verloren | parkeren
+```
+
+**Model pattern (follows existing codebase):**
+```python
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+
+LEAD_STATUSES = [
+    "nieuw", "contact_opgenomen", "interesse",
+    "voorstel", "gewonnen", "verloren", "parkeren"
+]
+
+class LeadStatus(Base, TenantMixin, TimestampMixin):
+    __tablename__ = "lead_statuses"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
+    scan_result_parcel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("parcel_cache.id", ondelete="CASCADE"))
+    scan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("area_scans.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="nieuw")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(f"status IN {tuple(LEAD_STATUSES)}", name="ck_lead_status_values"),
+        Index("ix_lead_statuses_org_scan", "organization_id", "scan_id"),
+        Index("ix_lead_statuses_org_status", "organization_id", "status"),
+        UniqueConstraint("organization_id", "scan_id", "scan_result_parcel_id", name="uq_lead_per_parcel_per_scan"),
+    )
+```
+
+**Confidence:** HIGH — follows AreaScan.status precedent in codebase, verified migration-friendliness via web research.
+
+---
+
+### Scan History — New List Endpoint (No New Dependencies)
+
+**Gap identified:** `GET /api/scans` does not exist. The router only has:
+- `POST /api/scans` (trigger)
+- `GET /api/scans/{scan_id}` (status poll)
+- `GET /api/scans/{scan_id}/results` (parcel results)
+- `GET /api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf` (MVT)
+- `GET /api/scans/{scan_id}/export` (CSV/XLSX)
+
+**Solution:** Add `GET /api/scans` returning paginated list of `AreaScan` rows, newest-first. Uses existing `service.py` pattern with `select(AreaScan).where(org filter).order_by(desc).limit/offset`. No new dependencies.
+
+**Response shape:**
+```python
+class ScanListItem(BaseModel):
+    scan_id: uuid.UUID
+    gemeente_naam: str
+    gemeente_code: str
+    wijk_naam: str | None
+    status: str
+    parcels_total: int
+    results_count: int        # derived: count of scan_results rows
+    created_at: datetime
+    completed_at: datetime | None
+    project_id: uuid.UUID | None
+
+class ScanListResponse(BaseModel):
+    scans: list[ScanListItem]
+    total: int
+    offset: int
+    limit: int
+```
+
+**Pagination:** offset/limit (consistent with existing `ScanResultsResponse` and `ReportListResponse` patterns). TanStack Query `useQuery` with page param — NOT `useInfiniteQuery` (scan history lists are short, no need for infinite scroll).
+
+**Confidence:** HIGH — direct extension of existing router/service/schema pattern.
+
+---
+
+### Map Visualization — GeoJSON Endpoint for Lead Status Coloring
+
+**Existing capability:** The MVT tile endpoint (`GET /api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf`) already serves parcel polygons colored by score. The `ParcelScoreLayer.tsx` already implements data-driven color interpolation.
+
+**Gap:** Lead status is not in the tile data. MVT tiles include `score` and `score_category` from the `scan_results.flags` JSONB. Lead status lives in the new `lead_statuses` table.
+
+**Decision: Extend MVT query to JOIN lead_statuses, NOT add a separate GeoJSON endpoint.**
+
+**Rationale:**
+- Adding a GeoJSON endpoint for all parcel geometries would require fetching potentially thousands of geometries into memory. The existing ST_AsMVT approach streams tiles on demand — far more efficient.
+- `tile_proxy.py` already JOINs `parcel_cache` + `scan_results`. Extend it to LEFT JOIN `lead_statuses` and include `lead_status` as a tile property.
+- MapLibre's data-driven styling can use `['get', 'lead_status']` in paint expressions, same as current `['get', 'score']`.
+- `updateParcelScoreSource()` in `ParcelScoreLayer.tsx` already handles tile URL changes — lead status updates invalidate and re-fetch tiles automatically.
+
+**Extended MVT query pattern:**
+```sql
+WITH bounds AS (...),
+mvt_data AS (
+    SELECT
+        ST_AsMVTGeom(pc.geometry, bounds.geom, 4096, 256, true) AS geom,
+        pc.parcel_id, pc.address, pc.area_m2, pc.has_pand,
+        sr.score,
+        sr.flags->>'category' AS score_category,
+        ls.status AS lead_status        -- NEW: LEFT JOIN
+    FROM parcel_cache pc
+    JOIN scan_results sr ON sr.parcel_id = pc.id
+    LEFT JOIN lead_statuses ls          -- NEW
+        ON ls.scan_result_parcel_id = pc.id
+        AND ls.scan_id = sr.scan_id
+        AND ls.organization_id = pc.organization_id
+    CROSS JOIN bounds
+    WHERE pc.organization_id = :org_id
+      AND sr.scan_id = :scan_id
+      AND sr.organization_id = :org_id
+      AND ST_Intersects(pc.geometry, bounds.geom)
+)
+SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom') FROM mvt_data
+```
+
+**MapLibre paint update for lead status:**
+```typescript
+// Color by lead_status when status layer active
+'fill-color': [
+  'case',
+  ['==', ['get', 'lead_status'], 'gewonnen'], '#16a34a',
+  ['==', ['get', 'lead_status'], 'interesse'], '#f97316',
+  ['==', ['get', 'lead_status'], 'verloren'], '#dc2626',
+  ['==', ['get', 'lead_status'], 'parkeren'], '#94a3b8',
+  // fallback to score-based color
+  ['interpolate', ['linear'], ['get', 'score'], 0, '#dc2626', 100, '#16a34a']
+]
+```
+
+**Confidence:** HIGH — extends existing, verified tile architecture.
+
+---
+
+## Frontend: One New Dependency (dnd-kit, Optional)
+
+### Lead Status Board — dnd-kit for Drag-and-Drop Kanban
+
+**Decision:** Add `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` ONLY IF a kanban drag-to-status board is in scope. If the lead pipeline uses a simple dropdown status selector (simpler approach), dnd-kit is NOT needed.
+
+**Recommendation: Start with dropdown selector, defer kanban drag-and-drop to a later milestone.**
+
+**Why defer kanban:**
+- `@dnd-kit/core` 6.3.1 declares peer dependency `react >= 16.8.0` — it works with React 19 but the library is stale (last published ~Feb 2024). The newer `@dnd-kit/react` 0.3.0 is in early development and not production-ready.
+- A dropdown PATCH to `PATCH /api/leads/{parcel_id}/status` provides full lead pipeline functionality without the kanban complexity.
+- The existing `ResultsTable` (TanStack Table) already has a status column slot — adding a `<Select>` primitive is a two-line change.
+
+**If kanban is required:**
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| @dnd-kit/core | 6.3.1 | Drag context, sensors (pointer/touch/keyboard) | Industry standard for React DnD, accessible, ~10KB, tree-shakeable |
+| @dnd-kit/sortable | 10.0.0 | Sortable list/column primitives | Required for kanban column arrangement |
+| @dnd-kit/utilities | 3.2.2 | CSS transform helpers | Used with useSortable hook |
+
+**Installation (only if kanban is in scope):**
 ```bash
-pnpm add lucide-react
+npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
 ```
 
-**Why Lucide over alternatives:**
-- Tree-shakeable (only bundle icons you use)
-- Consistent 24x24 grid design system
-- TypeScript-first with excellent DX
-- Community-maintained fork of Feather Icons (more icons, active development)
-- Already widely adopted in React ecosystem (9,931 dependent packages)
-- Zero runtime dependencies
-
-**Usage pattern:**
-```tsx
-import { Search, Map, Settings } from 'lucide-react';
-
-<Search className="w-5 h-5 text-gray-500" />
-```
-
-**Confidence:** HIGH (official npm package, verified current version)
+**Confidence for dnd-kit:** MEDIUM — functional with React 19 (peer dep is `>=16.8.0`), but library maintenance is slow. No breaking issues found; just note the staleness risk.
 
 ---
 
-### Animation: Motion for React
+### Scan History View — No New Dependencies
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| motion | ^12.34.0 | Declarative animations for slide-over panels, page transitions | React 19 compatible, 120fps GPU-accelerated, declarative API, 18M+ monthly downloads, hybrid Web Animations API + JavaScript engine |
+The scan history list uses:
+- `TanStack Query useQuery` (already installed) for `GET /api/scans`
+- `TanStack Router` (already installed) for `/resultaten/geschiedenis` or `/history` route
+- `TanStack Table` (already installed) for the history table — same pattern as existing `ResultsTable`
+- URL search params for pagination — consistent with existing `resultaten.tsx` pattern
 
-**Installation:**
-```bash
-pnpm add motion
-```
+No new packages. The `useQuery` paginated approach (not `useInfiniteQuery`) is appropriate — scan history lists are small (tens of entries per org, not thousands).
 
-**Import pattern (NOT framer-motion):**
-```tsx
-import { motion, AnimatePresence } from 'motion/react';
-```
-
-**Why Motion over alternatives:**
-- **React 19 compatibility:** framer-motion has compatibility issues; motion is the successor package
-- **Performance:** Hybrid engine (Web Animations API + JavaScript) delivers 120fps
-- **Declarative API:** Natural fit for React (state-driven animations)
-- **Production-grade:** Used by OpenAI, Vercel, Cursor, X
-- **Gestures included:** Tap, drag, hover recognizers built-in
-- **Small bundle impact:** Tree-shakeable, only import what you use
-
-**Slide-over panel pattern:**
-```tsx
-<AnimatePresence>
-  {isOpen && (
-    <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-    >
-      {/* Panel content */}
-    </motion.div>
-  )}
-</AnimatePresence>
-```
-
-**Alternative considered:**
-- **CSS View Transitions API:** Browser-native, excellent performance, but limited browser support (no Firefox, Safari experimental). Best for 2027+ projects. For 2026, Motion provides cross-browser reliability.
-
-**Confidence:** HIGH (official npm package, verified React 19 compatibility via motion.dev docs)
+**Confidence:** HIGH — identical pattern to existing scan results and report list views.
 
 ---
 
-## Design System Implementation
+### Map Layer Toggle for Lead Status Coloring — No New Dependencies
 
-### Tailwind v4 @theme Directive (NO NEW DEPENDENCIES)
+The map already has `LayerToggle.tsx` and `ParcelScoreLayer.tsx`. The lead status coloring is:
+- A new paint expression option in `ParcelScoreLayer` (mode: `'score' | 'lead_status'`)
+- A toggle button in the existing `LayerToggle` panel
+- When a parcel's lead status changes (PATCH API), invalidate the tile cache by calling `updateParcelScoreSource()` with the same tile URL (forcing a re-fetch)
 
-**Existing:** Tailwind v4.1.18 (already installed)
+No new packages. MapLibre's `setData()` / tile cache invalidation handles the refresh.
 
-**What's new in Tailwind v4:** Native design token system via `@theme` directive replaces JavaScript config.
-
-**Industrial Amber token system:**
-
-Edit `/frontend/src/styles/index.css`:
-
-```css
-@import "tailwindcss";
-
-@theme {
-  /* Color system — Industrial Amber */
-  --color-base-white: #FFFFFF;
-  --color-base-50: #FAFAFA;
-  --color-base-100: #F5F5F5;
-  --color-base-200: #E5E5E5;
-  --color-base-300: #D4D4D4;
-  --color-base-400: #A3A3A3;
-  --color-base-500: #737373;
-  --color-base-600: #525252;
-  --color-base-700: #404040;
-  --color-base-800: #262626;
-  --color-base-900: #171717;
-  --color-base-black: #000000;
-
-  --color-amber: #EBCB4B;
-  --color-amber-hover: #D4B743;
-  --color-amber-active: #BDA33B;
-
-  /* Semantic tokens */
-  --color-primary: var(--color-amber);
-  --color-primary-hover: var(--color-amber-hover);
-  --color-surface: var(--color-base-white);
-  --color-surface-secondary: var(--color-base-50);
-  --color-text: var(--color-base-900);
-  --color-text-secondary: var(--color-base-600);
-  --color-border: var(--color-base-200);
-
-  /* Z-index scale */
-  --z-map-canvas: 0;
-  --z-map-controls: 10;
-  --z-search-bar: 100;
-  --z-sidebar: 200;
-  --z-side-rail: 250;
-  --z-property-panel: 300;
-  --z-dropdown: 400;
-  --z-modal: 1000;
-  --z-toast: 2000;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-  /* Spacing scale (if custom needed beyond Tailwind defaults) */
-  --space-sidebar-width: 64px;
-  --space-search-height: 64px;
-}
-```
-
-**How Tailwind v4 consumes tokens:**
-- Automatically generates utilities: `bg-[--color-primary]`, `text-[--color-text-secondary]`
-- Available as CSS variables: `var(--color-primary)` in custom CSS
-- Runtime themeable (swap values via CSS, no rebuild)
-- Single source of truth (design tokens, utilities, and runtime all use same variables)
-
-**Why no additional tooling:**
-- Tailwind v4 natively converts `@theme` tokens → utilities + CSS variables
-- No need for design token libraries (Style Dictionary, Theo)
-- No need for CSS variable generators
-- Lightning CSS built-in (5x faster builds)
-
-**Confidence:** HIGH (official Tailwind v4 documentation, released January 2025)
+**Confidence:** HIGH — extends existing architecture.
 
 ---
 
-## Map Styling
+## Summary: New Dependencies Table
 
-### MapLibre Style JSON (NO NEW DEPENDENCIES)
+| Library | Version | Backend/Frontend | Required For | Confidence |
+|---------|---------|-----------------|--------------|------------|
+| None (backend) | — | Backend | All features | HIGH |
+| @dnd-kit/core | 6.3.1 | Frontend | Kanban only (defer) | MEDIUM |
+| @dnd-kit/sortable | 10.0.0 | Frontend | Kanban only (defer) | MEDIUM |
+| @dnd-kit/utilities | 3.2.2 | Frontend | Kanban only (defer) | MEDIUM |
 
-**Existing:** maplibre-gl 5.17.0 (already installed)
-
-**Requirement:** Desaturated silver map to match Industrial Amber monochrome aesthetic
-
-**Approach:** Custom MapLibre Style JSON
-
-**Options:**
-
-#### Option 1: Use MapTiler Basic/Dataviz Style (RECOMMENDED)
-
-MapTiler provides minimalist basemap styles designed for overlaying data:
-
-- **Basic style:** Minimal distracting colors, simplified for data overlay focus
-- **Dataviz style:** Maximum simplicity, no POIs, minimal features
-
-**Implementation:**
-```tsx
-import maplibregl from 'maplibre-gl';
-
-const map = new maplibregl.Map({
-  container: 'map',
-  style: 'https://api.maptiler.com/maps/dataviz/style.json?key=YOUR_API_KEY',
-  // or 'https://api.maptiler.com/maps/basic/style.json?key=YOUR_API_KEY'
-});
-```
-
-**Customization:** Modify color scheme via style JSON overrides to desaturate further
-
-**Cost:** MapTiler free tier: 100,000 map loads/month
-
-#### Option 2: OpenMapTiles Basic Style (Open Source)
-
-- GitHub: `openmaptiles/maptiler-basic-gl-style`
-- Self-hosted, fully customizable
-- Requires tile server setup
-
-#### Option 3: Maputnik Visual Editor (Development Tool)
-
-For creating/editing custom styles:
-
-- Web editor: https://maplibre.org/maputnik/
-- Visual style editor for MapLibre Style Spec
-- Export to JSON
-- TypeScript + React based
-- Actively maintained (updated Jan 2026)
-
-**Recommended workflow:**
-1. Start with MapTiler Basic/Dataviz
-2. Use Maputnik to customize colors (desaturate, adjust to silver/grey palette)
-3. Export style JSON
-4. Host JSON or inline in application
-
-**Desaturation technique:**
-```json
-{
-  "layers": [
-    {
-      "id": "background",
-      "type": "background",
-      "paint": {
-        "background-color": "#F5F5F5"
-      }
-    },
-    {
-      "id": "water",
-      "type": "fill",
-      "paint": {
-        "fill-color": "#E5E5E5"
-      }
-    },
-    {
-      "id": "landuse",
-      "type": "fill",
-      "paint": {
-        "fill-color": "#FAFAFA"
-      }
-    },
-    {
-      "id": "roads",
-      "type": "line",
-      "paint": {
-        "line-color": "#D4D4D4",
-        "line-width": 1
-      }
-    }
-  ]
-}
-```
-
-**Confidence:** MEDIUM (MapTiler/OpenMapTiles docs verified, Maputnik confirmed active, desaturation approach standard but needs testing)
-
----
-
-## Toast Notifications (ALREADY INSTALLED)
-
-### Sonner
-
-| Technology | Version | Purpose | Status |
-|------------|---------|---------|--------|
-| sonner | 2.0.7 | Toast notification system | ✅ Already installed |
-
-**Why Sonner:**
-- Opinionated, minimal API (`<Toaster />` once, call `toast()` anywhere)
-- 8M+ downloads/week
-- Default toast component in shadcn/ui
-- Used by OpenAI, Sonos, Adobe, Vercel
-- Lightweight, excellent DX
-- No context/hooks needed
-
-**Usage:**
-```tsx
-import { Toaster, toast } from 'sonner';
-
-// In root component
-<Toaster position="top-right" />
-
-// Anywhere in app
-toast.success('Property scan complete');
-toast.error('Failed to load kadaster data');
-toast.loading('Scanning address...');
-```
-
-**No action needed:** Already installed in package.json
-
-**Confidence:** HIGH (verified in package.json, official npm version confirmed)
+**Net result:** Zero new dependencies for MVP. Three optional dnd-kit packages only if kanban drag-drop is explicitly in scope.
 
 ---
 
 ## What NOT to Add
 
-| Library | Category | Why Avoid |
-|---------|----------|-----------|
-| Style Dictionary / Theo | Design tokens | Tailwind v4 `@theme` handles this natively |
-| react-spring | Animation | Motion provides better DX and performance |
-| framer-motion | Animation | Deprecated in favor of `motion` package (React 19 compatibility issues) |
-| React Icons | Icons | Larger bundle, less tree-shakeable than Lucide |
-| react-toastify | Toasts | Sonner already installed, better DX |
-| HeadlessUI | Component primitives | Not needed for this milestone (no new complex components) |
-| Radix UI | Component primitives | Not needed for this milestone (no new complex components) |
-| GSAP | Animation | Great library but overkill; Motion's declarative API better for React |
-| Anime.js | Animation | Imperative API, not React-idiomatic |
-
-**Key principle:** Leverage Tailwind v4's native capabilities before adding dependencies.
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| PostgreSQL native `ENUM` type for lead status | Adding new statuses requires `ALTER TYPE` outside transaction — painful Alembic migrations | `String(30)` + `CheckConstraint` + Pydantic validation |
+| Martin tile server | External service with no multi-tenant auth — cross-org data leakage risk (documented in existing `tile_proxy.py` comments) | Existing FastAPI ST_AsMVT endpoint |
+| Separate GeoJSON geometry endpoint for all scan parcels | Memory-intensive (thousands of geometries in JSON), slow, no streaming | Extend existing MVT tile endpoint with LEFT JOIN for lead_status |
+| `fastapi-pagination` PyPI package | Adds a dependency for simple limit/offset that's 3 lines of SQLAlchemy | Direct `select(...).limit(...).offset(...)` pattern |
+| `useInfiniteQuery` for scan history | Overkill — scan lists are short (dozens of entries, not thousands) | Simple `useQuery` with page param, consistent with existing patterns |
+| `react-beautiful-dnd` | Unmaintained (announced end-of-life) | `@dnd-kit/core` if kanban is required |
+| `react-dnd` | No React 19 support planned (open issue) | `@dnd-kit/core` if kanban is required |
+| SQLModel | Adds ORM layer over SQLAlchemy that conflicts with existing `Mapped[]` pattern | Raw SQLAlchemy 2.x `mapped_column()` — already used throughout |
 
 ---
 
 ## Integration Points
 
-### Tailwind v4 + Motion
+### Backend: lead_statuses → tile_proxy.py → MapLibre
 
-Motion respects Tailwind utilities for styling:
-
-```tsx
-<motion.div
-  className="bg-[--color-surface] shadow-lg rounded-lg"
-  initial={{ opacity: 0, scale: 0.95 }}
-  animate={{ opacity: 1, scale: 1 }}
->
-  {/* Content */}
-</motion.div>
+```
+PATCH /api/leads/{lead_id}/status
+  ↓ writes to lead_statuses
+  ↓ frontend invalidates tile query key
+  ↓ MapLibre re-fetches tiles
+  ↓ tile_proxy.py LEFT JOINs lead_statuses
+  ↓ lead_status property appears in MVT
+  ↓ ParcelScoreLayer paint expression reads lead_status
 ```
 
-### TanStack Router + Motion
+### Backend: GET /api/scans → useScans hook → ScanHistoryTable
 
-Page transitions with AnimatePresence:
-
-```tsx
-import { AnimatePresence } from 'motion/react';
-import { useLocation } from '@tanstack/react-router';
-
-function AnimatedOutlet() {
-  const location = useLocation();
-
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-      >
-        <Outlet />
-      </motion.div>
-    </AnimatePresence>
-  );
-}
+```
+GET /api/scans?offset=0&limit=20&status=completed
+  ↓ new ScanListResponse schema
+  ↓ new fetchScanList() in api.ts
+  ↓ new useScanList() hook in useScans.ts
+  ↓ ScanHistoryTable component (TanStack Table)
+  ↓ clicking a row navigates to /resultaten?scan_id=<id>
 ```
 
-### MapLibre + Tailwind Tokens
+### Frontend: LeadStatus → ResultsTable column
 
-Reference CSS variables in MapLibre paint properties:
-
-```tsx
-map.setPaintProperty('cadastral-parcels', 'fill-color', 'var(--color-amber)');
 ```
-
-### Lucide + Tailwind
-
-Icons use Tailwind utilities for sizing/colors:
-
-```tsx
-import { Map, Search, Settings } from 'lucide-react';
-
-<Map className="w-5 h-5 text-[--color-primary]" />
-<Search className="w-6 h-6 text-[--color-text-secondary]" />
+ScanResultItem (existing type)
+  + lead_status?: string    (new field from new endpoint)
+ResultsTable
+  + status column with <StatusBadge> or <Select> primitive
+  + PATCH on change → invalidate scan-results + tile query keys
 ```
 
 ---
 
-## Installation Commands
+## Schema Migration Strategy
 
-```bash
-# New dependencies
-pnpm add lucide-react motion
+Two new Alembic migrations needed:
 
-# Verify existing (should already be installed)
-pnpm list sonner maplibre-gl tailwindcss
+**Migration 1: lead_statuses table**
+```sql
+CREATE TABLE lead_statuses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    scan_result_parcel_id UUID NOT NULL REFERENCES parcel_cache(id) ON DELETE CASCADE,
+    scan_id UUID NOT NULL REFERENCES area_scans(id) ON DELETE CASCADE,
+    status VARCHAR(30) NOT NULL DEFAULT 'nieuw',
+    notes TEXT,
+    contact_name VARCHAR(200),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_lead_status_values CHECK (status IN ('nieuw', 'contact_opgenomen', 'interesse', 'voorstel', 'gewonnen', 'verloren', 'parkeren')),
+    CONSTRAINT uq_lead_per_parcel_per_scan UNIQUE (organization_id, scan_id, scan_result_parcel_id)
+);
+CREATE INDEX ix_lead_statuses_org ON lead_statuses(organization_id);
+CREATE INDEX ix_lead_statuses_org_scan ON lead_statuses(organization_id, scan_id);
+CREATE INDEX ix_lead_statuses_org_status ON lead_statuses(organization_id, status);
 ```
 
----
+**Migration 2: tile_proxy.py query extension** — No migration needed; query change is code-only.
 
-## Migration Notes
+**Pattern note:** Follow existing `db.add() / db.flush() / db.commit()` pattern. NOT `async with db.begin()`.
 
-### From Glassmorphism to Industrial Amber
-
-1. **Update @theme tokens** in `src/styles/index.css`
-2. **Replace color references** throughout components:
-   - `#2563eb` → `var(--color-primary)` or `bg-[--color-primary]`
-   - Hardcoded greys → base scale variables
-3. **Remove glassmorphism CSS** (`backdrop-filter: blur()`, `rgba()` backgrounds)
-4. **Update MapLibre style** to silver/desaturated theme
-
-### Add Animation to Existing Panels
-
-Current panels use static CSS. Wrap with Motion:
-
-```tsx
-// Before
-<div className={cn("fixed right-0 w-96", isOpen && "block")}>
-
-// After
-<AnimatePresence>
-  {isOpen && (
-    <motion.div
-      className="fixed right-0 w-96"
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-    >
-```
+**Confidence:** HIGH — direct application of existing migration patterns.
 
 ---
 
-## Browser Compatibility
+## Version Compatibility
 
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| Tailwind v4 CSS | ✅ | ✅ | ✅ | ✅ |
-| Motion animations | ✅ | ✅ | ✅ | ✅ |
-| MapLibre GL JS | ✅ | ✅ | ✅ | ✅ |
-| Lucide SVG icons | ✅ | ✅ | ✅ | ✅ |
-| Sonner toasts | ✅ | ✅ | ✅ | ✅ |
-
-**Note:** CSS View Transitions API (future alternative to Motion) not supported in Firefox, experimental in Safari. Motion provides better cross-browser support for 2026.
-
----
-
-## Performance Considerations
-
-| Technology | Bundle Impact | Performance Notes |
-|------------|---------------|-------------------|
-| lucide-react | Minimal (tree-shakeable, ~1KB per icon) | Only bundle icons imported |
-| motion | ~30KB gzipped | Hybrid engine (Web Animations API + JS), 120fps animations |
-| sonner | ~4KB gzipped | Lightweight toast implementation |
-| Tailwind v4 | CSS only (no JS runtime) | Lightning CSS compiler (5x faster builds) |
-
-**Total addition:** ~35KB gzipped for animation + icons (acceptable for UX polish milestone)
-
----
-
-## Development Workflow
-
-### Design Token Workflow
-
-1. **Define tokens** in `@theme` block (`src/styles/index.css`)
-2. **Reference in components:**
-   - Tailwind utilities: `bg-[--color-primary]`
-   - Custom CSS: `background: var(--color-primary);`
-3. **No rebuild needed** for color changes (CSS variables update at runtime)
-
-### Map Style Workflow
-
-1. **Start with base style** (MapTiler Basic/Dataviz)
-2. **Customize in Maputnik** (https://maplibre.org/maputnik/)
-3. **Export JSON** and save to `src/styles/map-style.json`
-4. **Import in map component:**
-   ```tsx
-   import mapStyle from './styles/map-style.json';
-
-   const map = new maplibregl.Map({
-     style: mapStyle as StyleSpecification
-   });
-   ```
-
-### Animation Development
-
-1. **Start simple:** `initial`, `animate`, `exit` states
-2. **Test performance:** Monitor FPS in DevTools
-3. **Prefer transforms** (`x`, `y`, `scale`, `rotate`) over position properties
-4. **Use spring physics** for natural feel: `transition={{ type: 'spring' }}`
+| Package | Version In Use | Compatibility Notes |
+|---------|---------------|---------------------|
+| maplibre-gl | 5.18.0 (installed) | `LEFT JOIN lead_status` property in tiles: data-driven expressions `['get', 'lead_status']` — supported since MapLibre 2.x |
+| @tanstack/react-query | 5.90.20 (installed) | `useQuery` for scan list — no changes needed. `refetchInterval` for polling also works for history auto-refresh |
+| @tanstack/react-table | 8.21.3 (installed) | Status column with cell renderer — standard pattern |
+| @tanstack/react-router | 1.158.4 (installed) | New `/resultaten/geschiedenis` or `/history` route via `createFileRoute` |
+| @dnd-kit/core | 6.3.1 (not installed) | Peer dep `react >= 16.8.0` — works with React 19.2.0 |
+| SQLAlchemy | 2.0.x (installed) | `Mapped[str]` + `String(30)` + `CheckConstraint` — fully supported |
+| GeoAlchemy2 | 0.15.x (installed) | No changes needed for tile query extension |
 
 ---
 
 ## Sources
 
-### Design Tokens & Tailwind v4
-- [Tailwind CSS v4.0 Release](https://tailwindcss.com/blog/tailwindcss-v4)
-- [Tailwind v4 Theme Variables Documentation](https://tailwindcss.com/docs/theme)
-- [Tailwind CSS 4 @theme Directive Guide](https://medium.com/@sureshdotariya/tailwind-css-4-theme-the-future-of-design-tokens-at-2025-guide-48305a26af06)
-- [Tailwind CSS Best Practices 2025-2026](https://www.frontendtools.tech/blog/tailwind-css-best-practices-design-system-patterns)
-
-### Animation Libraries
-- [Motion for React Official Docs](https://motion.dev/docs/react)
-- [Motion npm Package](https://www.npmjs.com/package/motion)
-- [Motion Installation Guide](https://motion.dev/docs/react-installation)
-- [React Animation Libraries 2026](https://www.syncfusion.com/blogs/post/top-react-animation-libraries)
-- [Framer Motion Examples](https://egghead.io/blog/how-to-create-a-sliding-sidebar-menu-with-framer-motion)
-- [CSS View Transitions API Guide](https://devtoolbox.dedyn.io/blog/css-view-transitions-complete-guide)
-
-### Toast Notifications
-- [Sonner Official Docs (shadcn/ui)](https://ui.shadcn.com/docs/components/radix/sonner)
-- [Sonner npm Package](https://www.npmjs.com/package/sonner)
-- [Top React Toast Libraries 2026](https://knock.app/blog/the-top-notification-libraries-for-react)
-- [React Toast Libraries Comparison](https://blog.logrocket.com/react-toast-libraries-compared-2025/)
-
-### Icon Libraries
-- [Lucide React Official Docs](https://lucide.dev/guide/packages/lucide-react)
-- [Lucide Icons npm Package](https://www.npmjs.com/package/lucide-react)
-- [Lucide Icons Library](https://lucide.dev/icons)
-
-### Map Styling
-- [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/)
-- [MapTiler Basic Map Style](https://www.maptiler.com/maps/basic/)
-- [Maputnik Style Editor](https://maplibre.org/maputnik/)
-- [Maputnik GitHub Repository](https://github.com/maplibre/maputnik)
-- [OpenMapTiles Basic Style](https://github.com/openmaptiles/maptiler-basic-gl-style)
+- [MapLibre GL JS GeoJSONSource — setData and updateData](https://maplibre.org/maplibre-gl-js/docs/API/classes/GeoJSONSource/) — performance characteristics for GeoJSON vs MVT
+- [MapLibre GL JS Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) — recommendation to use MVT for large parcel datasets
+- [MapLibre Expressions & Data-Driven Styling (DeepWiki)](https://deepwiki.com/maplibre/maplibre-gl-js/3.2-expressions-and-data-driven-styling) — `feature-state` vs data-driven properties comparison
+- [Alembic PostgreSQL Enum Migration complexity](https://roman.pt/posts/alembic-enums/) — confirms String+CheckConstraint is preferable for evolving status values
+- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — version 6.3.1, peer dep `react >= 16.8.0`
+- [@dnd-kit/react React 19 issue](https://github.com/clauderic/dnd-kit/issues/1654) — confirms new @dnd-kit/react still in development (0.3.0)
+- [TanStack Query v5 Paginated Queries](https://tanstack.com/query/v5/docs/react/guides/paginated-queries) — useQuery preferred over useInfiniteQuery for bounded lists
+- [TanStack Query v5 Infinite Queries](https://tanstack.com/query/v5/docs/react/guides/infinite-queries) — `maxPages` option; overkill for scan history
+- Existing codebase: `backend/app/services/tile_proxy.py` — ST_AsMVT join pattern
+- Existing codebase: `backend/app/models/area_scan.py` — String(20) status precedent
+- Existing codebase: `frontend/src/components/map/ParcelScoreLayer.tsx` — data-driven paint expression pattern
 
 ---
 
-## Confidence Assessment
-
-| Area | Confidence | Rationale |
-|------|------------|-----------|
-| Design tokens (Tailwind v4 @theme) | HIGH | Official Tailwind v4 docs, released Jan 2025, widely adopted |
-| Motion animation library | HIGH | Official npm package, verified React 19 compatibility, 18M+ downloads/month |
-| Lucide icons | HIGH | Official npm package, current version verified (0.564.0), active maintenance |
-| Sonner toasts | HIGH | Already installed in package.json, verified version matches npm |
-| MapLibre style customization | MEDIUM | Approach is standard, tools verified, but desaturated silver theme needs design validation |
-
-**Overall confidence:** HIGH — All recommendations based on official documentation, current npm versions verified, compatibility confirmed.
+*Stack research for: Propdex v5.0 — Lead Pipeline, Scan History, Map Visualization*
+*Researched: 2026-02-18*
