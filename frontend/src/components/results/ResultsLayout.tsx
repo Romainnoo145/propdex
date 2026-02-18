@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type maplibregl from 'maplibre-gl'
 import ResultsTable from './ResultsTable'
 import ResultsFilterPanel from './ResultsFilterPanel'
@@ -19,6 +19,66 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
   const selectionSourceRef = useRef<'table' | 'map' | null>(null)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
+  const hoveredParcelRef = useRef<string | number | null>(null)
+
+  // Handle table row hover — highlight corresponding parcel on map
+  const handleRowHover = useCallback(
+    (parcelId: string | null) => {
+      if (!mapRef.current) return
+      const map = mapRef.current
+
+      // Clear previous hover
+      if (hoveredParcelRef.current !== null) {
+        map.setFeatureState(
+          {
+            source: 'parcel-scores',
+            sourceLayer: 'parcel_scores',
+            id: hoveredParcelRef.current,
+          },
+          { hover: false }
+        )
+        hoveredParcelRef.current = null
+      }
+
+      if (parcelId) {
+        // Find the feature by parcel_id property to get its numeric MVT ID
+        const features = map.querySourceFeatures('parcel-scores', {
+          sourceLayer: 'parcel_scores',
+          filter: ['==', ['get', 'parcel_id'], parcelId],
+        })
+        const feature = features[0]
+        if (feature !== undefined && feature.id !== undefined) {
+          map.setFeatureState(
+            {
+              source: 'parcel-scores',
+              sourceLayer: 'parcel_scores',
+              id: feature.id,
+            },
+            { hover: true }
+          )
+          hoveredParcelRef.current = feature.id
+        }
+      }
+    },
+    [mapRef]
+  )
+
+  // Clear hover state when overlay collapses
+  useEffect(() => {
+    return () => {
+      if (mapRef.current && hoveredParcelRef.current !== null) {
+        mapRef.current.setFeatureState(
+          {
+            source: 'parcel-scores',
+            sourceLayer: 'parcel_scores',
+            id: hoveredParcelRef.current,
+          },
+          { hover: false }
+        )
+        hoveredParcelRef.current = null
+      }
+    }
+  }, [collapsed, mapRef])
 
   // Setup map click handler for parcel selection
   useEffect(() => {
@@ -120,6 +180,7 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
                 setModalParcel(parcel)
               }}
               onTotalChange={setTotal}
+              onRowHover={handleRowHover}
             />
           )}
         </div>

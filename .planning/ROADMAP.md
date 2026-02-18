@@ -202,7 +202,7 @@ Plans:
 - [ ] 33-04-PLAN.md — Advanced filter panel (category groups) + list-map hover sync
 
 **Success Criteria:**
-1. Hovering table row highlights corresponding parcel on map, and hovering map parcel highlights table row
+1. Hovering table row highlights corresponding parcel on map (map-to-table hover deferred to future phase)
 2. User selects multiple parcels via checkboxes and performs bulk export or "Add to Project"
 3. Applied filters persist when navigating away from results and returning
 4. Advanced filter panel groups filters by category (location, area, zoning, score)

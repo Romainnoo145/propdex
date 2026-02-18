@@ -24,6 +24,7 @@ interface ResultsTableProps {
   onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   onPageChange?: (page: number) => void
   currentPage?: number
+  onRowHover?: (parcelId: string | null) => void
 }
 
 // Score badge component for visual indicators
@@ -126,6 +127,7 @@ export default function ResultsTable({
   onSortChange,
   onPageChange,
   currentPage,
+  onRowHover,
 }: ResultsTableProps) {
   // Initialize sorting from URL-derived filters
   const [sorting, setSorting] = useState<SortingState>(() => {
@@ -331,6 +333,8 @@ export default function ResultsTable({
                 }`}
                 onClick={() => onRowClick?.(row.original.parcel_id)}
                 onDoubleClick={() => onRowDoubleClick?.(row.original)}
+                onMouseEnter={() => onRowHover?.(row.original.parcel_id)}
+                onMouseLeave={() => onRowHover?.(null)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="px-4 py-3 text-sm text-grey-100">
