@@ -70,7 +70,7 @@ Each task was committed atomically:
 1. **Task 1: Add mobile bottom padding to ResultsShell and audit touch targets** - `e10259e` (feat)
 2. **Task 2: Final mobile sweep — touch targets and spacing audit** - no code changes, verification only (included in metadata commit)
 
-**Plan metadata:** `[to be filled]` (docs: complete plan)
+**Plan metadata:** `0ead591` (docs: complete plan)
 
 ## Files Created/Modified
 
