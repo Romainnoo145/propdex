@@ -222,6 +222,14 @@ Plans:
 - MOB-02: Table-to-card layout transformation on mobile
 - MOB-03: 44px minimum touch targets
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 34-01-PLAN.md — useIsMobile hook + BottomTabNav + layout integration
+- [ ] 34-02-PLAN.md — InspectorPanel bottom sheet + map controls mobile adaptation
+- [ ] 34-03-PLAN.md — ResultsTable card layout + ParcelCard + filter panel + read-only banner
+- [ ] 34-04-PLAN.md — ResultsShell padding + Projecten page + touch target audit
+
 **Success Criteria:**
 1. User browses map, views projects, and reads scan results on mobile device
 2. Data tables transform to card layout on screens below 768px width
