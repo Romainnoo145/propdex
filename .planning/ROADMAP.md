@@ -275,6 +275,14 @@ Plans:
 
 **Requirements:** None (polish phase)
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 36-01-PLAN.md — Bundle splitting (autoCodeSplitting + manualChunks + rollup-plugin-visualizer)
+- [ ] 36-02-PLAN.md — Legacy CSS cleanup (undefined --color-* variables + gray-* token migration)
+- [ ] 36-03-PLAN.md — Mobile glassmorphism disable (map floating controls + Sonner toast)
+- [ ] 36-04-PLAN.md — Storybook layout shell stories (6 layout components)
+
 **Success Criteria:**
 1. Animations run at 60fps on desktop and 30fps minimum on mid-range mobile
 2. Glassmorphism effects disabled on mobile to improve performance
@@ -297,7 +305,7 @@ Plans:
 | 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | ✓ Complete (2026-02-18) |
 | 34 | Mobile Responsiveness | MOB-01, MOB-02, MOB-03 | ✓ Complete (2026-02-18) |
 | 35 | Settings Page | SET-01, SET-02, SET-03, SET-04 | Planned (3 plans) |
-| 36 | Polish + Performance | — | Pending |
+| 36 | Polish + Performance | — | Planned (4 plans) |
 
 **Total:** 10 phases, 31 requirements
 **Coverage:** 31/31 requirements mapped (100%)
@@ -379,4 +387,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (Phase 33 complete)*
+*Last updated: 2026-02-18 (Phase 36 planned — 4 plans, 2 waves)*
