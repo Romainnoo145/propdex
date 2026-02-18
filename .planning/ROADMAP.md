@@ -251,6 +251,13 @@ Plans:
 - SET-03: Notification preferences configuration
 - SET-04: Appearance settings (theme, map style)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 35-01-PLAN.md — Backend users API (migration, schemas, router for profile/password/preferences)
+- [ ] 35-02-PLAN.md — Frontend types, TanStack Query hooks, AuthContext updateUser
+- [ ] 35-03-PLAN.md — Settings page UI (AccountSection, PasswordSection, NotificationsSection, AppearanceSection)
+
 **Success Criteria:**
 1. User accesses settings page via sidebar icon
 2. User updates account details (name, email) and changes password
@@ -289,7 +296,7 @@ Plans:
 | 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | ✓ Complete (2026-02-18) |
 | 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | ✓ Complete (2026-02-18) |
 | 34 | Mobile Responsiveness | MOB-01, MOB-02, MOB-03 | ✓ Complete (2026-02-18) |
-| 35 | Settings Page | SET-01, SET-02, SET-03, SET-04 | Pending |
+| 35 | Settings Page | SET-01, SET-02, SET-03, SET-04 | Planned (3 plans) |
 | 36 | Polish + Performance | — | Pending |
 
 **Total:** 10 phases, 31 requirements
