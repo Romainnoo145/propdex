@@ -53,6 +53,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - All 14 remaining glassmorphism files migrated; MIG-02 and visual consistency gaps closed
 - Phase 32 Plan 01: ~1min, 1 task, 1 commit, 3 files
 - Skeleton, EmptyState, ErrorState feedback primitives; Industrial Amber tokens; lucide-react AlertTriangle; Button CVA integration
+- Phase 32 Plan 02: ~3min, 2 tasks, 2 commits, 5 files
+- Feedback primitives adopted in 5 components: skeleton loading, ErrorState retry, EmptyState with icons, toast.info on filter changes (FB-01 to FB-04 closed)
 - Phase 32 Plan 03: ~2min, 1 task, 1 commit, 1 file
 - ScanProgressOverlay redesign: three-step stepper (Kadaster/BAG/Bestemmingen), Industrial Amber tokens, real-time sublabels (FB-05 + FB-06)
 
@@ -158,6 +160,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ErrorState uses AlertTriangle from lucide-react (already installed), not custom SVG
 - Default error message is Dutch: 'Er is iets misgegaan.' per project language standard
 
+**Phase 32-02 (Feedback Primitives Adoption — 5 components):**
+- toast.info added to Select dropdowns (bestemming/status/score) and handleClearFilters only — NOT to debounced area input timer (too noisy, fires 500ms after every keystroke)
+- refetch destructured from useProjectChanges and useScanResults for ErrorState retry actions — TanStack Query useQuery always returns refetch
+- ProjectList skeleton uses border-grey-800 bg-grey-900 (dark tokens) in loading branch even though rest of file uses legacy text-gray-* — only loading branch was in scope
+
 **Phase 32-03 (ScanProgressOverlay Redesign):**
 - SCAN_STEPS array defined inline in ScanProgressOverlay.tsx, not extracted to separate config — keeps scan-specific stepper data co-located
 - Running state shows stepper + progress bar; completed/failed states hide stepper and show single semantic icon only
@@ -196,11 +203,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 32-03-PLAN.md (ScanProgressOverlay Redesign)
+**Stopped At:** Completed 32-02-PLAN.md (Feedback Primitives Adoption — 5 components)
 **Resume File:** None
 
-**Next Action:** Execute Phase 32 Plan 04 (if exists) or next phase
+**Next Action:** Execute Phase 32 Plan 03 (already complete) or Phase 32 Plan 04 if exists
 
 ---
 
-*State updated: 2026-02-18 — Phase 32 Plan 01 complete (Skeleton, EmptyState, ErrorState feedback primitives created)*
+*State updated: 2026-02-18 — Phase 32 Plan 02 complete (feedback primitives adopted in ProjectList, ChangeTimeline, ResultsTable, resultaten.tsx, ResultsFilterPanel)*
