@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 33 in progress (plan 02 of N complete)
-**Plan:** 33-02 complete — ScanProgressOverlay CTA button, step-specific labels, navigatedRef double-nav guard
+**Phase:** Phase 33 in progress (plan 04 of N complete)
+**Plan:** 33-04 complete — Category-grouped filter panel (DT-05), max_area_m2 exposed, table-to-map hover sync (DT-02)
 **Status:** Active — Phase 33 data-table-polish in progress
 
 **Progress:** [██████████] 97%
 
-**Last activity:** 2026-02-18 — Phase 33 Plan 02 complete (SCAN-01 + SCAN-02)
+**Last activity:** 2026-02-18 — Phase 33 Plan 04 complete (DT-05 filter groups + DT-02 hover sync)
 
 ---
 
@@ -61,6 +61,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - URL search params for sort/filter/page in /resultaten, multi-column sort indicators in ResultsTable
 - Phase 33 Plan 02: ~2min, 1 task, 1 commit, 2 files
 - ScanProgressOverlay CTA button (SCAN-01), step-specific running labels (SCAN-02), navigatedRef double-nav guard
+- Phase 33 Plan 04: ~2min, 2 tasks, 2 commits, 4 files
+- Category-grouped collapsible filter panel (Oppervlak/Bestemming/Score), max_area_m2 exposed, table-to-map hover sync via setFeatureState
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -183,6 +185,14 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Scan completion useEffect deps simplified to [scanStatus.data?.status] — prevents stale closures without unnecessary re-runs
 - Pre-existing TS2532 fixed: SCAN_STEPS[index - 1] possibly undefined via safe prevStep variable
 
+**Phase 33-04 (Filter Groups + Hover Sync):**
+- FILTER_GROUPS omits Locatie group — no location filters in scope, empty group avoided
+- All 3 filter groups default to open (all groups in initial openGroups Set)
+- Map-to-table hover deferred — table-to-map only in Phase 33 (ROADMAP updated); map-to-table needs mousemove handler in ResultsLayout
+- Use numeric MVT feature ID for setFeatureState, not string UUID parcel_id (querySourceFeatures returns numeric id)
+- hoveredParcelRef cleanup runs on collapsed change via useEffect dependency
+- features[0] extracted to local variable to satisfy TypeScript TS2532 undefined narrowing
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -215,11 +225,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 33-02-PLAN.md — ScanProgressOverlay CTA + scan state labels
+**Stopped At:** Completed 33-04-PLAN.md — Category-grouped filter panel (DT-05) + table-to-map hover sync (DT-02)
 **Resume File:** None
 
-**Next Action:** Continue Phase 33 (Data Table Polish) — next plan
+**Next Action:** Continue Phase 33 (Data Table Polish) — Plan 33-03 (multi-select checkboxes + bulk export)
 
 ---
 
-*State updated: 2026-02-18 — Phase 33 Plan 02 complete (SCAN-01 + SCAN-02: CTA button + step labels + navigatedRef guard)*
+*State updated: 2026-02-18 — Phase 33 Plan 04 complete (DT-05: category filter groups + DT-02: table-to-map hover sync)*
