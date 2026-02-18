@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 33 in progress (Plan 01 of 4 complete)
-**Plan:** 33-01 complete — URL search params for filter/sort/page, Shift+click multi-sort with priority badges
-**Status:** Phase 33 active — DT-04 (persistent filter state) and DT-01 (multi-sort) shipped
+**Phase:** Phase 33 in progress (plan 02 of N complete)
+**Plan:** 33-02 complete — ScanProgressOverlay CTA button, step-specific labels, navigatedRef double-nav guard
+**Status:** Active — Phase 33 data-table-polish in progress
 
 **Progress:** [██████████] 97%
 
-**Last activity:** 2026-02-18 — Phase 33 Plan 01 complete
+**Last activity:** 2026-02-18 — Phase 33 Plan 02 complete (SCAN-01 + SCAN-02)
 
 ---
 
@@ -57,8 +57,10 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Feedback primitives adopted in 5 components: skeleton loading, ErrorState retry, EmptyState with icons, toast.info on filter changes (FB-01 to FB-04 closed)
 - Phase 32 Plan 03: ~2min, 1 task, 1 commit, 1 file
 - ScanProgressOverlay redesign: three-step stepper (Kadaster/BAG/Bestemmingen), Industrial Amber tokens, real-time sublabels (FB-05 + FB-06)
-- Phase 33 Plan 01: 179s, 2 tasks, 2 commits, 3 files
-- Filter/sort/page state migrated to URL search params; Shift+click multi-sort with priority badges; DT-01 + DT-04 complete
+- Phase 33 Plan 01: ~179s, 2 tasks, 2 commits, 3 files
+- URL search params for sort/filter/page in /resultaten, multi-column sort indicators in ResultsTable
+- Phase 33 Plan 02: ~2min, 1 task, 1 commit, 2 files
+- ScanProgressOverlay CTA button (SCAN-01), step-specific running labels (SCAN-02), navigatedRef double-nav guard
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -175,6 +177,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - [Phase 33-01]: Only primary sort sent to backend API — secondary multi-sort columns are visual-only indicators (server is paginated)
 - [Phase 33-01]: navigate uses functional (prev) => ({...prev, ...changes}) to preserve scan_id across all URL state changes
 
+**Phase 33-02 (ScanProgressOverlay CTA + Labels):**
+- navigatedRef.current = false reset tied to [activeScanId] — ensures fresh navigation guard per scan, not per render
+- Overlay condition changed from status !== 'completed' to status !== 'cancelled' — shows CTA while user decides before auto-nav fires
+- Scan completion useEffect deps simplified to [scanStatus.data?.status] — prevents stale closures without unnecessary re-runs
+- Pre-existing TS2532 fixed: SCAN_STEPS[index - 1] possibly undefined via safe prevStep variable
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -203,16 +211,15 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 | 2 | Redesign scoring, add qualification filter, and resolve addresses | 2026-02-15 | 265aa49 | [2-redesign-scoring-add-qualification-filte](./quick/2-redesign-scoring-add-qualification-filte/) |
 
 ---
-| Phase 33-data-table-polish P01 | 179 | 2 tasks | 3 files |
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18T04:07:26.481Z
-**Stopped At:** Completed 33-01-PLAN.md — URL search params + multi-sort
+**Last Session:** 2026-02-18
+**Stopped At:** Completed 33-02-PLAN.md — ScanProgressOverlay CTA + scan state labels
 **Resume File:** None
 
-**Next Action:** Plan Phase 33 (Data Table Polish) — `/gsd:plan-phase 33`
+**Next Action:** Continue Phase 33 (Data Table Polish) — next plan
 
 ---
 
-*State updated: 2026-02-18 — Phase 32 complete (3 plans, 17/17 must-haves verified, feedback primitives + adoption + ScanProgressOverlay redesign)*
+*State updated: 2026-02-18 — Phase 33 Plan 02 complete (SCAN-01 + SCAN-02: CTA button + step labels + navigatedRef guard)*
