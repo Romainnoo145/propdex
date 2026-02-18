@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 34 in progress (plan 2 of 4 complete)
-**Plan:** 34-02 complete — InspectorPanel bottom sheet on mobile, map controls adapted (scan buttons hidden, "(alleen lezen)" label, "Gebruik desktop" banner)
+**Phase:** Phase 34 in progress (plan 3 of 4 complete)
+**Plan:** 34-03 complete — ParcelCard component, ResultsTable mobile card branch, filter panel stacked layout, resultaten read-only banner
 **Status:** Active — Phase 34 mobile responsiveness in progress
 
-**Progress:** [██████████] 97%
+**Progress:** [██████████] 98%
 
-**Last activity:** 2026-02-18 — Phase 34 Plan 02 complete (InspectorPanel + map controls mobile adaptation)
+**Last activity:** 2026-02-18 — Phase 34 Plan 03 complete (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner)
 
 ---
 
@@ -68,6 +68,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Phase 34 Plan 01: TBD (Phase 34-01 plan not yet executed via this session)
 - Phase 34 Plan 02: ~2min, 2 tasks, 2 commits, 2 files
 - InspectorPanel responsive bottom sheet (mobile fixed/slide-up, desktop absolute/slide-right), scan buttons hidden on mobile, "(alleen lezen)" label, "Gebruik desktop voor scannen" banner
+- Phase 34 Plan 03: ~3min, 2 tasks, 2 commits, 4 files
+- ParcelCard (72px touch target, address/score/area/bestemming), ResultsTable mobile card branch via useIsMobile(), filter panel flex-col mobile layout, read-only banner + BulkActionBar hidden on mobile
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -216,6 +218,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Gemeente X button given min-h-[44px] min-w-[44px] flex items-center justify-center for MOB-03 touch target compliance
 - Bottom sheet animation: translate-y-full (closed mobile) / translate-y-0 (open mobile), translate-x-full (closed desktop) / md:translate-x-0 (open desktop)
 
+**Phase 34-03 (Mobile Results Table + Filter Panel):**
+- ScoreBadge copied into ParcelCard.tsx as local function to avoid cross-file coupling for a small display component
+- Mobile card list omits checkboxes intentionally — selection/export is desktop-only per MOB-01 read-only mode
+- BulkActionBar hidden on mobile via `{!isMobile && <BulkActionBar />}` (conditional render, not CSS hidden) since no checkboxes in card view
+- Filter controls container: flex-col gap-2 on mobile, md:flex-row md:flex-wrap md:items-center md:gap-3 on desktop
+- Toon Kaart button text hidden on mobile via `hidden md:inline` span — icon-only saves space on narrow screens
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -249,11 +258,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 34-02-PLAN.md (InspectorPanel bottom sheet + map controls mobile adaptation)
+**Stopped At:** Completed 34-03-PLAN.md (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner)
 **Resume File:** None
 
-**Next Action:** Execute Phase 34 Plan 03 (Mobile responsiveness — address search + property cards)
+**Next Action:** Execute Phase 34 Plan 04 (Mobile bottom padding and touch target audit)
 
 ---
 
-*State updated: 2026-02-18 — Phase 34 Plan 02 complete (InspectorPanel bottom sheet + map controls mobile adaptation, 2 tasks, 2 commits)*
+*State updated: 2026-02-18 — Phase 34 Plan 03 complete (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner, 2 tasks, 2 commits)*
