@@ -52,8 +52,8 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
     : null
 
   return (
-    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
-      <div className="bg-grey-900 border border-grey-800 shadow-lg rounded-lg p-4 min-w-[380px]">
+    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)]">
+      <div className="bg-grey-900/90 backdrop-blur-md border border-grey-800 shadow-lg rounded-lg p-4 min-w-[380px]">
 
         {/* Terminal states: icon + message */}
         {(isCompleted || isFailed) && (
@@ -95,7 +95,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
 
         {/* Running: three-step stepper */}
         {isRunning && (
-          <div className="flex items-center mb-3">
+          <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center mb-3">
             {SCAN_STEPS.map((step, index) => {
               const state = getStepState(step.id, status.current_phase, false, false)
               const prevStep = index > 0 ? SCAN_STEPS[index - 1] : undefined
@@ -103,11 +103,11 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
                 ? getStepState(prevStep.id, status.current_phase, false, false) === 'completed'
                 : false
               return (
-                <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                <>
                   {index > 0 && (
-                    <div className={`flex-1 h-0.5 mx-1 ${prevCompleted ? 'bg-success' : 'bg-grey-800'}`} />
+                    <div key={`line-${step.id}`} className={`h-0.5 mx-2 ${prevCompleted ? 'bg-success' : 'bg-grey-800'}`} />
                   )}
-                  <div className="flex flex-col items-center gap-1">
+                  <div key={step.id} className="flex flex-col items-center gap-1">
                     <StepCircle number={index + 1} state={state} />
                     <span className={`text-xs whitespace-nowrap ${
                       state === 'active' ? 'text-amber-accent' : state === 'completed' ? 'text-success' : 'text-grey-400'
@@ -115,7 +115,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
                       {step.label}
                     </span>
                   </div>
-                </div>
+                </>
               )
             })}
           </div>

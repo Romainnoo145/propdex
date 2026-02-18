@@ -83,7 +83,7 @@ export function addGemeenteBoundariesLayer(
       type: 'fill',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'fill-color': '#3b82f6',
+        'fill-color': '#d4a843',
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'hover'], false],
@@ -102,7 +102,7 @@ export function addGemeenteBoundariesLayer(
       type: 'line',
       source: GEMEENTE_SOURCE_ID,
       paint: {
-        'line-color': '#3b82f6',
+        'line-color': '#d4a843',
         'line-width': 1,
         'line-opacity': 0.5,
       },

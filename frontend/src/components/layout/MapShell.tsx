@@ -13,7 +13,7 @@ interface MapShellProps {
  */
 export default function MapShell({ children }: MapShellProps) {
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden pointer-events-none [&>*]:pointer-events-auto">
       {children}
     </div>
   )

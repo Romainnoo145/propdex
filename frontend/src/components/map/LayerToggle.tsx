@@ -104,14 +104,8 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
 
   const active = 'bg-amber-accent text-grey-950 shadow-sm';
   const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
-  const parcelActive = 'bg-blue-500/30 text-grey-100 shadow-sm';
-  const parcelInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
-  const gemeenteActive = 'bg-emerald-500/30 text-grey-100 shadow-sm';
-  const gemeenteInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
-  const bestemmingsplanActive = 'bg-purple-500/30 text-grey-100 shadow-sm';
-  const bestemmingsplanInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
-  const wijkenActive = 'bg-emerald-500/30 text-grey-100 shadow-sm';
-  const wijkenInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm';
+  const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
 
   return (
     <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
@@ -137,7 +131,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
       <button
         onClick={handleParcelsToggle}
         className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showParcels ? parcelActive : parcelInactive
+          showParcels ? overlayActive : overlayInactive
         }`}
       >
         Percelen
@@ -148,7 +142,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
       <button
         onClick={handleGemeentenToggle}
         className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showGemeenten ? gemeenteActive : gemeenteInactive
+          showGemeenten ? overlayActive : overlayInactive
         }`}
       >
         Gemeenten
@@ -159,7 +153,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
       <button
         onClick={handleBestemmingsplanToggle}
         className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showBestemmingsplan ? bestemmingsplanActive : bestemmingsplanInactive
+          showBestemmingsplan ? overlayActive : overlayInactive
         }`}
       >
         Bestemmingsplan
@@ -171,7 +165,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
           <button
             onClick={handleWijkenToggle}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showWijken ? wijkenActive : wijkenInactive
+              showWijken ? overlayActive : overlayInactive
             }`}
           >
             Wijken

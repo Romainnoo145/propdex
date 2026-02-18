@@ -61,6 +61,9 @@ export function addScanAreaHighlight(
  * @param map - MapLibre GL JS map instance
  */
 export function removeScanAreaHighlight(map: maplibregl.Map): void {
+  // Guard: map style may be undefined during unmount/destroy
+  if (!map.getStyle()) return;
+
   // Remove layers (must be removed before source)
   if (map.getLayer(SCAN_AREA_LINE_LAYER)) {
     map.removeLayer(SCAN_AREA_LINE_LAYER);
