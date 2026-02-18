@@ -12,13 +12,16 @@
 import { useEffect, useState } from 'react'
 import { useProjectChanges, useMarkViewed } from '@/hooks/useNotifications'
 import type { ChangeRecord } from '@/lib/types/monitoring'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 
 interface ChangeTimelineProps {
   projectId: string
 }
 
 export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
-  const { data, isLoading, error } = useProjectChanges(projectId)
+  const { data, isLoading, error, refetch } = useProjectChanges(projectId)
   const markViewed = useMarkViewed()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -30,16 +33,28 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
   if (isLoading) {
     return (
-      <div className="px-5 py-4 text-sm text-gray-400">
-        Wijzigingen laden...
+      <div className="px-5 py-4 space-y-3">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+        ))}
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="px-5 py-4 text-sm text-red-500">
-        Fout bij laden wijzigingen
+      <div className="px-5 py-4">
+        <ErrorState
+          message="Fout bij laden wijzigingen"
+          actions={[{ label: 'Opnieuw proberen', onClick: () => refetch() }]}
+          className="py-6"
+        />
       </div>
     )
   }
@@ -48,8 +63,12 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
   if (changes.length === 0) {
     return (
-      <div className="px-5 py-4 text-sm text-gray-400">
-        Geen wijzigingen gedetecteerd
+      <div className="px-5 py-4">
+        <EmptyState
+          title="Geen wijzigingen gedetecteerd"
+          description="Wanneer er bestemmingsplan- of vergunningswijzigingen zijn, verschijnen ze hier."
+          className="py-6"
+        />
       </div>
     )
   }

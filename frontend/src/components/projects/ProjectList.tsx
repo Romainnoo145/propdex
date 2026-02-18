@@ -8,6 +8,7 @@ import type { ReportListItem } from '@/lib/types/report'
 import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
+import { Skeleton } from '@/components/feedback/Skeleton'
 
 // Demo reports per project
 const DEMO_REPORTS: Record<string, ReportListItem[]> = {
@@ -143,7 +144,16 @@ export default function ProjectList() {
   }
 
   if (isLoading) {
-    return <div className="py-8 text-center text-gray-400">Laden...</div>
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-lg border border-grey-800 bg-grey-900 p-4 space-y-2">
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
