@@ -200,7 +200,7 @@ export default function ProjectList() {
                 {/* Gemeente group header */}
                 <button
                   onClick={() => setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))}
-                  className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
                 >
                   <ChevronIcon
                     className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isGemeenteExpanded ? 'rotate-90' : ''}`}
@@ -243,7 +243,7 @@ export default function ProjectList() {
                           {/* Wijk project header */}
                           <button
                             onClick={() => handleToggle(wijk.id)}
-                            className="flex w-full items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-gray-100/50"
+                            className="flex w-full min-h-[44px] items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-gray-100/50"
                           >
                             <ChevronIcon
                               className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
@@ -275,7 +275,7 @@ export default function ProjectList() {
                                     <button
                                       key={report.id}
                                       onClick={() => handleReportClick(report)}
-                                      className="flex w-full items-center gap-3 border-b border-gray-100 px-10 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
+                                      className="flex w-full min-h-[44px] items-center gap-3 border-b border-gray-100 px-10 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
                                     >
                                       <DocumentIcon />
                                       <div className="min-w-0 flex-1">
@@ -334,7 +334,7 @@ export default function ProjectList() {
                 {/* Project header — clickable */}
                 <button
                   onClick={() => handleToggle(project.id)}
-                  className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
                 >
                   <ChevronIcon
                     className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -390,7 +390,7 @@ export default function ProjectList() {
                           <button
                             key={report.id}
                             onClick={() => handleReportClick(report)}
-                            className="flex w-full items-center gap-3 border-b border-gray-100 px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
+                            className="flex w-full min-h-[44px] items-center gap-3 border-b border-gray-100 px-5 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
                           >
                             <DocumentIcon />
                             <div className="min-w-0 flex-1">
