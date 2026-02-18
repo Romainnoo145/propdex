@@ -4,10 +4,11 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  SortingState,
-  PaginationState,
+  type SortingState,
+  type PaginationState,
+  type Updater,
 } from '@tanstack/react-table'
-import { Search } from 'lucide-react'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react'
 import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 import { ErrorState } from '@/components/feedback/ErrorState'
@@ -20,6 +21,9 @@ interface ResultsTableProps {
   onRowClick?: (parcelId: string) => void
   onRowDoubleClick?: (parcel: ScanResultItem) => void
   onTotalChange?: (total: number) => void
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void
+  onPageChange?: (page: number) => void
+  currentPage?: number
 }
 
 // Score badge component for visual indicators
@@ -119,20 +123,56 @@ export default function ResultsTable({
   onRowClick,
   onRowDoubleClick,
   onTotalChange,
+  onSortChange,
+  onPageChange,
+  currentPage,
 }: ResultsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'score', desc: true },
-  ])
+  // Initialize sorting from URL-derived filters
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    if (filters.sort_by) {
+      return [{ id: filters.sort_by, desc: filters.sort_order === 'desc' }]
+    }
+    return [{ id: 'score', desc: true }]
+  })
+
+  // Initialize pagination from URL-derived currentPage
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
+    pageIndex: currentPage ?? 0,
     pageSize: 50,
   })
+
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map())
 
-  // Reset pagination to page 0 when filters change
+  // Sync pagination when currentPage prop changes (URL navigation)
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-  }, [filters])
+    setPagination((prev) => ({ ...prev, pageIndex: currentPage ?? 0 }))
+  }, [currentPage])
+
+  // Sync sorting when URL-derived sort params change
+  useEffect(() => {
+    if (filters.sort_by) {
+      setSorting([{ id: filters.sort_by, desc: filters.sort_order === 'desc' }])
+    }
+  }, [filters.sort_by, filters.sort_order])
+
+  // Handle sorting changes — propagate primary sort to URL
+  const handleSortingChange = (updater: Updater<SortingState>) => {
+    const newSorting =
+      typeof updater === 'function' ? updater(sorting) : updater
+    setSorting(newSorting)
+    const primarySort = newSorting[0]
+    if (primarySort && onSortChange) {
+      onSortChange(primarySort.id, primarySort.desc ? 'desc' : 'asc')
+    }
+  }
+
+  // Handle pagination changes — propagate page index to URL
+  const handlePaginationChange = (updater: Updater<PaginationState>) => {
+    const newPagination =
+      typeof updater === 'function' ? updater(pagination) : updater
+    setPagination(newPagination)
+    onPageChange?.(newPagination.pageIndex)
+  }
 
   // Build API filters with sorting and pagination
   const apiFilters: ScanResultsFilters = {
@@ -167,13 +207,16 @@ export default function ResultsTable({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
+    enableMultiSort: true,
+    isMultiSortEvent: (e) => (e as MouseEvent).shiftKey,
+    maxMultiSortColCount: 3,
     pageCount: Math.ceil((data?.total ?? 0) / pagination.pageSize),
     state: {
       sorting,
       pagination,
     },
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
+    onSortingChange: handleSortingChange,
+    onPaginationChange: handlePaginationChange,
   })
 
   if (error) {
@@ -244,57 +287,29 @@ export default function ResultsTable({
                     }`}
                     onClick={header.column.getToggleSortingHandler()}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
                       {header.column.getCanSort() && (
-                        <span className="text-grey-600">
-                          {header.column.getIsSorted() === 'desc' ? (
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          ) : header.column.getIsSorted() === 'asc' ? (
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 15l7-7 7 7"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                              />
-                            </svg>
+                        <>
+                          <span className="text-grey-600">
+                            {header.column.getIsSorted() === 'desc' ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : header.column.getIsSorted() === 'asc' ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronsUpDown className="w-4 h-4" />
+                            )}
+                          </span>
+                          {/* Multi-sort priority badge */}
+                          {header.column.getIsSorted() && sorting.length > 1 && (
+                            <span className="text-xs text-amber-accent ml-0.5">
+                              {header.column.getSortIndex() + 1}
+                            </span>
                           )}
-                        </span>
+                        </>
                       )}
                     </div>
                   </th>
