@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 32 complete, Phase 33 next
+**Status:** Phase 33 complete, Phase 34 next
 
 ### Phase 27: Design System Foundation
 
@@ -196,10 +196,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 33-01-PLAN.md — Filter persistence (URL params) + multi-criteria sorting (Shift+click)
-- [ ] 33-02-PLAN.md — Scan flow polish (CTA button + state labels)
-- [ ] 33-03-PLAN.md — Multi-select checkboxes + bulk export + backend endpoint
-- [ ] 33-04-PLAN.md — Advanced filter panel (category groups) + list-map hover sync
+- [x] 33-01-PLAN.md — Filter persistence (URL params) + multi-criteria sorting (Shift+click)
+- [x] 33-02-PLAN.md — Scan flow polish (CTA button + state labels)
+- [x] 33-03-PLAN.md — Multi-select checkboxes + bulk export + backend endpoint
+- [x] 33-04-PLAN.md — Advanced filter panel (category groups) + list-map hover sync
 
 **Success Criteria:**
 1. Hovering table row highlights corresponding parcel on map (map-to-table hover deferred to future phase)
@@ -279,7 +279,7 @@ Plans:
 | 30 | View Separation | NAV-04 | ✓ Complete (2026-02-18) |
 | 31 | Component Migration | MIG-01, MIG-02 | ✓ Complete (2026-02-18) |
 | 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | ✓ Complete (2026-02-18) |
-| 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | Pending |
+| 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | ✓ Complete (2026-02-18) |
 | 34 | Mobile Responsiveness | MOB-01, MOB-02, MOB-03 | Pending |
 | 35 | Settings Page | SET-01, SET-02, SET-03, SET-04 | Pending |
 | 36 | Polish + Performance | — | Pending |
@@ -364,4 +364,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (Phase 31 complete)*
+*Last updated: 2026-02-18 (Phase 33 complete)*
