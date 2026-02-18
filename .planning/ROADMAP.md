@@ -193,6 +193,14 @@ Plans:
 - SCAN-01: Minimal-click scan-to-results flow
 - SCAN-02: Clear scan state indication
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 33-01-PLAN.md — Filter persistence (URL params) + multi-criteria sorting (Shift+click)
+- [ ] 33-02-PLAN.md — Scan flow polish (CTA button + state labels)
+- [ ] 33-03-PLAN.md — Multi-select checkboxes + bulk export + backend endpoint
+- [ ] 33-04-PLAN.md — Advanced filter panel (category groups) + list-map hover sync
+
 **Success Criteria:**
 1. Hovering table row highlights corresponding parcel on map, and hovering map parcel highlights table row
 2. User selects multiple parcels via checkboxes and performs bulk export or "Add to Project"
