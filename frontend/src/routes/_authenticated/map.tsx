@@ -791,26 +791,32 @@ function MapPage() {
             <span className="text-sm font-medium text-grey-100">
               {activeGemeente.naam}
             </span>
+            {/* Read-only label — mobile only, since scan buttons are hidden */}
+            <span className="text-xs text-grey-400 md:hidden">(alleen lezen)</span>
           </div>
           {wijkLoading && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-accent"></div>
           )}
-          {/* Viewport scan button */}
-          <button
-            onClick={handleScanViewport}
-            disabled={!!activeScanId || triggerScan.isPending}
-            className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-          >
-            {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
-          </button>
-          {/* Toon Lijst button — visible when a scan is active */}
-          {activeScanId && (
+          {/* Viewport scan button — desktop only (scanning is not supported on mobile) */}
+          <span className="hidden md:inline-flex">
             <button
-              onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
-              className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
+              onClick={handleScanViewport}
+              disabled={!!activeScanId || triggerScan.isPending}
+              className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
             >
-              Toon Lijst
+              {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
             </button>
+          </span>
+          {/* Toon Lijst button — desktop only, visible when a scan is active */}
+          {activeScanId && (
+            <span className="hidden md:inline-flex">
+              <button
+                onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
+                className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
+              >
+                Toon Lijst
+              </button>
+            </span>
           )}
           <button
             onClick={() => {
@@ -823,7 +829,7 @@ function MapPage() {
                 mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
               }
             }}
-            className="text-grey-400 hover:text-grey-100 transition-colors"
+            className="text-grey-400 hover:text-grey-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Gemeente deselecteren"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -890,13 +896,22 @@ function MapPage() {
                 </svg>
               </a>
             )}
-            <button
-              onClick={handleScanZone}
-              disabled={triggerScan.isPending || !!activeScanId}
-              className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-            >
-              {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
-            </button>
+            {/* Scan button — desktop only */}
+            <div className="hidden md:block">
+              <button
+                onClick={handleScanZone}
+                disabled={triggerScan.isPending || !!activeScanId}
+                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+              >
+                {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
+              </button>
+            </div>
+            {/* Mobile explanation — scanning requires desktop */}
+            <div className="md:hidden mt-3">
+              <div className="rounded-md bg-amber-accent/10 border border-amber-accent/30 px-3 py-2 text-xs text-amber-accent">
+                Gebruik desktop voor scannen
+              </div>
+            </div>
           </div>
         </div>
       )}
