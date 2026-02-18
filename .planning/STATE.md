@@ -16,7 +16,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 **Plan:** 33-04 complete — Category-grouped filter panel (DT-05), max_area_m2 exposed, table-to-map hover sync (DT-02)
 **Status:** Phase 33 verified (6/6 must-haves) — all data table polish shipped
 
-**Progress:** [███████░░░] 70% (7/10 phases complete)
+**Progress:** [██████████] 97%
 
 **Last activity:** 2026-02-18 — Phase 33 verified and marked complete
 
@@ -202,6 +202,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Use numeric MVT feature ID for setFeatureState, not string UUID parcel_id (querySourceFeatures returns numeric id)
 - hoveredParcelRef cleanup runs on collapsed change via useEffect dependency
 - features[0] extracted to local variable to satisfy TypeScript TS2532 undefined narrowing
+- [Phase 34-01]: BottomTabNav active state uses text-amber-accent (accent for transient tab selection, not persistent nav)
+- [Phase 34-01]: --z-bottom-nav: 250 same as --z-side-rail since they never coexist on the same viewport width
+- [Phase 34-01]: useIsMobile: useState initializer reads matchMedia synchronously (SSR-safe, no flicker), useEffect adds addEventListener 'change'
 
 ### Active TODOs
 
@@ -231,11 +234,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 | 2 | Redesign scoring, add qualification filter, and resolve addresses | 2026-02-15 | 265aa49 | [2-redesign-scoring-add-qualification-filte](./quick/2-redesign-scoring-add-qualification-filte/) |
 
 ---
+| Phase 34-mobile-responsiveness P01 | 98 | 2 tasks | 4 files |
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18
-**Stopped At:** Phase 33 verified and marked complete
+**Last Session:** 2026-02-18T04:53:21.817Z
+**Stopped At:** Completed 34-01-PLAN.md (useIsMobile + BottomTabNav + _authenticated.tsx wiring)
 **Resume File:** None
 
 **Next Action:** Plan Phase 34 (Mobile Responsiveness) — `/gsd:plan-phase 34`
