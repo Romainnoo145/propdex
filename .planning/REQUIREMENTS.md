@@ -1,0 +1,93 @@
+# Requirements: Propdex
+
+**Defined:** 2026-02-18
+**Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
+
+## v5.0 Requirements
+
+Requirements for v5.0 Scan Intelligence milestone. Each maps to roadmap phases.
+
+### Scan History
+
+- [ ] **SCAN-01**: User can view a list of all previous scans with gemeente, wijk, date, and parcel count
+- [ ] **SCAN-02**: User can re-open any previous scan's results in the results table
+- [ ] **SCAN-03**: User can navigate from scan history to the map with that scan's parcels visualized
+- [ ] **SCAN-04**: Projecten view shows associated scans with real data (replaces empty project shells)
+
+### Map Visualization
+
+- [ ] **MAP-01**: Scanned wijken are visually highlighted on the map (distinct from unscanned wijken)
+- [ ] **MAP-02**: Individual scan result parcels appear on the map as colored polygons by opportunity score
+- [ ] **MAP-03**: User can toggle between parcel score coloring and default map view
+
+### Report Integration
+
+- [ ] **RPT-01**: User can generate a full property intelligence report for any parcel in scan results
+- [ ] **RPT-02**: Generated report is saved and accessible from the report management system
+
+### Bug Fixes & Hardening
+
+- [ ] **FIX-01**: User can register a new account without errors
+- [ ] **FIX-02**: ARQ worker handles re-runs gracefully without duplicate data
+- [ ] **FIX-03**: Known tech debt resolved (unused packages, legacy classes)
+
+## Future Requirements
+
+Deferred to future milestones. Tracked but not in current roadmap.
+
+### Lead Pipeline
+
+- **LEAD-01**: User can add scan result parcels to a lead pipeline
+- **LEAD-02**: Lead pipeline has Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
+- **LEAD-03**: User can view pipeline summary with count per stage
+- **LEAD-04**: User can filter results by lead status
+- **LEAD-05**: Lead status visible on map as color-coded parcels by pipeline stage
+
+### Data Enrichment
+
+- **DATA-01**: Eigendom lookup via Kadaster BRK Bevragen (paid API, qualified leads only)
+- **DATA-02**: WOZ waarde integration (free government data)
+- **DATA-03**: Energielabel integration (free via RVO/Kadaster)
+
+### Collaboration
+
+- **COLLAB-01**: Comparison view — side-by-side 2-3 properties
+- **COLLAB-02**: Role-based access (admin, analyst, viewer)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Kanban drag-and-drop board | dnd-kit stale, dropdown sufficient at current scale |
+| Scan comparison across time | Requires 6+ months of production scan data |
+| Multi-user real-time collaboration | WebSockets/presence complexity, not needed for 1-5 user team |
+| Scheduled automatic re-scans | Overlaps with existing change monitoring |
+| Separate GeoJSON endpoint for parcels | MVT tiles handle scale better, avoids coordinate transform pitfalls |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SCAN-01 | — | Pending |
+| SCAN-02 | — | Pending |
+| SCAN-03 | — | Pending |
+| SCAN-04 | — | Pending |
+| MAP-01 | — | Pending |
+| MAP-02 | — | Pending |
+| MAP-03 | — | Pending |
+| RPT-01 | — | Pending |
+| RPT-02 | — | Pending |
+| FIX-01 | — | Pending |
+| FIX-02 | — | Pending |
+| FIX-03 | — | Pending |
+
+**Coverage:**
+- v5.0 requirements: 12 total
+- Mapped to phases: 0
+- Unmapped: 12
+
+---
+*Requirements defined: 2026-02-18*
+*Last updated: 2026-02-18 after initial definition*

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Lead Pipeline
+**Current focus:** v5.0 Scan Intelligence
 
 ---
 

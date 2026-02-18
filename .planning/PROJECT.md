@@ -20,15 +20,14 @@ Scan any Dutch municipality or neighborhood and instantly find unused building o
 
 This is the ONE thing that must work. Everything else is secondary.
 
-## Current Milestone: v5.0 Lead Pipeline
+## Current Milestone: v5.0 Scan Intelligence
 
-**Goal:** Transform scan results from throwaway data into persistent, actionable lead intelligence — scan persistence, map visualization of results, and a Dutch-language deal pipeline for tracking parcels from discovery to acquisition.
+**Goal:** Make scan results persistent and actionable — browsable scan history, map visualization of scanned areas and parcels, property report generation from scan results, and bug fixes.
 
 **Target features:**
-- Scan results persistence — revisit any previous scan from Projecten view
-- Map scan layers — scanned wijken highlighted + parcel results on map with score/status coloring
-- Lead pipeline — select parcels → track through Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
-- Report integration — generate full property reports for lead parcels
+- Scan history — browsable list of all previous scans with metadata, re-open on map or results table
+- Map visualization — scanned wijken highlighted + individual parcels colored by opportunity score via MVT tiles
+- Report integration — generate full property reports for any parcel in scan results
 - Bug fixes — register 500 error and known issues cleanup
 
 ## Current State
@@ -138,20 +137,20 @@ This is the ONE thing that must work. Everything else is secondary.
 ### Active
 
 - [ ] Scan results persist and are browsable from Projecten view
-- [ ] Map shows scanned wijken and individual parcel results with score/status coloring
-- [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
-- [ ] Full property reports can be generated for lead parcels
+- [ ] Map shows scanned wijken and individual parcel results with score coloring
+- [ ] Full property reports can be generated for scan result parcels
 - [ ] Backend register endpoint fixed
 - [ ] Known bugs and tech debt resolved
 
 ### Future
 
+- [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
+- [ ] Lead status visualization on map (color-coded by pipeline stage)
 - [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
 - [ ] WOZ waarde integration (free government data)
 - [ ] Energielabel integration (free via RVO/Kadaster)
 - [ ] Comparison view — side-by-side 2-3 properties
 - [ ] Role-based access (admin, analyst, viewer)
-- [ ] Lead status visualization on map (color-coded pins by pipeline stage)
 
 ### Out of Scope
 
