@@ -14,6 +14,8 @@ import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { ParcelCard } from './ParcelCard'
 
 interface ResultsTableProps {
   scanId: string
@@ -249,6 +251,8 @@ export default function ResultsTable({
     }),
   ]
 
+  const isMobile = useIsMobile()
+
   const table = useReactTable({
     data: data?.results ?? [],
     columns,
@@ -304,6 +308,60 @@ export default function ResultsTable({
         title="Geen resultaten gevonden"
         description="Pas de filters aan of voer een nieuwe scan uit."
       />
+    )
+  }
+
+  // Mobile branch: card list below 768px (MOB-02)
+  // Intentionally omits checkboxes — selection/export is desktop-only per MOB-01 read-only mode
+  if (isMobile) {
+    return (
+      <div className="h-full w-full flex flex-col">
+        {/* Header with summary */}
+        <div className="px-4 py-3 border-b border-grey-800">
+          <h3 className="text-grey-100 font-semibold text-base">
+            {data.gemeente_naam}
+          </h3>
+          <p className="text-grey-400 text-xs mt-0.5">
+            {data.total.toLocaleString('nl-NL')} kansrijk van{' '}
+            {data.parcels_total.toLocaleString('nl-NL')} gescand
+          </p>
+        </div>
+
+        {/* Card list */}
+        <div className="flex-1 overflow-y-auto divide-y divide-grey-800">
+          {table.getRowModel().rows.map((row) => (
+            <ParcelCard
+              key={row.id}
+              parcel={row.original}
+              isSelected={row.original.parcel_id === selectedParcelId}
+              onClick={() => onRowClick?.(row.original.parcel_id)}
+            />
+          ))}
+        </div>
+
+        {/* Simplified pagination — compact layout with 44px touch targets (MOB-03) */}
+        <div className="px-4 py-3 border-t border-grey-800 flex items-center justify-between">
+          <span className="text-xs text-grey-400">
+            {pagination.pageIndex + 1} / {table.getPageCount()}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="bg-grey-850 hover:bg-grey-800 disabled:opacity-30 disabled:cursor-not-allowed text-grey-100 px-3 py-2 rounded text-sm transition-colors min-h-[44px]"
+            >
+              Vorige
+            </button>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="bg-grey-850 hover:bg-grey-800 disabled:opacity-30 disabled:cursor-not-allowed text-grey-100 px-3 py-2 rounded text-sm transition-colors min-h-[44px]"
+            >
+              Volgende
+            </button>
+          </div>
+        </div>
+      </div>
     )
   }
 
