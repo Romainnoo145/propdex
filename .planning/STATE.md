@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 32 complete (all 3 plans complete)
-**Plan:** 32-02 complete — feedback primitives adopted across ProjectList, ChangeTimeline, ResultsTable, resultaten, ResultsFilterPanel
-**Status:** Phase 32 verified (17/17 must-haves) — all feedback systems shipped
+**Phase:** Phase 33 in progress (Plan 01 of 4 complete)
+**Plan:** 33-01 complete — URL search params for filter/sort/page, Shift+click multi-sort with priority badges
+**Status:** Phase 33 active — DT-04 (persistent filter state) and DT-01 (multi-sort) shipped
 
-**Progress:** [██████░░░░] 60% (6/10 phases complete)
+**Progress:** [██████████] 97%
 
-**Last activity:** 2026-02-18 — Phase 32 verified and marked complete
+**Last activity:** 2026-02-18 — Phase 33 Plan 01 complete
 
 ---
 
@@ -57,6 +57,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Feedback primitives adopted in 5 components: skeleton loading, ErrorState retry, EmptyState with icons, toast.info on filter changes (FB-01 to FB-04 closed)
 - Phase 32 Plan 03: ~2min, 1 task, 1 commit, 1 file
 - ScanProgressOverlay redesign: three-step stepper (Kadaster/BAG/Bestemmingen), Industrial Amber tokens, real-time sublabels (FB-05 + FB-06)
+- Phase 33 Plan 01: 179s, 2 tasks, 2 commits, 3 files
+- Filter/sort/page state migrated to URL search params; Shift+click multi-sort with priority badges; DT-01 + DT-04 complete
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -170,6 +172,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Running state shows stepper + progress bar; completed/failed states hide stepper and show single semantic icon only
 - text-warning token used for parcels_failed count (was raw text-amber-600) — warning is correct semantic for partial scan failure
 - Queued state (current_phase=null) shows all steps pending with 'Scan starten...' label
+- [Phase 33-01]: Only primary sort sent to backend API — secondary multi-sort columns are visual-only indicators (server is paginated)
+- [Phase 33-01]: navigate uses functional (prev) => ({...prev, ...changes}) to preserve scan_id across all URL state changes
 
 ### Active TODOs
 
@@ -199,11 +203,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 | 2 | Redesign scoring, add qualification filter, and resolve addresses | 2026-02-15 | 265aa49 | [2-redesign-scoring-add-qualification-filte](./quick/2-redesign-scoring-add-qualification-filte/) |
 
 ---
+| Phase 33-data-table-polish P01 | 179 | 2 tasks | 3 files |
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18
-**Stopped At:** Phase 32 verified and marked complete
+**Last Session:** 2026-02-18T04:07:26.481Z
+**Stopped At:** Completed 33-01-PLAN.md — URL search params + multi-sort
 **Resume File:** None
 
 **Next Action:** Plan Phase 33 (Data Table Polish) — `/gsd:plan-phase 33`
