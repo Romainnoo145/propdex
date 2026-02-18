@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 31 complete (Plan 04 complete)
-**Plan:** 31-04 complete — all 14 remaining glassmorphism files migrated (PropertySection, PropertySummary, InspectorPanel, FreshnessIndicator, ParcelEnrichmentCard, ReportCard, ReportSearch, PDFExportModal, EmptyState, RecentViewed, ProjectEditModal, ProjectCreateModal, resultaten.tsx, map.tsx)
-**Status:** Phase 31 glassmorphism migration complete — all 29 components now using Industrial Amber design tokens
+**Phase:** Phase 32 in progress (Plan 01 complete)
+**Plan:** 32-01 complete — Skeleton, EmptyState, ErrorState feedback primitives created in components/feedback/
+**Status:** Phase 32 Plan 01 done — three shared feedback primitives ready for Plan 02 component upgrades
 
 **Progress:** [█████░░░░░] 50% (5/10 phases complete)
 
-**Last activity:** 2026-02-18 — Phase 31 Plan 04 executed (14 remaining glassmorphism files: property, layout, results, reports, projects, routes)
+**Last activity:** 2026-02-18 — Phase 32 Plan 01 executed (Skeleton, EmptyState, ErrorState primitives using Industrial Amber tokens)
 
 ---
 
@@ -51,6 +51,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - PropertyDetailPanel, PropertyDetailDrawer (773 lines), PropertyQuickCard, LayerToggle (DS-04 blur), AddressSearch, dashboard, instellingen migrated
 - Phase 31 Plan 04: ~4min, 2 tasks, 2 commits, 14 files
 - All 14 remaining glassmorphism files migrated; MIG-02 and visual consistency gaps closed
+- Phase 32 Plan 01: ~1min, 1 task, 1 commit, 3 files
+- Skeleton, EmptyState, ErrorState feedback primitives; Industrial Amber tokens; lucide-react AlertTriangle; Button CVA integration
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -148,6 +150,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ReportCard freshness dot: bg-white/30 → bg-grey-800 (non-stale indicator is neutral grey, not white opacity)
 - cmdk data-[selected=true] states: bg-white/10 → bg-grey-800, text-white → text-grey-100
 
+**Phase 32-01 (Feedback Primitives):**
+- Skeleton is minimal single-div wrapper — className prop enables full shape control at call site
+- EmptyState uses Button primitive with variant=primary for CTA (consistent with design system)
+- ErrorState uses AlertTriangle from lucide-react (already installed), not custom SVG
+- Default error message is Dutch: 'Er is iets misgegaan.' per project language standard
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -180,13 +188,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Phase 31 verified (5/5 criteria) and marked complete
+**Stopped At:** Completed 32-01-PLAN.md (Feedback Primitives)
 **Resume File:** None
 
-**Next Action:** Execute Phase 32 (Feedback Systems) — `/gsd:execute-phase 32`
-
-**Next Action:** Phase 31 complete — proceed to Phase 32 (Feedback Systems)
+**Next Action:** Execute Phase 32 Plan 02 — component upgrades using Skeleton, EmptyState, ErrorState primitives
 
 ---
 
-*State updated: 2026-02-18 — Phase 31 Plan 04 complete (glassmorphism gap closure: 14 remaining files, Phase 31 complete)*
+*State updated: 2026-02-18 — Phase 32 Plan 01 complete (Skeleton, EmptyState, ErrorState feedback primitives created)*
