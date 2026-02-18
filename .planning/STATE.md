@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 34 in progress (plan 3 of 4 complete)
-**Plan:** 34-03 complete — ParcelCard component, ResultsTable mobile card branch, filter panel stacked layout, resultaten read-only banner
-**Status:** Active — Phase 34 mobile responsiveness in progress
+**Phase:** Phase 34 complete (all 4 plans complete)
+**Plan:** 34-04 complete — ProjectList MOB-03 touch targets, full mobile layout verification, Phase 34 mobile responsiveness complete
+**Status:** Active — Phase 34 complete, next milestone not yet defined
 
-**Progress:** [██████████] 98%
+**Progress:** [██████████] 100%
 
-**Last activity:** 2026-02-18 — Phase 34 Plan 03 complete (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner)
+**Last activity:** 2026-02-18 — Phase 34 Plan 04 complete (ProjectList touch targets + final mobile sweep, Phase 34 fully complete)
 
 ---
 
@@ -70,6 +70,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - InspectorPanel responsive bottom sheet (mobile fixed/slide-up, desktop absolute/slide-right), scan buttons hidden on mobile, "(alleen lezen)" label, "Gebruik desktop voor scannen" banner
 - Phase 34 Plan 03: ~3min, 2 tasks, 2 commits, 4 files
 - ParcelCard (72px touch target, address/score/area/bestemming), ResultsTable mobile card branch via useIsMobile(), filter panel flex-col mobile layout, read-only banner + BulkActionBar hidden on mobile
+- Phase 34 Plan 04: ~2min, 2 tasks, 1 commit, 1 file
+- ProjectList MOB-03 touch targets (5 accordion+report buttons), full mobile layout verification (map viewport/ResultsShell clearance/BottomTabNav fixed), Phase 34 complete
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -225,6 +227,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Filter controls container: flex-col gap-2 on mobile, md:flex-row md:flex-wrap md:items-center md:gap-3 on desktop
 - Toon Kaart button text hidden on mobile via `hidden md:inline` span — icon-only saves space on narrow screens
 
+**Phase 34-04 (Final Mobile Sweep):**
+- Task 2 required no code changes: map/main/ResultsShell layout was already correctly set up by Plans 01-03
+- ProjectList accordion toggle buttons (py-4 ~52px) and report buttons (py-3 ~44px) given explicit min-h-[44px] for MOB-03 compliance
+- Bottom nav clearance architecture: ResultsShell pb-14 md:pb-0 (not on <main>) ensures MapView fills full viewport while non-map routes clear 56px BottomTabNav
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -242,7 +249,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Backend register endpoint returns 500 (needs investigation)
 - Kadaster eigendomsdata requires paid API
 - Monument restrictions are generic boilerplate (not property-specific)
-- Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet (will be addressed in Phase 34)
+- Mobile navigation: RESOLVED in Phase 34 (BottomTabNav + all mobile adaptations complete)
 - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 - PLU WMS change detection needs live data validation
 
@@ -258,11 +265,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 34-03-PLAN.md (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner)
+**Stopped At:** Completed 34-04-PLAN.md (Phase 34 mobile responsiveness fully complete)
 **Resume File:** None
 
-**Next Action:** Execute Phase 34 Plan 04 (Mobile bottom padding and touch target audit)
+**Next Action:** Run /gsd:new-milestone to define v4.0 milestone and next phase
 
 ---
 
-*State updated: 2026-02-18 — Phase 34 Plan 03 complete (ParcelCard + ResultsTable mobile branch + filter panel mobile + read-only banner, 2 tasks, 2 commits)*
+*State updated: 2026-02-18 — Phase 34 Plan 04 complete (ProjectList touch targets + final mobile sweep, Phase 34 fully complete, 2 tasks, 1 commit)*
