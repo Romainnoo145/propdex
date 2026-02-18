@@ -16,7 +16,7 @@
 **Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
 
 **Started:** 2026-02-16
-**Status:** Phase 31 complete, Phase 32 next
+**Status:** Phase 32 complete, Phase 33 next
 
 ### Phase 27: Design System Foundation
 
@@ -164,9 +164,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 32-01-PLAN.md — Create Skeleton, EmptyState, ErrorState feedback primitives
-- [ ] 32-02-PLAN.md — Adopt feedback primitives in ProjectList, ChangeTimeline, ResultsTable, resultaten, ResultsFilterPanel
-- [ ] 32-03-PLAN.md — Redesign ScanProgressOverlay with step stepper + Industrial Amber tokens
+- [x] 32-01-PLAN.md — Create Skeleton, EmptyState, ErrorState feedback primitives
+- [x] 32-02-PLAN.md — Adopt feedback primitives in ProjectList, ChangeTimeline, ResultsTable, resultaten, ResultsFilterPanel
+- [x] 32-03-PLAN.md — Redesign ScanProgressOverlay with step stepper + Industrial Amber tokens
 
 **Success Criteria:**
 1. User sees skeleton screens while data loads, never blank white screens
@@ -270,7 +270,7 @@ Plans:
 | 29 | Silver Map Theme + Layout Shells | DS-03, DS-04 | ✓ Complete (2026-02-18) |
 | 30 | View Separation | NAV-04 | ✓ Complete (2026-02-18) |
 | 31 | Component Migration | MIG-01, MIG-02 | ✓ Complete (2026-02-18) |
-| 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | Pending |
+| 32 | Feedback Systems | FB-01, FB-02, FB-03, FB-04, FB-05, FB-06 | ✓ Complete (2026-02-18) |
 | 33 | Data Table Polish | DT-01, DT-02, DT-03, DT-04, DT-05, SCAN-01, SCAN-02 | Pending |
 | 34 | Mobile Responsiveness | MOB-01, MOB-02, MOB-03 | Pending |
 | 35 | Settings Page | SET-01, SET-02, SET-03, SET-04 | Pending |
