@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 33 complete (all 4 plans complete)
-**Plan:** 33-04 complete — Category-grouped filter panel (DT-05), max_area_m2 exposed, table-to-map hover sync (DT-02)
-**Status:** Phase 33 verified (6/6 must-haves) — all data table polish shipped
+**Phase:** Phase 34 in progress (plan 2 of 4 complete)
+**Plan:** 34-02 complete — InspectorPanel bottom sheet on mobile, map controls adapted (scan buttons hidden, "(alleen lezen)" label, "Gebruik desktop" banner)
+**Status:** Active — Phase 34 mobile responsiveness in progress
 
 **Progress:** [██████████] 97%
 
-**Last activity:** 2026-02-18 — Phase 33 verified and marked complete
+**Last activity:** 2026-02-18 — Phase 34 Plan 02 complete (InspectorPanel + map controls mobile adaptation)
 
 ---
 
@@ -65,6 +65,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Checkbox row selection (UUID-keyed RowSelectionState), BulkActionBar, backend export/selection endpoint (DT-03)
 - Phase 33 Plan 04: ~2min, 2 tasks, 2 commits, 4 files
 - Category-grouped collapsible filter panel (Oppervlak/Bestemming/Score), max_area_m2 exposed, table-to-map hover sync via setFeatureState
+- Phase 34 Plan 01: TBD (Phase 34-01 plan not yet executed via this session)
+- Phase 34 Plan 02: ~2min, 2 tasks, 2 commits, 2 files
+- InspectorPanel responsive bottom sheet (mobile fixed/slide-up, desktop absolute/slide-right), scan buttons hidden on mobile, "(alleen lezen)" label, "Gebruik desktop voor scannen" banner
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -206,6 +209,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - [Phase 34-01]: --z-bottom-nav: 250 same as --z-side-rail since they never coexist on the same viewport width
 - [Phase 34-01]: useIsMobile: useState initializer reads matchMedia synchronously (SSR-safe, no flicker), useEffect adds addEventListener 'change'
 
+**Phase 34-02 (InspectorPanel Bottom Sheet + Mobile Map Controls):**
+- InspectorPanel uses fixed (not absolute) on mobile so it overlays the full viewport regardless of MapShell parent constraints
+- Scan buttons wrapped in hidden md:inline-flex spans (not conditional render) to preserve DOM structure and event handlers
+- Zone info card uses hidden md:block / md:hidden pair — scan button desktop only, amber "Gebruik desktop" banner mobile only
+- Gemeente X button given min-h-[44px] min-w-[44px] flex items-center justify-center for MOB-03 touch target compliance
+- Bottom sheet animation: translate-y-full (closed mobile) / translate-y-0 (open mobile), translate-x-full (closed desktop) / md:translate-x-0 (open desktop)
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -238,12 +248,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18T04:53:21.817Z
-**Stopped At:** Completed 34-01-PLAN.md (useIsMobile + BottomTabNav + _authenticated.tsx wiring)
+**Last Session:** 2026-02-18
+**Stopped At:** Completed 34-02-PLAN.md (InspectorPanel bottom sheet + map controls mobile adaptation)
 **Resume File:** None
 
-**Next Action:** Plan Phase 34 (Mobile Responsiveness) — `/gsd:plan-phase 34`
+**Next Action:** Execute Phase 34 Plan 03 (Mobile responsiveness — address search + property cards)
 
 ---
 
-*State updated: 2026-02-18 — Phase 33 complete (4 plans, 6/6 must-haves verified, URL filters + scan CTA + bulk export + filter groups + hover sync)*
+*State updated: 2026-02-18 — Phase 34 Plan 02 complete (InspectorPanel bottom sheet + map controls mobile adaptation, 2 tasks, 2 commits)*
