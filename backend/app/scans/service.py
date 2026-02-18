@@ -160,6 +160,58 @@ async def get_scan_by_id(
     return result.scalar_one_or_none()
 
 
+async def list_scan_results_by_ids(
+    scan_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    parcel_ids: list[uuid.UUID],
+    sort_by: str = "score",
+    sort_order: str = "desc",
+    session: AsyncSession = None,  # type: ignore[assignment]
+) -> list[tuple]:
+    """
+    List scan results filtered by a specific set of parcel UUIDs.
+
+    Fetches results for the given parcel_ids within the scan. No pagination —
+    exports all selected rows. Used by the bulk export-selection endpoint.
+
+    Args:
+        scan_id: Scan UUID
+        organization_id: Tenant organization ID
+        parcel_ids: List of parcel UUIDs to include
+        sort_by: Sort field (score, area_m2, address, bouwjaar)
+        sort_order: Sort direction (asc, desc)
+        session: Database session
+
+    Returns:
+        list[tuple]: List of (ScanResult, ParcelCache) tuples
+    """
+    # Base query: join ScanResult to ParcelCache
+    query = (
+        select(ScanResult, ParcelCache)
+        .join(ParcelCache, ScanResult.parcel_id == ParcelCache.id)
+        .where(
+            ScanResult.scan_id == scan_id,
+            ScanResult.organization_id == organization_id,
+            ScanResult.parcel_id.in_(parcel_ids),
+        )
+    )
+
+    # Apply sorting
+    sort_field_map = {
+        "score": ScanResult.score,
+        "area_m2": ParcelCache.area_m2,
+        "address": ParcelCache.address,
+        "bouwjaar": ParcelCache.bouwjaar,
+    }
+
+    sort_field = sort_field_map.get(sort_by, ScanResult.score)
+    sort_func = desc if sort_order == "desc" else asc
+    query = query.order_by(sort_func(sort_field))
+
+    result = await session.execute(query)
+    return list(result.all())
+
+
 async def list_scan_results(
     scan_id: uuid.UUID,
     organization_id: uuid.UUID,

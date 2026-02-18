@@ -7,7 +7,7 @@ from datetime import datetime
 
 import httpx
 from arq.jobs import Job
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from shapely.geometry import box
 from sqlalchemy import func, select
@@ -683,6 +683,103 @@ async def get_scan_tiles(
         headers={
             "Cache-Control": "public, max-age=3600",
         },
+    )
+
+
+@router.get("/{scan_id}/export/selection")
+@limiter.limit("10/minute")
+async def export_selection(
+    request: Request,
+    scan_id: uuid.UUID,
+    parcel_ids: str = Query(..., description="Comma-separated parcel UUIDs"),
+    sort_by: str = "score",
+    sort_order: str = "desc",
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Export a user-selected subset of parcels to Excel .xlsx file.
+
+    Accepts a comma-separated list of parcel UUIDs and returns an Excel file
+    containing only those parcels. Maximum 500 parcels per export.
+
+    Requires JWT authentication. Rate limited to 10 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        scan_id: Scan UUID
+        parcel_ids: Comma-separated parcel UUIDs to include in export
+        sort_by: Sort field (score/area_m2/address/bouwjaar)
+        sort_order: Sort direction (asc/desc)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        StreamingResponse: Excel file download with Content-Disposition header
+
+    Raises:
+        HTTPException 400: Invalid UUID format, no IDs provided, or >500 IDs
+        HTTPException 404: Scan not found
+    """
+    # Parse and validate parcel_ids
+    try:
+        parsed_ids = [
+            uuid.UUID(pid.strip())
+            for pid in parcel_ids.split(",")
+            if pid.strip()
+        ]
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid parcel UUID format",
+        ) from e
+
+    if len(parsed_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No parcel IDs provided",
+        )
+
+    if len(parsed_ids) > 500:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 500 parcels per export",
+        )
+
+    # Get scan by ID with multi-tenant isolation
+    scan = await service.get_scan_by_id(scan_id, organization_id, db)
+
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    # Fetch selected results (no pagination -- export all selected)
+    rows = await service.list_scan_results_by_ids(
+        scan_id=scan_id,
+        organization_id=organization_id,
+        parcel_ids=parsed_ids,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        session=db,
+    )
+
+    # Build filters_applied dict for metadata
+    filters_applied = {"selection": f"{len(parsed_ids)} percelen geselecteerd"}
+
+    # Generate Excel file
+    excel_buffer = await export_scan_results_to_excel(rows, scan, filters_applied)
+
+    # Generate filename with gemeente name and date
+    filename = f"propdex-selectie-{scan.gemeente_naam}-{scan.created_at.strftime('%Y%m%d')}.xlsx"
+
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

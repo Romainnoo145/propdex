@@ -141,4 +141,7 @@ def _format_filters(filters: dict) -> str:
     if "score_category" in filters:
         parts.append(f"Score={filters['score_category']}")
 
+    if "selection" in filters:
+        parts.append(f"Selectie={filters['selection']}")
+
     return ", ".join(parts) if parts else "Geen filters"
