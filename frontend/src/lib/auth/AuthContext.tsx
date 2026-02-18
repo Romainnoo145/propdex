@@ -72,6 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser)
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -84,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         loginWithToken,
         loginAsDemo,
+        updateUser,
       }}
     >
       {children}

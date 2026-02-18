@@ -18,6 +18,7 @@ export interface AuthContextValue {
   logout: () => Promise<void>
   loginWithToken: (accessToken: string) => Promise<void>
   loginAsDemo: () => void
+  updateUser: (user: User) => void
 }
 
 export interface RegisterData {
