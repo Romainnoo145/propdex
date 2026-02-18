@@ -133,7 +133,7 @@ export default function ResultsFilterPanel({
             value={localMinArea}
             onChange={(e) => setLocalMinArea(e.target.value)}
             placeholder="0"
-            className="w-20 bg-grey-950 border border-grey-800 text-grey-100 text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-teal-accent"
+            className="w-full md:w-20 bg-grey-950 border border-grey-800 text-grey-100 text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-teal-accent"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function ResultsFilterPanel({
             value={localMaxArea}
             onChange={(e) => setLocalMaxArea(e.target.value)}
             placeholder="--"
-            className="w-20 bg-grey-950 border border-grey-800 text-grey-100 text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-teal-accent"
+            className="w-full md:w-20 bg-grey-950 border border-grey-800 text-grey-100 text-sm rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-teal-accent"
           />
         </div>
       </>
@@ -260,7 +260,7 @@ export default function ResultsFilterPanel({
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="text-grey-400 hover:text-grey-100 text-xs underline transition-colors"
+              className="text-grey-400 hover:text-grey-100 text-xs underline transition-colors px-3 py-2 min-h-[44px]"
             >
               Wis filters
             </button>
@@ -280,7 +280,7 @@ export default function ResultsFilterPanel({
             <div key={group.id}>
               <button
                 onClick={() => toggleGroup(group.id)}
-                className="flex items-center gap-2 w-full text-left py-1"
+                className="flex items-center gap-2 w-full text-left py-1 min-h-[44px]"
               >
                 {isOpen ? (
                   <ChevronDown size={14} className="text-grey-400" />
@@ -293,7 +293,7 @@ export default function ResultsFilterPanel({
                 </span>
               </button>
               {isOpen && (
-                <div className="pl-7 pt-1 flex flex-wrap items-center gap-3">
+                <div className="pl-7 pt-1 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
                   {group.id === 'area' && renderAreaFilters()}
                   {group.id === 'zoning' && renderZoningFilters()}
                   {group.id === 'score' && renderScoreFilters()}

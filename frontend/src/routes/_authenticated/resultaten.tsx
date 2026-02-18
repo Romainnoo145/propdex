@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Map } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import ResultsShell from '@/components/layout/ResultsShell'
 import ResultsTable from '@/components/results/ResultsTable'
 import ResultsFilterPanel from '@/components/results/ResultsFilterPanel'
@@ -55,6 +56,8 @@ function ResultatenPage() {
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
   const [selectedParcelIds, setSelectedParcelIds] = useState<string[]>([])
   const [selectionKey, setSelectionKey] = useState(0)
+
+  const isMobile = useIsMobile()
 
   const { scan_id } = search
 
@@ -113,12 +116,19 @@ function ResultatenPage() {
           <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
           <button
             onClick={() => navigate({ to: '/map', search: scan_id ? { scan_id } : {} })}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-grey-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-grey-300 hover:text-white transition-colors min-h-[44px]"
           >
             <Map size={16} />
-            Toon Kaart
+            <span className="hidden md:inline">Toon Kaart</span>
           </button>
         </div>
+
+        {/* Mobile read-only banner — explains scan/export are desktop-only (MOB-01) */}
+        {isMobile && (
+          <div className="mx-4 mt-3 rounded-md bg-amber-accent/10 border border-amber-accent/30 px-3 py-2 text-xs text-amber-accent shrink-0">
+            Gebruik desktop voor scannen en exporteren
+          </div>
+        )}
 
         {scan_id ? (
           <>
@@ -146,23 +156,25 @@ function ResultatenPage() {
               />
             </div>
 
-            {/* Bulk action bar — appears when parcels are selected */}
-            <BulkActionBar
-              selectedCount={selectedParcelIds.length}
-              onExport={() => {
-                const params = new URLSearchParams({
-                  parcel_ids: selectedParcelIds.join(','),
-                })
-                window.open(
-                  `/api/scans/${scan_id}/export/selection?${params.toString()}`,
-                  '_blank',
-                )
-              }}
-              onClearSelection={() => {
-                setSelectedParcelIds([])
-                setSelectionKey((k) => k + 1)
-              }}
-            />
+            {/* Bulk action bar — appears when parcels are selected; hidden on mobile (checkboxes are hidden in card view) */}
+            {!isMobile && (
+              <BulkActionBar
+                selectedCount={selectedParcelIds.length}
+                onExport={() => {
+                  const params = new URLSearchParams({
+                    parcel_ids: selectedParcelIds.join(','),
+                  })
+                  window.open(
+                    `/api/scans/${scan_id}/export/selection?${params.toString()}`,
+                    '_blank',
+                  )
+                }}
+                onClearSelection={() => {
+                  setSelectedParcelIds([])
+                  setSelectionKey((k) => k + 1)
+                }}
+              />
+            )}
           </>
         ) : (
           /* Empty state */
