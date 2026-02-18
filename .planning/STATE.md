@@ -11,14 +11,14 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-**Milestone:** v4.0 UX Redesign
-**Phase:** Phase 35 complete — Settings Page (all 3 plans shipped)
-**Plan:** 35-03 shipped (AccountSection, PasswordSection, NotificationsSection, AppearanceSection)
-**Status:** Phase 35 complete — v4.0 UX Redesign milestone complete
+**Milestone:** Phase 36 — Polish & Performance
+**Phase:** Phase 36 — Polish & Performance (plan 04 of 04 complete)
+**Plan:** 36-04 shipped (6 Storybook layout stories: SideRailNav, BottomTabNav, MapShell, ResultsShell, InspectorPanel, ReportSidebar)
+**Status:** Phase 36 complete — all 4 plans shipped
 
 **Progress:** [██████████] 100%
 
-**Last activity:** 2026-02-18 — Phase 35 Plan 03 shipped (4 settings UI section components, wired /instellingen route, 2 tasks, 5 files)
+**Last activity:** 2026-02-18 — Phase 36 Plan 04 shipped (6 layout shell Storybook stories, RouterProvider + AuthContext + QueryClient decorator patterns, 2 tasks, 6 files)
 
 ---
 
@@ -78,6 +78,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - settings.ts types, useSettings.ts hooks (4 TanStack Query hooks), AuthContext.updateUser callback
 - Phase 35 Plan 03: ~8min, 2 tasks, 2 commits, 5 files
 - AccountSection (name/email form, updateUser sync), PasswordSection (auth_provider guard, eye toggle), NotificationsSection (instant-save toggle), AppearanceSection (card selector), /instellingen wired
+- Phase 36 Plan 04: 21min, 2 tasks, 2 commits, 6 files
+- 6 layout shell Storybook stories (SideRailNav/BottomTabNav with RouterProvider+AuthContext+QueryClient, MapShell/ResultsShell/InspectorPanel/ReportSidebar), SC-04 Storybook documentation goal complete
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -251,6 +253,14 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Eye/eye-off toggle on new_password field only (not current_password or confirm_password) per spec
 - Settings section pattern: icon + h2 header, description text, form/controls, toast feedback
 
+**Phase 36-04 (Layout Shell Storybook Stories):**
+- RouterContext must be provided to createRouter — routeTree uses createRootRouteWithContext<RouterContext>(), so context: { auth: { isAuthenticated, user } } required (TS2345 without it)
+- SideRailNav stories need 3 provider layers: QueryClientProvider (useUnreadCounts) + AuthContext.Provider (useAuth/logout) + RouterProvider (useMatchRoute/Link)
+- BottomTabNav is zero-prop component — RouterProvider only, no auth/query needed
+- InspectorPanel is pure props — no router/auth/query deps, render() pattern with MapWrapper div for absolute positioning context
+- ReportSidebar QueryClient: retry:false + staleTime:Infinity prevents network requests, gracefully shows empty state in Storybook
+- layout: fullscreen Storybook parameter required for all fixed/absolute positioned layout components
+
 ### Active TODOs
 
 - [ ] Fix backend register endpoint 500 error
@@ -286,11 +296,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 35-03-PLAN.md (settings UI sections — Phase 35 complete)
+**Stopped At:** Completed 36-04-PLAN.md (layout shell Storybook stories — Phase 36 complete)
 **Resume File:** None
 
-**Next Action:** Define next milestone via `/gsd:new-milestone` — v4.0 UX Redesign complete
+**Next Action:** Define next milestone via `/gsd:new-milestone` — Phase 36 polish/performance complete
 
 ---
 
-*State updated: 2026-02-18 — Phase 35 Plan 03 complete (settings UI sections, 2 tasks, 2 commits, 5 files). Phase 35 and v4.0 milestone complete.*
+*State updated: 2026-02-18 — Phase 36 Plan 04 complete (6 layout shell Storybook stories, 2 tasks, 2 commits, 6 files). Phase 36 complete.*
