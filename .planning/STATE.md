@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 **Milestone:** v4.0 UX Redesign
-**Phase:** Phase 34 verified complete — Mobile Responsiveness (MOB-01, MOB-02, MOB-03)
-**Plan:** All 4 plans shipped, VERIFICATION.md passed 12/12 must-haves
-**Status:** Active — Phase 35 (Settings Page) next
+**Phase:** Phase 35 in progress — Settings Page (Plan 02/03 complete)
+**Plan:** 35-02 shipped (settings hooks + AuthContext.updateUser)
+**Status:** Active — Phase 35 Plan 03 (settings UI sections) next
 
-**Progress:** [██████████] 100%
+**Progress:** [██████████] 99%
 
-**Last activity:** 2026-02-18 — Phase 34 verified and closed (4 plans, BottomTabNav + InspectorPanel bottom sheet + ParcelCard + touch audit)
+**Last activity:** 2026-02-18 — Phase 35 Plan 02 shipped (useSettings.ts hooks, settings.ts types, AuthContext.updateUser, 2 tasks, 4 files)
 
 ---
 
@@ -72,6 +72,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - ParcelCard (72px touch target, address/score/area/bestemming), ResultsTable mobile card branch via useIsMobile(), filter panel flex-col mobile layout, read-only banner + BulkActionBar hidden on mobile
 - Phase 34 Plan 04: ~2min, 2 tasks, 1 commit, 1 file
 - ProjectList MOB-03 touch targets (5 accordion+report buttons), full mobile layout verification (map viewport/ResultsShell clearance/BottomTabNav fixed), Phase 34 complete
+- Phase 35 Plan 01: 117s, 2 tasks, 2 commits, 6 files
+- preferences JSONB migration (b7a8c9d0e1f2), users module (schemas + router), 4 endpoints: PATCH /me, PUT /me/password, GET+PATCH /me/preferences
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 16 requirements, 97 commits
@@ -231,6 +233,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Task 2 required no code changes: map/main/ResultsShell layout was already correctly set up by Plans 01-03
 - ProjectList accordion toggle buttons (py-4 ~52px) and report buttons (py-3 ~44px) given explicit min-h-[44px] for MOB-03 compliance
 - Bottom nav clearance architecture: ResultsShell pb-14 md:pb-0 (not on <main>) ensures MapView fills full viewport while non-map routes clear 56px BottomTabNav
+- [Phase 35-02]: useUpdateProfile does not auto-call updateUser — caller pattern avoids circular dependency (hook -> AuthContext -> hook)
+- [Phase 35-02]: useUpdatePreferences uses setQueryData (not invalidateQueries) for optimistic UX — PATCH response is final state
+- [Phase 35-02]: AuthContext.updateUser is useCallback([]) — stable reference wrapping setUser, no API round-trip
+- [Phase 35-01]: Re-export UserResponse/MessageResponse from auth schemas in users schemas to avoid duplication
+- [Phase 35-01]: PATCH /me/preferences uses model_dump(exclude_unset=True) for true partial merge of JSONB preferences
+- [Phase 35-01]: OAuth users blocked from password change: auth_provider \!= 'email' returns 400 with Dutch error message
 
 ### Active TODOs
 
@@ -261,11 +269,13 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ---
 | Phase 34-mobile-responsiveness P01 | 98 | 2 tasks | 4 files |
+| Phase 35-settings-page P02 | 98 | 2 tasks | 4 files |
+| Phase 35-settings-page P01 | 117s | 2 tasks | 6 files |
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18
-**Stopped At:** Completed 34-04-PLAN.md (Phase 34 mobile responsiveness fully complete)
+**Last Session:** 2026-02-18T13:26:25.642Z
+**Stopped At:** Completed 35-01-PLAN.md (users API: preferences migration, schemas, router with 4 endpoints)
 **Resume File:** None
 
 **Next Action:** Run /gsd:new-milestone to define v4.0 milestone and next phase
