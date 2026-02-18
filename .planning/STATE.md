@@ -270,6 +270,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - InspectorPanel is pure props — no router/auth/query deps, render() pattern with MapWrapper div for absolute positioning context
 - ReportSidebar QueryClient: retry:false + staleTime:Infinity prevents network requests, gracefully shows empty state in Storybook
 - layout: fullscreen Storybook parameter required for all fixed/absolute positioned layout components
+- [Phase 36-01]: manualChunks vendor-only rule: only node_modules paths get chunk names, app code left for autoCodeSplitting (avoids conflicting assignment)
+- [Phase 36-01]: visualizer plugin gated on ANALYZE env var with open: false for headless-safe bundle analysis
+- [Phase 36-01]: Circular chunk warning vendor -> vendor-react is informational Rollup warning; build and runtime are correct
 
 ### Active TODOs
 
@@ -306,8 +309,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18
-**Stopped At:** Completed 36-02-PLAN.md (CSS variable elimination + Industrial Amber token migration, 2 tasks, 11 files)
+**Last Session:** 2026-02-18T15:26:42.765Z
+**Stopped At:** Completed 36-01-PLAN.md (Vite bundle splitting — vendor-react 256KB, vendor-maplibre 1021KB, vendor-tanstack 141KB, vendor 177KB)
 **Resume File:** None
 
 **Next Action:** Execute 36-03-PLAN.md (mobile blur reduction) or 36-04 already shipped — Phase 36 polish/performance complete
