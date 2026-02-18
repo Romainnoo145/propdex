@@ -17,16 +17,16 @@ export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
 
   return (
     <div
-      className="fixed top-20 right-14 z-[var(--z-map-controls)] w-48 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200"
+      className="fixed top-20 right-14 z-[var(--z-map-controls)] w-48 bg-grey-900 rounded-lg shadow-lg border border-grey-800"
     >
       {/* Header */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50/50 rounded-t-lg transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-grey-100 hover:bg-grey-800 rounded-t-lg transition-colors"
       >
         <span>Legenda</span>
-        <span className="text-gray-600 text-xs">
+        <span className="text-grey-400 text-xs">
           {isExpanded ? '▼' : '▶'}
         </span>
       </button>
@@ -44,7 +44,7 @@ export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
                   className="w-3 h-3 rounded-sm border border-black/10 flex-shrink-0"
                   style={{ backgroundColor: hoofdgroep.color }}
                 />
-                <span className="text-xs text-gray-700">
+                <span className="text-xs text-grey-200">
                   {hoofdgroep.label}
                 </span>
               </div>

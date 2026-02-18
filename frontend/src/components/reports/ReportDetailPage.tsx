@@ -23,15 +23,15 @@ export default function ReportDetailPage({
 }: ReportDetailPageProps) {
   if (isLoading) {
     return (
-      <div className="h-full overflow-y-auto bg-stone-50">
+      <div className="h-full overflow-y-auto bg-grey-950">
         <div className="mx-auto max-w-4xl px-8 py-10">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 w-48 rounded bg-gray-200" />
-            <div className="h-32 rounded-xl bg-gray-200" />
+            <div className="h-8 w-48 rounded bg-grey-800" />
+            <div className="h-32 rounded-xl bg-grey-800" />
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-gray-200" />)}
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-grey-800" />)}
             </div>
-            {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-gray-200" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-grey-800" />)}
           </div>
         </div>
       </div>
@@ -40,10 +40,10 @@ export default function ReportDetailPage({
 
   if (!data) {
     return (
-      <div className="h-full overflow-y-auto bg-stone-50">
+      <div className="h-full overflow-y-auto bg-grey-950">
         <div className="mx-auto max-w-4xl px-8 py-10 text-center">
-          <p className="text-gray-500">Rapport niet gevonden</p>
-          <button onClick={onBack} className="mt-4 text-sm text-gray-600 underline hover:text-gray-900">
+          <p className="text-grey-500">Rapport niet gevonden</p>
+          <button onClick={onBack} className="mt-4 text-sm text-grey-400 underline hover:text-grey-100">
             Terug naar projecten
           </button>
         </div>
@@ -54,30 +54,30 @@ export default function ReportDetailPage({
   const { address, building, zoning, monuments, ai_parsing, completeness_score } = data
 
   return (
-    <div className="h-full overflow-y-auto bg-stone-50">
+    <div className="h-full overflow-y-auto bg-grey-950">
       <div className="mx-auto max-w-4xl px-8 py-8">
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
             <button
               onClick={onBack}
-              className="mb-3 flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
+              className="mb-3 flex items-center gap-1 text-sm text-grey-500 transition-colors hover:text-grey-400"
             >
               <ArrowLeftIcon />
               Terug naar projecten
             </button>
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-2xl font-semibold text-grey-100">
               {address.straat} {address.huisnummer}
               {address.huisletter ?? ''}{address.toevoeging ?? ''}
             </h1>
-            <p className="mt-1 text-gray-500">
+            <p className="mt-1 text-grey-500">
               {address.postcode}, {address.woonplaats}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onViewOnMap}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-200 shadow-sm transition-colors hover:bg-grey-800"
             >
               <MapPinIcon />
               Bekijk op kaart
@@ -128,7 +128,7 @@ export default function ReportDetailPage({
         </div>
 
         {/* Footer */}
-        <div className="mt-8 border-t border-gray-200 pt-4 text-center text-xs text-gray-400">
+        <div className="mt-8 border-t border-grey-800 pt-4 text-center text-xs text-grey-600">
           Rapport gegenereerd op {dateFmt.format(new Date(data.resolved_at))}
         </div>
       </div>
@@ -140,11 +140,11 @@ export default function ReportDetailPage({
 
 function MetricCard({ label, value, bar }: { label: string; value: string; bar?: number }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-1 truncate text-lg font-semibold text-gray-900">{value}</p>
+    <div className="rounded-xl border border-grey-800 bg-grey-900 px-4 py-3 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-grey-600">{label}</p>
+      <p className="mt-1 truncate text-lg font-semibold text-grey-100">{value}</p>
       {bar !== undefined && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-grey-800">
           <div
             className={`h-full rounded-full transition-all ${bar >= 0.9 ? 'bg-green-500' : bar >= 0.7 ? 'bg-yellow-500' : 'bg-red-400'}`}
             style={{ width: `${bar * 100}%` }}
@@ -159,9 +159,9 @@ function MetricCard({ label, value, bar }: { label: string; value: string; bar?:
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-100 px-5 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{title}</h2>
+    <div className="rounded-xl border border-grey-800 bg-grey-900 shadow-sm">
+      <div className="border-b border-grey-800 px-5 py-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-grey-500">{title}</h2>
       </div>
       <div className="px-5 py-4">{children}</div>
     </div>
@@ -174,8 +174,8 @@ function Row({ label, value, mono }: { label: string; value: string | null | und
   if (!value) return null
   return (
     <div className="flex items-baseline justify-between py-1.5">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className={`text-sm font-medium text-gray-900 ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+      <span className="text-sm text-grey-500">{label}</span>
+      <span className={`text-sm font-medium text-grey-100 ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
     </div>
   )
 }
@@ -188,14 +188,14 @@ function GebouwSection({ data }: { data: PropertyReportResponse }) {
 
   return (
     <Section title="Gebouw & BAG">
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-grey-800">
         <Row label="Pand ID" value={building?.pand_id} mono />
         <Row label="Bouwjaar" value={building?.bouwjaar?.toString()} />
         <Row label="Status" value={building?.status} />
         <Row label="Oppervlakte" value={building?.oppervlakte ? `${building.oppervlakte} m²` : null} />
         {gebruiksdoel.length > 0 && (
           <div className="flex items-baseline justify-between py-1.5">
-            <span className="text-sm text-gray-500">Gebruiksdoel</span>
+            <span className="text-sm text-grey-500">Gebruiksdoel</span>
             <div className="flex flex-wrap justify-end gap-1">
               {gebruiksdoel.map((doel) => (
                 <span key={doel} className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
@@ -220,7 +220,7 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
   if (parcels.length === 0) {
     return (
       <Section title="Kadaster">
-        <p className="text-sm italic text-gray-400">Geen kadastrale gegevens beschikbaar</p>
+        <p className="text-sm italic text-grey-600">Geen kadastrale gegevens beschikbaar</p>
       </Section>
     )
   }
@@ -231,29 +231,29 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
     <Section title="Kadaster">
       <div className="space-y-3">
         {parcels.map((parcel, idx) => (
-          <div key={idx} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+          <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-3">
             {parcel.kadastrale_aanduiding && (
-              <p className="mb-2 text-sm font-semibold text-gray-800">{parcel.kadastrale_aanduiding}</p>
+              <p className="mb-2 text-sm font-semibold text-grey-100">{parcel.kadastrale_aanduiding}</p>
             )}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-xs text-gray-400">Perceelnr</p>
-                <p className="text-sm font-medium text-gray-700">{parcel.perceelnummer ?? '–'}</p>
+                <p className="text-xs text-grey-600">Perceelnr</p>
+                <p className="text-sm font-medium text-grey-200">{parcel.perceelnummer ?? '–'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Sectie</p>
-                <p className="text-sm font-medium text-gray-700">{parcel.sectie ?? '–'}</p>
+                <p className="text-xs text-grey-600">Sectie</p>
+                <p className="text-sm font-medium text-grey-200">{parcel.sectie ?? '–'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Oppervlakte</p>
-                <p className="text-sm font-medium text-gray-700">{parcel.oppervlakte ? `${parcel.oppervlakte} m²` : '–'}</p>
+                <p className="text-xs text-grey-600">Oppervlakte</p>
+                <p className="text-sm font-medium text-grey-200">{parcel.oppervlakte ? `${parcel.oppervlakte} m²` : '–'}</p>
               </div>
             </div>
           </div>
         ))}
         {parcels.length > 1 && totalOpp > 0 && (
           <div className="flex justify-end pt-1">
-            <span className="text-xs text-gray-500">Totaal: <strong className="text-gray-700">{totalOpp} m²</strong></span>
+            <span className="text-xs text-grey-500">Totaal: <strong className="text-grey-200">{totalOpp} m²</strong></span>
           </div>
         )}
       </div>
@@ -269,7 +269,7 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
   if (!zoning) {
     return (
       <Section title="Bestemmingsplan">
-        <p className="text-sm italic text-gray-400">Geen bestemmingsplangegevens beschikbaar</p>
+        <p className="text-sm italic text-grey-600">Geen bestemmingsplangegevens beschikbaar</p>
       </Section>
     )
   }
@@ -288,7 +288,7 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
         {/* Building dimensions */}
         {zoning.building_dimensions && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Bouwregels</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bouwregels</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <DimensionCard label="Max. hoogte" value={zoning.building_dimensions.max_hoogte} unit="m" />
               <DimensionCard label="Max. goothoogte" value={zoning.building_dimensions.max_goothoogte} unit="m" />
@@ -301,22 +301,22 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
         {/* Plans */}
         {zoning.plans && zoning.plans.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Bestemmingsplannen</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsplannen</p>
             {zoning.plans.map((plan, idx) => (
-              <div key={idx} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <p className="font-medium text-gray-800">{plan.plan_naam}</p>
-                <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                  {plan.plan_status && <span className="rounded bg-gray-200 px-2 py-0.5">{plan.plan_status}</span>}
+              <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-4">
+                <p className="font-medium text-grey-100">{plan.plan_naam}</p>
+                <div className="mt-1 flex items-center gap-3 text-xs text-grey-500">
+                  {plan.plan_status && <span className="rounded bg-grey-800 px-2 py-0.5">{plan.plan_status}</span>}
                   {plan.plan_datum && <span>{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>}
-                  {plan.plan_type && <span className="text-gray-400">{plan.plan_type}</span>}
+                  {plan.plan_type && <span className="text-grey-600">{plan.plan_type}</span>}
                 </div>
                 {plan.rules && plan.rules.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+                  <div className="mt-3 space-y-2 border-t border-grey-800 pt-3">
                     {plan.rules.map((rule, rIdx) => (
                       <div key={rIdx}>
-                        <p className="text-sm font-medium text-gray-700">{rule.bestemming}</p>
+                        <p className="text-sm font-medium text-grey-200">{rule.bestemming}</p>
                         {rule.omschrijving && (
-                          <p className="mt-0.5 text-xs text-gray-500">{rule.omschrijving}</p>
+                          <p className="mt-0.5 text-xs text-grey-500">{rule.omschrijving}</p>
                         )}
                       </div>
                     ))}
@@ -343,9 +343,9 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
 function DimensionCard({ label, value, unit }: { label: string; value: number | null; unit?: string }) {
   return (
-    <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-center">
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold text-gray-800">
+    <div className="rounded-lg border border-grey-800 bg-grey-950 px-3 py-2 text-center">
+      <p className="text-xs text-grey-600">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold text-grey-100">
         {value != null ? `${value}${unit ?? ''}` : '–'}
       </p>
     </div>
@@ -360,7 +360,7 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
   if (!monuments) {
     return (
       <Section title="Monumentstatus">
-        <p className="text-sm italic text-gray-400">Geen monumentgegevens beschikbaar</p>
+        <p className="text-sm italic text-grey-600">Geen monumentgegevens beschikbaar</p>
       </Section>
     )
   }
@@ -391,10 +391,10 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
         {/* Restrictions */}
         {monuments.restrictions_summary && monuments.restrictions_summary.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Beperkingen</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Beperkingen</p>
             <ul className="space-y-1.5">
               {monuments.restrictions_summary.map((restriction, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                <li key={idx} className="flex items-start gap-2 text-sm text-grey-200">
                   <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
                   {restriction}
                 </li>
@@ -406,11 +406,11 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
         {/* Sources */}
         {monuments.sources && monuments.sources.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Bronverificatie</p>
-            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bronverificatie</p>
+            <div className="divide-y divide-grey-800 rounded-lg border border-grey-800 bg-grey-950">
               {monuments.sources.map((src, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2">
-                  <span className="text-sm text-gray-600">{src.source}</span>
+                  <span className="text-sm text-grey-400">{src.source}</span>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${src.is_monument ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
                     {src.is_monument ? 'Monument' : 'Geen'}
                   </span>
@@ -444,19 +444,19 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
           <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${confidenceColor}`}>
             {parsed.overall_confidence === 'HIGH' ? 'Hoog' : parsed.overall_confidence === 'MEDIUM' ? 'Gemiddeld' : 'Laag'}
           </span>
-          <p className="text-sm text-gray-700">{parsed.samenvatting}</p>
+          <p className="text-sm text-grey-200">{parsed.samenvatting}</p>
         </div>
 
         {/* Regels */}
         {parsed.regels && parsed.regels.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Bestemmingsregels (AI)</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsregels (AI)</p>
             <div className="space-y-3">
               {parsed.regels.map((regel, idx) => (
-                <div key={idx} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-gray-800">{regel.bestemming}</p>
-                    <span className="text-xs text-gray-400">{regel.artikel}</span>
+                    <p className="font-medium text-grey-100">{regel.bestemming}</p>
+                    <span className="text-xs text-grey-600">{regel.artikel}</span>
                   </div>
 
                   {regel.toegestane_gebruiken.length > 0 && (
@@ -492,13 +492,13 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
                   )}
 
                   {regel.parkeereis && (
-                    <p className="mt-2 text-xs text-gray-600"><strong>Parkeereis:</strong> {regel.parkeereis}</p>
+                    <p className="mt-2 text-xs text-grey-400"><strong>Parkeereis:</strong> {regel.parkeereis}</p>
                   )}
 
                   {regel.milieu_restricties.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-gray-600">Milieurestricties</p>
-                      <ul className="mt-0.5 text-xs text-gray-500">
+                      <p className="text-xs font-medium text-grey-400">Milieurestricties</p>
+                      <ul className="mt-0.5 text-xs text-grey-500">
                         {regel.milieu_restricties.map((m, i) => <li key={i}>• {m}</li>)}
                       </ul>
                     </div>
@@ -506,8 +506,8 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
                   {regel.bijzondere_voorwaarden.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-gray-600">Bijzondere voorwaarden</p>
-                      <ul className="mt-0.5 text-xs text-gray-500">
+                      <p className="text-xs font-medium text-grey-400">Bijzondere voorwaarden</p>
+                      <ul className="mt-0.5 text-xs text-grey-500">
                         {regel.bijzondere_voorwaarden.map((b, i) => <li key={i}>• {b}</li>)}
                       </ul>
                     </div>
@@ -520,10 +520,10 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
         {/* Disclaimers */}
         {parsed.disclaimers && parsed.disclaimers.length > 0 && (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold text-gray-500">Disclaimer</p>
+          <div className="rounded-lg border border-grey-800 bg-grey-950 px-4 py-3">
+            <p className="text-xs font-semibold text-grey-500">Disclaimer</p>
             {parsed.disclaimers.map((d, idx) => (
-              <p key={idx} className="mt-1 text-xs italic text-gray-400">{d}</p>
+              <p key={idx} className="mt-1 text-xs italic text-grey-600">{d}</p>
             ))}
           </div>
         )}
@@ -534,9 +534,9 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
 function MiniDim({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded bg-white px-2 py-1 text-center border border-gray-100">
-      <p className="text-[10px] text-gray-400">{label}</p>
-      <p className="text-sm font-semibold text-gray-800">{value}</p>
+    <div className="rounded bg-grey-900 px-2 py-1 text-center border border-grey-800">
+      <p className="text-[10px] text-grey-600">{label}</p>
+      <p className="text-sm font-semibold text-grey-100">{value}</p>
     </div>
   )
 }
@@ -556,12 +556,12 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
 
   return (
     <Section title="Data bronnen">
-      <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50">
+      <div className="divide-y divide-grey-800 rounded-lg border border-grey-800 bg-grey-950">
         {sources.map((src, idx) => (
           <div key={idx} className="flex items-center justify-between px-3 py-2.5">
             <div>
-              <p className="text-sm font-medium text-gray-700">{src.source}</p>
-              <p className="text-xs text-gray-400">{formatAge(src.age_seconds)}</p>
+              <p className="text-sm font-medium text-grey-200">{src.source}</p>
+              <p className="text-xs text-grey-600">{formatAge(src.age_seconds)}</p>
             </div>
             <div className="flex items-center gap-2">
               {src.confidence && (
@@ -574,7 +574,7 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
                 </span>
               )}
               {src.is_cached && (
-                <span className="text-xs text-gray-400">cached</span>
+                <span className="text-xs text-grey-600">cached</span>
               )}
             </div>
           </div>
