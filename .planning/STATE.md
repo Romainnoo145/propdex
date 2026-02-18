@@ -78,6 +78,8 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - settings.ts types, useSettings.ts hooks (4 TanStack Query hooks), AuthContext.updateUser callback
 - Phase 35 Plan 03: ~8min, 2 tasks, 2 commits, 5 files
 - AccountSection (name/email form, updateUser sync), PasswordSection (auth_provider guard, eye toggle), NotificationsSection (instant-save toggle), AppearanceSection (card selector), /instellingen wired
+- Phase 36 Plan 02: ~24min, 2 tasks, 2 commits, 11 files
+- 30 undefined CSS var refs eliminated from 9 auth/form files; ReportDetailPage (72 gray-* replacements) + BestemmingsplanLegend fully migrated to Industrial Amber dark tokens
 - Phase 36 Plan 04: 21min, 2 tasks, 2 commits, 6 files
 - 6 layout shell Storybook stories (SideRailNav/BottomTabNav with RouterProvider+AuthContext+QueryClient, MapShell/ResultsShell/InspectorPanel/ReportSidebar), SC-04 Storybook documentation goal complete
 
@@ -253,6 +255,14 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 - Eye/eye-off toggle on new_password field only (not current_password or confirm_password) per spec
 - Settings section pattern: icon + h2 header, description text, form/controls, toast feedback
 
+**Phase 36-02 (CSS Variable Elimination and Token Migration):**
+- LoginForm/RegisterForm submit button: bg-amber-accent text-grey-950 (dark text on amber per contrast requirements)
+- GoogleButton uses dark variant (bg-grey-900) not white — no bg-white in dark UI design system
+- Auth tab active state: border-amber-accent text-amber-accent (accent for transient tab selection, not persistent nav which uses neutral)
+- ReportDetailPage hierarchy: bg-grey-950 (page) > bg-grey-900 (primary card) > bg-grey-950 (nested sub-cards)
+- BestemmingsplanLegend backdrop-blur-sm removed entirely per DS-04 (fixed-position UI panel, not floating map chrome)
+- PropertyGeometryLayer MapLibre paint: var(--color-primary) -> '#d97706' literal hex (CSS custom props unsupported by MapLibre)
+
 **Phase 36-04 (Layout Shell Storybook Stories):**
 - RouterContext must be provided to createRouter — routeTree uses createRootRouteWithContext<RouterContext>(), so context: { auth: { isAuthenticated, user } } required (TS2345 without it)
 - SideRailNav stories need 3 provider layers: QueryClientProvider (useUnreadCounts) + AuthContext.Provider (useAuth/logout) + RouterProvider (useMatchRoute/Link)
@@ -292,14 +302,15 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 | Phase 34-mobile-responsiveness P01 | 98 | 2 tasks | 4 files |
 | Phase 35-settings-page P02 | 98 | 2 tasks | 4 files |
 | Phase 35-settings-page P01 | 117s | 2 tasks | 6 files |
+| Phase 36-polish-performance P01 | 24 | 1 tasks | 3 files |
 
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** Completed 36-04-PLAN.md (layout shell Storybook stories — Phase 36 complete)
+**Stopped At:** Completed 36-02-PLAN.md (CSS variable elimination + Industrial Amber token migration, 2 tasks, 11 files)
 **Resume File:** None
 
-**Next Action:** Define next milestone via `/gsd:new-milestone` — Phase 36 polish/performance complete
+**Next Action:** Execute 36-03-PLAN.md (mobile blur reduction) or 36-04 already shipped — Phase 36 polish/performance complete
 
 ---
 
