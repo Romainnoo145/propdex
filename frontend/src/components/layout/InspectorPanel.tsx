@@ -9,34 +9,42 @@ interface InspectorPanelProps {
 }
 
 /**
- * Right-edge slide-over panel that shows parcel details from scan results.
+ * Responsive parcel details panel:
+ * - Mobile (< md): fixed bottom sheet, slides up from bottom, max 65vh
+ * - Desktop (md+): absolute right-edge slide-over, w-80
  *
  * Design decisions:
  * - No backdrop — map stays fully interactive underneath
- * - CSS translate-x animation for slide-in/out from right edge
+ * - CSS translate animation: translateY on mobile, translateX on desktop
  * - z-index --z-property-panel (300) — above map controls, below modals
  * - Escape key to close via useEscapeKey hook
- * - Width: w-80 (320px) with max-w-[90vw] for small screens
+ * - Drag handle visible on mobile (md:hidden), matching Drawer.tsx pattern
+ * - Touch event isolation on scrollable content prevents MapLibre scroll hijack
  */
 export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps) {
   useEscapeKey(onClose, isOpen)
 
   return (
     <div
-      className={`absolute right-0 top-0 h-full w-80 max-w-[90vw]
-                  bg-grey-900 border-l border-grey-800
-                  shadow-lg flex flex-col
+      className={`fixed inset-x-0 bottom-0 max-h-[65vh] rounded-t-xl border-t border-grey-800
+                  md:absolute md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-80 md:max-h-none md:rounded-none md:border-t-0 md:border-l
+                  bg-grey-900 border-grey-800 flex flex-col shadow-lg
                   transition-transform duration-300 ease-out
-                  ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                  ${isOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
       style={{ zIndex: 'var(--z-property-panel)' }}
       aria-hidden={!isOpen}
     >
+      {/* Drag handle — mobile only */}
+      <div className="flex justify-center py-2 md:hidden shrink-0">
+        <div className="w-10 h-1 bg-grey-700 rounded-full" />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-grey-800 shrink-0">
         <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
         <button
           onClick={onClose}
-          className="text-grey-400 hover:text-white transition-colors p-1 rounded hover:bg-grey-800"
+          className="text-grey-400 hover:text-white transition-colors p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Sluiten"
         >
           <X size={16} />
@@ -44,7 +52,11 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div
+        className="flex-1 overflow-y-auto p-4"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         {parcel ? (
           <div className="space-y-4">
             {/* Parcel ID */}
