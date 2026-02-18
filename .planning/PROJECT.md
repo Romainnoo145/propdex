@@ -22,50 +22,26 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v3.1 Smart Area Intelligence (2026-02-15)
-**Codebase:** 13,756 lines Python + 13,444 lines TypeScript/React (~27,200 LOC total)
+**Shipped:** v4.0 UX Redesign (2026-02-18)
+**Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
-**Frontend:** React 19, Vite 7, TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, react-resizable-panels, pnpm
+**Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
 **Tests:** 275 backend (104 unit + 171 integration), 74% coverage, 80%+ core modules
 
 **What's working:**
-- Full-page MapLibre map with PDOK aerial/topographic tiles, kadaster parcel boundaries, and bestemmingsplan zones
+- Industrial Amber design system with oklch tokens, Inter/JetBrains Mono fonts, 5 UI primitives, 11 Storybook stories
+- Persistent MapLibre map (never unmounts), SideRailNav icon sidebar, InspectorPanel slide-over
+- Silver desaturated map with PDOK aerial/topographic tiles, kadaster parcel boundaries, bestemmingsplan zones
 - CBS gemeente boundaries with click-to-zoom, wijk boundaries with click-to-scan
-- Bestemmingsplan WMS layer with SVBP2012 colored zones, GetFeatureInfo click, and interactive legend
-- Area scan pipeline: BAG WFS → WMS bestemmingsplan enrichment → opportunity scoring → vector tiles
-- Split-panel results interface with TanStack Table sorting/filtering, map-table bidirectional linking
-- Parcel detail modal with on-demand SRU vergunningen enrichment (7-day cache)
-- Change monitoring: SRU Bekendmakingen + PLU WMS delta detection, ARQ daily cron, notification badges
-- Hierarchical project model (gemeente→wijk) with monitored wijk overlay on map
-- Floating address search with PDOK Locatieserver autocomplete and fly-to-location
-- Three-tier progressive disclosure (QuickCard → Drawer → Modal) for property intelligence
-- Report management sidebar with search, save, PDF export, freshness indicators
-- JWT auth with httpOnly cookies, silent refresh, protected routes
-- Multi-tenant isolation enforced at every layer (HTTP, service, cache, database)
-- Row-level security with fail-closed NULLIF policies on all tenant tables
-
-## Current Milestone: v4.0 UX Redesign
-
-**Goal:** Transform the frontend from a functional prototype into a polished, professional PropTech tool with a consistent "Industrial Amber" design system, restructured navigation, and smooth user flows.
-
-**Design Principles:**
-- **Industrial Amber palette:** Mustard accent (#EBCB4B) on monochrome grey/white base (#F0F2F5 canvas, #FFFFFF surfaces)
-- **Floating Concrete layers:** Z-layered depth (basis → cards with shadows → glassmorphism controls), consistent border-radius (12px small, 20-24px large)
-- **Data-first typography:** Sans-serif (Inter/Manrope), bold oversized numbers, uppercase labels with letter-spacing
-- **Generous whitespace:** 24-32px padding in cards, light separators (#E5E7EB)
-- **Silver Map:** Desaturated/greyscale base map layer for visual harmony with design system
-
-**Navigation restructure:**
-- Icon sidebar: Kaart (Explore) | Data (Results) | Projecten (Reports) | Settings
-- 3 main views as separate pages (not overlays)
-- "Toon Lijst" button on map for inline split-view to Results
-- Inspector slide-over (right panel) for detail on map click
-
-**Polish scope:**
-- Scan-to-results flow: reduce clicks, maintain context, clear state indication
-- Feedback: scan progress, action confirmations, error states throughout
-- Visual consistency: apply design system to every component
-- Mobile: view-only mode (browse projects, view map) — no editing/analyzing on mobile
+- Separate /resultaten route with URL-persisted filters, multi-column sort, checkbox selection, bulk CSV export
+- Category-grouped advanced filter panel (Oppervlak/Bestemming/Score), table-to-map hover sync
+- ScanProgressOverlay with 3-step stepper, CTA button, automatic navigation to results
+- Skeleton/EmptyState/ErrorState feedback primitives adopted across all data views
+- Mobile responsive: BottomTabNav, InspectorPanel bottom sheet, ParcelCard layout, 44px touch targets, read-only mode
+- Settings page: account profile, password, notifications, appearance preferences
+- Bundle-split build: 4 vendor chunks + 15 route chunks (was 1,813KB monolith)
+- Mobile glassmorphism disabled (solid backgrounds), motion-reduce:transition-none on InspectorPanel
+- All previous v1.0-v3.1 functionality preserved (scan pipeline, change monitoring, reports, PDF export, auth)
 
 ## Business Model
 
@@ -138,6 +114,15 @@ This is the ONE thing that must work. Everything else is secondary.
 - Change monitoring: track new vergunningen per gemeente via SRU Bekendmakingen — v3.1
 - Bestemmingsplan wijzigingen: detect zoning changes via PLU WMS delta (needs live validation) — v3.1
 - Parcel list with filtering: sortable table with bestemming, size, score filters — v3.1
+- Industrial Amber design system with Tailwind v4 @theme tokens and lucide-react icons — v4.0
+- Persistent MapView with icon sidebar navigation between Kaart/Resultaten/Projecten — v4.0
+- Silver desaturated map base layer with glassmorphism refinement — v4.0
+- Results view as separate /resultaten route with scan_id URL bridge — v4.0
+- Glassmorphism components fully migrated to Industrial Amber design system — v4.0
+- Skeleton/EmptyState/ErrorState feedback primitives with scan progress stepper — v4.0
+- Multi-criteria sorting, checkbox selection, bulk export, category-grouped filters — v4.0
+- Mobile responsive read-only mode with BottomTabNav, bottom sheet, card layout, 44px touch targets — v4.0
+- Settings page with account/password/notifications/appearance sections — v4.0
 
 ### Active
 
@@ -181,7 +166,7 @@ This is the ONE thing that must work. Everything else is secondary.
 | React 19 + Vite 7 (not SvelteKit) | Simpler, no SSR needed for dashboard app, wider ecosystem | ✓ Good — fast dev velocity |
 | MapLibre (not Mapbox) | Free, same API as Mapbox, PDOK tiles for NL aerial imagery | ✓ Good — excellent Dutch coverage |
 | Map-first UI (not dashboard) | The map IS the app — floating panels over full-page map | ✓ Good — intuitive spatial workflow |
-| Glassmorphism design system | Transparent glass panels over map background | ⚠️ Revisit — replacing with Industrial Amber in v4.0 |
+| Glassmorphism design system | Transparent glass panels over map background | ✓ Replaced — Industrial Amber shipped in v4.0 |
 | TanStack Router + Query | Type-safe routing with file-based routes, data fetching with cache | ✓ Good — clean separation of concerns |
 | Three-tier progressive disclosure | QuickCard → Drawer → Modal prevents information overload | ✓ Good — natural exploration flow |
 | httpOnly cookies for refresh tokens | Prevents XSS attacks on auth tokens | ✓ Good — secure token lifecycle |
@@ -210,9 +195,9 @@ This is the ONE thing that must work. Everything else is secondary.
   - Backend register endpoint returns 500 (needs investigation)
   - Kadaster eigendomsdata requires paid API (deferred)
   - Monument restrictions are generic boilerplate (not property-specific)
-  - Mobile navigation: Side-rail hidden on mobile, no replacement navigation exists yet
+  - Mobile navigation: RESOLVED in v4.0 (BottomTabNav + all mobile adaptations complete)
   - PLU WMS change detection needs live data validation (MON-02)
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-15 after v4.0 milestone started*
+*Last updated: 2026-02-18 after v4.0 milestone shipped*

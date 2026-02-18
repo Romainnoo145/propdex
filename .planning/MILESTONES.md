@@ -134,3 +134,37 @@
 
 ---
 
+
+## v4.0 UX Redesign (Shipped: 2026-02-18)
+
+**Delivered:** Complete frontend redesign from functional prototype to polished PropTech tool — Industrial Amber design system, persistent map navigation, mobile responsiveness, comprehensive feedback systems, data table polish, settings page, and performance optimization.
+
+**Phases completed:** 27-36 (31 plans total)
+
+**Key accomplishments:**
+- Industrial Amber design system: oklch color tokens, Inter/JetBrains Mono fonts, 5 UI primitives (Button, Card, Badge, Input, Select) with CVA variants, 11 Storybook stories
+- Persistent MapView architecture: MapLibre instance never unmounts, SideRailNav icon sidebar, InspectorPanel slide-over, /resultaten as separate route with scan_id URL bridge
+- Full glassmorphism→Industrial Amber migration: 40+ components migrated, DS-04 rule (solid panels, glass map floats), responsive mobile glassmorphism disable
+- Data table polish: URL-persisted filters, multi-column sort, checkbox selection with bulk export, category-grouped filter panel, table-to-map hover sync
+- Mobile responsiveness: BottomTabNav, InspectorPanel bottom sheet, ParcelCard layout, 44px touch targets, read-only mode with "Gebruik desktop" banners
+- Settings page: backend users API (profile/password/preferences), TanStack Query hooks, AccountSection/PasswordSection/NotificationsSection/AppearanceSection
+- Bundle splitting: 1,813KB monolith → 4 vendor chunks + 15 route chunks via autoCodeSplitting + manualChunks
+
+**Stats:**
+- 202 files created/modified
+- ~16,234 lines TypeScript/React (frontend), ~23,621 lines Python (backend total)
+- 10 phases, 31 plans, 129 commits
+- 3 days (2026-02-16 → 2026-02-18)
+
+**Git range:** v3.1 → v4.0
+
+**Tech debt:**
+- Lighthouse >90 not achievable for pure SPA without SSR (score: 57 on dev server)
+- react-resizable-panels still in package.json (unused since Phase 28)
+- ChangeTimeline.tsx and ProjectEditModal.tsx still have legacy gray-* classes
+- PropertyDetailDrawer.tsx at 773 lines (exceeds 300-line guideline)
+
+**What's next:** TBD — run `/gsd:new-milestone`
+
+---
+
