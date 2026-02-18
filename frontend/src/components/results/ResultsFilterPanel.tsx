@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Select } from '@/components/primitives'
 import type { ScanResultsFilters } from '@/lib/types/scan'
 
@@ -46,6 +47,7 @@ export default function ResultsFilterPanel({
       offset: filters.offset,
       limit: filters.limit,
     })
+    toast.info('Filters toegepast', { duration: 2000 })
   }
 
   return (
@@ -62,12 +64,13 @@ export default function ResultsFilterPanel({
           <Select
             id="bestemming-filter"
             value={filters.bestemming_type ?? ''}
-            onChange={(e) =>
+            onChange={(e) => {
               onChange({
                 ...filters,
                 bestemming_type: e.target.value || undefined,
               })
-            }
+              toast.info('Filters toegepast', { duration: 2000 })
+            }}
           >
             <option value="">Alle</option>
             <option value="Wonen">Wonen</option>
@@ -92,12 +95,13 @@ export default function ResultsFilterPanel({
           <Select
             id="status-filter"
             value={filters.pand_status ?? ''}
-            onChange={(e) =>
+            onChange={(e) => {
               onChange({
                 ...filters,
                 pand_status: e.target.value || undefined,
               })
-            }
+              toast.info('Filters toegepast', { duration: 2000 })
+            }}
           >
             <option value="">Alle</option>
             <option value="niet in gebruik">Niet in gebruik</option>
@@ -136,12 +140,13 @@ export default function ResultsFilterPanel({
           <Select
             id="score-filter"
             value={filters.score_category ?? ''}
-            onChange={(e) =>
+            onChange={(e) => {
               onChange({
                 ...filters,
                 score_category: e.target.value || undefined,
               })
-            }
+              toast.info('Filters toegepast', { duration: 2000 })
+            }}
           >
             <option value="">Alle</option>
             <option value="High">High</option>

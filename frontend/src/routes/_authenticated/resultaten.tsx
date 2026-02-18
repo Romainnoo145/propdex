@@ -5,6 +5,7 @@ import ResultsShell from '@/components/layout/ResultsShell'
 import ResultsTable from '@/components/results/ResultsTable'
 import ResultsFilterPanel from '@/components/results/ResultsFilterPanel'
 import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
+import { EmptyState } from '@/components/feedback/EmptyState'
 import type { ScanResultsFilters, ScanResultItem } from '@/lib/types/scan'
 
 interface ResultatenSearchParams {
@@ -64,9 +65,15 @@ function ResultatenPage() {
         ) : (
           /* Empty state */
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-grey-400 text-sm">
-              Selecteer een scan op de kaart om resultaten te bekijken
-            </p>
+            <EmptyState
+              icon={<Map size={32} />}
+              title="Geen scan geselecteerd"
+              description="Selecteer een scan op de kaart om resultaten te bekijken."
+              action={{
+                label: 'Naar kaart',
+                onClick: () => navigate({ to: '/map' }),
+              }}
+            />
           </div>
         )}
       </div>

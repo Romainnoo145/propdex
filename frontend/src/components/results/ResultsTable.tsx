@@ -7,8 +7,11 @@ import {
   SortingState,
   PaginationState,
 } from '@tanstack/react-table'
+import { Search } from 'lucide-react'
 import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
+import { ErrorState } from '@/components/feedback/ErrorState'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 interface ResultsTableProps {
   scanId: string
@@ -140,7 +143,7 @@ export default function ResultsTable({
     limit: pagination.pageSize,
   }
 
-  const { data, isLoading, error } = useScanResults(scanId, apiFilters)
+  const { data, isLoading, error, refetch } = useScanResults(scanId, apiFilters)
 
   // Update total count when data changes
   useEffect(() => {
@@ -175,12 +178,12 @@ export default function ResultsTable({
 
   if (error) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-grey-400">
-        <div className="text-center">
-          <p className="text-lg mb-2">Fout bij laden van resultaten</p>
-          <p className="text-sm">{error.message}</p>
-        </div>
-      </div>
+      <ErrorState
+        message="Fout bij laden van resultaten"
+        actions={[
+          { label: 'Opnieuw proberen', onClick: () => refetch() },
+        ]}
+      />
     )
   }
 
@@ -201,9 +204,11 @@ export default function ResultsTable({
 
   if (!data || data.results.length === 0) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-grey-400">
-        <p className="text-lg">Geen resultaten gevonden</p>
-      </div>
+      <EmptyState
+        icon={<Search size={32} />}
+        title="Geen resultaten gevonden"
+        description="Pas de filters aan of voer een nieuwe scan uit."
+      />
     )
   }
 
