@@ -34,7 +34,7 @@ import {
   addScanAreaHighlight,
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
-import { addParcelScoreLayer } from '@/components/map/ParcelScoreLayer'
+import { addParcelScoreLayer, setParcelScoreVisibility } from '@/components/map/ParcelScoreLayer'
 import {
   addMonitoredWijkOverlay,
   removeMonitoredWijkOverlay,
@@ -711,6 +711,15 @@ function MapPage() {
     []
   )
 
+  // Score layer visibility toggle handler
+  const handleScoreToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+      setParcelScoreVisibility(mapRef.current, visible)
+    },
+    []
+  )
+
   // Handle "Scan dit gebied" from bestemmingsplan zone
   const handleScanZone = useCallback(() => {
     if (!mapRef.current || !zoneInfo) return
@@ -961,6 +970,8 @@ function MapPage() {
         onBestemmingsplanToggle={handleBestemmingsplanToggle}
         onWijkenToggle={handleWijkenToggle}
         showWijkenToggle={!!activeGemeente}
+        onScoreToggle={handleScoreToggle}
+        showScoreToggle={!!activeScanId}
       />
 
       {/* Inspector panel — right-edge slide-over for parcel details */}
