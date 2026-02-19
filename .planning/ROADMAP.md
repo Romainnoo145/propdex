@@ -27,11 +27,11 @@
   2. `GET /api/projects/{id}/scans` returns scans associated with a specific project
   3. Each scan in the list includes a scan_id that can be used to load scan results in the results table
   4. Scan list endpoint enforces multi-tenant isolation -- org A cannot see org B's scans
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: both parallel)
 
 Plans:
-- [ ] 37-01: Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
-- [ ] 37-02: Add `GET /api/projects/{id}/scans` subresource endpoint
+- [ ] 37-01-PLAN.md -- Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
+- [ ] 37-02-PLAN.md -- Add `GET /api/projects/{id}/scans` sub-resource endpoint
 
 #### Phase 38: Scan History Frontend
 **Goal**: Users can browse their scan history in the Projecten view and navigate back to any previous scan's results or map
