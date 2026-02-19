@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 37 of 41 (Scan History Backend)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 -- v5.0 roadmap created (5 phases, 12 requirements, phases 37-41)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-19 -- Plan 37-01 complete: GET /api/scans paginated endpoint
 
-Progress: [░░░░░░░░░░] 0% (0/12 plans complete)
+Progress: [█░░░░░░░░░] 8% (1/12 plans complete)
 
 ---
 
@@ -51,6 +51,8 @@ Progress: [░░░░░░░░░░] 0% (0/12 plans complete)
 - [v5.0 roadmap]: Bug fixes grouped into Phase 41 for clean milestone close; they are parallel-safe but batched at end
 - [v4.0]: Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()` -- causes transaction already begun)
 - [v4.0]: parcel_cache.geometry is EPSG:28992; always use ST_Transform(geometry, 4326) before GeoJSON serialization
+- [37-01]: Use COUNT(scan_results) not parcels_total for parcel_count in scan history -- parcels_total reflects discovered parcels, scan_results count is actual qualifying results
+- [37-01]: list_scans() accepts optional project_id so Plan 37-02 can reuse without changes
 
 ### Known Issues (v5.0 scope)
 
@@ -72,12 +74,12 @@ Progress: [░░░░░░░░░░] 0% (0/12 plans complete)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-18
-**Stopped At:** v5.0 roadmap written -- ROADMAP.md, STATE.md, REQUIREMENTS.md updated
+**Last Session:** 2026-02-19
+**Stopped At:** Completed 37-01-PLAN.md -- GET /api/scans endpoint shipped
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 37` -- Plan the Scan History Backend phase
+**Next Action:** `/gsd:execute-phase 37` -- Execute Plan 37-02 (project-scoped scan filter)
 
 ---
 
-*State updated: 2026-02-18 -- v5.0 Scan Intelligence roadmap created*
+*State updated: 2026-02-19 -- Plan 37-01 complete*
