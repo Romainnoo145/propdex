@@ -1,5 +1,7 @@
 import { useEscapeKey } from '@/hooks/useEscapeKey'
-import { X } from 'lucide-react'
+import { useGenerateReportFromParcel } from '@/hooks/useReports'
+import { toast } from 'sonner'
+import { X, FileText } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
 
 interface InspectorPanelProps {
@@ -23,6 +25,20 @@ interface InspectorPanelProps {
  */
 export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps) {
   useEscapeKey(onClose, isOpen)
+
+  const generateReport = useGenerateReportFromParcel()
+
+  const handleGenerateReport = async () => {
+    if (!parcel?.parcel_id) return
+    const toastId = toast.loading('Rapport wordt gegenereerd...')
+    try {
+      await generateReport.mutateAsync(parcel.parcel_id)
+      toast.success('Rapport opgeslagen in Rapporten', { id: toastId })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Genereren mislukt'
+      toast.error(message, { id: toastId })
+    }
+  }
 
   return (
     <div
@@ -142,6 +158,19 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
                 </span>
               </div>
             )}
+
+            {/* Generate Report Action */}
+            <button
+              onClick={handleGenerateReport}
+              disabled={generateReport.isPending}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4
+                         bg-amber-accent text-grey-900 font-medium rounded text-sm
+                         hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
+                         transition-colors motion-reduce:transition-none min-h-[44px]"
+            >
+              <FileText size={14} />
+              {generateReport.isPending ? 'Bezig met genereren...' : 'Genereer rapport'}
+            </button>
           </div>
         ) : (
           <div className="flex items-center justify-center h-32">
