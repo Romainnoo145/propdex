@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 37 complete, next: Phase 38 (Map Visualization)
+**Current focus:** v5.0 Scan Intelligence -- Phase 38 complete, Phase 39 next
 
 ---
 
 ## Current Position
 
 Phase: 38 of 41 (Scan History Frontend)
-Plan: 2 of 38
+Plan: 3 of 38
 Status: In progress
-Last activity: 2026-02-19 -- Plan 38-01 complete: scan history data layer (types, API functions, TanStack Query hooks)
+Last activity: 2026-02-19 -- Plan 38-02 complete: scan history UI (WijkScanList replaces DEMO_REPORTS in Projecten view)
 
-Progress: [███░░░░░░░] 25% (3/12 plans complete)
+Progress: [████░░░░░░] 33% (4/12 plans complete)
 
 ---
 
@@ -24,7 +24,7 @@ Progress: [███░░░░░░░] 25% (3/12 plans complete)
 
 **v5.0 Scan Intelligence (In Progress)**
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
-- Phase 38: 2 min (38-01), 1 plan, 3 files modified
+- Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total so far, 2 plans, 4 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -62,6 +62,9 @@ Progress: [███░░░░░░░] 25% (3/12 plans complete)
 - [38-01]: 5-minute staleTime for scan history hooks -- balances freshness vs network requests for infrequently-changing data
 - [38-01]: useProjectScans disabled when projectId is null -- only fetches when wijk row is expanded (consistent with useScanPolling pattern)
 - [38-01]: useTriggerScan invalidates both scan-history and project-scans -- new scan appears immediately in all views
+- [38-02]: WijkScanList sub-component encapsulates useProjectScans -- hook fires only when row is expanded, not on page load
+- [38-02]: Single WijkScanList component handles both monitoring wijks and regular projects -- both provide project.id
+- [38-02]: DEMO_REPORTS removed completely -- Projecten view now shows real scan history from backend API
 
 ### Known Issues (v5.0 scope)
 
@@ -84,11 +87,11 @@ Progress: [███░░░░░░░] 25% (3/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-19
-**Stopped At:** Completed 38-01-PLAN.md -- scan history data layer shipped (types, API functions, TanStack Query hooks)
+**Stopped At:** Completed 38-02-PLAN.md -- scan history UI shipped (WijkScanList replaces DEMO_REPORTS in Projecten view)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 38` -- Phase 38 Plan 02 (replace demo data with real scan rows in Projecten view)
+**Next Action:** `/gsd:execute-phase 38` -- Phase 38 Plan 03 (next plan in phase 38)
 
 ---
 
-*State updated: 2026-02-19 -- Plan 38-01 complete, scan history data layer shipped*
+*State updated: 2026-02-19 -- Plan 38-02 complete, Projecten view now shows real scan history*
