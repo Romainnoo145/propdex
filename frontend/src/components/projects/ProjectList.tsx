@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
 import { useUnreadCounts } from '@/hooks/useNotifications'
+import { useProjectScans } from '@/hooks/useScans'
 import { toast } from 'sonner'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { ReportListItem } from '@/lib/types/report'
+import type { ScanListItem } from '@/lib/types/scan'
 import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
@@ -230,9 +232,6 @@ export default function ProjectList() {
                   <div className="border-t border-gray-100 bg-gray-50/30">
                     {wijkChildren.map((wijk) => {
                       const isWijkExpanded = expandedId === wijk.id
-                      const reports = isDemo
-                        ? DEMO_REPORTS[wijk.id] ?? []
-                        : [] // TODO: fetch from useReports({ project_id }) when live
 
                       const wijkUnread = unreadData?.per_project.find(
                         (p) => p.project_id === wijk.id
@@ -268,36 +267,12 @@ export default function ProjectList() {
                           {/* Wijk expanded content */}
                           {isWijkExpanded && (
                             <>
-                              {/* Reports section */}
-                              {reports.length > 0 && (
-                                <div className="border-t border-gray-100 bg-gray-50/50">
-                                  {reports.map((report) => (
-                                    <button
-                                      key={report.id}
-                                      onClick={() => handleReportClick(report)}
-                                      className="flex w-full min-h-[44px] items-center gap-3 border-b border-gray-100 px-10 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-100/70"
-                                    >
-                                      <DocumentIcon />
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-medium text-gray-800">
-                                          {report.report_name}
-                                        </p>
-                                        {report.notes && (
-                                          <p className="truncate text-xs text-gray-400">{report.notes}</p>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-3 text-xs text-gray-400">
-                                        <span>{Math.round(report.completeness_score * 100)}%</span>
-                                        <span>{dateFmt.format(new Date(report.created_at))}</span>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
+                              {/* Scan history section */}
+                              {!isDemo && <WijkScanList projectId={wijk.id} navigate={navigate} />}
 
-                              {reports.length === 0 && (
+                              {isDemo && (
                                 <div className="border-t border-gray-100 px-10 py-4 text-center text-sm text-gray-400">
-                                  Geen rapporten in dit project
+                                  Geen scans beschikbaar (demo modus)
                                 </div>
                               )}
 
@@ -447,6 +422,97 @@ export default function ProjectList() {
   )
 }
 
+/**
+ * Scan list for a project -- renders inside expanded wijk/project rows.
+ * Hook only fires when this component mounts (when row is expanded).
+ */
+function WijkScanList({
+  projectId,
+  navigate,
+}: {
+  projectId: string
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  const { data, isLoading } = useProjectScans(projectId)
+  const scans = data?.scans ?? []
+
+  const handleScanResultsClick = (scan: ScanListItem) => {
+    navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+  }
+
+  const handleScanMapClick = (scan: ScanListItem) => {
+    navigate({ to: '/map', search: { scan_id: scan.scan_id } })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-gray-100 px-10 py-3 space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    )
+  }
+
+  if (scans.length === 0) {
+    return (
+      <div className="border-t border-gray-100 px-10 py-4 text-center text-sm text-gray-400">
+        Nog geen scans voor dit project
+      </div>
+    )
+  }
+
+  return (
+    <div className="border-t border-gray-100 bg-gray-50/50">
+      {scans.map((scan) => {
+        const isCompleted = scan.status === 'completed'
+        return (
+          <div
+            key={scan.scan_id}
+            className="flex w-full items-center gap-3 border-b border-gray-100 px-10 py-3 last:border-b-0"
+          >
+            <ScanIcon />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-800">
+                  {scan.gemeente_naam}{scan.wijk_naam ? ` \u2014 ${scan.wijk_naam}` : ''}
+                </p>
+                {!isCompleted && (
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    scan.status === 'running' ? 'bg-blue-100 text-blue-600' :
+                    scan.status === 'failed' ? 'bg-red-100 text-red-600' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {scan.status}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">
+                {dateFmt.format(new Date(scan.scan_date))} &middot; {scan.parcel_count} percelen
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => handleScanResultsClick(scan)}
+                disabled={!isCompleted}
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Toon resultaten
+              </button>
+              <button
+                onClick={() => handleScanMapClick(scan)}
+                disabled={!isCompleted}
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Toon kaart
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -460,6 +526,15 @@ function DocumentIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
+    </svg>
+  )
+}
+
+function ScanIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   )
 }
