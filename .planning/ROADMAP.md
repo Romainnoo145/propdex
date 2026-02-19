@@ -72,11 +72,11 @@ Plans:
   2. Report generation reuses the existing property aggregator pipeline (BAG, PDOK, DSO, RCE, SRU)
   3. Generated report is saved and appears in the report management system (Rapporten view)
   4. User sees progress feedback while the report is being generated
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: backend, Wave 2: frontend)
 
 Plans:
-- [ ] 40-01: Add `POST /api/reports/from-parcel` backend endpoint reusing existing property_aggregator pipeline
-- [ ] 40-02: Add "Genereer rapport" action to ResultatenTable row and InspectorPanel parcel view; wire to new endpoint
+- [ ] 40-01-PLAN.md -- Add POST /api/reports/from-parcel endpoint with address parsing and property aggregator pipeline
+- [ ] 40-02-PLAN.md -- Add "Genereer rapport" button to ParcelDetailModal and InspectorPanel with sonner toast feedback
 
 #### Phase 41: Bug Fixes & Hardening
 **Goal**: Known bugs are resolved and the codebase is free of identified tech debt
@@ -102,7 +102,7 @@ Plans:
 | 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 39. Map Parcel Visualization | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 40. Report Integration | v5.0 | 0/2 | Not started | - |
+| 40. Report Integration | v5.0 | 0/2 | Planned | - |
 | 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
 
 ---
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-19 (Phase 39 complete)*
+*Last updated: 2026-02-19 (Phase 40 planned)*
