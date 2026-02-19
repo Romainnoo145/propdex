@@ -57,12 +57,11 @@ Plans:
   2. Individual parcels from scan results appear as colored polygons on the map, with color reflecting opportunity score
   3. User can toggle parcel score coloring on and off to return to the default map view
   4. Parcel polygons are rendered via MVT tiles (viewport-aware, performant at 2000+ parcels)
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: both parallel)
 
 Plans:
-- [ ] 39-01: Extend `tile_proxy.py` MVT query to include scan-result parcels with opportunity score as a tile property
-- [ ] 39-02: Add scanned wijk highlight layer to the map (CBS WFS styling for scanned vs unscanned)
-- [ ] 39-03: Add `ParcelScoreLayer` score toggle UI control and wire to map layer visibility
+- [ ] 39-01-PLAN.md -- Add ScannedWijkHighlightLayer (amber overlay for scanned wijken) and fix score layer restoration on URL navigation
+- [ ] 39-02-PLAN.md -- Add Perceel Score toggle button in LayerToggle and wire to parcel score layer visibility
 
 #### Phase 40: Report Integration
 **Goal**: Users can generate and save a full property intelligence report for any parcel appearing in scan results
@@ -102,7 +101,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 39. Map Parcel Visualization | v5.0 | 0/3 | Not started | - |
+| 39. Map Parcel Visualization | v5.0 | 0/2 | Not started | - |
 | 40. Report Integration | v5.0 | 0/2 | Not started | - |
 | 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
 
