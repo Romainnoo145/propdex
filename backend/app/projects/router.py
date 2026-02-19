@@ -12,6 +12,8 @@ from app.middleware.rate_limit import limiter
 from app.models.project import Project
 from app.models.report import SavedReport
 from app.models.user import User
+from app.scans import service as scan_service
+from app.scans.schemas import ScanListItem, ScanListResponse
 from app.schemas.project import (
     ProjectCreate,
     ProjectListResponse,
@@ -217,6 +219,88 @@ async def get_project(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get project",
         ) from e
+
+
+@router.get("/{project_id}/scans", response_model=ScanListResponse)
+@limiter.limit("60/minute")
+async def list_project_scans(
+    request: Request,
+    project_id: uuid.UUID,
+    offset: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ScanListResponse:
+    """
+    List scans associated with a specific project.
+
+    Returns paginated scans filtered by project_id. First verifies project
+    exists and belongs to the authenticated organization (404 if not --
+    prevents resource enumeration).
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        project_id: Project UUID
+        offset: Pagination offset (default 0)
+        limit: Page size (default 50, max 100)
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ScanListResponse: Paginated scan list for this project
+
+    Raises:
+        HTTPException 404: Project not found (or belongs to another org)
+    """
+    limit = min(limit, 100)
+
+    # 1. Verify project exists and belongs to org (404 not 403 -- prevents enumeration)
+    project_query = select(Project).where(
+        Project.id == project_id,
+        Project.organization_id == organization_id,
+    )
+    project_result = await db.execute(project_query)
+    project = project_result.scalar_one_or_none()
+
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    # 2. List scans filtered by project_id (already org-scoped via service)
+    scans, total = await scan_service.list_scans(
+        organization_id=organization_id,
+        offset=offset,
+        limit=limit,
+        session=db,
+        project_id=project_id,
+    )
+
+    scan_items = [
+        ScanListItem(
+            scan_id=scan.id,
+            gemeente_naam=scan.gemeente_naam,
+            gemeente_code=scan.gemeente_code,
+            wijk_naam=scan.wijk_naam,
+            scan_date=scan.created_at,
+            status=scan.status,
+            parcel_count=parcel_count or 0,
+            project_id=scan.project_id,
+        )
+        for scan, parcel_count in scans
+    ]
+
+    return ScanListResponse(
+        scans=scan_items,
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
