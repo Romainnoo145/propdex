@@ -2,23 +2,28 @@
 
 import asyncio
 import io
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
+from app.models.parcel_cache import ParcelCache
 from app.models.user import User
 from app.reports import service
 from app.reports.freshness import check_report_freshness
 from app.reports.pdf_export import generate_report_pdf
+from app.schemas.address import AddressInput
 from app.schemas.report import (
     ReportAssignProject,
     ReportDetailResponse,
     ReportFreshnessResponse,
+    ReportFromParcelRequest,
     ReportListItem,
     ReportListResponse,
     ReportSaveRequest,
@@ -26,8 +31,40 @@ from app.schemas.report import (
     SortField,
     SortOrder,
 )
+from app.services.property_aggregator import aggregate_property_data
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def _parse_parcel_address(address: str) -> tuple[str, int] | None:
+    """
+    Parse PDOK weergavenaam to (postcode, huisnummer).
+
+    PDOK reverse format: "{straat} {huisnummer}, {postcode} {woonplaats}"
+    Examples:
+      "Kerkstraat 42, 5911AA Venlo"       -> ("5911 AA", 42)
+      "Kerkstraat 42a, 5911 AA Venlo"     -> ("5911 AA", 42)
+      "Dorpsstraat 1 bis, 1234 AB Stad"   -> ("1234 AB", 1)
+    """
+    upper = address.upper()
+
+    # Extract postcode: 4 digits + optional space + 2 letters
+    postcode_match = re.search(r'(\d{4})\s*([A-Z]{2})\b', upper)
+    if not postcode_match:
+        return None
+    postcode = f"{postcode_match.group(1)} {postcode_match.group(2)}"
+
+    # Extract huisnummer: first number sequence before the comma
+    pre_comma = address.split(',')[0] if ',' in address else address
+    hn_match = re.search(r'(\d+)', pre_comma)
+    if not hn_match:
+        return None
+
+    huisnummer = int(hn_match.group(1))
+    if huisnummer <= 0:
+        return None
+
+    return postcode, huisnummer
 
 
 @router.post("", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -217,6 +254,131 @@ async def get_cities(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get cities",
+        ) from e
+
+
+@router.post(
+    "/from-parcel",
+    response_model=ReportDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("10/minute")
+async def generate_report_from_parcel(
+    request: Request,
+    body: ReportFromParcelRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Generate a full property intelligence report from a scan result parcel.
+
+    Fetches the ParcelCache entry, parses its address, runs the full property
+    aggregator pipeline, and saves the result as a new report.
+
+    Requires JWT authentication. Rate limited to 10 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        body: Request with parcel_id, optional notes and project_id
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ReportDetailResponse: The saved report with full details
+
+    Raises:
+        HTTPException 404: Parcel not found or not in this organization
+        HTTPException 422: Missing or unparseable address
+        HTTPException 502: Aggregator API failure
+        HTTPException 500: Internal server error
+    """
+    try:
+        # 1. Query ParcelCache with org isolation
+        result = await db.execute(
+            select(ParcelCache).where(
+                ParcelCache.id == body.parcel_id,
+                ParcelCache.organization_id == organization_id,
+            )
+        )
+        parcel = result.scalar_one_or_none()
+        if parcel is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Perceel niet gevonden",
+            )
+
+        # 2. Check address is available
+        if not parcel.address:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Geen geldig adres beschikbaar voor dit perceel",
+            )
+
+        # 3. Parse address to postcode + huisnummer
+        parsed = _parse_parcel_address(parcel.address)
+        if parsed is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Adres kan niet worden verwerkt: {parcel.address}",
+            )
+        postcode, huisnummer = parsed
+
+        # 4. Build AddressInput
+        address_input = AddressInput(postcode=postcode, huisnummer=huisnummer)
+
+        # 5. Aggregate property data
+        try:
+            property_data = await aggregate_property_data(
+                input_data=address_input,
+                client=request.app.state.http_client,
+                organization_id=organization_id,
+                session=db,
+                force_refresh=False,
+                arq_pool=request.app.state.arq_pool,
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Fout bij ophalen van perceeldata: {e}",
+            ) from e
+
+        # 6. Save report
+        report = await service.save_report(
+            report_data=property_data.model_dump(mode="json"),
+            notes=body.notes,
+            project_id=body.project_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        # 7. Return report detail
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate report from parcel",
         ) from e
 
 
