@@ -11,6 +11,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.schemas.property import PropertyReportResponse
 
 
+class ReportFromParcelRequest(BaseModel):
+    """Schema for generating a report from a scan result parcel."""
+
+    parcel_id: uuid.UUID = Field(description="ParcelCache UUID")
+    notes: str | None = Field(default=None, description="Optional notes for the report")
+    project_id: uuid.UUID | None = Field(
+        default=None, description="Optional project folder ID"
+    )
+
+
 class ReportSaveRequest(BaseModel):
     """Schema for saving a property report."""
 
