@@ -14,14 +14,17 @@ interface LayerToggleProps {
   onBestemmingsplanToggle?: (visible: boolean) => void;
   onWijkenToggle?: (visible: boolean) => void;
   showWijkenToggle?: boolean; // Only show when gemeente is active
+  onScoreToggle?: (visible: boolean) => void;
+  showScoreToggle?: boolean; // Only show when active scan is present
 }
 
-function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle, onWijkenToggle, showWijkenToggle }: LayerToggleProps) {
+function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle, onWijkenToggle, showWijkenToggle, onScoreToggle, showScoreToggle }: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
   const [showParcels, setShowParcels] = useState(false);
   const [showGemeenten, setShowGemeenten] = useState(false);
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false);
   const [showWijken, setShowWijken] = useState(true); // Wijken default to visible when loaded
+  const [showScore, setShowScore] = useState(true); // Score default to visible when scan is active
 
   const handleLayerChange = (layer: LayerType) => {
     if (!mapRef.current || layer === activeLayer) return;
@@ -90,6 +93,14 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     }
   };
 
+  const handleScoreToggle = () => {
+    const newShowScore = !showScore;
+    setShowScore(newShowScore);
+    if (onScoreToggle) {
+      onScoreToggle(newShowScore);
+    }
+  };
+
   // Track when wijken toggle appears/disappears to reset state to default (visible)
   const prevShowWijkenToggleRef = useRef(showWijkenToggle);
   useEffect(() => {
@@ -101,6 +112,18 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     }
     prevShowWijkenToggleRef.current = showWijkenToggle;
   }, [showWijkenToggle]);
+
+  // Track when score toggle appears/disappears to reset state to default (visible)
+  const prevShowScoreToggleRef = useRef(showScoreToggle);
+  useEffect(() => {
+    // Only reset when transitioning from hidden -> visible (scan just became active)
+    if (showScoreToggle && !prevShowScoreToggleRef.current) {
+      // Intentional: Reset toggle state to match layer visibility when scan becomes active
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowScore(true);
+    }
+    prevShowScoreToggleRef.current = showScoreToggle;
+  }, [showScoreToggle]);
 
   const active = 'bg-amber-accent text-grey-950 shadow-sm';
   const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
@@ -169,6 +192,20 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
             }`}
           >
             Wijken
+          </button>
+        </>
+      )}
+
+      {showScoreToggle && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleScoreToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showScore ? overlayActive : overlayInactive
+            }`}
+          >
+            Perceel Score
           </button>
         </>
       )}
