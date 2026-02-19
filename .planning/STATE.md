@@ -5,89 +5,79 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence
+**Current focus:** v5.0 Scan Intelligence -- Phase 37: Scan History Backend
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-18 — Milestone v5.0 started
+Phase: 37 of 41 (Scan History Backend)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-18 -- v5.0 roadmap created (5 phases, 12 requirements, phases 37-41)
+
+Progress: [░░░░░░░░░░] 0% (0/12 plans complete)
 
 ---
 
 ## Performance Metrics
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
-- 10 phases (27-36), 31 plans, 31 requirements, 129 commits
-- Industrial Amber design system, persistent MapView, mobile responsive, settings page, bundle splitting
-- ~16,234 LOC TypeScript/React (frontend)
-- 3 days (2026-02-16 → 2026-02-18)
+- 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
 
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
-- 5 phases (22-26), 22 plans, 16 requirements, 97 commits
-- ~27,200 LOC (13,756 Python + 13,444 TypeScript)
+- 5 phases (22-26), 22 plans, 97 commits, ~27,200 LOC
 
 **v3.0 Spatial Foundation (Shipped: 2026-02-11)**
-- 4 phases (18-21), 20 plans, 14 requirements, 72 commits
+- 4 phases (18-21), 20 plans, 72 commits
 
 **v2.0 Frontend (Shipped: 2026-02-09)**
-- 5 phases (13-17), 24 plans, 9 requirements, 117 commits
-- 8,804 LOC TypeScript/React
+- 5 phases (13-17), 24 plans, 117 commits, 8,804 LOC TypeScript/React
 
 **v1.1 Production Hardening (Shipped: 2026-02-08)**
-- 7 phases (6-12), 19 plans, 15 requirements, 71 commits
-- 275 tests, 15,947 LOC Python
+- 7 phases (6-12), 19 plans, 71 commits, 275 tests, 15,947 LOC Python
 
 **v1.0 Core Intelligence Engine (Shipped: 2026-02-07)**
-- 5 phases (1-5), 17 plans, 14 requirements, 79 commits
-- 8,281 LOC Python
+- 5 phases (1-5), 17 plans, 79 commits, 8,281 LOC Python
 
 ---
 
 ## Accumulated Context
 
-### Active TODOs
+### Decisions
 
-- [ ] Fix backend register endpoint 500 error
-- [ ] Production deployment: Create app_role
-- [ ] Production deployment: Update Docker container to postgis/postgis:16-3.5
-- [ ] Test Claude API with real bestemmingsplan PDFs
-- [ ] BAG API key aanvragen (gratis)
-- [ ] DSO API key aanvragen (gratis)
-- [ ] Kadaster BRK Bevragen API toegang regelen (betaald)
-- [ ] Ruimtelijkeplannen.nl REST API v4 key aanvragen
-- [ ] PLU WMS change detection live validation (MON-02)
+- [v5.0 roadmap]: No new dependencies required -- scan history reuses AreaScan table, MVT tiles extended via LEFT JOIN, report-from-parcel reuses existing property_aggregator
+- [v5.0 roadmap]: Lead pipeline deferred to future milestone -- not in v5.0 scope
+- [v5.0 roadmap]: Bug fixes grouped into Phase 41 for clean milestone close; they are parallel-safe but batched at end
+- [v4.0]: Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()` -- causes transaction already begun)
+- [v4.0]: parcel_cache.geometry is EPSG:28992; always use ST_Transform(geometry, 4326) before GeoJSON serialization
 
-### Known Issues
+### Known Issues (v5.0 scope)
 
-- Backend register endpoint returns 500 (needs investigation)
-- Kadaster eigendomsdata requires paid API
-- Monument restrictions are generic boilerplate (not property-specific)
-- Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
-- PLU WMS change detection needs live data validation
-- Lighthouse >90 not achievable for pure SPA without SSR (v4.0 score: 57)
-- react-resizable-panels unused but still in package.json
-- ChangeTimeline.tsx and ProjectEditModal.tsx still have legacy gray-* classes
+- Backend register endpoint returns 500 -- FIX-01 (Phase 41)
+- ARQ worker re-runs create duplicate ScanResult rows -- FIX-02 (Phase 41)
+- react-resizable-panels unused in package.json -- FIX-03 (Phase 41)
+- ChangeTimeline.tsx and ProjectEditModal.tsx have legacy gray-* classes -- FIX-03 (Phase 41)
 
-### Quick Tasks Completed
+### Ongoing TODOs (post-v5.0)
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 2 | Redesign scoring, add qualification filter, and resolve addresses | 2026-02-15 | 265aa49 | [2-redesign-scoring-add-qualification-filte](./quick/2-redesign-scoring-add-qualification-filte/) |
+- Production deployment: Create app_role (sql/setup_app_role.sql)
+- Production deployment: Update Docker container to postgis/postgis:16-3.5
+- BAG API key aanvragen (gratis)
+- DSO API key aanvragen (gratis)
+- Kadaster BRK Bevragen API toegang regelen (betaald)
+- PLU WMS change detection live validation (MON-02)
 
 ---
 
 ## Session Continuity
 
 **Last Session:** 2026-02-18
-**Stopped At:** v5.0 milestone started, defining requirements
+**Stopped At:** v5.0 roadmap written -- ROADMAP.md, STATE.md, REQUIREMENTS.md updated
 **Resume File:** None
 
-**Next Action:** Define requirements and create roadmap
+**Next Action:** `/gsd:plan-phase 37` -- Plan the Scan History Backend phase
 
 ---
 
-*State updated: 2026-02-18 — v5.0 Lead Pipeline milestone started*
+*State updated: 2026-02-18 -- v5.0 Scan Intelligence roadmap created*

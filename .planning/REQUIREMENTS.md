@@ -70,24 +70,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SCAN-03 | — | Pending |
-| SCAN-04 | — | Pending |
-| MAP-01 | — | Pending |
-| MAP-02 | — | Pending |
-| MAP-03 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
-| FIX-01 | — | Pending |
-| FIX-02 | — | Pending |
-| FIX-03 | — | Pending |
+| SCAN-01 | Phase 37 + Phase 38 | Pending |
+| SCAN-02 | Phase 38 | Pending |
+| SCAN-03 | Phase 38 | Pending |
+| SCAN-04 | Phase 38 | Pending |
+| MAP-01 | Phase 39 | Pending |
+| MAP-02 | Phase 39 | Pending |
+| MAP-03 | Phase 39 | Pending |
+| RPT-01 | Phase 40 | Pending |
+| RPT-02 | Phase 40 | Pending |
+| FIX-01 | Phase 41 | Pending |
+| FIX-02 | Phase 41 | Pending |
+| FIX-03 | Phase 41 | Pending |
 
 **Coverage:**
 - v5.0 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 — traceability mapped to phases 37-41*
