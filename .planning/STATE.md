@@ -11,12 +11,12 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 
 ## Current Position
 
-Phase: 38 of 41 (Map Visualization)
-Plan: 1 of next phase
-Status: Phase 37 complete
-Last activity: 2026-02-19 -- Plan 37-02 complete: GET /api/projects/{id}/scans sub-resource endpoint
+Phase: 38 of 41 (Scan History Frontend)
+Plan: 2 of 38
+Status: In progress
+Last activity: 2026-02-19 -- Plan 38-01 complete: scan history data layer (types, API functions, TanStack Query hooks)
 
-Progress: [██░░░░░░░░] 17% (2/12 plans complete)
+Progress: [███░░░░░░░] 25% (3/12 plans complete)
 
 ---
 
@@ -24,6 +24,7 @@ Progress: [██░░░░░░░░] 17% (2/12 plans complete)
 
 **v5.0 Scan Intelligence (In Progress)**
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
+- Phase 38: 2 min (38-01), 1 plan, 3 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -58,6 +59,9 @@ Progress: [██░░░░░░░░] 17% (2/12 plans complete)
 - [37-01]: list_scans() accepts optional project_id so Plan 37-02 can reuse without changes
 - [37-02]: 404 not 403 for cross-org projects in sub-resource endpoints -- consistent with get_project, prevents enumeration
 - [37-02]: Sub-resource pattern: verify parent ownership (project -> org) first, then query child via service layer
+- [38-01]: 5-minute staleTime for scan history hooks -- balances freshness vs network requests for infrequently-changing data
+- [38-01]: useProjectScans disabled when projectId is null -- only fetches when wijk row is expanded (consistent with useScanPolling pattern)
+- [38-01]: useTriggerScan invalidates both scan-history and project-scans -- new scan appears immediately in all views
 
 ### Known Issues (v5.0 scope)
 
@@ -80,11 +84,11 @@ Progress: [██░░░░░░░░] 17% (2/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-19
-**Stopped At:** Completed 37-02-PLAN.md -- GET /api/projects/{id}/scans endpoint shipped, Phase 37 complete
+**Stopped At:** Completed 38-01-PLAN.md -- scan history data layer shipped (types, API functions, TanStack Query hooks)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 38` -- Phase 38 Map Visualization
+**Next Action:** `/gsd:execute-phase 38` -- Phase 38 Plan 02 (replace demo data with real scan rows in Projecten view)
 
 ---
 
-*State updated: 2026-02-19 -- Plan 37-02 complete, Phase 37 complete*
+*State updated: 2026-02-19 -- Plan 38-01 complete, scan history data layer shipped*
