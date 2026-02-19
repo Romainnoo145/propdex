@@ -42,11 +42,11 @@ Plans:
   2. User can click any scan in the list to re-open its results in the /resultaten table
   3. User can navigate from a scan in the list to the map with that scan's parcels loaded
   4. Empty state is shown when no scans exist yet
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: data layer, Wave 2: UI)
 
 Plans:
-- [ ] 38-01: Add `useScanHistory` and `useProjectScans` TanStack Query hooks; replace DEMO_REPORTS in ProjectList.tsx with real data
-- [ ] 38-02: Wire scan row actions -- "Toon resultaten" navigates to /resultaten?scan_id=X, "Toon kaart" navigates to /map?scan_id=X
+- [ ] 38-01-PLAN.md -- Add ScanListItem/ScanListResponse types, fetchScanHistory/fetchProjectScans API functions, useScanHistory/useProjectScans hooks, useTriggerScan cache invalidation
+- [ ] 38-02-PLAN.md -- Replace DEMO_REPORTS with real scan data via WijkScanList component; add "Toon resultaten" and "Toon kaart" navigation actions
 
 #### Phase 39: Map Parcel Visualization
 **Goal**: Users can see scanned wijken highlighted on the map and individual scan result parcels colored by opportunity score
@@ -200,4 +200,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-18 (v5.0 Scan Intelligence roadmap created)*
+*Last updated: 2026-02-19 (Phase 38 plans created)*
