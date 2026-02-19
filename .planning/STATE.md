@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 37: Scan History Backend
+**Current focus:** v5.0 Scan Intelligence -- Phase 37 complete, next: Phase 38 (Map Visualization)
 
 ---
 
 ## Current Position
 
-Phase: 37 of 41 (Scan History Backend)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-19 -- Plan 37-01 complete: GET /api/scans paginated endpoint
+Phase: 38 of 41 (Map Visualization)
+Plan: 1 of next phase
+Status: Phase 37 complete
+Last activity: 2026-02-19 -- Plan 37-02 complete: GET /api/projects/{id}/scans sub-resource endpoint
 
-Progress: [█░░░░░░░░░] 8% (1/12 plans complete)
+Progress: [██░░░░░░░░] 17% (2/12 plans complete)
 
 ---
 
 ## Performance Metrics
+
+**v5.0 Scan Intelligence (In Progress)**
+- Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -53,6 +56,8 @@ Progress: [█░░░░░░░░░] 8% (1/12 plans complete)
 - [v4.0]: parcel_cache.geometry is EPSG:28992; always use ST_Transform(geometry, 4326) before GeoJSON serialization
 - [37-01]: Use COUNT(scan_results) not parcels_total for parcel_count in scan history -- parcels_total reflects discovered parcels, scan_results count is actual qualifying results
 - [37-01]: list_scans() accepts optional project_id so Plan 37-02 can reuse without changes
+- [37-02]: 404 not 403 for cross-org projects in sub-resource endpoints -- consistent with get_project, prevents enumeration
+- [37-02]: Sub-resource pattern: verify parent ownership (project -> org) first, then query child via service layer
 
 ### Known Issues (v5.0 scope)
 
@@ -75,11 +80,11 @@ Progress: [█░░░░░░░░░] 8% (1/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-19
-**Stopped At:** Completed 37-01-PLAN.md -- GET /api/scans endpoint shipped
+**Stopped At:** Completed 37-02-PLAN.md -- GET /api/projects/{id}/scans endpoint shipped, Phase 37 complete
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 37` -- Execute Plan 37-02 (project-scoped scan filter)
+**Next Action:** `/gsd:execute-phase 38` -- Phase 38 Map Visualization
 
 ---
 
-*State updated: 2026-02-19 -- Plan 37-01 complete*
+*State updated: 2026-02-19 -- Plan 37-02 complete, Phase 37 complete*
