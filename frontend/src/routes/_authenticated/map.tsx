@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
 import MapShell from '@/components/layout/MapShell'
@@ -39,7 +39,11 @@ import {
   addMonitoredWijkOverlay,
   removeMonitoredWijkOverlay,
 } from '@/components/map/MonitoredWijkOverlay'
-import { useTriggerScan, useScanPolling, useCancelScan } from '@/hooks/useScans'
+import {
+  addScannedWijkHighlight,
+  removeScannedWijkHighlight,
+} from '@/components/map/ScannedWijkHighlightLayer'
+import { useTriggerScan, useScanPolling, useCancelScan, useScanHistory } from '@/hooks/useScans'
 import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
 import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
@@ -148,6 +152,20 @@ function MapPage() {
   // Monitored projects for wijk overlay
   const { data: monitoredProjects } = useMonitoredProjects()
 
+  // Scan history for scanned wijk highlight
+  const { data: scanHistory } = useScanHistory({ limit: 100 })
+
+  const scannedWijkNames = useMemo(() => {
+    if (!activeGemeente || !scanHistory?.scans) return []
+    return scanHistory.scans
+      .filter(s =>
+        s.gemeente_code === activeGemeente.code &&
+        s.status === 'completed' &&
+        s.wijk_naam !== null
+      )
+      .map(s => s.wijk_naam as string)
+  }, [activeGemeente, scanHistory?.scans])
+
   // Fly to property whenever coordinates are set and map is ready
   useEffect(() => {
     if (!propertyLngLat || !mapReady || !mapRef.current) return
@@ -254,6 +272,14 @@ function MapPage() {
     }
   }, [scanStatus.data, activeScanId, mapReady])
 
+  // Restore score layer when returning to map with ?scan_id=X (no active polling for pre-existing scan)
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !activeScanId) return
+    // addParcelScoreLayer has internal guard (getSource check) -- safe to call if layer already exists
+    const tileUrl = getScanTileUrl(activeScanId)
+    addParcelScoreLayer(mapRef.current, tileUrl, 'parcel_scores')
+  }, [activeScanId, mapReady])
+
   // Handle scan completion and failure
   useEffect(() => {
     if (!scanStatus.data) return
@@ -358,6 +384,15 @@ function MapPage() {
       }
     }
   }, [mapReady, wijkGeojson, monitoredProjects])
+
+  // Show scanned wijk highlight when wijk GeoJSON loads and scan history has completed scans
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !wijkGeojson || scannedWijkNames.length === 0) return
+    addScannedWijkHighlight(mapRef.current, wijkGeojson, scannedWijkNames)
+    return () => {
+      if (mapRef.current) removeScannedWijkHighlight(mapRef.current)
+    }
+  }, [mapReady, wijkGeojson, scannedWijkNames])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
