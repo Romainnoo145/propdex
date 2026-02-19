@@ -32,6 +32,7 @@ import type {
   ScanStatusResponse,
   ScanResultsResponse,
   ScanResultsFilters,
+  ScanListResponse,
 } from './types/scan'
 import type {
   ChangeRecordListResponse,
@@ -655,6 +656,40 @@ export async function fetchParcelEnrichment(
     `${SCANS_BASE}/parcels/${parcelId}/enrich`,
     { method: 'GET', accessToken }
   )
+}
+
+/**
+ * Fetch paginated scan history for the authenticated organization
+ * GET /api/scans
+ */
+export async function fetchScanHistory(
+  accessToken: string | null,
+  params?: { offset?: number; limit?: number; status?: string }
+): Promise<ScanListResponse> {
+  const query = new URLSearchParams()
+  if (params?.offset !== undefined) query.set('offset', params.offset.toString())
+  if (params?.limit !== undefined) query.set('limit', params.limit.toString())
+  if (params?.status) query.set('status', params.status)
+
+  const url = `${SCANS_BASE}${query.toString() ? `?${query}` : ''}`
+  return apiFetch<ScanListResponse>(url, { method: 'GET', accessToken })
+}
+
+/**
+ * Fetch paginated scans for a specific project
+ * GET /api/projects/{projectId}/scans
+ */
+export async function fetchProjectScans(
+  projectId: string,
+  accessToken: string | null,
+  params?: { offset?: number; limit?: number }
+): Promise<ScanListResponse> {
+  const query = new URLSearchParams()
+  if (params?.offset !== undefined) query.set('offset', params.offset.toString())
+  if (params?.limit !== undefined) query.set('limit', params.limit.toString())
+
+  const url = `${PROJECTS_BASE}/${projectId}/scans${query.toString() ? `?${query}` : ''}`
+  return apiFetch<ScanListResponse>(url, { method: 'GET', accessToken })
 }
 
 /**

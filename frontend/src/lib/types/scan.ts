@@ -191,3 +191,29 @@ export interface ParcelEnrichmentResponse {
   /** True if returned from cache, False if freshly fetched */
   is_cached: boolean
 }
+
+/**
+ * Schema for a single scan in the history list
+ * Backend: ScanListItem (scans/schemas.py)
+ */
+export interface ScanListItem {
+  scan_id: string
+  gemeente_naam: string
+  gemeente_code: string
+  wijk_naam: string | null
+  scan_date: string
+  status: string
+  parcel_count: number
+  project_id: string | null
+}
+
+/**
+ * Response schema for paginated scan history list
+ * Backend: ScanListResponse (scans/schemas.py)
+ */
+export interface ScanListResponse {
+  scans: ScanListItem[]
+  total: number
+  offset: number
+  limit: number
+}
