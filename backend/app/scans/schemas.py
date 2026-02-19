@@ -217,3 +217,25 @@ class ParcelEnrichmentResponse(BaseModel):
         default=False,
         description="True if returned from cache, False if freshly fetched",
     )
+
+
+class ScanListItem(BaseModel):
+    """Schema for a single scan in the history list."""
+
+    scan_id: uuid.UUID = Field(description="AreaScan UUID")
+    gemeente_naam: str = Field(description="Gemeente display name")
+    gemeente_code: str = Field(description="CBS gemeentecode")
+    wijk_naam: str | None = Field(default=None, description="CBS wijk name")
+    scan_date: datetime = Field(description="Scan creation timestamp")
+    status: str = Field(description="Scan status: pending, running, completed, failed, cancelled")
+    parcel_count: int = Field(description="Number of qualifying scan results (COUNT of scan_results)", ge=0)
+    project_id: uuid.UUID | None = Field(default=None, description="Linked project folder ID")
+
+
+class ScanListResponse(BaseModel):
+    """Schema for paginated scan history list."""
+
+    scans: list[ScanListItem] = Field(description="Paginated scan items")
+    total: int = Field(description="Total scans matching filters (before pagination)", ge=0)
+    offset: int = Field(description="Current offset", ge=0)
+    limit: int = Field(description="Page size", ge=0)

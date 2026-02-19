@@ -314,3 +314,57 @@ async def list_scan_results(
     rows = result.all()
 
     return rows, total
+
+
+async def list_scans(
+    organization_id: uuid.UUID,
+    offset: int,
+    limit: int,
+    session: AsyncSession,
+    project_id: uuid.UUID | None = None,
+    status_filter: str | None = None,
+) -> tuple[list[tuple], int]:
+    """
+    List AreaScans with parcel_count from scan_results.
+
+    Returns list of (AreaScan, parcel_count) tuples and total count.
+    Uses COUNT(scan_results) for parcel_count -- more accurate than
+    parcels_total which reflects discovered parcels before qualification.
+
+    Args:
+        organization_id: Tenant organization ID
+        offset: Pagination offset
+        limit: Page size
+        session: Database session
+        project_id: Optional filter by project
+        status_filter: Optional filter by scan status
+
+    Returns:
+        tuple[list[tuple], int]: (AreaScan, parcel_count) rows and total count
+    """
+    parcel_count_subq = (
+        select(func.count(ScanResult.id))
+        .where(ScanResult.scan_id == AreaScan.id)
+        .scalar_subquery()
+    )
+
+    query = (
+        select(AreaScan, parcel_count_subq.label("parcel_count"))
+        .where(AreaScan.organization_id == organization_id)
+    )
+
+    if project_id is not None:
+        query = query.where(AreaScan.project_id == project_id)
+
+    if status_filter is not None:
+        query = query.where(AreaScan.status == status_filter)
+
+    # Count total before pagination (derive from same query to share filters)
+    count_query = select(func.count()).select_from(query.subquery())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+
+    # Apply ordering and pagination
+    query = query.order_by(AreaScan.created_at.desc()).offset(offset).limit(limit)
+    result = await session.execute(query)
+    return list(result.all()), total
