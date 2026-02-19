@@ -63,7 +63,7 @@ Plans:
 - [x] 39-01-PLAN.md -- Add ScannedWijkHighlightLayer (amber overlay for scanned wijken) and fix score layer restoration on URL navigation
 - [x] 39-02-PLAN.md -- Add Perceel Score toggle button in LayerToggle and wire to parcel score layer visibility
 
-#### Phase 40: Report Integration
+#### Phase 40: Report Integration ✅ (completed 2026-02-20)
 **Goal**: Users can generate and save a full property intelligence report for any parcel appearing in scan results
 **Depends on**: Phase 38 (parcels visible and selectable in results)
 **Requirements**: RPT-01, RPT-02
@@ -75,8 +75,8 @@ Plans:
 **Plans**: 2 plans (Wave 1: backend, Wave 2: frontend)
 
 Plans:
-- [ ] 40-01-PLAN.md -- Add POST /api/reports/from-parcel endpoint with address parsing and property aggregator pipeline
-- [ ] 40-02-PLAN.md -- Add "Genereer rapport" button to ParcelDetailModal and InspectorPanel with sonner toast feedback
+- [x] 40-01-PLAN.md -- Add POST /api/reports/from-parcel endpoint with address parsing and property aggregator pipeline
+- [x] 40-02-PLAN.md -- Add "Genereer rapport" button to ParcelDetailModal and InspectorPanel with sonner toast feedback
 
 #### Phase 41: Bug Fixes & Hardening
 **Goal**: Known bugs are resolved and the codebase is free of identified tech debt
@@ -102,7 +102,7 @@ Plans:
 | 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 39. Map Parcel Visualization | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 40. Report Integration | v5.0 | 0/2 | Planned | - |
+| 40. Report Integration | v5.0 | 2/2 | ✓ Complete | 2026-02-20 |
 | 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
 
 ---
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-19 (Phase 40 planned)*
+*Last updated: 2026-02-20 (Phase 40 complete)*
