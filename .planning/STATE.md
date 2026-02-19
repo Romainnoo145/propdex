@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 38 complete, next: Phase 39 (Map Parcel Visualization)
+**Current focus:** v5.0 Scan Intelligence -- Phase 39 Plan 02 complete (score toggle wired)
 
 ---
 
 ## Current Position
 
 Phase: 39 of 41 (Map Parcel Visualization)
-Plan: Ready to plan
-Status: Phase 38 complete
-Last activity: 2026-02-19 -- Phase 38 complete: scan history frontend shipped
+Plan: 02 complete (score toggle)
+Status: Active
+Last activity: 2026-02-19 -- Phase 39 Plan 02 complete: Perceel Score toggle wired to parcel score layer
 
-Progress: [████░░░░░░] 33% (4/12 plans complete)
+Progress: [█████░░░░░] 42% (5/12 plans complete)
 
 ---
 
@@ -25,6 +25,7 @@ Progress: [████░░░░░░] 33% (4/12 plans complete)
 **v5.0 Scan Intelligence (In Progress)**
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
 - Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
+- Phase 39: 2 min (39-02), 1 plan, 2 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -65,6 +66,8 @@ Progress: [████░░░░░░] 33% (4/12 plans complete)
 - [38-02]: WijkScanList sub-component encapsulates useProjectScans -- hook fires only when row is expanded, not on page load
 - [38-02]: Single WijkScanList component handles both monitoring wijks and regular projects -- both provide project.id
 - [38-02]: DEMO_REPORTS removed completely -- Projecten view now shows real scan history from backend API
+- [39-02]: showScoreToggle={!!activeScanId} -- toggle appears on scan start or URL restoration (scan_id param), disappears when scan cleared
+- [39-02]: showScore defaults to true -- consistent with score layer being added visible on scan completion; reset effect (prevShowScoreToggleRef) resets to visible when scan becomes active
 
 ### Known Issues (v5.0 scope)
 
@@ -87,11 +90,11 @@ Progress: [████░░░░░░] 33% (4/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-19
-**Stopped At:** Phase 38 complete -- scan history frontend verified and shipped
+**Stopped At:** Completed 39-02-PLAN.md -- Perceel Score toggle button wired to parcel score layer visibility
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 39` -- Phase 39 Map Parcel Visualization
+**Next Action:** Continue Phase 39 plans (39-03+) -- Map Parcel Visualization remaining tasks
 
 ---
 
-*State updated: 2026-02-19 -- Phase 38 complete*
+*State updated: 2026-02-19 -- Phase 39 Plan 02 complete*
