@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 39 complete, next: Phase 40 (Report Integration)
+**Current focus:** v5.0 Scan Intelligence -- Phase 40 Plan 01 complete, next: Phase 40 Plan 02
 
 ---
 
 ## Current Position
 
 Phase: 40 of 41 (Report Integration)
-Plan: Ready to plan
-Status: Phase 39 complete
-Last activity: 2026-02-19 -- Phase 39 complete: map parcel visualization shipped
+Plan: 02 of 2
+Status: Plan 40-01 complete
+Last activity: 2026-02-20 -- Phase 40 Plan 01: POST /from-parcel backend endpoint shipped
 
-Progress: [██████░░░░] 50% (6/12 plans complete)
+Progress: [███████░░░] 58% (7/12 plans complete)
 
 ---
 
@@ -26,6 +26,7 @@ Progress: [██████░░░░] 50% (6/12 plans complete)
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
 - Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
 - Phase 39: 6 min (39-01) + 2 min (39-02) = 8 min total, 2 plans, 4 files modified
+- Phase 40: 2 min (40-01) [ongoing], 1 plan done, 2 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -71,6 +72,9 @@ Progress: [██████░░░░] 50% (6/12 plans complete)
 - [39-01]: Score layer restoration fires on [activeScanId, mapReady] -- separate from live scan completion effect on [scanStatus.data] to handle URL restoration path
 - [39-02]: showScoreToggle={!!activeScanId} -- toggle appears on scan start or URL restoration (scan_id param), disappears when scan cleared
 - [39-02]: showScore defaults to true -- consistent with score layer being added visible on scan completion; reset effect (prevShowScoreToggleRef) resets to visible when scan becomes active
+- [40-01]: POST /from-parcel placed after /cities and before /{report_id} -- static sub-paths must precede parameterized paths in FastAPI
+- [40-01]: Rate limit 10/minute matches /{report_id}/refresh -- both trigger external API calls
+- [40-01]: 502 Bad Gateway for aggregator failures -- distinguishes upstream API errors from server errors
 
 ### Known Issues (v5.0 scope)
 
@@ -92,12 +96,12 @@ Progress: [██████░░░░] 50% (6/12 plans complete)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-19
-**Stopped At:** Phase 39 complete -- map parcel visualization verified and shipped
+**Last Session:** 2026-02-20
+**Stopped At:** Completed 40-01-PLAN.md -- POST /from-parcel backend endpoint
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 40` -- Phase 40 Report Integration
+**Next Action:** Execute Phase 40 Plan 02 -- Frontend integration for report-from-parcel
 
 ---
 
-*State updated: 2026-02-19 -- Phase 39 complete*
+*State updated: 2026-02-20 -- Plan 40-01 complete*
