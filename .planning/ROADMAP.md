@@ -33,7 +33,7 @@ Plans:
 - [x] 37-01-PLAN.md -- Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
 - [x] 37-02-PLAN.md -- Add `GET /api/projects/{id}/scans` sub-resource endpoint
 
-#### Phase 38: Scan History Frontend
+#### Phase 38: Scan History Frontend ✅ (completed 2026-02-19)
 **Goal**: Users can browse their scan history in the Projecten view and navigate back to any previous scan's results or map
 **Depends on**: Phase 37
 **Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04
@@ -45,8 +45,8 @@ Plans:
 **Plans**: 2 plans (Wave 1: data layer, Wave 2: UI)
 
 Plans:
-- [ ] 38-01-PLAN.md -- Add ScanListItem/ScanListResponse types, fetchScanHistory/fetchProjectScans API functions, useScanHistory/useProjectScans hooks, useTriggerScan cache invalidation
-- [ ] 38-02-PLAN.md -- Replace DEMO_REPORTS with real scan data via WijkScanList component; add "Toon resultaten" and "Toon kaart" navigation actions
+- [x] 38-01-PLAN.md -- Add ScanListItem/ScanListResponse types, fetchScanHistory/fetchProjectScans API functions, useScanHistory/useProjectScans hooks, useTriggerScan cache invalidation
+- [x] 38-02-PLAN.md -- Replace DEMO_REPORTS with real scan data via WijkScanList component; add "Toon resultaten" and "Toon kaart" navigation actions
 
 #### Phase 39: Map Parcel Visualization
 **Goal**: Users can see scanned wijken highlighted on the map and individual scan result parcels colored by opportunity score
@@ -101,7 +101,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 38. Scan History Frontend | v5.0 | 0/2 | Not started | - |
+| 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 39. Map Parcel Visualization | v5.0 | 0/3 | Not started | - |
 | 40. Report Integration | v5.0 | 0/2 | Not started | - |
 | 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
@@ -200,4 +200,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-19 (Phase 38 plans created)*
+*Last updated: 2026-02-19 (Phase 38 complete)*
