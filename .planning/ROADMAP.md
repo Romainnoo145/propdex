@@ -18,7 +18,7 @@
 
 **Milestone Goal:** Make scan results persistent and actionable -- browsable scan history, map visualization of scanned areas and parcels, property report generation from scan results, and bug fixes.
 
-#### Phase 37: Scan History Backend
+#### Phase 37: Scan History Backend ✅ (completed 2026-02-19)
 **Goal**: Users can retrieve a queryable list of all previous scans with metadata from the API
 **Depends on**: Nothing (backend-only phase)
 **Requirements**: SCAN-01, SCAN-02, SCAN-03
@@ -30,8 +30,8 @@
 **Plans**: 2 plans (Wave 1: both parallel)
 
 Plans:
-- [ ] 37-01-PLAN.md -- Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
-- [ ] 37-02-PLAN.md -- Add `GET /api/projects/{id}/scans` sub-resource endpoint
+- [x] 37-01-PLAN.md -- Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
+- [x] 37-02-PLAN.md -- Add `GET /api/projects/{id}/scans` sub-resource endpoint
 
 #### Phase 38: Scan History Frontend
 **Goal**: Users can browse their scan history in the Projecten view and navigate back to any previous scan's results or map
@@ -100,7 +100,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 37. Scan History Backend | v5.0 | 0/2 | Not started | - |
+| 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 38. Scan History Frontend | v5.0 | 0/2 | Not started | - |
 | 39. Map Parcel Visualization | v5.0 | 0/3 | Not started | - |
 | 40. Report Integration | v5.0 | 0/2 | Not started | - |
