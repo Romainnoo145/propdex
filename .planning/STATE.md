@@ -25,7 +25,7 @@ Progress: [█████░░░░░] 42% (5/12 plans complete)
 **v5.0 Scan Intelligence (In Progress)**
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
 - Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
-- Phase 39: 2 min (39-02), 1 plan, 2 files modified
+- Phase 39: 6 min (39-01) + 2 min (39-02) = 8 min total, 2 plans, 4 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -66,6 +66,9 @@ Progress: [█████░░░░░] 42% (5/12 plans complete)
 - [38-02]: WijkScanList sub-component encapsulates useProjectScans -- hook fires only when row is expanded, not on page load
 - [38-02]: Single WijkScanList component handles both monitoring wijks and regular projects -- both provide project.id
 - [38-02]: DEMO_REPORTS removed completely -- Projecten view now shows real scan history from backend API
+- [39-01]: Amber overlay (rgba(245,158,11,0.25) fill, rgba(245,158,11,0.7) line) -- visually distinct from emerald (unscanned) and blue (monitored wijken)
+- [39-01]: Scanned wijk highlight effect placed AFTER monitored wijk overlay effect -- both insert before wijk-fill, order matters for layer stacking
+- [39-01]: Score layer restoration fires on [activeScanId, mapReady] -- separate from live scan completion effect on [scanStatus.data] to handle URL restoration path
 - [39-02]: showScoreToggle={!!activeScanId} -- toggle appears on scan start or URL restoration (scan_id param), disappears when scan cleared
 - [39-02]: showScore defaults to true -- consistent with score layer being added visible on scan completion; reset effect (prevShowScoreToggleRef) resets to visible when scan becomes active
 
@@ -97,4 +100,4 @@ Progress: [█████░░░░░] 42% (5/12 plans complete)
 
 ---
 
-*State updated: 2026-02-19 -- Phase 39 Plan 02 complete*
+*State updated: 2026-02-19 -- Phase 39 Plan 01 + 02 complete*
