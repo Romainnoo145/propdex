@@ -25,6 +25,7 @@ import {
   refreshReport,
   exportReportPDF,
   fetchCities,
+  generateReportFromParcel,
 } from '@/lib/api'
 import type {
   ReportFilters,
@@ -155,6 +156,26 @@ export function useExportPDF() {
 
   return useMutation<Blob, Error, string>({
     mutationFn: (reportId: string) => exportReportPDF(reportId, accessToken),
+  })
+}
+
+/**
+ * Generate a property report from a scan result parcel
+ *
+ * Calls POST /api/reports/from-parcel.
+ * Invalidates report list cache on success so the new report
+ * appears immediately in the Rapporten view.
+ */
+export function useGenerateReportFromParcel() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<ReportDetailResponse, Error, string>({
+    mutationFn: (parcelId: string) =>
+      generateReportFromParcel(parcelId, accessToken),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
   })
 }
 

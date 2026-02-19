@@ -503,6 +503,35 @@ export async function assignReportToProject(
 }
 
 /**
+ * Generate a full property intelligence report from a scan result parcel
+ *
+ * POST /api/reports/from-parcel
+ *
+ * Triggers the property aggregator pipeline (BAG, PDOK, DSO, RCE, SRU)
+ * for the parcel's address and saves the result as a report.
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token from useAuth()
+ * @param options - Optional notes and project_id
+ * @returns Created report with full details
+ */
+export async function generateReportFromParcel(
+  parcelId: string,
+  accessToken: string | null,
+  options?: { notes?: string; project_id?: string }
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/from-parcel`, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify({
+      parcel_id: parcelId,
+      ...(options?.notes && { notes: options.notes }),
+      ...(options?.project_id && { project_id: options.project_id }),
+    }),
+  })
+}
+
+/**
  * Trigger a new area scan for a gemeente
  *
  * POST /api/scans
