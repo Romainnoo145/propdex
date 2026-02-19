@@ -18,6 +18,8 @@ import {
   cancelScan,
   fetchScanResults,
   fetchParcelEnrichment,
+  fetchScanHistory,
+  fetchProjectScans,
 } from '@/lib/api'
 import type {
   ParcelEnrichmentResponse,
@@ -26,6 +28,7 @@ import type {
   ScanStatusResponse,
   ScanResultsResponse,
   ScanResultsFilters,
+  ScanListResponse,
 } from '@/lib/types/scan'
 
 /**
@@ -36,9 +39,14 @@ import type {
  */
 export function useTriggerScan() {
   const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
 
   return useMutation<ScanResponse, Error, ScanCreateRequest>({
     mutationFn: (request: ScanCreateRequest) => triggerScan(request, accessToken),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scan-history'] })
+      queryClient.invalidateQueries({ queryKey: ['project-scans'] })
+    },
   })
 }
 
@@ -146,5 +154,43 @@ export function useParcelEnrichment(
     queryFn: () => fetchParcelEnrichment(parcelId!, accessToken),
     enabled: (options?.enabled ?? true) && !!parcelId && !!accessToken,
     staleTime: 7 * 24 * 60 * 60 * 1000, // 7 days (matches backend cache)
+  })
+}
+
+/**
+ * Fetch paginated scan history for the authenticated organization
+ *
+ * Query key: ['scan-history', params]
+ * Stale time: 5 minutes
+ */
+export function useScanHistory(params?: { offset?: number; limit?: number; status?: string }) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ScanListResponse, Error>({
+    queryKey: ['scan-history', params],
+    queryFn: () => fetchScanHistory(accessToken, params),
+    enabled: !!accessToken,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * Fetch scans for a specific project
+ *
+ * Query key: ['project-scans', projectId, params]
+ * Stale time: 5 minutes
+ * Disabled when projectId is null (only fetches when a wijk row is expanded)
+ */
+export function useProjectScans(
+  projectId: string | null,
+  params?: { offset?: number; limit?: number }
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ScanListResponse, Error>({
+    queryKey: ['project-scans', projectId, params],
+    queryFn: () => fetchProjectScans(projectId!, accessToken, params),
+    enabled: !!accessToken && !!projectId,
+    staleTime: 5 * 60 * 1000,
   })
 }
