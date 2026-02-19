@@ -97,6 +97,16 @@ None - no external service configuration required.
 - Data layer complete; Plan 38-02 can consume useScanHistory and useProjectScans to replace demo data in Projecten view
 - No blockers or concerns
 
+## Self-Check: PASSED
+
+- FOUND: frontend/src/lib/types/scan.ts
+- FOUND: frontend/src/lib/api.ts
+- FOUND: frontend/src/hooks/useScans.ts
+- FOUND: .planning/phases/38-scan-history-frontend/38-01-SUMMARY.md
+- FOUND commit d869670: feat(38-01): add ScanListItem/ScanListResponse types and API functions
+- FOUND commit 48f9bff: feat(38-01): add useScanHistory/useProjectScans hooks and wire cache invalidation
+- FOUND commit 9cfb02a: docs(38-01): complete scan history data layer plan
+
 ---
 *Phase: 38-scan-history-frontend*
 *Completed: 2026-02-19*
