@@ -25,6 +25,8 @@ from app.scans import service
 from app.scans.schemas import (
     ParcelEnrichmentResponse,
     ScanCreateRequest,
+    ScanListItem,
+    ScanListResponse,
     ScanResponse,
     ScanResultItem,
     ScanResultsResponse,
@@ -38,6 +40,74 @@ from app.services.wijk_service import get_wijken_in_gemeente
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+
+
+@router.get("", response_model=ScanListResponse)
+@limiter.limit("60/minute")
+async def list_scans(
+    request: Request,
+    offset: int = 0,
+    limit: int = 50,
+    status_filter: str | None = Query(
+        default=None,
+        alias="status",
+        description="Filter by scan status (pending, running, completed, failed, cancelled)",
+    ),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ScanListResponse:
+    """
+    List paginated scan history with metadata.
+
+    Returns all scans for the authenticated organization, ordered by most recent
+    first. Each scan includes gemeente name, wijk name, date, status, and the
+    count of qualifying parcel results.
+
+    Requires JWT authentication. Rate limited to 60 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        offset: Pagination offset (default 0)
+        limit: Page size (default 50, max 100)
+        status_filter: Optional filter by scan status
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        ScanListResponse: Paginated scan list with total count
+    """
+    limit = min(limit, 100)
+
+    scans, total = await service.list_scans(
+        organization_id=organization_id,
+        offset=offset,
+        limit=limit,
+        session=db,
+        status_filter=status_filter,
+    )
+
+    scan_items = [
+        ScanListItem(
+            scan_id=scan.id,
+            gemeente_naam=scan.gemeente_naam,
+            gemeente_code=scan.gemeente_code,
+            wijk_naam=scan.wijk_naam,
+            scan_date=scan.created_at,
+            status=scan.status,
+            parcel_count=parcel_count or 0,
+            project_id=scan.project_id,
+        )
+        for scan, parcel_count in scans
+    ]
+
+    return ScanListResponse(
+        scans=scan_items,
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
 
 
 @router.post("", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
