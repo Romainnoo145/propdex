@@ -48,7 +48,7 @@ Plans:
 - [x] 38-01-PLAN.md -- Add ScanListItem/ScanListResponse types, fetchScanHistory/fetchProjectScans API functions, useScanHistory/useProjectScans hooks, useTriggerScan cache invalidation
 - [x] 38-02-PLAN.md -- Replace DEMO_REPORTS with real scan data via WijkScanList component; add "Toon resultaten" and "Toon kaart" navigation actions
 
-#### Phase 39: Map Parcel Visualization
+#### Phase 39: Map Parcel Visualization ✅ (completed 2026-02-19)
 **Goal**: Users can see scanned wijken highlighted on the map and individual scan result parcels colored by opportunity score
 **Depends on**: Phase 37 (scan_id available)
 **Requirements**: MAP-01, MAP-02, MAP-03
@@ -60,8 +60,8 @@ Plans:
 **Plans**: 2 plans (Wave 1: both parallel)
 
 Plans:
-- [ ] 39-01-PLAN.md -- Add ScannedWijkHighlightLayer (amber overlay for scanned wijken) and fix score layer restoration on URL navigation
-- [ ] 39-02-PLAN.md -- Add Perceel Score toggle button in LayerToggle and wire to parcel score layer visibility
+- [x] 39-01-PLAN.md -- Add ScannedWijkHighlightLayer (amber overlay for scanned wijken) and fix score layer restoration on URL navigation
+- [x] 39-02-PLAN.md -- Add Perceel Score toggle button in LayerToggle and wire to parcel score layer visibility
 
 #### Phase 40: Report Integration
 **Goal**: Users can generate and save a full property intelligence report for any parcel appearing in scan results
@@ -101,7 +101,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 39. Map Parcel Visualization | v5.0 | 0/2 | Not started | - |
+| 39. Map Parcel Visualization | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 40. Report Integration | v5.0 | 0/2 | Not started | - |
 | 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
 
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-19 (Phase 38 complete)*
+*Last updated: 2026-02-19 (Phase 39 complete)*
