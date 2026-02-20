@@ -35,6 +35,7 @@ import type {
   ScanListResponse,
 } from './types/scan'
 import type {
+  ChangeRecord,
   ChangeRecordListResponse,
   UnreadDetailResponse,
 } from './types/monitoring'
@@ -745,18 +746,44 @@ export async function fetchUnreadCounts(
  *
  * @param projectId - Project UUID
  * @param accessToken - JWT access token
- * @param limit - Number of changes to fetch (default 50)
- * @param offset - Pagination offset (default 0)
+ * @param options - Optional limit, offset, includeMatches
  * @returns Paginated list of change records
  */
 export async function fetchProjectChanges(
   projectId: string,
   accessToken: string | null,
   limit = 50,
-  offset = 0
+  offset = 0,
+  includeMatches = false
 ): Promise<ChangeRecordListResponse> {
+  const params = new URLSearchParams({
+    project_id: projectId,
+    limit: limit.toString(),
+    offset: offset.toString(),
+  })
+  if (includeMatches) params.set('include_matches', 'true')
+
   return apiFetch<ChangeRecordListResponse>(
-    `${MONITORING_BASE}/changes?project_id=${projectId}&limit=${limit}&offset=${offset}`,
+    `${MONITORING_BASE}/changes?${params}`,
+    { accessToken, method: 'GET' }
+  )
+}
+
+/**
+ * Fetch bekendmakingen matching a specific parcel's postcode
+ *
+ * GET /api/monitoring/changes-for-parcel/{parcelId}
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns List of matching change records
+ */
+export async function fetchChangesForParcel(
+  parcelId: string,
+  accessToken: string | null
+): Promise<ChangeRecord[]> {
+  return apiFetch<ChangeRecord[]>(
+    `${MONITORING_BASE}/changes-for-parcel/${parcelId}`,
     { accessToken, method: 'GET' }
   )
 }

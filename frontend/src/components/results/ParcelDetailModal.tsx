@@ -3,14 +3,16 @@ import { Badge } from '@/components/primitives'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
 import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
+import { useParcelChanges } from '@/hooks/useNotifications'
 import { toast } from 'sonner'
-import { FileText } from 'lucide-react'
+import { FileText, MapPin } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
 
 interface ParcelDetailModalProps {
   parcel: ScanResultItem | null
   isOpen: boolean
   onClose: () => void
+  onViewOnMap?: () => void
 }
 
 /**
@@ -29,6 +31,7 @@ export function ParcelDetailModal({
   parcel,
   isOpen,
   onClose,
+  onViewOnMap,
 }: ParcelDetailModalProps) {
   // Fetch enrichment only when modal is open
   const enrichment = useParcelEnrichment(parcel?.parcel_id ?? null, {
@@ -36,6 +39,11 @@ export function ParcelDetailModal({
   })
 
   const generateReport = useGenerateReportFromParcel()
+
+  // Fetch matching bekendmakingen for this parcel's postcode
+  const parcelChanges = useParcelChanges(
+    isOpen && parcel?.parcel_id ? parcel.parcel_id : null
+  )
 
   const handleGenerateReport = async () => {
     if (!parcel?.parcel_id) return
@@ -187,18 +195,93 @@ export function ParcelDetailModal({
           />
         </div>
 
-        {/* Generate Report Action */}
-        <button
-          onClick={handleGenerateReport}
-          disabled={generateReport.isPending}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4
-                     bg-amber-accent text-grey-900 font-medium rounded text-sm
-                     hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-colors motion-reduce:transition-none min-h-[44px]"
-        >
-          <FileText size={14} />
-          {generateReport.isPending ? 'Bezig met genereren...' : 'Genereer rapport'}
-        </button>
+        {/* Meldingen Section — only shown when matching bekendmakingen exist */}
+        {parcelChanges.data && parcelChanges.data.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-grey-100 mb-3">
+              Meldingen
+            </h3>
+            <div className="space-y-2">
+              {parcelChanges.data.map((change) => (
+                <div
+                  key={change.id}
+                  className="flex items-start gap-2.5 rounded-md border border-grey-800 bg-grey-850 px-3 py-2.5"
+                >
+                  <div
+                    className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+                      change.change_type === 'permit'
+                        ? 'bg-blue-400'
+                        : 'bg-green-400'
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-grey-200 line-clamp-2">
+                      {change.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-grey-400">
+                      {new Intl.DateTimeFormat('nl-NL', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      }).format(new Date(change.change_date))}
+                    </p>
+                  </div>
+                  {change.source_url && (
+                    <a
+                      href={change.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-grey-400 hover:text-blue-400 transition-colors"
+                      title="Bekijk publicatie"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {onViewOnMap && (
+            <button
+              onClick={() => { onClose(); onViewOnMap(); }}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4
+                         border border-grey-800 text-grey-300 font-medium rounded text-sm
+                         hover:bg-grey-850 hover:text-grey-100
+                         transition-colors motion-reduce:transition-none min-h-[44px]"
+            >
+              <MapPin size={14} />
+              Bekijk op kaart
+            </button>
+          )}
+          <button
+            onClick={handleGenerateReport}
+            disabled={generateReport.isPending}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4
+                       bg-amber-accent text-grey-900 font-medium rounded text-sm
+                       hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
+                       transition-colors motion-reduce:transition-none min-h-[44px]"
+          >
+            <FileText size={14} />
+            {generateReport.isPending ? 'Bezig met genereren...' : 'Genereer rapport'}
+          </button>
+        </div>
       </div>
     </Modal>
   )

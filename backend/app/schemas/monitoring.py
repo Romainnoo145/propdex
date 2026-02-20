@@ -3,6 +3,21 @@
 from pydantic import BaseModel, ConfigDict
 
 
+class MatchedParcel(BaseModel):
+    """A parcel that matches a bekendmaking postcode."""
+
+    parcel_id: str
+    scan_id: str
+    address: str | None
+
+
+class MatchedReport(BaseModel):
+    """A saved report that matches a bekendmaking postcode."""
+
+    report_id: str
+    report_name: str
+
+
 class ChangeRecordResponse(BaseModel):
     """Schema for a single change record (permit or zoning change)."""
 
@@ -18,6 +33,9 @@ class ChangeRecordResponse(BaseModel):
     gemeente_naam: str
     address: str | None
     source_url: str | None
+    postcode: str | None
+    matched_parcels: list[MatchedParcel] | None = None
+    matched_reports: list[MatchedReport] | None = None
 
 
 class ChangeRecordListResponse(BaseModel):

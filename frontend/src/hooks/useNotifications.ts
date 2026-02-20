@@ -3,7 +3,8 @@
  *
  * Provides hooks for:
  * - Fetching unread notification counts (polled every 60 seconds)
- * - Fetching change history for a project
+ * - Fetching change history for a project (with optional match enrichment)
+ * - Fetching bekendmakingen for a specific parcel
  * - Marking a project as viewed (clears unread badge)
  *
  * All hooks require authentication and invalidate relevant caches on mutation.
@@ -14,9 +15,11 @@ import { useAuth } from '@/lib/auth/useAuth'
 import {
   fetchUnreadCounts,
   fetchProjectChanges,
+  fetchChangesForParcel,
   markProjectViewed,
 } from '@/lib/api'
 import type {
+  ChangeRecord,
   UnreadDetailResponse,
   ChangeRecordListResponse,
 } from '@/lib/types/monitoring'
@@ -43,16 +46,37 @@ export function useUnreadCounts() {
 /**
  * Fetch change history for a specific project
  *
- * Query key: ['changes', projectId]
+ * Query key: ['changes', projectId, includeMatches]
  * Stale time: 60 seconds (changes detected by background jobs, not real-time)
  */
-export function useProjectChanges(projectId: string | null) {
+export function useProjectChanges(
+  projectId: string | null,
+  includeMatches = false
+) {
   const { accessToken } = useAuth()
 
   return useQuery<ChangeRecordListResponse, Error>({
-    queryKey: ['changes', projectId],
-    queryFn: () => fetchProjectChanges(projectId!, accessToken),
+    queryKey: ['changes', projectId, includeMatches],
+    queryFn: () =>
+      fetchProjectChanges(projectId!, accessToken, 50, 0, includeMatches),
     enabled: !!accessToken && !!projectId,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Fetch bekendmakingen matching a parcel's address postcode
+ *
+ * Query key: ['parcel-changes', parcelId]
+ * Only fetches when parcelId is provided.
+ */
+export function useParcelChanges(parcelId: string | null) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ChangeRecord[], Error>({
+    queryKey: ['parcel-changes', parcelId],
+    queryFn: () => fetchChangesForParcel(parcelId!, accessToken),
+    enabled: !!accessToken && !!parcelId,
     staleTime: 60_000,
   })
 }

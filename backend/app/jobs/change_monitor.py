@@ -177,10 +177,11 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                                 external_id=change.external_id,
                                 gemeente_naam=change.gemeente_naam,
                                 title=change.title,
-                                description=change.description,
                                 change_date=change.change_date,
                                 detected_at=change.detected_at,
                                 metadata_json=change.metadata_json,
+                                source_url=change.source_url,
+                                postcode=change.postcode,
                             )
                             session.add(change_copy)
 

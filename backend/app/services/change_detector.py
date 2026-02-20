@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.models.cached_response import CachedAPIResponse
 from app.models.change_record import ChangeRecord
+from app.services.postcode_extractor import extract_postcodes
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +177,12 @@ async def detect_permit_changes(
             logger.warning(f"Skipping permit with invalid date: {external_id}")
             continue
 
+        # Extract postcode from title and URL for matching
+        postcodes = extract_postcodes(record["title"])
+        if not postcodes and record.get("url"):
+            postcodes = extract_postcodes(record["url"])
+        postcode = postcodes[0] if postcodes else None
+
         # Create ChangeRecord (caller will add to session)
         change_record = ChangeRecord(
             project_id=None,  # Will be set by caller based on project mapping
@@ -188,6 +195,7 @@ async def detect_permit_changes(
             address=None,  # SRU doesn't provide structured address in basic query
             metadata_json=record,
             source_url=record.get("url"),
+            postcode=postcode,
         )
 
         new_records.append(change_record)

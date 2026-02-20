@@ -4,6 +4,17 @@
  * All fields use snake_case to match backend JSON responses exactly
  */
 
+export interface MatchedParcel {
+  parcel_id: string
+  scan_id: string
+  address: string | null
+}
+
+export interface MatchedReport {
+  report_id: string
+  report_name: string
+}
+
 export interface ChangeRecord {
   id: string
   project_id: string
@@ -15,6 +26,9 @@ export interface ChangeRecord {
   gemeente_naam: string
   address: string | null
   source_url: string | null
+  postcode: string | null
+  matched_parcels: MatchedParcel[] | null
+  matched_reports: MatchedReport[] | null
 }
 
 export interface ChangeRecordListResponse {

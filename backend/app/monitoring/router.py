@@ -17,10 +17,17 @@ from app.models.user_notification_state import UserNotificationState
 from app.schemas.monitoring import (
     ChangeRecordListResponse,
     ChangeRecordResponse,
+    MatchedParcel,
+    MatchedReport,
     ProjectUnreadCount,
     UnreadDetailResponse,
 )
 from app.schemas.project import ProjectListResponse, ProjectResponse
+from app.services.bekendmaking_matcher import (
+    find_changes_for_parcel,
+    find_matching_parcels,
+    find_matching_reports,
+)
 
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
@@ -30,6 +37,7 @@ router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 async def get_changes(
     request: Request,
     project_id: uuid.UUID,
+    include_matches: bool = False,
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_active_user),
@@ -41,26 +49,10 @@ async def get_changes(
 
     Returns paginated list of change records (permits + zoning changes) ordered
     by detected_at DESC. Auto-updates user's last_viewed_at timestamp as a side
-    effect (per locked decision: "cleared automatically when user opens/views
-    the project folder or change detail").
+    effect.
 
-    Requires JWT authentication. Rate limited to 60 requests per minute.
-
-    Args:
-        request: FastAPI request object
-        project_id: Project ID to query changes for
-        limit: Maximum number of changes to return (default: 50)
-        offset: Pagination offset (default: 0)
-        current_user: Authenticated user
-        organization_id: Tenant ID
-        db: Database session
-
-    Returns:
-        ChangeRecordListResponse: List of changes with total count
-
-    Raises:
-        HTTPException 404: Project not found or not in user's organization
-        HTTPException 500: Internal server error
+    When include_matches=true, each change record with a postcode will include
+    matched_parcels and matched_reports from the organization's data.
     """
     try:
         # Verify project exists and belongs to organization
@@ -101,7 +93,6 @@ async def get_changes(
         total = count_result.scalar() or 0
 
         # Side effect: Update UserNotificationState.last_viewed_at
-        # Upsert notification state for current user + project
         notification_query = select(UserNotificationState).where(
             UserNotificationState.user_id == current_user.id,
             UserNotificationState.project_id == project_id,
@@ -110,7 +101,6 @@ async def get_changes(
         notification_state = notification_result.scalar_one_or_none()
 
         if notification_state is None:
-            # Create new notification state
             notification_state = UserNotificationState(
                 organization_id=organization_id,
                 user_id=current_user.id,
@@ -119,28 +109,50 @@ async def get_changes(
             )
             db.add(notification_state)
         else:
-            # Update existing state
             notification_state.last_viewed_at = datetime.utcnow()
 
         await db.flush()
         await db.commit()
 
-        # Build response
-        change_responses = [
-            ChangeRecordResponse(
-                id=str(change.id),
-                project_id=str(change.project_id),
-                change_type=change.change_type,
-                external_id=change.external_id,
-                title=change.title,
-                detected_at=change.detected_at.isoformat(),
-                change_date=change.change_date.isoformat(),
-                gemeente_naam=change.gemeente_naam,
-                address=change.address,
-                source_url=change.source_url,
+        # Build response with optional match enrichment
+        change_responses: list[ChangeRecordResponse] = []
+        for change in changes:
+            matched_parcels = None
+            matched_reports = None
+
+            if include_matches and change.postcode:
+                parcel_matches = await find_matching_parcels(
+                    change.postcode, organization_id, db
+                )
+                report_matches = await find_matching_reports(
+                    change.postcode, organization_id, db
+                )
+                if parcel_matches:
+                    matched_parcels = [
+                        MatchedParcel(**m) for m in parcel_matches
+                    ]
+                if report_matches:
+                    matched_reports = [
+                        MatchedReport(**m) for m in report_matches
+                    ]
+
+            change_responses.append(
+                ChangeRecordResponse(
+                    id=str(change.id),
+                    project_id=str(change.project_id),
+                    change_type=change.change_type,
+                    external_id=change.external_id,
+                    title=change.title,
+                    detected_at=change.detected_at.isoformat(),
+                    change_date=change.change_date.isoformat(),
+                    gemeente_naam=change.gemeente_naam,
+                    address=change.address,
+                    source_url=change.source_url,
+                    postcode=change.postcode,
+                    matched_parcels=matched_parcels,
+                    matched_reports=matched_reports,
+                )
             )
-            for change in changes
-        ]
 
         return ChangeRecordListResponse(changes=change_responses, total=total)
 
@@ -150,6 +162,51 @@ async def get_changes(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get change history",
+        ) from e
+
+
+@router.get(
+    "/changes-for-parcel/{parcel_id}",
+    response_model=list[ChangeRecordResponse],
+)
+@limiter.limit("60/minute")
+async def get_changes_for_parcel(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[ChangeRecordResponse]:
+    """
+    Get bekendmakingen matching a specific parcel's postcode.
+
+    Extracts postcode from the parcel's address and finds ChangeRecords
+    with the same postcode. Multi-tenant isolated.
+    """
+    try:
+        records = await find_changes_for_parcel(parcel_id, organization_id, db)
+
+        return [
+            ChangeRecordResponse(
+                id=str(r.id),
+                project_id=str(r.project_id),
+                change_type=r.change_type,
+                external_id=r.external_id,
+                title=r.title,
+                detected_at=r.detected_at.isoformat(),
+                change_date=r.change_date.isoformat(),
+                gemeente_naam=r.gemeente_naam,
+                address=r.address,
+                source_url=r.source_url,
+                postcode=r.postcode,
+            )
+            for r in records
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get changes for parcel",
         ) from e
 
 
@@ -164,34 +221,9 @@ async def get_unread(
     """
     Get unread change counts for current user.
 
-    Returns total unread count and per-project breakdown. Uses efficient single
-    query with subquery to avoid N+1 queries.
-
-    For each monitored project in user's organization:
-    - Count ChangeRecords where detected_at > user's last_viewed_at
-    - If no UserNotificationState exists, count ALL ChangeRecords (never viewed)
-
-    Requires JWT authentication. Rate limited to 120 requests per minute
-    (polled frequently from frontend).
-
-    Args:
-        request: FastAPI request object
-        current_user: Authenticated user
-        organization_id: Tenant ID
-        db: Database session
-
-    Returns:
-        UnreadDetailResponse: Total count + per-project breakdown
-
-    Raises:
-        HTTPException 500: Internal server error
+    Returns total unread count and per-project breakdown.
     """
     try:
-        # Efficient single query using subquery and LEFT JOIN
-        # For each monitored project, count changes detected after user's last_viewed_at
-        # (or ALL changes if user has never viewed the project)
-
-        # Subquery: Get last_viewed_at for each project the user has viewed
         notification_subquery = (
             select(
                 UserNotificationState.project_id,
@@ -201,8 +233,6 @@ async def get_unread(
             .subquery()
         )
 
-        # Main query: Count unread changes per monitored project
-        # Uses CASE to handle "never viewed" vs "viewed with new changes"
         from sqlalchemy import case
 
         unread_count_expr = func.count(
@@ -210,12 +240,12 @@ async def get_unread(
                 (
                     notification_subquery.c.last_viewed_at.is_(None),
                     ChangeRecord.id,
-                ),  # Never viewed - count all
+                ),
                 (
                     ChangeRecord.detected_at > notification_subquery.c.last_viewed_at,
                     ChangeRecord.id,
-                ),  # Viewed but has newer changes
-                else_=None,  # Viewed and no new changes
+                ),
+                else_=None,
             )
         )
 
@@ -284,28 +314,9 @@ async def mark_viewed(
     """
     Mark a project as viewed by the current user.
 
-    Upserts UserNotificationState for current user + project_id, setting
-    last_viewed_at to current UTC time. This clears the unread badge for
-    this project.
-
-    Requires JWT authentication. Rate limited to 60 requests per minute.
-
-    Args:
-        request: FastAPI request object
-        project_id: Project ID to mark as viewed
-        current_user: Authenticated user
-        organization_id: Tenant ID
-        db: Database session
-
-    Returns:
-        dict: Success status
-
-    Raises:
-        HTTPException 404: Project not found or not in user's organization
-        HTTPException 500: Internal server error
+    Upserts UserNotificationState, clearing the unread badge.
     """
     try:
-        # Verify project exists and belongs to organization
         project_query = select(Project).where(
             Project.id == project_id,
             Project.organization_id == organization_id,
@@ -319,7 +330,6 @@ async def mark_viewed(
                 detail="Project not found",
             )
 
-        # Upsert UserNotificationState
         notification_query = select(UserNotificationState).where(
             UserNotificationState.user_id == current_user.id,
             UserNotificationState.project_id == project_id,
@@ -328,7 +338,6 @@ async def mark_viewed(
         notification_state = notification_result.scalar_one_or_none()
 
         if notification_state is None:
-            # Create new notification state
             notification_state = UserNotificationState(
                 organization_id=organization_id,
                 user_id=current_user.id,
@@ -337,7 +346,6 @@ async def mark_viewed(
             )
             db.add(notification_state)
         else:
-            # Update existing state
             notification_state.last_viewed_at = datetime.utcnow()
 
         await db.flush()
@@ -364,26 +372,8 @@ async def get_monitored_projects(
 ) -> ProjectListResponse:
     """
     Get hierarchical list of monitored projects with unread counts.
-
-    Returns projects where is_monitored=True, organized by gemeente groups
-    with wijk children. Each project includes unread_count for current user.
-
-    Requires JWT authentication. Rate limited to 60 requests per minute.
-
-    Args:
-        request: FastAPI request object
-        current_user: Authenticated user
-        organization_id: Tenant ID
-        db: Database session
-
-    Returns:
-        ProjectListResponse: Hierarchical project list with unread counts
-
-    Raises:
-        HTTPException 500: Internal server error
     """
     try:
-        # Query monitored projects
         projects_query = (
             select(Project)
             .where(
@@ -395,10 +385,8 @@ async def get_monitored_projects(
         projects_result = await db.execute(projects_query)
         projects = projects_result.scalars().all()
 
-        # Build project responses with unread counts
         project_responses = []
         for project in projects:
-            # Get unread count for this project
             notification_query = select(UserNotificationState).where(
                 UserNotificationState.user_id == current_user.id,
                 UserNotificationState.project_id == project.id,
@@ -407,13 +395,11 @@ async def get_monitored_projects(
             notification_state = notification_result.scalar_one_or_none()
 
             if notification_state is None:
-                # Never viewed - count ALL changes
                 count_query = select(func.count(ChangeRecord.id)).where(
                     ChangeRecord.project_id == project.id,
                     ChangeRecord.organization_id == organization_id,
                 )
             else:
-                # Count changes detected after last_viewed_at
                 count_query = select(func.count(ChangeRecord.id)).where(
                     ChangeRecord.project_id == project.id,
                     ChangeRecord.organization_id == organization_id,
@@ -423,26 +409,23 @@ async def get_monitored_projects(
             count_result = await db.execute(count_query)
             unread_count = count_result.scalar() or 0
 
-            # Build ProjectResponse
             project_response = ProjectResponse(
                 id=project.id,
                 name=project.name,
                 description=project.description,
                 created_at=project.created_at,
                 updated_at=project.updated_at,
-                report_count=0,  # Not relevant for monitoring view
+                report_count=0,
                 parent_id=str(project.parent_id) if project.parent_id else None,
                 gemeente_code=project.gemeente_code,
                 wijk_naam=project.wijk_naam,
                 is_monitored=project.is_monitored,
                 unread_count=unread_count,
-                children=[],  # Populated after loop
+                children=[],
             )
 
             project_responses.append(project_response)
 
-        # Group children under their parent projects
-        # Build lookup: parent_id -> list of child responses
         children_by_parent: dict[uuid.UUID, list[ProjectResponse]] = {}
         root_projects: list[ProjectResponse] = []
 
@@ -453,7 +436,6 @@ async def get_monitored_projects(
             else:
                 root_projects.append(proj_resp)
 
-        # Populate children arrays on root projects
         for root in root_projects:
             root.children = children_by_parent.get(root.id, [])
 

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Map } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import ResultsShell from '@/components/layout/ResultsShell'
@@ -12,6 +12,7 @@ import type { ScanResultsFilters, ScanResultItem } from '@/lib/types/scan'
 
 interface ResultatenSearchParams {
   scan_id?: string
+  highlight?: string // parcel_id to highlight (from bekendmaking link)
   bestemming_type?: string
   pand_status?: string
   min_area_m2?: number
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/_authenticated/resultaten')({
   component: ResultatenPage,
   validateSearch: (search: Record<string, unknown>): ResultatenSearchParams => ({
     scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
+    highlight: typeof search.highlight === 'string' ? search.highlight : undefined,
     bestemming_type:
       typeof search.bestemming_type === 'string'
         ? search.bestemming_type
@@ -61,8 +63,8 @@ function ResultatenPage() {
 
   const { scan_id } = search
 
-  // Derive filters from URL search params
-  const filters: ScanResultsFilters = {
+  // Derive filters from URL search params (memoized to prevent re-render loops)
+  const filters: ScanResultsFilters = useMemo(() => ({
     bestemming_type: search.bestemming_type,
     pand_status: search.pand_status,
     min_area_m2: search.min_area_m2,
@@ -72,7 +74,7 @@ function ResultatenPage() {
     sort_order: search.sort_order ?? 'desc',
     offset: (search.page ?? 0) * 50,
     limit: 50,
-  }
+  }), [search.bestemming_type, search.pand_status, search.min_area_m2, search.max_area_m2, search.score_category, search.sort_by, search.sort_order, search.page])
 
   const handleFilterChange = (newFilters: Partial<ScanResultsFilters>) => {
     void navigate({
@@ -112,13 +114,13 @@ function ResultatenPage() {
     <ResultsShell fullWidth>
       <div className="flex flex-col h-full">
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-grey-800 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-grey-900 shrink-0">
           <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
           <button
             onClick={() => navigate({ to: '/map', search: scan_id ? { scan_id } : {} })}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-grey-300 hover:text-white transition-colors min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-500 hover:text-grey-300 border border-white/5 rounded-md hover:border-white/10 transition-colors min-h-[44px]"
           >
-            <Map size={16} />
+            <Map size={14} />
             <span className="hidden md:inline">Toon Kaart</span>
           </button>
         </div>
@@ -146,7 +148,7 @@ function ResultatenPage() {
               <ResultsTable
                 scanId={scan_id}
                 filters={filters}
-                onRowDoubleClick={(parcel) => setModalParcel(parcel)}
+                onRowClick={(parcel) => setModalParcel(parcel)}
                 onTotalChange={setTotal}
                 onSortChange={handleSortChange}
                 onPageChange={handlePageChange}
@@ -197,6 +199,7 @@ function ResultatenPage() {
         parcel={modalParcel}
         isOpen={!!modalParcel}
         onClose={() => setModalParcel(null)}
+        onViewOnMap={scan_id ? () => navigate({ to: '/map', search: { scan_id } }) : undefined}
       />
     </ResultsShell>
   )

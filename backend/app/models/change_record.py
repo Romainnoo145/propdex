@@ -84,6 +84,13 @@ class ChangeRecord(Base, TenantMixin, TimestampMixin):
         nullable=True,
     )
 
+    # Extracted Dutch postcode for matching against parcels/reports
+    postcode: Mapped[str | None] = mapped_column(
+        String(7),
+        nullable=True,
+        index=True,
+    )
+
     __table_args__ = (
         Index("ix_change_records_project_detected", "project_id", "detected_at"),
         UniqueConstraint(
