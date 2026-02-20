@@ -97,6 +97,18 @@ class BuildingData(BaseModel):
         default=None,
         description="Building status (e.g., 'Pand in gebruik')",
     )
+    status_datum: str | None = Field(
+        default=None,
+        description="Date current status became valid (voorkomen.beginGeldigheid)",
+    )
+    documentdatum: str | None = Field(
+        default=None,
+        description="Date of official status document (e.g., sloopvergunning grant date)",
+    )
+    documentnummer: str | None = Field(
+        default=None,
+        description="Official document reference number (e.g., 'Z2025-03020')",
+    )
     oppervlakte: int | None = Field(
         default=None,
         description="Surface area in m² (from verblijfsobject)",

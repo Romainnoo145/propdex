@@ -1,6 +1,6 @@
 import type { ScanResultItem } from '@/lib/types/scan'
 
-// Local score badge — mirrors ResultsTable.ScoreBadge, kept co-located to avoid cross-file coupling
+// Score badge — amber-based glow system (matches ResultsTable)
 function ScoreBadge({
   score,
   category,
@@ -10,23 +10,23 @@ function ScoreBadge({
 }) {
   if (score === null || category === null) {
     return (
-      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400 border border-gray-500/30">
-        N/A
+      <span className="inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 rounded-full text-xs font-semibold bg-grey-800/60 text-grey-500 border border-white/5">
+        --
       </span>
     )
   }
 
-  const colors = {
-    High: 'bg-green-500/20 text-green-400 border-green-500/30',
-    Medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    Low: 'bg-red-500/20 text-red-400 border-red-500/30',
+  const styles = {
+    High: 'bg-amber-accent/15 text-amber-accent border-amber-accent/30 shadow-[0_0_8px_rgba(217,170,56,0.15)]',
+    Medium: 'bg-amber-accent/8 text-amber-accent/70 border-amber-accent/15',
+    Low: 'bg-grey-800/60 text-grey-400 border-white/5',
   }
 
-  const colorClass = colors[category as keyof typeof colors] ?? colors.Low
+  const style = styles[category as keyof typeof styles] ?? styles.Low
 
   return (
     <span
-      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colorClass}`}
+      className={`inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 rounded-full text-xs font-bold tabular-nums border ${style}`}
     >
       {score.toFixed(0)}
     </span>
@@ -61,15 +61,15 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-4 py-3 min-h-[72px] transition-colors flex flex-col justify-center gap-1 ${
+      className={`w-full text-left px-4 py-4 min-h-[72px] transition-colors flex flex-col justify-center gap-1.5 ${
         isSelected
-          ? 'bg-grey-850 ring-1 ring-inset ring-amber-accent/30'
-          : 'hover:bg-grey-850'
+          ? 'bg-amber-accent/[0.06] ring-1 ring-inset ring-amber-accent/20'
+          : 'hover:bg-white/[0.02]'
       }`}
     >
       {/* Top row: address + score badge */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-grey-100 truncate min-w-0">
+        <span className="text-sm font-semibold text-grey-100 truncate min-w-0">
           {address}
         </span>
         <div className="shrink-0">
@@ -78,12 +78,18 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
       </div>
 
       {/* Bottom row: area + bestemming */}
-      <div className="flex items-center gap-2 text-xs text-grey-400">
-        <span>{area}</span>
+      <div className="flex items-center gap-2 text-xs text-grey-500">
+        <span className="tabular-nums">{area}</span>
         {bestemming && (
           <>
             <span className="text-grey-700">·</span>
-            <span className="truncate">{bestemming}</span>
+            <span className="truncate text-grey-400">{bestemming}</span>
+          </>
+        )}
+        {parcel.bouwjaar && (
+          <>
+            <span className="text-grey-700">·</span>
+            <span className="tabular-nums text-grey-500">{parcel.bouwjaar}</span>
           </>
         )}
       </div>

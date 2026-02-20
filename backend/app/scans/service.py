@@ -1,13 +1,42 @@
 """Scan CRUD service layer for area scan operations."""
 
 import uuid
+from datetime import datetime, timedelta
 
-from sqlalchemy import asc, delete, desc, func, select, text
+from sqlalchemy import asc, delete, desc, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
+from app.models.project import Project
 from app.models.scan_result import ScanResult
+
+
+async def expire_stale_scans(
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    stale_minutes: int = 15,
+) -> int:
+    """
+    Mark scans stuck in pending/running for too long as failed.
+
+    Returns the number of scans expired.
+    """
+    cutoff = datetime.utcnow() - timedelta(minutes=stale_minutes)
+    stmt = (
+        update(AreaScan)
+        .where(
+            AreaScan.organization_id == organization_id,
+            AreaScan.status.in_(["pending", "running"]),
+            AreaScan.created_at < cutoff,
+        )
+        .values(status="failed")
+    )
+    result = await session.execute(stmt)
+    if result.rowcount > 0:
+        await session.flush()
+        await session.commit()
+    return result.rowcount
 
 
 async def get_existing_scan(
@@ -17,7 +46,10 @@ async def get_existing_scan(
     bbox: dict | None = None,
 ) -> AreaScan | None:
     """
-    Get most recent scan for organization + gemeente + bbox.
+    Get most recent completed scan for organization + gemeente + bbox.
+
+    Only returns scans with status='completed'. Pending/running/failed scans
+    are not considered "existing" — they should not block re-scanning.
 
     When bbox is provided, only matches scans with the same bounding box
     (within 1m tolerance in RD coordinates). This prevents a gemeente-wide
@@ -30,13 +62,17 @@ async def get_existing_scan(
         session: Database session
 
     Returns:
-        AreaScan | None: Most recent scan or None
+        AreaScan | None: Most recent completed scan or None
     """
+    # First, expire any stale scans for this org
+    await expire_stale_scans(organization_id, session)
+
     query = (
         select(AreaScan)
         .where(
             AreaScan.organization_id == organization_id,
             AreaScan.gemeente_code == gemeente_code,
+            AreaScan.status == "completed",
         )
     )
 
@@ -56,6 +92,70 @@ async def get_existing_scan(
     return result.scalar_one_or_none()
 
 
+async def get_or_create_wijk_project(
+    organization_id: uuid.UUID,
+    gemeente_code: str,
+    gemeente_naam: str,
+    wijk_naam: str | None,
+    session: AsyncSession,
+) -> uuid.UUID | None:
+    """
+    Get or create a gemeente→wijk project hierarchy for a scan.
+
+    When a wijk scan is triggered, automatically creates:
+    1. A gemeente parent project (if not exists)
+    2. A wijk child project under that gemeente (if not exists)
+
+    Returns the wijk project ID to link to the scan.
+    """
+    if not wijk_naam:
+        return None
+
+    # Find or create gemeente parent project
+    gemeente_result = await session.execute(
+        select(Project).where(
+            Project.organization_id == organization_id,
+            Project.gemeente_code == gemeente_code,
+            Project.parent_id.is_(None),
+        ).limit(1)
+    )
+    gemeente_project = gemeente_result.scalar_one_or_none()
+
+    if not gemeente_project:
+        gemeente_project = Project(
+            organization_id=organization_id,
+            name=gemeente_naam,
+            gemeente_code=gemeente_code,
+            is_monitored=True,
+        )
+        session.add(gemeente_project)
+        await session.flush()
+
+    # Find or create wijk child project
+    wijk_result = await session.execute(
+        select(Project).where(
+            Project.organization_id == organization_id,
+            Project.parent_id == gemeente_project.id,
+            Project.wijk_naam == wijk_naam,
+        ).limit(1)
+    )
+    wijk_project = wijk_result.scalar_one_or_none()
+
+    if not wijk_project:
+        wijk_project = Project(
+            organization_id=organization_id,
+            name=wijk_naam,
+            parent_id=gemeente_project.id,
+            gemeente_code=gemeente_code,
+            wijk_naam=wijk_naam,
+            is_monitored=True,
+        )
+        session.add(wijk_project)
+        await session.flush()
+
+    return wijk_project.id
+
+
 async def create_scan(
     organization_id: uuid.UUID,
     gemeente_code: str,
@@ -66,6 +166,8 @@ async def create_scan(
 ) -> AreaScan:
     """
     Create a new area scan record.
+
+    Automatically creates a gemeente→wijk project hierarchy and links the scan.
 
     Args:
         organization_id: Tenant organization ID
@@ -78,11 +180,17 @@ async def create_scan(
     Returns:
         AreaScan: The created scan
     """
+    # Auto-create project hierarchy for wijk scans
+    project_id = await get_or_create_wijk_project(
+        organization_id, gemeente_code, gemeente_naam, wijk_naam, session
+    )
+
     scan = AreaScan(
         organization_id=organization_id,
         gemeente_code=gemeente_code,
         gemeente_naam=gemeente_naam,
         wijk_naam=wijk_naam,
+        project_id=project_id,
         bbox_minx=bbox["minx"],
         bbox_miny=bbox["miny"],
         bbox_maxx=bbox["maxx"],

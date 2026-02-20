@@ -42,6 +42,7 @@ class PDOKCadastralClient:
         url = f"{self.BASE_URL}/collections/perceel/items"
         params = {
             "bbox": bbox,
+            "bbox-crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
             "limit": limit,
             "f": "json",
         }

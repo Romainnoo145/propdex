@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
+import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
@@ -42,6 +43,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 const AuthenticatedResultatenRoute = AuthenticatedResultatenRouteImport.update({
   id: '/resultaten',
   path: '/resultaten',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedRapportenRoute = AuthenticatedRapportenRouteImport.update({
+  id: '/rapporten',
+  path: '/rapporten',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/projecten': typeof AuthenticatedProjectenRoute
+  '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/projecten': typeof AuthenticatedProjectenRoute
+  '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
+  '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/projecten'
+    | '/rapporten'
     | '/resultaten'
     | '/auth/google-callback'
     | '/auth/'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/projecten'
+    | '/rapporten'
     | '/resultaten'
     | '/auth/google-callback'
     | '/auth'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen'
     | '/_authenticated/map'
     | '/_authenticated/projecten'
+    | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
     | '/auth/google-callback'
     | '/auth/'
@@ -180,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/resultaten': {
+      id: '/_authenticated/resultaten'
+      path: '/resultaten'
+      fullPath: '/resultaten'
+      preLoaderRoute: typeof AuthenticatedResultatenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/rapporten': {
+      id: '/_authenticated/rapporten'
+      path: '/rapporten'
+      fullPath: '/rapporten'
+      preLoaderRoute: typeof AuthenticatedRapportenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/projecten': {
       id: '/_authenticated/projecten'
       path: '/projecten'
@@ -215,13 +241,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRapportIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/resultaten': {
-      id: '/_authenticated/resultaten'
-      path: '/resultaten'
-      fullPath: '/resultaten'
-      preLoaderRoute: typeof AuthenticatedResultatenRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
   }
 }
 
@@ -230,6 +249,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
+  AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
 }
@@ -239,6 +259,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
+  AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
 }

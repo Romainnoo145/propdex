@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
 import { useUnreadCounts } from '@/hooks/useNotifications'
 import { NotificationBadge } from '@/components/notifications/NotificationBadge'
-import { Map, ListOrdered, FolderOpen, Bell, FileText, Settings, LogOut } from 'lucide-react'
+import { Map, FolderOpen, Bell, FileText, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -12,24 +12,16 @@ interface NavItem {
   search?: Record<string, string>
 }
 
-interface SideRailNavProps {
-  sidebarOpen: boolean
-  onToggleSidebar: () => void
-}
-
 /**
  * Side-rail navigation component.
  *
  * Thin left-side icon-based navigation with Kaart, Resultaten, Projecten primary views
- * plus notification bell, Rapporten toggle, settings, and logout at bottom.
+ * plus notification bell, Rapporten page link, settings, and logout at bottom.
  *
  * Design: Industrial Amber (bg-grey-900 solid), fixed position,
  * z-index --z-side-rail (250).
  */
-export default function SideRailNav({
-  sidebarOpen,
-  onToggleSidebar,
-}: SideRailNavProps) {
+export default function SideRailNav() {
   const matchRoute = useMatchRoute()
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -45,11 +37,6 @@ export default function SideRailNav({
       icon: <Map size={20} />,
       label: 'Kaart',
       to: '/map',
-    },
-    {
-      icon: <ListOrdered size={20} />,
-      label: 'Resultaten',
-      to: '/resultaten',
     },
     {
       icon: <FolderOpen size={20} />,
@@ -106,14 +93,11 @@ export default function SideRailNav({
           </span>
         </Link>
 
-        {/* Rapporten toggle button */}
-        <button
-          onClick={onToggleSidebar}
-          className="group relative"
-        >
+        {/* Rapporten page link */}
+        <Link to="/rapporten" className="group relative">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
-              sidebarOpen
+              matchRoute({ to: '/rapporten' })
                 ? 'bg-grey-800 text-grey-100'
                 : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
             }`}
@@ -124,7 +108,7 @@ export default function SideRailNav({
           <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Rapporten
           </span>
-        </button>
+        </Link>
       </div>
 
       {/* Bottom section: Settings + Logout */}

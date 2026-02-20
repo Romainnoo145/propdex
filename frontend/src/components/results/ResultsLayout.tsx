@@ -172,11 +172,9 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
               scanId={scanId}
               filters={filters}
               selectedParcelId={selectedParcelId}
-              onRowClick={(parcelId) => {
+              onRowClick={(parcel) => {
                 selectionSourceRef.current = 'table'
-                setSelectedParcelId(parcelId)
-              }}
-              onRowDoubleClick={(parcel) => {
+                setSelectedParcelId(parcel.parcel_id)
                 setModalParcel(parcel)
               }}
               onTotalChange={setTotal}
@@ -191,6 +189,7 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
         parcel={modalParcel}
         isOpen={!!modalParcel}
         onClose={() => setModalParcel(null)}
+        onViewOnMap={undefined}
       />
     </>
   )

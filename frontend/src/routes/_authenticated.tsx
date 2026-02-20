@@ -1,13 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { createFileRoute, Outlet, redirect, useNavigate, useMatchRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/react-router'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
-import ReportSidebar from '@/components/layout/ReportSidebar'
 import BottomTabNav from '@/components/layout/BottomTabNav'
 import MapView from '@/components/map/MapView'
 import { MapContext } from '@/lib/MapContext'
 import { useAuth } from '@/lib/auth/useAuth'
-import type { RecentItem } from '@/hooks/useRecentViewed'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: ({ context, location }) => {
@@ -24,8 +22,6 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const mapRef = useRef<MapLibreMap | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const matchRoute = useMatchRoute()
@@ -68,42 +64,9 @@ function AuthenticatedLayout() {
     }
   }, [isMapVisible])
 
-  const handleToggleSidebar = () => {
-    setSidebarOpen((prev) => !prev)
-  }
-
-  const handleSelectReport = (reportId: string) => {
-    // Navigate to map with reportId - map.tsx will handle loading and display
-    navigate({
-      to: '/map',
-      search: { reportId },
-    })
-    setSidebarOpen(false)
-  }
-
-  const handleSelectRecent = (item: RecentItem) => {
-    navigate({
-      to: '/map',
-      search: {
-        postcode: item.postcode,
-        huisnummer: item.huisnummer,
-      },
-    })
-    setSidebarOpen(false)
-  }
-
   return (
     <div className="flex h-screen">
-      <SideRailNav
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={handleToggleSidebar}
-      />
-      <ReportSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSelectReport={handleSelectReport}
-        onSelectRecent={handleSelectRecent}
-      />
+      <SideRailNav />
       <main className="flex-1 relative overflow-hidden">
         {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
         <div

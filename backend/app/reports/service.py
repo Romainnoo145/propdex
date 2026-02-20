@@ -56,7 +56,7 @@ async def save_report(
 
     # Generate report_name from address
     address_data = report_data["address"]
-    report_name = f"{address_data['straatnaam']} {address_data['huisnummer']}, {address_data['woonplaats']}"
+    report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
 
     # Extract denormalized fields
     postcode = address_data["postcode"]
@@ -372,7 +372,7 @@ async def update_report_data(
     report.city = address_data["woonplaats"]
 
     # Update report_name
-    report.report_name = f"{address_data['straatnaam']} {address_data['huisnummer']}, {address_data['woonplaats']}"
+    report.report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
 
     # Update timestamp
     report.updated_at = datetime.utcnow()

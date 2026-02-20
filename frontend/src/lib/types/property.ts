@@ -51,6 +51,9 @@ export interface BuildingData {
   pand_id: string
   bouwjaar: number | null
   status: string | null
+  status_datum: string | null
+  documentdatum: string | null
+  documentnummer: string | null
   oppervlakte: number | null
   gebruiksdoel: string[]
   geometry: GeoJSONGeometry | null

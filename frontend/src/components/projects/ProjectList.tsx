@@ -64,7 +64,7 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
 
 /**
  * Project list with expandable report rows.
- * Light theme — off-white background with dark typography.
+ * Dark theme — Industrial Amber design system (grey-* tokens).
  * Falls back to demo data when API is unavailable.
  */
 export default function ProjectList() {
@@ -123,13 +123,13 @@ export default function ProjectList() {
   return (
     <div className="space-y-4">
       {isDemo && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-accent/30 bg-amber-accent/10 px-4 py-3 text-sm text-amber-accent">
           Voorbeelddata — start de backend om projecten te beheren
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-500">
+        <h3 className="text-sm font-medium text-grey-400">
           {allProjects.length > 0
             ? `${allProjects.length} ${allProjects.length === 1 ? 'project' : 'projecten'}`
             : 'Nog geen projecten'}
@@ -137,7 +137,7 @@ export default function ProjectList() {
         <button
           onClick={() => setCreateModalOpen(true)}
           disabled={isDemo}
-          className="min-h-[44px] rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[44px] rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-100 transition-colors hover:bg-grey-850 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Nieuw project +
         </button>
@@ -159,39 +159,36 @@ export default function ProjectList() {
             return (
               <div
                 key={gemeente.id}
-                className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900"
               >
                 {/* Gemeente group header */}
                 <button
                   onClick={() => setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))}
-                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-grey-850"
                 >
                   <ChevronIcon
-                    className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isGemeenteExpanded ? 'rotate-90' : ''}`}
+                    className={`h-4 w-4 shrink-0 text-grey-400 transition-transform ${isGemeenteExpanded ? 'rotate-90' : ''}`}
                   />
+                  <MapPinIcon />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-gray-900">{gemeente.name}</h4>
-                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">
-                        {wijkChildren.length} {wijkChildren.length === 1 ? 'wijk' : 'wijken'}
-                      </span>
+                      <span className="text-xs font-medium uppercase tracking-wider text-grey-400">Gemeente</span>
                       {totalUnread > 0 && (
                         <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
                           {totalUnread}
                         </span>
                       )}
                     </div>
-                    {gemeente.description && (
-                      <p className="mt-0.5 truncate text-sm text-gray-500">
-                        {gemeente.description}
-                      </p>
-                    )}
+                    <h4 className="text-base font-semibold text-grey-100">{gemeente.name}</h4>
+                    <p className="mt-0.5 text-xs text-grey-400">
+                      {wijkChildren.length} {wijkChildren.length === 1 ? 'wijk' : 'wijken'}
+                    </p>
                   </div>
                 </button>
 
                 {/* Wijk children */}
                 {isGemeenteExpanded && wijkChildren.length > 0 && (
-                  <div className="border-t border-gray-100 bg-gray-50/30">
+                  <div className="border-t border-grey-800 bg-grey-850/30">
                     {wijkChildren.map((wijk) => {
                       const isWijkExpanded = expandedId === wijk.id
 
@@ -200,20 +197,21 @@ export default function ProjectList() {
                       )?.unread_count ?? 0
 
                       return (
-                        <div key={wijk.id} className="border-b border-gray-100 last:border-b-0">
+                        <div key={wijk.id} className="border-b border-grey-800 last:border-b-0">
                           {/* Wijk project header */}
                           <button
                             onClick={() => handleToggle(wijk.id)}
-                            className="flex w-full min-h-[44px] items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-gray-100/50"
+                            className="flex w-full min-h-[44px] items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-grey-800/50"
                           >
                             <ChevronIcon
-                              className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
+                              className={`h-3.5 w-3.5 shrink-0 text-grey-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
                             />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <h5 className="text-sm font-medium text-gray-800">{wijk.name}</h5>
+                                <span className="inline-block h-2 w-2 rounded-full bg-amber-accent/60 shrink-0" />
+                                <h5 className="text-sm font-medium text-grey-200">{wijk.name}</h5>
                                 {wijk.report_count > 0 && (
-                                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                                  <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
                                     {wijk.report_count}
                                   </span>
                                 )}
@@ -233,7 +231,7 @@ export default function ProjectList() {
                               {!isDemo && <WijkScanList projectId={wijk.id} navigate={navigate} />}
 
                               {isDemo && (
-                                <div className="border-t border-gray-100 px-10 py-4 text-center text-sm text-gray-400">
+                                <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
                                   Geen scans beschikbaar (demo modus)
                                 </div>
                               )}
@@ -263,20 +261,20 @@ export default function ProjectList() {
             return (
               <div
                 key={project.id}
-                className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900"
               >
                 {/* Project header — clickable */}
                 <button
                   onClick={() => handleToggle(project.id)}
-                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-grey-850"
                 >
                   <ChevronIcon
-                    className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                    className={`h-4 w-4 shrink-0 text-grey-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-gray-900">{project.name}</h4>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                      <h4 className="font-medium text-grey-100">{project.name}</h4>
+                      <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
                         {project.report_count}
                       </span>
                       {/* Unread badge */}
@@ -287,7 +285,7 @@ export default function ProjectList() {
                       )}
                     </div>
                     {project.description && (
-                      <p className="mt-0.5 truncate text-sm text-gray-500">
+                      <p className="mt-0.5 truncate text-sm text-grey-400">
                         {project.description}
                       </p>
                     )}
@@ -297,7 +295,7 @@ export default function ProjectList() {
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={(e) => handleEdit(e, project)}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-800 hover:text-grey-200"
                         title="Bewerk project"
                       >
                         <PencilIcon />
@@ -305,7 +303,7 @@ export default function ProjectList() {
                       <button
                         onClick={(e) => handleDelete(e, project)}
                         disabled={deleteMutation.isPending}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                         title="Verwijder project"
                       >
                         <TrashIcon />
@@ -321,7 +319,7 @@ export default function ProjectList() {
                     {!isDemo && <WijkScanList projectId={project.id} navigate={navigate} />}
 
                     {isDemo && (
-                      <div className="border-t border-gray-100 px-5 py-4 text-center text-sm text-gray-400">
+                      <div className="border-t border-grey-800 px-5 py-4 text-center text-sm text-grey-400">
                         Geen scans beschikbaar (demo modus)
                       </div>
                     )}
@@ -335,17 +333,18 @@ export default function ProjectList() {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center shadow-sm">
-          <p className="mb-4 text-gray-500">Nog geen projecten aangemaakt</p>
+        <div className="rounded-xl border border-grey-800 bg-grey-900 px-6 py-12 text-center">
+          <p className="mb-4 text-grey-400">Nog geen projecten aangemaakt</p>
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="min-h-[44px] rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            className="min-h-[44px] rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-100 transition-colors hover:bg-grey-850"
           >
             Maak je eerste project
           </button>
         </div>
       )}
 
+      {/* Modals use intentional light theme (white card on dark backdrop) — JSDoc documents this decision */}
       <ProjectCreateModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} />
       <ProjectEditModal
         key={selectedProject?.id}
@@ -381,7 +380,7 @@ function WijkScanList({
 
   if (isLoading) {
     return (
-      <div className="border-t border-gray-100 px-10 py-3 space-y-2">
+      <div className="border-t border-grey-800 px-10 py-3 space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
       </div>
@@ -390,38 +389,38 @@ function WijkScanList({
 
   if (scans.length === 0) {
     return (
-      <div className="border-t border-gray-100 px-10 py-4 text-center text-sm text-gray-400">
+      <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
         Nog geen scans voor dit project
       </div>
     )
   }
 
   return (
-    <div className="border-t border-gray-100 bg-gray-50/50">
+    <div className="border-t border-grey-800 bg-grey-850/50">
       {scans.map((scan) => {
         const isCompleted = scan.status === 'completed'
         return (
           <div
             key={scan.scan_id}
-            className="flex w-full items-center gap-3 border-b border-gray-100 px-10 py-3 last:border-b-0"
+            className="flex w-full items-center gap-3 border-b border-grey-800 px-10 py-3 last:border-b-0"
           >
             <ScanIcon />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-800">
-                  {scan.gemeente_naam}{scan.wijk_naam ? ` \u2014 ${scan.wijk_naam}` : ''}
+                <p className="text-sm font-medium text-grey-200">
+                  Scan {dateFmt.format(new Date(scan.scan_date))}
                 </p>
                 {!isCompleted && (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    scan.status === 'running' ? 'bg-blue-100 text-blue-600' :
-                    scan.status === 'failed' ? 'bg-red-100 text-red-600' :
-                    'bg-gray-100 text-gray-500'
+                    scan.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
+                    scan.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-grey-800 text-grey-400'
                   }`}>
                     {scan.status}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-grey-400">
                 {dateFmt.format(new Date(scan.scan_date))} &middot; {scan.parcel_count} percelen
               </p>
             </div>
@@ -429,14 +428,14 @@ function WijkScanList({
               <button
                 onClick={() => handleScanResultsClick(scan)}
                 disabled={!isCompleted}
-                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-grey-800 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Toon resultaten
               </button>
               <button
                 onClick={() => handleScanMapClick(scan)}
                 disabled={!isCompleted}
-                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-grey-800 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Toon kaart
               </button>
@@ -456,9 +455,18 @@ function ChevronIcon({ className }: { className?: string }) {
   )
 }
 
+function MapPinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-400">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
 function ScanIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-500">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>

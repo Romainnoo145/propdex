@@ -138,11 +138,18 @@ async def resolve_address(
                     bouwjaar = pand_data.get("oorspronkelijkBouwjaar")
                     status = pand_data.get("status")
                     geometry = pand_data.get("geometrie")
+                    documentdatum = pand_data.get("documentdatum")
+                    documentnummer = pand_data.get("documentnummer")
+                    voorkomen = pand_data.get("voorkomen", {})
+                    status_datum = voorkomen.get("beginGeldigheid") if voorkomen else None
 
                     building_data = BuildingData(
                         pand_id=pand_id,
                         bouwjaar=bouwjaar,
                         status=status,
+                        status_datum=status_datum,
+                        documentdatum=documentdatum,
+                        documentnummer=documentnummer,
                         oppervlakte=oppervlakte,
                         gebruiksdoel=gebruiksdoel,
                         geometry=geometry,

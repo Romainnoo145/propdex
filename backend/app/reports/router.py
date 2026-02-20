@@ -1,6 +1,7 @@
 """Report management API endpoints."""
 
 import asyncio
+import logging
 import io
 import re
 import uuid
@@ -32,6 +33,8 @@ from app.schemas.report import (
     SortOrder,
 )
 from app.services.property_aggregator import aggregate_property_data
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -376,9 +379,10 @@ async def generate_report_from_parcel(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception("from-parcel failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate report from parcel",
+            detail=f"Failed to generate report from parcel: {e}",
         ) from e
 
 

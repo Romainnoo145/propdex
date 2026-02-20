@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { Map, ListOrdered, FolderOpen } from 'lucide-react'
+import { Map, FolderOpen, FileText } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -26,14 +26,14 @@ export default function BottomTabNav() {
       to: '/map',
     },
     {
-      icon: <ListOrdered size={20} />,
-      label: 'Resultaten',
-      to: '/resultaten',
-    },
-    {
       icon: <FolderOpen size={20} />,
       label: 'Projecten',
       to: '/projecten',
+    },
+    {
+      icon: <FileText size={20} />,
+      label: 'Rapporten',
+      to: '/rapporten',
     },
   ]
 

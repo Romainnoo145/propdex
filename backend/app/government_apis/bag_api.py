@@ -21,6 +21,11 @@ class BAGAPIClient:
     - Panden: Buildings with construction year and geometry
 
     Requires API key from https://lvbag.github.io/BAG-API/
+
+    BAG API v2 wraps individual resource responses in a type key
+    (e.g. {"verblijfsobject": {...}}, {"pand": {...}}).
+    This client unwraps them to return flat dicts and normalizes field names
+    so downstream code (address_resolver) gets a consistent interface.
     """
 
     BASE_URL = "https://api.bag.kadaster.nl/lvbag/individuelebevragingen/v2"
@@ -44,23 +49,15 @@ class BAGAPIClient:
         """
         Look up address by postcode and house number.
 
-        Args:
-            postcode: Dutch postcode (e.g., "1234 AB" or "1234AB")
-            huisnummer: House number (e.g., 42)
-            client: Shared httpx AsyncClient from app.state
-            huisletter: Optional house letter (e.g., "A")
-            toevoeging: Optional addition (e.g., "bis")
-
         Returns:
-            dict: Address data including nummeraanduidingId and street name
+            dict: Address data including nummeraanduidingIdentificatie and openbareRuimteNaam
 
         Raises:
             APINotFoundError: If no address found for given combination
-            httpx.HTTPStatusError: If API request fails
         """
         url = f"{self.BASE_URL}/adressen"
         params = {
-            "postcode": postcode.replace(" ", ""),  # Remove space for API
+            "postcode": postcode.replace(" ", ""),
             "huisnummer": huisnummer,
         }
         if huisletter:
@@ -86,20 +83,7 @@ class BAGAPIClient:
     async def get_nummeraanduiding(
         self, nummeraanduiding_id: str, client: httpx.AsyncClient
     ) -> dict:
-        """
-        Look up nummeraanduiding (address identifier) by ID.
-
-        Args:
-            nummeraanduiding_id: BAG nummeraanduiding identifier
-            client: Shared httpx AsyncClient from app.state
-
-        Returns:
-            dict: Nummeraanduiding details linking address to building
-
-        Raises:
-            APINotFoundError: If nummeraanduiding not found
-            httpx.HTTPStatusError: If API request fails
-        """
+        """Look up nummeraanduiding (address identifier) by ID."""
         url = f"{self.BASE_URL}/nummeraanduidingen/{nummeraanduiding_id}"
 
         logger.info(f"BAG get_nummeraanduiding: {nummeraanduiding_id}")
@@ -112,40 +96,66 @@ class BAGAPIClient:
         """
         Look up verblijfsobject (residential/commercial unit) by ID.
 
-        Args:
-            verblijfsobject_id: BAG verblijfsobject identifier
-            client: Shared httpx AsyncClient from app.state
+        BAG API v2 returns: {"verblijfsobject": {...}, "_links": {...}}
+        This method unwraps and normalizes the response to a flat dict with:
+        - oppervlakte, gebruiksdoelen, status (from inner object)
+        - _embedded.pandIdentificaties (normalized from maaktDeelUitVan)
+        - geometrie (normalized from geometrie.punt or geometrie.vlak)
 
         Returns:
-            dict: Verblijfsobject details including surface area, usage, and pand references
-
-        Raises:
-            APINotFoundError: If verblijfsobject not found
-            httpx.HTTPStatusError: If API request fails
+            dict: Normalized VBO details
         """
         url = f"{self.BASE_URL}/verblijfsobjecten/{verblijfsobject_id}"
 
         logger.info(f"BAG get_verblijfsobject: {verblijfsobject_id}")
         response = await client.get(url, headers=self._headers)
-        return handle_api_response(response, source="bag")
+        data = handle_api_response(response, source="bag")
+
+        # Unwrap: BAG v2 nests under "verblijfsobject" key
+        vbo = data.get("verblijfsobject", data)
+
+        # Normalize pand references: BAG v2 uses "maaktDeelUitVan" (list of pand IDs)
+        # Put them in _embedded.pandIdentificaties for backward compatibility
+        pand_ids = vbo.get("maaktDeelUitVan", [])
+        vbo["_embedded"] = {"pandIdentificaties": pand_ids}
+
+        # Normalize geometry: BAG v2 nests as geometrie.punt or geometrie.vlak
+        raw_geom = vbo.get("geometrie")
+        if raw_geom and not raw_geom.get("type"):
+            # Nested format — extract inner GeoJSON
+            inner = raw_geom.get("punt") or raw_geom.get("vlak") or raw_geom.get("multivlak")
+            if inner:
+                vbo["geometrie"] = inner
+
+        logger.info(
+            f"BAG VBO {verblijfsobject_id}: oppervlakte={vbo.get('oppervlakte')}, "
+            f"pand_ids={pand_ids}, has_geometry={vbo.get('geometrie') is not None}"
+        )
+        return vbo
 
     async def get_pand(self, pand_id: str, client: httpx.AsyncClient) -> dict:
         """
         Look up pand (building) by ID.
 
-        Args:
-            pand_id: BAG pand identifier
-            client: Shared httpx AsyncClient from app.state
+        BAG API v2 returns: {"pand": {...}, "_links": {...}}
+        This method unwraps to a flat dict with:
+        - oorspronkelijkBouwjaar, status (from inner object)
+        - geometrie (GeoJSON Polygon — already correct format in BAG v2)
 
         Returns:
-            dict: Pand details including construction year, status, and geometry
-
-        Raises:
-            APINotFoundError: If pand not found
-            httpx.HTTPStatusError: If API request fails
+            dict: Normalized pand details
         """
         url = f"{self.BASE_URL}/panden/{pand_id}"
 
         logger.info(f"BAG get_pand: {pand_id}")
         response = await client.get(url, headers=self._headers)
-        return handle_api_response(response, source="bag")
+        data = handle_api_response(response, source="bag")
+
+        # Unwrap: BAG v2 nests under "pand" key
+        pand = data.get("pand", data)
+
+        logger.info(
+            f"BAG pand {pand_id}: bouwjaar={pand.get('oorspronkelijkBouwjaar')}, "
+            f"status={pand.get('status')}, has_geometry={pand.get('geometrie') is not None}"
+        )
+        return pand

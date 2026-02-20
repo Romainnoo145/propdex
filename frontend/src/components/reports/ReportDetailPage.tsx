@@ -11,9 +11,73 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
   day: 'numeric',
   month: 'long',
   year: 'numeric',
+})
+
+const dateFmtFull = new Intl.DateTimeFormat('nl-NL', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
 })
+
+/** Map BAG statuses to developer-oriented Dutch explanations */
+const STATUS_EXPLANATIONS: Record<string, { label: string; description: string; severity: 'high' | 'medium' | 'low' }> = {
+  'Sloopvergunning verleend': {
+    label: 'Sloopvergunning verleend',
+    description: 'Er is een vergunning afgegeven om dit pand te slopen. Dit duidt op herontwikkelingsmogelijkheden — de grond komt mogelijk beschikbaar.',
+    severity: 'high',
+  },
+  'Pand gesloopt': {
+    label: 'Pand gesloopt',
+    description: 'Dit pand is gesloopt. De locatie is mogelijk beschikbaar voor nieuwbouw, afhankelijk van het bestemmingsplan.',
+    severity: 'high',
+  },
+  'Bouw gestart': {
+    label: 'Bouw gestart',
+    description: 'Er wordt momenteel gebouwd op deze locatie. Nieuwbouw of renovatie is gaande.',
+    severity: 'medium',
+  },
+  'Bouwvergunning verleend': {
+    label: 'Bouwvergunning verleend',
+    description: 'Er is een bouwvergunning afgegeven. Bouw kan elk moment starten.',
+    severity: 'medium',
+  },
+  'Niet gerealiseerd pand': {
+    label: 'Niet gerealiseerd',
+    description: 'Dit pand is nooit daadwerkelijk gebouwd ondanks een afgegeven vergunning.',
+    severity: 'medium',
+  },
+  'Pand in gebruik (niet ingemeten)': {
+    label: 'In gebruik (niet ingemeten)',
+    description: 'Pand is in gebruik maar nog niet definitief ingemeten door het Kadaster.',
+    severity: 'low',
+  },
+  'Pand in gebruik': {
+    label: 'In gebruik',
+    description: 'Regulier pand in normaal gebruik.',
+    severity: 'low',
+  },
+  'Pand buiten gebruik': {
+    label: 'Buiten gebruik',
+    description: 'Dit pand is niet meer in gebruik. Mogelijk leegstand — potentieel geschikt voor transformatie of herontwikkeling.',
+    severity: 'medium',
+  },
+  'Verbouwing pand': {
+    label: 'Verbouwing gaande',
+    description: 'Dit pand wordt momenteel verbouwd.',
+    severity: 'low',
+  },
+}
+
+function getStatusInfo(status: string | null | undefined) {
+  if (!status) return null
+  return STATUS_EXPLANATIONS[status] ?? {
+    label: status,
+    description: '',
+    severity: 'low' as const,
+  }
+}
 
 export default function ReportDetailPage({
   data,
@@ -27,11 +91,11 @@ export default function ReportDetailPage({
         <div className="mx-auto max-w-4xl px-8 py-10">
           <div className="animate-pulse space-y-6">
             <div className="h-8 w-48 rounded bg-grey-800" />
-            <div className="h-32 rounded-xl bg-grey-800" />
+            <div className="h-32 rounded-xl bg-grey-800/50" />
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-grey-800" />)}
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-grey-800/50" />)}
             </div>
-            {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-grey-800" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-grey-800/50" />)}
           </div>
         </div>
       </div>
@@ -51,17 +115,19 @@ export default function ReportDetailPage({
     )
   }
 
-  const { address, building, zoning, monuments, ai_parsing, completeness_score } = data
+  const { address, building, monuments, ai_parsing, completeness_score } = data
+  const statusInfo = getStatusInfo(building?.status)
+  const isActionableStatus = statusInfo && statusInfo.severity !== 'low'
 
   return (
     <div className="h-full overflow-y-auto bg-grey-950">
       <div className="mx-auto max-w-4xl px-8 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between">
           <div>
             <button
               onClick={onBack}
-              className="mb-3 flex items-center gap-1 text-sm text-grey-500 transition-colors hover:text-grey-400"
+              className="mb-3 flex items-center gap-1.5 text-sm text-grey-500 transition-colors hover:text-grey-300"
             >
               <ArrowLeftIcon />
               Terug naar projecten
@@ -77,7 +143,7 @@ export default function ReportDetailPage({
           <div className="flex items-center gap-2">
             <button
               onClick={onViewOnMap}
-              className="flex items-center gap-2 rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-200 shadow-sm transition-colors hover:bg-grey-800"
+              className="flex items-center gap-2 rounded-lg border border-white/5 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-white/[0.04] hover:text-grey-100"
             >
               <MapPinIcon />
               Bekijk op kaart
@@ -85,13 +151,50 @@ export default function ReportDetailPage({
           </div>
         </div>
 
-        {/* Overview metrics */}
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <MetricCard label="Bouwjaar" value={building?.bouwjaar?.toString() ?? 'Onbekend'} />
-          <MetricCard label="Oppervlakte" value={building?.oppervlakte ? `${building.oppervlakte} m²` : '–'} />
+        {/* Signal banner — actionable status */}
+        {isActionableStatus && (
+          <SignalBanner
+            statusInfo={statusInfo}
+            documentdatum={building?.documentdatum}
+            documentnummer={building?.documentnummer}
+          />
+        )}
+
+        {/* Monument alert */}
+        {monuments?.is_monument && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-accent/20 bg-amber-accent/[0.06] px-5 py-4">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-accent/10">
+              <MonumentIcon />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-accent">{monuments.consensus_status ?? 'Rijksmonument'}</p>
+              <p className="mt-0.5 text-sm text-grey-400">
+                Monumentale status beperkt sloop- en verbouwmogelijkheden. Vergunningsplicht voor wijzigingen.
+                {monuments.restrictions_summary && monuments.restrictions_summary.length > 0 && (
+                  <span className="ml-1 text-amber-accent/70">
+                    {monuments.restrictions_summary.length} beperkingen van toepassing.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Quick facts */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <MetricCard
-            label="Bestemming"
-            value={zoning?.primary_bestemming ?? '–'}
+            label="Bouwjaar"
+            value={building?.bouwjaar?.toString() ?? '–'}
+            sublabel={building?.bouwjaar ? `${new Date().getFullYear() - building.bouwjaar} jaar oud` : undefined}
+          />
+          <MetricCard
+            label="Vloeroppervlak"
+            value={building?.oppervlakte ? `${building.oppervlakte} m²` : '–'}
+            sublabel="gebruiksoppervlakte"
+          />
+          <MetricCard
+            label="Gebruiksdoel"
+            value={building?.gebruiksdoel?.[0] ?? '–'}
           />
           <MetricCard
             label="Compleetheid"
@@ -100,23 +203,8 @@ export default function ReportDetailPage({
           />
         </div>
 
-        {/* Monument alert */}
-        {monuments?.is_monument && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <span className="text-2xl">🏛</span>
-            <div>
-              <p className="font-semibold text-amber-900">{monuments.consensus_status ?? 'Rijksmonument'}</p>
-              {monuments.restrictions_summary && monuments.restrictions_summary.length > 0 && (
-                <p className="mt-0.5 text-sm text-amber-700">
-                  {monuments.restrictions_summary.length} beperkingen van toepassing
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Sections */}
-        <div className="space-y-6">
+        <div className="space-y-5">
           <GebouwSection data={data} />
           <KadasterSection data={data} />
           <BestemmingSection data={data} />
@@ -128,8 +216,54 @@ export default function ReportDetailPage({
         </div>
 
         {/* Footer */}
-        <div className="mt-8 border-t border-grey-800 pt-4 text-center text-xs text-grey-600">
-          Rapport gegenereerd op {dateFmt.format(new Date(data.resolved_at))}
+        <div className="mt-8 border-t border-white/5 pt-4 text-center text-xs text-grey-600">
+          Rapport gegenereerd op {dateFmtFull.format(new Date(data.resolved_at))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Signal Banner ────────────────────────────────────────── */
+
+function SignalBanner({
+  statusInfo,
+  documentdatum,
+  documentnummer,
+}: {
+  statusInfo: { label: string; description: string; severity: 'high' | 'medium' | 'low' }
+  documentdatum: string | null | undefined
+  documentnummer: string | null | undefined
+}) {
+  const isHigh = statusInfo.severity === 'high'
+  const borderColor = isHigh ? 'border-amber-accent/30' : 'border-white/10'
+  const bgColor = isHigh ? 'bg-amber-accent/[0.06]' : 'bg-white/[0.03]'
+  const iconBg = isHigh ? 'bg-amber-accent/15' : 'bg-white/[0.06]'
+  const titleColor = isHigh ? 'text-amber-accent' : 'text-grey-200'
+
+  return (
+    <div className={`mb-6 rounded-xl border ${borderColor} ${bgColor} px-5 py-4`}>
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+          <AlertIcon />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className={`font-semibold ${titleColor}`}>{statusInfo.label}</p>
+            {documentdatum && (
+              <span className="text-xs text-grey-500">
+                {dateFmt.format(new Date(documentdatum))}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-grey-400">
+            {statusInfo.description}
+          </p>
+          {documentnummer && (
+            <p className="mt-2 text-xs text-grey-600">
+              Documentnr: <span className="font-mono text-grey-500">{documentnummer}</span>
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -138,16 +272,17 @@ export default function ReportDetailPage({
 
 /* ─── Metric Card ───────────────────────────────────────────── */
 
-function MetricCard({ label, value, bar }: { label: string; value: string; bar?: number }) {
+function MetricCard({ label, value, sublabel, bar }: { label: string; value: string; sublabel?: string; bar?: number }) {
   return (
-    <div className="rounded-xl border border-grey-800 bg-grey-900 px-4 py-3 shadow-sm">
+    <div className="rounded-xl border border-white/5 bg-grey-900 px-4 py-3">
       <p className="text-xs font-medium uppercase tracking-wide text-grey-600">{label}</p>
       <p className="mt-1 truncate text-lg font-semibold text-grey-100">{value}</p>
+      {sublabel && <p className="mt-0.5 text-xs text-grey-600">{sublabel}</p>}
       {bar !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-grey-800">
           <div
-            className={`h-full rounded-full transition-all ${bar >= 0.9 ? 'bg-green-500' : bar >= 0.7 ? 'bg-yellow-500' : 'bg-red-400'}`}
-            style={{ width: `${bar * 100}%` }}
+            className="h-full rounded-full bg-amber-accent transition-all"
+            style={{ width: `${bar * 100}%`, opacity: bar >= 0.8 ? 1 : bar >= 0.5 ? 0.7 : 0.4 }}
           />
         </div>
       )}
@@ -159,8 +294,8 @@ function MetricCard({ label, value, bar }: { label: string; value: string; bar?:
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-grey-800 bg-grey-900 shadow-sm">
-      <div className="border-b border-grey-800 px-5 py-3">
+    <div className="rounded-xl border border-white/5 bg-grey-900">
+      <div className="border-b border-white/5 px-5 py-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-grey-500">{title}</h2>
       </div>
       <div className="px-5 py-4">{children}</div>
@@ -170,12 +305,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 /* ─── Row helper ────────────────────────────────────────────── */
 
-function Row({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+function Row({ label, value, mono, muted }: { label: string; value: string | null | undefined; mono?: boolean; muted?: boolean }) {
   if (!value) return null
   return (
-    <div className="flex items-baseline justify-between py-1.5">
+    <div className="flex items-baseline justify-between py-2">
       <span className="text-sm text-grey-500">{label}</span>
-      <span className={`text-sm font-medium text-grey-100 ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+      <span className={`text-sm font-medium ${muted ? 'text-grey-500' : 'text-grey-200'} ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
     </div>
   )
 }
@@ -185,28 +320,60 @@ function Row({ label, value, mono }: { label: string; value: string | null | und
 function GebouwSection({ data }: { data: PropertyReportResponse }) {
   const { address, building } = data
   const gebruiksdoel = building?.gebruiksdoel ?? []
+  const statusInfo = getStatusInfo(building?.status)
 
   return (
     <Section title="Gebouw & BAG">
-      <div className="divide-y divide-grey-800">
-        <Row label="Pand ID" value={building?.pand_id} mono />
+      <div className="divide-y divide-white/[0.03]">
         <Row label="Bouwjaar" value={building?.bouwjaar?.toString()} />
-        <Row label="Status" value={building?.status} />
-        <Row label="Oppervlakte" value={building?.oppervlakte ? `${building.oppervlakte} m²` : null} />
+        {building?.status && (
+          <div className="flex items-baseline justify-between py-2">
+            <span className="text-sm text-grey-500">Status</span>
+            <div className="text-right">
+              <span className={`text-sm font-medium ${statusInfo?.severity === 'high' ? 'text-amber-accent' : statusInfo?.severity === 'medium' ? 'text-grey-200' : 'text-grey-300'}`}>
+                {statusInfo?.label ?? building.status}
+              </span>
+            </div>
+          </div>
+        )}
+        {building?.documentnummer && (
+          <Row label="Documentnr" value={building.documentnummer} mono />
+        )}
+        <Row label="Gebruiksoppervlakte (VBO)" value={building?.oppervlakte ? `${building.oppervlakte} m²` : null} />
         {gebruiksdoel.length > 0 && (
-          <div className="flex items-baseline justify-between py-1.5">
+          <div className="flex items-baseline justify-between py-2">
             <span className="text-sm text-grey-500">Gebruiksdoel</span>
             <div className="flex flex-wrap justify-end gap-1">
               {gebruiksdoel.map((doel) => (
-                <span key={doel} className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                <span key={doel} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-xs font-medium text-grey-300">
                   {doel}
                 </span>
               ))}
             </div>
           </div>
         )}
-        <Row label="Nummeraanduiding ID" value={address.nummeraanduiding_id} mono />
-        <Row label="Verblijfsobject ID" value={address.verblijfsobject_id} mono />
+        {/* BAG IDs — de-emphasized */}
+        <div className="pt-3">
+          <p className="mb-1.5 text-xs font-medium text-grey-600">BAG referenties</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-1">
+            <span className="text-xs text-grey-600">
+              Pand <a
+                href={`https://bagviewer.kadaster.nl/lvbag/bag-viewer/?searchQuery=${building?.pand_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-grey-500 underline decoration-grey-700 underline-offset-2 hover:text-grey-300"
+              >{building?.pand_id}</a>
+            </span>
+            <span className="text-xs text-grey-600">
+              Nummeraanduiding <span className="font-mono text-grey-500">{address.nummeraanduiding_id}</span>
+            </span>
+            {address.verblijfsobject_id && (
+              <span className="text-xs text-grey-600">
+                VBO <span className="font-mono text-grey-500">{address.verblijfsobject_id}</span>
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </Section>
   )
@@ -231,29 +398,38 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
     <Section title="Kadaster">
       <div className="space-y-3">
         {parcels.map((parcel, idx) => (
-          <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-3">
+          <div key={idx} className="rounded-lg border border-white/[0.03] bg-white/[0.02] p-3">
             {parcel.kadastrale_aanduiding && (
-              <p className="mb-2 text-sm font-semibold text-grey-100">{parcel.kadastrale_aanduiding}</p>
+              <p className="mb-2 text-sm font-semibold text-grey-200">
+                <a
+                  href={`https://kadastralekaart.com/perceel/${parcel.kadastrale_aanduiding?.replace(/\s+/g, '/')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-grey-700 underline-offset-2 hover:text-grey-100"
+                >
+                  {parcel.kadastrale_aanduiding}
+                </a>
+              </p>
             )}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <p className="text-xs text-grey-600">Perceelnr</p>
-                <p className="text-sm font-medium text-grey-200">{parcel.perceelnummer ?? '–'}</p>
+                <p className="text-sm font-medium text-grey-300">{parcel.perceelnummer ?? '–'}</p>
               </div>
               <div>
                 <p className="text-xs text-grey-600">Sectie</p>
-                <p className="text-sm font-medium text-grey-200">{parcel.sectie ?? '–'}</p>
+                <p className="text-sm font-medium text-grey-300">{parcel.sectie ?? '–'}</p>
               </div>
               <div>
-                <p className="text-xs text-grey-600">Oppervlakte</p>
-                <p className="text-sm font-medium text-grey-200">{parcel.oppervlakte ? `${parcel.oppervlakte} m²` : '–'}</p>
+                <p className="text-xs text-grey-600">Kavelgrootte</p>
+                <p className="text-sm font-medium text-grey-300">{parcel.oppervlakte ? `${parcel.oppervlakte} m²` : '–'}</p>
               </div>
             </div>
           </div>
         ))}
         {parcels.length > 1 && totalOpp > 0 && (
           <div className="flex justify-end pt-1">
-            <span className="text-xs text-grey-500">Totaal: <strong className="text-grey-200">{totalOpp} m²</strong></span>
+            <span className="text-xs text-grey-500">Totaal: <strong className="text-grey-300">{totalOpp} m²</strong></span>
           </div>
         )}
       </div>
@@ -279,9 +455,9 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
       <div className="space-y-4">
         {/* Primary bestemming */}
         {zoning.primary_bestemming && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-500">Hoofdbestemming</p>
-            <p className="mt-0.5 text-lg font-semibold text-blue-900">{zoning.primary_bestemming}</p>
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-grey-600">Hoofdbestemming</p>
+            <p className="mt-0.5 text-lg font-semibold text-grey-100">{zoning.primary_bestemming}</p>
           </div>
         )}
 
@@ -303,18 +479,18 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsplannen</p>
             {zoning.plans.map((plan, idx) => (
-              <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-4">
-                <p className="font-medium text-grey-100">{plan.plan_naam}</p>
+              <div key={idx} className="rounded-lg border border-white/[0.03] bg-white/[0.02] p-4">
+                <p className="font-medium text-grey-200">{plan.plan_naam}</p>
                 <div className="mt-1 flex items-center gap-3 text-xs text-grey-500">
-                  {plan.plan_status && <span className="rounded bg-grey-800 px-2 py-0.5">{plan.plan_status}</span>}
+                  {plan.plan_status && <span className="rounded border border-white/5 bg-white/[0.04] px-2 py-0.5">{plan.plan_status}</span>}
                   {plan.plan_datum && <span>{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>}
                   {plan.plan_type && <span className="text-grey-600">{plan.plan_type}</span>}
                 </div>
                 {plan.rules && plan.rules.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-grey-800 pt-3">
+                  <div className="mt-3 space-y-2 border-t border-white/[0.03] pt-3">
                     {plan.rules.map((rule, rIdx) => (
                       <div key={rIdx}>
-                        <p className="text-sm font-medium text-grey-200">{rule.bestemming}</p>
+                        <p className="text-sm font-medium text-grey-300">{rule.bestemming}</p>
                         {rule.omschrijving && (
                           <p className="mt-0.5 text-xs text-grey-500">{rule.omschrijving}</p>
                         )}
@@ -329,9 +505,9 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
         {/* Data gaps */}
         {zoning.data_gaps && zoning.data_gaps.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-xs font-semibold text-amber-800">Onvolledige gegevens</p>
-            <ul className="mt-1 space-y-0.5 text-xs text-amber-700">
+          <div className="rounded-lg border border-amber-accent/15 bg-amber-accent/[0.04] px-4 py-3">
+            <p className="text-xs font-semibold text-amber-accent/80">Onvolledige gegevens</p>
+            <ul className="mt-1 space-y-0.5 text-xs text-grey-400">
               {zoning.data_gaps.map((gap, idx) => <li key={idx}>• {gap}</li>)}
             </ul>
           </div>
@@ -343,9 +519,9 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
 function DimensionCard({ label, value, unit }: { label: string; value: number | null; unit?: string }) {
   return (
-    <div className="rounded-lg border border-grey-800 bg-grey-950 px-3 py-2 text-center">
+    <div className="rounded-lg border border-white/[0.03] bg-white/[0.02] px-3 py-2 text-center">
       <p className="text-xs text-grey-600">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold text-grey-100">
+      <p className="mt-0.5 text-lg font-semibold tabular-nums text-grey-100">
         {value != null ? `${value}${unit ?? ''}` : '–'}
       </p>
     </div>
@@ -365,26 +541,38 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
     )
   }
 
+  // Check if all sources have errors (no definitive answer)
+  const allSourcesFailed = monuments.sources.every((s) => s.error != null)
+
   return (
     <Section title="Monumentstatus">
       <div className="space-y-4">
         {/* Status */}
-        <div className={`rounded-lg px-4 py-3 ${monuments.is_monument ? 'border border-amber-200 bg-amber-50' : 'border border-green-200 bg-green-50'}`}>
-          <p className={`font-semibold ${monuments.is_monument ? 'text-amber-900' : 'text-green-900'}`}>
-            {monuments.is_monument ? 'Rijksmonument' : 'Geen monument'}
-          </p>
-          {monuments.consensus_status && (
-            <p className={`mt-0.5 text-sm ${monuments.is_monument ? 'text-amber-700' : 'text-green-700'}`}>
-              {monuments.consensus_status}
+        {allSourcesFailed ? (
+          <div className="rounded-lg border border-white/5 bg-white/[0.03] px-4 py-3">
+            <p className="font-semibold text-grey-400">Niet vast te stellen</p>
+            <p className="mt-0.5 text-sm text-grey-500">
+              Alle bronnen voor monumentstatus zijn momenteel niet beschikbaar. Dit betekent niet dat het pand geen monument is.
             </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className={`rounded-lg px-4 py-3 ${monuments.is_monument ? 'border border-amber-accent/20 bg-amber-accent/[0.06]' : 'border border-white/5 bg-white/[0.03]'}`}>
+            <p className={`font-semibold ${monuments.is_monument ? 'text-amber-accent' : 'text-grey-300'}`}>
+              {monuments.is_monument ? 'Rijksmonument' : 'Geen monument'}
+            </p>
+            {monuments.consensus_status && (
+              <p className={`mt-0.5 text-sm ${monuments.is_monument ? 'text-grey-400' : 'text-grey-500'}`}>
+                {monuments.consensus_status}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Conflict */}
         {monuments.has_conflict && monuments.conflict_note && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-xs font-semibold text-amber-800">Let op — bronconflict</p>
-            <p className="mt-1 text-sm text-amber-700">{monuments.conflict_note}</p>
+          <div className="rounded-lg border border-amber-accent/15 bg-amber-accent/[0.04] px-4 py-3">
+            <p className="text-xs font-semibold text-amber-accent/80">Let op — bronconflict</p>
+            <p className="mt-1 text-sm text-grey-400">{monuments.conflict_note}</p>
           </div>
         )}
 
@@ -394,8 +582,8 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Beperkingen</p>
             <ul className="space-y-1.5">
               {monuments.restrictions_summary.map((restriction, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-grey-200">
-                  <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                <li key={idx} className="flex items-start gap-2 text-sm text-grey-300">
+                  <span className="mt-1.5 block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-accent/50" />
                   {restriction}
                 </li>
               ))}
@@ -407,16 +595,27 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
         {monuments.sources && monuments.sources.length > 0 && (
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bronverificatie</p>
-            <div className="divide-y divide-grey-800 rounded-lg border border-grey-800 bg-grey-950">
+            <div className="divide-y divide-white/[0.03] rounded-lg border border-white/[0.03] bg-white/[0.02]">
               {monuments.sources.map((src, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2">
                   <span className="text-sm text-grey-400">{src.source}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${src.is_monument ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                    {src.is_monument ? 'Monument' : 'Geen'}
-                  </span>
+                  {src.error ? (
+                    <span className="rounded-full border border-red-500/15 bg-red-500/[0.06] px-2 py-0.5 text-xs font-medium text-red-400">
+                      Fout
+                    </span>
+                  ) : (
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${src.is_monument ? 'border border-amber-accent/20 bg-amber-accent/10 text-amber-accent' : 'border border-white/5 bg-white/[0.04] text-grey-400'}`}>
+                      {src.is_monument ? 'Monument' : 'Geen'}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
+            {allSourcesFailed && (
+              <p className="mt-2 text-xs text-grey-600">
+                De RCE API is momenteel niet bereikbaar. BAG en Kadaster bieden geen monumentstatus in hun standaard API.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -430,21 +629,21 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
   const parsed = data.ai_parsing?.parsed_plan
   if (!parsed) return null
 
-  const confidenceColor = parsed.overall_confidence === 'HIGH'
-    ? 'bg-green-100 text-green-800'
+  const confidenceStyle = parsed.overall_confidence === 'HIGH'
+    ? 'border-amber-accent/30 bg-amber-accent/10 text-amber-accent'
     : parsed.overall_confidence === 'MEDIUM'
-      ? 'bg-yellow-100 text-yellow-800'
-      : 'bg-red-100 text-red-800'
+      ? 'border-white/10 bg-white/[0.06] text-grey-300'
+      : 'border-white/5 bg-white/[0.03] text-grey-500'
 
   return (
     <Section title="AI Interpretatie">
       <div className="space-y-4">
         {/* Confidence + Summary */}
         <div className="flex items-start gap-3">
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${confidenceColor}`}>
+          <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceStyle}`}>
             {parsed.overall_confidence === 'HIGH' ? 'Hoog' : parsed.overall_confidence === 'MEDIUM' ? 'Gemiddeld' : 'Laag'}
           </span>
-          <p className="text-sm text-grey-200">{parsed.samenvatting}</p>
+          <p className="text-sm text-grey-300">{parsed.samenvatting}</p>
         </div>
 
         {/* Regels */}
@@ -453,18 +652,18 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsregels (AI)</p>
             <div className="space-y-3">
               {parsed.regels.map((regel, idx) => (
-                <div key={idx} className="rounded-lg border border-grey-800 bg-grey-950 p-4">
+                <div key={idx} className="rounded-lg border border-white/[0.03] bg-white/[0.02] p-4">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-grey-100">{regel.bestemming}</p>
+                    <p className="font-medium text-grey-200">{regel.bestemming}</p>
                     <span className="text-xs text-grey-600">{regel.artikel}</span>
                   </div>
 
                   {regel.toegestane_gebruiken.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-green-700">Toegestaan gebruik</p>
+                      <p className="text-xs font-medium text-grey-500">Toegestaan gebruik</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {regel.toegestane_gebruiken.map((g, i) => (
-                          <span key={i} className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">{g}</span>
+                          <span key={i} className="rounded border border-white/5 bg-white/[0.04] px-2 py-0.5 text-xs text-grey-300">{g}</span>
                         ))}
                       </div>
                     </div>
@@ -472,10 +671,10 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
                   {regel.verboden_gebruiken.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-red-700">Verboden gebruik</p>
+                      <p className="text-xs font-medium text-grey-500">Verboden gebruik</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {regel.verboden_gebruiken.map((g, i) => (
-                          <span key={i} className="rounded bg-red-50 px-2 py-0.5 text-xs text-red-700">{g}</span>
+                          <span key={i} className="rounded border border-red-500/20 bg-red-500/[0.06] px-2 py-0.5 text-xs text-red-400">{g}</span>
                         ))}
                       </div>
                     </div>
@@ -492,12 +691,12 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
                   )}
 
                   {regel.parkeereis && (
-                    <p className="mt-2 text-xs text-grey-400"><strong>Parkeereis:</strong> {regel.parkeereis}</p>
+                    <p className="mt-2 text-xs text-grey-500"><strong className="text-grey-400">Parkeereis:</strong> {regel.parkeereis}</p>
                   )}
 
                   {regel.milieu_restricties.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-grey-400">Milieurestricties</p>
+                      <p className="text-xs font-medium text-grey-500">Milieurestricties</p>
                       <ul className="mt-0.5 text-xs text-grey-500">
                         {regel.milieu_restricties.map((m, i) => <li key={i}>• {m}</li>)}
                       </ul>
@@ -506,7 +705,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
                   {regel.bijzondere_voorwaarden.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-grey-400">Bijzondere voorwaarden</p>
+                      <p className="text-xs font-medium text-grey-500">Bijzondere voorwaarden</p>
                       <ul className="mt-0.5 text-xs text-grey-500">
                         {regel.bijzondere_voorwaarden.map((b, i) => <li key={i}>• {b}</li>)}
                       </ul>
@@ -520,7 +719,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
         {/* Disclaimers */}
         {parsed.disclaimers && parsed.disclaimers.length > 0 && (
-          <div className="rounded-lg border border-grey-800 bg-grey-950 px-4 py-3">
+          <div className="rounded-lg border border-white/[0.03] bg-white/[0.02] px-4 py-3">
             <p className="text-xs font-semibold text-grey-500">Disclaimer</p>
             {parsed.disclaimers.map((d, idx) => (
               <p key={idx} className="mt-1 text-xs italic text-grey-600">{d}</p>
@@ -534,9 +733,9 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
 function MiniDim({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded bg-grey-900 px-2 py-1 text-center border border-grey-800">
+    <div className="rounded border border-white/[0.03] bg-white/[0.02] px-2 py-1 text-center">
       <p className="text-[10px] text-grey-600">{label}</p>
-      <p className="text-sm font-semibold text-grey-100">{value}</p>
+      <p className="text-sm font-semibold tabular-nums text-grey-200">{value}</p>
     </div>
   )
 }
@@ -556,19 +755,19 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
 
   return (
     <Section title="Data bronnen">
-      <div className="divide-y divide-grey-800 rounded-lg border border-grey-800 bg-grey-950">
+      <div className="divide-y divide-white/[0.03] rounded-lg border border-white/[0.03] bg-white/[0.02]">
         {sources.map((src, idx) => (
           <div key={idx} className="flex items-center justify-between px-3 py-2.5">
             <div>
-              <p className="text-sm font-medium text-grey-200">{src.source}</p>
+              <p className="text-sm font-medium text-grey-300">{src.source}</p>
               <p className="text-xs text-grey-600">{formatAge(src.age_seconds)}</p>
             </div>
             <div className="flex items-center gap-2">
               {src.confidence && (
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  src.confidence === 'HIGH' ? 'bg-green-100 text-green-700'
-                    : src.confidence === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-red-100 text-red-700'
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                  src.confidence === 'HIGH' ? 'border-amber-accent/20 bg-amber-accent/10 text-amber-accent'
+                    : src.confidence === 'MEDIUM' ? 'border-white/10 bg-white/[0.06] text-grey-300'
+                    : 'border-white/5 bg-white/[0.03] text-grey-500'
                 }`}>
                   {src.confidence === 'HIGH' ? 'Hoog' : src.confidence === 'MEDIUM' ? 'Gemiddeld' : 'Laag'}
                 </span>
@@ -600,6 +799,28 @@ function MapPinIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
       <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+function AlertIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  )
+}
+
+function MonumentIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent">
+      <rect x="3" y="21" width="18" height="2" rx="1" />
+      <rect x="5" y="11" width="2" height="10" />
+      <rect x="17" y="11" width="2" height="10" />
+      <rect x="10" y="11" width="4" height="10" />
+      <path d="M12 3L4 11h16L12 3z" />
     </svg>
   )
 }

@@ -15,7 +15,7 @@ interface LayerToggleProps {
   onWijkenToggle?: (visible: boolean) => void;
   showWijkenToggle?: boolean; // Only show when gemeente is active
   onScoreToggle?: (visible: boolean) => void;
-  showScoreToggle?: boolean; // Only show when active scan is present
+  showScoreToggle?: boolean; // Only show when active scan is present and parcels are visible
 }
 
 function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle, onWijkenToggle, showWijkenToggle, onScoreToggle, showScoreToggle }: LayerToggleProps) {
@@ -60,6 +60,14 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     // Notify parent component
     if (onParcelsToggle) {
       onParcelsToggle(newShowParcels);
+    }
+
+    // When parcels are turned off, also hide score layer
+    if (!newShowParcels && showScore) {
+      setShowScore(false);
+      if (onScoreToggle) {
+        onScoreToggle(false);
+      }
     }
   };
 
@@ -196,7 +204,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
         </>
       )}
 
-      {showScoreToggle && (
+      {showScoreToggle && showParcels && (
         <>
           <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
           <button
@@ -205,7 +213,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
               showScore ? overlayActive : overlayInactive
             }`}
           >
-            Perceel Score
+            Potentie
           </button>
         </>
       )}

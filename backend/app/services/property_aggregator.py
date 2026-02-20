@@ -145,7 +145,7 @@ async def aggregate_property_data(
                     x=x,
                     y=y,
                     client=client,
-                    distance=1.0,
+                    distance=5.0,
                 ),
                 session=session,
                 force_refresh=force_refresh,
@@ -168,11 +168,22 @@ async def aggregate_property_data(
                 props = feature.get("properties", {})
                 geometry = feature.get("geometry")
 
+                # PDOK OGC API field names differ from older WFS
+                gemeente = props.get("kadastrale_gemeente_waarde", "")
+                sectie = props.get("sectie", "")
+                perceelnummer = props.get("perceelnummer")
+                perceelnr_str = str(perceelnummer) if perceelnummer is not None else None
+
+                # Construct kadastrale aanduiding: "Venlo M 1722"
+                kadastrale_aanduiding = None
+                if gemeente and sectie and perceelnummer is not None:
+                    kadastrale_aanduiding = f"{gemeente} {sectie} {perceelnummer}"
+
                 parcel = CadastralParcel(
-                    kadastrale_aanduiding=props.get("kadastraleAanduiding"),
-                    perceelnummer=props.get("perceelnummer"),
-                    sectie=props.get("sectie"),
-                    oppervlakte=props.get("oppervlakte"),
+                    kadastrale_aanduiding=kadastrale_aanduiding,
+                    perceelnummer=perceelnr_str,
+                    sectie=sectie,
+                    oppervlakte=props.get("kadastrale_grootte_waarde"),
                     geometry=geometry,
                 )
                 parcels.append(parcel)

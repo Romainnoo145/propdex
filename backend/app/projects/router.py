@@ -139,6 +139,10 @@ async def list_projects(
                 created_at=project.created_at,
                 updated_at=project.updated_at,
                 report_count=report_count or 0,
+                parent_id=str(project.parent_id) if project.parent_id else None,
+                gemeente_code=project.gemeente_code,
+                wijk_naam=project.wijk_naam,
+                is_monitored=project.is_monitored,
             )
             for project, report_count in rows
         ]
