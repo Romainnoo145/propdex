@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 41 of 41 (Bug Fixes)
-Plan: 01 of 3
-Status: Phase 40 complete
-Last activity: 2026-02-20 -- Phase 40 Plan 02: "Genereer rapport" button wired in ParcelDetailModal and InspectorPanel
+Plan: 02 of 3
+Status: Phase 41 in progress
+Last activity: 2026-02-20 -- Phase 41 Plan 02: ARQ ScanResult idempotent insert (ON CONFLICT DO NOTHING)
 
-Progress: [████████░░] 67% (8/12 plans complete)
+Progress: [████████░░] 75% (9/12 plans complete)
 
 ---
 
@@ -27,6 +27,7 @@ Progress: [████████░░] 67% (8/12 plans complete)
 - Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
 - Phase 39: 6 min (39-01) + 2 min (39-02) = 8 min total, 2 plans, 4 files modified
 - Phase 40: 2 min (40-01) + 5 min (40-02) = 7 min total, 2 plans, 4 files modified
+- Phase 41: 1 min (41-02) so far
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -78,11 +79,13 @@ Progress: [████████░░] 67% (8/12 plans complete)
 - [40-02]: useGenerateReportFromParcel invalidates ['reports'] queryKey -- new report appears immediately in Rapporten view without manual refresh
 - [40-02]: Toast pattern uses shared toastId -- loading toast replaced by success/error (no stacking)
 - [40-02]: Button placed as last item in both components -- below vergunningen in modal, below score_category in panel
+- [41-02]: Use index_elements=['scan_id', 'parcel_id'] not constraint name in on_conflict_do_nothing -- more robust and explicit
+- [41-02]: Wrap bulk insert in if qualifying: guard -- avoids empty VALUES list PostgreSQL error
 
 ### Known Issues (v5.0 scope)
 
 - Backend register endpoint returns 500 -- FIX-01 (Phase 41)
-- ARQ worker re-runs create duplicate ScanResult rows -- FIX-02 (Phase 41)
+- ARQ worker re-runs create duplicate ScanResult rows -- FIX-02 RESOLVED (Phase 41 Plan 02)
 - react-resizable-panels unused in package.json -- FIX-03 (Phase 41)
 - ChangeTimeline.tsx and ProjectEditModal.tsx have legacy gray-* classes -- FIX-03 (Phase 41)
 
@@ -100,11 +103,11 @@ Progress: [████████░░] 67% (8/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-20
-**Stopped At:** Completed 40-02-PLAN.md -- "Genereer rapport" frontend integration
+**Stopped At:** Completed 41-02-PLAN.md -- ARQ ScanResult idempotent insert (ON CONFLICT DO NOTHING)
 **Resume File:** None
 
-**Next Action:** Execute Phase 41 -- Bug fixes (register 500, ARQ duplicates, legacy gray-* classes)
+**Next Action:** Execute Phase 41 Plan 03 -- Legacy gray-* classes + react-resizable-panels cleanup
 
 ---
 
-*State updated: 2026-02-20 -- Plan 40-02 complete, Phase 40 complete*
+*State updated: 2026-02-20 -- Plan 41-02 complete, FIX-02 resolved*
