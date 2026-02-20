@@ -79,12 +79,14 @@ Progress: [████████░░] 75% (9/12 plans complete)
 - [40-02]: useGenerateReportFromParcel invalidates ['reports'] queryKey -- new report appears immediately in Rapporten view without manual refresh
 - [40-02]: Toast pattern uses shared toastId -- loading toast replaced by success/error (no stacking)
 - [40-02]: Button placed as last item in both components -- below vergunningen in modal, below score_category in panel
+- [41-01]: Read refresh_token from Set-Cookie header in tests via _extract_refresh_cookie() -- CookieTokenResponse only has access_token/token_type
+- [41-01]: Send refresh_token via cookies={} parameter in httpx tests -- bypasses path-matching for cookie jar (/api/auth path vs /auth/refresh endpoint)
 - [41-02]: Use index_elements=['scan_id', 'parcel_id'] not constraint name in on_conflict_do_nothing -- more robust and explicit
 - [41-02]: Wrap bulk insert in if qualifying: guard -- avoids empty VALUES list PostgreSQL error
 
 ### Known Issues (v5.0 scope)
 
-- Backend register endpoint returns 500 -- FIX-01 (Phase 41)
+- Backend register endpoint returns 500 -- FIX-01 (Phase 41) [auth tests updated, root cause was test mismatch not endpoint]
 - ARQ worker re-runs create duplicate ScanResult rows -- FIX-02 RESOLVED (Phase 41 Plan 02)
 - react-resizable-panels unused in package.json -- FIX-03 (Phase 41)
 - ChangeTimeline.tsx and ProjectEditModal.tsx have legacy gray-* classes -- FIX-03 (Phase 41)
@@ -103,11 +105,11 @@ Progress: [████████░░] 75% (9/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-20
-**Stopped At:** Completed 41-02-PLAN.md -- ARQ ScanResult idempotent insert (ON CONFLICT DO NOTHING)
+**Stopped At:** Completed 41-01-PLAN.md -- Auth integration test cookie-based flow fix
 **Resume File:** None
 
-**Next Action:** Execute Phase 41 Plan 03 -- Legacy gray-* classes + react-resizable-panels cleanup
+**Next Action:** Execute Phase 41 Plan 03 -- Legacy gray-* classes + react-resizable-panels cleanup (41-02 already complete)
 
 ---
 
-*State updated: 2026-02-20 -- Plan 41-02 complete, FIX-02 resolved*
+*State updated: 2026-02-20 -- Plan 41-01 complete, auth integration tests updated for cookie-based refresh flow*
