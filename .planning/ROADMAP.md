@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🚧 **v5.0 Scan Intelligence** -- Phases 37-41 (in progress)
+- ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
 - ✅ **v4.0 UX Redesign** -- Phases 27-36 (shipped 2026-02-18)
 - ✅ **v3.1 Smart Area Intelligence** -- Phases 22-26 (shipped 2026-02-15)
 - ✅ **v3.0 Spatial Foundation** -- Phases 18-21 (shipped 2026-02-11)
@@ -14,7 +14,7 @@
 
 ## Phases
 
-### 🚧 v5.0 Scan Intelligence (In Progress)
+### ✅ v5.0 Scan Intelligence (Shipped 2026-02-20)
 
 **Milestone Goal:** Make scan results persistent and actionable -- browsable scan history, map visualization of scanned areas and parcels, property report generation from scan results, and bug fixes.
 
@@ -78,7 +78,7 @@ Plans:
 - [x] 40-01-PLAN.md -- Add POST /api/reports/from-parcel endpoint with address parsing and property aggregator pipeline
 - [x] 40-02-PLAN.md -- Add "Genereer rapport" button to ParcelDetailModal and InspectorPanel with sonner toast feedback
 
-#### Phase 41: Bug Fixes & Hardening
+#### Phase 41: Bug Fixes & Hardening ✅ (completed 2026-02-20)
 **Goal**: Known bugs are resolved and the codebase is free of identified tech debt
 **Depends on**: Nothing (parallel-safe, grouped at end for clean milestone close)
 **Requirements**: FIX-01, FIX-02, FIX-03
@@ -89,9 +89,9 @@ Plans:
 **Plans**: 3 plans (Wave 1: all parallel)
 
 Plans:
-- [ ] 41-01-PLAN.md -- Update auth integration tests to match cookie-based CookieTokenResponse flow (FIX-01)
-- [ ] 41-02-PLAN.md -- Replace ScanResult session.add with bulk ON CONFLICT DO NOTHING insert (FIX-02)
-- [ ] 41-03-PLAN.md -- Remove react-resizable-panels, clean ChangeTimeline gray-* classes, remove unused Python imports (FIX-03)
+- [x] 41-01-PLAN.md -- Update auth integration tests to match cookie-based CookieTokenResponse flow (FIX-01)
+- [x] 41-02-PLAN.md -- Replace ScanResult session.add with bulk ON CONFLICT DO NOTHING insert (FIX-02)
+- [x] 41-03-PLAN.md -- Remove react-resizable-panels, clean ChangeTimeline gray-* classes, remove unused Python imports (FIX-03)
 
 ## Progress
 
@@ -103,7 +103,7 @@ Plans:
 | 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 39. Map Parcel Visualization | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
 | 40. Report Integration | v5.0 | 2/2 | ✓ Complete | 2026-02-20 |
-| 41. Bug Fixes & Hardening | v5.0 | 0/3 | Not started | - |
+| 41. Bug Fixes & Hardening | v5.0 | 3/3 | ✓ Complete | 2026-02-20 |
 
 ---
 
@@ -199,4 +199,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-20 (Phase 40 complete)*
+*Last updated: 2026-02-20 (Phase 41 complete — v5.0 milestone shipped)*
