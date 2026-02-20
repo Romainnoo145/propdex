@@ -10,6 +10,7 @@ import httpx
 from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
 from shapely.geometry import shape
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
@@ -225,18 +226,21 @@ async def area_scan_job(
                 f"qualify (threshold={QUALIFICATION_THRESHOLD}, cap={MAX_QUALIFYING})"
             )
 
-            for parcel, score, category, factors, _centroid in qualifying:
-                scan_result = ScanResult(
-                    organization_id=org_id,
-                    scan_id=scan.id,
-                    parcel_id=parcel.id,
-                    score=score,
-                    flags={
-                        "category": category,
-                        "factors": factors,
-                    },
+            if qualifying:
+                qualifying_values = [
+                    {
+                        "organization_id": org_id,
+                        "scan_id": scan.id,
+                        "parcel_id": parcel.id,
+                        "score": score,
+                        "flags": {"category": category, "factors": factors},
+                    }
+                    for parcel, score, category, factors, _centroid in qualifying
+                ]
+                stmt = pg_insert(ScanResult).values(qualifying_values).on_conflict_do_nothing(
+                    index_elements=["scan_id", "parcel_id"]
                 )
-                session.add(scan_result)
+                await session.execute(stmt)
 
             await session.flush()
             await session.commit()
