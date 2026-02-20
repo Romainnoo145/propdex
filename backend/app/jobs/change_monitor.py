@@ -1,7 +1,6 @@
 """Daily change monitoring background job for ARQ worker."""
 
 import logging
-import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 

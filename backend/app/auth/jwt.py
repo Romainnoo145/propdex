@@ -1,10 +1,9 @@
 """JWT token creation and validation utilities."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import jwt
-from jwt.exceptions import InvalidTokenError
 
 from app.core.config import settings
 
