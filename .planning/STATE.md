@@ -5,29 +5,29 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 40 complete, next: Phase 41 (bug fixes)
+**Current focus:** v5.0 Scan Intelligence -- Phase 41 complete, all 3 plans done
 
 ---
 
 ## Current Position
 
 Phase: 41 of 41 (Bug Fixes)
-Plan: 02 of 3
-Status: Phase 41 in progress
-Last activity: 2026-02-20 -- Phase 41 Plan 02: ARQ ScanResult idempotent insert (ON CONFLICT DO NOTHING)
+Plan: 03 of 3
+Status: Phase 41 complete -- v5.0 milestone complete
+Last activity: 2026-02-20 -- Phase 41 Plan 03: Tech debt cleanup (react-resizable-panels, ChangeTimeline dark theme, Python unused imports)
 
-Progress: [████████░░] 75% (9/12 plans complete)
+Progress: [██████████] 100% (12/12 plans complete)
 
 ---
 
 ## Performance Metrics
 
-**v5.0 Scan Intelligence (In Progress)**
+**v5.0 Scan Intelligence (Complete)**
 - Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
 - Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
 - Phase 39: 6 min (39-01) + 2 min (39-02) = 8 min total, 2 plans, 4 files modified
 - Phase 40: 2 min (40-01) + 5 min (40-02) = 7 min total, 2 plans, 4 files modified
-- Phase 41: 1 min (41-02) so far
+- Phase 41: 1 min (41-01) + 1 min (41-02) + 3 min (41-03) = 5 min total, 3 plans, 6 files modified
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -83,13 +83,13 @@ Progress: [████████░░] 75% (9/12 plans complete)
 - [41-01]: Send refresh_token via cookies={} parameter in httpx tests -- bypasses path-matching for cookie jar (/api/auth path vs /auth/refresh endpoint)
 - [41-02]: Use index_elements=['scan_id', 'parcel_id'] not constraint name in on_conflict_do_nothing -- more robust and explicit
 - [41-02]: Wrap bulk insert in if qualifying: guard -- avoids empty VALUES list PostgreSQL error
+- [41-03]: ruff --select F401 only (not bare --fix) -- avoids touching B904 bare-raise security patterns in auth code
+- [41-03]: ChangeTimeline uses grey-* (design system dark tokens) not gray-* (Tailwind default light palette) -- dark UI component context
+- [41-03]: ProjectEditModal/ProjectCreateModal gray-* kept intentionally -- light card on dimmed backdrop is correct modal pattern
 
 ### Known Issues (v5.0 scope)
 
-- Backend register endpoint returns 500 -- FIX-01 (Phase 41) [auth tests updated, root cause was test mismatch not endpoint]
-- ARQ worker re-runs create duplicate ScanResult rows -- FIX-02 RESOLVED (Phase 41 Plan 02)
-- react-resizable-panels unused in package.json -- FIX-03 (Phase 41)
-- ChangeTimeline.tsx and ProjectEditModal.tsx have legacy gray-* classes -- FIX-03 (Phase 41)
+- All v5.0 known issues resolved as of Phase 41 completion
 
 ### Ongoing TODOs (post-v5.0)
 
@@ -105,11 +105,11 @@ Progress: [████████░░] 75% (9/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-20
-**Stopped At:** Completed 41-01-PLAN.md -- Auth integration test cookie-based flow fix
+**Stopped At:** Completed 41-03-PLAN.md -- Tech debt cleanup (react-resizable-panels, ChangeTimeline dark theme, unused Python imports)
 **Resume File:** None
 
-**Next Action:** Execute Phase 41 Plan 03 -- Legacy gray-* classes + react-resizable-panels cleanup (41-02 already complete)
+**Next Action:** v5.0 milestone complete -- tag v5.0 and plan next milestone
 
 ---
 
-*State updated: 2026-02-20 -- Plan 41-01 complete, auth integration tests updated for cookie-based refresh flow*
+*State updated: 2026-02-20 -- Plan 41-03 complete, Phase 41 complete, v5.0 Scan Intelligence milestone complete*
