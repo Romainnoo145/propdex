@@ -2,32 +2,27 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-18)
+See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.0 Scan Intelligence -- Phase 41 complete, all 3 plans done
+**Current focus:** Planning next milestone
 
 ---
 
 ## Current Position
 
-Phase: 41 of 41 (Bug Fixes)
-Plan: 03 of 3
-Status: Phase 41 complete -- v5.0 milestone complete
-Last activity: 2026-02-20 -- Phase 41 Plan 03: Tech debt cleanup (react-resizable-panels, ChangeTimeline dark theme, Python unused imports)
+Status: v5.0 Scan Intelligence shipped (2026-02-20)
+Last activity: 2026-02-20 -- Milestone v5.0 archived, git tag v5.0 created
 
-Progress: [██████████] 100% (12/12 plans complete)
+Progress: All milestones complete (v1.0 → v5.0)
 
 ---
 
 ## Performance Metrics
 
-**v5.0 Scan Intelligence (Complete)**
-- Phase 37: 6 min (37-01) + 6 min (37-02) = 12 min total, 2 plans, 2 files modified
-- Phase 38: 2 min (38-01) + 4 min (38-02) = 6 min total, 2 plans, 4 files modified
-- Phase 39: 6 min (39-01) + 2 min (39-02) = 8 min total, 2 plans, 4 files modified
-- Phase 40: 2 min (40-01) + 5 min (40-02) = 7 min total, 2 plans, 4 files modified
-- Phase 41: 1 min (41-01) + 1 min (41-02) + 3 min (41-03) = 5 min total, 3 plans, 6 files modified
+**v5.0 Scan Intelligence (Shipped: 2026-02-20)**
+- 5 phases (37-41), 11 plans, 51 commits, 65 files changed (+9,264/-2,326)
+- Phase 37: 12 min, Phase 38: 6 min, Phase 39: 8 min, Phase 40: 7 min, Phase 41: 5 min
 
 **v4.0 UX Redesign (Shipped: 2026-02-18)**
 - 10 phases (27-36), 31 plans, 129 commits, ~16,234 LOC TypeScript/React
@@ -51,47 +46,16 @@ Progress: [██████████] 100% (12/12 plans complete)
 
 ## Accumulated Context
 
-### Decisions
+### Key Patterns (carry forward)
 
-- [v5.0 roadmap]: No new dependencies required -- scan history reuses AreaScan table, MVT tiles extended via LEFT JOIN, report-from-parcel reuses existing property_aggregator
-- [v5.0 roadmap]: Lead pipeline deferred to future milestone -- not in v5.0 scope
-- [v5.0 roadmap]: Bug fixes grouped into Phase 41 for clean milestone close; they are parallel-safe but batched at end
-- [v4.0]: Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()` -- causes transaction already begun)
-- [v4.0]: parcel_cache.geometry is EPSG:28992; always use ST_Transform(geometry, 4326) before GeoJSON serialization
-- [37-01]: Use COUNT(scan_results) not parcels_total for parcel_count in scan history -- parcels_total reflects discovered parcels, scan_results count is actual qualifying results
-- [37-01]: list_scans() accepts optional project_id so Plan 37-02 can reuse without changes
-- [37-02]: 404 not 403 for cross-org projects in sub-resource endpoints -- consistent with get_project, prevents enumeration
-- [37-02]: Sub-resource pattern: verify parent ownership (project -> org) first, then query child via service layer
-- [38-01]: 5-minute staleTime for scan history hooks -- balances freshness vs network requests for infrequently-changing data
-- [38-01]: useProjectScans disabled when projectId is null -- only fetches when wijk row is expanded (consistent with useScanPolling pattern)
-- [38-01]: useTriggerScan invalidates both scan-history and project-scans -- new scan appears immediately in all views
-- [38-02]: WijkScanList sub-component encapsulates useProjectScans -- hook fires only when row is expanded, not on page load
-- [38-02]: Single WijkScanList component handles both monitoring wijks and regular projects -- both provide project.id
-- [38-02]: DEMO_REPORTS removed completely -- Projecten view now shows real scan history from backend API
-- [39-01]: Amber overlay (rgba(245,158,11,0.25) fill, rgba(245,158,11,0.7) line) -- visually distinct from emerald (unscanned) and blue (monitored wijken)
-- [39-01]: Scanned wijk highlight effect placed AFTER monitored wijk overlay effect -- both insert before wijk-fill, order matters for layer stacking
-- [39-01]: Score layer restoration fires on [activeScanId, mapReady] -- separate from live scan completion effect on [scanStatus.data] to handle URL restoration path
-- [39-02]: showScoreToggle={!!activeScanId} -- toggle appears on scan start or URL restoration (scan_id param), disappears when scan cleared
-- [39-02]: showScore defaults to true -- consistent with score layer being added visible on scan completion; reset effect (prevShowScoreToggleRef) resets to visible when scan becomes active
-- [40-01]: POST /from-parcel placed after /cities and before /{report_id} -- static sub-paths must precede parameterized paths in FastAPI
-- [40-01]: Rate limit 10/minute matches /{report_id}/refresh -- both trigger external API calls
-- [40-01]: 502 Bad Gateway for aggregator failures -- distinguishes upstream API errors from server errors
-- [40-02]: useGenerateReportFromParcel invalidates ['reports'] queryKey -- new report appears immediately in Rapporten view without manual refresh
-- [40-02]: Toast pattern uses shared toastId -- loading toast replaced by success/error (no stacking)
-- [40-02]: Button placed as last item in both components -- below vergunningen in modal, below score_category in panel
-- [41-01]: Read refresh_token from Set-Cookie header in tests via _extract_refresh_cookie() -- CookieTokenResponse only has access_token/token_type
-- [41-01]: Send refresh_token via cookies={} parameter in httpx tests -- bypasses path-matching for cookie jar (/api/auth path vs /auth/refresh endpoint)
-- [41-02]: Use index_elements=['scan_id', 'parcel_id'] not constraint name in on_conflict_do_nothing -- more robust and explicit
-- [41-02]: Wrap bulk insert in if qualifying: guard -- avoids empty VALUES list PostgreSQL error
-- [41-03]: ruff --select F401 only (not bare --fix) -- avoids touching B904 bare-raise security patterns in auth code
-- [41-03]: ChangeTimeline uses grey-* (design system dark tokens) not gray-* (Tailwind default light palette) -- dark UI component context
-- [41-03]: ProjectEditModal/ProjectCreateModal gray-* kept intentionally -- light card on dimmed backdrop is correct modal pattern
+- Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()`)
+- parcel_cache.geometry is EPSG:28992; always ST_Transform(geometry, 4326) before GeoJSON
+- 404 not 403 for cross-org access (prevents enumeration)
+- Static sub-paths before parameterized paths in FastAPI routing
+- pg_insert().on_conflict_do_nothing() for idempotent bulk inserts
+- ProjectEditModal/ProjectCreateModal use intentional light-theme gray-* (white card on dark backdrop)
 
-### Known Issues (v5.0 scope)
-
-- All v5.0 known issues resolved as of Phase 41 completion
-
-### Ongoing TODOs (post-v5.0)
+### Ongoing TODOs
 
 - Production deployment: Create app_role (sql/setup_app_role.sql)
 - Production deployment: Update Docker container to postgis/postgis:16-3.5
@@ -105,11 +69,11 @@ Progress: [██████████] 100% (12/12 plans complete)
 ## Session Continuity
 
 **Last Session:** 2026-02-20
-**Stopped At:** Completed 41-03-PLAN.md -- Tech debt cleanup (react-resizable-panels, ChangeTimeline dark theme, unused Python imports)
+**Stopped At:** v5.0 milestone archived and tagged
 **Resume File:** None
 
-**Next Action:** v5.0 milestone complete -- tag v5.0 and plan next milestone
+**Next Action:** `/gsd:new-milestone` -- start next milestone
 
 ---
 
-*State updated: 2026-02-20 -- Plan 41-03 complete, Phase 41 complete, v5.0 Scan Intelligence milestone complete*
+*State updated: 2026-02-20 -- v5.0 Scan Intelligence milestone complete and archived*

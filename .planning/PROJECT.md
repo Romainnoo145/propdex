@@ -20,25 +20,19 @@ Scan any Dutch municipality or neighborhood and instantly find unused building o
 
 This is the ONE thing that must work. Everything else is secondary.
 
-## Current Milestone: v5.0 Scan Intelligence
-
-**Goal:** Make scan results persistent and actionable — browsable scan history, map visualization of scanned areas and parcels, property report generation from scan results, and bug fixes.
-
-**Target features:**
-- Scan history — browsable list of all previous scans with metadata, re-open on map or results table
-- Map visualization — scanned wijken highlighted + individual parcels colored by opportunity score via MVT tiles
-- Report integration — generate full property reports for any parcel in scan results
-- Bug fixes — register 500 error and known issues cleanup
-
 ## Current State
 
-**Shipped:** v4.0 UX Redesign (2026-02-18)
+**Shipped:** v5.0 Scan Intelligence (2026-02-20)
 **Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
 **Tests:** 275 backend (104 unit + 171 integration), 74% coverage, 80%+ core modules
 
 **What's working:**
+- Scan history: browsable list of all previous scans with gemeente/wijk metadata, re-open on map or results table
+- Map visualization: scanned wijken highlighted with amber overlay, individual parcels colored by opportunity score via MVT tiles, toggleable score layer
+- Report from parcel: one-click "Genereer rapport" for any scan result parcel, uses existing property aggregator pipeline
+- ARQ worker idempotent: scan re-runs silently skip duplicates via ON CONFLICT DO NOTHING
 - Industrial Amber design system with oklch tokens, Inter/JetBrains Mono fonts, 5 UI primitives, 11 Storybook stories
 - Persistent MapLibre map (never unmounts), SideRailNav icon sidebar, InspectorPanel slide-over
 - Silver desaturated map with PDOK aerial/topographic tiles, kadaster parcel boundaries, bestemmingsplan zones
@@ -50,8 +44,7 @@ This is the ONE thing that must work. Everything else is secondary.
 - Mobile responsive: BottomTabNav, InspectorPanel bottom sheet, ParcelCard layout, 44px touch targets, read-only mode
 - Settings page: account profile, password, notifications, appearance preferences
 - Bundle-split build: 4 vendor chunks + 15 route chunks (was 1,813KB monolith)
-- Mobile glassmorphism disabled (solid backgrounds), motion-reduce:transition-none on InspectorPanel
-- All previous v1.0-v3.1 functionality preserved (scan pipeline, change monitoring, reports, PDF export, auth)
+- All previous v1.0-v4.0 functionality preserved (scan pipeline, change monitoring, reports, PDF export, auth)
 
 ## Business Model
 
@@ -133,14 +126,16 @@ This is the ONE thing that must work. Everything else is secondary.
 - Multi-criteria sorting, checkbox selection, bulk export, category-grouped filters — v4.0
 - Mobile responsive read-only mode with BottomTabNav, bottom sheet, card layout, 44px touch targets — v4.0
 - Settings page with account/password/notifications/appearance sections — v4.0
+- Scan results persist and are browsable from Projecten view — v5.0
+- Map shows scanned wijken and individual parcel results with score coloring — v5.0
+- Full property reports can be generated for scan result parcels — v5.0
+- Auth integration tests match cookie-based CookieTokenResponse flow — v5.0
+- ARQ worker handles re-runs idempotently via ON CONFLICT DO NOTHING — v5.0
+- Tech debt resolved: unused packages, legacy Tailwind classes, dead imports — v5.0
 
 ### Active
 
-- [ ] Scan results persist and are browsable from Projecten view
-- [ ] Map shows scanned wijken and individual parcel results with score coloring
-- [ ] Full property reports can be generated for scan result parcels
-- [ ] Backend register endpoint fixed
-- [ ] Known bugs and tech debt resolved
+(No active milestone — planning next version)
 
 ### Future
 
@@ -200,6 +195,12 @@ This is the ONE thing that must work. Everything else is secondary.
 | SVBP2012 standard for bestemming colors | National standard for zoning plan visualization | ✓ Good — consistent with official plans |
 | Self-referential Project hierarchy | gemeente→wijk parent-child using same model, no new tables | ✓ Good — clean monitoring structure |
 | ARQ daily cron for change detection | Reuses existing job infrastructure, runs at 03:00 UTC | ✓ Good — simple, proven pattern |
+| Scan history reuses AreaScan table | No new models needed — COUNT(scan_results) for parcel_count | ✓ Good — zero schema changes |
+| Amber overlay for scanned wijken | rgba(245,158,11,0.25) fill — distinct from emerald unscanned and blue monitored | ✓ Good — clear visual hierarchy |
+| Score layer fires on [activeScanId, mapReady] | Separate from live scan completion effect — handles URL restoration path | ✓ Good — reliable state restoration |
+| POST /from-parcel before /{report_id} | Static sub-paths must precede parameterized paths in FastAPI | ✓ Good — prevents route matching bugs |
+| pg_insert().on_conflict_do_nothing() for ScanResult | index_elements form more robust than constraint name | ✓ Good — idempotent worker re-runs |
+| ProjectEditModal keeps gray-* (light theme) | White card on dark backdrop is intentional UX — JSDoc documents decision | ✓ Good — readable modal pattern |
 
 ## Context
 
@@ -209,12 +210,10 @@ This is the ONE thing that must work. Everything else is secondary.
 - **Comparable platforms:** Transect (US, land GIS), Datagrid (zoning AI), Prophetic (deal intelligence), Spartner (NL, AI for vastgoed), LightBox (zoning data)
 - **Key Dutch data sources:** PDOK, BAG, Kadaster, ruimtelijkeplannen.nl, Rijksdienst voor het Cultureel Erfgoed
 - **Known issues:**
-  - Backend register endpoint returns 500 (needs investigation)
   - Kadaster eigendomsdata requires paid API (deferred)
   - Monument restrictions are generic boilerplate (not property-specific)
-  - Mobile navigation: RESOLVED in v4.0 (BottomTabNav + all mobile adaptations complete)
   - PLU WMS change detection needs live data validation (MON-02)
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-18 after v5.0 Lead Pipeline milestone started*
+*Last updated: 2026-02-20 after v5.0 Scan Intelligence milestone shipped*

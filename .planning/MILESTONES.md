@@ -168,3 +168,13 @@
 
 ---
 
+
+## v5.0 Scan Intelligence (Shipped: 2026-02-20)
+
+**Phases completed:** 41 phases, 141 plans, 32 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

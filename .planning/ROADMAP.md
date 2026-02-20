@@ -14,98 +14,19 @@
 
 ## Phases
 
-### ✅ v5.0 Scan Intelligence (Shipped 2026-02-20)
+<details>
+<summary>✅ v5.0 Scan Intelligence (Phases 37-41) -- SHIPPED 2026-02-20</summary>
 
-**Milestone Goal:** Make scan results persistent and actionable -- browsable scan history, map visualization of scanned areas and parcels, property report generation from scan results, and bug fixes.
+- [x] Phase 37: Scan History Backend (2/2 plans) -- Paginated scan list API, project sub-resource endpoint
+- [x] Phase 38: Scan History Frontend (2/2 plans) -- Real scan data in Projecten, navigation to results/map
+- [x] Phase 39: Map Parcel Visualization (2/2 plans) -- Scanned wijk amber overlay, score layer toggle
+- [x] Phase 40: Report Integration (2/2 plans) -- POST /from-parcel endpoint, "Genereer rapport" button
+- [x] Phase 41: Bug Fixes & Hardening (3/3 plans) -- Auth test cookie fix, ARQ idempotency, tech debt cleanup
 
-#### Phase 37: Scan History Backend ✅ (completed 2026-02-19)
-**Goal**: Users can retrieve a queryable list of all previous scans with metadata from the API
-**Depends on**: Nothing (backend-only phase)
-**Requirements**: SCAN-01, SCAN-02, SCAN-03
-**Success Criteria** (what must be TRUE):
-  1. `GET /api/scans` returns a paginated list of scans with gemeente name, wijk name, date, and parcel count per scan
-  2. `GET /api/projects/{id}/scans` returns scans associated with a specific project
-  3. Each scan in the list includes a scan_id that can be used to load scan results in the results table
-  4. Scan list endpoint enforces multi-tenant isolation -- org A cannot see org B's scans
-**Plans**: 2 plans (Wave 1: both parallel)
+**11 plans, 12 requirements, 51 commits, 65 files changed (+9,264/-2,326)**
+**Archive:** `.planning/milestones/v5.0-ROADMAP.md`
 
-Plans:
-- [x] 37-01-PLAN.md -- Add `GET /api/scans` paginated list endpoint with gemeente/wijk metadata and parcel count
-- [x] 37-02-PLAN.md -- Add `GET /api/projects/{id}/scans` sub-resource endpoint
-
-#### Phase 38: Scan History Frontend ✅ (completed 2026-02-19)
-**Goal**: Users can browse their scan history in the Projecten view and navigate back to any previous scan's results or map
-**Depends on**: Phase 37
-**Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04
-**Success Criteria** (what must be TRUE):
-  1. Projecten view shows real scans with gemeente, wijk, date, and parcel count (no demo data)
-  2. User can click any scan in the list to re-open its results in the /resultaten table
-  3. User can navigate from a scan in the list to the map with that scan's parcels loaded
-  4. Empty state is shown when no scans exist yet
-**Plans**: 2 plans (Wave 1: data layer, Wave 2: UI)
-
-Plans:
-- [x] 38-01-PLAN.md -- Add ScanListItem/ScanListResponse types, fetchScanHistory/fetchProjectScans API functions, useScanHistory/useProjectScans hooks, useTriggerScan cache invalidation
-- [x] 38-02-PLAN.md -- Replace DEMO_REPORTS with real scan data via WijkScanList component; add "Toon resultaten" and "Toon kaart" navigation actions
-
-#### Phase 39: Map Parcel Visualization ✅ (completed 2026-02-19)
-**Goal**: Users can see scanned wijken highlighted on the map and individual scan result parcels colored by opportunity score
-**Depends on**: Phase 37 (scan_id available)
-**Requirements**: MAP-01, MAP-02, MAP-03
-**Success Criteria** (what must be TRUE):
-  1. Scanned wijken appear with a distinct highlight color on the map, visually distinct from unscanned wijken
-  2. Individual parcels from scan results appear as colored polygons on the map, with color reflecting opportunity score
-  3. User can toggle parcel score coloring on and off to return to the default map view
-  4. Parcel polygons are rendered via MVT tiles (viewport-aware, performant at 2000+ parcels)
-**Plans**: 2 plans (Wave 1: both parallel)
-
-Plans:
-- [x] 39-01-PLAN.md -- Add ScannedWijkHighlightLayer (amber overlay for scanned wijken) and fix score layer restoration on URL navigation
-- [x] 39-02-PLAN.md -- Add Perceel Score toggle button in LayerToggle and wire to parcel score layer visibility
-
-#### Phase 40: Report Integration ✅ (completed 2026-02-20)
-**Goal**: Users can generate and save a full property intelligence report for any parcel appearing in scan results
-**Depends on**: Phase 38 (parcels visible and selectable in results)
-**Requirements**: RPT-01, RPT-02
-**Success Criteria** (what must be TRUE):
-  1. User can trigger report generation for any parcel in the scan results table or InspectorPanel
-  2. Report generation reuses the existing property aggregator pipeline (BAG, PDOK, DSO, RCE, SRU)
-  3. Generated report is saved and appears in the report management system (Rapporten view)
-  4. User sees progress feedback while the report is being generated
-**Plans**: 2 plans (Wave 1: backend, Wave 2: frontend)
-
-Plans:
-- [x] 40-01-PLAN.md -- Add POST /api/reports/from-parcel endpoint with address parsing and property aggregator pipeline
-- [x] 40-02-PLAN.md -- Add "Genereer rapport" button to ParcelDetailModal and InspectorPanel with sonner toast feedback
-
-#### Phase 41: Bug Fixes & Hardening ✅ (completed 2026-02-20)
-**Goal**: Known bugs are resolved and the codebase is free of identified tech debt
-**Depends on**: Nothing (parallel-safe, grouped at end for clean milestone close)
-**Requirements**: FIX-01, FIX-02, FIX-03
-**Success Criteria** (what must be TRUE):
-  1. User can register a new account without receiving a 500 error
-  2. ARQ worker re-runs do not create duplicate ScanResult rows (idempotent via ON CONFLICT DO NOTHING)
-  3. Unused packages removed from package.json and legacy gray-* classes cleaned from ChangeTimeline.tsx / ProjectEditModal.tsx
-**Plans**: 3 plans (Wave 1: all parallel)
-
-Plans:
-- [x] 41-01-PLAN.md -- Update auth integration tests to match cookie-based CookieTokenResponse flow (FIX-01)
-- [x] 41-02-PLAN.md -- Replace ScanResult session.add with bulk ON CONFLICT DO NOTHING insert (FIX-02)
-- [x] 41-03-PLAN.md -- Remove react-resizable-panels, clean ChangeTimeline gray-* classes, remove unused Python imports (FIX-03)
-
-## Progress
-
-**Execution Order:** 37 → 38 → 39 → 40 → 41
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 37. Scan History Backend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 38. Scan History Frontend | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 39. Map Parcel Visualization | v5.0 | 2/2 | ✓ Complete | 2026-02-19 |
-| 40. Report Integration | v5.0 | 2/2 | ✓ Complete | 2026-02-20 |
-| 41. Bug Fixes & Hardening | v5.0 | 3/3 | ✓ Complete | 2026-02-20 |
-
----
+</details>
 
 <details>
 <summary>✅ v4.0 UX Redesign (Phases 27-36) -- SHIPPED 2026-02-18</summary>
@@ -199,4 +120,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-20 (Phase 41 complete — v5.0 milestone shipped)*
+*Last updated: 2026-02-20 (v5.0 Scan Intelligence shipped)*
