@@ -461,6 +461,43 @@ async def enrich_parcel(
         )
 
 
+@router.get("/parcels/{parcel_id}/centroid")
+@limiter.limit("60/minute")
+async def get_parcel_centroid(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return parcel centroid in WGS84 for map fly-to."""
+    from geoalchemy2.functions import ST_AsText, ST_Centroid, ST_Transform
+
+    query = select(
+        ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326))
+    ).where(
+        ParcelCache.id == parcel_id,
+        ParcelCache.organization_id == organization_id,
+    )
+    result = await db.execute(query)
+    wkt = result.scalar_one_or_none()
+
+    if not wkt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found",
+        )
+
+    # Parse "POINT(lng lat)" WKT
+    import re as re_mod
+
+    m = re_mod.match(r"POINT\(([^ ]+) ([^ ]+)\)", wkt)
+    if not m:
+        raise HTTPException(status_code=500, detail="Failed to parse centroid")
+
+    return {"lng": float(m.group(1)), "lat": float(m.group(2))}
+
+
 # --- Dynamic path routes (/{scan_id}) ---
 
 

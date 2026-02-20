@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/primitives/Button'
 import MapShell from '@/components/layout/MapShell'
 import { InspectorPanel } from '@/components/layout/InspectorPanel'
 import LayerToggle from '@/components/map/LayerToggle'
@@ -46,10 +48,9 @@ import {
 import { useTriggerScan, useScanPolling, useCancelScan, useScanHistory } from '@/hooks/useScans'
 import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
-import ScanProgressOverlay from '@/components/map/ScanProgressOverlay'
+// ScanProgressOverlay — replaced by inline progress in gemeente header bar
 import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
-import { lookupPdokAddress, getScanTileUrl, fetchWijken } from '@/lib/api'
-import { getDemoProperty } from '@/lib/demo-data'
+import { lookupPdokAddress, getScanTileUrl, fetchWijken, fetchParcelCentroid } from '@/lib/api'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
@@ -62,6 +63,7 @@ interface MapSearchParams {
   reportId?: string
   panel?: 'results'     // KEEP for now — unused but harmless
   scan_id?: string      // Restore scan context when returning from /resultaten
+  parcel_id?: string    // Focus on specific parcel (from scan results "Bekijk op kaart")
 }
 
 export const Route = createFileRoute('/_authenticated/map')({
@@ -74,6 +76,7 @@ export const Route = createFileRoute('/_authenticated/map')({
     reportId: typeof search.reportId === 'string' ? search.reportId : undefined,
     panel: search.panel === 'results' ? 'results' : undefined,
     scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
+    parcel_id: typeof search.parcel_id === 'string' ? search.parcel_id : undefined,
   }),
 })
 
@@ -83,10 +86,10 @@ function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
   const { mapRef, mapReady } = useMapContext()
   const navigate = useNavigate()
-  const { postcode, huisnummer, reportId, scan_id: urlScanId } = Route.useSearch()
+  const { postcode, huisnummer, reportId, scan_id: urlScanId, parcel_id: urlParcelId } = Route.useSearch()
   const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
-  const [demoData, setDemoData] = useState<PropertyReportResponse | null>(null)
+  // demo data removed — all property data comes from lookup API
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
@@ -111,6 +114,17 @@ function MapPage() {
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [wijkLoading, setWijkLoading] = useState(false)
   const [inspectorParcel, setInspectorParcel] = useState<ScanResultItem | null>(null)
+
+  // Track wijk name for inline progress display
+  const [activeScanWijk, setActiveScanWijk] = useState<string | null>(null)
+
+  // Pending scan confirmation state
+  const [pendingScan, setPendingScan] = useState<{
+    wijkNaam: string
+    gemeente_code: string
+    gemeente_naam: string
+    bbox_wgs84: [number, number, number, number]
+  } | null>(null)
 
   // Refs for fresh values in gemeente click handler (avoid stale closure)
   const activeGemeenteRef = useRef(activeGemeente)
@@ -145,7 +159,7 @@ function MapPage() {
   const savedReport = useReport(reportId || null)
 
   // Save/export flow
-  const currentData = demoData ?? lookup.data ?? null
+  const currentData = lookup.data ?? null
   const saveFlow = useSaveReportFlow(currentData)
   const [savedReportId, setSavedReportId] = useState<string | null>(null)
 
@@ -175,11 +189,11 @@ function MapPage() {
   // Update geometry whenever data changes and map is ready
   useEffect(() => {
     if (!mapReady || !mapRef.current) return
-    const data = demoData ?? lookup.data ?? null
+    const data = lookup.data ?? null
     if (data) {
       updatePropertyGeometry(mapRef.current, data)
     }
-  }, [demoData, lookup.data, mapReady])
+  }, [lookup.data, mapReady])
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
@@ -196,7 +210,6 @@ function MapPage() {
     // Extract PropertyReportResponse from saved report's report_data
     const propertyData = savedReport.data.report_data as unknown as PropertyReportResponse
 
-    setDemoData(propertyData)
     setSavedReportId(reportId)
     setTier('drawer')
 
@@ -211,12 +224,25 @@ function MapPage() {
   }, [reportId, savedReport.data, navigate])
 
   // Restore scan context when returning from /resultaten with ?scan_id=...
+  // When parcel_id is also present, fetch centroid and fly to it
   useEffect(() => {
     if (!urlScanId || activeScanId) return
     setActiveScanId(urlScanId)
+
+    if (urlParcelId && accessToken) {
+      // Fetch centroid and fly to parcel
+      fetchParcelCentroid(urlParcelId, accessToken)
+        .then(({ lng, lat }) => {
+          setPropertyLngLat([lng, lat])
+        })
+        .catch(() => {
+          // Silently fall back — scan layer still loads
+        })
+    }
+
     // Clear from URL to prevent re-trigger on hot reload
     navigate({ to: '/map', search: {}, replace: true })
-  }, [urlScanId, activeScanId, navigate])
+  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
@@ -235,7 +261,6 @@ function MapPage() {
     const hn = huisnummer
 
     setTier('quick')
-    setDemoData(null)
     setPropertyLngLat(null)
 
     lookup.mutate(
@@ -248,14 +273,7 @@ function MapPage() {
           }
         },
         onError: () => {
-          const demo = getDemoProperty(pc, hn)
-          if (demo) {
-            setDemoData(demo)
-            const coords = demo.map_data?.center_wgs84
-            if (coords && coords.length === 2) {
-              setPropertyLngLat([coords[0]!, coords[1]!])
-            }
-          }
+          toast.error('Adres niet gevonden')
         },
       }
     )
@@ -398,7 +416,6 @@ function MapPage() {
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
     // Show QuickCard immediately (for loading state)
     setTier('quick')
-    setDemoData(null)
     setPropertyLngLat(null)
 
     try {
@@ -436,17 +453,7 @@ function MapPage() {
             })
           },
           onError: () => {
-            const demo = getDemoProperty(pc, hn)
-            if (demo) {
-              setDemoData(demo)
-              addRecentItem({
-                id: demo.address.nummeraanduiding_id,
-                report_name: `${demo.address.straat} ${demo.address.huisnummer}${demo.address.huisletter || ''}${demo.address.toevoeging || ''}`,
-                postcode: demo.address.postcode,
-                huisnummer: demo.address.huisnummer,
-                woonplaats: demo.address.woonplaats,
-              })
-            }
+            toast.error('Adres niet gevonden')
           },
         }
       )
@@ -527,41 +534,59 @@ function MapPage() {
       removeScanAreaHighlight(mapRef.current)
       addScanAreaHighlight(mapRef.current, geometry)
 
-      // Trigger scan directly (wijk click is a deliberate action -- no confirmation needed)
-      triggerScan.mutate(
-        {
-          gemeente_code: currentGemeente.code,
-          gemeente_naam: currentGemeente.naam,
-          bbox_wgs84: bbox,
-          wijk_naam: wijkNaam,
-        },
-        {
-          onSuccess: (data) => {
-            setActiveScanId(data.scan_id)
-            if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-            setSelectedArea(null)
-            if (data.status === 'existing' && !data.needs_rescan) {
-              // Existing completed scan — navigate to results immediately
-              navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
-              toast.info(`Bestaande scan gevonden — resultaten laden`)
-            } else {
-              toast.success(`Scan gestart voor ${wijkNaam}`)
-            }
-          },
-          onError: (err) => {
-            toast.error(`Scan starten mislukt: ${err.message}`)
-            if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-            setSelectedArea(null)
-          },
-        }
-      )
+      // Show confirmation dialog before scanning
+      setPendingScan({
+        wijkNaam,
+        gemeente_code: currentGemeente.code,
+        gemeente_naam: currentGemeente.naam,
+        bbox_wgs84: bbox,
+      })
     },
-    [triggerScan]
+    []
   )
 
   // Ref for wijk click handler to avoid stale closure
   const handleWijkClickRef = useRef(handleWijkClick)
   handleWijkClickRef.current = handleWijkClick
+
+  // Confirm wijk scan from confirmation dialog
+  const handleConfirmScan = useCallback(() => {
+    if (!pendingScan) return
+
+    const { wijkNaam, ...scanParams } = pendingScan
+    setPendingScan(null)
+
+    triggerScan.mutate(
+      { ...scanParams, wijk_naam: wijkNaam },
+      {
+        onSuccess: (data) => {
+          setActiveScanId(data.scan_id)
+          setActiveScanWijk(wijkNaam)
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+          if (data.status === 'existing' && !data.needs_rescan) {
+            navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
+            toast.info(`Bestaande scan gevonden — resultaten laden`)
+          } else {
+            toast.success(`Scan gestart voor ${wijkNaam}`)
+          }
+        },
+        onError: (err) => {
+          toast.error(`Scan starten mislukt: ${err.message}`)
+          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          setSelectedArea(null)
+          setActiveScanWijk(null)
+        },
+      }
+    )
+  }, [pendingScan, triggerScan, navigate])
+
+  // Cancel wijk scan confirmation
+  const handleCancelScan = useCallback(() => {
+    setPendingScan(null)
+    if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+    setSelectedArea(null)
+  }, [])
 
   // Viewport scan handler
   const handleScanViewport = useCallback(() => {
@@ -606,6 +631,7 @@ function MapPage() {
       {
         onSuccess: (data) => {
           setActiveScanId(data.scan_id)
+          setActiveScanWijk('Viewport')
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
@@ -619,6 +645,7 @@ function MapPage() {
           toast.error(`Scan starten mislukt: ${err.message}`)
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
+          setActiveScanWijk(null)
         },
       }
     )
@@ -841,27 +868,59 @@ function MapPage() {
           {wijkLoading && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-accent"></div>
           )}
-          {/* Viewport scan button — desktop only (scanning is not supported on mobile) */}
-          <span className="hidden md:inline-flex">
-            <button
-              onClick={handleScanViewport}
-              disabled={!!activeScanId || triggerScan.isPending}
-              className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-            >
-              {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
-            </button>
-          </span>
-          {/* Toon Lijst button — desktop only, visible when a scan is active */}
-          {activeScanId && (
-            <span className="hidden md:inline-flex">
+
+          {/* Inline scan progress — replaces buttons when scan is running */}
+          {activeScanId && scanStatus.data && scanStatus.data.status === 'running' ? (
+            <div className="hidden md:flex items-center gap-3">
+              <div className="border-l border-grey-700 h-5" />
+              <span className="text-xs font-medium text-grey-100">
+                {scanStatus.data.current_phase === null
+                  ? 'Starten...'
+                  : activeScanWijk ?? 'Scannen'}
+              </span>
+              <div className="bg-grey-800 rounded-full h-1.5 w-24 overflow-hidden">
+                <div
+                  className="bg-amber-accent h-full transition-all duration-500 ease-out"
+                  style={{ width: `${scanStatus.data.progress_pct}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold text-amber-accent tabular-nums">
+                {Math.round(scanStatus.data.progress_pct)}%
+              </span>
               <button
-                onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
-                className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
+                onClick={() => cancelScan.mutate(activeScanId)}
+                disabled={cancelScan.isPending}
+                className="text-xs text-grey-400 hover:text-grey-100 disabled:opacity-50 font-medium transition-colors"
               >
-                Toon Lijst
+                {cancelScan.isPending ? 'Annuleren...' : 'Annuleren'}
               </button>
-            </span>
+            </div>
+          ) : (
+            <>
+              {/* Viewport scan button — desktop only (scanning is not supported on mobile) */}
+              <span className="hidden md:inline-flex">
+                <button
+                  onClick={handleScanViewport}
+                  disabled={!!activeScanId || triggerScan.isPending}
+                  className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                >
+                  {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
+                </button>
+              </span>
+              {/* Toon Lijst button — desktop only, visible when a scan is active */}
+              {activeScanId && (
+                <span className="hidden md:inline-flex">
+                  <button
+                    onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
+                    className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
+                  >
+                    Toon Lijst
+                  </button>
+                </span>
+              )}
+            </>
           )}
+
           <button
             onClick={() => {
               setActiveGemeente(null)
@@ -883,15 +942,7 @@ function MapPage() {
         </div>
       )}
 
-      {/* Scan progress overlay — shown for running and completed states (until user navigates or auto-nav fires) */}
-      {activeScanId && scanStatus.data && !navigatedRef.current && scanStatus.data.status !== 'cancelled' && (
-        <ScanProgressOverlay
-          status={scanStatus.data}
-          onCancel={() => cancelScan.mutate(activeScanId)}
-          isCancelling={cancelScan.isPending}
-          onViewResults={handleViewResults}
-        />
-      )}
+      {/* Scan progress is now inline in the gemeente header bar above */}
 
       {/* Bestemmingsplan legend */}
       <BestemmingsplanLegend visible={showBestemmingsplan} />
@@ -963,8 +1014,8 @@ function MapPage() {
       {/* Tier 1: QuickCard — MapLibre popup anchored to property */}
       {tier === 'quick' && (
         <PropertyQuickCard
-          data={demoData ?? lookup.data ?? null}
-          isLoading={!demoData && lookup.isPending}
+          data={lookup.data ?? null}
+          isLoading={lookup.isPending}
           onViewDetails={() => setTier('drawer')}
           onClose={handleCloseQuickCard}
           mapRef={mapRef}
@@ -976,8 +1027,8 @@ function MapPage() {
       {(tier === 'drawer' || tier === 'modal') && (
         <PropertyDetailDrawer
           data={currentData}
-          isLoading={!demoData && lookup.isPending}
-          error={!demoData ? lookup.error : null}
+          isLoading={lookup.isPending}
+          error={lookup.error}
           onClose={handleCloseDrawer}
           onExportPDF={handleExportPDF}
           onSave={handleSave}
@@ -1015,6 +1066,31 @@ function MapPage() {
         onClose={() => setInspectorParcel(null)}
         parcel={inspectorParcel}
       />
+
+      {/* Wijk scan confirmation dialog */}
+      <Modal isOpen={!!pendingScan} onClose={handleCancelScan} size="sm">
+        <div className="p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-accent/15">
+            <svg className="h-6 w-6 text-amber-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-grey-100 mb-2">
+            Wijk scannen?
+          </h3>
+          <p className="text-sm text-grey-400 mb-6">
+            Wil je <span className="font-medium text-grey-200">{pendingScan?.wijkNaam}</span> scannen op bouwmogelijkheden?
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="ghost" size="lg" onClick={handleCancelScan}>
+              Annuleren
+            </Button>
+            <Button variant="primary" size="lg" onClick={handleConfirmScan}>
+              Scannen
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </MapShell>
   )
 }

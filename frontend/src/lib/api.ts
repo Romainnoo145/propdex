@@ -667,6 +667,25 @@ export async function fetchWijken(
 }
 
 /**
+ * Fetch parcel centroid in WGS84 for map fly-to
+ *
+ * GET /api/scans/parcels/{parcelId}/centroid
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns {lng, lat} in WGS84
+ */
+export async function fetchParcelCentroid(
+  parcelId: string,
+  accessToken: string | null
+): Promise<{ lng: number; lat: number }> {
+  return apiFetch<{ lng: number; lat: number }>(
+    `${SCANS_BASE}/parcels/${parcelId}/centroid`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
  * Fetch on-demand enrichment for a parcel (vergunningen via SRU)
  *
  * GET /api/scans/parcels/{parcelId}/enrich

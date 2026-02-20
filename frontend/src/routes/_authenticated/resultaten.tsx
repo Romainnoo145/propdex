@@ -199,7 +199,7 @@ function ResultatenPage() {
         parcel={modalParcel}
         isOpen={!!modalParcel}
         onClose={() => setModalParcel(null)}
-        onViewOnMap={scan_id ? () => navigate({ to: '/map', search: { scan_id } }) : undefined}
+        onViewOnMap={scan_id && modalParcel ? () => navigate({ to: '/map', search: { scan_id, parcel_id: modalParcel.parcel_id } }) : undefined}
       />
     </ResultsShell>
   )
