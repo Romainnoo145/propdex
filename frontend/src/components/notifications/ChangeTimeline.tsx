@@ -85,15 +85,15 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
   const sortedDates = Object.keys(groupedChanges).sort().reverse() // Newest first
 
   return (
-    <div className="border-t border-gray-100 bg-gray-50/50">
+    <div className="border-t border-grey-800 bg-grey-900/50">
       {sortedDates.map((dateKey) => {
         const dateChanges = groupedChanges[dateKey]!
         if (dateChanges.length === 0) return null
 
         return (
-          <div key={dateKey} className="border-b border-gray-100 last:border-b-0">
+          <div key={dateKey} className="border-b border-grey-800 last:border-b-0">
             {/* Date header */}
-            <div className="px-5 py-2 text-xs font-medium text-gray-500">
+            <div className="px-5 py-2 text-xs font-medium text-grey-400">
               {formatDate(dateKey)}
             </div>
 
@@ -105,34 +105,34 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
               return (
                 <div
                   key={change.id}
-                  className="border-t border-gray-100/50 first:border-t-0"
+                  className="border-t border-grey-800/50 first:border-t-0"
                 >
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : change.id)}
-                    className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-100/70"
+                    className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/70"
                   >
                     <Icon />
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-medium text-gray-800">
+                      <p className="line-clamp-2 text-sm font-medium text-grey-100">
                         {change.title}
                       </p>
                       {change.address && (
-                        <p className="mt-0.5 text-xs text-gray-400">
+                        <p className="mt-0.5 text-xs text-grey-400">
                           {change.address}
                         </p>
                       )}
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-grey-400">
                         {formatRelativeTime(change.detected_at)}
                       </p>
                     </div>
                     <ChevronIcon
-                      className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      className={`h-4 w-4 shrink-0 text-grey-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                     />
                   </button>
 
                   {/* Expanded details */}
                   {isExpanded && change.source_url && (
-                    <div className="border-t border-gray-100/50 bg-white px-5 py-3">
+                    <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3">
                       <a
                         href={change.source_url}
                         target="_blank"
