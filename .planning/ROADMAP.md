@@ -86,12 +86,12 @@ Plans:
   1. User can register a new account without receiving a 500 error
   2. ARQ worker re-runs do not create duplicate ScanResult rows (idempotent via ON CONFLICT DO NOTHING)
   3. Unused packages removed from package.json and legacy gray-* classes cleaned from ChangeTimeline.tsx / ProjectEditModal.tsx
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1: all parallel)
 
 Plans:
-- [ ] 41-01: Investigate and fix backend register endpoint 500 error
-- [ ] 41-02: Add ON CONFLICT DO NOTHING to ScanResult insert in ARQ scan job; fix ARQ idempotency
-- [ ] 41-03: Remove react-resizable-panels from package.json; clean legacy gray-* Tailwind classes; remove unused Python imports
+- [ ] 41-01-PLAN.md -- Update auth integration tests to match cookie-based CookieTokenResponse flow (FIX-01)
+- [ ] 41-02-PLAN.md -- Replace ScanResult session.add with bulk ON CONFLICT DO NOTHING insert (FIX-02)
+- [ ] 41-03-PLAN.md -- Remove react-resizable-panels, clean ChangeTimeline gray-* classes, remove unused Python imports (FIX-03)
 
 ## Progress
 
