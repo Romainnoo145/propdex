@@ -1,10 +1,17 @@
 """Integration tests for auth happy-path flows."""
 
-from datetime import datetime, timedelta
-
 from httpx import AsyncClient
 
 from app.auth.jwt import create_email_verification_token, create_password_reset_token, decode_token
+
+
+def _extract_refresh_cookie(response) -> str:
+    """Extract refresh_token value from Set-Cookie header."""
+    for header_value in response.headers.get_list("set-cookie"):
+        if header_value.startswith("refresh_token="):
+            # Extract value between = and first ;
+            return header_value.split("=", 1)[1].split(";")[0]
+    raise AssertionError("No refresh_token cookie in response")
 
 
 async def test_register_success(async_client: AsyncClient):
@@ -22,8 +29,12 @@ async def test_register_success(async_client: AsyncClient):
     assert response.status_code == 201
     data = response.json()
     assert "access_token" in data
-    assert "refresh_token" in data
+    assert "refresh_token" not in data  # refresh_token is in httpOnly cookie only
     assert data["token_type"] == "bearer"
+
+    # Verify refresh_token is set as a cookie
+    refresh_token = _extract_refresh_cookie(response)
+    assert refresh_token  # cookie must be present
 
     # Verify access token contains correct claims
     payload = decode_token(data["access_token"])
@@ -86,8 +97,12 @@ async def test_login_success(async_client: AsyncClient):
     assert login_response.status_code == 200
     data = login_response.json()
     assert "access_token" in data
-    assert "refresh_token" in data
+    assert "refresh_token" not in data  # refresh_token is in httpOnly cookie only
     assert data["token_type"] == "bearer"
+
+    # Verify refresh_token cookie is set
+    refresh_token = _extract_refresh_cookie(login_response)
+    assert refresh_token
 
 
 async def test_login_case_insensitive_email(async_client: AsyncClient):
@@ -130,18 +145,18 @@ async def test_refresh_token_rotation(async_client: AsyncClient):
     )
     assert register_response.status_code == 201
     original_access_token = register_response.json()["access_token"]
-    original_refresh_token = register_response.json()["refresh_token"]
+    original_refresh_token = _extract_refresh_cookie(register_response)
 
-    # Refresh tokens
+    # Refresh tokens — send refresh_token via cookie (explicit, path may not match)
     refresh_response = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": original_refresh_token},
+        cookies={"refresh_token": original_refresh_token},
     )
 
     assert refresh_response.status_code == 200
     data = refresh_response.json()
     new_access_token = data["access_token"]
-    new_refresh_token = data["refresh_token"]
+    new_refresh_token = _extract_refresh_cookie(refresh_response)
 
     # Verify tokens are different (rotated)
     # Note: access tokens may be identical if created in same second (no JTI)
@@ -165,19 +180,19 @@ async def test_refresh_revokes_old_token(async_client: AsyncClient):
         },
     )
     assert register_response.status_code == 201
-    original_refresh_token = register_response.json()["refresh_token"]
+    original_refresh_token = _extract_refresh_cookie(register_response)
 
     # Refresh once to get new tokens
     refresh_response = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": original_refresh_token},
+        cookies={"refresh_token": original_refresh_token},
     )
     assert refresh_response.status_code == 200
 
     # Try to refresh again with OLD token (should fail)
     old_token_response = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": original_refresh_token},
+        cookies={"refresh_token": original_refresh_token},
     )
 
     assert old_token_response.status_code == 401
@@ -196,12 +211,12 @@ async def test_logout_success(async_client: AsyncClient):
         },
     )
     assert register_response.status_code == 201
-    refresh_token = register_response.json()["refresh_token"]
+    refresh_token = _extract_refresh_cookie(register_response)
 
-    # Logout
+    # Logout — send refresh_token via cookie
     logout_response = await async_client.post(
         "/auth/logout",
-        json={"refresh_token": refresh_token},
+        cookies={"refresh_token": refresh_token},
     )
 
     assert logout_response.status_code == 200
@@ -222,19 +237,19 @@ async def test_logout_then_refresh_fails(async_client: AsyncClient):
         },
     )
     assert register_response.status_code == 201
-    refresh_token = register_response.json()["refresh_token"]
+    refresh_token = _extract_refresh_cookie(register_response)
 
-    # Logout
+    # Logout — send refresh_token via cookie
     logout_response = await async_client.post(
         "/auth/logout",
-        json={"refresh_token": refresh_token},
+        cookies={"refresh_token": refresh_token},
     )
     assert logout_response.status_code == 200
 
     # Try to refresh with logged-out token (should fail)
     refresh_response = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": refresh_token},
+        cookies={"refresh_token": refresh_token},
     )
 
     assert refresh_response.status_code == 401
@@ -291,7 +306,7 @@ async def test_full_auth_lifecycle(async_client: AsyncClient):
     )
     assert register_response.status_code == 201
     initial_access = register_response.json()["access_token"]
-    initial_refresh = register_response.json()["refresh_token"]
+    initial_refresh = _extract_refresh_cookie(register_response)
 
     # Step 2: Login
     login_response = await async_client.post(
@@ -310,14 +325,14 @@ async def test_full_auth_lifecycle(async_client: AsyncClient):
     )
     assert me_response_1.status_code == 200
 
-    # Step 4: Refresh tokens
+    # Step 4: Refresh tokens — send refresh_token via cookie
     refresh_response = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": initial_refresh},
+        cookies={"refresh_token": initial_refresh},
     )
     assert refresh_response.status_code == 200
     new_access = refresh_response.json()["access_token"]
-    new_refresh = refresh_response.json()["refresh_token"]
+    new_refresh = _extract_refresh_cookie(refresh_response)
 
     # Step 5: Get user info with new token
     me_response_2 = await async_client.get(
@@ -326,10 +341,10 @@ async def test_full_auth_lifecycle(async_client: AsyncClient):
     )
     assert me_response_2.status_code == 200
 
-    # Step 6: Logout
+    # Step 6: Logout — send refresh_token via cookie
     logout_response = await async_client.post(
         "/auth/logout",
-        json={"refresh_token": new_refresh},
+        cookies={"refresh_token": new_refresh},
     )
     assert logout_response.status_code == 200
 
