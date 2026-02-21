@@ -1,213 +1,286 @@
 # Project Research Summary
 
-**Project:** Propdex v5.0 — Lead Pipeline, Scan History & Map Visualization
-**Domain:** Dutch PropTech SaaS — property intelligence with acquisition pipeline
-**Researched:** 2026-02-18
+**Project:** Propdex v6.0 — Premium Data Presentation
+**Domain:** Dutch PropTech SaaS — data presentation overhaul for property intelligence platform
+**Researched:** 2026-02-21
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Propdex v5.0 adds three interconnected capabilities to a mature existing platform: a lead acquisition pipeline for tracking parcels through a Dutch deal workflow, a browsable scan history so users can return to previous scans without losing context, and map-level lead status coloring. All three features integrate cleanly with the v4.0 stack (FastAPI + SQLAlchemy 2.x + PostgreSQL/PostGIS + MapLibre GL JS + TanStack ecosystem) and require zero new backend dependencies and zero new frontend dependencies for MVP. The existing MVT tile infrastructure, TanStack Query patterns, and service layer conventions are sufficient to deliver the full milestone.
+Propdex v6.0 is a presentation-layer overhaul of an existing, production-grade Dutch property intelligence platform (~40K LOC, React 19 + MapLibre 5.x + TanStack Stack). The goal is to transform a functional tool into a premium data experience that establishes a UX benchmark in the NL PropTech market. Research across all four areas is consistent: the existing architecture is sound and most new capabilities can be delivered with targeted additions rather than structural changes. Zero new backend work is required; seven new frontend packages cover all capability gaps. The recommended approach is to build depth-first — primitives before features, map infrastructure before comparison views, theme audits before polish.
 
-The recommended approach is model-first, API-second, frontend-last. The Lead model is the single most important new artifact — everything in the pipeline depends on it. The scan history gap is a missing `GET /api/scans` list endpoint only; the underlying `AreaScan` table already stores all needed data. Map lead-status coloring is achieved by extending the existing MVT tile query with a LEFT JOIN on the new `lead_statuses` table, not by building a separate GeoJSON endpoint. The decisive architectural choice across all three features: extend the MVT pipeline everywhere, never introduce a GeoJSON fallback for parcel geometry.
+The most important strategic finding is that no NL PropTech competitor (Funda Zakelijk, Brainbay, DataLand) offers the combination of score transparency, property comparison, and map filtering in a single cohesive product. The opportunity is real, and the implementation risk is low because the data and API infrastructure already exists. What is missing is purely the presentation layer: scoring visualizations, tabbed report layouts, a comparison route, map filter controls, and static mini-maps in reports. All of these can be built against the existing `PropertyReportResponse`, `ScanResultsResponse`, and MapLibre vector tile data already in the system.
 
-The critical risks are multi-tenant data isolation on the new `leads` table (RLS policy is not automatic — must be written explicitly per table), parcel cache lifecycle mismatch (leads must survive parcel cache eviction via `ON DELETE SET NULL` and denormalized `parcel_code`), and coordinate system errors if any GeoJSON endpoint is added without `ST_Transform(geometry, 4326)`. All three pitfalls are pre-empted by the architecture research, which documents exact prevention patterns grounded in the existing codebase.
+The primary risk area is MapLibre/WebGL context management. The existing architecture correctly isolates one persistent MapLibre instance. This constraint must be strictly maintained: mini-maps in reports must use static tile images (`<img>` tags), not additional MapLibre instances. A second high-priority risk is the theme system — MapLibre paint properties do not read CSS custom properties, so a `MAP_THEME_COLORS` hex constant file is required to keep light/dark mode consistent on map layers. Both risks are well-understood and have clear prevention patterns documented in PITFALLS.md.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v4.0 stack handles everything. No new packages are required for MVP delivery. The only optional addition is `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` for kanban drag-and-drop, but research strongly recommends deferring kanban — a dropdown stage selector delivers full pipeline functionality with far less complexity, and the dnd-kit packages are stale (last published ~Feb 2024). See `STACK.md` for full version compatibility table.
+The existing stack (React 19, Vite 7, TypeScript strict, Tailwind v4, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router, TanStack Table v8) requires no structural changes. Seven new frontend packages are required; zero new backend packages are needed.
 
-**Core technologies (no changes to existing stack):**
-- FastAPI + SQLAlchemy 2.x: new Lead model follows `Mapped[]` + `mapped_column()` pattern throughout
-- PostgreSQL/PostGIS: Lead status as `String(30)` + `CheckConstraint` (NOT PostgreSQL native ENUM — adding new statuses to a native ENUM requires `ALTER TYPE` outside transaction, incompatible with Alembic transaction-wrapped migrations)
-- MapLibre GL JS 5.x: existing `ParcelScoreLayer` extended via data-driven `['get', 'lead_status']` expressions — supported since MapLibre 2.x
-- TanStack Query v5: `useQuery` with page param for scan history (NOT `useInfiniteQuery` — scan history lists are dozens of entries, not thousands)
-- TanStack Router + TanStack Table: new `/leads` route via `createFileRoute`, reuse existing table patterns for scan history
+**New dependencies (install all at once):**
+```bash
+pnpm add recharts @radix-ui/react-tabs @radix-ui/react-slider @radix-ui/react-collapsible @radix-ui/react-tooltip @radix-ui/react-popover @tanstack/react-virtual
+```
+
+**Core new technologies:**
+- `recharts 3.7.0`: Score gauge, factor bars, sparklines — SVG-based, CSS variables apply natively, React 19 explicit support verified via npm
+- `@radix-ui/react-tabs 1.1.13`: Comparison view tab navigation — headless, WAI-ARIA accessible, React 19 explicit support
+- `@radix-ui/react-slider 1.3.6`: Score range filter slider with dual-thumb support — replaces native `<input type="range">` limitations
+- `@radix-ui/react-collapsible 1.1.12`: Report section expand/collapse — accessible `aria-expanded`, no animation library needed
+- `@radix-ui/react-tooltip 1.2.8`: Score factor label tooltips — replaces hand-rolled `group-hover` pattern, portal-rendered above MapLibre z-index
+- `@radix-ui/react-popover 1.1.15`: Map filter panel anchor — replaces custom outside-click detection logic in `LayerToggle.tsx`
+- `@tanstack/react-virtual 3.13.18`: Row virtualization for 500+ result sets — official TanStack Table v8 pairing, headless
 
 **What NOT to add:**
-- PostgreSQL native ENUM for lead status — migration pain when stages evolve
-- Martin tile server — no multi-tenant auth, cross-org data leakage risk
-- Separate GeoJSON geometry endpoint for parcel polygons — memory-intensive, no streaming, viewport-unaware
-- `fastapi-pagination` PyPI package — simple limit/offset is 3 lines of SQLAlchemy
-- `react-beautiful-dnd` (end-of-life) or `react-dnd` (no React 19 support)
+- `chart.js` / `react-chartjs-2` — canvas-based; CSS oklch variables do not apply to canvas fills
+- `victory` — last major release 2023, React 19 compatibility unclear
+- `maplibregl-minimap` npm package — README explicitly states "not yet ready for production use"
+- `framer-motion` / `react-spring` — ~150KB for effects achievable with Tailwind transitions
+- `shadcn/ui` CLI install — conflicts with Tailwind v4's CSS-first `@theme` (no `tailwind.config.js` in v4)
+- `react-window` / `react-virtualized` — unmaintained; `@tanstack/react-virtual` is the modern replacement
+
+See `.planning/research/STACK.md` for full decision rationale and the complete alternatives rejection table.
 
 ### Expected Features
 
-**Must have (table stakes — users expect these):**
-- Scan history list + scan picker — highest-priority gap; users lose access to all previous scan results without this; data already exists, just needs `GET /api/scans` list endpoint
-- Lead model with Dutch pipeline stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
-- Lead status in results table — dropdown per row, no need to open InspectorPanel
-- Lead status in InspectorPanel — full detail with notes text area
-- Pipeline summary view — count-per-stage dashboard ("6 Nieuw, 3 Onderzoek, 1 Gekocht"), not kanban
-- Filter results by lead status — hide Afgewezen by default; essential noise reduction in large scans
-- Restore scan tile layer on map when returning from results page (already partially implemented; solidify)
+This is a presentation overhaul, not a data addition milestone. All data exists in the backend — what is missing is the rendering layer.
 
-**Should have (competitive differentiators):**
-- Lead status visible on map — color parcels by pipeline stage, toggle vs score-coloring
-- Dutch pipeline stage labels throughout — resonates with NL/BE developers vs generic English CRM
-- Scan history with contextual metadata (gemeente name, wijk, date, parcel count, lead count)
-- Lead notes per parcel — free-text field; no full timestamped audit log for MVP
-- "Voeg toe aan pipeline" bulk action in results table and from InspectorPanel
+**Must have (P1 — table stakes for premium feel):**
+- Column visibility toggle — standard in every enterprise data tool (Airtable, CRE platforms); immediately premium
+- Density control (compact/regular/relaxed rows) — essential for scanning 500+ parcel result sets
+- Column pinning (address + score sticky left) — fixes usability when scrolling right to see more columns
+- Save filter state to localStorage — removes friction on return visits; same pattern as existing theme persistence
+- Score factor breakdown bars in detail drawer — makes scoring transparent; highest user trust impact
+- Heatmap column formatting (area, bouwjaar conditional color) — high visual impact, low implementation cost
+- Score legend / scale explanation — amber badge alone is not self-explanatory to new users
 
-**Defer to v5.x:**
-- Lead status color layer on map — validate after leads exist in production use
-- Lead notes history (timestamped log) — upgrade from single text field after validation
-- Report linked to lead in InspectorPanel UI
-- Lead count badge on wijk overlay
+**Should have (P2 — competitive differentiators):**
+- Mini-map in report page — premium PropTech UX standard (Reonomy-style), keeps spatial context without navigation
+- Map layer toggle panel — users need to turn off bestemmingsplan zones when examining physical parcels
+- Property comparison view (up to 4 parcels) — no NL competitor offers this; forces deliberate selection workflow
+- Insight card expansion (more Dutch developer reasoning) — extend existing `STATUS_EXPLANATIONS` vocabulary
+- Print/PDF-optimized report layout — enterprise sales requirement for client-deliverable reports
 
-**Defer to v6+:**
-- Scan comparison across time — meaningful only after 6+ months of production scan data
-- Multi-user lead collaboration — WebSockets, presence, conflict resolution
-- Kanban drag-and-drop — not needed at tens of leads; reconsider at hundreds
-- Scheduled re-scan triggers — overlaps with existing change monitoring feature
+**Defer to v7+:**
+- Score trend indicator — requires new backend historical score storage model (new DB table + migration)
+- Table column reordering (drag) — high complexity (dnd-kit), moderate value; validate user demand first
+- Saved scan comparison (diff two scan runs) — requires backend diff logic; not enough production data yet
+
+**Anti-features (do not build — commonly requested, demonstrably problematic):**
+- Real-time score updates mid-session — confuses users comparing parcels; scan is a point-in-time snapshot
+- Infinite scroll — breaks bulk selection and "I was on page 3" mental model; browser memory issues at 500+ rows
+- Per-user custom color themes — conflicts with semantic CSS variable system; amber is the brand signal
+- Drag-to-draw map selection — municipality granularity is correct for Dutch cadastral data model
+
+See `.planning/research/FEATURES.md` for the full prioritization matrix and NL/global competitor analysis.
 
 ### Architecture Approach
 
-The v5.0 architecture is strictly additive. All new components follow established patterns (service.py → router.py → schemas.py per domain module). The Lead model is the central new entity, linking `ParcelCache` → `Project` with a pipeline stage. Scan history reuses the existing `AreaScan` table — no new storage model. The MVT tile pipeline is extended by one LEFT JOIN, not replaced. The frontend gets one new route (`/leads`), one new nav icon, and several component modifications — all following existing TanStack Query hook patterns. See `ARCHITECTURE.md` for the complete new/modified file list.
+The architectural principle for v6.0 is extension, not rewrite. The existing component tree, data flow layers, `MapContext`, and three-tier property disclosure pattern are all unchanged. New features layer on top of established infrastructure using established patterns.
 
-**Major components:**
-1. `backend/app/models/lead.py` (NEW) — Lead model with `parcel_id`, `project_id`, `stage`, `source_scan_id`, `notes`; `ON DELETE SET NULL` for parcel cache resilience; `ON DELETE CASCADE` for project deletion; `UniqueConstraint` per org+project+parcel
-2. `backend/app/leads/` module (NEW) — router + service + schemas for full Lead CRUD (6 endpoints: POST, GET list, GET single, PATCH, DELETE, POST report)
-3. `GET /api/scans` list endpoint (NEW) — paginated `AreaScan` list with `results_count` + `lead_count` subqueries; existing scans router modified
-4. `GET /api/projects/{id}/scans` subresource (NEW) — feeds Projecten scan history view; replaces hardcoded `DEMO_REPORTS`
-5. `POST /api/reports/from-parcel` (NEW) — generates report from `ParcelCache.address`, reusing existing property aggregator pipeline without duplication
-6. `tile_proxy.py` LEFT JOIN extension (MODIFIED) — adds `lead_status` property to MVT tiles via LEFT JOIN on `lead_statuses`
-7. `/leads` route + `LeadKanbanBoard` (NEW) — pipeline page with stage columns, dropdown stage selectors (no drag-and-drop library)
-8. `PromoteParcelModal` (NEW) — parcel → lead conversion flow, invoked from `BulkActionBar` and `InspectorPanel`
-9. `ProjectList` (MODIFIED) — replace hardcoded `DEMO_REPORTS` with real `useProjectScans()` data
+**Critical constraint — single MapLibre instance:** The MapLibre instance is initialized once in `_authenticated.tsx` and never unmounts. Mini-maps in reports must use static CARTO tile `<img>` tags via `StaticMapImage` component — not additional MapLibre instances. Browser WebGL context limit is ~8; the persistent main map uses one and must not be competed with.
 
-**Build order:** Lead model (A) → Lead API (B) → Types + Hooks (C) → Projecten scan history quick win (D) → Pipeline UI (E) → Report integration (F) → Bug fixes (G, parallel throughout).
+**Major new components:**
+
+1. `src/components/primitives/ScoreRing.tsx` + `ScoreBar.tsx` + `ScoreGauge.tsx` — pure SVG/CSS scoring visualizations, zero dependencies, CSS variable–aware via `stroke="var(--color-amber-accent)"`
+2. `src/components/primitives/Tabs.tsx` — headless compound component (Root/List/Tab/Panel), CSS `hidden` for inactive panels (NOT conditional unmounting — panels must stay mounted)
+3. `src/lib/staticMap.ts` + `src/components/map/StaticMapImage.tsx` — pure tile URL math utility + `<img>` wrapper; zero WebGL contexts consumed
+4. `src/components/map/MapFilterPanel.tsx` — score/status/bestemming filter UI; wires to `map.setFilter()` via `useEffect` in `map.tsx`; no API calls (vector tiles already carry filter-eligible properties)
+5. `src/components/comparison/` directory — `ComparisonView`, `ComparisonColumn`, `ComparisonHeader`, `ComparisonMetricRow`, `ComparisonEmptySlot`
+6. `src/hooks/useComparison.ts` — `useQueries` for parallel fetching of N reports; reuses existing `['report', id]` cache keys automatically
+7. `src/routes/_authenticated/vergelijken.tsx` — new route; state via URL search params (`?ids=uuid1,uuid2`), not React context or Zustand store
+
+**Modified (not rewritten):**
+- `ReportDetailPage.tsx` — wrap sections in Tabs; add `StaticMapImage` + `ScoreGauge` above tab bar
+- `ParcelDetailModal.tsx` — replace inline score circle with `ScoreGauge`; replace factor bars with `ScoreBar`
+- `LayerToggle.tsx` — add "Filters" pill + `MapFilterPanel`; replace hand-rolled outside-click detection with Radix Popover
+- `map.tsx` — add `mapFilters` state + `useEffect` for `map.setFilter()`
+- `rapporten.tsx` — add report selection checkboxes + "Vergelijk" button navigating to `/vergelijken?ids=...`
+
+**Unchanged:** `MapView.tsx`, `_authenticated.tsx`, `MapContext.tsx`, all existing Section components (`GebouwSection`, `KadasterSection`, etc.), all TanStack Query hooks except new `useComparisonReports`, `ResultsFilterPanel.tsx`, `ThemeContext.tsx`.
+
+**Build order (dependency-ordered):**
+- Phase A: Primitives (`ScoreRing`, `ScoreBar`, `ScoreGauge`, `Tabs`, `staticMap.ts`) — zero external deps, build and test in isolation
+- Phase B: Map enhancements (`StaticMapImage`, `MapFilterPanel`, `LayerToggle` extension, `map.tsx` filter effect)
+- Phase C: Report enhancements (`ReportDetailPage` tabs + mini-map, `ParcelDetailModal` score gauge, `InspectorPanel` score gauge)
+- Phase D: Comparison feature (hooks, components, route, `rapporten.tsx` selection)
+- Phase E: Theme polish (gray-\* audit, `MAP_THEME_COLORS` hex constants, CSS variable additions, `@tanstack/react-virtual` in `ResultsTable`)
+
+See `.planning/research/ARCHITECTURE.md` for full component boundaries map, data flow diagrams, anti-patterns, and scalability assessment.
 
 ### Critical Pitfalls
 
-1. **Cross-tenant data leak on leads table** — `TenantMixin` provides the column but does NOT create the RLS policy. Every new table needs an explicit `ALTER TABLE leads ENABLE ROW LEVEL SECURITY; CREATE POLICY ...` in the migration. Write a multi-tenant integration test (create lead as org A, assert org B sees 0 rows) before any lead endpoint ships. Prevention: follow existing RLS pattern from `parcel_cache` migration.
+1. **MapLibre initialized at zero container dimensions** — a mini-map inside a modal/drawer initializes with `height: 0` if CSS animation hasn't completed when `useEffect` fires. Use `ResizeObserver` on the container and delay `new maplibregl.Map()` until `offsetHeight > 0`. Relevant to any phase touching mini-maps in drawers. (Moot for v6.0 if static tile images are used as recommended — but captures risk if any developer attempts a live MapLibre mini-map.)
 
-2. **Parcel cache eviction silently deletes leads** — `parcel_cache` is a cache, not a stable reference table. Lead FK to `parcel_cache.id` must use `ON DELETE SET NULL`, and the lead record must denormalize `parcel_code` (kadaster ID) + `address` for identity after cache eviction. Never use `ON DELETE CASCADE` from leads to parcel cache — this would silently delete user's pipeline data on force-rescan.
+2. **WebGL context budget exceeded** — browsers limit ~8 simultaneous WebGL contexts. Hard cap comparison view at 2 simultaneous mini-maps; destroy on close. Never add per-row thumbnail maps in scrollable lists. Static tile `<img>` consumes zero WebGL contexts — the recommended architecture sidesteps this risk entirely.
 
-3. **GeoJSON coordinate system error** — `parcel_cache.geometry` is EPSG:28992 (RD New). Any new GeoJSON endpoint that serializes geometry without `ST_Transform(geometry, 4326)` renders parcels in the North Sea with no error. Always use `ST_AsGeoJSON(ST_Transform(geometry, 4326), 6)` in SQL; never transform in Python. The existing MVT endpoint handles this correctly — the solution is to use MVT and avoid new GeoJSON geometry endpoints.
+3. **Tab panels conditionally rendered causing state loss** — `{activeTab === 'x' && <Component />}` unmounts panels on tab switch, triggering re-fetches, scroll position loss, and flash on return. All `TabPanel` children must stay mounted; use Tailwind `hidden` class (`display: none`) for inactive panels.
 
-4. **PostgreSQL ENUM blocks pipeline evolution** — Lead stage must be `VARCHAR(30)` + `CheckConstraint`, not a PostgreSQL native `ENUM`. All existing Propdex models (`AreaScan.status` = `String(20)`) follow this pattern. Alembic cannot run `ALTER TYPE ... ADD VALUE` inside a transaction — the migration fails at the first stage rename or addition.
+4. **Map filter state desync with URL/table filters** — adding map-level filter controls creates a second write path to URL state. All filter changes (map or table) must call the same `navigate()` handler. No local component state for filter values — read from URL, write to URL via the shared handler.
 
-5. **MapLibre feature-state fails silently with UUID IDs** — Any new GeoJSON source without `generateId: true` or `promoteId` will silently break hover and selection highlighting. `setFeatureState()` accepts UUIDs but does nothing with them — no console error. Use `generateId: true` on any new GeoJSON source; clear stale states with `map.removeFeatureState()` before `setData()` calls. The existing MVT tile endpoint avoids this because PostGIS generates integer rowids automatically.
+5. **Legacy `gray-*` Tailwind classes break light mode** — `ProjectEditModal.tsx` and `ProjectCreateModal.tsx` use hardcoded `gray-*` / `bg-white` classes that look correct in dark mode by accident but break in light mode. Full grep audit before starting any theme work: `grep -r "gray-\|bg-white\|text-white" src/components`. Replace with semantic `grey-*` equivalents.
+
+6. **MapLibre paint properties reject `oklch()` colors** — `getComputedStyle` returns `oklch(...)` strings from CSS variables, which MapLibre's GL color parser does not support (predates `oklch` adoption). Define `MAP_THEME_COLORS` in `lib/map-theme.ts` as hex constants with documentation mapping each to its CSS variable equivalent. Never pass `getComputedStyle` output directly to MapLibre.
+
+See `.planning/research/PITFALLS.md` for all 13 pitfalls with detection guidance and the phase-specific warning table.
+
+---
 
 ## Implications for Roadmap
 
-Based on combined research, the natural phase structure follows the explicit dependency chain identified in ARCHITECTURE.md (Phases A→G). Features and pitfall mitigations cluster cleanly into 5-6 roadmap phases.
+Research suggests a 5-phase structure ordered by dependency graph: primitives before features, infrastructure before UI, audit before polish. All phases follow well-documented patterns — no phase requires a `/gsd:research-phase` call.
 
-### Phase 1: Data Foundation
-**Rationale:** Every frontend and API feature depends on the Lead model existing and scan history being queryable. Nothing else can be built without this layer.
-**Delivers:** Lead model + Alembic migration + RLS policy; `GET /api/scans` list endpoint; `GET /api/projects/{id}/scans` subresource
-**Addresses features:** Scan history (backend), Lead pipeline (backend foundation)
-**Avoids pitfalls:** Cross-tenant data leak (Pitfall 1 — RLS written in this migration), Parcel cache eviction (Pitfall 6 — `ON DELETE SET NULL` + `parcel_code` denormalization), PostgreSQL ENUM (Pitfall 7 — `String(30)` + `CheckConstraint` from the start)
-**Research flag:** No deeper research needed — patterns derived directly from existing codebase migrations
+### Phase 1: Scoring Primitives and Table UX Foundation
 
-### Phase 2: Lead Pipeline API
-**Rationale:** All 6 lead endpoints + `POST /api/reports/from-parcel` must exist before frontend hooks can be written. Backend tests can be written against these endpoints before any frontend work.
-**Delivers:** `backend/app/leads/` module (router + service + schemas), `POST /api/reports/from-parcel`
-**Addresses features:** Lead CRUD, pipeline stage transitions, report generation from parcel
-**Uses:** SQLAlchemy 2.x `Mapped[]` pattern, `db.add()/flush()/commit()` (NOT `async with db.begin()` — causes "transaction already begun" per MEMORY.md)
-**Research flag:** No deeper research needed — follows established scan/project service patterns exactly
+**Rationale:** All other features depend on the scoring visualization primitives (`ScoreRing`, `ScoreBar`, `ScoreGauge`) and the `Tabs` component. Building these first with zero external dependencies means Phase 1 can ship and validate before any complex feature work begins. The P1 table features (column visibility, density, pinning, filter persistence) deliver immediate premium feel with low implementation risk and no new library requirements — TanStack Table v8 already supports all of them.
 
-### Phase 3: Frontend Types, Hooks & Scan History UI
-**Rationale:** Components depend on typed hooks, not raw fetch calls. The scan history UI is the fastest visible deliverable (replaces hardcoded demo data with real data, zero new components).
-**Delivers:** Lead TypeScript types, `useLeads` hook, `useScanHistory` / `useProjectScans` hooks; updated `ProjectList.tsx` with real scan history + "Toon kaart" navigation to `/map?scan_id=X`
-**Addresses features:** Scan history list with metadata, revisit old scan on map (wires the existing map `useEffect` handler to real data)
-**Uses:** TanStack Query `useQuery` with page param, existing `apiFetch()` wrapper
-**Research flag:** No deeper research needed — identical pattern to existing `useScans.ts` and `useProjects.ts`
+**Delivers:** Reusable `ScoreRing`, `ScoreBar`, `ScoreGauge` SVG primitives; headless `Tabs` compound component; `ResultsTable` column visibility toggle, density control, column pinning (sticky CSS), localStorage filter persistence; heatmap column conditional formatting; score legend in table header or filter panel.
 
-### Phase 4: Lead Pipeline UI
-**Rationale:** Requires all data plumbing from Phases 1-3 verified. The Kanban board is the most visible deliverable — build it after the foundation is solid and tested.
-**Delivers:** `PromoteParcelModal`, `LeadKanbanBoard`, `LeadCard` with dropdown stage selector, `LeadDetailModal`, `/leads` route, updated `BulkActionBar` and `InspectorPanel`, new `SideRailNav` icon (Briefcase or Target)
-**Addresses features:** Lead status in results table, lead status in InspectorPanel, pipeline summary view, "Voeg toe aan pipeline" bulk action
-**Avoids pitfalls:** No drag-and-drop library (ARCHITECTURE.md Anti-Pattern 2 — select dropdown is accessible, mobile-friendly, sufficient at current lead volume)
-**Research flag:** No deeper research needed — standard TanStack Table + Modal + Query pattern
+**Features from FEATURES.md:** Column visibility (P1), density control (P1), column pinning (P1), save filter state (P1), heatmap formatting (P1), score legend (P1), score factor breakdown bars in detail drawer (P1).
 
-### Phase 5: Map Lead Status Integration & MVT Extension
-**Rationale:** Depends on leads existing in the system (Phase 1). Extends the MVT tile query rather than building new infrastructure. The `ParcelScoreLayer` paint expression toggle is a frontend-only change once the tile includes `lead_status`.
-**Delivers:** Extended `tile_proxy.py` with LEFT JOIN on `lead_statuses`; `ParcelScoreLayer` mode toggle (score | lead_status); map layer toggle "Toon leadstatus"
-**Addresses features:** Lead status visible on map, score/lead-status toggle
-**Avoids pitfalls:** GeoJSON coordinate system error (Pitfall 2 — MVT avoids this entirely), GeoJSON setData bottleneck at 2000 parcels (Pitfall 5 — MVT is viewport-aware), MapLibre UUID feature-state (Pitfall 3 — MVT uses PostGIS integer IDs)
-**Research flag:** No deeper research needed — direct extension of existing `tile_proxy.py` with documented SQL pattern in STACK.md
+**Avoids:** Pitfall 9 (scoring visualization scroll jank) — CSS-only techniques in table rows (`conic-gradient`, not SVG animations); SVG ring only in detail panels where one instance renders.
 
-### Phase 6: Bug Fixes & Hardening
-**Rationale:** Independent of feature development; can run in parallel with any phase. Final hardening round before milestone close.
-**Delivers:** Backend register endpoint 500 fix; ARQ idempotency (`ON CONFLICT DO NOTHING` for ScanResult re-runs on worker restart); Redis tile cache using existing ARQ Redis connection; batch flush pattern for scan jobs (Python `uuid4()` + `add_all()` every 100 rows)
-**Avoids pitfalls:** ARQ re-run crashes on duplicate ScanResult (Pitfall 4), MVT tile DB overload at 5+ concurrent users (Pitfall 8), N+1 flush pattern for 2000-parcel scans (Pitfall 9)
-**Research flag:** No research needed — all mitigations are code-level patterns with exact implementations in PITFALLS.md
+**Research flag:** No research phase needed — TanStack Table v8 column visibility/pinning/density are fully documented in official docs with live examples. SVG `stroke-dasharray` gauge pattern is well-established.
+
+### Phase 2: Report Enhancement — Tabs, Mini-Map, Score Gauge Integration
+
+**Rationale:** With Phase 1 primitives validated, integrate them into `ReportDetailPage` and `ParcelDetailModal`. The tab layout converts the long-scroll report into a sectioned view — high visibility, users see it immediately. The static mini-map (`StaticMapImage`) slots into the report header area. This phase has zero backend dependencies and directly consumes Phase 1 outputs.
+
+**Delivers:** Tab-wrapped `ReportDetailPage` with named sections (Gebouw, Kadaster, Bestemming, Monument, AI Analyse, Bronnen) — sections unchanged, `TabPanel` wrappers added; `StaticMapImage` component and `buildStaticMapUrl` Mercator math utility; `ScoreGauge` replacing inline score circles in `ParcelDetailModal` and `InspectorPanel`; `STATUS_EXPLANATIONS` vocabulary expansion for Dutch developer reasoning.
+
+**Features from FEATURES.md:** Mini-map in report page (P2); insight card expansion (P2).
+
+**Stack from STACK.md:** Static CARTO tile URL (zero new dependency); `Tabs` from Phase 1.
+
+**Avoids:** Pitfall 1 (MapLibre at zero dimensions) — static `<img>` not MapLibre; Pitfall 2 (WebGL context budget) — static `<img>` consumes no WebGL; Pitfall 3 (tab panel state loss) — CSS `hidden`, panels stay mounted; Pitfall 5 (file size) — existing Section components unchanged, no file growth.
+
+**Research flag:** No research phase needed — static tile URL approach is standard Mercator math; Tabs pattern established in Phase 1.
+
+### Phase 3: Map Filter Controls
+
+**Rationale:** Map filtering (`MapFilterPanel`, score range slider, `LayerToggle` extension, `map.setFilter()` wiring) is self-contained and does not depend on the comparison view. Building it in Phase 3 allows the filter state architecture to be validated in isolation before comparison adds its own URL state in Phase 4. This is the phase most likely to surface the filter state desync pitfall (Pitfall 4).
+
+**Delivers:** `MapFilterPanel` component with Radix Slider (score range) and category pills; `LayerToggle.tsx` extended with "Filters" pill + active filter count badge; `map.tsx` extended with `mapFilters` state and `useEffect` for `map.setFilter()` expressions; Radix Popover anchoring the panel above the map.
+
+**Features from FEATURES.md:** Map layer toggle panel (P2); interactive map filter controls.
+
+**Stack from STACK.md:** `@radix-ui/react-slider 1.3.6`, `@radix-ui/react-popover 1.1.15`.
+
+**Avoids:** Pitfall 4 (filter state desync) — single `navigate()` handler, no parallel local state for filter values; Pitfall 13 (spurious re-fetches) — `replace: true` on navigate calls, guard page resets; Pitfall 12 (oklch in MapLibre) — `MAP_THEME_COLORS` hex constants established in this phase.
+
+**Research flag:** No research phase needed — MapLibre `setFilter()` expression API is first-class documented. Radix Slider is well-documented. Filter-to-URL sync follows established `resultaten.tsx` pattern.
+
+### Phase 4: Property Comparison View
+
+**Rationale:** Comparison is the most complex feature (new route, parallel queries, N-column grid, header sticky, state management). It requires Phase 1 primitives (ScoreGauge, ScoreBar per column), Phase 2's Section architecture (re-used in `ComparisonColumn`), and validated filter state architecture from Phase 3 (URL-first state pattern is confirmed). Building last avoids early commitment to a comparison architecture that might need adjustment based on Phase 1-3 learnings.
+
+**Delivers:** `/vergelijken` route; `ComparisonView` grid container; `ComparisonColumn` single-property stack re-using Section primitives; `ComparisonHeader` sticky row with names, close, swap buttons; `ComparisonMetricRow` labeled spanning-column rows; `ComparisonEmptySlot` placeholder; `useComparison.ts` parallel query hook via `useQueries`; report selection checkboxes + "Vergelijk" button in `rapporten.tsx`; optional `SideRailNav` link.
+
+**Features from FEATURES.md:** Property comparison view (P2 — high value, highest complexity; this phase IS the validation).
+
+**Stack from STACK.md:** `@radix-ui/react-tabs 1.1.13` for tabbed sections within each comparison column; `useQueries` from TanStack Query v5 (already installed).
+
+**Avoids:** Pitfall 2 (WebGL budget) — `StaticMapImage` (`<img>`) in ComparisonColumn header, not live MapLibre; Pitfall 10 (comparison race conditions) — independent `useQuery` per parcel, independent panel loading/error state; Pitfall 4 (state desync) — URL search params (`?ids=uuid1,uuid2`), not React context or Zustand; Pitfall anti-pattern (prop-drilling mapRef into report/comparison components).
+
+**Research flag:** No research phase needed — `useQueries` for parallel fetching is documented in TanStack Query v5 official docs. CSS grid for comparison layout is standard. URL-as-state is the established Propdex pattern.
+
+### Phase 5: Theme System Polish and Row Virtualization
+
+**Rationale:** Theme polish and virtualization are cross-cutting concerns best addressed last, after all new components exist and can be audited together. Running the `gray-*` grep audit on the full v6.0 component set (including Phases 1-4 additions) catches regressions introduced during development. Row virtualization (`@tanstack/react-virtual`) is additive to `ResultsTable` — it does not change sort/filter/selection state, so it can be added safely after all table features are stable.
+
+**Delivers:** Full `gray-*` / `bg-white` audit and replacement across all components; `lib/map-theme.ts` hex constant module for MapLibre layer theming in dark and light mode; dark/light mode verification for every new component; recharts tooltip CSS overrides tied to CSS variables; `@tanstack/react-virtual` row virtualization in `ResultsTable` for 500+ result sets with `estimateSize: () => 40` matching existing compact density; CSS variable additions in `index.css` (`--color-chart-1..5`, `--color-score-high/mid/low` in `@theme` and `html.light`).
+
+**Features from FEATURES.md:** Theme polish (prerequisite for confident light mode rollout); row virtualization for large datasets.
+
+**Stack from STACK.md:** `@tanstack/react-virtual 3.13.18`; CSS variable extensions in `index.css` (no new npm packages).
+
+**Avoids:** Pitfall 7 (map colors ignore theme) — `MAP_THEME_COLORS` object with `dark` and `light` entries; Pitfall 8 (legacy gray-\* classes) — full grep audit before starting; Pitfall 12 (oklch in MapLibre) — hex equivalents documented alongside their CSS variable counterparts.
+
+**Research flag:** No research phase needed — Tailwind v4 CSS variable theming, `@tanstack/react-virtual` + TanStack Table integration, and recharts CSS variable theming are all documented.
 
 ### Phase Ordering Rationale
 
-- Phases 1 → 2 → 3 → 4 are strictly sequential due to model → API → hooks → UI dependency chain
-- Phase 5 (MVT extension) can begin after Phase 1 (Lead model exists for the LEFT JOIN), but the UI toggle requires Phase 4 complete
-- Phase 6 is fully parallel — bug fixes have no dependencies and can absorb slack time between other phases
-- Phase 3 delivers the first user-visible feature (scan history) before the full kanban pipeline (Phase 4) — enables early validation
-- Report integration (`POST /api/reports/from-parcel`) is built in Phase 2 but wired into the UI in Phase 4 (`LeadDetailModal`) — correctly deferred until leads are usable
+- **Dependency order enforced:** Primitives (Phase 1) must precede all feature phases. Comparison (Phase 4) must follow Phase 2 because `ComparisonColumn` re-uses Section components. Theme polish (Phase 5) must follow all component creation to audit the full set.
+- **Risk-first validation:** The most novel architectural decisions (static mini-map via `<img>`, headless Tabs) are validated in Phase 2 before the most complex feature (comparison) depends on them in Phase 4.
+- **Isolation principle:** Map filter controls (Phase 3) are intentionally isolated from comparison (Phase 4) to validate the URL-first filter state architecture before comparison adds its own URL params.
+- **Pitfall mitigation embedded in order:** The WebGL context constraint (Pitfall 2) is resolved by the static image decision in Phase 2 — this architectural resolution is confirmed before Phase 4 might tempt a developer to add live mini-maps in comparison columns.
+- **Phase 1 delivers immediate user value:** Column visibility, density control, and filter persistence are visible immediately and require no new libraries. Users get premium table UX before any chart or comparison feature ships.
 
 ### Research Flags
 
-Phases with standard patterns (no `/gsd:research-phase` needed during planning):
-- **Phase 1:** TenantMixin + RLS pattern documented in existing migrations; Lead model follows existing `AreaScan` pattern exactly
-- **Phase 2:** Exact replica of scan/project service structure; report-from-parcel reuses existing aggregator
-- **Phase 3:** Identical to existing `useScans.ts` + `useProjects.ts` patterns
-- **Phase 4:** Standard TanStack Table + Modal + Query pattern; dropdown stage selector avoids dnd-kit complexity
-- **Phase 5:** Extends `tile_proxy.py` — documented in STACK.md with exact SQL including the LEFT JOIN
-- **Phase 6:** All mitigations are code-level; ARQ + Redis patterns are established in existing codebase
+No phase requires a `/gsd:research-phase` call. All capability areas are covered by official documentation verified during this research cycle:
 
-No phases require deeper research. All patterns are grounded in direct codebase inspection (HIGH confidence) or official documentation.
+- **Phase 1:** TanStack Table v8 column features have official docs with live working examples. SVG `stroke-dasharray` gauge is standard SVG technique documented on MDN.
+- **Phase 2:** Static tile URL construction is pure Mercator math. CARTO tile endpoint format is documented. Tabs compound component pattern is a foundational React architecture pattern (Martin Fowler).
+- **Phase 3:** MapLibre `setFilter()` is a first-class documented API with official examples. Radix Slider is well-documented with Tailwind integration patterns.
+- **Phase 4:** `useQueries` for parallel fetching is in TanStack Query v5 official docs. URL-as-state with TanStack Router is the established Propdex pattern (used in `resultaten.tsx`).
+- **Phase 5:** Tailwind v4 CSS variable theming is documented. `@tanstack/react-virtual` + TanStack Table v8 integration is documented in TanStack's own examples.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies for MVP confirmed. All compatibility checked against installed versions. dnd-kit defer decision backed by React 19 peer dep analysis and library staleness. |
-| Features | HIGH | What exists vs. what is missing determined by direct codebase reading (no guessing). Dutch pipeline stages are standard NL real estate practice confirmed across multiple sources. Competitor analysis (Dealpath, Northspyre) is MEDIUM confidence but not decision-critical for this milestone. |
-| Architecture | HIGH | All patterns derived from direct inspection of existing working code. Build order confirmed by explicit dependency graph. No external API dependencies introduced. Report-from-parcel reuses existing aggregator — verified by reading `reports/router.py`. |
-| Pitfalls | HIGH | Critical pitfalls (RLS, coordinate system, parcel cache lifecycle) verified with official sources and existing codebase examples. MVT-over-GeoJSON recommendation is technically grounded in MapLibre documentation and PostGIS capabilities. |
+| Stack | HIGH | All 7 packages verified via `npm info` for React 19 explicit peer dep. recharts 3.7.0 SVG CSS variable fills confirmed in recharts docs. maplibregl-minimap rejection backed by official repo README. All alternatives evaluated and rejected with documented rationale. |
+| Features | HIGH (P1/P2 scope) / MEDIUM (competitor analysis) | P1/P2 features derived from direct codebase analysis — no guessing. Anti-features justified by architectural constraints, not opinion. Competitor UX analysis from marketing pages (MEDIUM confidence) but not decision-critical — the NL market gap is the strategic thesis. |
+| Architecture | HIGH | Based on direct ~16K LOC TypeScript/React codebase inspection. Single MapLibre instance constraint verified in `_authenticated.tsx`. Static mini-map approach confirmed against MapLibre WebGL context discussion in official repo. Build order derived from explicit dependency graph analysis of new and modified components. |
+| Pitfalls | HIGH | All 4 critical pitfalls backed by official MapLibre/TanStack repo issues and discussions or direct codebase code inspection. `gray-*` legacy class audit grounded in actual file line numbers. oklch MapLibre incompatibility is a known, documented limitation. |
 
-**Overall confidence:** HIGH
+**Overall confidence: HIGH**
 
 ### Gaps to Address
 
-- **"Afgewezen" vs. "Verloren" stage naming inconsistency:** STACK.md uses `verloren` while FEATURES.md and ARCHITECTURE.md use `afgewezen`. Both mean "rejected/lost" in Dutch but have different connotations. This must be resolved before the Lead model migration is written — it cannot be changed without a subsequent migration. Recommend `afgewezen` (rejected — implies a decision about the property) over `verloren` (lost — implies a failure of the salesperson).
+- **ComparisonColumn content depth:** Research confirms the architecture (parallel queries, URL state, CSS grid) but the exact data fields to display per column per tab section are not specified. This is a product decision to be made during planning against the `PropertyReportResponse` TypeScript type — not a technical gap.
 
-- **Report-from-parcel: synchronous vs. async:** `POST /api/reports/from-parcel` makes multiple external API calls (BAG, PDOK, DSO, RCE, SRU) that can take 10-30 seconds. The synchronous approach is acceptable for MVP, but the planning phase should flag this for measurement during Phase 2 implementation. If response times exceed 15 seconds consistently, wrap in an ARQ background job with polling — the same pattern used elsewhere.
+- **Score legend visual design:** Research confirms the feature is needed (P1) and belongs near the table or filter panel, but the exact visual design (inline scale bar, legend tooltip, separate card?) is not specified. Low-stakes decision for the plan author to make during Phase 1 planning.
 
-- **Lead history table (Pitfall 12 — LOW urgency):** Omitting a `lead_history` table for stage transition timestamps is hard to retrofit. The roadmapper should make an explicit decision: include a minimal `lead_history` table in Phase 1 (adds ~30 minutes of work, prevents a painful future migration) or consciously defer with a "will not have in v5.0" note. Research recommends including it from day one.
+- **`MAP_THEME_COLORS` hex values computation:** The pitfall research identifies that MapLibre needs hex equivalents of the OKLCH design tokens and names the file (`lib/map-theme.ts`). The actual hex conversions must be computed from existing `index.css` oklch values during Phase 5 implementation — straightforward arithmetic but requires attention from the implementer.
 
-- **`project_id` NOT NULL on leads — empty project state:** ARCHITECTURE.md establishes that `project_id` is NOT NULL (leads without a project are orphaned and unbrowsable). The UI must handle the empty-projects state gracefully when a user tries to add their first parcel to the pipeline. The `PromoteParcelModal` needs a "Create project first" path or inline project creation.
+- **`PropertyDetailDrawer` vs `ParcelDetailModal` naming:** Both names appear across research files. The implementation references `ParcelDetailModal.tsx` in the architecture file component boundaries map. Confirm the correct filename before starting Phase 1 score visualization work — almost certainly `ParcelDetailModal.tsx` based on the majority of architectural references.
+
+---
 
 ## Sources
 
-### Primary (HIGH confidence — direct codebase inspection)
-- `backend/app/models/area_scan.py` — `String(20)` status precedent, AreaScan field inventory
-- `backend/app/scans/router.py` — existing scan endpoints, tile proxy pattern, organization scoping
-- `backend/app/services/tile_proxy.py` — ST_AsMVT JOIN pattern, geometry handling
-- `frontend/src/components/map/ParcelScoreLayer.tsx` — data-driven paint expression pattern to extend
-- `frontend/src/components/layout/InspectorPanel.tsx` — parcel detail panel extend point
-- `frontend/src/components/projects/ProjectList.tsx` — DEMO_REPORTS TODO identifying the gap
-- `frontend/src/routes/_authenticated/map.tsx` — historical scan restoration existing `useEffect` pattern
-- `frontend/src/hooks/useScans.ts` — TanStack Query pattern to replicate for leads
+### Primary (HIGH confidence)
 
-### Primary (HIGH confidence — official documentation)
-- [MapLibre GL JS Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) — MVT over GeoJSON recommendation for large parcel datasets
-- [MapLibre feature-state integer ID requirement #1043](https://github.com/maplibre/maplibre-gl-js/issues/1043) — UUID feature-state silent failure pitfall
-- [PostGIS ST_AsGeoJSON](https://postgis.net/docs/ST_AsGeoJSON.html) — coordinate projection with `ST_Transform`
-- [PostGIS ST_Transform](https://postgis.net/docs/ST_Transform.html) — EPSG:28992 → 4326 pattern
-- [GeoAlchemy2 + Alembic](https://geoalchemy-2.readthedocs.io/en/latest/alembic.html) — GIST index autogenerate gap
-- [TanStack Query v5 Paginated Queries](https://tanstack.com/query/v5/docs/react/guides/paginated-queries) — `useQuery` vs `useInfiniteQuery` decision
-- [MapLibre GL JS GeoJSONSource — setData](https://maplibre.org/maplibre-gl-js/docs/API/classes/GeoJSONSource/) — performance characteristics for GeoJSON vs MVT
+- `npm info recharts@3.7.0 peerDependencies` — React 19 explicit peer dep confirmed
+- `npm info @radix-ui/react-{tabs,slider,collapsible,tooltip,popover}` — all verified for React 19 explicit support
+- `npm info @tanstack/react-virtual` — v3.13.18, React 19 explicit support
+- [TanStack Table Column Visibility Guide](https://tanstack.dev/table/latest/docs/guide/column-visibility) — official docs
+- [TanStack Table Column Pinning Sticky Example](https://tanstack.com/table/v8/docs/framework/react/examples/column-pinning-sticky) — official docs
+- [TanStack Query v5 Parallel Queries](https://tanstack.com/query/v5/docs/framework/react/guides/parallel-queries) — official docs
+- [TanStack Virtual v3 Docs](https://tanstack.com/virtual/latest) — official docs
+- [MapLibre GL JS Filter Examples](https://maplibre.org/maplibre-gl-js/docs/examples/filter-within-a-layer/) — official docs
+- [MapLibre Map does not fit container in modal (Issue #1363)](https://github.com/maplibre/maplibre-gl-js/issues/1363) — official repo, WebGL context at zero dimensions pitfall
+- [MapLibre Too many active WebGL contexts (Discussion #3065)](https://github.com/maplibre/maplibre-gl-js/discussions/3065) — official repo, WebGL budget constraint
+- [maplibregl-minimap README](https://github.com/JabSYsEmb/maplibregl-minimap/blob/main/README.md) — "not yet ready for production use" (rejection basis)
+- [TanStack Router URL as State (Discussion #1249)](https://github.com/TanStack/router/discussions/1249) — official repo, filter state architecture
+- [TanStack Router Search Param Propagation (Discussion #3686)](https://github.com/TanStack/router/discussions/3686) — official repo, spurious re-fetch prevention
+- [TanStack Router Keep Alive (Discussion #1447)](https://github.com/TanStack/router/discussions/1447) — official repo, CSS `hidden` workaround for tab state
+- Direct codebase analysis (HIGH confidence): `_authenticated.tsx`, `MapView.tsx`, `MapContext.tsx`, `ReportDetailPage.tsx`, `ParcelDetailModal.tsx`, `LayerToggle.tsx`, `ParcelScoreLayer.tsx`, `InspectorPanel.tsx`, `ResultsTable.tsx`, `ResultsFilterPanel.tsx`, `Drawer.tsx`, `ProjectEditModal.tsx`, `ChangeTimeline.tsx`, `index.css`, `ThemeContext.tsx`, `frontend/package.json`
 
 ### Secondary (MEDIUM confidence)
-- [Alembic PostgreSQL Enum complexity](https://roman.pt/posts/alembic-enums/) — confirms `VARCHAR` + `CheckConstraint` is preferable for evolving status values
-- [Dealpath deal pipeline management](https://www.dealpath.com/deal-pipeline-management/) — competitor feature comparison for Dutch pipeline stage decisions
-- [reSPACio real estate pipeline stages](https://respacio.com/real-estate-software/contact-management/guide-to-real-estate-pipeline-stages/) — Dutch acquisition stage reference
-- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — version 6.3.1, React 19 peer dep confirmation, staleness assessment
-- [ARQ documentation — idempotency](https://arq-docs.helpmanual.io/) — at-least-once delivery, re-run handling
-- [MapLibre GL JS Memory Leak #6154](https://github.com/maplibre/maplibre-gl-js/issues/6154) — GeoJSON source update memory behavior
-- [MapLibre Expressions & Data-Driven Styling (DeepWiki)](https://deepwiki.com/maplibre/maplibre-gl-js/3.2-expressions-and-data-driven-styling) — `feature-state` vs data-driven property comparison
+
+- [Pencil & Paper Enterprise Data Table UX Patterns](https://www.pencilandpaper.io/articles/ux-pattern-analysis-enterprise-data-tables) — density control, column management UX conventions
+- [LogRocket Best React Chart Libraries 2025](https://blog.logrocket.com/best-react-chart-libraries-2025/) — recharts 3.x vs alternatives evaluation
+- [Headless Component Pattern — Martin Fowler](https://martinfowler.com/articles/headless-component.html) — Tabs compound component justification
+- [SVG Gauge stroke-dasharray Pattern](https://veerasundar.com/blog/building-a-radial-gauge-with-svg-and-react-part-1) — `ScoreRing` implementation technique
+- [Map UI Patterns — Attribute Filter](https://mapuipatterns.com/attribute-filter/) — map filter panel UX conventions
+- [Reonomy Web Application](https://www.reonomy.com/solutions/web-application/) — mini-map in reports competitor reference
+- [PropStream Features](https://www.propstream.com/propstream-features) — competitor table feature comparison
+- [Basedash Blog — Light Mode Without Tailwind dark: class](https://www.basedash.com/blog/how-we-built-light-mode-without-tailwind-s-dark-class) — `html.light` class pattern validation
+
+### Tertiary (LOW confidence)
+
+- [HouseCanary AI in Real Estate](https://www.housecanary.com/blog/ai-in-real-estate) — US market; insight card language patterns not directly applicable to Dutch developer UX
 
 ---
-*Research completed: 2026-02-18*
+
+*Research completed: 2026-02-21*
 *Ready for roadmap: yes*

@@ -1,237 +1,355 @@
-# Stack Research — v5.0 Lead Pipeline, Scan History & Map Visualization
+# Stack Research — v6.0 Premium Data Presentation
 
-**Project:** Propdex v5.0
-**Domain:** Dutch property intelligence SaaS — lead pipeline, scan persistence, map visualization
-**Researched:** 2026-02-18
+**Project:** Propdex v6.0
+**Domain:** Dutch property intelligence SaaS — premium data presentation, scoring visualizations, comparison views, mini-maps, map filtering UI, theme polish
+**Researched:** 2026-02-21
 **Confidence:** HIGH
-**Focus:** Additions and changes ONLY — existing v4.0 stack is validated and unchanged.
+**Focus:** Additions ONLY — existing stack (React 19, Vite 7, TypeScript strict, Tailwind v4, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router, TanStack Table v8, Industrial Amber design system) is validated and unchanged.
 
 ---
 
 ## Context: What This Milestone Adds
 
-The existing stack (React 19 + Vite 7 + MapLibre GL JS 5.x + TanStack ecosystem + FastAPI + SQLAlchemy 2.x + PostgreSQL/PostGIS + Alembic) handles everything already built. This document covers only the delta needed for three new capability areas:
+Six new capability areas, each with distinct library needs:
 
-1. **Lead pipeline** — status tracking per scan result parcel (new SQLAlchemy model, PATCH endpoint, frontend status badge/board)
-2. **Scan history** — browsable list of past scans with persist-to-DB results (new `GET /api/scans` list endpoint, frontend history view)
-3. **Map visualization of scan results** — parcel polygons colored by score/lead-status on the map (existing MVT tile infrastructure is sufficient; only new GeoJSON endpoint needed for small result sets)
-
----
-
-## Backend: No New Dependencies Required
-
-All three features can be built entirely with the existing backend stack. No new Python packages needed.
-
-### Lead Pipeline Model — String Column over PostgreSQL Enum
-
-**Decision:** Use `String(30)` with a Python `Literal` type for the lead status column, NOT a PostgreSQL native `ENUM` type.
-
-**Rationale:**
-- PostgreSQL `ENUM` types require `ALTER TYPE ... ADD VALUE` for new statuses, which cannot run inside a transaction (requires `autocommit_block` in Alembic). Lead stages evolve — we will add statuses.
-- `String` columns validated at the Pydantic schema layer provide the same application-level integrity without migration complexity.
-- The existing pattern in the codebase (`AreaScan.status` is `String(20)`, `ScanResult.flags` is `JSONB`) confirms this preference.
-- SQLAlchemy 2.x `Mapped[str]` with a `String(30)` column maps cleanly; add a `__table_args__` `CheckConstraint` for DB-level enforcement without enum rigidity.
-
-**Lead status values (initial set):**
-```
-nieuw | contact_opgenomen | interesse | voorstel | gewonnen | verloren | parkeren
-```
-
-**Model pattern (follows existing codebase):**
-```python
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, text
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
-
-LEAD_STATUSES = [
-    "nieuw", "contact_opgenomen", "interesse",
-    "voorstel", "gewonnen", "verloren", "parkeren"
-]
-
-class LeadStatus(Base, TenantMixin, TimestampMixin):
-    __tablename__ = "lead_statuses"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
-    scan_result_parcel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("parcel_cache.id", ondelete="CASCADE"))
-    scan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("area_scans.id", ondelete="CASCADE"))
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="nieuw")
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-
-    __table_args__ = (
-        CheckConstraint(f"status IN {tuple(LEAD_STATUSES)}", name="ck_lead_status_values"),
-        Index("ix_lead_statuses_org_scan", "organization_id", "scan_id"),
-        Index("ix_lead_statuses_org_status", "organization_id", "status"),
-        UniqueConstraint("organization_id", "scan_id", "scan_result_parcel_id", name="uq_lead_per_parcel_per_scan"),
-    )
-```
-
-**Confidence:** HIGH — follows AreaScan.status precedent in codebase, verified migration-friendliness via web research.
+1. **Scoring visualizations** — radial gauges, factor bar charts, score trend lines in detail panels and reports
+2. **Data-dense table UX** — column pinning, row virtualization for 500+ result sets, sticky headers
+3. **Property comparison views** — side-by-side parcel comparison with tabbed sections, diff highlights
+4. **Map filter controls** — range slider for score threshold, pill-toggle filters wired to MapLibre `setFilter()`
+5. **Mini-maps in reports** — static location thumbnail embedded in `ReportDetailPage`, live overview control in scan view
+6. **Theme system polish** — chart colors, map overlay colors, MapLibre popup styles wired to CSS variables for `html.light` / dark switch
 
 ---
 
-### Scan History — New List Endpoint (No New Dependencies)
+## New Dependencies: Decision Table
 
-**Gap identified:** `GET /api/scans` does not exist. The router only has:
-- `POST /api/scans` (trigger)
-- `GET /api/scans/{scan_id}` (status poll)
-- `GET /api/scans/{scan_id}/results` (parcel results)
-- `GET /api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf` (MVT)
-- `GET /api/scans/{scan_id}/export` (CSV/XLSX)
+| Library | Version | Area | Decision | Confidence |
+|---------|---------|------|----------|------------|
+| `recharts` | 3.7.0 | Scoring charts | ADD — only charting library needed | HIGH |
+| `@radix-ui/react-tabs` | 1.1.13 | Comparison views | ADD — headless, accessible, React 19 explicit support | HIGH |
+| `@radix-ui/react-slider` | 1.3.6 | Map filter controls | ADD — range slider for score threshold, accessible | HIGH |
+| `@radix-ui/react-collapsible` | 1.1.12 | Report sections | ADD — accordion-style expand/collapse for data sections | HIGH |
+| `@radix-ui/react-tooltip` | 1.2.8 | Score factor labels | ADD — accessible tooltip for score breakdown labels | HIGH |
+| `@radix-ui/react-popover` | 1.1.15 | Filter panel popup | ADD — filter panel anchored to map button | HIGH |
+| `@tanstack/react-virtual` | 3.13.18 | Table virtualization | ADD — row virtualization for 500+ parcel result sets | HIGH |
 
-**Solution:** Add `GET /api/scans` returning paginated list of `AreaScan` rows, newest-first. Uses existing `service.py` pattern with `select(AreaScan).where(org filter).order_by(desc).limit/offset`. No new dependencies.
-
-**Response shape:**
-```python
-class ScanListItem(BaseModel):
-    scan_id: uuid.UUID
-    gemeente_naam: str
-    gemeente_code: str
-    wijk_naam: str | None
-    status: str
-    parcels_total: int
-    results_count: int        # derived: count of scan_results rows
-    created_at: datetime
-    completed_at: datetime | None
-    project_id: uuid.UUID | None
-
-class ScanListResponse(BaseModel):
-    scans: list[ScanListItem]
-    total: int
-    offset: int
-    limit: int
-```
-
-**Pagination:** offset/limit (consistent with existing `ScanResultsResponse` and `ReportListResponse` patterns). TanStack Query `useQuery` with page param — NOT `useInfiniteQuery` (scan history lists are short, no need for infinite scroll).
-
-**Confidence:** HIGH — direct extension of existing router/service/schema pattern.
+**Zero new backend dependencies.**
 
 ---
 
-### Map Visualization — GeoJSON Endpoint for Lead Status Coloring
+## Capability Area 1: Scoring Visualizations
 
-**Existing capability:** The MVT tile endpoint (`GET /api/scans/{scan_id}/tiles/{z}/{x}/{y}.pbf`) already serves parcel polygons colored by score. The `ParcelScoreLayer.tsx` already implements data-driven color interpolation.
+### Decision: recharts 3.7.0
 
-**Gap:** Lead status is not in the tile data. MVT tiles include `score` and `score_category` from the `scan_results.flags` JSONB. Lead status lives in the new `lead_statuses` table.
+**Why recharts over alternatives:**
 
-**Decision: Extend MVT query to JOIN lead_statuses, NOT add a separate GeoJSON endpoint.**
+- React 19 explicit peer dependency support: `"react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"` — verified via `npm info recharts@3.7.0` (HIGH confidence).
+- Recharts 3.0 rewrote internal state management — smaller, faster, fewer re-renders than 2.x. Version 3.7.0 is the current stable (`npm info recharts version` returns `3.7.0`).
+- Renders to SVG — inherits CSS variables for colors. Chart `fill` and `stroke` can be `var(--color-amber-accent)` which automatically switches with `html.light`.
+- No additional charting dependency needed — recharts covers all required chart types: `RadialBarChart` for score gauge, `BarChart` + `Cell` for factor breakdown, `LineChart` for trend sparklines.
+- Bundle: ~150KB minified (acceptable for a data-dense SaaS — already shipping MapLibre at ~600KB).
 
-**Rationale:**
-- Adding a GeoJSON endpoint for all parcel geometries would require fetching potentially thousands of geometries into memory. The existing ST_AsMVT approach streams tiles on demand — far more efficient.
-- `tile_proxy.py` already JOINs `parcel_cache` + `scan_results`. Extend it to LEFT JOIN `lead_statuses` and include `lead_status` as a tile property.
-- MapLibre's data-driven styling can use `['get', 'lead_status']` in paint expressions, same as current `['get', 'score']`.
-- `updateParcelScoreSource()` in `ParcelScoreLayer.tsx` already handles tile URL changes — lead status updates invalidate and re-fetch tiles automatically.
+**Why NOT alternatives:**
+- **Chart.js / react-chartjs-2** — Canvas-based. CSS variables do not apply to canvas fills — each color must be extracted via `getComputedStyle()` at render time. Makes light/dark theme switching significantly more complex. Rejected.
+- **Victory** — React 19 support is unclear, last major release was 2023. LOW confidence on compatibility.
+- **D3 direct** — No React component abstraction; requires imperative DOM manipulation in `useEffect`. Conflicts with React 19's concurrent rendering model. More than 10x the implementation effort for equivalent charts.
+- **Tremor** — Component library (not headless). Imposes its own design tokens that conflict with the existing Industrial Amber CSS variable system. Rejected.
 
-**Extended MVT query pattern:**
-```sql
-WITH bounds AS (...),
-mvt_data AS (
-    SELECT
-        ST_AsMVTGeom(pc.geometry, bounds.geom, 4096, 256, true) AS geom,
-        pc.parcel_id, pc.address, pc.area_m2, pc.has_pand,
-        sr.score,
-        sr.flags->>'category' AS score_category,
-        ls.status AS lead_status        -- NEW: LEFT JOIN
-    FROM parcel_cache pc
-    JOIN scan_results sr ON sr.parcel_id = pc.id
-    LEFT JOIN lead_statuses ls          -- NEW
-        ON ls.scan_result_parcel_id = pc.id
-        AND ls.scan_id = sr.scan_id
-        AND ls.organization_id = pc.organization_id
-    CROSS JOIN bounds
-    WHERE pc.organization_id = :org_id
-      AND sr.scan_id = :scan_id
-      AND sr.organization_id = :org_id
-      AND ST_Intersects(pc.geometry, bounds.geom)
-)
-SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom') FROM mvt_data
-```
+**Required chart types:**
 
-**MapLibre paint update for lead status:**
+| Chart | Component | Use Case |
+|-------|-----------|----------|
+| Score gauge | `RadialBarChart` + `PolarAngleAxis` | 0-100 score ring in detail modal / report header |
+| Factor bars | `BarChart` + `Cell` + `LabelList` | Score breakdown (Pandstatus, Bouwjaar, etc.) |
+| Trend sparkline | `LineChart` + `ReferenceLine` | Score history across re-scans (future) |
+
+**CSS variable integration pattern (critical for theme):**
+
 ```typescript
-// Color by lead_status when status layer active
-'fill-color': [
-  'case',
-  ['==', ['get', 'lead_status'], 'gewonnen'], '#16a34a',
-  ['==', ['get', 'lead_status'], 'interesse'], '#f97316',
-  ['==', ['get', 'lead_status'], 'verloren'], '#dc2626',
-  ['==', ['get', 'lead_status'], 'parkeren'], '#94a3b8',
-  // fallback to score-based color
-  ['interpolate', ['linear'], ['get', 'score'], 0, '#dc2626', 100, '#16a34a']
-]
+// Chart colors use CSS variables — switch automatically with html.light
+const chartConfig = {
+  score: { color: 'var(--color-amber-accent)' },
+  success: { color: 'var(--color-success)' },
+  error: { color: 'var(--color-error)' },
+}
+
+// RadialBarChart gauge for 0-100 score
+<RadialBarChart
+  width={120} height={120}
+  innerRadius="70%" outerRadius="90%"
+  startAngle={180} endAngle={-180}
+  data={[{ value: score, fill: 'var(--color-amber-accent)' }]}
+>
+  <RadialBar dataKey="value" background={{ fill: 'var(--color-grey-800)' }} />
+</RadialBarChart>
+
+// BarChart for factor breakdown
+<BarChart data={factors} layout="vertical">
+  <Bar dataKey="value">
+    {factors.map((f) => (
+      <Cell key={f.key} fill={`var(--color-${f.color})`} />
+    ))}
+  </Bar>
+</BarChart>
 ```
 
-**Confidence:** HIGH — extends existing, verified tile architecture.
+**Confidence:** HIGH — recharts 3.7.0 explicitly supports React 19, CSS variable fills confirmed in recharts docs, SVG rendering verified.
 
 ---
 
-## Frontend: One New Dependency (dnd-kit, Optional)
+## Capability Area 2: Data-Dense Table UX
 
-### Lead Status Board — dnd-kit for Drag-and-Drop Kanban
+### Decision: @tanstack/react-virtual 3.13.18
 
-**Decision:** Add `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` ONLY IF a kanban drag-to-status board is in scope. If the lead pipeline uses a simple dropdown status selector (simpler approach), dnd-kit is NOT needed.
+**Why:**
+- TanStack Table v8 (already installed) has no built-in row virtualization. For scan result sets of 500+ parcels, rendering all rows causes visible lag.
+- `@tanstack/react-virtual` is the official TanStack companion — designed to compose with `useReactTable()` row models. The integration is documented in TanStack Table's own examples.
+- React 19 peer dependency explicitly supported: `"react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"` — verified via npm.
+- Headless — uses the same `styled div` approach as the existing `ResultsTable.tsx`. No style conflicts.
+- ~15KB. No DOM overhead when virtualization threshold is not reached (renders normally under ~100 rows).
 
-**Recommendation: Start with dropdown selector, defer kanban drag-and-drop to a later milestone.**
+**Integration pattern with existing ResultsTable:**
 
-**Why defer kanban:**
-- `@dnd-kit/core` 6.3.1 declares peer dependency `react >= 16.8.0` — it works with React 19 but the library is stale (last published ~Feb 2024). The newer `@dnd-kit/react` 0.3.0 is in early development and not production-ready.
-- A dropdown PATCH to `PATCH /api/leads/{parcel_id}/status` provides full lead pipeline functionality without the kanban complexity.
-- The existing `ResultsTable` (TanStack Table) already has a status column slot — adding a `<Select>` primitive is a two-line change.
+```typescript
+import { useVirtualizer } from '@tanstack/react-virtual'
 
-**If kanban is required:**
+// In ResultsTable.tsx — add to existing useReactTable setup:
+const { rows } = table.getRowModel()
+const parentRef = useRef<HTMLDivElement>(null)
 
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| @dnd-kit/core | 6.3.1 | Drag context, sensors (pointer/touch/keyboard) | Industry standard for React DnD, accessible, ~10KB, tree-shakeable |
-| @dnd-kit/sortable | 10.0.0 | Sortable list/column primitives | Required for kanban column arrangement |
-| @dnd-kit/utilities | 3.2.2 | CSS transform helpers | Used with useSortable hook |
+const rowVirtualizer = useVirtualizer({
+  count: rows.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 40,       // row height matches existing compact density
+  overscan: 10,
+})
 
-**Installation (only if kanban is in scope):**
+const virtualRows = rowVirtualizer.getVirtualItems()
+const totalSize = rowVirtualizer.getTotalSize()
+```
+
+**Column pinning (no new library needed):**
+TanStack Table v8 has built-in column pinning via `columnPinning` state and `getLeftLeafColumns()` / `getRightLeafColumns()`. Sticky positioning is pure CSS: `position: sticky; left: 0`. This is already documented in TanStack Table v8 and requires zero new dependencies.
+
+**Confidence:** HIGH — official TanStack pairing, React 19 explicitly supported, pattern verified in TanStack Table sticky pinning docs.
+
+---
+
+## Capability Area 3: Property Comparison Views
+
+### Decision: @radix-ui/react-tabs 1.1.13
+
+**Why:**
+- The comparison view is a side-by-side panel with tabbed sections (Overview / Locatie / Bestemmingen / Vergunningen). Tabs are the correct primitive — not accordion, not routing.
+- Radix UI Tabs: accessible (WAI-ARIA), keyboard navigable, zero styling imposed. Integrates with Tailwind CSS variables.
+- React 19 explicit peer dependency: `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"` — verified via npm.
+- Already familiar pattern — `cmdk` (already installed) uses Radix primitives under the hood.
+
+**Why NOT routing-based tabs:**
+TanStack Router tabs would force URL changes per tab switch in the comparison view, which is not desired (comparison is modal/panel state, not a navigable page).
+
+**Comparison view structure:**
+
+```tsx
+// Side-by-side comparison — two columns, one tab set controls both
+<Tabs.Root defaultValue="overview">
+  <Tabs.List>
+    <Tabs.Trigger value="overview">Overzicht</Tabs.Trigger>
+    <Tabs.Trigger value="locatie">Locatie</Tabs.Trigger>
+    <Tabs.Trigger value="bestemmingen">Bestemmingen</Tabs.Trigger>
+  </Tabs.List>
+
+  <div className="grid grid-cols-2 gap-4">
+    {[parcelA, parcelB].map((parcel) => (
+      <div key={parcel.id}>
+        <Tabs.Content value="overview"><OverviewSection parcel={parcel} /></Tabs.Content>
+        <Tabs.Content value="locatie"><LocatieSection parcel={parcel} /></Tabs.Content>
+        <Tabs.Content value="bestemmingen"><BestemmingSection parcel={parcel} /></Tabs.Content>
+      </div>
+    ))}
+  </div>
+</Tabs.Root>
+```
+
+**Diff highlights:** CSS only — compare field values, apply `bg-amber-accent/10 text-amber-accent` to cells that differ. No library needed.
+
+**Confidence:** HIGH — Radix Tabs 1.1.13, React 19 explicitly supported, accessible ARIA roles included.
+
+---
+
+## Capability Area 4: Map Filter Controls
+
+### Decision: @radix-ui/react-slider 1.3.6
+
+**Why:**
+- The map filter panel requires a range slider for score threshold (0–100). Native `<input type="range">` cannot be styled consistently across browsers and lacks dual-thumb (min/max range) support.
+- Radix Slider: accessible, dual-thumb range support, keyboard navigable. React 19 peer dep: `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"`.
+- The existing `ResultsFilterPanel.tsx` uses custom `FilterPill` and native `<select>` — adding Radix Slider extends this pattern without imposing a full component framework.
+
+**MapLibre setFilter wiring pattern:**
+
+```typescript
+// Score range slider → MapLibre layer filter
+const [scoreRange, setScoreRange] = useState([0, 100])
+
+const handleScoreChange = (values: number[]) => {
+  setScoreRange(values)
+  map.setFilter('parcel-scores-fill', [
+    'all',
+    ['>=', ['get', 'score'], values[0]],
+    ['<=', ['get', 'score'], values[1]],
+  ])
+}
+
+<Slider.Root
+  min={0} max={100} step={5}
+  value={scoreRange}
+  onValueChange={handleScoreChange}
+>
+  <Slider.Track className="h-1 bg-grey-800 rounded-full relative">
+    <Slider.Range className="absolute h-full bg-amber-accent rounded-full" />
+  </Slider.Track>
+  <Slider.Thumb className="block w-4 h-4 bg-amber-accent rounded-full shadow-md" />
+  <Slider.Thumb className="block w-4 h-4 bg-amber-accent rounded-full shadow-md" />
+</Slider.Root>
+```
+
+**Why NOT custom slider:** Keyboard accessibility for range sliders (Arrow keys, Home/End) requires significant ARIA implementation. Radix handles this correctly out of the box.
+
+### Decision: @radix-ui/react-popover 1.1.15
+
+**Why:**
+- The map filter panel is triggered by a button in `LayerToggle.tsx` and floats over the map. This is a popover pattern — anchored, dismissible on outside click, focus-trapped.
+- Radix Popover: correct semantic role, portal-rendered (above MapLibre z-index), accessible. React 19 peer dep: explicitly supported.
+- The existing `LayerToggle.tsx` is a hand-rolled positioned `<div>`. Replacing with Radix Popover eliminates the custom outside-click detection logic (currently in a `useEffect` with a document listener).
+
+**Confidence:** HIGH — Radix Slider 1.3.6 and Popover 1.1.15, React 19 explicitly supported, MapLibre `setFilter` integration is standard API.
+
+---
+
+## Capability Area 5: Mini-Maps in Reports
+
+### Decision: Native MapLibre GL JS — No New Library
+
+**Two distinct mini-map use cases require different approaches:**
+
+**5a. Static location thumbnail in ReportDetailPage (property centroid)**
+
+Implementation: `new maplibregl.Map({ container, preserveDrawingBuffer: true })` rendered into a small fixed-size `<div>` (e.g. 280px × 180px). Center on parcel centroid. Add `NavigationControl` disabled for interaction. Capture static image via `map.getCanvas().toDataURL('image/png')` after the `idle` event.
+
+Note: `preserveDrawingBuffer: true` has a GPU cost (prevents frame buffer reuse). Acceptable for a single mini-map in a detail page. Do NOT use it on the primary scan map.
+
+**5b. Overview "where-am-I" control in scan view**
+
+The `maplibregl-minimap` npm package (v1.0.3) exists on MapLibre's official plugins page. However, the package description states it is "currently in development and not yet ready for production use." Using an unstable plugin on the primary scan map carries unacceptable risk.
+
+**Decision: Implement the overview mini-map as a custom MapLibre `IControl`.** Pattern:
+- Create a small second `maplibregl.Map` instance inside a custom `IControl`'s `onAdd()` method.
+- Sync the overview map's center/zoom to the primary map via `map.on('move', ...)`.
+- This is the same approach MapLibre's own plugin uses internally — avoids dependency risk.
+- Estimated implementation: ~80 lines in `MinimapControl.ts`.
+
+**Why NOT react-mapbox-minimap (npm: `react-mapbox-minimap` by gilles-mastropasqua):**
+- Peer dependency requires `mapbox-gl ^3.7.0` — incompatible with this project's `maplibre-gl 5.x`. Rejected.
+
+**Why NOT a full additional MapLibre instance as React state:**
+- MapLibre instances are imperative and DOM-attached. Two Map instances managed via React state causes double mount/teardown on StrictMode and `suspense`. The `IControl` lifecycle (`onAdd` / `onRemove`) is the correct imperative container.
+
+**Confidence:** HIGH — `preserveDrawingBuffer` approach is MapLibre official recommendation for screenshots. Custom `IControl` for overview is the pattern MapLibre's plugin ecosystem uses.
+
+---
+
+## Capability Area 6: Theme System Polish
+
+### Decision: No New Libraries — CSS Variable Extension Only
+
+The theme system is already correct architecture (`html.light` selector on `<html>`, CSS variables in `@theme`, `ThemeContext.tsx` with localStorage). The gaps are color token coverage, not structural.
+
+**Required CSS variable additions to `index.css`:**
+
+```css
+@theme {
+  /* Chart palette — oklch for P3 gamut vibrancy */
+  --color-chart-1: oklch(0.78 0.15 85.87);   /* amber — matches amber-accent */
+  --color-chart-2: oklch(0.65 0.18 145);      /* green — matches success */
+  --color-chart-3: oklch(0.60 0.22 25);       /* red — matches error */
+  --color-chart-4: oklch(0.62 0.18 250);      /* blue — matches info */
+  --color-chart-5: oklch(0.59 0.12 192.47);   /* teal — matches teal-accent */
+
+  /* Score tier tokens */
+  --color-score-high: oklch(0.65 0.18 145);   /* >= 70: green */
+  --color-score-mid: oklch(0.78 0.15 85.87);  /* 40-69: amber */
+  --color-score-low: oklch(0.60 0.22 25);     /* < 40: red */
+}
+
+html.light {
+  /* Chart palette — same hues, adjusted L for white surfaces */
+  --color-chart-1: oklch(0.70 0.15 85.87);
+  --color-chart-2: oklch(0.50 0.18 145);
+  --color-chart-3: oklch(0.52 0.22 25);
+  --color-chart-4: oklch(0.52 0.18 250);
+  --color-chart-5: oklch(0.48 0.12 192.47);
+
+  --color-score-high: oklch(0.50 0.18 145);
+  --color-score-mid: oklch(0.70 0.15 85.87);
+  --color-score-low: oklch(0.52 0.22 25);
+}
+```
+
+**MapLibre light mode map tiles:**
+The existing map uses CartoDB Dark Matter tiles. In `html.light` mode, switch to CartoDB Positron (light tile variant). Pattern: `ThemeContext` change triggers `map.setStyle()` in `MapView.tsx`. This is pure logic — no new dependency.
+
+**MapLibre popup light mode:**
+Already handled in `index.css` via `html.light .propdex-property-popup .maplibregl-popup-content` selectors (confirmed in existing code). Extend same pattern for any new popups.
+
+**Recharts tooltip theming:**
+Recharts `<Tooltip>` renders into a `<div>` inside the SVG container. Style via CSS:
+```css
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--color-grey-900) !important;
+  border: 1px solid color-mix(in oklch, var(--color-overlay) 8%, transparent) !important;
+  color: var(--color-grey-100) !important;
+}
+```
+
+**Confidence:** HIGH — existing architecture is correct, gaps are additive token coverage only.
+
+---
+
+## Supporting Radix Primitives: Tooltip and Collapsible
+
+### @radix-ui/react-tooltip 1.2.8
+
+**Why:** Score factor labels in `ParcelDetailModal.tsx` currently use a hand-rolled `group-hover:opacity-100` tooltip (lines 128–134 of existing code). Radix Tooltip provides correct ARIA `role="tooltip"`, keyboard accessibility (focus shows tooltip), and portal rendering (prevents z-index conflicts inside scroll containers). React 19: explicitly supported.
+
+**Migration:** Replace the existing `<div className="group relative">` pattern with `<Tooltip.Root>` — backward compatible slot-based API.
+
+### @radix-ui/react-collapsible 1.1.12
+
+**Why:** Report detail sections (Vergunningen, Ruimtelijke Plannen, RCE Monumenten) currently render all data unconditionally. For parcels with many plan documents, this creates long single-scroll pages. Radix Collapsible provides accessible expand/collapse with `aria-expanded` — no animation library needed, just `data-[state=open]:animate-*` with Tailwind.
+
+React 19: explicitly supported.
+
+---
+
+## Full New Dependency Table
+
+| Library | Version | Purpose | pnpm install command |
+|---------|---------|---------|---------------------|
+| `recharts` | `^3.7.0` | Score gauge, factor bars, sparklines | `pnpm add recharts` |
+| `@radix-ui/react-tabs` | `^1.1.13` | Comparison view tab navigation | `pnpm add @radix-ui/react-tabs` |
+| `@radix-ui/react-slider` | `^1.3.6` | Score range filter slider | `pnpm add @radix-ui/react-slider` |
+| `@radix-ui/react-collapsible` | `^1.1.12` | Report section expand/collapse | `pnpm add @radix-ui/react-collapsible` |
+| `@radix-ui/react-tooltip` | `^1.2.8` | Score factor label tooltips | `pnpm add @radix-ui/react-tooltip` |
+| `@radix-ui/react-popover` | `^1.1.15` | Map filter panel anchor | `pnpm add @radix-ui/react-popover` |
+| `@tanstack/react-virtual` | `^3.13.18` | Row virtualization for 500+ results | `pnpm add @tanstack/react-virtual` |
+
+**Installation (all at once):**
 ```bash
-npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+pnpm add recharts @radix-ui/react-tabs @radix-ui/react-slider @radix-ui/react-collapsible @radix-ui/react-tooltip @radix-ui/react-popover @tanstack/react-virtual
 ```
 
-**Confidence for dnd-kit:** MEDIUM — functional with React 19 (peer dep is `>=16.8.0`), but library maintenance is slow. No breaking issues found; just note the staleness risk.
-
----
-
-### Scan History View — No New Dependencies
-
-The scan history list uses:
-- `TanStack Query useQuery` (already installed) for `GET /api/scans`
-- `TanStack Router` (already installed) for `/resultaten/geschiedenis` or `/history` route
-- `TanStack Table` (already installed) for the history table — same pattern as existing `ResultsTable`
-- URL search params for pagination — consistent with existing `resultaten.tsx` pattern
-
-No new packages. The `useQuery` paginated approach (not `useInfiniteQuery`) is appropriate — scan history lists are small (tens of entries per org, not thousands).
-
-**Confidence:** HIGH — identical pattern to existing scan results and report list views.
-
----
-
-### Map Layer Toggle for Lead Status Coloring — No New Dependencies
-
-The map already has `LayerToggle.tsx` and `ParcelScoreLayer.tsx`. The lead status coloring is:
-- A new paint expression option in `ParcelScoreLayer` (mode: `'score' | 'lead_status'`)
-- A toggle button in the existing `LayerToggle` panel
-- When a parcel's lead status changes (PATCH API), invalidate the tile cache by calling `updateParcelScoreSource()` with the same tile URL (forcing a re-fetch)
-
-No new packages. MapLibre's `setData()` / tile cache invalidation handles the refresh.
-
-**Confidence:** HIGH — extends existing architecture.
-
----
-
-## Summary: New Dependencies Table
-
-| Library | Version | Backend/Frontend | Required For | Confidence |
-|---------|---------|-----------------|--------------|------------|
-| None (backend) | — | Backend | All features | HIGH |
-| @dnd-kit/core | 6.3.1 | Frontend | Kanban only (defer) | MEDIUM |
-| @dnd-kit/sortable | 10.0.0 | Frontend | Kanban only (defer) | MEDIUM |
-| @dnd-kit/utilities | 3.2.2 | Frontend | Kanban only (defer) | MEDIUM |
-
-**Net result:** Zero new dependencies for MVP. Three optional dnd-kit packages only if kanban drag-drop is explicitly in scope.
+**No new dev dependencies.** All type declarations are bundled in the packages themselves.
 
 ---
 
@@ -239,115 +357,125 @@ No new packages. MapLibre's `setData()` / tile cache invalidation handles the re
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| PostgreSQL native `ENUM` type for lead status | Adding new statuses requires `ALTER TYPE` outside transaction — painful Alembic migrations | `String(30)` + `CheckConstraint` + Pydantic validation |
-| Martin tile server | External service with no multi-tenant auth — cross-org data leakage risk (documented in existing `tile_proxy.py` comments) | Existing FastAPI ST_AsMVT endpoint |
-| Separate GeoJSON geometry endpoint for all scan parcels | Memory-intensive (thousands of geometries in JSON), slow, no streaming | Extend existing MVT tile endpoint with LEFT JOIN for lead_status |
-| `fastapi-pagination` PyPI package | Adds a dependency for simple limit/offset that's 3 lines of SQLAlchemy | Direct `select(...).limit(...).offset(...)` pattern |
-| `useInfiniteQuery` for scan history | Overkill — scan lists are short (dozens of entries, not thousands) | Simple `useQuery` with page param, consistent with existing patterns |
-| `react-beautiful-dnd` | Unmaintained (announced end-of-life) | `@dnd-kit/core` if kanban is required |
-| `react-dnd` | No React 19 support planned (open issue) | `@dnd-kit/core` if kanban is required |
-| SQLModel | Adds ORM layer over SQLAlchemy that conflicts with existing `Mapped[]` pattern | Raw SQLAlchemy 2.x `mapped_column()` — already used throughout |
+| `chart.js` / `react-chartjs-2` | Canvas-based — CSS variables (oklch tokens) don't apply to canvas. Light/dark theme switching requires `getComputedStyle()` hacks at render time | `recharts` (SVG, CSS variables apply natively) |
+| `victory` (FormidableLabs) | Last major release 2023, React 19 compatibility unclear, LOW confidence | `recharts 3.7.0` |
+| `d3` direct | Imperative DOM manipulation conflicts with React 19 concurrent rendering; 10x implementation effort for equivalent charts | `recharts` (wraps d3 internally) |
+| `tremor` | Component library with its own design tokens — conflicts with Industrial Amber CSS variable system | `recharts` + Radix primitives + Tailwind |
+| `maplibregl-minimap` npm package | Package README states "not yet ready for production use" (development status) | Custom `IControl` implementation (~80 lines) |
+| `react-mapbox-minimap` | Peer dependency requires `mapbox-gl ^3.7.0` — incompatible with `maplibre-gl 5.x` | Custom `IControl` implementation |
+| `@radix-ui/react-accordion` | Adds indirection over `@radix-ui/react-collapsible` which is the lower-level primitive we need | `@radix-ui/react-collapsible` directly |
+| `framer-motion` | ~150KB animation library for effects achievable with Tailwind's `transition-*` utilities and CSS `@keyframes` | Tailwind transitions + `@keyframes` in `index.css` |
+| `react-spring` | Same concern as framer-motion — heavy for what's needed | CSS transitions only |
+| `next-themes` | Next.js-specific theme provider — incompatible with the existing `ThemeContext.tsx` + localStorage pattern | Existing `ThemeProvider` in `src/lib/theme/` |
+| `react-window` | Older virtualization library; `@tanstack/react-virtual` is the modern replacement with React 19 support | `@tanstack/react-virtual` |
+| `react-virtualized` | Unmaintained. Last release 2019. No React 17+ support | `@tanstack/react-virtual` |
+| `shadcn/ui` CLI install | Conflicts with Tailwind v4's CSS-first `@theme` approach — CLI modifies `tailwind.config.js` which doesn't exist in v4 | Copy-paste individual patterns manually (shadcn is source, not runtime dependency) |
 
 ---
 
 ## Integration Points
 
-### Backend: lead_statuses → tile_proxy.py → MapLibre
+### recharts ↔ Theme System
 
 ```
-PATCH /api/leads/{lead_id}/status
-  ↓ writes to lead_statuses
-  ↓ frontend invalidates tile query key
-  ↓ MapLibre re-fetches tiles
-  ↓ tile_proxy.py LEFT JOINs lead_statuses
-  ↓ lead_status property appears in MVT
-  ↓ ParcelScoreLayer paint expression reads lead_status
+index.css: --color-chart-1..5, --color-score-high/mid/low defined in @theme + html.light overrides
+  ↓ recharts SVG fills use var(--color-chart-1) etc.
+  ↓ ThemeContext toggles html.light class
+  ↓ CSS variables update automatically — no JS re-render needed for chart colors
 ```
 
-### Backend: GET /api/scans → useScans hook → ScanHistoryTable
+### @tanstack/react-virtual ↔ ResultsTable
 
 ```
-GET /api/scans?offset=0&limit=20&status=completed
-  ↓ new ScanListResponse schema
-  ↓ new fetchScanList() in api.ts
-  ↓ new useScanList() hook in useScans.ts
-  ↓ ScanHistoryTable component (TanStack Table)
-  ↓ clicking a row navigates to /resultaten?scan_id=<id>
+ResultsTable.tsx (existing TanStack Table v8)
+  ↓ add useVirtualizer() from @tanstack/react-virtual
+  ↓ render virtualRows instead of all rows
+  ↓ add paddingTop/paddingBottom spacers to maintain scroll position
+  ↓ existing sort/filter/selection state unaffected
 ```
 
-### Frontend: LeadStatus → ResultsTable column
+### @radix-ui/react-slider ↔ MapLibre setFilter
 
 ```
-ScanResultItem (existing type)
-  + lead_status?: string    (new field from new endpoint)
-ResultsTable
-  + status column with <StatusBadge> or <Select> primitive
-  + PATCH on change → invalidate scan-results + tile query keys
+LayerToggle.tsx → opens @radix-ui/react-popover
+  ↓ Popover content: score range Slider + category pills
+  ↓ onValueChange → map.setFilter('parcel-scores-fill', [...expression...])
+  ↓ map.setFilter('parcel-scores-line', [...expression...]) — same expression
+  ↓ ParcelScoreLayer.tsx setFilter call — paint stays; features filtered
+```
+
+### Custom MinimapControl ↔ MapLibre Map
+
+```
+MinimapControl.ts (new IControl class, ~80 lines)
+  ↓ onAdd(map): creates second maplibregl.Map in a container div
+  ↓ map.on('move', syncOverview) — syncs center/zoom with offset
+  ↓ Renders viewport rect as GeoJSON on overview map
+  ↓ Added to primary map: map.addControl(new MinimapControl(), 'bottom-right')
+  ↓ No React state — pure MapLibre imperative API
 ```
 
 ---
 
-## Schema Migration Strategy
+## Version Compatibility Matrix
 
-Two new Alembic migrations needed:
+| Package | Version | React 19 | Tailwind v4 | MapLibre 5.x | Notes |
+|---------|---------|-----------|-------------|--------------|-------|
+| `recharts` | 3.7.0 | explicit | via CSS vars | N/A | SVG fills inherit CSS variables |
+| `@radix-ui/react-tabs` | 1.1.13 | explicit | via className | N/A | No style conflicts |
+| `@radix-ui/react-slider` | 1.3.6 | explicit | via className | via setFilter | Thumb/track are unstyled divs |
+| `@radix-ui/react-collapsible` | 1.1.12 | explicit | via className | N/A | `data-[state=open]` Tailwind variant |
+| `@radix-ui/react-tooltip` | 1.2.8 | explicit | via className | N/A | Portal renders above MapLibre z-index |
+| `@radix-ui/react-popover` | 1.1.15 | explicit | via className | N/A | Portal renders above MapLibre z-index |
+| `@tanstack/react-virtual` | 3.13.18 | explicit | via className | N/A | Pairs with existing TanStack Table v8 |
 
-**Migration 1: lead_statuses table**
-```sql
-CREATE TABLE lead_statuses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    scan_result_parcel_id UUID NOT NULL REFERENCES parcel_cache(id) ON DELETE CASCADE,
-    scan_id UUID NOT NULL REFERENCES area_scans(id) ON DELETE CASCADE,
-    status VARCHAR(30) NOT NULL DEFAULT 'nieuw',
-    notes TEXT,
-    contact_name VARCHAR(200),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT ck_lead_status_values CHECK (status IN ('nieuw', 'contact_opgenomen', 'interesse', 'voorstel', 'gewonnen', 'verloren', 'parkeren')),
-    CONSTRAINT uq_lead_per_parcel_per_scan UNIQUE (organization_id, scan_id, scan_result_parcel_id)
-);
-CREATE INDEX ix_lead_statuses_org ON lead_statuses(organization_id);
-CREATE INDEX ix_lead_statuses_org_scan ON lead_statuses(organization_id, scan_id);
-CREATE INDEX ix_lead_statuses_org_status ON lead_statuses(organization_id, status);
-```
-
-**Migration 2: tile_proxy.py query extension** — No migration needed; query change is code-only.
-
-**Pattern note:** Follow existing `db.add() / db.flush() / db.commit()` pattern. NOT `async with db.begin()`.
-
-**Confidence:** HIGH — direct application of existing migration patterns.
+All Radix UI packages declare `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"` — verified via `npm info` for each package.
 
 ---
 
-## Version Compatibility
+## Radix UI Portals and MapLibre Z-Index
 
-| Package | Version In Use | Compatibility Notes |
-|---------|---------------|---------------------|
-| maplibre-gl | 5.18.0 (installed) | `LEFT JOIN lead_status` property in tiles: data-driven expressions `['get', 'lead_status']` — supported since MapLibre 2.x |
-| @tanstack/react-query | 5.90.20 (installed) | `useQuery` for scan list — no changes needed. `refetchInterval` for polling also works for history auto-refresh |
-| @tanstack/react-table | 8.21.3 (installed) | Status column with cell renderer — standard pattern |
-| @tanstack/react-router | 1.158.4 (installed) | New `/resultaten/geschiedenis` or `/history` route via `createFileRoute` |
-| @dnd-kit/core | 6.3.1 (not installed) | Peer dep `react >= 16.8.0` — works with React 19.2.0 |
-| SQLAlchemy | 2.0.x (installed) | `Mapped[str]` + `String(30)` + `CheckConstraint` — fully supported |
-| GeoAlchemy2 | 0.15.x (installed) | No changes needed for tile query extension |
+**Potential conflict:** Radix UI Tooltip, Popover, and other portal-rendered components render into `document.body`. MapLibre renders into a fixed canvas element. The existing `index.css` z-index scale has `--z-modal: 1000` and `--z-toast: 2000`.
+
+**Resolution:** Add explicit z-index to Radix portal containers:
+
+```css
+/* In index.css — Radix UI portal z-index */
+[data-radix-popper-content-wrapper] {
+  z-index: var(--z-dropdown) !important;  /* 400 — above map layers */
+}
+[data-radix-tooltip-content] {
+  z-index: var(--z-dropdown) !important;
+}
+```
+
+This is the established pattern for Radix + MapLibre coexistence (verified via community discussions). The `!important` is intentional — Radix sets inline `z-index` via Popper positioning that must be overridden.
 
 ---
 
 ## Sources
 
-- [MapLibre GL JS GeoJSONSource — setData and updateData](https://maplibre.org/maplibre-gl-js/docs/API/classes/GeoJSONSource/) — performance characteristics for GeoJSON vs MVT
-- [MapLibre GL JS Large Data Guide](https://maplibre.org/maplibre-gl-js/docs/guides/large-data/) — recommendation to use MVT for large parcel datasets
-- [MapLibre Expressions & Data-Driven Styling (DeepWiki)](https://deepwiki.com/maplibre/maplibre-gl-js/3.2-expressions-and-data-driven-styling) — `feature-state` vs data-driven properties comparison
-- [Alembic PostgreSQL Enum Migration complexity](https://roman.pt/posts/alembic-enums/) — confirms String+CheckConstraint is preferable for evolving status values
-- [@dnd-kit/core npm](https://www.npmjs.com/package/@dnd-kit/core) — version 6.3.1, peer dep `react >= 16.8.0`
-- [@dnd-kit/react React 19 issue](https://github.com/clauderic/dnd-kit/issues/1654) — confirms new @dnd-kit/react still in development (0.3.0)
-- [TanStack Query v5 Paginated Queries](https://tanstack.com/query/v5/docs/react/guides/paginated-queries) — useQuery preferred over useInfiniteQuery for bounded lists
-- [TanStack Query v5 Infinite Queries](https://tanstack.com/query/v5/docs/react/guides/infinite-queries) — `maxPages` option; overkill for scan history
-- Existing codebase: `backend/app/services/tile_proxy.py` — ST_AsMVT join pattern
-- Existing codebase: `backend/app/models/area_scan.py` — String(20) status precedent
-- Existing codebase: `frontend/src/components/map/ParcelScoreLayer.tsx` — data-driven paint expression pattern
+- `npm info recharts@3.7.0 peerDependencies` — React 19 explicit support confirmed (HIGH confidence)
+- `npm info @radix-ui/react-tabs version peerDependencies` — v1.1.13, React 19 explicit support (HIGH confidence)
+- `npm info @radix-ui/react-slider version peerDependencies` — v1.3.6, React 19 explicit support (HIGH confidence)
+- `npm info @radix-ui/react-collapsible version peerDependencies` — v1.1.12, React 19 explicit support (HIGH confidence)
+- `npm info @radix-ui/react-tooltip version peerDependencies` — v1.2.8, React 19 explicit support (HIGH confidence)
+- `npm info @radix-ui/react-popover version peerDependencies` — v1.1.15, React 19 explicit support (HIGH confidence)
+- `npm info @tanstack/react-virtual version peerDependencies` — v3.13.18, React 19 explicit support (HIGH confidence)
+- [Recharts 3.0 migration guide](https://github.com/recharts/recharts/wiki/3.0-migration-guide) — state management rewrite, CSS variable fill support
+- [maplibregl-minimap README](https://github.com/JabSYsEmb/maplibregl-minimap/blob/main/README.md) — "not yet ready for production use" (reason for custom IControl decision)
+- [react-mapbox-minimap npm](https://www.npmjs.com/package/react-mapbox-minimap) — peer dep `mapbox-gl ^3.7.0`, incompatible with maplibre-gl 5.x
+- [MapLibre GL JS Plugins page](https://maplibre.org/maplibre-gl-js/docs/plugins/) — official plugin ecosystem overview
+- [MapLibre setFilter examples](https://maplibre.org/maplibre-gl-js/docs/examples/filter-within-a-layer/) — filter expression API confirmed
+- [shadcn/ui charts with CSS variables](https://ui.shadcn.com/docs/components/radix/chart) — recharts + CSS variable pattern (`var(--chart-1)` etc.)
+- [TanStack Table column pinning sticky](https://tanstack.com/table/v8/docs/framework/react/examples/column-pinning-sticky) — built-in, no extra library needed
+- [TanStack Virtual v3 docs](https://tanstack.com/virtual/latest) — React 19 support, TanStack Table integration pattern
+- [Tailwind v4 dark mode docs](https://tailwindcss.com/docs/dark-mode) — `@custom-variant` and class selector approach
+- Existing codebase: `frontend/src/styles/index.css` — oklch `@theme` + `html.light` pattern (confirmed architecture)
+- Existing codebase: `frontend/src/lib/theme/ThemeContext.tsx` — localStorage + `html.light` toggle (confirmed pattern)
+- Existing codebase: `frontend/src/components/results/ParcelDetailModal.tsx` — hand-rolled score bars to be replaced
 
 ---
 
-*Stack research for: Propdex v5.0 — Lead Pipeline, Scan History, Map Visualization*
-*Researched: 2026-02-18*
+*Stack research for: Propdex v6.0 — Premium Data Presentation*
+*Researched: 2026-02-21*
