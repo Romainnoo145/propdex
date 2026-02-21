@@ -49,11 +49,11 @@ Plans:
   2. Each gemeente card shows a recognizable SVG silhouette of the municipality boundary (sourced from CBS WFS data already used on the map page)
   3. Each gemeente card displays the gemeente name prominently and a notification badge showing the count of unread change records for that gemeente
   4. Cards maintain consistent visual appearance across breakpoints -- no layout breaking, no truncated content, no overflow
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 43-01: CBS boundary SVG extraction and responsive card grid component
-- [ ] 43-02: Gemeente cards on Projecten page with notification badges
+- [ ] 43-01: GeoJSON-to-SVG projection utility, GemeenteCard component, and responsive card grid wrapper
+- [ ] 43-02: Integrate card grid into ProjectList replacing monitoring accordion with visual gemeente cards
 
 ### Phase 44: Wijk Cards and Drill-Down
 **Goal**: Users can click a gemeente card to see its wijken as visual cards, and click a wijk card to land on the results table filtered to that wijk's scan data
