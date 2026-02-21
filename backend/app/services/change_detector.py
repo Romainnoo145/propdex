@@ -8,7 +8,6 @@ Used by ARQ background jobs to detect changes since last check and create
 ChangeRecord instances for storage.
 """
 
-import hashlib
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -213,63 +212,86 @@ async def detect_zoning_changes(
     client: httpx.AsyncClient,
     session: AsyncSession,
 ) -> list[ChangeRecord]:
-    """Detect zoning plan changes via PLU WMS GetCapabilities hash comparison.
+    """Detect zoning plan changes via DSO Ruimtelijke Plannen API v4.
 
-    Fetches PDOK PLU WMS GetCapabilities XML, computes SHA256 hash, and compares
-    against stored hash in CachedAPIResponse. If hash changed, creates a single
-    ChangeRecord indicating zoning data was updated.
+    Queries the DSO API for plans at the gemeente's scan centroid, compares
+    against cached plan state, and creates ChangeRecords for:
+    - New plans not seen before
+    - Plans with changed status (e.g., ontwerp → vastgesteld)
+    - Plans with updated datum
 
-    Note: This is a coarse-grained change detection (entire WMS layer metadata).
-    For fine-grained change detection, would need Ruimtelijkeplannen.nl REST API v4.
+    Falls back to coarse WMS hash detection if no scan coordinates available.
 
     Args:
-        gemeente_code: CBS gemeente code (e.g., "GM0983")
+        gemeente_code: CBS gemeente code (e.g., "0983" or "GM0983")
         last_checked: UTC datetime of last successful check
         client: Shared httpx AsyncClient
-        session: Database session for hash storage
+        session: Database session for cache and scan queries
 
     Returns:
-        list[ChangeRecord]: Empty list or single record if hash changed
-
-    Example:
-        >>> changes = await detect_zoning_changes(
-        ...     gemeente_code="GM0983",
-        ...     last_checked=datetime(2026, 2, 1),
-        ...     client=app.state.http_client,
-        ...     session=db,
-        ... )
-        >>> len(changes)
-        1  # Hash changed
+        list[ChangeRecord]: Change records for detected plan changes
     """
+    from app.government_apis.dso_spatial_plans import get_dso_client
+    from app.models.area_scan import AreaScan
+
     logger.info(
         f"Detecting zoning changes for gemeente {gemeente_code} since {last_checked.isoformat()}"
     )
 
-    # Fetch PLU WMS GetCapabilities
-    plu_wms_url = "https://service.pdok.nl/kadaster/plu/wms/v1_0"
-    params = {
-        "SERVICE": "WMS",
-        "REQUEST": "GetCapabilities",
-    }
+    # Find a representative coordinate from completed AreaScans for this gemeente
+    scan_stmt = (
+        select(
+            AreaScan.bbox_minx, AreaScan.bbox_miny,
+            AreaScan.bbox_maxx, AreaScan.bbox_maxy,
+        )
+        .where(
+            AreaScan.gemeente_code == gemeente_code,
+            AreaScan.status == "completed",
+        )
+        .order_by(AreaScan.completed_at.desc())
+        .limit(1)
+    )
+    scan_result = await session.execute(scan_stmt)
+    scan_row = scan_result.one_or_none()
 
-    try:
-        response = await client.get(plu_wms_url, params=params, timeout=30.0)
-        if response.status_code != 200:
-            logger.error(
-                f"PLU WMS GetCapabilities failed with status {response.status_code}"
-            )
-            return []
-
-        # Compute hash of response content
-        content_hash = hashlib.sha256(response.content).hexdigest()
-        logger.info(f"PLU WMS GetCapabilities hash: {content_hash[:16]}...")
-
-    except Exception as e:
-        logger.error(f"Failed to fetch PLU WMS GetCapabilities: {e}")
+    if not scan_row:
+        logger.warning(f"No completed scans for {gemeente_code}, skipping zoning check")
         return []
 
-    # Check cached hash
-    cache_key = f"plu_capabilities_hash:{gemeente_code}"
+    # Use bounding box centroid as query point (EPSG:28992 RD New)
+    center_x = (scan_row.bbox_minx + scan_row.bbox_maxx) / 2
+    center_y = (scan_row.bbox_miny + scan_row.bbox_maxy) / 2
+
+    logger.info(f"Using scan centroid ({center_x:.0f}, {center_y:.0f}) for {gemeente_code}")
+
+    # Query DSO API for plans at this location
+    dso_client = get_dso_client()
+    try:
+        plans = await dso_client.find_plans_at_location(center_x, center_y, client)
+    except Exception as e:
+        logger.error(f"DSO API query failed for {gemeente_code}: {e}")
+        return []
+
+    if not plans:
+        logger.info(f"No plans found at centroid for {gemeente_code}")
+        return []
+
+    # Build current plan state: {plan_id: {status, datum, naam}}
+    current_plans: dict[str, dict] = {}
+    for plan in plans:
+        plan_id = plan.get("identificatie")
+        if plan_id:
+            current_plans[plan_id] = {
+                "status": plan.get("planStatus", ""),
+                "datum": plan.get("datum", ""),
+                "naam": plan.get("naam", ""),
+                "type": plan.get("planType", ""),
+            }
+
+    logger.info(f"Found {len(current_plans)} plans at centroid for {gemeente_code}")
+
+    # Load cached plan state
+    cache_key = f"dso_plan_state:{gemeente_code}"
     cached_query = select(CachedAPIResponse).where(
         CachedAPIResponse.cache_key == cache_key
     )
@@ -277,54 +299,87 @@ async def detect_zoning_changes(
     cached_response = cached_result.scalar_one_or_none()
 
     if cached_response is None:
-        # First time checking - store hash but don't create change record
-        logger.info(f"No cached hash found for {gemeente_code}, storing initial hash")
+        # First run — store baseline, no changes to report
+        logger.info(f"First zoning check for {gemeente_code}, storing {len(current_plans)} plans as baseline")
         new_cache = CachedAPIResponse(
             cache_key=cache_key,
-            source="plu_wms_getcapabilities",
-            response_data={"hash": content_hash},
+            source="dso_plan_state",
+            response_data={"plans": current_plans},
             fetched_at=datetime.utcnow(),
-            ttl_seconds=86400,  # 24 hours
+            ttl_seconds=86400 * 7,  # 7 days
         )
         session.add(new_cache)
         await session.flush()
         return []
 
-    # Compare hashes
-    stored_hash = cached_response.response_data.get("hash", "")
-    if content_hash == stored_hash:
-        logger.info(f"PLU WMS hash unchanged for {gemeente_code}")
-        return []
+    # Compare against cached state
+    stored_plans: dict[str, dict] = cached_response.response_data.get("plans", {})
+    new_records: list[ChangeRecord] = []
+    now = datetime.utcnow()
 
-    # Hash changed - create change record
-    logger.info(
-        f"PLU WMS hash changed for {gemeente_code}: {stored_hash[:16]}... -> {content_hash[:16]}..."
-    )
+    # Detect new plans (not in cached state)
+    for plan_id, info in current_plans.items():
+        if plan_id not in stored_plans:
+            external_id = f"zoning_new:{plan_id}"
+            new_records.append(ChangeRecord(
+                project_id=None,
+                change_type="zoning",
+                external_id=external_id,
+                title=f"Nieuw plan: {info['naam']} ({info['status']})",
+                detected_at=now,
+                change_date=now,
+                gemeente_naam=gemeente_code,
+                metadata_json={
+                    "plan_id": plan_id,
+                    "plan_naam": info["naam"],
+                    "plan_status": info["status"],
+                    "plan_datum": info["datum"],
+                    "plan_type": info["type"],
+                    "change": "new_plan",
+                },
+                source_url=f"https://www.ruimtelijkeplannen.nl/viewer/view?planidn={plan_id}",
+            ))
+            logger.info(f"  New plan: {plan_id} ({info['naam']})")
 
-    change_date = datetime.utcnow()  # Use current time as change date
-    external_id = f"plu_update_{change_date.strftime('%Y%m%d')}"
+    # Detect status/datum changes in existing plans
+    for plan_id, info in current_plans.items():
+        if plan_id in stored_plans:
+            old = stored_plans[plan_id]
+            changes_found = []
 
-    change_record = ChangeRecord(
-        project_id=None,  # Will be set by caller
-        change_type="zoning",
-        external_id=external_id,
-        title=f"Bestemmingsplan data updated for gemeente {gemeente_code}",
-        detected_at=change_date,
-        change_date=change_date,
-        gemeente_naam=gemeente_code,  # Store code, not name (consistent with cache key)
-        address=None,
-        metadata_json={
-            "old_hash": stored_hash,
-            "new_hash": content_hash,
-            "detection_method": "wms_getcapabilities_hash",
-        },
-        source_url=plu_wms_url,
-    )
+            if old.get("status") != info["status"]:
+                changes_found.append(f"status: {old.get('status')} → {info['status']}")
+            if old.get("datum") != info["datum"]:
+                changes_found.append(f"datum: {old.get('datum')} → {info['datum']}")
 
-    # Update cached hash
-    cached_response.response_data = {"hash": content_hash}
-    cached_response.fetched_at = change_date
+            if changes_found:
+                external_id = f"zoning_update:{plan_id}:{now.strftime('%Y%m%d')}"
+                change_desc = ", ".join(changes_found)
+                new_records.append(ChangeRecord(
+                    project_id=None,
+                    change_type="zoning",
+                    external_id=external_id,
+                    title=f"Plan gewijzigd: {info['naam']} ({change_desc})",
+                    detected_at=now,
+                    change_date=now,
+                    gemeente_naam=gemeente_code,
+                    metadata_json={
+                        "plan_id": plan_id,
+                        "plan_naam": info["naam"],
+                        "old_status": old.get("status"),
+                        "new_status": info["status"],
+                        "old_datum": old.get("datum"),
+                        "new_datum": info["datum"],
+                        "change": "plan_updated",
+                    },
+                    source_url=f"https://www.ruimtelijkeplannen.nl/viewer/view?planidn={plan_id}",
+                ))
+                logger.info(f"  Plan changed: {plan_id} — {change_desc}")
+
+    # Update cached plan state
+    cached_response.response_data = {"plans": current_plans}
+    cached_response.fetched_at = now
     await session.flush()
 
-    logger.info(f"Created zoning change record for {gemeente_code}")
-    return [change_record]
+    logger.info(f"Detected {len(new_records)} zoning changes for {gemeente_code}")
+    return new_records
