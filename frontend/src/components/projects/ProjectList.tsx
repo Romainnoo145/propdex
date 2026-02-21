@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
 import { useUnreadCounts } from '@/hooks/useNotifications'
@@ -10,6 +10,10 @@ import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { fetchGemeenteGeoJSON } from '@/components/map/GemeenteBoundariesLayer'
+import { geoJsonToSvgPath } from '@/lib/geo-utils'
+import { GemeenteCard } from './GemeenteCard'
+import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 
 // Demo projects shown when API is unavailable (no auth)
 const DEMO_PROJECTS: ProjectResponse[] = [
@@ -86,6 +90,14 @@ export default function ProjectList() {
   const monitoringProjects = topLevelProjects.filter((p) => p.is_monitored)
   const regularProjects = topLevelProjects.filter((p) => !p.is_monitored)
 
+  const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+
+  // Fetch CBS gemeente boundaries once when monitoring projects exist
+  useEffect(() => {
+    if (monitoringProjects.length === 0) return
+    fetchGemeenteGeoJSON().then(setGemeenteGeojson).catch(console.error)
+  }, [monitoringProjects.length])
+
   const handleToggle = (projectId: string) => {
     setExpandedId((prev) => (prev === projectId ? null : projectId))
   }
@@ -145,109 +157,118 @@ export default function ProjectList() {
 
       {allProjects.length > 0 ? (
         <div className="space-y-2">
-          {/* Monitoring projects (hierarchical gemeente -> wijk) */}
-          {monitoringProjects.map((gemeente) => {
-            const isGemeenteExpanded = expandedGemeenteId === gemeente.id
-            const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
-            const totalUnread = wijkChildren.reduce((sum, wijk) => {
-              const wijkUnread = unreadData?.per_project.find(
-                (p) => p.project_id === wijk.id
-              )?.unread_count ?? 0
-              return sum + wijkUnread
-            }, 0)
-
-            return (
-              <div
-                key={gemeente.id}
-                className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900"
-              >
-                {/* Gemeente group header */}
-                <button
-                  onClick={() => setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))}
-                  className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-grey-850"
-                >
-                  <ChevronIcon
-                    className={`h-4 w-4 shrink-0 text-grey-400 transition-transform ${isGemeenteExpanded ? 'rotate-90' : ''}`}
-                  />
-                  <MapPinIcon />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wider text-grey-400">Gemeente</span>
-                      {totalUnread > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
-                          {totalUnread}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-base font-semibold text-grey-100">{gemeente.name}</h4>
-                    <p className="mt-0.5 text-xs text-grey-400">
-                      {wijkChildren.length} {wijkChildren.length === 1 ? 'wijk' : 'wijken'}
-                    </p>
-                  </div>
-                </button>
-
-                {/* Wijk children */}
-                {isGemeenteExpanded && wijkChildren.length > 0 && (
-                  <div className="border-t border-grey-800 bg-grey-850/30">
-                    {wijkChildren.map((wijk) => {
-                      const isWijkExpanded = expandedId === wijk.id
-
+          {/* Monitoring projects — gemeente card grid */}
+          {monitoringProjects.length > 0 && (
+            <>
+              {!gemeenteGeojson ? (
+                <GemeenteCardGridSkeleton count={monitoringProjects.length} />
+              ) : (
+                <GemeenteCardGrid>
+                  {monitoringProjects.map((gemeente) => {
+                    const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
+                    const totalUnread = wijkChildren.reduce((sum, wijk) => {
                       const wijkUnread = unreadData?.per_project.find(
                         (p) => p.project_id === wijk.id
                       )?.unread_count ?? 0
+                      return sum + wijkUnread
+                    }, 0)
 
-                      return (
-                        <div key={wijk.id} className="border-b border-grey-800 last:border-b-0">
-                          {/* Wijk project header */}
-                          <button
-                            onClick={() => handleToggle(wijk.id)}
-                            className="flex w-full min-h-[44px] items-center gap-3 px-8 py-3 text-left transition-colors hover:bg-grey-800/50"
-                          >
-                            <ChevronIcon
-                              className={`h-3.5 w-3.5 shrink-0 text-grey-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="inline-block h-2 w-2 rounded-full bg-amber-accent/60 shrink-0" />
-                                <h5 className="text-sm font-medium text-grey-300">{wijk.name}</h5>
-                                {wijk.report_count > 0 && (
-                                  <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
-                                    {wijk.report_count}
-                                  </span>
-                                )}
-                                {wijkUnread > 0 && (
-                                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
-                                    {wijkUnread > 9 ? wijkUnread : ''}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
+                    const feature = gemeenteGeojson.features.find(
+                      (f) => f.properties?.statcode === gemeente.gemeente_code
+                    )
+                    const svgData = feature
+                      ? geoJsonToSvgPath(feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)
+                      : null
 
-                          {/* Wijk expanded content */}
-                          {isWijkExpanded && (
-                            <>
-                              {/* Scan history section */}
-                              {!isDemo && <WijkScanList projectId={wijk.id} navigate={navigate} />}
+                    return (
+                      <GemeenteCard
+                        key={gemeente.id}
+                        gemeente={gemeente}
+                        svgData={svgData}
+                        totalUnread={totalUnread}
+                        onClick={() => {
+                          // Phase 44 will add drill-down navigation to wijk cards.
+                          // For now, expand the gemeente to show wijk list inline.
+                          setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))
+                        }}
+                      />
+                    )
+                  })}
+                </GemeenteCardGrid>
+              )}
 
-                              {isDemo && (
-                                <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
-                                  Geen scans beschikbaar (demo modus)
+              {/* Expanded wijk list for the selected gemeente card */}
+              {expandedGemeenteId && (() => {
+                const gemeente = monitoringProjects.find((p) => p.id === expandedGemeenteId)
+                if (!gemeente) return null
+                const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
+                if (wijkChildren.length === 0) return null
+
+                return (
+                  <div className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-grey-800">
+                      <h4 className="text-sm font-medium text-grey-100">{gemeente.name} — Wijken</h4>
+                      <button
+                        onClick={() => setExpandedGemeenteId(null)}
+                        className="text-xs text-grey-400 hover:text-grey-300 transition-colors"
+                      >
+                        Sluiten
+                      </button>
+                    </div>
+                    <div className="bg-grey-850/30">
+                      {wijkChildren.map((wijk) => {
+                        const isWijkExpanded = expandedId === wijk.id
+                        const wijkUnread = unreadData?.per_project.find(
+                          (p) => p.project_id === wijk.id
+                        )?.unread_count ?? 0
+
+                        return (
+                          <div key={wijk.id} className="border-b border-grey-800 last:border-b-0">
+                            <button
+                              onClick={() => handleToggle(wijk.id)}
+                              className="flex w-full min-h-[44px] items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/50"
+                            >
+                              <ChevronIcon
+                                className={`h-3.5 w-3.5 shrink-0 text-grey-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-block h-2 w-2 rounded-full bg-amber-accent/60 shrink-0" />
+                                  <h5 className="text-sm font-medium text-grey-300">{wijk.name}</h5>
+                                  {wijk.report_count > 0 && (
+                                    <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
+                                      {wijk.report_count}
+                                    </span>
+                                  )}
+                                  {wijkUnread > 0 && (
+                                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
+                                      {wijkUnread > 9 ? wijkUnread : ''}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+                            </button>
 
-                              {/* Change timeline section */}
-                              {!isDemo && <ChangeTimeline projectId={wijk.id} />}
-                            </>
-                          )}
-                        </div>
-                      )
-                    })}
+                            {isWijkExpanded && (
+                              <>
+                                {!isDemo && <WijkScanList projectId={wijk.id} navigate={navigate} />}
+                                {isDemo && (
+                                  <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
+                                    Geen scans beschikbaar (demo modus)
+                                  </div>
+                                )}
+                                {!isDemo && <ChangeTimeline projectId={wijk.id} />}
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
+                )
+              })()}
+            </>
+          )}
 
           {/* Regular projects (non-monitoring) */}
           {regularProjects.map((project) => {
@@ -451,15 +472,6 @@ function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6" />
-    </svg>
-  )
-}
-
-function MapPinIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-400">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
     </svg>
   )
 }
