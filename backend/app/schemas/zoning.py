@@ -43,6 +43,27 @@ class BuildingDimensions(BaseModel):
         )
 
 
+class FunctieAanduiding(BaseModel):
+    """Function designation refining a bestemming (e.g., horeca, kantoren)."""
+
+    naam: str = Field(description="Function designation name")
+    groep: str | None = Field(default=None, description="Function group category")
+
+
+class GebiedsAanduiding(BaseModel):
+    """Area designation / overlay zone (e.g., noise zone, archaeology, safety)."""
+
+    naam: str = Field(description="Area designation name")
+    groep: str | None = Field(default=None, description="Area group category")
+
+
+class PlanTekst(BaseModel):
+    """Regulation text article from a bestemmingsplan."""
+
+    titel: str = Field(description="Article title")
+    inhoud: str | None = Field(default=None, description="Article text content (plain text)")
+
+
 class ZoningRule(BaseModel):
     """Zoning rule for a specific area with permitted functions."""
 
@@ -86,6 +107,18 @@ class ZoningPlan(BaseModel):
     )
     rules: list[ZoningRule] = Field(
         description="Zoning rules extracted for property location",
+    )
+    functie_aanduidingen: list[FunctieAanduiding] = Field(
+        default_factory=list,
+        description="Function designations refining the main bestemming",
+    )
+    gebieds_aanduidingen: list[GebiedsAanduiding] = Field(
+        default_factory=list,
+        description="Area designations / overlay zones (noise, archaeology, etc.)",
+    )
+    teksten: list[PlanTekst] = Field(
+        default_factory=list,
+        description="Regulation text articles from the bestemmingsplan",
     )
 
 

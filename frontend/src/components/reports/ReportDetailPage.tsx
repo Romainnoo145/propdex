@@ -476,7 +476,7 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
         {/* Plans */}
         {zoning.plans && zoning.plans.length > 0 && (
-          <div>
+          <div className="space-y-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsplannen</p>
             {zoning.plans.map((plan, idx) => (
               <div key={idx} className="rounded-lg border border-white/[0.03] bg-white/[0.02] p-4">
@@ -498,8 +498,57 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
                     ))}
                   </div>
                 )}
+
+                {/* Functie aanduidingen */}
+                {plan.functie_aanduidingen && plan.functie_aanduidingen.length > 0 && (
+                  <div className="mt-3 border-t border-white/[0.03] pt-3">
+                    <p className="mb-1.5 text-xs font-medium text-grey-500">Functieaanduidingen</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {plan.functie_aanduidingen.map((fa, fIdx) => (
+                        <span key={fIdx} className="rounded-full border border-blue-500/20 bg-blue-500/[0.06] px-2.5 py-0.5 text-xs font-medium text-blue-400">
+                          {fa.naam}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Gebieds aanduidingen */}
+                {plan.gebieds_aanduidingen && plan.gebieds_aanduidingen.length > 0 && (
+                  <div className="mt-3 border-t border-white/[0.03] pt-3">
+                    <p className="mb-1.5 text-xs font-medium text-grey-500">Gebiedsaanduidingen</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {plan.gebieds_aanduidingen.map((ga, gIdx) => (
+                        <span key={gIdx} className="rounded-full border border-purple-500/20 bg-purple-500/[0.06] px-2.5 py-0.5 text-xs font-medium text-purple-400">
+                          {ga.naam}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Plan teksten (only first plan) */}
+        {zoning.plans?.[0]?.teksten && zoning.plans[0].teksten.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Planregels</p>
+            <div className="space-y-2">
+              {zoning.plans[0].teksten.slice(0, 10).map((tekst, tIdx) => (
+                <details key={tIdx} className="group rounded-lg border border-white/[0.03] bg-white/[0.02]">
+                  <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-grey-300 hover:text-grey-100">
+                    {tekst.titel}
+                  </summary>
+                  {tekst.inhoud && (
+                    <div className="border-t border-white/[0.03] px-4 py-3 text-xs leading-relaxed text-grey-400">
+                      {tekst.inhoud.length > 800 ? `${tekst.inhoud.slice(0, 800)}...` : tekst.inhoud}
+                    </div>
+                  )}
+                </details>
+              ))}
+            </div>
           </div>
         )}
 

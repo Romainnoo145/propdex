@@ -110,6 +110,10 @@ class Settings(BaseSettings):
         default="",
         description="DSO Ruimtelijke Plannen API key (register at developer.omgevingswet.overheid.nl)",
     )
+    RUIMTELIJKE_PLANNEN_API_KEY: str = Field(
+        default="",
+        description="Ruimtelijke Plannen API key for extended plan data (teksten, functieaanduidingen)",
+    )
     BRK_API_KEY: str = Field(
         default="",
         description="Kadaster BRK Bevragen API key",

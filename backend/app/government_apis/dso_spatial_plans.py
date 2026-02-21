@@ -328,6 +328,155 @@ class DSOSpatialPlansClient:
                 f"HTTP error: {str(e)}",
             ) from e
 
+    async def get_functieaanduidingen(
+        self,
+        plan_id: str,
+        client: httpx.AsyncClient,
+    ) -> list[dict]:
+        """
+        Get functieaanduidingen (function designations) for a plan.
+
+        These indicate specific permitted functions like horeca, kantoren, etc.
+        that refine the main bestemming.
+
+        Args:
+            plan_id: DSO plan identifier
+            client: Shared httpx AsyncClient from app.state
+
+        Returns:
+            list[dict]: List of functieaanduidingen with geometries
+        """
+        url = f"{self.BASE_URL}/plannen/{plan_id}/functieaanduidingen"
+        params = {"expand": "geometrie", "pageSize": 100}
+
+        logger.info(f"DSO get_functieaanduidingen: {plan_id}")
+
+        try:
+            response = await client.get(
+                url, headers=self._headers, params=params, timeout=30.0,
+            )
+            data = handle_api_response(response, source="dso-spatial-plans")
+            items = data.get("_embedded", {}).get("functieaanduidingen", [])
+
+            page_count = 1
+            while page_count < 5:
+                next_link = data.get("_links", {}).get("next", {}).get("href")
+                if not next_link:
+                    break
+                response = await client.get(
+                    next_link, headers=self._headers, timeout=30.0,
+                )
+                data = handle_api_response(response, source="dso-spatial-plans")
+                items.extend(data.get("_embedded", {}).get("functieaanduidingen", []))
+                page_count += 1
+
+            logger.info(f"Found {len(items)} functieaanduidingen")
+            return items
+
+        except httpx.TimeoutException as e:
+            raise APITimeoutError("dso-spatial-plans", "Request timed out") from e
+        except httpx.HTTPError as e:
+            raise GovernmentAPIError("dso-spatial-plans", f"HTTP error: {str(e)}") from e
+
+    async def get_gebiedsaanduidingen(
+        self,
+        plan_id: str,
+        client: httpx.AsyncClient,
+    ) -> list[dict]:
+        """
+        Get gebiedsaanduidingen (area designations) for a plan.
+
+        These indicate overlay zones like noise zones, protected views,
+        archaeology zones, safety zones, etc.
+
+        Args:
+            plan_id: DSO plan identifier
+            client: Shared httpx AsyncClient from app.state
+
+        Returns:
+            list[dict]: List of gebiedsaanduidingen with geometries
+        """
+        url = f"{self.BASE_URL}/plannen/{plan_id}/gebiedsaanduidingen"
+        params = {"expand": "geometrie", "pageSize": 100}
+
+        logger.info(f"DSO get_gebiedsaanduidingen: {plan_id}")
+
+        try:
+            response = await client.get(
+                url, headers=self._headers, params=params, timeout=30.0,
+            )
+            data = handle_api_response(response, source="dso-spatial-plans")
+            items = data.get("_embedded", {}).get("gebiedsaanduidingen", [])
+
+            page_count = 1
+            while page_count < 5:
+                next_link = data.get("_links", {}).get("next", {}).get("href")
+                if not next_link:
+                    break
+                response = await client.get(
+                    next_link, headers=self._headers, timeout=30.0,
+                )
+                data = handle_api_response(response, source="dso-spatial-plans")
+                items.extend(data.get("_embedded", {}).get("gebiedsaanduidingen", []))
+                page_count += 1
+
+            logger.info(f"Found {len(items)} gebiedsaanduidingen")
+            return items
+
+        except httpx.TimeoutException as e:
+            raise APITimeoutError("dso-spatial-plans", "Request timed out") from e
+        except httpx.HTTPError as e:
+            raise GovernmentAPIError("dso-spatial-plans", f"HTTP error: {str(e)}") from e
+
+    async def get_teksten(
+        self,
+        plan_id: str,
+        client: httpx.AsyncClient,
+    ) -> list[dict]:
+        """
+        Get plan teksten (regulation text) in XHTML.
+
+        Returns the bestemmingsplan articles/rules as structured text.
+
+        Args:
+            plan_id: DSO plan identifier
+            client: Shared httpx AsyncClient from app.state
+
+        Returns:
+            list[dict]: List of text objects with title and XHTML body
+        """
+        url = f"{self.BASE_URL}/plannen/{plan_id}/teksten"
+        params = {"pageSize": 100}
+
+        logger.info(f"DSO get_teksten: {plan_id}")
+
+        try:
+            response = await client.get(
+                url, headers=self._headers, params=params, timeout=30.0,
+            )
+            data = handle_api_response(response, source="dso-spatial-plans")
+            items = data.get("_embedded", {}).get("teksten", [])
+
+            page_count = 1
+            while page_count < 3:  # Limit to 3 pages for text (can be large)
+                next_link = data.get("_links", {}).get("next", {}).get("href")
+                if not next_link:
+                    break
+                response = await client.get(
+                    next_link, headers=self._headers, timeout=30.0,
+                )
+                data = handle_api_response(response, source="dso-spatial-plans")
+                items.extend(data.get("_embedded", {}).get("teksten", []))
+                page_count += 1
+
+            logger.info(f"Found {len(items)} teksten")
+            return items
+
+        except httpx.TimeoutException as e:
+            raise APITimeoutError("dso-spatial-plans", "Request timed out") from e
+        except httpx.HTTPError as e:
+            raise GovernmentAPIError("dso-spatial-plans", f"HTTP error: {str(e)}") from e
+
 
 # Module-level singleton
 _dso_client: DSOSpatialPlansClient | None = None
@@ -337,6 +486,8 @@ def get_dso_client() -> DSOSpatialPlansClient:
     """
     Get or create the singleton DSO Spatial Plans client.
 
+    Prefers RUIMTELIJKE_PLANNEN_API_KEY if set, falls back to DSO_API_KEY.
+
     Returns:
         DSOSpatialPlansClient: Initialized client instance
     """
@@ -344,5 +495,6 @@ def get_dso_client() -> DSOSpatialPlansClient:
     if _dso_client is None:
         from app.core.config import settings
 
-        _dso_client = DSOSpatialPlansClient(api_key=settings.DSO_API_KEY)
+        api_key = settings.RUIMTELIJKE_PLANNEN_API_KEY or settings.DSO_API_KEY
+        _dso_client = DSOSpatialPlansClient(api_key=api_key)
     return _dso_client

@@ -1,5 +1,6 @@
 """Zoning aggregation service combining DSO API and spatial analysis."""
 
+import html
 import logging
 import re
 import uuid
@@ -9,10 +10,26 @@ from shapely.geometry import Point, shape
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.government_apis.dso_spatial_plans import get_dso_client
-from app.schemas.zoning import BuildingDimensions, ZoningData, ZoningPlan, ZoningRule
+from app.schemas.zoning import (
+    BuildingDimensions,
+    FunctieAanduiding,
+    GebiedsAanduiding,
+    PlanTekst,
+    ZoningData,
+    ZoningPlan,
+    ZoningRule,
+)
 from app.services.cache_manager import get_cached_or_fetch
 
 logger = logging.getLogger(__name__)
+
+
+def _strip_html(text: str) -> str:
+    """Strip HTML tags and decode entities from XHTML text."""
+    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = html.unescape(clean)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    return clean
 
 
 def _find_containing_features(
@@ -197,12 +214,20 @@ async def fetch_zoning_data(
             logger.info(f"Processing plan {plan_id}: {plan.get('naam')}")
 
             try:
-                # Fetch bestemmingsvlakken, maatvoeringen, bouwvlakken in parallel
-                # Note: We can't use asyncio.gather here because we're inside an async def
-                # that's called from cache_manager. Sequential fetches are safer.
+                # Fetch all plan components sequentially (inside cache_manager)
                 bestemmingsvlakken = await dso_client.get_bestemmingsvlakken(plan_id, client)
                 maatvoeringen = await dso_client.get_maatvoeringen(plan_id, client)
                 bouwvlakken = await dso_client.get_bouwvlakken(plan_id, client)
+                functieaanduidingen_raw = await dso_client.get_functieaanduidingen(plan_id, client)
+                gebiedsaanduidingen_raw = await dso_client.get_gebiedsaanduidingen(plan_id, client)
+
+                # Only fetch teksten for the most recent plan (index 0) to limit API calls
+                teksten_raw: list[dict] = []
+                if plan == filtered_plans[0]:
+                    try:
+                        teksten_raw = await dso_client.get_teksten(plan_id, client)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch teksten for {plan_id}: {e}")
 
                 # Spatial intersection - filter to features containing property point
                 relevant_bestemmingen = _find_containing_features(
@@ -213,6 +238,16 @@ async def fetch_zoning_data(
                 relevant_bouwvlakken = _find_containing_features(
                     property_point,
                     bouwvlakken,
+                )
+
+                relevant_functies = _find_containing_features(
+                    property_point,
+                    functieaanduidingen_raw,
+                )
+
+                relevant_gebieden = _find_containing_features(
+                    property_point,
+                    gebiedsaanduidingen_raw,
                 )
 
                 # Extract building dimensions from maatvoeringen
@@ -231,6 +266,34 @@ async def fetch_zoning_data(
                         geometry=bestemming.get("geometrie"),
                     )
                     rules.append(rule)
+
+                # Build functie aanduidingen
+                functie_aanduidingen = [
+                    FunctieAanduiding(
+                        naam=f.get("naam", "Onbekend"),
+                        groep=f.get("functieaanduidinggroep"),
+                    )
+                    for f in relevant_functies
+                ]
+
+                # Build gebieds aanduidingen
+                gebieds_aanduidingen = [
+                    GebiedsAanduiding(
+                        naam=g.get("naam", "Onbekend"),
+                        groep=g.get("gebiedsaanduidinggroep"),
+                    )
+                    for g in relevant_gebieden
+                ]
+
+                # Build teksten (strip XHTML to plain text)
+                teksten = []
+                for tekst in teksten_raw[:20]:  # Limit to 20 articles
+                    titel = tekst.get("titel", "")
+                    inhoud = tekst.get("tekst") or tekst.get("inhoud") or ""
+                    if inhoud:
+                        inhoud = _strip_html(inhoud)
+                    if titel:
+                        teksten.append(PlanTekst(titel=titel, inhoud=inhoud or None))
 
                 # Track data gaps
                 gaps = []
@@ -251,6 +314,9 @@ async def fetch_zoning_data(
                     plan_status=plan.get("planStatus"),
                     plan_datum=plan.get("datum"),
                     rules=rules,
+                    functie_aanduidingen=functie_aanduidingen,
+                    gebieds_aanduidingen=gebieds_aanduidingen,
+                    teksten=teksten,
                 )
                 zoning_plans.append(zoning_plan)
 

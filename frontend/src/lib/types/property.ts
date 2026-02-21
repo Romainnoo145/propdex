@@ -92,6 +92,30 @@ export interface ZoningRule {
 }
 
 /**
+ * Function designation refining a bestemming (e.g., horeca, kantoren)
+ */
+export interface FunctieAanduiding {
+  naam: string
+  groep: string | null
+}
+
+/**
+ * Area designation / overlay zone (e.g., noise zone, archaeology, safety)
+ */
+export interface GebiedsAanduiding {
+  naam: string
+  groep: string | null
+}
+
+/**
+ * Regulation text article from a bestemmingsplan
+ */
+export interface PlanTekst {
+  titel: string
+  inhoud: string | null
+}
+
+/**
  * Zoning plan (bestemmingsplan) information
  */
 export interface ZoningPlan {
@@ -101,6 +125,9 @@ export interface ZoningPlan {
   plan_status: string | null
   plan_datum: string | null
   rules: ZoningRule[]
+  functie_aanduidingen: FunctieAanduiding[]
+  gebieds_aanduidingen: GebiedsAanduiding[]
+  teksten: PlanTekst[]
 }
 
 /**
