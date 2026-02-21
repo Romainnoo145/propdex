@@ -137,15 +137,11 @@ This is the ONE thing that must work. Everything else is secondary.
 ### Active
 
 **v5.1 Data Presentation Overhaul:**
-- [ ] Resultaten tabel: visuele preview per perceel (thumbnail/luchtfoto)
-- [ ] Resultaten tabel: scoring UX overhaul (visuele bars, kleurgradienten, score breakdown)
-- [ ] Resultaten tabel: perceel vergelijking (side-by-side comparison view)
-- [ ] Property rapport: visuele hierarchie — key metrics prominent, rest secundair
-- [ ] Property rapport: kaart integratie — mini-map met perceelgrens + buurt context
-- [ ] Property rapport: sectie-indeling — tabs of cards i.p.v. lange scroll
-- [ ] Property rapport: actionable insights — wat data betekent voor een ontwikkelaar
-- [ ] Kaart: directe filtercontrols op de kaart (bestemming type, score range)
-- [ ] Dark/light mode: thema systeem consistent, geen hardcoded kleuren
+- [ ] Card-based drill-down navigation: Gemeente cards -> Wijk cards -> Results table
+- [ ] Gemeente/wijk cards with SVG boundary silhouettes, names, notification badges
+- [ ] Responsive card grid (3 col desktop, 2 tablet, 1 mobile) with breadcrumb navigation
+- [ ] URL-synced navigation state (deep-linkable drill-down levels)
+- [ ] Dark/light mode polish: all accent colors via CSS variables, no hardcoded classes
 
 ### Future
 
