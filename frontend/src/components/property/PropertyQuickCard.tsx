@@ -67,11 +67,11 @@ export function PropertyQuickCard({
   // Monument badge - compact for space-constrained popup
   const monumentBadge = data?.monuments ? (
     data.monuments.is_monument ? (
-      <span className="bg-amber-500/20 text-amber-200 text-xs px-2 py-0.5 rounded-full">
+      <span className="bg-amber-accent/20 text-amber-accent text-xs px-2 py-0.5 rounded-full">
         Rijksmonument
       </span>
     ) : (
-      <span className="bg-green-500/10 text-green-200/70 text-xs px-2 py-0.5 rounded-full">
+      <span className="bg-success/10 text-success text-xs px-2 py-0.5 rounded-full">
         Geen monument
       </span>
     )

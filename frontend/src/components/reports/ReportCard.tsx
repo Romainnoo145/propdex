@@ -42,7 +42,7 @@ export default function ReportCard({
       <div className="flex items-start gap-2">
         <div
           className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
-            isStale ? 'bg-amber-400' : 'bg-grey-800'
+            isStale ? 'bg-amber-accent' : 'bg-grey-800'
           }`}
         />
         <div className="min-w-0 flex-1">
@@ -67,7 +67,7 @@ export default function ReportCard({
       </p>
 
       {/* Bottom row: Date | Completeness */}
-      <div className="mt-2 flex items-center justify-between text-xs text-grey-500">
+      <div className="mt-2 flex items-center justify-between text-xs text-grey-600">
         <span>{formattedDate}</span>
         <span>{Math.round(report.completeness_score * 100)}% compleet</span>
       </div>
@@ -87,7 +87,7 @@ function TrashIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-grey-500 hover:text-red-400"
+      className="text-grey-600 hover:text-error"
     >
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />

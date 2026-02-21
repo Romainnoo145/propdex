@@ -44,7 +44,7 @@ export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
                   className="w-3 h-3 rounded-sm border border-black/10 flex-shrink-0"
                   style={{ backgroundColor: hoofdgroep.color }}
                 />
-                <span className="text-xs text-grey-200">
+                <span className="text-xs text-grey-300">
                   {hoofdgroep.label}
                 </span>
               </div>

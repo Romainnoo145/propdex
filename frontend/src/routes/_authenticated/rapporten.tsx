@@ -134,7 +134,7 @@ function RapportenPage() {
                   </p>
 
                   {/* Meta row */}
-                  <div className="mt-2 flex items-center gap-3 text-xs text-grey-500">
+                  <div className="mt-2 flex items-center gap-3 text-xs text-grey-600">
                     <span>{dateFmt.format(new Date(report.created_at))}</span>
                     <span className="text-grey-700">&middot;</span>
                     <span>
@@ -163,14 +163,14 @@ function RapportenPage() {
                         },
                       })
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-grey-400 hover:bg-grey-800 hover:text-grey-200 cursor-pointer"
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-grey-400 hover:bg-grey-800 hover:text-grey-300 cursor-pointer"
                     title="Bekijk op kaart"
                   >
                     <ExternalLink size={14} />
                   </span>
                   <span
                     onClick={(e) => handleDelete(e, report)}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-grey-400 hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-grey-400 hover:bg-error/10 hover:text-error cursor-pointer"
                     title="Verwijder rapport"
                   >
                     <Trash2 size={14} />

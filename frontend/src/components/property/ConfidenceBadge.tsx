@@ -10,17 +10,17 @@ interface ConfidenceBadgeProps {
 
 const CONFIDENCE_CONFIG = {
   HIGH: {
-    color: 'bg-green-500/20 border-green-500/40 text-green-100',
+    color: 'bg-success/15 border-success/40 text-success',
     defaultLabel: 'Hoog vertrouwen',
     title: undefined,
   },
   MEDIUM: {
-    color: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-100',
+    color: 'bg-warning/15 border-warning/40 text-warning',
     defaultLabel: 'Gemiddeld vertrouwen',
     title: undefined,
   },
   LOW: {
-    color: 'bg-red-500/20 border-red-500/40 text-red-100',
+    color: 'bg-error/15 border-error/40 text-error',
     defaultLabel: 'Laag vertrouwen',
     title: 'Verifieer handmatig - AI interpretatie mogelijk onvolledig',
   },

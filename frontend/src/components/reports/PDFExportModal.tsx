@@ -122,7 +122,7 @@ export function PDFExportModal({
               <button
                 onClick={handleExport}
                 disabled={exportPDF.isPending}
-                className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2 px-4 bg-info hover:bg-info/90 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {exportPDF.isPending ? 'Bezig...' : 'Exporteren'}
               </button>

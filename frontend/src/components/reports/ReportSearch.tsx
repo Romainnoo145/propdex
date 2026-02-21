@@ -61,7 +61,7 @@ export default function ReportSearch({
       </div>
 
       <Command.List className="max-h-64 overflow-y-auto p-2">
-        <Command.Empty className="py-6 text-center text-sm text-grey-500">
+        <Command.Empty className="py-6 text-center text-sm text-grey-600">
           Geen resultaten
         </Command.Empty>
 
@@ -71,7 +71,7 @@ export default function ReportSearch({
             heading={projectName}
             className="mb-2"
           >
-            <div className="mb-1 px-2 text-xs text-grey-500">
+            <div className="mb-1 px-2 text-xs text-grey-600">
               {projectName}
             </div>
             {projectReports.map((report) => (
@@ -84,7 +84,7 @@ export default function ReportSearch({
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{report.report_name}</p>
-                    <p className="text-xs text-grey-500">
+                    <p className="text-xs text-grey-600">
                       {report.postcode}, {report.city}
                     </p>
                   </div>
@@ -113,7 +113,7 @@ function SearchIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-grey-500"
+      className="text-grey-600"
     >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.35-4.35" />

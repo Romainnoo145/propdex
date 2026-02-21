@@ -114,11 +114,11 @@ function ResultatenPage() {
     <ResultsShell fullWidth>
       <div className="flex flex-col h-full">
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-grey-900 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-overlay/5 bg-grey-900 shrink-0">
           <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
           <button
             onClick={() => navigate({ to: '/map', search: scan_id ? { scan_id } : {} })}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-500 hover:text-grey-300 border border-white/5 rounded-md hover:border-white/10 transition-colors min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-600 hover:text-grey-300 border border-overlay/5 rounded-md hover:border-overlay/10 transition-colors min-h-[44px]"
           >
             <Map size={14} />
             <span className="hidden md:inline">Toon Kaart</span>

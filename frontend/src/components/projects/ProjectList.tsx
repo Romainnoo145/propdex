@@ -174,7 +174,7 @@ export default function ProjectList() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium uppercase tracking-wider text-grey-400">Gemeente</span>
                       {totalUnread > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
                           {totalUnread}
                         </span>
                       )}
@@ -209,14 +209,14 @@ export default function ProjectList() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="inline-block h-2 w-2 rounded-full bg-amber-accent/60 shrink-0" />
-                                <h5 className="text-sm font-medium text-grey-200">{wijk.name}</h5>
+                                <h5 className="text-sm font-medium text-grey-300">{wijk.name}</h5>
                                 {wijk.report_count > 0 && (
                                   <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
                                     {wijk.report_count}
                                   </span>
                                 )}
                                 {wijkUnread > 0 && (
-                                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
                                     {wijkUnread > 9 ? wijkUnread : ''}
                                   </span>
                                 )}
@@ -279,7 +279,7 @@ export default function ProjectList() {
                       </span>
                       {/* Unread badge */}
                       {unreadCount > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
                           {unreadCount > 9 ? unreadCount : ''}
                         </span>
                       )}
@@ -295,7 +295,7 @@ export default function ProjectList() {
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={(e) => handleEdit(e, project)}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-800 hover:text-grey-200"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-800 hover:text-grey-300"
                         title="Bewerk project"
                       >
                         <PencilIcon />
@@ -303,7 +303,7 @@ export default function ProjectList() {
                       <button
                         onClick={(e) => handleDelete(e, project)}
                         disabled={deleteMutation.isPending}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-error/10 hover:text-error disabled:opacity-50"
                         title="Verwijder project"
                       >
                         <TrashIcon />
@@ -407,13 +407,13 @@ function WijkScanList({
             <ScanIcon />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-grey-200">
+                <p className="text-sm font-medium text-grey-300">
                   Scan {dateFmt.format(new Date(scan.scan_date))}
                 </p>
                 {!isCompleted && (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    scan.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
-                    scan.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    scan.status === 'running' ? 'bg-info/20 text-info' :
+                    scan.status === 'failed' ? 'bg-error/20 text-error' :
                     'bg-grey-800 text-grey-400'
                   }`}>
                     {scan.status}
@@ -466,7 +466,7 @@ function MapPinIcon() {
 
 function ScanIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-500">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-600">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>

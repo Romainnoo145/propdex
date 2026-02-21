@@ -162,7 +162,7 @@ function ErrorState({
   return (
     <div className="p-4 flex flex-col items-center justify-center h-full text-center">
       <svg
-        className="w-12 h-12 text-red-400 mb-4"
+        className="w-12 h-12 text-error mb-4"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -282,7 +282,7 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
     <div className="space-y-3">
       {/* Primary bestemming */}
       {zoning.primary_bestemming && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+        <div className="bg-info/10 border border-info/30 rounded-lg p-3">
           <span className="text-grey-600 text-xs uppercase tracking-wide">
             Hoofdbestemming
           </span>
@@ -418,13 +418,13 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
       <div
         className={`rounded-lg p-3 ${
           monuments.is_monument
-            ? 'bg-amber-500/20 border border-amber-500/40'
-            : 'bg-green-500/10 border border-green-500/30'
+            ? 'bg-amber-accent/20 border border-amber-accent/40'
+            : 'bg-success/10 border border-success/30'
         }`}
       >
         <div
           className={`font-medium ${
-            monuments.is_monument ? 'text-amber-100' : 'text-green-100'
+            monuments.is_monument ? 'text-amber-accent' : 'text-success'
           }`}
         >
           {monuments.is_monument ? 'Rijksmonument' : 'Geen monument'}
@@ -432,7 +432,7 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
         {monuments.consensus_status && (
           <div
             className={`text-xs mt-1 ${
-              monuments.is_monument ? 'text-amber-200/70' : 'text-green-200/70'
+              monuments.is_monument ? 'text-amber-accent/70' : 'text-success/70'
             }`}
           >
             {monuments.consensus_status}
@@ -482,8 +482,8 @@ function MonumentContent({ data }: { data: PropertyReportResponse }) {
               <span
                 className={`text-xs ${
                   source.is_monument
-                    ? 'text-amber-400'
-                    : 'text-green-400'
+                    ? 'text-amber-accent'
+                    : 'text-success'
                 }`}
               >
                 {source.is_monument ? 'Monument' : 'Geen'}
@@ -520,11 +520,11 @@ function BronnenContent({ data }: { data: PropertyReportResponse }) {
   ): { color: string; text: string } => {
     switch (confidence) {
       case 'HIGH':
-        return { color: 'text-green-400', text: 'Hoog' };
+        return { color: 'text-success', text: 'Hoog' };
       case 'MEDIUM':
-        return { color: 'text-yellow-400', text: 'Gemiddeld' };
+        return { color: 'text-warning', text: 'Gemiddeld' };
       case 'LOW':
-        return { color: 'text-red-400', text: 'Laag' };
+        return { color: 'text-error', text: 'Laag' };
       default:
         return { color: 'text-grey-600', text: 'Onbekend' };
     }

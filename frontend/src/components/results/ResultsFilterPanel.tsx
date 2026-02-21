@@ -25,7 +25,7 @@ function FilterPill({
       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
         active
           ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-          : 'border-white/5 bg-grey-900 text-grey-400 hover:border-white/10 hover:text-grey-300'
+          : 'border-overlay/5 bg-grey-900 text-grey-400 hover:border-overlay/10 hover:text-grey-300'
       }`}
     >
       {label}
@@ -50,7 +50,7 @@ function FilterSelect({
   const hasValue = value !== ''
   return (
     <div className="flex items-center gap-1.5">
-      <label htmlFor={id} className="text-xs text-grey-500 whitespace-nowrap">
+      <label htmlFor={id} className="text-xs text-grey-600 whitespace-nowrap">
         {label}
       </label>
       <select
@@ -60,7 +60,7 @@ function FilterSelect({
         className={`appearance-none rounded-full text-xs font-medium px-3 py-1.5 pr-6 border transition-colors bg-no-repeat cursor-pointer ${
           hasValue
             ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-            : 'border-white/5 bg-grey-900 text-grey-400 hover:border-white/10'
+            : 'border-overlay/5 bg-grey-900 text-grey-400 hover:border-overlay/10'
         }`}
         style={{
           backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -150,12 +150,12 @@ export default function ResultsFilterPanel({
   }
 
   return (
-    <div className="border-b border-white/5 bg-grey-900 px-5 py-3">
+    <div className="border-b border-overlay/5 bg-grey-900 px-5 py-3">
       {/* Single horizontal row of filters */}
       <div className="flex items-center gap-4 flex-wrap">
         {/* Score pills */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-grey-500 mr-0.5">Score</span>
+          <span className="text-xs text-grey-600 mr-0.5">Score</span>
           <FilterPill
             label="Hoog"
             active={filters.score_category === 'High'}
@@ -174,7 +174,7 @@ export default function ResultsFilterPanel({
         </div>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-white/5 hidden md:block" />
+        <div className="h-5 w-px bg-overlay/5 hidden md:block" />
 
         {/* Bestemming dropdown */}
         <FilterSelect
@@ -213,11 +213,11 @@ export default function ResultsFilterPanel({
         </FilterSelect>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-white/5 hidden md:block" />
+        <div className="h-5 w-px bg-overlay/5 hidden md:block" />
 
         {/* Area range — compact inline inputs */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-grey-500">m²</span>
+          <span className="text-xs text-grey-600">m²</span>
           <input
             id="area-min-filter"
             type="number"
@@ -227,7 +227,7 @@ export default function ResultsFilterPanel({
             className={`w-16 rounded-full text-xs font-medium px-3 py-1.5 border transition-colors tabular-nums text-center ${
               localMinArea
                 ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-                : 'border-white/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
+                : 'border-overlay/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
             } focus:outline-none focus:border-amber-accent/50`}
           />
           <span className="text-grey-600 text-xs">–</span>
@@ -240,7 +240,7 @@ export default function ResultsFilterPanel({
             className={`w-16 rounded-full text-xs font-medium px-3 py-1.5 border transition-colors tabular-nums text-center ${
               localMaxArea
                 ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-                : 'border-white/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
+                : 'border-overlay/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
             } focus:outline-none focus:border-amber-accent/50`}
           />
         </div>
@@ -250,7 +250,7 @@ export default function ResultsFilterPanel({
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="flex items-center gap-1 text-xs text-grey-500 hover:text-grey-300 transition-colors"
+              className="flex items-center gap-1 text-xs text-grey-600 hover:text-grey-300 transition-colors"
             >
               <X size={12} />
               Wis

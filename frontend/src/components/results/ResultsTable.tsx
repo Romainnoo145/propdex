@@ -41,7 +41,7 @@ function ScoreBadge({
 }) {
   if (score === null || category === null) {
     return (
-      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-xs font-semibold bg-grey-800/60 text-grey-500 border border-white/5">
+      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-xs font-semibold bg-grey-800/60 text-grey-600 border border-overlay/5">
         --
       </span>
     )
@@ -51,7 +51,7 @@ function ScoreBadge({
   const styles = {
     High: 'bg-amber-accent/15 text-amber-accent border-amber-accent/30 shadow-[0_0_8px_rgba(217,170,56,0.15)]',
     Medium: 'bg-amber-accent/8 text-amber-accent/70 border-amber-accent/15',
-    Low: 'bg-grey-800/60 text-grey-400 border-white/5',
+    Low: 'bg-grey-800/60 text-grey-400 border-overlay/5',
   }
 
   const style = styles[category as keyof typeof styles] ?? styles.Low
@@ -200,7 +200,7 @@ export default function ResultsTable({
       header: 'Perceelcode',
       enableSorting: false,
       cell: (info) => (
-        <span className="font-mono text-xs text-grey-500 tracking-wide">{info.getValue()}</span>
+        <span className="font-mono text-xs text-grey-600 tracking-wide">{info.getValue()}</span>
       ),
     }),
     columnHelper.accessor('address', {
@@ -308,7 +308,7 @@ export default function ResultsTable({
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="h-14 bg-white/[0.02] border-b border-white/[0.03] animate-pulse"
+              className="h-14 bg-overlay/[0.02] border-b border-overlay/[0.03] animate-pulse"
             ></div>
           ))}
         </div>
@@ -332,18 +332,18 @@ export default function ResultsTable({
     return (
       <div className="h-full w-full flex flex-col">
         {/* Header with summary */}
-        <div className="px-4 py-3 border-b border-white/5">
+        <div className="px-4 py-3 border-b border-overlay/5">
           <h3 className="text-grey-100 font-semibold text-base">
             {data.gemeente_naam}
           </h3>
-          <p className="text-grey-500 text-xs mt-0.5">
+          <p className="text-grey-600 text-xs mt-0.5">
             <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> kansrijk van{' '}
             <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
           </p>
         </div>
 
         {/* Card list */}
-        <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
+        <div className="flex-1 overflow-y-auto divide-y divide-overlay/[0.03]">
           {table.getRowModel().rows.map((row) => (
             <ParcelCard
               key={row.id}
@@ -355,7 +355,7 @@ export default function ResultsTable({
         </div>
 
         {/* Simplified pagination — compact layout with 44px touch targets (MOB-03) */}
-        <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-overlay/5 flex items-center justify-between">
           <span className="text-xs text-grey-600 tabular-nums">
             {pagination.pageIndex + 1} / {table.getPageCount()}
           </span>
@@ -363,14 +363,14 @@ export default function ResultsTable({
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="border border-white/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-2 rounded-md text-xs font-medium transition-colors min-h-[44px]"
+              className="border border-overlay/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-2 rounded-md text-xs font-medium transition-colors min-h-[44px]"
             >
               Vorige
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="border border-white/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-2 rounded-md text-xs font-medium transition-colors min-h-[44px]"
+              className="border border-overlay/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-2 rounded-md text-xs font-medium transition-colors min-h-[44px]"
             >
               Volgende
             </button>
@@ -383,11 +383,11 @@ export default function ResultsTable({
   return (
     <div className="h-full w-full flex flex-col">
       {/* Header with summary */}
-      <div className="px-6 py-4 border-b border-white/5">
+      <div className="px-6 py-4 border-b border-overlay/5">
         <h3 className="text-grey-100 font-semibold text-lg">
           {data.gemeente_naam}
         </h3>
-        <p className="text-grey-500 text-sm mt-1">
+        <p className="text-grey-600 text-sm mt-1">
           <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> kansrijk van{' '}
           <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
           <span className="text-grey-600 ml-1.5">
@@ -401,13 +401,13 @@ export default function ResultsTable({
       {/* Table container with scroll */}
       <div className="flex-1 overflow-y-auto">
         <table className="w-full">
-          <thead className="sticky top-0 bg-grey-900 border-b border-white/5">
+          <thead className="sticky top-0 bg-grey-900 border-b border-overlay/5">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`px-5 py-3 text-left text-xs font-medium text-grey-500 uppercase tracking-wider ${
+                    className={`px-5 py-3 text-left text-xs font-medium text-grey-600 uppercase tracking-wider ${
                       header.column.getCanSort() ? 'cursor-pointer select-none hover:text-grey-300 transition-colors' : ''
                     }`}
                     onClick={header.column.getToggleSortingHandler()}
@@ -442,7 +442,7 @@ export default function ResultsTable({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-white/[0.03]">
+          <tbody className="divide-y divide-overlay/[0.03]">
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
@@ -452,7 +452,7 @@ export default function ResultsTable({
                 className={`transition-colors cursor-pointer ${
                   row.original.parcel_id === selectedParcelId
                     ? 'bg-amber-accent/[0.06] ring-1 ring-inset ring-amber-accent/20'
-                    : 'hover:bg-white/[0.02]'
+                    : 'hover:bg-overlay/[0.02]'
                 }`}
                 onClick={() => onRowClick?.(row.original)}
                 onMouseEnter={() => onRowHover?.(row.original.parcel_id)}
@@ -470,8 +470,8 @@ export default function ResultsTable({
       </div>
 
       {/* Pagination controls */}
-      <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between bg-grey-900">
-        <span className="text-xs text-grey-500 tabular-nums">
+      <div className="px-6 py-3 border-t border-overlay/5 flex items-center justify-between bg-grey-900">
+        <span className="text-xs text-grey-600 tabular-nums">
           {Math.min(
             pagination.pageIndex * pagination.pageSize + 1,
             data.total
@@ -492,7 +492,7 @@ export default function ResultsTable({
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="border border-white/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+            className="border border-overlay/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
           >
             Vorige
           </button>
@@ -500,7 +500,7 @@ export default function ResultsTable({
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="border border-white/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+            className="border border-overlay/5 bg-grey-900 hover:bg-grey-850 disabled:opacity-25 disabled:cursor-not-allowed text-grey-300 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
           >
             Volgende
           </button>

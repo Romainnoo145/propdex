@@ -33,7 +33,7 @@ function PropertySummary({ data }: PropertySummaryProps) {
           <div className="text-grey-100 font-medium text-base">
             {bouwjaar ?? 'Onbekend'}
           </div>
-          <div className="text-grey-500 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
             Bouwjr
           </div>
         </div>
@@ -41,7 +41,7 @@ function PropertySummary({ data }: PropertySummaryProps) {
           <div className="text-grey-100 font-medium text-base">
             {oppervlakte ? `${oppervlakte}m²` : '–'}
           </div>
-          <div className="text-grey-500 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
             Opp.
           </div>
         </div>
@@ -49,7 +49,7 @@ function PropertySummary({ data }: PropertySummaryProps) {
           <div className="text-grey-100 font-medium text-base truncate">
             {bestemming ?? '–'}
           </div>
-          <div className="text-grey-500 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
             Best.
           </div>
         </div>
@@ -57,9 +57,9 @@ function PropertySummary({ data }: PropertySummaryProps) {
 
       {/* Monument Badge */}
       {isMonument && monumentStatus && (
-        <div className="bg-amber-500/20 border border-amber-500/40 rounded-lg px-3 py-2 flex items-center gap-2">
-          <span className="text-amber-400 text-base">🏛</span>
-          <span className="text-amber-100 text-sm font-medium">
+        <div className="bg-amber-accent/20 border border-amber-accent/40 rounded-lg px-3 py-2 flex items-center gap-2">
+          <span className="text-amber-accent text-base">🏛</span>
+          <span className="text-amber-accent text-sm font-medium">
             {monumentStatus}
           </span>
         </div>
@@ -68,7 +68,7 @@ function PropertySummary({ data }: PropertySummaryProps) {
       {/* Completeness Score */}
       <div className="space-y-1">
         <div className="flex justify-between items-center">
-          <span className="text-grey-500 text-xs uppercase tracking-wide">
+          <span className="text-grey-600 text-xs uppercase tracking-wide">
             Compleetheid
           </span>
           <span className="text-grey-400 text-xs font-medium">
@@ -77,7 +77,7 @@ function PropertySummary({ data }: PropertySummaryProps) {
         </div>
         <div className="w-full bg-grey-850 rounded-full h-1 overflow-hidden">
           <div
-            className="bg-green-500 h-full transition-all duration-300"
+            className="bg-success h-full transition-all duration-300"
             style={{ width: `${completeness_score * 100}%` }}
           />
         </div>

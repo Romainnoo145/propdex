@@ -51,7 +51,7 @@ export function FreshnessIndicator({
     <div className="group relative inline-flex items-center">
       {/* Amber warning icon */}
       <svg
-        className="w-4 h-4 text-amber-500"
+        className="w-4 h-4 text-amber-accent"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -75,7 +75,7 @@ export function FreshnessIndicator({
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs text-amber-400 hover:text-amber-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs text-amber-accent hover:text-amber-accent-hover font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRefreshing ? 'Bezig...' : 'Update nu'}
             </button>

@@ -1,7 +1,9 @@
-import { Palette, Satellite, Map } from 'lucide-react'
+import { Palette, Satellite, Map, Sun, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { useUserPreferences, useUpdatePreferences } from '@/hooks/useSettings'
+import { useTheme } from '@/lib/theme/useTheme'
+import type { Theme } from '@/lib/theme/ThemeContext'
 
 const MAP_STYLES = [
   {
@@ -18,11 +20,27 @@ const MAP_STYLES = [
   },
 ] as const
 
+const THEME_OPTIONS = [
+  {
+    value: 'dark' as Theme,
+    label: 'Donker',
+    description: 'Donkere achtergrond',
+    icon: Moon,
+  },
+  {
+    value: 'light' as Theme,
+    label: 'Licht',
+    description: 'Lichte achtergrond',
+    icon: Sun,
+  },
+] as const
+
 type MapStyleValue = (typeof MAP_STYLES)[number]['value']
 
 export function AppearanceSection() {
   const { data: prefs, isLoading } = useUserPreferences()
   const { mutate: updatePreferences } = useUpdatePreferences()
+  const { theme, setTheme } = useTheme()
 
   const handleSelectStyle = (style: MapStyleValue) => {
     updatePreferences(
@@ -35,14 +53,62 @@ export function AppearanceSection() {
     )
   }
 
+  const handleSelectTheme = (t: Theme) => {
+    setTheme(t)
+    toast.success(t === 'light' ? 'Licht thema ingeschakeld' : 'Donker thema ingeschakeld')
+  }
+
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
         <Palette className="h-5 w-5 text-grey-400" />
         <h2 className="text-lg font-semibold text-grey-100">Weergave</h2>
       </div>
-      <p className="mb-6 text-sm text-grey-400">
-        Kies de stijl van de kaartweergave
+
+      {/* Theme toggle */}
+      <p className="mb-3 text-sm text-grey-400">
+        App thema
+      </p>
+      <div className="mb-8 flex flex-wrap gap-4">
+        {THEME_OPTIONS.map(({ value, label, description, icon: Icon }) => {
+          const isSelected = theme === value
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleSelectTheme(value)}
+              className={[
+                'flex w-40 flex-col items-center gap-2 rounded-lg border p-4',
+                'transition-colors duration-150',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-accent focus-visible:ring-offset-2 focus-visible:ring-offset-grey-950',
+                isSelected
+                  ? 'border-teal-accent ring-2 ring-teal-accent'
+                  : 'border-grey-800 hover:border-grey-700',
+              ].join(' ')}
+            >
+              <Icon
+                className={[
+                  'h-8 w-8',
+                  isSelected ? 'text-teal-accent' : 'text-grey-400',
+                ].join(' ')}
+              />
+              <span
+                className={[
+                  'text-sm font-medium',
+                  isSelected ? 'text-grey-100' : 'text-grey-400',
+                ].join(' ')}
+              >
+                {label}
+              </span>
+              <span className="text-xs text-grey-600">{description}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Map style */}
+      <p className="mb-3 text-sm text-grey-400">
+        Kaartstijl
       </p>
 
       {isLoading ? (

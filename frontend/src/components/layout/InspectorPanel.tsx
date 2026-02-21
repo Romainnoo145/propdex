@@ -60,7 +60,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
         <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
         <button
           onClick={onClose}
-          className="text-grey-400 hover:text-white transition-colors motion-reduce:transition-none p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-grey-400 hover:text-grey-100 transition-colors motion-reduce:transition-none p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Sluiten"
         >
           <X size={16} />

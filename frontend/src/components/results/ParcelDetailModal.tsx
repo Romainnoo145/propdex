@@ -115,8 +115,8 @@ export function ParcelDetailModal({
         {parcel.score !== null && (
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
             <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/20">
-                <span className="text-2xl font-bold text-green-300">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-success/15 border border-success/20">
+                <span className="text-2xl font-bold text-success">
                   {parcel.score.toFixed(0)}
                 </span>
               </div>
@@ -145,7 +145,7 @@ export function ParcelDetailModal({
                         </span>
                         <div className="flex-1 h-1.5 bg-grey-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-green-400/60"
+                            className="h-full bg-success/60"
                             style={{
                               width: `${Math.min(100, ((value as number) / (FACTOR_MAX[key] ?? 100)) * 100)}%`,
                             }}
@@ -237,12 +237,12 @@ export function ParcelDetailModal({
                   <div
                     className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
                       change.change_type === 'permit'
-                        ? 'bg-blue-400'
-                        : 'bg-green-400'
+                        ? 'bg-info'
+                        : 'bg-success'
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-grey-200 line-clamp-2">
+                    <p className="text-sm text-grey-300 line-clamp-2">
                       {change.title}
                     </p>
                     <p className="mt-0.5 text-xs text-grey-400">
@@ -258,7 +258,7 @@ export function ParcelDetailModal({
                       href={change.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 text-grey-400 hover:text-blue-400 transition-colors"
+                      className="shrink-0 text-grey-400 hover:text-info transition-colors"
                       title="Bekijk publicatie"
                     >
                       <svg
