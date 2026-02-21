@@ -27,9 +27,9 @@ Card-based drill-down navigation replacing the current flat list approach. Users
 
 ### Theme
 
-- [ ] **THEME-01**: Dark mode and light mode are visually consistent -- no hardcoded color classes bypass CSS variables
-- [ ] **THEME-02**: All amber/accent color usage goes through `--color-amber-accent` CSS variable (no Tailwind amber-* classes)
-- [ ] **THEME-03**: Theme toggle works reliably and persists across sessions via localStorage
+- [x] **THEME-01**: Dark mode and light mode are visually consistent -- no hardcoded color classes bypass CSS variables
+- [x] **THEME-02**: All amber/accent color usage goes through `--color-amber-accent` CSS variable (no Tailwind amber-* classes)
+- [x] **THEME-03**: Theme toggle works reliably and persists across sessions via localStorage
 
 ## v5.2+ Requirements
 
@@ -82,9 +82,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | CARD-05 | Phase 44 | Pending |
 | CARD-06 | Phase 44 | Pending |
 | CARD-07 | Phase 43 | Pending |
-| THEME-01 | Phase 42 | Pending |
-| THEME-02 | Phase 42 | Pending |
-| THEME-03 | Phase 42 | Pending |
+| THEME-01 | Phase 42 | ✓ Done |
+| THEME-02 | Phase 42 | ✓ Done |
+| THEME-03 | Phase 42 | ✓ Done |
 
 **Coverage:**
 - v5.1 requirements: 15 total
@@ -93,4 +93,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after roadmap creation*
+*Last updated: 2026-02-21 -- THEME-01/02/03 complete (Phase 42)*
