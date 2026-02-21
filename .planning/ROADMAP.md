@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- **v5.1 Data Presentation Overhaul** -- Phases 42-45 (in progress)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
 - ✅ **v4.0 UX Redesign** -- Phases 27-36 (shipped 2026-02-18)
 - ✅ **v3.1 Smart Area Intelligence** -- Phases 22-26 (shipped 2026-02-15)
@@ -13,6 +14,75 @@
 ---
 
 ## Phases
+
+### v5.1 Data Presentation Overhaul
+
+**Milestone Goal:** Card-based drill-down navigation from gemeente to wijk to results, with theme consistency across light and dark modes.
+
+- [ ] **Phase 42: Theme Consistency** - Audit and fix all hardcoded color classes so new components are built on correct patterns
+- [ ] **Phase 43: Gemeente Card Navigation** - Projecten page shows gemeente cards with SVG boundary silhouettes, names, and notification badges
+- [ ] **Phase 44: Wijk Cards and Drill-Down** - Click a gemeente card to see its wijk cards, click a wijk card to see filtered results
+- [ ] **Phase 45: Breadcrumb and URL State** - Breadcrumb navigation and deep-linkable URL state reflecting drill-down level
+
+## Phase Details
+
+### Phase 42: Theme Consistency
+**Goal**: Dark and light modes are visually consistent -- all accent colors flow through CSS variables, no hardcoded Tailwind color classes bypass the theme system
+**Depends on**: Nothing (audit/cleanup phase, establishes patterns for new components)
+**Requirements**: THEME-01, THEME-02, THEME-03
+**Success Criteria** (what must be TRUE):
+  1. User can toggle between dark and light mode and every component renders with correct contrast -- no white-on-white, no invisible text, no broken backgrounds
+  2. Searching the frontend source for `amber-` Tailwind classes returns zero results outside of CSS variable definitions -- all accent color usage goes through `--color-amber-accent`
+  3. Theme toggle persists across browser sessions -- user closes browser, reopens, and the previously selected theme is active without flash of wrong theme
+**Plans**: TBD
+
+Plans:
+- [ ] 42-01: Audit and replace hardcoded color classes; verify theme toggle persistence
+
+### Phase 43: Gemeente Card Navigation
+**Goal**: Users see their scanned gemeenten as visual cards on the Projecten page -- each card shows the municipality boundary shape, name, and a badge when there are unread changes
+**Depends on**: Phase 42 (theme patterns established, new components will follow them)
+**Requirements**: CARD-01, CARD-02, CARD-03, CARD-07, NAV-01
+**Success Criteria** (what must be TRUE):
+  1. Projecten page displays gemeente cards in a 3-column grid on desktop, 2 columns on tablet, and 1 column on mobile
+  2. Each gemeente card shows a recognizable SVG silhouette of the municipality boundary (sourced from CBS WFS data already used on the map page)
+  3. Each gemeente card displays the gemeente name prominently and a notification badge showing the count of unread change records for that gemeente
+  4. Cards maintain consistent visual appearance across breakpoints -- no layout breaking, no truncated content, no overflow
+**Plans**: TBD
+
+Plans:
+- [ ] 43-01: CBS boundary SVG extraction and responsive card grid component
+- [ ] 43-02: Gemeente cards on Projecten page with notification badges
+
+### Phase 44: Wijk Cards and Drill-Down
+**Goal**: Users can click a gemeente card to see its wijken as visual cards, and click a wijk card to land on the results table filtered to that wijk's scan data
+**Depends on**: Phase 43 (gemeente cards and card grid component exist)
+**Requirements**: CARD-04, CARD-05, CARD-06, NAV-02, NAV-03
+**Success Criteria** (what must be TRUE):
+  1. Clicking a gemeente card navigates to a view showing that gemeente's wijk cards in the same responsive grid layout
+  2. Each wijk card shows the wijk boundary SVG silhouette, the wijk name, and a notification badge for unread changes in that specific wijk
+  3. Clicking a wijk card navigates to the /resultaten route with filters pre-set to show only that wijk's scan results
+  4. User can navigate back from wijk view to gemeente view without losing state
+**Plans**: TBD
+
+Plans:
+- [ ] 44-01: Wijk cards with SVG silhouettes and notification badges
+- [ ] 44-02: Drill-down navigation from gemeente to wijk to results
+
+### Phase 45: Breadcrumb and URL State
+**Goal**: Users always know where they are in the drill-down hierarchy and can share or bookmark any navigation level
+**Depends on**: Phase 44 (full drill-down navigation works)
+**Requirements**: NAV-04, NAV-05
+**Success Criteria** (what must be TRUE):
+  1. Breadcrumb bar shows the current path (Projecten > Gemeente Name > Wijk Name) with each segment clickable for back-navigation
+  2. URL reflects the current navigation level -- copying the URL and opening it in a new tab restores the exact same view (gemeente cards, wijk cards, or filtered results)
+  3. Browser back/forward buttons navigate the drill-down levels correctly
+**Plans**: TBD
+
+Plans:
+- [ ] 45-01: Breadcrumb component and URL state synchronization
+
+---
 
 <details>
 <summary>✅ v5.0 Scan Intelligence (Phases 37-41) -- SHIPPED 2026-02-20</summary>
@@ -120,4 +190,17 @@
 
 ---
 
-*Last updated: 2026-02-20 (v5.0 Scan Intelligence shipped)*
+## Progress
+
+**Execution Order:** 42 -> 43 -> 44 -> 45
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 42. Theme Consistency | v5.1 | 0/1 | Not started | - |
+| 43. Gemeente Card Navigation | v5.1 | 0/2 | Not started | - |
+| 44. Wijk Cards and Drill-Down | v5.1 | 0/2 | Not started | - |
+| 45. Breadcrumb and URL State | v5.1 | 0/1 | Not started | - |
+
+---
+
+*Last updated: 2026-02-21 (v5.1 Data Presentation Overhaul roadmap created)*

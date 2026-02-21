@@ -2,19 +2,21 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-20)
+See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.1 Data Presentation Overhaul
+**Current focus:** v5.1 Data Presentation Overhaul -- Phase 42 Theme Consistency
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements for v5.1
-Last activity: 2026-02-21 — Milestone v5.1 started
+Phase: 42 of 45 (Theme Consistency)
+Plan: 0 of 1 in current phase
+Status: Ready to plan
+Last activity: 2026-02-21 -- Roadmap created for v5.1 (4 phases, 15 requirements)
+
+Progress: [░░░░░░░░░░] 0%
 
 ---
 
@@ -30,18 +32,6 @@ Last activity: 2026-02-21 — Milestone v5.1 started
 **v3.1 Smart Area Intelligence (Shipped: 2026-02-15)**
 - 5 phases (22-26), 22 plans, 97 commits, ~27,200 LOC
 
-**v3.0 Spatial Foundation (Shipped: 2026-02-11)**
-- 4 phases (18-21), 20 plans, 72 commits
-
-**v2.0 Frontend (Shipped: 2026-02-09)**
-- 5 phases (13-17), 24 plans, 117 commits, 8,804 LOC TypeScript/React
-
-**v1.1 Production Hardening (Shipped: 2026-02-08)**
-- 7 phases (6-12), 19 plans, 71 commits, 275 tests, 15,947 LOC Python
-
-**v1.0 Core Intelligence Engine (Shipped: 2026-02-07)**
-- 5 phases (1-5), 17 plans, 79 commits, 8,281 LOC Python
-
 ---
 
 ## Accumulated Context
@@ -51,15 +41,10 @@ Last activity: 2026-02-21 — Milestone v5.1 started
 - Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()`)
 - parcel_cache.geometry is EPSG:28992; always ST_Transform(geometry, 4326) before GeoJSON
 - 404 not 403 for cross-org access (prevents enumeration)
-- Static sub-paths before parameterized paths in FastAPI routing
-- pg_insert().on_conflict_do_nothing() for idempotent bulk inserts
 - ProjectEditModal/ProjectCreateModal use intentional light-theme gray-* (white card on dark backdrop)
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 3 | Commit the bekendmaking matching implementation | 2026-02-20 | 257041e | [3-commit-the-bekendmaking-matching-impleme](./quick/3-commit-the-bekendmaking-matching-impleme/) |
+- CBS WFS already integrated for gemeente/wijk boundaries on map page -- reuse for SVG silhouettes
+- Change monitoring with unread tracking per project already implemented -- reuse for notification badges
+- ThemeProvider at src/lib/theme/ with localStorage persistence already exists
 
 ### Ongoing TODOs
 
@@ -70,16 +55,20 @@ Last activity: 2026-02-21 — Milestone v5.1 started
 - Kadaster BRK Bevragen API toegang regelen (betaald)
 - PLU WMS change detection live validation (MON-02)
 
+### Blockers/Concerns
+
+None.
+
 ---
 
 ## Session Continuity
 
 **Last Session:** 2026-02-21
-**Stopped At:** Milestone v5.1 initialized, defining requirements
+**Stopped At:** Roadmap created for v5.1 milestone
 **Resume File:** None
 
-**Next Action:** Define requirements and create roadmap
+**Next Action:** `/gsd:plan-phase 42`
 
 ---
 
-*State updated: 2026-02-21 — Milestone v5.1 Data Presentation Overhaul started*
+*State updated: 2026-02-21 -- v5.1 roadmap created*

@@ -1,7 +1,7 @@
-# Requirements: Propdex v5.1 — Data Presentation Overhaul
+# Requirements: Propdex v5.1 -- Data Presentation Overhaul
 
 **Defined:** 2026-02-21
-**Core Value:** Area -> Opportunity Intelligence — card-based drill-down navigation from gemeente to wijk to results
+**Core Value:** Area -> Opportunity Intelligence -- card-based drill-down navigation from gemeente to wijk to results
 
 ## v5.1 Requirements
 
@@ -27,7 +27,7 @@ Card-based drill-down navigation replacing the current flat list approach. Users
 
 ### Theme
 
-- [ ] **THEME-01**: Dark mode and light mode are visually consistent — no hardcoded color classes bypass CSS variables
+- [ ] **THEME-01**: Dark mode and light mode are visually consistent -- no hardcoded color classes bypass CSS variables
 - [ ] **THEME-02**: All amber/accent color usage goes through `--color-amber-accent` CSS variable (no Tailwind amber-* classes)
 - [ ] **THEME-03**: Theme toggle works reliably and persists across sessions via localStorage
 
@@ -61,38 +61,36 @@ Deferred to future release. Tracked but not in current roadmap.
 | Score trend indicator | Requires historical score storage (new backend model) |
 | Table column reordering (drag) | High complexity, low value for current user base |
 | Saved scan comparison (diff two runs) | Requires backend diff logic |
-| Property comparison view | Deferred to v5.2 — validate user demand first |
-| Report redesign | Deferred to v5.2 — focus on navigation first |
-| Map filtering | Deferred to v5.2 — current filter panel sufficient |
-| Print/PDF optimized layout | Enterprise feature — defer until sales require it |
+| Property comparison view | Deferred to v5.2 -- validate user demand first |
+| Report redesign | Deferred to v5.2 -- focus on navigation first |
+| Map filtering | Deferred to v5.2 -- current filter panel sufficient |
+| Print/PDF optimized layout | Enterprise feature -- defer until sales require it |
 
 ## Traceability
 
-Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| NAV-04 | — | Pending |
-| NAV-05 | — | Pending |
-| CARD-01 | — | Pending |
-| CARD-02 | — | Pending |
-| CARD-03 | — | Pending |
-| CARD-04 | — | Pending |
-| CARD-05 | — | Pending |
-| CARD-06 | — | Pending |
-| CARD-07 | — | Pending |
-| THEME-01 | — | Pending |
-| THEME-02 | — | Pending |
-| THEME-03 | — | Pending |
+| NAV-01 | Phase 43 | Pending |
+| NAV-02 | Phase 44 | Pending |
+| NAV-03 | Phase 44 | Pending |
+| NAV-04 | Phase 45 | Pending |
+| NAV-05 | Phase 45 | Pending |
+| CARD-01 | Phase 43 | Pending |
+| CARD-02 | Phase 43 | Pending |
+| CARD-03 | Phase 43 | Pending |
+| CARD-04 | Phase 44 | Pending |
+| CARD-05 | Phase 44 | Pending |
+| CARD-06 | Phase 44 | Pending |
+| CARD-07 | Phase 43 | Pending |
+| THEME-01 | Phase 42 | Pending |
+| THEME-02 | Phase 42 | Pending |
+| THEME-03 | Phase 42 | Pending |
 
 **Coverage:**
 - v5.1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 after roadmap creation*
