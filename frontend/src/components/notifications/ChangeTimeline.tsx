@@ -146,12 +146,12 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                         {hasMatches && (
                           <div className="flex gap-1.5">
                             {pc > 0 && (
-                              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
+                              <span className="inline-flex items-center rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">
                                 {pc} {pc === 1 ? 'perceel' : 'percelen'}
                               </span>
                             )}
                             {rc > 0 && (
-                              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400">
+                              <span className="inline-flex items-center rounded-full bg-amber-accent/10 px-2 py-0.5 text-[11px] font-medium text-amber-accent">
                                 {rc} {rc === 1 ? 'rapport' : 'rapporten'}
                               </span>
                             )}
@@ -192,7 +192,7 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                                     },
                                   })
                                 }
-                                className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 hover:underline"
+                                className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
                               >
                                 <ParcelLinkIcon />
                                 {m.address
@@ -216,7 +216,7 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                                     params: { id: m.report_id },
                                   })
                                 }
-                                className="flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 hover:underline"
+                                className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
                               >
                                 <ReportLinkIcon />
                                 Bekijk rapport — {m.report_name}
@@ -231,7 +231,7 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                           href={change.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                          className="inline-flex items-center gap-1 text-sm text-info hover:underline"
                         >
                           Bekijk officiële publicatie
                           <ExternalLinkIcon />
@@ -302,7 +302,7 @@ function formatRelativeTime(isoDateStr: string): string {
 
 function PermitIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-info/10">
       <svg
         width="16"
         height="16"
@@ -312,7 +312,7 @@ function PermitIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-blue-600"
+        className="text-info"
       >
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
@@ -325,7 +325,7 @@ function PermitIcon() {
 
 function ZoningIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10">
       <svg
         width="16"
         height="16"
@@ -335,7 +335,7 @@ function ZoningIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-green-600"
+        className="text-success"
       >
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
         <circle cx="12" cy="10" r="3" />

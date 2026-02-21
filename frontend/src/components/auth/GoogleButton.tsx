@@ -50,7 +50,7 @@ export function GoogleButton() {
         {isLoading ? 'Loading...' : 'Continue with Google'}
       </button>
       {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+        <p className="mt-2 text-sm text-error">{error}</p>
       )}
     </div>
   )

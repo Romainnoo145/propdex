@@ -57,7 +57,7 @@ export function RegisterForm({ onRegister, onSuccess }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {apiError && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-lg bg-error/10 border border-error/20 p-3 text-sm text-error">
           {apiError}
         </div>
       )}

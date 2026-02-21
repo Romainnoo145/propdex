@@ -20,7 +20,7 @@ export function NotificationBadge({ count }: NotificationBadgeProps) {
   const displayText = count > 99 ? '99+' : count.toString()
 
   return (
-    <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
+    <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
       {displayText}
     </span>
   )
