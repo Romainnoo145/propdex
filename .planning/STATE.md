@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 42 of 45 (Theme Consistency)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-21 -- Executed 42-01: on-accent token, FOUC fix, amber button contrast
+Plan: 2 of 2 in current phase — PHASE COMPLETE
+Status: Phase 42 complete
+Last activity: 2026-02-21 -- Executed 42-02: semantic token sweep, grey-500/200 fixes across 29 components
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ---
 
@@ -24,6 +24,7 @@ Progress: [█░░░░░░░░░] 10%
 
 **v5.1 Theme Consistency (In Progress)**
 - Phase 42 Plan 01: 2 min, 2 tasks, 12 files changed
+- Phase 42 Plan 02: 9 min, 2 tasks, 29 files changed
 
 **v5.0 Scan Intelligence (Shipped: 2026-02-20)**
 - 5 phases (37-41), 11 plans, 51 commits, 65 files changed (+9,264/-2,326)
@@ -51,11 +52,18 @@ Progress: [█░░░░░░░░░] 10%
 - **text-on-accent**: all amber/accent-background elements use this utility — never text-grey-950/900/white
 - **--color-on-accent**: defined only in @theme, NOT overridden in html.light (amber stays golden in both modes)
 - **FOUC pattern**: inline `<script>` before `<link>` tags reads 'propdex-theme', applies .light class synchronously
+- **Semantic token mapping**: error=bg-error/10 text-error, success=bg-success/10 text-success, info=bg-info/10 text-info, warning=bg-warning/15 text-warning
+- **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950 — use 300 not 200, 600 not 500
+- **purple exception**: gebieds_aanduidingen in ReportDetailPage uses purple-500 (distinct from functie_aanduidingen info/blue per SVBP2012)
 
 ### Decisions Made
 
 - `--color-on-accent: oklch(0.12 0.005 270)` — fixed dark color for text on amber, identical value to dark-mode grey-950 but separate token that does NOT invert in light mode
 - FOUC script placed as very first child of `<head>` before icon/font/stylesheet links to guarantee class applied before any resource loads
+- `grey-500` -> `grey-600` throughout: grey-500 not defined in @theme, grey-600 is next defined muted value
+- `grey-200` -> `grey-300` throughout: grey-200 not defined, grey-300 is next defined lighter text value
+- purple-500 `gebieds_aanduidingen` badges retained in ReportDetailPage as documented exception (visually distinct from `functie_aanduidingen` info/blue per SVBP2012 zoning law)
+- ConfidenceBadge MEDIUM uses `warning` token (not `info`): medium confidence is cautionary, not informational
 
 ### Ongoing TODOs
 
@@ -75,11 +83,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-21
-**Stopped At:** Completed 42-01-PLAN.md — on-accent token, FOUC fix, all amber buttons fixed
+**Stopped At:** Completed 42-02-PLAN.md — semantic token sweep, grey-500/200 fixes, phase 42 complete
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 42` for Plan 02 (remaining theme consistency fixes)
+**Next Action:** `/gsd:execute-phase 43` for next phase in v5.1 roadmap
 
 ---
 
-*State updated: 2026-02-21 -- 42-01 complete: on-accent token + FOUC + amber button contrast*
+*State updated: 2026-02-21 -- 42-02 complete: semantic token sweep across 29 components, phase 42 done*
