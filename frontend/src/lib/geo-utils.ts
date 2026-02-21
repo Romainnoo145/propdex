@@ -42,3 +42,98 @@ export function calculateBboxFromGeometry(
 
   return [minLon, minLat, maxLon, maxLat];
 }
+
+/**
+ * Project a GeoJSON Polygon or MultiPolygon geometry into an SVG path string.
+ * Fits the shape within the given viewport with optional padding.
+ * Preserves aspect ratio — does not stretch shapes to fill the viewport.
+ * Y-axis is inverted: SVG Y grows downward, geographic latitude grows upward.
+ *
+ * @param geometry - GeoJSON Polygon or MultiPolygon (WGS84 [lon, lat] coordinates)
+ * @param width - SVG viewport width in pixels (default 200)
+ * @param height - SVG viewport height in pixels (default 120)
+ * @param padding - Inset padding in pixels on all sides (default 4)
+ * @returns { d, viewBox } suitable for <svg viewBox={viewBox}><path d={d} /></svg>
+ */
+export function geoJsonToSvgPath(
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
+  width = 200,
+  height = 120,
+  padding = 4
+): { d: string; viewBox: string } {
+  // 1. Collect all exterior ring coordinates (holes are ignored for silhouette)
+  const rings: GeoJSON.Position[][] =
+    geometry.type === 'Polygon'
+      ? [geometry.coordinates[0]!]
+      : geometry.coordinates.map((poly) => poly[0]!);
+
+  // 2. Compute bounding box across all rings
+  let minLon = Infinity;
+  let maxLon = -Infinity;
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+
+  for (const ring of rings) {
+    for (const coord of ring) {
+      const lon = coord[0];
+      const lat = coord[1];
+      if (lon !== undefined && lat !== undefined) {
+        if (lon < minLon) minLon = lon;
+        if (lon > maxLon) maxLon = lon;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+      }
+    }
+  }
+
+  // Guard against degenerate geometries (single point)
+  const lonRange = maxLon - minLon || 1;
+  const latRange = maxLat - minLat || 1;
+
+  const drawW = width - padding * 2;
+  const drawH = height - padding * 2;
+
+  // Uniform scale that preserves aspect ratio
+  const scale = Math.min(drawW / lonRange, drawH / latRange);
+  const projW = lonRange * scale;
+  const projH = latRange * scale;
+
+  // Center the projected shape within the padded area
+  const offsetX = padding + (drawW - projW) / 2;
+  const offsetY = padding + (drawH - projH) / 2;
+
+  // Project a [lon, lat] pair to SVG [x, y]
+  // maxLat - lat inverts the Y axis (SVG origin is top-left)
+  const project = (lon: number, lat: number): [number, number] => [
+    offsetX + (lon - minLon) * scale,
+    offsetY + (maxLat - lat) * scale,
+  ];
+
+  // 3. Build SVG path string — each ring becomes a separate sub-path
+  const parts: string[] = [];
+  for (const ring of rings) {
+    const points = ring
+      .map((coord) => {
+        const lon = coord[0];
+        const lat = coord[1];
+        if (lon === undefined || lat === undefined) return null;
+        return project(lon, lat);
+      })
+      .filter((pt): pt is [number, number] => pt !== null);
+
+    const first = points[0];
+    if (!first) continue;
+
+    const rest = points.slice(1);
+    parts.push(
+      `M ${first[0].toFixed(2)} ${first[1].toFixed(2)} ` +
+        rest.map(([x, y]) => `L ${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') +
+        ' Z'
+    );
+  }
+
+  return {
+    d: parts.join(' '),
+    viewBox: `0 0 ${width} ${height}`,
+  };
+}
