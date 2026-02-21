@@ -12,17 +12,20 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 43 of 45 (Gemeente Card Navigation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-21 -- Phase 42 Theme Consistency complete (2/2 plans, 6 commits, verified 8/8 must-haves)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-22 -- Phase 43 Plan 01 complete (geoJsonToSvgPath + GemeenteCard + GemeenteCardGrid, 2 tasks, 3 files)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███░░░░░░░] 30%
 
 ---
 
 ## Performance Metrics
 
-**v5.1 Theme Consistency (In Progress)**
+**v5.1 Gemeente Card Navigation (In Progress)**
+- Phase 43 Plan 01: 2 min, 2 tasks, 3 files changed
+
+**v5.1 Theme Consistency (Shipped: 2026-02-21)**
 - Phase 42 Plan 01: 2 min, 2 tasks, 12 files changed
 - Phase 42 Plan 02: 9 min, 2 tasks, 29 files changed
 
@@ -64,6 +67,8 @@ Progress: [██░░░░░░░░] 25%
 - `grey-200` -> `grey-300` throughout: grey-200 not defined, grey-300 is next defined lighter text value
 - purple-500 `gebieds_aanduidingen` badges retained in ReportDetailPage as documented exception (visually distinct from `functie_aanduidingen` info/blue per SVBP2012 zoning law)
 - ConfidenceBadge MEDIUM uses `warning` token (not `info`): medium confidence is cautionary, not informational
+- GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props — parent fetches GeoJSON once, avoids redundant WFS requests per card
+- geoJsonToSvgPath uses Math.min(drawW/lonRange, drawH/latRange) uniform scale — preserves aspect ratio for irregular gemeente shapes
 
 ### Ongoing TODOs
 
@@ -82,12 +87,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-21
-**Stopped At:** Phase 42 complete, verified 8/8 must-haves
+**Last Session:** 2026-02-22
+**Stopped At:** Completed 43-01-PLAN.md (geoJsonToSvgPath + GemeenteCard + GemeenteCardGrid)
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 43`
+**Next Action:** Execute plan 43-02 (integrate GemeenteCard grid into ProjectList.tsx)
 
 ---
 
-*State updated: 2026-02-21 -- Phase 42 complete, advancing to Phase 43*
+*State updated: 2026-02-22 -- Phase 43 Plan 01 complete, ready for 43-02*
