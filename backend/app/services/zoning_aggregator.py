@@ -134,24 +134,35 @@ def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
     Returns:
         list[dict]: Filtered and sorted plans
     """
+    def _get_status(plan: dict) -> str:
+        """Extract plan status from either v4 nested or legacy flat format."""
+        # v4 format: planstatusInfo.planstatus
+        info = plan.get("planstatusInfo", {})
+        if isinstance(info, dict) and info.get("planstatus"):
+            return info["planstatus"].lower()
+        # Legacy flat format
+        return (plan.get("planStatus") or "").lower()
+
+    def _get_datum(plan: dict) -> str:
+        """Extract plan datum from either v4 nested or legacy flat format."""
+        info = plan.get("planstatusInfo", {})
+        if isinstance(info, dict) and info.get("datum"):
+            return info["datum"]
+        return plan.get("datum") or ""
+
     # Filter to vastgesteld (finalized) plans
-    vastgesteld = [
-        p for p in plans
-        if p.get("planStatus", "").lower() == "vastgesteld"
-    ]
+    vastgesteld = [p for p in plans if _get_status(p) == "vastgesteld"]
 
     # Fallback to ontwerp (draft) if no vastgesteld found
     if not vastgesteld:
-        vastgesteld = [
-            p for p in plans
-            if p.get("planStatus", "").lower() == "ontwerp"
-        ]
+        vastgesteld = [p for p in plans if _get_status(p) == "ontwerp"]
+
+    # If still nothing, take all plans
+    if not vastgesteld:
+        vastgesteld = list(plans)
 
     # Sort by datum descending (newest first)
-    def get_date(plan: dict) -> str:
-        return plan.get("datum", "") or ""
-
-    sorted_plans = sorted(vastgesteld, key=get_date, reverse=True)
+    sorted_plans = sorted(vastgesteld, key=_get_datum, reverse=True)
 
     return sorted_plans
 
@@ -207,9 +218,23 @@ async def fetch_zoning_data(
         all_data_gaps = []
 
         for plan in filtered_plans[:3]:
-            plan_id = plan.get("identificatie")
+            plan_id = plan.get("id") or plan.get("identificatie")
             if not plan_id:
                 continue
+
+            # Extract status/datum from nested planstatusInfo or flat fields
+            plan_status_info = plan.get("planstatusInfo", {})
+            plan_status = (
+                plan_status_info.get("planstatus")
+                if isinstance(plan_status_info, dict)
+                else plan.get("planStatus")
+            )
+            plan_datum = (
+                plan_status_info.get("datum")
+                if isinstance(plan_status_info, dict)
+                else plan.get("datum")
+            )
+            plan_type = plan.get("type") or plan.get("planType")
 
             logger.info(f"Processing plan {plan_id}: {plan.get('naam')}")
 
@@ -310,9 +335,9 @@ async def fetch_zoning_data(
                 zoning_plan = ZoningPlan(
                     plan_id=plan_id,
                     plan_naam=plan.get("naam", ""),
-                    plan_type=plan.get("planType"),
-                    plan_status=plan.get("planStatus"),
-                    plan_datum=plan.get("datum"),
+                    plan_type=plan_type,
+                    plan_status=plan_status,
+                    plan_datum=plan_datum,
                     rules=rules,
                     functie_aanduidingen=functie_aanduidingen,
                     gebieds_aanduidingen=gebieds_aanduidingen,

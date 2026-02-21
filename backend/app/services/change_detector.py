@@ -279,13 +279,15 @@ async def detect_zoning_changes(
     # Build current plan state: {plan_id: {status, datum, naam}}
     current_plans: dict[str, dict] = {}
     for plan in plans:
-        plan_id = plan.get("identificatie")
+        plan_id = plan.get("id") or plan.get("identificatie")
         if plan_id:
+            # v4 nests status/datum under planstatusInfo
+            status_info = plan.get("planstatusInfo", {})
             current_plans[plan_id] = {
-                "status": plan.get("planStatus", ""),
-                "datum": plan.get("datum", ""),
+                "status": (status_info.get("planstatus") if isinstance(status_info, dict) else plan.get("planStatus")) or "",
+                "datum": (status_info.get("datum") if isinstance(status_info, dict) else plan.get("datum")) or "",
                 "naam": plan.get("naam", ""),
-                "type": plan.get("planType", ""),
+                "type": plan.get("type") or plan.get("planType", ""),
             }
 
     logger.info(f"Found {len(current_plans)} plans at centroid for {gemeente_code}")

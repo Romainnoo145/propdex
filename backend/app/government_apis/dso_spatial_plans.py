@@ -47,8 +47,8 @@ class DSOSpatialPlansClient:
         """
         headers = {
             "Content-Type": "application/json",
-            "Content-Crs": "EPSG:28992",  # Input coordinate system (RD New)
-            "Accept-Crs": "EPSG:28992",  # Output coordinate system (RD New)
+            "Content-Crs": "epsg:28992",  # Input coordinate system (RD New)
+            "Accept-Crs": "epsg:28992",  # Output coordinate system (RD New)
         }
         if self.api_key:
             headers["X-Api-Key"] = self.api_key
@@ -77,8 +77,12 @@ class DSOSpatialPlansClient:
         """
         url = f"{self.BASE_URL}/plannen/_zoek"
         body = {
-            "type": "Point",
-            "coordinates": [x, y],
+            "_geo": {
+                "intersectAndNotTouches": {
+                    "type": "Point",
+                    "coordinates": [x, y],
+                },
+            },
         }
 
         logger.info(f"DSO find_plans_at_location: ({x}, {y})")
@@ -89,6 +93,7 @@ class DSOSpatialPlansClient:
                 url,
                 headers=self._headers,
                 json=body,
+                params={"pageSize": 100},
                 timeout=30.0,
             )
             data = handle_api_response(response, source="dso-spatial-plans")
@@ -96,22 +101,27 @@ class DSOSpatialPlansClient:
             # Extract plans from HAL+JSON response
             plans = data.get("_embedded", {}).get("plannen", [])
 
-            # Handle pagination (up to 5 pages)
-            page_count = 1
-            while page_count < 5:
+            # Handle pagination via POST with page param (not GET on next_link)
+            page = 2
+            while page <= 5:
                 next_link = data.get("_links", {}).get("next", {}).get("href")
                 if not next_link:
                     break
 
-                logger.info(f"DSO fetching page {page_count + 1}")
-                response = await client.get(
-                    next_link,
+                logger.info(f"DSO fetching plans page {page}")
+                response = await client.post(
+                    url,
                     headers=self._headers,
+                    json=body,
+                    params={"pageSize": 100, "page": page},
                     timeout=30.0,
                 )
                 data = handle_api_response(response, source="dso-spatial-plans")
-                plans.extend(data.get("_embedded", {}).get("plannen", []))
-                page_count += 1
+                new_plans = data.get("_embedded", {}).get("plannen", [])
+                if not new_plans:
+                    break
+                plans.extend(new_plans)
+                page += 1
 
             logger.info(f"Found {len(plans)} spatial plans")
             return plans
