@@ -902,7 +902,7 @@ function MapPage() {
                 <button
                   onClick={handleScanViewport}
                   disabled={!!activeScanId || triggerScan.isPending}
-                  className="px-3 py-1 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  className="px-3 py-1 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
                 >
                   {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
                 </button>
@@ -996,7 +996,7 @@ function MapPage() {
               <button
                 onClick={handleScanZone}
                 disabled={triggerScan.isPending || !!activeScanId}
-                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
               >
                 {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
               </button>
@@ -1079,7 +1079,7 @@ function MapPage() {
             Wijk scannen?
           </h3>
           <p className="text-sm text-grey-400 mb-6">
-            Wil je <span className="font-medium text-grey-200">{pendingScan?.wijkNaam}</span> scannen op bouwmogelijkheden?
+            Wil je <span className="font-medium text-grey-300">{pendingScan?.wijkNaam}</span> scannen op bouwmogelijkheden?
           </p>
           <div className="flex gap-3 justify-center">
             <Button variant="ghost" size="lg" onClick={handleCancelScan}>

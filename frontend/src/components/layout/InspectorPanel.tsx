@@ -164,7 +164,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
               onClick={handleGenerateReport}
               disabled={generateReport.isPending}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4
-                         bg-amber-accent text-grey-900 font-medium rounded text-sm
+                         bg-amber-accent text-on-accent font-medium rounded text-sm
                          hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
                          transition-colors motion-reduce:transition-none min-h-[44px]"
             >

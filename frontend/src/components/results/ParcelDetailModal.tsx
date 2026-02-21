@@ -5,8 +5,26 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { useParcelChanges } from '@/hooks/useNotifications'
 import { toast } from 'sonner'
-import { FileText, MapPin } from 'lucide-react'
+import { FileText, Info, MapPin } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
+
+/** Dutch labels for score factors */
+const FACTOR_LABELS: Record<string, string> = {
+  pand_status_signal: 'Pandstatus',
+  building_age: 'Bouwjaar',
+  zoning_value: 'Bestemming',
+  footprint_size: 'Oppervlakte',
+  underutilization: 'Onderbenutting',
+}
+
+/** Max points per factor (for progress bar scaling) */
+const FACTOR_MAX: Record<string, number> = {
+  pand_status_signal: 30,
+  building_age: 20,
+  zoning_value: 25,
+  footprint_size: 15,
+  underutilization: 10,
+}
 
 interface ParcelDetailModalProps {
   parcel: ScanResultItem | null
@@ -103,29 +121,38 @@ export function ParcelDetailModal({
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-grey-100 mb-2">
-                  Score breakdown
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-sm font-medium text-grey-100">
+                    Score opbouw
+                  </p>
+                  <div className="group relative">
+                    <Info size={13} className="text-grey-600 cursor-help" />
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-3 py-2 text-xs text-grey-300 opacity-0 transition-opacity group-hover:opacity-100">
+                      Score 0-100 op basis van pandstatus,<br />bouwjaar, bestemming, oppervlakte<br />en onderbenutting
+                    </div>
+                  </div>
+                </div>
                 {parcel.score_breakdown && (
                   <div className="space-y-1">
-                    {Object.entries(parcel.score_breakdown).map(([key, value]) => (
+                    {Object.entries(
+                      (parcel.score_breakdown as { factors?: Record<string, number> }).factors ?? parcel.score_breakdown
+                    )
+                      .filter(([, v]) => typeof v === 'number')
+                      .map(([key, value]) => (
                       <div key={key} className="flex items-center gap-2">
                         <span className="text-xs text-grey-400 w-24 truncate">
-                          {key}
+                          {FACTOR_LABELS[key] ?? key}
                         </span>
                         <div className="flex-1 h-1.5 bg-grey-800 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-green-400/60"
                             style={{
-                              width: `${Math.min(
-                                100,
-                                ((value as number) / 100) * 100
-                              )}%`,
+                              width: `${Math.min(100, ((value as number) / (FACTOR_MAX[key] ?? 100)) * 100)}%`,
                             }}
                           />
                         </div>
-                        <span className="text-xs text-grey-400 w-8 text-right">
-                          {typeof value === 'number' ? value.toFixed(0) : String(value)}
+                        <span className="text-xs tabular-nums text-grey-400 w-8 text-right">
+                          {(value as number).toFixed(0)}
                         </span>
                       </div>
                     ))}
@@ -274,7 +301,7 @@ export function ParcelDetailModal({
             onClick={handleGenerateReport}
             disabled={generateReport.isPending}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4
-                       bg-amber-accent text-grey-900 font-medium rounded text-sm
+                       bg-amber-accent text-on-accent font-medium rounded text-sm
                        hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
                        transition-colors motion-reduce:transition-none min-h-[44px]"
           >

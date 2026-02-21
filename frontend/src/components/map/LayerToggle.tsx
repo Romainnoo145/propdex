@@ -133,7 +133,7 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     prevShowScoreToggleRef.current = showScoreToggle;
   }, [showScoreToggle]);
 
-  const active = 'bg-amber-accent text-grey-950 shadow-sm';
+  const active = 'bg-amber-accent text-on-accent shadow-sm';
   const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
   const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm';
   const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';

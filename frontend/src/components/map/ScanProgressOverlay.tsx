@@ -30,9 +30,9 @@ function getStepState(stepId: string, currentPhase: string | null, isCompleted: 
 function StepCircle({ number, state }: { number: number; state: StepState }) {
   const base = 'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0'
   if (state === 'completed')
-    return <div className={`${base} bg-success text-grey-950`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></div>
+    return <div className={`${base} bg-success text-on-accent`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></div>
   if (state === 'active')
-    return <div className={`${base} bg-amber-accent text-grey-950`}>{number}</div>
+    return <div className={`${base} bg-amber-accent text-on-accent`}>{number}</div>
   return <div className={`${base} bg-grey-800 text-grey-400`}>{number}</div>
 }
 
@@ -77,7 +77,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
         {isCompleted && onViewResults && (
           <button
             onClick={onViewResults}
-            className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
+            className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
           >
             Bekijk resultaten
           </button>

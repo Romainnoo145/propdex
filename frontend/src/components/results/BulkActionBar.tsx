@@ -30,7 +30,7 @@ export function BulkActionBar({
       <div className="flex items-center gap-2">
         <button
           onClick={onExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-950 bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
         >
           <Download size={14} />
           Exporteer selectie

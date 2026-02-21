@@ -81,8 +81,8 @@ export function PDFExportModal({
         {/* Content */}
         {!reportId ? (
           // Not saved yet - prompt to save first
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-3">
-            <p className="text-amber-100 text-sm">
+          <div className="bg-amber-accent/10 border border-amber-accent/30 rounded-lg p-4 space-y-3">
+            <p className="text-amber-accent text-sm">
               Dit rapport moet eerst worden opgeslagen voordat het geëxporteerd kan worden.
             </p>
             <button
@@ -90,7 +90,7 @@ export function PDFExportModal({
                 onClose()
                 onSaveFirst()
               }}
-              className="w-full py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-amber-accent hover:bg-amber-accent-hover text-on-accent rounded-lg transition-colors font-medium"
             >
               Eerst opslaan
             </button>
