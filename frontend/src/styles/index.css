@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors — oklch for P3 gamut vibrancy on dark surfaces */
+  /* Colors — oklch for P3 gamut vibrancy
+   * Grey scale values are dark-mode defaults.
+   * Light mode overrides are below via html.light selector. */
 
   /* Accent colors */
   --color-amber-accent: oklch(0.78 0.15 85.87);
@@ -9,7 +11,12 @@
   --color-teal-accent: oklch(0.59 0.12 192.47);
   --color-teal-accent-hover: oklch(0.54 0.11 192.47);
 
-  /* Grey scale — cool greys with subtle blue undertone (hue 270) */
+  /* Fixed dark color for text on accent backgrounds — same in both modes */
+  --color-on-accent: oklch(0.12 0.005 270);
+
+  /* Grey scale — cool greys with subtle blue undertone (hue 270)
+   * Numbers represent semantic depth, NOT literal lightness.
+   * grey-950 = deepest background, grey-100 = primary text. */
   --color-grey-950: oklch(0.13 0.005 270);
   --color-grey-900: oklch(0.18 0.005 270);
   --color-grey-850: oklch(0.23 0.005 270);
@@ -25,6 +32,10 @@
   --color-error: oklch(0.60 0.22 25);
   --color-warning: oklch(0.75 0.15 85);
   --color-info: oklch(0.62 0.18 250);
+
+  /* Overlay color — white in dark mode, black in light mode
+   * Used for subtle card/border overlays instead of hardcoded white/ or black/ */
+  --color-overlay: oklch(1 0 0);
 
   /* Typography */
   --font-sans: "Inter", system-ui, sans-serif;
@@ -61,6 +72,43 @@
   --z-dropdown: 400;
   --z-modal: 1000;
   --z-toast: 2000;
+}
+
+/* ─── Light mode ─────────────────────────────────────────────
+ * Inverts the grey scale so grey-950 = white and grey-100 = near-black.
+ * Accent colors are darkened slightly for contrast on white. */
+
+html.light {
+  /* Grey scale — inverted for light backgrounds */
+  --color-grey-950: oklch(0.99 0.002 270);
+  --color-grey-900: oklch(0.96 0.003 270);
+  --color-grey-850: oklch(0.93 0.004 270);
+  --color-grey-800: oklch(0.88 0.005 270);
+  --color-grey-700: oklch(0.78 0.005 270);
+  --color-grey-600: oklch(0.58 0.005 270);
+  --color-grey-400: oklch(0.42 0.008 270);
+  --color-grey-300: oklch(0.32 0.008 270);
+  --color-grey-100: oklch(0.18 0.008 270);
+
+  /* Accent colors — same golden hue as dark mode, slightly deeper for white surfaces */
+  --color-amber-accent: oklch(0.76 0.16 86);
+  --color-amber-accent-hover: oklch(0.71 0.15 86);
+  --color-teal-accent: oklch(0.48 0.12 192.47);
+  --color-teal-accent-hover: oklch(0.43 0.11 192.47);
+
+  /* Semantic colors — deeper for white backgrounds */
+  --color-success: oklch(0.50 0.18 145);
+  --color-error: oklch(0.52 0.22 25);
+  --color-warning: oklch(0.60 0.15 85);
+  --color-info: oklch(0.52 0.18 250);
+
+  /* Overlay — black for light surfaces */
+  --color-overlay: oklch(0 0 0);
+
+  /* Shadows — lighter for white surfaces */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
 }
 
 body {
@@ -109,6 +157,19 @@ body {
 
 .propdex-property-popup .maplibregl-popup-tip {
   border-top-color: rgba(0, 0, 0, 0.55);
+}
+
+/* Light mode popup overrides */
+html.light .propdex-property-popup .maplibregl-popup-content {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+html.light .propdex-property-popup .maplibregl-popup-tip {
+  border-top-color: rgba(255, 255, 255, 0.85);
 }
 
 /* Bottom sheet slide-up animation */
