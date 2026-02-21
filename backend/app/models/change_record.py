@@ -97,6 +97,7 @@ class ChangeRecord(Base, TenantMixin, TimestampMixin):
             "change_type",
             "external_id",
             "gemeente_naam",
-            name="uq_change_records_type_external_gemeente",
+            "project_id",
+            name="uq_change_records_type_external_gemeente_project",
         ),
     )

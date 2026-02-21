@@ -102,20 +102,23 @@ async def detect_permit_changes(
     max_records = 100
     start_record = 1
 
-    # Fetch first page to get total count
+    # Use server-side date filter to avoid fetching thousands of old records
+    modified_since = last_checked.strftime("%Y-%m-%d")
+
     records, total_count = await sru_client.query_by_municipality(
         gemeente=gemeente_naam,
         record_type="Omgevingsvergunning",
         client=client,
         max_records=max_records,
         start_record=start_record,
+        modified_since=modified_since,
     )
 
     logger.info(
-        f"SRU returned {len(records)} records (total: {total_count}) for {gemeente_naam}"
+        f"SRU returned {len(records)} records (total: {total_count}) for {gemeente_naam} since {modified_since}"
     )
 
-    # Handle pagination if needed
+    # Handle pagination if needed (only for date-filtered results)
     all_records = records[:]
     while len(all_records) < total_count and len(records) == max_records:
         start_record += max_records
@@ -125,13 +128,14 @@ async def detect_permit_changes(
             client=client,
             max_records=max_records,
             start_record=start_record,
+            modified_since=modified_since,
         )
         all_records.extend(records)
         logger.info(
             f"Fetched page starting at {start_record}, total now: {len(all_records)}"
         )
 
-    # Filter records by date (only keep records after last_checked)
+    # Secondary client-side date filter (in case server-side filter is date-only, not datetime)
     filtered_records = []
     for record in all_records:
         try:
@@ -211,6 +215,7 @@ async def detect_zoning_changes(
     last_checked: datetime,
     client: httpx.AsyncClient,
     session: AsyncSession,
+    organization_id: str | None = None,
 ) -> list[ChangeRecord]:
     """Detect zoning plan changes via DSO Ruimtelijke Plannen API v4.
 
@@ -309,6 +314,7 @@ async def detect_zoning_changes(
             response_data={"plans": current_plans},
             fetched_at=datetime.utcnow(),
             ttl_seconds=86400 * 7,  # 7 days
+            organization_id=organization_id,
         )
         session.add(new_cache)
         await session.flush()

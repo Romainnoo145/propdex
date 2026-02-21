@@ -60,7 +60,7 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
     total_changes = 0
 
     try:
-        http_client = httpx.AsyncClient(timeout=30.0)
+        http_client = httpx.AsyncClient(timeout=60.0)
 
         async with session_factory() as session:
             logger.info("Starting daily change monitor job")
@@ -152,12 +152,15 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                         f"  Found {len(permit_changes)} permit changes"
                     )
 
-                    # Detect zoning changes via PLU WMS metadata hash
+                    # Detect zoning changes via DSO plan state comparison
+                    # Use first project's organization_id for cache storage
+                    org_id = projects[0].organization_id
                     zoning_changes = await detect_zoning_changes(
                         gemeente_code=gemeente_code,
                         last_checked=last_checked,
                         client=http_client,
                         session=session,
+                        organization_id=str(org_id) if org_id else None,
                     )
 
                     logger.info(
@@ -169,10 +172,13 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
 
                     for change in all_changes:
                         for project in projects:
-                            # Set project_id and organization_id
+                            # Capture values before DB operations
+                            proj_id = project.id
+                            proj_org_id = project.organization_id
+
                             change_copy = ChangeRecord(
-                                organization_id=project.organization_id,
-                                project_id=project.id,
+                                organization_id=proj_org_id,
+                                project_id=proj_id,
                                 change_type=change.change_type,
                                 external_id=change.external_id,
                                 gemeente_naam=change.gemeente_naam,
@@ -183,19 +189,18 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                                 source_url=change.source_url,
                                 postcode=change.postcode,
                             )
-                            session.add(change_copy)
 
                             try:
-                                await session.flush()
+                                async with session.begin_nested():
+                                    session.add(change_copy)
+                                    await session.flush()
                                 total_changes += 1
                             except IntegrityError:
-                                # Duplicate — unique constraint on (change_type, external_id, gemeente_naam)
-                                await session.rollback()
+                                # Duplicate — savepoint rolled back, session still usable
                                 logger.debug(
                                     f"  Skipped duplicate: {change.change_type} "
-                                    f"{change.external_id} for project {project.id}"
+                                    f"{change.external_id} for project {proj_id}"
                                 )
-                                # Continue with same session
                                 continue
 
                     # Commit after processing this gemeente

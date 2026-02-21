@@ -31,7 +31,8 @@ _sru_parser = etree.XMLParser(
 SRU_NAMESPACES = {
     "srw": "http://www.loc.gov/zing/srw/",
     "gzd": "http://standaarden.overheid.nl/sru",
-    "overheidop": "http://standaarden.overheid.nl/product/metadata/",
+    "overheidop": "http://standaarden.overheid.nl/product/terms/",
+    "dcterms": "http://purl.org/dc/terms/",
 }
 
 
@@ -65,7 +66,7 @@ class SRUBekendmakingenClient:
     All XML parsing is done with XXE protection enabled.
     """
 
-    BASE_URL = "https://repository.overheid.nl/sru"
+    BASE_URL = "https://zoek.officielebekendmakingen.nl/sru/Search"
 
     async def query_by_postcode(
         self,
@@ -89,7 +90,7 @@ class SRUBekendmakingenClient:
         params = {
             "operation": "searchRetrieve",
             "version": "1.2",
-            "query": f"postcode={postcode}",
+            "query": f"keyword={postcode}",
             "maximumRecords": str(max_records),
         }
 
@@ -97,7 +98,7 @@ class SRUBekendmakingenClient:
 
         async with sru_limiter:
             response = await client.get(
-                self.BASE_URL, params=params, timeout=30.0
+                self.BASE_URL, params=params, timeout=60.0
             )
 
         if response.status_code != 200:
@@ -118,6 +119,7 @@ class SRUBekendmakingenClient:
         record_type: str | None = None,
         max_records: int = 100,
         start_record: int = 1,
+        modified_since: str | None = None,
     ) -> tuple[list[BekendmakingRecord], int]:
         """Query bekendmakingen for a specific municipality.
 
@@ -127,6 +129,7 @@ class SRUBekendmakingenClient:
             record_type: Optional filter by type (e.g., "Omgevingsvergunning")
             max_records: Maximum number of records to retrieve (default: 100)
             start_record: Starting record number for pagination (default: 1)
+            modified_since: ISO date string (YYYY-MM-DD) to filter records modified on or after
 
         Returns:
             tuple[list[BekendmakingRecord], int]: (records, total_count)
@@ -136,10 +139,12 @@ class SRUBekendmakingenClient:
         Raises:
             GovernmentAPIError: If the SRU request fails
         """
-        # Build SRU query with gemeente filter
-        query_parts = [f"gemeente={gemeente}"]
+        # Build SRU CQL query — 'creator' is the gemeente index
+        query_parts = [f"creator={gemeente}"]
         if record_type:
             query_parts.append(f"type={record_type}")
+        if modified_since:
+            query_parts.append(f"dcterms.modified>={modified_since}")
         query = " AND ".join(query_parts)
 
         params = {
@@ -156,7 +161,7 @@ class SRUBekendmakingenClient:
 
         async with sru_limiter:
             response = await client.get(
-                self.BASE_URL, params=params, timeout=30.0
+                self.BASE_URL, params=params, timeout=60.0
             )
 
         if response.status_code != 200:
@@ -200,41 +205,46 @@ class SRUBekendmakingenClient:
         record_elements = root.findall(".//srw:record", namespaces=SRU_NAMESPACES)
 
         for record_elem in record_elements:
-            # Extract fields with defensive fallback to empty string
-            # Use .findtext() with explicit namespace and default value
+            # Extract fields from gzd/originalData/overheidop:meta/owmskern
+            # and gzd/enrichedData — using dcterms: namespace for Dublin Core fields
             title = (
                 record_elem.findtext(
-                    ".//overheidop:title", default="", namespaces=SRU_NAMESPACES
+                    ".//dcterms:title", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
             identifier = (
                 record_elem.findtext(
-                    ".//overheidop:identifier", default="", namespaces=SRU_NAMESPACES
+                    ".//dcterms:identifier", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
             record_type = (
                 record_elem.findtext(
-                    ".//overheidop:type", default="", namespaces=SRU_NAMESPACES
+                    ".//dcterms:type", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
+            # Use dcterms:modified (most reliable date) with dcterms:date as fallback
             date = (
                 record_elem.findtext(
-                    ".//overheidop:date", default="", namespaces=SRU_NAMESPACES
+                    ".//dcterms:modified", default="", namespaces=SRU_NAMESPACES
+                )
+                or record_elem.findtext(
+                    ".//dcterms:date", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
             municipality = (
                 record_elem.findtext(
-                    ".//overheidop:spatial", default="", namespaces=SRU_NAMESPACES
+                    ".//dcterms:creator", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
+            # URL is in enrichedData (no namespace prefix)
             url = (
                 record_elem.findtext(
-                    ".//overheidop:source", default="", namespaces=SRU_NAMESPACES
+                    ".//gzd:enrichedData/gzd:url", default="", namespaces=SRU_NAMESPACES
                 )
                 or ""
             )
