@@ -23,7 +23,7 @@ This is the ONE thing that must work. Everything else is secondary.
 ## Current State
 
 **Shipped:** v5.0 Scan Intelligence (2026-02-20)
-**Current milestone:** v6.0 Deep Property Data
+**Current milestone:** v5.1 Data Presentation Overhaul
 **Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
@@ -136,21 +136,26 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-**v6.0 Deep Property Data:**
+**v5.1 Data Presentation Overhaul:**
+- [ ] Resultaten tabel: visuele preview per perceel (thumbnail/luchtfoto)
+- [ ] Resultaten tabel: scoring UX overhaul (visuele bars, kleurgradienten, score breakdown)
+- [ ] Resultaten tabel: perceel vergelijking (side-by-side comparison view)
+- [ ] Property rapport: visuele hierarchie — key metrics prominent, rest secundair
+- [ ] Property rapport: kaart integratie — mini-map met perceelgrens + buurt context
+- [ ] Property rapport: sectie-indeling — tabs of cards i.p.v. lange scroll
+- [ ] Property rapport: actionable insights — wat data betekent voor een ontwikkelaar
+- [ ] Kaart: directe filtercontrols op de kaart (bestemming type, score range)
+- [ ] Dark/light mode: thema systeem consistent, geen hardcoded kleuren
+
+### Future
+
 - [ ] WOZ-waarde integration — government-assessed property valuation per parcel
 - [ ] Energielabel integration — energy performance ratings from EP-Online/RVO
 - [ ] Kadaster BRK eigendomsdata — ownership, purchase history, mortgage status
 - [ ] RCE monument improvements — property-specific heritage data instead of generic boilerplate
-- [ ] Dark mode theme — full dark theme with light/dark toggle
-
-### Future
-
 - [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
 - [ ] Lead status visualization on map (color-coded by pipeline stage)
 - [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
-- [ ] WOZ waarde integration (free government data)
-- [ ] Energielabel integration (free via RVO/Kadaster)
-- [ ] Comparison view — side-by-side 2-3 properties
 - [ ] Role-based access (admin, analyst, viewer)
 
 ### Out of Scope
@@ -222,4 +227,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-21 after v6.0 Deep Property Data milestone started*
+*Last updated: 2026-02-21 after v5.1 Data Presentation Overhaul milestone started*

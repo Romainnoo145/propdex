@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Deep Property Data
+**Current focus:** v5.1 Data Presentation Overhaul
 
 ---
 
@@ -13,8 +13,8 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 Phase: Not started (defining requirements)
 Plan: —
-Status: Defining requirements for v6.0
-Last activity: 2026-02-21 — Milestone v6.0 started
+Status: Defining requirements for v5.1
+Last activity: 2026-02-21 — Milestone v5.1 started
 
 ---
 
@@ -75,11 +75,11 @@ Last activity: 2026-02-21 — Milestone v6.0 started
 ## Session Continuity
 
 **Last Session:** 2026-02-21
-**Stopped At:** Milestone v6.0 initialized, defining requirements
+**Stopped At:** Milestone v5.1 initialized, defining requirements
 **Resume File:** None
 
 **Next Action:** Define requirements and create roadmap
 
 ---
 
-*State updated: 2026-02-21 — Milestone v6.0 Deep Property Data started*
+*State updated: 2026-02-21 — Milestone v5.1 Data Presentation Overhaul started*
