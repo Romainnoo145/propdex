@@ -34,10 +34,11 @@
   1. User can toggle between dark and light mode and every component renders with correct contrast -- no white-on-white, no invisible text, no broken backgrounds
   2. Searching the frontend source for `amber-` Tailwind classes returns zero results outside of CSS variable definitions -- all accent color usage goes through `--color-amber-accent`
   3. Theme toggle persists across browser sessions -- user closes browser, reopens, and the previously selected theme is active without flash of wrong theme
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 42-01: Audit and replace hardcoded color classes; verify theme toggle persistence
+- [ ] 42-01: Add on-accent CSS token, FOUC prevention script, fix amber button contrast
+- [ ] 42-02: Semantic token sweep -- replace raw Tailwind palette colors and fix undefined grey values
 
 ### Phase 43: Gemeente Card Navigation
 **Goal**: Users see their scanned gemeenten as visual cards on the Projecten page -- each card shows the municipality boundary shape, name, and a badge when there are unread changes
@@ -196,7 +197,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 42. Theme Consistency | v5.1 | 0/1 | Not started | - |
+| 42. Theme Consistency | v5.1 | 0/2 | Not started | - |
 | 43. Gemeente Card Navigation | v5.1 | 0/2 | Not started | - |
 | 44. Wijk Cards and Drill-Down | v5.1 | 0/2 | Not started | - |
 | 45. Breadcrumb and URL State | v5.1 | 0/1 | Not started | - |
