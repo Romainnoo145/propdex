@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Planning next milestone
+**Current focus:** v6.0 Deep Property Data
 
 ---
 
 ## Current Position
 
-Status: v5.0 Scan Intelligence shipped (2026-02-20)
-Last activity: 2026-02-20 - Completed quick task 3: Commit the bekendmaking matching implementation
-
-Progress: All milestones complete (v1.0 → v5.0)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v6.0
+Last activity: 2026-02-21 — Milestone v6.0 started
 
 ---
 
@@ -74,12 +74,12 @@ Progress: All milestones complete (v1.0 → v5.0)
 
 ## Session Continuity
 
-**Last Session:** 2026-02-20
-**Stopped At:** v5.0 milestone archived and tagged
+**Last Session:** 2026-02-21
+**Stopped At:** Milestone v6.0 initialized, defining requirements
 **Resume File:** None
 
-**Next Action:** `/gsd:new-milestone` -- start next milestone
+**Next Action:** Define requirements and create roadmap
 
 ---
 
-*State updated: 2026-02-20 -- Quick task 3: bekendmaking matching committed*
+*State updated: 2026-02-21 — Milestone v6.0 Deep Property Data started*

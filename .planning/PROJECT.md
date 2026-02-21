@@ -23,6 +23,7 @@ This is the ONE thing that must work. Everything else is secondary.
 ## Current State
 
 **Shipped:** v5.0 Scan Intelligence (2026-02-20)
+**Current milestone:** v6.0 Deep Property Data
 **Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
@@ -135,7 +136,12 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-(No active milestone — planning next version)
+**v6.0 Deep Property Data:**
+- [ ] WOZ-waarde integration — government-assessed property valuation per parcel
+- [ ] Energielabel integration — energy performance ratings from EP-Online/RVO
+- [ ] Kadaster BRK eigendomsdata — ownership, purchase history, mortgage status
+- [ ] RCE monument improvements — property-specific heritage data instead of generic boilerplate
+- [ ] Dark mode theme — full dark theme with light/dark toggle
 
 ### Future
 
@@ -216,4 +222,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-20 after v5.0 Scan Intelligence milestone shipped*
+*Last updated: 2026-02-21 after v6.0 Deep Property Data milestone started*
