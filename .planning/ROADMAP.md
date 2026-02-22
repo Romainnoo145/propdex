@@ -64,11 +64,11 @@ Plans:
   2. Each wijk card shows the wijk boundary SVG silhouette, the wijk name, and a notification badge for unread changes in that specific wijk
   3. Clicking a wijk card navigates to the /resultaten route with filters pre-set to show only that wijk's scan results
   4. User can navigate back from wijk view to gemeente view without losing state
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 44-01: Wijk cards with SVG silhouettes and notification badges
-- [ ] 44-02: Drill-down navigation from gemeente to wijk to results
+- [ ] 44-01-PLAN.md -- WijkCard component, WijkCardGrid container, and useWijkGeoJSON hook
+- [ ] 44-02-PLAN.md -- Drill-down navigation integration into ProjectList (gemeente -> wijk -> resultaten)
 
 ### Phase 45: Breadcrumb and URL State
 **Goal**: Users always know where they are in the drill-down hierarchy and can share or bookmark any navigation level
@@ -204,4 +204,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-22 (Phase 43 Gemeente Card Navigation complete)*
+*Last updated: 2026-02-22 (Phase 44 planned -- 2 plans in 2 waves)*
