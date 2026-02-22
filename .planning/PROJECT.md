@@ -22,8 +22,8 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v5.0 Scan Intelligence (2026-02-20)
-**Current milestone:** v5.1 Data Presentation Overhaul
+**Shipped:** v5.1 Data Presentation Overhaul (2026-02-22)
+**Current milestone:** v6.0 Meldingen Intelligence
 **Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
@@ -136,12 +136,13 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-**v5.1 Data Presentation Overhaul:**
-- [ ] Card-based drill-down navigation: Gemeente cards -> Wijk cards -> Results table
-- [ ] Gemeente/wijk cards with SVG boundary silhouettes, names, notification badges
-- [ ] Responsive card grid (3 col desktop, 2 tablet, 1 mobile) with breadcrumb navigation
-- [ ] URL-synced navigation state (deep-linkable drill-down levels)
-- [ ] Dark/light mode polish: all accent colors via CSS variables, no hardcoded classes
+**v6.0 Meldingen Intelligence:**
+- [ ] Improved bekendmakingen → parcel matching (geocode addresses, spatial postcode lookup)
+- [ ] Melding → map → rapport flow (click parcel → fly to map → generate from verified data)
+- [ ] Report generation safety (only from verified parcel IDs, auto-create wijk projects)
+- [ ] Address intelligence (better SRU title extraction, validation, category classification)
+- [ ] Server-side per-change read/unread tracking (replace localStorage hack)
+- [ ] Meldingen UX (filters, search, actionability — daily go-to tab)
 
 ### Future
 
@@ -223,4 +224,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-21 after v5.1 Data Presentation Overhaul milestone started*
+*Last updated: 2026-02-23 after v6.0 Meldingen Intelligence milestone started*

@@ -5,22 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.1 Data Presentation Overhaul -- Phase 45 Breadcrumb and URL State
+**Current focus:** v6.0 Meldingen Intelligence
 
 ---
 
 ## Current Position
 
-Phase: 45 of 45 (Breadcrumb and URL State)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Phase 44 Wijk Cards and Drill-Down complete (2/2 plans, 6 commits, verified 11/11 must-haves)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-23 — Milestone v6.0 Meldingen Intelligence started
 
-Progress: [████████░░] 75%
+Progress: [          ] 0%
 
 ---
 
 ## Performance Metrics
+
+**v5.1 Wijk Detail View (Complete: 2026-02-22)**
+- Phase 46 Plan 01: WijkDetailView with scan summary, ChangeTimeline, reports
+- Phase 46 Plan 02: Navigation integration -- wijk_id routing, 3-level breadcrumb
+
+**v5.1 URL State + Gemeente Detail View (Complete: 2026-02-22)**
+- Phase 45 Plan 01: URL state migration (validateSearch), DrilldownBreadcrumb, counter fix
+- Phase 45 Plan 02: GemeenteDetailView with stat bar, ChangeTimeline, WijkCardGrid
 
 **v5.1 Wijk Cards and Drill-Down (Complete: 2026-02-22)**
 - Phase 44 Plan 01: 1 min, 2 tasks, 3 files created
@@ -78,8 +86,12 @@ Progress: [████████░░] 75%
 - **WijkCardGrid reuses GemeenteCardGrid/GemeenteCardGridSkeleton wrappers** — no new grid CSS needed for wijk layer
 - **CBS WFS statnaam matching**: use `f.properties.statnaam === wijk.wijk_naam` (not statcode) — statnaam is reliable across CBS WFS years
 - **renderCard render prop in WijkCardGrid**: enables per-card useProjectScans hook calls in WijkCardWithNav sub-component without hooks-in-loop React violation
-- **WijkCardWithNav is a named sub-component**: valid top-level React hook call pattern — navigates to /resultaten with scan_id, Dutch toast fallback when no completed scan
-- **selectedGemeenteId view switching**: single state controls gemeente vs wijk layer — no router navigation, preserves all other page state
+- **URL state via TanStack Router validateSearch**: gemeente_id/wijk_id in URL search params, same proven pattern as resultaten.tsx
+- **DrilldownBreadcrumb reads from useSearch**: returns null at top level, 2-level for gemeente, 3-level for wijk
+- **Project counter shows regularProjects.length**: excludes monitoring gemeente/wijk container projects from the count
+- **GemeenteDetailView stat bar**: derived from props (wijkProjects.length, sum of report_count, sum of unread counts) — zero API calls
+- **Wijk card click targets wijk detail view**: `/projecten?gemeente_id=X&wijk_id=Y` instead of directly to `/resultaten`
+- **WijkDetailView: scan summary, ChangeTimeline, ReportCard grid**: all use existing hooks with project_id filter, zero backend changes
 
 ### Ongoing TODOs
 
@@ -98,12 +110,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-22
-**Stopped At:** Phase 44 complete, verified 11/11 must-haves
+**Last Session:** 2026-02-23
+**Stopped At:** v6.0 milestone initialization — defining requirements
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 45`
+**Next Action:** Define requirements, create roadmap, then `/gsd:plan-phase 47`
 
 ---
 
-*State updated: 2026-02-22 -- Phase 44 complete, advancing to Phase 45*
+*State updated: 2026-02-23 -- v6.0 Meldingen Intelligence milestone started*
