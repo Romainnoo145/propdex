@@ -26,8 +26,8 @@ export function GemeenteCardGridSkeleton({ count = 3 }: { count?: number }) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900">
-          {/* SVG silhouette placeholder — matches aspect-[5/3] of GemeenteCard */}
-          <div className="aspect-[5/3] bg-grey-950/50 animate-pulse" />
+          {/* SVG silhouette placeholder — matches aspect-[4/3] of GemeenteCard */}
+          <div className="aspect-[4/3] bg-grey-950/50 animate-pulse" />
           {/* Text area placeholder */}
           <div className="px-4 py-3 space-y-2">
             <div className="h-5 w-2/3 rounded bg-grey-800 animate-pulse" />

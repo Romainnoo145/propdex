@@ -27,7 +27,7 @@ export function GemeenteCard({ gemeente, svgData, totalUnread, onClick }: Gemeen
       className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900 cursor-pointer transition-colors hover:bg-grey-850"
     >
       {/* SVG silhouette area */}
-      <div className="relative aspect-[5/3] bg-grey-950/50">
+      <div className="relative aspect-[4/3] bg-grey-950/50">
         {svgData ? (
           <svg
             viewBox={svgData.viewBox}

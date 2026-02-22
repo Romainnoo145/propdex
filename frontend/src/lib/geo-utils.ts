@@ -51,15 +51,15 @@ export function calculateBboxFromGeometry(
  *
  * @param geometry - GeoJSON Polygon or MultiPolygon (WGS84 [lon, lat] coordinates)
  * @param width - SVG viewport width in pixels (default 200)
- * @param height - SVG viewport height in pixels (default 120)
- * @param padding - Inset padding in pixels on all sides (default 4)
+ * @param height - SVG viewport height in pixels (default 150)
+ * @param padding - Inset padding in pixels on all sides (default 8)
  * @returns { d, viewBox } suitable for <svg viewBox={viewBox}><path d={d} /></svg>
  */
 export function geoJsonToSvgPath(
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
   width = 200,
-  height = 120,
-  padding = 4
+  height = 150,
+  padding = 8
 ): { d: string; viewBox: string } {
   // 1. Collect all exterior ring coordinates (holes are ignored for silhouette)
   const rings: GeoJSON.Position[][] =
