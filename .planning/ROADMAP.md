@@ -20,7 +20,7 @@
 **Milestone Goal:** Card-based drill-down navigation from gemeente to wijk to results, with theme consistency across light and dark modes.
 
 - [x] **Phase 42: Theme Consistency** - Audit and fix all hardcoded color classes so new components are built on correct patterns
-- [ ] **Phase 43: Gemeente Card Navigation** - Projecten page shows gemeente cards with SVG boundary silhouettes, names, and notification badges
+- [x] **Phase 43: Gemeente Card Navigation** - Projecten page shows gemeente cards with SVG boundary silhouettes, names, and notification badges
 - [ ] **Phase 44: Wijk Cards and Drill-Down** - Click a gemeente card to see its wijk cards, click a wijk card to see filtered results
 - [ ] **Phase 45: Breadcrumb and URL State** - Breadcrumb navigation and deep-linkable URL state reflecting drill-down level
 
@@ -52,8 +52,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 43-01: GeoJSON-to-SVG projection utility, GemeenteCard component, and responsive card grid wrapper
-- [ ] 43-02: Integrate card grid into ProjectList replacing monitoring accordion with visual gemeente cards
+- [x] 43-01: GeoJSON-to-SVG projection utility, GemeenteCard component, and responsive card grid wrapper
+- [x] 43-02: Integrate card grid into ProjectList replacing monitoring accordion with visual gemeente cards
 
 ### Phase 44: Wijk Cards and Drill-Down
 **Goal**: Users can click a gemeente card to see its wijken as visual cards, and click a wijk card to land on the results table filtered to that wijk's scan data
@@ -198,10 +198,10 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 42. Theme Consistency | v5.1 | 2/2 | ✓ Complete | 2026-02-21 |
-| 43. Gemeente Card Navigation | v5.1 | 0/2 | Not started | - |
+| 43. Gemeente Card Navigation | v5.1 | 2/2 | ✓ Complete | 2026-02-22 |
 | 44. Wijk Cards and Drill-Down | v5.1 | 0/2 | Not started | - |
 | 45. Breadcrumb and URL State | v5.1 | 0/1 | Not started | - |
 
 ---
 
-*Last updated: 2026-02-21 (Phase 42 Theme Consistency complete)*
+*Last updated: 2026-02-22 (Phase 43 Gemeente Card Navigation complete)*
