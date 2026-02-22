@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 44 of 45 (Wijk Cards and Drill-Down)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Phase 43 Gemeente Card Navigation complete (2/2 plans, 4 commits, verified 8/8 must-haves)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-22 -- Phase 44 Plan 01 complete (2 tasks, 3 files created, 0 deviations)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ---
 
 ## Performance Metrics
+
+**v5.1 Wijk Cards and Drill-Down (In Progress)**
+- Phase 44 Plan 01: 1 min, 2 tasks, 3 files created
 
 **v5.1 Gemeente Card Navigation (Complete: 2026-02-22)**
 - Phase 43 Plan 01: 2 min, 2 tasks, 3 files created
@@ -70,6 +73,9 @@ Progress: [█████░░░░░] 50%
 - ConfidenceBadge MEDIUM uses `warning` token (not `info`): medium confidence is cautionary, not informational
 - GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props — parent fetches GeoJSON once, avoids redundant WFS requests per card
 - geoJsonToSvgPath uses Math.min(drawW/lonRange, drawH/latRange) uniform scale — preserves aspect ratio for irregular gemeente shapes
+- **WijkCard mirrors GemeenteCard pattern but omits gemeente_code subtitle** — wijk projects have no meaningful code to display
+- **WijkCardGrid reuses GemeenteCardGrid/GemeenteCardGridSkeleton wrappers** — no new grid CSS needed for wijk layer
+- **CBS WFS statnaam matching**: use `f.properties.statnaam === wijk.wijk_naam` (not statcode) — statnaam is reliable across CBS WFS years
 
 ### Ongoing TODOs
 
@@ -89,11 +95,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-22
-**Stopped At:** Phase 43 complete, verified 8/8 must-haves
+**Stopped At:** Phase 44 Plan 01 complete — useWijkGeoJSON, WijkCard, WijkCardGrid created
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 44`
+**Next Action:** `/gsd:execute-phase 44` (Plan 02: integrate WijkCardGrid into ProjectList.tsx)
 
 ---
 
-*State updated: 2026-02-22 -- Phase 43 complete, advancing to Phase 44*
+*State updated: 2026-02-22 -- Phase 44 Plan 01 complete, 1/2 plans done*
