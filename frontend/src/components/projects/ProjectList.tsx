@@ -14,6 +14,8 @@ import { fetchGemeenteGeoJSON } from '@/components/map/GemeenteBoundariesLayer'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { GemeenteCard } from './GemeenteCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
+import { WijkCard } from './WijkCard'
+import { WijkCardGrid } from './WijkCardGrid'
 
 // Demo projects shown when API is unavailable (no auth)
 const DEMO_PROJECTS: ProjectResponse[] = [
@@ -77,7 +79,7 @@ export default function ProjectList() {
   const deleteMutation = useDeleteProject()
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [expandedGemeenteId, setExpandedGemeenteId] = useState<string | null>(null)
+  const [selectedGemeenteId, setSelectedGemeenteId] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null)
@@ -157,117 +159,65 @@ export default function ProjectList() {
 
       {allProjects.length > 0 ? (
         <div className="space-y-2">
-          {/* Monitoring projects — gemeente card grid */}
+          {/* Monitoring projects — drill-down: gemeente cards -> wijk cards -> resultaten */}
           {monitoringProjects.length > 0 && (
-            <>
-              {!gemeenteGeojson ? (
-                <GemeenteCardGridSkeleton count={monitoringProjects.length} />
-              ) : (
-                <GemeenteCardGrid>
-                  {monitoringProjects.map((gemeente) => {
-                    const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
-                    const totalUnread = wijkChildren.reduce((sum, wijk) => {
-                      const wijkUnread = unreadData?.per_project.find(
-                        (p) => p.project_id === wijk.id
-                      )?.unread_count ?? 0
-                      return sum + wijkUnread
-                    }, 0)
-
-                    const feature = gemeenteGeojson.features.find(
-                      (f) => f.properties?.statcode === gemeente.gemeente_code
-                    )
-                    const svgData = feature
-                      ? geoJsonToSvgPath(feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)
-                      : null
-
-                    return (
-                      <GemeenteCard
-                        key={gemeente.id}
-                        gemeente={gemeente}
-                        svgData={svgData}
-                        totalUnread={totalUnread}
-                        onClick={() => {
-                          // Phase 44 will add drill-down navigation to wijk cards.
-                          // For now, expand the gemeente to show wijk list inline.
-                          setExpandedGemeenteId((prev) => (prev === gemeente.id ? null : gemeente.id))
-                        }}
-                      />
-                    )
-                  })}
-                </GemeenteCardGrid>
-              )}
-
-              {/* Expanded wijk list for the selected gemeente card */}
-              {expandedGemeenteId && (() => {
-                const gemeente = monitoringProjects.find((p) => p.id === expandedGemeenteId)
+            selectedGemeenteId ? (
+              (() => {
+                const gemeente = monitoringProjects.find((p) => p.id === selectedGemeenteId)
                 if (!gemeente) return null
                 const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
-                if (wijkChildren.length === 0) return null
-
                 return (
-                  <div className="overflow-hidden rounded-lg border border-grey-800 bg-grey-900">
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-grey-800">
-                      <h4 className="text-sm font-medium text-grey-100">{gemeente.name} — Wijken</h4>
-                      <button
-                        onClick={() => setExpandedGemeenteId(null)}
-                        className="text-xs text-grey-400 hover:text-grey-300 transition-colors"
-                      >
-                        Sluiten
-                      </button>
-                    </div>
-                    <div className="bg-grey-850/30">
-                      {wijkChildren.map((wijk) => {
-                        const isWijkExpanded = expandedId === wijk.id
+                  <WijkCardGrid
+                    gemeente={gemeente}
+                    wijkProjects={wijkChildren}
+                    unreadData={unreadData}
+                    onBack={() => setSelectedGemeenteId(null)}
+                    renderCard={(wijk, svgData, unreadCount) => (
+                      <WijkCardWithNav
+                        key={wijk.id}
+                        wijk={wijk}
+                        svgData={svgData}
+                        unreadCount={unreadCount}
+                        navigate={navigate}
+                      />
+                    )}
+                  />
+                )
+              })()
+            ) : (
+              <>
+                {!gemeenteGeojson ? (
+                  <GemeenteCardGridSkeleton count={monitoringProjects.length} />
+                ) : (
+                  <GemeenteCardGrid>
+                    {monitoringProjects.map((gemeente) => {
+                      const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
+                      const totalUnread = wijkChildren.reduce((sum, wijk) => {
                         const wijkUnread = unreadData?.per_project.find(
                           (p) => p.project_id === wijk.id
                         )?.unread_count ?? 0
-
-                        return (
-                          <div key={wijk.id} className="border-b border-grey-800 last:border-b-0">
-                            <button
-                              onClick={() => handleToggle(wijk.id)}
-                              className="flex w-full min-h-[44px] items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/50"
-                            >
-                              <ChevronIcon
-                                className={`h-3.5 w-3.5 shrink-0 text-grey-400 transition-transform ${isWijkExpanded ? 'rotate-90' : ''}`}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-2 w-2 rounded-full bg-amber-accent/60 shrink-0" />
-                                  <h5 className="text-sm font-medium text-grey-300">{wijk.name}</h5>
-                                  {wijk.report_count > 0 && (
-                                    <span className="rounded-full bg-grey-800 px-2 py-0.5 text-xs font-medium text-grey-400">
-                                      {wijk.report_count}
-                                    </span>
-                                  )}
-                                  {wijkUnread > 0 && (
-                                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-xs font-medium text-white">
-                                      {wijkUnread > 9 ? wijkUnread : ''}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-
-                            {isWijkExpanded && (
-                              <>
-                                {!isDemo && <WijkScanList projectId={wijk.id} navigate={navigate} />}
-                                {isDemo && (
-                                  <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
-                                    Geen scans beschikbaar (demo modus)
-                                  </div>
-                                )}
-                                {!isDemo && <ChangeTimeline projectId={wijk.id} />}
-                              </>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })()}
-            </>
+                        return sum + wijkUnread
+                      }, 0)
+                      const feature = gemeenteGeojson.features.find(
+                        (f) => f.properties?.statcode === gemeente.gemeente_code
+                      )
+                      const svgData = feature
+                        ? geoJsonToSvgPath(feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)
+                        : null
+                      return (
+                        <GemeenteCard
+                          key={gemeente.id}
+                          gemeente={gemeente}
+                          svgData={svgData}
+                          totalUnread={totalUnread}
+                          onClick={() => setSelectedGemeenteId(gemeente.id)}
+                        />
+                      )
+                    })}
+                  </GemeenteCardGrid>
+                )}
+              </>
+            )
           )}
 
           {/* Regular projects (non-monitoring) */}
@@ -374,6 +324,49 @@ export default function ProjectList() {
         project={selectedProject}
       />
     </div>
+  )
+}
+
+/**
+ * Navigation-aware wijk card sub-component.
+ *
+ * Calls useProjectScans at component top level (valid hook usage — this is a
+ * React component, not a .map() callback). Looks up the latest completed scan
+ * on click and navigates to /resultaten?scan_id=<id>. Shows a Dutch toast when
+ * no completed scan exists.
+ *
+ * Passed to WijkCardGrid via the renderCard render prop so each wijk card can
+ * independently fetch its own scan data without a hooks-in-loop violation.
+ */
+function WijkCardWithNav({
+  wijk,
+  svgData,
+  unreadCount,
+  navigate,
+}: {
+  wijk: ProjectResponse
+  svgData: { d: string; viewBox: string } | null
+  unreadCount: number
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  const { data } = useProjectScans(wijk.id)
+
+  const handleClick = () => {
+    const latestScan = data?.scans.find((s) => s.status === 'completed')
+    if (!latestScan) {
+      toast.info('Nog geen scan beschikbaar voor deze wijk')
+      return
+    }
+    navigate({ to: '/resultaten', search: { scan_id: latestScan.scan_id } })
+  }
+
+  return (
+    <WijkCard
+      wijk={wijk}
+      svgData={svgData}
+      unreadCount={unreadCount}
+      onClick={handleClick}
+    />
   )
 }
 
