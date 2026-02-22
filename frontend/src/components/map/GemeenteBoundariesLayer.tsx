@@ -1,5 +1,5 @@
 import type maplibregl from 'maplibre-gl';
-import { CBS_GEMEENTEN_WFS } from '@/lib/pdok';
+import { CBS_GEMEENTEN_WFS, CBS_PROVINCIES_WFS } from '@/lib/pdok';
 import { calculateBboxFromGeometry } from '@/lib/geo-utils';
 
 const GEMEENTE_SOURCE_ID = 'cbs-gemeenten';
@@ -8,6 +8,9 @@ const GEMEENTE_LINE_LAYER = 'gemeente-line';
 
 // Module-level cache for CBS gemeente GeoJSON
 let gemeenteGeoJSONCache: GeoJSON.FeatureCollection | null = null;
+
+// Module-level cache for CBS provincie GeoJSON
+let provincieGeoJSONCache: GeoJSON.FeatureCollection | null = null;
 
 // Track hovered gemeente for feature-state management
 let hoveredGemeenteId: string | null = null;
@@ -31,6 +34,30 @@ export async function fetchGemeenteGeoJSON(): Promise<GeoJSON.FeatureCollection>
 
   const geojson = (await response.json()) as GeoJSON.FeatureCollection;
   gemeenteGeoJSONCache = geojson;
+
+  return geojson;
+}
+
+/**
+ * Fetch CBS provincie boundaries from PDOK WFS.
+ * Results are cached at module level to avoid redundant network requests.
+ * 12 Dutch provinces, ~615 KB total — fetched once and reused.
+ *
+ * @returns Promise resolving to GeoJSON FeatureCollection with province polygons
+ */
+export async function fetchProvincieGeoJSON(): Promise<GeoJSON.FeatureCollection> {
+  if (provincieGeoJSONCache) {
+    return provincieGeoJSONCache;
+  }
+
+  const response = await fetch(CBS_PROVINCIES_WFS);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch CBS provincies: ${response.statusText}`);
+  }
+
+  const geojson = (await response.json()) as GeoJSON.FeatureCollection;
+  provincieGeoJSONCache = geojson;
 
   return geojson;
 }

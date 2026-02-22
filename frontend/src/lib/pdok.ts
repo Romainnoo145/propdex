@@ -38,6 +38,13 @@ export const NL_ZOOM = 7;
 export const CBS_GEMEENTEN_WFS =
   'https://service.pdok.nl/cbs/gebiedsindelingen/2024/wfs/v1_0?service=WFS&version=2.0.0&request=GetFeature&typeName=gebiedsindelingen:gemeente_gegeneraliseerd&outputFormat=application/json&srsName=EPSG:4326';
 
+/**
+ * CBS WFS endpoint for province boundaries (2024 version)
+ * Returns GeoJSON FeatureCollection with 12 Dutch provinces (MultiPolygon, ~615 KB)
+ */
+export const CBS_PROVINCIES_WFS =
+  'https://service.pdok.nl/cbs/gebiedsindelingen/2024/wfs/v1_0?service=WFS&version=2.0.0&request=GetFeature&typeName=gebiedsindelingen:provincie_gegeneraliseerd&outputFormat=application/json&srsName=EPSG:4326';
+
 /** PDOK WMS Ruimtelijke Plannen — enkelbestemming layer (SVBP2012 colored zoning areas). Free, no API key. */
 export const PDOK_BESTEMMINGSPLAN_WMS =
   'https://service.pdok.nl/kadaster/plu/wms/v1_0' +

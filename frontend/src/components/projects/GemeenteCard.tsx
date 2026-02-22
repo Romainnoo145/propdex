@@ -3,8 +3,8 @@ import type { ProjectResponse } from '@/lib/types/project'
 interface GemeenteCardProps {
   /** Gemeente-level monitored project */
   gemeente: ProjectResponse
-  /** Pre-computed SVG path data from geoJsonToSvgPath, or null while loading */
-  svgData: { d: string; viewBox: string } | null
+  /** Pre-computed SVG path data — supports dual-path (with background + siblings) or single-path */
+  svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null
   /** Sum of unread change counts across all wijk children */
   totalUnread: number
   /** Card click handler — parent decides navigation behavior */
@@ -31,11 +31,25 @@ export function GemeenteCard({ gemeente, svgData, totalUnread, onClick }: Gemeen
         {svgData ? (
           <svg
             viewBox={svgData.viewBox}
-            className="h-full w-full"
+            className="h-full w-full overflow-hidden"
             preserveAspectRatio="xMidYMid meet"
           >
+            {svgData.backgroundD && (
+              <path
+                d={svgData.backgroundD}
+                className="fill-grey-700/20 stroke-grey-600/40"
+                strokeWidth="0.5"
+              />
+            )}
+            {svgData.siblingsD && (
+              <path
+                d={svgData.siblingsD}
+                className="fill-transparent stroke-grey-600/30"
+                strokeWidth="0.3"
+              />
+            )}
             <path
-              d={svgData.d}
+              d={svgData.primaryD}
               className="fill-amber-accent/20 stroke-amber-accent"
               strokeWidth="1"
             />

@@ -10,8 +10,8 @@ import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { fetchGemeenteGeoJSON } from '@/components/map/GemeenteBoundariesLayer'
-import { geoJsonToSvgPath } from '@/lib/geo-utils'
+import { fetchGemeenteGeoJSON, fetchProvincieGeoJSON } from '@/components/map/GemeenteBoundariesLayer'
+import { geoJsonToSvgPath, geoJsonToSvgDualPath, findProvinceForGemeente, pointInPolygon, bboxCenter } from '@/lib/geo-utils'
 import { GemeenteCard } from './GemeenteCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 import { WijkCard } from './WijkCard'
@@ -93,11 +93,14 @@ export default function ProjectList() {
   const regularProjects = topLevelProjects.filter((p) => !p.is_monitored)
 
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [provincieGeojson, setProvincieGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
 
-  // Fetch CBS gemeente boundaries once when monitoring projects exist
+  // Fetch CBS gemeente + provincie boundaries once when monitoring projects exist
   useEffect(() => {
     if (monitoringProjects.length === 0) return
     fetchGemeenteGeoJSON().then(setGemeenteGeojson).catch(console.error)
+    // Province data is non-blocking — cards render without it, re-render when it arrives
+    fetchProvincieGeoJSON().then(setProvincieGeojson).catch(console.error)
   }, [monitoringProjects.length])
 
   const handleToggle = (projectId: string) => {
@@ -172,6 +175,7 @@ export default function ProjectList() {
                     wijkProjects={wijkChildren}
                     unreadData={unreadData}
                     onBack={() => setSelectedGemeenteId(null)}
+                    gemeenteGeojson={gemeenteGeojson}
                     renderCard={(wijk, svgData, unreadCount) => (
                       <WijkCardWithNav
                         key={wijk.id}
@@ -201,9 +205,40 @@ export default function ProjectList() {
                       const feature = gemeenteGeojson.features.find(
                         (f) => f.properties?.statcode === gemeente.gemeente_code
                       )
-                      const svgData = feature
-                        ? geoJsonToSvgPath(feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)
-                        : null
+                      const gemeenteGeom = feature?.geometry as
+                        | GeoJSON.Polygon
+                        | GeoJSON.MultiPolygon
+                        | undefined
+
+                      let svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null = null
+                      if (gemeenteGeom && provincieGeojson) {
+                        const provinceFeature = findProvinceForGemeente(gemeenteGeom, provincieGeojson)
+                        if (provinceFeature) {
+                          const provGeom = provinceFeature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+
+                          // Collect sibling gemeenten within the same province
+                          const siblingGeoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = []
+                          if (gemeenteGeojson) {
+                            for (const f of gemeenteGeojson.features) {
+                              if (f.properties?.statcode === gemeente.gemeente_code) continue
+                              const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+                              if (g.type !== 'Polygon' && g.type !== 'MultiPolygon') continue
+                              const center = bboxCenter(g)
+                              if (pointInPolygon(center, provGeom)) {
+                                siblingGeoms.push(g)
+                              }
+                            }
+                          }
+
+                          svgData = geoJsonToSvgDualPath(gemeenteGeom, provGeom, siblingGeoms)
+                        } else {
+                          const single = geoJsonToSvgPath(gemeenteGeom)
+                          svgData = { primaryD: single.d, viewBox: single.viewBox }
+                        }
+                      } else if (gemeenteGeom) {
+                        const single = geoJsonToSvgPath(gemeenteGeom)
+                        svgData = { primaryD: single.d, viewBox: single.viewBox }
+                      }
                       return (
                         <GemeenteCard
                           key={gemeente.id}
@@ -345,7 +380,7 @@ function WijkCardWithNav({
   navigate,
 }: {
   wijk: ProjectResponse
-  svgData: { d: string; viewBox: string } | null
+  svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null
   unreadCount: number
   navigate: ReturnType<typeof useNavigate>
 }) {

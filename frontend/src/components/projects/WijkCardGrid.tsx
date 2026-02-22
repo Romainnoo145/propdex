@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { UnreadDetailResponse } from '@/lib/types/monitoring'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
-import { geoJsonToSvgPath } from '@/lib/geo-utils'
+import { geoJsonToSvgPath, geoJsonToSvgDualPath } from '@/lib/geo-utils'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 
 interface WijkCardGridProps {
@@ -14,6 +14,8 @@ interface WijkCardGridProps {
   unreadData: UnreadDetailResponse | undefined
   /** Callback to clear selectedGemeenteId — returns to gemeente view */
   onBack: () => void
+  /** Gemeente GeoJSON for background context in wijk cards (null = no background) */
+  gemeenteGeojson: GeoJSON.FeatureCollection | null
   /**
    * Render prop for each wijk card.
    * The parent provides a sub-component that can call hooks (e.g. useProjectScans)
@@ -21,7 +23,7 @@ interface WijkCardGridProps {
    */
   renderCard: (
     wijk: ProjectResponse,
-    svgData: { d: string; viewBox: string } | null,
+    svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null,
     unreadCount: number
   ) => ReactNode
 }
@@ -49,9 +51,19 @@ export function WijkCardGrid({
   wijkProjects,
   unreadData,
   onBack,
+  gemeenteGeojson,
   renderCard,
 }: WijkCardGridProps) {
   const { data: wijkGeojson, isLoading } = useWijkGeoJSON(gemeente.gemeente_code)
+
+  // Find gemeente feature once for background context in all wijk cards
+  const gemeenteFeature = gemeenteGeojson?.features.find(
+    (f) => f.properties?.statcode === gemeente.gemeente_code
+  )
+  const gemeenteGeom = gemeenteFeature?.geometry as
+    | GeoJSON.Polygon
+    | GeoJSON.MultiPolygon
+    | undefined
 
   return (
     <div className="space-y-4">
@@ -82,11 +94,30 @@ export function WijkCardGrid({
               (f) => f.properties?.statnaam === wijk.wijk_naam
             )
 
-            const svgData = feature
-              ? geoJsonToSvgPath(
-                  feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
-                )
-              : null
+            const wijkGeom = feature?.geometry as
+              | GeoJSON.Polygon
+              | GeoJSON.MultiPolygon
+              | undefined
+
+            // Collect sibling wijk geometries (all other wijken in the gemeente)
+            const siblingGeoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = []
+            if (wijkGeojson && wijkGeom) {
+              for (const f of wijkGeojson.features) {
+                if (f.properties?.statnaam === wijk.wijk_naam) continue
+                const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+                if (g.type === 'Polygon' || g.type === 'MultiPolygon') {
+                  siblingGeoms.push(g)
+                }
+              }
+            }
+
+            let svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null = null
+            if (wijkGeom && gemeenteGeom) {
+              svgData = geoJsonToSvgDualPath(wijkGeom, gemeenteGeom, siblingGeoms)
+            } else if (wijkGeom) {
+              const single = geoJsonToSvgPath(wijkGeom)
+              svgData = { primaryD: single.d, viewBox: single.viewBox }
+            }
 
             return renderCard(wijk, svgData, unreadCount)
           })}
