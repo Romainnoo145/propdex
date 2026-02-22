@@ -5,25 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v5.1 Data Presentation Overhaul -- Phase 44 Wijk Cards and Drill-Down
+**Current focus:** v5.1 Data Presentation Overhaul -- Phase 44 COMPLETE
 
 ---
 
 ## Current Position
 
-Phase: 44 of 45 (Wijk Cards and Drill-Down)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-22 -- Phase 44 Plan 01 complete (2 tasks, 3 files created, 0 deviations)
+Phase: 44 of 45 (Wijk Cards and Drill-Down) -- COMPLETE
+Plan: 2 of 2 in current phase -- ALL PLANS DONE
+Status: Phase complete
+Last activity: 2026-02-22 -- Phase 44 Plan 02 complete (2 tasks, 2 files modified, 0 deviations)
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ---
 
 ## Performance Metrics
 
-**v5.1 Wijk Cards and Drill-Down (In Progress)**
+**v5.1 Wijk Cards and Drill-Down (Complete: 2026-02-22)**
 - Phase 44 Plan 01: 1 min, 2 tasks, 3 files created
+- Phase 44 Plan 02: 2 min, 2 tasks, 2 files modified
 
 **v5.1 Gemeente Card Navigation (Complete: 2026-02-22)**
 - Phase 43 Plan 01: 2 min, 2 tasks, 3 files created
@@ -76,6 +77,9 @@ Progress: [██████░░░░] 60%
 - **WijkCard mirrors GemeenteCard pattern but omits gemeente_code subtitle** — wijk projects have no meaningful code to display
 - **WijkCardGrid reuses GemeenteCardGrid/GemeenteCardGridSkeleton wrappers** — no new grid CSS needed for wijk layer
 - **CBS WFS statnaam matching**: use `f.properties.statnaam === wijk.wijk_naam` (not statcode) — statnaam is reliable across CBS WFS years
+- **renderCard render prop in WijkCardGrid**: enables per-card useProjectScans hook calls in WijkCardWithNav sub-component without hooks-in-loop React violation
+- **WijkCardWithNav is a named sub-component**: valid top-level React hook call pattern — navigates to /resultaten with scan_id, Dutch toast fallback when no completed scan
+- **selectedGemeenteId view switching**: single state controls gemeente vs wijk layer — no router navigation, preserves all other page state
 
 ### Ongoing TODOs
 
@@ -95,11 +99,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-22
-**Stopped At:** Phase 44 Plan 01 complete — useWijkGeoJSON, WijkCard, WijkCardGrid created
+**Stopped At:** Phase 44 Plan 02 complete — drill-down navigation integrated, Phase 44 DONE
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 44` (Plan 02: integrate WijkCardGrid into ProjectList.tsx)
+**Next Action:** Phase 45 (if planned) or ship v5.1
 
 ---
 
-*State updated: 2026-02-22 -- Phase 44 Plan 01 complete, 1/2 plans done*
+*State updated: 2026-02-22 -- Phase 44 Plan 02 complete, phase 44 DONE (2/2 plans)*
