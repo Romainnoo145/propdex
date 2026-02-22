@@ -21,7 +21,7 @@
 
 - [x] **Phase 42: Theme Consistency** - Audit and fix all hardcoded color classes so new components are built on correct patterns
 - [x] **Phase 43: Gemeente Card Navigation** - Projecten page shows gemeente cards with SVG boundary silhouettes, names, and notification badges
-- [ ] **Phase 44: Wijk Cards and Drill-Down** - Click a gemeente card to see its wijk cards, click a wijk card to see filtered results
+- [x] **Phase 44: Wijk Cards and Drill-Down** - Click a gemeente card to see its wijk cards, click a wijk card to see filtered results
 - [ ] **Phase 45: Breadcrumb and URL State** - Breadcrumb navigation and deep-linkable URL state reflecting drill-down level
 
 ## Phase Details
@@ -67,8 +67,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 44-01-PLAN.md -- WijkCard component, WijkCardGrid container, and useWijkGeoJSON hook
-- [ ] 44-02-PLAN.md -- Drill-down navigation integration into ProjectList (gemeente -> wijk -> resultaten)
+- [x] 44-01: WijkCard component, WijkCardGrid container, and useWijkGeoJSON hook
+- [x] 44-02: Drill-down navigation integration into ProjectList (gemeente -> wijk -> resultaten)
 
 ### Phase 45: Breadcrumb and URL State
 **Goal**: Users always know where they are in the drill-down hierarchy and can share or bookmark any navigation level
@@ -199,9 +199,9 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 42. Theme Consistency | v5.1 | 2/2 | ✓ Complete | 2026-02-21 |
 | 43. Gemeente Card Navigation | v5.1 | 2/2 | ✓ Complete | 2026-02-22 |
-| 44. Wijk Cards and Drill-Down | v5.1 | 0/2 | Not started | - |
+| 44. Wijk Cards and Drill-Down | v5.1 | 2/2 | ✓ Complete | 2026-02-22 |
 | 45. Breadcrumb and URL State | v5.1 | 0/1 | Not started | - |
 
 ---
 
-*Last updated: 2026-02-22 (Phase 44 planned -- 2 plans in 2 waves)*
+*Last updated: 2026-02-22 (Phase 44 complete -- 2/2 plans, 6 commits, verified 11/11 must-haves)*
