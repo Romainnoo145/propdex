@@ -1,96 +1,99 @@
-# Requirements: Propdex v5.1 -- Data Presentation Overhaul
+# Requirements: Propdex v6.0 -- Meldingen Intelligence
 
-**Defined:** 2026-02-21
-**Core Value:** Area -> Opportunity Intelligence -- card-based drill-down navigation from gemeente to wijk to results
+**Defined:** 2026-02-23
+**Core Value:** Area -> Opportunity Intelligence -- make meldingen actionable with reliable parcel matching, direct map→rapport flow, and proper read tracking
 
-## v5.1 Requirements
+## v6.0 Requirements
 
-Card-based drill-down navigation replacing the current flat list approach. Users navigate: Gemeente cards -> Wijk cards -> Results table.
+Transform the meldingen (change monitoring) system from a passive notification feed into an actionable intelligence tool. Fix broken parcel matching, enable direct melding→map→rapport flow, add server-side per-change read tracking, and improve the overall meldingen UX.
 
-### Navigation
+### Parcel Matching
 
-- [ ] **NAV-01**: Projecten page shows gemeente cards in a responsive grid (3 columns desktop, 2 tablet, 1 mobile)
-- [ ] **NAV-02**: Clicking a gemeente card navigates to that gemeente's wijk cards in the same grid layout
-- [ ] **NAV-03**: Clicking a wijk card navigates to the results table filtered on that wijk's scan data
-- [ ] **NAV-04**: Breadcrumb navigation shows current drill-down path (Projecten > Gemeente > Wijk) with back navigation
-- [ ] **NAV-05**: URL state reflects current navigation level (deep-linkable)
+- [ ] **MATCH-01**: System geocodes bekendmaking addresses via PDOK Locatieserver to get coordinates when no parcel match exists
+- [ ] **MATCH-02**: Matched parcel IDs are stored persistently on ChangeRecord for direct navigation (not computed on-demand only)
+- [ ] **MATCH-03**: Matching re-runs retrospectively when new scans complete (existing unmatched changes get checked against new ParcelCache entries)
 
-### Cards
+### Flow
 
-- [ ] **CARD-01**: Gemeente card displays the actual gemeente boundary shape as an SVG silhouette
-- [ ] **CARD-02**: Gemeente card displays the gemeente name prominently
-- [ ] **CARD-03**: Gemeente card displays a notification badge when unread change records exist for that gemeente
-- [ ] **CARD-04**: Wijk card displays the wijk boundary shape as an SVG silhouette
-- [ ] **CARD-05**: Wijk card displays the wijk name prominently
-- [ ] **CARD-06**: Wijk card displays a notification badge when unread change records exist for that specific wijk
-- [ ] **CARD-07**: Card grid is responsive and maintains visual consistency across breakpoints
+- [ ] **FLOW-01**: User can click a matched parcel in a melding to fly to that location on the map
+- [ ] **FLOW-02**: Map shows an amber marker at the parcel location with address and "Genereer rapport" button
+- [ ] **FLOW-03**: User can generate a report from the map marker using verified parcel data
+- [ ] **FLOW-04**: Wijk project hierarchy is auto-created when generating a report for an unlinked parcel
 
-### Theme
+### Address Intelligence
 
-- [x] **THEME-01**: Dark mode and light mode are visually consistent -- no hardcoded color classes bypass CSS variables
-- [x] **THEME-02**: All amber/accent color usage goes through `--color-amber-accent` CSS variable (no Tailwind amber-* classes)
-- [x] **THEME-03**: Theme toggle works reliably and persists across sessions via localStorage
+- [ ] **ADDR-01**: Address extraction handles all common Dutch SRU bekendmaking title formats (with test coverage on real examples)
+- [ ] **ADDR-02**: Extracted addresses include both postcode and huisnummer for precise parcel matching
+- [ ] **ADDR-03**: Changes display human-readable category labels (e.g., "Omgevingsvergunning aangevraagd", "Bestemmingsplan gewijzigd")
 
-## v5.2+ Requirements
+### Read Tracking
 
-Deferred to future release. Tracked but not in current roadmap.
+- [ ] **READ-01**: User can mark individual changes as read/unread (click-to-toggle)
+- [ ] **READ-02**: Read state is persisted server-side in database (works across browsers and devices)
+- [ ] **READ-03**: Unread count badges reflect per-change read state (not project-level timestamp)
+- [ ] **READ-04**: User can "mark all as read" for all visible changes in one action
 
-### Table Enhancements
+### Meldingen UX
 
-- **TABLE-01**: Column visibility toggle (show/hide columns)
-- **TABLE-02**: Density control (compact/regular/relaxed rows)
-- **TABLE-03**: Column pinning (sticky address + score columns)
-- **TABLE-04**: Save/restore filter state to localStorage
+- [ ] **UX-01**: Meldingen page supports filtering by gemeente
+- [ ] **UX-02**: Each melding shows clear action state -- matched = rapport button, unmatched = kaart-only or "geen match"
+- [ ] **UX-03**: Read-tracking logic extracted to shared hook used by both meldingen.tsx and ChangeTimeline.tsx
+- [ ] **UX-04**: Meldingen feed handles growth with pagination or infinite scroll
 
-### Comparison & Report
+## Future Requirements
 
-- **COMP-01**: Property comparison view (side-by-side, up to 4 parcels)
-- **REPORT-01**: Property report visual hierarchy redesign
-- **REPORT-02**: Mini-map with parcel boundary in report page
-- **REPORT-03**: Tab/card section layout for report page
+Deferred to v6.1+. Tracked but not in current roadmap.
 
-### Map
+### Search & Filtering
+- **SEARCH-01**: Full-text search across bekendmaking titles and addresses
+- **SEARCH-02**: Date range filtering on meldingen feed
+- **SEARCH-03**: Filter by change type (permit / zoning / all)
 
-- **MAP-01**: Direct filter controls on the map (bestemming type, score range)
-- **MAP-02**: Map layer toggle panel
+### Notifications
+- **NOTIF-01**: Email digest of new meldingen (daily/weekly configurable)
+- **NOTIF-02**: Webhook integration for external notification (Slack, Teams)
+
+### Export
+- **EXPORT-01**: Export filtered meldingen to CSV
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Score trend indicator | Requires historical score storage (new backend model) |
-| Table column reordering (drag) | High complexity, low value for current user base |
-| Saved scan comparison (diff two runs) | Requires backend diff logic |
-| Property comparison view | Deferred to v5.2 -- validate user demand first |
-| Report redesign | Deferred to v5.2 -- focus on navigation first |
-| Map filtering | Deferred to v5.2 -- current filter panel sufficient |
-| Print/PDF optimized layout | Enterprise feature -- defer until sales require it |
+| ML-based address extraction | Regex patterns with PDOK validation sufficient for Dutch addresses |
+| Real-time WebSocket notifications | Polling at 60s is adequate for daily change detection |
+| Historical bekendmakingen backfill (>30 days) | SRU API rate limits make large backfills impractical |
+| Zoning change visual diff | Requires WMS tile comparison infrastructure |
+| Melding → auto-generate rapport (no user action) | Reports should be user-initiated for cost control |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Phase 43 | Pending |
-| NAV-02 | Phase 44 | Pending |
-| NAV-03 | Phase 44 | Pending |
-| NAV-04 | Phase 45 | Pending |
-| NAV-05 | Phase 45 | Pending |
-| CARD-01 | Phase 43 | Pending |
-| CARD-02 | Phase 43 | Pending |
-| CARD-03 | Phase 43 | Pending |
-| CARD-04 | Phase 44 | Pending |
-| CARD-05 | Phase 44 | Pending |
-| CARD-06 | Phase 44 | Pending |
-| CARD-07 | Phase 43 | Pending |
-| THEME-01 | Phase 42 | ✓ Done |
-| THEME-02 | Phase 42 | ✓ Done |
-| THEME-03 | Phase 42 | ✓ Done |
+| MATCH-01 | — | Pending |
+| MATCH-02 | — | Pending |
+| MATCH-03 | — | Pending |
+| FLOW-01 | — | Pending |
+| FLOW-02 | — | Pending |
+| FLOW-03 | — | Pending |
+| FLOW-04 | — | Pending |
+| ADDR-01 | — | Pending |
+| ADDR-02 | — | Pending |
+| ADDR-03 | — | Pending |
+| READ-01 | — | Pending |
+| READ-02 | — | Pending |
+| READ-03 | — | Pending |
+| READ-04 | — | Pending |
+| UX-01 | — | Pending |
+| UX-02 | — | Pending |
+| UX-03 | — | Pending |
+| UX-04 | — | Pending |
 
 **Coverage:**
-- v5.1 requirements: 15 total
-- Mapped to phases: 15
-- Unmapped: 0
+- v6.0 requirements: 18 total
+- Mapped to phases: 0
+- Unmapped: 18
+- Complete: 0 (0%)
 
 ---
-*Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 -- THEME-01/02/03 complete (Phase 42)*
+*Requirements defined: 2026-02-23*
