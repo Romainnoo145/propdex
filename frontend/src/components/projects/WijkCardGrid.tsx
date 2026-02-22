@@ -1,8 +1,8 @@
+import type { ReactNode } from 'react'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { UnreadDetailResponse } from '@/lib/types/monitoring'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
-import { WijkCard } from './WijkCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 
 interface WijkCardGridProps {
@@ -14,16 +14,28 @@ interface WijkCardGridProps {
   unreadData: UnreadDetailResponse | undefined
   /** Callback to clear selectedGemeenteId — returns to gemeente view */
   onBack: () => void
-  /** Callback when a wijk card is clicked — parent handles navigation */
-  onWijkClick: (wijk: ProjectResponse) => void
+  /**
+   * Render prop for each wijk card.
+   * The parent provides a sub-component that can call hooks (e.g. useProjectScans)
+   * per card without violating React's rules of hooks (no hooks in .map() callbacks).
+   */
+  renderCard: (
+    wijk: ProjectResponse,
+    svgData: { d: string; viewBox: string } | null,
+    unreadCount: number
+  ) => ReactNode
 }
 
 /**
  * Data-fetching container for wijk cards.
  *
  * Fetches CBS WFS wijk boundaries via useWijkGeoJSON, computes SVG silhouettes,
- * matches wijk projects to GeoJSON features by statnaam, and renders each as a
- * WijkCard in a responsive grid.
+ * matches wijk projects to GeoJSON features by statnaam, and renders each card
+ * via the renderCard render prop.
+ *
+ * Using renderCard instead of rendering WijkCard directly allows the parent
+ * (ProjectList) to wrap each card in a sub-component that calls useProjectScans
+ * per wijk — a valid hook call at component top level, not inside .map().
  *
  * Includes a breadcrumb back button to return to the gemeente grid view.
  * Shows a loading skeleton while wijk GeoJSON is loading.
@@ -37,7 +49,7 @@ export function WijkCardGrid({
   wijkProjects,
   unreadData,
   onBack,
-  onWijkClick,
+  renderCard,
 }: WijkCardGridProps) {
   const { data: wijkGeojson, isLoading } = useWijkGeoJSON(gemeente.gemeente_code)
 
@@ -76,15 +88,7 @@ export function WijkCardGrid({
                 )
               : null
 
-            return (
-              <WijkCard
-                key={wijk.id}
-                wijk={wijk}
-                svgData={svgData}
-                unreadCount={unreadCount}
-                onClick={() => onWijkClick(wijk)}
-              />
-            )
+            return renderCard(wijk, svgData, unreadCount)
           })}
         </GemeenteCardGrid>
       )}
