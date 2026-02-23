@@ -1,32 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useAllChanges } from '@/hooks/useNotifications'
+import { useAllChanges, useMarkChangeRead, useMarkAllRead } from '@/hooks/useNotifications'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { useAuth } from '@/lib/auth/useAuth'
 import { generateReportFromParcel } from '@/lib/api'
 import type { ChangeRecord } from '@/lib/types/monitoring'
-
-// --- Per-change read tracking via localStorage ---
-const READ_STORAGE_KEY = 'propdex-read-changes'
-
-function getReadIds(): Set<string> {
-  try {
-    const stored = localStorage.getItem(READ_STORAGE_KEY)
-    return stored ? new Set(JSON.parse(stored) as string[]) : new Set()
-  } catch {
-    return new Set()
-  }
-}
-
-function persistReadIds(ids: Set<string>) {
-  // Keep last 500 to prevent unbounded growth
-  const arr = [...ids].slice(-500)
-  localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(arr))
-}
 
 export const Route = createFileRoute('/_authenticated/meldingen')({
   component: MeldingenPage,
@@ -38,22 +20,22 @@ function MeldingenPage() {
   const { data, isLoading } = useAllChanges(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
-  const [readIds, setReadIds] = useState<Set<string>>(() => getReadIds())
 
-  const markChangeRead = useCallback((changeId: string) => {
-    setReadIds((prev) => {
-      if (prev.has(changeId)) return prev
-      const next = new Set(prev)
-      next.add(changeId)
-      persistReadIds(next)
-      return next
-    })
-  }, [])
+  const markRead = useMarkChangeRead()
+  const markAllRead = useMarkAllRead()
+
+  // Read state comes from server via read_change_ids in the changes response
+  const readIds = useMemo(
+    () => new Set(data?.read_change_ids ?? []),
+    [data?.read_change_ids]
+  )
 
   const handleToggle = useCallback((changeId: string) => {
     setExpandedId((prev) => prev === changeId ? null : changeId)
-    markChangeRead(changeId)
-  }, [markChangeRead])
+    if (!readIds.has(changeId)) {
+      markRead.mutate(changeId)
+    }
+  }, [readIds, markRead])
 
   const handleGenerateReport = useCallback(
     async (parcelId: string) => {
@@ -98,6 +80,15 @@ function MeldingenPage() {
           <span className="inline-flex items-center rounded-full bg-amber-accent/15 px-2.5 py-0.5 text-sm font-medium text-amber-accent">
             {totalUnread} nieuw
           </span>
+        )}
+        {totalUnread > 0 && (
+          <button
+            onClick={() => markAllRead.mutate()}
+            disabled={markAllRead.isPending}
+            className="ml-auto text-xs text-grey-400 transition-colors hover:text-grey-100 disabled:opacity-50"
+          >
+            Markeer alles als gelezen
+          </button>
         )}
       </div>
 

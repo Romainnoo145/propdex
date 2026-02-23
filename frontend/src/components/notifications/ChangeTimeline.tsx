@@ -5,36 +5,19 @@
  * - Permit changes (document icon) and zoning changes (map icon)
  * - Grouped by date with expandable details
  * - Match pills linking to parcels/reports when postcode matches exist
- * - Amber dot indicator on unread changes (per-change via localStorage)
+ * - Amber dot indicator on unread changes (per-change via server read state)
  */
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { useProjectChanges } from '@/hooks/useNotifications'
+import { useProjectChanges, useMarkChangeRead } from '@/hooks/useNotifications'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useAuth } from '@/lib/auth/useAuth'
 import { generateReportFromParcel } from '@/lib/api'
-
-// Shared per-change read tracking via localStorage
-const READ_STORAGE_KEY = 'propdex-read-changes'
-
-function getReadIds(): Set<string> {
-  try {
-    const stored = localStorage.getItem(READ_STORAGE_KEY)
-    return stored ? new Set(JSON.parse(stored) as string[]) : new Set()
-  } catch {
-    return new Set()
-  }
-}
-
-function persistReadIds(ids: Set<string>) {
-  const arr = [...ids].slice(-500)
-  localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(arr))
-}
 
 interface ChangeTimelineProps {
   projectId: string
@@ -48,36 +31,26 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
-  const [readIds, setReadIds] = useState<Set<string>>(() => getReadIds())
   const navigate = useNavigate()
   const { accessToken } = useAuth()
+  const markRead = useMarkChangeRead()
 
-  const markChangeRead = useCallback((changeId: string) => {
-    setReadIds((prev) => {
-      if (prev.has(changeId)) return prev
-      const next = new Set(prev)
-      next.add(changeId)
-      persistReadIds(next)
-      return next
-    })
-  }, [])
+  // Read state comes from server via read_change_ids in the changes response
+  const readIds = new Set(data?.read_change_ids ?? [])
 
-  const handleGenerateReport = useCallback(
-    async (parcelId: string) => {
-      setGeneratingId(parcelId)
-      try {
-        const report = await generateReportFromParcel(parcelId, accessToken)
-        navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Rapport genereren mislukt'
-        )
-      } finally {
-        setGeneratingId(null)
-      }
-    },
-    [accessToken, navigate]
-  )
+  const handleGenerateReport = async (parcelId: string) => {
+    setGeneratingId(parcelId)
+    try {
+      const report = await generateReportFromParcel(parcelId, accessToken)
+      navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Rapport genereren mislukt'
+      )
+    } finally {
+      setGeneratingId(null)
+    }
+  }
 
   const changes = data?.changes ?? []
 
@@ -111,7 +84,9 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
   const handleToggle = (changeId: string) => {
     setExpandedId(expandedId === changeId ? null : changeId)
-    markChangeRead(changeId)
+    if (!readIds.has(changeId)) {
+      markRead.mutate(changeId)
+    }
   }
 
   if (changes.length === 0) {

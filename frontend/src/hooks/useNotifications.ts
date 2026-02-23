@@ -120,6 +120,8 @@ export function useMarkViewed() {
   })
 }
 
+type ChangesSnapshot = { queryKey: readonly unknown[]; data: ChangeRecordListResponse | undefined }
+
 /**
  * Mark a single change as read (server-backed, with optimistic update)
  *
@@ -131,25 +133,29 @@ export function useMarkChangeRead() {
   const { accessToken } = useAuth()
   const queryClient = useQueryClient()
 
-  return useMutation<void, Error, string, { previousData: [unknown, ChangeRecordListResponse | undefined][] }>({
+  return useMutation<void, Error, string, { snapshots: ChangesSnapshot[] }>({
     mutationFn: (changeId: string) => apiMarkChangeRead(changeId, accessToken),
     onMutate: async (changeId: string) => {
       // Snapshot all changes caches for rollback
-      const cacheEntries = queryClient
-        .getQueriesData<ChangeRecordListResponse>({ queryKey: ['changes'] })
-        .filter((entry): entry is [unknown, ChangeRecordListResponse] => entry[1] !== undefined)
+      const allEntries = queryClient.getQueriesData<ChangeRecordListResponse>({ queryKey: ['changes'] })
 
-      const previousData = cacheEntries.map(([key, data]) => [key, data] as [unknown, ChangeRecordListResponse | undefined])
+      const snapshots: ChangesSnapshot[] = allEntries.map(([queryKey, data]) => ({
+        queryKey: queryKey as readonly unknown[],
+        data,
+      }))
 
       // Optimistically update all changes caches to include the new read ID
-      for (const [queryKey, data] of cacheEntries) {
-        queryClient.setQueryData<ChangeRecordListResponse>(queryKey as Parameters<typeof queryClient.setQueryData>[0], {
-          ...data,
-          read_change_ids: [...(data.read_change_ids ?? []), changeId],
-        })
+      for (const { queryKey, data } of snapshots) {
+        if (data !== undefined) {
+          queryClient.setQueryData<ChangeRecordListResponse>(queryKey, {
+            changes: data.changes,
+            total: data.total,
+            read_change_ids: [...(data.read_change_ids ?? []), changeId],
+          })
+        }
       }
 
-      return { previousData }
+      return { snapshots }
     },
     onSuccess: () => {
       // Refresh server-side unread counts (badge numbers)
@@ -157,9 +163,9 @@ export function useMarkChangeRead() {
     },
     onError: (_error, _changeId, context) => {
       // Roll back all optimistic updates
-      if (context?.previousData) {
-        for (const [queryKey, data] of context.previousData) {
-          queryClient.setQueryData(queryKey as Parameters<typeof queryClient.setQueryData>[0], data)
+      if (context?.snapshots) {
+        for (const { queryKey, data } of context.snapshots) {
+          queryClient.setQueryData(queryKey, data)
         }
       }
     },
