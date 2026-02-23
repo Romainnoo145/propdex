@@ -70,30 +70,31 @@ Deferred to v6.1+. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATCH-01 | — | Pending |
-| MATCH-02 | — | Pending |
-| MATCH-03 | — | Pending |
-| FLOW-01 | — | Pending |
-| FLOW-02 | — | Pending |
-| FLOW-03 | — | Pending |
-| FLOW-04 | — | Pending |
-| ADDR-01 | — | Pending |
-| ADDR-02 | — | Pending |
-| ADDR-03 | — | Pending |
-| READ-01 | — | Pending |
-| READ-02 | — | Pending |
-| READ-03 | — | Pending |
-| READ-04 | — | Pending |
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
-| UX-04 | — | Pending |
+| ADDR-01 | Phase 47 | Pending |
+| ADDR-02 | Phase 47 | Pending |
+| ADDR-03 | Phase 47 | Pending |
+| MATCH-01 | Phase 48 | Pending |
+| MATCH-02 | Phase 48 | Pending |
+| MATCH-03 | Phase 48 | Pending |
+| READ-01 | Phase 49 | Pending |
+| READ-02 | Phase 49 | Pending |
+| READ-03 | Phase 49 | Pending |
+| READ-04 | Phase 49 | Pending |
+| FLOW-01 | Phase 50 | Pending |
+| FLOW-02 | Phase 50 | Pending |
+| FLOW-03 | Phase 50 | Pending |
+| FLOW-04 | Phase 50 | Pending |
+| UX-01 | Phase 51 | Pending |
+| UX-02 | Phase 51 | Pending |
+| UX-03 | Phase 51 | Pending |
+| UX-04 | Phase 51 | Pending |
 
 **Coverage:**
 - v6.0 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18
+- Mapped to phases: 18
+- Unmapped: 0
 - Complete: 0 (0%)
 
 ---
 *Requirements defined: 2026-02-23*
+*Traceability updated: 2026-02-23 -- all 18 requirements mapped to Phases 47-51*

@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-21)
+See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 47: Address Intelligence
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 47 of 51 (Address Intelligence)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-02-23 — Milestone v6.0 Meldingen Intelligence started
+Status: Ready to plan
+Last activity: 2026-02-23 -- v6.0 roadmap created (Phases 47-51, 18 requirements)
 
 Progress: [          ] 0%
 
@@ -62,36 +62,29 @@ Progress: [          ] 0%
 - parcel_cache.geometry is EPSG:28992; always ST_Transform(geometry, 4326) before GeoJSON
 - 404 not 403 for cross-org access (prevents enumeration)
 - ProjectEditModal/ProjectCreateModal use intentional light-theme gray-* (white card on dark backdrop)
-- CBS WFS already integrated for gemeente/wijk boundaries on map page -- reuse for SVG silhouettes
-- Change monitoring with unread tracking per project already implemented -- reuse for notification badges
+- CBS WFS already integrated for gemeente/wijk boundaries -- reuse for SVG silhouettes
 - ThemeProvider at src/lib/theme/ with localStorage persistence already exists
-- **text-on-accent**: all amber/accent-background elements use this utility — never text-grey-950/900/white
-- **--color-on-accent**: defined only in @theme, NOT overridden in html.light (amber stays golden in both modes)
-- **FOUC pattern**: inline `<script>` before `<link>` tags reads 'propdex-theme', applies .light class synchronously
-- **Semantic token mapping**: error=bg-error/10 text-error, success=bg-success/10 text-success, info=bg-info/10 text-info, warning=bg-warning/15 text-warning
-- **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950 — use 300 not 200, 600 not 500
-- **purple exception**: gebieds_aanduidingen in ReportDetailPage uses purple-500 (distinct from functie_aanduidingen info/blue per SVBP2012)
+- **text-on-accent**: all amber/accent-background elements use this utility
+- **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950
+- **SET LOCAL f-string (not params)**: asyncpg doesn't support parameterized SET statements
 
 ### Decisions Made
 
-- `--color-on-accent: oklch(0.12 0.005 270)` — fixed dark color for text on amber, identical value to dark-mode grey-950 but separate token that does NOT invert in light mode
-- FOUC script placed as very first child of `<head>` before icon/font/stylesheet links to guarantee class applied before any resource loads
-- `grey-500` -> `grey-600` throughout: grey-500 not defined in @theme, grey-600 is next defined muted value
-- `grey-200` -> `grey-300` throughout: grey-200 not defined, grey-300 is next defined lighter text value
-- purple-500 `gebieds_aanduidingen` badges retained in ReportDetailPage as documented exception (visually distinct from `functie_aanduidingen` info/blue per SVBP2012 zoning law)
-- ConfidenceBadge MEDIUM uses `warning` token (not `info`): medium confidence is cautionary, not informational
-- GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props — parent fetches GeoJSON once, avoids redundant WFS requests per card
-- geoJsonToSvgPath uses Math.min(drawW/lonRange, drawH/latRange) uniform scale — preserves aspect ratio for irregular gemeente shapes
-- **WijkCard mirrors GemeenteCard pattern but omits gemeente_code subtitle** — wijk projects have no meaningful code to display
-- **WijkCardGrid reuses GemeenteCardGrid/GemeenteCardGridSkeleton wrappers** — no new grid CSS needed for wijk layer
-- **CBS WFS statnaam matching**: use `f.properties.statnaam === wijk.wijk_naam` (not statcode) — statnaam is reliable across CBS WFS years
-- **renderCard render prop in WijkCardGrid**: enables per-card useProjectScans hook calls in WijkCardWithNav sub-component without hooks-in-loop React violation
-- **URL state via TanStack Router validateSearch**: gemeente_id/wijk_id in URL search params, same proven pattern as resultaten.tsx
-- **DrilldownBreadcrumb reads from useSearch**: returns null at top level, 2-level for gemeente, 3-level for wijk
-- **Project counter shows regularProjects.length**: excludes monitoring gemeente/wijk container projects from the count
-- **GemeenteDetailView stat bar**: derived from props (wijkProjects.length, sum of report_count, sum of unread counts) — zero API calls
-- **Wijk card click targets wijk detail view**: `/projecten?gemeente_id=X&wijk_id=Y` instead of directly to `/resultaten`
-- **WijkDetailView: scan summary, ChangeTimeline, ReportCard grid**: all use existing hooks with project_id filter, zero backend changes
+- `--color-on-accent: oklch(0.12 0.005 270)` -- fixed dark color for text on amber, does NOT invert in light mode
+- FOUC script placed as very first child of `<head>` before icon/font/stylesheet links
+- GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props
+- WijkCard mirrors GemeenteCard pattern but omits gemeente_code subtitle
+- URL state via TanStack Router validateSearch: gemeente_id/wijk_id in URL search params
+- DrilldownBreadcrumb reads from useSearch -- returns null at top level, 2-level for gemeente, 3-level for wijk
+
+### v6.0 Architecture Notes
+
+- **MATCH depends on ADDR**: Geocoding needs clean addresses -- Phase 48 cannot start without Phase 47
+- **READ is independent**: ChangeReadState table and server-side read API can be built in parallel with matching (Phases 48+49 can run concurrently)
+- **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord
+- **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last because they surface the completed features
+- **New model needed**: `ChangeReadState` (change_id FK, user_id FK, read_at timestamp) -- replaces localStorage hack
+- **matched_parcel_id migration needed**: New nullable column on ChangeRecord model
 
 ### Ongoing TODOs
 
@@ -111,11 +104,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** v6.0 milestone initialization — defining requirements
+**Stopped At:** v6.0 roadmap creation -- 5 phases (47-51), 18 requirements mapped, files written
 **Resume File:** None
 
-**Next Action:** Define requirements, create roadmap, then `/gsd:plan-phase 47`
+**Next Action:** `/gsd:plan-phase 47`
 
 ---
 
-*State updated: 2026-02-23 -- v6.0 Meldingen Intelligence milestone started*
+*State updated: 2026-02-23 -- v6.0 Meldingen Intelligence roadmap created*

@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- **v5.1 Data Presentation Overhaul** -- Phases 42-45 (in progress)
+- **v6.0 Meldingen Intelligence** -- Phases 47-51 (in progress)
+- ✅ **v5.1 Data Presentation Overhaul** -- Phases 42-46 (shipped 2026-02-22)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
 - ✅ **v4.0 UX Redesign** -- Phases 27-36 (shipped 2026-02-18)
 - ✅ **v3.1 Smart Area Intelligence** -- Phases 22-26 (shipped 2026-02-15)
@@ -15,75 +16,106 @@
 
 ## Phases
 
-### v5.1 Data Presentation Overhaul
+### v6.0 Meldingen Intelligence
 
-**Milestone Goal:** Card-based drill-down navigation from gemeente to wijk to results, with theme consistency across light and dark modes.
+**Milestone Goal:** Transform the meldingen feed from a passive notification list into an actionable intelligence tool -- reliable parcel matching via geocoding, direct melding-to-map-to-report flow, server-side per-change read tracking, and a meldingen page worth visiting every day.
 
-- [x] **Phase 42: Theme Consistency** - Audit and fix all hardcoded color classes so new components are built on correct patterns
-- [x] **Phase 43: Gemeente Card Navigation** - Projecten page shows gemeente cards with SVG boundary silhouettes, names, and notification badges
-- [x] **Phase 44: Wijk Cards and Drill-Down** - Click a gemeente card to see its wijk cards, click a wijk card to see filtered results
-- [ ] **Phase 45: Breadcrumb and URL State** - Breadcrumb navigation and deep-linkable URL state reflecting drill-down level
+- [ ] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage
+- [ ] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes
+- [ ] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges
+- [ ] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report
+- [ ] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination
 
 ## Phase Details
 
-### Phase 42: Theme Consistency
-**Goal**: Dark and light modes are visually consistent -- all accent colors flow through CSS variables, no hardcoded Tailwind color classes bypass the theme system
-**Depends on**: Nothing (audit/cleanup phase, establishes patterns for new components)
-**Requirements**: THEME-01, THEME-02, THEME-03
+### Phase 47: Address Intelligence
+**Goal**: SRU bekendmaking titles yield clean, validated Dutch addresses -- the raw input quality on which all parcel matching depends
+**Depends on**: Nothing (foundational data quality improvement)
+**Requirements**: ADDR-01, ADDR-02, ADDR-03
 **Success Criteria** (what must be TRUE):
-  1. User can toggle between dark and light mode and every component renders with correct contrast -- no white-on-white, no invisible text, no broken backgrounds
-  2. Searching the frontend source for `amber-` Tailwind classes returns zero results outside of CSS variable definitions -- all accent color usage goes through `--color-amber-accent`
-  3. Theme toggle persists across browser sessions -- user closes browser, reopens, and the previously selected theme is active without flash of wrong theme
-**Plans**: 2 plans
-
-Plans:
-- [x] 42-01: Add on-accent CSS token, FOUC prevention script, fix amber button contrast
-- [x] 42-02: Semantic token sweep -- replace raw Tailwind palette colors and fix undefined grey values
-
-### Phase 43: Gemeente Card Navigation
-**Goal**: Users see their scanned gemeenten as visual cards on the Projecten page -- each card shows the municipality boundary shape, name, and a badge when there are unread changes
-**Depends on**: Phase 42 (theme patterns established, new components will follow them)
-**Requirements**: CARD-01, CARD-02, CARD-03, CARD-07, NAV-01
-**Success Criteria** (what must be TRUE):
-  1. Projecten page displays gemeente cards in a 3-column grid on desktop, 2 columns on tablet, and 1 column on mobile
-  2. Each gemeente card shows a recognizable SVG silhouette of the municipality boundary (sourced from CBS WFS data already used on the map page)
-  3. Each gemeente card displays the gemeente name prominently and a notification badge showing the count of unread change records for that gemeente
-  4. Cards maintain consistent visual appearance across breakpoints -- no layout breaking, no truncated content, no overflow
-**Plans**: 2 plans
-
-Plans:
-- [x] 43-01: GeoJSON-to-SVG projection utility, GemeenteCard component, and responsive card grid wrapper
-- [x] 43-02: Integrate card grid into ProjectList replacing monitoring accordion with visual gemeente cards
-
-### Phase 44: Wijk Cards and Drill-Down
-**Goal**: Users can click a gemeente card to see its wijken as visual cards, and click a wijk card to land on the results table filtered to that wijk's scan data
-**Depends on**: Phase 43 (gemeente cards and card grid component exist)
-**Requirements**: CARD-04, CARD-05, CARD-06, NAV-02, NAV-03
-**Success Criteria** (what must be TRUE):
-  1. Clicking a gemeente card navigates to a view showing that gemeente's wijk cards in the same responsive grid layout
-  2. Each wijk card shows the wijk boundary SVG silhouette, the wijk name, and a notification badge for unread changes in that specific wijk
-  3. Clicking a wijk card navigates to the /resultaten route with filters pre-set to show only that wijk's scan results
-  4. User can navigate back from wijk view to gemeente view without losing state
-**Plans**: 2 plans
-
-Plans:
-- [x] 44-01: WijkCard component, WijkCardGrid container, and useWijkGeoJSON hook
-- [x] 44-02: Drill-down navigation integration into ProjectList (gemeente -> wijk -> resultaten)
-
-### Phase 45: Breadcrumb and URL State
-**Goal**: Users always know where they are in the drill-down hierarchy and can share or bookmark any navigation level
-**Depends on**: Phase 44 (full drill-down navigation works)
-**Requirements**: NAV-04, NAV-05
-**Success Criteria** (what must be TRUE):
-  1. Breadcrumb bar shows the current path (Projecten > Gemeente Name > Wijk Name) with each segment clickable for back-navigation
-  2. URL reflects the current navigation level -- copying the URL and opening it in a new tab restores the exact same view (gemeente cards, wijk cards, or filtered results)
-  3. Browser back/forward buttons navigate the drill-down levels correctly
+  1. Address extractor correctly parses all common Dutch bekendmaking title formats (straatnaam + huisnummer, with and without postcode, with and without additions) -- verified by a test suite against real SRU examples
+  2. Extracted addresses include both postcode and huisnummer when present in the source title, giving the matcher enough precision to reach a single parcel
+  3. Each change record displays a human-readable Dutch category label (e.g. "Omgevingsvergunning aangevraagd", "Bestemmingsplan gewijzigd") instead of a raw type code
 **Plans**: TBD
 
 Plans:
-- [ ] 45-01: Breadcrumb component and URL state synchronization
+- [ ] 47-01: Refactor address extractor with comprehensive regex patterns and test suite on real SRU titles
+- [ ] 47-02: Add category label mapping and wire human-readable labels through API response and frontend display
+
+### Phase 48: Parcel Matching
+**Goal**: Every bekendmaking with an extractable address gets a matched parcel ID stored in the database -- and existing unmatched changes get a second chance whenever new scan data arrives
+**Depends on**: Phase 47 (clean address extraction is the input to geocoding)
+**Requirements**: MATCH-01, MATCH-02, MATCH-03
+**Success Criteria** (what must be TRUE):
+  1. When a change record has an extractable address but no parcel match, the system geocodes it via PDOK Locatieserver and attempts a spatial lookup against ParcelCache -- a matched parcel_id is stored on the ChangeRecord row
+  2. Matched parcel IDs survive application restarts and API calls -- they are persisted on the ChangeRecord model, not recomputed on every request
+  3. After a wijk scan completes and new ParcelCache entries exist, previously unmatched ChangeRecords for that gemeente are re-checked and matched where possible
+**Plans**: TBD
+
+Plans:
+- [ ] 48-01: PDOK Locatieserver geocoding client and spatial parcel lookup in bekendmaking_matcher.py
+- [ ] 48-02: Persist matched_parcel_id on ChangeRecord model (migration) and wire into change detector
+- [ ] 48-03: Post-scan retro-matching job -- trigger re-match of unmatched changes when scan completes
+
+### Phase 49: Read Tracking
+**Goal**: Users can mark individual changes as read or unread, and that state persists in the database -- unread badges everywhere reflect actual per-change state, not a project-level last-seen timestamp
+**Depends on**: Nothing (independent of matching and flow, can ship in parallel)
+**Requirements**: READ-01, READ-02, READ-03, READ-04
+**Success Criteria** (what must be TRUE):
+  1. User can click any change in the meldingen feed to toggle its read/unread state -- the change immediately updates its visual treatment (read = dimmed, unread = bold)
+  2. After toggling read state on one device, opening the app on a different browser or device shows the same read/unread state -- localStorage is no longer the source of truth
+  3. Unread count badges on gemeente cards, wijk cards, and the SideRailNav icon reflect per-change read state -- reading a change decrements the badge count in real time
+  4. A "Markeer alles als gelezen" action marks all currently visible changes as read in a single API call -- unread badges reset to zero
+**Plans**: TBD
+
+Plans:
+- [ ] 49-01: ChangeReadState model (migration), API endpoints (mark read/unread, mark all read, unread counts)
+- [ ] 49-02: Frontend read tracking -- replace localStorage with server state, toggle UI, badge updates, mark-all action
+
+### Phase 50: Melding-to-Map Flow
+**Goal**: A user who sees an interesting melding with a matched parcel can click once to fly to that parcel on the map, see an amber marker with address and action button, and generate a full report -- the complete intelligence workflow in three clicks
+**Depends on**: Phase 48 (matched parcel IDs must exist for navigation to work)
+**Requirements**: FLOW-01, FLOW-02, FLOW-03, FLOW-04
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Bekijk op kaart" on a matched melding opens the map route and flies the viewport to the parcel's coordinates
+  2. An amber marker appears at the parcel location showing the bekendmaking address and a "Genereer rapport" button -- visible without any additional clicks
+  3. Clicking "Genereer rapport" from the map marker generates a property report using the verified parcel ID from the ChangeRecord -- the report uses real kadaster/BAG data, not a free-form address guess
+  4. If the parcel has no wijk project yet, the wijk project hierarchy (gemeente container + wijk container) is auto-created before the report is saved -- the report lands in the correct project without user setup
+**Plans**: TBD
+
+Plans:
+- [ ] 50-01: Map marker component and fly-to integration -- meldingen.tsx passes parcel_id+coordinates to map route
+- [ ] 50-02: Report generation from map marker using verified parcel ID, with auto-create wijk project
+
+### Phase 51: Meldingen UX
+**Goal**: The meldingen page is the user's daily intelligence briefing -- filterable by gemeente, each entry clearly shows what action is available, read tracking is consistent across the app, and the feed scales gracefully as data grows
+**Depends on**: Phase 49 (read tracking must be server-side), Phase 50 (matched/unmatched action states must exist)
+**Requirements**: UX-01, UX-02, UX-03, UX-04
+**Success Criteria** (what must be TRUE):
+  1. User can filter the meldingen feed by gemeente using a dropdown -- selecting a gemeente shows only changes from monitored wijken in that gemeente
+  2. Each melding entry clearly communicates its action state: matched parcels show a "Bekijk op kaart" or "Genereer rapport" button; unmatched entries show "Geen perceel gevonden" with a kaart-only fallback if coordinates exist; genuinely unknown entries show a neutral state
+  3. The useReadTracking hook is imported by both meldingen.tsx and ChangeTimeline.tsx -- read/unread logic lives in exactly one place in the codebase
+  4. The meldingen feed loads incrementally -- the user sees the first entries quickly and can scroll or page through a growing history without a full-page reload
+**Plans**: TBD
+
+Plans:
+- [ ] 51-01: Gemeente filter dropdown and shared useReadTracking hook extraction
+- [ ] 51-02: Per-melding action state display (matched/unmatched/unknown) and pagination or infinite scroll
 
 ---
+
+<details>
+<summary>✅ v5.1 Data Presentation Overhaul (Phases 42-46) -- SHIPPED 2026-02-22</summary>
+
+- [x] Phase 42: Theme Consistency (2/2 plans) -- on-accent token, FOUC prevention, semantic token sweep
+- [x] Phase 43: Gemeente Card Navigation (2/2 plans) -- SVG boundary silhouettes, GeoJSON projection, card grid
+- [x] Phase 44: Wijk Cards and Drill-Down (2/2 plans) -- WijkCard, WijkCardGrid, gemeente→wijk navigation
+- [x] Phase 45: URL State + Gemeente Detail View (2/2 plans) -- validateSearch, DrilldownBreadcrumb, GemeenteDetailView
+- [x] Phase 46: Wijk Detail View (2/2 plans) -- scan summary, ChangeTimeline, report list, 3-level breadcrumb
+
+**10 plans, 14 requirements, 5 phases**
+
+</details>
 
 <details>
 <summary>✅ v5.0 Scan Intelligence (Phases 37-41) -- SHIPPED 2026-02-20</summary>
@@ -193,15 +225,16 @@ Plans:
 
 ## Progress
 
-**Execution Order:** 42 -> 43 -> 44 -> 45
+**Execution Order:** 47 -> 48 -> 49 -> 50 -> 51
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 42. Theme Consistency | v5.1 | 2/2 | ✓ Complete | 2026-02-21 |
-| 43. Gemeente Card Navigation | v5.1 | 2/2 | ✓ Complete | 2026-02-22 |
-| 44. Wijk Cards and Drill-Down | v5.1 | 2/2 | ✓ Complete | 2026-02-22 |
-| 45. Breadcrumb and URL State | v5.1 | 0/1 | Not started | - |
+| 47. Address Intelligence | v6.0 | 0/TBD | Not started | - |
+| 48. Parcel Matching | v6.0 | 0/TBD | Not started | - |
+| 49. Read Tracking | v6.0 | 0/TBD | Not started | - |
+| 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
+| 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-02-22 (Phase 44 complete -- 2/2 plans, 6 commits, verified 11/11 must-haves)*
+*Last updated: 2026-02-23 (v6.0 Meldingen Intelligence roadmap created -- Phases 47-51, 18 requirements)*
