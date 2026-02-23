@@ -1,747 +1,734 @@
 # Architecture Patterns
 
-**Domain:** Premium data presentation layer — comparison views, mini-maps, tab layouts, map filter controls, scoring visualizations
-**Researched:** 2026-02-21
-**Confidence:** HIGH — based on direct codebase analysis of ~16K LOC TypeScript/React
+**Domain:** Deep property data integration — WOZ-waarde, Energielabel, BRK eigendomsdata, improved RCE monument data
+**Researched:** 2026-02-23
+**Confidence:** HIGH — based on direct codebase analysis of existing aggregator pipeline + verified Dutch government API documentation
 
 ---
 
-## Existing Architecture Summary
+## Existing Pipeline Summary (What We Extend)
 
-Before documenting new patterns, here is the current structure this milestone integrates into.
-
-### Persistent Map Lifecycle (Critical Constraint)
-
-The MapLibre instance is initialized once in `_authenticated.tsx` (the layout route), placed in an always-mounted DOM node with CSS `display: none/block` toggling. It never unmounts. All child routes receive the map via `MapContext` (provides `mapRef` and `mapReady`).
-
-This means:
-- Only ONE real MapLibre instance exists per session
-- Mini-maps in reports CANNOT be a second full MapLibre instance on the same page (browser WebGL context limit: ~8 total, but two concurrent full-feature instances causes measurable performance degradation and tile duplication)
-- Static map images in reports must be tile snapshots, not live MapLibre instances
-
-### Current Component Tree
+The property aggregator follows a two-step pattern that all new data sources must fit:
 
 ```
-routes/__root.tsx
-  └── ThemeProvider + QueryClientProvider + AuthProvider
-      └── _authenticated.tsx (layout)
-          ├── SideRailNav (w-16, icon-only)
-          ├── MapView (absolute inset-0, display:none when not /map — NEVER unmounts)
-          ├── MapContext.Provider (exposes mapRef + mapReady)
-          └── Outlet (child route content)
-              ├── /map          → MapPage (MapShell + overlays + drawers + modals)
-              ├── /resultaten   → ResultatenPage (filter bar + TanStack Table)
-              ├── /rapporten    → RapportenPage (report list)
-              ├── /rapport/:id  → ReportDetailPage (full-height scroll)
-              └── /projecten    → ProjectenPage
+STEP 1 (sequential): resolve_address() via BAG — MUST succeed
+  Returns: verblijfsobject_id, pand_id, RD coordinates
+
+STEP 2 (parallel): asyncio.gather(N fetch functions)
+  Returns: cadastral_parcels, zoning_data, monument_status
+  Error handling: each fetch wraps exceptions → errors list, graceful None
+
+STEP 3 (sequential): AI parsing trigger, MapData build, source attribution
+
+STEP 4: Assemble PropertyReportResponse + completeness_score
 ```
 
-### Data Flow Layers
-
-```
-Backend API
-  → TanStack Query hooks (src/hooks/)
-  → Route components (src/routes/_authenticated/)
-  → Layout components (src/components/layout/)
-  → Domain components (src/components/{property,results,reports,map}/)
-  → Primitive components (src/components/primitives/)
-
-Key hooks today:
-  useReport(id)            → PropertyReportResponse (report detail)
-  useReports(filters)      → ReportListResponse (paginated list)
-  useScanResults(id, f)    → ScanResultsResponse (parcel grid)
-  useParcelEnrichment(id)  → ParcelEnrichmentResponse (vergunningen)
-  usePropertyLookup()      → PropertyReportResponse (live address lookup)
-```
-
-### Three-Tier Property Disclosure (Existing)
-
-```
-Map click → PropertyQuickCard (floating popup, minimal data, MapLibre Popup anchored)
-          → PropertyDetailDrawer (right-side Drawer, full PropertyReportResponse)
-          → PDFExportModal (modal overlay)
-```
+Key constraints from codebase analysis:
+- All fetches in Step 2 use `get_cached_or_fetch()` with source-specific TTLs from `CACHE_TTL`
+- Each new data source needs a key added to `CACHE_TTL` in `backend/app/core/config.py`
+- `PropertyReportResponse` is stored as JSONB in `reports.report_data` — all new fields must be Pydantic-serializable
+- `completeness_score` = `sections_available / total_sections` — new sections must increment `total_sections`
+- BRK eigendomsdata MUST NOT be cached (Kadaster Tier 3 terms) — this is the only source that bypasses `get_cached_or_fetch`
 
 ---
 
-## Architecture for Each New Feature
+## New Data Sources: Integration Map
 
-### 1. Comparison Views
+Each new source maps to exactly four integration points:
 
-**Architectural decision: URL-first state, useQueries for parallel fetching, no new store**
+| Source | API Client File | Schema Section | Aggregator Integration | Frontend Component |
+|--------|----------------|----------------|----------------------|-------------------|
+| Energielabel | `backend/app/government_apis/ep_online.py` (NEW) | `EnergyLabel` in `backend/app/schemas/energy.py` (NEW) | `fetch_energy_label()` nested func in `property_aggregator.py` | `EnergieLabelSection` in `ReportDetailPage.tsx` |
+| WOZ-waarde | `backend/app/government_apis/woz_waardeloket.py` (NEW) | `WOZData` in `backend/app/schemas/woz.py` (NEW) | `fetch_woz_data()` nested func in `property_aggregator.py` | `WOZSection` in `ReportDetailPage.tsx` |
+| BRK eigendomsdata | `backend/app/government_apis/brk_bevragen.py` (EXISTS — needs aggregator wiring) | `BRKOwnership` in `backend/app/schemas/brk.py` (NEW) | `fetch_brk_ownership()` nested func, NO caching | `EigendomSection` in `ReportDetailPage.tsx` |
+| RCE (improved) | `backend/app/government_apis/rce_monuments.py` (EXISTS — needs RCE Linked Data API) | `MonumentDetail` fields added to `MonumentSourceResult` | Enhance `_fetch_rce()` in `monument_aggregator.py` | Enhance `MonumentSection` in `ReportDetailPage.tsx` |
 
-Comparison state lives in TanStack Router URL search params. No global store, no context needed. URL makes comparisons bookmarkable.
+---
+
+## Source 1: Energielabel (EP-Online)
+
+### API Details
+
+**Endpoint:** `https://public.ep-online.nl/api/v5/`
+**Authentication:** API key via `Authorization: Bearer {key}` header — free to request at `https://apikey.ep-online.nl/`
+**Query by VBO:** `GET /api/v5/PandEnergielabel/Adres?bagVerblijfsobjectId={verblijfsobject_id}` or by postcode+huisnummer
+**Response fields:** `energieklasse` (A+++ through G), `energieprestatie` (EI value), `registratiedatum`, `geldigTot` (validity date), `pand_registratienummer`
+**API Version:** V5 (live since November 2024; V4 deprecated July 2025; V3 gone January 2025) — MEDIUM confidence (Swagger docs not directly accessible, inferred from RVO handleiding)
+**Rate limits:** Not officially documented; conservative: 5 concurrent, 300/hour
+**TTL recommendation:** 90 days (energielabels change infrequently; validity periods are years)
+
+### New File
 
 ```
-URL: /vergelijken?ids=uuid1,uuid2,uuid3
+backend/app/government_apis/ep_online.py
 ```
 
-**Parallel data fetching with useQueries (HIGH confidence — official TanStack Query v5 pattern):**
+```python
+"""EP-Online energielabel API client.
+
+Fetches registered energy labels from RVO EP-Online Public API V5.
+Queries by BAG verblijfsobject ID (VBO).
+
+Authentication: Bearer API key (request at apikey.ep-online.nl).
+Free tier: yes, API key required but no cost.
+"""
+
+class EPOnlineClient:
+    BASE_URL = "https://public.ep-online.nl/api/v5"
+
+    async def get_energielabel(
+        self,
+        verblijfsobject_id: str,
+        client: httpx.AsyncClient,
+    ) -> dict | None:
+        """Fetch energy label for a verblijfsobject.
+        Returns None if no label registered (not all buildings have EP labels).
+        """
+        url = f"{self.BASE_URL}/PandEnergielabel/Adres"
+        params = {"bagVerblijfsobjectId": verblijfsobject_id}
+        headers = {"Authorization": f"Bearer {settings.EP_ONLINE_API_KEY}"}
+        # ... standard error handling per base.py patterns
+```
+
+### New Schema File
+
+```
+backend/app/schemas/energy.py
+```
+
+```python
+class EnergyLabel(BaseModel):
+    """Energielabel data from EP-Online."""
+    energieklasse: str | None   # "A+++" through "G"
+    energie_index: float | None  # EI numeric value
+    registratiedatum: str | None # ISO 8601
+    geldig_tot: str | None       # label validity date
+    pand_nummer: str | None      # EP-Online registration number
+    source: str = "EP-Online V5"
+```
+
+### Aggregator Integration
+
+In `aggregate_property_data()`, add `fetch_energy_label()` as a nested async function alongside `fetch_cadastral_parcels()`. Add to the `asyncio.gather()` call.
+
+**Cache key:** `f"ep-online:label:{verblijfsobject_id}"`
+**CACHE_TTL key:** `"ep_online"` → 7776000 (90 days)
+
+Input: `verblijfsobject_id` from BAG resolution (available from Step 1).
+Graceful degradation: if no VBO available or API returns 404, return `None`. Append error to `errors` list.
+
+### PropertyReportResponse Addition
+
+```python
+# In backend/app/schemas/property.py
+energy_label: EnergyLabel | None = Field(
+    default=None,
+    description="Energielabel from EP-Online (None if not registered or VBO not available)",
+)
+```
+
+### Frontend Type Addition
 
 ```typescript
-// src/hooks/useComparison.ts  (NEW)
-import { useQueries } from '@tanstack/react-query'
-import { fetchReport } from '@/lib/api'
-import { useAuth } from '@/lib/auth/useAuth'
-import type { ReportDetailResponse } from '@/lib/types/report'
-
-export function useComparisonReports(reportIds: string[]) {
-  const { accessToken } = useAuth()
-  return useQueries({
-    queries: reportIds.map((id) => ({
-      queryKey: ['report', id],            // reuses existing cache
-      queryFn: () => fetchReport(id, accessToken),
-      enabled: !!id && !!accessToken,
-      staleTime: 5 * 60 * 1000,
-    })),
-  })
+// In frontend/src/lib/types/property.ts
+export interface EnergyLabel {
+  energieklasse: string | null   // "A+++" through "G"
+  energie_index: number | null
+  registratiedatum: string | null
+  geldig_tot: string | null
+  pand_nummer: string | null
+  source: string
 }
+
+// Add to PropertyReportResponse:
+energy_label: EnergyLabel | null
 ```
 
-No new API endpoints. All data comes from the existing `GET /api/reports/{id}` endpoint. The `['report', id]` query key matches existing `useReport()` hooks — cache is shared automatically.
+### Frontend Component
 
-**Component structure (new directory):**
+New section component added to `ReportDetailPage.tsx` as `EnergieLabelSection`. Renders:
+- Label badge (large letter: A through G with color coding — green A+++, red G)
+- Energie-index numeric value
+- Registration date + validity date
+- Link to EP-Online registration lookup
 
-```
-src/components/comparison/
-  ComparisonView.tsx        — grid container, orchestrates 2-4 columns
-  ComparisonColumn.tsx      — single property vertical stack (re-uses Section components)
-  ComparisonHeader.tsx      — sticky top row: property names + close/swap buttons
-  ComparisonMetricRow.tsx   — one labeled row spanning all columns side-by-side
-  ComparisonEmptySlot.tsx   — placeholder for unfilled slots
-```
+Position in ReportDetailPage: between `GebouwSection` and `KadasterSection` (building-level data logically clusters together).
 
-**Layout:** Fixed-width CSS grid (`grid-cols-2`, `grid-cols-3`, `grid-cols-4`), horizontal scroll when columns overflow viewport. No resizable split pane library required. Each column has `overflow-y-auto` to scroll independently if content heights differ.
-
-**Route:** New file `src/routes/_authenticated/vergelijken.tsx` — a dedicated page, not a modal state on `/rapporten`. Comparison is a primary feature, not an incidental overlay.
-
-**Entry point from `/rapporten`:** Select checkboxes on report cards, click "Vergelijk" button → navigate to `/vergelijken?ids=...`.
-
-**Key constraint on ComparisonColumn:** Do NOT embed `PropertyDetailDrawer` or `ReportDetailPage` inside a comparison column. Those are vertical-scroll documents designed for full-width. ComparisonColumn extracts the same data from `PropertyReportResponse` and renders horizontally-appropriate sub-components (metric cells, labeled rows).
+**Color coding for label classes** (matches EU standard): A+++=`#009900`, A++=`#00bb00`, A+=`#33cc00`, A=`#66dd00`, B=`#99dd00`, C=`#ccee00`, D=`#ffee00`, E=`#ffcc00`, F=`#ff9900`, G=`#ff3300`.
 
 ---
 
-### 2. Mini-Map in Reports
+## Source 2: WOZ-waarde
 
-**Architectural decision: Static tile image (a simple `<img>` tag), not a second MapLibre instance**
+### API Details
 
-The active MapLibre is in the layout parent and cannot be portaled into a report. A second full MapLibre instance is inadvisable for three reasons:
+**Critical finding:** WOZ data has restricted access. The Kadaster WOZ API Bevragen requires OIN + PKIOverheid certificate (municipalities only). The WOZ-waardeloket has no public API.
 
-1. WebGL context pressure (browser limit ~8 contexts; each MapLibre instance uses one)
-2. Tile fetch cost (mini-maps load all tile layers the same as the main map)
-3. Theme sync complexity (mini-map MapLibre style would need to mirror ThemeContext)
+**Viable approach for Propdex:** The WOZ-waardeloket (`wozwaardeloket.nl`) exposes a public JSON endpoint that Propdex can scrape via HTTP: `https://www.wozwaardeloket.nl/woz-api/v1/objecten/nummeraanduidingen/{nummeraanduiding_id}`. This is the same endpoint the WOZ-waardeloket website uses internally.
 
-The correct pattern: a static raster tile image URL constructed from the property's `map_data.center_wgs84` coordinates. This is a single HTTP request to a CDN tile server — no WebGL, no MapLibre initialization.
+**Confidence:** LOW — this is an undocumented public endpoint, subject to change, rate limiting, or blocking. Not an official open API.
 
-**Implementation:**
+**Alternative approach:** WOZ-waarden are also available as open data bulk download from PDOK (monthly snapshot), but bulk ingestion is a different architecture (ETL pipeline, not on-demand per-property lookup).
 
-```typescript
-// src/lib/staticMap.ts  (NEW)
-// Tile coordinate math (Mercator)
-function lngToTileX(lng: number, zoom: number): number {
-  return Math.floor(((lng + 180) / 360) * Math.pow(2, zoom))
-}
-function latToTileY(lat: number, zoom: number): number {
-  const rad = (lat * Math.PI) / 180
-  return Math.floor(
-    ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) *
-    Math.pow(2, zoom)
-  )
-}
+**Recommended approach for this milestone:** Implement WOZ client with explicit LOW_CONFIDENCE flag on returned data. Mark the source as "WOZ-Waardeloket (publiek)" and show a disclaimer that this is publicly available data from the WOZ-waardeloket, not a certified government API connection.
 
-// Returns a PDOK/CARTO light tile URL for the given coordinates
-export function buildStaticMapUrl(
-  lng: number,
-  lat: number,
-  zoom: number = 16,
-): string {
-  const x = lngToTileX(lng, zoom)
-  const y = latToTileY(lat, zoom)
-  // CARTO light — same CDN used by MapView.tsx
-  return `https://basemaps.cartocdn.com/light_all/${zoom}/${x}/${y}@2x.png`
-}
+**TTL recommendation:** 365 days (WOZ values are set annually, usually communicated in February)
+**Cache key pattern:** `f"woz:object:{nummeraanduiding_id}"`
+
+### New File
+
+```
+backend/app/government_apis/woz_waardeloket.py
 ```
 
-```typescript
-// src/components/map/StaticMapImage.tsx  (NEW)
-import { useTheme } from '@/lib/theme/useTheme'
+```python
+"""WOZ-waarde client via WOZ-waardeloket public endpoint.
 
-interface StaticMapImageProps {
-  lng: number
-  lat: number
-  zoom?: number
-  className?: string
-  alt?: string
-}
+Fetches WOZ-waarde from the public WOZ-waardeloket API.
+Uses nummeraanduiding ID from BAG resolution.
 
-export function StaticMapImage({ lng, lat, zoom = 16, className, alt }: StaticMapImageProps) {
-  const { theme } = useTheme()
-  const tileUrl = buildStaticMapUrl(lng, lat, zoom)
-  // Light mode: CARTO light tiles; Dark mode: could use a dark variant
-  // For simplicity, same CARTO light tile works for both — readable in both themes
-  return (
-    <div className={`relative overflow-hidden rounded-lg bg-grey-800 ${className ?? ''}`}>
-      <img
-        src={tileUrl}
-        alt={alt ?? 'Locatie op kaart'}
-        className="w-full h-full object-cover"
-        loading="lazy"
-      />
-      {/* Center crosshair overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-4 h-4 rounded-full bg-amber-accent ring-2 ring-white/50" />
-      </div>
-    </div>
-  )
-}
+IMPORTANT: This is an undocumented public endpoint, not an official API.
+Data should be presented with LOW confidence and a disclaimer.
+"""
+
+class WOZWaardeloketClient:
+    BASE_URL = "https://www.wozwaardeloket.nl/woz-api/v1"
+
+    async def get_woz_waarde(
+        self,
+        nummeraanduiding_id: str,
+        client: httpx.AsyncClient,
+    ) -> dict | None:
+        """Fetch WOZ-waarde by nummeraanduiding ID.
+        Returns dict with wozWaarde, peildatum, or None if unavailable.
+        """
+        url = f"{self.BASE_URL}/objecten/nummeraanduidingen/{nummeraanduiding_id}"
+        # No authentication required (public endpoint)
 ```
 
-**Integration into ReportDetailPage:** Place between the address header and the quick-facts MetricCard grid. Width 100%, height ~180px on desktop. The `map_data.center_wgs84` field already exists on `PropertyReportResponse` — no backend changes.
+### New Schema File
 
-**Integration into ComparisonColumn:** Smaller variant (160×100px) in the column header, above the MetricCard cells.
+```
+backend/app/schemas/woz.py
+```
 
-**Why not `preserveDrawingBuffer: true` + `canvas.toDataURL()`:** This would require modifying `MapView.tsx` initialization (performance regression — GPU cannot clear frames), captures the current main map viewport (not the property location), and only works while the map is visible. Static tile URL is simpler, faster, and always correct.
+```python
+class WOZJaarwaarde(BaseModel):
+    """WOZ-waarde for a specific peildatum year."""
+    peildatum: str   # e.g., "2025-01-01"
+    waarde: int      # EUR value
+
+class WOZData(BaseModel):
+    """WOZ-waarde data from WOZ-waardeloket."""
+    woz_waarden: list[WOZJaarwaarde]  # Last 3-5 years
+    actuele_waarde: int | None        # Most recent value
+    actuele_peildatum: str | None     # Most recent reference date
+    object_id: str | None
+    source: str = "WOZ-Waardeloket"
+    confidence: str = "LOW"           # Non-official API
+```
+
+### Aggregator Integration
+
+Add `fetch_woz_data()` nested function. Input: `nummeraanduiding_id` from BAG address resolution (available from Step 1). Add to `asyncio.gather()`.
+
+**PropertyReportResponse addition:**
+```python
+woz: WOZData | None = Field(
+    default=None,
+    description="WOZ-waarde from WOZ-waardeloket (LOW confidence — public endpoint)",
+)
+```
+
+### Frontend Component
+
+New `WOZSection` in `ReportDetailPage.tsx`. Renders:
+- Current WOZ-waarde formatted as currency (e.g., "€ 485.000")
+- Peildatum (reference date)
+- WOZ history table (last 3-5 years) showing trend
+- Explicit LOW confidence disclaimer: "WOZ-waarde opgehaald via publiek waardeloket. Geen gecertificeerde API-verbinding."
+
+**Note on display:** WOZ-waarden for non-residential properties are not public under current law. If the API returns no data for commercial properties, show "WOZ-waarde niet openbaar voor dit type object" rather than a generic error.
 
 ---
 
-### 3. Tab-Based Report Layout
+## Source 3: BRK Eigendomsdata
 
-**Architectural decision: Custom headless Tabs primitive, compound component pattern, no external library**
+### API Details
 
-The codebase uses no headless UI library (no Radix, no Headless UI). The existing primitive components (`Button`, `Card`, `Badge`, `Input`, `Select`) are all custom. Tabs follow the same pattern.
+The `BRKBevragenClient` already exists in `backend/app/government_apis/brk_bevragen.py`. It implements `get_eigendom()` and `get_kadastraal_object()`. The gap is that it has never been wired into `aggregate_property_data()`.
 
-**Headless compound component implementation (~80 lines):**
+**Critical constraint (existing code comment):** "CRITICAL: Eigendomsdata must NEVER be cached or stored per Kadaster Tier 3 terms."
 
-```typescript
-// src/components/primitives/Tabs.tsx  (NEW)
-import { createContext, useContext, useState } from 'react'
+**New requirement:** BRK queries need a `kadaster_identificatie` — the full cadastral object ID (e.g., `NL.IMKAD.KadastraalObject.12345`). This is NOT the same as the `kadastrale_aanduiding` (e.g., "Venlo M 1722") returned by PDOK Cadastral. A mapping step is needed.
 
-interface TabsContext {
-  activeTab: string
-  setActiveTab: (id: string) => void
-}
+**Mapping strategy:** PDOK Cadastral OGC API already returns a feature with properties. The `localid` or `kadastraleAanduiding` can be used to construct or find the BRK identificatie. Alternatively, the BRK API supports query by `kadastraleAanduiding` string. Research indicates BRK API accepts the formatted string directly: `GET /kadastraalonroerendezaken?kadastraleAanduiding=VENLO+M+1722`.
 
-const Context = createContext<TabsContext | null>(null)
+**Access constraint:** BRK requires PKIOverheid mTLS certificate + API key. The client `BRKBevragenClient` gracefully disables itself if not configured (logs warning, `_configured = False`). The aggregator must check `brk_client._configured` before attempting.
 
-function useTabs() {
-  const ctx = useContext(Context)
-  if (!ctx) throw new Error('Tab components must be used within <Tabs>')
-  return ctx
-}
+**No-cache requirement:** BRK eigendomsdata MUST NOT go through `get_cached_or_fetch()`. It bypasses the cache layer entirely. This is architecturally exceptional — document clearly.
 
-// Compound components
-export function Tabs({ defaultTab, children }: { defaultTab: string; children: React.ReactNode }) {
-  const [activeTab, setActiveTab] = useState(defaultTab)
-  return <Context.Provider value={{ activeTab, setActiveTab }}>{children}</Context.Provider>
-}
+### New Schema File
 
-export function TabList({ children }: { children: React.ReactNode }) {
-  return (
-    <div role="tablist" className="flex gap-1 border-b border-overlay/5 px-5">
-      {children}
-    </div>
-  )
-}
-
-export function Tab({ id, children, badge }: { id: string; children: React.ReactNode; badge?: number }) {
-  const { activeTab, setActiveTab } = useTabs()
-  const isActive = activeTab === id
-  return (
-    <button
-      role="tab"
-      aria-selected={isActive}
-      aria-controls={`panel-${id}`}
-      onClick={() => setActiveTab(id)}
-      className={`px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
-        isActive
-          ? 'border-amber-accent text-grey-100'
-          : 'border-transparent text-grey-500 hover:text-grey-300'
-      }`}
-    >
-      {children}
-      {badge !== undefined && badge > 0 && (
-        <span className="ml-1.5 rounded-full bg-grey-800 px-1.5 py-0.5 text-[10px] tabular-nums">
-          {badge}
-        </span>
-      )}
-    </button>
-  )
-}
-
-export function TabPanel({ id, children }: { id: string; children: React.ReactNode }) {
-  const { activeTab } = useTabs()
-  return (
-    <div
-      id={`panel-${id}`}
-      role="tabpanel"
-      aria-labelledby={id}
-      className={activeTab === id ? 'block' : 'hidden'}  // CSS display:none — stays mounted
-    >
-      {children}
-    </div>
-  )
-}
+```
+backend/app/schemas/brk.py
 ```
 
-**Critical: use CSS `display: none` (Tailwind `hidden`), NOT conditional rendering.** Panels stay mounted. Unmounting on tab switch causes:
-- Re-fetching lazy data (AI parsing status, enrichment data)
-- Loss of scroll position within panels
-- Flash when switching back to a previously visited tab
+```python
+class BRKEigenaar(BaseModel):
+    """Single property owner/rights holder from BRK."""
+    naam: str | None            # Person/organization name
+    type: str | None            # "Natuurlijk persoon" or "Rechtspersoon"
+    recht: str | None           # "Eigendom", "Recht van erfpacht", etc.
+    aandeel: str | None         # Share fraction (e.g., "1/2")
 
-**Tab grouping for ReportDetailPage:**
+class BRKOwnership(BaseModel):
+    """Eigendomsdata from BRK Bevragen API.
 
-| Tab | Content | Badge |
-|-----|---------|-------|
-| Gebouw | BAG building data + status | — |
-| Kadaster | Parcel list + totals | parcel count |
-| Bestemming | Zoning + bouwregels + planregels | plan count |
-| Monument | Monument status + restrictions | — |
-| AI Analyse | PDF upload or parsed plan | — |
-| Bronnen | Data sources + confidence | source count |
+    NEVER cache or store this data (Kadaster Tier 3 terms).
+    """
+    eigenaren: list[BRKEigenaar]
+    zakelijk_rechten: list[str]   # Rights types present
+    is_available: bool             # False if BRK not configured or query failed
+    unavailable_reason: str | None # "BRK niet geconfigureerd" or error message
+    source: str = "Kadaster BRK Bevragen API v2"
+    retrieved_at: str              # ISO 8601 — timestamp of this fetch (not a cache timestamp)
+```
 
-**Integration into ReportDetailPage:**
+### Aggregator Integration
 
-The current layout renders sections in a `space-y-5` stack. Wrap in Tabs:
-- Keep SignalBanner, MonumentAlert, MetricCards ABOVE the tab bar (always visible)
-- Keep StaticMapImage ABOVE the tab bar (always visible)
-- Sections slot directly into TabPanel without internal changes
+```python
+async def fetch_brk_ownership() -> BRKOwnership | None:
+    """Fetch BRK eigendomsdata — NEVER cached."""
+    if not brk_client._configured:
+        return BRKOwnership(
+            eigenaren=[],
+            zakelijk_rechten=[],
+            is_available=False,
+            unavailable_reason="BRK niet geconfigureerd",
+            retrieved_at=datetime.utcnow().isoformat() + "Z",
+        )
 
-This is a MODIFICATION, not a rewrite. The existing `GebouwSection`, `KadasterSection`, `BestemmingSection`, `MonumentSection`, `AIInterpretatieSection`, and `BronnenSection` components are unchanged — they simply get `<TabPanel>` wrappers around them.
+    if not cadastral_parcels:
+        return None  # Need parcel ID to query BRK
 
-**Keyboard navigation (ARIA compliance):**
+    # Use first parcel's kadastrale_aanduiding
+    aanduiding = cadastral_parcels[0].kadastrale_aanduiding
+    if not aanduiding:
+        return None
 
-```typescript
-// In TabList: add onKeyDown handler
-function handleKeyDown(e: React.KeyboardEvent) {
-  const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
-  const idx = tabs.indexOf(e.currentTarget as Element)
-  if (e.key === 'ArrowRight') tabs[(idx + 1) % tabs.length]?.focus()
-  if (e.key === 'ArrowLeft') tabs[(idx - 1 + tabs.length) % tabs.length]?.focus()
-}
+    try:
+        async with brk_client.create_client() as brk_http_client:
+            # BRK creates its OWN mTLS client, separate from shared httpx client
+            raw = await brk_client.get_eigendom(aanduiding, brk_http_client)
+            return _parse_brk_response(raw)
+    except GovernmentAPIError as e:
+        return BRKOwnership(
+            eigenaren=[], zakelijk_rechten=[],
+            is_available=False,
+            unavailable_reason=str(e.message),
+            retrieved_at=datetime.utcnow().isoformat() + "Z",
+        )
+```
+
+**Critical ordering constraint:** BRK fetch depends on `cadastral_parcels` being populated (needs parcel aanduiding). BRK cannot run in the same `asyncio.gather()` as parcel fetch. It needs a SECOND gather after cadastral parcels resolve.
+
+**Revised aggregation flow:**
+
+```
+STEP 2a (parallel): fetch_cadastral_parcels(), fetch_zoning(), fetch_monuments(),
+                    fetch_energy_label(), fetch_woz_data()
+  ↓ await
+STEP 2b (parallel): fetch_brk_ownership()  # depends on STEP 2a cadastral result
+```
+
+### PropertyReportResponse Addition
+
+```python
+# In backend/app/schemas/property.py
+brk_ownership: BRKOwnership | None = Field(
+    default=None,
+    description="Property ownership data from BRK (never cached per Kadaster terms)",
+)
+```
+
+**Frontend note:** `BRKOwnership.retrieved_at` replaces `cached_at`/`age_seconds` for source display. Show "Actueel opgevraagd: [timestamp]" instead of cache age.
+
+### Frontend Component
+
+New `EigendomSection` in `ReportDetailPage.tsx`. Renders:
+- Owner list (obfuscate partial names for privacy — show "J. de V..." not full name)
+- Rights type per owner (eigendom, erfpacht, etc.)
+- Aandeel (share fraction) if multiple owners
+- "Niet beschikbaar" state when `is_available = false` with `unavailable_reason`
+- No "Bekijk op cache" freshness indicator (data is always live)
+
+**Privacy consideration:** Eigendomsdata includes personal names. Display should match the WOZ-waardeloket convention: first initial + truncated surname. Full display is legally permitted (public register) but industry best practice is partial display.
+
+---
+
+## Source 4: RCE Monument Data (Improved)
+
+### Current State
+
+`backend/app/government_apis/rce_monuments.py` queries the PDOK OGC Features API for spatial monument hits but returns minimal data: monument number, naam, and a register URL. The `monument_naam` field often gets populated with a generic "Rijksmonument {nr}" fallback.
+
+### What's Missing
+
+The RCE Linked Data API at `https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run` provides rich detail: volledigeOmschrijving (full description), oorspronkelijkeFunctie (original function), monumentaard (built/archaeological), provincieNaam, woonplaatsNaam, straat, and status. This API requires no authentication and is freely accessible.
+
+**Query:** `GET https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run?rijksmonumentnummer={nr}&pageSize=1`
+
+**TTL:** 30 days (monument register changes infrequently)
+
+### Integration Approach
+
+When the PDOK spatial query returns a monument with a monument number, make a SECOND call to the RCE Linked Data API to fetch full detail. This is a two-step enrichment within `_fetch_rce()`:
+
+```python
+async def _fetch_rce(x, y, client, organization_id, session, force_refresh):
+    # Step 1: spatial query (existing)
+    cache_key = f"rce:monument:{x:.0f}:{y:.0f}"
+    cache_result = await get_cached_or_fetch(
+        cache_key=cache_key, source="rce", ...
+        fetch_fn=_fetch_rce_with_detail(x, y, client)  # NEW: includes detail fetch
+    )
+    ...
+
+async def _fetch_rce_with_detail(x, y, client):
+    """Fetch monument spatial hit + enrich with RCE Linked Data detail."""
+    # Step 1: spatial hit (existing PDOK OGC query)
+    docs = await _rce_client.query_by_location(x, y, client)
+    if not docs:
+        return {}
+
+    monument_nr = docs[0].get("rce_objrijksnr")
+    if not monument_nr:
+        return docs[0]
+
+    # Step 2: detail enrichment via RCE Linked Data API
+    try:
+        detail = await _rce_client.get_detail_by_number(monument_nr, client)
+        return {**docs[0], **detail}  # Merge spatial + detail
+    except Exception:
+        return docs[0]  # Graceful: spatial data only if detail fails
+```
+
+### New RCEMonumentClient Method
+
+```python
+async def get_detail_by_number(
+    self,
+    monument_number: str,
+    client: httpx.AsyncClient,
+) -> dict:
+    """Fetch full monument detail from RCE Linked Data API.
+
+    No authentication required. Free public API.
+    """
+    url = "https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run"
+    params = {
+        "rijksmonumentnummer": monument_number,
+        "pageSize": "1",
+    }
+    response = await client.get(url, params=params, timeout=15.0)
+    data = response.json()
+    if not data:
+        return {}
+    item = data[0]
+    return {
+        "volledigeOmschrijving": item.get("volledigeOmschrijving"),
+        "oorspronkelijkeFunctie": item.get("oorspronkelijkeFunctie"),
+        "monumentaard": item.get("monumentaard"),  # "Gebouwd" or "Archeologisch"
+        "bouwstijl": item.get("bouwstijl"),
+        "redengeving": item.get("redengevingOmschrijving"),
+        "rijksmonument_url": f"https://monumentenregister.cultureelerfgoed.nl/monuments/{monument_number}",
+    }
+```
+
+### Schema Changes
+
+Extend `MonumentSourceResult` (in `backend/app/schemas/monument.py`) with optional enrichment fields:
+
+```python
+class MonumentSourceResult(BaseModel):
+    # ... existing fields ...
+    # NEW enrichment fields (only populated by RCE source):
+    volledigeOmschrijving: str | None = None  # Full monument description
+    oorspronkelijkeFunctie: str | None = None  # e.g., "Woonhuis", "Kerk"
+    monumentaard: str | None = None            # "Gebouwd" or "Archeologisch"
+    bouwstijl: str | None = None               # e.g., "Jugendstil"
+    redengeving: str | None = None             # Why it was listed
+    rijksmonument_url: str | None = None       # Link to official register
+```
+
+These fields are nullable so existing BAG and Kadaster `MonumentSourceResult` objects are unaffected.
+
+### Frontend Changes
+
+Enhance `MonumentSection` in `ReportDetailPage.tsx` to display new fields when present:
+- Official register link: `<a href={src.rijksmonument_url}>Bekijk in Rijksmonumentenregister</a>`
+- `volledigeOmschrijving` — collapsible (potentially long text)
+- `oorspronkelijkeFunctie` + `bouwstijl` as metadata chips
+- `monumentaard` badge ("Gebouwen" or "Archeologisch")
+
+---
+
+## Data Flow (Complete Updated Picture)
+
+```
+Input: { postcode, huisnummer }
+  │
+  ▼
+STEP 1 (sequential) ─────────────────────────────────────────────
+resolve_address(BAG)
+  → verblijfsobject_id  ← needed by EP-Online, WOZ
+  → nummeraanduiding_id ← needed by WOZ
+  → pand_id             ← needed by BRK (via parcel)
+  → coordinates (RD)    ← needed by cadastral, zoning, monuments
+  │
+  ▼
+STEP 2a (parallel) ───────────────────────────────────────────────
+asyncio.gather(
+  fetch_cadastral_parcels(coordinates),    # PDOK Cadastral OGC
+  fetch_zoning(coordinates),               # DSO Ruimtelijke Plannen
+  fetch_monuments(coordinates, pand_id),   # PDOK + RCE Linked Data
+  fetch_energy_label(verblijfsobject_id),  # EP-Online V5 [NEW]
+  fetch_woz_data(nummeraanduiding_id),     # WOZ-waardeloket [NEW]
+)
+  │
+  ▼
+STEP 2b (sequential, BRK only) ──────────────────────────────────
+if brk_client._configured and cadastral_parcels:
+  fetch_brk_ownership(cadastral_parcels[0].kadastrale_aanduiding)
+  # Uses mTLS client, NOT shared httpx client
+  # NEVER goes through get_cached_or_fetch
+  │
+  ▼
+STEP 3 (sequential) ─────────────────────────────────────────────
+AI parsing trigger (existing)
+MapData build (existing)
+section_sources build (existing + new sections)
+completeness_score (existing + new sections increment total_sections)
+  │
+  ▼
+PropertyReportResponse (extended)
+  address, building, cadastral_parcels       ← existing
+  zoning, monuments, map_data, ai_parsing    ← existing
+  energy_label [NEW]
+  woz [NEW]
+  brk_ownership [NEW]
 ```
 
 ---
 
-### 4. Map Filter Controls
+## Component Boundaries
 
-**Architectural decision: Extend LayerToggle with collapsible filter panel, use MapLibre setFilter() for client-side filtering**
+### New Backend Files
 
-The existing `LayerToggle` is a pill bar at bottom-left. It already handles layer visibility via callbacks to `MapPage`. Map filters extend this pattern:
+| File | Type | Purpose | Caching |
+|------|------|---------|---------|
+| `backend/app/government_apis/ep_online.py` | API client | EP-Online V5 REST queries by VBO ID | Via `get_cached_or_fetch`, TTL 90d |
+| `backend/app/government_apis/woz_waardeloket.py` | API client | WOZ-waardeloket public JSON endpoint | Via `get_cached_or_fetch`, TTL 365d |
+| `backend/app/schemas/energy.py` | Pydantic schema | `EnergyLabel` model | N/A |
+| `backend/app/schemas/woz.py` | Pydantic schema | `WOZData`, `WOZJaarwaarde` models | N/A |
+| `backend/app/schemas/brk.py` | Pydantic schema | `BRKOwnership`, `BRKEigenaar` models | N/A |
 
-1. A "Filters" toggle button added to the pill bar
-2. On click: `MapFilterPanel` expands above the bar (absolute position)
-3. Filter state lives in `MapPage` (same pattern as `activeGemeente`, `activeScanId`)
-4. `useEffect` in MapPage calls `map.setFilter()` when filter state changes
+### Modified Backend Files
 
-**No API calls for filter application.** Vector tiles already carry all filter-eligible properties (`score`, `pand_status`, `bestemming` type extracted from `bestemmingen` JSON). MapLibre's expression-based filtering is client-side — instant response, no network round-trip.
+| File | Change | Scope |
+|------|--------|-------|
+| `backend/app/government_apis/rce_monuments.py` | Add `get_detail_by_number()` method to `RCEMonumentClient` | EXTEND — existing `query_by_location` unchanged |
+| `backend/app/services/monument_aggregator.py` | Modify `_fetch_rce()` to call enrichment after spatial hit | MODIFY — split fetch into two-step |
+| `backend/app/schemas/monument.py` | Add nullable enrichment fields to `MonumentSourceResult` | EXTEND — backward compatible |
+| `backend/app/schemas/property.py` | Add `energy_label`, `woz`, `brk_ownership` fields to `PropertyReportResponse` | EXTEND — all Optional |
+| `backend/app/services/property_aggregator.py` | Add 3 nested fetch functions, adjust gather call order, update completeness_score denominator | MODIFY — core orchestration |
+| `backend/app/core/config.py` | Add `CACHE_TTL` entries for `ep_online` and `woz` | EXTEND |
+| `backend/app/government_apis/rate_limiter.py` | Add `ep_online_limiter` (5 concurrent, 300/hour) | EXTEND |
 
-**New component:**
+### New Frontend Files
 
-```typescript
-// src/components/map/MapFilterPanel.tsx  (NEW)
-interface MapFilters {
-  scoreMin: number       // 0-100
-  scoreMax: number       // 0-100
-  bestemmingType?: string
-  pandStatus?: string
-  hasBuilding?: boolean
-}
+| File | Purpose |
+|------|---------|
+| `frontend/src/components/reports/EnergieLabelSection.tsx` | Energy label badge + index + history |
+| `frontend/src/components/reports/WOZSection.tsx` | WOZ-waarde + history table + disclaimer |
+| `frontend/src/components/reports/EigendomSection.tsx` | BRK ownership list + rights + live-fetch indicator |
 
-interface MapFilterPanelProps {
-  isOpen: boolean
-  filters: MapFilters
-  onApply: (filters: MapFilters) => void
-  onClose: () => void
-}
-```
+### Modified Frontend Files
 
-**MapLibre setFilter() integration in MapPage:**
-
-```typescript
-// In map.tsx (MODIFIED)
-const [mapFilters, setMapFilters] = useState<MapFilters>({
-  scoreMin: 0,
-  scoreMax: 100,
-})
-
-useEffect(() => {
-  if (!mapReady || !mapRef.current) return
-  const map = mapRef.current
-  if (!map.getLayer('parcel-score-fill')) return
-
-  const expressions: maplibregl.FilterSpecification[] = [
-    ['has', 'score'],
-    ['>=', ['get', 'score'], mapFilters.scoreMin],
-    ['<=', ['get', 'score'], mapFilters.scoreMax],
-  ]
-  if (mapFilters.bestemmingType) {
-    // bestemming stored as string in tile properties
-    expressions.push(['==', ['get', 'bestemming_type'], mapFilters.bestemmingType])
-  }
-  if (mapFilters.pandStatus) {
-    expressions.push(['==', ['get', 'pand_status'], mapFilters.pandStatus])
-  }
-  map.setFilter('parcel-score-fill', ['all', ...expressions])
-  map.setFilter('parcel-score-outline', ['all', ...expressions])
-}, [mapFilters, mapReady])
-```
-
-**Score range slider:** Two-thumb range slider using two overlapping `<input type="range">` elements. No library. A known CSS technique using z-index and pointer-events.
-
-**LayerToggle modification:** Add a "Filters" pill that shows an active-count badge when filters are non-default:
-
-```
-[Kaart] [Satellite] | [Percelen] [Gemeenten] [Bestemmingsplan] [Wijken] [Potentie] | [Filters (2)]
-```
-
-The "2" badge counts the number of active non-default filter values.
+| File | Change |
+|------|--------|
+| `frontend/src/lib/types/property.ts` | Add `EnergyLabel`, `WOZData`, `WOZJaarwaarde`, `BRKOwnership`, `BRKEigenaar` interfaces; extend `MonumentSourceResult` with enrichment fields; extend `PropertyReportResponse` |
+| `frontend/src/components/reports/ReportDetailPage.tsx` | Import + render `EnergieLabelSection`, `WOZSection`, `EigendomSection` in section stack; enhance `MonumentSection` with RCE enrichment fields |
 
 ---
 
-### 5. Scoring Visualizations
+## Settings / Config Changes
 
-**Architectural decision: Pure SVG primitives, no charting library, CSS variable tokens**
+### New Settings (backend/app/core/config.py)
 
-The codebase has no charting library. The existing score visualization in `ParcelDetailModal` is already done with div elements and inline widths — a reasonable pattern elevated to proper shared primitives.
-
-**New primitive components:**
-
-```
-src/components/primitives/ScoreRing.tsx      — SVG radial arc gauge
-src/components/primitives/ScoreBar.tsx       — horizontal bar (thin variant of existing pattern)
-src/components/primitives/ScoreGauge.tsx     — composition: ring + numeric label + category badge
-```
-
-**ScoreRing implementation pattern (SVG stroke-dasharray technique):**
-
-```typescript
-// src/components/primitives/ScoreRing.tsx  (NEW)
-interface ScoreRingProps {
-  score: number       // 0-100
-  size?: number       // viewBox size, default 80
-  strokeWidth?: number
-  className?: string
-}
-
-export function ScoreRing({ score, size = 80, strokeWidth = 7, className }: ScoreRingProps) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (Math.min(Math.max(score, 0), 100) / 100) * circumference
-  const cx = size / 2
-  const cy = size / 2
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      className={`-rotate-90 ${className ?? ''}`}
-      aria-hidden="true"
-    >
-      {/* Track */}
-      <circle cx={cx} cy={cy} r={radius}
-        fill="none"
-        stroke="var(--color-grey-800)"
-        strokeWidth={strokeWidth}
-      />
-      {/* Fill arc */}
-      <circle cx={cx} cy={cy} r={radius}
-        fill="none"
-        stroke="var(--color-amber-accent)"
-        strokeWidth={strokeWidth}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 0.6s ease-out' }}
-      />
-    </svg>
-  )
+```python
+CACHE_TTL = {
+    # ... existing ...
+    "ep_online": 7776000,   # 90 days (energy labels change infrequently)
+    "woz": 31536000,        # 365 days (set annually)
 }
 ```
 
-**ScoreGauge composition:**
-
-```typescript
-// src/components/primitives/ScoreGauge.tsx  (NEW)
-export function ScoreGauge({ score, category, size = 'md' }: ScoreGaugeProps) {
-  const ringSize = size === 'sm' ? 48 : size === 'md' ? 72 : 96
-
-  return (
-    <div className="relative flex items-center justify-center">
-      <ScoreRing score={score} size={ringSize} />
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold tabular-nums text-grey-100">
-          {Math.round(score)}
-        </span>
-        {category && (
-          <span className="text-[10px] text-grey-500">{category}</span>
-        )}
-      </div>
-    </div>
-  )
-}
+```python
+class Settings(BaseSettings):
+    # ... existing ...
+    EP_ONLINE_API_KEY: str = Field(
+        default="",
+        description="EP-Online Public API key (request at apikey.ep-online.nl — free)",
+    )
+    # BRK_API_KEY, BRK_CLIENT_CERT_PATH, etc. already exist
 ```
 
-**ScoreBar (elevates existing pattern):**
+### Environment Variables
 
-The existing inline bar in `ParcelDetailModal` lines 146-155 is exactly the component to extract. Props: `value`, `max`, `label`, `size`.
-
-**Where scoring visualizations appear:**
-
-| Location | Component | Variant |
-|----------|-----------|---------|
-| `ParcelDetailModal` | `ScoreGauge` | size="lg", replaces existing div circle |
-| `InspectorPanel` (map click) | `ScoreGauge` | size="sm", in the Kanscore section |
-| `ReportDetailPage` header | `ScoreGauge` (completeness) | size="md", in MetricCard area |
-| `ComparisonColumn` header | `ScoreGauge` | size="sm" |
-| Score factor breakdown | `ScoreBar` | replaces all inline bar divs |
+| Variable | Required | Fallback Behavior |
+|----------|----------|------------------|
+| `EP_ONLINE_API_KEY` | Yes (for EP-Online) | Section returns None + error in errors list |
+| `BRK_API_KEY` + certs | Yes (for BRK) | `brk_client._configured = False`, section shows "niet geconfigureerd" |
+| No new vars for WOZ | N/A | WOZ public endpoint needs no auth |
 
 ---
 
-### 6. Theme Polish
+## Build Order
 
-**Architectural decision: Extend existing CSS variable system only — no structural changes**
+Build order is driven by three constraints:
+1. Schema before aggregator (Pydantic models must exist before they're referenced)
+2. API client before aggregator integration
+3. BRK aggregation after cadastral parcel fetch (data dependency)
 
-The theme system (`ThemeContext`, `html.light` class, CSS variables in `index.css`) is correct and complete. All new components must:
+### Phase 1: Schema Layer (no dependencies)
 
-1. Use semantic grey scale tokens (`text-grey-100`, `bg-grey-950`, etc.) — NEVER hardcode colors
-2. Use `--color-overlay` for subtle overlays instead of `white/[0.05]` or `black/[0.05]`
-3. Use `--color-amber-accent` via Tailwind class `text-amber-accent` / `bg-amber-accent`
-4. Use CSS variable `stroke="var(--color-amber-accent)"` in SVG elements (inline style for SVG)
-5. NOT modify `html.light {}` CSS block unless adding a new token
+1. `backend/app/schemas/energy.py` — `EnergyLabel` model
+2. `backend/app/schemas/woz.py` — `WOZData`, `WOZJaarwaarde`
+3. `backend/app/schemas/brk.py` — `BRKOwnership`, `BRKEigenaar`
+4. Extend `backend/app/schemas/monument.py` — add nullable enrichment fields
+5. Extend `backend/app/schemas/property.py` — add 3 new fields to `PropertyReportResponse`
+6. Add CACHE_TTL entries + EP_ONLINE_API_KEY to `backend/app/core/config.py`
 
-**StaticMapImage theme handling:** CARTO light tiles (`basemaps.cartocdn.com/light_all/`) are readable in both themes — they are a grey/beige map that works on dark and light backgrounds. No theme-switching needed for the tile URL.
+**Gate:** `ruff check . && mypy .` — all type checks pass
 
-**MapLibre map style in `MapView.tsx`:** The hardcoded `#1a1a2e` background color is intentional (MapLibre styles are not CSS-theming-aware). Do not attempt to make MapLibre styles dynamic — this is a known architectural constraint.
+### Phase 2: API Clients (depends on Phase 1 schemas)
 
----
+7. `backend/app/government_apis/ep_online.py` — EPOnlineClient
+8. `backend/app/government_apis/woz_waardeloket.py` — WOZWaardeloketClient
+9. Add `ep_online_limiter` to `backend/app/government_apis/rate_limiter.py`
+10. Extend `backend/app/government_apis/rce_monuments.py` — `get_detail_by_number()` method
 
-## Component Boundaries Map
+**Gate:** Manual curl tests against live APIs (EP-Online Swagger, WOZ-waardeloket, RCE Linked Data)
 
-### New Components (create from scratch)
+### Phase 3: Aggregator Wiring (depends on Phases 1 + 2)
 
-| Component | Location | Responsibility | Dependencies |
-|-----------|----------|----------------|-------------|
-| `ComparisonView` | `src/components/comparison/` | Grid layout, column orchestration | `useComparisonReports`, `ComparisonColumn` |
-| `ComparisonColumn` | `src/components/comparison/` | Single property vertical stack | Existing Section components |
-| `ComparisonHeader` | `src/components/comparison/` | Sticky row: names, close, swap | TanStack Router search params |
-| `ComparisonMetricRow` | `src/components/comparison/` | Labeled row spanning columns | none |
-| `ComparisonEmptySlot` | `src/components/comparison/` | Placeholder for unfilled slots | none |
-| `StaticMapImage` | `src/components/map/` | Static tile image for reports | `buildStaticMapUrl` utility, `useTheme` |
-| `MapFilterPanel` | `src/components/map/` | Score/status/bestemming filter UI | callback to MapPage |
-| `Tabs` | `src/components/primitives/` | Headless tab compound component | React context |
-| `TabList` | `src/components/primitives/Tabs.tsx` | Tab button container | Tabs context |
-| `Tab` | `src/components/primitives/Tabs.tsx` | Individual tab button | Tabs context |
-| `TabPanel` | `src/components/primitives/Tabs.tsx` | Tab content container (stays mounted) | Tabs context |
-| `ScoreRing` | `src/components/primitives/` | SVG radial arc gauge | none |
-| `ScoreBar` | `src/components/primitives/` | Horizontal factor bar | none |
-| `ScoreGauge` | `src/components/primitives/` | Ring + label + category badge | `ScoreRing`, `Badge` |
-| `useComparisonReports` | `src/hooks/` | Parallel TanStack Query for N reports | `useQueries`, `useAuth`, `fetchReport` |
-| `vergelijken.tsx` | `src/routes/_authenticated/` | Comparison route | `ComparisonView`, `useComparisonReports` |
-| `buildStaticMapUrl` | `src/lib/staticMap.ts` | Tile URL math utility | none |
+11. Extend `backend/app/services/monument_aggregator.py` — two-step RCE enrichment
+12. Extend `backend/app/services/property_aggregator.py` — add 3 nested fetch functions, second gather for BRK, update completeness_score
+13. Update `total_sections` denominator (currently 6, becomes 9 with 3 new sections)
 
-### Modified Components (extend, not rewrite)
+**Gate:** Full end-to-end test: `POST /api/property/lookup` returns response with all 3 new sections populated
 
-| Component | Change | Scope |
-|-----------|--------|-------|
-| `ReportDetailPage.tsx` | Wrap sections in Tabs; add StaticMapImage above tabs; add ScoreGauge to MetricCard area | MODIFY — sections unchanged |
-| `ParcelDetailModal.tsx` | Replace inline score circle with ScoreGauge; replace factor bars with ScoreBar | MODIFY — other content unchanged |
-| `LayerToggle.tsx` | Add "Filters" pill + open/close state; render MapFilterPanel | MODIFY — existing toggles unchanged |
-| `InspectorPanel.tsx` | Add ScoreGauge in Kanscore section; add ScoreBar for factor breakdown | MODIFY — other content unchanged |
-| `map.tsx` | Add `mapFilters` state; `useEffect` for `map.setFilter()`; pass MapFilterPanel props | MODIFY — add state + effect only |
-| `SideRailNav.tsx` | Add `/vergelijken` link if comparison is a primary destination | OPTIONAL MODIFY |
-| `rapporten.tsx` (route) | Add report selection checkboxes + "Vergelijk" button to navigate to `/vergelijken` | MODIFY — add selection state |
+### Phase 4: Frontend Types + Components (depends on Phase 3 backend being stable)
 
-### Unchanged Components (consume as-is)
+14. Extend `frontend/src/lib/types/property.ts` — all new interfaces
+15. `frontend/src/components/reports/EnergieLabelSection.tsx`
+16. `frontend/src/components/reports/WOZSection.tsx`
+17. `frontend/src/components/reports/EigendomSection.tsx`
+18. Modify `frontend/src/components/reports/ReportDetailPage.tsx` — wire in new sections
+19. Enhance `MonumentSection` within `ReportDetailPage.tsx` — RCE detail fields
 
-| Component | Why Unchanged |
-|-----------|---------------|
-| `MapView.tsx` | Map lifecycle must not change |
-| `_authenticated.tsx` | MapContext + layout structure unchanged |
-| `MapContext.tsx` | Mini-maps use static images, not this context |
-| `GebouwSection`, `KadasterSection`, `BestemmingSection`, `MonumentSection`, `AIInterpretatieSection`, `BronnenSection` | Slot into TabPanel without modification |
-| All TanStack Query hooks (except `useComparisonReports` new) | Already correct |
-| `ResultsFilterPanel.tsx` | Map filters are separate from results table filters |
-| `ParcelScoreLayer.tsx` | `setFilter` called on the layer ID from outside, no internal change |
-| `ThemeContext.tsx` | Theme system is complete |
+**Gate:** `npm run check` passes; open a real report and verify all 3 new sections render (even in empty/unavailable state)
 
----
+### Phase 5: BRK Stub (parallel-executable with Phases 1-4)
 
-## Data Flow Changes
+BRK requires mTLS certificates which are not yet obtained. Build with graceful degradation:
+- `EigendomSection` must render cleanly when `brk_ownership.is_available = false`
+- Show "Eigendomsdata niet geconfigureerd" with configuration instructions
+- Section should be visible but empty — not hidden — so users know the feature exists
 
-### Comparison Flow
-
-```
-User selects reports in /rapporten
-  → selects 2-4 checkboxes, clicks "Vergelijk"
-  → navigate({ to: '/vergelijken', search: { ids: ['uuid1', 'uuid2'].join(',') } })
-
-vergelijken.tsx
-  → reads search.ids, splits by ','
-  → useComparisonReports([uuid1, uuid2])
-    → useQueries — runs N queries in parallel
-    → hits existing ['report', id] cache entries (likely cached from /rapporten)
-  → ComparisonView receives N QueryResult objects
-    → ComparisonColumn per result
-      → renders Section data side-by-side using MetricCard/Row primitives
-```
-
-**No new API endpoints required.** The existing `GET /api/reports/{id}` serves all comparison data.
-
-### Map Filter Flow
-
-```
-User clicks "Filters" in LayerToggle
-  → MapFilterPanel expands (React state in LayerToggle or MapPage)
-  → User drags score range to 60-100, selects "Wonen" bestemming
-  → Clicks "Toepassen"
-  → onApply(filters) callback fires
-  → MapPage.setMapFilters({ scoreMin: 60, scoreMax: 100, bestemmingType: 'Wonen' })
-  → useEffect fires (mapFilters dependency changed)
-    → mapRef.current.setFilter('parcel-score-fill', ['all', ...expressions])
-    → MapLibre re-renders fill layer with client-side filter
-    → No API call — vector tiles already loaded, filter is client-side expression evaluation
-```
-
-**No new API endpoints.** MapLibre vector tile properties already include `score`, `pand_status`, and bestemming type.
-
-### Static Mini-Map Flow
-
-```
-ReportDetailPage receives data.map_data.center_wgs84 = [5.2913, 52.1326]
-  → <StaticMapImage lng={5.2913} lat={52.1326} zoom={16} />
-    → buildStaticMapUrl(5.2913, 52.1326, 16)
-    → returns 'https://basemaps.cartocdn.com/light_all/16/33867/21752@2x.png'
-    → <img src={...} loading="lazy" />
-    → browser fetches single PNG tile from CARTO CDN (no MapLibre, no WebGL)
-```
-
-**No API call to backend.** Tile URL is a pure function of coordinates.
-
----
-
-## Build Order (Dependency-Ordered)
-
-### Phase A: Primitives (no dependencies — build first)
-
-All Phase A components have zero external dependencies. They can be built and tested in complete isolation.
-
-1. `src/components/primitives/ScoreRing.tsx` — SVG math, CSS variables
-2. `src/components/primitives/ScoreBar.tsx` — trivial div with width
-3. `src/components/primitives/ScoreGauge.tsx` — composes ScoreRing + Badge
-4. `src/components/primitives/Tabs.tsx` — React context + compound pattern
-5. `src/lib/staticMap.ts` — pure URL math utility
-
-**Gate:** Run `npm run check` after each. No new dependencies needed.
-
-### Phase B: Map Enhancements (depends on Phase A primitives)
-
-6. `src/components/map/StaticMapImage.tsx` — uses `buildStaticMapUrl` + `useTheme`
-7. `src/components/map/MapFilterPanel.tsx` — uses Tabs (optional), local filter state
-8. Modify `src/components/map/LayerToggle.tsx` — add Filters pill + MapFilterPanel
-9. Modify `src/routes/_authenticated/map.tsx` — add `mapFilters` state + `setFilter` effect
-
-**Gate:** Verify map filter works on a scan with parcel score layer active.
-
-### Phase C: Report Enhancements (depends on Phase A primitives + Phase B StaticMapImage)
-
-10. Modify `src/components/reports/ReportDetailPage.tsx` — add Tabs wrapper + StaticMapImage + ScoreGauge
-11. Modify `src/components/results/ParcelDetailModal.tsx` — swap to ScoreGauge + ScoreBar
-12. Modify `src/components/layout/InspectorPanel.tsx` — richer score display with ScoreGauge
-
-**Gate:** Open an existing report and verify tabs, mini-map renders, score ring animates.
-
-### Phase D: Comparison Feature (depends on Phase A + Phase C being validated)
-
-13. `src/hooks/useComparison.ts` — parallel query hook
-14. `src/components/comparison/ComparisonMetricRow.tsx` — base layout primitive
-15. `src/components/comparison/ComparisonEmptySlot.tsx` — placeholder
-16. `src/components/comparison/ComparisonColumn.tsx` — single property column
-17. `src/components/comparison/ComparisonHeader.tsx` — sticky header row
-18. `src/components/comparison/ComparisonView.tsx` — grid container
-19. `src/routes/_authenticated/vergelijken.tsx` — comparison route
-20. Modify `src/routes/_authenticated/rapporten.tsx` — add selection + "Vergelijk" button
-21. Optionally modify `src/components/layout/SideRailNav.tsx` — add comparison nav icon
-
-**Gate:** Select 2 reports from /rapporten, click Vergelijk, see side-by-side view.
-
-### Phase E: Theme Polish (can run in parallel with any Phase)
-
-- Audit all new components for hardcoded colors
-- Verify dark mode and light mode rendering for each new component
-- Spot-check `html.light` CSS variables apply correctly to ScoreRing SVG (uses CSS variables inline)
+The mTLS certificate procurement process (PKIOverheid via KPN/Digidentity) takes weeks. Build the full integration with the mock/graceful-fail path FIRST, then plug in real credentials.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Second Full MapLibre Instance for Mini-Maps
-**What goes wrong:** Instantiating `new maplibregl.Map()` inside `ReportDetailPage` or `ComparisonColumn` for property location display.
-**Why it happens:** Seems natural — mini-map looks like a map, so use MapLibre.
-**Consequences:** WebGL context pressure (~8 browser limit), tile fetch cost duplicated, theme sync required, MapLibre initialization delay visible to user.
-**Prevention:** Static tile `<img>` via `StaticMapImage` component. `map_data.center_wgs84` provides the coordinates.
+### Anti-Pattern 1: Caching BRK Eigendomsdata
 
-### Anti-Pattern 2: Prop-Drilling mapRef Into Report Components
-**What goes wrong:** Passing `mapRef` from `MapContext` down into `ReportDetailPage` or `ComparisonColumn` to enable "fly to location" or to render a mini-map using the main map instance.
-**Why it happens:** `mapRef` is accessible — seems convenient.
-**Consequences:** Report components become tightly coupled to map state. They break in routes where the map is hidden (e.g., `/rapporten`). "Bekijk op kaart" navigation belongs at the route level via `navigate()`.
-**Prevention:** Never import `useMapContext` inside report or comparison components. Navigation to map is via `navigate({ to: '/map', search: { ... } })`.
+**What goes wrong:** Using `get_cached_or_fetch()` for BRK ownership data.
+**Why it happens:** Every other source uses this pattern — easy to copy.
+**Consequences:** Violates Kadaster Tier 3 terms of service. Legal liability for Propdex.
+**Prevention:** `fetch_brk_ownership()` never calls `get_cached_or_fetch()`. Uses `brk_client.create_client()` directly. Add a `# NEVER CACHE — Kadaster Tier 3 terms` comment at the call site.
 
-### Anti-Pattern 3: Conditionally Rendering TabPanel Children
-**What goes wrong:** `{activeTab === 'bestemming' && <BestemmingSection />}` — rendering only the active panel's content.
-**Why it happens:** Feels natural to only mount what's visible.
-**Consequences:** Re-mounting triggers re-fetching lazy sections (AI parsing, enrichment). Scroll position lost. Flash on tab return.
-**Prevention:** All `TabPanel` children stay mounted. Use Tailwind `hidden` class (`display: none`) on inactive panels — content is in the DOM but not painted.
+### Anti-Pattern 2: Including BRK Data in JSONB Report Store
 
-### Anti-Pattern 4: Comparison State in React Context or Zustand
-**What goes wrong:** Creating a `ComparisonContext` or store to hold selected report IDs.
-**Why it happens:** Feels like "shared state needs a store".
-**Consequences:** Selected IDs are lost on refresh; comparison is not bookmarkable; adds global state machinery.
-**Prevention:** URL search params are the state: `/vergelijken?ids=uuid1,uuid2`. TanStack Router `useSearch()` provides the IDs. Shareable, bookmarkable, zero-store.
+**What goes wrong:** Storing `brk_ownership` in `reports.report_data` JSONB when saving a report.
+**Why it happens:** `PropertyReportResponse` is saved wholesale to `report_data`.
+**Consequences:** Cached/stored eigendomsdata violates Kadaster terms.
+**Prevention:** Strip `brk_ownership` from `PropertyReportResponse` before saving to DB. Either (a) add a `to_storable_dict()` method that excludes it, or (b) set `brk_ownership = None` before the save operation in `reports/service.py`.
 
-### Anti-Pattern 5: Calling `map.setFilter()` Outside useEffect
-**What goes wrong:** Calling `mapRef.current?.setFilter(...)` directly in event handlers or during render.
-**Why it happens:** Seems simpler than wiring through state and effect.
-**Consequences:** Stale `mapReady` check missed; may call on unmounted map; React violates its own render model.
-**Prevention:** Follow the established pattern from `map.tsx`: state change → `useEffect` detects it → imperative MapLibre call inside the effect with `if (!mapReady || !mapRef.current) return` guard.
+### Anti-Pattern 3: Treating WOZ-waardeloket Endpoint as a Stable API
 
-### Anti-Pattern 6: Adding a Charting Library for Score Visualization
-**What goes wrong:** Adding `recharts`, `chart.js`, `victory`, or similar to render score rings and bars.
-**Why it happens:** Score ring "looks complex", charting libraries seem to solve it.
-**Consequences:** Bundle size increase (recharts alone is ~200KB); inconsistent styling with Industrial Amber design; opacity/color control fights the library's own theme system.
-**Prevention:** Native SVG with `stroke-dasharray` / `stroke-dashoffset` is ~40 lines and fully controllable with CSS variables. See `ScoreRing.tsx` pattern above.
+**What goes wrong:** Building production code that depends on `wozwaardeloket.nl` internal endpoint without fallback.
+**Why it happens:** Endpoint happens to work today.
+**Consequences:** Non-zero probability of endpoint change or authentication requirement added without notice.
+**Prevention:** Wrap in try/except, return `WOZData` with `confidence="LOW"` and a disclaimer. Design frontend to show "WOZ-waarde tijdelijk niet beschikbaar" gracefully. Add health monitoring.
+
+### Anti-Pattern 4: Blocking Step 2b BRK on Zoning/Monument Completion
+
+**What goes wrong:** Awaiting ALL Step 2a results before starting BRK (including slow DSO API calls).
+**Why it happens:** Simple to await the full gather result.
+**Consequences:** BRK fetch adds latency equal to the slowest Step 2a call (DSO can be 3-8s).
+**Prevention:** Only BRK needs the cadastral parcel result. Use a separate `asyncio.Task` for cadastral that starts immediately, then await it specifically before BRK:
+```python
+cadastral_task = asyncio.create_task(fetch_cadastral_parcels())
+other_tasks = asyncio.gather(fetch_zoning(), fetch_monuments(), fetch_energy_label(), fetch_woz())
+cadastral_result = await cadastral_task
+brk_result = await fetch_brk_ownership(cadastral_result)
+await other_tasks  # Wait for remaining
+```
+
+### Anti-Pattern 5: Using Full Monument Description as Monument Name
+
+**What goes wrong:** Populating `monument_naam` with `volledigeOmschrijving` (can be 500+ characters).
+**Why it happens:** The RCE detail provides this field and it seems like the "name".
+**Consequences:** `monument_naam` overflows in UI — it was designed for short names.
+**Prevention:** Keep `monument_naam` from the PDOK spatial query (short). Put `volledigeOmschrijving` in the new enrichment field, displayed in a collapsible panel.
 
 ---
 
 ## Scalability Considerations
 
-| Concern | Current Scale | New Features Impact | Mitigation |
-|---------|--------------|--------------------|-----------:|
-| WebGL contexts | 1 main map | 0 added (static images in reports) | Correct — `StaticMapImage` is `<img>` not MapLibre |
-| TanStack Query cache | ~10 query keys | +N keys for comparison (same keys, shared cache) | No issue — `['report', id]` cache reused |
-| Bundle size | ~16K LOC | +8 new components, 0 new npm packages | No new dependencies required |
-| Map filter re-render | N/A today | `setFilter` is imperative — no React re-render of map | Filter state change triggers `useEffect` only |
-| Tab switch performance | N/A today | Panels stay mounted — O(1) CSS class change | `hidden` class is browser-native, no React overhead |
-| Comparison query count | N/A today | Max 4 parallel queries (4 reports) | `useQueries` batches; existing cache likely hot |
-| Tile CDN requests for mini-maps | 0 today | 1 PNG per report view (cached by browser) | Standard browser tile cache; CDN handles scale |
+| Concern | At Current Scale | With New Sources | Mitigation |
+|---------|-----------------|-----------------|------------|
+| API call count per lookup | 4-6 calls | +4-5 calls (EP-Online, WOZ, RCE detail, optional BRK) | Parallel gather; TTL caching keeps repeat lookups fast |
+| BRK mTLS overhead | N/A | Creates dedicated SSL client per request | `create_client()` overhead is ~5ms; acceptable for optional paid feature |
+| WOZ endpoint reliability | N/A | Single point of failure (undocumented endpoint) | Graceful degradation; 365d TTL means cache cushions outages |
+| completeness_score inflation | 6 sections | 9 sections | Denominator change means existing reports show lower scores — consider versioning |
+| JSONB storage size | ~20KB per report | +2-5KB per new section | No concern at current scale |
+| BRK in JSONB | N/A | MUST strip before save | Enforce in reports/service.py save path |
 
 ---
 
 ## Sources
 
 - Direct codebase analysis (HIGH confidence):
-  - `src/routes/_authenticated.tsx` — MapView lifecycle, MapContext
-  - `src/components/map/MapView.tsx` — MapLibre initialization, CARTO tile constants
-  - `src/lib/MapContext.tsx` — mapRef + mapReady interface
-  - `src/components/reports/ReportDetailPage.tsx` — section structure, PropertyReportResponse shape
-  - `src/components/results/ParcelDetailModal.tsx` — score visualization baseline
-  - `src/components/map/LayerToggle.tsx` — existing filter control pattern
-  - `src/components/map/ParcelScoreLayer.tsx` — setFilter integration point
-  - `src/components/layout/InspectorPanel.tsx` — score bar pattern
-  - `src/lib/types/property.ts` — `map_data.center_wgs84` confirmed on PropertyReportResponse
-  - `frontend/package.json` — no charting library installed; confirms zero new deps approach
-- [MapLibre GL JS WebGL Context Limit Discussion](https://github.com/maplibre/maplibre-gl-js/discussions/3065) (MEDIUM confidence — community, browser-level hardware constraint)
-- [MapLibre Filter Within a Layer Example](https://maplibre.org/maplibre-gl-js/docs/examples/filter-within-a-layer/) (HIGH confidence — official MapLibre documentation)
-- [TanStack Query v5 Parallel Queries — Official Docs](https://tanstack.com/query/v5/docs/framework/react/guides/parallel-queries) (HIGH confidence — official docs)
-- [Headless Component Pattern — Martin Fowler](https://martinfowler.com/articles/headless-component.html) (HIGH confidence — foundational pattern, aligns with existing codebase approach)
-- [SVG Gauge stroke-dasharray pattern](https://veerasundar.com/blog/building-a-radial-gauge-with-svg-and-react-part-1) (MEDIUM confidence — standard SVG stroke technique, confirmed by MDN SVG specification)
+  - `backend/app/services/property_aggregator.py` — aggregation pipeline structure
+  - `backend/app/government_apis/brk_bevragen.py` — existing BRK client (graceful degradation pattern)
+  - `backend/app/government_apis/rce_monuments.py` — existing RCE PDOK client
+  - `backend/app/services/monument_aggregator.py` — two-step aggregation pattern
+  - `backend/app/schemas/monument.py` — MonumentSourceResult extension approach
+  - `backend/app/schemas/property.py` — PropertyReportResponse structure
+  - `backend/app/core/config.py` — CACHE_TTL and Settings patterns
+  - `backend/app/services/cache_manager.py` — caching contract
+  - `frontend/src/components/reports/ReportDetailPage.tsx` — section rendering pattern
+  - `frontend/src/lib/types/property.ts` — TypeScript interface extension points
+- [EP-Online Swagger UI](https://public.ep-online.nl/swagger/index.html) — V5 API endpoints (MEDIUM confidence — confirmed V5 is current, BAG VBO query supported)
+- [EP-Online API key request portal](https://apikey.ep-online.nl/) — free API key, registration required (HIGH confidence)
+- [RVO EP-Online handleiding February 2025](https://www.rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf) — V5 endpoint structure (HIGH confidence — official government documentation)
+- [RCE Linked Data API — rest-api-rijksmonumenten](https://linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9) — no auth, public REST endpoint (HIGH confidence — official RCE Linked Open Data)
+- [RCE PDOK OGC API](https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1) — existing integration confirmed working (HIGH confidence)
+- [Kadaster WOZ API Bevragen docs](https://kadaster.github.io/WOZ-bevragen/getting-started) — confirms municipal-only access (HIGH confidence — official Kadaster)
+- [WOZ-waardeloket public access](https://www.wozwaardeloket.nl/) — public website with undocumented JSON API (LOW confidence — reverse-engineered public endpoint)
+- [Kadaster BRK Bevragen Tier 3 terms](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen) — never-store eigendomsdata requirement (HIGH confidence — existing code comment + official Kadaster terms)

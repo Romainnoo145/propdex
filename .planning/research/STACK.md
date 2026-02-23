@@ -1,481 +1,414 @@
-# Stack Research — v6.0 Premium Data Presentation
+# Stack Research — Deep Property Data APIs
 
-**Project:** Propdex v6.0
-**Domain:** Dutch property intelligence SaaS — premium data presentation, scoring visualizations, comparison views, mini-maps, map filtering UI, theme polish
-**Researched:** 2026-02-21
-**Confidence:** HIGH
-**Focus:** Additions ONLY — existing stack (React 19, Vite 7, TypeScript strict, Tailwind v4, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router, TanStack Table v8, Industrial Amber design system) is validated and unchanged.
+**Domain:** Dutch Government Property Data APIs — WOZ-waarde, EP-Online Energielabel, Kadaster BRK Bevragen, RCE Monument Detail Enrichment
+**Researched:** 2026-02-24
+**Confidence:** HIGH (EP-Online, BRK, RCE Linked Data), MEDIUM (WOZ — access constraints require validation before implementation)
 
 ---
 
-## Context: What This Milestone Adds
+## Context: This Is a Subsequent Milestone
 
-Six new capability areas, each with distinct library needs:
+The following stack is already implemented and validated. Do NOT re-research or change these:
 
-1. **Scoring visualizations** — radial gauges, factor bar charts, score trend lines in detail panels and reports
-2. **Data-dense table UX** — column pinning, row virtualization for 500+ result sets, sticky headers
-3. **Property comparison views** — side-by-side parcel comparison with tabbed sections, diff highlights
-4. **Map filter controls** — range slider for score threshold, pill-toggle filters wired to MapLibre `setFilter()`
-5. **Mini-maps in reports** — static location thumbnail embedded in `ReportDetailPage`, live overview control in scan view
-6. **Theme system polish** — chart colors, map overlay colors, MapLibre popup styles wired to CSS variables for `html.light` / dark switch
+- FastAPI + asyncio backend, async PostgreSQL via SQLAlchemy 2.x
+- `httpx.AsyncClient` — shared client, connection pooling, all government API calls
+- `aiolimiter.AsyncLimiter` + `asyncio.Semaphore` composited in `APIRateLimiter` (`government_apis/rate_limiter.py`)
+- JSONB caching via `get_cached_or_fetch()` (`services/cache_manager.py`)
+- `GovernmentAPIError`, `APINotFoundError`, `handle_api_response()` (`government_apis/base.py`)
+- `pydantic-settings` config with `Field()` (`core/config.py`)
+- `pyproj.Transformer` — coordinate transforms RD ↔ WGS84 (`government_apis/rce_monuments.py`)
 
----
+The following are **already implemented in the codebase** (confirmed by code audit):
 
-## New Dependencies: Decision Table
-
-| Library | Version | Area | Decision | Confidence |
-|---------|---------|------|----------|------------|
-| `recharts` | 3.7.0 | Scoring charts | ADD — only charting library needed | HIGH |
-| `@radix-ui/react-tabs` | 1.1.13 | Comparison views | ADD — headless, accessible, React 19 explicit support | HIGH |
-| `@radix-ui/react-slider` | 1.3.6 | Map filter controls | ADD — range slider for score threshold, accessible | HIGH |
-| `@radix-ui/react-collapsible` | 1.1.12 | Report sections | ADD — accordion-style expand/collapse for data sections | HIGH |
-| `@radix-ui/react-tooltip` | 1.2.8 | Score factor labels | ADD — accessible tooltip for score breakdown labels | HIGH |
-| `@radix-ui/react-popover` | 1.1.15 | Filter panel popup | ADD — filter panel anchored to map button | HIGH |
-| `@tanstack/react-virtual` | 3.13.18 | Table virtualization | ADD — row virtualization for 500+ parcel result sets | HIGH |
-
-**Zero new backend dependencies.**
+| File | What it already does |
+|------|---------------------|
+| `government_apis/brk_bevragen.py` | BRK Bevragen client: mTLS + API key, production+test endpoints, `get_kadastraal_object()`, `get_eigendom()`, no-cache constraint |
+| `government_apis/rce_monuments.py` | PDOK OGC spatial query for monument detection, `query_by_location()`, `get_by_monument_number()` stub |
+| `government_apis/rate_limiter.py` | `brk_limiter` (2 concurrent, 200/hour), `bag_wfs_limiter`, `plu_wfs_limiter`, `sru_limiter` |
+| `core/config.py` | `BRK_API_KEY`, `BRK_CLIENT_CERT_PATH`, `BRK_CLIENT_KEY_PATH`, `BRK_CA_BUNDLE_PATH` settings |
 
 ---
 
-## Capability Area 1: Scoring Visualizations
+## API Integration Specifications
 
-### Decision: recharts 3.7.0
+### 1. WOZ-waarde (Property Tax Valuation)
 
-**Why recharts over alternatives:**
+#### Access Reality — Critical Blocker
 
-- React 19 explicit peer dependency support: `"react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"` — verified via `npm info recharts@3.7.0` (HIGH confidence).
-- Recharts 3.0 rewrote internal state management — smaller, faster, fewer re-renders than 2.x. Version 3.7.0 is the current stable (`npm info recharts version` returns `3.7.0`).
-- Renders to SVG — inherits CSS variables for colors. Chart `fill` and `stroke` can be `var(--color-amber-accent)` which automatically switches with `html.light`.
-- No additional charting dependency needed — recharts covers all required chart types: `RadialBarChart` for score gauge, `BarChart` + `Cell` for factor breakdown, `LineChart` for trend sparklines.
-- Bundle: ~150KB minified (acceptable for a data-dense SaaS — already shipping MapLibre at ~600KB).
+**HIGH confidence:** The official Kadaster WOZ Bevragen API (Haal Centraal, endpoint: `wozobjecten`) is **restricted to municipalities and specific housing/tax-law use cases**. Commercial SaaS products cannot access it.
 
-**Why NOT alternatives:**
-- **Chart.js / react-chartjs-2** — Canvas-based. CSS variables do not apply to canvas fills — each color must be extracted via `getComputedStyle()` at render time. Makes light/dark theme switching significantly more complex. Rejected.
-- **Victory** — React 19 support is unclear, last major release was 2023. LOW confidence on compatibility.
-- **D3 direct** — No React component abstraction; requires imperative DOM manipulation in `useEffect`. Conflicts with React 19's concurrent rendering model. More than 10x the implementation effort for equivalent charts.
-- **Tremor** — Component library (not headless). Imposes its own design tokens that conflict with the existing Industrial Amber CSS variable system. Rejected.
+**Requirements that Propdex cannot meet:**
+- Active OIN (Organisatie Identificatienummer) — government entities only
+- PKIOverheid PKIO certificate (Staat der Nederlanden Private Root CA-G1)
+- Signed legal agreement with Kadaster for housing-law or tax-collection purposes
+- Rate: 10,000 queries/day, 35 queries/minute
 
-**Required chart types:**
+**Sources:** Kadaster official page ([WOZ API Bevragen](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen)) states: "only for municipalities" and "limited to tax collection purposes." Confirmed by [data.overheid.nl community discussion](https://data.overheid.nl/community/datarequest/api-voor-woz-waarde-woningen-o-b-v-adres).
 
-| Chart | Component | Use Case |
-|-------|-----------|----------|
-| Score gauge | `RadialBarChart` + `PolarAngleAxis` | 0-100 score ring in detail modal / report header |
-| Factor bars | `BarChart` + `Cell` + `LabelList` | Score breakdown (Pandstatus, Bouwjaar, etc.) |
-| Trend sparkline | `LineChart` + `ReferenceLine` | Score history across re-scans (future) |
+#### Recommended Access Path: Kadaster Objectinformatie API
 
-**CSS variable integration pattern (critical for theme):**
+The Objectinformatie API is the commercial Kadaster product for property data including WOZ values. Available to any registered business via Mijn Kadaster.
 
-```typescript
-// Chart colors use CSS variables — switch automatically with html.light
-const chartConfig = {
-  score: { color: 'var(--color-amber-accent)' },
-  success: { color: 'var(--color-success)' },
-  error: { color: 'var(--color-error)' },
-}
+| Attribute | Value |
+|-----------|-------|
+| Base URL | `https://kadatawebservice.kadaster.nl/` (exact API path requires Mijn Kadaster login) |
+| Auth | API key via `X-Api-Key` header, obtained from Kadata Internet in Mijn Kadaster portal |
+| Cost | €1.92 per WOZ-object query (incl. VAT) |
+| Response format | JSON |
+| Rate limit | Not publicly documented — apply conservative limits (2 concurrent, 100/hour) |
+| Registration | [kadaster.nl/zakelijk/producten/vastgoed/objectinformatie](https://www.kadaster.nl/zakelijk/producten/vastgoed/objectinformatie) then Mijn Kadaster |
+| Swagger | Available through Kadata Internet after registration |
 
-// RadialBarChart gauge for 0-100 score
-<RadialBarChart
-  width={120} height={120}
-  innerRadius="70%" outerRadius="90%"
-  startAngle={180} endAngle={-180}
-  data={[{ value: score, fill: 'var(--color-amber-accent)' }]}
->
-  <RadialBar dataKey="value" background={{ fill: 'var(--color-grey-800)' }} />
-</RadialBarChart>
+**No new Python library needed.** Existing httpx handles this. Add `KADASTER_OI_API_KEY` to settings.
 
-// BarChart for factor breakdown
-<BarChart data={factors} layout="vertical">
-  <Bar dataKey="value">
-    {factors.map((f) => (
-      <Cell key={f.key} fill={`var(--color-${f.color})`} />
-    ))}
-  </Bar>
-</BarChart>
-```
+Confidence: MEDIUM — pricing and access model verified; exact API endpoint URL path requires Mijn Kadaster login to confirm. **Validate before starting implementation phase.**
 
-**Confidence:** HIGH — recharts 3.7.0 explicitly supports React 19, CSS variable fills confirmed in recharts docs, SVG rendering verified.
+#### If Objectinformatie Access Is Delayed: Altum AI WOZ API
+
+- URL: `https://altum.ai/woz-api/`
+- Accepts BAG ID (`pand_id` or `verblijfsobject_id`) or postcode + huisnummer
+- No official source — aggregates public WOZ Waardeloket data
+- Pricing not public — contact sales
+- **Verdict:** Fallback only. Use Kadaster official source when available.
+
+#### What NOT to Do
+
+Do NOT scrape `wozwaardeloket.nl`. This violates the site's terms of service and is legally risky for a commercial product. The data is publicly viewable per-address by law, but automated scraping of the portal is not authorized.
 
 ---
 
-## Capability Area 2: Data-Dense Table UX
+### 2. EP-Online Energielabel API
 
-### Decision: @tanstack/react-virtual 3.13.18
+#### API Details
 
-**Why:**
-- TanStack Table v8 (already installed) has no built-in row virtualization. For scan result sets of 500+ parcels, rendering all rows causes visible lag.
-- `@tanstack/react-virtual` is the official TanStack companion — designed to compose with `useReactTable()` row models. The integration is documented in TanStack Table's own examples.
-- React 19 peer dependency explicitly supported: `"react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"` — verified via npm.
-- Headless — uses the same `styled div` approach as the existing `ResultsTable.tsx`. No style conflicts.
-- ~15KB. No DOM overhead when virtualization threshold is not reached (renders normally under ~100 rows).
+**HIGH confidence** — verified from official RVO handleiding published February 2025.
 
-**Integration pattern with existing ResultsTable:**
+| Attribute | Value |
+|-----------|-------|
+| Version | **v5** (live since November 2024) |
+| Base URL | `https://public.ep-online.nl/api/v5/` |
+| Swagger | `https://public.ep-online.nl/swagger/index.html` |
+| Auth | API key in `Authorization` header (Bearer scheme per Swagger) |
+| Rate limit | Not published — apply conservative limits (5 concurrent, 500/hour) |
+| Response format | JSON |
+| Cost | Free with registered API key |
+| Registration | `https://apikey.ep-online.nl/` — submit org name, org type, email, KvK number; key delivered by email activation within minutes |
 
-```typescript
-import { useVirtualizer } from '@tanstack/react-virtual'
+**Critical version note:** v3 deprecated January 30, 2025. v4 deprecated July 1, 2025. **Only v5 is current.** Do not implement against v3 or v4.
 
-// In ResultsTable.tsx — add to existing useReactTable setup:
-const { rows } = table.getRowModel()
-const parentRef = useRef<HTMLDivElement>(null)
+#### Key Endpoints
 
-const rowVirtualizer = useVirtualizer({
-  count: rows.length,
-  getScrollElement: () => parentRef.current,
-  estimateSize: () => 40,       // row height matches existing compact density
-  overscan: 10,
-})
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `GET /api/v5/PandEnergielabel/Adres` | GET | Lookup by postcode + huisnummer (+ optional toevoeging) |
+| `GET /api/v5/PandEnergielabel/{bagId}` | GET | Lookup by BAG Pand ID, VBO ID, Ligplaats ID, or Standplaats ID |
 
-const virtualRows = rowVirtualizer.getVirtualItems()
-const totalSize = rowVirtualizer.getTotalSize()
-```
+The BAG VBO ID lookup is preferable for Propdex because BAG resolution already runs first in `property_aggregator.py` and provides the `verblijfsobject_id`. Use BAG ID when available; fall back to postcode+huisnummer.
 
-**Column pinning (no new library needed):**
-TanStack Table v8 has built-in column pinning via `columnPinning` state and `getLeftLeafColumns()` / `getRightLeafColumns()`. Sticky positioning is pure CSS: `position: sticky; left: 0`. This is already documented in TanStack Table v8 and requires zero new dependencies.
+#### Response Fields (MEDIUM confidence — inferred from Swagger schema and API documentation)
 
-**Confidence:** HIGH — official TanStack pairing, React 19 explicitly supported, pattern verified in TanStack Table sticky pinning docs.
-
----
-
-## Capability Area 3: Property Comparison Views
-
-### Decision: @radix-ui/react-tabs 1.1.13
-
-**Why:**
-- The comparison view is a side-by-side panel with tabbed sections (Overview / Locatie / Bestemmingen / Vergunningen). Tabs are the correct primitive — not accordion, not routing.
-- Radix UI Tabs: accessible (WAI-ARIA), keyboard navigable, zero styling imposed. Integrates with Tailwind CSS variables.
-- React 19 explicit peer dependency: `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"` — verified via npm.
-- Already familiar pattern — `cmdk` (already installed) uses Radix primitives under the hood.
-
-**Why NOT routing-based tabs:**
-TanStack Router tabs would force URL changes per tab switch in the comparison view, which is not desired (comparison is modal/panel state, not a navigable page).
-
-**Comparison view structure:**
-
-```tsx
-// Side-by-side comparison — two columns, one tab set controls both
-<Tabs.Root defaultValue="overview">
-  <Tabs.List>
-    <Tabs.Trigger value="overview">Overzicht</Tabs.Trigger>
-    <Tabs.Trigger value="locatie">Locatie</Tabs.Trigger>
-    <Tabs.Trigger value="bestemmingen">Bestemmingen</Tabs.Trigger>
-  </Tabs.List>
-
-  <div className="grid grid-cols-2 gap-4">
-    {[parcelA, parcelB].map((parcel) => (
-      <div key={parcel.id}>
-        <Tabs.Content value="overview"><OverviewSection parcel={parcel} /></Tabs.Content>
-        <Tabs.Content value="locatie"><LocatieSection parcel={parcel} /></Tabs.Content>
-        <Tabs.Content value="bestemmingen"><BestemmingSection parcel={parcel} /></Tabs.Content>
-      </div>
-    ))}
-  </div>
-</Tabs.Root>
-```
-
-**Diff highlights:** CSS only — compare field values, apply `bg-amber-accent/10 text-amber-accent` to cells that differ. No library needed.
-
-**Confidence:** HIGH — Radix Tabs 1.1.13, React 19 explicitly supported, accessible ARIA roles included.
-
----
-
-## Capability Area 4: Map Filter Controls
-
-### Decision: @radix-ui/react-slider 1.3.6
-
-**Why:**
-- The map filter panel requires a range slider for score threshold (0–100). Native `<input type="range">` cannot be styled consistently across browsers and lacks dual-thumb (min/max range) support.
-- Radix Slider: accessible, dual-thumb range support, keyboard navigable. React 19 peer dep: `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"`.
-- The existing `ResultsFilterPanel.tsx` uses custom `FilterPill` and native `<select>` — adding Radix Slider extends this pattern without imposing a full component framework.
-
-**MapLibre setFilter wiring pattern:**
-
-```typescript
-// Score range slider → MapLibre layer filter
-const [scoreRange, setScoreRange] = useState([0, 100])
-
-const handleScoreChange = (values: number[]) => {
-  setScoreRange(values)
-  map.setFilter('parcel-scores-fill', [
-    'all',
-    ['>=', ['get', 'score'], values[0]],
-    ['<=', ['get', 'score'], values[1]],
-  ])
-}
-
-<Slider.Root
-  min={0} max={100} step={5}
-  value={scoreRange}
-  onValueChange={handleScoreChange}
->
-  <Slider.Track className="h-1 bg-grey-800 rounded-full relative">
-    <Slider.Range className="absolute h-full bg-amber-accent rounded-full" />
-  </Slider.Track>
-  <Slider.Thumb className="block w-4 h-4 bg-amber-accent rounded-full shadow-md" />
-  <Slider.Thumb className="block w-4 h-4 bg-amber-accent rounded-full shadow-md" />
-</Slider.Root>
-```
-
-**Why NOT custom slider:** Keyboard accessibility for range sliders (Arrow keys, Home/End) requires significant ARIA implementation. Radix handles this correctly out of the box.
-
-### Decision: @radix-ui/react-popover 1.1.15
-
-**Why:**
-- The map filter panel is triggered by a button in `LayerToggle.tsx` and floats over the map. This is a popover pattern — anchored, dismissible on outside click, focus-trapped.
-- Radix Popover: correct semantic role, portal-rendered (above MapLibre z-index), accessible. React 19 peer dep: explicitly supported.
-- The existing `LayerToggle.tsx` is a hand-rolled positioned `<div>`. Replacing with Radix Popover eliminates the custom outside-click detection logic (currently in a `useEffect` with a document listener).
-
-**Confidence:** HIGH — Radix Slider 1.3.6 and Popover 1.1.15, React 19 explicitly supported, MapLibre `setFilter` integration is standard API.
-
----
-
-## Capability Area 5: Mini-Maps in Reports
-
-### Decision: Native MapLibre GL JS — No New Library
-
-**Two distinct mini-map use cases require different approaches:**
-
-**5a. Static location thumbnail in ReportDetailPage (property centroid)**
-
-Implementation: `new maplibregl.Map({ container, preserveDrawingBuffer: true })` rendered into a small fixed-size `<div>` (e.g. 280px × 180px). Center on parcel centroid. Add `NavigationControl` disabled for interaction. Capture static image via `map.getCanvas().toDataURL('image/png')` after the `idle` event.
-
-Note: `preserveDrawingBuffer: true` has a GPU cost (prevents frame buffer reuse). Acceptable for a single mini-map in a detail page. Do NOT use it on the primary scan map.
-
-**5b. Overview "where-am-I" control in scan view**
-
-The `maplibregl-minimap` npm package (v1.0.3) exists on MapLibre's official plugins page. However, the package description states it is "currently in development and not yet ready for production use." Using an unstable plugin on the primary scan map carries unacceptable risk.
-
-**Decision: Implement the overview mini-map as a custom MapLibre `IControl`.** Pattern:
-- Create a small second `maplibregl.Map` instance inside a custom `IControl`'s `onAdd()` method.
-- Sync the overview map's center/zoom to the primary map via `map.on('move', ...)`.
-- This is the same approach MapLibre's own plugin uses internally — avoids dependency risk.
-- Estimated implementation: ~80 lines in `MinimapControl.ts`.
-
-**Why NOT react-mapbox-minimap (npm: `react-mapbox-minimap` by gilles-mastropasqua):**
-- Peer dependency requires `mapbox-gl ^3.7.0` — incompatible with this project's `maplibre-gl 5.x`. Rejected.
-
-**Why NOT a full additional MapLibre instance as React state:**
-- MapLibre instances are imperative and DOM-attached. Two Map instances managed via React state causes double mount/teardown on StrictMode and `suspense`. The `IControl` lifecycle (`onAdd` / `onRemove`) is the correct imperative container.
-
-**Confidence:** HIGH — `preserveDrawingBuffer` approach is MapLibre official recommendation for screenshots. Custom `IControl` for overview is the pattern MapLibre's plugin ecosystem uses.
-
----
-
-## Capability Area 6: Theme System Polish
-
-### Decision: No New Libraries — CSS Variable Extension Only
-
-The theme system is already correct architecture (`html.light` selector on `<html>`, CSS variables in `@theme`, `ThemeContext.tsx` with localStorage). The gaps are color token coverage, not structural.
-
-**Required CSS variable additions to `index.css`:**
-
-```css
-@theme {
-  /* Chart palette — oklch for P3 gamut vibrancy */
-  --color-chart-1: oklch(0.78 0.15 85.87);   /* amber — matches amber-accent */
-  --color-chart-2: oklch(0.65 0.18 145);      /* green — matches success */
-  --color-chart-3: oklch(0.60 0.22 25);       /* red — matches error */
-  --color-chart-4: oklch(0.62 0.18 250);      /* blue — matches info */
-  --color-chart-5: oklch(0.59 0.12 192.47);   /* teal — matches teal-accent */
-
-  /* Score tier tokens */
-  --color-score-high: oklch(0.65 0.18 145);   /* >= 70: green */
-  --color-score-mid: oklch(0.78 0.15 85.87);  /* 40-69: amber */
-  --color-score-low: oklch(0.60 0.22 25);     /* < 40: red */
-}
-
-html.light {
-  /* Chart palette — same hues, adjusted L for white surfaces */
-  --color-chart-1: oklch(0.70 0.15 85.87);
-  --color-chart-2: oklch(0.50 0.18 145);
-  --color-chart-3: oklch(0.52 0.22 25);
-  --color-chart-4: oklch(0.52 0.18 250);
-  --color-chart-5: oklch(0.48 0.12 192.47);
-
-  --color-score-high: oklch(0.50 0.18 145);
-  --color-score-mid: oklch(0.70 0.15 85.87);
-  --color-score-low: oklch(0.52 0.22 25);
+```json
+{
+  "Pand_opnamedatum": "2023-01-15",
+  "Pand_registratiedatum": "2023-02-01",
+  "Pand_energieklasse": "A",
+  "Pand_berekeningstype": "Nieuw",
+  "Pand_energielabel_is_pand_label": true,
+  "VBO_ID": "0363010000123456",
+  "Postcode": "1054GL",
+  "Huisnummer": 77
 }
 ```
 
-**MapLibre light mode map tiles:**
-The existing map uses CartoDB Dark Matter tiles. In `html.light` mode, switch to CartoDB Positron (light tile variant). Pattern: `ThemeContext` change triggers `map.setStyle()` in `MapView.tsx`. This is pure logic — no new dependency.
+`Pand_energieklasse` values: `A++++` to `G` for residential; `A+++++` to `G` for utility buildings.
 
-**MapLibre popup light mode:**
-Already handled in `index.css` via `html.light .propdex-property-popup .maplibregl-popup-content` selectors (confirmed in existing code). Extend same pattern for any new popups.
+#### Caching Strategy
 
-**Recharts tooltip theming:**
-Recharts `<Tooltip>` renders into a `<div>` inside the SVG container. Style via CSS:
-```css
-.recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: var(--color-grey-900) !important;
-  border: 1px solid color-mix(in oklch, var(--color-overlay) 8%, transparent) !important;
-  color: var(--color-grey-100) !important;
-}
+Energy labels are quasi-permanent once registered. Cache at 30 days (`"ep_online": 2592000`). Cache key: `ep_online:label:{verblijfsobject_id}` or `ep_online:label:{postcode}:{huisnummer}`.
+
+#### New Settings Required
+
+```python
+EP_ONLINE_API_KEY: str = Field(
+    default="",
+    description="EP-Online energielabel API key (register at apikey.ep-online.nl)",
+)
 ```
 
-**Confidence:** HIGH — existing architecture is correct, gaps are additive token coverage only.
+#### New Rate Limiter Required
+
+```python
+# EP-Online (RVO) — free, no published rate limit, be conservative
+ep_online_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=500)
+```
+
+**No new Python library needed.** Existing httpx handles this.
 
 ---
 
-## Supporting Radix Primitives: Tooltip and Collapsible
+### 3. Kadaster BRK Bevragen (Eigendomsdata)
 
-### @radix-ui/react-tooltip 1.2.8
+#### Status: Client Already Implemented
 
-**Why:** Score factor labels in `ParcelDetailModal.tsx` currently use a hand-rolled `group-hover:opacity-100` tooltip (lines 128–134 of existing code). Radix Tooltip provides correct ARIA `role="tooltip"`, keyboard accessibility (focus shows tooltip), and portal rendering (prevents z-index conflicts inside scroll containers). React 19: explicitly supported.
+`government_apis/brk_bevragen.py` is fully operational. Confirmed by code audit:
 
-**Migration:** Replace the existing `<div className="group relative">` pattern with `<Tooltip.Root>` — backward compatible slot-based API.
+- mTLS via Python stdlib `ssl.SSLContext` + PKIOverheid certificate
+- Test endpoint: `https://api.brk.kadaster.nl/esd-eto/bevragen/v2/`
+- Production endpoint: `https://api.brk.kadaster.nl/esd/bevragen/v2/`
+- Two methods: `get_kadastraal_object(identificatie)` and `get_eigendom(identificatie)` with `expand=true`
+- Rate limiter: `brk_limiter` (2 concurrent, 200/hour)
+- No-cache constraint enforced ("CRITICAL: Eigendomsdata must NEVER be cached" — per Kadaster Tier 3 terms)
+- Graceful degradation: if BRK not configured, logs warning and disables queries (does not crash)
 
-### @radix-ui/react-collapsible 1.1.12
+**The client exists. The milestone work is wiring it into the property aggregator pipeline and displaying results.**
 
-**Why:** Report detail sections (Vergunningen, Ruimtelijke Plannen, RCE Monumenten) currently render all data unconditionally. For parcels with many plan documents, this creates long single-scroll pages. Radix Collapsible provides accessible expand/collapse with `aria-expanded` — no animation library needed, just `data-[state=open]:animate-*` with Tailwind.
+#### API Facts (Confirmed)
 
-React 19: explicitly supported.
+| Attribute | Value |
+|-----------|-------|
+| Production URL | `https://api.brk.kadaster.nl/esd/bevragen/v2/` |
+| Test URL | `https://api.brk.kadaster.nl/esd-eto/bevragen/v2/` |
+| Auth | `X-Api-Key` header + PKIOverheid mTLS certificate |
+| Cert type | PKIOverheid G1 Private Root, with HRN (Handelsregisternummer for commercial orgs) |
+| Subscription | Mijn Kadaster required (€40.20/year base) |
+| Cert procurement | Via TSP registered with Logius PKIOverheid (e.g., DigiCert, QuoVadis) |
+| Response format | JSON (OAS3 spec) |
+| Caching | Prohibited by terms for eigendomsdata (Tier 3 data) |
+
+#### Endpoints Used
+
+```
+GET /kadastraalonroerendezaken/{identificatie}
+    → Cadastral object: geometry, area, municipality, section, parcel number
+
+GET /kadastraalonroerendezaken/{identificatie}/zakelijkegerechtigden?expand=true
+    → Rights holders: owners (eigenaren), right types, expanded person details
+```
+
+#### Integration Gap to Close
+
+`brk_bevragen.py` exists but is not called from `property_aggregator.py`. The aggregator currently has placeholder functions in `monument_aggregator.py` for `_fetch_kadaster_monument()` that return stub errors. The parallel fetch pipeline needs:
+
+1. A new `fetch_eigendom()` async function in `property_aggregator.py`
+2. The kadastrale aanduiding from the already-fetched PDOK parcels maps to BRK's `identificatie`
+3. Add `BRK` as a new parallel task in `asyncio.gather()` call
+4. New `EigendomData` Pydantic schema for the response
+5. No caching (enforce existing constraint)
 
 ---
 
-## Full New Dependency Table
+### 4. RCE Monument Detail Enrichment
 
-| Library | Version | Purpose | pnpm install command |
-|---------|---------|---------|---------------------|
-| `recharts` | `^3.7.0` | Score gauge, factor bars, sparklines | `pnpm add recharts` |
-| `@radix-ui/react-tabs` | `^1.1.13` | Comparison view tab navigation | `pnpm add @radix-ui/react-tabs` |
-| `@radix-ui/react-slider` | `^1.3.6` | Score range filter slider | `pnpm add @radix-ui/react-slider` |
-| `@radix-ui/react-collapsible` | `^1.1.12` | Report section expand/collapse | `pnpm add @radix-ui/react-collapsible` |
-| `@radix-ui/react-tooltip` | `^1.2.8` | Score factor label tooltips | `pnpm add @radix-ui/react-tooltip` |
-| `@radix-ui/react-popover` | `^1.1.15` | Map filter panel anchor | `pnpm add @radix-ui/react-popover` |
-| `@tanstack/react-virtual` | `^3.13.18` | Row virtualization for 500+ results | `pnpm add @tanstack/react-virtual` |
+#### Status: Spatial Detection Works, Detail Data Missing
 
-**Installation (all at once):**
-```bash
-pnpm add recharts @radix-ui/react-tabs @radix-ui/react-slider @radix-ui/react-collapsible @radix-ui/react-tooltip @radix-ui/react-popover @tanstack/react-virtual
+Current `government_apis/rce_monuments.py` uses the PDOK OGC API spatial query, which returns only:
+- `localid` (monument number, e.g., `"11766.00"`)
+- `sitenaam` (monument name)
+- `siteprotectionclassification` (generic text)
+- `ci_citation` (register URL)
+- `legalfoundationdate`
+
+There is no `beschrijving`, `functie`, `architect`, `bouwperiode`, or `oorspronkelijkeFunctie` from this source.
+
+The stub `get_by_monument_number()` in `rce_monuments.py` explicitly states: "Falls back to returning None. The PDOK API doesn't support filtering by monument number directly."
+
+#### New Source: RCE Linked Data REST API
+
+**HIGH confidence** — official RCE documentation, no registration required.
+
+| Attribute | Value |
+|-----------|-------|
+| Base URL | `https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run` |
+| Auth | None — public, no API key required |
+| Rate limit | Not formally documented; "excessive use may result in access restrictions" |
+| Response format | JSON-LD via `Accept: application/ld+json`; also CSV and Turtle |
+| Pagination | `page` + `pageSize` parameters (max 10,000 per page) |
+| Cost | Free |
+| Registration | Not required |
+
+#### Key Query Parameters
+
+| Parameter | Type | Use |
+|-----------|------|-----|
+| `rijksmonumentnummer` | string | Primary lookup after PDOK spatial query yields monument number |
+| `postcode` | string | Address-first lookup fallback |
+| `volledigAdres` | string | Full address string search |
+| `straat` | string | Street name filter |
+| `monumentaard` | string | `gebouwd` or `archeologisch` |
+| `oorspronkelijkeFunctie` | string | Original function filter |
+| `status` | string | `rijksmonument`, `voorbeschermd`, `geen rijksmonument` |
+
+#### Example URL
+
+```
+https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run?rijksmonumentnummer=12340
 ```
 
-**No new dev dependencies.** All type declarations are bundled in the packages themselves.
+#### Response Fields Available (MEDIUM confidence — inferred from CEO ontology and API documentation; verify against live API response)
+
+Fields present in JSON-LD response (ignorable `@context` and `@id` prefixes, parse as plain JSON):
+- Monument number, name, status
+- `monumentaard` (`gebouwd`, `archeologisch`)
+- `oorspronkelijkeFunctie` (original building function)
+- `volledigAdres`
+- `registeromschrijving` (legal description including cultural significance)
+- Building period (`bouwperiode`) — available via CEO ontology, confirm in live response
+- Architect — available via CEO ontology, confirm in live response
+
+#### Integration Strategy: Two-Step Enrichment
+
+Do NOT replace the PDOK OGC spatial query. Keep it as Step 1 (monument detection by location). Add Step 2 only when a monument is found:
+
+```
+Step 1: PDOK OGC API spatial query
+  → bbox query → monument_nummer from localid
+  → Returns: is_monument=True/False + basic data
+
+Step 2 (only if monument found): RCE Linked Data API
+  → rijksmonumentnummer lookup → rich detail fields
+  → Returns: beschrijving, functie, bouwperiode, architect, status
+```
+
+This avoids unnecessary calls to the RCE Linked Data API for non-monument properties.
+
+#### New Rate Limiter Required
+
+```python
+# RCE Linked Data — free, no published limit, conservative
+rce_detail_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=100)
+```
+
+#### Caching Strategy
+
+Cache at 30 days (`"rce_detail": 2592000`). Monument descriptions are legally fixed once registered. Cache key: `rce:detail:{monument_nummer}`.
+
+**No new Python library needed.** JSON-LD parses as plain JSON with existing `response.json()`. The `@context` and `@id` fields can be ignored for display purposes.
 
 ---
 
-## What NOT to Add
+## Summary: Stack Changes Required
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `chart.js` / `react-chartjs-2` | Canvas-based — CSS variables (oklch tokens) don't apply to canvas. Light/dark theme switching requires `getComputedStyle()` hacks at render time | `recharts` (SVG, CSS variables apply natively) |
-| `victory` (FormidableLabs) | Last major release 2023, React 19 compatibility unclear, LOW confidence | `recharts 3.7.0` |
-| `d3` direct | Imperative DOM manipulation conflicts with React 19 concurrent rendering; 10x implementation effort for equivalent charts | `recharts` (wraps d3 internally) |
-| `tremor` | Component library with its own design tokens — conflicts with Industrial Amber CSS variable system | `recharts` + Radix primitives + Tailwind |
-| `maplibregl-minimap` npm package | Package README states "not yet ready for production use" (development status) | Custom `IControl` implementation (~80 lines) |
-| `react-mapbox-minimap` | Peer dependency requires `mapbox-gl ^3.7.0` — incompatible with `maplibre-gl 5.x` | Custom `IControl` implementation |
-| `@radix-ui/react-accordion` | Adds indirection over `@radix-ui/react-collapsible` which is the lower-level primitive we need | `@radix-ui/react-collapsible` directly |
-| `framer-motion` | ~150KB animation library for effects achievable with Tailwind's `transition-*` utilities and CSS `@keyframes` | Tailwind transitions + `@keyframes` in `index.css` |
-| `react-spring` | Same concern as framer-motion — heavy for what's needed | CSS transitions only |
-| `next-themes` | Next.js-specific theme provider — incompatible with the existing `ThemeContext.tsx` + localStorage pattern | Existing `ThemeProvider` in `src/lib/theme/` |
-| `react-window` | Older virtualization library; `@tanstack/react-virtual` is the modern replacement with React 19 support | `@tanstack/react-virtual` |
-| `react-virtualized` | Unmaintained. Last release 2019. No React 17+ support | `@tanstack/react-virtual` |
-| `shadcn/ui` CLI install | Conflicts with Tailwind v4's CSS-first `@theme` approach — CLI modifies `tailwind.config.js` which doesn't exist in v4 | Copy-paste individual patterns manually (shadcn is source, not runtime dependency) |
+### New Python Dependencies
+
+**None.** All four API integrations work with the existing library set.
+
+Do NOT add any of the following:
+- `zeep` — no SOAP APIs in scope
+- `lxml` / `xmltodict` — no XML responses
+- `requests` — blocking; httpx already installed
+- `python-kadaster` — not a maintained package
+
+### New Settings (add to `core/config.py`)
+
+```python
+EP_ONLINE_API_KEY: str = Field(
+    default="",
+    description="EP-Online energielabel API key (register at apikey.ep-online.nl)",
+)
+KADASTER_OI_API_KEY: str = Field(
+    default="",
+    description="Kadaster Objectinformatie API key (via Mijn Kadaster, for WOZ-waarde data)",
+)
+```
+
+BRK settings (`BRK_API_KEY`, `BRK_CLIENT_CERT_PATH`, `BRK_CLIENT_KEY_PATH`, `BRK_CA_BUNDLE_PATH`) already exist.
+RCE Linked Data needs no credentials.
+
+### New Cache TTLs (add to `CACHE_TTL` in `core/config.py`)
+
+```python
+"ep_online":  2592000,  # 30 days — energy labels change infrequently
+"woz":        2592000,  # 30 days — WOZ values update annually
+"rce_detail": 2592000,  # 30 days — monument descriptions rarely change
+```
+
+### New Rate Limiters (add to `government_apis/rate_limiter.py`)
+
+```python
+# EP-Online (RVO) — free API, no published limit, conservative
+ep_online_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=500)
+
+# RCE Linked Data — free, no published limit
+rce_detail_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=100)
+
+# Kadaster Objectinformatie — paid per query
+kadaster_oi_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=100)
+```
+
+### New Government API Client Files
+
+| File | What it does |
+|------|-------------|
+| `government_apis/ep_online.py` | EP-Online v5 energielabel lookup by VBO ID or postcode+huisnummer |
+| `government_apis/rce_monument_detail.py` | RCE Linked Data enrichment call by rijksmonumentnummer |
+| `government_apis/kadaster_objectinfo.py` | Kadaster Objectinformatie WOZ lookup — implement after access is confirmed |
+
+### Existing Files to Modify
+
+| File | Change |
+|------|--------|
+| `government_apis/rce_monuments.py` | Implement `get_by_monument_number()` to call new `rce_monument_detail.py` |
+| `services/monument_aggregator.py` | Wire RCE detail enrichment into `_fetch_rce()` result |
+| `services/property_aggregator.py` | Add `fetch_eigendom()` and `fetch_energielabel()` to parallel gather |
+| `core/config.py` | Add new settings and cache TTLs |
+| `government_apis/rate_limiter.py` | Add new limiter instances |
 
 ---
 
-## Integration Points
+## Alternatives Considered
 
-### recharts ↔ Theme System
-
-```
-index.css: --color-chart-1..5, --color-score-high/mid/low defined in @theme + html.light overrides
-  ↓ recharts SVG fills use var(--color-chart-1) etc.
-  ↓ ThemeContext toggles html.light class
-  ↓ CSS variables update automatically — no JS re-render needed for chart colors
-```
-
-### @tanstack/react-virtual ↔ ResultsTable
-
-```
-ResultsTable.tsx (existing TanStack Table v8)
-  ↓ add useVirtualizer() from @tanstack/react-virtual
-  ↓ render virtualRows instead of all rows
-  ↓ add paddingTop/paddingBottom spacers to maintain scroll position
-  ↓ existing sort/filter/selection state unaffected
-```
-
-### @radix-ui/react-slider ↔ MapLibre setFilter
-
-```
-LayerToggle.tsx → opens @radix-ui/react-popover
-  ↓ Popover content: score range Slider + category pills
-  ↓ onValueChange → map.setFilter('parcel-scores-fill', [...expression...])
-  ↓ map.setFilter('parcel-scores-line', [...expression...]) — same expression
-  ↓ ParcelScoreLayer.tsx setFilter call — paint stays; features filtered
-```
-
-### Custom MinimapControl ↔ MapLibre Map
-
-```
-MinimapControl.ts (new IControl class, ~80 lines)
-  ↓ onAdd(map): creates second maplibregl.Map in a container div
-  ↓ map.on('move', syncOverview) — syncs center/zoom with offset
-  ↓ Renders viewport rect as GeoJSON on overview map
-  ↓ Added to primary map: map.addControl(new MinimapControl(), 'bottom-right')
-  ↓ No React state — pure MapLibre imperative API
-```
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| WOZ data | Kadaster Objectinformatie API | Official WOZ Bevragen API | Municipalities-only; requires OIN — Propdex cannot qualify |
+| WOZ data | Kadaster Objectinformatie API | Altum AI WOZ API | Third-party aggregator; not official source; opaque pricing |
+| WOZ data | Kadaster Objectinformatie API | wozwaardeloket.nl scraping | ToS violation; legally risky for commercial product |
+| RCE detail | RCE Linked Data REST API + rijksmonumentnummer | Replace PDOK OGC spatial query | PDOK spatial query already works for monument detection; only add enrichment on top |
+| RCE legacy | RCE Linked Data REST API | rijksmonumenten.info Solr API | Returns HTTP 403 as of early 2026 (documented in existing `rce_monuments.py` comment) |
+| EP-Online | Public REST API v5 | Bulk mutatiebestand file download | Bulk download is for data warehousing; per-address lookup is correct for on-demand reports |
+| HTTP client | httpx (existing) | zeep, requests, aiohttp | All new APIs return JSON; no SOAP; httpx already installed and async |
 
 ---
 
-## Version Compatibility Matrix
+## Registration Timeline and Access Prerequisites
 
-| Package | Version | React 19 | Tailwind v4 | MapLibre 5.x | Notes |
-|---------|---------|-----------|-------------|--------------|-------|
-| `recharts` | 3.7.0 | explicit | via CSS vars | N/A | SVG fills inherit CSS variables |
-| `@radix-ui/react-tabs` | 1.1.13 | explicit | via className | N/A | No style conflicts |
-| `@radix-ui/react-slider` | 1.3.6 | explicit | via className | via setFilter | Thumb/track are unstyled divs |
-| `@radix-ui/react-collapsible` | 1.1.12 | explicit | via className | N/A | `data-[state=open]` Tailwind variant |
-| `@radix-ui/react-tooltip` | 1.2.8 | explicit | via className | N/A | Portal renders above MapLibre z-index |
-| `@radix-ui/react-popover` | 1.1.15 | explicit | via className | N/A | Portal renders above MapLibre z-index |
-| `@tanstack/react-virtual` | 3.13.18 | explicit | via className | N/A | Pairs with existing TanStack Table v8 |
+| API | Register At | Time to Access | Cost | Blocker? |
+|-----|------------|---------------|------|----------|
+| EP-Online | `https://apikey.ep-online.nl/` | Minutes (email activation) | Free | No — do this first |
+| RCE Linked Data | No registration | Immediate | Free | No — no action needed |
+| BRK Bevragen | Mijn Kadaster + PKIOverheid cert | Days-weeks (cert procurement is the long pole) | €40.20/yr + per-query | Partially — client exists, cert may already be procured |
+| Kadaster Objectinformatie (WOZ) | Mijn Kadaster → Kadata Internet | Days | €1.92/WOZ query | Yes — validate access before planning implementation phase |
 
-All Radix UI packages declare `"react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"` — verified via `npm info` for each package.
-
----
-
-## Radix UI Portals and MapLibre Z-Index
-
-**Potential conflict:** Radix UI Tooltip, Popover, and other portal-rendered components render into `document.body`. MapLibre renders into a fixed canvas element. The existing `index.css` z-index scale has `--z-modal: 1000` and `--z-toast: 2000`.
-
-**Resolution:** Add explicit z-index to Radix portal containers:
-
-```css
-/* In index.css — Radix UI portal z-index */
-[data-radix-popper-content-wrapper] {
-  z-index: var(--z-dropdown) !important;  /* 400 — above map layers */
-}
-[data-radix-tooltip-content] {
-  z-index: var(--z-dropdown) !important;
-}
-```
-
-This is the established pattern for Radix + MapLibre coexistence (verified via community discussions). The `!important` is intentional — Radix sets inline `z-index` via Popper positioning that must be overridden.
+**Recommended order:**
+1. Register EP-Online API key now (minutes, free)
+2. Confirm BRK PKIOverheid cert status — if not procured, start immediately (takes 1-2 weeks)
+3. Request Kadaster Objectinformatie access via Mijn Kadaster — confirm endpoint URL and schema
+4. RCE Linked Data — no action needed, test live API response to confirm field names
 
 ---
 
 ## Sources
 
-- `npm info recharts@3.7.0 peerDependencies` — React 19 explicit support confirmed (HIGH confidence)
-- `npm info @radix-ui/react-tabs version peerDependencies` — v1.1.13, React 19 explicit support (HIGH confidence)
-- `npm info @radix-ui/react-slider version peerDependencies` — v1.3.6, React 19 explicit support (HIGH confidence)
-- `npm info @radix-ui/react-collapsible version peerDependencies` — v1.1.12, React 19 explicit support (HIGH confidence)
-- `npm info @radix-ui/react-tooltip version peerDependencies` — v1.2.8, React 19 explicit support (HIGH confidence)
-- `npm info @radix-ui/react-popover version peerDependencies` — v1.1.15, React 19 explicit support (HIGH confidence)
-- `npm info @tanstack/react-virtual version peerDependencies` — v3.13.18, React 19 explicit support (HIGH confidence)
-- [Recharts 3.0 migration guide](https://github.com/recharts/recharts/wiki/3.0-migration-guide) — state management rewrite, CSS variable fill support
-- [maplibregl-minimap README](https://github.com/JabSYsEmb/maplibregl-minimap/blob/main/README.md) — "not yet ready for production use" (reason for custom IControl decision)
-- [react-mapbox-minimap npm](https://www.npmjs.com/package/react-mapbox-minimap) — peer dep `mapbox-gl ^3.7.0`, incompatible with maplibre-gl 5.x
-- [MapLibre GL JS Plugins page](https://maplibre.org/maplibre-gl-js/docs/plugins/) — official plugin ecosystem overview
-- [MapLibre setFilter examples](https://maplibre.org/maplibre-gl-js/docs/examples/filter-within-a-layer/) — filter expression API confirmed
-- [shadcn/ui charts with CSS variables](https://ui.shadcn.com/docs/components/radix/chart) — recharts + CSS variable pattern (`var(--chart-1)` etc.)
-- [TanStack Table column pinning sticky](https://tanstack.com/table/v8/docs/framework/react/examples/column-pinning-sticky) — built-in, no extra library needed
-- [TanStack Virtual v3 docs](https://tanstack.com/virtual/latest) — React 19 support, TanStack Table integration pattern
-- [Tailwind v4 dark mode docs](https://tailwindcss.com/docs/dark-mode) — `@custom-variant` and class selector approach
-- Existing codebase: `frontend/src/styles/index.css` — oklch `@theme` + `html.light` pattern (confirmed architecture)
-- Existing codebase: `frontend/src/lib/theme/ThemeContext.tsx` — localStorage + `html.light` toggle (confirmed pattern)
-- Existing codebase: `frontend/src/components/results/ParcelDetailModal.tsx` — hand-rolled score bars to be replaced
+- Kadaster WOZ Bevragen official — [kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen) (HIGH)
+- Kadaster WOZ Bevragen GitHub — [github.com/kadaster/WOZ-bevragen](https://github.com/kadaster/WOZ-bevragen) (HIGH)
+- Kadaster WOZ rate limits — [kadaster.nl/-/wat-kost-de-woz-api-huidige-bevragingen-](https://www.kadaster.nl/-/wat-kost-de-woz-api-huidige-bevragingen-) (HIGH)
+- Kadaster Objectinformatie API — [kadaster.nl/-/objectinformatie-api](https://www.kadaster.nl/-/objectinformatie-api) (HIGH)
+- EP-Online handleiding (RVO, Feb 2025) — [rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf](https://www.rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf) (HIGH)
+- EP-Online public data page — [ep-online.nl/PublicData](https://www.ep-online.nl/PublicData) (HIGH)
+- EP-Online Swagger — [public.ep-online.nl/swagger/index.html](https://public.ep-online.nl/swagger/index.html) (HIGH)
+- EP-Online API key portal — [apikey.ep-online.nl](https://apikey.ep-online.nl/) (HIGH)
+- EP-Online release notes (v5 live Nov 2024, v3 end-of-life Jan 2025) — [ep-online.nl/Home/ReleaseNotes](https://www.ep-online.nl/Home/ReleaseNotes) (HIGH)
+- Kadaster BRK Bevragen official — [kadaster.nl/zakelijk/producten/eigendom/brk-bevragen](https://www.kadaster.nl/zakelijk/producten/eigendom/brk-bevragen) (HIGH)
+- Kadaster BRK Bevragen GitHub (VNG) — [github.com/kadaster/BRK-bevragen](https://github.com/kadaster/BRK-bevragen) (HIGH)
+- RCE Linked Data API documentation — [cultureelerfgoed.github.io/API/](https://cultureelerfgoed.github.io/API/) (HIGH)
+- RCE REST API story — [linkeddata.cultureelerfgoed.nl/rce/-/stories/Restfull-API](https://linkeddata.cultureelerfgoed.nl/rce/-/stories/Restfull-API) (HIGH)
+- RCE rijksmonumenten query spec — [linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9](https://linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9) (HIGH)
+- Codebase audit: `government_apis/brk_bevragen.py` — fully implemented client confirmed (HIGH)
+- Codebase audit: `government_apis/rce_monuments.py` — PDOK OGC integration + 403 note confirmed (HIGH)
+- Codebase audit: `government_apis/rate_limiter.py` — existing limiters confirmed (HIGH)
+- Codebase audit: `core/config.py` — BRK settings, CACHE_TTL dict confirmed (HIGH)
+- Codebase audit: `services/property_aggregator.py` — parallel gather pattern confirmed (HIGH)
 
 ---
 
-*Stack research for: Propdex v6.0 — Premium Data Presentation*
-*Researched: 2026-02-21*
+*Stack research for: Propdex — Deep Property Data APIs (WOZ, EP-Online, BRK eigendom, RCE detail)*
+*Researched: 2026-02-24*

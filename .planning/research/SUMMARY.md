@@ -1,286 +1,221 @@
 # Project Research Summary
 
-**Project:** Propdex v6.0 — Premium Data Presentation
-**Domain:** Dutch PropTech SaaS — data presentation overhaul for property intelligence platform
-**Researched:** 2026-02-21
-**Confidence:** HIGH
+**Project:** Propdex — Deep Property Data APIs (v7.0)
+**Domain:** Dutch Government Property Data Integration — WOZ, EP-Online Energielabel, BRK Eigendom, RCE Monument Enrichment
+**Researched:** 2026-02-24
+**Confidence:** HIGH (BRK, EP-Online, RCE) / MEDIUM (WOZ — access path requires pre-milestone validation)
 
 ## Executive Summary
 
-Propdex v6.0 is a presentation-layer overhaul of an existing, production-grade Dutch property intelligence platform (~40K LOC, React 19 + MapLibre 5.x + TanStack Stack). The goal is to transform a functional tool into a premium data experience that establishes a UX benchmark in the NL PropTech market. Research across all four areas is consistent: the existing architecture is sound and most new capabilities can be delivered with targeted additions rather than structural changes. Zero new backend work is required; seven new frontend packages cover all capability gaps. The recommended approach is to build depth-first — primitives before features, map infrastructure before comparison views, theme audits before polish.
+This milestone adds four new data sources to Propdex's existing property intelligence pipeline: WOZ-waarde (property tax valuation), EP-Online energielabel (energy label), BRK eigendomsdata (ownership and rights), and enriched RCE monument data (redengevende omschrijving, oorspronkelijke functie, bouwperiode). The architecture is already proven — FastAPI + asyncio + `asyncio.gather()` parallel fetches + JSONB caching + graceful degradation — and all four integrations fit cleanly into this established pattern. No new Python libraries are required. The primary structural addition is a sequential Step 2b in the aggregation pipeline for BRK, which depends on cadastral parcel data from the existing Step 2a and must bypass the cache layer entirely due to Kadaster Tier 3 terms.
 
-The most important strategic finding is that no NL PropTech competitor (Funda Zakelijk, Brainbay, DataLand) offers the combination of score transparency, property comparison, and map filtering in a single cohesive product. The opportunity is real, and the implementation risk is low because the data and API infrastructure already exists. What is missing is purely the presentation layer: scoring visualizations, tabbed report layouts, a comparison route, map filter controls, and static mini-maps in reports. All of these can be built against the existing `PropertyReportResponse`, `ScanResultsResponse`, and MapLibre vector tile data already in the system.
+The recommended build sequence is: schema layer first (Pydantic models precede aggregator wiring), then API clients, then aggregator integration, then frontend components. EP-Online and RCE enrichment are the lowest-risk integrations — free APIs, no procurement delay, well-documented. Register the EP-Online API key immediately (minutes, free at `apikey.ep-online.nl`). WOZ data carries the most uncertainty: the official Kadaster WOZ Bevragen API is restricted to municipalities and Propdex cannot qualify; the viable path is the unofficial WOZ-waardeloket public JSON endpoint (undocumented, no SLA) or the commercial Kadaster Objectinformatie API (€1.92/query, Mijn Kadaster registration required). This access path decision must be made before Phase 2 starts. BRK has the most operational complexity: PKIOverheid certificate procurement takes 2-4 weeks minimum and must start at milestone kickoff, but the client code already exists and gracefully degrades when unconfigured.
 
-The primary risk area is MapLibre/WebGL context management. The existing architecture correctly isolates one persistent MapLibre instance. This constraint must be strictly maintained: mini-maps in reports must use static tile images (`<img>` tags), not additional MapLibre instances. A second high-priority risk is the theme system — MapLibre paint properties do not read CSS custom properties, so a `MAP_THEME_COLORS` hex constant file is required to keep light/dark mode consistent on map layers. Both risks are well-understood and have clear prevention patterns documented in PITFALLS.md.
-
----
+The most critical risk is regulatory: caching BRK eigendomsdata in any persistent layer (PostgreSQL, Redis, files) violates Kadaster Tier 3 terms and GDPR. This must be enforced architecturally — no `get_cached_or_fetch()` call for BRK, and `brk_ownership` must be stripped from `PropertyReportResponse` before saving to the JSONB report store. All other pitfalls (EP-Online V4 sunset, WOZ access restrictions, BRK identificatie format mapping) are well-understood and preventable with documented mitigations.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack (React 19, Vite 7, TypeScript strict, Tailwind v4, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router, TanStack Table v8) requires no structural changes. Seven new frontend packages are required; zero new backend packages are needed.
+No new Python libraries are needed. All four APIs return JSON and work with the existing `httpx.AsyncClient`, `aiolimiter.AsyncLimiter`, and `pydantic-settings` stack. The only new configuration entries are two settings (`EP_ONLINE_API_KEY`, optionally `KADASTER_OI_API_KEY`), three new cache TTL entries, and three new rate limiter instances.
 
-**New dependencies (install all at once):**
-```bash
-pnpm add recharts @radix-ui/react-tabs @radix-ui/react-slider @radix-ui/react-collapsible @radix-ui/react-tooltip @radix-ui/react-popover @tanstack/react-virtual
-```
+**Core technologies (existing — no change):**
+- `httpx.AsyncClient`: All four new API clients use the shared async HTTP client — no new HTTP library needed
+- `aiolimiter.AsyncLimiter` + `asyncio.Semaphore` via `APIRateLimiter`: New limiters for EP-Online (5 concurrent, 500/hr) and RCE detail (3 concurrent, 100/hr); Kadaster OI (2 concurrent, 100/hr) if WOZ path chosen
+- `get_cached_or_fetch()` in `cache_manager.py`: Used by EP-Online (30d TTL), WOZ (365d TTL), RCE enrichment (30d TTL); explicitly NOT used by BRK
+- `pyproj.Transformer`: Already handles RD/WGS84 transforms; existing CRS pattern must not be changed
 
-**Core new technologies:**
-- `recharts 3.7.0`: Score gauge, factor bars, sparklines — SVG-based, CSS variables apply natively, React 19 explicit support verified via npm
-- `@radix-ui/react-tabs 1.1.13`: Comparison view tab navigation — headless, WAI-ARIA accessible, React 19 explicit support
-- `@radix-ui/react-slider 1.3.6`: Score range filter slider with dual-thumb support — replaces native `<input type="range">` limitations
-- `@radix-ui/react-collapsible 1.1.12`: Report section expand/collapse — accessible `aria-expanded`, no animation library needed
-- `@radix-ui/react-tooltip 1.2.8`: Score factor label tooltips — replaces hand-rolled `group-hover` pattern, portal-rendered above MapLibre z-index
-- `@radix-ui/react-popover 1.1.15`: Map filter panel anchor — replaces custom outside-click detection logic in `LayerToggle.tsx`
-- `@tanstack/react-virtual 3.13.18`: Row virtualization for 500+ result sets — official TanStack Table v8 pairing, headless
+**New API surface confirmed:**
+- EP-Online V5: `GET https://public.ep-online.nl/api/v5/PandEnergielabel/Adres` — free, API key required (minutes to register at `apikey.ep-online.nl`)
+- RCE Linked Data: `GET https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run?rijksmonumentnummer={nr}` — free, no auth required
+- BRK Bevragen V2: Client already implemented in `government_apis/brk_bevragen.py` — needs aggregator wiring only; mTLS + API key
+- WOZ: Official WOZ Bevragen API is municipalities-only (blocked for Propdex); use WOZ-waardeloket undocumented public endpoint or Kadaster Objectinformatie API — decision required pre-implementation
 
 **What NOT to add:**
-- `chart.js` / `react-chartjs-2` — canvas-based; CSS oklch variables do not apply to canvas fills
-- `victory` — last major release 2023, React 19 compatibility unclear
-- `maplibregl-minimap` npm package — README explicitly states "not yet ready for production use"
-- `framer-motion` / `react-spring` — ~150KB for effects achievable with Tailwind transitions
-- `shadcn/ui` CLI install — conflicts with Tailwind v4's CSS-first `@theme` (no `tailwind.config.js` in v4)
-- `react-window` / `react-virtualized` — unmaintained; `@tanstack/react-virtual` is the modern replacement
-
-See `.planning/research/STACK.md` for full decision rationale and the complete alternatives rejection table.
+- `zeep` — no SOAP APIs in scope
+- `lxml` / `xmltodict` — all APIs return JSON, not XML
+- `requests` — blocking; httpx already installed and async
+- `python-kadaster` — not a maintained package
 
 ### Expected Features
 
-This is a presentation overhaul, not a data addition milestone. All data exists in the backend — what is missing is the rendering layer.
+**Must have (table stakes — Dutch property developers expect these):**
+- WOZ-waarde + waardepeildatum — always displayed together; the date is mandatory context (WOZ can be 12-24 months behind market)
+- Energielabel klasse (A++++ to G) + registratiedatum + geldigheid (10-year validity flag)
+- BRK eigenaar type (rechtsvorm: natuurlijk persoon / rechtspersoon / overheid) + zakelijk recht type
+- BRK hypotheek indicator (boolean — mortgage/lien present)
+- RCE redengevende omschrijving + oorspronkelijke functie (only for monument properties, via two-step enrichment)
+- RCE monumentnummer exact match (already extracted from PDOK; needs enrichment from Linked Data)
 
-**Must have (P1 — table stakes for premium feel):**
-- Column visibility toggle — standard in every enterprise data tool (Airtable, CRE platforms); immediately premium
-- Density control (compact/regular/relaxed rows) — essential for scanning 500+ parcel result sets
-- Column pinning (address + score sticky left) — fixes usability when scrolling right to see more columns
-- Save filter state to localStorage — removes friction on return visits; same pattern as existing theme persistence
-- Score factor breakdown bars in detail drawer — makes scoring transparent; highest user trust impact
-- Heatmap column formatting (area, bouwjaar conditional color) — high visual impact, low implementation cost
-- Score legend / scale explanation — amber badge alone is not self-explanatory to new users
+**Should have (differentiators — make Propdex better than manual research):**
+- WOZ-waarde per m² (derived: `woz_waarde / building.oppervlakte` — zero extra API cost, high value)
+- Energielabel expiry flag + monument-without-label compliance warning (May 2026 obligation for rijksmonumenten on sale/rental)
+- Energielabel + bouwjaar correlation signal (pre-1945 + G label = renovation cost flag)
+- BRK multiple owners display with count and rights types
+- RCE oorspronkelijke functie + bouwperiode + complex membership when applicable
 
-**Should have (P2 — competitive differentiators):**
-- Mini-map in report page — premium PropTech UX standard (Reonomy-style), keeps spatial context without navigation
-- Map layer toggle panel — users need to turn off bestemmingsplan zones when examining physical parcels
-- Property comparison view (up to 4 parcels) — no NL competitor offers this; forces deliberate selection workflow
-- Insight card expansion (more Dutch developer reasoning) — extend existing `STATUS_EXPLANATIONS` vocabulary
-- Print/PDF-optimized report layout — enterprise sales requirement for client-deliverable reports
+**Defer to later milestone:**
+- WOZ historical values (requires separate WOZ Individuele Bevragingen subscription — different API)
+- WOZ vs. marktwaarde delta (requires transaction data not currently available)
+- RCE complex membership deep-linking (beyond MVP scope)
+- Gemeentelijke monumenten (no national API exists; per-gemeente integration required)
 
-**Defer to v7+:**
-- Score trend indicator — requires new backend historical score storage model (new DB table + migration)
-- Table column reordering (drag) — high complexity (dnd-kit), moderate value; validate user demand first
-- Saved scan comparison (diff two scan runs) — requires backend diff logic; not enough production data yet
-
-**Anti-features (do not build — commonly requested, demonstrably problematic):**
-- Real-time score updates mid-session — confuses users comparing parcels; scan is a point-in-time snapshot
-- Infinite scroll — breaks bulk selection and "I was on page 3" mental model; browser memory issues at 500+ rows
-- Per-user custom color themes — conflicts with semantic CSS variable system; amber is the brand signal
-- Drag-to-draw map selection — municipality granularity is correct for Dutch cadastral data model
-
-See `.planning/research/FEATURES.md` for the full prioritization matrix and NL/global competitor analysis.
+**Anti-features — explicitly do not build:**
+- Display of BRK natural person names or addresses (AVG/GDPR exposure — show "Particulier eigenaar" only)
+- Caching or storing BRK eigendomsdata in any persistent layer (Kadaster Tier 3 terms)
+- Full redengevende omschrijving as a raw text dump (can be 1,000-5,000 words; must be collapsible)
+- WOZ bezwaar (objection) workflow — developer use case, not residential consumer
+- Applying for official Kadaster WOZ Bevragen API as SaaS (application will be rejected)
 
 ### Architecture Approach
 
-The architectural principle for v6.0 is extension, not rewrite. The existing component tree, data flow layers, `MapContext`, and three-tier property disclosure pattern are all unchanged. New features layer on top of established infrastructure using established patterns.
-
-**Critical constraint — single MapLibre instance:** The MapLibre instance is initialized once in `_authenticated.tsx` and never unmounts. Mini-maps in reports must use static CARTO tile `<img>` tags via `StaticMapImage` component — not additional MapLibre instances. Browser WebGL context limit is ~8; the persistent main map uses one and must not be competed with.
+All four sources integrate into the existing two-step pipeline with one structural addition: BRK requires a sequential Step 2b after cadastral parcels are available, because it needs `kadastrale_aanduiding` from Step 2a. The recommended pattern uses `asyncio.create_task()` for the cadastral fetch, awaits it specifically before BRK, then awaits the remaining Step 2a tasks — avoiding the latency penalty of waiting for the slowest Step 2a call (DSO can be 3-8s) before starting BRK.
 
 **Major new components:**
+1. `government_apis/ep_online.py` (NEW): EP-Online V5 client — lookup by BAG VBO ID, explicit `None` on 404 (not an error state)
+2. `government_apis/woz_waardeloket.py` (NEW): WOZ public endpoint client — explicit LOW confidence flag, full graceful degradation, WOZ peildatum always co-fetched
+3. `government_apis/rce_monuments.py` (EXTEND): Add `get_detail_by_number()` method calling RCE Linked Data API by rijksmonumentnummer
+4. `services/property_aggregator.py` (MODIFY): Add `fetch_energy_label()`, `fetch_woz_data()`, `fetch_brk_ownership()` nested functions; restructure gather into Step 2a/2b; update `total_sections` from 6 to 9
+5. `services/monument_aggregator.py` (MODIFY): Two-step RCE enrichment — PDOK spatial detection (Step 1) then Linked Data detail call (Step 2) only when monument is found
+6. `schemas/energy.py`, `schemas/woz.py`, `schemas/brk.py` (NEW): Pydantic models for three new report sections
+7. `reports/service.py` (MODIFY): Strip `brk_ownership` from `PropertyReportResponse` before saving to JSONB
+8. Frontend: 3 new section components (`EnergieLabelSection`, `WOZSection`, `EigendomSection`) + enhanced `MonumentSection` with RCE enrichment fields
 
-1. `src/components/primitives/ScoreRing.tsx` + `ScoreBar.tsx` + `ScoreGauge.tsx` — pure SVG/CSS scoring visualizations, zero dependencies, CSS variable–aware via `stroke="var(--color-amber-accent)"`
-2. `src/components/primitives/Tabs.tsx` — headless compound component (Root/List/Tab/Panel), CSS `hidden` for inactive panels (NOT conditional unmounting — panels must stay mounted)
-3. `src/lib/staticMap.ts` + `src/components/map/StaticMapImage.tsx` — pure tile URL math utility + `<img>` wrapper; zero WebGL contexts consumed
-4. `src/components/map/MapFilterPanel.tsx` — score/status/bestemming filter UI; wires to `map.setFilter()` via `useEffect` in `map.tsx`; no API calls (vector tiles already carry filter-eligible properties)
-5. `src/components/comparison/` directory — `ComparisonView`, `ComparisonColumn`, `ComparisonHeader`, `ComparisonMetricRow`, `ComparisonEmptySlot`
-6. `src/hooks/useComparison.ts` — `useQueries` for parallel fetching of N reports; reuses existing `['report', id]` cache keys automatically
-7. `src/routes/_authenticated/vergelijken.tsx` — new route; state via URL search params (`?ids=uuid1,uuid2`), not React context or Zustand store
+**Critical architectural constraint:** `brk_ownership` must be stripped from `PropertyReportResponse` before any save to the `reports.report_data` JSONB column. This is the single most important architectural enforcement in the milestone.
 
-**Modified (not rewritten):**
-- `ReportDetailPage.tsx` — wrap sections in Tabs; add `StaticMapImage` + `ScoreGauge` above tab bar
-- `ParcelDetailModal.tsx` — replace inline score circle with `ScoreGauge`; replace factor bars with `ScoreBar`
-- `LayerToggle.tsx` — add "Filters" pill + `MapFilterPanel`; replace hand-rolled outside-click detection with Radix Popover
-- `map.tsx` — add `mapFilters` state + `useEffect` for `map.setFilter()`
-- `rapporten.tsx` — add report selection checkboxes + "Vergelijk" button navigating to `/vergelijken?ids=...`
-
-**Unchanged:** `MapView.tsx`, `_authenticated.tsx`, `MapContext.tsx`, all existing Section components (`GebouwSection`, `KadasterSection`, etc.), all TanStack Query hooks except new `useComparisonReports`, `ResultsFilterPanel.tsx`, `ThemeContext.tsx`.
-
-**Build order (dependency-ordered):**
-- Phase A: Primitives (`ScoreRing`, `ScoreBar`, `ScoreGauge`, `Tabs`, `staticMap.ts`) — zero external deps, build and test in isolation
-- Phase B: Map enhancements (`StaticMapImage`, `MapFilterPanel`, `LayerToggle` extension, `map.tsx` filter effect)
-- Phase C: Report enhancements (`ReportDetailPage` tabs + mini-map, `ParcelDetailModal` score gauge, `InspectorPanel` score gauge)
-- Phase D: Comparison feature (hooks, components, route, `rapporten.tsx` selection)
-- Phase E: Theme polish (gray-\* audit, `MAP_THEME_COLORS` hex constants, CSS variable additions, `@tanstack/react-virtual` in `ResultsTable`)
-
-See `.planning/research/ARCHITECTURE.md` for full component boundaries map, data flow diagrams, anti-patterns, and scalability assessment.
+**Build order driven by three hard constraints:**
+- Schema models must exist before aggregators import and reference them (Phase 1)
+- API clients must exist before aggregator integration (Phase 2)
+- BRK Step 2b has a hard data dependency on Step 2a cadastral parcel output
 
 ### Critical Pitfalls
 
-1. **MapLibre initialized at zero container dimensions** — a mini-map inside a modal/drawer initializes with `height: 0` if CSS animation hasn't completed when `useEffect` fires. Use `ResizeObserver` on the container and delay `new maplibregl.Map()` until `offsetHeight > 0`. Relevant to any phase touching mini-maps in drawers. (Moot for v6.0 if static tile images are used as recommended — but captures risk if any developer attempts a live MapLibre mini-map.)
+1. **Caching BRK eigendomsdata violates Kadaster Tier 3 terms** — never call `get_cached_or_fetch()` for BRK; strip `brk_ownership` before DB save in `reports/service.py`; add integration test asserting no `CachedAPIResponse` row with `source='brk'` exists after eigendom fetch
 
-2. **WebGL context budget exceeded** — browsers limit ~8 simultaneous WebGL contexts. Hard cap comparison view at 2 simultaneous mini-maps; destroy on close. Never add per-row thumbnail maps in scrollable lists. Static tile `<img>` consumes zero WebGL contexts — the recommended architecture sidesteps this risk entirely.
+2. **WOZ official API is restricted to municipalities** — do not apply for WOZ Bevragen API (Kadaster will reject SaaS applications); use unofficial WOZ-waardeloket public endpoint or Kadaster Objectinformatie API (commercial, €1.92/query); validate and decide access path before Phase 2 starts
 
-3. **Tab panels conditionally rendered causing state loss** — `{activeTab === 'x' && <Component />}` unmounts panels on tab switch, triggering re-fetches, scroll position loss, and flash on return. All `TabPanel` children must stay mounted; use Tailwind `hidden` class (`display: none`) for inactive panels.
+3. **PKIOverheid certificate procurement takes 2-4 weeks** — start at milestone kickoff regardless of when the BRK code phase begins; BRK client already gracefully degrades when unconfigured; test against ESD-ETO staging environment while awaiting production certificate
 
-4. **Map filter state desync with URL/table filters** — adding map-level filter controls creates a second write path to URL state. All filter changes (map or table) must call the same `navigate()` handler. No local component state for filter values — read from URL, write to URL via the shared handler.
+4. **EP-Online V4 endpoint was sunset January 30, 2026** — implement only against V5 at `https://public.ep-online.nl/api/v5/`; verify response field names against live V5 Swagger before writing parsers; do not copy field names from older examples
 
-5. **Legacy `gray-*` Tailwind classes break light mode** — `ProjectEditModal.tsx` and `ProjectCreateModal.tsx` use hardcoded `gray-*` / `bg-white` classes that look correct in dark mode by accident but break in light mode. Full grep audit before starting any theme work: `grep -r "gray-\|bg-white\|text-white" src/components`. Replace with semantic `grey-*` equivalents.
+5. **EP-Online 404 is a normal state, not an error** — approximately 20-30% of properties and the majority of non-residential/monument/agricultural properties have no registered label; EP-Online 404 must return `energielabel_status = "niet_geregistreerd"`, must not increment the error count, and must not reduce the completeness score
 
-6. **MapLibre paint properties reject `oklch()` colors** — `getComputedStyle` returns `oklch(...)` strings from CSS variables, which MapLibre's GL color parser does not support (predates `oklch` adoption). Define `MAP_THEME_COLORS` in `lib/map-theme.ts` as hex constants with documentation mapping each to its CSS variable equivalent. Never pass `getComputedStyle` output directly to MapLibre.
+6. **BRK identificatie must be in NL.IMKAD format** — `NL.IMKAD.KadastraalObject.<id>` is not derivable from the kadastrale aanduiding string; it must come from the PDOK OGC cadastral parcel feature properties or from a BRK search by `kadastraleAanduiding`; validate the PDOK → identificatie → BRK lookup chain with real parcels before building the full integration
 
-See `.planning/research/PITFALLS.md` for all 13 pitfalls with detection guidance and the phase-specific warning table.
-
----
+7. **RCE coverage is rijksmonumenten only** — the PDOK `rce_inspire_points` dataset does not contain gemeentelijke monumenten; UI must say "Rijksmonument (RCE)" not "Monument" in all labels; also query `rce_inspire_areas` for beschermde stads- en dorpsgezichten
 
 ## Implications for Roadmap
 
-Research suggests a 5-phase structure ordered by dependency graph: primitives before features, infrastructure before UI, audit before polish. All phases follow well-documented patterns — no phase requires a `/gsd:research-phase` call.
+Based on the combined research, a four-phase backend build followed by a frontend phase is the correct structure. The dependency chain is strict: schemas before clients before aggregator wiring before frontend. PKIOverheid procurement runs in parallel from day one as an operational track.
 
-### Phase 1: Scoring Primitives and Table UX Foundation
+### Phase 1: Schema and Config Foundation
 
-**Rationale:** All other features depend on the scoring visualization primitives (`ScoreRing`, `ScoreBar`, `ScoreGauge`) and the `Tabs` component. Building these first with zero external dependencies means Phase 1 can ship and validate before any complex feature work begins. The P1 table features (column visibility, density, pinning, filter persistence) deliver immediate premium feel with low implementation risk and no new library requirements — TanStack Table v8 already supports all of them.
+**Rationale:** Every downstream component references Pydantic models. Nothing can be built until these types and cache config entries exist. This phase has zero external API dependencies and zero risk — pure Python type definitions following established project patterns.
+**Delivers:** `schemas/energy.py` (`EnergyLabel`), `schemas/woz.py` (`WOZData`, `WOZJaarwaarde`), `schemas/brk.py` (`BRKOwnership`, `BRKEigenaar`); extended `PropertyReportResponse` with 3 new Optional fields; extended `MonumentSourceResult` with nullable enrichment fields; new `CACHE_TTL` entries for `ep_online` (30d), `woz` (365d), `rce_detail` (30d); `EP_ONLINE_API_KEY` setting in `core/config.py`
+**Addresses:** Table stakes feature schemas — establishes the type contract for all four new data sources
+**Avoids:** Runtime `KeyError` from missing `CACHE_TTL` entries (Pitfall 12); `mypy` errors from undefined types in aggregator integration phase
+**Research flag:** No research phase needed — Pydantic model patterns are established and consistent throughout the codebase. Follow existing `schemas/monument.py` and `schemas/property.py` as templates.
 
-**Delivers:** Reusable `ScoreRing`, `ScoreBar`, `ScoreGauge` SVG primitives; headless `Tabs` compound component; `ResultsTable` column visibility toggle, density control, column pinning (sticky CSS), localStorage filter persistence; heatmap column conditional formatting; score legend in table header or filter panel.
+### Phase 2: API Clients
 
-**Features from FEATURES.md:** Column visibility (P1), density control (P1), column pinning (P1), save filter state (P1), heatmap formatting (P1), score legend (P1), score factor breakdown bars in detail drawer (P1).
+**Rationale:** Clients depend on schemas (import them) but have no aggregator dependencies. They can be built and verified against live APIs before any pipeline wiring. This is where the WOZ access path decision must be implemented and where EP-Online V5 field names are verified against real responses.
+**Delivers:** `ep_online.py` — EP-Online V5 client by VBO ID, graceful `None` on 404; `woz_waardeloket.py` — WOZ public endpoint client with explicit LOW confidence flag; `rce_monuments.py` extended with `get_detail_by_number()` calling RCE Linked Data API; new rate limiters (`ep_online_limiter`, `rce_detail_limiter`) in `rate_limiter.py`
+**Uses:** Existing `httpx.AsyncClient`, `APIRateLimiter`, `handle_api_response()` from `government_apis/base.py`
+**Avoids:** EP-Online V4 sunset (Pitfall 5) — pin to V5 Swagger from day one; WOZ API restriction (Pitfall 2) — use waardeloket or Objectinformatie approach, not official WOZ Bevragen API
+**Research flag:** Validate EP-Online V5 field names against live Swagger with a real VBO ID before writing the parser — V4 vs V5 field names differ. Confirm WOZ-waardeloket endpoint JSON structure with a real address (nummeraanduidingidentificatie). Test RCE Linked Data API for a known rijksmonumentnummer (e.g., 12340) to confirm `volledigeOmschrijving`, `oorspronkelijkeFunctie`, `bouwstijl` field availability in the REST response.
 
-**Avoids:** Pitfall 9 (scoring visualization scroll jank) — CSS-only techniques in table rows (`conic-gradient`, not SVG animations); SVG ring only in detail panels where one instance renders.
+### Phase 3: Aggregator Wiring (Backend Integration)
 
-**Research flag:** No research phase needed — TanStack Table v8 column visibility/pinning/density are fully documented in official docs with live examples. SVG `stroke-dasharray` gauge pattern is well-established.
+**Rationale:** This is the structurally complex change — rewiring `asyncio.gather()` into Step 2a/2b, integrating all four new data sources, and enforcing the BRK no-cache constraint at every touch point. Must happen after Phases 1 and 2 are complete and type-checked. The BRK integration requires the most care because of the data dependency on cadastral parcels and the regulatory constraint on storage.
+**Delivers:** `property_aggregator.py` with `fetch_energy_label()`, `fetch_woz_data()`, `fetch_brk_ownership()` nested functions; Step 2a/2b gather restructure using `asyncio.create_task()` for cadastral to avoid blocking BRK on slow DSO calls; `monument_aggregator.py` with two-step RCE enrichment (`_fetch_rce_with_detail()`); `completeness_score` `total_sections` denominator updated (6 → 9); `reports/service.py` with `brk_ownership` stripped before JSONB save
+**Avoids:** BRK caching violation (Pitfall 1) — no `get_cached_or_fetch()` call for BRK, `brk_ownership` stripped before DB save; BRK blocking on DSO latency (ARCHITECTURE.md Anti-Pattern 4) — `asyncio.create_task()` pattern; BRK identificatie format (Pitfall 7) — validate PDOK OGC field names before implementing; WOZ multiple objects per apartment (Pitfall 9) — filter by `nummeraanduidingidentificatie`; PDOK OGC CRS (Pitfall 10) — use existing RD coordinate + explicit `bbox-crs` header pattern
+**Research flag:** Validate which field in the PDOK OGC cadastral parcel response carries the `NL.IMKAD.KadastraalObject.<id>` format needed for BRK lookup — this must be confirmed against a real PDOK response before implementing `fetch_brk_ownership()`. Confirm `nummeraanduidingidentificatie` is returned from the existing BAG address resolution step in `property_aggregator.py`.
 
-### Phase 2: Report Enhancement — Tabs, Mini-Map, Score Gauge Integration
+### Phase 4: Frontend Components
 
-**Rationale:** With Phase 1 primitives validated, integrate them into `ReportDetailPage` and `ParcelDetailModal`. The tab layout converts the long-scroll report into a sectioned view — high visibility, users see it immediately. The static mini-map (`StaticMapImage`) slots into the report header area. This phase has zero backend dependencies and directly consumes Phase 1 outputs.
+**Rationale:** Frontend depends on stable backend types and a working API endpoint. Building after Phase 3 means components can be verified against real data. All three new section components follow the established `GebouwSection`/`KadasterSection` pattern.
+**Delivers:** `EnergieLabelSection.tsx` — label badge (A-G with EU color coding), registratiedatum, geldigheid, expired flag, monument compliance warning; `WOZSection.tsx` — WOZ-waarde + peildatum always together, per-m² calculation, LOW confidence disclaimer; `EigendomSection.tsx` — owner list with partial name obfuscation for natural persons, rights type, hypotheek indicator, "Actueel opgevraagd" timestamp instead of cache age; enhanced `MonumentSection` with RCE enrichment fields (volledigeOmschrijving collapsible, oorspronkelijkeFunctie, bouwstijl, rijksmonument link); TypeScript interfaces in `property.ts` for all new sections; `ReportDetailPage.tsx` wired with new sections
+**Addresses:** All display format recommendations from FEATURES.md — energielabel EU color scale, WOZ peildatum always shown, BRK partial name display, collapsible redengevende omschrijving
+**Avoids:** WOZ display without peildatum (Pitfall 13); "geen monument" false confidence (Pitfall 6 UX); energielabel shown without expiry status; BRK data without data source attribution
+**Research flag:** No research phase needed — React section component pattern is established in existing report sections. Follow `GebouwSection.tsx` and `KadasterSection.tsx` as structural templates.
 
-**Delivers:** Tab-wrapped `ReportDetailPage` with named sections (Gebouw, Kadaster, Bestemming, Monument, AI Analyse, Bronnen) — sections unchanged, `TabPanel` wrappers added; `StaticMapImage` component and `buildStaticMapUrl` Mercator math utility; `ScoreGauge` replacing inline score circles in `ParcelDetailModal` and `InspectorPanel`; `STATUS_EXPLANATIONS` vocabulary expansion for Dutch developer reasoning.
+### Phase 5: BRK Live Integration (Operational Track — Parallel to Phases 1-4)
 
-**Features from FEATURES.md:** Mini-map in report page (P2); insight card expansion (P2).
-
-**Stack from STACK.md:** Static CARTO tile URL (zero new dependency); `Tabs` from Phase 1.
-
-**Avoids:** Pitfall 1 (MapLibre at zero dimensions) — static `<img>` not MapLibre; Pitfall 2 (WebGL context budget) — static `<img>` consumes no WebGL; Pitfall 3 (tab panel state loss) — CSS `hidden`, panels stay mounted; Pitfall 5 (file size) — existing Section components unchanged, no file growth.
-
-**Research flag:** No research phase needed — static tile URL approach is standard Mercator math; Tabs pattern established in Phase 1.
-
-### Phase 3: Map Filter Controls
-
-**Rationale:** Map filtering (`MapFilterPanel`, score range slider, `LayerToggle` extension, `map.setFilter()` wiring) is self-contained and does not depend on the comparison view. Building it in Phase 3 allows the filter state architecture to be validated in isolation before comparison adds its own URL state in Phase 4. This is the phase most likely to surface the filter state desync pitfall (Pitfall 4).
-
-**Delivers:** `MapFilterPanel` component with Radix Slider (score range) and category pills; `LayerToggle.tsx` extended with "Filters" pill + active filter count badge; `map.tsx` extended with `mapFilters` state and `useEffect` for `map.setFilter()` expressions; Radix Popover anchoring the panel above the map.
-
-**Features from FEATURES.md:** Map layer toggle panel (P2); interactive map filter controls.
-
-**Stack from STACK.md:** `@radix-ui/react-slider 1.3.6`, `@radix-ui/react-popover 1.1.15`.
-
-**Avoids:** Pitfall 4 (filter state desync) — single `navigate()` handler, no parallel local state for filter values; Pitfall 13 (spurious re-fetches) — `replace: true` on navigate calls, guard page resets; Pitfall 12 (oklch in MapLibre) — `MAP_THEME_COLORS` hex constants established in this phase.
-
-**Research flag:** No research phase needed — MapLibre `setFilter()` expression API is first-class documented. Radix Slider is well-documented. Filter-to-URL sync follows established `resultaten.tsx` pattern.
-
-### Phase 4: Property Comparison View
-
-**Rationale:** Comparison is the most complex feature (new route, parallel queries, N-column grid, header sticky, state management). It requires Phase 1 primitives (ScoreGauge, ScoreBar per column), Phase 2's Section architecture (re-used in `ComparisonColumn`), and validated filter state architecture from Phase 3 (URL-first state pattern is confirmed). Building last avoids early commitment to a comparison architecture that might need adjustment based on Phase 1-3 learnings.
-
-**Delivers:** `/vergelijken` route; `ComparisonView` grid container; `ComparisonColumn` single-property stack re-using Section primitives; `ComparisonHeader` sticky row with names, close, swap buttons; `ComparisonMetricRow` labeled spanning-column rows; `ComparisonEmptySlot` placeholder; `useComparison.ts` parallel query hook via `useQueries`; report selection checkboxes + "Vergelijk" button in `rapporten.tsx`; optional `SideRailNav` link.
-
-**Features from FEATURES.md:** Property comparison view (P2 — high value, highest complexity; this phase IS the validation).
-
-**Stack from STACK.md:** `@radix-ui/react-tabs 1.1.13` for tabbed sections within each comparison column; `useQueries` from TanStack Query v5 (already installed).
-
-**Avoids:** Pitfall 2 (WebGL budget) — `StaticMapImage` (`<img>`) in ComparisonColumn header, not live MapLibre; Pitfall 10 (comparison race conditions) — independent `useQuery` per parcel, independent panel loading/error state; Pitfall 4 (state desync) — URL search params (`?ids=uuid1,uuid2`), not React context or Zustand; Pitfall anti-pattern (prop-drilling mapRef into report/comparison components).
-
-**Research flag:** No research phase needed — `useQueries` for parallel fetching is documented in TanStack Query v5 official docs. CSS grid for comparison layout is standard. URL-as-state is the established Propdex pattern.
-
-### Phase 5: Theme System Polish and Row Virtualization
-
-**Rationale:** Theme polish and virtualization are cross-cutting concerns best addressed last, after all new components exist and can be audited together. Running the `gray-*` grep audit on the full v6.0 component set (including Phases 1-4 additions) catches regressions introduced during development. Row virtualization (`@tanstack/react-virtual`) is additive to `ResultsTable` — it does not change sort/filter/selection state, so it can be added safely after all table features are stable.
-
-**Delivers:** Full `gray-*` / `bg-white` audit and replacement across all components; `lib/map-theme.ts` hex constant module for MapLibre layer theming in dark and light mode; dark/light mode verification for every new component; recharts tooltip CSS overrides tied to CSS variables; `@tanstack/react-virtual` row virtualization in `ResultsTable` for 500+ result sets with `estimateSize: () => 40` matching existing compact density; CSS variable additions in `index.css` (`--color-chart-1..5`, `--color-score-high/mid/low` in `@theme` and `html.light`).
-
-**Features from FEATURES.md:** Theme polish (prerequisite for confident light mode rollout); row virtualization for large datasets.
-
-**Stack from STACK.md:** `@tanstack/react-virtual 3.13.18`; CSS variable extensions in `index.css` (no new npm packages).
-
-**Avoids:** Pitfall 7 (map colors ignore theme) — `MAP_THEME_COLORS` object with `dark` and `light` entries; Pitfall 8 (legacy gray-\* classes) — full grep audit before starting; Pitfall 12 (oklch in MapLibre) — hex equivalents documented alongside their CSS variable counterparts.
-
-**Research flag:** No research phase needed — Tailwind v4 CSS variable theming, `@tanstack/react-virtual` + TanStack Table integration, and recharts CSS variable theming are all documented.
+**Rationale:** PKIOverheid certificate procurement is independent of all code work and takes 2-4 weeks minimum. This track starts at milestone kickoff and runs in parallel. Phases 1-4 code must gracefully degrade when BRK is unconfigured (`brk_client._configured = False`); this phase plugs in real credentials when procurement completes.
+**Delivers:** PKIOverheid certificate procured from an approved CA (DigiCert, QuoVadis, Sectigo); certificate files installed and paths configured in staging env; BRK switched from test endpoint (ESD-ETO) to production (ESD); `EigendomSection` showing live data instead of "Eigendomsdata niet geconfigureerd" state; Redis-backed rate limiter for BRK to prevent multi-worker rate limit violations (Pitfall 11); certificate expiry logging at application startup with warning when < 60 days remain
+**Avoids:** Certificate procurement blocking BRK demo (Pitfall 3) — start procurement day one; BRK rate limit multi-worker violation (Pitfall 11) — Redis-backed limiter before production traffic; certificate expiry surprise — startup monitoring
 
 ### Phase Ordering Rationale
 
-- **Dependency order enforced:** Primitives (Phase 1) must precede all feature phases. Comparison (Phase 4) must follow Phase 2 because `ComparisonColumn` re-uses Section components. Theme polish (Phase 5) must follow all component creation to audit the full set.
-- **Risk-first validation:** The most novel architectural decisions (static mini-map via `<img>`, headless Tabs) are validated in Phase 2 before the most complex feature (comparison) depends on them in Phase 4.
-- **Isolation principle:** Map filter controls (Phase 3) are intentionally isolated from comparison (Phase 4) to validate the URL-first filter state architecture before comparison adds its own URL params.
-- **Pitfall mitigation embedded in order:** The WebGL context constraint (Pitfall 2) is resolved by the static image decision in Phase 2 — this architectural resolution is confirmed before Phase 4 might tempt a developer to add live mini-maps in comparison columns.
-- **Phase 1 delivers immediate user value:** Column visibility, density control, and filter persistence are visible immediately and require no new libraries. Users get premium table UX before any chart or comparison feature ships.
+- Schema before aggregator is a hard Python import-time dependency
+- API clients before aggregator makes isolated testing feasible before pipeline integration
+- BRK Step 2b is a hard data dependency on Step 2a cadastral parcel output — cannot be parallelized with Step 2a
+- Frontend after backend because testing against mocks would require maintaining a mock layer that diverges from actual API responses
+- PKIOverheid procurement is operational (not code), runs in parallel from day one to avoid being the late blocker
+- The completeness_score denominator change (6 → 9) retroactively affects all existing stored reports — plan whether to recalculate or version-guard during Phase 3 planning
 
 ### Research Flags
 
-No phase requires a `/gsd:research-phase` call. All capability areas are covered by official documentation verified during this research cycle:
+Phases needing live API validation during planning or early Phase 2 execution:
+- **Phase 2 (API Clients):** Validate EP-Online V5 response schema with a real VBO ID before writing the parser — field names changed between V4 and V5. Validate WOZ-waardeloket endpoint JSON structure with a real nummeraanduidingidentificatie. Test RCE Linked Data API for a known rijksmonumentnummer to confirm field availability.
+- **Phase 3 (Aggregator):** Validate which PDOK OGC cadastral parcel property field carries the BRK-compatible `NL.IMKAD.KadastraalObject.<id>` identificatie. Confirm `nummeraanduidingidentificatie` is returned from existing BAG resolution.
+- **Phase 5 (BRK Live):** Confirm current PKIOverheid certificate status in the existing environment — check whether a certificate was procured for a prior milestone or whether fresh procurement is required.
+- **Pre-milestone (WOZ access path):** Decide between WOZ-waardeloket undocumented endpoint vs. Kadaster Objectinformatie API before Phase 2 starts. Register for Kadaster Objectinformatie access via Mijn Kadaster immediately to assess timeline and confirm endpoint URL.
 
-- **Phase 1:** TanStack Table v8 column features have official docs with live working examples. SVG `stroke-dasharray` gauge is standard SVG technique documented on MDN.
-- **Phase 2:** Static tile URL construction is pure Mercator math. CARTO tile endpoint format is documented. Tabs compound component pattern is a foundational React architecture pattern (Martin Fowler).
-- **Phase 3:** MapLibre `setFilter()` is a first-class documented API with official examples. Radix Slider is well-documented with Tailwind integration patterns.
-- **Phase 4:** `useQueries` for parallel fetching is in TanStack Query v5 official docs. URL-as-state with TanStack Router is the established Propdex pattern (used in `resultaten.tsx`).
-- **Phase 5:** Tailwind v4 CSS variable theming is documented. `@tanstack/react-virtual` + TanStack Table v8 integration is documented in TanStack's own examples.
-
----
+Phases with standard well-understood patterns (skip research-phase):
+- **Phase 1 (Schemas):** Pydantic model patterns are fully established in the codebase
+- **Phase 4 (Frontend):** React section component pattern is established in existing report sections
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All 7 packages verified via `npm info` for React 19 explicit peer dep. recharts 3.7.0 SVG CSS variable fills confirmed in recharts docs. maplibregl-minimap rejection backed by official repo README. All alternatives evaluated and rejected with documented rationale. |
-| Features | HIGH (P1/P2 scope) / MEDIUM (competitor analysis) | P1/P2 features derived from direct codebase analysis — no guessing. Anti-features justified by architectural constraints, not opinion. Competitor UX analysis from marketing pages (MEDIUM confidence) but not decision-critical — the NL market gap is the strategic thesis. |
-| Architecture | HIGH | Based on direct ~16K LOC TypeScript/React codebase inspection. Single MapLibre instance constraint verified in `_authenticated.tsx`. Static mini-map approach confirmed against MapLibre WebGL context discussion in official repo. Build order derived from explicit dependency graph analysis of new and modified components. |
-| Pitfalls | HIGH | All 4 critical pitfalls backed by official MapLibre/TanStack repo issues and discussions or direct codebase code inspection. `gray-*` legacy class audit grounded in actual file line numbers. oklch MapLibre incompatibility is a known, documented limitation. |
+| Stack | HIGH | All APIs return JSON; existing httpx handles everything; no new libraries; settings patterns confirmed by codebase audit; EP-Online V5, RCE Linked Data, and BRK Bevragen V2 all verified against official documentation |
+| Features | HIGH | Official Dutch government documentation + direct codebase analysis of existing schema gaps; feature boundaries are precisely identified with source-level field mappings |
+| Architecture | HIGH | Based on direct codebase analysis of `property_aggregator.py`, `monument_aggregator.py`, `cache_manager.py`, `brk_bevragen.py`, `schemas/property.py`; integration points are explicit and the extension pattern is consistent |
+| Pitfalls | HIGH | Based on official Kadaster/RVO/EP-Online documentation + existing code comments that already document BRK no-cache constraint; regulatory pitfalls confirmed against official terms of service |
 
-**Overall confidence: HIGH**
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **ComparisonColumn content depth:** Research confirms the architecture (parallel queries, URL state, CSS grid) but the exact data fields to display per column per tab section are not specified. This is a product decision to be made during planning against the `PropertyReportResponse` TypeScript type — not a technical gap.
+- **WOZ access path (pre-milestone decision):** Kadaster Objectinformatie API is the recommended official commercial path (€1.92/query), but the exact endpoint URL requires Mijn Kadaster login to confirm and the timeline for access approval is unknown. The WOZ-waardeloket undocumented endpoint is the fallback but carries LOW confidence and no SLA. This decision must be made before Phase 2 begins. Register for Objectinformatie access immediately.
 
-- **Score legend visual design:** Research confirms the feature is needed (P1) and belongs near the table or filter panel, but the exact visual design (inline scale bar, legend tooltip, separate card?) is not specified. Low-stakes decision for the plan author to make during Phase 1 planning.
+- **EP-Online multi-tenant API key terms:** RVO terms state the API key is "personal and may not be shared with third parties." For a multi-tenant SaaS using a shared backend key, RVO guidance is needed. Contact RVO at `fbni@rvo.nl` at milestone start to confirm whether a single backend key serving multiple organizations is permitted under the indirect-use exemption.
 
-- **`MAP_THEME_COLORS` hex values computation:** The pitfall research identifies that MapLibre needs hex equivalents of the OKLCH design tokens and names the file (`lib/map-theme.ts`). The actual hex conversions must be computed from existing `index.css` oklch values during Phase 5 implementation — straightforward arithmetic but requires attention from the implementer.
+- **EP-Online V5 response schema field names:** The exact field names in the V5 JSON response were inferred from Swagger and the RVO handleiding but not directly verified with a live VBO ID call. Verify before writing the parser — V4 and V5 field naming is not identical.
 
-- **`PropertyDetailDrawer` vs `ParcelDetailModal` naming:** Both names appear across research files. The implementation references `ParcelDetailModal.tsx` in the architecture file component boundaries map. Confirm the correct filename before starting Phase 1 score visualization work — almost certainly `ParcelDetailModal.tsx` based on the majority of architectural references.
+- **RCE Linked Data field availability:** `bouwstijl`, `bouwperiode`, and architect fields are referenced in the CEO ontology but their presence in the REST API JSON response was not directly confirmed. Test with a known rijksmonumentnummer early in Phase 2.
 
----
+- **PDOK OGC cadastral identificatie field name:** It is not confirmed which property field in the PDOK cadastral OGC feature response carries the `NL.IMKAD.KadastraalObject.<id>` format. This must be validated against a real PDOK response before Phase 3 implementation.
+
+- **completeness_score versioning:** Increasing `total_sections` from 6 to 9 retroactively lowers completeness scores on all stored reports. Decide during Phase 3 planning whether to (a) accept the regression, (b) add a `score_version` field, or (c) trigger a background recalculation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- `npm info recharts@3.7.0 peerDependencies` — React 19 explicit peer dep confirmed
-- `npm info @radix-ui/react-{tabs,slider,collapsible,tooltip,popover}` — all verified for React 19 explicit support
-- `npm info @tanstack/react-virtual` — v3.13.18, React 19 explicit support
-- [TanStack Table Column Visibility Guide](https://tanstack.dev/table/latest/docs/guide/column-visibility) — official docs
-- [TanStack Table Column Pinning Sticky Example](https://tanstack.com/table/v8/docs/framework/react/examples/column-pinning-sticky) — official docs
-- [TanStack Query v5 Parallel Queries](https://tanstack.com/query/v5/docs/framework/react/guides/parallel-queries) — official docs
-- [TanStack Virtual v3 Docs](https://tanstack.com/virtual/latest) — official docs
-- [MapLibre GL JS Filter Examples](https://maplibre.org/maplibre-gl-js/docs/examples/filter-within-a-layer/) — official docs
-- [MapLibre Map does not fit container in modal (Issue #1363)](https://github.com/maplibre/maplibre-gl-js/issues/1363) — official repo, WebGL context at zero dimensions pitfall
-- [MapLibre Too many active WebGL contexts (Discussion #3065)](https://github.com/maplibre/maplibre-gl-js/discussions/3065) — official repo, WebGL budget constraint
-- [maplibregl-minimap README](https://github.com/JabSYsEmb/maplibregl-minimap/blob/main/README.md) — "not yet ready for production use" (rejection basis)
-- [TanStack Router URL as State (Discussion #1249)](https://github.com/TanStack/router/discussions/1249) — official repo, filter state architecture
-- [TanStack Router Search Param Propagation (Discussion #3686)](https://github.com/TanStack/router/discussions/3686) — official repo, spurious re-fetch prevention
-- [TanStack Router Keep Alive (Discussion #1447)](https://github.com/TanStack/router/discussions/1447) — official repo, CSS `hidden` workaround for tab state
-- Direct codebase analysis (HIGH confidence): `_authenticated.tsx`, `MapView.tsx`, `MapContext.tsx`, `ReportDetailPage.tsx`, `ParcelDetailModal.tsx`, `LayerToggle.tsx`, `ParcelScoreLayer.tsx`, `InspectorPanel.tsx`, `ResultsTable.tsx`, `ResultsFilterPanel.tsx`, `Drawer.tsx`, `ProjectEditModal.tsx`, `ChangeTimeline.tsx`, `index.css`, `ThemeContext.tsx`, `frontend/package.json`
+- Kadaster WOZ API Bevragen official — `kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen` — municipal-only access confirmed; SaaS blocked
+- Kadaster WOZ Bevragen GitHub — `github.com/kadaster/WOZ-bevragen` — OIN + PKIOverheid requirement confirmed
+- Kadaster Objectinformatie API — `kadaster.nl/-/objectinformatie-api` — commercial WOZ access path confirmed
+- EP-Online Public API V5 Swagger — `public.ep-online.nl/swagger/index.html` — V5 endpoint structure
+- RVO EP-Online handleiding (February 2025) — `rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf` — V5 confirmed current, V3 end-of-life January 2025
+- EP-Online release notes — `ep-online.nl/Home/ReleaseNotes` — V4 sunset date January 30, 2026 confirmed
+- RCE Linked Data API documentation — `cultureelerfgoed.github.io/API/` — REST endpoint, no auth, parameters confirmed
+- RCE rijksmonumenten query spec — `linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9` — query parameters and response shape
+- Kadaster BRK Bevragen official — `kadaster.nl/zakelijk/producten/eigendom/brk-bevragen` — Tier 3 never-store terms, mTLS confirmed
+- VNG Realisatie BRK Bevragen GitHub — `github.com/VNG-Realisatie/Haal-Centraal-BRK-bevragen` — V2 API specification
+- RCE energielabelplicht rijksmonumenten — `cultureelerfgoed.nl/onderwerpen/d/duurzaamheid/energielabel-voor-monumenten/energielabelplicht---vraag--antwoord` — May 2026 obligation confirmed
+- Propdex codebase audit (all of): `government_apis/brk_bevragen.py`, `government_apis/rce_monuments.py`, `services/property_aggregator.py`, `services/monument_aggregator.py`, `services/cache_manager.py`, `government_apis/rate_limiter.py`, `core/config.py`, `schemas/property.py`, `schemas/monument.py` — existing patterns, integration gaps, and constraints confirmed
 
 ### Secondary (MEDIUM confidence)
-
-- [Pencil & Paper Enterprise Data Table UX Patterns](https://www.pencilandpaper.io/articles/ux-pattern-analysis-enterprise-data-tables) — density control, column management UX conventions
-- [LogRocket Best React Chart Libraries 2025](https://blog.logrocket.com/best-react-chart-libraries-2025/) — recharts 3.x vs alternatives evaluation
-- [Headless Component Pattern — Martin Fowler](https://martinfowler.com/articles/headless-component.html) — Tabs compound component justification
-- [SVG Gauge stroke-dasharray Pattern](https://veerasundar.com/blog/building-a-radial-gauge-with-svg-and-react-part-1) — `ScoreRing` implementation technique
-- [Map UI Patterns — Attribute Filter](https://mapuipatterns.com/attribute-filter/) — map filter panel UX conventions
-- [Reonomy Web Application](https://www.reonomy.com/solutions/web-application/) — mini-map in reports competitor reference
-- [PropStream Features](https://www.propstream.com/propstream-features) — competitor table feature comparison
-- [Basedash Blog — Light Mode Without Tailwind dark: class](https://www.basedash.com/blog/how-we-built-light-mode-without-tailwind-s-dark-class) — `html.light` class pattern validation
+- WOZ-waardeloket.nl — public website with undocumented JSON endpoint at `/woz-api/v1/objecten/nummeraanduidingen/{id}`; multiple Dutch data aggregators (Altum AI, Matrixian) use this approach
+- RCE CEO ontology — field availability for `bouwperiode`, architect, `oorspronkelijkeFunctie` inferred but not directly tested against REST API JSON response
+- data.overheid.nl community discussion on WOZ access — confirms commercial SaaS access restrictions; MEDIUM confidence (community, not official)
 
 ### Tertiary (LOW confidence)
-
-- [HouseCanary AI in Real Estate](https://www.housecanary.com/blog/ai-in-real-estate) — US market; insight card language patterns not directly applicable to Dutch developer UX
+- WOZ-waardeloket internal API endpoint — reverse-engineered from public website; no SLA, no official documentation; endpoint may change without notice
+- Altum AI WOZ API — confirmed as commercial alternative at `altum.ai/woz-api/`; pricing not public; not recommended as primary source
 
 ---
-
-*Research completed: 2026-02-21*
+*Research completed: 2026-02-24*
 *Ready for roadmap: yes*

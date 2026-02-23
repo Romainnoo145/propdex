@@ -1,404 +1,438 @@
-# Domain Pitfalls: Premium Data Presentation UI/UX Overhaul
+# Pitfalls Research: Dutch Government API Integration
 
-**Domain:** PropTech SaaS — adding comparison views, mini-maps, tab layouts, map filtering, scoring visualizations, and theme polish to an existing React 19 + MapLibre + TanStack platform
-**Researched:** 2026-02-21
-**Scope:** Pitfalls specific to adding premium data presentation features to Propdex (existing ~40K LOC, React 19 + MapLibre 5.x + TanStack Stack)
+**Domain:** PropTech SaaS — adding WOZ-waarde, Energielabel (EP-Online), BRK eigendomsdata, and improved RCE monument data to an existing property intelligence platform
+**Researched:** 2026-02-23
+**Confidence:** HIGH (based on Propdex codebase inspection + verified official Dutch government documentation)
+**Scope:** Pitfalls specific to integrating WOZ, EP-Online, BRK Bevragen v2, and PDOK RCE OGC API into an existing platform that already handles PDOK BAG, DSO, PDOK Kadastral, and SRU Bekendmakingen
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, broken maps, or corrupted state.
+Mistakes that cause regulatory violations, data loss, authentication failures, or architectural rewrites.
 
 ---
 
-### Pitfall 1: MapLibre Mini-Map Initialized Before Container Has Dimensions
+### Pitfall 1: Caching BRK Eigendomsdata Violates Kadaster Terms (Tier 3 Never-Store)
 
 **What goes wrong:**
-A mini-map is mounted inside a modal, drawer, or initially-hidden tab panel. MapLibre initializes against a container with `height: 0` (or `display: none`), adopts zero dimensions, and renders as a blank tile-less rectangle. Calling `map.resize()` after the fact may not fix it if the GL context was created with zero-area.
+The existing `get_cached_or_fetch()` pattern in `cache_manager.py` stores all API responses in `CachedAPIResponse` (PostgreSQL). BRK eigendomsdata (owner names, BSN-adjacent data, zakelijke rechten) falls under Kadaster's Tier 3 "never store" terms. Feeding eigendomsdata through the standard caching pipeline persists personal ownership data in your database indefinitely, violating the BRK access agreement and GDPR.
 
 **Why it happens:**
-React renders the JSX tree before CSS transitions finish. A modal or tab panel whose animation is 300ms means the container reports `offsetHeight === 0` at `useEffect` mount time when `map = new maplibregl.Map({ container })` is called.
+The natural developer instinct is to reuse the existing `get_cached_or_fetch()` wrapper for every new API source. Propdex already does this for BAG, Kadaster cadastral parcels, RCE, and DSO. BRK eigendomsdata looks like another government API, so developers apply the same pattern without reading the specific licensing terms.
 
-**Propdex specifics:**
-- `MapView.tsx` uses `useEffect([], [])` — fine for the persistent main map (container always visible), but that pattern is wrong for mini-maps inside `<Drawer>` or `<Modal>`.
-- `Drawer.tsx` renders only when `isOpen === true`, then animates. The container has real dimensions by the time the Drawer is open, but `requestAnimationFrame` timing in `useEffect` is still not guaranteed to fire after CSS transitions.
+**How to avoid:**
+The `BRKBevragenClient` in `brk_bevragen.py` already has the correct comment (`CRITICAL: Eigendomsdata must NEVER be cached or stored per Kadaster Tier 3 terms`). Enforce this at the aggregator level: the BRK integration MUST NOT call `get_cached_or_fetch()`. Instead, fetch live on each request and pass data directly to the response payload without touching `CachedAPIResponse`. Add a runtime assertion that blocks any future developer from adding a cache key for the `brk` source to `CACHE_TTL` in `config.py`.
 
-**Consequences:** Blank map that never recovers without a hard re-mount; or renders tiles scaled to 0px.
+**Warning signs:**
+- Any `CACHE_TTL` entry for `"brk_eigendom"` or similar appearing in `config.py`
+- `get_cached_or_fetch(source="brk", ...)` appearing in `property_aggregator.py`
+- `CachedAPIResponse` rows with `source = 'brk'` appearing in the database
 
-**Prevention:**
-Use `map.on('load', ...)` as the gate, never the React `useEffect` mount. For hidden containers, use a `ResizeObserver` on the container div and call `map.resize()` whenever the container transitions from 0 dimensions to real dimensions. Alternatively, delay map instantiation until `containerRef.current.offsetHeight > 0`. Do NOT use `display: none` on map containers — use `visibility: hidden` or `opacity: 0` with real dimensions preserved.
-
-**Code pattern to use:**
-```typescript
-const containerRef = useRef<HTMLDivElement>(null);
-
-useEffect(() => {
-  if (!isOpen || !containerRef.current) return;
-
-  // Wait for container to have real dimensions
-  const observer = new ResizeObserver((entries) => {
-    const entry = entries[0];
-    if (entry && entry.contentRect.height > 0) {
-      if (!mapRef.current) {
-        mapRef.current = new maplibregl.Map({ container: containerRef.current! });
-      } else {
-        mapRef.current.resize();
-      }
-      observer.disconnect();
-    }
-  });
-  observer.observe(containerRef.current);
-  return () => observer.disconnect();
-}, [isOpen]);
-```
-
-**Detection:** Map container has non-zero CSS dimensions but tiles never load; browser console shows WebGL context warnings.
-
-**Phase:** Phase implementing mini-maps in drawers/modals.
+**Phase to address:**
+BRK integration phase — must be the first thing verified before any eigendom data flows through the system. Add an integration test that asserts no BRK eigendom response is written to the cache table.
 
 ---
 
-### Pitfall 2: Multiple MapLibre Instances Exceed Browser WebGL Context Limit
+### Pitfall 2: WOZ Official API Access Is Restricted — SaaS Use Is Not Permitted
 
 **What goes wrong:**
-Comparison view shows 2 mini-maps. Detail modals open stacked with mini-maps. The scan results page adds a filter-synced mini overview map. Total simultaneous MapLibre instances reaches 8+, at which point browsers start silently destroying the oldest WebGL context. Maps go blank with no error in the UI.
+Developers assume WOZ-waarde is public data (it's visible on the WOZ-waardeloket website) and implement integration using the official Kadaster WOZ Bevragen API. Access to this API is legally restricted: it is only permitted for use under the Housing Act (Huisvestingswet), the Good Landlord Act (Wet goed verhuurderschap), or tax collection. A commercial property intelligence SaaS does not qualify. Kadaster will reject the access application, causing a blocking dependency.
 
 **Why it happens:**
-Browsers (Chrome, Firefox, Safari) enforce a limit of approximately 8 simultaneous WebGL contexts per page. MapLibre creates one WebGL context per `Map` instance. There is no MapLibre-level context pooling; this is a browser constraint.
+WOZ values are public in the sense that citizens can look them up for their own property. But the WOZ Bevragen API that provides programmatic access has strict permitted-use restrictions in the terms of service. The distinction between "this data is visible on a government website" and "you are permitted to API-integrate it" is easy to miss when reading the marketing copy for the API.
 
-**Propdex specifics:**
-- Existing main map on `/map` = 1 context (persistent).
-- Comparison view adds 2 side-by-side mini-maps = 3 total.
-- Open a parcel detail modal with mini-map = 4.
-- Projects page with a per-project thumbnail map = rapidly hits limit.
+**How to avoid:**
+Do not apply for direct WOZ Bevragen API access for Propdex. Instead, use the unofficial WOZ-waardeloket approach: the waardeloket site exposes a public-facing endpoint (not officially documented as a developer API) that returns JSON for individual property lookups. Multiple Dutch property data aggregators (Altum AI, Matrixian, Nederland Postcode API) wrap this. Alternatively, procure WOZ data through a licensed data aggregator (Altum AI, Matrixian) that has the commercial rights to redistribute. The WOZ data itself is public information; the restriction is on the official government API, not on display of individual property values obtained through the website.
 
-**Consequences:** Silent map blanking; oldest context destroyed without user-visible error; difficult to debug because the failing map may not be the newly added one.
+**Warning signs:**
+- Applying for WOZ Bevragen API with a SaaS/commercial purpose description — Kadaster will reject the application
+- "Access only granted under Housing Act, Good Landlord Act, or Tax Collection" phrase in the API terms
+- Planning phases that depend on WOZ Bevragen API approval before being able to proceed
 
-**Prevention:**
-- Budget WebGL contexts explicitly: decide the maximum simultaneous map instances and document it.
-- Destroy map instances when their container unmounts — `map.remove()` in cleanup, which Propdex's `MapView.tsx` already does correctly.
-- For mini-maps in modals: only initialize when modal is open, destroy on close. Do NOT use `display: none` to hide — actually unmount.
-- Limit comparison view to maximum 2 maps. Never add per-row thumbnail maps in scrollable lists.
-- Use `canvas` screenshots (static PNG fallback) for any list-level map thumbnails instead of live instances.
-
-**Detection:** Maps randomly go blank after navigating; no network errors; `Too many active WebGL contexts` in console.
-
-**Phase:** Phase implementing comparison views and mini-maps. Needs budget decision upfront.
+**Phase to address:**
+WOZ integration research/spike phase — decision must be made upfront: unofficial waardeloket endpoint, or licensed aggregator. Do not proceed with official API application.
 
 ---
 
-### Pitfall 3: Tab Layout Destroys State on Tab Switch
+### Pitfall 3: PKIOverheid Certificate Provisioning Blocks BRK for Weeks
 
 **What goes wrong:**
-Refactoring from long-scroll layout to tabs (e.g., Overview / Kaart / Analyse) causes data re-fetch, scroll position loss, and filter reset every time the user switches tabs. A 3-second API call fires on each tab return.
+BRK Bevragen requires a PKIOverheid (PKIO) certificate with an Organization Identification Number (OIN) or HRN (Trade Registration Number). Obtaining a PKIOverheid certificate is a formal procurement process: you must apply through a certified certificate authority (DigiCert, Sectigo, QuoVadis), provide organizational verification, and wait for the CA's review process. This typically takes 2-4 weeks. If a phase plans to demo BRK data, the demo will fail if certificate procurement wasn't started 3+ weeks earlier.
 
 **Why it happens:**
-React unmounts components not in the active tab if the tab implementation uses conditional rendering (`{activeTab === 'kaart' && <MapTab />}`). TanStack Query caches the server data, but component-local state (scroll position, selected row, expanded accordion) is gone. The map instance is destroyed and re-initialized on each switch.
+The BRK client code in `brk_bevragen.py` already exists and gracefully degrades when unconfigured. Developers see the code is "ready" and assume turning it on is just setting environment variables. In reality, the certificates must be procured before those env vars can be populated with real values.
 
-**Propdex specifics:**
-- `PropertyDetailDrawer.tsx` at 773 lines — if refactored to tabs, each tab's sub-component will be conditionally rendered.
-- The persistent MapLibre instance (via `MapContext`) lives in `MapShell.tsx` above the route, so it survives tab switches at the route level. But any mini-map inside `PropertyDetailDrawer` does not.
-- `ResultsTable.tsx` has row selection state, pagination state, and sort state — all local to the component. Unmounting loses them.
+**How to avoid:**
+Start the PKIOverheid certificate application process at the beginning of the milestone, not when the BRK phase begins. The Kadaster test environment (ESD-ETO staging) accepts certificates from the same CA chain, allowing integration testing while awaiting production certificate approval. Plan for 3-week lead time minimum. Also note: certificates expire (maximum 3 years for PKIOverheid OV certificates, G3 root until 2028, G4 transition required after). Add a certificate expiry monitoring step to the deployment checklist.
 
-**Consequences:** Jarring UX where returning to a tab shows loading spinners and reset state; perceived as buggy even if data is correct.
+**Warning signs:**
+- BRK phase starts without certificate application already in progress
+- `BRK_CLIENT_CERT_PATH` pointing to an expired or self-signed certificate in staging
+- `ssl.SSLError` in logs from `_create_brk_ssl_context()` at startup when cert files exist but are malformed
 
-**Prevention:**
-- Use CSS visibility toggling (`display: none` → `display: block`) for tabs where you need to preserve DOM state. For map containers, use `visibility: hidden` not `display: none` (maps need real dimensions).
-- Lift scroll position, selected row, and filter state to the parent route (URL search params via TanStack Router) so it survives tab switches via unmount/remount.
-- Do NOT use `{activeTab === 'x' && <Component />}` for any tab that contains a map or has expensive initialization. Use `<div className={activeTab === 'x' ? '' : 'hidden'}>`.
-- TanStack Router discussion confirms there is no built-in "keep alive" — the CSS approach is the standard workaround.
-
-**Detection:** React DevTools shows component mount/unmount on tab switch; TanStack Query shows `isFetching: true` on every tab return.
-
-**Phase:** Phase converting PropertyDetailDrawer to tab layout.
+**Phase to address:**
+Milestone kickoff — start certificate procurement process immediately, before any BRK phase work begins.
 
 ---
 
-### Pitfall 4: Filter State Desync Between Map Controls and URL/Table
+### Pitfall 4: EP-Online API Key Is Personal and Cannot Be Used for Multi-Tenant SaaS
 
 **What goes wrong:**
-Adding map-level filter controls (e.g., score range slider on the map overlay) that update `ResultsFilterPanel` state creates a bidirectional sync problem. User changes filter on the map — URL updates — table re-fetches. User changes filter in the table panel — URL updates — map controls don't reflect the new state. After a browser Back, both are out of sync.
+The EP-Online public REST API requires an API key. Per the EP-Online terms of use: "The API-key is personal and may not be made available to third parties." The Propdex backend uses a single shared API key to serve all tenant organizations. Sharing one API key across multiple organizations technically violates the personal-key restriction.
 
 **Why it happens:**
-The current architecture stores all filter state in URL search params (via `resultaten.tsx` `handleFilterChange`). Adding a second write path (map controls) that also writes to URL causes race conditions when both update within the same render cycle. URL as source of truth works only if all writers go through the same `navigate()` call.
+Most SaaS platforms use shared API keys for third-party integrations — it's the standard backend pattern. The EP-Online terms use language ("personal") that is unusual for a B2B API and is often overlooked. The terms also restrict direct redistribution of raw data at individual level to third parties in large quantities, though indirect use (value-added service on a property detail page) is explicitly permitted.
 
-**Propdex specifics:**
-- `resultaten.tsx` uses TanStack Router's `navigate()` with `search: (prev) => ({ ...prev, ... })` pattern — this is the correct single writer.
-- `ResultsFilterPanel.tsx` already uses debounced local state for area inputs, then commits to URL. Adding a map slider with its own local state creates a parallel commit path.
-- TanStack Router Discussion #1249 notes: "URL as state doesn't mean all state should be in URL" — ephemeral map interactions (hover, drag) belong in component state, not URL.
+**How to avoid:**
+Request clarification from RVO (fbni@rvo.nl) on whether a single API key used in a shared backend to serve multiple end users counts as "made available to third parties." Based on the RVO guidance that indirect sharing is permitted ("as part of information on a website for buying or renting homes"), a shared backend key is most likely acceptable. Document this interpretation and the RVO clarification response. If rejected, investigate whether per-organization API keys are feasible. Do not launch without this clarification.
 
-**Consequences:** Filters that appear visually active but don't match the data being shown; Back button confusion; double API calls when both writers fire simultaneously.
+**Warning signs:**
+- EP-Online API key configured in `.env` as a global `EP_ONLINE_API_KEY` setting without reviewing terms
+- No documented confirmation from RVO on multi-tenant usage
 
-**Prevention:**
-- Single source of truth: URL search params (already the pattern). All filter changes — map or table — must call `navigate()` via the same handler.
-- Extract `handleFilterChange` to a shared hook imported by both `ResultsFilterPanel` and map controls.
-- Map controls should read initial state from URL on mount and have NO local state; they write directly to URL and re-read on next render.
-- Add `replace: true` to navigation calls for filter changes to avoid history stack pollution.
-- Debounce in the handler, not in local component state, when adding map slider controls.
+**Phase to address:**
+EP-Online integration phase — legal/terms review must happen before development starts, not after.
 
-**Detection:** Filter pills in table panel show "active" but the map scatter plot shows a different distribution; table row count doesn't match visible map points.
+---
 
-**Phase:** Phase adding map filter controls.
+### Pitfall 5: EP-Online API Version Mismatch — V4 Was Sunset January 2026
+
+**What goes wrong:**
+EP-Online Public API V4 was discontinued on January 30, 2026. Any integration built referencing V4 documentation, V4 endpoints, or V4 response schemas will fail immediately. The current version is V5 (live since November 2024), with its Swagger at `https://public.ep-online.nl/swagger`.
+
+**Why it happens:**
+Documentation found via Google often references the V4 API, which was the stable version for years. GitHub examples, Stack Overflow answers, and third-party integration guides written before November 2024 will use V4 endpoints and response structures. A developer following an older guide builds against a dead endpoint.
+
+**How to avoid:**
+Always reference `https://public.ep-online.nl/swagger` directly for the current API schema. The V5 endpoint for address-based lookup is `GET /api/v5/PandEnergielabel/Adres` with `postcode` and `huisnummer` as required parameters. Do not copy response field names from V4 examples — verify against the V5 Swagger schema.
+
+**Warning signs:**
+- Client code referencing `/api/v4/` in the URL
+- Response parsing for V4-specific field names that no longer exist in V5
+- HTTP 404 or 410 on requests to EP-Online (endpoint no longer exists)
+
+**Phase to address:**
+EP-Online implementation phase — pin implementation to V5 Swagger from day one.
+
+---
+
+### Pitfall 6: RCE PDOK OGC API Only Covers Rijksmonumenten — Gemeentelijke Monumenten Are Absent
+
+**What goes wrong:**
+The current `RCEMonumentClient` queries `rce_inspire_points` via the PDOK beschermde-gebieden-cultuurhistorie OGC API. This dataset contains only nationally designated monuments (rijksmonumenten) and protected town/village views (stads- en dorpsgezichten). It does NOT contain gemeentelijke monumenten (municipal monuments). A property that is a gemeentelijk monument will return `is_monument=False` from the current implementation — a false negative that misleads users about development restrictions.
+
+**Why it happens:**
+The PDOK dataset description says it "shows Rijksmonumenten, Stads- en Dorpsgezichten, and UNESCO sites." Developers see "monuments" and assume it is comprehensive. Gemeentelijke monumenten are maintained by individual municipalities (gemeenten) and are NOT published to a national PDOK layer.
+
+**How to avoid:**
+For rijksmonumenten: the PDOK OGC API is correct and sufficient. For gemeentelijke monumenten: there is no national API. Each gemeente maintains its own register. The Monumenten.nl and Monumentengemeenten.nl platforms aggregate some of this data. Consider:
+1. Displaying a clear UI disclaimer: "Rijksmonument status via RCE/PDOK. Gemeentelijk monument status is niet centraal beschikbaar — raadpleeg de gemeente."
+2. For the RCE improvement goal, enhance the PDOK query to also check the `rce_inspire_areas` collection for beschermde stads- en dorpsgezichten (protected area) containment, which provides a geographic boundary check for area-level designations.
+3. Do NOT promise "complete monument coverage" in any Propdex UI copy.
+
+**Warning signs:**
+- `consensus_status = "geen_monument"` returned for a property that users report is a gemeentelijk monument
+- No distinction in the UI between "not a rijksmonument" and "monument status unknown"
+- `monument_type` hardcoded to `"rijksmonument"` in `_fetch_rce()` without considering area-level designations
+
+**Phase to address:**
+RCE improvement phase — must add `rce_inspire_areas` bbox query alongside the existing `rce_inspire_points` query, and update UI copy to accurately scope what is and isn't covered.
+
+---
+
+### Pitfall 7: BRK Identificatie Format Must Match Exactly — No Fuzzy Lookup
+
+**What goes wrong:**
+BRK Bevragen V2 uses `NL.IMKAD.KadastraalObject.<number>` as the identificatie format for `GET /kadastraalonroerendezaken/{identificatie}`. The identificatie must be obtained from the cadastral parcel data, not guessed or constructed from a kadastrale aanduiding string like "AMSTERDAM M 1234". Using the wrong format returns a 404 that looks like "property not found" but is actually a malformed identifier.
+
+**Why it happens:**
+The PDOK Cadastral OGC API already returns parcel features with geometry and attributes like `perceelnummer`, `sectie`, and `kadastrale_gemeente_waarde`. Developers may try to construct a BRK identificatie from those fields. However, the BRK `identificatie` (NEN3610 format) is a separate internal identifier not directly derivable from the kadastrale aanduiding string without a lookup. The correct flow is: PDOK OGC API parcel feature → extract `identificatie` or `kadastraalaanduidingcode` field → use that as the BRK lookup key.
+
+**How to avoid:**
+Inspect the PDOK Cadastral OGC API response for the `identificatie` field (it may appear as `kadastraalaanduidingcode` or a similar field in the properties). Verify what field name the PDOK OGC API uses for the BRK-compatible identifier. If PDOK does not expose the NL.IMKAD identificatie, use BRK's own search endpoint with `kadastraleAanduiding` query parameter (supports gemeente code + sectie + nummer) to resolve the identificatie. Do not construct it from scratch.
+
+**Warning signs:**
+- HTTP 404 from BRK for parcels that definitely exist
+- Identificatie strings that look like `"Amsterdam M 1234"` rather than `"NL.IMKAD.KadastraalObject.12345678910000"`
+- BRK lookup failing on parcels that were recently created or split (new parcels may not yet appear in BRK Bevragen)
+
+**Phase to address:**
+BRK integration phase — validate the identificatie lookup chain (PDOK → identificatie field → BRK) with real parcels before building the full integration.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 5: PropertyDetailDrawer 773-Line File Grows Further During Refactor
+---
+
+### Pitfall 8: Energielabel "Not Found" Is Normal — Not an Error
 
 **What goes wrong:**
-The drawer refactor adds tab navigation, mini-map, and new data sections without splitting the file. The file grows to 1000+ lines. Sub-components defined inside the file cause every drawer open to re-create their function references, causing unnecessary child re-renders.
+EP-Online returns a 404 (or empty result) for properties that have no registered energy label. The current `handle_api_response()` in `base.py` raises `APINotFoundError` on 404. If EP-Online 404s are surfaced as errors, the aggregator marks energielabel as "failed" rather than "not available," causing misleading error messages and incorrect completeness scores.
 
 **Why it happens:**
-Components defined inline in the same file are technically separate (not re-created per render if defined at module level), but developers tend to co-locate new sections. 773 lines makes the file hard to audit, making it easy to accidentally add inline component definitions inside the main component body.
+The generic 404 handler treats all 404s as "resource not found = error." For BAG addresses, a 404 means the address genuinely doesn't exist (a real error). For EP-Online, a 404 means the building exists but has no registered label — a completely normal and expected state, especially for older buildings, agricultural properties, industrial buildings, and buildings where the label was voluntarily registered. Approximately 20-30% of Dutch residential properties and the majority of non-residential properties do not have a registered energielabel in EP-Online.
 
-**Propdex specifics:**
-- `PropertyDetailDrawer.tsx` currently has `KadasterContent`, `BestemmingContent`, `MonumentContent`, `BronnenContent` all in the same file. This is acceptable at the current size but will explode with tabs.
-- The 300-line guideline is already violated. Any new feature added here compounds the problem.
+**How to avoid:**
+In the EP-Online client, catch 404 responses and return a structured `None` or `{"label": None, "registered": False}` rather than raising an exception. The aggregator should treat this as `energielabel_status = "niet_geregistreerd"` — a valid data state, not an error. Do NOT increment the error counter or reduce the completeness score for an absent energielabel.
 
-**Prevention:**
-- Before adding tabs, split NOW: extract each content section to `property/sections/KadasterSection.tsx`, etc.
-- The mini-map tab should be a separate file `property/tabs/MapTab.tsx` that manages its own MapLibre lifecycle.
-- After splitting, `PropertyDetailDrawer.tsx` should be <150 lines (the shell: Drawer + tab header + tab panels that import the section files).
+**Warning signs:**
+- EP-Online integration always showing errors for a large proportion of properties
+- `errors.append("Energielabel data unavailable")` in aggregator logs for properties in older neighborhoods
+- Completeness score dropping for perfectly valid properties that simply don't have a label
 
-**Detection:** File grows past 400 lines during the PR; CI should enforce the 300-line limit (project rule).
-
-**Phase:** First phase touching PropertyDetailDrawer. Split is a prerequisite, not an afterthought.
+**Phase to address:**
+EP-Online implementation phase — model the "no label" state explicitly in the schema before writing the client.
 
 ---
 
-### Pitfall 6: MapLibre Scroll Hijacking Inside Scroll Containers
+### Pitfall 9: WOZ Data Has Multiple Objects Per Address (VvE / Appartementen)
 
 **What goes wrong:**
-A mini-map inside the scrollable drawer content area intercepts scroll events intended for the drawer. User tries to scroll down the drawer to see more property sections — the map zooms or pans instead. On mobile, touch events are captured by the map, preventing the bottom sheet from being scrolled.
+For apartment buildings with a VvE (homeowners association) structure, there may be multiple WOZ objects per building — one per apartment unit. Querying by address (postcode + huisnummer) may return multiple WOZ objects. Blindly returning the first result may return the wrong unit's WOZ value, or the total building value rather than the individual apartment value.
 
 **Why it happens:**
-MapLibre's `ScrollZoomHandler` and touch handlers are active by default. When the map container is inside a scrollable parent, scroll/touch events bubble to MapLibre before reaching the scroll container.
+A single postal address in BAG can map to multiple verblijfsobjecten (apartment units), each with their own WOZ taxatie. The query by postcode + huisnummer resolves to the building but not necessarily to the specific unit. In BAG terms, the `nummeraanduidingidentificatie` (specific unit's address ID) is required to disambiguate, not just the postcode + housenumber.
 
-**Propdex specifics:**
-- `Drawer.tsx` already uses `onTouchStart={(e) => e.stopPropagation()}` on the content wrapper to prevent touch event conflicts. But this stops propagation upward, not downward into MapLibre.
-- A mini-map inside the drawer's `overflow-y-auto` div will compete with the drawer scroll.
+**How to avoid:**
+Pass the BAG `nummeraanduidingidentificatie` (already available from the address resolution step in `property_aggregator.py`) as an additional filter in the WOZ query. If the WOZ source does not support filtering by nummeraanduidingidentificatie, display all WOZ objects returned and let the user select, or pick the one whose verblijfsobject ID matches the BAG address resolution result.
 
-**Prevention:**
-- Disable scroll zoom on mini-maps: `scrollZoom: false` in `MapOptions`.
-- Disable drag pan if the mini-map is read-only (showing location only): `dragPan: false`, `dragRotate: false`.
-- For any interactive mini-map, use a fixed height container that does NOT sit inside the scroll area — instead, pin it above the scrollable section or use a sticky position.
-- Never put an interactive MapLibre instance inside `overflow-y-auto` without disabling conflicting interactions.
+**Warning signs:**
+- WOZ query returns a list with more than one item for addresses like "Teststraat 1" where multiple units exist
+- WOZ value shown significantly higher than expected for a single apartment (may be the whole building value)
+- Wrong tax year data shown (multiple objects with different waardepeildatum)
 
-**Detection:** Scrolling the drawer causes unexpected map zoom; bottom sheet on mobile cannot be dismissed by swiping down.
-
-**Phase:** Phase adding mini-maps to drawers/modals.
+**Phase to address:**
+WOZ integration phase — design the disambiguation logic before implementation, not as an afterthought.
 
 ---
 
-### Pitfall 7: Hardcoded Colors in Map Layer Configurations Break Theme Consistency
+### Pitfall 10: PDOK RCE OGC API Bbox CRS Must Be Specified Explicitly
 
 **What goes wrong:**
-MapLibre layer paint properties use hardcoded hex colors (`#dc2626`, `#ffffff`, `#d4a843`). When dark/light mode is added or refined, these colors never update because MapLibre's style system is outside the CSS variable system. Light mode launches with dark-mode-optimized map overlays — white outlines that are invisible on light tile backgrounds.
+The existing `RCEMonumentClient` already passes `"bbox-crs": "http://www.opengis.net/def/crs/EPSG/0/28992"` correctly. However, if any developer modifies the bbox query to use WGS84 coordinates (e.g., lat/lon from a frontend map click) without updating the CRS parameter, the spatial filter silently uses the wrong coordinate system. A bbox of `[4.9, 52.3, 5.0, 52.4]` (WGS84 Amsterdam) interpreted as RD coordinates points to a location in the middle of the North Sea.
 
 **Why it happens:**
-MapLibre GL paint properties accept only literal color values, expressions, or data-driven steps — not CSS variables. CSS custom properties are not readable inside a GL style JSON object.
+PDOK OGC API Features spec defaults to WGS84 (EPSG:4326) for bbox when no CRS is specified. Propdex stores coordinates in RD (EPSG:28992) internally and passes them correctly. If coordinates come from a different source (frontend GeoJSON click, which uses WGS84), and the conversion step is missed, the query returns zero results with no error — it just finds no monuments near the North Sea.
 
-**Propdex specifics:**
-- `ParcelScoreLayer.tsx`: `'line-color': '#ffffff'` (white outline) — invisible on light CartoDB tiles.
-- `WijkBoundariesLayer.tsx`: `'text-halo-color': '#ffffff'` — same issue.
-- `GemeenteBoundariesLayer.tsx`: `'line-color': '#d4a843'` — hardcoded amber that may not match `--color-amber-accent` OKLCH value visually.
-- Light mode uses the same CartoDB light tiles but with different contrast expectations.
+**How to avoid:**
+The current pattern (RD → bbox with explicit CRS header) is correct. Do not change it. When extending the RCE query to also check `rce_inspire_areas`, use the same RD + explicit CRS pattern. Add a coordinate sanity check: valid RD X range is 0-280000, valid Y range is 300000-625000. Reject any coordinates outside these bounds before making the API call.
 
-**Consequences:** Parcel outlines invisible in light mode; score layer looks washed out; boundary labels unreadable.
+**Warning signs:**
+- Monument queries returning zero results for addresses in Amsterdam city center (known monument-dense area)
+- Bbox values like `[4.89, 52.37, 4.91, 52.38]` appearing in logs (these are WGS84, not RD)
+- `bbox-crs` header absent from PDOK requests
 
-**Prevention:**
-- Define a `MAP_THEME_COLORS` object in a dedicated module (`lib/map-theme.ts`) with separate `dark` and `light` entries for each semantic color (outline, boundary, label, halo, etc.).
-- Pass `theme` state to all map layer functions; compute the color object at call time.
-- Subscribe to theme changes and call the layer update functions when theme toggles: `setLayerPaintProperty` / remove + re-add layers.
-- Do NOT try to dynamically read CSS variables at runtime inside GL paint expressions — it doesn't work. Read them once via `getComputedStyle(document.body).getPropertyValue('--color-amber-accent')` and pass them explicitly.
-
-**Detection:** Toggle to light mode — parcel outlines disappear; score gradient renders with poor contrast on light tiles.
-
-**Phase:** Theme polish phase (and any phase adding new map layers).
+**Phase to address:**
+RCE improvement phase — add coordinate validation helper and use it before all PDOK OGC spatial queries.
 
 ---
 
-### Pitfall 8: Legacy `gray-*` Tailwind Classes Survive Refactor and Break in Light Mode
+### Pitfall 11: BRK Rate Limit Is Conservative and Must Not Be Shared Across Workers
 
 **What goes wrong:**
-`ProjectEditModal.tsx` and `ProjectCreateModal.tsx` use hardcoded `gray-*` Tailwind classes (`border-gray-200 bg-white text-gray-900`). These components look correct in dark mode by accident (bg-white modals on dark backdrop look fine) but break in light mode because they use Tailwind's built-in gray palette rather than the project's semantic `grey-*` CSS variable system.
+The `brk_limiter` in `rate_limiter.py` is configured as `max_concurrent=2, max_per_hour=200` and is a module-level singleton. If the FastAPI application runs with multiple worker processes (e.g., `uvicorn --workers 4`), each worker has its own `brk_limiter` instance. Four workers with 200 req/hour each = 800 effective requests/hour, far exceeding the Kadaster limit and risking API key suspension.
 
 **Why it happens:**
-These components were built early (before the semantic `grey-*` system was established) using default Tailwind colors. They weren't caught because dark mode was the default; the discrepancy is only obvious in light mode where `bg-white` duplicates the page background.
+Python's asyncio rate limiters are in-process only. Module-level singletons are not shared across OS processes. The existing code was designed for single-worker deployment (or single-process development), which is likely fine for MVP but breaks when production scales horizontally.
 
-**Propdex specifics:**
-- `ProjectEditModal.tsx` lines 80-148: 14 `gray-*` class usages.
-- `ProjectCreateModal.tsx`: same count.
-- `ChangeTimeline.tsx` `PermitIcon`/`ZoningIcon`: `bg-blue-100`/`bg-green-100` (light-tinted icon backgrounds) look fine in dark mode but conflict with the semantic color system.
+**How to avoid:**
+For BRK specifically (paid API with strict limits), implement rate limiting at the Redis level rather than in-process. Use a Redis-backed rate limiter (e.g., `limits` library with Redis backend) for BRK. Alternatively, enforce that BRK calls only go through a dedicated background worker (ARQ queue) where a single worker process is guaranteed. Document the single-worker constraint for BRK in the deployment notes.
 
-**Consequences:** Components look visually inconsistent with the rest of the app in light mode; ESLint Tailwind plugin may not catch this automatically since `gray-*` is valid Tailwind.
+**Warning signs:**
+- Multiple `uvicorn` worker processes running in production
+- HTTP 429 responses from BRK after periods of normal usage
+- Rate limit not being respected during load testing
 
-**Prevention:**
-- Audit ALL `gray-*` and `white` classes before the theme polish phase: `grep -r "gray-\|bg-white\|text-white" src/components --include="*.tsx"`.
-- Replace with semantic equivalents: `gray-900` → `grey-900`, `bg-white` → `bg-grey-950`, `text-gray-900` → `text-grey-100`.
-- Use `ChangeTimeline` icon backgrounds as a conversion example: `bg-blue-100` → `bg-blue-500/10`, `text-blue-600` → `text-blue-400`.
-- Add a lint rule or CI check: `eslint-plugin-tailwindcss` with a `forbiddenClassNames` config to block `gray-*`.
-
-**Detection:** Toggle to light mode — project modals show white-on-white text; icon backgrounds are too light/washed.
-
-**Phase:** Theme polish phase. This audit must be Phase 1 of any theme work.
+**Phase to address:**
+BRK integration phase — deployment architecture decision must be made alongside the integration work.
 
 ---
 
-### Pitfall 9: Scoring Visualization Performance Degrades With 1000+ Rows in DOM
+### Pitfall 12: EP-Online TTL Must Respect Annual Label Update Cycle
 
 **What goes wrong:**
-Adding a per-row score visualization (radial progress bar, animated gauge, or SVG arc) to the results table causes frame drops and janky scrolling when 50 rows are rendered per page, each with an SVG-based score indicator. At 1000 total rows with virtual scroll, incorrect virtualization setup causes layout thrashing.
+Adding `"ep_online": 86400` (24 hours) to `CACHE_TTL` would cache energielabels for only 24 hours, causing unnecessary re-fetches. But using the same TTL as `"rce": 2592000` (30 days) would serve a stale label after a new label is registered. Energy labels can be updated when a building is renovated (new label required within 6 months of sale), but existing labels are valid for 10 years. The right TTL is "months, not days."
 
 **Why it happens:**
-SVG-based visualizations with CSS animations run on the main thread. 50 animated SVG elements per table page create 50 RAF callbacks. Without proper virtualization, scrolling 1000 rows means React renders all 1000 at once.
+Developers pick a TTL heuristically without considering the update frequency of the specific data source. Energy labels are registered once and are stable for years; they don't need daily re-checking.
 
-**Propdex specifics:**
-- `ResultsTable.tsx` currently uses server-side pagination (50 rows per page) — this limits the DOM node count effectively. The existing `ScoreBadge` is a pure HTML span with CSS, which is performant.
-- If a new radial score gauge replaces `ScoreBadge`, each row adds ~3-5 SVG elements. 50 rows × 4 SVG nodes = 200 additional DOM nodes per page — borderline acceptable.
-- The mobile card view (`ParcelCard.tsx`) renders all visible cards without virtualization — acceptable at 50/page, but if page size increases or infinite scroll is added, this becomes a problem.
+**How to avoid:**
+Use a 30-day TTL for cached energielabels. Add a `force_refresh` pathway so users can manually re-check (in case they know a new label was registered). Separately, EP-Online provides a bulk mutation file via the webservice for organizations that want to track changes systematically — this is not needed for Propdex's per-property lookup use case.
 
-**Consequences:** Scroll jank at 60+ rows; CPU spikes on score column renders; mobile devices with slower GPUs show visible animation stuttering.
+**Warning signs:**
+- `"ep_online": 86400` in `CACHE_TTL` causing 350+ unnecessary EP-Online requests per year per property
+- No TTL entry for `ep_online` in `config.py` (would cause `KeyError` at runtime from `get_cached_or_fetch()`)
 
-**Prevention:**
-- Keep score visualizations as pure CSS where possible. The existing `ScoreBadge` (span with Tailwind classes) is correct. Enhance with CSS-only techniques: `background: conic-gradient()` for radial display — no SVG, no JS animation.
-- If SVG is required (e.g., animated arc), disable animation after first paint: `prefers-reduced-motion` media query + `animation: none`.
-- Do NOT add `requestAnimationFrame`-based score counters — they run continuously even when off-screen.
-- If adding TanStack Virtual, ensure `estimateSize` returns accurate row heights. Variable heights without accurate estimates cause scroll position jumps.
-- The server-side pagination at 50 rows is the correct performance budget. Do not increase page size without adding virtualization first.
-
-**Detection:** Chrome DevTools Performance tab shows long frames (>16ms) during table scroll; "Rendering" section shows frequent layout recalculations.
-
-**Phase:** Phase adding scoring visualizations to results table/cards.
+**Phase to address:**
+EP-Online implementation phase — add TTL entry to `config.py` before wiring up the cache integration.
 
 ---
 
-### Pitfall 10: Comparison View Creates N×API-Calls Race Conditions
+### Pitfall 13: WOZ Waardepeildatum Can Be a Year Old — Display the Reference Date
 
 **What goes wrong:**
-A side-by-side comparison view loads two property detail payloads simultaneously. If both requests modify the same cached TanStack Query key, or if one succeeds and one fails, the comparison UI partially renders — one panel shows data, the other shows an error or stale cache.
+WOZ values are assessed annually with a `waardepeildatum` (valuation reference date) typically January 1 of the previous year. A WOZ value fetched in February 2026 may show the 2025 value (reference date: January 1, 2024) or the 2026 value (reference date: January 1, 2025) depending on when the municipality published the new assessment. Displaying just the WOZ value without the reference date misleads users who assume they're seeing current market value.
 
 **Why it happens:**
-TanStack Query caches by query key. If both parcels in the comparison use the same data shape but different IDs, the cache keys should be different (good). But if the comparison uses the existing `PropertyDetailDrawer` with a single `data` prop driven by a single selected parcel, switching to "compare 2 parcels" requires a parallel fetch architecture that doesn't exist yet.
+The numeric WOZ value is the salient data point. The `waardepeildatum` is treated as metadata and omitted from the display. Users (real estate developers) use WOZ value as a proxy for current market value, which can be significantly off when the reference date is 12-24 months old.
 
-**Propdex specifics:**
-- Current pattern: `selectedParcel` (single) → API fetch → `PropertyDetailDrawer` shows result.
-- Comparison needs: `selectedParcels[]` (up to 2) → 2 parallel fetches → comparison layout.
-- The `onRowClick` in `ResultsTable.tsx` sets a single `modalParcel` state. Multi-select is already implemented (checkboxes + `selectedParcelIds`), but no comparison UI exists yet.
+**How to avoid:**
+Always display the `waardepeildatum` alongside the WOZ value. Use a display format like "WOZ-waarde: €485.000 (peildatum 1 jan. 2024)". If the data source provides a tax year (`belastingjaar`), display that too. Do not label the value as "actuele waarde" — it is a tax assessment value with a specific reference date.
 
-**Consequences:** First parcel data shows, second remains loading indefinitely (if fetch quota is hit); or both fetch but comparison UI unmounts one when the other resolves.
+**Warning signs:**
+- WOZ value displayed without a date reference in the UI
+- UI copy reading "Actuele WOZ-waarde" instead of "WOZ-waarde (belastingjaar XXXX)"
 
-**Prevention:**
-- Use `Promise.all` / multiple parallel `useQuery` calls with distinct keys: `['parcel-enrichment', parcel_id_1]` and `['parcel-enrichment', parcel_id_2]`.
-- Design the comparison component to render independently-fetched panels — each panel manages its own loading/error state. Never merge two parcel payloads into one query.
-- Limit comparison to 2 parcels and enforce this at the selection layer (disable checkbox after 2 are selected).
-- Use the existing `selectedParcelIds` from `BulkActionBar` as the trigger for comparison mode — no new selection architecture needed.
-
-**Detection:** Comparison panel shows one parcel loaded, one stuck in skeleton; network tab shows only 1 of 2 requests completing.
-
-**Phase:** Phase implementing comparison views.
+**Phase to address:**
+WOZ UI implementation — build the display component to require the peildatum as a non-optional field from day one.
 
 ---
 
-## Minor Pitfalls
+## Technical Debt Patterns
 
-### Pitfall 11: Tab Keyboard Navigation Missing on Custom Tab Implementation
+Shortcuts that seem reasonable but create long-term problems.
 
-**What goes wrong:**
-A custom tab component built with `div` + `onClick` handlers doesn't support keyboard navigation (`ArrowLeft`/`ArrowRight` to switch tabs, `Enter` to select). Screen readers announce nothing meaningful.
-
-**Why it happens:**
-Developers implement visible tab styling without the ARIA `role="tablist"` / `role="tab"` / `aria-selected` / `aria-controls` pattern. The visual appearance works; keyboard access does not.
-
-**Prevention:**
-- Use `role="tablist"` on the container, `role="tab"` on each tab button, `aria-selected` on the active tab, `aria-controls` pointing to the panel ID.
-- Implement `onKeyDown` with `ArrowLeft`/`ArrowRight` to move focus between tabs.
-- Panel div uses `role="tabpanel"` and `tabIndex={0}`.
-- This is 20 lines of code but catches 100% of accessibility issues.
-
-**Detection:** Tab through the UI — tab buttons are not focusable or don't respond to arrow keys.
-
-**Phase:** Every phase that adds tab components.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Skip BRK Bevragen, show only PDOK cadastral parcels | Avoids mTLS/cert complexity entirely | Users never see ownership data, limiting product value | Never for v7.0 goal |
+| Use unofficial WOZ scraping endpoint without monitoring | Gets WOZ data working quickly | Endpoint can break without notice; no SLA; may violate ToS | Only for internal prototyping, not production |
+| Hardcode `monument_type = "rijksmonument"` in aggregator | Avoids building the area-containment query | False negatives for stads/dorpsgezicht properties | Never — misleads users about legal restrictions |
+| Skip EP-Online "no label" disambiguation | Simpler error handling | Error logs fill with expected 404s; support burden increases | Never — silent failure is worse than explicit None |
+| Cache WOZ data as plain `dict` without `waardepeildatum` in the key | Simpler cache key | Year-old values served after new assessment published without user knowing | Never — always include peildatum in cached payload |
 
 ---
 
-### Pitfall 12: `oklch()` Colors Not Supported in All CSS Contexts
+## Integration Gotchas
 
-**What goes wrong:**
-The design system uses `oklch()` for all semantic colors (e.g., `--color-amber-accent: oklch(0.78 0.15 85.87)`). Passing these to MapLibre paint properties via `getComputedStyle` returns the raw `oklch(...)` string, which MapLibre does not parse (it expects hex, rgb, or named colors).
+Common mistakes when connecting to these specific Dutch government APIs.
 
-**Why it happens:**
-MapLibre's color parser uses a subset of CSS color parsing that predates wide `oklch()` support.
-
-**Propdex specifics:**
-- This is already an implicit risk in `GemeenteBoundariesLayer.tsx` and `WijkBoundariesLayer.tsx` where colors are hardcoded as hex (the "safe" workaround). The risk appears when developers try to be "correct" by reading CSS variables: `getComputedStyle` → MapLibre → fails.
-
-**Prevention:**
-- Define `MAP_THEME_COLORS` in `lib/map-theme.ts` using hex equivalents of the design tokens. Document which hex value corresponds to which CSS variable.
-- Never pass `getComputedStyle` output directly to MapLibre. Always convert to hex first.
-- Add a comment in the theme colors file: "These hex values are the MapLibre equivalents of the OKLCH design tokens in index.css."
-
-**Detection:** MapLibre throws `Error: Invalid color "oklch(...)"` in console; layer renders with fallback black/white.
-
-**Phase:** Map layer development in any phase.
-
----
-
-### Pitfall 13: TanStack Router `navigate()` With Search Params Triggers Unnecessary Re-Fetches
-
-**What goes wrong:**
-Every `navigate()` call for filter changes causes TanStack Query to re-evaluate its cache keys. If the filter object is constructed inline (`{ ...filters, score_category: cat }`), the resulting object is a new reference even when the values are identical. This triggers spurious API calls.
-
-**Why it happens:**
-TanStack Router's `validateSearch` runs on every navigation. TanStack Query compares query keys by value (deep equality), but if the filters object is reconstructed with the same values, the key array's content is identical, so re-fetches are NOT triggered — this is actually fine. The real problem is when filter changes trigger navigation that resets `page: 0`, forcing a re-fetch even when the user is on page 0 already.
-
-**Propdex specifics:**
-- `resultaten.tsx` `handleFilterChange` always resets `page: 0`. If user is already on page 0, this navigation still fires and TanStack Query re-fetches because the `page` param in the URL changed (0 → 0 → 0 cycles if the router doesn't deduplicate identical URLs).
-- TanStack Router Discussion #3686 notes that search parameter propagation must explicitly carry forward existing params, which `resultaten.tsx` already does correctly.
-
-**Prevention:**
-- Guard page reset: `page: search.page === 0 ? undefined : 0` — avoids no-op navigation.
-- Use `replace: true` for filter navigation to avoid polluting browser history.
-- Memoize the `filters` object (already done with `useMemo` in `resultaten.tsx` — maintain this pattern when adding new filter writers).
-
-**Detection:** Network tab shows duplicate API calls with identical parameters; React Query Devtools shows refetch status on every filter pill click even when value doesn't change.
-
-**Phase:** Phase adding map filter controls (new writers to the filter state).
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| BRK Bevragen | Feeding response through `get_cached_or_fetch()` | Return eigendomsdata directly to response payload, no DB persistence |
+| BRK Bevragen | Using `kadastraleAanduiding` string as identificatie | Resolve `NL.IMKAD.KadastraalObject.<id>` from PDOK OGC feature properties or BRK search endpoint |
+| BRK Bevragen | Applying in-process `brk_limiter` with multiple uvicorn workers | Use Redis-backed rate limiter or single dedicated ARQ worker for BRK calls |
+| EP-Online | Building against V4 API endpoints | Use V5: `GET https://public.ep-online.nl/api/v5/PandEnergielabel/Adres` |
+| EP-Online | Treating 404 as "error" | Return `energielabel_status = "niet_geregistreerd"` — 404 is a normal state |
+| EP-Online | One API key per organization for multi-tenant | Use single backend key; confirm indirect-use terms with RVO before launch |
+| WOZ | Applying for official WOZ Bevragen API as SaaS | Use unofficial waardeloket approach or licensed aggregator (Altum AI, Matrixian) |
+| WOZ | Returning first WOZ object for an address without disambiguation | Filter by BAG `nummeraanduidingidentificatie` to get unit-specific WOZ value |
+| WOZ | Displaying WOZ value without `waardepeildatum` | Always show peildatum: "€485.000 (peildatum 1 jan. 2024)" |
+| RCE/PDOK | Querying only `rce_inspire_points` for monument coverage | Also query `rce_inspire_areas` for beschermde stads- en dorpsgezichten |
+| RCE/PDOK | Claiming "full monument coverage" in UI | Be explicit: rijksmonumenten only; gemeentelijke monumenten not available nationally |
+| PDOK OGC | Omitting `bbox-crs` header | Always include `"bbox-crs": "http://www.opengis.net/def/crs/EPSG/0/28992"` for RD queries |
 
 ---
 
-## Phase-Specific Warnings
+## Performance Traps
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|---|---|---|
-| Mini-maps in Drawer/Modal | Map initialized at 0px height (Pitfall 1) | Use ResizeObserver; delay init until `offsetHeight > 0` |
-| Mini-maps in Drawer/Modal | Scroll hijacking (Pitfall 6) | Disable scrollZoom and dragPan on read-only mini-maps |
-| Comparison view | WebGL context budget exceeded (Pitfall 2) | Hard cap at 2 comparison maps; destroy on close |
-| Comparison view | Parallel fetch race conditions (Pitfall 10) | Independent `useQuery` per parcel; independent panel state |
-| Tab layout refactor | State loss on tab switch (Pitfall 3) | CSS visibility toggle for map tabs; lift state to URL |
-| Tab layout refactor | Drawer grows to 1000+ lines (Pitfall 5) | Split into section files BEFORE adding tabs |
-| Tab accessibility | Missing keyboard/ARIA (Pitfall 11) | tablist/tab/tabpanel roles + ArrowKey handlers |
-| Map filter controls | Filter state desync (Pitfall 4) | Single `navigate()` handler; no parallel local state |
-| Map filter controls | Spurious re-fetches (Pitfall 13) | Guard page resets; use `replace: true` |
-| Scoring visualizations | Scroll jank with animations (Pitfall 9) | CSS-only (conic-gradient); no SVG animations per row |
-| Theme polish | Legacy gray-* classes (Pitfall 8) | Full audit before starting; grep + fix ProjectModals |
-| Theme polish | Map colors ignore theme (Pitfall 7) | MAP_THEME_COLORS object; re-apply on theme change |
-| Map layer work | oklch not parsed by MapLibre (Pitfall 12) | Hex equivalents in dedicated map-theme.ts module |
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| BRK called synchronously in the main aggregation `asyncio.gather()` | BRK's 30s timeout blocks all parallel fetches if BRK is slow | Move BRK call to a separate non-blocking path; return property data without eigendom, then fetch eigendom on user demand | At any scale — BRK is paid/slow; don't block core report rendering |
+| WOZ + EP-Online + BRK all fetched in parallel with PDOK BAG | Five parallel external calls on every property lookup, most of which add 0.5-2s each | Phase the load: resolve address (BAG) first, then fetch supplemental data in parallel only if BAG succeeds | At ~50 concurrent property lookups — upstream timeouts cascade |
+| No circuit breaker for BRK | A BRK outage causes every property report to wait 30s for timeout before degrading | Implement circuit breaker: after 3 consecutive BRK errors, skip BRK for 5 minutes | First BRK outage |
+| EP-Online 30-day cache with no negative caching | "No label" (404) hits EP-Online on every request for uncached properties | Cache "no label" state explicitly with a 7-day TTL; return `{"label": null, "registered": false}` | When more than 30% of queried properties have no label (common) |
+
+---
+
+## Security Mistakes
+
+Domain-specific security issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Logging BRK eigendomsdata (owner names, BSN-adjacent) | GDPR violation; personal data in log files | Never log BRK response bodies at any log level; log only request ID and status code |
+| Storing BRK response in any persistent layer (Redis, Postgres, files) | Violates Kadaster Tier 3 terms; data breach risk | Strict no-persistence rule: BRK data flows only in memory from HTTP response to API response payload |
+| Exposing BRK `zakelijkGerechtigden` data to all authenticated users regardless of role | Owner data is sensitive; not all Propdex users should see it | Gate eigendomsdata behind a feature flag or permission level; do not return it in the standard property report endpoint |
+| PKIOverheid private key stored in the repository or shared `.env` | Certificate compromise allows impersonation | Store key in secrets manager (Docker secrets, Vault); never commit to git; separate path env vars |
+| WOZ unofficial endpoint without ToS review | Potential ToS violation; service disruption if endpoint is blocked | Review wayback machine history of the endpoint; monitor for 429/blocking; have licensed-aggregator fallback |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes with this type of data.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Showing "geen monument" when data coverage is only rijksmonumenten | Users trust the result, proceed with renovation, discover they have a gemeentelijk monument after the fact | Show "Geen rijksmonument (RCE)" with tooltip: "Gemeentelijke monumenten worden niet centraal geregistreerd" |
+| Displaying WOZ value without year context | Users confuse fiscal assessment value with market value | Format: "WOZ-waarde 2026: €485.000 (peildatum 1 jan. 2025)" with tooltip explaining the annual cycle |
+| Energielabel shown without expiry date | Label may be 9 years old and due for renewal; users don't know | Show label year: "Energielabel B (2016)" — labels expire after 10 years |
+| BRK eigendomsdata shown to all users without context | Exposing business ownership details without explaining data source or legal basis | Add data source attribution and "deze gegevens zijn afkomstig uit het openbare kadasterregister" |
+| Treating WOZ/EP-Online/BRK loading as blocking | If any of these fail or are slow, users see a blank report | Render BAG + kadastral + zoning immediately; load supplemental data sections progressively with individual skeleton states |
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **BRK integration:** Often missing the "never cache" enforcement — verify no `CachedAPIResponse` row is created for BRK eigendom data in integration tests.
+- [ ] **EP-Online integration:** Often missing "no label" negative caching — verify that a 404 from EP-Online results in a cached `null` state, not an uncached absence that hits EP-Online again on next request.
+- [ ] **WOZ integration:** Often missing `waardepeildatum` in the stored/displayed payload — verify that the displayed WOZ value always includes the reference date.
+- [ ] **RCE improvement:** Often missing `rce_inspire_areas` containment check — verify that a property in a beschermd stadsgezicht (which is a polygon, not a point) is correctly flagged.
+- [ ] **BRK rate limiter:** Often missing Redis-backed enforcement in multi-worker deployments — verify that 200 req/hour limit is respected when running with multiple uvicorn workers.
+- [ ] **Monument UI copy:** Often claiming "monument status" when only rijksmonument status is checked — verify UI copy says "rijksmonument" not "monument" in all labels.
+- [ ] **PKIOverheid cert path:** Often missing cert expiry monitoring — verify cert expiry date is logged at startup and a warning fires when < 60 days remain.
+
+---
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| BRK eigendomsdata found in `CachedAPIResponse` table | HIGH | Immediate: delete all rows with `source='brk'`. Audit access logs. Review whether Kadaster must be notified. Add DB constraint preventing future inserts with this source. |
+| WOZ official API rejected — application denied | LOW | Switch to unofficial waardeloket endpoint or Altum AI/Matrixian aggregator. No code architectural change needed, just client URL change. |
+| PKIOverheid certificate expired — BRK calls fail | MEDIUM | Disable BRK in feature flag immediately (graceful degradation already exists). Start emergency certificate renewal (2-5 business days express processing from CA). Update `BRK_CLIENT_CERT_PATH` when new cert arrives. |
+| EP-Online V4 endpoint used — all calls 404 | LOW | Update base URL from `/api/v4/` to `/api/v5/`. Verify response schema fields match V5 Swagger. Flush EP-Online cache to force re-fetch with new schema. |
+| PDOK OGC CRS mismatch — all monument queries return empty | LOW | Check `bbox-crs` header is set. Verify RD coordinates are in valid range (0-280000 X, 300000-625000 Y). Flush monument cache and re-fetch. |
+| BRK rate limit exceeded — 429 from Kadaster | MEDIUM | Stop all BRK requests immediately via feature flag. Wait for rate limit window reset (1 hour). Switch to Redis-backed rate limiter before resuming. |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Caching BRK eigendomsdata (Pitfall 1) | BRK integration phase | Integration test: assert no `CachedAPIResponse` row with `source='brk'` after eigendom fetch |
+| WOZ API access restrictions (Pitfall 2) | Pre-milestone planning | Document which WOZ access method is used and legal basis before any code |
+| PKIOverheid cert provisioning (Pitfall 3) | Milestone kickoff — start cert immediately | Certificate files exist in staging before BRK phase begins |
+| EP-Online API key terms (Pitfall 4) | EP-Online integration phase (pre-dev) | Written confirmation from RVO on multi-tenant use |
+| EP-Online V4 sunset (Pitfall 5) | EP-Online implementation phase | All client URLs reference `/api/v5/`; Swagger schema verified |
+| RCE gemeentelijke monumenten gap (Pitfall 6) | RCE improvement phase | `rce_inspire_areas` query added; UI copy scoped to rijksmonumenten |
+| BRK identificatie format (Pitfall 7) | BRK integration phase | Test with real parcels: PDOK OGC → identificatie → BRK lookup succeeds |
+| EP-Online 404 as error (Pitfall 8) | EP-Online implementation phase | Test: property with no label returns `energielabel_status="niet_geregistreerd"`, no error increment |
+| WOZ multiple objects per address (Pitfall 9) | WOZ integration phase | Test: apartment address returns unit-specific WOZ, not building total |
+| PDOK OGC CRS omission (Pitfall 10) | RCE improvement phase | All PDOK OGC requests log `bbox-crs` header; coordinate range validation in helper |
+| BRK rate limit multi-worker (Pitfall 11) | BRK integration phase | Load test with 2+ workers: confirm < 200 BRK requests/hour aggregate |
+| EP-Online TTL (Pitfall 12) | EP-Online implementation phase | `CACHE_TTL["ep_online"]` exists in `config.py`; negative-cache state stored |
+| WOZ waardepeildatum display (Pitfall 13) | WOZ UI phase | UI review: WOZ value always shows reference date in same component |
 
 ---
 
 ## Sources
 
-- [MapLibre GL JS — Map does not fit container in modal window (Issue #1363)](https://github.com/maplibre/maplibre-gl-js/issues/1363) — HIGH confidence (official repo)
-- [MapLibre GL JS — Too many active WebGL contexts (Discussion #3065)](https://github.com/maplibre/maplibre-gl-js/discussions/3065) — HIGH confidence (official repo)
-- [MapLibre GL JS — Map.resize() API documentation](https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/) — HIGH confidence (official docs)
-- [TanStack Router — Best Practices for URL as State (Discussion #1249)](https://github.com/TanStack/router/discussions/1249) — HIGH confidence (official repo)
-- [TanStack Router — Best Practices for Propagating Search Parameters (Discussion #3686)](https://github.com/TanStack/router/discussions/3686) — HIGH confidence (official repo)
-- [TanStack Router — Cache Routes to allow Tabs to keep alive (Discussion #1447)](https://github.com/TanStack/router/discussions/1447) — HIGH confidence (official repo)
-- [TanStack Virtual — Rendering lag with row and column virtualization (Issue #685)](https://github.com/TanStack/virtual/issues/685) — HIGH confidence (official repo)
-- [Tailwind CSS v4 — CSS variables for dark/light mode (Discussion #15083)](https://github.com/tailwindlabs/tailwindcss/discussions/15083) — HIGH confidence (official repo)
-- [Basedash Blog — How We Built Light Mode Without Tailwind's dark: Class](https://www.basedash.com/blog/how-we-built-light-mode-without-tailwind-s-dark-class) — MEDIUM confidence (practitioner, verified against official docs)
-- [React Aria — ProgressBar accessibility pattern](https://react-spectrum.adobe.com/react-aria/ProgressBar.html) — HIGH confidence (official Adobe/Spectrum docs)
-- Propdex codebase direct inspection (`MapView.tsx`, `ParcelScoreLayer.tsx`, `PropertyDetailDrawer.tsx`, `ResultsTable.tsx`, `ResultsFilterPanel.tsx`, `Drawer.tsx`, `ProjectEditModal.tsx`, `ChangeTimeline.tsx`, `index.css`) — HIGH confidence (source of truth)
+- Propdex codebase direct inspection (`brk_bevragen.py`, `rce_monuments.py`, `property_aggregator.py`, `monument_aggregator.py`, `cache_manager.py`, `rate_limiter.py`, `config.py`) — HIGH confidence (source of truth for existing patterns)
+- [Kadaster BRK Bevragen — Product page](https://www.kadaster.nl/zakelijk/producten/eigendom/brk-bevragen) — HIGH confidence (official Kadaster documentation)
+- [Haal Centraal BRK Bevragen — Getting Started](https://kadaster.github.io/BRK-bevragen/) — HIGH confidence (official VNG-Realisatie documentation)
+- [EP-Online Public REST API V5 — Swagger](https://public.ep-online.nl/swagger) — HIGH confidence (official RVO/EP-Online)
+- [EP-Online Terms of Use](https://apikey.ep-online.nl/Home/TermsOfUse) — HIGH confidence (official terms)
+- [EP-Online Release Notes](https://www.ep-online.nl/Home/ReleaseNotes) — HIGH confidence (V4 sunset date January 30, 2026 confirmed)
+- [WOZ API Bevragen — Kadaster](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen) — HIGH confidence (official access restrictions confirmed)
+- [WOZ Bevragen Getting Started](https://kadaster.github.io/WOZ-bevragen/getting-started) — HIGH confidence (OIN + PKIO requirement confirmed)
+- [PDOK Beschermde Gebieden Cultuurhistorie OGC API](https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1?f=html&lang=en) — HIGH confidence (official PDOK API, confirms rijksmonumenten + stadsgezichten only)
+- [KIK Inzage API — Authenticatie/autorisatie methoden v2.3 (March 2025)](https://developer.kadaster.nl/schemas/kik-inzage/6.0.x/KIK-Inzage-API-authenticatie-en-autorisatie-methoden.pdf) — HIGH confidence (PKIOverheid OIN/HRN requirements)
+- [PKIoverheid G3/G4 Transition](https://www.logius.nl/english/pkioverheid/new-generation-pkioverheid-certificates) — HIGH confidence (G3 expiry by November 2028)
+- [Data.overheid.nl — WOZ access restrictions](https://data.overheid.nl/community/datarequest/api-voor-woz-waarde-woningen-o-b-v-adres) — MEDIUM confidence (community discussion confirming access restrictions)
+- [Altum AI WOZ API](https://altum.ai/woz-api/) — MEDIUM confidence (confirms commercial WOZ alternative exists; not official government source)
+
+---
+*Pitfalls research for: Dutch government API integration (WOZ, EP-Online, BRK, RCE)*
+*Researched: 2026-02-23*
