@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 49 COMPLETE, ready for Phase 50
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 50 Plan 01 COMPLETE, melding-to-map flow wired
 
 ---
 
 ## Current Position
 
-Phase: 49 of 51 (Read Tracking)
-Plan: 2 of 2 complete
-Status: Phase 49 COMPLETE — server-backed per-change read tracking, frontend and backend
-Last activity: 2026-02-23 -- Phase 49 Plan 02: localStorage removed, server-backed readIds, Markeer alles als gelezen (2 tasks, 5 files)
+Phase: 50 of 51 (Melding-to-Map Flow)
+Plan: 1 of 1 complete
+Status: Phase 50 Plan 01 COMPLETE — matched_parcel_id wired through frontend (ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx)
+Last activity: 2026-02-23 -- Phase 50 Plan 01: ChangeRecord type + Bekijk op kaart + Genereer rapport use matched_parcel_id (3 tasks, 3 files)
 
-Progress: [#####     ] 41%
+Progress: [######    ] 47%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Melding-to-Map Flow Phase 50 Plan 01 (Complete: 2026-02-23)**
+- Phase 50 Plan 01: 2 min, 3 tasks, 3 files — matched_parcel_id in ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx
 
 **v6.0 Read Tracking Phase 49 Plan 02 (Complete: 2026-02-23)**
 - Phase 49 Plan 02: 5 min, 2 tasks, 5 files — localStorage removed, useMarkChangeRead + useMarkAllRead, Markeer alles als gelezen button
@@ -92,6 +95,7 @@ Progress: [#####     ] 41%
 - **Absence-based read tracking**: unread = no row in change_read_states for (user_id, change_id)
 - **useMemo for Set from server data**: prevents useCallback deps changing on every render (use `useMemo(() => new Set(data?.ids ?? []), [data?.ids])`)
 - **Optimistic TanStack update pattern**: snapshot all matching caches, setQueryData per key, return snapshot in context for onError rollback
+- **matched_parcel_id gating pattern**: `{change.matched_parcel_id ? (primary path) : (fallback path) : null}` — prefer verified ID over list/address
 
 ### Decisions Made
 
@@ -127,13 +131,15 @@ Progress: [#####     ] 41%
 - read_change_ids returned on GET /changes response — frontend knows per-change read state without extra call
 - useMarkChangeRead optimistic update uses ChangesSnapshot type alias (not tuple filter) — avoids TypeScript predicate issues with TanStack getQueriesData return types
 - useMarkAllRead takes projectId as hook param (not mutate arg) — meldingen.tsx has no project scope, consistent API surface
+- matched_parcel_id preferred over matched_parcels[] for Genereer rapport — single verified parcel from geocode+ST_Contains, not ambiguous list
+- matched_parcel_id preferred over address-based for Bekijk op kaart — ?parcel_id= triggers amber flyTo marker in map.tsx; address-based does not
+- Graceful fallback preserved in both meldingen.tsx and ChangeTimeline.tsx — null matched_parcel_id degrades to existing behaviour
 
 ### v6.0 Architecture Notes
 
+- **Phase 50 Plan 01 COMPLETE**: matched_parcel_id wired through frontend — full three-click workflow (melding → amber map marker → report) operational
 - **Phase 49 COMPLETE**: Server-backed per-change read tracking end-to-end (backend + frontend)
 - **Phase 48 COMPLETE**: matched_parcel_id populated via 3 paths: (1) initial detection in change_monitor, (2) retro-match after area scan, (3) future on-demand
-- **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord (Phase 48 now provides this)
-- **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last
 - **UserNotificationState/last_viewed_at**: Deprecated but kept for backward compat, removable in future cleanup
 
 ### Ongoing TODOs
@@ -154,11 +160,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 49 Plan 02 complete — localStorage removed, server-backed read tracking, Markeer alles als gelezen
+**Stopped At:** Phase 50 Plan 01 complete — matched_parcel_id wired in ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 50` (Phase 50 — next phase per ROADMAP)
+**Next Action:** Check ROADMAP for next phase after 50
 
 ---
 
-*State updated: 2026-02-23 -- Phase 49 Plan 02 complete (2 tasks, 5 files: monitoring types, api.ts, useNotifications.ts, meldingen.tsx, ChangeTimeline.tsx)*
+*State updated: 2026-02-23 -- Phase 50 Plan 01 complete (3 tasks, 3 files: monitoring.ts, meldingen.tsx, ChangeTimeline.tsx)*
