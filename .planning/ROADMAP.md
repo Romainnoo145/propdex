@@ -50,12 +50,12 @@ Plans:
   1. When a change record has an extractable address but no parcel match, the system geocodes it via PDOK Locatieserver and attempts a spatial lookup against ParcelCache -- a matched parcel_id is stored on the ChangeRecord row
   2. Matched parcel IDs survive application restarts and API calls -- they are persisted on the ChangeRecord model, not recomputed on every request
   3. After a wijk scan completes and new ParcelCache entries exist, previously unmatched ChangeRecords for that gemeente are re-checked and matched where possible
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 48-01: PDOK Locatieserver geocoding client and spatial parcel lookup in bekendmaking_matcher.py
-- [ ] 48-02: Persist matched_parcel_id on ChangeRecord model (migration) and wire into change detector
-- [ ] 48-03: Post-scan retro-matching job -- trigger re-match of unmatched changes when scan completes
+- [ ] 48-01-PLAN.md -- TDD: PDOK Locatieserver geocode_address() and find_parcel_at_point() spatial lookup
+- [ ] 48-02-PLAN.md -- Alembic migration (matched_parcel_id column), model/schema update, wire geocoding into change_monitor.py
+- [ ] 48-03-PLAN.md -- Post-scan retro-matching: retro_match_changes_for_gemeente() + area_scan_job Phase 6 integration
 
 ### Phase 49: Read Tracking
 **Goal**: Users can mark individual changes as read or unread, and that state persists in the database -- unread badges everywhere reflect actual per-change state, not a project-level last-seen timestamp
