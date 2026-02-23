@@ -7,7 +7,7 @@ Provides query functions for two-way matching:
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.change_record import ChangeRecord
@@ -15,6 +15,39 @@ from app.models.parcel_cache import ParcelCache
 from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.services.postcode_extractor import extract_postcodes
+
+
+async def find_parcel_at_point(
+    x: float,
+    y: float,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+) -> uuid.UUID | None:
+    """Find the ParcelCache.id whose geometry contains the RD point (x, y).
+
+    Uses PostGIS ST_Contains with GIST index for fast lookup.
+    Both geometry and point are in EPSG:28992 (RD New) — no transform needed.
+
+    Args:
+        x: X coordinate in EPSG:28992 (RD New)
+        y: Y coordinate in EPSG:28992 (RD New)
+        organization_id: Organization UUID for multi-tenant isolation
+        session: Async SQLAlchemy session
+
+    Returns:
+        ParcelCache.id UUID if a parcel contains the point, else None.
+    """
+    point = func.ST_SetSRID(func.ST_MakePoint(x, y), 28992)
+    stmt = (
+        select(ParcelCache.id)
+        .where(
+            ParcelCache.organization_id == organization_id,
+            func.ST_Contains(ParcelCache.geometry, point),
+        )
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def find_matching_parcels(
