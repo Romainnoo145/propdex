@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 48 COMPLETE, next: Phase 49
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 49 Plan 01 COMPLETE, ready for Phase 49 Plan 02
 
 ---
 
 ## Current Position
 
-Phase: 48 of 51 (Parcel Matching — COMPLETE)
-Plan: 3 of 3 complete
-Status: Phase 48 complete, ready for Phase 49
-Last activity: 2026-02-23 -- Phase 48 Plan 03 retro-match post-scan integration complete (2 tasks, 3 files)
+Phase: 49 of 51 (Read Tracking)
+Plan: 1 of 2 complete
+Status: Phase 49 Plan 01 complete — ChangeReadState model + 3 API endpoints
+Last activity: 2026-02-23 -- Phase 49 Plan 01: ChangeReadState model, migration, read/unread/read-all endpoints (2 tasks, 5 files)
 
-Progress: [####      ] 35%
+Progress: [####      ] 37%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Read Tracking Phase 49 Plan 01 (Complete: 2026-02-23)**
+- Phase 49 Plan 01: 2 min, 2 tasks, 5 files — ChangeReadState model + migration + 3 API endpoints + updated /unread
 
 **v6.0 Parcel Matching Phase 48 Plan 03 (Complete: 2026-02-23)**
 - Phase 48 Plan 03: 3 min, 2 tasks, 3 files — retro_match_changes_for_gemeente + area_scan_job wiring (7 new tests)
@@ -83,6 +86,7 @@ Progress: [####      ] 35%
 - **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950
 - **SET LOCAL f-string (not params)**: asyncpg doesn't support parameterized SET statements
 - **Response enrichment pattern**: compute category_label inline during ChangeRecordResponse construction, not in separate pass
+- **Absence-based read tracking**: unread = no row in change_read_states for (user_id, change_id)
 
 ### Decisions Made
 
@@ -111,14 +115,19 @@ Progress: [####      ] 35%
 - LIMIT 200 safety cap on retro-match candidates — prevents runaway queries on first scan of active gemeente
 - Retro-match is non-fatal to scan — wrapped in try/except, scan already marked completed before retro-match runs
 - Caller (area_scan_job) handles commit after retro-match — function only flushes, separating responsibility
+- ChangeReadState has no TimestampMixin — read state is insert/delete only, no updated_at needed
+- UniqueConstraint(user_id, change_id) enables ON CONFLICT DO NOTHING for idempotent mark-as-read
+- GET /unread uses LEFT JOIN on change_read_states subquery — absence means unread (not timestamp comparison)
+- read-all route registered before {change_id}/read — FastAPI matches literal paths first
+- read_change_ids returned on GET /changes response — frontend knows per-change read state without extra call
 
 ### v6.0 Architecture Notes
 
 - **Phase 48 COMPLETE**: matched_parcel_id populated via 3 paths: (1) initial detection in change_monitor, (2) retro-match after area scan, (3) future on-demand
-- **READ is independent**: ChangeReadState table and server-side read API can be built in parallel
+- **Phase 49 Plan 01 COMPLETE**: ChangeReadState table + read/unread/read-all API endpoints ready for frontend
 - **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord (Phase 48 now provides this)
 - **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last
-- **New model needed**: `ChangeReadState` (change_id FK, user_id FK, read_at timestamp) -- replaces localStorage hack
+- **UserNotificationState/last_viewed_at**: Deprecated but kept for backward compat, removable in future cleanup
 
 ### Ongoing TODOs
 
@@ -138,11 +147,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 48 Plan 03 complete — retro_match_changes_for_gemeente + area_scan_job wiring
+**Stopped At:** Phase 49 Plan 01 complete — ChangeReadState model + 3 read/unread/read-all API endpoints
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 49` (ChangeReadState — read tracking)
+**Next Action:** `/gsd:execute-phase 49` (Phase 49 Plan 02 — frontend read tracking UI)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 48 complete (all 3 plans: geocode_address, matched_parcel_id migration, retro-match post-scan)*
+*State updated: 2026-02-23 -- Phase 49 Plan 01 complete (2 tasks, 5 files: ChangeReadState model, migration, API endpoints)*
