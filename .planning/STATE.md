@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 50 Plan 01 COMPLETE, melding-to-map flow wired
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 50 COMPLETE, ready for Phase 51
 
 ---
 
@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 Phase: 50 of 51 (Melding-to-Map Flow)
 Plan: 1 of 1 complete
-Status: Phase 50 Plan 01 COMPLETE — matched_parcel_id wired through frontend (ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx)
-Last activity: 2026-02-23 -- Phase 50 Plan 01: ChangeRecord type + Bekijk op kaart + Genereer rapport use matched_parcel_id (3 tasks, 3 files)
+Status: Phase 50 COMPLETE — three-click melding-to-map-to-report flow wired end-to-end
+Last activity: 2026-02-23 -- Phase 50 complete: matched_parcel_id wired through ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx (1 plan, 4 commits)
 
-Progress: [######    ] 47%
+Progress: [########  ] 80%
 
 ---
 
@@ -160,11 +160,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 50 Plan 01 complete — matched_parcel_id wired in ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx
+**Stopped At:** Phase 50 complete — melding-to-map-to-report flow wired end-to-end
 **Resume File:** None
 
-**Next Action:** Check ROADMAP for next phase after 50
+**Next Action:** `/gsd:plan-phase 51` (Phase 51 — Meldingen UX)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 50 Plan 01 complete (3 tasks, 3 files: monitoring.ts, meldingen.tsx, ChangeTimeline.tsx)*
+*State updated: 2026-02-23 -- Phase 50 complete (1 plan, 4 commits, 3 files: monitoring.ts, meldingen.tsx, ChangeTimeline.tsx)*

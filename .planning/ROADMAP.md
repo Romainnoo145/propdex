@@ -23,7 +23,7 @@
 - [x] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage (shipped 2026-02-23)
 - [x] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes (shipped 2026-02-23)
 - [x] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges (shipped 2026-02-23)
-- [ ] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report
+- [x] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report (shipped 2026-02-23)
 - [ ] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination
 
 ## Phase Details
@@ -84,7 +84,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 50-01-PLAN.md -- Wire matched_parcel_id through ChangeRecord type, meldingen.tsx, and ChangeTimeline.tsx for parcel-ID-based map navigation and report generation
+- [x] 50-01-PLAN.md -- Wire matched_parcel_id through ChangeRecord type, meldingen.tsx, and ChangeTimeline.tsx for parcel-ID-based map navigation and report generation
 
 ### Phase 51: Meldingen UX
 **Goal**: The meldingen page is the user's daily intelligence briefing -- filterable by gemeente, each entry clearly shows what action is available, read tracking is consistent across the app, and the feed scales gracefully as data grows
@@ -231,9 +231,9 @@ Plans:
 | 47. Address Intelligence | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 48. Parcel Matching | v6.0 | 3/3 | ✓ Complete | 2026-02-23 |
 | 49. Read Tracking | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
-| 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
+| 50. Melding-to-Map Flow | v6.0 | 1/1 | ✓ Complete | 2026-02-23 |
 | 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-02-23 (Phase 49 Read Tracking shipped -- 2 plans, 6 commits)*
+*Last updated: 2026-02-23 (Phase 50 Melding-to-Map Flow shipped -- 1 plan, 4 commits)*
