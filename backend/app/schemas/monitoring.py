@@ -34,6 +34,7 @@ class ChangeRecordResponse(BaseModel):
     address: str | None
     source_url: str | None
     postcode: str | None
+    matched_parcel_id: str | None = None
     matched_parcels: list[MatchedParcel] | None = None
     matched_reports: list[MatchedReport] | None = None
     project_name: str | None = None

@@ -169,6 +169,7 @@ async def get_changes(
                     address=change.address,
                     source_url=change.source_url,
                     postcode=change.postcode,
+                    matched_parcel_id=str(change.matched_parcel_id) if change.matched_parcel_id else None,
                     matched_parcels=matched_parcels,
                     matched_reports=matched_reports,
                     project_name=project_names.get(change.project_id),
@@ -223,6 +224,7 @@ async def get_changes_for_parcel(
                 address=r.address,
                 source_url=r.source_url,
                 postcode=r.postcode,
+                matched_parcel_id=str(r.matched_parcel_id) if r.matched_parcel_id else None,
                 category_label=classify_bekendmaking(r.title, r.change_type),
             )
             for r in records

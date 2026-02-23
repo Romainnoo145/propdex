@@ -91,6 +91,13 @@ class ChangeRecord(Base, TenantMixin, TimestampMixin):
         index=True,
     )
 
+    # Spatial match: direct FK to the parcel containing this address
+    matched_parcel_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("parcel_cache.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     __table_args__ = (
         Index("ix_change_records_project_detected", "project_id", "detected_at"),
         UniqueConstraint(
