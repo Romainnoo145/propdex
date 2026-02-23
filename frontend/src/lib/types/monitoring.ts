@@ -38,6 +38,7 @@ export interface ChangeRecordListResponse {
   changes: ChangeRecord[]
   total: number
   read_change_ids?: string[]
+  has_more?: boolean
 }
 
 export interface MarkAllReadResponse {

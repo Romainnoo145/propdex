@@ -47,6 +47,7 @@ class ChangeRecordListResponse(BaseModel):
     changes: list[ChangeRecordResponse]
     total: int
     read_change_ids: list[str] | None = None
+    has_more: bool = False
 
 
 class MarkAllReadResponse(BaseModel):

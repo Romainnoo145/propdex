@@ -10,7 +10,7 @@
  * All hooks require authentication and invalidate relevant caches on mutation.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   fetchUnreadCounts,
@@ -59,6 +59,45 @@ export function useAllChanges(includeMatches = true, gemeenteNaam?: string) {
   return useQuery<ChangeRecordListResponse, Error>({
     queryKey: ['changes', 'all', includeMatches, gemeenteNaam],
     queryFn: () => fetchAllChanges(accessToken, 100, 0, includeMatches, gemeenteNaam),
+    enabled: !!accessToken,
+    staleTime: 60_000,
+  })
+}
+
+const PAGE_SIZE = 25
+
+/**
+ * Infinite scroll hook for all change history across the organization
+ *
+ * Query key: ['changes', 'all-infinite', includeMatches, gemeenteNaam]
+ * Page size: 25 records
+ * Stale time: 60 seconds
+ *
+ * Stops fetching when has_more=false (backend signals no more pages).
+ */
+export function useInfiniteAllChanges(
+  includeMatches = true,
+  gemeenteNaam?: string
+) {
+  const { accessToken } = useAuth()
+
+  return useInfiniteQuery<ChangeRecordListResponse, Error>({
+    queryKey: ['changes', 'all-infinite', includeMatches, gemeenteNaam],
+    queryFn: ({ pageParam = 0 }) =>
+      fetchAllChanges(
+        accessToken,
+        PAGE_SIZE,
+        pageParam as number,
+        includeMatches,
+        gemeenteNaam
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (lastPage.has_more) {
+        return (lastPageParam as number) + PAGE_SIZE
+      }
+      return undefined // No more pages
+    },
     enabled: !!accessToken,
     staleTime: 60_000,
   })

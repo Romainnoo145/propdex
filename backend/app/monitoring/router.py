@@ -203,10 +203,13 @@ async def get_changes(
             read_ids = read_result.scalars().all()
             read_change_ids = [str(cid) for cid in read_ids]
 
+        has_more = (offset + limit) < total
+
         return ChangeRecordListResponse(
             changes=change_responses,
             total=total,
             read_change_ids=read_change_ids,
+            has_more=has_more,
         )
 
     except HTTPException:
