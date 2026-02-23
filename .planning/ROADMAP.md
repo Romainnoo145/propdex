@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- **v6.0 Meldingen Intelligence** -- Phases 47-51 (in progress)
+- ✅ **v6.0 Meldingen Intelligence** -- Phases 47-51 (shipped 2026-02-23)
 - ✅ **v5.1 Data Presentation Overhaul** -- Phases 42-46 (shipped 2026-02-22)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
 - ✅ **v4.0 UX Redesign** -- Phases 27-36 (shipped 2026-02-18)
@@ -24,7 +24,7 @@
 - [x] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes (shipped 2026-02-23)
 - [x] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges (shipped 2026-02-23)
 - [x] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report (shipped 2026-02-23)
-- [ ] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination
+- [x] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination (shipped 2026-02-23)
 
 ## Phase Details
 
@@ -98,8 +98,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 51-01-PLAN.md -- Gemeente filter dropdown, backend gemeente_naam filter, shared useReadTracking hook extraction
-- [ ] 51-02-PLAN.md -- Per-melding action state badges (matched/unmatched/unknown) and infinite scroll pagination
+- [x] 51-01-PLAN.md -- Gemeente filter dropdown, backend gemeente_naam filter, shared useReadTracking hook extraction
+- [x] 51-02-PLAN.md -- Per-melding action state badges (matched/unmatched/unknown) and infinite scroll pagination
 
 ---
 
@@ -232,8 +232,8 @@ Plans:
 | 48. Parcel Matching | v6.0 | 3/3 | ✓ Complete | 2026-02-23 |
 | 49. Read Tracking | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 50. Melding-to-Map Flow | v6.0 | 1/1 | ✓ Complete | 2026-02-23 |
-| 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
+| 51. Meldingen UX | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 
 ---
 
-*Last updated: 2026-02-23 (Phase 50 Melding-to-Map Flow shipped -- 1 plan, 4 commits)*
+*Last updated: 2026-02-23 (Phase 51 Meldingen UX shipped -- 2 plans, 6 commits)*

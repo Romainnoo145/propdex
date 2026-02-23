@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 51 COMPLETE
+**Current focus:** v6.0 Meldingen Intelligence -- MILESTONE COMPLETE (Phases 47-51 shipped)
 
 ---
 
@@ -179,10 +179,10 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Completed 51-02-PLAN.md — infinite scroll pagination + action state badges
+**Stopped At:** v6.0 Meldingen Intelligence milestone complete — all 5 phases (47-51) shipped
 **Resume File:** None
 
-**Next Action:** v6.0 milestone review or new phase
+**Next Action:** `/gsd:complete-milestone` (archive v6.0, prepare for next milestone)
 
 ---
 
