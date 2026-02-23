@@ -50,15 +50,15 @@ export function useUnreadCounts() {
 /**
  * Fetch all change history across the organization
  *
- * Query key: ['changes', 'all', includeMatches]
+ * Query key: ['changes', 'all', includeMatches, gemeenteNaam]
  * Stale time: 60 seconds
  */
-export function useAllChanges(includeMatches = true) {
+export function useAllChanges(includeMatches = true, gemeenteNaam?: string) {
   const { accessToken } = useAuth()
 
   return useQuery<ChangeRecordListResponse, Error>({
-    queryKey: ['changes', 'all', includeMatches],
-    queryFn: () => fetchAllChanges(accessToken, 100, 0, includeMatches),
+    queryKey: ['changes', 'all', includeMatches, gemeenteNaam],
+    queryFn: () => fetchAllChanges(accessToken, 100, 0, includeMatches, gemeenteNaam),
     enabled: !!accessToken,
     staleTime: 60_000,
   })

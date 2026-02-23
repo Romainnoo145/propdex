@@ -41,6 +41,7 @@ router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 async def get_changes(
     request: Request,
     project_id: uuid.UUID | None = Query(None),
+    gemeente_naam: str | None = Query(None),
     include_matches: bool = False,
     limit: int = 50,
     offset: int = 0,
@@ -89,6 +90,10 @@ async def get_changes(
             changes_query = changes_query.where(
                 ChangeRecord.project_id == project_id
             )
+        if gemeente_naam is not None:
+            changes_query = changes_query.where(
+                ChangeRecord.gemeente_naam == gemeente_naam
+            )
 
         changes_result = await db.execute(changes_query)
         changes = changes_result.scalars().all()
@@ -100,6 +105,10 @@ async def get_changes(
         if project_id is not None:
             count_query = count_query.where(
                 ChangeRecord.project_id == project_id
+            )
+        if gemeente_naam is not None:
+            count_query = count_query.where(
+                ChangeRecord.gemeente_naam == gemeente_naam
             )
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0

@@ -817,13 +817,15 @@ export async function fetchAllChanges(
   accessToken: string | null,
   limit = 100,
   offset = 0,
-  includeMatches = false
+  includeMatches = false,
+  gemeenteNaam?: string
 ): Promise<ChangeRecordListResponse> {
   const params = new URLSearchParams({
     limit: limit.toString(),
     offset: offset.toString(),
   })
   if (includeMatches) params.set('include_matches', 'true')
+  if (gemeenteNaam) params.set('gemeente_naam', gemeenteNaam)
 
   return apiFetch<ChangeRecordListResponse>(
     `${MONITORING_BASE}/changes?${params}`,
