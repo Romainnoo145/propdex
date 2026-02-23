@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 49 Plan 01 COMPLETE, ready for Phase 49 Plan 02
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 49 COMPLETE, ready for Phase 50
 
 ---
 
 ## Current Position
 
 Phase: 49 of 51 (Read Tracking)
-Plan: 1 of 2 complete
-Status: Phase 49 Plan 01 complete — ChangeReadState model + 3 API endpoints
-Last activity: 2026-02-23 -- Phase 49 Plan 01: ChangeReadState model, migration, read/unread/read-all endpoints (2 tasks, 5 files)
+Plan: 2 of 2 complete
+Status: Phase 49 COMPLETE — server-backed per-change read tracking, frontend and backend
+Last activity: 2026-02-23 -- Phase 49 Plan 02: localStorage removed, server-backed readIds, Markeer alles als gelezen (2 tasks, 5 files)
 
-Progress: [####      ] 37%
+Progress: [#####     ] 41%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Read Tracking Phase 49 Plan 02 (Complete: 2026-02-23)**
+- Phase 49 Plan 02: 5 min, 2 tasks, 5 files — localStorage removed, useMarkChangeRead + useMarkAllRead, Markeer alles als gelezen button
 
 **v6.0 Read Tracking Phase 49 Plan 01 (Complete: 2026-02-23)**
 - Phase 49 Plan 01: 2 min, 2 tasks, 5 files — ChangeReadState model + migration + 3 API endpoints + updated /unread
@@ -87,6 +90,8 @@ Progress: [####      ] 37%
 - **SET LOCAL f-string (not params)**: asyncpg doesn't support parameterized SET statements
 - **Response enrichment pattern**: compute category_label inline during ChangeRecordResponse construction, not in separate pass
 - **Absence-based read tracking**: unread = no row in change_read_states for (user_id, change_id)
+- **useMemo for Set from server data**: prevents useCallback deps changing on every render (use `useMemo(() => new Set(data?.ids ?? []), [data?.ids])`)
+- **Optimistic TanStack update pattern**: snapshot all matching caches, setQueryData per key, return snapshot in context for onError rollback
 
 ### Decisions Made
 
@@ -120,11 +125,13 @@ Progress: [####      ] 37%
 - GET /unread uses LEFT JOIN on change_read_states subquery — absence means unread (not timestamp comparison)
 - read-all route registered before {change_id}/read — FastAPI matches literal paths first
 - read_change_ids returned on GET /changes response — frontend knows per-change read state without extra call
+- useMarkChangeRead optimistic update uses ChangesSnapshot type alias (not tuple filter) — avoids TypeScript predicate issues with TanStack getQueriesData return types
+- useMarkAllRead takes projectId as hook param (not mutate arg) — meldingen.tsx has no project scope, consistent API surface
 
 ### v6.0 Architecture Notes
 
+- **Phase 49 COMPLETE**: Server-backed per-change read tracking end-to-end (backend + frontend)
 - **Phase 48 COMPLETE**: matched_parcel_id populated via 3 paths: (1) initial detection in change_monitor, (2) retro-match after area scan, (3) future on-demand
-- **Phase 49 Plan 01 COMPLETE**: ChangeReadState table + read/unread/read-all API endpoints ready for frontend
 - **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord (Phase 48 now provides this)
 - **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last
 - **UserNotificationState/last_viewed_at**: Deprecated but kept for backward compat, removable in future cleanup
@@ -147,11 +154,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 49 Plan 01 complete — ChangeReadState model + 3 read/unread/read-all API endpoints
+**Stopped At:** Phase 49 Plan 02 complete — localStorage removed, server-backed read tracking, Markeer alles als gelezen
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 49` (Phase 49 Plan 02 — frontend read tracking UI)
+**Next Action:** `/gsd:execute-phase 50` (Phase 50 — next phase per ROADMAP)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 49 Plan 01 complete (2 tasks, 5 files: ChangeReadState model, migration, API endpoints)*
+*State updated: 2026-02-23 -- Phase 49 Plan 02 complete (2 tasks, 5 files: monitoring types, api.ts, useNotifications.ts, meldingen.tsx, ChangeTimeline.tsx)*
