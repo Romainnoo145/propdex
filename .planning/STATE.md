@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 50 COMPLETE, ready for Phase 51
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 51 COMPLETE
 
 ---
 
 ## Current Position
 
 Phase: 51 of 51 (Meldingen UX)
-Plan: 1 of 1 complete
-Status: Phase 51 Plan 01 COMPLETE — gemeente filter dropdown + useReadTracking hook extracted
-Last activity: 2026-02-23 -- Phase 51 Plan 01 complete: gemeente filter, useReadTracking, shared utils (2 commits)
+Plan: 2 of 2 complete
+Status: Phase 51 Plan 02 COMPLETE — infinite scroll pagination + action state badges
+Last activity: 2026-02-23 -- Phase 51 Plan 02 complete: useInfiniteAllChanges, IntersectionObserver, action state badges (2 commits)
 
 Progress: [##########] 100%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Meldingen UX Phase 51 Plan 02 (Complete: 2026-02-23)**
+- Phase 51 Plan 02: 3 min, 2 tasks, 5 files — useInfiniteAllChanges hook, has_more pagination, IntersectionObserver, action state badges
 
 **v6.0 Meldingen UX Phase 51 Plan 01 (Complete: 2026-02-23)**
 - Phase 51 Plan 01: 4 min, 2 tasks, 8 files — useReadTracking hook, gemeente filter dropdown, shared utils
@@ -99,6 +102,7 @@ Progress: [##########] 100%
 - **useMemo for Set from server data**: prevents useCallback deps changing on every render (use `useMemo(() => new Set(data?.ids ?? []), [data?.ids])`)
 - **Optimistic TanStack update pattern**: snapshot all matching caches, setQueryData per key, return snapshot in context for onError rollback
 - **matched_parcel_id gating pattern**: `{change.matched_parcel_id ? (primary path) : (fallback path) : null}` — prefer verified ID over list/address
+- **Infinite scroll pattern**: useInfiniteQuery + IntersectionObserver sentinel + pages.flatMap + has_more backend flag
 
 ### Decisions Made
 
@@ -141,9 +145,16 @@ Progress: [##########] 100%
 - matched_parcel_id preferred over matched_parcels[] for Genereer rapport — single verified parcel from geocode+ST_Contains, not ambiguous list
 - matched_parcel_id preferred over address-based for Bekijk op kaart — ?parcel_id= triggers amber flyTo marker in map.tsx; address-based does not
 - Graceful fallback preserved in both meldingen.tsx and ChangeTimeline.tsx — null matched_parcel_id degrades to existing behaviour
+- useInfiniteAllChanges passes gemeenteNaam to server — query key changes on filter, auto-resets infinite feed
+- totalUnread from useUnreadCounts() not paginated pages — accurate org-wide count regardless of pagination offset
+- Gemeente names derived progressively from loaded pages — avoids extra query, first page covers most gemeentes
+- IntersectionObserver rootMargin 200px — triggers 200px before bottom, prevents janky load
+- allReadIds merged via pages.flatMap — each page carries its own read_change_ids subset
 
 ### v6.0 Architecture Notes
 
+- **Phase 51 COMPLETE**: Meldingen UX — gemeente filter + useReadTracking + infinite scroll + action state badges
+- **Phase 51 Plan 02 COMPLETE**: infinite scroll (25 rec/page, has_more flag, IntersectionObserver) + action state badges (Perceel gekoppeld / Alleen adres / Geen perceel gevonden)
 - **Phase 51 Plan 01 COMPLETE**: gemeente filter dropdown + useReadTracking hook — meldingen feed filterable by gemeente, single source of truth for read/unread state
 - **Phase 50 Plan 01 COMPLETE**: matched_parcel_id wired through frontend — full three-click workflow (melding → amber map marker → report) operational
 - **Phase 49 COMPLETE**: Server-backed per-change read tracking end-to-end (backend + frontend)
@@ -168,11 +179,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Completed 51-01-PLAN.md — gemeente filter + useReadTracking hook
+**Stopped At:** Completed 51-02-PLAN.md — infinite scroll pagination + action state badges
 **Resume File:** None
 
-**Next Action:** Phase 51 Plan 02 (if exists) or v6.0 milestone review
+**Next Action:** v6.0 milestone review or new phase
 
 ---
 
-*State updated: 2026-02-23 -- Phase 51 Plan 01 complete (2 tasks, 2 commits, 8 files: useReadTracking.ts, address.ts, date.ts, router.py, api.ts, useNotifications.ts, meldingen.tsx, ChangeTimeline.tsx)*
+*State updated: 2026-02-23 -- Phase 51 Plan 02 complete (2 tasks, 2 commits, 5 files: monitoring.py schema, monitoring router, monitoring.ts type, useNotifications.ts hook, meldingen.tsx page)*
