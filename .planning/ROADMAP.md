@@ -95,11 +95,11 @@ Plans:
   2. Each melding entry clearly communicates its action state: matched parcels show a "Bekijk op kaart" or "Genereer rapport" button; unmatched entries show "Geen perceel gevonden" with a kaart-only fallback if coordinates exist; genuinely unknown entries show a neutral state
   3. The useReadTracking hook is imported by both meldingen.tsx and ChangeTimeline.tsx -- read/unread logic lives in exactly one place in the codebase
   4. The meldingen feed loads incrementally -- the user sees the first entries quickly and can scroll or page through a growing history without a full-page reload
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 51-01: Gemeente filter dropdown and shared useReadTracking hook extraction
-- [ ] 51-02: Per-melding action state display (matched/unmatched/unknown) and pagination or infinite scroll
+- [ ] 51-01-PLAN.md -- Gemeente filter dropdown, backend gemeente_naam filter, shared useReadTracking hook extraction
+- [ ] 51-02-PLAN.md -- Per-melding action state badges (matched/unmatched/unknown) and infinite scroll pagination
 
 ---
 
