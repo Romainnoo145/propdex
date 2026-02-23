@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 47 of 51 (Address Intelligence)
-Plan: 01 complete
+Plan: 02 complete
 Status: In progress
-Last activity: 2026-02-23 -- 47-01 address extractor TDD complete
+Last activity: 2026-02-23 -- 47-02 category classifier + badge rendering complete
 
-Progress: [##        ] 10%
+Progress: [###       ] 15%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Address Intelligence Phase 47 Plan 02 (Complete: 2026-02-23)**
+- Phase 47 Plan 02: 2 min, 2 tasks, 7 files — category_classifier.py + badge rendering (27 tests)
 
 **v6.0 Address Intelligence Phase 47 Plan 01 (Complete: 2026-02-23)**
 - Phase 47 Plan 01: 5 min, 3 commits, 3 files — address_extractor.py TDD (34 tests)
@@ -70,6 +73,7 @@ Progress: [##        ] 10%
 - **text-on-accent**: all amber/accent-background elements use this utility
 - **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950
 - **SET LOCAL f-string (not params)**: asyncpg doesn't support parameterized SET statements
+- **Response enrichment pattern**: compute category_label inline during ChangeRecordResponse construction, not in separate pass
 
 ### Decisions Made
 
@@ -77,6 +81,10 @@ Progress: [##        ] 10%
 - extract_address_from_title() returns structured dict (not raw string) — Phase 48 gets clean field access without re-parsing
 - address_components stored in metadata_json, ChangeRecord.address still gets full_address string — no DB migration needed
 - _strip_permit_prefix() strips leading keywords before street extraction — solves Formats E, F, I false positives
+- classify_bekendmaking checks "buiten behandeling" and "bezwaar" before permit verb patterns — prevents false substring matches
+- category_label computed at response-build time, not stored in DB — no migration needed
+- category_label: str | None = None (nullable) — pre-existing records degrade gracefully to no badge
+- Badge uses grey-800/grey-300 to visually separate from amber rapport pills and blue perceel pills
 - `--color-on-accent: oklch(0.12 0.005 270)` -- fixed dark color for text on amber, does NOT invert in light mode
 - FOUC script placed as very first child of `<head>` before icon/font/stylesheet links
 - GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props
@@ -111,11 +119,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Completed 47-01-PLAN.md -- address_extractor.py TDD, 34 tests, change_detector refactored
+**Stopped At:** Completed 47-02-PLAN.md -- category_classifier.py, 27 tests, badge rendering in ChangeTimeline + meldingen.tsx
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 47` (plan 02 next)
+**Next Action:** `/gsd:execute-phase 47` (plan 03 next)
 
 ---
 
-*State updated: 2026-02-23 -- 47-01 address_extractor.py TDD complete (34 tests, 3 commits)*
+*State updated: 2026-02-23 -- 47-02 category_classifier.py complete (27 tests, 2 commits)*
