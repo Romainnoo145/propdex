@@ -1,14 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Bell } from 'lucide-react'
-import { toast } from 'sonner'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useAllChanges, useMarkChangeRead, useMarkAllRead } from '@/hooks/useNotifications'
+import { useAllChanges, useMarkAllRead } from '@/hooks/useNotifications'
+import { useReadTracking } from '@/hooks/useReadTracking'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { useAuth } from '@/lib/auth/useAuth'
-import { generateReportFromParcel } from '@/lib/api'
 import type { ChangeRecord } from '@/lib/types/monitoring'
+import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
+import { formatDate, formatRelativeTime } from '@/lib/utils/date'
 
 export const Route = createFileRoute('/_authenticated/meldingen')({
   component: MeldingenPage,
@@ -16,49 +16,36 @@ export const Route = createFileRoute('/_authenticated/meldingen')({
 
 function MeldingenPage() {
   const navigate = useNavigate()
-  const { accessToken } = useAuth()
   const { data, isLoading } = useAllChanges(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [selectedGemeente, setSelectedGemeente] = useState<string | null>(null)
 
-  const markRead = useMarkChangeRead()
   const markAllRead = useMarkAllRead()
 
-  // Read state comes from server via read_change_ids in the changes response
-  const readIds = useMemo(
-    () => new Set(data?.read_change_ids ?? []),
-    [data?.read_change_ids]
+  const { readIds, handleToggle, handleGenerateReport, generatingId } =
+    useReadTracking({ readChangeIds: data?.read_change_ids })
+
+  const changes = useMemo(() => data?.changes ?? [], [data?.changes])
+
+  // Derive unique gemeente names for the dropdown
+  const gemeenteNames = useMemo(
+    () => [...new Set(changes.map((c) => c.gemeente_naam))].sort(),
+    [changes]
   )
 
-  const handleToggle = useCallback((changeId: string) => {
-    setExpandedId((prev) => prev === changeId ? null : changeId)
-    if (!readIds.has(changeId)) {
-      markRead.mutate(changeId)
-    }
-  }, [readIds, markRead])
-
-  const handleGenerateReport = useCallback(
-    async (parcelId: string) => {
-      setGeneratingId(parcelId)
-      try {
-        const report = await generateReportFromParcel(parcelId, accessToken)
-        navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Rapport genereren mislukt'
-        )
-      } finally {
-        setGeneratingId(null)
-      }
-    },
-    [accessToken, navigate]
+  // Filter changes client-side by selected gemeente
+  const filteredChanges = useMemo(
+    () =>
+      selectedGemeente
+        ? changes.filter((c) => c.gemeente_naam === selectedGemeente)
+        : changes,
+    [changes, selectedGemeente]
   )
 
-  const changes = data?.changes ?? []
-  const totalUnread = changes.filter((c) => !readIds.has(c.id)).length
+  const totalUnread = filteredChanges.filter((c) => !readIds.has(c.id)).length
 
-  // Group changes by publication date (YYYY-MM-DD from change_date)
-  const groupedChanges = changes.reduce<Record<string, ChangeRecord[]>>(
+  // Group filtered changes by publication date (YYYY-MM-DD from change_date)
+  const groupedChanges = filteredChanges.reduce<Record<string, ChangeRecord[]>>(
     (acc, change) => {
       const dateKey = change.change_date.split('T')[0]
       if (!dateKey) return acc
@@ -74,12 +61,27 @@ function MeldingenPage() {
   return (
     <ResultsShell>
       {/* Header */}
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold text-grey-100">Meldingen</h1>
         {totalUnread > 0 && (
           <span className="inline-flex items-center rounded-full bg-amber-accent/15 px-2.5 py-0.5 text-sm font-medium text-amber-accent">
             {totalUnread} nieuw
           </span>
+        )}
+        {/* Gemeente filter dropdown */}
+        {gemeenteNames.length > 1 && (
+          <select
+            value={selectedGemeente ?? ''}
+            onChange={(e) => setSelectedGemeente(e.target.value || null)}
+            className="rounded-md border border-grey-700 bg-grey-900 px-2.5 py-1 text-sm text-grey-200 focus:border-amber-accent focus:outline-none focus:ring-1 focus:ring-amber-accent"
+          >
+            <option value="">Alle gemeentes</option>
+            {gemeenteNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         )}
         {totalUnread > 0 && (
           <button
@@ -146,7 +148,9 @@ function MeldingenPage() {
                       change={change}
                       isExpanded={expandedId === change.id}
                       isRead={readIds.has(change.id)}
-                      onToggle={() => handleToggle(change.id)}
+                      onToggle={() =>
+                        handleToggle(change.id, expandedId, setExpandedId)
+                      }
                       onNavigate={navigate}
                       onGenerateReport={handleGenerateReport}
                       generatingId={generatingId}
@@ -162,21 +166,6 @@ function MeldingenPage() {
   )
 }
 
-/** Extract huisnummer from address string like "Straat 42, 1234AB Stad" */
-function extractHuisnummer(address: string): number | null {
-  // Match first number in the street part (before comma)
-  const streetPart = address.split(',')[0] ?? address
-  const match = streetPart.match(/\d+/)
-  return match ? parseInt(match[0], 10) : null
-}
-
-/** Format postcode to "1234 AB" with space */
-function formatPostcode(pc: string): string {
-  const clean = pc.replace(/\s/g, '')
-  if (clean.length === 6) return `${clean.slice(0, 4)} ${clean.slice(4)}`
-  return pc
-}
-
 // --- MeldingItem ---
 
 interface MeldingItemProps {
@@ -185,7 +174,7 @@ interface MeldingItemProps {
   isRead: boolean
   onToggle: () => void
   onNavigate: ReturnType<typeof useNavigate>
-  onGenerateReport: (parcelId: string) => void
+  onGenerateReport: (parcelId: string) => Promise<void>
   generatingId: string | null
 }
 
@@ -425,44 +414,6 @@ function MeldingItem({
       })()}
     </div>
   )
-}
-
-// --- Date formatting (reused from ChangeTimeline) ---
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  if (date.toDateString() === today.toDateString()) return 'Vandaag'
-  if (date.toDateString() === yesterday.toDateString()) return 'Gisteren'
-
-  return new Intl.DateTimeFormat('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  }).format(date)
-}
-
-function formatRelativeTime(isoDateStr: string): string {
-  const date = new Date(isoDateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / 60_000)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMinutes < 1) return 'Net gedetecteerd'
-  if (diffMinutes < 60)
-    return `${diffMinutes} ${diffMinutes === 1 ? 'minuut' : 'minuten'} geleden`
-  if (diffHours < 24) return `${diffHours} uur geleden`
-  if (diffDays < 7)
-    return `${diffDays} ${diffDays === 1 ? 'dag' : 'dagen'} geleden`
-
-  return new Intl.DateTimeFormat('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  }).format(date)
 }
 
 // --- SVG Icons ---

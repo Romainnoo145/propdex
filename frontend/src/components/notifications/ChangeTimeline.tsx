@@ -10,14 +10,14 @@
 
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { toast } from 'sonner'
-import { useProjectChanges, useMarkChangeRead } from '@/hooks/useNotifications'
+import { useProjectChanges } from '@/hooks/useNotifications'
+import { useReadTracking } from '@/hooks/useReadTracking'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
-import { useAuth } from '@/lib/auth/useAuth'
-import { generateReportFromParcel } from '@/lib/api'
+import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
+import { formatDate, formatRelativeTime } from '@/lib/utils/date'
 
 interface ChangeTimelineProps {
   projectId: string
@@ -30,27 +30,10 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
     true // include_matches for timeline view
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [generatingId, setGeneratingId] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { accessToken } = useAuth()
-  const markRead = useMarkChangeRead()
 
-  // Read state comes from server via read_change_ids in the changes response
-  const readIds = new Set(data?.read_change_ids ?? [])
-
-  const handleGenerateReport = async (parcelId: string) => {
-    setGeneratingId(parcelId)
-    try {
-      const report = await generateReportFromParcel(parcelId, accessToken)
-      navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Rapport genereren mislukt'
-      )
-    } finally {
-      setGeneratingId(null)
-    }
-  }
+  const { readIds, handleToggle, handleGenerateReport, generatingId } =
+    useReadTracking({ readChangeIds: data?.read_change_ids })
 
   const changes = data?.changes ?? []
 
@@ -80,13 +63,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
         />
       </div>
     )
-  }
-
-  const handleToggle = (changeId: string) => {
-    setExpandedId(expandedId === changeId ? null : changeId)
-    if (!readIds.has(changeId)) {
-      markRead.mutate(changeId)
-    }
   }
 
   if (changes.length === 0) {
@@ -148,7 +124,7 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                   className="border-t border-grey-800/50 first:border-t-0"
                 >
                   <button
-                    onClick={() => handleToggle(change.id)}
+                    onClick={() => handleToggle(change.id, expandedId, setExpandedId)}
                     className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/70"
                   >
                     <div className="relative">
@@ -333,69 +309,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
       })}
     </div>
   )
-}
-
-// Format YYYY-MM-DD to human-readable Dutch date
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  // Check if today
-  if (date.toDateString() === today.toDateString()) {
-    return 'Vandaag'
-  }
-
-  // Check if yesterday
-  if (date.toDateString() === yesterday.toDateString()) {
-    return 'Gisteren'
-  }
-
-  // Otherwise format as "15 feb"
-  return new Intl.DateTimeFormat('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  }).format(date)
-}
-
-// Format relative time (e.g., "2 uur geleden", "3 dagen geleden")
-function formatRelativeTime(isoDateStr: string): string {
-  const date = new Date(isoDateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMinutes < 1) return 'Net gedetecteerd'
-  if (diffMinutes < 60)
-    return `${diffMinutes} ${diffMinutes === 1 ? 'minuut' : 'minuten'} geleden`
-  if (diffHours < 24)
-    return `${diffHours} ${diffHours === 1 ? 'uur' : 'uur'} geleden`
-  if (diffDays < 7)
-    return `${diffDays} ${diffDays === 1 ? 'dag' : 'dagen'} geleden`
-
-  // For older dates, show absolute date
-  return new Intl.DateTimeFormat('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  }).format(date)
-}
-
-// Helpers
-
-function extractHuisnummer(address: string): number | null {
-  const streetPart = address.split(',')[0] ?? address
-  const match = streetPart.match(/\d+/)
-  return match ? parseInt(match[0], 10) : null
-}
-
-function formatPostcode(pc: string): string {
-  const clean = pc.replace(/\s/g, '')
-  if (clean.length === 6) return `${clean.slice(0, 4)} ${clean.slice(4)}`
-  return pc
 }
 
 // SVG Icons
