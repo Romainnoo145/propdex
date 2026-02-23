@@ -22,7 +22,7 @@
 
 - [x] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage (shipped 2026-02-23)
 - [x] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes (shipped 2026-02-23)
-- [ ] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges
+- [x] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges (shipped 2026-02-23)
 - [ ] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report
 - [ ] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination
 
@@ -69,8 +69,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 49-01-PLAN.md -- ChangeReadState model, Alembic migration, API endpoints (mark read/unread, mark all read, updated unread counts)
-- [ ] 49-02-PLAN.md -- Frontend read tracking: replace localStorage with server state, toggle UI, badge updates, mark-all action
+- [x] 49-01-PLAN.md -- ChangeReadState model, Alembic migration, API endpoints (mark read/unread, mark all read, updated unread counts)
+- [x] 49-02-PLAN.md -- Frontend read tracking: replace localStorage with server state, toggle UI, badge updates, mark-all action
 
 ### Phase 50: Melding-to-Map Flow
 **Goal**: A user who sees an interesting melding with a matched parcel can click once to fly to that parcel on the map, see an amber marker with address and action button, and generate a full report -- the complete intelligence workflow in three clicks
@@ -231,10 +231,10 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 47. Address Intelligence | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 48. Parcel Matching | v6.0 | 3/3 | ✓ Complete | 2026-02-23 |
-| 49. Read Tracking | v6.0 | 0/2 | Not started | - |
+| 49. Read Tracking | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
 | 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-02-23 (Phase 48 Parcel Matching shipped -- 3 plans, 26 tests, 9 commits)*
+*Last updated: 2026-02-23 (Phase 49 Read Tracking shipped -- 2 plans, 6 commits)*
