@@ -20,7 +20,7 @@
 
 **Milestone Goal:** Transform the meldingen feed from a passive notification list into an actionable intelligence tool -- reliable parcel matching via geocoding, direct melding-to-map-to-report flow, server-side per-change read tracking, and a meldingen page worth visiting every day.
 
-- [ ] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage
+- [x] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage (shipped 2026-02-23)
 - [ ] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes
 - [ ] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges
 - [ ] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report
@@ -39,8 +39,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 47-01-PLAN.md -- TDD: Refactor address extractor into standalone module with comprehensive regex and test suite on real SRU titles
-- [ ] 47-02-PLAN.md -- Category label classifier and frontend wiring (API schema + ChangeTimeline + meldingen.tsx)
+- [x] 47-01-PLAN.md -- TDD: Refactor address extractor into standalone module with comprehensive regex and test suite on real SRU titles
+- [x] 47-02-PLAN.md -- Category label classifier and frontend wiring (API schema + ChangeTimeline + meldingen.tsx)
 
 ### Phase 48: Parcel Matching
 **Goal**: Every bekendmaking with an extractable address gets a matched parcel ID stored in the database -- and existing unmatched changes get a second chance whenever new scan data arrives
@@ -229,7 +229,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 47. Address Intelligence | v6.0 | 0/TBD | Not started | - |
+| 47. Address Intelligence | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 48. Parcel Matching | v6.0 | 0/TBD | Not started | - |
 | 49. Read Tracking | v6.0 | 0/TBD | Not started | - |
 | 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
@@ -237,4 +237,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-23 (v6.0 Meldingen Intelligence roadmap created -- Phases 47-51, 18 requirements)*
+*Last updated: 2026-02-23 (Phase 47 Address Intelligence shipped -- 2 plans, 61 tests, 7 commits)*
