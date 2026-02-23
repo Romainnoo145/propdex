@@ -19,12 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.models.cached_response import CachedAPIResponse
 from app.models.change_record import ChangeRecord
+from app.services.address_extractor import extract_address_from_title
 from app.services.postcode_extractor import extract_postcodes
 
 logger = logging.getLogger(__name__)
 
 # Amsterdam timezone for parsing API dates (SRU uses Europe/Amsterdam)
 AMSTERDAM_TZ = ZoneInfo("Europe/Amsterdam")
+
 
 
 def parse_api_date(date_str: str) -> datetime:
@@ -186,6 +188,21 @@ async def detect_permit_changes(
             postcodes = extract_postcodes(record["url"])
         postcode = postcodes[0] if postcodes else None
 
+        # Extract structured address from title using multi-strategy extractor
+        address_data = extract_address_from_title(record["title"])
+        address = address_data["full_address"] if address_data else None
+
+        # Merge address components into metadata for Phase 48 parcel matching
+        metadata = dict(record)
+        if address_data:
+            metadata["address_components"] = {
+                "street": address_data["street"],
+                "huisnummer": address_data["huisnummer"],
+                "huisnummer_toevoeging": address_data["huisnummer_toevoeging"],
+                "postcode": address_data["postcode"],
+                "city": address_data["city"],
+            }
+
         # Create ChangeRecord (caller will add to session)
         change_record = ChangeRecord(
             project_id=None,  # Will be set by caller based on project mapping
@@ -195,8 +212,8 @@ async def detect_permit_changes(
             detected_at=datetime.utcnow(),  # Project convention: naive UTC
             change_date=change_date,
             gemeente_naam=gemeente_naam,
-            address=None,  # SRU doesn't provide structured address in basic query
-            metadata_json=record,
+            address=address,
+            metadata_json=metadata,
             source_url=record.get("url"),
             postcode=postcode,
         )
