@@ -5,17 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Planning next milestone (v6.0 archived)
+**Current focus:** v7.0 Deep Property Data — enriching reports with WOZ, energielabel, BRK, and RCE data
 
 ---
 
 ## Current Position
 
-Phase: 51 of 51
-Status: v6.0 Meldingen Intelligence SHIPPED and ARCHIVED
-Last activity: 2026-02-23 -- v6.0 milestone archived (5 phases, 10 plans, 39 commits)
-
-Progress: All milestones complete through v6.0
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-23 — Milestone v7.0 started
 
 ---
 
@@ -80,11 +79,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** v6.0 milestone archived
+**Stopped At:** Defining v7.0 requirements
 **Resume File:** None
 
-**Next Action:** `/gsd:new-milestone` (define requirements and roadmap for next version)
+**Next Action:** Define requirements and create roadmap
 
 ---
 
-*State updated: 2026-02-23 -- v6.0 Meldingen Intelligence milestone archived*
+*State updated: 2026-02-23 — v7.0 Deep Property Data milestone started*

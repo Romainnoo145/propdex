@@ -145,17 +145,25 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-(None — run `/gsd:new-milestone` to define next requirements)
+## Current Milestone: v7.0 Deep Property Data
 
-### Future
+**Goal:** Enrich property reports with government valuations, energy ratings, ownership data, and property-specific heritage information — making Propdex reports the single source of truth for property due diligence.
+
+**Target features:**
+- WOZ-waarde integration (government-assessed property valuations)
+- Energielabel integration (energy performance ratings from EP-Online/RVO)
+- Kadaster BRK eigendomsdata (ownership, purchase history, mortgage status)
+- RCE monument improvements (property-specific heritage data replacing generic boilerplate)
 
 - [ ] WOZ-waarde integration — government-assessed property valuation per parcel
 - [ ] Energielabel integration — energy performance ratings from EP-Online/RVO
 - [ ] Kadaster BRK eigendomsdata — ownership, purchase history, mortgage status
 - [ ] RCE monument improvements — property-specific heritage data instead of generic boilerplate
+
+### Future
+
 - [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
 - [ ] Lead status visualization on map (color-coded by pipeline stage)
-- [ ] Eigendom lookup: Kadaster BRK Bevragen for ownership data (paid, only for qualified leads)
 - [ ] Role-based access (admin, analyst, viewer)
 
 ### Out of Scope
@@ -234,4 +242,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-23 after v6.0 Meldingen Intelligence milestone*
+*Last updated: 2026-02-23 after v7.0 Deep Property Data milestone started*
