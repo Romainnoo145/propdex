@@ -36,6 +36,12 @@ export interface ChangeRecord {
 export interface ChangeRecordListResponse {
   changes: ChangeRecord[]
   total: number
+  read_change_ids?: string[]
+}
+
+export interface MarkAllReadResponse {
+  status: string
+  marked_count: number
 }
 
 export interface ProjectUnreadCount {

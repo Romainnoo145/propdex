@@ -14,12 +14,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   fetchUnreadCounts,
+  fetchAllChanges,
   fetchProjectChanges,
   fetchChangesForParcel,
   markProjectViewed,
+  markChangeRead as apiMarkChangeRead,
+  markAllChangesRead as apiMarkAllChangesRead,
 } from '@/lib/api'
 import type {
   ChangeRecord,
+  MarkAllReadResponse,
   UnreadDetailResponse,
   ChangeRecordListResponse,
 } from '@/lib/types/monitoring'
@@ -40,6 +44,23 @@ export function useUnreadCounts() {
     refetchInterval: 60_000, // Poll every 60 seconds
     staleTime: 30_000,
     enabled: !!accessToken,
+  })
+}
+
+/**
+ * Fetch all change history across the organization
+ *
+ * Query key: ['changes', 'all', includeMatches]
+ * Stale time: 60 seconds
+ */
+export function useAllChanges(includeMatches = true) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ChangeRecordListResponse, Error>({
+    queryKey: ['changes', 'all', includeMatches],
+    queryFn: () => fetchAllChanges(accessToken, 100, 0, includeMatches),
+    enabled: !!accessToken,
+    staleTime: 60_000,
   })
 }
 
@@ -95,6 +116,74 @@ export function useMarkViewed() {
     onSuccess: () => {
       // Invalidate unread counts (badge should update)
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+    },
+  })
+}
+
+/**
+ * Mark a single change as read (server-backed, with optimistic update)
+ *
+ * Optimistically adds changeId to read_change_ids in all ['changes', ...] caches.
+ * On success: invalidates unread counts for fresh server badge counts.
+ * On error: rolls back optimistic update.
+ */
+export function useMarkChangeRead() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, string, { previousData: [unknown, ChangeRecordListResponse | undefined][] }>({
+    mutationFn: (changeId: string) => apiMarkChangeRead(changeId, accessToken),
+    onMutate: async (changeId: string) => {
+      // Snapshot all changes caches for rollback
+      const cacheEntries = queryClient
+        .getQueriesData<ChangeRecordListResponse>({ queryKey: ['changes'] })
+        .filter((entry): entry is [unknown, ChangeRecordListResponse] => entry[1] !== undefined)
+
+      const previousData = cacheEntries.map(([key, data]) => [key, data] as [unknown, ChangeRecordListResponse | undefined])
+
+      // Optimistically update all changes caches to include the new read ID
+      for (const [queryKey, data] of cacheEntries) {
+        queryClient.setQueryData<ChangeRecordListResponse>(queryKey as Parameters<typeof queryClient.setQueryData>[0], {
+          ...data,
+          read_change_ids: [...(data.read_change_ids ?? []), changeId],
+        })
+      }
+
+      return { previousData }
+    },
+    onSuccess: () => {
+      // Refresh server-side unread counts (badge numbers)
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+    },
+    onError: (_error, _changeId, context) => {
+      // Roll back all optimistic updates
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey as Parameters<typeof queryClient.setQueryData>[0], data)
+        }
+      }
+    },
+  })
+}
+
+/**
+ * Mark all changes as read (bulk action)
+ *
+ * On success: invalidates both unread counts and all changes caches
+ * so read_change_ids is refreshed from server.
+ * No optimistic update needed — full invalidation is appropriate for bulk action.
+ *
+ * @param projectId - Optional project filter (omit to mark all org changes)
+ */
+export function useMarkAllRead(projectId?: string) {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<MarkAllReadResponse, Error, void>({
+    mutationFn: () => apiMarkAllChangesRead(accessToken, projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+      queryClient.invalidateQueries({ queryKey: ['changes'] })
     },
   })
 }

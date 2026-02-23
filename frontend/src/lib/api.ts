@@ -37,6 +37,7 @@ import type {
 import type {
   ChangeRecord,
   ChangeRecordListResponse,
+  MarkAllReadResponse,
   UnreadDetailResponse,
 } from './types/monitoring'
 
@@ -371,6 +372,49 @@ export async function exportReportPDF(
 }
 
 /**
+ * Upload bestemmingsplan PDF for AI parsing
+ *
+ * POST /api/properties/upload-pdf?plan_idn={planIdn}
+ *
+ * @param planIdn - IMRO plan identifier (e.g., NL.IMRO.0363.BP2024CENTRUM-VA01)
+ * @param file - PDF file to upload
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Job status with job_id for polling
+ */
+export async function uploadBestemmingsplanPDF(
+  planIdn: string,
+  file: File,
+  accessToken: string | null
+): Promise<{ status: string; job_id: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const headers = new Headers()
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(
+    `${API_BASE}/upload-pdf?plan_idn=${encodeURIComponent(planIdn)}`,
+    {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Upload failed with status ${response.status}` }))
+    throw new Error(error.detail || `Upload failed with status ${response.status}`)
+  }
+
+  return response.json()
+}
+
+/**
  * Fetch all unique cities from saved reports
  *
  * GET /api/reports/cities
@@ -678,8 +722,8 @@ export async function fetchWijken(
 export async function fetchParcelCentroid(
   parcelId: string,
   accessToken: string | null
-): Promise<{ lng: number; lat: number }> {
-  return apiFetch<{ lng: number; lat: number }>(
+): Promise<{ lng: number; lat: number; address: string | null }> {
+  return apiFetch<{ lng: number; lat: number; address: string | null }>(
     `${SCANS_BASE}/parcels/${parcelId}/centroid`,
     { method: 'GET', accessToken }
   )
@@ -759,6 +803,35 @@ export async function fetchUnreadCounts(
 }
 
 /**
+ * Fetch all change history across the organization (no project filter)
+ *
+ * GET /api/monitoring/changes (without project_id)
+ *
+ * @param accessToken - JWT access token
+ * @param limit - Max records to return
+ * @param offset - Pagination offset
+ * @param includeMatches - Include matched parcels/reports
+ * @returns Paginated list of change records with project_name context
+ */
+export async function fetchAllChanges(
+  accessToken: string | null,
+  limit = 100,
+  offset = 0,
+  includeMatches = false
+): Promise<ChangeRecordListResponse> {
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString(),
+  })
+  if (includeMatches) params.set('include_matches', 'true')
+
+  return apiFetch<ChangeRecordListResponse>(
+    `${MONITORING_BASE}/changes?${params}`,
+    { accessToken, method: 'GET' }
+  )
+}
+
+/**
  * Fetch change history for a specific project
  *
  * GET /api/monitoring/changes
@@ -823,4 +896,66 @@ export async function markProjectViewed(
     accessToken,
     method: 'POST',
   })
+}
+
+/**
+ * Mark a single change as read for the current user
+ *
+ * POST /api/monitoring/changes/{changeId}/read
+ *
+ * Idempotent — safe to call multiple times (ON CONFLICT DO NOTHING).
+ *
+ * @param changeId - Change UUID
+ * @param accessToken - JWT access token
+ */
+export async function markChangeRead(
+  changeId: string,
+  accessToken: string | null
+): Promise<void> {
+  await apiFetch(`${MONITORING_BASE}/changes/${changeId}/read`, {
+    accessToken,
+    method: 'POST',
+  })
+}
+
+/**
+ * Mark a single change as unread for the current user
+ *
+ * DELETE /api/monitoring/changes/{changeId}/read
+ *
+ * @param changeId - Change UUID
+ * @param accessToken - JWT access token
+ */
+export async function markChangeUnread(
+  changeId: string,
+  accessToken: string | null
+): Promise<void> {
+  await apiFetch(`${MONITORING_BASE}/changes/${changeId}/read`, {
+    accessToken,
+    method: 'DELETE',
+  })
+}
+
+/**
+ * Mark all changes as read for the current user (bulk action)
+ *
+ * POST /api/monitoring/changes/read-all
+ * POST /api/monitoring/changes/read-all?project_id={projectId}
+ *
+ * @param accessToken - JWT access token
+ * @param projectId - Optional project filter (omit for all org changes)
+ * @returns Status and count of changes marked read
+ */
+export async function markAllChangesRead(
+  accessToken: string | null,
+  projectId?: string
+): Promise<MarkAllReadResponse> {
+  const params = projectId ? `?project_id=${projectId}` : ''
+  return apiFetch<MarkAllReadResponse>(
+    `${MONITORING_BASE}/changes/read-all${params}`,
+    {
+      accessToken,
+      method: 'POST',
+    }
+  )
 }
