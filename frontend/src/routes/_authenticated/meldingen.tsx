@@ -362,8 +362,21 @@ function MeldingItem({
 
               {/* Right: action buttons */}
               <div className="flex shrink-0 flex-col gap-2">
-                {/* Bekijk op kaart — address-based */}
-                {canNavigateByAddress && (
+                {/* Bekijk op kaart — prefer parcel-ID (Phase 48 verified), fallback to address */}
+                {change.matched_parcel_id ? (
+                  <button
+                    onClick={() =>
+                      onNavigate({
+                        to: '/map',
+                        search: { parcel_id: change.matched_parcel_id! },
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
+                  >
+                    <MapPinIcon />
+                    Bekijk op kaart
+                  </button>
+                ) : canNavigateByAddress ? (
                   <button
                     onClick={() =>
                       onNavigate({
@@ -380,20 +393,31 @@ function MeldingItem({
                     <MapPinIcon />
                     Bekijk op kaart
                   </button>
-                )}
+                ) : null}
 
-                {/* Genereer rapport — only for matched parcels (verified data) */}
-                {hasParcels && change.matched_parcels!.map((m) => (
+                {/* Genereer rapport — prefer matched_parcel_id (verified), fallback to matched_parcels list */}
+                {change.matched_parcel_id ? (
                   <button
-                    key={`gen-${m.parcel_id}`}
-                    onClick={() => onGenerateReport(m.parcel_id)}
-                    disabled={generatingId === m.parcel_id}
+                    onClick={() => onGenerateReport(change.matched_parcel_id!)}
+                    disabled={generatingId === change.matched_parcel_id}
                     className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
                   >
                     <ReportLinkIcon />
-                    {generatingId === m.parcel_id ? 'Bezig...' : 'Genereer rapport'}
+                    {generatingId === change.matched_parcel_id ? 'Bezig...' : 'Genereer rapport'}
                   </button>
-                ))}
+                ) : hasParcels ? (
+                  change.matched_parcels!.map((m) => (
+                    <button
+                      key={`gen-${m.parcel_id}`}
+                      onClick={() => onGenerateReport(m.parcel_id)}
+                      disabled={generatingId === m.parcel_id}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
+                    >
+                      <ReportLinkIcon />
+                      {generatingId === m.parcel_id ? 'Bezig...' : 'Genereer rapport'}
+                    </button>
+                  ))
+                ) : null}
               </div>
             </div>
           </div>
