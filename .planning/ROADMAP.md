@@ -36,11 +36,11 @@
   1. Address extractor correctly parses all common Dutch bekendmaking title formats (straatnaam + huisnummer, with and without postcode, with and without additions) -- verified by a test suite against real SRU examples
   2. Extracted addresses include both postcode and huisnummer when present in the source title, giving the matcher enough precision to reach a single parcel
   3. Each change record displays a human-readable Dutch category label (e.g. "Omgevingsvergunning aangevraagd", "Bestemmingsplan gewijzigd") instead of a raw type code
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 47-01: Refactor address extractor with comprehensive regex patterns and test suite on real SRU titles
-- [ ] 47-02: Add category label mapping and wire human-readable labels through API response and frontend display
+- [ ] 47-01-PLAN.md -- TDD: Refactor address extractor into standalone module with comprehensive regex and test suite on real SRU titles
+- [ ] 47-02-PLAN.md -- Category label classifier and frontend wiring (API schema + ChangeTimeline + meldingen.tsx)
 
 ### Phase 48: Parcel Matching
 **Goal**: Every bekendmaking with an extractable address gets a matched parcel ID stored in the database -- and existing unmatched changes get a second chance whenever new scan data arrives
