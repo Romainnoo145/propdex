@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 48 of 51 (Parcel Matching)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-02-23 -- Phase 47 Address Intelligence shipped (2 plans, 61 tests, 7 commits)
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-23 -- Phase 48 Plan 01 geocoding + spatial lookup complete (2 tasks, 12 new tests)
 
 Progress: [##        ] 20%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Parcel Matching Phase 48 Plan 01 (Complete: 2026-02-23)**
+- Phase 48 Plan 01: 3 min, 2 tasks, 4 files — geocode_address() + find_parcel_at_point() TDD (12 new tests)
 
 **v6.0 Address Intelligence Phase 47 Plan 02 (Complete: 2026-02-23)**
 - Phase 47 Plan 02: 2 min, 2 tasks, 7 files — category_classifier.py + badge rendering (27 tests)
@@ -77,6 +80,9 @@ Progress: [##        ] 20%
 
 ### Decisions Made
 
+- _parse_rd_point() is module-level (not method) — pure function, no class dependency, easier to import and test
+- geocode_address() appends gemeente_naam only when both postcode and city absent — avoids over-constraining queries that already have postcode (pitfall #1 from research)
+- ST_Contains(parcel.geometry, point) not ST_Within — parcel-contains-point semantics correct for polygon containment
 - Multi-strategy address extraction (5 strategies) instead of single monolithic regex — each handles a subset of SRU formats
 - extract_address_from_title() returns structured dict (not raw string) — Phase 48 gets clean field access without re-parsing
 - address_components stored in metadata_json, ChangeRecord.address still gets full_address string — no DB migration needed
@@ -119,11 +125,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 47 Address Intelligence complete — verified 7/7 must-haves
+**Stopped At:** Phase 48 Plan 01 complete — geocode_address() + find_parcel_at_point() TDD (19 tests passing)
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 48`
+**Next Action:** `/gsd:execute-phase 48` (Plans 02 and 03 remain)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 47 Address Intelligence shipped (2 plans, 61 tests, 7 commits)*
+*State updated: 2026-02-23 -- Phase 48 Plan 01 complete (geocode_address + find_parcel_at_point TDD)*
