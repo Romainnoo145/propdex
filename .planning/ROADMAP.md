@@ -81,11 +81,10 @@ Plans:
   2. An amber marker appears at the parcel location showing the bekendmaking address and a "Genereer rapport" button -- visible without any additional clicks
   3. Clicking "Genereer rapport" from the map marker generates a property report using the verified parcel ID from the ChangeRecord -- the report uses real kadaster/BAG data, not a free-form address guess
   4. If the parcel has no wijk project yet, the wijk project hierarchy (gemeente container + wijk container) is auto-created before the report is saved -- the report lands in the correct project without user setup
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 50-01: Map marker component and fly-to integration -- meldingen.tsx passes parcel_id+coordinates to map route
-- [ ] 50-02: Report generation from map marker using verified parcel ID, with auto-create wijk project
+- [ ] 50-01-PLAN.md -- Wire matched_parcel_id through ChangeRecord type, meldingen.tsx, and ChangeTimeline.tsx for parcel-ID-based map navigation and report generation
 
 ### Phase 51: Meldingen UX
 **Goal**: The meldingen page is the user's daily intelligence briefing -- filterable by gemeente, each entry clearly shows what action is available, read tracking is consistent across the app, and the feed scales gracefully as data grows
