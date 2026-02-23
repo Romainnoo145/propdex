@@ -1,12 +1,32 @@
 """PDOK Locatieserver API client for address autocomplete and lookup."""
 
 import logging
+import re
 
 import httpx
 
 from app.government_apis.base import handle_api_response
 
 logger = logging.getLogger(__name__)
+
+_RD_POINT_RE = re.compile(r"POINT\(([0-9.]+)\s+([0-9.]+)\)")
+
+
+def _parse_rd_point(wkt: str) -> tuple[float, float] | None:
+    """Parse a PDOK centroide_rd WKT POINT string into (x, y) RD coordinates.
+
+    Args:
+        wkt: WKT string like "POINT(121348.243 487347.752)"
+
+    Returns:
+        Tuple of (x, y) floats in EPSG:28992, or None if unparseable.
+    """
+    if not wkt:
+        return None
+    m = _RD_POINT_RE.match(wkt)
+    if not m:
+        return None
+    return (float(m.group(1)), float(m.group(2)))
 
 
 class PDOKLocatieserver:
@@ -117,3 +137,65 @@ class PDOKLocatieserver:
             logger.debug(f"PDOK reverse geocode failed for ({rd_x}, {rd_y}): {e}")
 
         return None
+
+    async def geocode_address(
+        self,
+        street: str,
+        huisnummer: int,
+        client: httpx.AsyncClient,
+        postcode: str | None = None,
+        city: str | None = None,
+        gemeente_naam: str | None = None,
+    ) -> tuple[float, float] | None:
+        """Forward geocode a Dutch address to RD New (EPSG:28992) coordinates.
+
+        Uses PDOK Locatieserver /free endpoint. No authentication required.
+
+        Args:
+            street: Street name (straatnaam)
+            huisnummer: House number
+            client: Shared httpx AsyncClient
+            postcode: Dutch postcode (e.g., "5911AA") — appended to query when provided
+            city: City/place name — appended to query when provided
+            gemeente_naam: Municipality name — used as fallback when neither
+                postcode nor city is available (pitfall: many addresses share
+                a street name across NL; gemeente_naam narrows the search)
+
+        Returns:
+            Tuple of (x, y) in EPSG:28992 (RD New), or None on failure.
+        """
+        try:
+            parts = [f"{street} {huisnummer}"]
+            if postcode:
+                parts.append(postcode)
+            if city:
+                parts.append(city)
+            if not postcode and not city and gemeente_naam:
+                parts.append(gemeente_naam)
+            query = ", ".join(parts)
+
+            url = f"{self.BASE_URL}/free"
+            params = {
+                "q": query,
+                "fq": "type:adres",
+                "fl": "id,centroide_rd",
+                "rows": 1,
+            }
+
+            logger.debug(f"PDOK geocode: {query!r}")
+            response = await client.get(url, params=params)
+            data = handle_api_response(response, source="pdok")
+
+            docs = data.get("response", {}).get("docs", [])
+            if not docs:
+                return None
+
+            centroide_rd = docs[0].get("centroide_rd")
+            if not centroide_rd:
+                return None
+
+            return _parse_rd_point(centroide_rd)
+
+        except Exception as e:
+            logger.debug(f"PDOK geocode failed for {street!r} {huisnummer}: {e}")
+            return None
