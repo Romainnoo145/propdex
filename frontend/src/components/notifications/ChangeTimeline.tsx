@@ -2,24 +2,43 @@
  * Change timeline component for displaying project change history
  *
  * Shows:
- * - Permit changes (blue document icon)
- * - Zoning changes (green map icon)
+ * - Permit changes (document icon) and zoning changes (map icon)
  * - Grouped by date with expandable details
  * - Match pills linking to parcels/reports when postcode matches exist
- *
- * Auto-marks project as viewed on mount (clears unread badge).
+ * - Amber dot indicator on unread changes (per-change via localStorage)
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useProjectChanges, useMarkViewed } from '@/hooks/useNotifications'
+import { toast } from 'sonner'
+import { useProjectChanges } from '@/hooks/useNotifications'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
+import { useAuth } from '@/lib/auth/useAuth'
+import { generateReportFromParcel } from '@/lib/api'
+
+// Shared per-change read tracking via localStorage
+const READ_STORAGE_KEY = 'propdex-read-changes'
+
+function getReadIds(): Set<string> {
+  try {
+    const stored = localStorage.getItem(READ_STORAGE_KEY)
+    return stored ? new Set(JSON.parse(stored) as string[]) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function persistReadIds(ids: Set<string>) {
+  const arr = [...ids].slice(-500)
+  localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(arr))
+}
 
 interface ChangeTimelineProps {
   projectId: string
+  unreadCount?: number
 }
 
 export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
@@ -27,15 +46,40 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
     projectId,
     true // include_matches for timeline view
   )
-  const markViewed = useMarkViewed()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [readIds, setReadIds] = useState<Set<string>>(() => getReadIds())
   const navigate = useNavigate()
+  const { accessToken } = useAuth()
 
-  // Auto-mark as viewed when component mounts
-  useEffect(() => {
-    markViewed.mutate(projectId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]) // Only run when projectId changes (markViewed is stable from useMutation)
+  const markChangeRead = useCallback((changeId: string) => {
+    setReadIds((prev) => {
+      if (prev.has(changeId)) return prev
+      const next = new Set(prev)
+      next.add(changeId)
+      persistReadIds(next)
+      return next
+    })
+  }, [])
+
+  const handleGenerateReport = useCallback(
+    async (parcelId: string) => {
+      setGeneratingId(parcelId)
+      try {
+        const report = await generateReportFromParcel(parcelId, accessToken)
+        navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Rapport genereren mislukt'
+        )
+      } finally {
+        setGeneratingId(null)
+      }
+    },
+    [accessToken, navigate]
+  )
+
+  const changes = data?.changes ?? []
 
   if (isLoading) {
     return (
@@ -65,7 +109,10 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
     )
   }
 
-  const changes = data?.changes ?? []
+  const handleToggle = (changeId: string) => {
+    setExpandedId(expandedId === changeId ? null : changeId)
+    markChangeRead(changeId)
+  }
 
   if (changes.length === 0) {
     return (
@@ -126,23 +173,28 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                   className="border-t border-grey-800/50 first:border-t-0"
                 >
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : change.id)}
+                    onClick={() => handleToggle(change.id)}
                     className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/70"
                   >
-                    <Icon />
+                    <div className="relative">
+                      <Icon />
+                      {!readIds.has(change.id) && (
+                        <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-grey-900 bg-amber-accent" />
+                      )}
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-medium text-grey-100">
+                      <p className="line-clamp-2 text-sm font-medium text-grey-300">
                         {change.title}
                       </p>
-                      {change.address && (
-                        <p className="mt-0.5 text-xs text-grey-400">
-                          {change.address}
-                        </p>
-                      )}
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="text-xs text-grey-400">
-                          {formatRelativeTime(change.detected_at)}
+                        <span className="text-[11px] text-grey-600">
+                          {formatRelativeTime(change.change_date)}
                         </span>
+                        {change.category_label && (
+                          <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-300">
+                            {change.category_label}
+                          </span>
+                        )}
                         {hasMatches && (
                           <div className="flex gap-1.5">
                             {pc > 0 && (
@@ -165,80 +217,113 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                   </button>
 
                   {/* Expanded details */}
-                  {isExpanded && (
-                    <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3 space-y-2">
-                      {change.postcode && (
-                        <p className="text-xs text-grey-400">
-                          Postcode:{' '}
-                          <span className="font-mono text-grey-300">
-                            {change.postcode}
-                          </span>
-                        </p>
-                      )}
+                  {isExpanded && (() => {
+                    const hasParcels = (change.matched_parcels?.length ?? 0) > 0
+                    const hasReports = (change.matched_reports?.length ?? 0) > 0
+                    const hn = change.address ? extractHuisnummer(change.address) : null
+                    const canNav = change.postcode && hn
 
-                      {/* Matched parcels */}
-                      {change.matched_parcels &&
-                        change.matched_parcels.length > 0 && (
-                          <div className="space-y-1">
-                            {change.matched_parcels.map((m) => (
+                    return (
+                      <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3">
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Left: details */}
+                          <div className="min-w-0 flex-1 space-y-2">
+                            {change.address && (
+                              <p className="text-xs text-grey-400">{change.address}</p>
+                            )}
+
+                            {hasParcels && (
+                              <div className="space-y-1">
+                                {change.matched_parcels!.map((m) => (
+                                  <button
+                                    key={m.parcel_id}
+                                    onClick={() =>
+                                      navigate({
+                                        to: '/map',
+                                        search: { parcel_id: m.parcel_id },
+                                      })
+                                    }
+                                    className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
+                                  >
+                                    <ParcelLinkIcon />
+                                    {m.address
+                                      ? `Bekijk perceel — ${m.address}`
+                                      : 'Bekijk op kaart'}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {hasReports && (
+                              <div className="space-y-1">
+                                {change.matched_reports!.map((m) => (
+                                  <button
+                                    key={m.report_id}
+                                    onClick={() =>
+                                      navigate({
+                                        to: '/rapport/$id',
+                                        params: { id: m.report_id },
+                                      })
+                                    }
+                                    className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+                                  >
+                                    <ReportLinkIcon />
+                                    Bekijk rapport — {m.report_name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {change.source_url && (
+                              <a
+                                href={change.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-sm text-info hover:underline"
+                              >
+                                Bekijk officiële publicatie
+                                <ExternalLinkIcon />
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Right: action buttons */}
+                          <div className="flex shrink-0 flex-col gap-2">
+                            {canNav && (
                               <button
-                                key={m.parcel_id}
                                 onClick={() =>
                                   navigate({
-                                    to: '/resultaten',
+                                    to: '/map',
                                     search: {
-                                      scan_id: m.scan_id,
-                                      highlight: m.parcel_id,
+                                      postcode: formatPostcode(change.postcode!),
+                                      huisnummer: hn!,
+                                      _t: Date.now(),
                                     },
                                   })
                                 }
-                                className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
+                                className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
                               >
-                                <ParcelLinkIcon />
-                                {m.address
-                                  ? `Bekijk perceel — ${m.address}`
-                                  : 'Bekijk in scanresultaten'}
+                                <MapPinIcon />
+                                Bekijk op kaart
                               </button>
-                            ))}
-                          </div>
-                        )}
+                            )}
 
-                      {/* Matched reports */}
-                      {change.matched_reports &&
-                        change.matched_reports.length > 0 && (
-                          <div className="space-y-1">
-                            {change.matched_reports.map((m) => (
+                            {hasParcels && change.matched_parcels!.map((m) => (
                               <button
-                                key={m.report_id}
-                                onClick={() =>
-                                  navigate({
-                                    to: '/rapport/$id',
-                                    params: { id: m.report_id },
-                                  })
-                                }
-                                className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+                                key={`gen-${m.parcel_id}`}
+                                onClick={() => handleGenerateReport(m.parcel_id)}
+                                disabled={generatingId === m.parcel_id}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
                               >
                                 <ReportLinkIcon />
-                                Bekijk rapport — {m.report_name}
+                                {generatingId === m.parcel_id ? 'Bezig...' : 'Genereer rapport'}
                               </button>
                             ))}
                           </div>
-                        )}
-
-                      {/* Source URL */}
-                      {change.source_url && (
-                        <a
-                          href={change.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-info hover:underline"
-                        >
-                          Bekijk officiële publicatie
-                          <ExternalLinkIcon />
-                        </a>
-                      )}
-                    </div>
-                  )}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}
@@ -298,11 +383,44 @@ function formatRelativeTime(isoDateStr: string): string {
   }).format(date)
 }
 
+// Helpers
+
+function extractHuisnummer(address: string): number | null {
+  const streetPart = address.split(',')[0] ?? address
+  const match = streetPart.match(/\d+/)
+  return match ? parseInt(match[0], 10) : null
+}
+
+function formatPostcode(pc: string): string {
+  const clean = pc.replace(/\s/g, '')
+  if (clean.length === 6) return `${clean.slice(0, 4)} ${clean.slice(4)}`
+  return pc
+}
+
 // SVG Icons
+
+function MapPinIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+    >
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
 
 function PermitIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-info/10">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-grey-700/30">
       <svg
         width="16"
         height="16"
@@ -312,7 +430,7 @@ function PermitIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-info"
+        className="text-grey-400"
       >
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
@@ -325,7 +443,7 @@ function PermitIcon() {
 
 function ZoningIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-grey-700/30">
       <svg
         width="16"
         height="16"
@@ -335,7 +453,7 @@ function ZoningIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-success"
+        className="text-grey-400"
       >
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
         <circle cx="12" cy="10" r="3" />

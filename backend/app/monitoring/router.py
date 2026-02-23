@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,7 @@ from app.services.bekendmaking_matcher import (
     find_matching_parcels,
     find_matching_reports,
 )
+from app.services.category_classifier import classify_bekendmaking
 
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
@@ -36,7 +37,7 @@ router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 @limiter.limit("60/minute")
 async def get_changes(
     request: Request,
-    project_id: uuid.UUID,
+    project_id: uuid.UUID | None = Query(None),
     include_matches: bool = False,
     limit: int = 50,
     offset: int = 0,
@@ -45,74 +46,93 @@ async def get_changes(
     db: AsyncSession = Depends(get_db),
 ) -> ChangeRecordListResponse:
     """
-    Get change history for a specific project.
+    Get change history, optionally filtered by project.
 
-    Returns paginated list of change records (permits + zoning changes) ordered
-    by detected_at DESC. Auto-updates user's last_viewed_at timestamp as a side
-    effect.
+    When project_id is provided: returns changes for that project and updates
+    the user's last_viewed_at (existing behavior).
+
+    When project_id is omitted: returns all organization changes across all
+    projects, with project_name included for feed context. No notification
+    side-effect (mark-as-viewed stays per-project via POST /viewed/{id}).
 
     When include_matches=true, each change record with a postcode will include
     matched_parcels and matched_reports from the organization's data.
     """
     try:
-        # Verify project exists and belongs to organization
-        project_query = select(Project).where(
-            Project.id == project_id,
-            Project.organization_id == organization_id,
-        )
-        project_result = await db.execute(project_query)
-        project = project_result.scalar_one_or_none()
-
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found",
+        # Per-project path: verify project + mark as viewed
+        if project_id is not None:
+            project_query = select(Project).where(
+                Project.id == project_id,
+                Project.organization_id == organization_id,
             )
+            project_result = await db.execute(project_query)
+            project = project_result.scalar_one_or_none()
+
+            if project is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                )
 
         # Query change records
         changes_query = (
             select(ChangeRecord)
-            .where(
-                ChangeRecord.project_id == project_id,
-                ChangeRecord.organization_id == organization_id,
-            )
+            .where(ChangeRecord.organization_id == organization_id)
             .order_by(ChangeRecord.detected_at.desc())
             .limit(limit)
             .offset(offset)
         )
+        if project_id is not None:
+            changes_query = changes_query.where(
+                ChangeRecord.project_id == project_id
+            )
 
         changes_result = await db.execute(changes_query)
         changes = changes_result.scalars().all()
 
-        # Count total changes for this project
+        # Count total
         count_query = select(func.count(ChangeRecord.id)).where(
-            ChangeRecord.project_id == project_id,
             ChangeRecord.organization_id == organization_id,
         )
+        if project_id is not None:
+            count_query = count_query.where(
+                ChangeRecord.project_id == project_id
+            )
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
 
-        # Side effect: Update UserNotificationState.last_viewed_at
-        notification_query = select(UserNotificationState).where(
-            UserNotificationState.user_id == current_user.id,
-            UserNotificationState.project_id == project_id,
-        )
-        notification_result = await db.execute(notification_query)
-        notification_state = notification_result.scalar_one_or_none()
-
-        if notification_state is None:
-            notification_state = UserNotificationState(
-                organization_id=organization_id,
-                user_id=current_user.id,
-                project_id=project_id,
-                last_viewed_at=datetime.utcnow(),
+        # Side effect: Update last_viewed_at only for per-project requests
+        if project_id is not None:
+            notification_query = select(UserNotificationState).where(
+                UserNotificationState.user_id == current_user.id,
+                UserNotificationState.project_id == project_id,
             )
-            db.add(notification_state)
-        else:
-            notification_state.last_viewed_at = datetime.utcnow()
+            notification_result = await db.execute(notification_query)
+            notification_state = notification_result.scalar_one_or_none()
 
-        await db.flush()
-        await db.commit()
+            if notification_state is None:
+                notification_state = UserNotificationState(
+                    organization_id=organization_id,
+                    user_id=current_user.id,
+                    project_id=project_id,
+                    last_viewed_at=datetime.utcnow(),
+                )
+                db.add(notification_state)
+            else:
+                notification_state.last_viewed_at = datetime.utcnow()
+
+            await db.flush()
+            await db.commit()
+
+        # For all-org feed, pre-load project names
+        project_names: dict[uuid.UUID, str] = {}
+        if project_id is None and changes:
+            project_ids = {c.project_id for c in changes}
+            names_query = select(Project.id, Project.name).where(
+                Project.id.in_(project_ids)
+            )
+            names_result = await db.execute(names_query)
+            project_names = dict(names_result.all())
 
         # Build response with optional match enrichment
         change_responses: list[ChangeRecordResponse] = []
@@ -151,6 +171,10 @@ async def get_changes(
                     postcode=change.postcode,
                     matched_parcels=matched_parcels,
                     matched_reports=matched_reports,
+                    project_name=project_names.get(change.project_id),
+                    category_label=classify_bekendmaking(
+                        change.title, change.change_type
+                    ),
                 )
             )
 
@@ -199,6 +223,7 @@ async def get_changes_for_parcel(
                 address=r.address,
                 source_url=r.source_url,
                 postcode=r.postcode,
+                category_label=classify_bekendmaking(r.title, r.change_type),
             )
             for r in records
         ]

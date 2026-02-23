@@ -29,6 +29,8 @@ export interface ChangeRecord {
   postcode: string | null
   matched_parcels: MatchedParcel[] | null
   matched_reports: MatchedReport[] | null
+  project_name?: string | null
+  category_label?: string | null
 }
 
 export interface ChangeRecordListResponse {

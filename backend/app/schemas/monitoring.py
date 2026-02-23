@@ -36,6 +36,8 @@ class ChangeRecordResponse(BaseModel):
     postcode: str | None
     matched_parcels: list[MatchedParcel] | None = None
     matched_reports: list[MatchedReport] | None = None
+    project_name: str | None = None
+    category_label: str | None = None
 
 
 class ChangeRecordListResponse(BaseModel):
