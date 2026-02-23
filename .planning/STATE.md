@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 48 of 51 (Parcel Matching)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-23 -- Phase 48 Plan 01 geocoding + spatial lookup complete (2 tasks, 12 new tests)
+Last activity: 2026-02-23 -- Phase 48 Plan 02 matched_parcel_id migration + change_monitor wiring complete (2 tasks, 5 files)
 
-Progress: [##        ] 20%
+Progress: [###       ] 30%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Parcel Matching Phase 48 Plan 02 (Complete: 2026-02-23)**
+- Phase 48 Plan 02: 8 min, 2 tasks, 5 files — matched_parcel_id migration + change_monitor geocoding wiring
 
 **v6.0 Parcel Matching Phase 48 Plan 01 (Complete: 2026-02-23)**
 - Phase 48 Plan 01: 3 min, 2 tasks, 4 files — geocode_address() + find_parcel_at_point() TDD (12 new tests)
@@ -90,6 +93,9 @@ Progress: [##        ] 20%
 - classify_bekendmaking checks "buiten behandeling" and "bezwaar" before permit verb patterns — prevents false substring matches
 - category_label computed at response-build time, not stored in DB — no migration needed
 - category_label: str | None = None (nullable) — pre-existing records degrade gracefully to no badge
+- matched_parcel_id uses ondelete=SET NULL — parcel deletion doesn't cascade to change records
+- _try_match_parcel helper wraps huisnummer int() in try/except — house numbers may be strings or contain letters
+- Geocode call happens outside session.begin_nested() in both pipeline functions — HTTP I/O must not block nested transaction
 - Badge uses grey-800/grey-300 to visually separate from amber rapport pills and blue perceel pills
 - `--color-on-accent: oklch(0.12 0.005 270)` -- fixed dark color for text on amber, does NOT invert in light mode
 - FOUC script placed as very first child of `<head>` before icon/font/stylesheet links
@@ -125,11 +131,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 48 Plan 01 complete — geocode_address() + find_parcel_at_point() TDD (19 tests passing)
+**Stopped At:** Phase 48 Plan 02 complete — matched_parcel_id migration + geocoding wired into change_monitor
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 48` (Plans 02 and 03 remain)
+**Next Action:** `/gsd:execute-phase 48` (Plan 03 remains)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 48 Plan 01 complete (geocode_address + find_parcel_at_point TDD)*
+*State updated: 2026-02-23 -- Phase 48 Plan 02 complete (matched_parcel_id migration + change_monitor geocoding wiring)*
