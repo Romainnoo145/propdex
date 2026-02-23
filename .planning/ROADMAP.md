@@ -66,11 +66,11 @@ Plans:
   2. After toggling read state on one device, opening the app on a different browser or device shows the same read/unread state -- localStorage is no longer the source of truth
   3. Unread count badges on gemeente cards, wijk cards, and the SideRailNav icon reflect per-change read state -- reading a change decrements the badge count in real time
   4. A "Markeer alles als gelezen" action marks all currently visible changes as read in a single API call -- unread badges reset to zero
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 49-01: ChangeReadState model (migration), API endpoints (mark read/unread, mark all read, unread counts)
-- [ ] 49-02: Frontend read tracking -- replace localStorage with server state, toggle UI, badge updates, mark-all action
+- [ ] 49-01-PLAN.md -- ChangeReadState model, Alembic migration, API endpoints (mark read/unread, mark all read, updated unread counts)
+- [ ] 49-02-PLAN.md -- Frontend read tracking: replace localStorage with server state, toggle UI, badge updates, mark-all action
 
 ### Phase 50: Melding-to-Map Flow
 **Goal**: A user who sees an interesting melding with a matched parcel can click once to fly to that parcel on the map, see an amber marker with address and action button, and generate a full report -- the complete intelligence workflow in three clicks
@@ -231,7 +231,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 47. Address Intelligence | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
 | 48. Parcel Matching | v6.0 | 3/3 | ✓ Complete | 2026-02-23 |
-| 49. Read Tracking | v6.0 | 0/TBD | Not started | - |
+| 49. Read Tracking | v6.0 | 0/2 | Not started | - |
 | 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
 | 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
 
