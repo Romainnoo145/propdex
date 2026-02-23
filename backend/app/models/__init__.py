@@ -3,6 +3,7 @@
 from app.models.area_scan import AreaScan  # noqa: F401
 from app.models.base import Base
 from app.models.cached_response import CachedAPIResponse
+from app.models.change_read_state import ChangeReadState  # noqa: F401
 from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache  # noqa: F401
@@ -29,5 +30,6 @@ __all__ = [
     "Project",
     "SavedReport",
     "ChangeRecord",
+    "ChangeReadState",
     "UserNotificationState",
 ]
