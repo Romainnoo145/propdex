@@ -11,16 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: 50 of 51 (Melding-to-Map Flow)
+Phase: 51 of 51 (Meldingen UX)
 Plan: 1 of 1 complete
-Status: Phase 50 COMPLETE — three-click melding-to-map-to-report flow wired end-to-end
-Last activity: 2026-02-23 -- Phase 50 complete: matched_parcel_id wired through ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx (1 plan, 4 commits)
+Status: Phase 51 Plan 01 COMPLETE — gemeente filter dropdown + useReadTracking hook extracted
+Last activity: 2026-02-23 -- Phase 51 Plan 01 complete: gemeente filter, useReadTracking, shared utils (2 commits)
 
-Progress: [########  ] 80%
+Progress: [##########] 100%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Meldingen UX Phase 51 Plan 01 (Complete: 2026-02-23)**
+- Phase 51 Plan 01: 4 min, 2 tasks, 8 files — useReadTracking hook, gemeente filter dropdown, shared utils
 
 **v6.0 Melding-to-Map Flow Phase 50 Plan 01 (Complete: 2026-02-23)**
 - Phase 50 Plan 01: 2 min, 3 tasks, 3 files — matched_parcel_id in ChangeRecord type, meldingen.tsx, ChangeTimeline.tsx
@@ -99,6 +102,10 @@ Progress: [########  ] 80%
 
 ### Decisions Made
 
+- useReadTracking accepts readChangeIds only (not accessToken) — hook calls useAuth() internally, consistent with other hooks
+- handleToggle signature includes expandedId + setExpandedId params — callers own expand state, hook does not
+- Client-side filtering for gemeente (not server-side) — full dataset fetched once, filtered via useMemo; server-side only needed when pagination added
+- date + address utils in lib/utils/ subdirectory (not added to lib/utils.ts) — separation of domain concerns
 - _parse_rd_point() is module-level (not method) — pure function, no class dependency, easier to import and test
 - geocode_address() appends gemeente_naam only when both postcode and city absent — avoids over-constraining queries that already have postcode (pitfall #1 from research)
 - ST_Contains(parcel.geometry, point) not ST_Within — parcel-contains-point semantics correct for polygon containment
@@ -137,6 +144,7 @@ Progress: [########  ] 80%
 
 ### v6.0 Architecture Notes
 
+- **Phase 51 Plan 01 COMPLETE**: gemeente filter dropdown + useReadTracking hook — meldingen feed filterable by gemeente, single source of truth for read/unread state
 - **Phase 50 Plan 01 COMPLETE**: matched_parcel_id wired through frontend — full three-click workflow (melding → amber map marker → report) operational
 - **Phase 49 COMPLETE**: Server-backed per-change read tracking end-to-end (backend + frontend)
 - **Phase 48 COMPLETE**: matched_parcel_id populated via 3 paths: (1) initial detection in change_monitor, (2) retro-match after area scan, (3) future on-demand
@@ -160,11 +168,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 50 complete — melding-to-map-to-report flow wired end-to-end
+**Stopped At:** Completed 51-01-PLAN.md — gemeente filter + useReadTracking hook
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 51` (Phase 51 — Meldingen UX)
+**Next Action:** Phase 51 Plan 02 (if exists) or v6.0 milestone review
 
 ---
 
-*State updated: 2026-02-23 -- Phase 50 complete (1 plan, 4 commits, 3 files: monitoring.ts, meldingen.tsx, ChangeTimeline.tsx)*
+*State updated: 2026-02-23 -- Phase 51 Plan 01 complete (2 tasks, 2 commits, 8 files: useReadTracking.ts, address.ts, date.ts, router.py, api.ts, useNotifications.ts, meldingen.tsx, ChangeTimeline.tsx)*
