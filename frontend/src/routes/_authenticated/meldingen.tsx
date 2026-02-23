@@ -1,8 +1,12 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Bell } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useAllChanges, useMarkAllRead } from '@/hooks/useNotifications'
+import {
+  useInfiniteAllChanges,
+  useMarkAllRead,
+  useUnreadCounts,
+} from '@/hooks/useNotifications'
 import { useReadTracking } from '@/hooks/useReadTracking'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
@@ -16,36 +20,61 @@ export const Route = createFileRoute('/_authenticated/meldingen')({
 
 function MeldingenPage() {
   const navigate = useNavigate()
-  const { data, isLoading } = useAllChanges(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedGemeente, setSelectedGemeente] = useState<string | null>(null)
 
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteAllChanges(true, selectedGemeente ?? undefined)
+
+  const { data: unreadData } = useUnreadCounts()
+  const totalUnread = unreadData?.total_unread ?? 0
+
   const markAllRead = useMarkAllRead()
 
+  // Flatten pages into single arrays
+  const allChanges = useMemo(
+    () => data?.pages.flatMap((p) => p.changes) ?? [],
+    [data?.pages]
+  )
+
+  const allReadIds = useMemo(
+    () => data?.pages.flatMap((p) => p.read_change_ids ?? []) ?? [],
+    [data?.pages]
+  )
+
   const { readIds, handleToggle, handleGenerateReport, generatingId } =
-    useReadTracking({ readChangeIds: data?.read_change_ids })
+    useReadTracking({ readChangeIds: allReadIds })
 
-  const changes = useMemo(() => data?.changes ?? [], [data?.changes])
-
-  // Derive unique gemeente names for the dropdown
+  // Derive gemeente names from loaded pages (progressively more as pages load)
   const gemeenteNames = useMemo(
-    () => [...new Set(changes.map((c) => c.gemeente_naam))].sort(),
-    [changes]
+    () => [...new Set(allChanges.map((c) => c.gemeente_naam))].sort(),
+    [allChanges]
   )
 
-  // Filter changes client-side by selected gemeente
-  const filteredChanges = useMemo(
-    () =>
-      selectedGemeente
-        ? changes.filter((c) => c.gemeente_naam === selectedGemeente)
-        : changes,
-    [changes, selectedGemeente]
-  )
+  // Intersection observer sentinel for infinite scroll
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const totalUnread = filteredChanges.filter((c) => !readIds.has(c.id)).length
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' } // Trigger 200px before reaching the bottom
+    )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  // Group filtered changes by publication date (YYYY-MM-DD from change_date)
-  const groupedChanges = filteredChanges.reduce<Record<string, ChangeRecord[]>>(
+  // Group changes by publication date (YYYY-MM-DD from change_date)
+  const groupedChanges = allChanges.reduce<Record<string, ChangeRecord[]>>(
     (acc, change) => {
       const dateKey = change.change_date.split('T')[0]
       if (!dateKey) return acc
@@ -116,7 +145,7 @@ function MeldingenPage() {
       )}
 
       {/* Empty */}
-      {!isLoading && changes.length === 0 && (
+      {!isLoading && allChanges.length === 0 && (
         <EmptyState
           icon={<Bell size={32} />}
           title="Geen meldingen"
@@ -129,7 +158,7 @@ function MeldingenPage() {
       )}
 
       {/* Feed grouped by date */}
-      {!isLoading && changes.length > 0 && (
+      {!isLoading && allChanges.length > 0 && (
         <div className="space-y-6">
           {sortedDates.map((dateKey) => {
             const dateChanges = groupedChanges[dateKey]!
@@ -160,6 +189,23 @@ function MeldingenPage() {
               </div>
             )
           })}
+
+          {/* Infinite scroll sentinel */}
+          {hasNextPage && (
+            <div
+              ref={sentinelRef}
+              className="flex items-center justify-center py-4"
+            >
+              {isFetchingNextPage ? (
+                <div className="flex items-center gap-2 text-sm text-grey-400">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  Meer laden...
+                </div>
+              ) : (
+                <span className="text-xs text-grey-600">Scroll voor meer</span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </ResultsShell>
@@ -190,6 +236,10 @@ function MeldingItem({
   const pc = change.matched_parcels?.length ?? 0
   const rc = change.matched_reports?.length ?? 0
   const hasMatches = pc > 0 || rc > 0
+
+  // Determine action state for collapsed badge
+  const hn = change.address ? extractHuisnummer(change.address) : null
+  const canNavigateByAddress = change.postcode && hn
 
   return (
     <div className="rounded-lg border border-grey-800 bg-grey-900 overflow-hidden">
@@ -230,12 +280,38 @@ function MeldingItem({
             )}
           </div>
 
-          {/* Category label badge */}
-          {change.category_label && (
-            <span className="mt-1 inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-300">
-              {change.category_label}
-            </span>
-          )}
+          {/* Category label badge + action state badge */}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {change.category_label && (
+              <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-300">
+                {change.category_label}
+              </span>
+            )}
+            {/* Action state indicator */}
+            {change.matched_parcel_id ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Perceel gekoppeld
+              </span>
+            ) : canNavigateByAddress ? (
+              <span className="inline-flex items-center rounded-full bg-amber-accent/10 px-2 py-0.5 text-[11px] font-medium text-amber-accent">
+                Alleen adres
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-500">
+                Geen perceel gevonden
+              </span>
+            )}
+          </div>
 
           {/* Timestamp + match pills */}
           <div className="mt-1.5 flex items-center gap-2">
@@ -277,8 +353,8 @@ function MeldingItem({
       {isExpanded && (() => {
         const hasParcels = (change.matched_parcels?.length ?? 0) > 0
         const hasReports = (change.matched_reports?.length ?? 0) > 0
-        const hn = change.address ? extractHuisnummer(change.address) : null
-        const canNavigateByAddress = change.postcode && hn
+        const expandedHn = change.address ? extractHuisnummer(change.address) : null
+        const expandedCanNavigate = change.postcode && expandedHn
 
         return (
           <div className="border-t border-grey-800 bg-grey-900/50 px-4 py-3">
@@ -365,14 +441,14 @@ function MeldingItem({
                     <MapPinIcon />
                     Bekijk op kaart
                   </button>
-                ) : canNavigateByAddress ? (
+                ) : expandedCanNavigate ? (
                   <button
                     onClick={() =>
                       onNavigate({
                         to: '/map',
                         search: {
                           postcode: formatPostcode(change.postcode!),
-                          huisnummer: hn!,
+                          huisnummer: expandedHn!,
                           _t: Date.now(),
                         },
                       })
