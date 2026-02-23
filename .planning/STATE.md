@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 47 of 51 (Address Intelligence)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-02-23 -- v6.0 roadmap created (Phases 47-51, 18 requirements)
+Plan: 01 complete
+Status: In progress
+Last activity: 2026-02-23 -- 47-01 address extractor TDD complete
 
-Progress: [          ] 0%
+Progress: [##        ] 10%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Address Intelligence Phase 47 Plan 01 (Complete: 2026-02-23)**
+- Phase 47 Plan 01: 5 min, 3 commits, 3 files — address_extractor.py TDD (34 tests)
 
 **v5.1 Wijk Detail View (Complete: 2026-02-22)**
 - Phase 46 Plan 01: WijkDetailView with scan summary, ChangeTimeline, reports
@@ -70,6 +73,10 @@ Progress: [          ] 0%
 
 ### Decisions Made
 
+- Multi-strategy address extraction (5 strategies) instead of single monolithic regex — each handles a subset of SRU formats
+- extract_address_from_title() returns structured dict (not raw string) — Phase 48 gets clean field access without re-parsing
+- address_components stored in metadata_json, ChangeRecord.address still gets full_address string — no DB migration needed
+- _strip_permit_prefix() strips leading keywords before street extraction — solves Formats E, F, I false positives
 - `--color-on-accent: oklch(0.12 0.005 270)` -- fixed dark color for text on amber, does NOT invert in light mode
 - FOUC script placed as very first child of `<head>` before icon/font/stylesheet links
 - GemeenteCard is stateless: receives pre-computed svgData and totalUnread as props
@@ -104,11 +111,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** v6.0 roadmap creation -- 5 phases (47-51), 18 requirements mapped, files written
+**Stopped At:** Completed 47-01-PLAN.md -- address_extractor.py TDD, 34 tests, change_detector refactored
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 47`
+**Next Action:** `/gsd:execute-phase 47` (plan 02 next)
 
 ---
 
-*State updated: 2026-02-23 -- v6.0 Meldingen Intelligence roadmap created*
+*State updated: 2026-02-23 -- 47-01 address_extractor.py TDD complete (34 tests, 3 commits)*
