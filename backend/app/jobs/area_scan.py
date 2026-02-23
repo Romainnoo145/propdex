@@ -21,6 +21,7 @@ from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
+from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
@@ -286,6 +287,26 @@ async def area_scan_job(
             session.add(scan)
             await session.flush()
             await session.commit()
+
+            # ── Post-scan: retro-match unmatched bekendmakingen ──
+            try:
+                retro_matched = await retro_match_changes_for_gemeente(
+                    gemeente_code=scan.gemeente_code,
+                    organization_id=org_id,
+                    session=session,
+                    client=http_client,
+                )
+                if retro_matched > 0:
+                    await session.commit()
+                    logger.info(
+                        f"Scan {scan_id}: retro-matched {retro_matched} "
+                        f"bekendmakingen to parcels"
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Scan {scan_id}: retro-match failed (non-fatal): {e}"
+                )
+                # Don't fail the scan — retro-match is best-effort
 
             logger.info(
                 f"Scan {scan_id}: completed ({scan.parcels_processed} processed, "
