@@ -22,30 +22,32 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v5.1 Data Presentation Overhaul (2026-02-22)
-**Current milestone:** v6.0 Meldingen Intelligence
-**Codebase:** ~23,621 lines Python + ~16,234 lines TypeScript/React (~39,855 LOC total)
+**Shipped:** v6.0 Meldingen Intelligence (2026-02-23)
+**Codebase:** ~26,294 lines Python + ~19,926 lines TypeScript/React (~46,220 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
-**Tests:** 275 backend (104 unit + 171 integration), 74% coverage, 80%+ core modules
+**Tests:** 275 backend (104 unit + 171 integration) + 46 new tests in v6.0, 74% coverage, 80%+ core modules
 
 **What's working:**
+- Meldingen intelligence: bekendmakingen geocoded to parcels via PDOK, matched parcel IDs persisted, post-scan retro-matching
+- Melding-to-map flow: click matched melding → fly to amber map marker → generate report from verified parcel data
+- Server-backed per-change read tracking with "Markeer alles als gelezen" action
+- Meldingen feed: gemeente filter dropdown, action state badges, infinite scroll pagination (25 records/page)
+- Address intelligence: multi-strategy Dutch address extraction, category classification (e.g. "Omgevingsvergunning aangevraagd")
+- Report from address: standalone report creation without requiring area scan first
 - Scan history: browsable list of all previous scans with gemeente/wijk metadata, re-open on map or results table
 - Map visualization: scanned wijken highlighted with amber overlay, individual parcels colored by opportunity score via MVT tiles, toggleable score layer
 - Report from parcel: one-click "Genereer rapport" for any scan result parcel, uses existing property aggregator pipeline
-- ARQ worker idempotent: scan re-runs silently skip duplicates via ON CONFLICT DO NOTHING
+- Data presentation: gemeente SVG cards, wijk drill-down, 3-level breadcrumb navigation, ChangeTimeline per wijk
 - Industrial Amber design system with oklch tokens, Inter/JetBrains Mono fonts, 5 UI primitives, 11 Storybook stories
 - Persistent MapLibre map (never unmounts), SideRailNav icon sidebar, InspectorPanel slide-over
 - Silver desaturated map with PDOK aerial/topographic tiles, kadaster parcel boundaries, bestemmingsplan zones
 - CBS gemeente boundaries with click-to-zoom, wijk boundaries with click-to-scan
 - Separate /resultaten route with URL-persisted filters, multi-column sort, checkbox selection, bulk CSV export
-- Category-grouped advanced filter panel (Oppervlak/Bestemming/Score), table-to-map hover sync
-- ScanProgressOverlay with 3-step stepper, CTA button, automatic navigation to results
-- Skeleton/EmptyState/ErrorState feedback primitives adopted across all data views
 - Mobile responsive: BottomTabNav, InspectorPanel bottom sheet, ParcelCard layout, 44px touch targets, read-only mode
 - Settings page: account profile, password, notifications, appearance preferences
-- Bundle-split build: 4 vendor chunks + 15 route chunks (was 1,813KB monolith)
-- All previous v1.0-v4.0 functionality preserved (scan pipeline, change monitoring, reports, PDF export, auth)
+- Bundle-split build: 4 vendor chunks + 15 route chunks
+- All previous v1.0-v5.1 functionality preserved
 
 ## Business Model
 
@@ -133,16 +135,17 @@ This is the ONE thing that must work. Everything else is secondary.
 - Auth integration tests match cookie-based CookieTokenResponse flow — v5.0
 - ARQ worker handles re-runs idempotently via ON CONFLICT DO NOTHING — v5.0
 - Tech debt resolved: unused packages, legacy Tailwind classes, dead imports — v5.0
+- Gemeente SVG cards, wijk drill-down, 3-level breadcrumb navigation — v5.1
+- Bekendmakingen → parcel matching via PDOK geocoding + PostGIS spatial lookup — v6.0
+- Melding → map → rapport flow (click matched parcel → fly to map → generate report) — v6.0
+- Address intelligence: multi-strategy extraction + category classification — v6.0
+- Server-side per-change read/unread tracking (ChangeReadState model replacing localStorage) — v6.0
+- Meldingen UX: gemeente filter, action state badges, infinite scroll pagination — v6.0
+- Report from address: standalone report creation without requiring area scan — v6.0
 
 ### Active
 
-**v6.0 Meldingen Intelligence:**
-- [ ] Improved bekendmakingen → parcel matching (geocode addresses, spatial postcode lookup)
-- [ ] Melding → map → rapport flow (click parcel → fly to map → generate from verified data)
-- [ ] Report generation safety (only from verified parcel IDs, auto-create wijk projects)
-- [ ] Address intelligence (better SRU title extraction, validation, category classification)
-- [ ] Server-side per-change read/unread tracking (replace localStorage hack)
-- [ ] Meldingen UX (filters, search, actionability — daily go-to tab)
+(None — run `/gsd:new-milestone` to define next requirements)
 
 ### Future
 
@@ -209,6 +212,13 @@ This is the ONE thing that must work. Everything else is secondary.
 | POST /from-parcel before /{report_id} | Static sub-paths must precede parameterized paths in FastAPI | ✓ Good — prevents route matching bugs |
 | pg_insert().on_conflict_do_nothing() for ScanResult | index_elements form more robust than constraint name | ✓ Good — idempotent worker re-runs |
 | ProjectEditModal keeps gray-* (light theme) | White card on dark backdrop is intentional UX — JSDoc documents decision | ✓ Good — readable modal pattern |
+| Multi-strategy address extraction (5 regex) | Each strategy handles a subset of SRU title formats; fallback chain | ✓ Good — handles all common Dutch formats |
+| PDOK geocoding + PostGIS ST_Contains | Geocode address → spatial lookup against ParcelCache polygons | ✓ Good — reliable parcel matching |
+| Post-scan retro-matching for unmatched changes | Re-check after new ParcelCache entries arrive from area scan | ✓ Good — progressive matching improvement |
+| ChangeReadState model (absence = unread) | Insert/delete rows instead of timestamps; LEFT JOIN for unread count | ✓ Good — clean, scalable pattern |
+| matched_parcel_id on ChangeRecord (not computed) | Persisted FK — survives restarts, enables direct navigation | ✓ Good — single source of truth |
+| useInfiniteQuery + IntersectionObserver | 25-record pages, sentinel-based scroll loading, has_more cursor | ✓ Good — scales to large feeds |
+| Report from address endpoint (/from-address) | Bypass scan requirement for standalone report creation | ✓ Good — flexible workflow |
 
 ## Context
 
@@ -224,4 +234,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
 
 ---
-*Last updated: 2026-02-23 after v6.0 Meldingen Intelligence milestone started*
+*Last updated: 2026-02-23 after v6.0 Meldingen Intelligence milestone*

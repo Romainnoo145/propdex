@@ -171,10 +171,49 @@
 
 ## v5.0 Scan Intelligence (Shipped: 2026-02-20)
 
-**Phases completed:** 41 phases, 141 plans, 32 tasks
+**Delivered:** Scan results persist and are browsable, map shows scanned wijken with amber overlays and score-colored parcels, one-click report generation from scan results, and production hardening (auth test cookie fix, ARQ idempotency, tech debt cleanup).
+
+**Phases completed:** 37-41 (11 plans total)
 
 **Key accomplishments:**
-- (none recorded)
+- Paginated scan history API and browsable scan list in Projecten view
+- Map visualization: scanned wijk amber overlays, individual parcel results with opportunity score coloring via MVT tiles
+- POST /from-parcel endpoint for one-click report generation from scan result parcels
+- Auth integration tests updated for cookie-based CookieTokenResponse flow
+- ARQ worker idempotency via pg_insert().on_conflict_do_nothing() for ScanResult
+
+**Stats:**
+- 65 files changed (+9,264/-2,326)
+- 5 phases, 11 plans, 51 commits
+- 2 days (2026-02-19 → 2026-02-20)
+
+**What's next:** TBD — run `/gsd:new-milestone`
+
+---
+
+
+## v6.0 Meldingen Intelligence (Shipped: 2026-02-23)
+
+**Delivered:** Actionable meldingen intelligence -- bekendmakingen matched to parcels via PDOK geocoding and PostGIS spatial lookup, server-backed per-change read tracking, melding-to-map-to-report flow in three clicks, and a daily intelligence feed with gemeente filtering, action state badges, and infinite scroll.
+
+**Phases completed:** 47-51 (10 plans total)
+
+**Key accomplishments:**
+- Multi-strategy Dutch address extraction from SRU bekendmaking titles with category classification (27 tests, 5 regex strategies)
+- PDOK Locatieserver geocoding + PostGIS ST_Contains spatial parcel matching with post-scan retro-matching (19 new tests)
+- Server-side per-change read tracking (ChangeReadState model, 3 API endpoints) replacing localStorage hack
+- Melding-to-map flow: click matched parcel → fly to amber map marker → generate report from verified parcel data
+- Meldingen UX: gemeente filter dropdown, action state badges (Perceel gekoppeld / Alleen adres / Geen perceel gevonden), shared useReadTracking hook, infinite scroll with 25-record pages
+
+**Stats:**
+- 56 files created/modified
+- +8,818 / -292 lines
+- 5 phases, 10 plans, 39 commits
+- 1 day (2026-02-23, 09:00 → 11:48)
+
+**Git range:** `a6c6a97` (docs(47): create phase plan) → `e7a19a3` (docs(phase-51): complete phase execution)
+
+**What's next:** TBD — run `/gsd:new-milestone`
 
 ---
 
