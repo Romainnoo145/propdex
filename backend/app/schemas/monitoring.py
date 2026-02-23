@@ -46,6 +46,14 @@ class ChangeRecordListResponse(BaseModel):
 
     changes: list[ChangeRecordResponse]
     total: int
+    read_change_ids: list[str] | None = None
+
+
+class MarkAllReadResponse(BaseModel):
+    """Schema for mark-all-read response."""
+
+    status: str
+    marked_count: int
 
 
 class UnreadCountResponse(BaseModel):

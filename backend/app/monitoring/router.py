@@ -5,11 +5,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
+from app.models.change_read_state import ChangeReadState
 from app.models.change_record import ChangeRecord
 from app.models.project import Project
 from app.models.user import User
@@ -17,6 +19,7 @@ from app.models.user_notification_state import UserNotificationState
 from app.schemas.monitoring import (
     ChangeRecordListResponse,
     ChangeRecordResponse,
+    MarkAllReadResponse,
     MatchedParcel,
     MatchedReport,
     ProjectUnreadCount,
@@ -179,7 +182,23 @@ async def get_changes(
                 )
             )
 
-        return ChangeRecordListResponse(changes=change_responses, total=total)
+        # Collect read_change_ids for the current user from this page
+        read_change_ids: list[str] | None = None
+        if change_responses:
+            response_change_uuids = [uuid.UUID(c.id) for c in change_responses]
+            read_query = select(ChangeReadState.change_id).where(
+                ChangeReadState.user_id == current_user.id,
+                ChangeReadState.change_id.in_(response_change_uuids),
+            )
+            read_result = await db.execute(read_query)
+            read_ids = read_result.scalars().all()
+            read_change_ids = [str(cid) for cid in read_ids]
+
+        return ChangeRecordListResponse(
+            changes=change_responses,
+            total=total,
+            read_change_ids=read_change_ids,
+        )
 
     except HTTPException:
         raise
@@ -251,51 +270,29 @@ async def get_unread(
     Returns total unread count and per-project breakdown.
     """
     try:
-        notification_subquery = (
-            select(
-                UserNotificationState.project_id,
-                UserNotificationState.last_viewed_at,
-            )
-            .where(UserNotificationState.user_id == current_user.id)
+        # Per-change read state: a change is unread if NO matching row exists
+        # in change_read_states for (user_id, change_id).
+        # LEFT JOIN against change_read_states; crs.id IS NULL means unread.
+        read_subquery = (
+            select(ChangeReadState.change_id)
+            .where(ChangeReadState.user_id == current_user.id)
             .subquery()
-        )
-
-        from sqlalchemy import case
-
-        unread_count_expr = func.count(
-            case(
-                (
-                    notification_subquery.c.last_viewed_at.is_(None),
-                    ChangeRecord.id,
-                ),
-                (
-                    ChangeRecord.detected_at > notification_subquery.c.last_viewed_at,
-                    ChangeRecord.id,
-                ),
-                else_=None,
-            )
         )
 
         query = (
             select(
-                Project.id,
-                unread_count_expr.label("unread_count"),
-            )
-            .select_from(Project)
-            .outerjoin(
-                ChangeRecord,
-                (ChangeRecord.project_id == Project.id)
-                & (ChangeRecord.organization_id == organization_id),
+                ChangeRecord.project_id,
+                func.count(ChangeRecord.id).label("unread_count"),
             )
             .outerjoin(
-                notification_subquery,
-                notification_subquery.c.project_id == Project.id,
+                read_subquery,
+                read_subquery.c.change_id == ChangeRecord.id,
             )
             .where(
-                Project.organization_id == organization_id,
-                Project.is_monitored == True,  # noqa: E712
+                ChangeRecord.organization_id == organization_id,
+                read_subquery.c.change_id.is_(None),
             )
-            .group_by(Project.id)
+            .group_by(ChangeRecord.project_id)
         )
 
         result = await db.execute(query)
@@ -326,6 +323,165 @@ async def get_unread(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get unread counts",
+        ) from e
+
+
+@router.post("/changes/read-all", response_model=MarkAllReadResponse)
+@limiter.limit("30/minute")
+async def mark_all_read(
+    request: Request,
+    project_id: uuid.UUID | None = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> MarkAllReadResponse:
+    """
+    Mark all changes as read for the current user.
+
+    If project_id is provided: marks all changes for that project as read.
+    If project_id is omitted: marks all changes across the organization as read.
+
+    Uses ON CONFLICT DO NOTHING for idempotency (safe to call multiple times).
+    """
+    try:
+        changes_query = select(ChangeRecord.id).where(
+            ChangeRecord.organization_id == organization_id,
+        )
+        if project_id is not None:
+            # Verify project belongs to organization
+            project_check = select(Project.id).where(
+                Project.id == project_id,
+                Project.organization_id == organization_id,
+            )
+            project_result = await db.execute(project_check)
+            if project_result.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                )
+            changes_query = changes_query.where(
+                ChangeRecord.project_id == project_id
+            )
+
+        changes_result = await db.execute(changes_query)
+        change_ids = changes_result.scalars().all()
+
+        if not change_ids:
+            return MarkAllReadResponse(status="ok", marked_count=0)
+
+        # Bulk insert with ON CONFLICT DO NOTHING for idempotency
+        rows = [
+            {
+                "organization_id": organization_id,
+                "user_id": current_user.id,
+                "change_id": cid,
+            }
+            for cid in change_ids
+        ]
+        stmt = pg_insert(ChangeReadState).values(rows).on_conflict_do_nothing(
+            index_elements=None,
+            constraint="uq_change_read_states_user_change",
+        )
+        result = await db.execute(stmt)
+        await db.flush()
+        await db.commit()
+
+        marked_count = result.rowcount if result.rowcount >= 0 else len(rows)
+
+        return MarkAllReadResponse(status="ok", marked_count=marked_count)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to mark all changes as read",
+        ) from e
+
+
+@router.post("/changes/{change_id}/read")
+@limiter.limit("60/minute")
+async def mark_change_read(
+    request: Request,
+    change_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """
+    Mark a single change as read for the current user.
+
+    Idempotent: safe to call multiple times (ON CONFLICT DO NOTHING).
+    """
+    try:
+        change_query = select(ChangeRecord.id).where(
+            ChangeRecord.id == change_id,
+            ChangeRecord.organization_id == organization_id,
+        )
+        change_result = await db.execute(change_query)
+        if change_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Change not found",
+            )
+
+        stmt = (
+            pg_insert(ChangeReadState)
+            .values(
+                organization_id=organization_id,
+                user_id=current_user.id,
+                change_id=change_id,
+            )
+            .on_conflict_do_nothing(
+                constraint="uq_change_read_states_user_change",
+            )
+        )
+        await db.execute(stmt)
+        await db.flush()
+        await db.commit()
+
+        return {"status": "ok"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to mark change as read",
+        ) from e
+
+
+@router.delete("/changes/{change_id}/read")
+@limiter.limit("60/minute")
+async def mark_change_unread(
+    request: Request,
+    change_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """
+    Mark a single change as unread for the current user.
+
+    Removes the ChangeReadState row if it exists. Idempotent (no error if not found).
+    """
+    try:
+        from sqlalchemy import delete
+
+        stmt = delete(ChangeReadState).where(
+            ChangeReadState.user_id == current_user.id,
+            ChangeReadState.change_id == change_id,
+        )
+        await db.execute(stmt)
+        await db.flush()
+        await db.commit()
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to mark change as unread",
         ) from e
 
 
