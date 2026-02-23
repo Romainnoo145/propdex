@@ -21,7 +21,7 @@
 **Milestone Goal:** Transform the meldingen feed from a passive notification list into an actionable intelligence tool -- reliable parcel matching via geocoding, direct melding-to-map-to-report flow, server-side per-change read tracking, and a meldingen page worth visiting every day.
 
 - [x] **Phase 47: Address Intelligence** - Extract clean, validated Dutch addresses from SRU bekendmaking titles with full test coverage (shipped 2026-02-23)
-- [ ] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes
+- [x] **Phase 48: Parcel Matching** - Geocode extracted addresses via PDOK Locatieserver, store matched parcel IDs, and retro-match existing changes (shipped 2026-02-23)
 - [ ] **Phase 49: Read Tracking** - Replace localStorage read state with server-side per-change read tracking and unread count badges
 - [ ] **Phase 50: Melding-to-Map Flow** - User clicks a matched melding parcel, flies to map, sees an amber marker, and can generate a report
 - [ ] **Phase 51: Meldingen UX** - Gemeente filter, clear action states per melding, shared read-tracking hook, and pagination
@@ -53,9 +53,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 48-01-PLAN.md -- TDD: PDOK Locatieserver geocode_address() and find_parcel_at_point() spatial lookup
-- [ ] 48-02-PLAN.md -- Alembic migration (matched_parcel_id column), model/schema update, wire geocoding into change_monitor.py
-- [ ] 48-03-PLAN.md -- Post-scan retro-matching: retro_match_changes_for_gemeente() + area_scan_job Phase 6 integration
+- [x] 48-01-PLAN.md -- TDD: PDOK Locatieserver geocode_address() and find_parcel_at_point() spatial lookup
+- [x] 48-02-PLAN.md -- Alembic migration (matched_parcel_id column), model/schema update, wire geocoding into change_monitor.py
+- [x] 48-03-PLAN.md -- Post-scan retro-matching: retro_match_changes_for_gemeente() + area_scan_job Phase 6 integration
 
 ### Phase 49: Read Tracking
 **Goal**: Users can mark individual changes as read or unread, and that state persists in the database -- unread badges everywhere reflect actual per-change state, not a project-level last-seen timestamp
@@ -230,11 +230,11 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 47. Address Intelligence | v6.0 | 2/2 | ✓ Complete | 2026-02-23 |
-| 48. Parcel Matching | v6.0 | 0/TBD | Not started | - |
+| 48. Parcel Matching | v6.0 | 3/3 | ✓ Complete | 2026-02-23 |
 | 49. Read Tracking | v6.0 | 0/TBD | Not started | - |
 | 50. Melding-to-Map Flow | v6.0 | 0/TBD | Not started | - |
 | 51. Meldingen UX | v6.0 | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-02-23 (Phase 47 Address Intelligence shipped -- 2 plans, 61 tests, 7 commits)*
+*Last updated: 2026-02-23 (Phase 48 Parcel Matching shipped -- 3 plans, 26 tests, 9 commits)*
