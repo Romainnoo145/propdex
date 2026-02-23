@@ -5,22 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v6.0 Meldingen Intelligence -- Phase 48: Parcel Matching
+**Current focus:** v6.0 Meldingen Intelligence -- Phase 48 COMPLETE, next: Phase 49
 
 ---
 
 ## Current Position
 
-Phase: 48 of 51 (Parcel Matching)
-Plan: 2 of 3 complete
-Status: In progress
-Last activity: 2026-02-23 -- Phase 48 Plan 02 matched_parcel_id migration + change_monitor wiring complete (2 tasks, 5 files)
+Phase: 48 of 51 (Parcel Matching — COMPLETE)
+Plan: 3 of 3 complete
+Status: Phase 48 complete, ready for Phase 49
+Last activity: 2026-02-23 -- Phase 48 Plan 03 retro-match post-scan integration complete (2 tasks, 3 files)
 
-Progress: [###       ] 30%
+Progress: [####      ] 35%
 
 ---
 
 ## Performance Metrics
+
+**v6.0 Parcel Matching Phase 48 Plan 03 (Complete: 2026-02-23)**
+- Phase 48 Plan 03: 3 min, 2 tasks, 3 files — retro_match_changes_for_gemeente + area_scan_job wiring (7 new tests)
 
 **v6.0 Parcel Matching Phase 48 Plan 02 (Complete: 2026-02-23)**
 - Phase 48 Plan 02: 8 min, 2 tasks, 5 files — matched_parcel_id migration + change_monitor geocoding wiring
@@ -103,15 +106,19 @@ Progress: [###       ] 30%
 - WijkCard mirrors GemeenteCard pattern but omits gemeente_code subtitle
 - URL state via TanStack Router validateSearch: gemeente_id/wijk_id in URL search params
 - DrilldownBreadcrumb reads from useSearch -- returns null at top level, 2-level for gemeente, 3-level for wijk
+- Sequential processing (not asyncio.gather) for retro-match loop — shared AsyncSession write conflicts make concurrent gather unsafe
+- asyncio.Semaphore(5) kept even in sequential retro-match loop — throttles HTTP I/O, allows event loop interleaving with DB writes
+- LIMIT 200 safety cap on retro-match candidates — prevents runaway queries on first scan of active gemeente
+- Retro-match is non-fatal to scan — wrapped in try/except, scan already marked completed before retro-match runs
+- Caller (area_scan_job) handles commit after retro-match — function only flushes, separating responsibility
 
 ### v6.0 Architecture Notes
 
-- **MATCH depends on ADDR**: Geocoding needs clean addresses -- Phase 48 cannot start without Phase 47
-- **READ is independent**: ChangeReadState table and server-side read API can be built in parallel with matching (Phases 48+49 can run concurrently)
-- **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord
-- **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last because they surface the completed features
+- **Phase 48 COMPLETE**: matched_parcel_id populated via 3 paths: (1) initial detection in change_monitor, (2) retro-match after area scan, (3) future on-demand
+- **READ is independent**: ChangeReadState table and server-side read API can be built in parallel
+- **FLOW depends on MATCH**: Fly-to-parcel and map marker need matched_parcel_id on ChangeRecord (Phase 48 now provides this)
+- **UX depends on READ+FLOW**: Filter, action states, shared hook, pagination are last
 - **New model needed**: `ChangeReadState` (change_id FK, user_id FK, read_at timestamp) -- replaces localStorage hack
-- **matched_parcel_id migration needed**: New nullable column on ChangeRecord model
 
 ### Ongoing TODOs
 
@@ -131,11 +138,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-23
-**Stopped At:** Phase 48 Plan 02 complete — matched_parcel_id migration + geocoding wired into change_monitor
+**Stopped At:** Phase 48 Plan 03 complete — retro_match_changes_for_gemeente + area_scan_job wiring
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 48` (Plan 03 remains)
+**Next Action:** `/gsd:execute-phase 49` (ChangeReadState — read tracking)
 
 ---
 
-*State updated: 2026-02-23 -- Phase 48 Plan 02 complete (matched_parcel_id migration + change_monitor geocoding wiring)*
+*State updated: 2026-02-23 -- Phase 48 complete (all 3 plans: geocode_address, matched_parcel_id migration, retro-match post-scan)*
