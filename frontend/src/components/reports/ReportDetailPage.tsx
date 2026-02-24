@@ -1085,6 +1085,28 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
     return unlinkedHints.some((hint) => msg.includes(hint)) ? 'unlinked' : 'error'
   }
 
+  const sanitizeSourceNote = (
+    note?: string | null,
+    source?: string
+  ): string | undefined => {
+    if (!note) return undefined
+    const raw = note.trim()
+    const lower = raw.toLowerCase()
+    const sourceKey = (source ?? '').toLowerCase()
+
+    if (sourceKey.includes('monumenten: rce')) {
+      if (lower.includes('403')) return 'RCE API toegang geweigerd (403)'
+      if (lower.includes('401')) return 'RCE API authenticatie mislukt (401)'
+      if (lower.includes('rce api error')) return 'RCE API fout'
+    }
+
+    // Strip raw URLs from notes to keep rows readable.
+    let cleaned = raw.replace(/https?:\/\/\S+/gi, '').replace(/\s+/g, ' ').trim()
+    if (!cleaned) cleaned = raw
+    if (cleaned.length > 180) cleaned = `${cleaned.slice(0, 177)}...`
+    return cleaned
+  }
+
   const addRow = (row: SourceRow) => {
     const key = row.source.toLowerCase()
     if (!byKey.has(key)) {
@@ -1129,7 +1151,10 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
       source: `Monumenten: ${src.source}`,
       age_seconds: src.age_seconds ?? null,
       status: src.error ? classifyIssue(src.error) : 'ok',
-      note: src.error || (src.is_monument ? 'Beschermd' : 'Niet beschermd'),
+      note: sanitizeSourceNote(
+        src.error || (src.is_monument ? 'Beschermd' : 'Niet beschermd'),
+        `Monumenten: ${src.source}`
+      ),
     })
   }
 
@@ -1149,8 +1174,12 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
     addRow({
       source: 'EP-Online V5',
       age_seconds: null,
-      status: energyError ? classifyIssue(energyError) : 'unlinked',
-      note: energyError || 'Geen energielabel-data beschikbaar',
+      // "Geen data voor dit adres" is not a broken integration.
+      status: energyError ? classifyIssue(energyError) : 'ok',
+      note: sanitizeSourceNote(
+        energyError || 'Geen energielabel-data beschikbaar voor dit adres',
+        'EP-Online V5'
+      ),
     })
   }
 
@@ -1168,8 +1197,12 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
     addRow({
       source: 'WOZ Waardeloket',
       age_seconds: null,
-      status: wozError ? classifyIssue(wozError) : 'unlinked',
-      note: wozError || 'Geen WOZ-data beschikbaar',
+      // "Geen data voor dit adres" is not a broken integration.
+      status: wozError ? classifyIssue(wozError) : 'ok',
+      note: sanitizeSourceNote(
+        wozError || 'Geen WOZ-data beschikbaar voor dit adres',
+        'WOZ Waardeloket'
+      ),
     })
   }
 
@@ -1214,13 +1247,17 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
       )}
       <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
         {sources.map((src, idx) => (
-          <div key={idx} className="flex items-center justify-between px-3 py-2.5">
-            <div>
+          <div key={idx} className="flex items-start justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-grey-300">{src.source}</p>
               <p className="text-xs text-grey-600">{formatAge(src.age_seconds)}</p>
-              {src.note && <p className="text-xs text-grey-600">{src.note}</p>}
+              {src.note && (
+                <p className="text-xs text-grey-600 break-words">
+                  {sanitizeSourceNote(src.note, src.source)}
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="shrink-0">
               <span
                 className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
                   src.status === 'error'
