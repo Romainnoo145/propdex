@@ -97,3 +97,6 @@ ep_online_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
 # RCE Linked Data detail — public API, polite limits
 rce_detail_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
+
+# WOZ Waardeloket (Kadaster) — public endpoint, conservative polite limits
+woz_waardeloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
