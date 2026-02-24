@@ -189,10 +189,15 @@ function MapPage() {
   const triggerScan = useTriggerScan()
   const scanStatus = useScanPolling(activeScanId)
   const cancelScan = useCancelScan()
+  // Only auto-toast/auto-navigate when the user started a fresh scan in this session.
+  const shouldAutoFollowScanRef = useRef(false)
 
   // Reset navigatedRef when activeScanId changes (new scan = fresh navigation guard)
   useEffect(() => {
     navigatedRef.current = false
+    if (!activeScanId) {
+      shouldAutoFollowScanRef.current = false
+    }
   }, [activeScanId])
 
   // Shared navigation handler for CTA button and completion useEffect
@@ -332,6 +337,8 @@ function MapPage() {
     if (!activeScanId) {
       setActiveScanId(urlScanId)
     }
+    // Returning from /resultaten should not trigger completion toast + redirect loop.
+    shouldAutoFollowScanRef.current = false
 
     const focusKey = `${urlScanId}:${urlParcelId ?? ''}:${navTs ?? 0}`
     if (handledScanFocusRef.current === focusKey) return
@@ -573,17 +580,21 @@ function MapPage() {
   // Handle scan completion and failure
   useEffect(() => {
     if (!scanStatus.data) return
+    if (!shouldAutoFollowScanRef.current) return
+
     if (scanStatus.data.status === 'completed') {
+      shouldAutoFollowScanRef.current = false
       toast.success(`Scan voltooid: ${scanStatus.data.results_count} percelen gevonden`)
       // Invalidate stale results cache so fresh data is fetched
       queryClient.invalidateQueries({ queryKey: ['scan-results', activeScanId] })
       // Navigate via shared handler (prevents double-navigation with CTA button)
       handleViewResults()
     } else if (scanStatus.data.status === 'failed') {
+      shouldAutoFollowScanRef.current = false
       toast.error('Scan mislukt')
       setActiveScanId(null) // Clear scan
     }
-  }, [scanStatus.data?.status])
+  }, [scanStatus.data, activeScanId, handleViewResults, queryClient])
 
   // Setup bestemmingsplan click handler
   useEffect(() => {
@@ -840,9 +851,11 @@ function MapPage() {
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
+            shouldAutoFollowScanRef.current = false
             navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
             toast.info(`Bestaande scan gevonden — resultaten laden`)
           } else {
+            shouldAutoFollowScanRef.current = true
             toast.success(`Scan gestart voor ${wijkNaam}`)
           }
         },
@@ -910,9 +923,11 @@ function MapPage() {
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
+            shouldAutoFollowScanRef.current = false
             navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
             toast.info(`Bestaande scan gevonden — resultaten laden`)
           } else {
+            shouldAutoFollowScanRef.current = true
             toast.success(`Scan gestart voor ${currentGemeente.naam}`)
           }
         },
