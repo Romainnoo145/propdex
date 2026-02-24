@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-23 — Milestone v7.0 started
+Phase: 52 — Schema & Config Foundation
+Plan: 02 complete
+Status: Active — executing v7.0 foundation plans
+Last activity: 2026-02-24 — Phase 52 Plan 02 complete (config + rate limiters)
 
 ---
 
@@ -70,6 +70,12 @@ Last activity: 2026-02-23 — Milestone v7.0 started
 - Kadaster BRK Bevragen API toegang regelen (betaald)
 - PLU WMS change detection live validation (MON-02)
 
+### Decisions (v7.0)
+
+- BRK intentionally absent from CACHE_TTL — Kadaster Tier 3 terms prohibit caching BRK data
+- EP_ONLINE_API_KEY uses empty string default (graceful degradation, same as BAG/DSO pattern)
+- Rate limits: ep_online(3/500), rce_detail(3/300) — conservative for public/key-gated APIs
+
 ### Blockers/Concerns
 
 None.
@@ -78,12 +84,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-23
-**Stopped At:** Defining v7.0 requirements
+**Last Session:** 2026-02-24
+**Stopped At:** Completed Phase 52 Plan 02 (config + rate limiters)
 **Resume File:** None
 
-**Next Action:** Define requirements and create roadmap
+**Next Action:** Continue with remaining Phase 52 plans or proceed to Phase 53 (API clients)
 
 ---
 
-*State updated: 2026-02-23 — v7.0 Deep Property Data milestone started*
+*State updated: 2026-02-24 — Phase 52 Plan 02 complete (config + rate limiters)*
