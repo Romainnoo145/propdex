@@ -207,6 +207,9 @@ function ResultatenPage() {
                   search: {
                     scan_id,
                     parcel_id: modalParcel.parcel_id,
+                    ...(modalParcel.address
+                      ? { fallback_address: modalParcel.address }
+                      : {}),
                     _t: Date.now(),
                   },
                 })

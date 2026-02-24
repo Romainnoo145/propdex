@@ -495,7 +495,15 @@ function MeldingItem({
                           onClick={() =>
                             onNavigate({
                               to: '/map',
-                              search: { parcel_id: m.parcel_id, _t: Date.now() },
+                              search: {
+                                parcel_id: m.parcel_id,
+                                ...(m.address
+                                  ? { fallback_address: m.address }
+                                  : change.address
+                                    ? { fallback_address: change.address }
+                                    : {}),
+                                _t: Date.now(),
+                              },
                             })
                           }
                           className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
@@ -553,7 +561,15 @@ function MeldingItem({
                     if (primaryParcelId) {
                       onNavigate({
                         to: '/map',
-                        search: { parcel_id: primaryParcelId, _t: Date.now() },
+                        search: {
+                          parcel_id: primaryParcelId,
+                          ...(matchedParcels[0]?.address
+                            ? { fallback_address: matchedParcels[0].address }
+                            : change.address
+                              ? { fallback_address: change.address }
+                              : {}),
+                          _t: Date.now(),
+                        },
                       })
                       return
                     }

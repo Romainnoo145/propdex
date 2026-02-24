@@ -68,6 +68,7 @@ import type { ScanResultItem } from '@/lib/types/scan'
 interface MapSearchParams {
   postcode?: string
   huisnummer?: number
+  fallback_address?: string
   reportId?: string
   panel?: 'results'     // KEEP for now — unused but harmless
   scan_id?: string      // Restore scan context when returning from /resultaten
@@ -84,6 +85,10 @@ export const Route = createFileRoute('/_authenticated/map')({
     huisnummer: typeof search.huisnummer === 'number' ? search.huisnummer
       : typeof search.huisnummer === 'string' ? parseInt(search.huisnummer, 10) || undefined
       : undefined,
+    fallback_address:
+      typeof search.fallback_address === 'string'
+        ? search.fallback_address
+        : undefined,
     reportId: typeof search.reportId === 'string' ? search.reportId : undefined,
     panel: search.panel === 'results' ? 'results' : undefined,
     scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
@@ -122,6 +127,7 @@ function MapPage() {
   const {
     postcode,
     huisnummer,
+    fallback_address: fallbackAddress,
     reportId,
     scan_id: urlScanId,
     parcel_id: urlParcelId,
@@ -352,7 +358,12 @@ function MapPage() {
       fetchParcelCentroid(urlParcelId, accessToken)
         .then(({ lng, lat, address }) => {
           setPropertyLngLat([lng, lat])
-          setFocusedParcel({ parcelId: urlParcelId, lng, lat, address })
+          setFocusedParcel({
+            parcelId: urlParcelId,
+            lng,
+            lat,
+            address: address ?? fallbackAddress ?? null,
+          })
           setAutoEnableParcelsKey(`${urlParcelId}:${urlScanId}:${navTs ?? 0}`)
         })
         .catch(() => {
@@ -366,7 +377,7 @@ function MapPage() {
 
     // Clear from URL to prevent re-trigger on hot reload.
     navigate({ to: '/map', search: {}, replace: true })
-  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs])
+  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs, fallbackAddress])
 
   // Handle direct parcel navigation (e.g. from meldingen) without scan context
   useEffect(() => {
@@ -379,7 +390,12 @@ function MapPage() {
     fetchParcelCentroid(urlParcelId, accessToken)
       .then(({ lng, lat, address }) => {
         setPropertyLngLat([lng, lat])
-        setFocusedParcel({ parcelId: urlParcelId, lng, lat, address })
+        setFocusedParcel({
+          parcelId: urlParcelId,
+          lng,
+          lat,
+          address: address ?? fallbackAddress ?? null,
+        })
         setAutoEnableParcelsKey(key)
       })
       .catch(() => {
@@ -388,7 +404,7 @@ function MapPage() {
       .finally(() => {
         navigate({ to: '/map', search: {}, replace: true })
       })
-  }, [urlParcelId, urlScanId, navTs, accessToken, navigate])
+  }, [urlParcelId, urlScanId, navTs, accessToken, navigate, fallbackAddress])
 
   // Render amber marker for parcel-focused navigation and attach popup CTA.
   useEffect(() => {
@@ -499,7 +515,7 @@ function MapPage() {
       cta.addEventListener('click', handleGenerate)
 
       popup = new maplibregl.Popup({
-        closeButton: true,
+        closeButton: false,
         closeOnClick: false,
         offset: 16,
         className: 'focused-parcel-popup',

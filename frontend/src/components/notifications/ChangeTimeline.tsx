@@ -219,6 +219,11 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                                         to: '/map',
                                         search: {
                                           parcel_id: m.parcel_id,
+                                          ...(m.address
+                                            ? { fallback_address: m.address }
+                                            : change.address
+                                              ? { fallback_address: change.address }
+                                              : {}),
                                           _t: Date.now(),
                                         },
                                       })
@@ -277,6 +282,11 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                                     to: '/map',
                                     search: {
                                       parcel_id: primaryParcelId,
+                                      ...(matchedParcels[0]?.address
+                                        ? { fallback_address: matchedParcels[0].address }
+                                        : change.address
+                                          ? { fallback_address: change.address }
+                                          : {}),
                                       _t: Date.now(),
                                     },
                                   })
