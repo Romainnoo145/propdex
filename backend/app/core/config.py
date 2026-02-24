@@ -9,8 +9,12 @@ CACHE_TTL = {
     "bag": 86400,           # 24 hours
     "bestemmingsplan": 7776000,  # 90 days
     "dso": 7776000,         # 90 days (zoning data changes rarely)
+    "ep_online": 2592000,   # 30 days (energielabels change infrequently)
     "kadaster": 604800,     # 7 days
     "rce": 2592000,         # 30 days (monument status changes infrequently)
+    "rce_detail": 2592000,  # 30 days (monument descriptions are stable)
+    "woz": 31536000,        # 365 days (WOZ values set once per year on Jan 1)
+    # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 
 
@@ -109,6 +113,10 @@ class Settings(BaseSettings):
     DSO_API_KEY: str = Field(
         default="",
         description="DSO Ruimtelijke Plannen API key (register at developer.omgevingswet.overheid.nl)",
+    )
+    EP_ONLINE_API_KEY: str = Field(
+        default="",
+        description="EP-Online API key for energy label lookup (register at public.ep-online.nl)",
     )
     RUIMTELIJKE_PLANNEN_API_KEY: str = Field(
         default="",
