@@ -11,14 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: 53 — API Clients
-Plan: 3/3 complete
-Status: Phase 53 complete — all three API clients (EP-Online, WOZ, RCE) with unit tests
-Last activity: 2026-02-24 — Phase 53 Plan 03 complete (unit tests for all three API clients)
+Phase: 54 — BRK Wiring & No-Cache Enforcement
+Plan: 1/? complete
+Status: Phase 54 Plan 01 complete — BRK schema evolved + fetch_brk_ownership() Step 2b wired
+Last activity: 2026-02-24 — Phase 54 Plan 01 complete (3 min, 2 tasks, 4 files)
 
 ---
 
 ## Performance Metrics
+
+**v7.0 Deep Property Data (In Progress)**
+- Phase 54 Plan 01: 3 min (BRK schema + aggregator wiring)
 
 **v6.0 Meldingen Intelligence (Shipped: 2026-02-23)**
 - 5 phases (47-51), 10 plans, 39 commits, 56 files changed (+8,818/-292)
@@ -63,6 +66,8 @@ Last activity: 2026-02-24 — Phase 53 Plan 03 complete (unit tests for all thre
 - **Three-state contract**: return model | None (not-found/unconfigured) | raise GovernmentAPIError (error)
 - **retry_with_backoff**: shared helper in base.py, wraps any async HTTP callable, 429-aware exponential backoff (1s/2s/4s)
 - **MEDIUM/LOW confidence field comments**: API field names annotated for Phase 53 live validation
+- **Step 2b sequential BRK pattern**: fetch_brk_ownership() runs after asyncio.gather completes, uses CadastralParcel.identificatie from PDOK
+- **ClassVar[bool] never_cache marker**: BRKOwnership.never_cache = True — Pydantic excludes ClassVar from serialization; save layer checks this attribute before JSONB persist
 
 ### Ongoing TODOs
 
@@ -91,6 +96,10 @@ Last activity: 2026-02-24 — Phase 53 Plan 03 complete (unit tests for all thre
 - RCE three async calls per monument: REST API + dereference + omschrijving node (+ optional functie node)
 - URL-dispatch mock pattern (_make_http_client_with_url_dispatch) for multi-step HTTP clients in tests
 - api_mocks.make_mock_response uses 'json_data or {}' — empty list requires direct MagicMock construction
+- BRK three-state status (available/unavailable/error) over boolean is_beschikbaar — explicit, frontend-consumable (Phase 54)
+- Single mTLS client for all percelen per aggregation call — avoids repeated SSL handshakes (Phase 54)
+- No Redis cache for BRK — safest Kadaster Tier 3 interpretation (Phase 54)
+- ClassVar[bool] never_cache on BRKOwnership — save layer must pop brk_ownership from model_dump before JSONB persist (Phase 54)
 
 ### Blockers/Concerns
 
@@ -100,12 +109,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T05:39:50.070Z
-**Stopped At:** Phase 54 context gathered
-**Resume File:** .planning/phases/54-brk-wiring-no-cache/54-CONTEXT.md
+**Last Session:** 2026-02-24T06:02:34Z
+**Stopped At:** Completed 54-01-PLAN.md (Phase 54, Plan 01)
+**Resume File:** .planning/phases/54-brk-wiring-no-cache/54-01-SUMMARY.md
 
-**Next Action:** Phase 53 complete — proceed to next phase (Phase 54: report enrichment integration)
+**Next Action:** Continue Phase 54 — remaining plans (save-layer strip + re-fetch-on-view)
 
 ---
 
-*State updated: 2026-02-24 — Phase 53 Plan 03 complete (22 unit tests for EP-Online, WOZ, RCE clients)*
+*State updated: 2026-02-24 — Phase 54 Plan 01 complete (BRK schema evolution + Step 2b wiring, 3 min)*
