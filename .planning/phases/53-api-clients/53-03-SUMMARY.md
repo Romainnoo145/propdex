@@ -117,6 +117,14 @@ None - no external service configuration required.
 - Phase 53 Wave 2 complete; ready for Phase 54 integration (wiring clients into report enrichment pipeline)
 - Rate limiter disable pattern and URL-dispatch mock helper established for future client test files
 
+## Self-Check: PASSED
+
+- FOUND: backend/tests/unit/test_ep_online.py
+- FOUND: backend/tests/unit/test_woz_waardeloket.py
+- FOUND: backend/tests/unit/test_rce_linked_data.py
+- FOUND: commit fc0a280 (Task 1)
+- FOUND: commit 40342cf (Task 2)
+
 ---
 *Phase: 53-api-clients*
 *Completed: 2026-02-24*
