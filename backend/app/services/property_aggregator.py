@@ -12,9 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import AIParsingSection
 from app.government_apis.base import APINotFoundError, GovernmentAPIError
+from app.government_apis.brk_bevragen import brk_client
 from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.rce_monuments import rd_to_wgs84
 from app.schemas.address import AddressInput
+from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGerechtigde
 from app.schemas.monument import MonumentStatus
 from app.schemas.property import (
     CadastralParcel,
@@ -36,6 +38,154 @@ logger = logging.getLogger(__name__)
 _cadastral_client = PDOKCadastralClient()
 
 
+def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
+    """Parse a single perceel's BRK eigendom response into PerceelOwnership.
+
+    CRITICAL: Never log response payload — only log parse outcome count.
+    Extracts gerechtigden (rights holders) and hypotheek indicator from BRK V2 response.
+
+    Args:
+        raw: Raw dict from BRK get_eigendom() response
+        perceel_id: kadastraalOnroerendeZaakIdentificatie for this perceel
+
+    Returns:
+        PerceelOwnership: Parsed ownership data for this perceel
+    """
+    embedded = raw.get("_embedded", {})
+    raw_gerechtigden = embedded.get("zakelijkGerechtigden", [])
+
+    gerechtigden: list[ZakelijkGerechtigde] = []
+    heeft_hypotheek = False
+
+    for item in raw_gerechtigden:
+        # Determine eigenaar_type from persoon.type
+        persoon = item.get("persoon", {})
+        persoon_type = persoon.get("type", "")
+        if persoon_type == "NatuurlijkPersoon":
+            eigenaar_type = "natuurlijk_persoon"
+        elif persoon_type == "NietNatuurlijkPersoon":
+            eigenaar_type = "rechtspersoon"
+        else:
+            eigenaar_type = "onbekend"
+
+        # Extract right type
+        zakelijk_recht_type = item.get("type")
+
+        # Extract aandeel fraction
+        aandeel_data = item.get("aandeel", {})
+        aandeel: str | None = None
+        if aandeel_data:
+            teller = aandeel_data.get("teller")
+            noemer = aandeel_data.get("noemer")
+            if teller is not None and noemer is not None:
+                aandeel = f"{teller}/{noemer}"
+
+        # Check if this is a hypotheek registration
+        if zakelijk_recht_type and "Hypotheek" in zakelijk_recht_type:
+            heeft_hypotheek = True
+
+        gerechtigden.append(
+            ZakelijkGerechtigde(
+                eigenaar_type=eigenaar_type,  # type: ignore[arg-type]
+                zakelijk_recht_type=zakelijk_recht_type,
+                aandeel=aandeel,
+            )
+        )
+
+    logger.info(
+        "BRK parse outcome: perceel=%s, gerechtigden=%d, heeft_hypotheek=%s",
+        perceel_id,
+        len(gerechtigden),
+        heeft_hypotheek,
+    )
+
+    return PerceelOwnership(
+        perceel_identificatie=perceel_id,
+        gerechtigden=gerechtigden,
+        heeft_hypotheek=heeft_hypotheek,
+    )
+
+
+# CRITICAL LOGGING REMINDER: Never log BRK response payloads below.
+# Only log request metadata (endpoint, perceel ID) and parse outcomes.
+# Kadaster Tier 3 terms prohibit storing or logging eigendomsdata.
+async def fetch_brk_ownership(
+    cadastral_parcels: list[CadastralParcel],
+) -> BRKOwnership:
+    """Fetch BRK Bevragen V2 ownership for all matching percelen.
+
+    Runs as Step 2b — sequential after Step 2a cadastral fetch completes.
+    Requires perceel identificatie from CadastralParcel to look up eigendomsdata.
+
+    Always returns BRKOwnership — never raises, never returns None.
+    Uses a single mTLS client for all percelen in this call.
+
+    CRITICAL: Never cache or store this data (Kadaster Tier 3 never-store terms).
+    Never log BRK response payloads — only log request metadata and parse outcomes.
+
+    Args:
+        cadastral_parcels: Parcels from Step 2a cadastral fetch
+
+    Returns:
+        BRKOwnership: Three-state ownership result (available/unavailable/error)
+    """
+    # Check configuration before attempting fetch
+    if not brk_client.is_configured:
+        return BRKOwnership(
+            status="unavailable",
+            reason="BRK Bevragen niet geconfigureerd",
+            admin_hint=(
+                "Configureer PKIOverheid mTLS-certificaat "
+                "(BRK_CLIENT_CERT_PATH, BRK_CLIENT_KEY_PATH, BRK_CA_BUNDLE_PATH) "
+                "om eigendomsdata op te vragen."
+            ),
+        )
+
+    # Extract perceel identificaties — skip parcels without identificatie
+    perceel_ids = [
+        p.identificatie for p in cadastral_parcels if p.identificatie is not None
+    ]
+    if not perceel_ids:
+        return BRKOwnership(
+            status="unavailable",
+            reason="Geen kadastraal perceel gevonden voor dit adres",
+        )
+
+    fetched_at = datetime.utcnow().isoformat() + "Z"
+
+    try:
+        # ONE client for all percelen — avoids repeated SSL handshakes
+        async with brk_client.create_client() as client:
+            perceel_results: list[PerceelOwnership] = []
+            for perceel_id in perceel_ids:
+                # CRITICAL: log request metadata only — never log response payload
+                logger.info(
+                    "BRK fetch: endpoint=zakelijkegerechtigden, perceel=%s",
+                    perceel_id,
+                )
+                raw = await brk_client.get_eigendom(perceel_id, client)
+                perceel_results.append(_parse_perceel_ownership(raw, perceel_id))
+
+        return BRKOwnership(
+            status="available",
+            data=perceel_results,
+            fetched_at=fetched_at,
+        )
+
+    except GovernmentAPIError as e:
+        logger.warning("BRK fetch failed: %s", e.message)
+        return BRKOwnership(
+            status="error",
+            reason=f"BRK Bevragen fout: {e.message}",
+        )
+    except Exception as e:
+        logger.warning("BRK fetch unexpected error: %s", str(e))
+        return BRKOwnership(
+            status="error",
+            reason="Onverwachte fout bij ophalen eigendomsdata",
+        )
+
+
 async def aggregate_property_data(
     input_data: AddressInput,
     client: httpx.AsyncClient,
@@ -49,7 +199,8 @@ async def aggregate_property_data(
 
     Flow:
     1. Sequential: Resolve address via BAG (MUST succeed)
-    2. Parallel: Fetch cadastral parcels, zoning, and monuments if coordinates available
+    2a. Parallel: Fetch cadastral parcels, zoning, and monuments if coordinates available
+    2b. Sequential: Fetch BRK ownership (requires cadastral identificatie from Step 2a)
     3. Trigger AI bestemmingsplan parsing (always, returns immediately with job status)
 
     Args:
@@ -108,7 +259,7 @@ async def aggregate_property_data(
     address = address_resolution.address
     building = address_resolution.building
 
-    # STEP 2 (PARALLEL): Fetch cadastral parcels if we have geometry coordinates
+    # STEP 2a (PARALLEL): Fetch cadastral parcels if we have geometry coordinates
     # Extract coordinates from building geometry if available
     coordinates: tuple[float, float] | None = None
     if building and building.geometry:
@@ -180,6 +331,7 @@ async def aggregate_property_data(
                     kadastrale_aanduiding = f"{gemeente} {sectie} {perceelnummer}"
 
                 parcel = CadastralParcel(
+                    identificatie=props.get("identificatie"),
                     kadastrale_aanduiding=kadastrale_aanduiding,
                     perceelnummer=perceelnr_str,
                     sectie=sectie,
@@ -238,7 +390,7 @@ async def aggregate_property_data(
             errors.append(f"Monument data niet beschikbaar: {str(e)}")
             return None
 
-    # Execute ALL fetches in parallel
+    # Execute ALL Step 2a fetches in parallel
     results = await asyncio.gather(
         fetch_cadastral_parcels(),
         fetch_zoning(),
@@ -267,6 +419,11 @@ async def aggregate_property_data(
         errors.append(f"Monument data fetch failed: {str(monument_result)}")
     else:
         monument_status = monument_result
+
+    # STEP 2b (SEQUENTIAL): BRK ownership — requires cadastral identificatie from Step 2a
+    # NOTE: Never cache BRK data (Kadaster Tier 3). fetch_brk_ownership() always returns,
+    # never raises, and never logs BRK response payloads.
+    brk_ownership = await fetch_brk_ownership(cadastral_parcels)
 
     # STEP 3: Trigger AI bestemmingsplan parsing (always)
     ai_parsing_section: AIParsingSection | None = None
@@ -407,4 +564,5 @@ async def aggregate_property_data(
         errors=errors,
         resolved_at=datetime.utcnow().isoformat() + "Z",
         ai_parsing=ai_parsing_section,
+        brk_ownership=brk_ownership,
     )
