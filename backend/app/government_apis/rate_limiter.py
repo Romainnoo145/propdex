@@ -91,3 +91,9 @@ sru_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
 # BRK (Kadaster) is a paid API, use conservative limits
 brk_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=200)
+
+# EP-Online (RVO) — API-key-gated, conservative limits
+ep_online_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
+
+# RCE Linked Data detail — public API, polite limits
+rce_detail_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
