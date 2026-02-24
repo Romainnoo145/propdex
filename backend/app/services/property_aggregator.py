@@ -8,6 +8,7 @@ from datetime import datetime
 import httpx
 from arq import ArqRedis
 from fastapi import HTTPException, status
+from shapely.geometry import shape
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import AIParsingSection
@@ -40,6 +41,42 @@ logger = logging.getLogger(__name__)
 
 # Module-level singleton
 _cadastral_client = PDOKCadastralClient()
+
+
+def _extract_rd_coordinates(geometry: dict | None) -> tuple[float, float] | None:
+    """
+    Extract a robust RD point from BAG GeoJSON geometry.
+
+    Prefer geometric centroid for polygons/multipolygons. This avoids selecting
+    an edge vertex (old behavior) that can miss parcel-level DSO intersections.
+    """
+    if not isinstance(geometry, dict):
+        return None
+
+    coordinates_data = geometry.get("coordinates")
+    geometry_type = geometry.get("type")
+
+    if geometry_type == "Point" and isinstance(coordinates_data, list) and len(coordinates_data) >= 2:
+        try:
+            return float(coordinates_data[0]), float(coordinates_data[1])
+        except (TypeError, ValueError):
+            return None
+
+    try:
+        geom = shape(geometry)
+        if geom.is_empty:
+            return None
+        centroid = geom.centroid
+        return float(centroid.x), float(centroid.y)
+    except Exception:
+        # Fallback for malformed polygon payloads.
+        if geometry_type == "Polygon" and coordinates_data:
+            try:
+                first_point = coordinates_data[0][0]
+                return float(first_point[0]), float(first_point[1])
+            except Exception:
+                return None
+        return None
 
 
 def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
@@ -263,23 +300,8 @@ async def aggregate_property_data(
     address = address_resolution.address
     building = address_resolution.building
 
-    # STEP 2a (PARALLEL): Fetch cadastral parcels if we have geometry coordinates
-    # Extract coordinates from building geometry if available
-    coordinates: tuple[float, float] | None = None
-    if building and building.geometry:
-        # Extract centroid from GeoJSON geometry
-        geometry_type = building.geometry.get("type")
-        coordinates_data = building.geometry.get("coordinates")
-
-        if geometry_type == "Point" and coordinates_data:
-            # Point geometry: [x, y]
-            coordinates = (coordinates_data[0], coordinates_data[1])
-        elif geometry_type == "Polygon" and coordinates_data:
-            # Polygon geometry: calculate simple centroid from first coordinate
-            # For MVP, use first coordinate as approximation
-            if coordinates_data and coordinates_data[0]:
-                first_point = coordinates_data[0][0]
-                coordinates = (first_point[0], first_point[1])
+    # STEP 2a (PARALLEL): Fetch parcel/zoning/monuments if we have RD coordinates
+    coordinates = _extract_rd_coordinates(building.geometry if building else None)
 
     # Parallel fetch: cadastral parcels, zoning, and monuments
     async def fetch_cadastral_parcels() -> list[CadastralParcel]:

@@ -126,7 +126,7 @@ def _extract_building_dimensions(
 
 def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
     """
-    Filter plans to vastgesteld status and sort by date descending.
+    Filter plans to vastgesteld status and sort by relevance + date.
 
     Args:
         plans: List of plan dicts from DSO API
@@ -150,6 +150,36 @@ def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
             return info["datum"]
         return plan.get("datum") or ""
 
+    def _plan_type_rank(plan: dict) -> int:
+        """
+        Lower rank = more relevant for perceel-level bouwregels.
+
+        Prioritize binding local plans (bestemmingsplan/omgevingsplan) over
+        policy-level plans (structuurvisie/programmas/voorbereidingsbesluiten)
+        which often return no bouwvlakken or maatvoeringen for a parcel.
+        """
+        plan_type = (
+            str(plan.get("type") or plan.get("planType") or "")
+            .strip()
+            .lower()
+        )
+        if not plan_type:
+            return 5
+        if "bestemmingsplan" in plan_type or "omgevingsplan" in plan_type:
+            return 0
+        if (
+            "inpassingsplan" in plan_type
+            or "beheersverordening" in plan_type
+            or "wijzigingsplan" in plan_type
+            or "uitwerkingsplan" in plan_type
+        ):
+            return 1
+        if "voorbereidingsbesluit" in plan_type:
+            return 3
+        if "structuurvisie" in plan_type or "programma" in plan_type:
+            return 4
+        return 2
+
     # Filter to vastgesteld (finalized) plans
     vastgesteld = [p for p in plans if _get_status(p) == "vastgesteld"]
 
@@ -161,8 +191,17 @@ def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
     if not vastgesteld:
         vastgesteld = list(plans)
 
-    # Sort by datum descending (newest first)
-    sorted_plans = sorted(vastgesteld, key=_get_datum, reverse=True)
+    # Sort by plan relevance first, then by datum descending.
+    # This avoids selecting only national/policy plans for parcel-level analysis.
+    sorted_plans = sorted(
+        vastgesteld,
+        key=lambda p: (_plan_type_rank(p), _get_datum(p)),
+        reverse=False,
+    )
+    # Within the same rank, keep newest first.
+    # Stable sort: apply date desc before relevance sort.
+    sorted_plans = sorted(sorted_plans, key=_get_datum, reverse=True)
+    sorted_plans = sorted(sorted_plans, key=_plan_type_rank)
 
     return sorted_plans
 
@@ -196,7 +235,9 @@ async def fetch_zoning_data(
     Raises:
         GovernmentAPIError: If API requests fail
     """
-    cache_key = f"dso:zoning:{x}:{y}"
+    # Versioned cache key so improved plan-prioritization logic is applied
+    # immediately instead of reusing legacy cached selections.
+    cache_key = f"dso:zoning:v2:{x}:{y}"
     property_point = Point(x, y)
 
     async def _fetch() -> dict:
@@ -213,11 +254,14 @@ async def fetch_zoning_data(
         # Filter and sort plans
         filtered_plans = _filter_and_sort_plans(plans)
 
-        # Process top 3 most recent plans
+        # Process top N relevant plans
+        # Keep bounded to avoid excessive DSO calls while still escaping
+        # "policy-only top-3" cases.
+        max_plans_to_process = 8
         zoning_plans = []
         all_data_gaps = []
 
-        for plan in filtered_plans[:3]:
+        for plan in filtered_plans[:max_plans_to_process]:
             plan_id = plan.get("id") or plan.get("identificatie")
             if not plan_id:
                 continue
