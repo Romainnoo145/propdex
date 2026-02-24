@@ -22,6 +22,8 @@ export interface ScanCreateRequest {
   bbox_wgs84?: [number, number, number, number]
   /** CBS wijk name (for auto-creating project folder) */
   wijk_naam?: string
+  /** Optional existing project folder to link this scan to */
+  project_id?: string
 }
 
 /**

@@ -44,6 +44,7 @@ async def get_existing_scan(
     gemeente_code: str,
     session: AsyncSession,
     bbox: dict | None = None,
+    project_id: uuid.UUID | None = None,
 ) -> AreaScan | None:
     """
     Get most recent completed scan for organization + gemeente + bbox.
@@ -75,6 +76,9 @@ async def get_existing_scan(
             AreaScan.status == "completed",
         )
     )
+
+    if project_id is not None:
+        query = query.where(AreaScan.project_id == project_id)
 
     if bbox is not None:
         # Match bbox within 1m tolerance (RD coordinates are in meters)
@@ -163,6 +167,7 @@ async def create_scan(
     bbox: dict,
     session: AsyncSession,
     wijk_naam: str | None = None,
+    project_id: uuid.UUID | None = None,
 ) -> AreaScan:
     """
     Create a new area scan record.
@@ -180,17 +185,19 @@ async def create_scan(
     Returns:
         AreaScan: The created scan
     """
-    # Auto-create project hierarchy for wijk scans
-    project_id = await get_or_create_wijk_project(
-        organization_id, gemeente_code, gemeente_naam, wijk_naam, session
-    )
+    resolved_project_id = project_id
+    if resolved_project_id is None:
+        # Auto-create project hierarchy for wijk scans when no explicit folder is provided.
+        resolved_project_id = await get_or_create_wijk_project(
+            organization_id, gemeente_code, gemeente_naam, wijk_naam, session
+        )
 
     scan = AreaScan(
         organization_id=organization_id,
         gemeente_code=gemeente_code,
         gemeente_naam=gemeente_naam,
         wijk_naam=wijk_naam,
-        project_id=project_id,
+        project_id=resolved_project_id,
         bbox_minx=bbox["minx"],
         bbox_miny=bbox["miny"],
         bbox_maxx=bbox["maxx"],

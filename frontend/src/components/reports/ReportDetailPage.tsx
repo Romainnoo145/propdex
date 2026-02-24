@@ -646,7 +646,9 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
         {/* Plans */}
         {zoning.plans && zoning.plans.length > 0 && (
           <div className="space-y-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsplannen</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">
+              Plannen op locatie ({zoning.plans.length})
+            </p>
             {zoning.plans.map((plan, idx) => (
               <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] p-4">
                 <p className="font-medium text-grey-300">{plan.plan_naam}</p>

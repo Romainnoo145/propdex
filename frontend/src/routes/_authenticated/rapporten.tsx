@@ -7,6 +7,7 @@ import { useReports, useDeleteReport } from '@/hooks/useReports'
 import { useProjects } from '@/hooks/useProjects'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { Select } from '@/components/primitives/Select'
 import type { ReportListItem } from '@/lib/types/report'
 
 export const Route = createFileRoute('/_authenticated/rapporten')({
@@ -63,11 +64,11 @@ function RapportenPage() {
           >
             Project:
           </label>
-          <select
+          <Select
             id="project-filter"
             value={projectFilter || ''}
             onChange={(e) => setProjectFilter(e.target.value || undefined)}
-            className="rounded-lg border border-grey-800 bg-grey-900 px-3 py-2 text-sm text-grey-100 min-h-[44px]"
+            className="min-h-[44px] min-w-[230px]"
           >
             <option value="">Alle projecten</option>
             {projectsData.projects
@@ -77,7 +78,7 @@ function RapportenPage() {
                   {project.name}
                 </option>
               ))}
-          </select>
+          </Select>
           <span className="text-sm text-grey-400 ml-auto">
             {reports.length} {reports.length === 1 ? 'rapport' : 'rapporten'}
           </span>

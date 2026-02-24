@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
+import { Select } from '@/components/primitives/Select'
 import type { ScanResultsFilters } from '@/lib/types/scan'
 
 interface ResultsFilterPanelProps {
@@ -53,23 +54,19 @@ function FilterSelect({
       <label htmlFor={id} className="text-xs text-grey-600 whitespace-nowrap">
         {label}
       </label>
-      <select
+      <Select
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none rounded-full text-xs font-medium px-3 py-1.5 pr-6 border transition-colors bg-no-repeat cursor-pointer ${
+        className={`h-8 w-auto rounded-full px-3 pr-8 text-xs font-medium border cursor-pointer ${
           hasValue
             ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
             : 'border-overlay/5 bg-grey-900 text-grey-400 hover:border-overlay/10'
         }`}
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-          backgroundPosition: 'right 0.35rem center',
-          backgroundSize: '1rem 1rem',
-        }}
+        iconClassName={hasValue ? 'text-amber-accent/80' : 'text-grey-500'}
       >
         {children}
-      </select>
+      </Select>
     </div>
   )
 }

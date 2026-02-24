@@ -13,6 +13,7 @@ import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useReadTracking } from '@/hooks/useReadTracking'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { Select } from '@/components/primitives/Select'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
 import { formatDate, formatRelativeTime } from '@/lib/utils/date'
@@ -208,10 +209,11 @@ function MeldingenPage() {
         )}
         {/* Gemeente filter dropdown */}
         {(gemeenteNames.length > 1 || selectedGemeente !== null) && (
-          <select
+          <Select
             value={selectedGemeente ?? ''}
             onChange={(e) => setSelectedGemeente(e.target.value || null)}
-            className="rounded-md border border-grey-700 bg-grey-900 px-2.5 py-1 text-sm text-grey-200 focus:border-amber-accent focus:outline-none focus:ring-1 focus:ring-amber-accent"
+            className="h-9 min-w-[220px] rounded-md border-grey-700 bg-grey-900 text-sm text-grey-200 focus-visible:ring-1 focus-visible:ring-amber-accent focus-visible:border-amber-accent"
+            iconClassName="text-grey-400"
           >
             <option value="">Alle gemeentes</option>
             {gemeenteNames.map((name) => (
@@ -219,7 +221,7 @@ function MeldingenPage() {
                 {name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <div className="ml-auto flex items-center gap-2">
           {totalUnread > 0 && (

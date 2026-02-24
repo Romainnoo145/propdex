@@ -38,6 +38,14 @@ class ScanCreateRequest(BaseModel):
         description="CBS wijk name (for auto-creating project folder)",
         max_length=200,
     )
+    project_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Optional existing project folder to link this scan to. "
+            "When provided, backend links the scan directly instead of auto-creating "
+            "a gemeente/wijk project."
+        ),
+    )
 
 
 class ScanResponse(BaseModel):

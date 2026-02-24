@@ -20,6 +20,7 @@ from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
 from app.models.parcel_cache import ParcelCache
+from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
@@ -201,11 +202,28 @@ async def trigger_scan(
                     detail=f"Invalid gemeente: {e}",
                 ) from e
 
+        # Optional explicit project linkage (used by project-detail scan trigger).
+        target_project_id = scan_request.project_id
+        if target_project_id is not None:
+            project_result = await db.execute(
+                select(Project).where(
+                    Project.id == target_project_id,
+                    Project.organization_id == organization_id,
+                ).limit(1)
+            )
+            project = project_result.scalar_one_or_none()
+            if project is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Project not found",
+                )
+
         # Check for existing scan with matching bbox
         existing_scan = await service.get_existing_scan(
             organization_id=organization_id,
             gemeente_code=scan_request.gemeente_code,
             bbox=bbox,
+            project_id=target_project_id,
             session=db,
         )
 
@@ -236,6 +254,7 @@ async def trigger_scan(
                 bbox=bbox,
                 session=db,
                 wijk_naam=scan_request.wijk_naam,
+                project_id=target_project_id,
             )
 
         # Enqueue ARQ job

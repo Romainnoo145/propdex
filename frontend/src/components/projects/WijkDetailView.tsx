@@ -1,9 +1,10 @@
 import { useNavigate } from '@tanstack/react-router'
 import type { ProjectResponse } from '@/lib/types/project'
-import { useProjectScans } from '@/hooks/useScans'
+import { useProjectScans, useTriggerScan } from '@/hooks/useScans'
 import { useReports } from '@/hooks/useReports'
 import ReportCard from '@/components/reports/ReportCard'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { toast } from 'sonner'
 
 interface WijkDetailViewProps {
   gemeente: ProjectResponse
@@ -24,7 +25,12 @@ export function WijkDetailView({ gemeente, wijk }: WijkDetailViewProps) {
   return (
     <div className="space-y-6">
       {/* Scan summary */}
-      <ScanSummarySection wijkId={wijk.id} gemeenteCode={gemeente.gemeente_code} wijkNaam={wijk.wijk_naam} />
+      <ScanSummarySection
+        wijkId={wijk.id}
+        gemeenteCode={gemeente.gemeente_code}
+        gemeenteNaam={gemeente.name}
+        wijkNaam={wijk.wijk_naam}
+      />
 
       {/* Reports section */}
       <ReportListSection wijkId={wijk.id} />
@@ -41,11 +47,23 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
 /**
  * Shows latest scan info with quick action buttons.
  */
-function ScanSummarySection({ wijkId, gemeenteCode, wijkNaam }: { wijkId: string; gemeenteCode: string | null; wijkNaam: string | null }) {
+function ScanSummarySection({
+  wijkId,
+  gemeenteCode,
+  gemeenteNaam,
+  wijkNaam,
+}: {
+  wijkId: string
+  gemeenteCode: string | null
+  gemeenteNaam: string
+  wijkNaam: string | null
+}) {
   const navigate = useNavigate()
   const { data, isLoading } = useProjectScans(wijkId)
+  const triggerScan = useTriggerScan()
   const scans = data?.scans ?? []
   const latestScan = scans.find((s) => s.status === 'completed')
+  const activeScan = scans.find((s) => s.status === 'pending' || s.status === 'running')
 
   if (isLoading) {
     return (
@@ -124,9 +142,76 @@ function ScanSummarySection({ wijkId, gemeenteCode, wijkNaam }: { wijkId: string
             </div>
           </div>
         </div>
+      ) : activeScan ? (
+        <div className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-grey-100">
+                Scan bezig ({activeScan.status})
+              </p>
+              <p className="text-xs text-grey-400 mt-0.5">
+                Gestart op {dateFmt.format(new Date(activeScan.scan_date))}
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                navigate({
+                  to: '/map',
+                  search: {
+                    scan_id: activeScan.scan_id,
+                    ...(gemeenteCode ? { gemeente_code: gemeenteCode } : {}),
+                    ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
+                  },
+                })
+              }
+              className="flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-850 px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-grey-800"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              Volg op kaart
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="px-4 py-6 text-center text-sm text-grey-400">
-          Nog geen scan beschikbaar
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm text-grey-400">Nog geen scan beschikbaar</p>
+          {!gemeenteCode && (
+            <p className="mt-1 text-xs text-grey-600">
+              Geen gemeentecode gevonden voor deze wijk
+            </p>
+          )}
+          <button
+            onClick={() => {
+              if (!gemeenteCode) return
+              triggerScan.mutate(
+                {
+                  gemeente_code: gemeenteCode,
+                  gemeente_naam: gemeenteNaam,
+                  project_id: wijkId,
+                  ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
+                },
+                {
+                  onSuccess: (scan) => {
+                    if (scan.status === 'existing' && !scan.needs_rescan) {
+                      toast.info('Bestaande scan gevonden, resultaten worden geopend')
+                      navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+                      return
+                    }
+                    toast.success('Scan gestart voor deze wijk')
+                  },
+                  onError: (error) => {
+                    toast.error(error.message || 'Scan starten mislukt')
+                  },
+                }
+              )
+            }}
+            disabled={!gemeenteCode || triggerScan.isPending}
+            className="mt-3 min-h-[36px] rounded-md border border-grey-700 bg-grey-850 px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-grey-800 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {triggerScan.isPending ? 'Scan starten...' : 'Start scan'}
+          </button>
         </div>
       )}
     </section>

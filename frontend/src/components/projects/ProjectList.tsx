@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
 import { useUnreadCounts } from '@/hooks/useNotifications'
-import { useProjectScans } from '@/hooks/useScans'
+import { useProjectScans, useTriggerScan } from '@/hooks/useScans'
 import { toast } from 'sonner'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { ScanListItem } from '@/lib/types/scan'
-import ProjectCreateModal from './ProjectCreateModal'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { Skeleton } from '@/components/feedback/Skeleton'
@@ -14,8 +13,6 @@ import { fetchGemeenteGeoJSON, fetchProvincieGeoJSON } from '@/components/map/Ge
 import { geoJsonToSvgPath, geoJsonToSvgDualPath, findProvinceForGemeente, pointInPolygon, bboxCenter } from '@/lib/geo-utils'
 import { GemeenteCard } from './GemeenteCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
-import { WijkCard } from './WijkCard'
-import { WijkCardGrid } from './WijkCardGrid'
 import { GemeenteDetailView } from './GemeenteDetailView'
 import { WijkDetailView } from './WijkDetailView'
 import { DrilldownBreadcrumb } from './DrilldownBreadcrumb'
@@ -85,7 +82,6 @@ export default function ProjectList() {
   const selectedGemeenteId = search.gemeente_id ?? null
   const selectedWijkId = search.wijk_id ?? null
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null)
 
@@ -100,13 +96,36 @@ export default function ProjectList() {
   const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [provincieGeojson, setProvincieGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
 
-  // Fetch CBS gemeente + provincie boundaries once when monitoring projects exist
+  // Fetch CBS gemeente + provincie boundaries once when projects are available.
+  // Gemeente shapes are also used to resolve gemeente_code for legacy report-only projects.
   useEffect(() => {
-    if (monitoringProjects.length === 0) return
+    if (allProjects.length === 0) return
     fetchGemeenteGeoJSON().then(setGemeenteGeojson).catch(console.error)
-    // Province data is non-blocking — cards render without it, re-render when it arrives
-    fetchProvincieGeoJSON().then(setProvincieGeojson).catch(console.error)
-  }, [monitoringProjects.length])
+    if (monitoringProjects.length > 0) {
+      // Province data is non-blocking — cards render without it, re-render when it arrives
+      fetchProvincieGeoJSON().then(setProvincieGeojson).catch(console.error)
+    }
+  }, [allProjects.length, monitoringProjects.length])
+
+  const resolveGemeenteCodeForProject = (project: ProjectResponse): string | null => {
+    if (project.gemeente_code) return project.gemeente_code
+    if (!gemeenteGeojson) return null
+
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/[’']/g, '')
+        .trim()
+
+    const target = normalize(project.name)
+    const match = gemeenteGeojson.features.find((f) => {
+      const statnaam = String(f.properties?.statnaam ?? '')
+      return normalize(statnaam) === target
+    })
+
+    return (match?.properties?.statcode as string | undefined) ?? null
+  }
 
   const handleToggle = (projectId: string) => {
     setExpandedId((prev) => (prev === projectId ? null : projectId))
@@ -156,13 +175,6 @@ export default function ProjectList() {
             ? `${allProjects.length} ${allProjects.length === 1 ? 'project' : 'projecten'}`
             : 'Nog geen projecten'}
         </h3>
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          disabled={isDemo}
-          className="min-h-[44px] rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-100 transition-colors hover:bg-grey-850 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Nieuw project +
-        </button>
       </div>
 
       {allProjects.length > 0 ? (
@@ -335,8 +347,15 @@ export default function ProjectList() {
                 {isExpanded && (
                   <>
                     {/* Scan history section */}
-                    {!isDemo && <WijkScanList projectId={project.id} navigate={navigate} />}
-
+                    {!isDemo && (
+                      <WijkScanList
+                        projectId={project.id}
+                        projectName={project.name}
+                        gemeenteCode={resolveGemeenteCodeForProject(project)}
+                        wijkNaam={project.wijk_naam}
+                        navigate={navigate}
+                      />
+                    )}
                     {isDemo && (
                       <div className="border-t border-grey-800 px-5 py-4 text-center text-sm text-grey-400">
                         Geen scans beschikbaar (demo modus)
@@ -353,18 +372,13 @@ export default function ProjectList() {
         </div>
       ) : (
         <div className="rounded-xl border border-grey-800 bg-grey-900 px-6 py-12 text-center">
-          <p className="mb-4 text-grey-400">Nog geen projecten aangemaakt</p>
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="min-h-[44px] rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-100 transition-colors hover:bg-grey-850"
-          >
-            Maak je eerste project
-          </button>
+          <p className="text-grey-400">
+            Nog geen projecten gevonden. Projecten worden automatisch gekoppeld via scan- en rapportflows.
+          </p>
         </div>
       )}
 
       {/* Modals use intentional light theme (white card on dark backdrop) — JSDoc documents this decision */}
-      <ProjectCreateModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} />
       <ProjectEditModal
         key={selectedProject?.id}
         isOpen={editModalOpen}
@@ -376,60 +390,24 @@ export default function ProjectList() {
 }
 
 /**
- * Navigation-aware wijk card sub-component.
- *
- * Calls useProjectScans at component top level (valid hook usage — this is a
- * React component, not a .map() callback). Looks up the latest completed scan
- * on click and navigates to /resultaten?scan_id=<id>. Shows a Dutch toast when
- * no completed scan exists.
- *
- * Passed to WijkCardGrid via the renderCard render prop so each wijk card can
- * independently fetch its own scan data without a hooks-in-loop violation.
- */
-function WijkCardWithNav({
-  wijk,
-  svgData,
-  unreadCount,
-  navigate,
-}: {
-  wijk: ProjectResponse
-  svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null
-  unreadCount: number
-  navigate: ReturnType<typeof useNavigate>
-}) {
-  const { data } = useProjectScans(wijk.id)
-
-  const handleClick = () => {
-    const latestScan = data?.scans.find((s) => s.status === 'completed')
-    if (!latestScan) {
-      toast.info('Nog geen scan beschikbaar voor deze wijk')
-      return
-    }
-    navigate({ to: '/resultaten', search: { scan_id: latestScan.scan_id } })
-  }
-
-  return (
-    <WijkCard
-      wijk={wijk}
-      svgData={svgData}
-      unreadCount={unreadCount}
-      onClick={handleClick}
-    />
-  )
-}
-
-/**
  * Scan list for a project -- renders inside expanded wijk/project rows.
  * Hook only fires when this component mounts (when row is expanded).
  */
 function WijkScanList({
   projectId,
+  projectName,
+  gemeenteCode,
+  wijkNaam,
   navigate,
 }: {
   projectId: string
+  projectName: string
+  gemeenteCode: string | null
+  wijkNaam: string | null
   navigate: ReturnType<typeof useNavigate>
 }) {
   const { data, isLoading } = useProjectScans(projectId)
+  const triggerScan = useTriggerScan()
   const scans = data?.scans ?? []
 
   const handleScanResultsClick = (scan: ScanListItem) => {
@@ -451,8 +429,43 @@ function WijkScanList({
 
   if (scans.length === 0) {
     return (
-      <div className="border-t border-grey-800 px-10 py-4 text-center text-sm text-grey-400">
-        Nog geen scans voor dit project
+      <div className="border-t border-grey-800 px-10 py-5 text-center">
+        <p className="text-sm text-grey-400">Nog geen scans voor dit project</p>
+        {!gemeenteCode && (
+          <p className="mt-1 text-xs text-grey-600">
+            Gemeentecode niet gevonden voor dit project. Hernoem naar een gemeentenaam of koppel gemeente_code.
+          </p>
+        )}
+        <button
+          onClick={() => {
+            if (!gemeenteCode) return
+            triggerScan.mutate(
+              {
+                gemeente_code: gemeenteCode,
+                gemeente_naam: projectName,
+                project_id: projectId,
+                ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
+              },
+              {
+                onSuccess: (scan) => {
+                  if (scan.status === 'existing' && !scan.needs_rescan) {
+                    toast.info('Bestaande scan gevonden, resultaten worden geopend')
+                    navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+                    return
+                  }
+                  toast.success('Scan gestart voor dit project')
+                },
+                onError: (error) => {
+                  toast.error(error.message || 'Scan starten mislukt')
+                },
+              }
+            )
+          }}
+          disabled={!gemeenteCode || triggerScan.isPending}
+          className="mt-3 min-h-[36px] rounded-md border border-grey-700 bg-grey-850 px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-grey-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {triggerScan.isPending ? 'Scan starten...' : 'Start scan'}
+        </button>
       </div>
     )
   }
@@ -496,10 +509,9 @@ function WijkScanList({
               </button>
               <button
                 onClick={() => handleScanMapClick(scan)}
-                disabled={!isCompleted}
-                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-grey-800 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-grey-800"
               >
-                Toon kaart
+                {isCompleted ? 'Toon kaart' : 'Volg op kaart'}
               </button>
             </div>
           </div>

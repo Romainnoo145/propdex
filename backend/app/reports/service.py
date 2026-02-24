@@ -213,6 +213,38 @@ async def _backfill_unassigned_reports(
     await session.commit()
 
 
+async def _collect_project_scope_ids(
+    organization_id: uuid.UUID,
+    root_project_id: uuid.UUID,
+    session: AsyncSession,
+) -> list[uuid.UUID]:
+    """
+    Collect project filter scope as root project + all descendants.
+
+    Rapporten filter uses top-level gemeente folders in the UI. Reports are often
+    stored under child wijk folders, so parent-only filtering would return empty
+    results. This helper expands scope recursively.
+    """
+    scope_ids: set[uuid.UUID] = {root_project_id}
+    frontier: set[uuid.UUID] = {root_project_id}
+
+    while frontier:
+        child_rows = await session.execute(
+            select(Project.id).where(
+                Project.organization_id == organization_id,
+                Project.parent_id.in_(tuple(frontier)),
+            )
+        )
+        child_ids = set(child_rows.scalars().all())
+        next_frontier = child_ids - scope_ids
+        if not next_frontier:
+            break
+        scope_ids.update(next_frontier)
+        frontier = next_frontier
+
+    return list(scope_ids)
+
+
 async def save_report(
     report_data: dict,
     notes: str | None,
@@ -333,7 +365,7 @@ async def list_reports(
     Args:
         organization_id: Tenant organization ID
         city: Optional city filter (exact match)
-        project_id: Optional project filter (exact match)
+        project_id: Optional project filter (selected project + descendants)
         search_query: Optional search query (ILIKE on report_name)
         sort_by: Sort field ("created", "updated", "address")
         sort_order: Sort order ("asc", "desc")
@@ -355,7 +387,12 @@ async def list_reports(
         query = query.where(SavedReport.city == city)
 
     if project_id is not None:
-        query = query.where(SavedReport.project_id == project_id)
+        scoped_project_ids = await _collect_project_scope_ids(
+            organization_id=organization_id,
+            root_project_id=project_id,
+            session=session,
+        )
+        query = query.where(SavedReport.project_id.in_(scoped_project_ids))
 
     if search_query is not None:
         query = query.where(SavedReport.report_name.ilike(f"%{search_query}%"))

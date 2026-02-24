@@ -511,7 +511,7 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       {zoning.plans && zoning.plans.length > 0 && (
         <div className="space-y-2">
           <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
-            Bestemmingsplannen
+            Plannen op locatie ({zoning.plans.length})
           </div>
           {zoning.plans.map((plan, idx) => (
             <div
