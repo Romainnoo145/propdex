@@ -116,6 +116,11 @@ class BRKBevragenClient:
         self._ssl_context = _create_brk_ssl_context()
         logger.info("BRK Bevragen client configured with mTLS authentication")
 
+    @property
+    def is_configured(self) -> bool:
+        """Return True if BRK mTLS certificates and API key are configured."""
+        return self._configured
+
     def create_client(self) -> httpx.AsyncClient:
         """Create httpx AsyncClient with mTLS SSL context.
 

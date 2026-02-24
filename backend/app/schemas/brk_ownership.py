@@ -2,11 +2,12 @@
 
 CRITICAL: BRK eigendomsdata MUST NEVER be cached or stored (Kadaster Tier 3).
 This schema is used for live display only — stripped from report before DB save.
+The never_cache class-level marker signals the save layer to actively strip this field.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -33,39 +34,58 @@ class ZakelijkGerechtigde(BaseModel):
     )
 
 
-class BRKOwnership(BaseModel):
-    """Ownership and rights data from BRK Bevragen V2.
+class PerceelOwnership(BaseModel):
+    """Ownership data for a single cadastral perceel.
 
-    CRITICAL: Never cache or store this data.
-    Strip from PropertyReportResponse before JSONB save.
-
-    All external-API fields are Optional — field names are provisional (MEDIUM confidence).
-    Phase 53 will validate field names against the live BRK Bevragen V2 API.
+    Groups all rights holders for one kadastraalOnroerendeZaak.
     """
 
+    perceel_identificatie: str = Field(
+        description="PDOK/BRK kadastraalOnroerendeZaakIdentificatie (NL.IMKAD.KadastraalObject.XXXXXXXX)",
+    )
     gerechtigden: list[ZakelijkGerechtigde] = Field(
         default_factory=list,
-        description="List of rights holders",
+        description="List of rights holders for this perceel",
     )
     heeft_hypotheek: bool = Field(
         default=False,
-        description="True if a mortgage (hypotheek) is registered on this object",
-    )
-    aantal_eigenaren: int | None = Field(
-        default=None,
-        description="Total number of rights holders",
-    )
-    actueel_opgevraagd: str | None = Field(
-        default=None,
-        description="ISO 8601 timestamp when data was fetched (shown in UI per BRK-06)",
+        description="True if a mortgage (hypotheek) is registered on this perceel",
     )
 
-    # Data availability
-    is_beschikbaar: bool = Field(
-        default=False,
-        description="False when BRK is unconfigured (PKIOverheid cert pending)",
+
+class BRKOwnership(BaseModel):
+    """Ownership and rights data from BRK Bevragen V2.
+
+    CRITICAL: never_cache = True — strip from report before JSONB save.
+    BRK eigendomsdata MUST NEVER be cached or stored (Kadaster Tier 3 never-store terms).
+    This field MUST be excluded from model_dump() before DB persist.
+
+    Three-state status:
+    - 'available': BRK data successfully fetched; data array populated
+    - 'unavailable': BRK not configured (PKIOverheid cert pending) or no perceel found
+    - 'error': BRK configured but API call failed
+    """
+
+    # Class-level never_cache marker — checked by save layer before JSONB persist.
+    # ClassVar is excluded from Pydantic serialization (does not appear in model_dump output).
+    never_cache: ClassVar[bool] = True
+
+    status: Literal["available", "unavailable", "error"] = Field(
+        description="'available'=BRK data fetched; 'unavailable'=not configured/no cert; 'error'=cert present but API failed",
     )
-    niet_beschikbaar_reden: str | None = Field(
+    data: list[PerceelOwnership] | None = Field(
         default=None,
-        description="Dutch explanation when BRK is unavailable",
+        description="Per-perceel ownership records (None when status != 'available')",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Dutch-language reason (populated when status='unavailable' or 'error')",
+    )
+    fetched_at: str | None = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp of live BRK query",
+    )
+    admin_hint: str | None = Field(
+        default=None,
+        description="Admin-facing hint shown when status='unavailable' — indicates required PKIOverheid setup",
     )

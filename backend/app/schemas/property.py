@@ -18,6 +18,10 @@ from app.schemas.zoning import ZoningData
 class CadastralParcel(BaseModel):
     """Cadastral parcel data from PDOK Cadastral API."""
 
+    identificatie: str | None = Field(
+        default=None,
+        description="PDOK/BRK kadastraalOnroerendeZaakIdentificatie (NL.IMKAD.KadastraalObject.XXXXXXXX) — used for BRK Bevragen V2 ownership lookup",
+    )
     kadastrale_aanduiding: str | None = Field(
         default=None,
         description="Full cadastral designation (e.g., 'ASD04 S 12345')",
@@ -236,7 +240,10 @@ class PropertyReportResponse(BaseModel):
         default=None,
         description="WOZ assessed value from waardeloket",
     )
-    brk_ownership: BRKOwnership | None = Field(
-        default=None,
+    brk_ownership: BRKOwnership = Field(
+        default_factory=lambda: BRKOwnership(
+            status="unavailable",
+            reason="Eigendomsdata niet opgehaald",
+        ),
         description="Property ownership from BRK Bevragen V2 (never stored — live only)",
     )
