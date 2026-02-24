@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: 54 — BRK Wiring & No-Cache Enforcement
-Plan: 2/2 complete
-Status: Phase 54 complete — BRK schema + fetch_brk_ownership Step 2b + strip-before-save + re-fetch-on-view
-Last activity: 2026-02-24 — Phase 54 Plan 02 complete (5 min, 2 tasks, 3 files)
+Phase: 55 — Aggregator Integration
+Plan: 1/1 complete
+Status: Phase 55 Plan 01 complete — RCE Linked Data two-step enrichment wired into monument_aggregator
+Last activity: 2026-02-24 — Phase 55 Plan 01 complete (5 min, 1 task, 1 file)
 
 ---
 
@@ -23,6 +23,7 @@ Last activity: 2026-02-24 — Phase 54 Plan 02 complete (5 min, 2 tasks, 3 files
 **v7.0 Deep Property Data (In Progress)**
 - Phase 54 Plan 01: 3 min (BRK schema + aggregator wiring)
 - Phase 54 Plan 02: 5 min (BRK strip-before-save + re-fetch-on-view + 6 integration tests)
+- Phase 55 Plan 01: 5 min (RCE Linked Data two-step enrichment in monument_aggregator)
 
 **v6.0 Meldingen Intelligence (Shipped: 2026-02-23)**
 - 5 phases (47-51), 10 plans, 39 commits, 56 files changed (+8,818/-292)
@@ -72,6 +73,8 @@ Last activity: 2026-02-24 — Phase 54 Plan 02 complete (5 min, 2 tasks, 3 files
 - **BRK strip-before-assign**: model_dump() -> pop('brk_ownership', None) -> assign (pop before assign, not after)
 - **BRK enriched copy**: dict(report.report_data) shallow copy for re-fetch — stored JSONB untouched, enriched copy returned in response
 - **GovernmentAPIError signature**: GovernmentAPIError(source, message, status_code) — source is first positional arg
+- **Post-parallel enrichment**: RCE Linked Data detail fetched after asyncio.gather completes, not inside it (Phase 55)
+- **Inner async def for cache-manager wrap**: `_fetch_rce_detail()` closure wraps Pydantic-returning client with `.model_dump()` for get_cached_or_fetch compatibility (Phase 55)
 
 ### Ongoing TODOs
 
@@ -106,6 +109,10 @@ Last activity: 2026-02-24 — Phase 54 Plan 02 complete (5 min, 2 tasks, 3 files
 - ClassVar[bool] never_cache on BRKOwnership — save layer must pop brk_ownership from model_dump before JSONB persist (Phase 54)
 - Strip-before-assign (not assign-then-pop): pop must happen before assigning to report.report_data (Phase 54)
 - GET re-fetch uses stored cadastral_parcels from JSONB — avoids full re-aggregation, fast live BRK lookup (Phase 54)
+- No extra rate limiter wrapper in aggregator — rce_detail_limiter applied inside client method, not at call site (Phase 55)
+- monument_nummer converted to str() before RCE client call — client expects string (Phase 55)
+- Enrichment only triggers for consensus_status == 'rijksmonument' — avoids unnecessary API calls (Phase 55)
+- cache source 'rce_detail' (not 'rce') matches CACHE_TTL key and 30-day TTL (Phase 55)
 
 ### Blockers/Concerns
 
@@ -115,12 +122,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T06:23:07.914Z
-**Stopped At:** Phase 55 context gathered
-**Resume File:** .planning/phases/55-aggregator-integration/55-CONTEXT.md
+**Last Session:** 2026-02-24T06:35:00Z
+**Stopped At:** Phase 55 Plan 01 complete — RCE Linked Data two-step enrichment
+**Resume File:** .planning/phases/55-aggregator-integration/55-01-SUMMARY.md
 
-**Next Action:** Phase 54 complete. Continue v7.0 — next phase TBD (Phase 55: aggregator enrichment or frontend property report)
+**Next Action:** Phase 55 Plan 01 complete. Continue v7.0 — next plan in phase 55 or move to Phase 56 (frontend property report).
 
 ---
 
-*State updated: 2026-02-24 — Phase 54 Plan 02 complete (BRK strip-before-save + re-fetch-on-view + 6 tests, 5 min)*
+*State updated: 2026-02-24 — Phase 55 Plan 01 complete (RCE two-step enrichment in monument_aggregator, 5 min, 1 task, 1 file)*

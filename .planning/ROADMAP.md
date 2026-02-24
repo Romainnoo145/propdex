@@ -50,7 +50,7 @@
   - Risk: BRK Step 2b data dependency on Step 2a cadastral output
   - Depends on: Phase 53, Phase 54 (all clients ready)
   - **Plans:** 2 plans (Wave 1 parallel)
-    - [ ] 55-01-PLAN.md — Monument two-step enrichment (PDOK spatial → RCE Linked Data detail)
+    - [x] 55-01-PLAN.md — Monument two-step enrichment (PDOK spatial → RCE Linked Data detail) *(completed 2026-02-24)*
     - [ ] 55-02-PLAN.md — EP-Online + WOZ wiring into Step 2a + completeness score update + AGG-03 verification
 
 - [ ] **Phase 56: Frontend Sections** — EnergieLabelSection (EU color badge, expiry, monument warning); WOZSection (value + peildatum + per-m²); EigendomSection (owner type, rights, hypotheek, "actueel opgevraagd"); enhanced MonumentSection (collapsible redengevende omschrijving, functie, bouwperiode)
