@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.government_apis.base import GovernmentAPIError
+from app.government_apis.rce_linked_data import rce_linked_data_client
 from app.government_apis.rce_monuments import _rce_client
-from app.schemas.monument import MonumentSourceResult, MonumentStatus
+from app.schemas.monument import MonumentSourceResult, MonumentStatus, RCEMonumentDetail
 from app.services.cache_manager import get_cached_or_fetch
+
+logger = logging.getLogger(__name__)
 
 
 async def _fetch_rce(
@@ -242,6 +247,42 @@ async def fetch_monument_status(
             "Er kunnen gemeentelijke subsidies beschikbaar zijn voor onderhoud",
         ]
 
+    # Two-step enrichment: fetch RCE detail when rijksmonument detected (AGG-04)
+    rce_detail: RCEMonumentDetail | None = None
+    if consensus_status == "rijksmonument":
+        rce_source = next(
+            (s for s in sources if s.source == "RCE" and s.monument_nummer is not None),
+            None,
+        )
+        if rce_source:
+            monument_nr_str = str(rce_source.monument_nummer)
+            cache_key = f"rce_detail:monument:{monument_nr_str}"
+            try:
+                async def _fetch_rce_detail() -> dict:
+                    detail = await rce_linked_data_client.get_detail_by_monument_number(
+                        monument_nr_str, client
+                    )
+                    return detail.model_dump() if detail is not None else {}
+
+                detail_cache = await get_cached_or_fetch(
+                    cache_key=cache_key,
+                    source="rce_detail",
+                    organization_id=organization_id,
+                    fetch_fn=_fetch_rce_detail,
+                    session=session,
+                    force_refresh=force_refresh,
+                )
+                if detail_cache.data:
+                    rce_detail = RCEMonumentDetail.model_validate(detail_cache.data)
+            except GovernmentAPIError as e:
+                logger.warning(
+                    "RCE detail fetch failed for monument %s: %s", monument_nr_str, e.message
+                )
+            except Exception as e:
+                logger.warning(
+                    "RCE detail unexpected error for monument %s: %s", monument_nr_str, str(e)
+                )
+
     # Build final status
     monument_status = MonumentStatus(
         sources=sources,
@@ -249,6 +290,7 @@ async def fetch_monument_status(
         conflict_note=conflict_note,
         consensus_status=consensus_status,
         restrictions_summary=restrictions_summary,
+        rce_detail=rce_detail,
     )
 
     return monument_status
