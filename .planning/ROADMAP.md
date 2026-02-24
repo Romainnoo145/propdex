@@ -37,13 +37,13 @@
     - [x] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation *(completed 2026-02-24)*
     - [x] 53-03-PLAN.md — Unit tests for all three clients (22 test cases) *(completed 2026-02-24)*
 
-- [ ] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured
+- [x] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured *(completed 2026-02-24)*
   - Requirements: BRK-01, BRK-04, BRK-05
   - Risk: BRK identificatie format mapping needs PDOK field validation
   - Depends on: Phase 52 (BRK schema)
   - **Plans:** 2 plans (Wave 1: 1 plan, Wave 2: 1 plan)
-    - [ ] 54-01-PLAN.md — Schema evolution (three-state BRKOwnership, PerceelOwnership, CadastralParcel.identificatie) + aggregator Step 2b wiring
-    - [ ] 54-02-PLAN.md — Never-cache enforcement (strip before save, re-fetch on view) + integration tests
+    - [x] 54-01-PLAN.md — Schema evolution (three-state BRKOwnership, PerceelOwnership, CadastralParcel.identificatie) + aggregator Step 2b wiring *(completed 2026-02-24)*
+    - [x] 54-02-PLAN.md — Never-cache enforcement (strip before save, re-fetch on view) + integration tests *(completed 2026-02-24)*
 
 - [ ] **Phase 55: Aggregator Integration** — Restructure property_aggregator into Step 2a/2b; wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9)
   - Requirements: AGG-01, AGG-02, AGG-03, AGG-04

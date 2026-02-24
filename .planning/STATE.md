@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 54 — BRK Wiring & No-Cache Enforcement
-Plan: 1/? complete
-Status: Phase 54 Plan 01 complete — BRK schema evolved + fetch_brk_ownership() Step 2b wired
-Last activity: 2026-02-24 — Phase 54 Plan 01 complete (3 min, 2 tasks, 4 files)
+Plan: 2/2 complete
+Status: Phase 54 complete — BRK schema + fetch_brk_ownership Step 2b + strip-before-save + re-fetch-on-view
+Last activity: 2026-02-24 — Phase 54 Plan 02 complete (5 min, 2 tasks, 3 files)
 
 ---
 
@@ -22,6 +22,7 @@ Last activity: 2026-02-24 — Phase 54 Plan 01 complete (3 min, 2 tasks, 4 files
 
 **v7.0 Deep Property Data (In Progress)**
 - Phase 54 Plan 01: 3 min (BRK schema + aggregator wiring)
+- Phase 54 Plan 02: 5 min (BRK strip-before-save + re-fetch-on-view + 6 integration tests)
 
 **v6.0 Meldingen Intelligence (Shipped: 2026-02-23)**
 - 5 phases (47-51), 10 plans, 39 commits, 56 files changed (+8,818/-292)
@@ -68,6 +69,9 @@ Last activity: 2026-02-24 — Phase 54 Plan 01 complete (3 min, 2 tasks, 4 files
 - **MEDIUM/LOW confidence field comments**: API field names annotated for Phase 53 live validation
 - **Step 2b sequential BRK pattern**: fetch_brk_ownership() runs after asyncio.gather completes, uses CadastralParcel.identificatie from PDOK
 - **ClassVar[bool] never_cache marker**: BRKOwnership.never_cache = True — Pydantic excludes ClassVar from serialization; save layer checks this attribute before JSONB persist
+- **BRK strip-before-assign**: model_dump() -> pop('brk_ownership', None) -> assign (pop before assign, not after)
+- **BRK enriched copy**: dict(report.report_data) shallow copy for re-fetch — stored JSONB untouched, enriched copy returned in response
+- **GovernmentAPIError signature**: GovernmentAPIError(source, message, status_code) — source is first positional arg
 
 ### Ongoing TODOs
 
@@ -100,6 +104,8 @@ Last activity: 2026-02-24 — Phase 54 Plan 01 complete (3 min, 2 tasks, 4 files
 - Single mTLS client for all percelen per aggregation call — avoids repeated SSL handshakes (Phase 54)
 - No Redis cache for BRK — safest Kadaster Tier 3 interpretation (Phase 54)
 - ClassVar[bool] never_cache on BRKOwnership — save layer must pop brk_ownership from model_dump before JSONB persist (Phase 54)
+- Strip-before-assign (not assign-then-pop): pop must happen before assigning to report.report_data (Phase 54)
+- GET re-fetch uses stored cadastral_parcels from JSONB — avoids full re-aggregation, fast live BRK lookup (Phase 54)
 
 ### Blockers/Concerns
 
@@ -109,12 +115,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T06:02:34Z
-**Stopped At:** Completed 54-01-PLAN.md (Phase 54, Plan 01)
-**Resume File:** .planning/phases/54-brk-wiring-no-cache/54-01-SUMMARY.md
+**Last Session:** 2026-02-24T06:11:25Z
+**Stopped At:** Completed 54-02-PLAN.md (Phase 54, Plan 02)
+**Resume File:** .planning/phases/54-brk-wiring-no-cache/54-02-SUMMARY.md
 
-**Next Action:** Continue Phase 54 — remaining plans (save-layer strip + re-fetch-on-view)
+**Next Action:** Phase 54 complete. Continue v7.0 — next phase TBD (Phase 55: aggregator enrichment or frontend property report)
 
 ---
 
-*State updated: 2026-02-24 — Phase 54 Plan 01 complete (BRK schema evolution + Step 2b wiring, 3 min)*
+*State updated: 2026-02-24 — Phase 54 Plan 02 complete (BRK strip-before-save + re-fetch-on-view + 6 tests, 5 min)*
