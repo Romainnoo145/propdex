@@ -50,7 +50,15 @@ import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
 // ScanProgressOverlay — replaced by inline progress in gemeente header bar
 import { BestemmingsplanLegend } from '@/components/map/BestemmingsplanLegend'
-import { lookupPdokAddress, getScanTileUrl, fetchWijken, fetchParcelCentroid } from '@/lib/api'
+import {
+  lookupPdokAddress,
+  getScanTileUrl,
+  fetchWijken,
+  fetchParcelCentroid,
+  resolveParcelByAddress,
+  generateReportFromParcel,
+  generateReportFromAddress,
+} from '@/lib/api'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
 import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
@@ -88,11 +96,37 @@ export const Route = createFileRoute('/_authenticated/map')({
 
 type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
 
+function parseAddressForReport(address: string | null): {
+  postcode: string
+  huisnummer: number
+} | null {
+  if (!address) return null
+
+  const postcodeMatch = address.toUpperCase().match(/\b(\d{4})\s*([A-Z]{2})\b/)
+  const huisnummerMatch = (address.split(',')[0] ?? address).match(/\b(\d+)\b/)
+  if (!postcodeMatch || !huisnummerMatch) return null
+
+  const huisnummer = Number.parseInt(huisnummerMatch[1]!, 10)
+  if (!Number.isFinite(huisnummer) || huisnummer <= 0) return null
+
+  return {
+    postcode: `${postcodeMatch[1]} ${postcodeMatch[2]}`,
+    huisnummer,
+  }
+}
+
 function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
   const { mapRef, mapReady } = useMapContext()
   const navigate = useNavigate()
-  const { postcode, huisnummer, reportId, scan_id: urlScanId, parcel_id: urlParcelId } = Route.useSearch()
+  const {
+    postcode,
+    huisnummer,
+    reportId,
+    scan_id: urlScanId,
+    parcel_id: urlParcelId,
+    _t: navTs,
+  } = Route.useSearch()
   const { accessToken } = useAuth()
   const [tier, setTier] = useState<ViewTier>('none')
   // demo data removed — all property data comes from lookup API
@@ -120,6 +154,13 @@ function MapPage() {
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [wijkLoading, setWijkLoading] = useState(false)
   const [inspectorParcel, setInspectorParcel] = useState<ScanResultItem | null>(null)
+  const [autoEnableParcelsKey, setAutoEnableParcelsKey] = useState<string | null>(null)
+  const [focusedParcel, setFocusedParcel] = useState<{
+    parcelId: string | null
+    lng: number
+    lat: number
+    address: string | null
+  } | null>(null)
 
   // Track wijk name for inline progress display
   const [activeScanWijk, setActiveScanWijk] = useState<string | null>(null)
@@ -203,7 +244,11 @@ function MapPage() {
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
+  const handledParcelRef = useRef<string | null>(null)
+  const handledScanFocusRef = useRef<string | null>(null)
   const handledReportRef = useRef<string | null>(null)
+  const focusedMarkerRef = useRef<maplibregl.Marker | null>(null)
+  const focusedPopupRef = useRef<maplibregl.Popup | null>(null)
 
   // Handle saved report loading (from sidebar report selection)
   useEffect(() => {
@@ -218,6 +263,7 @@ function MapPage() {
 
     setSavedReportId(reportId)
     setTier('drawer')
+    setFocusedParcel(null)
 
     // Set coordinates — flyTo handled by dedicated effect
     const coords = propertyData.map_data?.center_wgs84
@@ -225,37 +271,257 @@ function MapPage() {
       setPropertyLngLat([coords[0]!, coords[1]!])
     }
 
-    // Clear reportId from URL so it doesn't re-trigger
-    navigate({ to: '/map', search: {}, replace: true })
-  }, [reportId, savedReport.data, navigate])
+    const resolveFocus = async () => {
+      if (!accessToken) return
+      const addr = propertyData.address
+      if (!addr?.straat || !addr?.huisnummer) return
+      const fallbackAddress = [addr.straat, String(addr.huisnummer), addr.postcode, addr.woonplaats]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+
+      try {
+        const resolved = await resolveParcelByAddress(
+          {
+            street: addr.straat,
+            huisnummer: addr.huisnummer,
+            postcode: addr.postcode,
+          },
+          accessToken
+        )
+        setFocusedParcel({
+          parcelId: resolved.parcel_id,
+          lng: resolved.lng,
+          lat: resolved.lat,
+          address: resolved.address,
+        })
+        setAutoEnableParcelsKey(`report:${reportId}:${navTs ?? 0}`)
+      } catch {
+        // Fallback: still render a marker at known report center when parcel resolve fails.
+        if (coords && coords.length === 2) {
+          setFocusedParcel({
+            parcelId: null,
+            lng: coords[0]!,
+            lat: coords[1]!,
+            address: fallbackAddress || null,
+          })
+        }
+      }
+    }
+
+    void resolveFocus().finally(() => {
+      // Clear reportId from URL so it doesn't re-trigger
+      navigate({ to: '/map', search: {}, replace: true })
+    })
+  }, [reportId, savedReport.data, accessToken, navigate, navTs])
+
+  // Always center map on the focused marker target.
+  useEffect(() => {
+    if (!focusedParcel || !mapReady || !mapRef.current) return
+    mapRef.current.flyTo({
+      center: [focusedParcel.lng, focusedParcel.lat],
+      zoom: 17,
+      duration: 700,
+    })
+  }, [focusedParcel, mapReady])
 
   // Restore scan context when returning from /resultaten with ?scan_id=...
-  // When parcel_id is also present, fetch centroid and fly to it
+  // When parcel_id is present, wait for auth token before fetching centroid.
   useEffect(() => {
-    if (!urlScanId || activeScanId) return
-    setActiveScanId(urlScanId)
+    if (!urlScanId) return
+    if (!activeScanId) {
+      setActiveScanId(urlScanId)
+    }
+
+    const focusKey = `${urlScanId}:${urlParcelId ?? ''}:${navTs ?? 0}`
+    if (handledScanFocusRef.current === focusKey) return
+
+    // parcel focus requires auth; keep URL intact until token is available.
+    if (urlParcelId && !accessToken) return
+
+    handledScanFocusRef.current = focusKey
 
     if (urlParcelId && accessToken) {
-      // Fetch centroid and fly to parcel
       fetchParcelCentroid(urlParcelId, accessToken)
-        .then(({ lng, lat }) => {
+        .then(({ lng, lat, address }) => {
           setPropertyLngLat([lng, lat])
+          setFocusedParcel({ parcelId: urlParcelId, lng, lat, address })
+          setAutoEnableParcelsKey(`${urlParcelId}:${urlScanId}:${navTs ?? 0}`)
         })
         .catch(() => {
           // Silently fall back — scan layer still loads
         })
+        .finally(() => {
+          navigate({ to: '/map', search: {}, replace: true })
+        })
+      return
     }
 
-    // Clear from URL to prevent re-trigger on hot reload
+    // Clear from URL to prevent re-trigger on hot reload.
     navigate({ to: '/map', search: {}, replace: true })
-  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate])
+  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs])
+
+  // Handle direct parcel navigation (e.g. from meldingen) without scan context
+  useEffect(() => {
+    if (!urlParcelId || urlScanId || !accessToken) return
+
+    const key = `${urlParcelId}:${navTs ?? 0}`
+    if (handledParcelRef.current === key) return
+    handledParcelRef.current = key
+
+    fetchParcelCentroid(urlParcelId, accessToken)
+      .then(({ lng, lat, address }) => {
+        setPropertyLngLat([lng, lat])
+        setFocusedParcel({ parcelId: urlParcelId, lng, lat, address })
+        setAutoEnableParcelsKey(key)
+      })
+      .catch(() => {
+        toast.error('Kon perceel op kaart niet centreren')
+      })
+      .finally(() => {
+        navigate({ to: '/map', search: {}, replace: true })
+      })
+  }, [urlParcelId, urlScanId, navTs, accessToken, navigate])
+
+  // Render amber marker for parcel-focused navigation and attach popup CTA.
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !focusedParcel) return
+    const map = mapRef.current
+
+    focusedPopupRef.current?.remove()
+    focusedPopupRef.current = null
+    focusedMarkerRef.current?.remove()
+    focusedMarkerRef.current = null
+
+    const markerEl = document.createElement('button')
+    markerEl.type = 'button'
+    markerEl.className = 'bg-transparent border-0 p-0 cursor-pointer'
+    markerEl.title = 'Geselecteerd perceel'
+    markerEl.setAttribute('aria-label', 'Geselecteerd perceel')
+    markerEl.innerHTML = `
+      <svg width="30" height="42" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 22s8-7.2 8-13a8 8 0 1 0-16 0c0 5.8 8 13 8 13z" fill="#F59E0B" stroke="#FFFFFF" stroke-width="1.6"/>
+        <circle cx="12" cy="9" r="3.2" fill="#FFFFFF"/>
+      </svg>
+    `
+
+    const marker = new maplibregl.Marker({
+      element: markerEl,
+      anchor: 'bottom',
+    })
+      .setLngLat([focusedParcel.lng, focusedParcel.lat])
+      .addTo(map)
+
+    let popup: maplibregl.Popup | null = null
+    let cta: HTMLButtonElement | null = null
+    let handleGenerate: (() => Promise<void>) | null = null
+    let openPopup: (() => void) | null = null
+    const parsedAddress = parseAddressForReport(focusedParcel.address)
+    const hasGenerateCta = Boolean(
+      accessToken && (focusedParcel.parcelId || parsedAddress)
+    )
+
+    if (hasGenerateCta) {
+      const popupRoot = document.createElement('div')
+      popupRoot.className = 'min-w-[120px]'
+
+      cta = document.createElement('button')
+      cta.type = 'button'
+      cta.className =
+        'w-full rounded-md border border-grey-700 bg-grey-900 px-2.5 py-1.5 text-[11px] font-medium text-amber-accent transition-colors hover:bg-grey-850'
+      cta.textContent = 'Genereer rapport'
+      popupRoot.appendChild(cta)
+
+      let isGenerating = false
+      const setGenerating = (busy: boolean) => {
+        isGenerating = busy
+        if (!cta) return
+        cta.disabled = busy
+        cta.textContent = busy ? 'Bezig met genereren...' : 'Genereer rapport'
+        cta.classList.toggle('opacity-60', busy)
+        cta.classList.toggle('cursor-not-allowed', busy)
+      }
+
+      handleGenerate = async () => {
+        if (isGenerating || !accessToken) return
+        setGenerating(true)
+        try {
+          let report
+          if (focusedParcel.parcelId) {
+            try {
+              report = await generateReportFromParcel(
+                focusedParcel.parcelId,
+                accessToken
+              )
+            } catch (error) {
+              if (!parsedAddress) throw error
+              report = await generateReportFromAddress(
+                {
+                  postcode: parsedAddress.postcode,
+                  huisnummer: parsedAddress.huisnummer,
+                },
+                accessToken
+              )
+            }
+          } else if (parsedAddress) {
+            report = await generateReportFromAddress(
+              {
+                postcode: parsedAddress.postcode,
+                huisnummer: parsedAddress.huisnummer,
+              },
+              accessToken
+            )
+          } else {
+            return
+          }
+
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['reports'] }),
+            queryClient.invalidateQueries({ queryKey: ['projects'] }),
+          ])
+          toast.success('Rapport gegenereerd')
+          navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : 'Rapport genereren mislukt'
+          )
+        } finally {
+          setGenerating(false)
+        }
+      }
+      cta.addEventListener('click', handleGenerate)
+
+      popup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: false,
+        offset: 16,
+        className: 'focused-parcel-popup',
+      }).setDOMContent(popupRoot)
+
+      openPopup = () => {
+        if (!popup) return
+        popup.setLngLat([focusedParcel.lng, focusedParcel.lat]).addTo(map)
+      }
+      markerEl.addEventListener('click', openPopup)
+    }
+
+    focusedMarkerRef.current = marker
+    focusedPopupRef.current = popup
+
+    return () => {
+      if (cta && handleGenerate) cta.removeEventListener('click', handleGenerate)
+      if (openPopup) markerEl.removeEventListener('click', openPopup)
+      popup?.remove()
+      marker.remove()
+    }
+  }, [mapReady, mapRef, focusedParcel, accessToken, navigate])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
     if (!postcode || !huisnummer) return
 
     // Use timestamp-based key to allow re-navigation to same address
-    const key = `${postcode}-${huisnummer}`
+    const key = `${postcode}-${huisnummer}-${navTs ?? 0}`
     if (handledSearchRef.current === key) return
     handledSearchRef.current = key
 
@@ -283,7 +549,7 @@ function MapPage() {
         },
       }
     )
-  }, [postcode, huisnummer, lookup, navigate])
+  }, [postcode, huisnummer, navTs, lookup, navigate])
 
   // Show score layer when scan completes
   useEffect(() => {
@@ -420,6 +686,8 @@ function MapPage() {
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
+    setFocusedParcel(null)
+
     // Show QuickCard immediately (for loading state)
     setTier('quick')
     setPropertyLngLat(null)
@@ -473,6 +741,7 @@ function MapPage() {
   const handleCloseQuickCard = useCallback(() => {
     setTier('none')
     setPropertyLngLat(null)
+    setFocusedParcel(null)
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
     }
@@ -1058,6 +1327,7 @@ function MapPage() {
 
       <LayerToggle
         mapRef={mapRef}
+        autoEnableParcelsKey={autoEnableParcelsKey}
         onGemeentenToggle={handleGemeentenToggle}
         onBestemmingsplanToggle={handleBestemmingsplanToggle}
         onWijkenToggle={handleWijkenToggle}

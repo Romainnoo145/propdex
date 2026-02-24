@@ -151,6 +151,8 @@ export interface MonumentSourceResult {
   monument_type: string | null
   monument_nummer: string | null
   monument_naam: string | null
+  cached_at: string | null
+  age_seconds: number | null
   error: string | null
 }
 
@@ -164,6 +166,16 @@ export interface MonumentStatus {
   consensus_status: string | null
   restrictions_summary: string[]
   is_monument: boolean
+  rce_detail?: {
+    rijksmonumentnummer: string | null
+    redengevende_omschrijving: string | null
+    oorspronkelijke_functie: string | null
+    bouwjaar_van: number | null
+    bouwjaar_tot: number | null
+    architect: string | null
+    bouwstijl: string | null
+    monument_register_url: string | null
+  } | null
 }
 
 /**
@@ -250,6 +262,52 @@ export interface AIParsingSection {
   disclaimer_banner: string
 }
 
+export interface EnergyLabel {
+  energieklasse: string | null
+  registratie_datum: string | null
+  geldig_tot: string | null
+  is_geldig: boolean | null
+  berekenings_type: string | null
+  soort_opname: string | null
+  opname_datum: string | null
+  bag_vbo_id: string | null
+  is_geregistreerd: boolean
+  niet_geregistreerd_reden: string | null
+}
+
+export interface WOZWaarde {
+  vastgestelde_waarde: number | null
+  peildatum: string | null
+  toestandspeildatum: string | null
+}
+
+export interface WOZData {
+  woz_objectnummer: string | null
+  meest_recente_waarde: number | null
+  meest_recente_peildatum: string | null
+  waarden: WOZWaarde[]
+  grondoppervlakte: number | null
+  low_confidence: boolean
+  low_confidence_reden: string | null
+  bron: string
+}
+
+export interface BRKOwnership {
+  status: 'available' | 'unavailable' | 'error'
+  data: Array<{
+    perceel_identificatie: string
+    gerechtigden: Array<{
+      eigenaar_type: 'natuurlijk_persoon' | 'rechtspersoon' | 'overheid' | 'onbekend'
+      zakelijk_recht_type: string | null
+      aandeel: string | null
+    }>
+    heeft_hypotheek: boolean
+  }> | null
+  reason: string | null
+  fetched_at: string | null
+  admin_hint: string | null
+}
+
 /**
  * Extended property report with zoning, monuments, and map data
  *
@@ -274,4 +332,9 @@ export interface PropertyReportResponse {
 
   // Phase 4 additions
   ai_parsing: AIParsingSection | null
+
+  // Phase 7 additions
+  energy_label?: EnergyLabel | null
+  woz_data?: WOZData | null
+  brk_ownership?: BRKOwnership | null
 }

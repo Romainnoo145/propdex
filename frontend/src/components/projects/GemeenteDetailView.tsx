@@ -3,7 +3,8 @@ import type { useNavigate as UseNavigateType } from '@tanstack/react-router'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { UnreadDetailResponse } from '@/lib/types/monitoring'
 import { useQueryClient } from '@tanstack/react-query'
-import { useProjectChanges } from '@/hooks/useNotifications'
+import { toast } from 'sonner'
+import { useProjectChanges, useRefreshMonitoring } from '@/hooks/useNotifications'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { WijkCard } from './WijkCard'
 import { WijkCardGrid } from './WijkCardGrid'
@@ -39,21 +40,32 @@ export function GemeenteDetailView({
     wijkProjects.reduce((sum, wijk) => sum + wijk.report_count, 0)
   // Total meldingen and unread count
   const { data: changesData } = useProjectChanges(gemeente.id)
+  const refreshMonitoring = useRefreshMonitoring()
 
   const [isSpinning, setIsSpinning] = useState(false)
   const handleRefresh = useCallback(async () => {
     setIsSpinning(true)
-    const minDuration = new Promise((r) => setTimeout(r, 1000))
+    const minDuration = new Promise((r) => setTimeout(r, 500))
     try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['changes', gemeente.id] }),
-        queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] }),
+      const [result] = await Promise.all([
+        refreshMonitoring.mutateAsync(gemeente.id),
         minDuration,
       ])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['changes'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] }),
+      ])
+      if ((result?.new_changes ?? 0) > 0) {
+        toast.success(
+          `Refresh voltooid: ${result.new_changes} ${result.new_changes === 1 ? 'nieuwe melding' : 'nieuwe meldingen'} gevonden`
+        )
+      } else {
+        toast.info('Refresh voltooid: geen nieuwe meldingen gevonden')
+      }
     } finally {
       setIsSpinning(false)
     }
-  }, [gemeente.id, queryClient])
+  }, [gemeente.id, queryClient, refreshMonitoring])
   const meldingenCount = changesData?.total ?? 0
   const gemeenteUnread =
     unreadData?.per_project.find((p) => p.project_id === gemeente.id)?.unread_count ?? 0
@@ -169,4 +181,3 @@ function StatCard({
     </div>
   )
 }
-

@@ -27,6 +27,7 @@ export interface ChangeRecord {
   address: string | null
   source_url: string | null
   postcode: string | null
+  huisnummer_hint?: number | null
   matched_parcel_id?: string | null  // Phase 48 — geometrically verified via geocode + ST_Contains
   matched_parcels: MatchedParcel[] | null
   matched_reports: MatchedReport[] | null

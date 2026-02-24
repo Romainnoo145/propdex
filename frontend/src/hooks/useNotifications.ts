@@ -10,13 +10,20 @@
  * All hooks require authentication and invalidate relevant caches on mutation.
  */
 
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   fetchUnreadCounts,
   fetchAllChanges,
   fetchProjectChanges,
   fetchChangesForParcel,
+  refreshMonitoring as apiRefreshMonitoring,
   markProjectViewed,
   markChangeRead as apiMarkChangeRead,
   markAllChangesRead as apiMarkAllChangesRead,
@@ -159,7 +166,23 @@ export function useMarkViewed() {
   })
 }
 
-type ChangesSnapshot = { queryKey: readonly unknown[]; data: ChangeRecordListResponse | undefined }
+type ChangesQueryData =
+  | ChangeRecordListResponse
+  | InfiniteData<ChangeRecordListResponse>
+  | undefined
+type ChangesSnapshot = { queryKey: readonly unknown[]; data: ChangesQueryData }
+
+function appendReadId(
+  page: ChangeRecordListResponse,
+  changeId: string
+): ChangeRecordListResponse {
+  const readIds = new Set(page.read_change_ids ?? [])
+  readIds.add(changeId)
+  return {
+    ...page,
+    read_change_ids: [...readIds],
+  }
+}
 
 /**
  * Mark a single change as read (server-backed, with optimistic update)
@@ -176,21 +199,38 @@ export function useMarkChangeRead() {
     mutationFn: (changeId: string) => apiMarkChangeRead(changeId, accessToken),
     onMutate: async (changeId: string) => {
       // Snapshot all changes caches for rollback
-      const allEntries = queryClient.getQueriesData<ChangeRecordListResponse>({ queryKey: ['changes'] })
+      const allEntries = queryClient.getQueriesData<ChangesQueryData>({
+        queryKey: ['changes'],
+      })
 
       const snapshots: ChangesSnapshot[] = allEntries.map(([queryKey, data]) => ({
         queryKey: queryKey as readonly unknown[],
         data,
       }))
 
-      // Optimistically update all changes caches to include the new read ID
+      // Optimistically update all changes caches to include the new read ID.
+      // Important: keep InfiniteQuery shape intact ({ pages, pageParams }).
       for (const { queryKey, data } of snapshots) {
-        if (data !== undefined) {
-          queryClient.setQueryData<ChangeRecordListResponse>(queryKey, {
-            changes: data.changes,
-            total: data.total,
-            read_change_ids: [...(data.read_change_ids ?? []), changeId],
-          })
+        if (data === undefined) continue
+
+        const infinite = data as InfiniteData<ChangeRecordListResponse>
+        if (Array.isArray(infinite.pages)) {
+          queryClient.setQueryData<InfiniteData<ChangeRecordListResponse>>(
+            queryKey,
+            {
+              ...infinite,
+              pages: infinite.pages.map((page) => appendReadId(page, changeId)),
+            }
+          )
+          continue
+        }
+
+        const single = data as ChangeRecordListResponse
+        if (Array.isArray(single.changes)) {
+          queryClient.setQueryData<ChangeRecordListResponse>(
+            queryKey,
+            appendReadId(single, changeId)
+          )
         }
       }
 
@@ -229,6 +269,30 @@ export function useMarkAllRead(projectId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
       queryClient.invalidateQueries({ queryKey: ['changes'] })
+    },
+  })
+}
+
+/**
+ * Trigger on-demand monitoring refresh for a monitored gemeente project.
+ *
+ * Invalidates unread + changes caches so UI updates immediately after refresh.
+ */
+export function useRefreshMonitoring() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    { status: string; new_changes: number; total_detected: number },
+    Error,
+    string
+  >({
+    mutationFn: (projectId: string) =>
+      apiRefreshMonitoring(accessToken, projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+      queryClient.invalidateQueries({ queryKey: ['changes'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', 'monitored'] })
     },
   })
 }

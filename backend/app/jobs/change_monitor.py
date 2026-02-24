@@ -1,25 +1,208 @@
 """Daily change monitoring background job for ARQ worker."""
 
 import logging
+import re
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.models.change_record import ChangeRecord
+from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.change_detector import detect_permit_changes, detect_zoning_changes
+from app.services.postcode_extractor import extract_postcodes
 
 logger = logging.getLogger(__name__)
 
 locatieserver = PDOKLocatieserver()
+
+
+def _normalize_postcode(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.upper().replace(" ", "").strip()
+    return cleaned if len(cleaned) == 6 else None
+
+
+def _coerce_huisnummer(value: object) -> int | None:
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, str):
+        match = re.search(r"(\d+)", value)
+        if match:
+            try:
+                parsed = int(match.group(1))
+                return parsed if parsed > 0 else None
+            except ValueError:
+                return None
+    return None
+
+
+def _normalize_street_hint(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    street = value.strip()
+    if not street:
+        return None
+    if " - " in street:
+        parts = [p.strip() for p in street.split(" - ") if p.strip()]
+        if parts:
+            street = parts[-1]
+    return street or None
+
+
+def _build_address_from_components(
+    components: dict | None,
+    normalized_postcode: str | None = None,
+) -> str | None:
+    if not isinstance(components, dict):
+        return None
+
+    street = str(components.get("street") or "").strip()
+    huisnummer = str(components.get("huisnummer") or "").strip()
+    toevoeging = str(components.get("huisnummer_toevoeging") or "").strip()
+    city = str(components.get("city") or "").strip()
+
+    if not street or not huisnummer:
+        return None
+
+    if " - " in street:
+        parts = [p.strip() for p in street.split(" - ") if p.strip()]
+        if parts:
+            street = parts[-1]
+
+    first_line = f"{street} {huisnummer}{toevoeging}".strip()
+    postcode = normalized_postcode or (
+        str(components.get("postcode") or "").upper().replace(" ", "")
+    )
+
+    address_parts = [first_line]
+    if postcode:
+        address_parts.append(postcode)
+    if city:
+        address_parts.append(city)
+
+    return ", ".join(address_parts)
+
+
+def _extract_huisnummer_from_address(address: str | None) -> int | None:
+    if not address:
+        return None
+    first_line = address.split(",")[0].strip()
+    match = re.search(r"(\d+)", first_line)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def _extract_street_huisnummer(address_like: str | None) -> tuple[str, int] | None:
+    if not address_like:
+        return None
+
+    first_line = address_like.split(",")[0].strip()
+    if " - " in first_line:
+        first_line = first_line.rsplit(" - ", 1)[-1].strip()
+
+    match = re.search(r"(.+?)\s+(\d+)(?:[A-Za-z]|-[A-Za-z0-9]+)?\b", first_line)
+    if not match:
+        return None
+
+    street = _normalize_street_hint(match.group(1))
+    if not street:
+        return None
+    try:
+        huisnummer = int(match.group(2))
+    except ValueError:
+        return None
+
+    if huisnummer <= 0:
+        return None
+    return street, huisnummer
+
+
+def _extract_match_hints(
+    change: ChangeRecord,
+    effective_postcode: str | None,
+) -> tuple[str, int, str | None] | None:
+    components = (change.metadata_json or {}).get("address_components")
+    if isinstance(components, dict):
+        street = _normalize_street_hint(components.get("street"))
+        huisnummer = _coerce_huisnummer(components.get("huisnummer"))
+        postcode = _normalize_postcode(
+            effective_postcode or components.get("postcode")
+        )
+        if street and huisnummer:
+            return street, huisnummer, postcode
+
+    parsed = _extract_street_huisnummer(change.address)
+    if parsed:
+        return parsed[0], parsed[1], _normalize_postcode(effective_postcode)
+
+    title_tail = (
+        change.title.rsplit(" - ", 1)[-1]
+        if isinstance(change.title, str) and " - " in change.title
+        else change.title
+    )
+    if isinstance(title_tail, str) and re.search(r"\bsectie\b", title_tail, re.IGNORECASE):
+        return None
+    parsed_from_title = _extract_street_huisnummer(title_tail)
+    if parsed_from_title:
+        return parsed_from_title[0], parsed_from_title[1], _normalize_postcode(
+            effective_postcode
+        )
+    return None
+
+
+async def _find_parcel_by_address_hint(
+    street: str,
+    huisnummer: int,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    postcode: str | None = None,
+) -> uuid.UUID | None:
+    normalized_street = street.strip().lower()
+    if not normalized_street:
+        return None
+
+    normalized_postcode = _normalize_postcode(postcode)
+
+    query = select(ParcelCache.id, ParcelCache.address).where(
+        ParcelCache.organization_id == organization_id,
+        ParcelCache.address.is_not(None),
+        func.lower(ParcelCache.address).contains(normalized_street),
+    )
+    if normalized_postcode:
+        query = query.where(
+            func.upper(
+                func.regexp_replace(ParcelCache.address, r"\s+", "", "g")
+            ).contains(normalized_postcode)
+        )
+
+    rows = (await session.execute(query.limit(60))).all()
+    if not rows:
+        return None
+
+    exact = [
+        row
+        for row in rows
+        if _extract_huisnummer_from_address(row[1]) == huisnummer
+    ]
+    if exact:
+        return exact[0][0]
+    if len(rows) == 1:
+        return rows[0][0]
+    return None
 
 
 async def _try_match_parcel(
@@ -33,32 +216,36 @@ async def _try_match_parcel(
     Uses address_components from metadata_json. Returns matched parcel UUID or None.
     """
     components = (change.metadata_json or {}).get("address_components")
-    if not components:
+    if not isinstance(components, dict):
         return None
 
-    street = components.get("street")
-    huisnummer = components.get("huisnummer")
+    street = _normalize_street_hint(components.get("street"))
+    huisnummer = _coerce_huisnummer(components.get("huisnummer"))
     if not street or not huisnummer:
-        return None
-
-    try:
-        hn_int = int(huisnummer)
-    except (ValueError, TypeError):
         return None
 
     coords = await locatieserver.geocode_address(
         street=street,
-        huisnummer=hn_int,
+        huisnummer=huisnummer,
         client=client,
-        postcode=components.get("postcode"),
+        postcode=_normalize_postcode(components.get("postcode")),
         city=components.get("city"),
         gemeente_naam=change.gemeente_naam,
     )
-    if coords is None:
-        return None
 
-    return await find_parcel_at_point(
-        coords[0], coords[1], organization_id, session
+    if coords is not None:
+        matched = await find_parcel_at_point(
+            coords[0], coords[1], organization_id, session
+        )
+        if matched is not None:
+            return matched
+
+    return await _find_parcel_by_address_hint(
+        street=street,
+        huisnummer=huisnummer,
+        organization_id=organization_id,
+        session=session,
+        postcode=_normalize_postcode(components.get("postcode")),
     )
 
 
@@ -221,6 +408,30 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                     )
 
                     for change in all_changes:
+                        components = (change.metadata_json or {}).get("address_components")
+                        effective_postcode = change.postcode
+                        if not effective_postcode:
+                            if isinstance(components, dict) and components.get("postcode"):
+                                effective_postcode = str(components["postcode"]).upper().replace(
+                                    " ", ""
+                                )
+                            else:
+                                for text_candidate in (
+                                    change.address,
+                                    change.title,
+                                    change.source_url,
+                                ):
+                                    if not text_candidate:
+                                        continue
+                                    extracted = extract_postcodes(text_candidate)
+                                    if extracted:
+                                        effective_postcode = extracted[0]
+                                        break
+
+                        effective_address = change.address or _build_address_from_components(
+                            components, effective_postcode
+                        )
+
                         # Attempt geocode + spatial parcel match
                         matched_id = await _try_match_parcel(
                             change,
@@ -228,6 +439,16 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                             http_client,
                             session,
                         )
+                        if matched_id is None:
+                            hints = _extract_match_hints(change, effective_postcode)
+                            if hints is not None:
+                                matched_id = await _find_parcel_by_address_hint(
+                                    street=hints[0],
+                                    huisnummer=hints[1],
+                                    organization_id=parent_project.organization_id,
+                                    session=session,
+                                    postcode=hints[2],
+                                )
 
                         change_record = ChangeRecord(
                             organization_id=parent_project.organization_id,
@@ -238,10 +459,11 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                             title=change.title,
                             change_date=change.change_date,
                             detected_at=change.detected_at,
+                            address=effective_address,
                             metadata_json=change.metadata_json,
                             source_url=change.source_url,
-                            postcode=change.postcode,
-                            matched_parcel_id=matched_id,
+                            postcode=effective_postcode,
+                            matched_parcel_id=matched_id or change.matched_parcel_id,
                         )
 
                         try:

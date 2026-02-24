@@ -16,9 +16,20 @@ interface LayerToggleProps {
   showWijkenToggle?: boolean; // Only show when gemeente is active
   onScoreToggle?: (visible: boolean) => void;
   showScoreToggle?: boolean; // Only show when active scan is present and parcels are visible
+  autoEnableParcelsKey?: string | null; // External trigger to force-enable parcel layer
 }
 
-function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmingsplanToggle, onWijkenToggle, showWijkenToggle, onScoreToggle, showScoreToggle }: LayerToggleProps) {
+function LayerToggle({
+  mapRef,
+  onParcelsToggle,
+  onGemeentenToggle,
+  onBestemmingsplanToggle,
+  onWijkenToggle,
+  showWijkenToggle,
+  onScoreToggle,
+  showScoreToggle,
+  autoEnableParcelsKey,
+}: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
   const [showParcels, setShowParcels] = useState(false);
   const [showGemeenten, setShowGemeenten] = useState(false);
@@ -132,6 +143,24 @@ function LayerToggle({ mapRef, onParcelsToggle, onGemeentenToggle, onBestemmings
     }
     prevShowScoreToggleRef.current = showScoreToggle;
   }, [showScoreToggle]);
+
+  // Force-enable parcels from external navigation (e.g. "Bekijk op kaart" from meldingen)
+  const lastAutoEnableRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!autoEnableParcelsKey || !mapRef.current) return;
+    if (lastAutoEnableRef.current === autoEnableParcelsKey) return;
+    lastAutoEnableRef.current = autoEnableParcelsKey;
+
+    const map = mapRef.current;
+    if (!map.getSource('pdok-parcels')) {
+      addParcelBoundariesLayer(map);
+    }
+    setParcelBoundariesVisibility(map, true);
+    // Intentional sync to keep toggle UI aligned with external map navigation state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowParcels(true);
+    onParcelsToggle?.(true);
+  }, [autoEnableParcelsKey, mapRef, onParcelsToggle]);
 
   const active = 'bg-amber-accent text-on-accent shadow-sm';
   const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';

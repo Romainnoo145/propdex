@@ -5,6 +5,8 @@ from __future__ import annotations
 import httpx
 from pyproj import Transformer
 
+from app.government_apis.base import GovernmentAPIError, handle_api_response
+
 # Module-level coordinate transformers (initialized once)
 _rd_to_wgs84 = Transformer.from_crs("EPSG:28992", "EPSG:4326", always_xy=True)
 _wgs84_to_rd = Transformer.from_crs("EPSG:4326", "EPSG:28992", always_xy=True)
@@ -95,9 +97,16 @@ class RCEMonumentClient:
             timeout=30.0,
         )
 
-        # RCE API may return 200 with error in response body
-        # Parse response structure for results
-        data = response.json()
+        try:
+            data = handle_api_response(response, source="rce")
+        except GovernmentAPIError:
+            raise
+        except ValueError as e:
+            raise GovernmentAPIError(
+                "rce",
+                f"Invalid JSON response from RCE API (HTTP {response.status_code})",
+                status_code=response.status_code,
+            ) from e
         docs = data.get("response", {}).get("docs", [])
 
         return docs
@@ -129,7 +138,16 @@ class RCEMonumentClient:
             timeout=30.0,
         )
 
-        data = response.json()
+        try:
+            data = handle_api_response(response, source="rce")
+        except GovernmentAPIError:
+            raise
+        except ValueError as e:
+            raise GovernmentAPIError(
+                "rce",
+                f"Invalid JSON response from RCE API (HTTP {response.status_code})",
+                status_code=response.status_code,
+            ) from e
         docs = data.get("response", {}).get("docs", [])
 
         return docs[0] if docs else None

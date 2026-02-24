@@ -1,12 +1,15 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Bell } from 'lucide-react'
+import { toast } from 'sonner'
 import ResultsShell from '@/components/layout/ResultsShell'
 import {
   useInfiniteAllChanges,
   useMarkAllRead,
+  useRefreshMonitoring,
   useUnreadCounts,
 } from '@/hooks/useNotifications'
+import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useReadTracking } from '@/hooks/useReadTracking'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
@@ -22,6 +25,7 @@ function MeldingenPage() {
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedGemeente, setSelectedGemeente] = useState<string | null>(null)
+  const [manualRefreshing, setManualRefreshing] = useState(false)
 
   const {
     data,
@@ -34,9 +38,11 @@ function MeldingenPage() {
   } = useInfiniteAllChanges(true, selectedGemeente ?? undefined)
 
   const { data: unreadData } = useUnreadCounts()
+  const { data: monitoredData } = useMonitoredProjects()
   const totalUnread = unreadData?.total_unread ?? 0
 
   const markAllRead = useMarkAllRead()
+  const refreshMonitoring = useRefreshMonitoring()
 
   // Flatten pages into single arrays
   const allChanges = useMemo(
@@ -49,14 +55,115 @@ function MeldingenPage() {
     [data?.pages]
   )
 
-  const { readIds, handleToggle, handleGenerateReport, generatingId } =
-    useReadTracking({ readChangeIds: allReadIds })
+  const {
+    readIds,
+    handleToggle,
+    handleGenerateReport,
+    handleGenerateReportByAddress,
+    generatingId,
+  } = useReadTracking({ readChangeIds: allReadIds })
 
-  // Derive gemeente names from loaded pages (progressively more as pages load)
-  const gemeenteNames = useMemo(
-    () => [...new Set(allChanges.map((c) => c.gemeente_naam))].sort(),
+  // Prefer top-level monitored gemeente projects for stable filter options.
+  const monitoredGemeenteProjects = useMemo(
+    () => (monitoredData?.projects ?? []).filter((p) => !p.parent_id),
+    [monitoredData?.projects]
+  )
+
+  const monitoredGemeenteNames = useMemo(
+    () =>
+      [...new Set(
+        monitoredGemeenteProjects
+          .map((p) => p.name.trim())
+          .filter((name) => name.length > 0)
+      )].sort((a, b) => a.localeCompare(b, 'nl')),
+    [monitoredGemeenteProjects]
+  )
+
+  // Fallback source from loaded pages (also useful to include newly seen names)
+  const observedGemeenteNames = useMemo(
+    () =>
+      [...new Set(
+        allChanges
+          .map((c) => (c.gemeente_naam ?? '').trim())
+          .filter((name) => name.length > 0)
+      )].sort((a, b) => a.localeCompare(b, 'nl')),
     [allChanges]
   )
+
+  const gemeenteNames = useMemo(
+    () => {
+      const merged = new Set<string>([
+        ...(monitoredGemeenteNames.length > 0
+          ? monitoredGemeenteNames
+          : observedGemeenteNames),
+        ...observedGemeenteNames,
+      ])
+      if (selectedGemeente) {
+        merged.add(selectedGemeente)
+      }
+      return [...merged].sort((a, b) => a.localeCompare(b, 'nl'))
+    },
+    [monitoredGemeenteNames, observedGemeenteNames, selectedGemeente]
+  )
+
+  const isRefreshing =
+    manualRefreshing || isRefetching || refreshMonitoring.isPending
+
+  const handleRefresh = async () => {
+    setManualRefreshing(true)
+    const monitoredProjects =
+      monitoredGemeenteProjects.length > 0
+        ? monitoredGemeenteProjects
+        : monitoredData?.projects ?? []
+    const targets = selectedGemeente
+      ? monitoredProjects.filter(
+          (p) =>
+            p.name.trim().toLowerCase() ===
+            selectedGemeente.trim().toLowerCase()
+      )
+      : monitoredProjects.slice(0, 5)
+    const minDuration = new Promise((r) => setTimeout(r, 500))
+
+    try {
+      if (selectedGemeente && targets.length === 0) {
+        toast.info(
+          `Geen monitoringproject gevonden voor ${selectedGemeente}`
+        )
+        await Promise.all([refetch(), minDuration])
+        return
+      }
+
+      if (!selectedGemeente && monitoredProjects.length > 5) {
+        toast.info(
+          'Max 5 monitoring-projecten per refresh (API limiet). Filter op gemeente voor gericht verversen.'
+        )
+      }
+
+      let totalNewChanges = 0
+      for (const project of targets) {
+        const result = await refreshMonitoring.mutateAsync(project.id)
+        totalNewChanges += result.new_changes ?? 0
+      }
+
+      await Promise.all([refetch(), minDuration])
+
+      if (targets.length > 0) {
+        if (totalNewChanges > 0) {
+          toast.success(
+            `Refresh voltooid: ${totalNewChanges} ${totalNewChanges === 1 ? 'nieuwe melding' : 'nieuwe meldingen'} gevonden`
+          )
+        } else {
+          toast.info('Refresh voltooid: geen nieuwe meldingen gevonden')
+        }
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Verversen van meldingen mislukt'
+      )
+    } finally {
+      setManualRefreshing(false)
+    }
+  }
 
   // Intersection observer sentinel for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -100,7 +207,7 @@ function MeldingenPage() {
           </span>
         )}
         {/* Gemeente filter dropdown */}
-        {gemeenteNames.length > 1 && (
+        {(gemeenteNames.length > 1 || selectedGemeente !== null) && (
           <select
             value={selectedGemeente ?? ''}
             onChange={(e) => setSelectedGemeente(e.target.value || null)}
@@ -125,12 +232,12 @@ function MeldingenPage() {
             </button>
           )}
           <button
-            onClick={() => refetch()}
-            disabled={isRefetching}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
             className="rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
             aria-label="Ververs meldingen"
           >
-            <RefreshIcon spinning={isRefetching} />
+            <RefreshIcon spinning={isRefreshing} />
           </button>
         </div>
       </div>
@@ -194,6 +301,7 @@ function MeldingenPage() {
                       }
                       onNavigate={navigate}
                       onGenerateReport={handleGenerateReport}
+                      onGenerateReportByAddress={handleGenerateReportByAddress}
                       generatingId={generatingId}
                     />
                   ))}
@@ -232,7 +340,12 @@ interface MeldingItemProps {
   isRead: boolean
   onToggle: () => void
   onNavigate: ReturnType<typeof useNavigate>
-  onGenerateReport: (parcelId: string) => Promise<void>
+  onGenerateReport: (parcelId: string, projectId?: string) => Promise<void>
+  onGenerateReportByAddress: (input: {
+    postcode: string
+    huisnummer: number
+    projectId?: string
+  }) => Promise<void>
   generatingId: string | null
 }
 
@@ -243,11 +356,20 @@ function MeldingItem({
   onToggle,
   onNavigate,
   onGenerateReport,
+  onGenerateReportByAddress,
   generatingId,
 }: MeldingItemProps) {
-  const pc = change.matched_parcels?.length ?? 0
-  const rc = change.matched_reports?.length ?? 0
+  const matchedParcels = Array.isArray(change.matched_parcels)
+    ? change.matched_parcels
+    : []
+  const matchedReports = Array.isArray(change.matched_reports)
+    ? change.matched_reports
+    : []
+  const pc = matchedParcels.length
+  const rc = matchedReports.length
   const hasMatches = pc > 0 || rc > 0
+  const primaryParcelId =
+    change.matched_parcel_id ?? matchedParcels[0]?.parcel_id ?? null
 
   return (
     <div className="rounded-lg border border-grey-800 bg-grey-900 overflow-hidden">
@@ -339,10 +461,20 @@ function MeldingItem({
 
       {/* Expanded detail */}
       {isExpanded && (() => {
-        const hasParcels = (change.matched_parcels?.length ?? 0) > 0
-        const hasReports = (change.matched_reports?.length ?? 0) > 0
-        const expandedHn = change.address ? extractHuisnummer(change.address) : null
+        const hasParcels = matchedParcels.length > 0
+        const hasReports = matchedReports.length > 0
+        const expandedHn =
+          change.huisnummer_hint ??
+          (change.address ? extractHuisnummer(change.address) : null)
         const expandedCanNavigate = change.postcode && expandedHn
+        const canViewOnMap = Boolean(primaryParcelId || expandedCanNavigate)
+        const addressGenerateKey =
+          expandedCanNavigate
+            ? `addr:${change.postcode!.replace(/\s/g, '').toUpperCase()}:${expandedHn!}`
+            : null
+        const canGenerate = Boolean(primaryParcelId || expandedCanNavigate)
+        const isGeneratingAddress =
+          !!addressGenerateKey && generatingId === addressGenerateKey
 
         return (
           <div className="border-t border-grey-800 bg-grey-900/50 px-4 py-3">
@@ -357,13 +489,13 @@ function MeldingItem({
                 {/* Matched parcels */}
                 {hasParcels && (
                   <div className="space-y-1">
-                    {change.matched_parcels!.map((m) => (
+                    {matchedParcels.map((m) => (
                       <div key={m.parcel_id} className="flex items-center gap-2">
                         <button
                           onClick={() =>
                             onNavigate({
                               to: '/map',
-                              search: { parcel_id: m.parcel_id },
+                              search: { parcel_id: m.parcel_id, _t: Date.now() },
                             })
                           }
                           className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
@@ -381,7 +513,7 @@ function MeldingItem({
                 {/* Matched reports */}
                 {hasReports && (
                   <div className="space-y-1">
-                    {change.matched_reports!.map((m) => (
+                    {matchedReports.map((m) => (
                       <button
                         key={m.report_id}
                         onClick={() =>
@@ -415,62 +547,59 @@ function MeldingItem({
 
               {/* Right: action buttons */}
               <div className="flex shrink-0 flex-col gap-2">
-                {/* Bekijk op kaart — prefer parcel-ID (Phase 48 verified), fallback to address */}
-                {change.matched_parcel_id ? (
-                  <button
-                    onClick={() =>
+                <button
+                  onClick={() => {
+                    if (!canViewOnMap) return
+                    if (primaryParcelId) {
                       onNavigate({
                         to: '/map',
-                        search: { parcel_id: change.matched_parcel_id! },
+                        search: { parcel_id: primaryParcelId, _t: Date.now() },
                       })
+                      return
                     }
-                    className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
-                  >
-                    <MapPinIcon />
-                    Bekijk op kaart
-                  </button>
-                ) : expandedCanNavigate ? (
-                  <button
-                    onClick={() =>
-                      onNavigate({
-                        to: '/map',
-                        search: {
-                          postcode: formatPostcode(change.postcode!),
-                          huisnummer: expandedHn!,
-                          _t: Date.now(),
-                        },
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
-                  >
-                    <MapPinIcon />
-                    Bekijk op kaart
-                  </button>
-                ) : null}
+                    onNavigate({
+                      to: '/map',
+                      search: {
+                        postcode: formatPostcode(change.postcode!),
+                        huisnummer: expandedHn!,
+                        _t: Date.now(),
+                      },
+                    })
+                  }}
+                  disabled={!canViewOnMap}
+                  title={!canViewOnMap ? 'Adres/huisnummer ontbreekt' : undefined}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <MapPinIcon />
+                  Bekijk op kaart
+                </button>
 
-                {/* Genereer rapport — prefer matched_parcel_id (verified), fallback to matched_parcels list */}
-                {change.matched_parcel_id ? (
-                  <button
-                    onClick={() => onGenerateReport(change.matched_parcel_id!)}
-                    disabled={generatingId === change.matched_parcel_id}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
-                  >
-                    <ReportLinkIcon />
-                    {generatingId === change.matched_parcel_id ? 'Bezig...' : 'Genereer rapport'}
-                  </button>
-                ) : hasParcels ? (
-                  change.matched_parcels!.map((m) => (
-                    <button
-                      key={`gen-${m.parcel_id}`}
-                      onClick={() => onGenerateReport(m.parcel_id)}
-                      disabled={generatingId === m.parcel_id}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
-                    >
-                      <ReportLinkIcon />
-                      {generatingId === m.parcel_id ? 'Bezig...' : 'Genereer rapport'}
-                    </button>
-                  ))
-                ) : null}
+                <button
+                  onClick={() => {
+                    if (!canGenerate) return
+                    if (primaryParcelId) {
+                      void onGenerateReport(primaryParcelId, change.project_id)
+                      return
+                    }
+                    void onGenerateReportByAddress({
+                      postcode: formatPostcode(change.postcode!),
+                      huisnummer: expandedHn!,
+                      projectId: change.project_id,
+                    })
+                  }}
+                  disabled={
+                    !canGenerate ||
+                    generatingId === primaryParcelId ||
+                    isGeneratingAddress
+                  }
+                  title={!canGenerate ? 'Adres/huisnummer ontbreekt' : undefined}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ReportLinkIcon />
+                  {generatingId === primaryParcelId || isGeneratingAddress
+                    ? 'Bezig...'
+                    : 'Genereer rapport'}
+                </button>
               </div>
             </div>
           </div>

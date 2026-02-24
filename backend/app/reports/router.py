@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
+from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.middleware.rate_limit import limiter
 from app.models.parcel_cache import ParcelCache
 from app.models.user import User
@@ -25,6 +26,7 @@ from app.schemas.report import (
     ReportAssignProject,
     ReportDetailResponse,
     ReportFreshnessResponse,
+    ReportFromAddressRequest,
     ReportFromParcelRequest,
     ReportListItem,
     ReportListResponse,
@@ -36,8 +38,49 @@ from app.schemas.report import (
 from app.services.property_aggregator import aggregate_property_data, fetch_brk_ownership
 
 logger = logging.getLogger(__name__)
+locatieserver = PDOKLocatieserver()
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def _extract_report_address_input(
+    report_data: dict,
+    fallback_postcode: str | None = None,
+) -> AddressInput | None:
+    """Build AddressInput from stored report payload."""
+    address = report_data.get("address")
+    if not isinstance(address, dict):
+        return None
+
+    postcode = address.get("postcode") or fallback_postcode
+    huisnummer_raw = address.get("huisnummer")
+    try:
+        huisnummer = int(huisnummer_raw)
+    except (TypeError, ValueError):
+        return None
+
+    if not postcode or huisnummer <= 0:
+        return None
+
+    try:
+        return AddressInput(
+            postcode=str(postcode),
+            huisnummer=huisnummer,
+        )
+    except Exception:
+        return None
+
+
+def _report_needs_v7_backfill(report_data: dict) -> bool:
+    """Detect old reports that miss newer v7 sections."""
+    required_keys = (
+        "energy_label",
+        "woz_data",
+        "map_data",
+        "monuments",
+        "section_sources",
+    )
+    return any(key not in report_data for key in required_keys)
 
 
 def _parse_parcel_address(address: str) -> tuple[str, int] | None:
@@ -69,6 +112,19 @@ def _parse_parcel_address(address: str) -> tuple[str, int] | None:
         return None
 
     return postcode, huisnummer
+
+
+def _parse_rd_point_wkt(wkt: str | None) -> tuple[float, float] | None:
+    """Parse WKT POINT string to RD tuple."""
+    if not isinstance(wkt, str) or not wkt:
+        return None
+    m = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", wkt)
+    if not m:
+        return None
+    try:
+        return float(m.group(1)), float(m.group(2))
+    except ValueError:
+        return None
 
 
 @router.post("", response_model=ReportDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -262,6 +318,83 @@ async def get_cities(
 
 
 @router.post(
+    "/from-address",
+    response_model=ReportDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("10/minute")
+async def generate_report_from_address(
+    request: Request,
+    body: ReportFromAddressRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """
+    Generate a full property intelligence report directly from address input.
+
+    Useful fallback for monitoring items that have postcode + huisnummer but no
+    matched parcel in ParcelCache yet.
+    """
+    try:
+        address_input = AddressInput(
+            postcode=body.postcode,
+            huisnummer=body.huisnummer,
+        )
+
+        try:
+            property_data = await aggregate_property_data(
+                input_data=address_input,
+                client=request.app.state.http_client,
+                organization_id=organization_id,
+                session=db,
+                force_refresh=False,
+                arq_pool=request.app.state.arq_pool,
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Fout bij ophalen van adresdata: {e}",
+            ) from e
+
+        report = await service.save_report(
+            report_data=property_data.model_dump(mode="json"),
+            notes=body.notes,
+            project_id=body.project_id,
+            organization_id=organization_id,
+            session=db,
+            parcel_id=None,
+        )
+
+        return ReportDetailResponse(
+            id=report.id,
+            report_name=report.report_name,
+            report_data=report.report_data,
+            postcode=report.postcode,
+            city=report.city,
+            notes=report.notes,
+            project_id=report.project_id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("from-address failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate report from address: {e}",
+        ) from e
+
+
+@router.post(
     "/from-parcel",
     response_model=ReportDetailResponse,
     status_code=status.HTTP_201_CREATED,
@@ -313,26 +446,50 @@ async def generate_report_from_parcel(
                 detail="Perceel niet gevonden",
             )
 
-        # 2. Check address is available
-        if not parcel.address:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Geen geldig adres beschikbaar voor dit perceel",
-            )
+        # 2. Parse address to postcode + huisnummer.
+        # Fallback: when ParcelCache.address is missing/unparseable, reverse-geocode
+        # the parcel centroid via PDOK so report generation still works from map marker.
+        source_address = parcel.address
+        parsed = _parse_parcel_address(source_address) if source_address else None
+        if parsed is None:
+            from geoalchemy2.functions import ST_AsText, ST_Centroid
 
-        # 3. Parse address to postcode + huisnummer
-        parsed = _parse_parcel_address(parcel.address)
+            centroid_query = select(
+                ST_AsText(ST_Centroid(ParcelCache.geometry))
+            ).where(
+                ParcelCache.id == body.parcel_id,
+                ParcelCache.organization_id == organization_id,
+            )
+            centroid_row = (await db.execute(centroid_query)).one_or_none()
+            rd_point = _parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
+            if rd_point is not None:
+                reverse_address = await locatieserver.reverse(
+                    rd_x=rd_point[0],
+                    rd_y=rd_point[1],
+                    client=request.app.state.http_client,
+                )
+                if reverse_address:
+                    source_address = reverse_address
+                    parsed = _parse_parcel_address(reverse_address)
+                    if parsed is not None and not parcel.address:
+                        parcel.address = reverse_address
+                        db.add(parcel)
+
         if parsed is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Adres kan niet worden verwerkt: {parcel.address}",
+                detail=(
+                    f"Adres kan niet worden verwerkt: {source_address}"
+                    if source_address
+                    else "Geen geldig adres beschikbaar voor dit perceel"
+                ),
             )
         postcode, huisnummer = parsed
 
-        # 4. Build AddressInput
+        # 3. Build AddressInput
         address_input = AddressInput(postcode=postcode, huisnummer=huisnummer)
 
-        # 5. Aggregate property data
+        # 4. Aggregate property data
         try:
             property_data = await aggregate_property_data(
                 input_data=address_input,
@@ -350,16 +507,17 @@ async def generate_report_from_parcel(
                 detail=f"Fout bij ophalen van perceeldata: {e}",
             ) from e
 
-        # 6. Save report
+        # 5. Save report
         report = await service.save_report(
             report_data=property_data.model_dump(mode="json"),
             notes=body.notes,
             project_id=body.project_id,
             organization_id=organization_id,
             session=db,
+            parcel_id=body.parcel_id,
         )
 
-        # 7. Return report detail
+        # 6. Return report detail
         return ReportDetailResponse(
             id=report.id,
             report_name=report.report_name,
@@ -422,9 +580,37 @@ async def get_report(
             session=db,
         )
 
-        # BRK was stripped before save — re-fetch live for each view
-        # (Kadaster Tier 3: data must be "actueel opgevraagd")
         report_data = dict(report.report_data)  # copy of stored JSONB
+
+        # Auto-upgrade older reports with missing v7 sections on first view.
+        # This persists non-BRK sections so old reports become feature-complete.
+        if _report_needs_v7_backfill(report_data):
+            address_input = _extract_report_address_input(report_data, report.postcode)
+            if address_input is not None:
+                try:
+                    fresh = await aggregate_property_data(
+                        input_data=address_input,
+                        client=request.app.state.http_client,
+                        organization_id=organization_id,
+                        session=db,
+                        force_refresh=False,
+                        arq_pool=request.app.state.arq_pool,
+                    )
+                    fresh_data = fresh.model_dump(mode="json")
+                    report = await service.update_report_data(
+                        report_id=report.id,
+                        organization_id=organization_id,
+                        fresh_data=fresh_data,
+                        session=db,
+                    )
+                    report_data = dict(report.report_data)
+                    # Keep live BRK for response only (never persisted).
+                    report_data["brk_ownership"] = fresh_data.get("brk_ownership")
+                except Exception as e:
+                    logger.warning("Report v7 auto-backfill skipped for %s: %s", report.id, str(e))
+
+        # BRK is stripped before save — re-fetch live for each view
+        # (Kadaster Tier 3: data must be "actueel opgevraagd")
         if report_data.get("brk_ownership") is None:
             try:
                 stored_parcels = [
@@ -634,7 +820,10 @@ async def assign_project(
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
-    Assign report to a project (or remove from project).
+    Assign report to a project.
+
+    When project_id is null, backend auto-assigns the report to a
+    gemeente folder based on report location.
 
     Requires JWT authentication. Rate limited to 30 requests per minute.
 

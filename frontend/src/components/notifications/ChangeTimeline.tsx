@@ -32,8 +32,13 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const { readIds, handleToggle, handleGenerateReport, generatingId } =
-    useReadTracking({ readChangeIds: data?.read_change_ids })
+  const {
+    readIds,
+    handleToggle,
+    handleGenerateReport,
+    handleGenerateReportByAddress,
+    generatingId,
+  } = useReadTracking({ readChangeIds: data?.read_change_ids })
 
   const changes = data?.changes ?? []
 
@@ -91,11 +96,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
   const sortedDates = Object.keys(groupedChanges).sort().reverse() // Newest first
 
-  const parcelCount = (change: ChangeRecord) =>
-    change.matched_parcels?.length ?? 0
-  const reportCount = (change: ChangeRecord) =>
-    change.matched_reports?.length ?? 0
-
   return (
     <div className="border-t border-grey-800 bg-grey-900/50">
       {sortedDates.map((dateKey) => {
@@ -111,12 +111,22 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
             {/* Changes for this date */}
             {dateChanges.map((change) => {
+              const matchedParcels = Array.isArray(change.matched_parcels)
+                ? change.matched_parcels
+                : []
+              const matchedReports = Array.isArray(change.matched_reports)
+                ? change.matched_reports
+                : []
               const isExpanded = expandedId === change.id
               const Icon =
                 change.change_type === 'permit' ? PermitIcon : ZoningIcon
-              const pc = parcelCount(change)
-              const rc = reportCount(change)
+              const pc = matchedParcels.length
+              const rc = matchedReports.length
               const hasMatches = pc > 0 || rc > 0
+              const primaryParcelId =
+                change.matched_parcel_id ??
+                matchedParcels[0]?.parcel_id ??
+                null
 
               return (
                 <div
@@ -142,7 +152,13 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                           {formatRelativeTime(change.change_date)}
                         </span>
                         {change.category_label && (
-                          <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-300">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              /verleend|vastgesteld/i.test(change.category_label)
+                                ? 'bg-amber-accent/15 text-amber-accent'
+                                : 'bg-grey-800 text-grey-300'
+                            }`}
+                          >
                             {change.category_label}
                           </span>
                         )}
@@ -169,10 +185,20 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
                   {/* Expanded details */}
                   {isExpanded && (() => {
-                    const hasParcels = (change.matched_parcels?.length ?? 0) > 0
-                    const hasReports = (change.matched_reports?.length ?? 0) > 0
-                    const hn = change.address ? extractHuisnummer(change.address) : null
+                    const hasParcels = matchedParcels.length > 0
+                    const hasReports = matchedReports.length > 0
+                    const hn =
+                      change.huisnummer_hint ??
+                      (change.address ? extractHuisnummer(change.address) : null)
                     const canNav = change.postcode && hn
+                    const canViewOnMap = Boolean(primaryParcelId || canNav)
+                    const addressGenerateKey =
+                      canNav
+                        ? `addr:${change.postcode!.replace(/\s/g, '').toUpperCase()}:${hn!}`
+                        : null
+                    const canGenerate = Boolean(primaryParcelId || canNav)
+                    const isGeneratingAddress =
+                      !!addressGenerateKey && generatingId === addressGenerateKey
 
                     return (
                       <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3">
@@ -185,13 +211,16 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
                             {hasParcels && (
                               <div className="space-y-1">
-                                {change.matched_parcels!.map((m) => (
+                                {matchedParcels.map((m) => (
                                   <button
                                     key={m.parcel_id}
                                     onClick={() =>
                                       navigate({
                                         to: '/map',
-                                        search: { parcel_id: m.parcel_id },
+                                        search: {
+                                          parcel_id: m.parcel_id,
+                                          _t: Date.now(),
+                                        },
                                       })
                                     }
                                     className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
@@ -207,7 +236,7 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
                             {hasReports && (
                               <div className="space-y-1">
-                                {change.matched_reports!.map((m) => (
+                                {matchedReports.map((m) => (
                                   <button
                                     key={m.report_id}
                                     onClick={() =>
@@ -240,62 +269,62 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
                           {/* Right: action buttons */}
                           <div className="flex shrink-0 flex-col gap-2">
-                            {/* Bekijk op kaart — prefer matched_parcel_id (Phase 48 verified), fallback to address */}
-                            {change.matched_parcel_id ? (
-                              <button
-                                onClick={() =>
-                                  navigate({
-                                    to: '/map',
-                                    search: { parcel_id: change.matched_parcel_id! },
-                                  })
-                                }
-                                className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
-                              >
-                                <MapPinIcon />
-                                Bekijk op kaart
-                              </button>
-                            ) : canNav ? (
-                              <button
-                                onClick={() =>
+                            <button
+                              onClick={() => {
+                                if (!canViewOnMap) return
+                                if (primaryParcelId) {
                                   navigate({
                                     to: '/map',
                                     search: {
-                                      postcode: formatPostcode(change.postcode!),
-                                      huisnummer: hn!,
+                                      parcel_id: primaryParcelId,
                                       _t: Date.now(),
                                     },
                                   })
+                                  return
                                 }
-                                className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors"
-                              >
-                                <MapPinIcon />
-                                Bekijk op kaart
-                              </button>
-                            ) : null}
+                                navigate({
+                                  to: '/map',
+                                  search: {
+                                    postcode: formatPostcode(change.postcode!),
+                                    huisnummer: hn!,
+                                    _t: Date.now(),
+                                  },
+                                })
+                              }}
+                              disabled={!canViewOnMap}
+                              title={!canViewOnMap ? 'Adres/huisnummer ontbreekt' : undefined}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <MapPinIcon />
+                              Bekijk op kaart
+                            </button>
 
-                            {/* Genereer rapport — prefer matched_parcel_id (verified), fallback to matched_parcels list */}
-                            {change.matched_parcel_id ? (
-                              <button
-                                onClick={() => handleGenerateReport(change.matched_parcel_id!)}
-                                disabled={generatingId === change.matched_parcel_id}
-                                className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
-                              >
-                                <ReportLinkIcon />
-                                {generatingId === change.matched_parcel_id ? 'Bezig...' : 'Genereer rapport'}
-                              </button>
-                            ) : hasParcels ? (
-                              change.matched_parcels!.map((m) => (
-                                <button
-                                  key={`gen-${m.parcel_id}`}
-                                  onClick={() => handleGenerateReport(m.parcel_id)}
-                                  disabled={generatingId === m.parcel_id}
-                                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:opacity-50"
-                                >
-                                  <ReportLinkIcon />
-                                  {generatingId === m.parcel_id ? 'Bezig...' : 'Genereer rapport'}
-                                </button>
-                              ))
-                            ) : null}
+                            <button
+                              onClick={() => {
+                                if (!canGenerate) return
+                                if (primaryParcelId) {
+                                  void handleGenerateReport(primaryParcelId, change.project_id)
+                                  return
+                                }
+                                void handleGenerateReportByAddress({
+                                  postcode: formatPostcode(change.postcode!),
+                                  huisnummer: hn!,
+                                  projectId: change.project_id,
+                                })
+                              }}
+                              disabled={
+                                !canGenerate ||
+                                generatingId === primaryParcelId ||
+                                isGeneratingAddress
+                              }
+                              title={!canGenerate ? 'Adres/huisnummer ontbreekt' : undefined}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <ReportLinkIcon />
+                              {generatingId === primaryParcelId || isGeneratingAddress
+                                ? 'Bezig...'
+                                : 'Genereer rapport'}
+                            </button>
                           </div>
                         </div>
                       </div>

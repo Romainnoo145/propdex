@@ -202,6 +202,9 @@ async def detect_permit_changes(
                 "postcode": address_data["postcode"],
                 "city": address_data["city"],
             }
+            # Fallback: when title/URL parsing missed postcode, use structured address extraction.
+            if not postcode and address_data.get("postcode"):
+                postcode = str(address_data["postcode"]).upper().replace(" ", "")
 
         # Create ChangeRecord (caller will add to session)
         change_record = ChangeRecord(

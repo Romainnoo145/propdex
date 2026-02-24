@@ -21,6 +21,17 @@ class ReportFromParcelRequest(BaseModel):
     )
 
 
+class ReportFromAddressRequest(BaseModel):
+    """Schema for generating a report directly from postcode + huisnummer."""
+
+    postcode: str = Field(description="Dutch postcode (e.g. '1234AB' or '1234 AB')")
+    huisnummer: int = Field(ge=1, description="House number")
+    notes: str | None = Field(default=None, description="Optional notes for the report")
+    project_id: uuid.UUID | None = Field(
+        default=None, description="Optional project folder ID"
+    )
+
+
 class ReportSaveRequest(BaseModel):
     """Schema for saving a property report."""
 
@@ -59,7 +70,7 @@ class ReportAssignProject(BaseModel):
     """Schema for assigning report to a project."""
 
     project_id: uuid.UUID | None = Field(
-        description="Project ID (null to remove from project)",
+        description="Project ID (null = auto-assign by location)",
     )
 
 

@@ -526,12 +526,12 @@ export async function deleteProject(
 }
 
 /**
- * Assign a report to a project (or remove from project)
+ * Assign a report to a project
  *
  * PATCH /api/reports/{reportId}/project
  *
  * @param reportId - Report UUID
- * @param projectId - Project UUID (or null to remove from project)
+ * @param projectId - Project UUID (or null to auto-assign by location)
  * @param accessToken - JWT access token from useAuth()
  * @returns Updated report detail
  */
@@ -572,6 +572,34 @@ export async function generateReportFromParcel(
       parcel_id: parcelId,
       ...(options?.notes && { notes: options.notes }),
       ...(options?.project_id && { project_id: options.project_id }),
+    }),
+  })
+}
+
+/**
+ * Generate a full property intelligence report from postcode + huisnummer.
+ *
+ * POST /api/reports/from-address
+ *
+ * Fallback flow for meldingen without matched parcel IDs.
+ */
+export async function generateReportFromAddress(
+  input: {
+    postcode: string
+    huisnummer: number
+    notes?: string
+    project_id?: string
+  },
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/from-address`, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify({
+      postcode: input.postcode,
+      huisnummer: input.huisnummer,
+      ...(input.notes && { notes: input.notes }),
+      ...(input.project_id && { project_id: input.project_id }),
     }),
   })
 }
@@ -725,6 +753,29 @@ export async function fetchParcelCentroid(
 ): Promise<{ lng: number; lat: number; address: string | null }> {
   return apiFetch<{ lng: number; lat: number; address: string | null }>(
     `${SCANS_BASE}/parcels/${parcelId}/centroid`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
+ * Resolve a ParcelCache UUID from address components.
+ *
+ * GET /api/scans/parcels/resolve?street=...&huisnummer=...&postcode=...
+ */
+export async function resolveParcelByAddress(
+  params: { street: string; huisnummer: number; postcode?: string },
+  accessToken: string | null
+): Promise<{ parcel_id: string; lng: number; lat: number; address: string | null }> {
+  const query = new URLSearchParams({
+    street: params.street,
+    huisnummer: String(params.huisnummer),
+  })
+  if (params.postcode) {
+    query.set('postcode', params.postcode)
+  }
+
+  return apiFetch<{ parcel_id: string; lng: number; lat: number; address: string | null }>(
+    `${SCANS_BASE}/parcels/resolve?${query.toString()}`,
     { method: 'GET', accessToken }
   )
 }

@@ -7,8 +7,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.area_scan import AreaScan
+from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.report import SavedReport
+from app.models.scan_result import ScanResult
 from app.schemas.property import PropertyReportResponse
 
 
@@ -24,12 +27,199 @@ def active_reports_query(organization_id: uuid.UUID):
     )
 
 
+def _normalize_location_value(value: str | None) -> str | None:
+    """Normalize optional location labels (strip + empty to None)."""
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+async def _get_or_create_project_for_location(
+    organization_id: uuid.UUID,
+    gemeente_naam: str | None,
+    gemeente_code: str | None,
+    wijk_naam: str | None,
+    session: AsyncSession,
+) -> uuid.UUID:
+    """
+    Ensure a gemeente/wijk project folder exists and return its ID.
+
+    Hierarchy:
+    - parent project: gemeente
+    - child project: wijk (optional)
+    """
+    normalized_gemeente_naam = _normalize_location_value(gemeente_naam)
+    normalized_gemeente_code = _normalize_location_value(gemeente_code)
+    normalized_wijk_naam = _normalize_location_value(wijk_naam)
+
+    # Always keep a deterministic fallback folder for reports with incomplete location data.
+    if normalized_gemeente_naam is None:
+        normalized_gemeente_naam = (
+            f"Gemeente {normalized_gemeente_code}"
+            if normalized_gemeente_code
+            else "Onbekende gemeente"
+        )
+
+    gemeente_project = None
+
+    # Prefer exact gemeente_code match when available.
+    if normalized_gemeente_code is not None:
+        gemeente_by_code_result = await session.execute(
+            select(Project).where(
+                Project.organization_id == organization_id,
+                Project.parent_id.is_(None),
+                Project.gemeente_code == normalized_gemeente_code,
+            ).limit(1)
+        )
+        gemeente_project = gemeente_by_code_result.scalar_one_or_none()
+
+    # Fallback to case-insensitive gemeente name match.
+    if gemeente_project is None:
+        gemeente_by_name_result = await session.execute(
+            select(Project).where(
+                Project.organization_id == organization_id,
+                Project.parent_id.is_(None),
+                func.lower(Project.name) == normalized_gemeente_naam.lower(),
+            ).limit(1)
+        )
+        gemeente_project = gemeente_by_name_result.scalar_one_or_none()
+
+    if gemeente_project is None:
+        gemeente_project = Project(
+            organization_id=organization_id,
+            name=normalized_gemeente_naam,
+            gemeente_code=normalized_gemeente_code,
+            is_monitored=normalized_gemeente_code is not None,
+        )
+        session.add(gemeente_project)
+        await session.flush()
+    else:
+        # Fill missing metadata on older folders when we now have better context.
+        if normalized_gemeente_code and not gemeente_project.gemeente_code:
+            gemeente_project.gemeente_code = normalized_gemeente_code
+
+    if normalized_wijk_naam is None:
+        return gemeente_project.id
+
+    wijk_result = await session.execute(
+        select(Project).where(
+            Project.organization_id == organization_id,
+            Project.parent_id == gemeente_project.id,
+            func.lower(Project.name) == normalized_wijk_naam.lower(),
+        ).limit(1)
+    )
+    wijk_project = wijk_result.scalar_one_or_none()
+
+    if wijk_project is None:
+        wijk_project = Project(
+            organization_id=organization_id,
+            name=normalized_wijk_naam,
+            parent_id=gemeente_project.id,
+            gemeente_code=normalized_gemeente_code,
+            wijk_naam=normalized_wijk_naam,
+            is_monitored=normalized_gemeente_code is not None,
+        )
+        session.add(wijk_project)
+        await session.flush()
+    else:
+        if normalized_gemeente_code and not wijk_project.gemeente_code:
+            wijk_project.gemeente_code = normalized_gemeente_code
+        if not wijk_project.wijk_naam:
+            wijk_project.wijk_naam = normalized_wijk_naam
+
+    return wijk_project.id
+
+
+async def _resolve_location_context_from_parcel(
+    organization_id: uuid.UUID,
+    parcel_id: uuid.UUID,
+    default_gemeente_naam: str,
+    session: AsyncSession,
+) -> tuple[str, str | None, str | None]:
+    """
+    Resolve best-known gemeente/wijk context for a parcel.
+
+    Priority:
+    1. Latest scan result context (gemeente + wijk)
+    2. ParcelCache.gemeente_code
+    3. Report address city as municipality display name
+    """
+    resolved_gemeente_naam = default_gemeente_naam
+    resolved_gemeente_code = None
+    resolved_wijk_naam = None
+
+    scan_context_result = await session.execute(
+        select(
+            AreaScan.gemeente_naam,
+            AreaScan.gemeente_code,
+            AreaScan.wijk_naam,
+        )
+        .join(ScanResult, ScanResult.scan_id == AreaScan.id)
+        .where(
+            AreaScan.organization_id == organization_id,
+            ScanResult.organization_id == organization_id,
+            ScanResult.parcel_id == parcel_id,
+        )
+        .order_by(ScanResult.created_at.desc())
+        .limit(1)
+    )
+    scan_context = scan_context_result.one_or_none()
+    if scan_context is not None:
+        resolved_gemeente_naam = (
+            _normalize_location_value(scan_context.gemeente_naam) or resolved_gemeente_naam
+        )
+        resolved_gemeente_code = _normalize_location_value(scan_context.gemeente_code)
+        resolved_wijk_naam = _normalize_location_value(scan_context.wijk_naam)
+
+    if resolved_gemeente_code is None:
+        parcel_code_result = await session.execute(
+            select(ParcelCache.gemeente_code).where(
+                ParcelCache.id == parcel_id,
+                ParcelCache.organization_id == organization_id,
+            )
+        )
+        parcel_gemeente_code = parcel_code_result.scalar_one_or_none()
+        resolved_gemeente_code = _normalize_location_value(parcel_gemeente_code)
+
+    return resolved_gemeente_naam, resolved_gemeente_code, resolved_wijk_naam
+
+
+async def _backfill_unassigned_reports(
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+) -> None:
+    """Backfill legacy reports without project_id to gemeente folders."""
+    unassigned_result = await session.execute(
+        select(SavedReport).where(
+            SavedReport.organization_id == organization_id,
+            SavedReport.deleted_at.is_(None),
+            SavedReport.project_id.is_(None),
+        )
+    )
+    unassigned_reports = list(unassigned_result.scalars().all())
+    if not unassigned_reports:
+        return
+
+    for report in unassigned_reports:
+        report.project_id = await _get_or_create_project_for_location(
+            organization_id=organization_id,
+            gemeente_naam=report.city,
+            gemeente_code=None,
+            wijk_naam=None,
+            session=session,
+        )
+
+    await session.commit()
+
+
 async def save_report(
     report_data: dict,
     notes: str | None,
     project_id: uuid.UUID | None,
     organization_id: uuid.UUID,
     session: AsyncSession,
+    parcel_id: uuid.UUID | None = None,
 ) -> SavedReport:
     """
     Save a property intelligence report.
@@ -40,6 +230,7 @@ async def save_report(
         project_id: Optional project folder ID
         organization_id: Tenant organization ID
         session: Database session
+        parcel_id: Optional ParcelCache ID (used to resolve wijk context)
 
     Returns:
         SavedReport: The created report
@@ -62,11 +253,13 @@ async def save_report(
     postcode = address_data["postcode"]
     city = address_data["woonplaats"]
 
-    # If project_id provided, verify project exists and belongs to same organization
-    if project_id is not None:
+    resolved_project_id = project_id
+
+    # If project_id provided, verify project exists and belongs to same organization.
+    if resolved_project_id is not None:
         project_result = await session.execute(
             select(Project).where(
-                Project.id == project_id,
+                Project.id == resolved_project_id,
                 Project.organization_id == organization_id,
             )
         )
@@ -76,6 +269,28 @@ async def save_report(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Project not found",
             )
+    else:
+        gemeente_naam = city
+        gemeente_code = None
+        wijk_naam = None
+
+        if parcel_id is not None:
+            gemeente_naam, gemeente_code, wijk_naam = (
+                await _resolve_location_context_from_parcel(
+                    organization_id=organization_id,
+                    parcel_id=parcel_id,
+                    default_gemeente_naam=city,
+                    session=session,
+                )
+            )
+
+        resolved_project_id = await _get_or_create_project_for_location(
+            organization_id=organization_id,
+            gemeente_naam=gemeente_naam,
+            gemeente_code=gemeente_code,
+            wijk_naam=wijk_naam,
+            session=session,
+        )
 
     # Store validated dict
     report_data_json = validated_report.model_dump(mode="json")
@@ -91,7 +306,7 @@ async def save_report(
         postcode=postcode,
         city=city,
         notes=notes,
-        project_id=project_id,
+        project_id=resolved_project_id,
     )
 
     session.add(report)
@@ -129,6 +344,9 @@ async def list_reports(
     Returns:
         tuple: (list of SavedReport, total count)
     """
+    # One-time safety pass: ensure legacy data is also folder-linked.
+    await _backfill_unassigned_reports(organization_id=organization_id, session=session)
+
     # Start from active reports query
     query = active_reports_query(organization_id)
 
@@ -198,6 +416,17 @@ async def get_report(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report not found",
         )
+
+    # Backfill one-off legacy report assignment on read.
+    if report.project_id is None:
+        report.project_id = await _get_or_create_project_for_location(
+            organization_id=organization_id,
+            gemeente_naam=report.city,
+            gemeente_code=None,
+            wijk_naam=None,
+            session=session,
+        )
+        await session.commit()
 
     return report
 
@@ -300,12 +529,12 @@ async def assign_report_to_project(
     session: AsyncSession,
 ) -> SavedReport:
     """
-    Assign report to a project (or remove from project).
+    Assign report to a project.
 
     Args:
         report_id: Report ID
         organization_id: Tenant organization ID
-        project_id: Project ID (None to remove from project)
+        project_id: Project ID (None auto-maps to gemeente folder)
         session: Database session
 
     Returns:
@@ -316,8 +545,17 @@ async def assign_report_to_project(
     """
     report = await get_report(report_id, organization_id, session)
 
-    # If project_id provided, verify project exists in same organization
-    if project_id is not None:
+    # Never leave a report unassigned. Null requests map to auto gemeente folder.
+    if project_id is None:
+        project_id = await _get_or_create_project_for_location(
+            organization_id=organization_id,
+            gemeente_naam=report.city,
+            gemeente_code=None,
+            wijk_naam=None,
+            session=session,
+        )
+    else:
+        # If project_id provided, verify project exists in same organization.
         project_result = await session.execute(
             select(Project).where(
                 Project.id == project_id,

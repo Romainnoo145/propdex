@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models.organization import Organization
 from app.models.project import Project
@@ -125,6 +125,52 @@ class TestSaveReport:
         stmt = select(SavedReport).where(SavedReport.id == report.id)
         row = (await test_db.execute(stmt)).scalar_one()
         assert row.project_id == project_id
+
+    async def test_save_without_project_auto_assigns_city_folder(self, test_db, org_id):
+        """Saving without project_id must auto-assign to a gemeente folder."""
+        report_data = _make_report_data(
+            straat="Keizersgracht",
+            huisnummer=7,
+            postcode="1015 CJ",
+            woonplaats="Amsterdam",
+        )
+
+        first = await service.save_report(
+            report_data=report_data,
+            notes=None,
+            project_id=None,
+            organization_id=org_id,
+            session=test_db,
+        )
+        second = await service.save_report(
+            report_data=_make_report_data(
+                straat="Prinsengracht",
+                huisnummer=8,
+                postcode="1016 DV",
+                woonplaats="Amsterdam",
+            ),
+            notes=None,
+            project_id=None,
+            organization_id=org_id,
+            session=test_db,
+        )
+
+        assert first.project_id is not None
+        assert second.project_id is not None
+        assert first.project_id == second.project_id
+
+        project_stmt = select(Project).where(Project.id == first.project_id)
+        project = (await test_db.execute(project_stmt)).scalar_one()
+        assert project.name == "Amsterdam"
+        assert project.parent_id is None
+
+        count_stmt = select(func.count(Project.id)).where(
+            Project.organization_id == org_id,
+            Project.parent_id.is_(None),
+            func.lower(Project.name) == "amsterdam",
+        )
+        count = (await test_db.execute(count_stmt)).scalar_one()
+        assert count == 1
 
     async def test_save_invalid_data_raises_value_error(self, test_db, org_id):
         """Test saving invalid report_data raises ValueError."""
@@ -467,6 +513,31 @@ class TestUpdateNotes:
         )
 
         assert updated.notes == "Updated notes"
+
+
+class TestAssignProject:
+    async def test_assign_null_auto_maps_to_city_folder(self, test_db, org_id, project_id):
+        """Null assignment should keep report in a project folder via auto-mapping."""
+        report = await service.save_report(
+            report_data=_make_report_data("Velperweg", 10, "6811 AB", "Arnhem"),
+            notes=None,
+            project_id=project_id,
+            organization_id=org_id,
+            session=test_db,
+        )
+
+        updated = await service.assign_report_to_project(
+            report_id=report.id,
+            organization_id=org_id,
+            project_id=None,
+            session=test_db,
+        )
+
+        assert updated.project_id is not None
+
+        assigned_project_stmt = select(Project).where(Project.id == updated.project_id)
+        assigned_project = (await test_db.execute(assigned_project_stmt)).scalar_one()
+        assert assigned_project.name == "Arnhem"
 
 
 class TestDistinctCities:

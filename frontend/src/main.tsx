@@ -7,6 +7,7 @@ import { routeTree } from './routeTree.gen'
 import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './lib/auth/AuthContext'
 import { useAuth } from './lib/auth/useAuth'
+import { ThemeProvider } from './lib/theme/ThemeContext'
 import { AuthLoadingScreen } from './components/AuthLoadingScreen'
 import './styles/index.css'
 
@@ -52,9 +53,11 @@ function InnerApp() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <InnerApp />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <InnerApp />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
     <Toaster
       position="bottom-right"

@@ -37,12 +37,11 @@ function RapportPage() {
   }
 
   const handleViewOnMap = () => {
-    if (!propertyData) return
     navigate({
       to: '/map',
       search: {
-        postcode: propertyData.address.postcode,
-        huisnummer: propertyData.address.huisnummer,
+        reportId: id,
+        _t: Date.now(),
       },
     })
   }

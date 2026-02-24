@@ -1,3 +1,5 @@
+import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/primitives'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
@@ -51,6 +53,8 @@ export function ParcelDetailModal({
   onClose,
   onViewOnMap,
 }: ParcelDetailModalProps) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   // Fetch enrichment only when modal is open
   const enrichment = useParcelEnrichment(parcel?.parcel_id ?? null, {
     enabled: isOpen && !!parcel?.parcel_id,
@@ -67,8 +71,11 @@ export function ParcelDetailModal({
     if (!parcel?.parcel_id) return
     const toastId = toast.loading('Rapport wordt gegenereerd...')
     try {
-      await generateReport.mutateAsync(parcel.parcel_id)
-      toast.success('Rapport opgeslagen in Rapporten', { id: toastId })
+      const report = await generateReport.mutateAsync(parcel.parcel_id)
+      await queryClient.invalidateQueries({ queryKey: ['projects'] })
+      toast.success('Rapport opgeslagen', { id: toastId })
+      onClose()
+      void navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Genereren mislukt'
       toast.error(message, { id: toastId })

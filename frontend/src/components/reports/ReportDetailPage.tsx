@@ -210,6 +210,9 @@ export default function ReportDetailPage({
         <div className="space-y-5">
           <GebouwSection data={data} />
           <KadasterSection data={data} />
+          <WOZSection data={data} />
+          <EnergyLabelSection data={data} />
+          <BRKOwnershipSection data={data} />
           <BestemmingSection data={data} />
           <MonumentSection data={data} />
           {ai_parsing?.parsed_plan && ai_parsing.status === 'complete' ? (
@@ -437,6 +440,167 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
             <span className="text-xs text-grey-600">Totaal: <strong className="text-grey-300">{totalOpp} m²</strong></span>
           </div>
         )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── WOZ ───────────────────────────────────────────────────── */
+
+function WOZSection({ data }: { data: PropertyReportResponse }) {
+  const woz = data.woz_data
+
+  if (!woz) {
+    return (
+      <Section title="WOZ">
+        <p className="text-sm italic text-grey-600">Geen WOZ-gegevens beschikbaar</p>
+      </Section>
+    )
+  }
+
+  return (
+    <Section title="WOZ">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+            <p className="text-xs text-grey-600">Meest recente waarde</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-grey-100">
+              {woz.meest_recente_waarde != null
+                ? `EUR ${woz.meest_recente_waarde.toLocaleString('nl-NL')}`
+                : '–'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+            <p className="text-xs text-grey-600">Peildatum</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">
+              {woz.meest_recente_peildatum
+                ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
+                : '–'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+            <p className="text-xs text-grey-600">Grondoppervlakte</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">
+              {woz.grondoppervlakte != null ? `${woz.grondoppervlakte} m²` : '–'}
+            </p>
+          </div>
+        </div>
+
+        {woz.low_confidence && (
+          <div className="rounded-lg border border-amber-accent/15 bg-amber-accent/[0.04] px-4 py-3">
+            <p className="text-xs font-semibold text-amber-accent/80">Datakwaliteit</p>
+            <p className="mt-1 text-sm text-grey-400">
+              {woz.low_confidence_reden || 'WOZ-data is indicatief.'}
+            </p>
+          </div>
+        )}
+
+        {woz.waarden && woz.waarden.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">
+              Historie
+            </p>
+            <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
+              {woz.waarden.slice(0, 6).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between px-3 py-2">
+                  <span className="text-sm text-grey-400">
+                    {item.peildatum
+                      ? new Date(item.peildatum).toLocaleDateString('nl-NL')
+                      : 'Onbekend'}
+                  </span>
+                  <span className="text-sm font-medium tabular-nums text-grey-300">
+                    {item.vastgestelde_waarde != null
+                      ? `EUR ${item.vastgestelde_waarde.toLocaleString('nl-NL')}`
+                      : '–'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Energy Label ──────────────────────────────────────────── */
+
+function EnergyLabelSection({ data }: { data: PropertyReportResponse }) {
+  const label = data.energy_label
+
+  if (!label || label.is_geregistreerd === false || !label.energieklasse) {
+    return (
+      <Section title="Energielabel">
+        <p className="text-sm italic text-grey-600">
+          {label?.niet_geregistreerd_reden || 'Geen geregistreerd energielabel gevonden'}
+        </p>
+      </Section>
+    )
+  }
+
+  return (
+    <Section title="Energielabel">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <p className="text-xs text-grey-600">Klasse</p>
+          <p className="mt-0.5 text-lg font-semibold text-grey-100">{label.energieklasse}</p>
+        </div>
+        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <p className="text-xs text-grey-600">Registratie</p>
+          <p className="mt-0.5 text-sm font-medium text-grey-300">
+            {label.registratie_datum
+              ? new Date(label.registratie_datum).toLocaleDateString('nl-NL')
+              : '–'}
+          </p>
+        </div>
+        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <p className="text-xs text-grey-600">Geldig tot</p>
+          <p className="mt-0.5 text-sm font-medium text-grey-300">
+            {label.geldig_tot ? new Date(label.geldig_tot).toLocaleDateString('nl-NL') : '–'}
+          </p>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+/* ─── BRK Ownership ─────────────────────────────────────────── */
+
+function BRKOwnershipSection({ data }: { data: PropertyReportResponse }) {
+  const ownership = data.brk_ownership
+
+  if (!ownership) {
+    return (
+      <Section title="BRK Eigendom">
+        <p className="text-sm text-grey-400">
+          BRK eigendomsdata wordt bewust niet opgeslagen in rapporten (Kadaster Tier 3 voorwaarden).
+        </p>
+      </Section>
+    )
+  }
+
+  if (ownership.status !== 'available' || !ownership.data || ownership.data.length === 0) {
+    return (
+      <Section title="BRK Eigendom">
+        <p className="text-sm italic text-grey-600">
+          {ownership.reason || 'Geen eigendomsdata beschikbaar'}
+        </p>
+      </Section>
+    )
+  }
+
+  return (
+    <Section title="BRK Eigendom">
+      <div className="space-y-3">
+        {ownership.data.map((item, idx) => (
+          <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+            <p className="text-sm font-medium text-grey-300">{item.perceel_identificatie}</p>
+            <p className="mt-1 text-xs text-grey-600">
+              {item.gerechtigden.length} zakelijk gerechtigden
+              {item.heeft_hypotheek ? ' · hypotheek geregistreerd' : ''}
+            </p>
+          </div>
+        ))}
       </div>
     </Section>
   )
@@ -727,8 +891,8 @@ function PDFUploadSection({ data }: { data: PropertyReportResponse }) {
         </div>
       ) : (
         <div className="flex items-start gap-4 rounded-lg border border-overlay/[0.06] bg-overlay/[0.02] px-4 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-overlay/[0.06] bg-overlay/[0.03]">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-grey-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-overlay/10 bg-overlay/[0.03]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-error"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-grey-300">Bestemmingsplan PDF</p>
@@ -887,10 +1051,156 @@ function MiniDim({ label, value }: { label: string; value: string }) {
 /* ─── Bronnen ───────────────────────────────────────────────── */
 
 function BronnenSection({ data }: { data: PropertyReportResponse }) {
-  const sources = data.data_sources || []
+  type SourceRow = {
+    source: string
+    age_seconds: number | null
+    status: 'ok' | 'unlinked' | 'error'
+    note?: string
+  }
+
+  const byKey = new Map<string, SourceRow>()
+
+  const classifyIssue = (message?: string | null): 'unlinked' | 'error' => {
+    const msg = (message ?? '').toLowerCase()
+    if (!msg) return 'unlinked'
+    const unlinkedHints = [
+      'api key',
+      'apikey',
+      'not configured',
+      'niet geconfigureerd',
+      'niet beschikbaar via',
+      'not available via',
+      'geen verblijfsobject id beschikbaar',
+      'geen kadastraal perceel',
+      'forbidden',
+      'unauthorized',
+      '401',
+      '403',
+      'permission',
+      'toegang',
+      'niet gekoppeld',
+      'disabled',
+      'not enabled',
+    ]
+    return unlinkedHints.some((hint) => msg.includes(hint)) ? 'unlinked' : 'error'
+  }
+
+  const addRow = (row: SourceRow) => {
+    const key = row.source.toLowerCase()
+    if (!byKey.has(key)) {
+      byKey.set(key, row)
+      return
+    }
+    const existing = byKey.get(key)!
+    byKey.set(key, {
+      ...existing,
+      ...row,
+      age_seconds: row.age_seconds ?? existing.age_seconds,
+      note: row.note ?? existing.note,
+      status:
+        existing.status === 'error' || row.status === 'error'
+          ? 'error'
+          : existing.status === 'unlinked' || row.status === 'unlinked'
+            ? 'unlinked'
+            : 'ok',
+    })
+  }
+
+  for (const src of data.data_sources || []) {
+    addRow({
+      source: src.source,
+      age_seconds: src.age_seconds,
+      status: 'ok',
+    })
+  }
+
+  for (const section of data.section_sources || []) {
+    for (const src of section.sources || []) {
+      addRow({
+        source: src.source,
+        age_seconds: src.age_seconds,
+        status: 'ok',
+      })
+    }
+  }
+
+  for (const src of data.monuments?.sources || []) {
+    addRow({
+      source: `Monumenten: ${src.source}`,
+      age_seconds: src.age_seconds ?? null,
+      status: src.error ? classifyIssue(src.error) : 'ok',
+      note: src.error || (src.is_monument ? 'Beschermd' : 'Niet beschermd'),
+    })
+  }
+
+  if (data.energy_label) {
+    addRow({
+      source: 'EP-Online V5',
+      age_seconds: null,
+      status: 'ok',
+      note: data.energy_label.is_geregistreerd
+        ? `Label ${data.energy_label.energieklasse ?? ''}`.trim()
+        : data.energy_label.niet_geregistreerd_reden || 'Geen labelregistratie',
+    })
+  } else {
+    const energyError = (data.errors || []).find((e) =>
+      e.toLowerCase().includes('energielabel') || e.toLowerCase().includes('ep-online')
+    )
+    addRow({
+      source: 'EP-Online V5',
+      age_seconds: null,
+      status: energyError ? classifyIssue(energyError) : 'unlinked',
+      note: energyError || 'Geen energielabel-data beschikbaar',
+    })
+  }
+
+  if (data.woz_data) {
+    addRow({
+      source: data.woz_data.bron || 'WOZ Waardeloket',
+      age_seconds: null,
+      status: 'ok',
+      note: data.woz_data.low_confidence_reden || undefined,
+    })
+  } else {
+    const wozError = (data.errors || []).find((e) =>
+      e.toLowerCase().includes('woz')
+    )
+    addRow({
+      source: 'WOZ Waardeloket',
+      age_seconds: null,
+      status: wozError ? classifyIssue(wozError) : 'unlinked',
+      note: wozError || 'Geen WOZ-data beschikbaar',
+    })
+  }
+
+  if (!data.brk_ownership) {
+    addRow({
+      source: 'BRK Bevragen V2',
+      age_seconds: null,
+      status: 'unlinked',
+      note: 'Niet opgeslagen in rapport (compliance)',
+    })
+  } else {
+    const brkStatus =
+      data.brk_ownership.status === 'available'
+        ? 'ok'
+        : data.brk_ownership.status === 'error'
+          ? classifyIssue(data.brk_ownership.reason)
+          : 'unlinked'
+    addRow({
+      source: 'BRK Bevragen V2',
+      age_seconds: null,
+      status: brkStatus,
+      note: data.brk_ownership.reason || undefined,
+    })
+  }
+
+  const sources = Array.from(byKey.values()).sort((a, b) =>
+    a.source.localeCompare(b.source, 'nl')
+  )
 
   const formatAge = (s: number | null): string => {
-    if (!s) return 'Onbekend'
+    if (s == null) return 'Onbekend'
     if (s < 60) return 'Zojuist'
     if (s < 3600) return `${Math.floor(s / 60)} min geleden`
     if (s < 86400) return `${Math.floor(s / 3600)} uur geleden`
@@ -899,26 +1209,29 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
 
   return (
     <Section title="Data bronnen">
+      {sources.length === 0 && (
+        <p className="text-sm italic text-grey-600">Geen broninformatie beschikbaar</p>
+      )}
       <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
         {sources.map((src, idx) => (
           <div key={idx} className="flex items-center justify-between px-3 py-2.5">
             <div>
               <p className="text-sm font-medium text-grey-300">{src.source}</p>
               <p className="text-xs text-grey-600">{formatAge(src.age_seconds)}</p>
+              {src.note && <p className="text-xs text-grey-600">{src.note}</p>}
             </div>
             <div className="flex items-center gap-2">
-              {src.confidence && (
-                <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                  src.confidence === 'HIGH' ? 'border-amber-accent/20 bg-amber-accent/10 text-amber-accent'
-                    : src.confidence === 'MEDIUM' ? 'border-overlay/10 bg-overlay/[0.06] text-grey-300'
-                    : 'border-overlay/5 bg-overlay/[0.03] text-grey-600'
-                }`}>
-                  {src.confidence === 'HIGH' ? 'Hoog' : src.confidence === 'MEDIUM' ? 'Gemiddeld' : 'Laag'}
-                </span>
-              )}
-              {src.is_cached && (
-                <span className="text-xs text-grey-600">cached</span>
-              )}
+              <span
+                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                  src.status === 'error'
+                    ? 'border-error/20 bg-error/10 text-error'
+                    : src.status === 'unlinked'
+                      ? 'border-overlay/10 bg-overlay/[0.06] text-grey-300'
+                      : 'border-success/20 bg-success/[0.06] text-success'
+                }`}
+              >
+                {src.status === 'error' ? 'Fout' : src.status === 'unlinked' ? 'Niet gekoppeld' : 'OK'}
+              </span>
             </div>
           </div>
         ))}

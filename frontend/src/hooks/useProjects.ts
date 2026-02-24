@@ -121,14 +121,14 @@ export function useDeleteProject() {
     onSuccess: () => {
       // Invalidate project list
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      // Invalidate report lists (reports move to "Geen project")
+      // Invalidate report lists (backend auto-remaps orphaned reports by location)
       queryClient.invalidateQueries({ queryKey: ['reports'] })
     },
   })
 }
 
 /**
- * Assign a report to a project (or remove from project)
+ * Assign a report to a project (null triggers auto-location assignment)
  *
  * Invalidates report and project caches on success.
  */

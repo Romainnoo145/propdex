@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.government_apis.base import GovernmentAPIError
+from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
 from app.models.parcel_cache import ParcelCache
@@ -32,6 +33,7 @@ from app.scans.schemas import (
     ScanResultsResponse,
     ScanStatusResponse,
 )
+from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.excel_exporter import export_scan_results_to_excel
 from app.services.gemeente_service import get_gemeente_bbox
 from app.services.spatial_helpers import transform_bbox_to_rd
@@ -474,13 +476,16 @@ async def get_parcel_centroid(
     from geoalchemy2.functions import ST_AsText, ST_Centroid, ST_Transform
 
     query = select(
-        ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326))
+        ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
+        ParcelCache.address,
     ).where(
         ParcelCache.id == parcel_id,
         ParcelCache.organization_id == organization_id,
     )
     result = await db.execute(query)
-    wkt = result.scalar_one_or_none()
+    row = result.one_or_none()
+    wkt = row[0] if row else None
+    address = row[1] if row else None
 
     if not wkt:
         raise HTTPException(
@@ -495,7 +500,116 @@ async def get_parcel_centroid(
     if not m:
         raise HTTPException(status_code=500, detail="Failed to parse centroid")
 
-    return {"lng": float(m.group(1)), "lat": float(m.group(2))}
+    return {"lng": float(m.group(1)), "lat": float(m.group(2)), "address": address}
+
+
+@router.get("/parcels/resolve")
+@limiter.limit("60/minute")
+async def resolve_parcel_by_address(
+    request: Request,
+    street: str = Query(..., min_length=2),
+    huisnummer: int = Query(..., ge=1),
+    postcode: str | None = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Resolve a ParcelCache UUID from address hints for map-focused navigation.
+
+    Heuristic matching over ParcelCache.address for the authenticated organization.
+    Returns best-effort match with centroid and address.
+    """
+    from geoalchemy2.functions import ST_AsText, ST_Centroid, ST_Transform
+
+    normalized_street = street.strip().lower()
+    normalized_postcode = (
+        postcode.upper().replace(" ", "") if isinstance(postcode, str) and postcode.strip() else None
+    )
+
+    base_query = (
+        select(
+            ParcelCache.id,
+            ParcelCache.address,
+            ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
+        )
+        .where(
+            ParcelCache.organization_id == organization_id,
+            ParcelCache.address.is_not(None),
+            func.lower(ParcelCache.address).contains(normalized_street),
+        )
+    )
+    if normalized_postcode:
+        base_query = base_query.where(
+            func.upper(
+                func.regexp_replace(ParcelCache.address, r"\s+", "", "g")
+            ).contains(normalized_postcode)
+        )
+
+    rows = (await db.execute(base_query.limit(40))).all()
+
+    def _extract_huisnummer(value: str) -> int | None:
+        prefix = value.split(",")[0] if "," in value else value
+        match = re.search(r"(\d+)", prefix)
+        if not match:
+            return None
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return None
+
+    chosen = None
+    if rows:
+        exact_matches = [r for r in rows if _extract_huisnummer(r[1] or "") == huisnummer]
+        chosen = exact_matches[0] if exact_matches else rows[0]
+
+    if chosen is None:
+        # Fallback: geocode exact address and do spatial point-in-parcel.
+        locatieserver = PDOKLocatieserver()
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            coords = await locatieserver.geocode_address(
+                street=street,
+                huisnummer=huisnummer,
+                postcode=normalized_postcode,
+                client=client,
+            )
+        if coords is not None:
+            parcel_id = await find_parcel_at_point(
+                coords[0], coords[1], organization_id, db
+            )
+            if parcel_id is not None:
+                centroid_query = select(
+                    ParcelCache.id,
+                    ParcelCache.address,
+                    ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
+                ).where(
+                    ParcelCache.id == parcel_id,
+                    ParcelCache.organization_id == organization_id,
+                )
+                centroid_row = (await db.execute(centroid_query)).one_or_none()
+                if centroid_row is not None:
+                    chosen = centroid_row
+
+    if chosen is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found for address",
+        )
+
+    wkt = chosen[2]
+    wkt_match = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", wkt or "")
+    if not wkt_match:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to parse centroid",
+        )
+
+    return {
+        "parcel_id": str(chosen[0]),
+        "address": chosen[1],
+        "lng": float(wkt_match.group(1)),
+        "lat": float(wkt_match.group(2)),
+    }
 
 
 # --- Dynamic path routes (/{scan_id}) ---
