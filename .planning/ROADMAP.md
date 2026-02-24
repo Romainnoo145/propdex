@@ -28,14 +28,14 @@
     - [x] 52-01-PLAN.md — Pydantic schemas (EnergyLabel, WOZData, BRKOwnership, RCEMonumentDetail) + PropertyReportResponse extension
     - [x] 52-02-PLAN.md — Cache TTL entries, EP_ONLINE_API_KEY setting, rate limiter singletons
 
-- [ ] **Phase 53: API Clients** — EP-Online V5 client (by VBO ID, graceful 404); WOZ waardeloket client (low-confidence flag); RCE Linked Data detail method (by rijksmonumentnummer); new rate limiters
+- [x] **Phase 53: API Clients** — EP-Online V5 client (by VBO ID, graceful 404); WOZ waardeloket client (low-confidence flag); RCE Linked Data detail method (by rijksmonumentnummer); new rate limiters *(completed 2026-02-24)*
   - Requirements: NRG-01, NRG-03, RCE-01, RCE-03, RCE-04, WOZ-01, WOZ-04
   - Risk: EP-Online V5 field names need live validation; WOZ access path decision required
   - Depends on: Phase 52 (schemas imported by clients)
   - **Plans:** 3 plans (Wave 1: 2 parallel, Wave 2: 1 sequential)
     - [x] 53-01-PLAN.md — EP-Online V5 client + WOZ Waardeloket client + WOZ rate limiter *(completed 2026-02-24)*
     - [x] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation *(completed 2026-02-24)*
-    - [ ] 53-03-PLAN.md — Unit tests for all three clients (~19+ test cases)
+    - [x] 53-03-PLAN.md — Unit tests for all three clients (22 test cases) *(completed 2026-02-24)*
 
 - [ ] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured
   - Requirements: BRK-01, BRK-04, BRK-05

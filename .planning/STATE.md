@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 53 — API Clients
-Plan: 2/3 complete
-Status: Plan 53-02 complete — RCE Linked Data client with JSON-LD parsing and live API validation
-Last activity: 2026-02-24 — Phase 53 Plan 02 complete (RCE Linked Data client)
+Plan: 3/3 complete
+Status: Phase 53 complete — all three API clients (EP-Online, WOZ, RCE) with unit tests
+Last activity: 2026-02-24 — Phase 53 Plan 03 complete (unit tests for all three API clients)
 
 ---
 
@@ -89,6 +89,8 @@ Last activity: 2026-02-24 — Phase 53 Plan 02 complete (RCE Linked Data client)
 - RCE omschrijving uses ceo:omschrijving predicate (not redengevendeOmschrijving) in Omschrijving nodes
 - RCE functie label via heeftFunctieNaam -> SKOS prefLabel (lang=nl), not URI path segment
 - RCE three async calls per monument: REST API + dereference + omschrijving node (+ optional functie node)
+- URL-dispatch mock pattern (_make_http_client_with_url_dispatch) for multi-step HTTP clients in tests
+- api_mocks.make_mock_response uses 'json_data or {}' — empty list requires direct MagicMock construction
 
 ### Blockers/Concerns
 
@@ -98,12 +100,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T05:02:14Z
-**Stopped At:** Completed 53-02-PLAN.md
-**Resume File:** .planning/phases/53-api-clients/53-02-SUMMARY.md
+**Last Session:** 2026-02-24T05:25:00Z
+**Stopped At:** Completed 53-03-PLAN.md
+**Resume File:** .planning/phases/53-api-clients/53-03-SUMMARY.md
 
-**Next Action:** Execute Phase 53 Plan 03 (BRK client)
+**Next Action:** Phase 53 complete — proceed to next phase (Phase 54: report enrichment integration)
 
 ---
 
-*State updated: 2026-02-24 — Phase 53 Plan 02 complete (RCE Linked Data client with live API validation)*
+*State updated: 2026-02-24 — Phase 53 Plan 03 complete (22 unit tests for EP-Online, WOZ, RCE clients)*
