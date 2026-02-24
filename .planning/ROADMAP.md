@@ -45,13 +45,13 @@
     - [x] 54-01-PLAN.md — Schema evolution (three-state BRKOwnership, PerceelOwnership, CadastralParcel.identificatie) + aggregator Step 2b wiring *(completed 2026-02-24)*
     - [x] 54-02-PLAN.md — Never-cache enforcement (strip before save, re-fetch on view) + integration tests *(completed 2026-02-24)*
 
-- [ ] **Phase 55: Aggregator Integration** — Wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9)
+- [x] **Phase 55: Aggregator Integration** — Wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9) *(completed 2026-02-24)*
   - Requirements: AGG-01, AGG-02, AGG-03, AGG-04
   - Risk: BRK Step 2b data dependency on Step 2a cadastral output
   - Depends on: Phase 53, Phase 54 (all clients ready)
   - **Plans:** 2 plans (Wave 1 parallel)
     - [x] 55-01-PLAN.md — Monument two-step enrichment (PDOK spatial → RCE Linked Data detail) *(completed 2026-02-24)*
-    - [ ] 55-02-PLAN.md — EP-Online + WOZ wiring into Step 2a + completeness score update + AGG-03 verification
+    - [x] 55-02-PLAN.md — EP-Online + WOZ wiring into Step 2a + completeness score update + AGG-03 verification *(completed 2026-02-24)*
 
 - [ ] **Phase 56: Frontend Sections** — EnergieLabelSection (EU color badge, expiry, monument warning); WOZSection (value + peildatum + per-m²); EigendomSection (owner type, rights, hypotheek, "actueel opgevraagd"); enhanced MonumentSection (collapsible redengevende omschrijving, functie, bouwperiode)
   - Requirements: NRG-02, NRG-04, NRG-05, WOZ-02, WOZ-03, WOZ-05, BRK-02, BRK-03, BRK-06, RCE-02
@@ -192,4 +192,4 @@
 
 ---
 
-*Last updated: 2026-02-24 -- v7.0 Deep Property Data roadmap defined*
+*Last updated: 2026-02-24 -- Phase 55 complete (EP-Online + WOZ wired, completeness 6->9, AGG-03 verified)*

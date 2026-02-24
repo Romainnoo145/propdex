@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 55 — Aggregator Integration
-Plan: 1/1 complete
-Status: Phase 55 Plan 01 complete — RCE Linked Data two-step enrichment wired into monument_aggregator
-Last activity: 2026-02-24 — Phase 55 Plan 01 complete (5 min, 1 task, 1 file)
+Plan: 2/2 complete
+Status: Phase 55 complete — EP-Online + WOZ wired into 5-parallel Step 2a gather, completeness 6->9, AGG-03 verified
+Last activity: 2026-02-24 — Phase 55 Plan 02 complete (2 min, 2 tasks, 1 file)
 
 ---
 
@@ -24,6 +24,7 @@ Last activity: 2026-02-24 — Phase 55 Plan 01 complete (5 min, 1 task, 1 file)
 - Phase 54 Plan 01: 3 min (BRK schema + aggregator wiring)
 - Phase 54 Plan 02: 5 min (BRK strip-before-save + re-fetch-on-view + 6 integration tests)
 - Phase 55 Plan 01: 5 min (RCE Linked Data two-step enrichment in monument_aggregator)
+- Phase 55 Plan 02: 2 min (EP-Online + WOZ into 5-parallel Step 2a gather, completeness 6->9)
 
 **v6.0 Meldingen Intelligence (Shipped: 2026-02-23)**
 - 5 phases (47-51), 10 plans, 39 commits, 56 files changed (+8,818/-292)
@@ -113,6 +114,11 @@ Last activity: 2026-02-24 — Phase 55 Plan 01 complete (5 min, 1 task, 1 file)
 - monument_nummer converted to str() before RCE client call — client expects string (Phase 55)
 - Enrichment only triggers for consensus_status == 'rijksmonument' — avoids unnecessary API calls (Phase 55)
 - cache source 'rce_detail' (not 'rce') matches CACHE_TTL key and 30-day TTL (Phase 55)
+- energy_label is not None covers both is_geregistreerd=True and is_geregistreerd=False — None means unconfigured/unavailable (Phase 55 Plan 02)
+- woz_data is not None for completeness — None means 404 (no WOZ object, normal) (Phase 55 Plan 02)
+- brk_ownership.status == 'available' for completeness — BRKOwnership always present, use status check (Phase 55 Plan 02)
+- fetch_energy_label() None-guards verblijfsobject_id — some addresses lack VBO ID (Phase 55 Plan 02)
+- fetch_woz_data() uses nummeraanduiding_id without None guard — always present on BAGAddressResponse (Phase 55 Plan 02)
 
 ### Blockers/Concerns
 
@@ -122,12 +128,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T06:35:00Z
-**Stopped At:** Phase 55 Plan 01 complete — RCE Linked Data two-step enrichment
-**Resume File:** .planning/phases/55-aggregator-integration/55-01-SUMMARY.md
+**Last Session:** 2026-02-24T06:38:42Z
+**Stopped At:** Phase 55 Plan 02 complete — EP-Online + WOZ wired into Step 2a, completeness denominator 6->9
+**Resume File:** .planning/phases/55-aggregator-integration/55-02-SUMMARY.md
 
-**Next Action:** Phase 55 Plan 01 complete. Continue v7.0 — next plan in phase 55 or move to Phase 56 (frontend property report).
+**Next Action:** Phase 55 complete. Continue v7.0 — Phase 56 (frontend property report displaying WOZ, energielabel, BRK) or live API validation (Phase 53).
 
 ---
 
-*State updated: 2026-02-24 — Phase 55 Plan 01 complete (RCE two-step enrichment in monument_aggregator, 5 min, 1 task, 1 file)*
+*State updated: 2026-02-24 — Phase 55 Plan 02 complete (EP-Online + WOZ into 5-parallel gather, completeness 6->9, AGG-03 verified, 2 min, 2 tasks, 1 file)*
