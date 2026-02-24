@@ -32,6 +32,10 @@
   - Requirements: NRG-01, NRG-03, RCE-01, RCE-03, RCE-04, WOZ-01, WOZ-04
   - Risk: EP-Online V5 field names need live validation; WOZ access path decision required
   - Depends on: Phase 52 (schemas imported by clients)
+  - **Plans:** 3 plans (Wave 1: 2 parallel, Wave 2: 1 sequential)
+    - [ ] 53-01-PLAN.md — EP-Online V5 client + WOZ Waardeloket client + WOZ rate limiter
+    - [ ] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation
+    - [ ] 53-03-PLAN.md — Unit tests for all three clients (~19+ test cases)
 
 - [ ] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured
   - Requirements: BRK-01, BRK-04, BRK-05
