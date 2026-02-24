@@ -29,6 +29,8 @@ function MeldingenPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch,
+    isRefetching,
   } = useInfiniteAllChanges(true, selectedGemeente ?? undefined)
 
   const { data: unreadData } = useUnreadCounts()
@@ -112,15 +114,25 @@ function MeldingenPage() {
             ))}
           </select>
         )}
-        {totalUnread > 0 && (
+        <div className="ml-auto flex items-center gap-2">
+          {totalUnread > 0 && (
+            <button
+              onClick={() => markAllRead.mutate()}
+              disabled={markAllRead.isPending}
+              className="text-xs text-grey-400 transition-colors hover:text-grey-100 disabled:opacity-50"
+            >
+              Markeer alles als gelezen
+            </button>
+          )}
           <button
-            onClick={() => markAllRead.mutate()}
-            disabled={markAllRead.isPending}
-            className="ml-auto text-xs text-grey-400 transition-colors hover:text-grey-100 disabled:opacity-50"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
+            aria-label="Ververs meldingen"
           >
-            Markeer alles als gelezen
+            <RefreshIcon spinning={isRefetching} />
           </button>
-        )}
+        </div>
       </div>
 
       {/* Loading */}
@@ -237,10 +249,6 @@ function MeldingItem({
   const rc = change.matched_reports?.length ?? 0
   const hasMatches = pc > 0 || rc > 0
 
-  // Determine action state for collapsed badge
-  const hn = change.address ? extractHuisnummer(change.address) : null
-  const canNavigateByAddress = change.postcode && hn
-
   return (
     <div className="rounded-lg border border-grey-800 bg-grey-900 overflow-hidden">
       <button
@@ -280,38 +288,18 @@ function MeldingItem({
             )}
           </div>
 
-          {/* Category label badge + action state badge */}
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {change.category_label && (
-              <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-300">
+          {/* Category label badge — amber for important statuses */}
+          {change.category_label && (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                /verleend|vastgesteld/i.test(change.category_label)
+                  ? 'bg-amber-accent/15 text-amber-accent'
+                  : 'bg-grey-800 text-grey-300'
+              }`}>
                 {change.category_label}
               </span>
-            )}
-            {/* Action state indicator */}
-            {change.matched_parcel_id ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Perceel gekoppeld
-              </span>
-            ) : canNavigateByAddress ? (
-              <span className="inline-flex items-center rounded-full bg-amber-accent/10 px-2 py-0.5 text-[11px] font-medium text-amber-accent">
-                Alleen adres
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-grey-800 px-2 py-0.5 text-[11px] font-medium text-grey-500">
-                Geen perceel gevonden
-              </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Timestamp + match pills */}
           <div className="mt-1.5 flex items-center gap-2">
@@ -493,6 +481,23 @@ function MeldingItem({
 }
 
 // --- SVG Icons ---
+
+function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
+  if (spinning) {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="animate-spin">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  )
+}
 
 function PermitIcon() {
   return (

@@ -64,6 +64,9 @@ interface MapSearchParams {
   panel?: 'results'     // KEEP for now — unused but harmless
   scan_id?: string      // Restore scan context when returning from /resultaten
   parcel_id?: string    // Focus on specific parcel (from scan results "Bekijk op kaart")
+  gemeente_code?: string // Navigate to gemeente boundary
+  wijk_naam?: string     // Navigate to wijk boundary
+  _t?: number            // Cache-bust for address navigation
 }
 
 export const Route = createFileRoute('/_authenticated/map')({
@@ -77,6 +80,9 @@ export const Route = createFileRoute('/_authenticated/map')({
     panel: search.panel === 'results' ? 'results' : undefined,
     scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
     parcel_id: typeof search.parcel_id === 'string' ? search.parcel_id : undefined,
+    gemeente_code: typeof search.gemeente_code === 'string' ? search.gemeente_code : undefined,
+    wijk_naam: typeof search.wijk_naam === 'string' ? search.wijk_naam : undefined,
+    _t: typeof search._t === 'number' ? search._t : undefined,
   }),
 })
 

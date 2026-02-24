@@ -12,8 +12,8 @@ interface WijkCardGridProps {
   wijkProjects: ProjectResponse[]
   /** Unread counts from useUnreadCounts (passed from parent) */
   unreadData: UnreadDetailResponse | undefined
-  /** Callback to clear selectedGemeenteId — returns to gemeente view */
-  onBack: () => void
+  /** Callback to return to gemeente grid — omit when using DrilldownBreadcrumb for navigation */
+  onBack?: () => void
   /** Gemeente GeoJSON for background context in wijk cards (null = no background) */
   gemeenteGeojson: GeoJSON.FeatureCollection | null
   /**
@@ -67,17 +67,19 @@ export function WijkCardGrid({
 
   return (
     <div className="space-y-4">
-      {/* Breadcrumb navigation */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onBack}
-          className="text-sm text-grey-400 hover:text-grey-100 transition-colors"
-        >
-          &larr; Gemeenten
-        </button>
-        <span className="text-grey-600">/</span>
-        <span className="text-sm font-medium text-grey-100">{gemeente.name}</span>
-      </div>
+      {/* Breadcrumb navigation — only when onBack is provided (standalone use) */}
+      {onBack && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="text-sm text-grey-400 hover:text-grey-100 transition-colors"
+          >
+            &larr; Gemeenten
+          </button>
+          <span className="text-grey-600">/</span>
+          <span className="text-sm font-medium text-grey-100">{gemeente.name}</span>
+        </div>
+      )}
 
       {/* Loading skeleton while CBS WFS boundary data loads */}
       {isLoading ? (

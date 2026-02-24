@@ -1,11 +1,14 @@
 """Monitoring API endpoints for change detection and notifications."""
 
+import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
@@ -32,6 +35,9 @@ from app.services.bekendmaking_matcher import (
     find_matching_reports,
 )
 from app.services.category_classifier import classify_bekendmaking
+from app.services.change_detector import detect_permit_changes
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
@@ -643,4 +649,120 @@ async def get_monitored_projects(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get monitored projects",
+        ) from e
+
+
+@router.post("/refresh/{project_id}")
+@limiter.limit("5/minute")
+async def refresh_monitoring(
+    request: Request,
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    On-demand monitoring refresh for a single gemeente project.
+
+    Triggers permit change detection for the project's gemeente,
+    stores new changes, and returns the count of new changes found.
+    Rate-limited to 5/min to avoid API abuse.
+    """
+    try:
+        # Load project and verify ownership
+        project_query = select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == organization_id,
+            Project.is_monitored == True,  # noqa: E712
+        )
+        project_result = await db.execute(project_query)
+        project = project_result.scalar_one_or_none()
+
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Monitored project not found",
+            )
+
+        # Use project name as gemeente_naam for SRU query
+        # For wijk projects, find the parent gemeente project
+        if project.parent_id is not None:
+            parent_query = select(Project).where(
+                Project.id == project.parent_id,
+                Project.organization_id == organization_id,
+            )
+            parent_result = await db.execute(parent_query)
+            parent_project = parent_result.scalar_one_or_none()
+            gemeente_naam = parent_project.name if parent_project else project.name
+            target_project = parent_project or project
+        else:
+            gemeente_naam = project.name
+            target_project = project
+
+        # Determine last_checked from most recent change
+        last_checked_query = (
+            select(ChangeRecord.detected_at)
+            .where(ChangeRecord.project_id == target_project.id)
+            .order_by(ChangeRecord.detected_at.desc())
+            .limit(1)
+        )
+        result = await db.execute(last_checked_query)
+        last_detected = result.scalar_one_or_none()
+        last_checked = last_detected or (datetime.utcnow() - timedelta(days=7))
+
+        # Detect permit changes via SRU Bekendmakingen API
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            permit_changes = await detect_permit_changes(
+                gemeente_naam=gemeente_naam,
+                last_checked=last_checked,
+                client=client,
+                session=db,
+            )
+
+        # Store new changes
+        stored = 0
+        for change in permit_changes:
+            change_record = ChangeRecord(
+                organization_id=organization_id,
+                project_id=target_project.id,
+                change_type=change.change_type,
+                external_id=change.external_id,
+                gemeente_naam=change.gemeente_naam,
+                title=change.title,
+                change_date=change.change_date,
+                detected_at=change.detected_at,
+                metadata_json=change.metadata_json,
+                source_url=change.source_url,
+                postcode=change.postcode,
+                matched_parcel_id=change.matched_parcel_id,
+            )
+
+            try:
+                async with db.begin_nested():
+                    db.add(change_record)
+                    await db.flush()
+                stored += 1
+            except IntegrityError:
+                continue
+
+        await db.commit()
+
+        logger.info(
+            f"On-demand refresh for {gemeente_naam}: "
+            f"{stored} new changes from {len(permit_changes)} detected"
+        )
+
+        return {
+            "status": "ok",
+            "new_changes": stored,
+            "total_detected": len(permit_changes),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"On-demand monitoring refresh failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh monitoring",
         ) from e

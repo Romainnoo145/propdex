@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
 import { useUnreadCounts } from '@/hooks/useNotifications'
 import { useProjectScans } from '@/hooks/useScans'
@@ -16,6 +16,9 @@ import { GemeenteCard } from './GemeenteCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 import { WijkCard } from './WijkCard'
 import { WijkCardGrid } from './WijkCardGrid'
+import { GemeenteDetailView } from './GemeenteDetailView'
+import { WijkDetailView } from './WijkDetailView'
+import { DrilldownBreadcrumb } from './DrilldownBreadcrumb'
 
 // Demo projects shown when API is unavailable (no auth)
 const DEMO_PROJECTS: ProjectResponse[] = [
@@ -78,8 +81,10 @@ export default function ProjectList() {
   const { data: unreadData } = useUnreadCounts()
   const deleteMutation = useDeleteProject()
   const navigate = useNavigate()
+  const search = useSearch({ from: '/_authenticated/projecten' })
+  const selectedGemeenteId = search.gemeente_id ?? null
+  const selectedWijkId = search.wijk_id ?? null
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [selectedGemeenteId, setSelectedGemeenteId] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null)
@@ -162,30 +167,38 @@ export default function ProjectList() {
 
       {allProjects.length > 0 ? (
         <div className="space-y-2">
-          {/* Monitoring projects — drill-down: gemeente cards -> wijk cards -> resultaten */}
+          {/* Monitoring projects — drill-down: gemeente cards -> gemeente detail -> wijk detail */}
           {monitoringProjects.length > 0 && (
             selectedGemeenteId ? (
               (() => {
                 const gemeente = monitoringProjects.find((p) => p.id === selectedGemeenteId)
                 if (!gemeente) return null
                 const wijkChildren = allProjects.filter((p) => p.parent_id === gemeente.id)
+
+                // Wijk detail view
+                if (selectedWijkId) {
+                  const wijk = wijkChildren.find((w) => w.id === selectedWijkId)
+                  if (!wijk) return null
+                  return (
+                    <>
+                      <DrilldownBreadcrumb gemeenteName={gemeente.name} wijkName={wijk.name} />
+                      <WijkDetailView gemeente={gemeente} wijk={wijk} />
+                    </>
+                  )
+                }
+
+                // Gemeente detail view
                 return (
-                  <WijkCardGrid
-                    gemeente={gemeente}
-                    wijkProjects={wijkChildren}
-                    unreadData={unreadData}
-                    onBack={() => setSelectedGemeenteId(null)}
-                    gemeenteGeojson={gemeenteGeojson}
-                    renderCard={(wijk, svgData, unreadCount) => (
-                      <WijkCardWithNav
-                        key={wijk.id}
-                        wijk={wijk}
-                        svgData={svgData}
-                        unreadCount={unreadCount}
-                        navigate={navigate}
-                      />
-                    )}
-                  />
+                  <>
+                    <DrilldownBreadcrumb gemeenteName={gemeente.name} />
+                    <GemeenteDetailView
+                      gemeente={gemeente}
+                      wijkProjects={wijkChildren}
+                      unreadData={unreadData}
+                      gemeenteGeojson={gemeenteGeojson}
+                      navigate={navigate}
+                    />
+                  </>
                 )
               })()
             ) : (
@@ -245,7 +258,7 @@ export default function ProjectList() {
                           gemeente={gemeente}
                           svgData={svgData}
                           totalUnread={totalUnread}
-                          onClick={() => setSelectedGemeenteId(gemeente.id)}
+                          onClick={() => navigate({ to: '/projecten', search: { gemeente_id: gemeente.id } })}
                         />
                       )
                     })}

@@ -1,8 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import ResultsShell from '@/components/layout/ResultsShell'
 import ProjectList from '@/components/projects/ProjectList'
 
+const projectenSearchSchema = z.object({
+  gemeente_id: z.string().optional(),
+  wijk_id: z.string().optional(),
+})
+
 export const Route = createFileRoute('/_authenticated/projecten')({
+  validateSearch: projectenSearchSchema,
   component: ProjectenPage,
 })
 

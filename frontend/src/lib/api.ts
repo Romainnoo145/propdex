@@ -961,3 +961,16 @@ export async function markAllChangesRead(
     }
   )
 }
+
+export async function refreshMonitoring(
+  accessToken: string | null,
+  projectId: string
+): Promise<{ status: string; new_changes: number; total_detected: number }> {
+  return apiFetch<{ status: string; new_changes: number; total_detected: number }>(
+    `${MONITORING_BASE}/refresh/${projectId}`,
+    {
+      accessToken,
+      method: 'POST',
+    }
+  )
+}
