@@ -21,12 +21,12 @@
 
 **Goal:** Enrich property reports with WOZ-waarde, energielabel, BRK ownership, and detailed RCE monument data from Dutch government APIs.
 
-- [ ] **Phase 52: Schema & Config Foundation** — Pydantic models for EnergyLabel, WOZData, BRKOwnership; PropertyReportResponse extended with 3 new Optional sections; cache TTL entries; EP_ONLINE_API_KEY setting; rate limiter config
+- [x] **Phase 52: Schema & Config Foundation** — Pydantic models for EnergyLabel, WOZData, BRKOwnership; PropertyReportResponse extended with 3 new Optional sections; cache TTL entries; EP_ONLINE_API_KEY setting; rate limiter config *(completed 2026-02-24)*
   - Requirements: INF-01, INF-02, INF-03, INF-04, INF-05
   - Risk: None (pure type definitions, zero external dependencies)
   - **Plans:** 2 plans (Wave 1 parallel)
-    - [ ] 52-01-PLAN.md — Pydantic schemas (EnergyLabel, WOZData, BRKOwnership, RCEMonumentDetail) + PropertyReportResponse extension
-    - [ ] 52-02-PLAN.md — Cache TTL entries, EP_ONLINE_API_KEY setting, rate limiter singletons
+    - [x] 52-01-PLAN.md — Pydantic schemas (EnergyLabel, WOZData, BRKOwnership, RCEMonumentDetail) + PropertyReportResponse extension
+    - [x] 52-02-PLAN.md — Cache TTL entries, EP_ONLINE_API_KEY setting, rate limiter singletons
 
 - [ ] **Phase 53: API Clients** — EP-Online V5 client (by VBO ID, graceful 404); WOZ waardeloket client (low-confidence flag); RCE Linked Data detail method (by rijksmonumentnummer); new rate limiters
   - Requirements: NRG-01, NRG-03, RCE-01, RCE-03, RCE-04, WOZ-01, WOZ-04
