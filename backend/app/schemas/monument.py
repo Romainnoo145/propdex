@@ -41,6 +41,48 @@ class MonumentSourceResult(BaseModel):
     )
 
 
+class RCEMonumentDetail(BaseModel):
+    """Detailed RCE monument data from RCE Linked Data REST API.
+
+    Field names are LOW confidence — Phase 53 will validate against the live
+    linkeddata.cultureelerfgoed.nl API. All fields are Optional to tolerate
+    field name corrections.
+    """
+
+    rijksmonumentnummer: str | None = Field(
+        default=None,
+        description="Official rijksmonumentnummer from RCE register",
+    )
+    redengevende_omschrijving: str | None = Field(
+        default=None,
+        description="Detailed architectural/historical description (can be 1,000-5,000 words)",
+    )
+    oorspronkelijke_functie: str | None = Field(
+        default=None,
+        description="Original function of the monument",
+    )
+    bouwjaar_van: int | None = Field(
+        default=None,
+        description="Construction period start year",
+    )
+    bouwjaar_tot: int | None = Field(
+        default=None,
+        description="Construction period end year",
+    )
+    architect: str | None = Field(
+        default=None,
+        description="Architect name(s)",
+    )
+    bouwstijl: str | None = Field(
+        default=None,
+        description="Architectural style",
+    )
+    monument_register_url: str | None = Field(
+        default=None,
+        description="URL to official register entry",
+    )
+
+
 class MonumentStatus(BaseModel):
     """
     Aggregated monument status from multiple sources.
@@ -71,6 +113,10 @@ class MonumentStatus(BaseModel):
     is_monument: bool = Field(
         default=False,
         description="Whether ANY source indicates monument status",
+    )
+    rce_detail: RCEMonumentDetail | None = Field(
+        default=None,
+        description="Detailed RCE monument data (enriched in Phase 55)",
     )
 
     @model_validator(mode="after")

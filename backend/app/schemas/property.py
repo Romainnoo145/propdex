@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field
 
 from app.ai.schemas import AIParsingSection
 from app.schemas.address import BAGAddressResponse, BuildingData
+from app.schemas.brk_ownership import BRKOwnership
+from app.schemas.energy_label import EnergyLabel
 from app.schemas.monument import MonumentStatus
+from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
 
 
@@ -222,4 +225,18 @@ class PropertyReportResponse(BaseModel):
     ai_parsing: AIParsingSection | None = Field(
         default=None,
         description="AI-parsed bestemmingsplan data (complete, in-progress, or not available)",
+    )
+
+    # Phase 7 additions (v7.0 Deep Property Data)
+    energy_label: EnergyLabel | None = Field(
+        default=None,
+        description="Registered energy label from EP-Online V5",
+    )
+    woz_data: WOZData | None = Field(
+        default=None,
+        description="WOZ assessed value from waardeloket",
+    )
+    brk_ownership: BRKOwnership | None = Field(
+        default=None,
+        description="Property ownership from BRK Bevragen V2 (never stored — live only)",
     )
