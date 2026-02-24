@@ -1,6 +1,7 @@
 """Base classes and utilities for government API clients."""
 
 import logging
+from collections.abc import Awaitable, Callable
 
 import httpx
 
@@ -82,3 +83,37 @@ def handle_api_response(response: httpx.Response, source: str) -> dict:
         ) from e
 
     return response.json()
+
+
+async def retry_with_backoff(
+    fn: Callable[[], Awaitable[httpx.Response]],
+    source: str,
+    retries: int = 3,
+) -> httpx.Response:
+    """Retry HTTP request with exponential backoff on 429 responses.
+
+    Args:
+        fn: Async callable that returns an httpx.Response
+        source: API source name for logging
+        retries: Maximum number of retry attempts (default 3)
+
+    Returns:
+        httpx.Response: The final response (may still be 429 if all retries exhausted)
+    """
+    import asyncio
+
+    response = await fn()
+    for attempt in range(1, retries + 1):
+        if response.status_code != 429:
+            return response
+        delay = 2 ** (attempt - 1)  # 1, 2, 4 seconds
+        logger.warning(
+            "[%s] Rate limited (429), retry %d/%d in %ds",
+            source,
+            attempt,
+            retries,
+            delay,
+        )
+        await asyncio.sleep(delay)
+        response = await fn()
+    return response  # Return last response; handle_api_response raises APIRateLimitError
