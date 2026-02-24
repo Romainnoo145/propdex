@@ -475,6 +475,8 @@ function MeldingItem({
         const canGenerate = Boolean(primaryParcelId || expandedCanNavigate)
         const isGeneratingAddress =
           !!addressGenerateKey && generatingId === addressGenerateKey
+        const isGeneratingParcel =
+          !!primaryParcelId && generatingId === primaryParcelId
 
         return (
           <div className="border-t border-grey-800 bg-grey-900/50 px-4 py-3">
@@ -605,14 +607,14 @@ function MeldingItem({
                   }}
                   disabled={
                     !canGenerate ||
-                    generatingId === primaryParcelId ||
+                    isGeneratingParcel ||
                     isGeneratingAddress
                   }
                   title={!canGenerate ? 'Adres/huisnummer ontbreekt' : undefined}
                   className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ReportLinkIcon />
-                  {generatingId === primaryParcelId || isGeneratingAddress
+                  {isGeneratingParcel || isGeneratingAddress
                     ? 'Bezig...'
                     : 'Genereer rapport'}
                 </button>
