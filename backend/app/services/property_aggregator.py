@@ -13,10 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.schemas import AIParsingSection
 from app.government_apis.base import APINotFoundError, GovernmentAPIError
 from app.government_apis.brk_bevragen import brk_client
+from app.government_apis.ep_online import ep_online_client
 from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.rce_monuments import rd_to_wgs84
+from app.government_apis.woz_waardeloket import woz_waardeloket_client
 from app.schemas.address import AddressInput
 from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGerechtigde
+from app.schemas.energy_label import EnergyLabel
 from app.schemas.monument import MonumentStatus
 from app.schemas.property import (
     CadastralParcel,
@@ -25,6 +28,7 @@ from app.schemas.property import (
     PropertyReportResponse,
     SectionSourceInfo,
 )
+from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
 from app.services.cache_manager import get_cached_or_fetch
@@ -199,7 +203,7 @@ async def aggregate_property_data(
 
     Flow:
     1. Sequential: Resolve address via BAG (MUST succeed)
-    2a. Parallel: Fetch cadastral parcels, zoning, and monuments if coordinates available
+    2a. Parallel: Fetch cadastral parcels, zoning, monuments, energy label, and WOZ if available
     2b. Sequential: Fetch BRK ownership (requires cadastral identificatie from Step 2a)
     3. Trigger AI bestemmingsplan parsing (always, returns immediately with job status)
 
@@ -390,11 +394,63 @@ async def aggregate_property_data(
             errors.append(f"Monument data niet beschikbaar: {str(e)}")
             return None
 
-    # Execute ALL Step 2a fetches in parallel
+    async def fetch_energy_label() -> EnergyLabel | None:
+        """Fetch EP-Online energy label if VBO ID available."""
+        vbo_id = address.verblijfsobject_id
+        if not vbo_id:
+            return None
+        cache_key = f"ep_online:label:{vbo_id}"
+        try:
+            async def _fetch_ep() -> dict:
+                label = await ep_online_client.get_by_vbo_id(vbo_id, client)
+                return label.model_dump() if label is not None else {}
+
+            cache_result = await get_cached_or_fetch(
+                cache_key=cache_key,
+                source="ep_online",
+                organization_id=organization_id,
+                fetch_fn=_fetch_ep,
+                session=session,
+                force_refresh=force_refresh,
+            )
+            data = cache_result.data
+            return EnergyLabel.model_validate(data) if data else None
+        except Exception as e:
+            logger.warning(f"Failed to fetch energy label: {e}")
+            errors.append(f"Energielabel niet beschikbaar: {str(e)}")
+            return None
+
+    async def fetch_woz_data() -> WOZData | None:
+        """Fetch WOZ valuation data by nummeraanduiding ID."""
+        na_id = address.nummeraanduiding_id
+        cache_key = f"woz:waarde:{na_id}"
+        try:
+            async def _fetch_woz() -> dict:
+                woz = await woz_waardeloket_client.get_by_nummeraanduiding_id(na_id, client)
+                return woz.model_dump() if woz is not None else {}
+
+            cache_result = await get_cached_or_fetch(
+                cache_key=cache_key,
+                source="woz",
+                organization_id=organization_id,
+                fetch_fn=_fetch_woz,
+                session=session,
+                force_refresh=force_refresh,
+            )
+            data = cache_result.data
+            return WOZData.model_validate(data) if data else None
+        except Exception as e:
+            logger.warning(f"Failed to fetch WOZ data: {e}")
+            errors.append(f"WOZ-waarde niet beschikbaar: {str(e)}")
+            return None
+
+    # Execute ALL Step 2a fetches in parallel (5 tasks: cadastral, zoning, monuments, energy_label, woz)
     results = await asyncio.gather(
         fetch_cadastral_parcels(),
         fetch_zoning(),
         fetch_monuments(),
+        fetch_energy_label(),
+        fetch_woz_data(),
         return_exceptions=True,
     )
 
@@ -419,6 +475,22 @@ async def aggregate_property_data(
         errors.append(f"Monument data fetch failed: {str(monument_result)}")
     else:
         monument_status = monument_result
+
+    energy_label: EnergyLabel | None = None
+    energy_label_result = results[3]
+    if isinstance(energy_label_result, Exception):
+        logger.error(f"Energy label fetch failed: {energy_label_result}")
+        errors.append(f"Energielabel fetch failed: {str(energy_label_result)}")
+    else:
+        energy_label = energy_label_result
+
+    woz_data: WOZData | None = None
+    woz_result = results[4]
+    if isinstance(woz_result, Exception):
+        logger.error(f"WOZ fetch failed: {woz_result}")
+        errors.append(f"WOZ data fetch failed: {str(woz_result)}")
+    else:
+        woz_data = woz_result
 
     # STEP 2b (SEQUENTIAL): BRK ownership — requires cadastral identificatie from Step 2a
     # NOTE: Never cache BRK data (Kadaster Tier 3). fetch_brk_ownership() always returns,
@@ -530,7 +602,8 @@ async def aggregate_property_data(
         )
 
     # Calculate completeness score
-    # Sections: address (always 1), building (0 or 1), parcels (0 or 1), zoning (0 or 1), monuments (0 or 1), ai_parsing (0 or 1)
+    # Sections: address (1), building (1), parcels (1), zoning (1), monuments (1), ai_parsing (1),
+    #           energy_label (1), woz_data (1), brk_ownership (1) — total 9 — INF-05
     sections_available = 1  # Address always available
     if building:
         sections_available += 1
@@ -542,8 +615,14 @@ async def aggregate_property_data(
         sections_available += 1
     if ai_parsing_section and ai_parsing_section.status == "complete":
         sections_available += 1
+    if energy_label is not None:
+        sections_available += 1
+    if woz_data is not None:
+        sections_available += 1
+    if brk_ownership.status == "available":
+        sections_available += 1
 
-    total_sections = 6
+    total_sections = 9  # Updated from 6 — INF-05
     completeness_score = sections_available / total_sections
 
     logger.info(
@@ -564,5 +643,7 @@ async def aggregate_property_data(
         errors=errors,
         resolved_at=datetime.utcnow().isoformat() + "Z",
         ai_parsing=ai_parsing_section,
+        energy_label=energy_label,
+        woz_data=woz_data,
         brk_ownership=brk_ownership,
     )
