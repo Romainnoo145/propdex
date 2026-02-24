@@ -41,6 +41,9 @@
   - Requirements: BRK-01, BRK-04, BRK-05
   - Risk: BRK identificatie format mapping needs PDOK field validation
   - Depends on: Phase 52 (BRK schema)
+  - **Plans:** 2 plans (Wave 1: 1 plan, Wave 2: 1 plan)
+    - [ ] 54-01-PLAN.md — Schema evolution (three-state BRKOwnership, PerceelOwnership, CadastralParcel.identificatie) + aggregator Step 2b wiring
+    - [ ] 54-02-PLAN.md — Never-cache enforcement (strip before save, re-fetch on view) + integration tests
 
 - [ ] **Phase 55: Aggregator Integration** — Restructure property_aggregator into Step 2a/2b; wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9)
   - Requirements: AGG-01, AGG-02, AGG-03, AGG-04
