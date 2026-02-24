@@ -56,6 +56,10 @@
 - [ ] **Phase 56: Frontend Sections** — EnergieLabelSection (EU color badge, expiry, monument warning); WOZSection (value + peildatum + per-m²); EigendomSection (owner type, rights, hypotheek, "actueel opgevraagd"); enhanced MonumentSection (collapsible redengevende omschrijving, functie, bouwperiode)
   - Requirements: NRG-02, NRG-04, NRG-05, WOZ-02, WOZ-03, WOZ-05, BRK-02, BRK-03, BRK-06, RCE-02
   - Depends on: Phase 55 (backend returns data)
+  - **Plans:** 3 plans (Wave 1: 1 plan, Wave 2: 1 plan, Wave 3: 1 plan)
+    - [ ] 56-01-PLAN.md — TypeScript types + EnergieLabelSection + WOZSection
+    - [ ] 56-02-PLAN.md — EigendomSection + enhanced MonumentSection with RCE detail
+    - [ ] 56-03-PLAN.md — Section reordering + 6-card metrics grid + PropertyDetailPanel condensed sections
 
 ---
 
