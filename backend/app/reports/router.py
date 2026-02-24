@@ -1,8 +1,8 @@
 """Report management API endpoints."""
 
 import asyncio
-import logging
 import io
+import logging
 import re
 import uuid
 
@@ -20,6 +20,7 @@ from app.reports import service
 from app.reports.freshness import check_report_freshness
 from app.reports.pdf_export import generate_report_pdf
 from app.schemas.address import AddressInput
+from app.schemas.property import CadastralParcel
 from app.schemas.report import (
     ReportAssignProject,
     ReportDetailResponse,
@@ -32,7 +33,7 @@ from app.schemas.report import (
     SortField,
     SortOrder,
 )
-from app.services.property_aggregator import aggregate_property_data
+from app.services.property_aggregator import aggregate_property_data, fetch_brk_ownership
 
 logger = logging.getLogger(__name__)
 
@@ -421,10 +422,25 @@ async def get_report(
             session=db,
         )
 
+        # BRK was stripped before save — re-fetch live for each view
+        # (Kadaster Tier 3: data must be "actueel opgevraagd")
+        report_data = dict(report.report_data)  # copy of stored JSONB
+        if report_data.get("brk_ownership") is None:
+            try:
+                stored_parcels = [
+                    CadastralParcel.model_validate(p)
+                    for p in report_data.get("cadastral_parcels", [])
+                ]
+                brk_section = await fetch_brk_ownership(stored_parcels)
+                report_data["brk_ownership"] = brk_section.model_dump(mode="json")
+            except Exception as e:
+                logger.warning("BRK re-fetch on view failed: %s", str(e))
+                # Leave brk_ownership as None — frontend handles gracefully
+
         return ReportDetailResponse(
             id=report.id,
             report_name=report.report_name,
-            report_data=report.report_data,
+            report_data=report_data,  # Use enriched copy, not raw stored data
             postcode=report.postcode,
             city=report.city,
             notes=report.notes,

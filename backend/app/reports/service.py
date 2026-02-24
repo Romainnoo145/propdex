@@ -79,6 +79,9 @@ async def save_report(
 
     # Store validated dict
     report_data_json = validated_report.model_dump(mode="json")
+    # BRK eigendomsdata MUST be stripped before JSONB persist (Kadaster Tier 3 never-store terms).
+    # See: app/schemas/brk_ownership.py (never_cache = True)
+    report_data_json.pop("brk_ownership", None)
 
     # Create SavedReport
     report = SavedReport(
@@ -364,7 +367,10 @@ async def update_report_data(
     report = await get_report(report_id, organization_id, session)
 
     # Update report_data JSONB
-    report.report_data = validated_report.model_dump(mode="json")
+    # BRK eigendomsdata MUST be stripped before JSONB persist (Kadaster Tier 3 never-store terms).
+    report_data_dict = validated_report.model_dump(mode="json")
+    report_data_dict.pop("brk_ownership", None)
+    report.report_data = report_data_dict
 
     # Update denormalized fields
     address_data = fresh_data["address"]
