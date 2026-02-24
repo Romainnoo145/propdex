@@ -34,7 +34,7 @@
   - Depends on: Phase 52 (schemas imported by clients)
   - **Plans:** 3 plans (Wave 1: 2 parallel, Wave 2: 1 sequential)
     - [x] 53-01-PLAN.md — EP-Online V5 client + WOZ Waardeloket client + WOZ rate limiter *(completed 2026-02-24)*
-    - [ ] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation
+    - [x] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation *(completed 2026-02-24)*
     - [ ] 53-03-PLAN.md — Unit tests for all three clients (~19+ test cases)
 
 - [ ] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured

@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 53 — API Clients
-Plan: 1/3 complete
-Status: Plan 53-01 complete — EP-Online + WOZ Waardeloket clients built
-Last activity: 2026-02-24 — Phase 53 Plan 01 complete (EP-Online V5 + WOZ Waardeloket clients)
+Plan: 2/3 complete
+Status: Plan 53-02 complete — RCE Linked Data client with JSON-LD parsing and live API validation
+Last activity: 2026-02-24 — Phase 53 Plan 02 complete (RCE Linked Data client)
 
 ---
 
@@ -85,6 +85,10 @@ Last activity: 2026-02-24 — Phase 53 Plan 01 complete (EP-Online V5 + WOZ Waar
 - EP-Online 404 returns EnergyLabel(is_geregistreerd=False) not None — normal for 20-30% of properties (NRG-03)
 - WOZ low_confidence=True always set (WOZ-04) — public Waardeloket, not authoritative API
 - WOZ unexpected format raises GovernmentAPIError not silent None — monitoring requirement
+- RCE SPARQL not available (serviceCount=0 on all public RCE datasets) — replaced with linked-node HTTP fetching
+- RCE omschrijving uses ceo:omschrijving predicate (not redengevendeOmschrijving) in Omschrijving nodes
+- RCE functie label via heeftFunctieNaam -> SKOS prefLabel (lang=nl), not URI path segment
+- RCE three async calls per monument: REST API + dereference + omschrijving node (+ optional functie node)
 
 ### Blockers/Concerns
 
@@ -94,12 +98,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T04:56:03Z
-**Stopped At:** Completed 53-01-PLAN.md
-**Resume File:** .planning/phases/53-api-clients/53-01-SUMMARY.md
+**Last Session:** 2026-02-24T05:02:14Z
+**Stopped At:** Completed 53-02-PLAN.md
+**Resume File:** .planning/phases/53-api-clients/53-02-SUMMARY.md
 
-**Next Action:** Execute Phase 53 Plan 02 (BAG + RCE clients)
+**Next Action:** Execute Phase 53 Plan 03 (BRK client)
 
 ---
 
-*State updated: 2026-02-24 — Phase 53 Plan 01 complete (EP-Online V5 + WOZ Waardeloket clients)*
+*State updated: 2026-02-24 — Phase 53 Plan 02 complete (RCE Linked Data client with live API validation)*
