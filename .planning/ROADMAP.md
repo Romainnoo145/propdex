@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v7.0 Deep Property Data** -- Phases 52-56 (in progress)
 - ✅ **v6.0 Meldingen Intelligence** -- Phases 47-51 (shipped 2026-02-23)
 - ✅ **v5.1 Data Presentation Overhaul** -- Phases 42-46 (shipped 2026-02-22)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
@@ -15,6 +16,38 @@
 ---
 
 ## Phases
+
+### v7.0 Deep Property Data (Phases 52-56)
+
+**Goal:** Enrich property reports with WOZ-waarde, energielabel, BRK ownership, and detailed RCE monument data from Dutch government APIs.
+
+- [ ] **Phase 52: Schema & Config Foundation** — Pydantic models for EnergyLabel, WOZData, BRKOwnership; PropertyReportResponse extended with 3 new Optional sections; cache TTL entries; EP_ONLINE_API_KEY setting; rate limiter config
+  - Requirements: INF-01, INF-02, INF-03, INF-04, INF-05
+  - Risk: None (pure type definitions, zero external dependencies)
+  - **Plans:** 2 plans (Wave 1 parallel)
+    - [ ] 52-01-PLAN.md — Pydantic schemas (EnergyLabel, WOZData, BRKOwnership, RCEMonumentDetail) + PropertyReportResponse extension
+    - [ ] 52-02-PLAN.md — Cache TTL entries, EP_ONLINE_API_KEY setting, rate limiter singletons
+
+- [ ] **Phase 53: API Clients** — EP-Online V5 client (by VBO ID, graceful 404); WOZ waardeloket client (low-confidence flag); RCE Linked Data detail method (by rijksmonumentnummer); new rate limiters
+  - Requirements: NRG-01, NRG-03, RCE-01, RCE-03, RCE-04, WOZ-01, WOZ-04
+  - Risk: EP-Online V5 field names need live validation; WOZ access path decision required
+  - Depends on: Phase 52 (schemas imported by clients)
+
+- [ ] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured
+  - Requirements: BRK-01, BRK-04, BRK-05
+  - Risk: BRK identificatie format mapping needs PDOK field validation
+  - Depends on: Phase 52 (BRK schema)
+
+- [ ] **Phase 55: Aggregator Integration** — Restructure property_aggregator into Step 2a/2b; wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9)
+  - Requirements: AGG-01, AGG-02, AGG-03, AGG-04
+  - Risk: BRK Step 2b data dependency on Step 2a cadastral output
+  - Depends on: Phase 53, Phase 54 (all clients ready)
+
+- [ ] **Phase 56: Frontend Sections** — EnergieLabelSection (EU color badge, expiry, monument warning); WOZSection (value + peildatum + per-m²); EigendomSection (owner type, rights, hypotheek, "actueel opgevraagd"); enhanced MonumentSection (collapsible redengevende omschrijving, functie, bouwperiode)
+  - Requirements: NRG-02, NRG-04, NRG-05, WOZ-02, WOZ-03, WOZ-05, BRK-02, BRK-03, BRK-06, RCE-02
+  - Depends on: Phase 55 (backend returns data)
+
+---
 
 <details>
 <summary>✅ v6.0 Meldingen Intelligence (Phases 47-51) -- SHIPPED 2026-02-23</summary>
@@ -149,4 +182,4 @@
 
 ---
 
-*Last updated: 2026-02-23 -- v6.0 Meldingen Intelligence archived*
+*Last updated: 2026-02-24 -- v7.0 Deep Property Data roadmap defined*
