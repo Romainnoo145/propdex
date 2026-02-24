@@ -82,8 +82,14 @@ export default function SideRailNav() {
         <div className="my-2 h-px w-8 bg-grey-800" />
 
         {/* Notification bell */}
-        <Link to="/projecten" className="group relative">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-850 hover:text-grey-100">
+        <Link to="/meldingen" className="group relative">
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
+              matchRoute({ to: '/meldingen' })
+                ? 'bg-grey-800 text-grey-100'
+                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+            }`}
+          >
             <Bell size={20} />
             <NotificationBadge count={unreadData?.total_unread ?? 0} />
           </div>

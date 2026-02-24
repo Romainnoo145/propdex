@@ -16,6 +16,7 @@ import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-cal
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
+import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -55,6 +56,11 @@ const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
   path: '/projecten',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
+  id: '/meldingen',
+  path: '/meldingen',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
+  '/meldingen': typeof AuthenticatedMeldingenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
+  '/meldingen': typeof AuthenticatedMeldingenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
+  '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/instellingen'
     | '/map'
+    | '/meldingen'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/instellingen'
     | '/map'
+    | '/meldingen'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/instellingen'
     | '/_authenticated/map'
+    | '/_authenticated/meldingen'
     | '/_authenticated/projecten'
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
@@ -213,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/meldingen': {
+      id: '/_authenticated/meldingen'
+      path: '/meldingen'
+      fullPath: '/meldingen'
+      preLoaderRoute: typeof AuthenticatedMeldingenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/map': {
       id: '/_authenticated/map'
       path: '/map'
@@ -248,6 +267,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
+  AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
@@ -258,6 +278,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
+  AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
