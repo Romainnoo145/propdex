@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: 52 — Schema & Config Foundation ✓
-Plan: 2/2 complete, verified
-Status: Phase 52 complete — ready for Phase 53 planning
-Last activity: 2026-02-24 — Phase 52 complete (schemas + config + rate limiters)
+Phase: 53 — API Clients
+Plan: 1/3 complete
+Status: Plan 53-01 complete — EP-Online + WOZ Waardeloket clients built
+Last activity: 2026-02-24 — Phase 53 Plan 01 complete (EP-Online V5 + WOZ Waardeloket clients)
 
 ---
 
@@ -60,6 +60,9 @@ Last activity: 2026-02-24 — Phase 52 complete (schemas + config + rate limiter
 - **Defined grey scale**: only 100, 300, 400, 600, 700, 800, 850, 900, 950
 - CBS WFS already integrated for gemeente/wijk boundaries
 - ThemeProvider at src/lib/theme/ with localStorage persistence
+- **Three-state contract**: return model | None (not-found/unconfigured) | raise GovernmentAPIError (error)
+- **retry_with_backoff**: shared helper in base.py, wraps any async HTTP callable, 429-aware exponential backoff (1s/2s/4s)
+- **MEDIUM/LOW confidence field comments**: API field names annotated for Phase 53 live validation
 
 ### Ongoing TODOs
 
@@ -79,6 +82,9 @@ Last activity: 2026-02-24 — Phase 52 complete (schemas + config + rate limiter
 - BRK intentionally absent from CACHE_TTL — Kadaster Tier 3 terms prohibit caching BRK data
 - EP_ONLINE_API_KEY uses empty string default (graceful degradation, same as BAG/DSO pattern)
 - Rate limits: ep_online(3/500), rce_detail(3/300) — conservative for public/key-gated APIs
+- EP-Online 404 returns EnergyLabel(is_geregistreerd=False) not None — normal for 20-30% of properties (NRG-03)
+- WOZ low_confidence=True always set (WOZ-04) — public Waardeloket, not authoritative API
+- WOZ unexpected format raises GovernmentAPIError not silent None — monitoring requirement
 
 ### Blockers/Concerns
 
@@ -88,12 +94,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T04:23:01.499Z
-**Stopped At:** Phase 53 context gathered
-**Resume File:** .planning/phases/53-api-clients/53-CONTEXT.md
+**Last Session:** 2026-02-24T04:56:03Z
+**Stopped At:** Completed 53-01-PLAN.md
+**Resume File:** .planning/phases/53-api-clients/53-01-SUMMARY.md
 
-**Next Action:** `/gsd:plan-phase 53` to plan API Clients (EP-Online, WOZ, RCE Linked Data)
+**Next Action:** Execute Phase 53 Plan 02 (BAG + RCE clients)
 
 ---
 
-*State updated: 2026-02-24 — Phase 52 Plans 01 + 02 complete (schemas + config + rate limiters)*
+*State updated: 2026-02-24 — Phase 53 Plan 01 complete (EP-Online V5 + WOZ Waardeloket clients)*
