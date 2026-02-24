@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 52 — Schema & Config Foundation
-Plan: 02 complete
+Plan: 01 + 02 complete
 Status: Active — executing v7.0 foundation plans
-Last activity: 2026-02-24 — Phase 52 Plan 02 complete (config + rate limiters)
+Last activity: 2026-02-24 — Phase 52 Plans 01 + 02 complete (schemas + config + rate limiters)
 
 ---
 
@@ -72,6 +72,10 @@ Last activity: 2026-02-24 — Phase 52 Plan 02 complete (config + rate limiters)
 
 ### Decisions (v7.0)
 
+- All external-API schema fields use | None defaults — EP-Online/WOZ/RCE field names are MEDIUM/LOW confidence, Phase 53 validates live
+- BRKOwnership module docstring has Kadaster Tier 3 caching prohibition — critical legal compliance note
+- RCEMonumentDetail added to monument.py (not a new file) — enriches MonumentStatus, belongs in monument domain
+- INF-05 completeness denominator 6->9 deferred to Phase 55 — changing without wiring new sections gives wrong scores
 - BRK intentionally absent from CACHE_TTL — Kadaster Tier 3 terms prohibit caching BRK data
 - EP_ONLINE_API_KEY uses empty string default (graceful degradation, same as BAG/DSO pattern)
 - Rate limits: ep_online(3/500), rce_detail(3/300) — conservative for public/key-gated APIs
@@ -85,11 +89,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-24
-**Stopped At:** Completed Phase 52 Plan 02 (config + rate limiters)
+**Stopped At:** Completed Phase 52 Plan 01 (schemas) + Plan 02 (config + rate limiters)
 **Resume File:** None
 
-**Next Action:** Continue with remaining Phase 52 plans or proceed to Phase 53 (API clients)
+**Next Action:** Proceed to Phase 53 (API clients — EP-Online, WOZ, RCE Linked Data)
 
 ---
 
-*State updated: 2026-02-24 — Phase 52 Plan 02 complete (config + rate limiters)*
+*State updated: 2026-02-24 — Phase 52 Plans 01 + 02 complete (schemas + config + rate limiters)*
