@@ -25,18 +25,35 @@ interface WijkDetailViewProps {
  * stores identical records for all projects in a gemeente).
  */
 export function WijkDetailView({ gemeente, wijk }: WijkDetailViewProps) {
+  const isVirtualWijk = wijk.id.startsWith('virtual-wijk:')
+
   return (
     <div className="space-y-6">
       {/* Scan summary */}
       <ScanSummarySection
-        wijkId={wijk.id}
+        wijkId={isVirtualWijk ? null : wijk.id}
         gemeenteCode={gemeente.gemeente_code}
         gemeenteNaam={gemeente.name}
         wijkNaam={wijk.wijk_naam}
       />
 
       {/* Reports section */}
-      <ReportListSection wijkId={wijk.id} />
+      {isVirtualWijk ? (
+        <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent/70">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">Rapporten</span>
+          </div>
+          <div className="px-4 py-6 text-center text-sm text-grey-400">
+            Deze wijk is nog niet gekoppeld als project. Start eerst een scan om rapporten te vullen.
+          </div>
+        </section>
+      ) : (
+        <ReportListSection wijkId={wijk.id} />
+      )}
     </div>
   )
 }
@@ -85,7 +102,7 @@ function ScanSummarySection({
   gemeenteNaam,
   wijkNaam,
 }: {
-  wijkId: string
+  wijkId: string | null
   gemeenteCode: string | null
   gemeenteNaam: string
   wijkNaam: string | null
@@ -200,7 +217,7 @@ function ScanSummarySection({
                 {
                   gemeente_code: gemeenteCode,
                   gemeente_naam: gemeenteNaam,
-                  project_id: wijkId,
+                  ...(wijkId ? { project_id: wijkId } : {}),
                   ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
                   ...(wijkBboxWgs84 ? { bbox_wgs84: wijkBboxWgs84 } : {}),
                 },

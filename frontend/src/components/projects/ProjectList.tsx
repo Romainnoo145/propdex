@@ -623,6 +623,22 @@ export default function ProjectList() {
     )
   }, [municipalityProjectsByCode])
 
+  const detailGemeenteCodeForWijken = useMemo(() => {
+    if (selectedGemeenteId) {
+      const gemeenteProject = municipalityProjectsById.get(selectedGemeenteId)
+      if (!gemeenteProject) return null
+      return resolveGemeenteCodeForProject(gemeenteProject)
+    }
+    return selectedGemeenteCode
+  }, [
+    selectedGemeenteId,
+    selectedGemeenteCode,
+    municipalityProjectsById,
+    gemeenteGeojson,
+  ])
+
+  const { data: detailWijkGeojson } = useWijkGeoJSON(detailGemeenteCodeForWijken)
+
   const regularProjects = useMemo(() => {
     return topLevelProjects.filter((project) => {
       if (inferIsWijkProject(project)) return false
@@ -875,9 +891,42 @@ export default function ProjectList() {
                   ? (standaloneWijkProjectsByCode.get(gemeenteCode) ?? [])
                   : []
                 const wijkChildren = [...linkedChildren, ...standaloneChildren]
+                const existingWijkNameSet = new Set(
+                  wijkChildren.map((wijk) =>
+                    normalizeAreaName(wijk.wijk_naam ?? wijk.name)
+                  )
+                )
+                const virtualWijken: ProjectResponse[] = []
+
+                if (gemeenteCode && detailWijkGeojson) {
+                  for (const feature of detailWijkGeojson.features) {
+                    const wijkName = String(feature.properties?.statnaam ?? '').trim()
+                    if (!wijkName) continue
+                    const normalized = normalizeAreaName(wijkName)
+                    if (!normalized || existingWijkNameSet.has(normalized)) continue
+                    virtualWijken.push({
+                      id: `virtual-wijk:${gemeenteCode}:${normalized}`,
+                      name: wijkName,
+                      description: 'Nog niet gekoppeld als wijkproject',
+                      created_at: gemeente.created_at,
+                      updated_at: gemeente.updated_at,
+                      report_count: 0,
+                      parent_id: gemeente.id,
+                      gemeente_code: gemeenteCode,
+                      wijk_naam: wijkName,
+                      is_monitored: gemeente.is_monitored,
+                      unread_count: 0,
+                      children: [],
+                    })
+                  }
+                }
+
+                const allWijkChildren = [...wijkChildren, ...virtualWijken].sort((a, b) =>
+                  (a.wijk_naam ?? a.name).localeCompare((b.wijk_naam ?? b.name), 'nl-NL')
+                )
 
                 if (selectedWijkId) {
-                  const wijk = wijkChildren.find((w) => w.id === selectedWijkId)
+                  const wijk = allWijkChildren.find((w) => w.id === selectedWijkId)
                   if (!wijk) return null
                   return (
                     <>
@@ -891,11 +940,11 @@ export default function ProjectList() {
                   <>
                     <ProjectWorkspaceHeader
                       title={gemeente.name}
-                      subtitle={`${1 + wijkChildren.length} ${1 + wijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
+                      subtitle={`${1 + allWijkChildren.length} ${1 + allWijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
                       onBack={() => navigate({ to: '/projecten', search: {} })}
                       backLabel="Terug naar projecten"
                       metrics={[
-                        { label: 'Wijken', value: wijkChildren.length, icon: <WijkStatIcon /> },
+                        { label: 'Wijken', value: allWijkChildren.length, icon: <WijkStatIcon /> },
                         {
                           label: 'Rapporten',
                           value: gemeente.report_count + wijkChildren.reduce((sum, wijk) => sum + wijk.report_count, 0),
@@ -930,7 +979,7 @@ export default function ProjectList() {
                     />
                     <GemeenteDetailView
                       gemeente={gemeente}
-                      wijkProjects={wijkChildren}
+                      wijkProjects={allWijkChildren}
                       unreadData={unreadData}
                       gemeenteGeojson={gemeenteGeojson}
                     />
