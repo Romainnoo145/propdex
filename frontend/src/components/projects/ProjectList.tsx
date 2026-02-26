@@ -1344,18 +1344,44 @@ function UnlinkedGemeenteWorkspace({
   const [selectedWijkNaam, setSelectedWijkNaam] = useState<string | null>(null)
 
   const wijkItems = useMemo(() => {
-    const unique = new Map<string, [number, number, number, number] | null>()
+    const unique = new Map<
+      string,
+      {
+        bbox: [number, number, number, number] | null
+        svgData: { primaryD: string; viewBox: string } | null
+      }
+    >()
     for (const feature of wijkGeojson?.features ?? []) {
       const name = String(feature.properties?.statnaam ?? '').trim()
       const geometry = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | undefined
       if (!name || !geometry) continue
       if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue
-      unique.set(name, calculateBboxFromGeometry(geometry))
+      const svg = geoJsonToSvgPath(geometry)
+      unique.set(name, {
+        bbox: calculateBboxFromGeometry(geometry),
+        svgData: { primaryD: svg.d, viewBox: svg.viewBox },
+      })
     }
     return Array.from(unique.entries())
-      .map(([name, bbox]) => ({ name, bbox }))
+      .map(([name, value]) => ({ name, bbox: value.bbox, svgData: value.svgData }))
       .sort((a, b) => a.name.localeCompare(b.name, 'nl-NL'))
   }, [wijkGeojson])
+
+  const latestScanByWijkName = useMemo(() => {
+    const map = new Map<string, ScanListItem>()
+    const normalizedGemeenteCode = normalizeGemeenteCode(gemeenteCode)
+    for (const scan of scanHistory) {
+      if (scan.status !== 'completed') continue
+      if (normalizeGemeenteCode(scan.gemeente_code) !== normalizedGemeenteCode) continue
+      const wijkNaam = normalizeAreaName(scan.wijk_naam ?? '')
+      if (!wijkNaam) continue
+      const current = map.get(wijkNaam)
+      if (!current || Date.parse(scan.scan_date) > Date.parse(current.scan_date)) {
+        map.set(wijkNaam, scan)
+      }
+    }
+    return map
+  }, [scanHistory, gemeenteCode])
 
   useEffect(() => {
     if (wijkItems.length === 0) {
@@ -1374,16 +1400,8 @@ function UnlinkedGemeenteWorkspace({
 
   const latestWijkScan = useMemo(() => {
     if (!selectedWijkNaam) return null
-    const normalizedWijkNaam = normalizeAreaName(selectedWijkNaam)
-    const normalizedGemeenteCode = normalizeGemeenteCode(gemeenteCode)
-    return [...scanHistory]
-      .filter((scan) => (
-        scan.status === 'completed' &&
-        normalizeGemeenteCode(scan.gemeente_code) === normalizedGemeenteCode &&
-        normalizeAreaName(scan.wijk_naam ?? '') === normalizedWijkNaam
-      ))
-      .sort((a, b) => Date.parse(b.scan_date) - Date.parse(a.scan_date))[0] ?? null
-  }, [scanHistory, selectedWijkNaam, gemeenteCode])
+    return latestScanByWijkName.get(normalizeAreaName(selectedWijkNaam)) ?? null
+  }, [latestScanByWijkName, selectedWijkNaam])
 
   return (
     <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
@@ -1410,26 +1428,49 @@ function UnlinkedGemeenteWorkspace({
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
             <div className="max-h-[620px] overflow-y-auto rounded-xl border border-overlay/[0.08] bg-grey-900 p-3">
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {wijkItems.map((wijk) => {
                   const isActive = wijk.name === selectedWijkNaam
+                  const wijkScan = latestScanByWijkName.get(normalizeAreaName(wijk.name))
                   return (
                     <button
                       key={wijk.name}
                       onClick={() => setSelectedWijkNaam(wijk.name)}
-                      className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                      className={`group relative w-full overflow-hidden rounded-xl border text-left transition-all ${
                         isActive
                           ? 'border-amber-accent/35 bg-overlay/[0.08] shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
-                          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+                          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:border-amber-accent/30 hover:bg-overlay/[0.05]'
                       }`}
                     >
-                      <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
-                      <p className="truncate pl-1 text-sm font-semibold text-grey-100">{wijk.name}</p>
-                      {latestWijkScan && isActive && (
-                        <p className="mt-1 pl-1 text-[11px] text-grey-500">
-                          Laatste scan: {dateFmt.format(new Date(latestWijkScan.scan_date))}
+                      <span className={`absolute inset-y-1 left-0 z-10 w-1 rounded-r ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
+                      <div className="relative aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/65">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(217,170,56,0.11),transparent_45%),radial-gradient(circle_at_20%_82%,rgba(255,255,255,0.06),transparent_45%)]" />
+                        {wijk.svgData ? (
+                          <svg
+                            viewBox={wijk.svgData.viewBox}
+                            className="relative h-full w-full overflow-hidden"
+                            preserveAspectRatio="xMidYMid meet"
+                          >
+                            <path
+                              d={wijk.svgData.primaryD}
+                              className="fill-amber-accent/24 stroke-amber-accent transition-all duration-200 group-hover:fill-amber-accent/30 group-hover:stroke-amber-accent"
+                              strokeWidth="1"
+                            />
+                          </svg>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <WijkStatIcon />
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-3.5 py-2.5">
+                        <p className="truncate text-sm font-semibold text-grey-100">{wijk.name}</p>
+                        <p className="mt-1 text-[11px] text-grey-500">
+                          {wijkScan
+                            ? `Scan: ${dateFmt.format(new Date(wijkScan.scan_date))}`
+                            : 'Nog geen scan'}
                         </p>
-                      )}
+                      </div>
                     </button>
                   )
                 })}
