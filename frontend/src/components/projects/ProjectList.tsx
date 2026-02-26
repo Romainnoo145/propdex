@@ -2,7 +2,11 @@ import { useState, useEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
-import { useUnreadCounts, useProjectChanges } from '@/hooks/useNotifications'
+import {
+  useUnreadCounts,
+  useProjectChanges,
+  useSetGemeenteMonitoringSubscription,
+} from '@/hooks/useNotifications'
 import { useProjectScans, useScanHistory, useTriggerScan } from '@/hooks/useScans'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { toast } from 'sonner'
@@ -164,6 +168,7 @@ export default function ProjectList() {
   const { data: unreadData } = useUnreadCounts()
   const { data: scanHistory } = useScanHistory({ limit: 100, status: 'completed' })
   const deleteMutation = useDeleteProject()
+  const setMonitoringSubscription = useSetGemeenteMonitoringSubscription()
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/projecten' })
   const selectedGemeenteId = search.gemeente_id ?? null
@@ -720,6 +725,37 @@ export default function ProjectList() {
     })
   }
 
+  const handleSetGemeenteMonitoring = (
+    gemeenteCode: string | null,
+    gemeenteNaam: string,
+    enabled: boolean
+  ) => {
+    const normalizedCode = normalizeGemeenteCode(gemeenteCode)
+    if (!normalizedCode) {
+      toast.error('Gemeentecode ontbreekt')
+      return
+    }
+    setMonitoringSubscription.mutate(
+      {
+        gemeente_code: normalizedCode,
+        gemeente_naam: gemeenteNaam,
+        enabled,
+      },
+      {
+        onSuccess: (result) => {
+          toast.success(
+            result.enabled
+              ? `Meldingen geactiveerd voor ${result.gemeente_naam}`
+              : `Meldingen uitgeschakeld voor ${result.gemeente_naam}`
+          )
+        },
+        onError: (error) => {
+          toast.error(error.message || 'Instellen van meldingen mislukt')
+        },
+      }
+    )
+  }
+
   const renderGemeenteCard = (card: GemeenteScopeCard) => {
     const siblings = selectedProvinceGemeenteCards
       .filter((candidate) => candidate.code !== card.code)
@@ -878,6 +914,19 @@ export default function ProjectList() {
                           ? () => navigate({ to: '/map', search: { gemeente_code: gemeenteCode } })
                           : undefined
                       }
+                      extraActions={
+                        <MonitoringToggleAction
+                          enabled={gemeente.is_monitored}
+                          pending={setMonitoringSubscription.isPending}
+                          onClick={() =>
+                            handleSetGemeenteMonitoring(
+                              gemeenteCode,
+                              gemeente.name,
+                              !gemeente.is_monitored
+                            )
+                          }
+                        />
+                      }
                     />
                     <GemeenteDetailView
                       gemeente={gemeente}
@@ -909,6 +958,19 @@ export default function ProjectList() {
                       ]}
                       actionLabel="Bekijk op kaart"
                       onAction={() => navigate({ to: '/map', search: { gemeente_code: selectedGemeenteCard.code } })}
+                      extraActions={
+                        <MonitoringToggleAction
+                          enabled={Boolean(selectedGemeenteCard.project?.is_monitored)}
+                          pending={setMonitoringSubscription.isPending}
+                          onClick={() =>
+                            handleSetGemeenteMonitoring(
+                              selectedGemeenteCard.code,
+                              selectedGemeenteCard.naam,
+                              !Boolean(selectedGemeenteCard.project?.is_monitored)
+                            )
+                          }
+                        />
+                      }
                     />
                     <UnlinkedGemeenteWorkspace
                       gemeenteCode={selectedGemeenteCard.code}
@@ -1176,6 +1238,7 @@ function ProjectWorkspaceHeader({
   backLabel = 'Terug',
   actionLabel,
   onAction,
+  extraActions,
 }: {
   title: string
   subtitle?: string
@@ -1189,6 +1252,7 @@ function ProjectWorkspaceHeader({
   backLabel?: string
   actionLabel: string
   onAction?: () => void
+  extraActions?: ReactNode
 }) {
   return (
     <div className="relative mb-5 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900 px-5 py-5 sm:px-6 sm:py-6">
@@ -1211,14 +1275,17 @@ function ProjectWorkspaceHeader({
               <p className="mt-1 text-sm text-grey-600">{subtitle}</p>
             )}
           </div>
-          <button
-            onClick={onAction}
-            disabled={!onAction}
-            className="inline-flex items-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <MapPinLineIcon />
-            {actionLabel}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {extraActions}
+            <button
+              onClick={onAction}
+              disabled={!onAction}
+              className="inline-flex items-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <MapPinLineIcon />
+              {actionLabel}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1234,6 +1301,31 @@ function ProjectWorkspaceHeader({
         </div>
       </div>
     </div>
+  )
+}
+
+function MonitoringToggleAction({
+  enabled,
+  pending,
+  onClick,
+}: {
+  enabled: boolean
+  pending: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={pending}
+      className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+        enabled
+          ? 'border-amber-accent/35 bg-amber-accent/12 text-amber-accent hover:bg-amber-accent/18'
+          : 'border-overlay/[0.1] bg-overlay/[0.04] text-grey-300 hover:bg-overlay/[0.08] hover:text-grey-100'
+      }`}
+    >
+      <BellStatIcon />
+      {pending ? 'Opslaan...' : enabled ? 'Meldingen aan' : 'Meldingen ontvangen'}
+    </button>
   )
 }
 

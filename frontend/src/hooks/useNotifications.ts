@@ -24,6 +24,7 @@ import {
   fetchProjectChanges,
   fetchChangesForParcel,
   refreshMonitoring as apiRefreshMonitoring,
+  setGemeenteMonitoringSubscription,
   markProjectViewed,
   markChangeRead as apiMarkChangeRead,
   markAllChangesRead as apiMarkAllChangesRead,
@@ -31,6 +32,8 @@ import {
 import type {
   ChangeRecord,
   MarkAllReadResponse,
+  MonitoringSubscriptionRequest,
+  MonitoringSubscriptionResponse,
   UnreadDetailResponse,
   ChangeRecordListResponse,
 } from '@/lib/types/monitoring'
@@ -293,6 +296,31 @@ export function useRefreshMonitoring() {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
       queryClient.invalidateQueries({ queryKey: ['changes'] })
       queryClient.invalidateQueries({ queryKey: ['projects', 'monitored'] })
+    },
+  })
+}
+
+/**
+ * Enable/disable monitoring for a single gemeente.
+ *
+ * Invalidates project and monitoring caches so UI picks up the new scope
+ * immediately (project cards, unread counters, and monitored list).
+ */
+export function useSetGemeenteMonitoringSubscription() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    MonitoringSubscriptionResponse,
+    Error,
+    MonitoringSubscriptionRequest
+  >({
+    mutationFn: (input) => setGemeenteMonitoringSubscription(accessToken, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', 'monitored'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+      queryClient.invalidateQueries({ queryKey: ['changes'] })
     },
   })
 }

@@ -57,3 +57,17 @@ export interface UnreadDetailResponse {
   projects_with_changes: number
   per_project: ProjectUnreadCount[]
 }
+
+export interface MonitoringSubscriptionRequest {
+  gemeente_code: string
+  gemeente_naam: string
+  enabled: boolean
+}
+
+export interface MonitoringSubscriptionResponse {
+  gemeente_code: string
+  gemeente_naam: string
+  enabled: boolean
+  project_id: string | null
+  affected_projects: number
+}

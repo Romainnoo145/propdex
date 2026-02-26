@@ -78,3 +78,21 @@ class UnreadDetailResponse(BaseModel):
     total_unread: int
     projects_with_changes: int
     per_project: list[ProjectUnreadCount]
+
+
+class MonitoringSubscriptionRequest(BaseModel):
+    """Request payload for enabling/disabling gemeente monitoring."""
+
+    gemeente_code: str
+    gemeente_naam: str
+    enabled: bool = True
+
+
+class MonitoringSubscriptionResponse(BaseModel):
+    """Response payload for gemeente monitoring subscription changes."""
+
+    gemeente_code: str
+    gemeente_naam: str
+    enabled: bool
+    project_id: str | None = None
+    affected_projects: int = 0

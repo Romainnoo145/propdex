@@ -38,6 +38,8 @@ import type {
   ChangeRecord,
   ChangeRecordListResponse,
   MarkAllReadResponse,
+  MonitoringSubscriptionRequest,
+  MonitoringSubscriptionResponse,
   UnreadDetailResponse,
 } from './types/monitoring'
 
@@ -1042,4 +1044,15 @@ export async function refreshMonitoring(
       method: 'POST',
     }
   )
+}
+
+export async function setGemeenteMonitoringSubscription(
+  accessToken: string | null,
+  input: MonitoringSubscriptionRequest
+): Promise<MonitoringSubscriptionResponse> {
+  return apiFetch<MonitoringSubscriptionResponse>(`${MONITORING_BASE}/subscriptions`, {
+    accessToken,
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }

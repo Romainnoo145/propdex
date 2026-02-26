@@ -153,28 +153,27 @@ function MeldingenPage() {
       monitoredGemeenteProjects.length > 0
         ? monitoredGemeenteProjects
         : monitoredData?.projects ?? []
-    const targets = selectedGemeente
-      ? monitoredProjects.filter(
-          (p) =>
-            p.name.trim().toLowerCase() ===
-            selectedGemeente.trim().toLowerCase()
-      )
-      : monitoredProjects.slice(0, 5)
     const minDuration = new Promise((r) => setTimeout(r, 500))
 
     try {
-      if (selectedGemeente && targets.length === 0) {
+      if (!selectedGemeente) {
+        toast.info('Kies eerst een gemeente om gericht te verversen')
+        await Promise.all([refetch(), minDuration])
+        return
+      }
+
+      const targets = monitoredProjects.filter(
+        (p) =>
+          p.name.trim().toLowerCase() ===
+          selectedGemeente.trim().toLowerCase()
+      )
+
+      if (targets.length === 0) {
         toast.info(
           `Geen monitoringproject gevonden voor ${selectedGemeente}`
         )
         await Promise.all([refetch(), minDuration])
         return
-      }
-
-      if (!selectedGemeente && monitoredProjects.length > 5) {
-        toast.info(
-          'Max 5 monitoring-projecten per refresh (API limiet). Filter op gemeente voor gericht verversen.'
-        )
       }
 
       let totalNewChanges = 0

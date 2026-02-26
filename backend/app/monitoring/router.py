@@ -28,6 +28,8 @@ from app.schemas.monitoring import (
     MarkAllReadResponse,
     MatchedParcel,
     MatchedReport,
+    MonitoringSubscriptionRequest,
+    MonitoringSubscriptionResponse,
     ProjectUnreadCount,
     UnreadDetailResponse,
 )
@@ -53,6 +55,20 @@ def _normalize_postcode(value: str | None) -> str | None:
         return None
     cleaned = value.upper().replace(" ", "").strip()
     return cleaned if len(cleaned) == 6 else None
+
+
+def _normalize_gemeente_code(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    code = value.strip().upper()
+    if not code:
+        return None
+    if re.fullmatch(r"GM\d{4}", code):
+        return code
+    digits = code[2:] if code.startswith("GM") else code
+    if re.fullmatch(r"\d{4}", digits):
+        return f"GM{digits}"
+    return None
 
 
 def _coerce_huisnummer(value: object) -> int | None:
@@ -1040,6 +1056,87 @@ async def get_monitored_projects(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get monitored projects",
+        ) from e
+
+
+@router.post("/subscriptions", response_model=MonitoringSubscriptionResponse)
+@limiter.limit("30/minute")
+async def set_gemeente_subscription(
+    request: Request,
+    payload: MonitoringSubscriptionRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> MonitoringSubscriptionResponse:
+    """
+    Enable or disable monitoring for a single gemeente.
+
+    If enabling and no gemeente-level project exists yet, creates one.
+    Applies the monitoring flag to all projects in the organization with the
+    same gemeente_code, so daily monitoring can be controlled centrally.
+    """
+    try:
+        gemeente_code = _normalize_gemeente_code(payload.gemeente_code)
+        if not gemeente_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid gemeente_code",
+            )
+
+        gemeente_naam = payload.gemeente_naam.strip() or gemeente_code
+
+        project_query = (
+            select(Project)
+            .where(
+                Project.organization_id == organization_id,
+                Project.gemeente_code == gemeente_code,
+            )
+            .order_by(Project.created_at.asc())
+        )
+        project_result = await db.execute(project_query)
+        projects = list(project_result.scalars().all())
+
+        root_project = next((p for p in projects if p.parent_id is None), None)
+        affected_projects = 0
+
+        if payload.enabled and root_project is None:
+            root_project = Project(
+                organization_id=organization_id,
+                name=gemeente_naam,
+                description=f"Monitoring voor gemeente {gemeente_naam}",
+                parent_id=None,
+                gemeente_code=gemeente_code,
+                wijk_naam=None,
+                is_monitored=True,
+            )
+            db.add(root_project)
+            await db.flush()
+            projects.append(root_project)
+            affected_projects += 1
+
+        for project in projects:
+            if project.is_monitored == payload.enabled:
+                continue
+            project.is_monitored = payload.enabled
+            affected_projects += 1
+
+        await db.commit()
+
+        return MonitoringSubscriptionResponse(
+            gemeente_code=gemeente_code,
+            gemeente_naam=gemeente_naam,
+            enabled=payload.enabled,
+            project_id=str(root_project.id) if root_project else None,
+            affected_projects=affected_projects,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to update gemeente monitoring subscription: %s", e)
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update gemeente monitoring subscription",
         ) from e
 
 
