@@ -886,6 +886,10 @@ export default function ProjectList() {
                 if (!gemeente) return null
 
                 const gemeenteCode = resolveGemeenteCodeForProject(gemeente)
+                const gemeenteForDetail =
+                  gemeenteCode && gemeente.gemeente_code !== gemeenteCode
+                    ? { ...gemeente, gemeente_code: gemeenteCode }
+                    : gemeente
                 const linkedChildren = childrenByParentId.get(gemeente.id) ?? []
                 const standaloneChildren = gemeenteCode
                   ? (standaloneWijkProjectsByCode.get(gemeenteCode) ?? [])
@@ -931,7 +935,7 @@ export default function ProjectList() {
                   return (
                     <>
                       <DrilldownBreadcrumb gemeenteName={gemeente.name} wijkName={wijk.name} />
-                      <WijkDetailView gemeente={gemeente} wijk={wijk} />
+                      <WijkDetailView gemeente={gemeenteForDetail} wijk={wijk} />
                     </>
                   )
                 }
@@ -978,7 +982,7 @@ export default function ProjectList() {
                       }
                     />
                     <GemeenteDetailView
-                      gemeente={gemeente}
+                      gemeente={gemeenteForDetail}
                       wijkProjects={allWijkChildren}
                       unreadData={unreadData}
                       gemeenteGeojson={gemeenteGeojson}
@@ -1024,6 +1028,7 @@ export default function ProjectList() {
                     <UnlinkedGemeenteWorkspace
                       gemeenteCode={selectedGemeenteCard.code}
                       gemeenteName={selectedGemeenteCard.naam}
+                      gemeenteGeometry={selectedGemeenteCard.geometry}
                       scanHistory={scanHistory?.scans ?? []}
                     />
                   </>
@@ -1381,10 +1386,12 @@ function MonitoringToggleAction({
 function UnlinkedGemeenteWorkspace({
   gemeenteCode,
   gemeenteName,
+  gemeenteGeometry,
   scanHistory,
 }: {
   gemeenteCode: string
   gemeenteName: string
+  gemeenteGeometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
   scanHistory: ScanListItem[]
 }) {
   const navigate = useNavigate()
@@ -1396,8 +1403,8 @@ function UnlinkedGemeenteWorkspace({
     const unique = new Map<
       string,
       {
+        geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
         bbox: [number, number, number, number] | null
-        svgData: { primaryD: string; viewBox: string } | null
       }
     >()
     for (const feature of wijkGeojson?.features ?? []) {
@@ -1405,16 +1412,23 @@ function UnlinkedGemeenteWorkspace({
       const geometry = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | undefined
       if (!name || !geometry) continue
       if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue
-      const svg = geoJsonToSvgPath(geometry)
       unique.set(name, {
+        geometry,
         bbox: calculateBboxFromGeometry(geometry),
-        svgData: { primaryD: svg.d, viewBox: svg.viewBox },
       })
     }
-    return Array.from(unique.entries())
-      .map(([name, value]) => ({ name, bbox: value.bbox, svgData: value.svgData }))
+    const rows = Array.from(unique.entries())
+      .map(([name, value]) => ({ name, geometry: value.geometry, bbox: value.bbox }))
       .sort((a, b) => a.name.localeCompare(b.name, 'nl-NL'))
-  }, [wijkGeojson])
+
+    return rows.map((row, index) => {
+      const siblings = rows
+        .filter((_, siblingIndex) => siblingIndex !== index)
+        .map((entry) => entry.geometry)
+      const svgData = geoJsonToSvgDualPath(row.geometry, gemeenteGeometry, siblings)
+      return { name: row.name, bbox: row.bbox, svgData }
+    })
+  }, [wijkGeojson, gemeenteGeometry])
 
   const latestScanByWijkName = useMemo(() => {
     const map = new Map<string, ScanListItem>()
@@ -1500,6 +1514,20 @@ function UnlinkedGemeenteWorkspace({
                             className="relative h-full w-full overflow-hidden"
                             preserveAspectRatio="xMidYMid meet"
                           >
+                            {wijk.svgData.backgroundD && (
+                              <path
+                                d={wijk.svgData.backgroundD}
+                                className="fill-grey-700/18 stroke-overlay/[0.2]"
+                                strokeWidth="0.5"
+                              />
+                            )}
+                            {wijk.svgData.siblingsD && (
+                              <path
+                                d={wijk.svgData.siblingsD}
+                                className="fill-transparent stroke-grey-600/25"
+                                strokeWidth="0.3"
+                              />
+                            )}
                             <path
                               d={wijk.svgData.primaryD}
                               className="fill-amber-accent/24 stroke-amber-accent transition-all duration-200 group-hover:fill-amber-accent/30 group-hover:stroke-amber-accent"
