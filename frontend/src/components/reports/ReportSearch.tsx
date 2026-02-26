@@ -56,6 +56,17 @@ export default function ReportSearch({
           value={searchValue}
           onValueChange={setSearchValue}
           placeholder="Zoek rapporten... (⌘K)"
+          autoComplete="new-password"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          inputMode="search"
+          enterKeyHint="search"
+          name="q_sidebar_reports"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-bwignore="true"
+          data-form-type="other"
           className="w-full border-0 bg-transparent py-3 pl-2 text-sm text-grey-100 outline-none placeholder:text-grey-600"
         />
       </div>

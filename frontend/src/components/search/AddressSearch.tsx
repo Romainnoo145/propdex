@@ -134,6 +134,13 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Zoek een adres..."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          name="address-search"
+          data-lpignore="true"
+          data-1p-ignore="true"
           className="flex-1 bg-transparent text-sm text-grey-100 placeholder:text-grey-600 outline-none"
         />
         {isLoading && query.length >= 3 && <Spinner />}

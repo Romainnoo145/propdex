@@ -6,13 +6,10 @@ import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/primitives/Button'
 import MapShell from '@/components/layout/MapShell'
-import { InspectorPanel } from '@/components/layout/InspectorPanel'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
-import { PropertyDetailDrawer } from '@/components/property/PropertyDetailDrawer'
-import { PDFExportModal } from '@/components/reports/PDFExportModal'
-import { useSaveReportFlow } from '@/components/reports/SaveReportFlow'
+import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { useRecentViewed } from '@/hooks/useRecentViewed'
 import { useReport } from '@/hooks/useReports'
@@ -36,7 +33,12 @@ import {
   addScanAreaHighlight,
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
-import { addParcelScoreLayer, setParcelScoreVisibility } from '@/components/map/ParcelScoreLayer'
+import {
+  addParcelScoreLayer,
+  PARCEL_BUILT_STATUS_FILL_LAYER_ID,
+  setParcelBuiltStatusVisibility,
+  setParcelScoreVisibility,
+} from '@/components/map/ParcelScoreLayer'
 import {
   addMonitoredWijkOverlay,
   removeMonitoredWijkOverlay,
@@ -56,12 +58,10 @@ import {
   fetchWijken,
   fetchParcelCentroid,
   resolveParcelByAddress,
-  generateReportFromParcel,
-  generateReportFromAddress,
 } from '@/lib/api'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
-import type { SuggestResult, PropertyReportResponse, AddressInput } from '@/lib/types/property'
+import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -99,7 +99,7 @@ export const Route = createFileRoute('/_authenticated/map')({
   }),
 })
 
-type ViewTier = 'none' | 'quick' | 'drawer' | 'modal'
+type ViewTier = 'none' | 'quick'
 
 function parseAddressForReport(address: string | null): {
   postcode: string
@@ -118,6 +118,27 @@ function parseAddressForReport(address: string | null): {
     postcode: `${postcodeMatch[1]} ${postcodeMatch[2]}`,
     huisnummer,
   }
+}
+
+function deriveVacancySignalFromPandStatus(
+  pandStatus: string | null | undefined,
+  hasPand: boolean
+): ScanResultItem['vacancy_signal'] {
+  if (!hasPand) return 'leeg_perceel'
+  if (!pandStatus) return 'onbekend'
+
+  const normalized = pandStatus.toLowerCase()
+  if (
+    normalized.includes('buiten gebruik') ||
+    normalized.includes('gesloopt') ||
+    normalized.includes('niet gerealiseerd')
+  ) {
+    return 'leegstaand_pand'
+  }
+  if (normalized.includes('in gebruik') || normalized.includes('verbouwing')) {
+    return 'in_gebruik'
+  }
+  return 'onbekend'
 }
 
 function MapPage() {
@@ -166,6 +187,13 @@ function MapPage() {
     lng: number
     lat: number
     address: string | null
+  } | null>(null)
+  const [parcelGeometryHighlight, setParcelGeometryHighlight] = useState<{
+    lng: number
+    lat: number
+    parcelCode: string | null
+    areaM2: number | null
+    geometry: GeoJSON.Geometry
   } | null>(null)
 
   // Track wijk name for inline progress display
@@ -216,11 +244,6 @@ function MapPage() {
   // Fetch saved report if reportId provided
   const savedReport = useReport(reportId || null)
 
-  // Save/export flow
-  const currentData = lookup.data ?? null
-  const saveFlow = useSaveReportFlow(currentData)
-  const [savedReportId, setSavedReportId] = useState<string | null>(null)
-
   // Monitored projects for wijk overlay
   const { data: monitoredProjects } = useMonitoredProjects()
 
@@ -244,22 +267,302 @@ function MapPage() {
     mapRef.current.flyTo({ center: propertyLngLat, zoom: 17 })
   }, [propertyLngLat, mapReady])
 
-  // Update geometry whenever data changes and map is ready
+  // Update geometry whenever data changes and map is ready.
+  // Priority: explicit parcel highlight (parcel_id flow) over lookup geometry.
   useEffect(() => {
     if (!mapReady || !mapRef.current) return
-    const data = lookup.data ?? null
-    if (data) {
-      updatePropertyGeometry(mapRef.current, data)
+    if (parcelGeometryHighlight) {
+      const parcelGeometryData = {
+        map_data: {
+          center_rd: null,
+          center_wgs84: [parcelGeometryHighlight.lng, parcelGeometryHighlight.lat],
+          property_geometry: null,
+          parcel_geometries: [parcelGeometryHighlight.geometry],
+          zoning_geometries: [],
+        },
+        cadastral_parcels: [
+          {
+            kadastrale_aanduiding: parcelGeometryHighlight.parcelCode,
+            perceelnummer: null,
+            sectie: null,
+            oppervlakte: parcelGeometryHighlight.areaM2,
+            geometry: parcelGeometryHighlight.geometry,
+          },
+        ],
+      } as unknown as PropertyReportResponse
+      updatePropertyGeometry(mapRef.current, parcelGeometryData)
+      return
     }
-  }, [lookup.data, mapReady])
+
+    if (lookup.data) {
+      updatePropertyGeometry(mapRef.current, lookup.data)
+      return
+    }
+
+    clearPropertyGeometry(mapRef.current)
+  }, [lookup.data, mapReady, parcelGeometryHighlight, mapRef])
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
   const handledParcelRef = useRef<string | null>(null)
   const handledScanFocusRef = useRef<string | null>(null)
   const handledReportRef = useRef<string | null>(null)
+  const pendingLookupInspectorRef = useRef<{
+    postcode: string
+    huisnummer: number
+  } | null>(null)
   const focusedMarkerRef = useRef<maplibregl.Marker | null>(null)
   const focusedPopupRef = useRef<maplibregl.Popup | null>(null)
+  const [isQuickOpeningDetails, setIsQuickOpeningDetails] = useState(false)
+
+  const focusAddressWithLookup = useCallback(
+    ({
+      postcode,
+      huisnummer,
+      fallbackFocus = null,
+      showToastOnError = false,
+      openInspectorOnSuccess = false,
+    }: {
+      postcode: string
+      huisnummer: number
+      fallbackFocus?: {
+        parcelId: string | null
+        lng: number
+        lat: number
+        address: string | null
+      } | null
+      showToastOnError?: boolean
+      openInspectorOnSuccess?: boolean
+    }) => {
+      setTier('quick')
+      setFocusedParcel(null)
+      setParcelGeometryHighlight(null)
+      pendingLookupInspectorRef.current = openInspectorOnSuccess
+        ? { postcode, huisnummer }
+        : null
+      lookup.mutate(
+        { postcode, huisnummer },
+        {
+          onSuccess: (data) => {
+            const coords = data.map_data?.center_wgs84
+            if (coords && coords.length === 2) {
+              setPropertyLngLat([coords[0]!, coords[1]!])
+            }
+          },
+          onError: () => {
+            pendingLookupInspectorRef.current = null
+            if (mapRef.current) {
+              clearPropertyGeometry(mapRef.current)
+            }
+            if (fallbackFocus) {
+              setTier('none')
+              setFocusedParcel(fallbackFocus)
+            } else {
+              setTier('none')
+            }
+            if (showToastOnError) {
+              toast.error('Adres niet gevonden')
+            }
+          },
+        }
+      )
+    },
+    [lookup, mapRef]
+  )
+
+  const makeInspectorParcel = useCallback((input: {
+    parcelId: string
+    address: string | null
+    parcelCode?: string | null
+    gemeenteCode?: string | null
+    areaM2?: number | null
+    hasPand?: boolean
+    bouwjaar?: number | null
+    pandStatus?: string | null
+    vacancySignal?: ScanResultItem['vacancy_signal']
+    bestemmingen?: Record<string, unknown>[] | null
+    maxBebouwingspercentage?: number | null
+    maxFloorAreaRatio?: number | null
+  }): ScanResultItem => {
+    const hasPand = input.hasPand ?? true
+    const vacancySignal =
+      input.vacancySignal ??
+      deriveVacancySignalFromPandStatus(input.pandStatus, hasPand)
+
+    return {
+      parcel_id: input.parcelId,
+      parcel_code: input.parcelCode ?? '',
+      address: input.address ?? null,
+      gemeente_code: input.gemeenteCode ?? null,
+      area_m2: input.areaM2 ?? null,
+      has_pand: hasPand,
+      bouwjaar: input.bouwjaar ?? null,
+      pand_status: input.pandStatus ?? null,
+      bestemmingen: input.bestemmingen ?? null,
+      score: null,
+      score_category: null,
+      score_breakdown: null,
+      vacancy_signal: vacancySignal,
+      opportunity_signals: null,
+      building_metrics: {
+        max_bebouwingspercentage: input.maxBebouwingspercentage ?? null,
+        max_floor_area_ratio: input.maxFloorAreaRatio ?? null,
+      },
+    }
+  }, [])
+
+  const focusParcelWithInspector = useCallback((input: {
+    parcelId: string
+    lng: number
+    lat: number
+    address: string | null
+    parcelCode?: string | null
+    gemeenteCode?: string | null
+    areaM2?: number | null
+    geometry?: GeoJSON.Geometry | null
+    autoEnableKey: string
+  }) => {
+    setTier('none')
+    setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    setParcelGeometryHighlight(
+      input.geometry
+        ? {
+            lng: input.lng,
+            lat: input.lat,
+            parcelCode: input.parcelCode ?? null,
+            areaM2: input.areaM2 ?? null,
+            geometry: input.geometry,
+          }
+        : null
+    )
+    setPropertyLngLat([input.lng, input.lat])
+    setAutoEnableParcelsKey(input.autoEnableKey)
+    setInspectorParcel(
+      makeInspectorParcel({
+        parcelId: input.parcelId,
+        address: input.address,
+        parcelCode: input.parcelCode ?? null,
+        gemeenteCode: input.gemeenteCode ?? null,
+        areaM2: input.areaM2 ?? null,
+        hasPand: true,
+      })
+    )
+  }, [makeInspectorParcel])
+
+  // For URL-driven postcode/huisnummer navigation: auto-open the same parcel detail modal
+  // once we can resolve a concrete parcel_id from the lookup response.
+  useEffect(() => {
+    if (!lookup.data) return
+    const pending = pendingLookupInspectorRef.current
+    if (!pending || !accessToken) return
+
+    pendingLookupInspectorRef.current = null
+    const data = lookup.data
+
+    void resolveParcelByAddress(
+      {
+        street: data.address.straat,
+        huisnummer: data.address.huisnummer,
+        postcode: data.address.postcode,
+      },
+      accessToken
+    )
+      .then((resolved) => {
+        const firstParcel = data.cadastral_parcels?.[0]
+        const primaryBestemming = data.zoning?.primary_bestemming
+        const hasPand = Boolean(data.building?.pand_id)
+
+        setAutoEnableParcelsKey(
+          `addr:${pending.postcode.replace(/\s/g, '').toUpperCase()}:${pending.huisnummer}`
+        )
+        setTier('none')
+        setFocusedParcel(null)
+        setParcelGeometryHighlight(null)
+        setInspectorParcel(
+          makeInspectorParcel({
+            parcelId: resolved.parcel_id,
+            address:
+              resolved.address ??
+              `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
+            parcelCode: firstParcel?.kadastrale_aanduiding ?? null,
+            areaM2: firstParcel?.oppervlakte ?? data.building?.oppervlakte ?? null,
+            hasPand,
+            bouwjaar: data.building?.bouwjaar ?? null,
+            pandStatus: data.building?.status ?? null,
+            vacancySignal: deriveVacancySignalFromPandStatus(
+              data.building?.status ?? null,
+              hasPand
+            ),
+            bestemmingen: primaryBestemming
+              ? [{ type: primaryBestemming, naam: primaryBestemming }]
+              : null,
+            maxBebouwingspercentage:
+              data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
+            maxFloorAreaRatio:
+              data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
+          })
+        )
+      })
+      .catch(() => {
+        // Keep quick card fallback if parcel resolution fails.
+      })
+  }, [lookup.data, accessToken, makeInspectorParcel])
+
+  const handleOpenQuickDetails = useCallback(async () => {
+    if (lookup.isPending || isQuickOpeningDetails) return
+    if (!lookup.data) {
+      toast.info('Perceeldetails worden nog geladen')
+      return
+    }
+    if (!accessToken) {
+      toast.error('Sessie verlopen. Log opnieuw in.')
+      return
+    }
+
+    const data = lookup.data
+    setIsQuickOpeningDetails(true)
+    try {
+      const resolved = await resolveParcelByAddress(
+        {
+          street: data.address.straat,
+          huisnummer: data.address.huisnummer,
+          postcode: data.address.postcode,
+        },
+        accessToken
+      )
+
+      const firstParcel = data.cadastral_parcels?.[0]
+      const primaryBestemming = data.zoning?.primary_bestemming
+      setInspectorParcel(
+        makeInspectorParcel({
+          parcelId: resolved.parcel_id,
+          address: resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
+          parcelCode: firstParcel?.kadastrale_aanduiding ?? null,
+          areaM2: firstParcel?.oppervlakte ?? data.building?.oppervlakte ?? null,
+          hasPand: Boolean(data.building?.pand_id),
+          bouwjaar: data.building?.bouwjaar ?? null,
+          pandStatus: data.building?.status ?? null,
+          vacancySignal: deriveVacancySignalFromPandStatus(
+            data.building?.status ?? null,
+            Boolean(data.building?.pand_id)
+          ),
+          bestemmingen: primaryBestemming
+            ? [{ type: primaryBestemming, naam: primaryBestemming }]
+            : null,
+          maxBebouwingspercentage: data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
+          maxFloorAreaRatio: data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
+        })
+      )
+      setTier('none')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Perceeldetails openen mislukt'
+      )
+    } finally {
+      setIsQuickOpeningDetails(false)
+    }
+  }, [lookup.isPending, lookup.data, accessToken, makeInspectorParcel, isQuickOpeningDetails])
 
   // Handle saved report loading (from sidebar report selection)
   useEffect(() => {
@@ -272,9 +575,11 @@ function MapPage() {
     // Extract PropertyReportResponse from saved report's report_data
     const propertyData = savedReport.data.report_data as unknown as PropertyReportResponse
 
-    setSavedReportId(reportId)
-    setTier('drawer')
+    setTier('none')
     setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    setInspectorParcel(null)
+    pendingLookupInspectorRef.current = null
 
     // Set coordinates — flyTo handled by dedicated effect
     const coords = propertyData.map_data?.center_wgs84
@@ -286,10 +591,16 @@ function MapPage() {
       if (!accessToken) return
       const addr = propertyData.address
       if (!addr?.straat || !addr?.huisnummer) return
-      const fallbackAddress = [addr.straat, String(addr.huisnummer), addr.postcode, addr.woonplaats]
+      const fallbackAddressText = [addr.straat, String(addr.huisnummer), addr.postcode, addr.woonplaats]
         .filter(Boolean)
         .join(' ')
         .trim()
+      let fallbackFocus: {
+        parcelId: string | null
+        lng: number
+        lat: number
+        address: string | null
+      } | null = null
 
       try {
         const resolved = await resolveParcelByAddress(
@@ -300,23 +611,34 @@ function MapPage() {
           },
           accessToken
         )
-        setFocusedParcel({
+        fallbackFocus = {
           parcelId: resolved.parcel_id,
           lng: resolved.lng,
           lat: resolved.lat,
           address: resolved.address,
-        })
+        }
         setAutoEnableParcelsKey(`report:${reportId}:${navTs ?? 0}`)
       } catch {
         // Fallback: still render a marker at known report center when parcel resolve fails.
         if (coords && coords.length === 2) {
-          setFocusedParcel({
+          fallbackFocus = {
             parcelId: null,
             lng: coords[0]!,
             lat: coords[1]!,
-            address: fallbackAddress || null,
-          })
+            address: fallbackAddressText || null,
+          }
         }
+      }
+
+      const huisnummerParsed = Number(addr.huisnummer)
+      if (addr.postcode && Number.isFinite(huisnummerParsed) && huisnummerParsed > 0) {
+        focusAddressWithLookup({
+          postcode: addr.postcode,
+          huisnummer: huisnummerParsed,
+          fallbackFocus,
+        })
+      } else if (fallbackFocus) {
+        setFocusedParcel(fallbackFocus)
       }
     }
 
@@ -324,7 +646,7 @@ function MapPage() {
       // Clear reportId from URL so it doesn't re-trigger
       navigate({ to: '/map', search: {}, replace: true })
     })
-  }, [reportId, savedReport.data, accessToken, navigate, navTs])
+  }, [reportId, savedReport.data, accessToken, navigate, navTs, focusAddressWithLookup])
 
   // Always center map on the focused marker target.
   useEffect(() => {
@@ -355,16 +677,29 @@ function MapPage() {
     handledScanFocusRef.current = focusKey
 
     if (urlParcelId && accessToken) {
+      // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
+      setTier('none')
+      setFocusedParcel(null)
+      setParcelGeometryHighlight(null)
+      setInspectorParcel(null)
+      pendingLookupInspectorRef.current = null
+      if (mapRef.current) {
+        clearPropertyGeometry(mapRef.current)
+      }
+
       fetchParcelCentroid(urlParcelId, accessToken)
-        .then(({ lng, lat, address }) => {
-          setPropertyLngLat([lng, lat])
-          setFocusedParcel({
+        .then(({ lng, lat, address, parcel_code, gemeente_code, area_m2, geometry }) => {
+          focusParcelWithInspector({
             parcelId: urlParcelId,
             lng,
             lat,
             address: address ?? fallbackAddress ?? null,
+            parcelCode: parcel_code ?? null,
+            gemeenteCode: gemeente_code ?? null,
+            areaM2: area_m2 ?? null,
+            geometry: geometry ?? null,
+            autoEnableKey: `${urlParcelId}:${urlScanId}:${navTs ?? 0}`,
           })
-          setAutoEnableParcelsKey(`${urlParcelId}:${urlScanId}:${navTs ?? 0}`)
         })
         .catch(() => {
           // Silently fall back — scan layer still loads
@@ -377,7 +712,7 @@ function MapPage() {
 
     // Clear from URL to prevent re-trigger on hot reload.
     navigate({ to: '/map', search: {}, replace: true })
-  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs, fallbackAddress])
+  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs, fallbackAddress, focusParcelWithInspector])
 
   // Handle direct parcel navigation (e.g. from meldingen) without scan context
   useEffect(() => {
@@ -387,16 +722,29 @@ function MapPage() {
     if (handledParcelRef.current === key) return
     handledParcelRef.current = key
 
+    // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
+    setTier('none')
+    setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    setInspectorParcel(null)
+    pendingLookupInspectorRef.current = null
+    if (mapRef.current) {
+      clearPropertyGeometry(mapRef.current)
+    }
+
     fetchParcelCentroid(urlParcelId, accessToken)
-      .then(({ lng, lat, address }) => {
-        setPropertyLngLat([lng, lat])
-        setFocusedParcel({
+      .then(({ lng, lat, address, parcel_code, gemeente_code, area_m2, geometry }) => {
+        focusParcelWithInspector({
           parcelId: urlParcelId,
           lng,
           lat,
           address: address ?? fallbackAddress ?? null,
+          parcelCode: parcel_code ?? null,
+          gemeenteCode: gemeente_code ?? null,
+          areaM2: area_m2 ?? null,
+          geometry: geometry ?? null,
+          autoEnableKey: key,
         })
-        setAutoEnableParcelsKey(key)
       })
       .catch(() => {
         toast.error('Kon perceel op kaart niet centreren')
@@ -404,7 +752,7 @@ function MapPage() {
       .finally(() => {
         navigate({ to: '/map', search: {}, replace: true })
       })
-  }, [urlParcelId, urlScanId, navTs, accessToken, navigate, fallbackAddress])
+  }, [urlParcelId, urlScanId, navTs, accessToken, navigate, fallbackAddress, focusParcelWithInspector])
 
   // Render amber marker for parcel-focused navigation and attach popup CTA.
   useEffect(() => {
@@ -437,82 +785,81 @@ function MapPage() {
 
     let popup: maplibregl.Popup | null = null
     let cta: HTMLButtonElement | null = null
-    let handleGenerate: (() => Promise<void>) | null = null
+    let handleOpenDetails: (() => Promise<void>) | null = null
     let openPopup: (() => void) | null = null
     const parsedAddress = parseAddressForReport(focusedParcel.address)
-    const hasGenerateCta = Boolean(
-      accessToken && (focusedParcel.parcelId || parsedAddress)
+    const hasDetailsCta = Boolean(
+      focusedParcel.parcelId || (accessToken && parsedAddress)
     )
 
-    if (hasGenerateCta) {
+    if (hasDetailsCta) {
       const popupRoot = document.createElement('div')
-      popupRoot.className = 'min-w-[120px]'
+      popupRoot.className = 'min-w-[132px]'
 
       cta = document.createElement('button')
       cta.type = 'button'
       cta.className =
         'w-full rounded-md border border-grey-700 bg-grey-900 px-2.5 py-1.5 text-[11px] font-medium text-amber-accent transition-colors hover:bg-grey-850'
-      cta.textContent = 'Genereer rapport'
+      cta.textContent = 'Bekijk details'
       popupRoot.appendChild(cta)
 
-      let isGenerating = false
+      let isOpeningDetails = false
       const setGenerating = (busy: boolean) => {
-        isGenerating = busy
+        isOpeningDetails = busy
         if (!cta) return
         cta.disabled = busy
-        cta.textContent = busy ? 'Bezig met genereren...' : 'Genereer rapport'
+        cta.textContent = busy ? 'Details laden...' : 'Bekijk details'
         cta.classList.toggle('opacity-60', busy)
         cta.classList.toggle('cursor-not-allowed', busy)
       }
 
-      handleGenerate = async () => {
-        if (isGenerating || !accessToken) return
+      handleOpenDetails = async () => {
+        if (isOpeningDetails) return
         setGenerating(true)
         try {
-          let report
           if (focusedParcel.parcelId) {
-            try {
-              report = await generateReportFromParcel(
-                focusedParcel.parcelId,
-                accessToken
-              )
-            } catch (error) {
-              if (!parsedAddress) throw error
-              report = await generateReportFromAddress(
-                {
-                  postcode: parsedAddress.postcode,
-                  huisnummer: parsedAddress.huisnummer,
-                },
-                accessToken
-              )
-            }
-          } else if (parsedAddress) {
-            report = await generateReportFromAddress(
-              {
-                postcode: parsedAddress.postcode,
-                huisnummer: parsedAddress.huisnummer,
-              },
-              accessToken
+            const lookupData = lookup.data
+            const lookupParcel = lookupData?.cadastral_parcels?.[0]
+            const primaryBestemming = lookupData?.zoning?.primary_bestemming
+            const hasPand = Boolean(lookupData?.building?.pand_id)
+            setInspectorParcel(
+              makeInspectorParcel({
+                parcelId: focusedParcel.parcelId,
+                address: focusedParcel.address,
+                parcelCode: lookupParcel?.kadastrale_aanduiding ?? null,
+                areaM2: lookupParcel?.oppervlakte ?? lookupData?.building?.oppervlakte ?? null,
+                hasPand,
+                bouwjaar: lookupData?.building?.bouwjaar ?? null,
+                pandStatus: lookupData?.building?.status ?? null,
+                vacancySignal: deriveVacancySignalFromPandStatus(
+                  lookupData?.building?.status ?? null,
+                  hasPand
+                ),
+                bestemmingen: primaryBestemming
+                  ? [{ type: primaryBestemming, naam: primaryBestemming }]
+                  : null,
+                maxBebouwingspercentage: lookupData?.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
+                maxFloorAreaRatio: lookupData?.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
+              })
             )
-          } else {
+            setTier('none')
             return
           }
 
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['reports'] }),
-            queryClient.invalidateQueries({ queryKey: ['projects'] }),
-          ])
-          toast.success('Rapport gegenereerd')
-          navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
-        } catch (error) {
-          toast.error(
-            error instanceof Error ? error.message : 'Rapport genereren mislukt'
-          )
+          if (!parsedAddress) return
+          focusAddressWithLookup({
+            postcode: parsedAddress.postcode,
+            huisnummer: parsedAddress.huisnummer,
+            fallbackFocus: focusedParcel,
+            showToastOnError: true,
+          })
+        } catch {
+          toast.error('Perceeldetails laden mislukt')
         } finally {
           setGenerating(false)
         }
       }
-      cta.addEventListener('click', handleGenerate)
+      cta.addEventListener('click', handleOpenDetails)
 
       popup = new maplibregl.Popup({
         closeButton: false,
@@ -532,12 +879,12 @@ function MapPage() {
     focusedPopupRef.current = popup
 
     return () => {
-      if (cta && handleGenerate) cta.removeEventListener('click', handleGenerate)
+      if (cta && handleOpenDetails) cta.removeEventListener('click', handleOpenDetails)
       if (openPopup) markerEl.removeEventListener('click', openPopup)
       popup?.remove()
       marker.remove()
     }
-  }, [mapReady, mapRef, focusedParcel, accessToken, navigate])
+  }, [mapReady, mapRef, focusedParcel, accessToken, focusAddressWithLookup, makeInspectorParcel, lookup.data])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
@@ -555,24 +902,24 @@ function MapPage() {
     const pc = postcode
     const hn = huisnummer
 
-    setTier('quick')
-    setPropertyLngLat(null)
+    // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
+    setTier('none')
+    setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    setInspectorParcel(null)
+    pendingLookupInspectorRef.current = null
+    if (mapRef.current) {
+      clearPropertyGeometry(mapRef.current)
+    }
 
-    lookup.mutate(
-      { postcode: pc, huisnummer: hn },
-      {
-        onSuccess: (data) => {
-          const coords = data.map_data?.center_wgs84
-          if (coords && coords.length === 2) {
-            setPropertyLngLat([coords[0]!, coords[1]!])
-          }
-        },
-        onError: () => {
-          toast.error('Adres niet gevonden')
-        },
-      }
-    )
-  }, [postcode, huisnummer, navTs, lookup, navigate])
+    setPropertyLngLat(null)
+    focusAddressWithLookup({
+      postcode: pc,
+      huisnummer: hn,
+      showToastOnError: true,
+      openInspectorOnSuccess: true,
+    })
+  }, [postcode, huisnummer, navTs, navigate, focusAddressWithLookup])
 
   // Show score layer when scan completes
   useEffect(() => {
@@ -648,13 +995,23 @@ function MapPage() {
         score: (props.score as number | null) ?? null,
         score_category: (props.score_category as string | null) ?? null,
         score_breakdown: null,
+        vacancy_signal: (props.vacancy_signal as string | null) ?? null,
+        opportunity_signals: null,
+        building_metrics: {
+          max_bebouwingspercentage:
+            (props.max_bebouwingspercentage as number | null) ?? null,
+          max_floor_area_ratio:
+            (props.max_floor_area_ratio as number | null) ?? null,
+        },
       }
       setInspectorParcel(parcel)
     }
 
     map.on('click', 'parcel-score-fill', handleParcelClick)
+    map.on('click', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleParcelClick)
     return () => {
       map.off('click', 'parcel-score-fill', handleParcelClick)
+      map.off('click', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleParcelClick)
     }
   }, [mapReady])
 
@@ -714,6 +1071,12 @@ function MapPage() {
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
     setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    setInspectorParcel(null)
+    pendingLookupInspectorRef.current = null
+    if (mapRef.current) {
+      clearPropertyGeometry(mapRef.current)
+    }
 
     // Show QuickCard immediately (for loading state)
     setTier('quick')
@@ -769,51 +1132,12 @@ function MapPage() {
     setTier('none')
     setPropertyLngLat(null)
     setFocusedParcel(null)
+    setParcelGeometryHighlight(null)
+    pendingLookupInspectorRef.current = null
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
     }
   }, [])
-
-  // Handle Drawer close (back to QuickCard, keep geometry)
-  const handleCloseDrawer = useCallback(() => {
-    setTier('quick')
-  }, [])
-
-  // Save handler
-  const handleSave = useCallback(async () => {
-    const reportId = await saveFlow.handleSave()
-    if (reportId) {
-      setSavedReportId(reportId)
-    }
-  }, [saveFlow])
-
-  // Export handler - opens modal
-  const handleExportPDF = useCallback(() => {
-    setTier('modal')
-  }, [])
-
-  // Close modal handler
-  const handleCloseModal = useCallback(() => {
-    setTier('drawer')
-  }, [])
-
-  // Force refresh handler
-  const handleForceRefresh = useCallback(() => {
-    if (!currentData?.address) return
-    const input: AddressInput = {
-      postcode: currentData.address.postcode,
-      huisnummer: currentData.address.huisnummer,
-      huisletter: currentData.address.huisletter || undefined,
-      toevoeging: currentData.address.toevoeging || undefined,
-    }
-    lookup.mutate(
-      { ...input, forceRefresh: true },
-      {
-        onSuccess: () => toast.success('Gegevens bijgewerkt met laatste bronnen'),
-        onError: (err: Error) => toast.error(err.message),
-      }
-    )
-  }, [currentData, lookup])
 
   // Wijk click handler
   const handleWijkClick = useCallback(
@@ -1088,6 +1412,14 @@ function MapPage() {
     []
   )
 
+  const handleBuiltStatusToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+      setParcelBuiltStatusVisibility(mapRef.current, visible)
+    },
+    []
+  )
+
   // Handle "Scan dit gebied" from bestemmingsplan zone
   const handleScanZone = useCallback(() => {
     if (!mapRef.current || !zoneInfo) return
@@ -1322,37 +1654,11 @@ function MapPage() {
         <PropertyQuickCard
           data={lookup.data ?? null}
           isLoading={lookup.isPending}
-          onViewDetails={() => setTier('drawer')}
+          onOpenDetails={handleOpenQuickDetails}
+          isOpeningDetails={lookup.isPending || isQuickOpeningDetails}
           onClose={handleCloseQuickCard}
           mapRef={mapRef}
           lngLat={propertyLngLat}
-        />
-      )}
-
-      {/* Tier 2: Drawer */}
-      {(tier === 'drawer' || tier === 'modal') && (
-        <PropertyDetailDrawer
-          data={currentData}
-          isLoading={lookup.isPending}
-          error={lookup.error}
-          onClose={handleCloseDrawer}
-          onExportPDF={handleExportPDF}
-          onSave={handleSave}
-          isSaving={saveFlow.isSaving}
-          isSaved={!!savedReportId}
-          onRefreshAll={handleForceRefresh}
-          isRefreshing={lookup.isPending}
-        />
-      )}
-
-      {/* Tier 3: PDF Export Modal */}
-      {tier === 'modal' && (
-        <PDFExportModal
-          reportId={savedReportId}
-          propertyData={currentData}
-          isOpen={tier === 'modal'}
-          onClose={handleCloseModal}
-          onSaveFirst={handleSave}
         />
       )}
 
@@ -1365,13 +1671,16 @@ function MapPage() {
         showWijkenToggle={!!activeGemeente}
         onScoreToggle={handleScoreToggle}
         showScoreToggle={!!activeScanId}
+        onBuiltStatusToggle={handleBuiltStatusToggle}
+        showBuiltStatusToggle={!!activeScanId}
       />
 
-      {/* Inspector panel — right-edge slide-over for parcel details */}
-      <InspectorPanel
+      {/* Parcel details modal — same component as scan results row click */}
+      <ParcelDetailModal
+        parcel={inspectorParcel}
         isOpen={!!inspectorParcel}
         onClose={() => setInspectorParcel(null)}
-        parcel={inspectorParcel}
+        onViewOnMap={undefined}
       />
 
       {/* Wijk scan confirmation dialog */}

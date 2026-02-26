@@ -1,5 +1,6 @@
 """Report management service layer with CRUD operations."""
 
+import re
 import uuid
 from datetime import datetime
 
@@ -33,6 +34,89 @@ def _normalize_location_value(value: str | None) -> str | None:
         return None
     normalized = value.strip()
     return normalized or None
+
+
+def _location_key(value: str | None) -> str:
+    """Case-insensitive comparison key for location labels."""
+    if not value:
+        return ""
+    return " ".join(value.lower().split())
+
+
+def _infer_gemeente_code_from_report_data(report_data: dict) -> str | None:
+    """
+    Infer CBS municipality code from BAG object IDs in report payload.
+
+    BAG IDs start with the 4-digit municipality code (e.g., 1507... -> GM1507).
+    """
+    address_data = report_data.get("address")
+    if not isinstance(address_data, dict):
+        return None
+
+    for key in ("verblijfsobject_id", "nummeraanduiding_id", "pand_id"):
+        raw_value = address_data.get(key)
+        if raw_value is None:
+            continue
+        match = re.match(r"^\s*(\d{4})", str(raw_value))
+        if not match:
+            continue
+        return f"GM{match.group(1)}"
+
+    return None
+
+
+async def _find_existing_gemeente_project_by_code(
+    organization_id: uuid.UUID,
+    gemeente_code: str,
+    session: AsyncSession,
+) -> Project | None:
+    """Return existing top-level gemeente project for a CBS code."""
+    project_result = await session.execute(
+        select(Project).where(
+            Project.organization_id == organization_id,
+            Project.parent_id.is_(None),
+            Project.gemeente_code == gemeente_code,
+        ).limit(1)
+    )
+    return project_result.scalar_one_or_none()
+
+
+async def _resolve_report_location_context(
+    organization_id: uuid.UUID,
+    report_data: dict,
+    city: str,
+    session: AsyncSession,
+) -> tuple[str, str | None, str | None]:
+    """
+    Resolve gemeente/wijk context from report payload without parcel context.
+
+    Safety rule:
+    - Only trust inferred gemeente_code when a gemeente project with that code
+      already exists in this org (prevents creating wrong municipality folders
+      from woonplaats labels).
+    """
+    gemeente_naam = city
+    wijk_naam = None
+    gemeente_code = None
+
+    inferred_code = _infer_gemeente_code_from_report_data(report_data)
+    if inferred_code is None:
+        return gemeente_naam, gemeente_code, wijk_naam
+
+    existing_gemeente = await _find_existing_gemeente_project_by_code(
+        organization_id=organization_id,
+        gemeente_code=inferred_code,
+        session=session,
+    )
+    if existing_gemeente is None:
+        return gemeente_naam, gemeente_code, wijk_naam
+
+    gemeente_naam = existing_gemeente.name
+    gemeente_code = inferred_code
+    if _location_key(city) != _location_key(existing_gemeente.name):
+        wijk_naam = city
+
+    return gemeente_naam, gemeente_code, wijk_naam
 
 
 async def _get_or_create_project_for_location(
@@ -202,11 +286,17 @@ async def _backfill_unassigned_reports(
         return
 
     for report in unassigned_reports:
+        gemeente_naam, gemeente_code, wijk_naam = await _resolve_report_location_context(
+            organization_id=organization_id,
+            report_data=report.report_data,
+            city=report.city,
+            session=session,
+        )
         report.project_id = await _get_or_create_project_for_location(
             organization_id=organization_id,
-            gemeente_naam=report.city,
-            gemeente_code=None,
-            wijk_naam=None,
+            gemeente_naam=gemeente_naam,
+            gemeente_code=gemeente_code,
+            wijk_naam=wijk_naam,
             session=session,
         )
 
@@ -302,10 +392,6 @@ async def save_report(
                 detail="Project not found",
             )
     else:
-        gemeente_naam = city
-        gemeente_code = None
-        wijk_naam = None
-
         if parcel_id is not None:
             gemeente_naam, gemeente_code, wijk_naam = (
                 await _resolve_location_context_from_parcel(
@@ -314,6 +400,13 @@ async def save_report(
                     default_gemeente_naam=city,
                     session=session,
                 )
+            )
+        else:
+            gemeente_naam, gemeente_code, wijk_naam = await _resolve_report_location_context(
+                organization_id=organization_id,
+                report_data=report_data,
+                city=city,
+                session=session,
             )
 
         resolved_project_id = await _get_or_create_project_for_location(
@@ -584,11 +677,17 @@ async def assign_report_to_project(
 
     # Never leave a report unassigned. Null requests map to auto gemeente folder.
     if project_id is None:
+        gemeente_naam, gemeente_code, wijk_naam = await _resolve_report_location_context(
+            organization_id=organization_id,
+            report_data=report.report_data,
+            city=report.city,
+            session=session,
+        )
         project_id = await _get_or_create_project_for_location(
             organization_id=organization_id,
-            gemeente_naam=report.city,
-            gemeente_code=None,
-            wijk_naam=None,
+            gemeente_naam=gemeente_naam,
+            gemeente_code=gemeente_code,
+            wijk_naam=wijk_naam,
             session=session,
         )
     else:

@@ -4,6 +4,7 @@ const SOURCE_ID = 'parcel-scores';
 const FILL_LAYER_ID = 'parcel-score-fill';
 const OUTLINE_LAYER_ID = 'parcel-score-outline';
 const SELECTED_OUTLINE_LAYER_ID = 'parcel-score-selected-outline';
+export const PARCEL_BUILT_STATUS_FILL_LAYER_ID = 'parcel-built-status-fill';
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
@@ -74,6 +75,37 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
+  // Optional overlay layer to quickly see built vs unbuilt parcels.
+  // Hidden by default and toggled from LayerToggle.
+  map.addLayer({
+    id: PARCEL_BUILT_STATUS_FILL_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    layout: {
+      visibility: 'none',
+    },
+    paint: {
+      'fill-color': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'has_pand'], 'false']]],
+        ['true', '1', 'yes'],
+        '#ef4444', // Bebouwd
+        '#22c55e', // Onbebouwd
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.9,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.8,
+        0.58,
+      ],
+    },
+    minzoom: 14,
+  });
+
   // Add outline layer for visual separation between parcels
   map.addLayer({
     id: OUTLINE_LAYER_ID,
@@ -114,8 +146,7 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
-  // Hover effect: Update feature-state on mousemove
-  map.on('mousemove', FILL_LAYER_ID, (e) => {
+  const handleMouseMove = (e: maplibregl.MapLayerMouseEvent) => {
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
       if (!feature) return;
@@ -143,10 +174,9 @@ export function addParcelScoreLayer(
         canvas.style.cursor = 'pointer';
       }
     }
-  });
+  };
 
-  // Clear hover state on mouseleave
-  map.on('mouseleave', FILL_LAYER_ID, () => {
+  const handleMouseLeave = () => {
     if (hoveredScoreParcelId !== null) {
       map.setFeatureState(
         { source: SOURCE_ID, sourceLayer, id: hoveredScoreParcelId },
@@ -158,7 +188,13 @@ export function addParcelScoreLayer(
     if (canvas) {
       canvas.style.cursor = '';
     }
-  });
+  };
+
+  // Hover effect on both potential and built-status overlays.
+  map.on('mousemove', FILL_LAYER_ID, handleMouseMove);
+  map.on('mousemove', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleMouseMove);
+  map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave);
+  map.on('mouseleave', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleMouseLeave);
 }
 
 /**
@@ -238,6 +274,10 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
     map.removeLayer(SELECTED_OUTLINE_LAYER_ID);
   }
 
+  if (map.getLayer(PARCEL_BUILT_STATUS_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_BUILT_STATUS_FILL_LAYER_ID);
+  }
+
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.removeLayer(OUTLINE_LAYER_ID);
   }
@@ -270,6 +310,27 @@ export function setParcelScoreVisibility(
 
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.setLayoutProperty(OUTLINE_LAYER_ID, 'visibility', visibility);
+  }
+
+  if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
+    map.setLayoutProperty(SELECTED_OUTLINE_LAYER_ID, 'visibility', visibility);
+  }
+}
+
+/**
+ * Toggle visibility of built/unbuilt parcel overlay.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param visible - Whether layer should be visible
+ */
+export function setParcelBuiltStatusVisibility(
+  map: maplibregl.Map,
+  visible: boolean
+): void {
+  const visibility = visible ? 'visible' : 'none';
+
+  if (map.getLayer(PARCEL_BUILT_STATUS_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_BUILT_STATUS_FILL_LAYER_ID, 'visibility', visibility);
   }
 }
 

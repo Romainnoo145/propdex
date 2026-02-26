@@ -103,6 +103,12 @@ export interface ScanResultItem {
   score_category: string | null
   /** Per-factor score contributions for transparency */
   score_breakdown: Record<string, unknown> | null
+  /** Vacancy classification for development focus */
+  vacancy_signal: string | null
+  /** Human-readable development opportunity signals */
+  opportunity_signals: string[] | null
+  /** Zoning build metrics (if available in source data) */
+  building_metrics: Record<string, unknown> | null
 }
 
 /**
@@ -114,11 +120,13 @@ export interface ScanResultsResponse {
   scan_id: string
   /** Gemeente display name */
   gemeente_naam: string
+  /** Wijk name when the scan is scoped to a wijk */
+  wijk_naam?: string | null
   /** Scan creation timestamp (ISO 8601 string) */
   scan_date: string
   /** Total parcels scanned (before qualification) */
   parcels_total: number
-  /** Total qualifying results (before pagination) */
+  /** Total ranked results (before pagination) */
   total: number
   /** Current offset */
   offset: number
@@ -135,6 +143,8 @@ export interface ScanResultsResponse {
 export interface ScanResultsFilters {
   /** Filter by building presence */
   has_pand?: boolean
+  /** Free-text search across parcel code, address, status and bestemming */
+  search?: string
   /** Filter by bestemming type */
   bestemming_type?: string
   /** Minimum parcel area (square meters) */

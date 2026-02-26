@@ -1,5 +1,6 @@
 """Scan management API endpoints."""
 
+import json
 import logging
 import re
 import uuid
@@ -9,7 +10,7 @@ import httpx
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
-from shapely.geometry import box
+from shapely.geometry import box, shape
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,7 @@ from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
 from app.scans.schemas import (
+    ParcelCentroidResponse,
     ParcelEnrichmentResponse,
     ScanCreateRequest,
     ScanListItem,
@@ -43,6 +45,140 @@ from app.services.wijk_service import get_wijken_in_gemeente
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+
+
+def _normalize_area_name(value: str) -> str:
+    """Normalize area names for robust matching (wijk names can vary in spacing/apostrophes)."""
+    return re.sub(r"\s+", " ", value.casefold().replace("’", "").replace("'", "")).strip()
+
+
+def _resolve_wijk_bbox_from_geojson(
+    geojson: dict,
+    wijk_naam: str,
+) -> tuple[float, float, float, float] | None:
+    """Find wijk geometry by name and return WGS84 bbox (min_lon, min_lat, max_lon, max_lat)."""
+    features = geojson.get("features", []) if isinstance(geojson, dict) else []
+    if not isinstance(features, list):
+        return None
+
+    target = _normalize_area_name(wijk_naam)
+
+    # Exact normalized name match first.
+    matched_feature = None
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        properties = feature.get("properties", {})
+        statnaam = properties.get("statnaam") if isinstance(properties, dict) else None
+        if isinstance(statnaam, str) and _normalize_area_name(statnaam) == target:
+            matched_feature = feature
+            break
+
+    # Fuzzy fallback: allow containment match (e.g., legacy labels/prefixes).
+    if matched_feature is None:
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+            properties = feature.get("properties", {})
+            statnaam = properties.get("statnaam") if isinstance(properties, dict) else None
+            if not isinstance(statnaam, str):
+                continue
+            candidate = _normalize_area_name(statnaam)
+            if target in candidate or candidate in target:
+                matched_feature = feature
+                break
+
+    if matched_feature is None:
+        return None
+
+    geometry = matched_feature.get("geometry") if isinstance(matched_feature, dict) else None
+    if not isinstance(geometry, dict):
+        return None
+
+    try:
+        min_lon, min_lat, max_lon, max_lat = shape(geometry).bounds
+    except Exception:
+        return None
+
+    return (min_lon, min_lat, max_lon, max_lat)
+
+
+def _parse_address_components(address: str | None) -> tuple[str | None, str | None]:
+    """Parse simple Dutch street + housenumber from display address."""
+    if not address:
+        return None, None
+
+    first_part = address.split(",")[0].strip()
+    if not first_part:
+        return None, None
+
+    # Examples:
+    # - "Maasstraat 117"
+    # - "Maasstraat 117A"
+    # - "Maasstraat 117-1"
+    match = re.match(r"^(?P<street>.+?)\s+(?P<number>\d+[A-Za-z]?(?:-\d+)?)$", first_part)
+    if not match:
+        return first_part.lower(), None
+
+    street = match.group("street").strip().lower()
+    number = match.group("number").strip().lower()
+    return street, number
+
+
+def _filter_vergunningen_for_parcel(
+    records: list[dict],
+    address: str | None,
+    postcode: str,
+) -> list[dict]:
+    """
+    Filter postcode-level SRU records down to parcel-level likely matches.
+
+    SRU postcode queries can return many items for the entire postcode area.
+    We prioritize precision by matching straat + huisnummer in title where possible.
+    """
+    street, house_number = _parse_address_components(address)
+    postcode_compact = postcode.replace(" ", "").lower()
+
+    # Deduplicate on identifier first.
+    deduped: list[dict] = []
+    seen_ids: set[str] = set()
+    for record in records:
+        identifier = str(record.get("identifier") or "").strip()
+        key = identifier if identifier else str(record)
+        if key in seen_ids:
+            continue
+        seen_ids.add(key)
+        deduped.append(record)
+
+    if not street and not house_number:
+        return deduped
+
+    strict_matches: list[dict] = []
+    soft_matches: list[dict] = []
+
+    for record in deduped:
+        title = str(record.get("title") or "").lower()
+        rtype = str(record.get("type") or "").lower()
+        text = f"{title} {rtype}"
+        text_compact = re.sub(r"\s+", "", text)
+
+        postcode_match = postcode_compact in text_compact
+        street_match = bool(street and street in text)
+        number_match = bool(
+            house_number and
+            re.search(rf"\b{re.escape(house_number)}\b", text)
+        )
+
+        if street_match and number_match:
+            strict_matches.append(record)
+        elif number_match and postcode_match:
+            soft_matches.append(record)
+
+    if strict_matches:
+        return strict_matches
+    if soft_matches:
+        return soft_matches
+    return []
 
 
 @router.get("", response_model=ScanListResponse)
@@ -147,8 +283,49 @@ async def trigger_scan(
     """
     try:
         # Determine bbox first (needed for existing scan matching)
-        if scan_request.bbox_wgs84:
-            min_lon, min_lat, max_lon, max_lat = scan_request.bbox_wgs84
+        bbox_wgs84 = scan_request.bbox_wgs84
+        http_client = request.app.state.http_client
+
+        # If this is a wijk scan without explicit bbox, resolve bbox from CBS wijk geometry.
+        # This prevents accidental gemeente-wide scans from project/wijk views.
+        if bbox_wgs84 is None and scan_request.wijk_naam:
+            try:
+                wijken_geojson = await get_wijken_in_gemeente(
+                    scan_request.gemeente_code,
+                    http_client,
+                )
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"No wijken found for gemeente {scan_request.gemeente_code}: {e}",
+                ) from e
+            except httpx.HTTPError as e:
+                logger.exception("CBS WFS service error while resolving wijk bbox")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="CBS WFS service unavailable",
+                ) from e
+            resolved_bbox = _resolve_wijk_bbox_from_geojson(
+                wijken_geojson,
+                scan_request.wijk_naam,
+            )
+            if resolved_bbox is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Could not resolve wijk bbox for '{scan_request.wijk_naam}'. "
+                        "Selecteer de wijk op de kaart of stuur bbox_wgs84 mee."
+                    ),
+                )
+            bbox_wgs84 = resolved_bbox
+            logger.info(
+                "Resolved wijk bbox from CBS WFS for gemeente=%s wijk=%s",
+                scan_request.gemeente_code,
+                scan_request.wijk_naam,
+            )
+
+        if bbox_wgs84:
+            min_lon, min_lat, max_lon, max_lat = bbox_wgs84
 
             # Validate coordinates are within Netherlands WGS84 bounds
             # Netherlands approximate WGS84 bounds: 3.3-7.2E, 50.7-53.6N
@@ -193,7 +370,6 @@ async def trigger_scan(
             }
         else:
             # Fall back to gemeente bbox (existing logic)
-            http_client = request.app.state.http_client
             try:
                 bbox = await get_gemeente_bbox(scan_request.gemeente_code, http_client)
             except ValueError as e:
@@ -403,36 +579,87 @@ async def enrich_parcel(
             detail="Parcel not found",
         )
 
-    # Check if enrichment is fresh (< 7 days old)
+    # Check if enrichment is fresh (< 7 days old).
+    # Since 2026-02-25 we require postcode+adres filtering for vergunningen.
+    # Legacy cache entries (without source_match_mode) are treated as stale
+    # to avoid inflated postcode-level counts.
     if parcel.enriched_at:
         days_old = (datetime.utcnow() - parcel.enriched_at).days
         if days_old < 7:
-            # Return cached enrichment
-            return ParcelEnrichmentResponse(
-                parcel_id=parcel.id,
-                enrichment_data=parcel.enrichment_data,
-                enriched_at=parcel.enriched_at,
-                is_cached=True,
+            cached = parcel.enrichment_data if isinstance(parcel.enrichment_data, dict) else {}
+            mode = cached.get("source_match_mode")
+            is_legacy_vergunning_cache = (
+                "vergunningen" in cached and mode != "postcode+adres"
             )
+            if not is_legacy_vergunning_cache:
+                return ParcelEnrichmentResponse(
+                    parcel_id=parcel.id,
+                    enrichment_data=parcel.enrichment_data,
+                    enriched_at=parcel.enriched_at,
+                    is_cached=True,
+                )
 
     # Enrichment is stale or missing - fetch fresh data
 
     # Extract postcode from address (pattern: last 7 chars like "1234 AB" or "1234AB")
     postcode = None
+    resolved_address = None
     if parcel.address:
         # Find Dutch postcode pattern: 4 digits + optional space + 2 uppercase letters
-        match = re.search(r'\b(\d{4}\s?[A-Z]{2})\b', parcel.address)
+        match = re.search(r'\b(\d{4}\s?[A-Z]{2})\b', parcel.address, flags=re.IGNORECASE)
         if match:
             # Remove space for SRU query (expects "1234AB" format)
-            postcode = match.group(1).replace(' ', '')
+            postcode = match.group(1).replace(' ', '').upper()
+
+    # Fallback: derive an address via centroid reverse geocoding when parcel.address
+    # is missing/incomplete and therefore has no postcode.
+    if not postcode:
+        try:
+            from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+            centroid_query = select(
+                ST_AsText(ST_Centroid(ParcelCache.geometry))
+            ).where(
+                ParcelCache.id == parcel.id,
+                ParcelCache.organization_id == organization_id,
+            )
+            centroid_wkt = (await db.execute(centroid_query)).scalar_one_or_none()
+            centroid_match = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_wkt or "")
+            if centroid_match:
+                rd_x = float(centroid_match.group(1))
+                rd_y = float(centroid_match.group(2))
+                locatieserver = PDOKLocatieserver()
+                resolved_address = await locatieserver.reverse(
+                    rd_x, rd_y, request.app.state.http_client
+                )
+                if resolved_address:
+                    reverse_match = re.search(
+                        r'\b(\d{4}\s?[A-Z]{2})\b',
+                        resolved_address,
+                        flags=re.IGNORECASE,
+                    )
+                    if reverse_match:
+                        postcode = reverse_match.group(1).replace(' ', '').upper()
+                        parcel.address = resolved_address
+        except Exception as e:
+            logger.debug(
+                "Reverse geocode fallback failed for parcel %s: %s",
+                parcel.id,
+                e,
+            )
 
     if not postcode:
+        if resolved_address and parcel.address != resolved_address:
+            parcel.address = resolved_address
+            db.add(parcel)
+            await db.commit()
         # No postcode extractable - return empty enrichment with note
         return ParcelEnrichmentResponse(
             parcel_id=parcel.id,
             enrichment_data={
                 "vergunningen": [],
                 "error": "Postcode niet gevonden in adres",
+                "source_match_mode": "postcode+adres",
             },
             enriched_at=None,
             is_cached=False,
@@ -447,10 +674,17 @@ async def enrich_parcel(
             client=http_client,
             max_records=20,
         )
+        filtered_records = _filter_vergunningen_for_parcel(
+            [dict(r) for r in records],
+            parcel.address,
+            postcode,
+        )
 
         # Store enrichment result
         parcel.enrichment_data = {
-            "vergunningen": [dict(r) for r in records],
+            "vergunningen": filtered_records,
+            "source_total_postcode_records": len(records),
+            "source_match_mode": "postcode+adres",
         }
         parcel.enriched_at = datetime.utcnow()
         db.add(parcel)
@@ -482,7 +716,7 @@ async def enrich_parcel(
         )
 
 
-@router.get("/parcels/{parcel_id}/centroid")
+@router.get("/parcels/{parcel_id}/centroid", response_model=ParcelCentroidResponse)
 @limiter.limit("60/minute")
 async def get_parcel_centroid(
     request: Request,
@@ -490,13 +724,17 @@ async def get_parcel_centroid(
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> ParcelCentroidResponse:
     """Return parcel centroid in WGS84 for map fly-to."""
-    from geoalchemy2.functions import ST_AsText, ST_Centroid, ST_Transform
+    from geoalchemy2.functions import ST_AsGeoJSON, ST_AsText, ST_Centroid, ST_Transform
 
     query = select(
         ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
         ParcelCache.address,
+        ParcelCache.parcel_id,
+        ParcelCache.gemeente_code,
+        ParcelCache.area_m2,
+        ST_AsGeoJSON(ST_Transform(ParcelCache.geometry, 4326)),
     ).where(
         ParcelCache.id == parcel_id,
         ParcelCache.organization_id == organization_id,
@@ -505,6 +743,10 @@ async def get_parcel_centroid(
     row = result.one_or_none()
     wkt = row[0] if row else None
     address = row[1] if row else None
+    parcel_code = row[2] if row else None
+    gemeente_code = row[3] if row else None
+    area_m2 = row[4] if row else None
+    geometry_raw = row[5] if row else None
 
     if not wkt:
         raise HTTPException(
@@ -519,7 +761,27 @@ async def get_parcel_centroid(
     if not m:
         raise HTTPException(status_code=500, detail="Failed to parse centroid")
 
-    return {"lng": float(m.group(1)), "lat": float(m.group(2)), "address": address}
+    geometry = None
+    if isinstance(geometry_raw, str) and geometry_raw.strip():
+        try:
+            parsed_geometry = json.loads(geometry_raw)
+            if isinstance(parsed_geometry, dict):
+                geometry = parsed_geometry
+        except json.JSONDecodeError:
+            logger.debug(
+                "Failed to parse parcel geometry JSON for parcel_id=%s",
+                parcel_id,
+            )
+
+    return ParcelCentroidResponse(
+        lng=float(m.group(1)),
+        lat=float(m.group(2)),
+        address=address,
+        parcel_code=parcel_code,
+        gemeente_code=gemeente_code,
+        area_m2=area_m2,
+        geometry=geometry,
+    )
 
 
 @router.get("/parcels/resolve")
@@ -759,6 +1021,7 @@ async def list_results(
     request: Request,
     scan_id: uuid.UUID,
     has_pand: bool | None = None,
+    search: str | None = None,
     bestemming_type: str | None = None,
     min_area_m2: float | None = None,
     max_area_m2: float | None = None,
@@ -785,6 +1048,7 @@ async def list_results(
         request: FastAPI request object
         scan_id: Scan UUID
         has_pand: Filter by building presence
+        search: Free-text search across address, parcel code, status, and bestemming
         bestemming_type: Filter by zoning type substring
         min_area_m2: Minimum parcel area
         max_area_m2: Maximum parcel area
@@ -821,6 +1085,7 @@ async def list_results(
         scan_id=scan_id,
         organization_id=organization_id,
         has_pand=has_pand,
+        search=search,
         bestemming_type=bestemming_type,
         min_area_m2=min_area_m2,
         max_area_m2=max_area_m2,
@@ -838,10 +1103,32 @@ async def list_results(
     for result, parcel in rows:
         # Extract score_category from flags
         score_category_value = None
-        score_breakdown = {}
+        score_breakdown = None
+        vacancy_signal = None
+        opportunity_signals = None
+        building_metrics = None
         if result.flags:
             score_category_value = result.flags.get("category")
-            score_breakdown = {k: v for k, v in result.flags.items() if k != "category"}
+            raw_vacancy = result.flags.get("vacancy_signal")
+            raw_signals = result.flags.get("opportunity_signals")
+            raw_metrics = result.flags.get("building_metrics")
+
+            vacancy_signal = raw_vacancy if isinstance(raw_vacancy, str) else None
+            opportunity_signals = (
+                [str(s) for s in raw_signals]
+                if isinstance(raw_signals, list)
+                else None
+            )
+            building_metrics = raw_metrics if isinstance(raw_metrics, dict) else None
+
+            factors = result.flags.get("factors")
+            if isinstance(factors, dict):
+                score_breakdown = {"factors": factors}
+            else:
+                legacy_breakdown = {
+                    k: v for k, v in result.flags.items() if k != "category"
+                }
+                score_breakdown = legacy_breakdown if legacy_breakdown else None
 
         result_items.append(
             ScanResultItem(
@@ -856,13 +1143,17 @@ async def list_results(
                 bestemmingen=parcel.bestemmingen,
                 score=result.score,
                 score_category=score_category_value,
-                score_breakdown=score_breakdown if score_breakdown else None,
+                score_breakdown=score_breakdown,
+                vacancy_signal=vacancy_signal,
+                opportunity_signals=opportunity_signals,
+                building_metrics=building_metrics,
             )
         )
 
     return ScanResultsResponse(
         scan_id=scan.id,
         gemeente_naam=scan.gemeente_naam,
+        wijk_naam=scan.wijk_naam,
         scan_date=scan.created_at,
         parcels_total=scan.parcels_total,
         total=total,
@@ -1029,6 +1320,7 @@ async def export_results(
     request: Request,
     scan_id: uuid.UUID,
     has_pand: bool | None = None,
+    search: str | None = None,
     bestemming_type: str | None = None,
     min_area_m2: float | None = None,
     max_area_m2: float | None = None,
@@ -1056,6 +1348,7 @@ async def export_results(
         request: FastAPI request object
         scan_id: Scan UUID
         has_pand: Filter by building presence
+        search: Free-text search across address, parcel code, status, and bestemming
         bestemming_type: Filter by zoning type substring
         min_area_m2: Minimum parcel area
         max_area_m2: Maximum parcel area
@@ -1086,6 +1379,7 @@ async def export_results(
         scan_id=scan_id,
         organization_id=organization_id,
         has_pand=has_pand,
+        search=search,
         bestemming_type=bestemming_type,
         min_area_m2=min_area_m2,
         max_area_m2=max_area_m2,
@@ -1102,6 +1396,8 @@ async def export_results(
     filters_applied = {}
     if has_pand is not None:
         filters_applied["has_pand"] = has_pand
+    if search is not None and search.strip():
+        filters_applied["search"] = search.strip()
     if bestemming_type is not None:
         filters_applied["bestemming_type"] = bestemming_type
     if min_area_m2 is not None:

@@ -61,6 +61,9 @@
     - [ ] 56-02-PLAN.md — EigendomSection + enhanced MonumentSection with RCE detail
     - [ ] 56-03-PLAN.md — Section reordering + 6-card metrics grid + PropertyDetailPanel condensed sections
 
+**Next Candidate Milestone:** v7.1 Opportunity Intelligence (proposed phases 57-62)  
+Reference: `.planning/quick/4-opportunity-thesis-gsd/4-PLAN.md`
+
 ---
 
 <details>

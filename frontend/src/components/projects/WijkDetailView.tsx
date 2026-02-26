@@ -1,7 +1,10 @@
+import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { ProjectResponse } from '@/lib/types/project'
 import { useProjectScans, useTriggerScan } from '@/hooks/useScans'
+import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { useReports } from '@/hooks/useReports'
+import { calculateBboxFromGeometry } from '@/lib/geo-utils'
 import ReportCard from '@/components/reports/ReportCard'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { toast } from 'sonner'
@@ -15,7 +18,7 @@ interface WijkDetailViewProps {
  * Detail view for a selected wijk (neighbourhood).
  *
  * Shows:
- * 1. Scan summary with quick actions (resultaten/kaart)
+ * 1. Scan summary with quick actions
  * 2. Reports assigned to the wijk
  *
  * Note: Meldingen are only available at gemeente level (change monitor
@@ -44,6 +47,35 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
   year: 'numeric',
 })
 
+function normalizeAreaName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[’']/g, '')
+    .trim()
+}
+
+function resolveWijkBbox(
+  geojson: GeoJSON.FeatureCollection | undefined,
+  wijkNaam: string | null
+): [number, number, number, number] | null {
+  if (!geojson || !wijkNaam) return null
+
+  const target = normalizeAreaName(wijkNaam)
+  const match = geojson.features.find((feature) => {
+    const name = String(feature.properties?.statnaam ?? '')
+    return normalizeAreaName(name) === target
+  })
+  if (!match) return null
+
+  const geometry = match.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+  if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) {
+    return null
+  }
+
+  return calculateBboxFromGeometry(geometry)
+}
+
 /**
  * Shows latest scan info with quick action buttons.
  */
@@ -60,10 +92,15 @@ function ScanSummarySection({
 }) {
   const navigate = useNavigate()
   const { data, isLoading } = useProjectScans(wijkId)
+  const { data: wijkGeojson } = useWijkGeoJSON(gemeenteCode)
   const triggerScan = useTriggerScan()
   const scans = data?.scans ?? []
   const latestScan = scans.find((s) => s.status === 'completed')
   const activeScan = scans.find((s) => s.status === 'pending' || s.status === 'running')
+  const wijkBboxWgs84 = useMemo(
+    () => resolveWijkBbox(wijkGeojson, wijkNaam),
+    [wijkGeojson, wijkNaam]
+  )
 
   if (isLoading) {
     return (
@@ -121,24 +158,6 @@ function ScanSummarySection({
                 </svg>
                 Bekijk resultaten
               </button>
-              <button
-                onClick={() =>
-                  navigate({
-                    to: '/map',
-                    search: {
-                      ...(gemeenteCode ? { gemeente_code: gemeenteCode } : {}),
-                      ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
-                    },
-                  })
-                }
-                className="flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-850 px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-grey-800"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                Bekijk op kaart
-              </button>
             </div>
           </div>
         </div>
@@ -156,21 +175,13 @@ function ScanSummarySection({
             <button
               onClick={() =>
                 navigate({
-                  to: '/map',
-                  search: {
-                    scan_id: activeScan.scan_id,
-                    ...(gemeenteCode ? { gemeente_code: gemeenteCode } : {}),
-                    ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
-                  },
+                  to: '/resultaten',
+                  search: { scan_id: activeScan.scan_id },
                 })
               }
               className="flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-850 px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-grey-800"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              Volg op kaart
+              Bekijk resultaten
             </button>
           </div>
         </div>
@@ -191,6 +202,7 @@ function ScanSummarySection({
                   gemeente_naam: gemeenteNaam,
                   project_id: wijkId,
                   ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
+                  ...(wijkBboxWgs84 ? { bbox_wgs84: wijkBboxWgs84 } : {}),
                 },
                 {
                   onSuccess: (scan) => {
@@ -225,6 +237,16 @@ function ReportListSection({ wijkId }: { wijkId: string }) {
   const navigate = useNavigate()
   const { data, isLoading } = useReports({ project_id: wijkId })
   const reports = data?.reports ?? []
+  const [reportSearch, setReportSearch] = useState('')
+  const filteredReports = useMemo(() => {
+    const q = reportSearch.trim().toLowerCase()
+    if (!q) return reports
+    return reports.filter((report) => (
+      report.report_name.toLowerCase().includes(q) ||
+      report.postcode.toLowerCase().includes(q) ||
+      report.city.toLowerCase().includes(q)
+    ))
+  }, [reports, reportSearch])
 
   if (isLoading) {
     return (
@@ -260,20 +282,45 @@ function ReportListSection({ wijkId }: { wijkId: string }) {
         </svg>
         <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">Rapporten</span>
         {reports.length > 0 && (
-          <span className="ml-auto text-xs text-grey-600">{reports.length}</span>
+          <span className="ml-auto text-xs text-grey-600">
+            {filteredReports.length}/{reports.length}
+          </span>
         )}
       </div>
       {reports.length > 0 ? (
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {reports.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              onClick={() =>
-                navigate({ to: '/rapport/$id', params: { id: report.id } })
-              }
-            />
-          ))}
+        <div className="p-4">
+          <input
+            type="search"
+            value={reportSearch}
+            onChange={(e) => setReportSearch(e.target.value)}
+            placeholder="Zoek rapporten (adres, postcode, plaats)"
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            inputMode="search"
+            enterKeyHint="search"
+            name="q_wijk_reports"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-bwignore="true"
+            data-form-type="other"
+            className="mb-3 w-full rounded-md border border-grey-700 bg-grey-850 px-3 py-2 text-xs text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/50 focus:outline-none"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filteredReports.map((report) => (
+              <ReportCard
+                key={report.id}
+                report={report}
+                onClick={() =>
+                  navigate({ to: '/rapport/$id', params: { id: report.id } })
+                }
+              />
+            ))}
+          </div>
+          {filteredReports.length === 0 && (
+            <p className="mt-2 text-xs text-grey-500">Geen rapporten gevonden</p>
+          )}
         </div>
       ) : (
         <div className="px-4 py-6 text-center text-sm text-grey-400">

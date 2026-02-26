@@ -172,6 +172,52 @@ class TestSaveReport:
         count = (await test_db.execute(count_stmt)).scalar_one()
         assert count == 1
 
+    async def test_save_without_project_maps_city_to_wijk_when_gemeente_code_matches(
+        self,
+        test_db,
+        org_id,
+    ):
+        """Woonplaats should become wijk child when BAG code matches existing gemeente project."""
+        gemeente_project = Project(
+            name="Horst aan de Maas",
+            organization_id=org_id,
+            gemeente_code="GM1507",
+            is_monitored=True,
+        )
+        test_db.add(gemeente_project)
+        await test_db.flush()
+
+        report_data = _make_report_data(
+            straat="St. Jorisweg",
+            huisnummer=70,
+            postcode="5963 ND",
+            woonplaats="Hegelsom",
+        )
+        report_data["address"]["nummeraanduiding_id"] = "1507202000509970"
+
+        saved = await service.save_report(
+            report_data=report_data,
+            notes=None,
+            project_id=None,
+            organization_id=org_id,
+            session=test_db,
+        )
+
+        assigned_project_stmt = select(Project).where(Project.id == saved.project_id)
+        assigned_project = (await test_db.execute(assigned_project_stmt)).scalar_one()
+
+        assert assigned_project.parent_id == gemeente_project.id
+        assert assigned_project.wijk_naam == "Hegelsom"
+        assert assigned_project.gemeente_code == "GM1507"
+
+        loose_top_level_stmt = select(func.count(Project.id)).where(
+            Project.organization_id == org_id,
+            Project.parent_id.is_(None),
+            func.lower(Project.name) == "hegelsom",
+        )
+        loose_top_level_count = (await test_db.execute(loose_top_level_stmt)).scalar_one()
+        assert loose_top_level_count == 0
+
     async def test_save_invalid_data_raises_value_error(self, test_db, org_id):
         """Test saving invalid report_data raises ValueError."""
         invalid_data = {"invalid": True}

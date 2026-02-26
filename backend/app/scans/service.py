@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import asc, delete, desc, func, select, text, update
+from sqlalchemy import asc, delete, desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
@@ -331,6 +331,7 @@ async def list_scan_results(
     scan_id: uuid.UUID,
     organization_id: uuid.UUID,
     has_pand: bool | None,
+    search: str | None,
     bestemming_type: str | None,
     min_area_m2: float | None,
     max_area_m2: float | None,
@@ -349,6 +350,7 @@ async def list_scan_results(
         scan_id: Scan UUID
         organization_id: Tenant organization ID
         has_pand: Filter by building presence (True/False/None)
+        search: Free-text search across address, parcel code, status, and bestemming JSON
         bestemming_type: Filter by zoning type substring (e.g., "Wonen")
         min_area_m2: Minimum parcel area in square meters
         max_area_m2: Maximum parcel area in square meters
@@ -376,6 +378,19 @@ async def list_scan_results(
     # Apply filters
     if has_pand is not None:
         query = query.where(ParcelCache.has_pand == has_pand)
+
+    if search is not None and search.strip():
+        pattern = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                ParcelCache.address.ilike(pattern),
+                ParcelCache.parcel_id.ilike(pattern),
+                ParcelCache.pand_status.ilike(pattern),
+                text("bestemmingen::text ILIKE :search_pattern").bindparams(
+                    search_pattern=pattern
+                ),
+            )
+        )
 
     if bestemming_type is not None:
         # Use JSONB text cast with LIKE for display filtering

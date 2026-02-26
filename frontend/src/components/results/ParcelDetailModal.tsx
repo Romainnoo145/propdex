@@ -14,18 +14,27 @@ import type { ScanResultItem } from '@/lib/types/scan'
 const FACTOR_LABELS: Record<string, string> = {
   pand_status_signal: 'Pandstatus',
   building_age: 'Bouwjaar',
-  zoning_value: 'Bestemming',
+  zoning_value: 'TAR/FAR',
   footprint_size: 'Oppervlakte',
   underutilization: 'Onderbenutting',
+  vacancy_guardrail: 'Leegstands-correctie',
 }
 
 /** Max points per factor (for progress bar scaling) */
 const FACTOR_MAX: Record<string, number> = {
-  pand_status_signal: 30,
-  building_age: 20,
-  zoning_value: 25,
-  footprint_size: 15,
-  underutilization: 10,
+  pand_status_signal: 40,
+  building_age: 5,
+  zoning_value: 20,
+  footprint_size: 5,
+  underutilization: 30,
+  vacancy_guardrail: 35,
+}
+
+const VACANCY_LABELS: Record<string, string> = {
+  leeg_perceel: 'Leeg perceel',
+  leegstaand_pand: 'Leegstaand pand',
+  in_gebruik: 'Pand in gebruik',
+  onbekend: 'Onbekend',
 }
 
 interface ParcelDetailModalProps {
@@ -145,24 +154,30 @@ export function ParcelDetailModal({
                       (parcel.score_breakdown as { factors?: Record<string, number> }).factors ?? parcel.score_breakdown
                     )
                       .filter(([, v]) => typeof v === 'number')
-                      .map(([key, value]) => (
+                      .map(([key, value]) => {
+                        const numeric = value as number
+                        const isNegative = numeric < 0
+                        const max = FACTOR_MAX[key] ?? 100
+                        const widthPct = Math.min(100, (Math.abs(numeric) / max) * 100)
+
+                        return (
                       <div key={key} className="flex items-center gap-2">
                         <span className="text-xs text-grey-400 w-24 truncate">
                           {FACTOR_LABELS[key] ?? key}
                         </span>
                         <div className="flex-1 h-1.5 bg-grey-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-success/60"
+                            className={`h-full ${isNegative ? 'bg-error/60' : 'bg-success/60'}`}
                             style={{
-                              width: `${Math.min(100, ((value as number) / (FACTOR_MAX[key] ?? 100)) * 100)}%`,
+                              width: `${widthPct}%`,
                             }}
                           />
                         </div>
                         <span className="text-xs tabular-nums text-grey-400 w-8 text-right">
-                          {(value as number).toFixed(0)}
+                          {numeric.toFixed(0)}
                         </span>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>
@@ -175,7 +190,7 @@ export function ParcelDetailModal({
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
             <p className="text-xs text-grey-400 mb-1">Oppervlak</p>
             <p className="text-sm font-medium text-grey-100">
-              {parcel.area_m2?.toLocaleString('nl-NL')} m²
+              {parcel.area_m2 != null ? Math.round(parcel.area_m2).toLocaleString('nl-NL') : '--'} m²
             </p>
           </div>
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
@@ -190,6 +205,14 @@ export function ParcelDetailModal({
               {parcel.pand_status || 'Onbekend'}
             </p>
           </div>
+          {parcel.vacancy_signal && (
+            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+              <p className="text-xs text-grey-400 mb-1">Leegstandsignaal</p>
+              <p className="text-sm font-medium text-grey-100">
+                {VACANCY_LABELS[parcel.vacancy_signal] ?? parcel.vacancy_signal}
+              </p>
+            </div>
+          )}
           {parcel.gemeente_code && (
             <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
               <p className="text-xs text-grey-400 mb-1">Gemeente</p>
@@ -199,6 +222,53 @@ export function ParcelDetailModal({
             </div>
           )}
         </div>
+
+        {/* Build metrics */}
+        {((((parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)?.max_bebouwingspercentage ?? null) != null) ||
+          (((parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)?.max_floor_area_ratio ?? null) != null)) && (
+          <div>
+            <h3 className="text-sm font-medium text-grey-100 mb-3">
+              Bouwregels (bestemmingsplan)
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+                <p className="text-xs text-grey-400 mb-1">Max bebouwings%</p>
+                <p className="text-sm font-medium text-grey-100">
+                  {(parcel.building_metrics as { max_bebouwingspercentage?: number | null }).max_bebouwingspercentage != null
+                    ? `${(parcel.building_metrics as { max_bebouwingspercentage: number }).max_bebouwingspercentage.toFixed(1)}%`
+                    : 'Onbekend'}
+                </p>
+              </div>
+              <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+                <p className="text-xs text-grey-400 mb-1">Max FAR</p>
+                <p className="text-sm font-medium text-grey-100">
+                  {(parcel.building_metrics as { max_floor_area_ratio?: number | null }).max_floor_area_ratio != null
+                    ? (parcel.building_metrics as { max_floor_area_ratio: number }).max_floor_area_ratio.toFixed(2)
+                    : 'Onbekend'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Opportunity signals */}
+        {parcel.opportunity_signals && parcel.opportunity_signals.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-grey-100 mb-3">
+              Ontwikkelsignalen
+            </h3>
+            <div className="space-y-2">
+              {parcel.opportunity_signals.map((signal) => (
+                <div
+                  key={signal}
+                  className="rounded-md border border-grey-800 bg-grey-850 px-3 py-2 text-sm text-grey-300"
+                >
+                  {signal}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Bestemmingen Section */}
         {parcel.bestemmingen && parcel.bestemmingen.length > 0 && (
@@ -226,6 +296,7 @@ export function ParcelDetailModal({
           <ParcelEnrichmentCard
             data={enrichment.data}
             isLoading={enrichment.isLoading}
+            error={enrichment.error?.message ?? null}
           />
         </div>
 

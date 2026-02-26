@@ -4,6 +4,7 @@ interface ResultsShellProps {
   children: React.ReactNode
   className?: string
   fullWidth?: boolean // bypass inner max-w-5xl container for full-width data views
+  contentClassName?: string
 }
 
 /**
@@ -17,11 +18,16 @@ interface ResultsShellProps {
  *
  * Routes using this: /projecten, /instellingen, /rapport/:id, /resultaten (fullWidth)
  */
-export default function ResultsShell({ children, className, fullWidth }: ResultsShellProps) {
+export default function ResultsShell({
+  children,
+  className,
+  fullWidth,
+  contentClassName,
+}: ResultsShellProps) {
   return (
     <div className={cn('w-full h-full overflow-y-auto bg-grey-950 pb-14 md:pb-0', className)}>
       {fullWidth ? children : (
-        <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className={cn('mx-auto max-w-5xl px-6 py-8', contentClassName)}>
           {children}
         </div>
       )}

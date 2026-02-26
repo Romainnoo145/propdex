@@ -26,6 +26,7 @@ from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
     compute_opportunity_score,
+    derive_opportunity_insights,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ logger = logging.getLogger(__name__)
 WMS_CONCURRENCY = 15
 # Concurrent reverse geocode requests
 REVERSE_GEOCODE_CONCURRENCY = 10
+# Resolve addresses for all ranked parcels up to this cap.
+# For very large scans, we still prioritize top-scoring parcels to keep runtime bounded.
+MAX_ADDRESS_LOOKUPS = 5000
 
 locatieserver = PDOKLocatieserver()
 
@@ -50,8 +54,8 @@ async def area_scan_job(
         Phase 1 (0-20%):   Fetch BAG panden in bbox
         Phase 2 (20-40%):  Fetch bestemmingen per parcel via WMS GetFeatureInfo
         Phase 3 (40-70%):  Upsert ALL parcels + compute scores (cache everything)
-        Phase 4 (70-80%):  Qualify — filter score >= 40, cap at 150, create ScanResult
-        Phase 5 (80-95%):  Addresses — batch reverse geocode qualifying parcels
+        Phase 4 (70-80%):  Rank — persist all scored parcels into ScanResult
+        Phase 5 (80-95%):  Addresses — reverse geocode ranked parcels (capped)
         Phase 6 (95-100%): Project — auto-create wijk project, link scan, finalize
 
     Args:
@@ -169,8 +173,19 @@ async def area_scan_job(
             await session.commit()
 
             failed_count = 0
-            # Collect (parcel, score_breakdown, centroid_xy) for qualification
-            scored_parcels: list[tuple[ParcelCache, float, str, dict, tuple[float, float] | None]] = []
+            # Collect (parcel + score + insights + centroid) for ranking/persistence
+            scored_parcels: list[
+                tuple[
+                    ParcelCache,
+                    float,
+                    str,
+                    dict,
+                    str,
+                    list[str],
+                    dict[str, float | None],
+                    tuple[float, float] | None,
+                ]
+            ] = []
 
             for idx, (feature, bestemmingen) in enumerate(
                 zip(features, bestemmingen_list, strict=True)
@@ -182,12 +197,16 @@ async def area_scan_job(
                     )
 
                     score_breakdown = compute_opportunity_score(parcel)
+                    insights = derive_opportunity_insights(parcel)
 
                     scored_parcels.append((
                         parcel,
                         score_breakdown.total_score,
                         score_breakdown.category,
                         score_breakdown.factors,
+                        insights.vacancy_signal,
+                        insights.signals,
+                        insights.building_metrics,
                         centroid_xy,
                     ))
 
@@ -205,40 +224,69 @@ async def area_scan_job(
                     failed_count += 1
                     continue
 
-            # ── Phase 4: Qualify — filter and create ScanResult (70-80%) ──
+            # ── Phase 4: Rank and persist scored parcels (70-80%) ──
             scan.current_phase = "qualifying"
             scan.progress_pct = 70
             session.add(scan)
             await session.flush()
             await session.commit()
 
-            # Sort by score desc, filter >= threshold, cap at MAX_QUALIFYING
-            qualifying = sorted(
+            # Sort all scored parcels by score desc.
+            scored_sorted = sorted(
                 scored_parcels,
                 key=lambda x: x[1],
                 reverse=True,
             )
-            qualifying = [
-                p for p in qualifying if p[1] >= QUALIFICATION_THRESHOLD
-            ][:MAX_QUALIFYING]
+
+            # Persist ALL scored parcels so users can inspect full wijk potential.
+            all_ranked = scored_sorted
+
+            # Resolve addresses for all ranked parcels in normal wijk scans.
+            # For very large scans, keep a bounded prioritized subset.
+            if len(all_ranked) <= MAX_ADDRESS_LOOKUPS:
+                address_targets = all_ranked
+                address_strategy = "all-ranked"
+            else:
+                prioritized = [
+                    p for p in scored_sorted if p[1] >= QUALIFICATION_THRESHOLD
+                ][:MAX_QUALIFYING]
+                address_targets = prioritized if prioritized else scored_sorted[:MAX_ADDRESS_LOOKUPS]
+                address_strategy = "priority-capped"
 
             logger.info(
-                f"Scan {scan_id}: {len(qualifying)}/{len(scored_parcels)} parcels "
-                f"qualify (threshold={QUALIFICATION_THRESHOLD}, cap={MAX_QUALIFYING})"
+                f"Scan {scan_id}: ranked {len(all_ranked)} parcels total; "
+                f"address-targets {len(address_targets)} "
+                f"(strategy={address_strategy}, threshold={QUALIFICATION_THRESHOLD}, "
+                f"priority_cap={MAX_QUALIFYING}, max_lookups={MAX_ADDRESS_LOOKUPS})"
             )
 
-            if qualifying:
-                qualifying_values = [
+            if all_ranked:
+                ranked_values = [
                     {
                         "organization_id": org_id,
                         "scan_id": scan.id,
                         "parcel_id": parcel.id,
                         "score": score,
-                        "flags": {"category": category, "factors": factors},
+                        "flags": {
+                            "category": category,
+                            "factors": factors,
+                            "vacancy_signal": vacancy_signal,
+                            "opportunity_signals": opportunity_signals,
+                            "building_metrics": building_metrics,
+                        },
                     }
-                    for parcel, score, category, factors, _centroid in qualifying
+                    for (
+                        parcel,
+                        score,
+                        category,
+                        factors,
+                        vacancy_signal,
+                        opportunity_signals,
+                        building_metrics,
+                        _centroid,
+                    ) in all_ranked
                 ]
-                stmt = pg_insert(ScanResult).values(qualifying_values).on_conflict_do_nothing(
+                stmt = pg_insert(ScanResult).values(ranked_values).on_conflict_do_nothing(
                     index_elements=["scan_id", "parcel_id"]
                 )
                 await session.execute(stmt)
@@ -258,7 +306,7 @@ async def area_scan_job(
             await session.commit()
 
             await _batch_resolve_addresses(
-                [(p, c) for p, _s, _cat, _f, c in qualifying],
+                [(p, c) for p, _s, _cat, _f, _vs, _os, _bm, c in address_targets],
                 http_client,
                 session,
             )
@@ -310,7 +358,7 @@ async def area_scan_job(
 
             logger.info(
                 f"Scan {scan_id}: completed ({scan.parcels_processed} processed, "
-                f"{enriched_count} enriched, {len(qualifying)} qualifying, "
+                f"{enriched_count} enriched, {len(all_ranked)} ranked, "
                 f"{failed_count} failed)"
             )
 
@@ -489,9 +537,10 @@ async def _batch_resolve_addresses(
     session: AsyncSession,
 ) -> None:
     """
-    Batch reverse geocode qualifying parcels to resolve addresses.
+    Batch reverse geocode parcels to resolve addresses.
 
-    Only called for qualifying parcels (~50-150), not all 10k.
+    Usually runs for all ranked parcels in a wijk scan. For very large scans,
+    caller can pass a capped prioritized subset.
     Uses PDOK Locatieserver /reverse with RD coordinates.
 
     Args:
@@ -506,8 +555,9 @@ async def _batch_resolve_addresses(
             return
         async with semaphore:
             address = await locatieserver.reverse(centroid[0], centroid[1], client)
-            if address:
-                parcel.address = address
+            normalized = address.strip() if isinstance(address, str) else None
+            if normalized:
+                parcel.address = normalized
                 session.add(parcel)
 
     tasks = [

@@ -46,10 +46,10 @@ interface ParcelCardProps {
  * Used by ResultsTable in its mobile branch (below 768px).
  */
 export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
-  const address = parcel.address ?? parcel.parcel_code ?? 'Onbekend'
+  const address = parcel.address?.trim() || parcel.parcel_code || 'Onbekend'
   const area =
     parcel.area_m2 !== null
-      ? `${parcel.area_m2.toLocaleString('nl-NL')} m²`
+      ? `${Math.round(parcel.area_m2).toLocaleString('nl-NL')} m²`
       : '--'
   const rawBestemming =
     (parcel.bestemmingen?.[0] as { type?: string } | undefined)?.type ?? ''
@@ -57,6 +57,12 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
     rawBestemming.length > 25
       ? `${rawBestemming.substring(0, 25)}...`
       : rawBestemming
+  const vacancyLabel =
+    parcel.vacancy_signal === 'leeg_perceel' ? 'Leeg perceel'
+      : parcel.vacancy_signal === 'leegstaand_pand' ? 'Leegstaand'
+      : parcel.vacancy_signal === 'in_gebruik' ? 'In gebruik'
+      : parcel.vacancy_signal === 'onbekend' ? 'Onbekend'
+      : null
 
   return (
     <button
@@ -84,6 +90,12 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
           <>
             <span className="text-grey-700">·</span>
             <span className="truncate text-grey-400">{bestemming}</span>
+          </>
+        )}
+        {vacancyLabel && (
+          <>
+            <span className="text-grey-700">·</span>
+            <span className="truncate text-grey-300">{vacancyLabel}</span>
           </>
         )}
         {parcel.bouwjaar && (

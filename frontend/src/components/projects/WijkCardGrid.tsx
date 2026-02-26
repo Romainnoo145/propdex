@@ -3,7 +3,8 @@ import type { ProjectResponse } from '@/lib/types/project'
 import type { UnreadDetailResponse } from '@/lib/types/monitoring'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { geoJsonToSvgPath, geoJsonToSvgDualPath } from '@/lib/geo-utils'
-import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { GemeenteCardGrid } from './GemeenteCardGrid'
 
 interface WijkCardGridProps {
   /** The selected gemeente-level project */
@@ -26,6 +27,8 @@ interface WijkCardGridProps {
     svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null,
     unreadCount: number
   ) => ReactNode
+  /** Presentation mode for cards */
+  layout?: 'grid' | 'list'
 }
 
 /**
@@ -53,6 +56,7 @@ export function WijkCardGrid({
   onBack,
   gemeenteGeojson,
   renderCard,
+  layout = 'grid',
 }: WijkCardGridProps) {
   const { data: wijkGeojson, isLoading } = useWijkGeoJSON(gemeente.gemeente_code)
 
@@ -66,7 +70,7 @@ export function WijkCardGrid({
     | undefined
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Breadcrumb navigation — only when onBack is provided (standalone use) */}
       {onBack && (
         <div className="flex items-center gap-2">
@@ -83,48 +87,136 @@ export function WijkCardGrid({
 
       {/* Loading skeleton while CBS WFS boundary data loads */}
       {isLoading ? (
-        <GemeenteCardGridSkeleton count={wijkProjects.length || 3} />
+        <WijkCardGridSkeleton count={wijkProjects.length || 3} layout={layout} />
       ) : (
-        <GemeenteCardGrid>
-          {wijkProjects.map((wijk) => {
-            const unreadCount =
-              unreadData?.per_project.find((p) => p.project_id === wijk.id)
-                ?.unread_count ?? 0
+        layout === 'list' ? (
+          <div className="space-y-2.5">
+            {wijkProjects.map((wijk) => {
+              const unreadCount =
+                unreadData?.per_project.find((p) => p.project_id === wijk.id)
+                  ?.unread_count ?? 0
 
-            // Match wijk to CBS WFS feature by statnaam (NOT statcode — Research Pitfall 1)
-            const feature = wijkGeojson?.features.find(
-              (f) => f.properties?.statnaam === wijk.wijk_naam
-            )
+              // Match wijk to CBS WFS feature by statnaam (NOT statcode — Research Pitfall 1)
+              const feature = wijkGeojson?.features.find(
+                (f) => f.properties?.statnaam === wijk.wijk_naam
+              )
 
-            const wijkGeom = feature?.geometry as
-              | GeoJSON.Polygon
-              | GeoJSON.MultiPolygon
-              | undefined
+              const wijkGeom = feature?.geometry as
+                | GeoJSON.Polygon
+                | GeoJSON.MultiPolygon
+                | undefined
 
-            // Collect sibling wijk geometries (all other wijken in the gemeente)
-            const siblingGeoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = []
-            if (wijkGeojson && wijkGeom) {
-              for (const f of wijkGeojson.features) {
-                if (f.properties?.statnaam === wijk.wijk_naam) continue
-                const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
-                if (g.type === 'Polygon' || g.type === 'MultiPolygon') {
-                  siblingGeoms.push(g)
+              // Collect sibling wijk geometries (all other wijken in the gemeente)
+              const siblingGeoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = []
+              if (wijkGeojson && wijkGeom) {
+                for (const f of wijkGeojson.features) {
+                  if (f.properties?.statnaam === wijk.wijk_naam) continue
+                  const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+                  if (g.type === 'Polygon' || g.type === 'MultiPolygon') {
+                    siblingGeoms.push(g)
+                  }
                 }
               }
-            }
 
-            let svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null = null
-            if (wijkGeom && gemeenteGeom) {
-              svgData = geoJsonToSvgDualPath(wijkGeom, gemeenteGeom, siblingGeoms)
-            } else if (wijkGeom) {
-              const single = geoJsonToSvgPath(wijkGeom)
-              svgData = { primaryD: single.d, viewBox: single.viewBox }
-            }
+              let svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null = null
+              if (wijkGeom && gemeenteGeom) {
+                svgData = geoJsonToSvgDualPath(wijkGeom, gemeenteGeom, siblingGeoms)
+              } else if (wijkGeom) {
+                const single = geoJsonToSvgPath(wijkGeom)
+                svgData = { primaryD: single.d, viewBox: single.viewBox }
+              }
 
-            return renderCard(wijk, svgData, unreadCount)
-          })}
-        </GemeenteCardGrid>
+              return renderCard(wijk, svgData, unreadCount)
+            })}
+          </div>
+        ) : (
+          <GemeenteCardGrid>
+            {wijkProjects.map((wijk) => {
+              const unreadCount =
+                unreadData?.per_project.find((p) => p.project_id === wijk.id)
+                  ?.unread_count ?? 0
+
+              // Match wijk to CBS WFS feature by statnaam (NOT statcode — Research Pitfall 1)
+              const feature = wijkGeojson?.features.find(
+                (f) => f.properties?.statnaam === wijk.wijk_naam
+              )
+
+              const wijkGeom = feature?.geometry as
+                | GeoJSON.Polygon
+                | GeoJSON.MultiPolygon
+                | undefined
+
+              // Collect sibling wijk geometries (all other wijken in the gemeente)
+              const siblingGeoms: (GeoJSON.Polygon | GeoJSON.MultiPolygon)[] = []
+              if (wijkGeojson && wijkGeom) {
+                for (const f of wijkGeojson.features) {
+                  if (f.properties?.statnaam === wijk.wijk_naam) continue
+                  const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+                  if (g.type === 'Polygon' || g.type === 'MultiPolygon') {
+                    siblingGeoms.push(g)
+                  }
+                }
+              }
+
+              let svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null = null
+              if (wijkGeom && gemeenteGeom) {
+                svgData = geoJsonToSvgDualPath(wijkGeom, gemeenteGeom, siblingGeoms)
+              } else if (wijkGeom) {
+                const single = geoJsonToSvgPath(wijkGeom)
+                svgData = { primaryD: single.d, viewBox: single.viewBox }
+              }
+
+              return renderCard(wijk, svgData, unreadCount)
+            })}
+          </GemeenteCardGrid>
+        )
       )}
+    </div>
+  )
+}
+
+function WijkCardGridSkeleton({
+  count = 3,
+  layout = 'grid',
+}: {
+  count?: number
+  layout?: 'grid' | 'list'
+}) {
+  if (layout === 'list') {
+    return (
+      <div className="space-y-2.5">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900"
+          >
+            <div className="aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/60 p-3">
+              <Skeleton className="h-full w-full rounded-md bg-grey-800/70" />
+            </div>
+            <div className="px-3.5 py-2.5">
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900"
+        >
+          <div className="aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/60 p-3">
+            <Skeleton className="h-full w-full rounded-md bg-grey-800/70" />
+          </div>
+          <div className="px-3.5 py-2.5">
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

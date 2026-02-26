@@ -125,10 +125,112 @@ def _extract_street_huisnummer(address_like: str | None) -> tuple[str, int] | No
     return street, huisnummer
 
 
+def _extract_city_from_address_like(address_like: str | None) -> str | None:
+    if not isinstance(address_like, str):
+        return None
+
+    parts = [p.strip() for p in address_like.split(",") if p.strip()]
+    if len(parts) >= 2:
+        candidate = parts[-1]
+        candidate = re.sub(r"\b\d{4}\s?[A-Z]{2}\b", "", candidate).strip()
+        if candidate and not any(ch.isdigit() for ch in candidate):
+            words = candidate.split()
+            if words and len(words) <= 4 and words[0][0].isupper():
+                return " ".join(words)
+
+    # Fallback for "Straat 12 Venlo" style (no comma/postcode).
+    match = re.search(
+        r"\b\d+[A-Za-z]?(?:-[A-Za-z0-9]+)?\b\s*,?\s*(.+)$",
+        address_like.strip(),
+    )
+    if not match:
+        return None
+
+    tail = match.group(1).split(",")[0].strip()
+    if not tail:
+        return None
+
+    words = [w.strip(" .;:-") for w in tail.split() if w.strip(" .;:-")]
+    if not words:
+        return None
+
+    permit_words = {
+        "omgevingsvergunning",
+        "bouwvergunning",
+        "sloopvergunning",
+        "aanvraag",
+        "verleende",
+        "verleend",
+        "geweigerde",
+        "geweigerd",
+        "ingetrokken",
+        "kennisgeving",
+        "besluit",
+        "vergunning",
+        "bekendmaking",
+        "beschikking",
+        "reguliere",
+        "regulier",
+        "ontwerpbesluit",
+        "ontwerp",
+        "aangevraagde",
+        "aangevraagd",
+        "mededeling",
+    }
+    if words[0].lower() in permit_words:
+        return None
+
+    connectors = {"aan", "de", "den", "der", "het", "op", "te", "ter", "ten", "van", "bij"}
+    picked: list[str] = []
+    for idx, word in enumerate(words):
+        normalized = word.replace("’", "'").strip()
+        if not normalized or any(ch.isdigit() for ch in normalized):
+            break
+        is_upper_start = normalized.startswith("'") or normalized[0].isupper()
+        if idx == 0:
+            if not is_upper_start:
+                return None
+            picked.append(word)
+            continue
+        if len(picked) >= 4:
+            break
+        if is_upper_start or normalized.lower() in connectors:
+            picked.append(word)
+            continue
+        break
+
+    if not picked:
+        return None
+    return " ".join(picked)
+
+
+def _build_address_from_hints(
+    street: str,
+    huisnummer: int,
+    postcode: str | None,
+    city: str | None,
+    gemeente_naam: str | None,
+) -> str:
+    first_line = f"{street} {huisnummer}".strip()
+    normalized_postcode = _normalize_postcode(postcode)
+    city_hint = city.strip() if isinstance(city, str) and city.strip() else None
+    if not city_hint:
+        city_hint = gemeente_naam.strip() if isinstance(gemeente_naam, str) and gemeente_naam.strip() else None
+
+    parts = [first_line]
+    if normalized_postcode and city_hint:
+        parts.append(f"{normalized_postcode} {city_hint}")
+    elif normalized_postcode:
+        parts.append(normalized_postcode)
+    elif city_hint:
+        parts.append(city_hint)
+    return ", ".join(parts)
+
+
 def _extract_match_hints(
     change: ChangeRecord,
     effective_postcode: str | None,
-) -> tuple[str, int, str | None] | None:
+) -> tuple[str, int, str | None, str | None] | None:
     components = (change.metadata_json or {}).get("address_components")
     if isinstance(components, dict):
         street = _normalize_street_hint(components.get("street"))
@@ -136,12 +238,18 @@ def _extract_match_hints(
         postcode = _normalize_postcode(
             effective_postcode or components.get("postcode")
         )
+        city = _normalize_street_hint(components.get("city"))
         if street and huisnummer:
-            return street, huisnummer, postcode
+            return street, huisnummer, postcode, city
 
     parsed = _extract_street_huisnummer(change.address)
     if parsed:
-        return parsed[0], parsed[1], _normalize_postcode(effective_postcode)
+        return (
+            parsed[0],
+            parsed[1],
+            _normalize_postcode(effective_postcode),
+            _extract_city_from_address_like(change.address),
+        )
 
     # Last fallback: try parsing from title tail after last " - "
     title_tail = (
@@ -154,8 +262,11 @@ def _extract_match_hints(
         return None
     parsed_from_title = _extract_street_huisnummer(title_tail)
     if parsed_from_title:
-        return parsed_from_title[0], parsed_from_title[1], _normalize_postcode(
-            effective_postcode
+        return (
+            parsed_from_title[0],
+            parsed_from_title[1],
+            _normalize_postcode(effective_postcode),
+            _extract_city_from_address_like(title_tail),
         )
 
     return None
@@ -167,6 +278,7 @@ async def _find_parcel_by_address_hint(
     organization_id: uuid.UUID,
     db: AsyncSession,
     postcode: str | None = None,
+    city: str | None = None,
 ) -> uuid.UUID | None:
     """Best-effort parcel lookup from textual address hints in ParcelCache.address."""
     normalized_street = street.strip().lower()
@@ -174,6 +286,7 @@ async def _find_parcel_by_address_hint(
         return None
 
     normalized_postcode = _normalize_postcode(postcode)
+    normalized_city = city.lower().strip() if isinstance(city, str) and city.strip() else None
 
     query = select(ParcelCache.id, ParcelCache.address).where(
         ParcelCache.organization_id == organization_id,
@@ -186,6 +299,8 @@ async def _find_parcel_by_address_hint(
                 func.regexp_replace(ParcelCache.address, r"\s+", "", "g")
             ).contains(normalized_postcode)
         )
+    elif normalized_city:
+        query = query.where(func.lower(ParcelCache.address).contains(normalized_city))
 
     rows = (await db.execute(query.limit(60))).all()
     if not rows:
@@ -242,6 +357,7 @@ async def _try_match_parcel_from_metadata(
         organization_id=organization_id,
         db=db,
         postcode=_normalize_postcode(components.get("postcode")),
+        city=_normalize_street_hint(components.get("city")),
     )
 
 
@@ -422,7 +538,16 @@ async def get_changes(
                         organization_id=organization_id,
                         db=db,
                         postcode=hints[2],
+                        city=hints[3],
                     )
+                    if effective_address is None:
+                        effective_address = _build_address_from_hints(
+                            street=hints[0],
+                            huisnummer=hints[1],
+                            postcode=hints[2],
+                            city=hints[3],
+                            gemeente_naam=change.gemeente_naam,
+                        )
             hints_for_ui = _extract_match_hints(change, effective_postcode)
             huisnummer_hint = hints_for_ui[1] if hints_for_ui is not None else _extract_huisnummer_from_address(effective_address)
 
@@ -1020,7 +1145,16 @@ async def refresh_monitoring(
                             organization_id=organization_id,
                             db=db,
                             postcode=hints[2],
+                            city=hints[3],
                         )
+                        if effective_address is None:
+                            effective_address = _build_address_from_hints(
+                                street=hints[0],
+                                huisnummer=hints[1],
+                                postcode=hints[2],
+                                city=hints[3],
+                                gemeente_naam=change.gemeente_naam,
+                            )
 
                 change_record = ChangeRecord(
                     organization_id=organization_id,

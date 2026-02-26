@@ -74,6 +74,13 @@ _PERMIT_WORDS: frozenset[str] = frozenset(
     }
 )
 
+# Common lowercase connectors seen inside Dutch place names.
+_CITY_CONNECTORS: frozenset[str] = frozenset(
+    {"aan", "de", "den", "der", "het", "op", "te", "ter", "ten", "van", "bij"}
+)
+
+_CITY_WORD_RE = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ÿ'’`-]+$")
+
 # Multi-word lead phrases to strip from the front of a string before parsing
 _STRIP_LEAD_PHRASES = re.compile(
     r"^(?:"
@@ -332,40 +339,11 @@ def _find_street_and_number(segment: str) -> tuple[str, int, str | None] | None:
     if not segment or not segment.strip():
         return None
 
-    best: re.Match | None = None
-    for m in _LAST_STREET_NUMBER_RE.finditer(segment):
-        num = int(m.group(2))
-        # Skip year-like numbers
-        if 1900 <= num <= 2100:
-            continue
-        best = m
-
+    best = _find_best_street_number_match(segment)
     if best is None:
         return None
 
-    # Extract the full matched text and parse into components
-    full_match = best.group(0).strip()
-    huisnummer = int(best.group(2))
-    suffix_raw = best.group(3)
-
-    # Street name is everything before the house number in the match
-    # Find position of the house number in the match text
-    num_pos = full_match.rfind(str(best.group(2)) + (suffix_raw or ""))
-    if num_pos == -1:
-        # Fallback: find by number alone
-        num_str = str(huisnummer)
-        num_pos = full_match.rfind(num_str)
-    street = full_match[:num_pos].strip().rstrip(",").strip()
-
-    if not street or not street[0].isupper():
-        return None
-
-    # Normalize toevoeging
-    toevoeging: str | None = None
-    if suffix_raw:
-        toevoeging = suffix_raw.lstrip("-").strip() or None
-
-    return street, huisnummer, toevoeging
+    return _parse_street_number_match(best)
 
 
 def _try_bare_street_fallback(text: str) -> dict | None:
@@ -381,7 +359,11 @@ def _try_bare_street_fallback(text: str) -> dict | None:
     if not cleaned:
         return None
 
-    street_match = _find_street_and_number(cleaned)
+    best_match = _find_best_street_number_match(cleaned)
+    if best_match is None:
+        return None
+
+    street_match = _parse_street_number_match(best_match)
     if street_match is None:
         return None
 
@@ -391,15 +373,104 @@ def _try_bare_street_fallback(text: str) -> dict | None:
     if not street or not street[0].isupper():
         return None
 
-    full_address = _build_full_address(street, huisnummer, toevoeging, None, None)
+    tail = cleaned[best_match.end():].strip(" ,;-")
+    city = _extract_city_from_tail(tail)
+
+    full_address = _build_full_address(street, huisnummer, toevoeging, None, city)
     return {
         "street": street,
         "huisnummer": huisnummer,
         "huisnummer_toevoeging": toevoeging,
         "postcode": None,
-        "city": None,
+        "city": city,
         "full_address": full_address,
     }
+
+
+def _find_best_street_number_match(segment: str) -> re.Match | None:
+    """Return the last plausible street+number match in segment."""
+    best: re.Match | None = None
+    for m in _LAST_STREET_NUMBER_RE.finditer(segment):
+        num = int(m.group(2))
+        if 1900 <= num <= 2100:
+            continue
+        best = m
+    return best
+
+
+def _parse_street_number_match(
+    match: re.Match,
+) -> tuple[str, int, str | None] | None:
+    """Parse a regex match into (street, huisnummer, toevoeging)."""
+    full_match = match.group(0).strip()
+    huisnummer = int(match.group(2))
+    suffix_raw = match.group(3)
+
+    num_pos = full_match.rfind(str(match.group(2)) + (suffix_raw or ""))
+    if num_pos == -1:
+        num_pos = full_match.rfind(str(huisnummer))
+    street = full_match[:num_pos].strip().rstrip(",").strip()
+    if not street or not street[0].isupper():
+        return None
+
+    toevoeging: str | None = None
+    if suffix_raw:
+        toevoeging = suffix_raw.lstrip("-").strip() or None
+
+    return street, huisnummer, toevoeging
+
+
+def _looks_like_city_word(word: str, *, is_first: bool) -> bool:
+    """Heuristic for city tokens (supports names like 's-Hertogenbosch)."""
+    normalized = word.replace("’", "'").strip()
+    if not normalized or not _CITY_WORD_RE.match(normalized):
+        return False
+
+    lowered = normalized.lower()
+    if not is_first and lowered in _CITY_CONNECTORS:
+        return True
+
+    if normalized.startswith("'"):
+        return len(normalized) > 1 and normalized[1].isalpha()
+    return normalized[0].isupper()
+
+
+def _extract_city_from_tail(tail: str | None) -> str | None:
+    """Extract city hint from text after the house number."""
+    if not tail:
+        return None
+
+    first_segment = tail.split(",")[0].strip()
+    if not first_segment:
+        return None
+
+    words = [w.strip(" .;:-") for w in first_segment.split() if w.strip(" .;:-")]
+    if not words:
+        return None
+
+    if words[0].lower() in _PERMIT_WORDS:
+        return None
+
+    picked: list[str] = []
+    for idx, word in enumerate(words):
+        if idx == 0:
+            if not _looks_like_city_word(word, is_first=True):
+                return None
+            picked.append(word)
+            continue
+
+        if len(picked) >= 4:
+            break
+
+        if _looks_like_city_word(word, is_first=False):
+            picked.append(word)
+            continue
+        break
+
+    city = " ".join(picked).strip()
+    if not city or any(ch.isdigit() for ch in city):
+        return None
+    return city
 
 
 def _build_full_address(

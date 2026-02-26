@@ -16,6 +16,8 @@ interface LayerToggleProps {
   showWijkenToggle?: boolean; // Only show when gemeente is active
   onScoreToggle?: (visible: boolean) => void;
   showScoreToggle?: boolean; // Only show when active scan is present and parcels are visible
+  onBuiltStatusToggle?: (visible: boolean) => void;
+  showBuiltStatusToggle?: boolean;
   autoEnableParcelsKey?: string | null; // External trigger to force-enable parcel layer
 }
 
@@ -28,6 +30,8 @@ function LayerToggle({
   showWijkenToggle,
   onScoreToggle,
   showScoreToggle,
+  onBuiltStatusToggle,
+  showBuiltStatusToggle,
   autoEnableParcelsKey,
 }: LayerToggleProps) {
   const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
@@ -36,6 +40,7 @@ function LayerToggle({
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(false);
   const [showWijken, setShowWijken] = useState(true); // Wijken default to visible when loaded
   const [showScore, setShowScore] = useState(true); // Score default to visible when scan is active
+  const [showBuiltStatus, setShowBuiltStatus] = useState(false);
 
   const handleLayerChange = (layer: LayerType) => {
     if (!mapRef.current || layer === activeLayer) return;
@@ -73,11 +78,17 @@ function LayerToggle({
       onParcelsToggle(newShowParcels);
     }
 
-    // When parcels are turned off, also hide score layer
+    // When parcels are turned off, also hide data overlays.
     if (!newShowParcels && showScore) {
       setShowScore(false);
       if (onScoreToggle) {
         onScoreToggle(false);
+      }
+    }
+    if (!newShowParcels && showBuiltStatus) {
+      setShowBuiltStatus(false);
+      if (onBuiltStatusToggle) {
+        onBuiltStatusToggle(false);
       }
     }
   };
@@ -118,6 +129,22 @@ function LayerToggle({
     if (onScoreToggle) {
       onScoreToggle(newShowScore);
     }
+    if (newShowScore && showBuiltStatus) {
+      setShowBuiltStatus(false);
+      onBuiltStatusToggle?.(false);
+    }
+  };
+
+  const handleBuiltStatusToggle = () => {
+    const newShowBuiltStatus = !showBuiltStatus;
+    setShowBuiltStatus(newShowBuiltStatus);
+    if (onBuiltStatusToggle) {
+      onBuiltStatusToggle(newShowBuiltStatus);
+    }
+    if (newShowBuiltStatus && showScore) {
+      setShowScore(false);
+      onScoreToggle?.(false);
+    }
   };
 
   // Track when wijken toggle appears/disappears to reset state to default (visible)
@@ -140,6 +167,9 @@ function LayerToggle({
       // Intentional: Reset toggle state to match layer visibility when scan becomes active
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowScore(true);
+      // Intentional: built-status overlay defaults to off for a new scan context.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowBuiltStatus(false);
     }
     prevShowScoreToggleRef.current = showScoreToggle;
   }, [showScoreToggle]);
@@ -243,6 +273,20 @@ function LayerToggle({
             }`}
           >
             Potentie
+          </button>
+        </>
+      )}
+
+      {showBuiltStatusToggle && showParcels && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleBuiltStatusToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showBuiltStatus ? overlayActive : overlayInactive
+            }`}
+          >
+            Bebouwd
           </button>
         </>
       )}

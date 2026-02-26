@@ -88,12 +88,21 @@ async def generate_mvt_tile(
                     bounds.geom,
                     4096, 256, true
                 ) AS geom,
-                pc.parcel_id,
+                pc.id::text AS parcel_id,
+                pc.parcel_id AS parcel_code,
                 pc.address,
+                pc.gemeente_code,
                 pc.area_m2,
                 pc.has_pand,
+                pc.bouwjaar,
+                pc.pand_status,
                 sr.score,
-                sr.flags->>'category' AS score_category
+                sr.flags->>'category' AS score_category,
+                sr.flags->>'vacancy_signal' AS vacancy_signal,
+                (sr.flags->'building_metrics'->>'max_bebouwingspercentage')::float
+                    AS max_bebouwingspercentage,
+                (sr.flags->'building_metrics'->>'max_floor_area_ratio')::float
+                    AS max_floor_area_ratio
             FROM parcel_cache pc
             JOIN scan_results sr ON sr.parcel_id = pc.id
             CROSS JOIN bounds

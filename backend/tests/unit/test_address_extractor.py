@@ -5,8 +5,6 @@ based on real-world examples from municipalities like Venlo, Arnhem, Den Haag,
 Amersfoort, and others.
 """
 
-import pytest
-
 from app.services.address_extractor import extract_address_from_title, extract_huisnummer
 
 
@@ -144,6 +142,34 @@ class TestExtractAddressFromTitle:
         assert result["street"] == "Parkweg"
         assert result["huisnummer"] == 88
         assert result["postcode"] is None
+
+    def test_format_e_bare_street_number_with_city_comma(self) -> None:
+        title = "Omgevingsvergunning Parkweg 88, Venlo"
+        result = extract_address_from_title(title)
+        assert result is not None
+        assert result["street"] == "Parkweg"
+        assert result["huisnummer"] == 88
+        assert result["postcode"] is None
+        assert result["city"] == "Venlo"
+        assert result["full_address"] == "Parkweg 88, Venlo"
+
+    def test_format_e_bare_street_number_with_city_no_comma(self) -> None:
+        title = "Omgevingsvergunning Parkweg 88 Venlo"
+        result = extract_address_from_title(title)
+        assert result is not None
+        assert result["street"] == "Parkweg"
+        assert result["huisnummer"] == 88
+        assert result["postcode"] is None
+        assert result["city"] == "Venlo"
+
+    def test_format_e_bare_street_number_with_multiword_city(self) -> None:
+        title = "Omgevingsvergunning Kerkstraat 12 Horst aan de Maas"
+        result = extract_address_from_title(title)
+        assert result is not None
+        assert result["street"] == "Kerkstraat"
+        assert result["huisnummer"] == 12
+        assert result["postcode"] is None
+        assert result["city"] == "Horst aan de Maas"
 
     # -------------------------------------------------------------------
     # Format F: "With huisnummer additions"

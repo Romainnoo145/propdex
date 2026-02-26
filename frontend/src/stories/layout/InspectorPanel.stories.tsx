@@ -38,6 +38,9 @@ const mockParcel: ScanResultItem = {
   score: 78,
   score_category: 'High',
   score_breakdown: { unbebouwd_bonus: 0, age_factor: 30, area_factor: 48 },
+  vacancy_signal: 'in_gebruik',
+  opportunity_signals: ['Pand momenteel in gebruik', 'Bestemming ondersteunt wonen/gemengd'],
+  building_metrics: { max_bebouwingspercentage: 75, max_floor_area_ratio: null },
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +119,9 @@ export const OpenMinimalParcel: Story = {
           score: null,
           score_category: null,
           score_breakdown: null,
+          vacancy_signal: null,
+          opportunity_signals: null,
+          building_metrics: null,
         }}
       />
     </MapWrapper>

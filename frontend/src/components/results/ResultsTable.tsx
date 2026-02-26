@@ -65,6 +65,42 @@ function ScoreBadge({
   )
 }
 
+function VacancyBadge({ value }: { value: string | null }) {
+  if (!value) {
+    return <span className="text-grey-600">--</span>
+  }
+
+  const map: Record<string, { label: string; cls: string }> = {
+    leeg_perceel: {
+      label: 'Leeg perceel',
+      cls: 'bg-success/12 text-success border-success/25',
+    },
+    leegstaand_pand: {
+      label: 'Leegstaand',
+      cls: 'bg-warning/15 text-warning border-warning/30',
+    },
+    in_gebruik: {
+      label: 'In gebruik',
+      cls: 'bg-grey-800/70 text-grey-400 border-overlay/8',
+    },
+    onbekend: {
+      label: 'Onbekend',
+      cls: 'bg-info/12 text-info border-info/25',
+    },
+  }
+
+  const { label, cls } = map[value] ?? {
+    label: value,
+    cls: 'bg-grey-800/70 text-grey-300 border-overlay/8',
+  }
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {label}
+    </span>
+  )
+}
+
 const columnHelper = createColumnHelper<ScanResultItem>()
 
 export default function ResultsTable({
@@ -206,11 +242,15 @@ export default function ResultsTable({
     columnHelper.accessor('address', {
       header: 'Adres',
       enableSorting: true,
-      cell: (info) => (
-        <span className="font-semibold text-grey-100">
-          {info.getValue() ?? <span className="text-grey-600 font-normal italic">Onbekend</span>}
-        </span>
-      ),
+      cell: (info) => {
+        const raw = info.getValue()
+        const address = typeof raw === 'string' ? raw.trim() : raw
+        return (
+          <span className="font-semibold text-grey-100">
+            {address ? address : <span className="text-grey-600 font-normal italic">Onbekend</span>}
+          </span>
+        )
+      },
     }),
     columnHelper.accessor('area_m2', {
       header: 'Oppervlak (m²)',
@@ -218,7 +258,9 @@ export default function ResultsTable({
       cell: (info) => {
         const value = info.getValue()
         return value !== null ? (
-          <span className="tabular-nums text-grey-300">{value.toLocaleString('nl-NL')}</span>
+          <span className="tabular-nums text-grey-300">
+            {Math.round(value).toLocaleString('nl-NL')}
+          </span>
         ) : (
           <span className="text-grey-600">--</span>
         )
@@ -253,6 +295,11 @@ export default function ResultsTable({
           <span className="text-grey-600">--</span>
         )
       },
+    }),
+    columnHelper.accessor('vacancy_signal', {
+      header: 'Potentie-signaal',
+      enableSorting: false,
+      cell: (info) => <VacancyBadge value={info.getValue()} />,
     }),
     columnHelper.accessor('score', {
       header: 'Score',
@@ -321,7 +368,7 @@ export default function ResultsTable({
       <EmptyState
         icon={<Search size={32} />}
         title="Geen resultaten gevonden"
-        description="Pas de filters aan of voer een nieuwe scan uit."
+        description="Pas je zoekterm of sortering aan, of voer een nieuwe scan uit."
       />
     )
   }
@@ -329,21 +376,24 @@ export default function ResultsTable({
   // Mobile branch: card list below 768px (MOB-02)
   // Intentionally omits checkboxes — selection/export is desktop-only per MOB-01 read-only mode
   if (isMobile) {
+    const areaTitle = data.wijk_naam
+      ? `${data.wijk_naam} (${data.gemeente_naam})`
+      : data.gemeente_naam
     return (
       <div className="h-full w-full flex flex-col">
         {/* Header with summary */}
         <div className="px-4 py-3 border-b border-overlay/5">
           <h3 className="text-grey-100 font-semibold text-base">
-            {data.gemeente_naam}
+            {areaTitle}
           </h3>
           <p className="text-grey-600 text-xs mt-0.5">
-            <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> kansrijk van{' '}
+            <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
             <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
           </p>
         </div>
 
         {/* Card list */}
-        <div className="flex-1 overflow-y-auto divide-y divide-overlay/[0.03]">
+        <div className="scrollbar-hidden flex-1 overflow-y-auto divide-y divide-overlay/[0.03]">
           {table.getRowModel().rows.map((row) => (
             <ParcelCard
               key={row.id}
@@ -380,26 +430,25 @@ export default function ResultsTable({
     )
   }
 
+  const areaTitle = data.wijk_naam
+    ? `${data.wijk_naam} (${data.gemeente_naam})`
+    : data.gemeente_naam
+
   return (
     <div className="h-full w-full flex flex-col">
       {/* Header with summary */}
       <div className="px-6 py-4 border-b border-overlay/5">
         <h3 className="text-grey-100 font-semibold text-lg">
-          {data.gemeente_naam}
+          {areaTitle}
         </h3>
         <p className="text-grey-600 text-sm mt-1">
-          <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> kansrijk van{' '}
+          <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
           <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
-          <span className="text-grey-600 ml-1.5">
-            ({data.parcels_total > 0
-              ? Math.round(((data.parcels_total - data.total) / data.parcels_total) * 100)
-              : 0}% afgevallen)
-          </span>
         </p>
       </div>
 
       {/* Table container with scroll */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto">
         <table className="w-full">
           <thead className="sticky top-0 bg-grey-900 border-b border-overlay/5">
             {table.getHeaderGroups().map((headerGroup) => (

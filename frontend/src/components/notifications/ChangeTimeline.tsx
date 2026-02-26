@@ -1,14 +1,12 @@
 /**
- * Change timeline component for displaying project change history
+ * Change timeline component for displaying project change history.
  *
- * Shows:
- * - Permit changes (document icon) and zoning changes (map icon)
- * - Grouped by date with expandable details
- * - Match pills linking to parcels/reports when postcode matches exist
- * - Amber dot indicator on unread changes (per-change via server read state)
+ * Variants:
+ * - timeline: classic expandable feed (default)
+ * - inbox: master-detail inbox layout used in gemeente detail
  */
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useProjectChanges } from '@/hooks/useNotifications'
 import { useReadTracking } from '@/hooks/useReadTracking'
@@ -22,14 +20,19 @@ import { formatDate, formatRelativeTime } from '@/lib/utils/date'
 interface ChangeTimelineProps {
   projectId: string
   unreadCount?: number
+  variant?: 'timeline' | 'inbox'
 }
 
-export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
+export default function ChangeTimeline({
+  projectId,
+  variant = 'timeline',
+}: ChangeTimelineProps) {
   const { data, isLoading, error, refetch } = useProjectChanges(
     projectId,
-    true // include_matches for timeline view
+    true
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const {
@@ -41,6 +44,39 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
   } = useReadTracking({ readChangeIds: data?.read_change_ids })
 
   const changes = data?.changes ?? []
+
+  const groupedChanges = useMemo(
+    () =>
+      changes.reduce<Record<string, ChangeRecord[]>>((acc, change) => {
+        const dateKey = change.change_date.split('T')[0]
+        if (!dateKey) return acc
+        if (!acc[dateKey]) acc[dateKey] = []
+        acc[dateKey].push(change)
+        return acc
+      }, {}),
+    [changes]
+  )
+
+  const sortedDates = useMemo(
+    () => Object.keys(groupedChanges).sort().reverse(),
+    [groupedChanges]
+  )
+
+  useEffect(() => {
+    if (variant !== 'inbox') return
+    if (changes.length === 0) {
+      if (selectedId !== null) setSelectedId(null)
+      return
+    }
+    if (!selectedId || !changes.some((change) => change.id === selectedId)) {
+      setSelectedId(changes[0]!.id)
+    }
+  }, [variant, changes, selectedId])
+
+  const selectedChange = useMemo(
+    () => changes.find((change) => change.id === selectedId) ?? null,
+    [changes, selectedId]
+  )
 
   if (isLoading) {
     return (
@@ -82,19 +118,54 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
     )
   }
 
-  // Group changes by date (YYYY-MM-DD)
-  const groupedChanges = changes.reduce<Record<string, ChangeRecord[]>>(
-    (acc, change) => {
-      const dateKey = change.change_date.split('T')[0]
-      if (!dateKey) return acc // Skip if no date
-      if (!acc[dateKey]) acc[dateKey] = []
-      acc[dateKey].push(change)
-      return acc
-    },
-    {}
-  )
+  if (variant === 'inbox') {
+    return (
+      <div className="bg-grey-900/50 px-3 pb-3 pt-4 sm:px-4 sm:pb-4 sm:pt-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
+          <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+            <div className="max-h-[560px] overflow-y-auto p-3">
+              <div className="space-y-5">
+                {sortedDates.map((dateKey) => {
+                  const dateChanges = groupedChanges[dateKey]!
+                  return (
+                    <div key={dateKey}>
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="h-px flex-1 bg-overlay/[0.08]" />
+                        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-grey-500">
+                          {formatTimelineDateLabel(dateKey).toUpperCase()}
+                        </h2>
+                        <div className="h-px flex-1 bg-overlay/[0.08]" />
+                      </div>
 
-  const sortedDates = Object.keys(groupedChanges).sort().reverse() // Newest first
+                      <div className="space-y-1.5">
+                        {dateChanges.map((change) => (
+                          <ChangeInboxItem
+                            key={change.id}
+                            change={change}
+                            isActive={selectedId === change.id}
+                            isRead={readIds.has(change.id)}
+                            onClick={() => handleToggle(change.id, null, setSelectedId)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <ChangeDetailPanel
+            change={selectedChange}
+            onNavigate={navigate}
+            onGenerateReport={handleGenerateReport}
+            onGenerateReportByAddress={handleGenerateReportByAddress}
+            generatingId={generatingId}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="border-t border-grey-800 bg-grey-900/50">
@@ -104,12 +175,10 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
 
         return (
           <div key={dateKey} className="border-b border-grey-800 last:border-b-0">
-            {/* Date header */}
             <div className="px-5 py-2 text-xs font-medium text-grey-400">
               {formatDate(dateKey)}
             </div>
 
-            {/* Changes for this date */}
             {dateChanges.map((change) => {
               const matchedParcels = Array.isArray(change.matched_parcels)
                 ? change.matched_parcels
@@ -183,7 +252,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                     />
                   </button>
 
-                  {/* Expanded details */}
                   {isExpanded && (() => {
                     const hasParcels = matchedParcels.length > 0
                     const hasReports = matchedReports.length > 0
@@ -205,7 +273,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                     return (
                       <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3">
                         <div className="flex items-start justify-between gap-4">
-                          {/* Left: details */}
                           <div className="min-w-0 flex-1 space-y-2">
                             {change.address && (
                               <p className="text-xs text-grey-400">{change.address}</p>
@@ -274,7 +341,6 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
                             )}
                           </div>
 
-                          {/* Right: action buttons */}
                           <div className="flex shrink-0 flex-col gap-2">
                             <button
                               onClick={() => {
@@ -350,6 +416,316 @@ export default function ChangeTimeline({ projectId }: ChangeTimelineProps) {
       })}
     </div>
   )
+}
+
+interface ChangeInboxItemProps {
+  change: ChangeRecord
+  isActive: boolean
+  isRead: boolean
+  onClick: () => void
+}
+
+function ChangeInboxItem({
+  change,
+  isActive,
+  isRead,
+  onClick,
+}: ChangeInboxItemProps) {
+  const address = change.address?.trim() || 'Adres onbekend'
+  const summary = change.title?.trim() || 'Geen omschrijving'
+  const typeLabel =
+    change.change_type === 'permit' ? 'Omgevingsvergunning' : 'Bestemmingsplan'
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
+        isActive
+          ? 'border-overlay/[0.08] bg-overlay/[0.08]'
+          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+      }`}
+    >
+      <span
+        className={`absolute inset-y-1 left-0 w-1 rounded-r ${
+          isActive ? 'bg-amber-accent' : 'bg-transparent'
+        }`}
+      />
+      {!isRead && (
+        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-accent" />
+      )}
+      <p className="pr-4 text-sm font-semibold leading-snug text-grey-100">{address}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-snug text-grey-400">{summary}</p>
+      <div className="mt-2 flex items-center gap-2 text-[11px] text-grey-500">
+        <span>{typeLabel}</span>
+        {change.category_label && (
+          <>
+            <span className="text-grey-600">&middot;</span>
+            <span
+              className={
+                /verleend|vastgesteld/i.test(change.category_label)
+                  ? 'text-amber-accent'
+                  : 'text-grey-400'
+              }
+            >
+              {change.category_label}
+            </span>
+          </>
+        )}
+      </div>
+    </button>
+  )
+}
+
+interface ChangeDetailPanelProps {
+  change: ChangeRecord | null
+  onNavigate: ReturnType<typeof useNavigate>
+  onGenerateReport: (parcelId: string, projectId?: string) => Promise<void>
+  onGenerateReportByAddress: (input: {
+    postcode: string
+    huisnummer: number
+    projectId?: string
+  }) => Promise<void>
+  generatingId: string | null
+}
+
+function ChangeDetailPanel({
+  change,
+  onNavigate,
+  onGenerateReport,
+  onGenerateReportByAddress,
+  generatingId,
+}: ChangeDetailPanelProps) {
+  if (!change) {
+    return (
+      <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-5">
+        <p className="text-sm text-grey-500">Selecteer links een melding om details te zien.</p>
+      </div>
+    )
+  }
+
+  const matchedParcels = Array.isArray(change.matched_parcels)
+    ? change.matched_parcels
+    : []
+  const matchedReports = Array.isArray(change.matched_reports)
+    ? change.matched_reports
+    : []
+  const primaryParcelId =
+    change.matched_parcel_id ?? matchedParcels[0]?.parcel_id ?? null
+  const expandedHn =
+    change.huisnummer_hint ??
+    (change.address ? extractHuisnummer(change.address) : null)
+  const expandedCanNavigate = change.postcode && expandedHn
+  const canViewOnMap = Boolean(primaryParcelId || expandedCanNavigate)
+  const addressGenerateKey =
+    expandedCanNavigate
+      ? `addr:${change.postcode!.replace(/\s/g, '').toUpperCase()}:${expandedHn!}`
+      : null
+  const canGenerate = Boolean(primaryParcelId || expandedCanNavigate)
+  const isGeneratingAddress =
+    !!addressGenerateKey && generatingId === addressGenerateKey
+  const isGeneratingParcel =
+    !!primaryParcelId && generatingId === primaryParcelId
+  const detailAddress = change.address?.trim() || 'Adres onbekend'
+  const locationQualityLabel = primaryParcelId
+    ? 'Perceel gekoppeld'
+    : expandedCanNavigate
+      ? 'Adres-hint beschikbaar'
+      : 'Locatie onzeker'
+  const locationQualityClass = primaryParcelId
+    ? 'border-amber-accent/45 bg-amber-accent/15 text-amber-accent'
+    : expandedCanNavigate
+      ? 'border-overlay/[0.18] bg-overlay/[0.08] text-grey-200'
+      : 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-400'
+
+  const openOnMap = () => {
+    if (!canViewOnMap) return
+    if (primaryParcelId) {
+      onNavigate({
+        to: '/map',
+        search: {
+          parcel_id: primaryParcelId,
+          ...(matchedParcels[0]?.address
+            ? { fallback_address: matchedParcels[0].address }
+            : change.address
+              ? { fallback_address: change.address }
+              : {}),
+          _t: Date.now(),
+        },
+      })
+      return
+    }
+    onNavigate({
+      to: '/map',
+      search: {
+        postcode: formatPostcode(change.postcode!),
+        huisnummer: expandedHn!,
+        _t: Date.now(),
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+      <button
+        type="button"
+        onClick={openOnMap}
+        disabled={!canViewOnMap}
+        className="group relative h-36 w-full overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-850 text-left disabled:cursor-default"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(217,170,56,0.14),transparent_46%),radial-gradient(circle_at_70%_75%,rgba(255,255,255,0.07),transparent_40%)]" />
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+          }}
+        />
+        <div className={`absolute left-3 top-3 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${locationQualityClass}`}>
+          {locationQualityLabel}
+        </div>
+        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-200">
+          {matchedParcels.length}p
+          <span className="text-grey-500">/</span>
+          {matchedReports.length}r
+        </div>
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-amber-accent/35 bg-amber-accent/15 px-3 py-1.5 text-xs font-medium text-amber-accent">
+          <MapPinIcon />
+          {canViewOnMap ? 'Open op kaart' : 'Locatie melding'}
+        </div>
+        <span className="absolute bottom-3 left-3 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-300">
+          {change.gemeente_naam}
+        </span>
+      </button>
+
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-semibold text-grey-100">{detailAddress}</h3>
+          {change.category_label && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              /verleend|vastgesteld/i.test(change.category_label)
+                ? 'bg-amber-accent/15 text-amber-accent'
+                : 'bg-grey-800/80 text-grey-300'
+            }`}>
+              {change.category_label}
+            </span>
+          )}
+          <span className="inline-flex items-center rounded-full border border-overlay/[0.1] bg-overlay/[0.05] px-2 py-0.5 text-xs text-grey-300">
+            {change.change_type === 'permit' ? 'Omgevingsvergunning' : 'Bestemmingsplan'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-grey-300">{change.title}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {change.source_url && (
+            <a
+              href={change.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.04] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+            >
+              Bekijk officiële publicatie
+              <ExternalLinkIcon />
+            </a>
+          )}
+          <button
+            onClick={() => {
+              if (!canGenerate) return
+              if (primaryParcelId) {
+                void onGenerateReport(primaryParcelId, change.project_id)
+                return
+              }
+              void onGenerateReportByAddress({
+                postcode: formatPostcode(change.postcode!),
+                huisnummer: expandedHn!,
+                projectId: change.project_id,
+              })
+            }}
+            disabled={!canGenerate || isGeneratingParcel || isGeneratingAddress}
+            className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent bg-amber-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ReportLinkIcon />
+            {isGeneratingParcel || isGeneratingAddress ? 'Bezig...' : 'Sla op in project +'}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-2 rounded-xl border border-overlay/[0.06] bg-overlay/[0.02] p-3 sm:grid-cols-2">
+        <MetaRow label="Gemeente" value={change.gemeente_naam || '–'} />
+        <MetaRow label="Project" value={change.project_name || 'Niet gekoppeld'} />
+        <MetaRow label="Publicatiedatum" value={formatDate(change.change_date)} />
+        <MetaRow label="Relatief" value={formatRelativeTime(change.change_date)} />
+      </div>
+
+      {(matchedParcels.length > 0 || matchedReports.length > 0) && (
+        <div className="space-y-1.5 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3">
+          {matchedParcels.map((m) => (
+            <button
+              key={m.parcel_id}
+              onClick={() =>
+                onNavigate({
+                  to: '/map',
+                  search: {
+                    parcel_id: m.parcel_id,
+                    ...(m.address ? { fallback_address: m.address } : {}),
+                    _t: Date.now(),
+                  },
+                })
+              }
+              className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
+            >
+              <ParcelLinkIcon />
+              {m.address ? `Perceel: ${m.address}` : `Perceel ${m.parcel_id}`}
+            </button>
+          ))}
+          {matchedReports.map((m) => (
+            <button
+              key={m.report_id}
+              onClick={() =>
+                onNavigate({
+                  to: '/rapport/$id',
+                  params: { id: m.report_id },
+                })
+              }
+              className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+            >
+              <ReportLinkIcon />
+              Rapport: {m.report_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-overlay/[0.035] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-grey-600">{label}</p>
+      <p className="mt-0.5 text-sm text-grey-200">{value}</p>
+    </div>
+  )
+}
+
+function formatTimelineDateLabel(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  if (!year || !month || !day) return dateKey
+
+  const date = new Date(year, month - 1, day)
+  const today = new Date()
+  const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const yesterdayAtMidnight = new Date(todayAtMidnight)
+  yesterdayAtMidnight.setDate(todayAtMidnight.getDate() - 1)
+
+  if (date.getTime() === todayAtMidnight.getTime()) return 'Vandaag'
+  if (date.getTime() === yesterdayAtMidnight.getTime()) return 'Gisteren'
+
+  const sameYear = date.getFullYear() === today.getFullYear()
+  return date.toLocaleDateString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  })
 }
 
 // SVG Icons

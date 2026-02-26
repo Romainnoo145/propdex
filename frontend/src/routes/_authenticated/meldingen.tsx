@@ -16,14 +16,51 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import { Select } from '@/components/primitives/Select'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
-import { formatDate, formatRelativeTime } from '@/lib/utils/date'
+import { formatRelativeTime } from '@/lib/utils/date'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 export const Route = createFileRoute('/_authenticated/meldingen')({
   component: MeldingenPage,
 })
 
+const detailDateFmt = new Intl.DateTimeFormat('nl-NL', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+const detailDateTimeFmt = new Intl.DateTimeFormat('nl-NL', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function formatTimelineDateLabel(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  if (!year || !month || !day) return dateKey
+
+  const date = new Date(year, month - 1, day)
+  const today = new Date()
+  const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const yesterdayAtMidnight = new Date(todayAtMidnight)
+  yesterdayAtMidnight.setDate(todayAtMidnight.getDate() - 1)
+
+  if (date.getTime() === todayAtMidnight.getTime()) return 'Vandaag'
+  if (date.getTime() === yesterdayAtMidnight.getTime()) return 'Gisteren'
+
+  const sameYear = date.getFullYear() === today.getFullYear()
+  return date.toLocaleDateString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  })
+}
+
 function MeldingenPage() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedGemeente, setSelectedGemeente] = useState<string | null>(null)
   const [manualRefreshing, setManualRefreshing] = useState(false)
@@ -196,140 +233,222 @@ function MeldingenPage() {
   )
 
   const sortedDates = Object.keys(groupedChanges).sort().reverse()
+  const selectedChange = useMemo(
+    () => allChanges.find((change) => change.id === expandedId) ?? null,
+    [allChanges, expandedId]
+  )
+
+  useEffect(() => {
+    if (isMobile) return
+    if (allChanges.length === 0) {
+      if (expandedId !== null) setExpandedId(null)
+      return
+    }
+    if (!expandedId || !allChanges.some((change) => change.id === expandedId)) {
+      setExpandedId(allChanges[0]!.id)
+    }
+  }, [isMobile, allChanges, expandedId])
 
   return (
-    <ResultsShell>
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-grey-100">Meldingen</h1>
-        {totalUnread > 0 && (
-          <span className="inline-flex items-center rounded-full bg-amber-accent/15 px-2.5 py-0.5 text-sm font-medium text-amber-accent">
-            {totalUnread} nieuw
-          </span>
-        )}
-        {/* Gemeente filter dropdown */}
-        {(gemeenteNames.length > 1 || selectedGemeente !== null) && (
-          <Select
-            value={selectedGemeente ?? ''}
-            onChange={(e) => setSelectedGemeente(e.target.value || null)}
-            className="h-9 min-w-[220px] rounded-md border-grey-700 bg-grey-900 text-sm text-grey-200 focus-visible:ring-1 focus-visible:ring-amber-accent focus-visible:border-amber-accent"
-            iconClassName="text-grey-400"
-          >
-            <option value="">Alle gemeentes</option>
-            {gemeenteNames.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          {totalUnread > 0 && (
-            <button
-              onClick={() => markAllRead.mutate()}
-              disabled={markAllRead.isPending}
-              className="text-xs text-grey-400 transition-colors hover:text-grey-100 disabled:opacity-50"
-            >
-              Markeer alles als gelezen
-            </button>
-          )}
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
-            aria-label="Ververs meldingen"
-          >
-            <RefreshIcon spinning={isRefreshing} />
-          </button>
-        </div>
-      </div>
-
-      {/* Loading */}
-      {isLoading && (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-grey-800 bg-grey-900 p-4"
-            >
-              <div className="flex items-start gap-3">
-                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-3 w-1/4" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Empty */}
-      {!isLoading && allChanges.length === 0 && (
-        <EmptyState
-          icon={<Bell size={32} />}
-          title="Geen meldingen"
-          description="Wijzigingen in bestemmingsplannen en vergunningen verschijnen hier zodra ze gedetecteerd worden."
-          action={{
-            label: 'Naar projecten',
-            onClick: () => navigate({ to: '/projecten' }),
-          }}
-        />
-      )}
-
-      {/* Feed grouped by date */}
-      {!isLoading && allChanges.length > 0 && (
-        <div className="space-y-6">
-          {sortedDates.map((dateKey) => {
-            const dateChanges = groupedChanges[dateKey]!
-            return (
-              <div key={dateKey}>
-                {/* Date header */}
-                <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-grey-400">
-                  {formatDate(dateKey)}
-                </h2>
-
-                {/* Changes for this date */}
-                <div className="space-y-2">
-                  {dateChanges.map((change) => (
-                    <MeldingItem
-                      key={change.id}
-                      change={change}
-                      isExpanded={expandedId === change.id}
-                      isRead={readIds.has(change.id)}
-                      onToggle={() =>
-                        handleToggle(change.id, expandedId, setExpandedId)
-                      }
-                      onNavigate={navigate}
-                      onGenerateReport={handleGenerateReport}
-                      onGenerateReportByAddress={handleGenerateReportByAddress}
-                      generatingId={generatingId}
-                    />
+    <ResultsShell contentClassName="max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="w-full">
+        {/* Header */}
+        <div className="mb-6 rounded-2xl border border-overlay/[0.08] bg-grey-900 px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold text-grey-100">Meldingen</h1>
+            {totalUnread > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-accent/15 px-2.5 py-0.5 text-sm font-medium text-amber-accent">
+                {totalUnread} nieuw
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {(gemeenteNames.length > 1 || selectedGemeente !== null) && (
+                <Select
+                  value={selectedGemeente ?? ''}
+                  onChange={(e) => setSelectedGemeente(e.target.value || null)}
+                  className="h-8 w-[170px] rounded-md border-grey-700 bg-grey-900 px-2.5 pr-8 text-xs text-grey-200 focus-visible:ring-1 focus-visible:ring-amber-accent focus-visible:border-amber-accent sm:w-[210px]"
+                  iconClassName="text-grey-500"
+                >
+                  <option value="">Alle gemeentes</option>
+                  {gemeenteNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
                   ))}
+                </Select>
+              )}
+              {totalUnread > 0 && (
+                <button
+                  onClick={() => markAllRead.mutate()}
+                  disabled={markAllRead.isPending}
+                  className="text-xs text-grey-400 transition-colors hover:text-grey-100 disabled:opacity-50"
+                >
+                  Markeer alles als gelezen
+                </button>
+              )}
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
+                aria-label="Ververs meldingen"
+              >
+                <RefreshIcon spinning={isRefreshing} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-lg border border-grey-800 bg-grey-900 p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
                 </div>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        )}
 
-          {/* Infinite scroll sentinel */}
-          {hasNextPage && (
-            <div
-              ref={sentinelRef}
-              className="flex items-center justify-center py-4"
-            >
-              {isFetchingNextPage ? (
-                <div className="flex items-center gap-2 text-sm text-grey-400">
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                  Meer laden...
+        {/* Empty */}
+        {!isLoading && allChanges.length === 0 && (
+          <EmptyState
+            icon={<Bell size={32} />}
+            title="Geen meldingen"
+            description="Wijzigingen in bestemmingsplannen en vergunningen verschijnen hier zodra ze gedetecteerd worden."
+            action={{
+              label: 'Naar projecten',
+              onClick: () => navigate({ to: '/projecten' }),
+            }}
+          />
+        )}
+
+        {/* Feed grouped by date */}
+        {!isLoading && allChanges.length > 0 && (
+          isMobile ? (
+            <div className="space-y-6">
+              {sortedDates.map((dateKey) => {
+                const dateChanges = groupedChanges[dateKey]!
+                return (
+                  <div key={dateKey}>
+                    {/* Date header */}
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-overlay/[0.08]" />
+                      <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-grey-500">
+                        {formatTimelineDateLabel(dateKey).toUpperCase()}
+                      </h2>
+                      <div className="h-px flex-1 bg-overlay/[0.08]" />
+                    </div>
+
+                    {/* Changes for this date */}
+                    <div className="space-y-2.5">
+                      {dateChanges.map((change) => (
+                        <MeldingItem
+                          key={change.id}
+                          change={change}
+                          isExpanded={expandedId === change.id}
+                          isRead={readIds.has(change.id)}
+                          onToggle={() =>
+                            handleToggle(change.id, expandedId, setExpandedId)
+                          }
+                          onNavigate={navigate}
+                          onGenerateReport={handleGenerateReport}
+                          onGenerateReportByAddress={handleGenerateReportByAddress}
+                          generatingId={generatingId}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Infinite scroll sentinel */}
+              {hasNextPage && (
+                <div
+                  ref={sentinelRef}
+                  className="flex items-center justify-center py-4"
+                >
+                  {isFetchingNextPage ? (
+                    <div className="flex items-center gap-2 text-sm text-grey-400">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      Meer laden...
+                    </div>
+                  ) : (
+                    <span className="text-xs text-grey-600">Scroll voor meer</span>
+                  )}
                 </div>
-              ) : (
-                <span className="text-xs text-grey-600">Scroll voor meer</span>
               )}
             </div>
-          )}
-        </div>
-      )}
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
+              <div className="overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900">
+                <div className="max-h-[calc(100vh-280px)] overflow-y-auto p-3">
+                  <div className="space-y-5">
+                    {sortedDates.map((dateKey) => {
+                      const dateChanges = groupedChanges[dateKey]!
+                      return (
+                        <div key={dateKey}>
+                          <div className="mb-2 flex items-center gap-2">
+                            <div className="h-px flex-1 bg-overlay/[0.08]" />
+                            <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-grey-500">
+                              {formatTimelineDateLabel(dateKey).toUpperCase()}
+                            </h2>
+                            <div className="h-px flex-1 bg-overlay/[0.08]" />
+                          </div>
+                          <div className="space-y-1.5">
+                            {dateChanges.map((change) => (
+                              <MeldingInboxItem
+                                key={change.id}
+                                change={change}
+                                isActive={expandedId === change.id}
+                                isRead={readIds.has(change.id)}
+                                onClick={() => handleToggle(change.id, null, setExpandedId)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {hasNextPage && (
+                    <div
+                      ref={sentinelRef}
+                      className="mt-4 flex items-center justify-center py-2"
+                    >
+                      {isFetchingNextPage ? (
+                        <div className="flex items-center gap-2 text-xs text-grey-400">
+                          <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                          Meer laden...
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-grey-600">Scroll voor meer</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <MeldingDetailPanel
+                change={selectedChange}
+                onNavigate={navigate}
+                onGenerateReport={handleGenerateReport}
+                onGenerateReportByAddress={handleGenerateReportByAddress}
+                generatingId={generatingId}
+              />
+            </div>
+          )
+        )}
+      </div>
     </ResultsShell>
   )
 }
@@ -372,15 +491,20 @@ function MeldingItem({
   const hasMatches = pc > 0 || rc > 0
   const primaryParcelId =
     change.matched_parcel_id ?? matchedParcels[0]?.parcel_id ?? null
+  const normalizedAddress = change.address?.trim()
+  const primaryTitle = normalizedAddress && normalizedAddress.length > 0
+    ? normalizedAddress
+    : change.title
+  const secondaryTitle = normalizedAddress ? change.title : null
 
   return (
-    <div className="rounded-lg border border-grey-800 bg-grey-900 overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
       <button
         onClick={onToggle}
-        className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-grey-850"
+        className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-overlay/[0.04]"
       >
         {/* Type icon + unread dot */}
-        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-grey-700/30">
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-overlay/[0.08] bg-overlay/[0.04]">
           {change.change_type === 'permit' ? (
             <PermitIcon />
           ) : (
@@ -392,10 +516,14 @@ function MeldingItem({
         </div>
 
         <div className="min-w-0 flex-1">
-          {/* Title */}
-          <p className="line-clamp-2 text-sm font-medium text-grey-200">
-            {change.title}
+          <p className="text-[15px] font-semibold leading-snug text-grey-100">
+            {primaryTitle}
           </p>
+          {secondaryTitle && (
+            <p className="mt-1 line-clamp-2 text-sm leading-snug text-grey-400">
+              {secondaryTitle}
+            </p>
+          )}
 
           {/* Gemeente + project context */}
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -418,7 +546,7 @@ function MeldingItem({
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                 /verleend|vastgesteld/i.test(change.category_label)
                   ? 'bg-amber-accent/15 text-amber-accent'
-                  : 'bg-grey-800 text-grey-300'
+                  : 'bg-grey-800/80 text-grey-300'
               }`}>
                 {change.category_label}
               </span>
@@ -433,7 +561,7 @@ function MeldingItem({
             {hasMatches && (
               <div className="flex gap-1.5">
                 {pc > 0 && (
-                  <span className="inline-flex items-center rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">
+                  <span className="inline-flex items-center rounded-full border border-overlay/[0.1] bg-overlay/[0.05] px-2 py-0.5 text-[11px] font-medium text-grey-300">
                     {pc} {pc === 1 ? 'perceel' : 'percelen'}
                   </span>
                 )}
@@ -481,7 +609,7 @@ function MeldingItem({
           !!primaryParcelId && generatingId === primaryParcelId
 
         return (
-          <div className="border-t border-grey-800 bg-grey-900/50 px-4 py-3">
+          <div className="border-t border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
             <div className="flex items-start justify-between gap-4">
               {/* Left: details */}
               <div className="min-w-0 flex-1 space-y-2">
@@ -510,7 +638,7 @@ function MeldingItem({
                               },
                             })
                           }
-                          className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
+                          className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
                         >
                           <ParcelLinkIcon />
                           {m.address
@@ -549,7 +677,7 @@ function MeldingItem({
                     href={change.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-info hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-grey-300 hover:text-grey-100 hover:underline"
                   >
                     Bekijk officiële publicatie
                     <ExternalLinkIcon />
@@ -588,7 +716,7 @@ function MeldingItem({
                   }}
                   disabled={!canViewOnMap}
                   title={!canViewOnMap ? 'Adres/huisnummer ontbreekt' : undefined}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.05] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <MapPinIcon />
                   Bekijk op kaart
@@ -625,6 +753,313 @@ function MeldingItem({
           </div>
         )
       })()}
+    </div>
+  )
+}
+
+interface MeldingInboxItemProps {
+  change: ChangeRecord
+  isActive: boolean
+  isRead: boolean
+  onClick: () => void
+}
+
+function MeldingInboxItem({
+  change,
+  isActive,
+  isRead,
+  onClick,
+}: MeldingInboxItemProps) {
+  const address = change.address?.trim() || 'Adres onbekend'
+  const typeLabel = change.change_type === 'permit'
+    ? 'Omgevingsvergunning'
+    : 'Bestemmingsplan'
+  const summary = change.title?.trim() || 'Geen omschrijving'
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
+        isActive
+          ? 'border-amber-accent/40 bg-overlay/[0.06] ring-1 ring-inset ring-amber-accent/20'
+          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+      }`}
+    >
+      <span className={`absolute inset-y-0 left-0 w-0.5 ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
+      {!isRead && (
+        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-accent" />
+      )}
+      <p className="pr-4 text-sm font-semibold leading-snug text-grey-100">
+        {address}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs leading-snug text-grey-400">
+        {summary}
+      </p>
+      <div className="mt-2 flex items-center gap-2 text-[11px] text-grey-500">
+        <span>{typeLabel}</span>
+        {change.category_label && (
+          <>
+            <span className="text-grey-600">&middot;</span>
+            <span className={/verleend|vastgesteld/i.test(change.category_label) ? 'text-amber-accent' : 'text-grey-400'}>
+              {change.category_label}
+            </span>
+          </>
+        )}
+      </div>
+    </button>
+  )
+}
+
+interface MeldingDetailPanelProps {
+  change: ChangeRecord | null
+  onNavigate: ReturnType<typeof useNavigate>
+  onGenerateReport: (parcelId: string, projectId?: string) => Promise<void>
+  onGenerateReportByAddress: (input: {
+    postcode: string
+    huisnummer: number
+    projectId?: string
+  }) => Promise<void>
+  generatingId: string | null
+}
+
+function MeldingDetailPanel({
+  change,
+  onNavigate,
+  onGenerateReport,
+  onGenerateReportByAddress,
+  generatingId,
+}: MeldingDetailPanelProps) {
+  if (!change) {
+    return (
+      <div className="rounded-2xl border border-overlay/[0.08] bg-grey-900 p-6">
+        <p className="text-sm text-grey-500">Selecteer links een melding om details te zien.</p>
+      </div>
+    )
+  }
+
+  const matchedParcels = Array.isArray(change.matched_parcels)
+    ? change.matched_parcels
+    : []
+  const matchedReports = Array.isArray(change.matched_reports)
+    ? change.matched_reports
+    : []
+  const primaryParcelId =
+    change.matched_parcel_id ?? matchedParcels[0]?.parcel_id ?? null
+  const expandedHn =
+    change.huisnummer_hint ??
+    (change.address ? extractHuisnummer(change.address) : null)
+  const expandedCanNavigate = change.postcode && expandedHn
+  const canViewOnMap = Boolean(primaryParcelId || expandedCanNavigate)
+  const addressGenerateKey =
+    expandedCanNavigate
+      ? `addr:${change.postcode!.replace(/\s/g, '').toUpperCase()}:${expandedHn!}`
+      : null
+  const canGenerate = Boolean(primaryParcelId || expandedCanNavigate)
+  const isGeneratingAddress =
+    !!addressGenerateKey && generatingId === addressGenerateKey
+  const isGeneratingParcel =
+    !!primaryParcelId && generatingId === primaryParcelId
+  const detailAddress = change.address?.trim() || 'Adres onbekend'
+  const locationQualityLabel = primaryParcelId
+    ? 'Perceel gekoppeld'
+    : expandedCanNavigate
+      ? 'Adres-hint beschikbaar'
+      : 'Locatie onzeker'
+  const locationQualityClass = primaryParcelId
+    ? 'border-amber-accent/45 bg-amber-accent/15 text-amber-accent'
+    : expandedCanNavigate
+      ? 'border-overlay/[0.18] bg-overlay/[0.08] text-grey-200'
+      : 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-400'
+  const formattedPostcode = change.postcode ? formatPostcode(change.postcode) : null
+
+  const openOnMap = () => {
+    if (!canViewOnMap) return
+    if (primaryParcelId) {
+      onNavigate({
+        to: '/map',
+        search: {
+          parcel_id: primaryParcelId,
+          ...(matchedParcels[0]?.address
+            ? { fallback_address: matchedParcels[0].address }
+            : change.address
+              ? { fallback_address: change.address }
+              : {}),
+          _t: Date.now(),
+        },
+      })
+      return
+    }
+    onNavigate({
+      to: '/map',
+      search: {
+        postcode: formatPostcode(change.postcode!),
+        huisnummer: expandedHn!,
+        _t: Date.now(),
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+      <button
+        type="button"
+        onClick={openOnMap}
+        disabled={!canViewOnMap}
+        className="group relative h-40 w-full overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-850 text-left disabled:cursor-default"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(217,170,56,0.14),transparent_46%),radial-gradient(circle_at_70%_75%,rgba(255,255,255,0.07),transparent_40%)]" />
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+          }}
+        />
+        <div className={`absolute left-3 top-3 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${locationQualityClass}`}>
+          {locationQualityLabel}
+        </div>
+        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-200">
+          {matchedParcels.length}p
+          <span className="text-grey-500">/</span>
+          {matchedReports.length}r
+        </div>
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-amber-accent/35 bg-amber-accent/15 px-3 py-1.5 text-xs font-medium text-amber-accent">
+          <MapPinIcon />
+          {canViewOnMap ? 'Open op kaart' : 'Locatie melding'}
+        </div>
+        <span className="absolute bottom-3 left-3 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-300">
+          {change.gemeente_naam}
+        </span>
+        <span className="absolute bottom-3 right-3 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-300 transition-colors group-hover:text-grey-100">
+          {canViewOnMap ? 'Klik voor kaart' : 'Geen kaartmatch'}
+        </span>
+      </button>
+
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-semibold text-grey-100">{detailAddress}</h3>
+          {change.category_label && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              /verleend|vastgesteld/i.test(change.category_label)
+                ? 'bg-amber-accent/15 text-amber-accent'
+                : 'bg-grey-800/80 text-grey-300'
+            }`}>
+              {change.category_label}
+            </span>
+          )}
+          <span className="inline-flex items-center rounded-full border border-overlay/[0.1] bg-overlay/[0.05] px-2 py-0.5 text-xs text-grey-300">
+            {change.change_type === 'permit' ? 'Omgevingsvergunning' : 'Bestemmingsplan'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-grey-300">{change.title}</p>
+      </div>
+
+      <div className="grid gap-2 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3 sm:grid-cols-2">
+        <MetaRow label="Gemeente" value={change.gemeente_naam || '–'} />
+        <MetaRow label="Project" value={change.project_name || 'Niet gekoppeld'} />
+        <MetaRow label="Publicatiedatum" value={detailDateFmt.format(new Date(change.change_date))} />
+        <MetaRow label="Gedetecteerd" value={detailDateTimeFmt.format(new Date(change.detected_at))} />
+      </div>
+
+      <div className="grid gap-2 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3 sm:grid-cols-3">
+        <MetaRow label="Postcode" value={formattedPostcode || 'Onbekend'} />
+        <MetaRow label="Huisnummer" value={expandedHn ? String(expandedHn) : 'Onbekend'} />
+        <MetaRow
+          label="Matchstatus"
+          value={primaryParcelId ? 'Gekoppeld' : expandedCanNavigate ? 'Adreshint' : 'Geen match'}
+        />
+      </div>
+
+      {(matchedParcels.length > 0 || matchedReports.length > 0 || change.source_url) && (
+        <div className="space-y-1.5 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3">
+          {matchedParcels.map((m) => (
+            <button
+              key={m.parcel_id}
+              onClick={() =>
+                onNavigate({
+                  to: '/map',
+                  search: {
+                    parcel_id: m.parcel_id,
+                    ...(m.address ? { fallback_address: m.address } : {}),
+                    _t: Date.now(),
+                  },
+                })
+              }
+              className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
+            >
+              <ParcelLinkIcon />
+              {m.address ? `Perceel: ${m.address}` : `Perceel ${m.parcel_id}`}
+            </button>
+          ))}
+          {matchedReports.map((m) => (
+            <button
+              key={m.report_id}
+              onClick={() =>
+                onNavigate({
+                  to: '/rapport/$id',
+                  params: { id: m.report_id },
+                })
+              }
+              className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+            >
+              <ReportLinkIcon />
+              Rapport: {m.report_name}
+            </button>
+          ))}
+          {change.source_url && (
+            <a
+              href={change.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-grey-300 hover:text-grey-100 hover:underline"
+            >
+              Bekijk officiële publicatie
+              <ExternalLinkIcon />
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        <button
+          onClick={openOnMap}
+          disabled={!canViewOnMap}
+          className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.05] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MapPinIcon />
+          Toon op grote kaart
+        </button>
+
+        <button
+          onClick={() => {
+            if (!canGenerate) return
+            if (primaryParcelId) {
+              void onGenerateReport(primaryParcelId, change.project_id)
+              return
+            }
+            void onGenerateReportByAddress({
+              postcode: formatPostcode(change.postcode!),
+              huisnummer: expandedHn!,
+              projectId: change.project_id,
+            })
+          }}
+          disabled={!canGenerate || isGeneratingParcel || isGeneratingAddress}
+          className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent transition-colors hover:bg-amber-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ReportLinkIcon />
+          {isGeneratingParcel || isGeneratingAddress ? 'Bezig...' : 'Sla op in project +'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-grey-600">{label}</p>
+      <p className="mt-0.5 text-sm text-grey-200">{value}</p>
     </div>
   )
 }

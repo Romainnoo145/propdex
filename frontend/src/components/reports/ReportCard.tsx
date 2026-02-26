@@ -11,7 +11,7 @@ interface ReportCardProps {
  * Rich card for saved report with address, date, and freshness badge.
  *
  * Design: Industrial Amber card with:
- * - Freshness dot (gray for fresh, amber for stale)
+ * - Freshness dot (amber tint)
  * - Report name (address)
  * - Postcode + city
  * - Created date + completeness percentage
@@ -42,7 +42,7 @@ export default function ReportCard({
       <div className="flex items-start gap-2">
         <div
           className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
-            isStale ? 'bg-amber-accent' : 'bg-grey-800'
+            isStale ? 'bg-amber-accent' : 'bg-amber-accent/70'
           }`}
         />
         <div className="min-w-0 flex-1">
@@ -67,9 +67,11 @@ export default function ReportCard({
       </p>
 
       {/* Bottom row: Date | Completeness */}
-      <div className="mt-2 flex items-center justify-between text-xs text-grey-600">
-        <span>{formattedDate}</span>
-        <span>{Math.round(report.completeness_score * 100)}% compleet</span>
+      <div className="mt-2 flex items-center justify-between text-xs">
+        <span className="text-grey-600">{formattedDate}</span>
+        <span className="font-medium text-amber-accent">
+          {Math.round(report.completeness_score * 100)}% compleet
+        </span>
       </div>
     </div>
   )

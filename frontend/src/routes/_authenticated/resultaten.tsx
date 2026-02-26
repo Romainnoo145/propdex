@@ -1,23 +1,19 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
-import { Map } from 'lucide-react'
+import { ArrowLeft, Map, Search } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import ResultsShell from '@/components/layout/ResultsShell'
 import ResultsTable from '@/components/results/ResultsTable'
-import ResultsFilterPanel from '@/components/results/ResultsFilterPanel'
 import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
 import { BulkActionBar } from '@/components/results/BulkActionBar'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { useScanHistory } from '@/hooks/useScans'
 import type { ScanResultsFilters, ScanResultItem } from '@/lib/types/scan'
 
 interface ResultatenSearchParams {
   scan_id?: string
   highlight?: string // parcel_id to highlight (from bekendmaking link)
-  bestemming_type?: string
-  pand_status?: string
-  min_area_m2?: number
-  max_area_m2?: number
-  score_category?: string
+  parcel_q?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
   page?: number
@@ -28,20 +24,7 @@ export const Route = createFileRoute('/_authenticated/resultaten')({
   validateSearch: (search: Record<string, unknown>): ResultatenSearchParams => ({
     scan_id: typeof search.scan_id === 'string' ? search.scan_id : undefined,
     highlight: typeof search.highlight === 'string' ? search.highlight : undefined,
-    bestemming_type:
-      typeof search.bestemming_type === 'string'
-        ? search.bestemming_type
-        : undefined,
-    pand_status:
-      typeof search.pand_status === 'string' ? search.pand_status : undefined,
-    min_area_m2:
-      typeof search.min_area_m2 === 'number' ? search.min_area_m2 : undefined,
-    max_area_m2:
-      typeof search.max_area_m2 === 'number' ? search.max_area_m2 : undefined,
-    score_category:
-      typeof search.score_category === 'string'
-        ? search.score_category
-        : undefined,
+    parcel_q: typeof search.parcel_q === 'string' ? search.parcel_q : undefined,
     sort_by: typeof search.sort_by === 'string' ? search.sort_by : undefined,
     sort_order:
       search.sort_order === 'asc' || search.sort_order === 'desc'
@@ -54,6 +37,7 @@ export const Route = createFileRoute('/_authenticated/resultaten')({
 function ResultatenPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
+  const { data: scanHistoryData } = useScanHistory({ limit: 200 })
   const [total, setTotal] = useState(0)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
   const [selectedParcelIds, setSelectedParcelIds] = useState<string[]>([])
@@ -62,34 +46,21 @@ function ResultatenPage() {
   const isMobile = useIsMobile()
 
   const { scan_id } = search
+  const scans = scanHistoryData?.scans ?? []
+  const activeScan = useMemo(
+    () => scans.find((scan) => scan.scan_id === scan_id) ?? null,
+    [scans, scan_id]
+  )
+  const recentScans = useMemo(() => scans.slice(0, 8), [scans])
 
   // Derive filters from URL search params (memoized to prevent re-render loops)
   const filters: ScanResultsFilters = useMemo(() => ({
-    bestemming_type: search.bestemming_type,
-    pand_status: search.pand_status,
-    min_area_m2: search.min_area_m2,
-    max_area_m2: search.max_area_m2,
-    score_category: search.score_category,
+    search: search.parcel_q?.trim() || undefined,
     sort_by: search.sort_by ?? 'score',
     sort_order: search.sort_order ?? 'desc',
     offset: (search.page ?? 0) * 50,
     limit: 50,
-  }), [search.bestemming_type, search.pand_status, search.min_area_m2, search.max_area_m2, search.score_category, search.sort_by, search.sort_order, search.page])
-
-  const handleFilterChange = (newFilters: Partial<ScanResultsFilters>) => {
-    void navigate({
-      to: '/resultaten',
-      search: (prev) => ({
-        ...prev,
-        bestemming_type: newFilters.bestemming_type,
-        pand_status: newFilters.pand_status,
-        min_area_m2: newFilters.min_area_m2,
-        max_area_m2: newFilters.max_area_m2,
-        score_category: newFilters.score_category,
-        page: 0, // Reset page on filter change
-      }),
-    })
-  }
+  }), [search.parcel_q, search.sort_by, search.sort_order, search.page])
 
   const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
     void navigate({
@@ -110,41 +81,116 @@ function ResultatenPage() {
     })
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back()
+      return
+    }
+    void navigate({ to: '/projecten' })
+  }
+
+  const handleOpenScan = (nextScanId: string) => {
+    void navigate({
+      to: '/resultaten',
+      search: (prev) => ({
+        ...prev,
+        scan_id: nextScanId,
+        page: 0,
+      }),
+    })
+  }
+
+  const handleParcelSearchChange = (value: string) => {
+    void navigate({
+      to: '/resultaten',
+      search: (prev) => ({
+        ...prev,
+        parcel_q: value.trim() ? value : undefined,
+        page: 0,
+      }),
+      replace: true,
+    })
+  }
+
   return (
-    <ResultsShell fullWidth>
-      <div className="flex flex-col h-full">
+    <ResultsShell fullWidth className="scrollbar-hidden">
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-overlay/5 bg-grey-900 shrink-0">
-          <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
-          <button
-            onClick={() => navigate({ to: '/map', search: scan_id ? { scan_id } : {} })}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-600 hover:text-grey-300 border border-overlay/5 rounded-md hover:border-overlay/10 transition-colors min-h-[44px]"
-          >
-            <Map size={14} />
-            <span className="hidden md:inline">Toon Kaart</span>
-          </button>
+        <div className="shrink-0 rounded-2xl border border-overlay/[0.08] bg-grey-900 px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleBack}
+              className="inline-flex items-center gap-1.5 rounded-md border border-overlay/5 px-3 py-1.5 text-xs font-medium text-grey-400 transition-colors hover:border-overlay/10 hover:text-grey-200 min-h-[44px]"
+            >
+              <ArrowLeft size={14} />
+              Terug
+            </button>
+            <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
+            {activeScan && (
+              <p className="text-xs text-grey-500">
+                {dateFmt.format(new Date(activeScan.scan_date))} · {activeScan.status} · {activeScan.parcel_count} percelen
+              </p>
+            )}
+          </div>
+          <div className="mt-3 rounded-md border border-overlay/5 bg-grey-850 p-2.5">
+            <label htmlFor="parcel-search-results" className="sr-only">
+              Zoek percelen
+            </label>
+            <div className="relative">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-grey-600" />
+              <input
+                id="parcel-search-results"
+                type="search"
+                value={search.parcel_q ?? ''}
+                onChange={(e) => handleParcelSearchChange(e.target.value)}
+                placeholder="Zoek percelen (adres, perceelcode, status)"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="w-full rounded-md border border-grey-700 bg-grey-900 py-2 pl-9 pr-3 text-xs text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/50 focus:outline-none"
+              />
+            </div>
+            {recentScans.length > 0 && (
+              <div className="scrollbar-hidden mt-2 max-h-36 space-y-1 overflow-auto">
+                <p className="px-1 text-[11px] uppercase tracking-wide text-grey-600">Recente scans</p>
+                {recentScans.map((scan) => {
+                  const isActive = scan.scan_id === scan_id
+                  return (
+                    <button
+                      key={scan.scan_id}
+                      onClick={() => handleOpenScan(scan.scan_id)}
+                      className={`flex w-full items-center justify-between rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                        isActive
+                          ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
+                          : 'border-overlay/5 bg-grey-900 text-grey-300 hover:bg-grey-800'
+                      }`}
+                    >
+                      <span className="truncate">
+                        {dateFmt.format(new Date(scan.scan_date))} · {scan.status} · {(scan.wijk_naam ?? scan.gemeente_naam)}
+                      </span>
+                      <span className="ml-2 shrink-0 tabular-nums text-[11px] text-grey-500">
+                        {scan.parcel_count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile read-only banner — explains scan/export are desktop-only (MOB-01) */}
         {isMobile && (
-          <div className="mx-4 mt-3 rounded-md bg-amber-accent/10 border border-amber-accent/30 px-3 py-2 text-xs text-amber-accent shrink-0">
+          <div className="mt-3 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-2 text-xs text-amber-accent shrink-0">
             Gebruik desktop voor scannen en exporteren
           </div>
         )}
 
         {scan_id ? (
           <>
-            {/* Filter panel */}
-            <div className="shrink-0">
-              <ResultsFilterPanel
-                filters={filters}
-                onChange={handleFilterChange}
-                total={total}
-              />
-            </div>
-
             {/* Results table — fills remaining height */}
-            <div className="flex-1 overflow-hidden">
+            <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900">
               <ResultsTable
                 scanId={scan_id}
                 filters={filters}
@@ -219,3 +265,9 @@ function ResultatenPage() {
     </ResultsShell>
   )
 }
+
+const dateFmt = new Intl.DateTimeFormat('nl-NL', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})

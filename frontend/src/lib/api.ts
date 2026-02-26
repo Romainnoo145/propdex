@@ -684,6 +684,7 @@ export async function fetchScanResults(
 
   if (filters.has_pand !== undefined)
     params.set('has_pand', filters.has_pand.toString())
+  if (filters.search) params.set('search', filters.search)
   if (filters.bestemming_type) params.set('bestemming_type', filters.bestemming_type)
   if (filters.min_area_m2 !== undefined)
     params.set('min_area_m2', filters.min_area_m2.toString())
@@ -713,7 +714,8 @@ export async function fetchScanResults(
  * @returns Tile URL template with {z}/{x}/{y} placeholders
  */
 export function getScanTileUrl(scanId: string): string {
-  return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf`
+  const TILE_SCHEMA_VERSION = '2'
+  return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf?v=${TILE_SCHEMA_VERSION}`
 }
 
 /**
@@ -750,8 +752,24 @@ export async function fetchWijken(
 export async function fetchParcelCentroid(
   parcelId: string,
   accessToken: string | null
-): Promise<{ lng: number; lat: number; address: string | null }> {
-  return apiFetch<{ lng: number; lat: number; address: string | null }>(
+): Promise<{
+  lng: number
+  lat: number
+  address: string | null
+  parcel_code?: string | null
+  gemeente_code?: string | null
+  area_m2?: number | null
+  geometry?: GeoJSON.Geometry | null
+}> {
+  return apiFetch<{
+    lng: number
+    lat: number
+    address: string | null
+    parcel_code?: string | null
+    gemeente_code?: string | null
+    area_m2?: number | null
+    geometry?: GeoJSON.Geometry | null
+  }>(
     `${SCANS_BASE}/parcels/${parcelId}/centroid`,
     { method: 'GET', accessToken }
   )

@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react'
-import type { useNavigate as UseNavigateType } from '@tanstack/react-router'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { UnreadDetailResponse } from '@/lib/types/monitoring'
 import { useQueryClient } from '@tanstack/react-query'
@@ -8,41 +7,36 @@ import { useProjectChanges, useRefreshMonitoring } from '@/hooks/useNotification
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { WijkCard } from './WijkCard'
 import { WijkCardGrid } from './WijkCardGrid'
+import { WijkDetailView } from './WijkDetailView'
 
 interface GemeenteDetailViewProps {
   gemeente: ProjectResponse
   wijkProjects: ProjectResponse[]
   unreadData: UnreadDetailResponse | undefined
   gemeenteGeojson: GeoJSON.FeatureCollection | null
-  navigate: ReturnType<typeof UseNavigateType>
 }
 
 /**
  * Detail view for a selected gemeente.
  *
  * Shows:
- * 1. Summary stat bar (wijken, rapporten, meldingen)
- * 2. Wijk card grid for drill-down (reports live per-wijk in WijkDetailView)
- * 3. Meldingen timeline at bottom (gemeente-level, not per-wijk)
+ * 1. Wijk workspace (left select list + right wijk detail panel)
+ * 2. Meldingen timeline at bottom (gemeente-level, not per-wijk)
  */
 export function GemeenteDetailView({
   gemeente,
   wijkProjects,
   unreadData,
   gemeenteGeojson,
-  navigate,
 }: GemeenteDetailViewProps) {
   const queryClient = useQueryClient()
   const wijkenCount = wijkProjects.length
-  // Include reports from both gemeente project and all wijk children
-  const rapportenCount =
-    gemeente.report_count +
-    wijkProjects.reduce((sum, wijk) => sum + wijk.report_count, 0)
   // Total meldingen and unread count
   const { data: changesData } = useProjectChanges(gemeente.id)
   const refreshMonitoring = useRefreshMonitoring()
 
   const [isSpinning, setIsSpinning] = useState(false)
+  const [selectedWijkId, setSelectedWijkId] = useState<string | null>(null)
   const handleRefresh = useCallback(async () => {
     setIsSpinning(true)
     const minDuration = new Promise((r) => setTimeout(r, 500))
@@ -60,8 +54,19 @@ export function GemeenteDetailView({
           `Refresh voltooid: ${result.new_changes} ${result.new_changes === 1 ? 'nieuwe melding' : 'nieuwe meldingen'} gevonden`
         )
       } else {
-        toast.info('Refresh voltooid: geen nieuwe meldingen gevonden')
+        const checked = result?.total_detected ?? 0
+        toast.info(
+          checked > 0
+            ? `Refresh voltooid: geen nieuwe meldingen (${checked} bestaande gecontroleerd)`
+            : 'Refresh voltooid: geen meldingen gevonden voor deze gemeente'
+        )
       }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Verversen van meldingen mislukt'
+      )
     } finally {
       setIsSpinning(false)
     }
@@ -69,19 +74,26 @@ export function GemeenteDetailView({
   const meldingenCount = changesData?.total ?? 0
   const gemeenteUnread =
     unreadData?.per_project.find((p) => p.project_id === gemeente.id)?.unread_count ?? 0
+  const selectedWijk = useMemo(
+    () => wijkProjects.find((wijk) => wijk.id === selectedWijkId) ?? wijkProjects[0] ?? null,
+    [wijkProjects, selectedWijkId]
+  )
+
+  useEffect(() => {
+    if (wijkProjects.length === 0) {
+      if (selectedWijkId !== null) setSelectedWijkId(null)
+      return
+    }
+    if (!selectedWijkId || !wijkProjects.some((wijk) => wijk.id === selectedWijkId)) {
+      setSelectedWijkId(wijkProjects[0]!.id)
+    }
+  }, [wijkProjects, selectedWijkId])
 
   return (
     <div className="space-y-6">
-      {/* Stat bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard value={wijkenCount} label="Wijken" />
-        <StatCard value={rapportenCount} label="Rapporten" />
-        <StatCard value={meldingenCount} label="Meldingen" highlight={gemeenteUnread > 0} />
-      </div>
-
       {/* Wijk cards — primary content, reports live per-wijk in WijkDetailView */}
-      <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+      <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent/70">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
@@ -90,32 +102,45 @@ export function GemeenteDetailView({
           <span className="ml-auto text-xs text-grey-600">{wijkenCount}</span>
         </div>
         <div className="p-4">
-          <WijkCardGrid
-            gemeente={gemeente}
-            wijkProjects={wijkProjects}
-            unreadData={unreadData}
-            gemeenteGeojson={gemeenteGeojson}
-            renderCard={(wijk, svgData, unreadCount) => (
-              <WijkCard
-                key={wijk.id}
-                wijk={wijk}
-                svgData={svgData}
-                unreadCount={unreadCount}
-                onClick={() =>
-                  navigate({
-                    to: '/projecten',
-                    search: { gemeente_id: gemeente.id, wijk_id: wijk.id },
-                  })
-                }
-              />
-            )}
-          />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
+            <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+              <div className="max-h-[660px] overflow-y-auto p-3">
+                <WijkCardGrid
+                  gemeente={gemeente}
+                  wijkProjects={wijkProjects}
+                  unreadData={unreadData}
+                  gemeenteGeojson={gemeenteGeojson}
+                  layout="list"
+                  renderCard={(wijk, svgData, unreadCount) => (
+                    <WijkCard
+                      key={wijk.id}
+                      wijk={wijk}
+                      svgData={svgData}
+                      unreadCount={unreadCount}
+                      isActive={selectedWijk?.id === wijk.id}
+                      onClick={() => setSelectedWijkId(wijk.id)}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+              {selectedWijk ? (
+                <WijkDetailView gemeente={gemeente} wijk={selectedWijk} />
+              ) : (
+                <p className="text-sm text-grey-500">
+                  Geen wijken gevonden voor deze gemeente.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Meldingen — gemeente-level (not per-wijk), shown at bottom */}
-      <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+      <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent/70">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -138,7 +163,11 @@ export function GemeenteDetailView({
             <span className="text-xs text-grey-600">{meldingenCount}</span>
           )}
         </div>
-        <ChangeTimeline projectId={gemeente.id} unreadCount={gemeenteUnread} />
+        <ChangeTimeline
+          projectId={gemeente.id}
+          unreadCount={gemeenteUnread}
+          variant="inbox"
+        />
       </section>
     </div>
   )
@@ -158,26 +187,5 @@ function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
       <polyline points="23 4 23 10 17 10" />
       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
     </svg>
-  )
-}
-
-function StatCard({
-  value,
-  label,
-  highlight = false,
-}: {
-  value: number
-  label: string
-  highlight?: boolean
-}) {
-  return (
-    <div className="rounded-xl border border-overlay/5 bg-grey-900 px-6 py-5">
-      <p
-        className={`text-2xl font-semibold ${highlight ? 'text-amber-accent' : 'text-grey-100'}`}
-      >
-        {value}
-      </p>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-grey-600">{label}</p>
-    </div>
   )
 }

@@ -172,6 +172,18 @@ class ScanResultItem(BaseModel):
         default=None,
         description="Per-factor score contributions for transparency",
     )
+    vacancy_signal: str | None = Field(
+        default=None,
+        description="Vacancy classification: leeg_perceel, leegstaand_pand, in_gebruik, onbekend",
+    )
+    opportunity_signals: list[str] | None = Field(
+        default=None,
+        description="Human-readable development opportunity signals",
+    )
+    building_metrics: dict | None = Field(
+        default=None,
+        description="Zoning build metrics (e.g., max_bebouwingspercentage, max_floor_area_ratio)",
+    )
 
 
 class ScanResultsResponse(BaseModel):
@@ -183,6 +195,10 @@ class ScanResultsResponse(BaseModel):
     gemeente_naam: str = Field(
         description="Gemeente display name",
     )
+    wijk_naam: str | None = Field(
+        default=None,
+        description="CBS wijk name (if scan was wijk-scoped)",
+    )
     scan_date: datetime = Field(
         description="Scan creation timestamp",
     )
@@ -191,7 +207,7 @@ class ScanResultsResponse(BaseModel):
         ge=0,
     )
     total: int = Field(
-        description="Total qualifying results (before pagination)",
+        description="Total ranked results (before pagination)",
         ge=0,
     )
     offset: int = Field(
@@ -224,6 +240,21 @@ class ParcelEnrichmentResponse(BaseModel):
     is_cached: bool = Field(
         default=False,
         description="True if returned from cache, False if freshly fetched",
+    )
+
+
+class ParcelCentroidResponse(BaseModel):
+    """Parcel centroid and optional geometry metadata for map focus flows."""
+
+    lng: float = Field(description="Centroid longitude in WGS84")
+    lat: float = Field(description="Centroid latitude in WGS84")
+    address: str | None = Field(default=None, description="Display address")
+    parcel_code: str | None = Field(default=None, description="Kadastrale aanduiding")
+    gemeente_code: str | None = Field(default=None, description="CBS gemeentecode")
+    area_m2: float | None = Field(default=None, description="Parcel area in m2")
+    geometry: dict | None = Field(
+        default=None,
+        description="Parcel geometry as GeoJSON (WGS84)",
     )
 
 

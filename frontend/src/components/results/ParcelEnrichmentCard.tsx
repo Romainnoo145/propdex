@@ -3,6 +3,7 @@ import type { ParcelEnrichmentResponse } from '@/lib/types/scan'
 interface ParcelEnrichmentCardProps {
   data: ParcelEnrichmentResponse | undefined
   isLoading: boolean
+  error?: string | null
 }
 
 /**
@@ -14,7 +15,18 @@ interface ParcelEnrichmentCardProps {
 export function ParcelEnrichmentCard({
   data,
   isLoading,
+  error,
 }: ParcelEnrichmentCardProps) {
+  const formatEnrichmentError = (message: string): { text: string; tone: 'error' | 'muted' } => {
+    if (message.toLowerCase().includes('postcode niet gevonden in adres')) {
+      return {
+        text: 'Adres mist postcode; vergunningen kunnen nog niet gekoppeld worden voor dit perceel.',
+        tone: 'muted',
+      }
+    }
+    return { text: message, tone: 'error' }
+  }
+
   // Loading state - show animated skeleton
   if (isLoading) {
     return (
@@ -27,13 +39,28 @@ export function ParcelEnrichmentCard({
   }
 
   // No data yet
-  if (!data) return null
+  if (!data) {
+    if (error) {
+      const formatted = formatEnrichmentError(error)
+      return (
+        <div className="bg-grey-850 rounded-lg border border-grey-800 p-4">
+          <p className={`text-sm ${formatted.tone === 'error' ? 'text-error' : 'text-grey-400'}`}>
+            {formatted.text}
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
 
   // Error in enrichment
   if (data.enrichment_data?.error) {
+    const formatted = formatEnrichmentError(data.enrichment_data.error)
     return (
       <div className="bg-grey-850 rounded-lg border border-grey-800 p-4">
-        <p className="text-sm text-error">{data.enrichment_data.error}</p>
+        <p className={`text-sm ${formatted.tone === 'error' ? 'text-error' : 'text-grey-400'}`}>
+          {formatted.text}
+        </p>
       </div>
     )
   }

@@ -1,5 +1,7 @@
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
+import { useParcelEnrichment } from '@/hooks/useScans'
+import { ParcelEnrichmentCard } from '@/components/results/ParcelEnrichmentCard'
 import { toast } from 'sonner'
 import { X, FileText } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
@@ -27,6 +29,10 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
   useEscapeKey(onClose, isOpen)
 
   const generateReport = useGenerateReportFromParcel()
+  const enrichment = useParcelEnrichment(
+    isOpen && parcel?.parcel_id ? parcel.parcel_id : null,
+    { enabled: isOpen && !!parcel?.parcel_id }
+  )
 
   const handleGenerateReport = async () => {
     if (!parcel?.parcel_id) return
@@ -102,7 +108,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
               <div>
                 <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Oppervlakte</p>
                 <p className="text-sm text-grey-100 mt-0.5">
-                  {parcel.area_m2.toLocaleString('nl-NL')} m&sup2;
+                  {Math.round(parcel.area_m2).toLocaleString('nl-NL')} m&sup2;
                 </p>
               </div>
             )}
@@ -128,6 +134,39 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
               <div>
                 <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Pandstatus</p>
                 <p className="text-sm text-grey-100 mt-0.5 capitalize">{parcel.pand_status}</p>
+              </div>
+            )}
+
+            {/* Vacancy signal */}
+            {parcel.vacancy_signal && (
+              <div>
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Leegstandsignaal</p>
+                <p className="text-sm text-grey-100 mt-0.5">
+                  {{
+                    leeg_perceel: 'Leeg perceel',
+                    leegstaand_pand: 'Leegstaand pand',
+                    in_gebruik: 'Pand in gebruik',
+                    onbekend: 'Onbekend',
+                  }[parcel.vacancy_signal] ?? parcel.vacancy_signal}
+                </p>
+              </div>
+            )}
+
+            {/* Build metrics */}
+            {(((parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)?.max_bebouwingspercentage ?? null) != null ||
+              ((parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)?.max_floor_area_ratio ?? null) != null) && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwregels</p>
+                {(parcel.building_metrics as { max_bebouwingspercentage?: number | null }).max_bebouwingspercentage != null && (
+                  <p className="text-sm text-grey-100">
+                    Max bebouwings%: {(parcel.building_metrics as { max_bebouwingspercentage: number }).max_bebouwingspercentage.toFixed(1)}%
+                  </p>
+                )}
+                {(parcel.building_metrics as { max_floor_area_ratio?: number | null }).max_floor_area_ratio != null && (
+                  <p className="text-sm text-grey-100">
+                    Max FAR: {(parcel.building_metrics as { max_floor_area_ratio: number }).max_floor_area_ratio.toFixed(2)}
+                  </p>
+                )}
               </div>
             )}
 
@@ -158,6 +197,32 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
                 </span>
               </div>
             )}
+
+            {/* Opportunity signals */}
+            {parcel.opportunity_signals && parcel.opportunity_signals.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwpotentie signalen</p>
+                <div className="mt-1 space-y-1">
+                  {parcel.opportunity_signals.map((signal) => (
+                    <p key={signal} className="text-sm text-grey-100">
+                      {signal}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vergunningen (on-demand SRU enrichment) */}
+            <div>
+              <p className="text-xs font-medium text-grey-400 uppercase tracking-wider mb-1.5">
+                Vergunningen
+              </p>
+              <ParcelEnrichmentCard
+                data={enrichment.data}
+                isLoading={enrichment.isLoading}
+                error={enrichment.error?.message ?? null}
+              />
+            </div>
 
             {/* Generate Report Action */}
             <button

@@ -15,15 +15,7 @@ export const Route = createFileRoute('/_authenticated/projecten')({
 
 function ProjectenPage() {
   return (
-    <ResultsShell>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-grey-100">Projecten</h1>
-        <p className="mt-1 text-grey-400">
-          Organiseer je rapporten in projectmappen
-        </p>
-      </div>
-
+    <ResultsShell contentClassName="max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Project list */}
       <ProjectList />
     </ResultsShell>

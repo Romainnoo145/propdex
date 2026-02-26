@@ -5,6 +5,7 @@ import PropertySection from './PropertySection';
 import { FreshnessIndicator, FRESHNESS_THRESHOLDS } from './FreshnessIndicator';
 import { SourceBadge } from './SourceBadge';
 import { ConfidenceBadge } from './ConfidenceBadge';
+import { splitZoningPlans } from '@/lib/zoningPlans';
 
 interface PropertyDetailDrawerProps {
   data: PropertyReportResponse | null;
@@ -407,6 +408,8 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
     );
   }
 
+  const { actionablePlans, policyPlans } = splitZoningPlans(zoning.plans);
+
   return (
     <div className="space-y-3">
       {/* Primary bestemming */}
@@ -508,12 +511,12 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
       )}
 
       {/* Zoning plans */}
-      {zoning.plans && zoning.plans.length > 0 && (
+      {actionablePlans.length > 0 && (
         <div className="space-y-2">
           <div className="text-grey-400 text-xs uppercase tracking-wide font-medium">
-            Plannen op locatie ({zoning.plans.length})
+            Plannen op locatie ({actionablePlans.length})
           </div>
-          {zoning.plans.map((plan, idx) => (
+          {actionablePlans.map((plan, idx) => (
             <div
               key={idx}
               className="bg-grey-850 rounded-lg p-3 space-y-2 border border-grey-800"
@@ -552,6 +555,26 @@ function BestemmingContent({ data }: { data: PropertyReportResponse }) {
             </div>
           ))}
         </div>
+      )}
+
+      {policyPlans.length > 0 && (
+        <details className="bg-grey-850 rounded-lg border border-grey-800">
+          <summary className="cursor-pointer px-3 py-2 text-grey-400 text-xs uppercase tracking-wide font-medium">
+            Beleidskaders (niet perceelspecifiek) ({policyPlans.length})
+          </summary>
+          <div className="space-y-2 border-t border-grey-800 px-3 py-2">
+            {policyPlans.map((plan, idx) => (
+              <div key={idx} className="rounded border border-grey-800 bg-grey-900/40 px-2.5 py-2">
+                <div className="text-grey-100 text-sm font-medium">{plan.plan_naam}</div>
+                <div className="text-grey-500 text-xs mt-0.5">
+                  {[plan.plan_status, plan.plan_type, plan.plan_datum ? new Date(plan.plan_datum).toLocaleDateString('nl-NL') : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Data gaps */}

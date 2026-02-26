@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { uploadBestemmingsplanPDF } from '@/lib/api'
+import { splitZoningPlans } from '@/lib/zoningPlans'
 import type { PropertyReportResponse } from '@/lib/types/property'
 
 interface ReportDetailPageProps {
@@ -82,6 +83,16 @@ function getStatusInfo(status: string | null | undefined) {
   }
 }
 
+function formatArea(value: number | null | undefined): string {
+  if (value == null) return '–'
+  return `${Math.round(value).toLocaleString('nl-NL')} m²`
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null) return '–'
+  return `EUR ${Math.round(value).toLocaleString('nl-NL')}`
+}
+
 export default function ReportDetailPage({
   data,
   isLoading,
@@ -91,14 +102,20 @@ export default function ReportDetailPage({
   if (isLoading) {
     return (
       <div className="h-full overflow-y-auto bg-grey-950">
-        <div className="mx-auto max-w-4xl px-8 py-10">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 w-48 rounded bg-grey-800" />
-            <div className="h-32 rounded-xl bg-grey-800/50" />
-            <div className="grid grid-cols-4 gap-4">
+            <div className="h-40 rounded-2xl bg-grey-800/50" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-grey-800/50" />)}
             </div>
-            {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-grey-800/50" />)}
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-xl bg-grey-800/50" />)}
+              </div>
+              <div className="space-y-4">
+                {[1, 2].map((i) => <div key={i} className="h-36 rounded-xl bg-grey-800/50" />)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -108,7 +125,7 @@ export default function ReportDetailPage({
   if (!data) {
     return (
       <div className="h-full overflow-y-auto bg-grey-950">
-        <div className="mx-auto max-w-4xl px-8 py-10 text-center">
+        <div className="mx-auto max-w-7xl px-4 py-8 text-center sm:px-6 lg:px-8">
           <p className="text-grey-600">Rapport niet gevonden</p>
           <button onClick={onBack} className="mt-4 text-sm text-grey-400 underline hover:text-grey-100">
             Terug naar projecten
@@ -121,36 +138,82 @@ export default function ReportDetailPage({
   const { address, building, monuments, ai_parsing, completeness_score } = data
   const statusInfo = getStatusInfo(building?.status)
   const isActionableStatus = statusInfo && statusInfo.severity !== 'low'
+  const completenessPct = Math.round(completeness_score * 100)
 
   return (
     <div className="h-full overflow-y-auto bg-grey-950">
-      <div className="mx-auto max-w-4xl px-8 py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <button
-              onClick={onBack}
-              className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
-            >
-              <ArrowLeftIcon />
-              Terug naar projecten
-            </button>
-            <h1 className="text-2xl font-semibold text-grey-100">
-              {address.straat} {address.huisnummer}
-              {address.huisletter ?? ''}{address.toevoeging ?? ''}
-            </h1>
-            <p className="mt-1 text-grey-600">
-              {address.postcode}, {address.woonplaats}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onViewOnMap}
-              className="flex items-center gap-2 rounded-lg border border-overlay/5 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.04] hover:text-grey-100"
-            >
-              <MapPinIcon />
-              Bekijk op kaart
-            </button>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="relative mb-6 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900 px-5 py-5 sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-amber-accent/10 blur-3xl" />
+          <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-overlay/[0.04] blur-3xl" />
+          <div className="relative">
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <button
+                  onClick={onBack}
+                  className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
+                >
+                  <ArrowLeftIcon />
+                  Terug naar projecten
+                </button>
+                <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">
+                  {address.straat} {address.huisnummer}
+                  {address.huisletter ?? ''}{address.toevoeging ?? ''}
+                </h1>
+                <p className="mt-1 text-grey-600">
+                  {address.postcode}, {address.woonplaats}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  {statusInfo && (
+                    <span className={`rounded-full border px-2.5 py-1 font-medium ${
+                      statusInfo.severity === 'high'
+                        ? 'border-amber-accent/35 bg-amber-accent/10 text-amber-accent'
+                        : statusInfo.severity === 'medium'
+                          ? 'border-overlay/15 bg-overlay/[0.06] text-grey-300'
+                          : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
+                    }`}>
+                      {statusInfo.label}
+                    </span>
+                  )}
+                  <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
+                    {data.cadastral_parcels.length} percelen gekoppeld
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={onViewOnMap}
+                className="inline-flex items-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+              >
+                <MapPinIcon />
+                Bekijk op kaart
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <MetricCard
+                label="Bouwjaar"
+                value={building?.bouwjaar?.toString() ?? '–'}
+                sublabel={building?.bouwjaar ? `${new Date().getFullYear() - building.bouwjaar} jaar oud` : undefined}
+                icon={<CalendarIcon />}
+              />
+              <MetricCard
+                label="Vloeroppervlak"
+                value={formatArea(building?.oppervlakte)}
+                sublabel="gebruiksoppervlakte"
+                icon={<ScaleIcon />}
+              />
+              <MetricCard
+                label="Gebruiksdoel"
+                value={building?.gebruiksdoel?.[0] ?? '–'}
+                icon={<BuildingIcon />}
+              />
+              <MetricCard
+                label="Compleetheid"
+                value={`${completenessPct}%`}
+                bar={completeness_score}
+                icon={<SparkIcon />}
+              />
+            </div>
           </div>
         </div>
 
@@ -183,48 +246,35 @@ export default function ReportDetailPage({
           </div>
         )}
 
-        {/* Quick facts */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <MetricCard
-            label="Bouwjaar"
-            value={building?.bouwjaar?.toString() ?? '–'}
-            sublabel={building?.bouwjaar ? `${new Date().getFullYear() - building.bouwjaar} jaar oud` : undefined}
-          />
-          <MetricCard
-            label="Vloeroppervlak"
-            value={building?.oppervlakte ? `${building.oppervlakte} m²` : '–'}
-            sublabel="gebruiksoppervlakte"
-          />
-          <MetricCard
-            label="Gebruiksdoel"
-            value={building?.gebruiksdoel?.[0] ?? '–'}
-          />
-          <MetricCard
-            label="Compleetheid"
-            value={`${Math.round(completeness_score * 100)}%`}
-            bar={completeness_score}
-          />
-        </div>
-
-        {/* Sections */}
-        <div className="space-y-5">
-          <GebouwSection data={data} />
-          <KadasterSection data={data} />
-          <WOZSection data={data} />
-          <EnergyLabelSection data={data} />
-          <BRKOwnershipSection data={data} />
-          <BestemmingSection data={data} />
-          <MonumentSection data={data} />
-          {ai_parsing?.parsed_plan && ai_parsing.status === 'complete' ? (
-            <AIInterpretatieSection data={data} />
-          ) : (
-            <PDFUploadSection data={data} />
-          )}
-          <BronnenSection data={data} />
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+          <div className="space-y-5">
+            <GebouwSection data={data} />
+            <KadasterSection data={data} />
+            <WOZSection data={data} />
+            <EnergyLabelSection data={data} />
+            <BRKOwnershipSection data={data} />
+            <BestemmingSection data={data} />
+            {ai_parsing?.parsed_plan && ai_parsing.status === 'complete' ? (
+              <AIInterpretatieSection data={data} />
+            ) : (
+              <PDFUploadSection data={data} />
+            )}
+          </div>
+          <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
+            <ReportMetaCard
+              resolvedAt={data.resolved_at}
+              status={statusInfo?.label}
+              completenessPct={completenessPct}
+              parcelCount={data.cadastral_parcels.length}
+              onViewOnMap={onViewOnMap}
+            />
+            <MonumentSection data={data} />
+            <BronnenSection data={data} />
+          </aside>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 border-t border-overlay/5 pt-4 text-center text-xs text-grey-600">
+        <div className="mt-8 border-t border-overlay/[0.08] pt-4 text-center text-xs text-grey-600">
           Rapport gegenereerd op {dateFmtFull.format(new Date(data.resolved_at))}
         </div>
       </div>
@@ -244,13 +294,13 @@ function SignalBanner({
   documentnummer: string | null | undefined
 }) {
   const isHigh = statusInfo.severity === 'high'
-  const borderColor = isHigh ? 'border-amber-accent/30' : 'border-overlay/10'
-  const bgColor = isHigh ? 'bg-amber-accent/[0.06]' : 'bg-overlay/[0.03]'
+  const borderColor = isHigh ? 'border-amber-accent/30' : 'border-overlay/[0.08]'
+  const bgColor = isHigh ? 'bg-amber-accent/[0.06]' : 'bg-overlay/[0.04]'
   const iconBg = isHigh ? 'bg-amber-accent/15' : 'bg-overlay/[0.06]'
   const titleColor = isHigh ? 'text-amber-accent' : 'text-grey-300'
 
   return (
-    <div className={`mb-6 rounded-xl border ${borderColor} ${bgColor} px-5 py-4`}>
+    <div className={`mb-6 rounded-2xl border ${borderColor} ${bgColor} px-5 py-4`}>
       <div className="flex items-start gap-3">
         <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
           <AlertIcon />
@@ -280,31 +330,128 @@ function SignalBanner({
 
 /* ─── Metric Card ───────────────────────────────────────────── */
 
-function MetricCard({ label, value, sublabel, bar }: { label: string; value: string; sublabel?: string; bar?: number }) {
+function MetricCard({
+  label,
+  value,
+  sublabel,
+  bar,
+  icon,
+}: {
+  label: string
+  value: string
+  sublabel?: string
+  bar?: number
+  icon?: React.ReactNode
+}) {
   return (
-    <div className="rounded-xl border border-overlay/5 bg-grey-900 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-grey-600">{label}</p>
-      <p className="mt-1 truncate text-lg font-semibold text-grey-100">{value}</p>
+    <div className="rounded-xl border border-overlay/[0.08] bg-overlay/[0.04] px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-grey-600">{label}</p>
+        {icon && <span className="text-grey-500">{icon}</span>}
+      </div>
+      <p className="mt-1 truncate text-2xl font-semibold leading-none text-grey-100">{value}</p>
       {sublabel && <p className="mt-0.5 text-xs text-grey-600">{sublabel}</p>}
       {bar !== undefined && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-grey-800">
-          <div
-            className="h-full rounded-full bg-amber-accent transition-all"
-            style={{ width: `${bar * 100}%`, opacity: bar >= 0.8 ? 1 : bar >= 0.5 ? 0.7 : 0.4 }}
-          />
+        <div className="mt-3 flex items-center gap-2.5">
+          <CompletenessRing value={bar} />
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-grey-800/80">
+            <div
+              className="h-full rounded-full bg-amber-accent transition-all"
+              style={{ width: `${bar * 100}%`, opacity: bar >= 0.8 ? 1 : bar >= 0.5 ? 0.75 : 0.45 }}
+            />
+          </div>
         </div>
       )}
     </div>
   )
 }
 
+function CompletenessRing({ value }: { value: number }) {
+  const safeValue = Math.max(0, Math.min(1, value))
+  const percentage = Math.round(safeValue * 100)
+  const angle = Math.round(safeValue * 360)
+
+  return (
+    <div
+      className="relative h-8 w-8 shrink-0 rounded-full"
+      style={{
+        background: `conic-gradient(rgba(217, 170, 56, 0.95) ${angle}deg, rgba(255, 255, 255, 0.12) ${angle}deg 360deg)`,
+      }}
+    >
+      <div className="absolute inset-[3px] flex items-center justify-center rounded-full bg-grey-900 text-[9px] font-semibold text-amber-accent">
+        {percentage}
+      </div>
+    </div>
+  )
+}
+
+function ReportMetaCard({
+  resolvedAt,
+  status,
+  completenessPct,
+  parcelCount,
+  onViewOnMap,
+}: {
+  resolvedAt: string
+  status?: string
+  completenessPct: number
+  parcelCount: number
+  onViewOnMap: () => void
+}) {
+  return (
+    <div className="rounded-2xl border border-overlay/[0.08] bg-grey-900 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-grey-600">Overzicht</p>
+      <div className="mt-3 space-y-2 text-sm text-grey-300">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-grey-600">Status</span>
+          <span className="truncate text-right">{status ?? 'Onbekend'}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-grey-600">Compleetheid</span>
+          <span className="font-semibold text-amber-accent">{completenessPct}%</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-grey-600">Percelen</span>
+          <span>{parcelCount}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-grey-600">Laatste update</span>
+          <span>{dateFmt.format(new Date(resolvedAt))}</span>
+        </div>
+      </div>
+      <button
+        onClick={onViewOnMap}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+      >
+        <MapPinIcon />
+        Bekijk op kaart
+      </button>
+    </div>
+  )
+}
+
 /* ─── Section Wrapper ───────────────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  children,
+}: {
+  title: string
+  icon?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
-    <div className="rounded-xl border border-overlay/5 bg-grey-900">
-      <div className="border-b border-overlay/5 px-5 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-grey-600">{title}</h2>
+    <div className="rounded-2xl border border-overlay/[0.08] bg-grey-900">
+      <div className="border-b border-overlay/[0.08] px-5 py-3.5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide leading-none text-grey-500">
+          {icon && (
+            <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-grey-500">
+              {icon}
+            </span>
+          )}
+          {title}
+        </h2>
       </div>
       <div className="px-5 py-4">{children}</div>
     </div>
@@ -331,8 +478,8 @@ function GebouwSection({ data }: { data: PropertyReportResponse }) {
   const statusInfo = getStatusInfo(building?.status)
 
   return (
-    <Section title="Gebouw & BAG">
-      <div className="divide-y divide-overlay/[0.03]">
+    <Section title="Gebouw & BAG" icon={<BuildingIcon />}>
+      <div className="divide-y divide-overlay/[0.06]">
         <Row label="Bouwjaar" value={building?.bouwjaar?.toString()} />
         {building?.status && (
           <div className="flex items-baseline justify-between py-2">
@@ -347,7 +494,7 @@ function GebouwSection({ data }: { data: PropertyReportResponse }) {
         {building?.documentnummer && (
           <Row label="Documentnr" value={building.documentnummer} mono />
         )}
-        <Row label="Gebruiksoppervlakte (VBO)" value={building?.oppervlakte ? `${building.oppervlakte} m²` : null} />
+        <Row label="Gebruiksoppervlakte (VBO)" value={formatArea(building?.oppervlakte)} />
         {gebruiksdoel.length > 0 && (
           <div className="flex items-baseline justify-between py-2">
             <span className="text-sm text-grey-600">Gebruiksdoel</span>
@@ -369,7 +516,7 @@ function GebouwSection({ data }: { data: PropertyReportResponse }) {
                 href={`https://bagviewer.kadaster.nl/lvbag/bag-viewer/?searchQuery=${building?.pand_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-grey-600 underline decoration-grey-700 underline-offset-2 hover:text-grey-300"
+                className="font-mono text-grey-500 underline decoration-grey-700 underline-offset-2 hover:text-grey-300"
               >{building?.pand_id}</a>
             </span>
             <span className="text-xs text-grey-600">
@@ -394,7 +541,7 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
 
   if (parcels.length === 0) {
     return (
-      <Section title="Kadaster">
+      <Section title="Kadaster" icon={<ParcelIcon />}>
         <p className="text-sm italic text-grey-600">Geen kadastrale gegevens beschikbaar</p>
       </Section>
     )
@@ -403,10 +550,10 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
   const totalOpp = parcels.reduce((sum, p) => sum + (p.oppervlakte ?? 0), 0)
 
   return (
-    <Section title="Kadaster">
+    <Section title="Kadaster" icon={<ParcelIcon />}>
       <div className="space-y-3">
         {parcels.map((parcel, idx) => (
-          <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] p-3">
+          <div key={idx} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] p-3">
             {parcel.kadastrale_aanduiding && (
               <p className="mb-2 text-sm font-semibold text-grey-300">
                 <a
@@ -430,14 +577,14 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
               </div>
               <div>
                 <p className="text-xs text-grey-600">Kavelgrootte</p>
-                <p className="text-sm font-medium text-grey-300">{parcel.oppervlakte ? `${parcel.oppervlakte} m²` : '–'}</p>
+                <p className="text-sm font-medium text-grey-300">{formatArea(parcel.oppervlakte)}</p>
               </div>
             </div>
           </div>
         ))}
         {parcels.length > 1 && totalOpp > 0 && (
           <div className="flex justify-end pt-1">
-            <span className="text-xs text-grey-600">Totaal: <strong className="text-grey-300">{totalOpp} m²</strong></span>
+            <span className="text-xs text-grey-600">Totaal: <strong className="text-grey-300">{formatArea(totalOpp)}</strong></span>
           </div>
         )}
       </div>
@@ -452,25 +599,23 @@ function WOZSection({ data }: { data: PropertyReportResponse }) {
 
   if (!woz) {
     return (
-      <Section title="WOZ">
+      <Section title="WOZ" icon={<ChartIcon />}>
         <p className="text-sm italic text-grey-600">Geen WOZ-gegevens beschikbaar</p>
       </Section>
     )
   }
 
   return (
-    <Section title="WOZ">
+    <Section title="WOZ" icon={<ChartIcon />}>
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
             <p className="text-xs text-grey-600">Meest recente waarde</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums text-grey-100">
-              {woz.meest_recente_waarde != null
-                ? `EUR ${woz.meest_recente_waarde.toLocaleString('nl-NL')}`
-                : '–'}
+              {formatCurrency(woz.meest_recente_waarde)}
             </p>
           </div>
-          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
             <p className="text-xs text-grey-600">Peildatum</p>
             <p className="mt-0.5 text-sm font-medium text-grey-300">
               {woz.meest_recente_peildatum
@@ -478,10 +623,10 @@ function WOZSection({ data }: { data: PropertyReportResponse }) {
                 : '–'}
             </p>
           </div>
-          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
             <p className="text-xs text-grey-600">Grondoppervlakte</p>
             <p className="mt-0.5 text-sm font-medium text-grey-300">
-              {woz.grondoppervlakte != null ? `${woz.grondoppervlakte} m²` : '–'}
+              {formatArea(woz.grondoppervlakte)}
             </p>
           </div>
         </div>
@@ -500,7 +645,7 @@ function WOZSection({ data }: { data: PropertyReportResponse }) {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">
               Historie
             </p>
-            <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
+            <div className="divide-y divide-overlay/[0.06] rounded-lg border border-overlay/[0.08] bg-overlay/[0.03]">
               {woz.waarden.slice(0, 6).map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2">
                   <span className="text-sm text-grey-400">
@@ -509,9 +654,7 @@ function WOZSection({ data }: { data: PropertyReportResponse }) {
                       : 'Onbekend'}
                   </span>
                   <span className="text-sm font-medium tabular-nums text-grey-300">
-                    {item.vastgestelde_waarde != null
-                      ? `EUR ${item.vastgestelde_waarde.toLocaleString('nl-NL')}`
-                      : '–'}
+                    {formatCurrency(item.vastgestelde_waarde)}
                   </span>
                 </div>
               ))}
@@ -530,7 +673,7 @@ function EnergyLabelSection({ data }: { data: PropertyReportResponse }) {
 
   if (!label || label.is_geregistreerd === false || !label.energieklasse) {
     return (
-      <Section title="Energielabel">
+      <Section title="Energielabel" icon={<LightningIcon />}>
         <p className="text-sm italic text-grey-600">
           {label?.niet_geregistreerd_reden || 'Geen geregistreerd energielabel gevonden'}
         </p>
@@ -539,13 +682,13 @@ function EnergyLabelSection({ data }: { data: PropertyReportResponse }) {
   }
 
   return (
-    <Section title="Energielabel">
+    <Section title="Energielabel" icon={<LightningIcon />}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
           <p className="text-xs text-grey-600">Klasse</p>
           <p className="mt-0.5 text-lg font-semibold text-grey-100">{label.energieklasse}</p>
         </div>
-        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
           <p className="text-xs text-grey-600">Registratie</p>
           <p className="mt-0.5 text-sm font-medium text-grey-300">
             {label.registratie_datum
@@ -553,7 +696,7 @@ function EnergyLabelSection({ data }: { data: PropertyReportResponse }) {
               : '–'}
           </p>
         </div>
-        <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
           <p className="text-xs text-grey-600">Geldig tot</p>
           <p className="mt-0.5 text-sm font-medium text-grey-300">
             {label.geldig_tot ? new Date(label.geldig_tot).toLocaleDateString('nl-NL') : '–'}
@@ -571,7 +714,7 @@ function BRKOwnershipSection({ data }: { data: PropertyReportResponse }) {
 
   if (!ownership) {
     return (
-      <Section title="BRK Eigendom">
+      <Section title="BRK Eigendom" icon={<OwnershipIcon />}>
         <p className="text-sm text-grey-400">
           BRK eigendomsdata wordt bewust niet opgeslagen in rapporten (Kadaster Tier 3 voorwaarden).
         </p>
@@ -581,7 +724,7 @@ function BRKOwnershipSection({ data }: { data: PropertyReportResponse }) {
 
   if (ownership.status !== 'available' || !ownership.data || ownership.data.length === 0) {
     return (
-      <Section title="BRK Eigendom">
+      <Section title="BRK Eigendom" icon={<OwnershipIcon />}>
         <p className="text-sm italic text-grey-600">
           {ownership.reason || 'Geen eigendomsdata beschikbaar'}
         </p>
@@ -590,10 +733,10 @@ function BRKOwnershipSection({ data }: { data: PropertyReportResponse }) {
   }
 
   return (
-    <Section title="BRK Eigendom">
+    <Section title="BRK Eigendom" icon={<OwnershipIcon />}>
       <div className="space-y-3">
         {ownership.data.map((item, idx) => (
-          <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2">
+          <div key={idx} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
             <p className="text-sm font-medium text-grey-300">{item.perceel_identificatie}</p>
             <p className="mt-1 text-xs text-grey-600">
               {item.gerechtigden.length} zakelijk gerechtigden
@@ -613,18 +756,23 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
   if (!zoning) {
     return (
-      <Section title="Bestemmingsplan">
+      <Section title="Bestemmingsplan" icon={<PlanIcon />}>
         <p className="text-sm italic text-grey-600">Geen bestemmingsplangegevens beschikbaar</p>
       </Section>
     )
   }
 
+  const { actionablePlans, policyPlans } = splitZoningPlans(zoning.plans)
+  const primaryPlanForRules = actionablePlans.find((plan) =>
+    (plan.teksten ?? []).some((tekst) => Boolean(tekst.inhoud))
+  )
+
   return (
-    <Section title="Bestemmingsplan">
+    <Section title="Bestemmingsplan" icon={<PlanIcon />}>
       <div className="space-y-4">
         {/* Primary bestemming */}
         {zoning.primary_bestemming && (
-          <div className="rounded-lg border border-overlay/10 bg-overlay/[0.03] px-4 py-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-grey-600">Hoofdbestemming</p>
             <p className="mt-0.5 text-lg font-semibold text-grey-100">{zoning.primary_bestemming}</p>
           </div>
@@ -644,21 +792,21 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
         )}
 
         {/* Plans */}
-        {zoning.plans && zoning.plans.length > 0 && (
+        {actionablePlans.length > 0 && (
           <div className="space-y-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">
-              Plannen op locatie ({zoning.plans.length})
+              Plannen op locatie ({actionablePlans.length})
             </p>
-            {zoning.plans.map((plan, idx) => (
-              <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] p-4">
+            {actionablePlans.map((plan, idx) => (
+              <div key={idx} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] p-4">
                 <p className="font-medium text-grey-300">{plan.plan_naam}</p>
                 <div className="mt-1 flex items-center gap-3 text-xs text-grey-600">
-                  {plan.plan_status && <span className="rounded border border-overlay/5 bg-overlay/[0.04] px-2 py-0.5">{plan.plan_status}</span>}
+                  {plan.plan_status && <span className="rounded border border-overlay/[0.08] bg-overlay/[0.05] px-2 py-0.5">{plan.plan_status}</span>}
                   {plan.plan_datum && <span>{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>}
                   {plan.plan_type && <span className="text-grey-600">{plan.plan_type}</span>}
                 </div>
                 {plan.rules && plan.rules.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-overlay/[0.03] pt-3">
+                  <div className="mt-3 space-y-2 border-t border-overlay/[0.06] pt-3">
                     {plan.rules.map((rule, rIdx) => (
                       <div key={rIdx}>
                         <p className="text-sm font-medium text-grey-300">{rule.bestemming}</p>
@@ -672,11 +820,11 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
                 {/* Functie aanduidingen */}
                 {plan.functie_aanduidingen && plan.functie_aanduidingen.length > 0 && (
-                  <div className="mt-3 border-t border-overlay/[0.03] pt-3">
+                  <div className="mt-3 border-t border-overlay/[0.06] pt-3">
                     <p className="mb-1.5 text-xs font-medium text-grey-600">Functieaanduidingen</p>
                     <div className="flex flex-wrap gap-1.5">
                       {plan.functie_aanduidingen.map((fa, fIdx) => (
-                        <span key={fIdx} className="rounded-full border border-info/20 bg-info/[0.06] px-2.5 py-0.5 text-xs font-medium text-info">
+                        <span key={fIdx} className="rounded-full border border-overlay/[0.08] bg-overlay/[0.05] px-2.5 py-0.5 text-xs font-medium text-grey-300">
                           {fa.naam}
                         </span>
                       ))}
@@ -686,11 +834,11 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
                 {/* Gebieds aanduidingen */}
                 {plan.gebieds_aanduidingen && plan.gebieds_aanduidingen.length > 0 && (
-                  <div className="mt-3 border-t border-overlay/[0.03] pt-3">
+                  <div className="mt-3 border-t border-overlay/[0.06] pt-3">
                     <p className="mb-1.5 text-xs font-medium text-grey-600">Gebiedsaanduidingen</p>
                     <div className="flex flex-wrap gap-1.5">
                       {plan.gebieds_aanduidingen.map((ga, gIdx) => (
-                        <span key={gIdx} className="rounded-full border border-purple-500/20 bg-purple-500/[0.06] px-2.5 py-0.5 text-xs font-medium text-purple-400">
+                        <span key={gIdx} className="rounded-full border border-amber-accent/25 bg-amber-accent/10 px-2.5 py-0.5 text-xs font-medium text-amber-accent">
                           {ga.naam}
                         </span>
                       ))}
@@ -702,23 +850,54 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
           </div>
         )}
 
+        {actionablePlans.length === 0 && policyPlans.length > 0 && (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
+            <p className="text-xs text-grey-500">
+              Geen perceelsspecifieke plannen gevonden. Alleen bovenlokale beleidskaders beschikbaar.
+            </p>
+          </div>
+        )}
+
+        {policyPlans.length > 0 && (
+          <details className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03]">
+            <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-wide text-grey-600">
+              Beleidskaders (niet perceelspecifiek) ({policyPlans.length})
+            </summary>
+            <div className="space-y-2 border-t border-overlay/[0.06] px-4 py-3">
+              {policyPlans.map((plan, idx) => (
+                <div key={idx} className="rounded border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+                  <p className="text-sm font-medium text-grey-300">{plan.plan_naam}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-grey-600">
+                    {plan.plan_status && <span>{plan.plan_status}</span>}
+                    {plan.plan_type && <span>{plan.plan_type}</span>}
+                    {plan.plan_datum && <span>{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         {/* Plan teksten (only first plan, only articles with content) */}
         {(() => {
-          const artikelen = zoning.plans?.[0]?.teksten?.filter(t => t.inhoud) ?? []
+          const artikelen = primaryPlanForRules?.teksten?.filter(t => t.inhoud) ?? []
           if (artikelen.length === 0) return null
           return (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">
-                Planregels ({zoning.plans?.[0]?.plan_naam})
+                Planregels ({primaryPlanForRules?.plan_naam})
               </p>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {artikelen.slice(0, 15).map((tekst, tIdx) => (
-                  <details key={tIdx} className="group rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
-                    <summary className="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-grey-300 hover:text-grey-100">
+                  <details key={tIdx} className="group rounded-lg border border-overlay/[0.08] bg-overlay/[0.03]">
+                    <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-grey-300 hover:text-grey-100">
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-overlay/[0.08] bg-overlay/[0.05] px-1.5 text-[10px] font-semibold text-grey-400">
+                        {tIdx + 1}
+                      </span>
                       <span className="text-[10px] text-grey-600 transition-transform group-open:rotate-90">&#9654;</span>
                       {tekst.titel}
                     </summary>
-                    <div className="border-t border-overlay/[0.03] px-4 py-3 text-xs leading-relaxed text-grey-400">
+                    <div className="border-t border-overlay/[0.06] px-4 py-3 text-xs leading-relaxed text-grey-400">
                       {tekst.inhoud!.length > 600 ? `${tekst.inhoud!.slice(0, 600)}…` : tekst.inhoud}
                     </div>
                   </details>
@@ -744,7 +923,7 @@ function BestemmingSection({ data }: { data: PropertyReportResponse }) {
 
 function DimensionCard({ label, value, unit }: { label: string; value: number | null; unit?: string }) {
   return (
-    <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-3 py-2 text-center">
+    <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2 text-center">
       <p className="text-xs text-grey-600">{label}</p>
       <p className="mt-0.5 text-lg font-semibold tabular-nums text-grey-100">
         {value != null ? `${value}${unit ?? ''}` : '–'}
@@ -760,7 +939,7 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
 
   if (!monuments) {
     return (
-      <Section title="Monumentstatus">
+      <Section title="Monumentstatus" icon={<MonumentIcon className="text-current" />}>
         <p className="text-sm italic text-grey-600">Geen monumentgegevens beschikbaar</p>
       </Section>
     )
@@ -770,18 +949,18 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
   const allSourcesFailed = monuments.sources.every((s) => s.error != null)
 
   return (
-    <Section title="Monumentstatus">
+    <Section title="Monumentstatus" icon={<MonumentIcon className="text-current" />}>
       <div className="space-y-4">
         {/* Status */}
         {allSourcesFailed ? (
-          <div className="rounded-lg border border-overlay/5 bg-overlay/[0.03] px-4 py-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
             <p className="font-semibold text-grey-400">Niet vast te stellen</p>
             <p className="mt-0.5 text-sm text-grey-600">
               Alle bronnen voor monumentstatus zijn momenteel niet beschikbaar. Dit betekent niet dat het pand geen monument is.
             </p>
           </div>
         ) : (
-          <div className={`rounded-lg px-4 py-3 ${monuments.is_monument ? 'border border-amber-accent/20 bg-amber-accent/[0.06]' : 'border border-overlay/5 bg-overlay/[0.03]'}`}>
+          <div className={`rounded-lg px-4 py-3 ${monuments.is_monument ? 'border border-amber-accent/20 bg-amber-accent/[0.06]' : 'border border-overlay/[0.08] bg-overlay/[0.03]'}`}>
             <p className={`font-semibold ${monuments.is_monument ? 'text-amber-accent' : 'text-grey-300'}`}>
               {monuments.is_monument ? 'Rijksmonument' : 'Niet beschermd'}
             </p>
@@ -825,17 +1004,17 @@ function MonumentSection({ data }: { data: PropertyReportResponse }) {
         {monuments.sources && monuments.sources.length > 0 && (
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bronverificatie</p>
-            <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
+            <div className="divide-y divide-overlay/[0.06] rounded-lg border border-overlay/[0.08] bg-overlay/[0.03]">
               {monuments.sources.map((src, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2">
                   <span className="text-sm text-grey-400">{src.source}</span>
                   {src.error ? (
                     <span className="text-xs text-grey-600">Niet beschikbaar</span>
                   ) : (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${src.is_monument ? 'border border-amber-accent/20 bg-amber-accent/10 text-amber-accent' : 'border border-success/20 bg-success/[0.06] text-success'}`}>
-                      {src.is_monument ? 'Beschermd' : 'Niet beschermd'}
-                    </span>
-                  )}
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${src.is_monument ? 'border border-amber-accent/20 bg-amber-accent/10 text-amber-accent' : 'border border-overlay/[0.08] bg-overlay/[0.05] text-grey-300'}`}>
+                        {src.is_monument ? 'Beschermd' : 'Niet beschermd'}
+                      </span>
+                    )}
                 </div>
               ))}
             </div>
@@ -880,7 +1059,7 @@ function PDFUploadSection({ data }: { data: PropertyReportResponse }) {
   if (!planIdn) return null
 
   return (
-    <Section title="AI Interpretatie">
+    <Section title="AI Interpretatie" icon={<BrainIcon />}>
       {status === 'done' ? (
         <div className="flex items-center gap-3 rounded-lg border border-success/20 bg-success/[0.04] px-4 py-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10">
@@ -892,9 +1071,9 @@ function PDFUploadSection({ data }: { data: PropertyReportResponse }) {
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-4 rounded-lg border border-overlay/[0.06] bg-overlay/[0.02] px-4 py-4">
+        <div className="flex items-start gap-4 rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-overlay/10 bg-overlay/[0.03]">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-error"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-grey-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-grey-300">Bestemmingsplan PDF</p>
@@ -924,7 +1103,7 @@ function PDFUploadSection({ data }: { data: PropertyReportResponse }) {
             </button>
 
             {status === 'error' && (
-              <p className="mt-1.5 text-xs text-error">{errorMsg}</p>
+              <p className="mt-1.5 text-xs text-warning">{errorMsg}</p>
             )}
           </div>
         </div>
@@ -946,7 +1125,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
       : 'border-overlay/5 bg-overlay/[0.03] text-grey-600'
 
   return (
-    <Section title="AI Interpretatie">
+    <Section title="AI Interpretatie" icon={<BrainIcon />}>
       <div className="space-y-4">
         {/* Confidence + Summary */}
         <div className="flex items-start gap-3">
@@ -962,7 +1141,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-600">Bestemmingsregels (AI)</p>
             <div className="space-y-3">
               {parsed.regels.map((regel, idx) => (
-                <div key={idx} className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] p-4">
+                <div key={idx} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] p-4">
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-grey-300">{regel.bestemming}</p>
                     <span className="text-xs text-grey-600">{regel.artikel}</span>
@@ -984,7 +1163,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
                       <p className="text-xs font-medium text-grey-600">Verboden gebruik</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {regel.verboden_gebruiken.map((g, i) => (
-                          <span key={i} className="rounded border border-error/20 bg-error/[0.06] px-2 py-0.5 text-xs text-error">{g}</span>
+                          <span key={i} className="rounded border border-warning/25 bg-warning/[0.10] px-2 py-0.5 text-xs text-warning">{g}</span>
                         ))}
                       </div>
                     </div>
@@ -1029,7 +1208,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
         {/* Disclaimers */}
         {parsed.disclaimers && parsed.disclaimers.length > 0 && (
-          <div className="rounded-lg border border-overlay/[0.03] bg-overlay/[0.02] px-4 py-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
             <p className="text-xs font-semibold text-grey-600">Disclaimer</p>
             {parsed.disclaimers.map((d, idx) => (
               <p key={idx} className="mt-1 text-xs italic text-grey-600">{d}</p>
@@ -1043,7 +1222,7 @@ function AIInterpretatieSection({ data }: { data: PropertyReportResponse }) {
 
 function MiniDim({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-overlay/[0.03] bg-overlay/[0.02] px-2 py-1 text-center">
+    <div className="rounded border border-overlay/[0.08] bg-overlay/[0.03] px-2 py-1 text-center">
       <p className="text-[10px] text-grey-600">{label}</p>
       <p className="text-sm font-semibold tabular-nums text-grey-300">{value}</p>
     </div>
@@ -1053,18 +1232,24 @@ function MiniDim({ label, value }: { label: string; value: string }) {
 /* ─── Bronnen ───────────────────────────────────────────────── */
 
 function BronnenSection({ data }: { data: PropertyReportResponse }) {
+  type SourceStatus = 'ok' | 'unlinked' | 'blocked' | 'error'
   type SourceRow = {
     source: string
     age_seconds: number | null
-    status: 'ok' | 'unlinked' | 'error'
+    status: SourceStatus
     note?: string
   }
 
   const byKey = new Map<string, SourceRow>()
 
-  const classifyIssue = (message?: string | null): 'unlinked' | 'error' => {
+  const classifyIssue = (
+    message?: string | null,
+    source?: string
+  ): 'unlinked' | 'blocked' | 'error' => {
     const msg = (message ?? '').toLowerCase()
+    const sourceKey = (source ?? '').toLowerCase()
     if (!msg) return 'unlinked'
+    if (sourceKey.includes('monumenten: rce') && msg.includes('403')) return 'blocked'
     const unlinkedHints = [
       'api key',
       'apikey',
@@ -1097,7 +1282,9 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
     const sourceKey = (source ?? '').toLowerCase()
 
     if (sourceKey.includes('monumenten: rce')) {
-      if (lower.includes('403')) return 'RCE API toegang geweigerd (403)'
+      if (lower.includes('403')) {
+        return 'RCE endpoint geblokkeerd (HTTP 403) vanuit deze omgeving; monumentstatus via RCE nu niet verifieerbaar.'
+      }
       if (lower.includes('401')) return 'RCE API authenticatie mislukt (401)'
       if (lower.includes('rce api error')) return 'RCE API fout'
     }
@@ -1116,17 +1303,21 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
       return
     }
     const existing = byKey.get(key)!
+    const statusPriority: Record<SourceStatus, number> = {
+      ok: 0,
+      unlinked: 1,
+      blocked: 2,
+      error: 3,
+    }
     byKey.set(key, {
       ...existing,
       ...row,
       age_seconds: row.age_seconds ?? existing.age_seconds,
       note: row.note ?? existing.note,
       status:
-        existing.status === 'error' || row.status === 'error'
-          ? 'error'
-          : existing.status === 'unlinked' || row.status === 'unlinked'
-            ? 'unlinked'
-            : 'ok',
+        statusPriority[row.status] >= statusPriority[existing.status]
+          ? row.status
+          : existing.status,
     })
   }
 
@@ -1152,7 +1343,7 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
     addRow({
       source: `Monumenten: ${src.source}`,
       age_seconds: src.age_seconds ?? null,
-      status: src.error ? classifyIssue(src.error) : 'ok',
+      status: src.error ? classifyIssue(src.error, `Monumenten: ${src.source}`) : 'ok',
       note: sanitizeSourceNote(
         src.error || (src.is_monument ? 'Beschermd' : 'Niet beschermd'),
         `Monumenten: ${src.source}`
@@ -1243,11 +1434,11 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
   }
 
   return (
-    <Section title="Data bronnen">
+    <Section title="Data bronnen" icon={<DatabaseIcon />}>
       {sources.length === 0 && (
         <p className="text-sm italic text-grey-600">Geen broninformatie beschikbaar</p>
       )}
-      <div className="divide-y divide-overlay/[0.03] rounded-lg border border-overlay/[0.03] bg-overlay/[0.02]">
+      <div className="divide-y divide-overlay/[0.06] rounded-lg border border-overlay/[0.08] bg-overlay/[0.03]">
         {sources.map((src, idx) => (
           <div key={idx} className="flex items-start justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0 flex-1">
@@ -1263,13 +1454,21 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
               <span
                 className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
                   src.status === 'error'
-                    ? 'border-error/20 bg-error/10 text-error'
+                    ? 'border-warning/30 bg-warning/[0.14] text-warning'
+                    : src.status === 'blocked'
+                      ? 'border-warning/30 bg-warning/10 text-warning'
                     : src.status === 'unlinked'
                       ? 'border-overlay/10 bg-overlay/[0.06] text-grey-300'
                       : 'border-success/20 bg-success/[0.06] text-success'
                 }`}
               >
-                {src.status === 'error' ? 'Fout' : src.status === 'unlinked' ? 'Niet gekoppeld' : 'OK'}
+                {src.status === 'error'
+                  ? 'Fout'
+                  : src.status === 'blocked'
+                    ? 'Geblokkeerd'
+                    : src.status === 'unlinked'
+                      ? 'Niet gekoppeld'
+                      : 'OK'}
               </span>
             </div>
           </div>
@@ -1309,14 +1508,130 @@ function AlertIcon() {
   )
 }
 
-function MonumentIcon() {
+function MonumentIcon({ className = 'text-amber-accent' }: { className?: string }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <rect x="3" y="21" width="18" height="2" rx="1" />
       <rect x="5" y="11" width="2" height="10" />
       <rect x="17" y="11" width="2" height="10" />
       <rect x="10" y="11" width="4" height="10" />
       <path d="M12 3L4 11h16L12 3z" />
+    </svg>
+  )
+}
+
+function BuildingIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="9" y1="9" x2="9" y2="9.01" />
+      <line x1="15" y1="9" x2="15" y2="9.01" />
+      <line x1="9" y1="13" x2="9" y2="13.01" />
+      <line x1="15" y1="13" x2="15" y2="13.01" />
+      <path d="M10 21v-4h4v4" />
+    </svg>
+  )
+}
+
+function ParcelIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7.5 12 3l9 4.5-9 4.5L3 7.5Z" />
+      <path d="M3 12 12 16.5 21 12" />
+      <path d="M3 16.5 12 21l9-4.5" />
+    </svg>
+  )
+}
+
+function ChartIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="20" x2="20" y2="20" />
+      <rect x="6" y="11" width="3" height="7" rx="1" />
+      <rect x="11" y="8" width="3" height="10" rx="1" />
+      <rect x="16" y="5" width="3" height="13" rx="1" />
+    </svg>
+  )
+}
+
+function LightningIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2 4 14h7l-1 8 10-13h-7l0-7Z" />
+    </svg>
+  )
+}
+
+function OwnershipIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 10 12 3l8 7" />
+      <path d="M6 9v10h12V9" />
+      <path d="M10 19v-5h4v5" />
+    </svg>
+  )
+}
+
+function PlanIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <line x1="8" y1="8" x2="16" y2="8" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="8" y1="16" x2="13" y2="16" />
+    </svg>
+  )
+}
+
+function BrainIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3a3 3 0 0 0-3 3v1a3 3 0 0 0-2 2.8A3 3 0 0 0 6 13v2a3 3 0 0 0 3 3" />
+      <path d="M15 3a3 3 0 0 1 3 3v1a3 3 0 0 1 2 2.8A3 3 0 0 1 18 13v2a3 3 0 0 1-3 3" />
+      <path d="M9 11h6" />
+      <path d="M12 8v8" />
+    </svg>
+  )
+}
+
+function DatabaseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+      <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <line x1="16" y1="3" x2="16" y2="7" />
+      <line x1="8" y1="3" x2="8" y2="7" />
+      <line x1="3" y1="11" x2="21" y2="11" />
+    </svg>
+  )
+}
+
+function ScaleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h16" />
+      <path d="M7 16h10" />
+      <path d="M10 16V7h4v9" />
+      <path d="M12 7V4" />
+    </svg>
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 2 2.1 5.4L19 9.5l-4.9 2.1L12 17l-2.1-5.4L5 9.5l4.9-2.1L12 2Z" />
+      <path d="M5 20h.01" />
+      <path d="M19 20h.01" />
     </svg>
   )
 }

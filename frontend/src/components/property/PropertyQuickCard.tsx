@@ -6,7 +6,8 @@ import type { PropertyReportResponse } from '@/lib/types/property';
 interface PropertyQuickCardProps {
   data: PropertyReportResponse | null;
   isLoading: boolean;
-  onViewDetails: () => void;
+  onOpenDetails: () => void;
+  isOpeningDetails?: boolean;
   onClose: () => void;
   mapRef: RefObject<maplibregl.Map | null>;
   lngLat: [number, number] | null;
@@ -20,7 +21,8 @@ interface PropertyQuickCardProps {
 export function PropertyQuickCard({
   data,
   isLoading,
-  onViewDetails,
+  onOpenDetails,
+  isOpeningDetails = false,
   onClose,
   mapRef,
   lngLat,
@@ -65,23 +67,18 @@ export function PropertyQuickCard({
     : '';
 
   // Monument badge - compact for space-constrained popup
-  const monumentBadge = data?.monuments ? (
-    data.monuments.is_monument ? (
-      <span className="bg-amber-accent/20 text-amber-accent text-xs px-2 py-0.5 rounded-full">
-        Rijksmonument
-      </span>
-    ) : (
-      <span className="bg-success/10 text-success text-xs px-2 py-0.5 rounded-full">
-        Geen monument
-      </span>
-    )
+  const monumentBadge = data?.monuments?.is_monument ? (
+    <span className="bg-amber-accent/20 text-amber-accent text-xs px-2 py-0.5 rounded-full">
+      Rijksmonument
+    </span>
   ) : null;
 
   return createPortal(
     <div className="flex items-center gap-2 whitespace-nowrap">
       {isLoading && (
-        <div className="flex items-center gap-2 px-1">
-          <div className="h-3.5 w-24 animate-pulse rounded bg-grey-800" />
+        <div className="flex items-center gap-2 rounded-full border border-amber-accent/30 bg-grey-900/95 px-2.5 py-1">
+          <span className="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-accent/30 border-t-amber-accent" />
+          <span className="text-xs font-medium text-amber-accent">Perceel laden...</span>
         </div>
       )}
 
@@ -98,10 +95,11 @@ export function PropertyQuickCard({
           {monumentBadge}
 
           <button
-            onClick={onViewDetails}
-            className="rounded-full bg-grey-800 px-2.5 py-0.5 text-xs font-medium text-grey-100 transition-colors hover:bg-grey-700"
+            onClick={onOpenDetails}
+            disabled={isOpeningDetails}
+            className="rounded-full border border-grey-700 bg-grey-900 px-2.5 py-0.5 text-xs font-medium text-amber-accent transition-colors hover:bg-grey-850 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Details &rarr;
+            {isOpeningDetails ? 'Details laden...' : 'Details'}
           </button>
 
           <button
