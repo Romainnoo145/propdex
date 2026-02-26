@@ -5,6 +5,7 @@ import ProjectList from '@/components/projects/ProjectList'
 
 const projectenSearchSchema = z.object({
   gemeente_id: z.string().optional(),
+  gemeente_code: z.string().optional(),
   wijk_id: z.string().optional(),
 })
 

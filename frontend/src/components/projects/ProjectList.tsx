@@ -167,6 +167,7 @@ export default function ProjectList() {
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/projecten' })
   const selectedGemeenteId = search.gemeente_id ?? null
+  const selectedGemeenteCode = normalizeGemeenteCode(search.gemeente_code)
   const selectedWijkId = search.wijk_id ?? null
   const { data: selectedGemeenteChanges } = useProjectChanges(selectedGemeenteId)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -597,6 +598,20 @@ export default function ProjectList() {
     [allGemeenteCards, selectedProvince]
   )
 
+  const gemeenteCardByCode = useMemo(
+    () => new Map(allGemeenteCards.map((card) => [card.code, card])),
+    [allGemeenteCards]
+  )
+
+  const selectedGemeenteCard = useMemo(
+    () => (selectedGemeenteCode ? (gemeenteCardByCode.get(selectedGemeenteCode) ?? null) : null),
+    [selectedGemeenteCode, gemeenteCardByCode]
+  )
+
+  const hasGemeenteDetail = Boolean(
+    selectedGemeenteId || (selectedGemeenteCode && selectedGemeenteCard)
+  )
+
   const municipalityProjectsById = useMemo(() => {
     return new Map(
       Array.from(municipalityProjectsByCode.values()).map((project) => [project.id, project])
@@ -734,10 +749,13 @@ export default function ProjectList() {
         onClick={() => {
           registerRecentGemeente(card.code)
           if (card.project) {
-            navigate({ to: '/projecten', search: { gemeente_id: card.project.id } })
+            navigate({
+              to: '/projecten',
+              search: { gemeente_id: card.project.id, gemeente_code: card.code },
+            })
             return
           }
-          navigate({ to: '/map', search: { gemeente_code: card.code } })
+          navigate({ to: '/projecten', search: { gemeente_code: card.code } })
         }}
       />
     )
@@ -785,7 +803,7 @@ export default function ProjectList() {
         </div>
       )}
 
-      {!selectedGemeenteId && (
+      {!hasGemeenteDetail && (
         <ProjectWorkspaceHeader
           title="Projecten"
           subtitle={`${allProjects.length} ${allProjects.length === 1 ? 'project' : 'projecten'} in totaal${
@@ -809,65 +827,99 @@ export default function ProjectList() {
       {allProjects.length > 0 ? (
         <div className="space-y-2">
           {/* Province -> municipality drill-down for linked projects, map focus for unlinked */}
-          {selectedGemeenteId ? (
+          {hasGemeenteDetail ? (
             (() => {
-              const gemeente = municipalityProjectsById.get(selectedGemeenteId)
-              if (!gemeente) return null
+              if (selectedGemeenteId) {
+                const gemeente = municipalityProjectsById.get(selectedGemeenteId)
+                if (!gemeente) return null
 
-              const gemeenteCode = resolveGemeenteCodeForProject(gemeente)
-              const linkedChildren = childrenByParentId.get(gemeente.id) ?? []
-              const standaloneChildren = gemeenteCode
-                ? (standaloneWijkProjectsByCode.get(gemeenteCode) ?? [])
-                : []
-              const wijkChildren = [...linkedChildren, ...standaloneChildren]
+                const gemeenteCode = resolveGemeenteCodeForProject(gemeente)
+                const linkedChildren = childrenByParentId.get(gemeente.id) ?? []
+                const standaloneChildren = gemeenteCode
+                  ? (standaloneWijkProjectsByCode.get(gemeenteCode) ?? [])
+                  : []
+                const wijkChildren = [...linkedChildren, ...standaloneChildren]
 
-              if (selectedWijkId) {
-                const wijk = wijkChildren.find((w) => w.id === selectedWijkId)
-                if (!wijk) return null
+                if (selectedWijkId) {
+                  const wijk = wijkChildren.find((w) => w.id === selectedWijkId)
+                  if (!wijk) return null
+                  return (
+                    <>
+                      <DrilldownBreadcrumb gemeenteName={gemeente.name} wijkName={wijk.name} />
+                      <WijkDetailView gemeente={gemeente} wijk={wijk} />
+                    </>
+                  )
+                }
+
                 return (
                   <>
-                    <DrilldownBreadcrumb gemeenteName={gemeente.name} wijkName={wijk.name} />
-                    <WijkDetailView gemeente={gemeente} wijk={wijk} />
+                    <ProjectWorkspaceHeader
+                      title={gemeente.name}
+                      subtitle={`${1 + wijkChildren.length} ${1 + wijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
+                      onBack={() => navigate({ to: '/projecten', search: {} })}
+                      backLabel="Terug naar projecten"
+                      metrics={[
+                        { label: 'Wijken', value: wijkChildren.length, icon: <WijkStatIcon /> },
+                        {
+                          label: 'Rapporten',
+                          value: gemeente.report_count + wijkChildren.reduce((sum, wijk) => sum + wijk.report_count, 0),
+                          icon: <ReportStatIcon />,
+                        },
+                        {
+                          label: 'Meldingen',
+                          value: selectedGemeenteChanges?.total ?? 0,
+                          icon: <BellStatIcon />,
+                          highlight: (selectedGemeenteChanges?.total ?? 0) > 0,
+                        },
+                      ]}
+                      actionLabel="Bekijk op kaart"
+                      onAction={
+                        gemeenteCode
+                          ? () => navigate({ to: '/map', search: { gemeente_code: gemeenteCode } })
+                          : undefined
+                      }
+                    />
+                    <GemeenteDetailView
+                      gemeente={gemeente}
+                      wijkProjects={wijkChildren}
+                      unreadData={unreadData}
+                      gemeenteGeojson={gemeenteGeojson}
+                    />
                   </>
                 )
               }
 
-              return (
-                <>
-                  <ProjectWorkspaceHeader
-                    title={gemeente.name}
-                    subtitle={`${1 + wijkChildren.length} ${1 + wijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
-                    onBack={() => navigate({ to: '/projecten', search: {} })}
-                    backLabel="Terug naar projecten"
-                    metrics={[
-                      { label: 'Wijken', value: wijkChildren.length, icon: <WijkStatIcon /> },
-                      {
-                        label: 'Rapporten',
-                        value: gemeente.report_count + wijkChildren.reduce((sum, wijk) => sum + wijk.report_count, 0),
-                        icon: <ReportStatIcon />,
-                      },
-                      {
-                        label: 'Meldingen',
-                        value: selectedGemeenteChanges?.total ?? 0,
-                        icon: <BellStatIcon />,
-                        highlight: (selectedGemeenteChanges?.total ?? 0) > 0,
-                      },
-                    ]}
-                    actionLabel="Bekijk op kaart"
-                    onAction={
-                      gemeenteCode
-                        ? () => navigate({ to: '/map', search: { gemeente_code: gemeenteCode } })
-                        : undefined
-                    }
-                  />
-                  <GemeenteDetailView
-                    gemeente={gemeente}
-                    wijkProjects={wijkChildren}
-                    unreadData={unreadData}
-                    gemeenteGeojson={gemeenteGeojson}
-                  />
-                </>
-              )
+              if (selectedGemeenteCard) {
+                return (
+                  <>
+                    <ProjectWorkspaceHeader
+                      title={selectedGemeenteCard.naam}
+                      subtitle="Gemeenteflow zonder gekoppeld gemeenteproject"
+                      onBack={() => navigate({ to: '/projecten', search: {} })}
+                      backLabel="Terug naar projecten"
+                      metrics={[
+                        { label: 'Wijken', value: selectedGemeenteCard.scannedWijken, icon: <WijkStatIcon /> },
+                        { label: 'Rapporten', value: selectedGemeenteCard.rapporten, icon: <ReportStatIcon /> },
+                        {
+                          label: 'Meldingen',
+                          value: selectedGemeenteCard.meldingen,
+                          icon: <BellStatIcon />,
+                          highlight: selectedGemeenteCard.meldingen > 0,
+                        },
+                      ]}
+                      actionLabel="Bekijk op kaart"
+                      onAction={() => navigate({ to: '/map', search: { gemeente_code: selectedGemeenteCard.code } })}
+                    />
+                    <UnlinkedGemeenteWorkspace
+                      gemeenteCode={selectedGemeenteCard.code}
+                      gemeenteName={selectedGemeenteCard.naam}
+                      scanHistory={scanHistory?.scans ?? []}
+                    />
+                  </>
+                )
+              }
+
+              return null
             })()
           ) : (
             <>
@@ -941,10 +993,13 @@ export default function ProjectList() {
                                   onClick={() => {
                                     registerRecentGemeente(card.code)
                                     if (card.project) {
-                                      navigate({ to: '/projecten', search: { gemeente_id: card.project.id } })
+                                      navigate({
+                                        to: '/projecten',
+                                        search: { gemeente_id: card.project.id, gemeente_code: card.code },
+                                      })
                                       return
                                     }
-                                    navigate({ to: '/map', search: { gemeente_code: card.code } })
+                                    navigate({ to: '/projecten', search: { gemeente_code: card.code } })
                                   }}
                                   className="rounded-full border border-overlay/[0.1] bg-overlay/[0.06] px-3 py-1 text-xs text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
                                 >
@@ -1179,6 +1234,204 @@ function ProjectWorkspaceHeader({
         </div>
       </div>
     </div>
+  )
+}
+
+function UnlinkedGemeenteWorkspace({
+  gemeenteCode,
+  gemeenteName,
+  scanHistory,
+}: {
+  gemeenteCode: string
+  gemeenteName: string
+  scanHistory: ScanListItem[]
+}) {
+  const navigate = useNavigate()
+  const triggerScan = useTriggerScan()
+  const { data: wijkGeojson, isLoading } = useWijkGeoJSON(gemeenteCode)
+  const [selectedWijkNaam, setSelectedWijkNaam] = useState<string | null>(null)
+
+  const wijkItems = useMemo(() => {
+    const unique = new Map<string, [number, number, number, number] | null>()
+    for (const feature of wijkGeojson?.features ?? []) {
+      const name = String(feature.properties?.statnaam ?? '').trim()
+      const geometry = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | undefined
+      if (!name || !geometry) continue
+      if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue
+      unique.set(name, calculateBboxFromGeometry(geometry))
+    }
+    return Array.from(unique.entries())
+      .map(([name, bbox]) => ({ name, bbox }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nl-NL'))
+  }, [wijkGeojson])
+
+  useEffect(() => {
+    if (wijkItems.length === 0) {
+      if (selectedWijkNaam !== null) setSelectedWijkNaam(null)
+      return
+    }
+    if (!selectedWijkNaam || !wijkItems.some((item) => item.name === selectedWijkNaam)) {
+      setSelectedWijkNaam(wijkItems[0]!.name)
+    }
+  }, [wijkItems, selectedWijkNaam])
+
+  const selectedWijk = useMemo(
+    () => wijkItems.find((item) => item.name === selectedWijkNaam) ?? null,
+    [wijkItems, selectedWijkNaam]
+  )
+
+  const latestWijkScan = useMemo(() => {
+    if (!selectedWijkNaam) return null
+    const normalizedWijkNaam = normalizeAreaName(selectedWijkNaam)
+    const normalizedGemeenteCode = normalizeGemeenteCode(gemeenteCode)
+    return [...scanHistory]
+      .filter((scan) => (
+        scan.status === 'completed' &&
+        normalizeGemeenteCode(scan.gemeente_code) === normalizedGemeenteCode &&
+        normalizeAreaName(scan.wijk_naam ?? '') === normalizedWijkNaam
+      ))
+      .sort((a, b) => Date.parse(b.scan_date) - Date.parse(a.scan_date))[0] ?? null
+  }, [scanHistory, selectedWijkNaam, gemeenteCode])
+
+  return (
+    <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
+        <WijkStatIcon />
+        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+          Wijken in {gemeenteName}
+        </span>
+        <span className="ml-auto text-xs text-grey-600">{wijkItems.length}</span>
+      </div>
+      <div className="p-4">
+        {isLoading ? (
+          <div className="space-y-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : wijkItems.length === 0 ? (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-6 text-center">
+            <p className="text-sm text-grey-400">Geen wijkgrenzen gevonden voor deze gemeente.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
+            <div className="max-h-[620px] overflow-y-auto rounded-xl border border-overlay/[0.08] bg-grey-900 p-3">
+              <div className="space-y-2">
+                {wijkItems.map((wijk) => {
+                  const isActive = wijk.name === selectedWijkNaam
+                  return (
+                    <button
+                      key={wijk.name}
+                      onClick={() => setSelectedWijkNaam(wijk.name)}
+                      className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                        isActive
+                          ? 'border-amber-accent/35 bg-overlay/[0.08] shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
+                          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+                      }`}
+                    >
+                      <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
+                      <p className="truncate pl-1 text-sm font-semibold text-grey-100">{wijk.name}</p>
+                      {latestWijkScan && isActive && (
+                        <p className="mt-1 pl-1 text-[11px] text-grey-500">
+                          Laatste scan: {dateFmt.format(new Date(latestWijkScan.scan_date))}
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+              {selectedWijk ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-grey-100">{selectedWijk.name}</h3>
+                    <p className="mt-1 text-sm text-grey-500">
+                      Wijk is direct beschikbaar voor scan en kaartnavigatie.
+                    </p>
+                  </div>
+
+                  {latestWijkScan ? (
+                    <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
+                      <p className="text-xs uppercase tracking-wide text-grey-600">Laatste scan</p>
+                      <p className="mt-1 text-sm font-medium text-grey-200">
+                        {dateFmt.format(new Date(latestWijkScan.scan_date))}
+                      </p>
+                      <p className="text-xs text-grey-500">
+                        {latestWijkScan.parcel_count} percelen gescand
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
+                      <p className="text-sm text-grey-400">Nog geen scan uitgevoerd voor deze wijk.</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() =>
+                        navigate({
+                          to: '/map',
+                          search: { gemeente_code: gemeenteCode },
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+                    >
+                      <MapPinLineIcon />
+                      Open op kaart
+                    </button>
+                    {latestWijkScan && (
+                      <button
+                        onClick={() => navigate({ to: '/resultaten', search: { scan_id: latestWijkScan.scan_id } })}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+                      >
+                        <ScanIcon />
+                        Bekijk resultaten
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        triggerScan.mutate(
+                          {
+                            gemeente_code: gemeenteCode,
+                            gemeente_naam: gemeenteName,
+                            wijk_naam: selectedWijk.name,
+                            ...(selectedWijk.bbox ? { bbox_wgs84: selectedWijk.bbox } : {}),
+                          },
+                          {
+                            onSuccess: (scan) => {
+                              if (scan.status === 'existing' && !scan.needs_rescan) {
+                                toast.info('Bestaande scan gevonden, resultaten worden geopend')
+                                navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+                                return
+                              }
+                              toast.success(`Scan gestart voor ${selectedWijk.name}`)
+                            },
+                            onError: (error) => {
+                              toast.error(error.message || 'Scan starten mislukt')
+                            },
+                          }
+                        )
+                      }}
+                      disabled={triggerScan.isPending}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent bg-amber-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <ScanIcon />
+                      {triggerScan.isPending ? 'Scan starten...' : 'Start wijkscan'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-grey-500">Selecteer links een wijk.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 
