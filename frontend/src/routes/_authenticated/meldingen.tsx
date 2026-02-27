@@ -18,8 +18,15 @@ import type { ChangeRecord } from '@/lib/types/monitoring'
 import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
 import { formatRelativeTime } from '@/lib/utils/date'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { toMapAddressSearch, toMapParcelSearch } from '@/lib/navigation/mapSearch'
 
 export const Route = createFileRoute('/_authenticated/meldingen')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    gemeente:
+      typeof search.gemeente === 'string' && search.gemeente.trim().length > 0
+        ? search.gemeente.trim()
+        : undefined,
+  }),
   component: MeldingenPage,
 })
 
@@ -60,10 +67,11 @@ function formatTimelineDateLabel(dateKey: string): string {
 
 function MeldingenPage() {
   const navigate = useNavigate()
+  const search = Route.useSearch()
   const isMobile = useIsMobile()
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [selectedGemeente, setSelectedGemeente] = useState<string | null>(null)
   const [manualRefreshing, setManualRefreshing] = useState(false)
+  const selectedGemeente = search.gemeente ?? null
 
   const {
     data,
@@ -99,7 +107,7 @@ function MeldingenPage() {
     handleGenerateReport,
     handleGenerateReportByAddress,
     generatingId,
-  } = useReadTracking({ readChangeIds: allReadIds })
+  } = useReadTracking({ readChangeIds: allReadIds, reportSource: 'meldingen' })
 
   // Prefer top-level monitored gemeente projects for stable filter options.
   const monitoredGemeenteProjects = useMemo(
@@ -146,6 +154,16 @@ function MeldingenPage() {
 
   const isRefreshing =
     manualRefreshing || isRefetching || refreshMonitoring.isPending
+
+  const setSelectedGemeente = (nextGemeente: string | null) => {
+    navigate({
+      to: '/meldingen',
+      search: {
+        gemeente: nextGemeente?.trim() || undefined,
+      },
+      replace: true,
+    })
+  }
 
   const handleRefresh = async () => {
     setManualRefreshing(true)
@@ -295,6 +313,19 @@ function MeldingenPage() {
               </button>
             </div>
           </div>
+          {selectedGemeente && (
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <span className="inline-flex items-center rounded-full border border-amber-accent/35 bg-amber-accent/12 px-2.5 py-1 text-amber-accent">
+                Scope: {selectedGemeente}
+              </span>
+              <button
+                onClick={() => setSelectedGemeente(null)}
+                className="text-grey-400 transition-colors hover:text-grey-100"
+              >
+                Wis scope
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Loading */}
@@ -626,15 +657,10 @@ function MeldingItem({
                           onClick={() =>
                             onNavigate({
                               to: '/map',
-                              search: {
-                                parcel_id: m.parcel_id,
-                                ...(m.address
-                                  ? { fallback_address: m.address }
-                                  : change.address
-                                    ? { fallback_address: change.address }
-                                    : {}),
-                                _t: Date.now(),
-                              },
+                              search: toMapParcelSearch({
+                                parcelId: m.parcel_id,
+                                fallbackAddress: m.address ?? change.address,
+                              }),
                             })
                           }
                           className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
@@ -659,6 +685,7 @@ function MeldingItem({
                           onNavigate({
                             to: '/rapport/$id',
                             params: { id: m.report_id },
+                            search: { from: 'meldingen' },
                           })
                         }
                         className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
@@ -692,25 +719,19 @@ function MeldingItem({
                     if (primaryParcelId) {
                       onNavigate({
                         to: '/map',
-                        search: {
-                          parcel_id: primaryParcelId,
-                          ...(matchedParcels[0]?.address
-                            ? { fallback_address: matchedParcels[0].address }
-                            : change.address
-                              ? { fallback_address: change.address }
-                              : {}),
-                          _t: Date.now(),
-                        },
+                        search: toMapParcelSearch({
+                          parcelId: primaryParcelId,
+                          fallbackAddress: matchedParcels[0]?.address ?? change.address,
+                        }),
                       })
                       return
                     }
                     onNavigate({
                       to: '/map',
-                      search: {
+                      search: toMapAddressSearch({
                         postcode: formatPostcode(change.postcode!),
                         huisnummer: expandedHn!,
-                        _t: Date.now(),
-                      },
+                      }),
                     })
                   }}
                   disabled={!canViewOnMap}
@@ -869,32 +890,25 @@ function MeldingDetailPanel({
     : expandedCanNavigate
       ? 'border-overlay/[0.18] bg-overlay/[0.08] text-grey-200'
       : 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-400'
-  const formattedPostcode = change.postcode ? formatPostcode(change.postcode) : null
 
   const openOnMap = () => {
     if (!canViewOnMap) return
     if (primaryParcelId) {
       onNavigate({
         to: '/map',
-        search: {
-          parcel_id: primaryParcelId,
-          ...(matchedParcels[0]?.address
-            ? { fallback_address: matchedParcels[0].address }
-            : change.address
-              ? { fallback_address: change.address }
-              : {}),
-          _t: Date.now(),
-        },
+        search: toMapParcelSearch({
+          parcelId: primaryParcelId,
+          fallbackAddress: matchedParcels[0]?.address ?? change.address,
+        }),
       })
       return
     }
     onNavigate({
       to: '/map',
-      search: {
+      search: toMapAddressSearch({
         postcode: formatPostcode(change.postcode!),
         huisnummer: expandedHn!,
-        _t: Date.now(),
-      },
+      }),
     })
   }
 
@@ -961,28 +975,50 @@ function MeldingDetailPanel({
         <MetaRow label="Gedetecteerd" value={detailDateTimeFmt.format(new Date(change.detected_at))} />
       </div>
 
-      <div className="grid gap-2 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3 sm:grid-cols-3">
-        <MetaRow label="Postcode" value={formattedPostcode || 'Onbekend'} />
-        <MetaRow label="Huisnummer" value={expandedHn ? String(expandedHn) : 'Onbekend'} />
-        <MetaRow
-          label="Matchstatus"
-          value={primaryParcelId ? 'Gekoppeld' : expandedCanNavigate ? 'Adreshint' : 'Geen match'}
-        />
-      </div>
-
-      {(matchedParcels.length > 0 || matchedReports.length > 0 || change.source_url) && (
+      {(matchedParcels.length > 0 || matchedReports.length > 0 || change.source_url || canGenerate) && (
         <div className="space-y-1.5 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3">
+          {canGenerate && (
+            <button
+              onClick={() => {
+                if (primaryParcelId) {
+                  void onGenerateReport(primaryParcelId, change.project_id)
+                  return
+                }
+                if (!expandedCanNavigate) return
+                void onGenerateReportByAddress({
+                  postcode: formatPostcode(change.postcode!),
+                  huisnummer: expandedHn!,
+                  projectId: change.project_id,
+                })
+              }}
+              disabled={!canGenerate || isGeneratingParcel || isGeneratingAddress}
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent transition-colors hover:bg-amber-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ReportLinkIcon />
+              {isGeneratingParcel || isGeneratingAddress ? 'Bezig...' : 'Sla op in project +'}
+            </button>
+          )}
+          {change.source_url && (
+            <a
+              href={change.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-grey-300 hover:text-grey-100 hover:underline"
+            >
+              Bekijk officiële publicatie
+              <ExternalLinkIcon />
+            </a>
+          )}
           {matchedParcels.map((m) => (
             <button
               key={m.parcel_id}
               onClick={() =>
                 onNavigate({
                   to: '/map',
-                  search: {
-                    parcel_id: m.parcel_id,
-                    ...(m.address ? { fallback_address: m.address } : {}),
-                    _t: Date.now(),
-                  },
+                  search: toMapParcelSearch({
+                    parcelId: m.parcel_id,
+                    fallbackAddress: m.address,
+                  }),
                 })
               }
               className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
@@ -998,6 +1034,7 @@ function MeldingDetailPanel({
                 onNavigate({
                   to: '/rapport/$id',
                   params: { id: m.report_id },
+                  search: { from: 'meldingen' },
                 })
               }
               className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
@@ -1006,50 +1043,8 @@ function MeldingDetailPanel({
               Rapport: {m.report_name}
             </button>
           ))}
-          {change.source_url && (
-            <a
-              href={change.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-grey-300 hover:text-grey-100 hover:underline"
-            >
-              Bekijk officiële publicatie
-              <ExternalLinkIcon />
-            </a>
-          )}
         </div>
       )}
-
-      <div className="flex flex-wrap gap-2 pt-1">
-        <button
-          onClick={openOnMap}
-          disabled={!canViewOnMap}
-          className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.05] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <MapPinIcon />
-          Toon op grote kaart
-        </button>
-
-        <button
-          onClick={() => {
-            if (!canGenerate) return
-            if (primaryParcelId) {
-              void onGenerateReport(primaryParcelId, change.project_id)
-              return
-            }
-            void onGenerateReportByAddress({
-              postcode: formatPostcode(change.postcode!),
-              huisnummer: expandedHn!,
-              projectId: change.project_id,
-            })
-          }}
-          disabled={!canGenerate || isGeneratingParcel || isGeneratingAddress}
-          className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent transition-colors hover:bg-amber-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <ReportLinkIcon />
-          {isGeneratingParcel || isGeneratingAddress ? 'Bezig...' : 'Sla op in project +'}
-        </button>
-      </div>
     </div>
   )
 }

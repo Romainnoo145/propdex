@@ -1,28 +1,44 @@
-import { useState, useRef, useEffect } from 'react';
-import type maplibregl from 'maplibre-gl';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import type maplibregl from 'maplibre-gl'
 import {
   addParcelBoundariesLayer,
   setParcelBoundariesVisibility,
-} from './ParcelBoundariesLayer';
+} from './ParcelBoundariesLayer'
+import {
+  MAP_LAYER_CATALOG,
+  readPersistedMapLayerState,
+  writePersistedMapLayerState,
+} from '@/lib/map/layers'
+import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 
-type LayerType = 'aerial' | 'kaart';
+type LayerType = 'aerial' | 'kaart'
 
 interface LayerToggleProps {
-  mapRef: React.RefObject<maplibregl.Map | null>;
-  onParcelsToggle?: (visible: boolean) => void;
-  onGemeentenToggle?: (visible: boolean) => void;
-  onBestemmingsplanToggle?: (visible: boolean) => void;
-  onWijkenToggle?: (visible: boolean) => void;
-  showWijkenToggle?: boolean; // Only show when gemeente is active
-  onScoreToggle?: (visible: boolean) => void;
-  showScoreToggle?: boolean; // Only show when active scan is present and parcels are visible
-  onBuiltStatusToggle?: (visible: boolean) => void;
-  showBuiltStatusToggle?: boolean;
-  autoEnableParcelsKey?: string | null; // External trigger to force-enable parcel layer
+  mapRef: React.RefObject<maplibregl.Map | null>
+  mapReady?: boolean
+  onParcelsToggle?: (visible: boolean) => void
+  onGemeentenToggle?: (visible: boolean) => void
+  onBestemmingsplanToggle?: (visible: boolean) => void
+  onWijkenToggle?: (visible: boolean) => void
+  showWijkenToggle?: boolean
+  onScoreToggle?: (visible: boolean) => void
+  showScoreToggle?: boolean
+  onBuiltStatusToggle?: (visible: boolean) => void
+  showBuiltStatusToggle?: boolean
+  onReportStatusToggle?: (visible: boolean) => void
+  showReportStatusToggle?: boolean
+  onVacancySignalToggle?: (visible: boolean) => void
+  showVacancySignalToggle?: boolean
+  onBuildCapacityToggle?: (visible: boolean) => void
+  showBuildCapacityToggle?: boolean
+  onScannedScopeToggle?: (visible: boolean) => void
+  showScannedScopeToggle?: boolean
+  autoEnableParcelsKey?: string | null
 }
 
 function LayerToggle({
   mapRef,
+  mapReady = false,
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
@@ -32,170 +48,350 @@ function LayerToggle({
   showScoreToggle,
   onBuiltStatusToggle,
   showBuiltStatusToggle,
+  onReportStatusToggle,
+  showReportStatusToggle,
+  onVacancySignalToggle,
+  showVacancySignalToggle,
+  onBuildCapacityToggle,
+  showBuildCapacityToggle,
+  onScannedScopeToggle,
+  showScannedScopeToggle,
   autoEnableParcelsKey,
 }: LayerToggleProps) {
-  const [activeLayer, setActiveLayer] = useState<LayerType>('kaart');
-  const [showParcels, setShowParcels] = useState(false);
-  const [showGemeenten, setShowGemeenten] = useState(false);
-  const [showBestemmingsplan, setShowBestemmingsplan] = useState(false);
-  const [showWijken, setShowWijken] = useState(true); // Wijken default to visible when loaded
-  const [showScore, setShowScore] = useState(true); // Score default to visible when scan is active
-  const [showBuiltStatus, setShowBuiltStatus] = useState(false);
+  const persisted = useMemo(() => readPersistedMapLayerState(), [])
+
+  const [activeLayer, setActiveLayer] = useState<LayerType>(persisted.basemap)
+  const [showParcels, setShowParcels] = useState(persisted.showParcels)
+  const [showGemeenten, setShowGemeenten] = useState(persisted.showGemeenten)
+  const [showBestemmingsplan, setShowBestemmingsplan] = useState(
+    persisted.showBestemmingsplan
+  )
+  const [showWijken, setShowWijken] = useState(persisted.showWijken)
+  const [showScannedScope, setShowScannedScope] = useState(persisted.showScannedScope)
+  const [showScore, setShowScore] = useState(
+    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
+  )
+  const [showBuiltStatus, setShowBuiltStatus] = useState(
+    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[1].id
+  )
+  const [showReportStatus, setShowReportStatus] = useState(
+    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
+  )
+  const [showVacancySignal, setShowVacancySignal] = useState(
+    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
+  )
+  const [showBuildCapacity, setShowBuildCapacity] = useState(
+    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
+  )
+
+  const isStyleReady = useCallback(() => {
+    const map = mapRef.current
+    return Boolean(map && mapReady && map.isStyleLoaded())
+  }, [mapReady, mapRef])
+
+  const applyBaseLayer = useCallback(
+    (layer: LayerType) => {
+      if (!isStyleReady()) return
+      if (!mapRef.current) return
+      const map = mapRef.current
+      try {
+        if (layer === 'aerial') {
+          map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 1)
+          map.setPaintProperty('carto-light-layer', 'raster-opacity', 0)
+        } else {
+          map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 0)
+          map.setPaintProperty('carto-light-layer', 'raster-opacity', 1)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!message.includes('Style is not done loading')) {
+          throw error
+        }
+      }
+    },
+    [isStyleReady, mapRef]
+  )
+
+  const ensureParcelInteractionZoom = useCallback(() => {
+    if (!isStyleReady()) return
+    const map = mapRef.current
+    if (!map) return
+    const currentZoom = map.getZoom()
+    if (currentZoom >= PARCEL_INTERACTION_MIN_ZOOM) return
+    map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
+  }, [isStyleReady, mapRef])
+
+  const setParcelOverlayMode = useCallback(
+    (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'none') => {
+      const isScore = mode === 'score'
+      const isBuilt = mode === 'built'
+      const isReport = mode === 'report'
+      const isVacancy = mode === 'vacancy'
+      const isCapacity = mode === 'capacity'
+      setShowScore(isScore)
+      setShowBuiltStatus(isBuilt)
+      setShowReportStatus(isReport)
+      setShowVacancySignal(isVacancy)
+      setShowBuildCapacity(isCapacity)
+      onScoreToggle?.(isScore)
+      onBuiltStatusToggle?.(isBuilt)
+      onReportStatusToggle?.(isReport)
+      onVacancySignalToggle?.(isVacancy)
+      onBuildCapacityToggle?.(isCapacity)
+      if (mode !== 'none') {
+        ensureParcelInteractionZoom()
+      }
+    },
+    [
+      ensureParcelInteractionZoom,
+      onBuildCapacityToggle,
+      onBuiltStatusToggle,
+      onReportStatusToggle,
+      onScoreToggle,
+      onVacancySignalToggle,
+    ]
+  )
+
+  useEffect(() => {
+    applyBaseLayer(activeLayer)
+  }, [activeLayer, applyBaseLayer])
+
+  const didInitSyncRef = useRef(false)
+  useEffect(() => {
+    if (!isStyleReady()) return
+    if (didInitSyncRef.current) return
+    didInitSyncRef.current = true
+    const map = mapRef.current
+    if (map) {
+      if (!map.getSource('pdok-parcels')) {
+        addParcelBoundariesLayer(map)
+      }
+      setParcelBoundariesVisibility(map, showParcels)
+    }
+    onParcelsToggle?.(showParcels)
+    onGemeentenToggle?.(showGemeenten)
+    onBestemmingsplanToggle?.(showBestemmingsplan)
+    onScannedScopeToggle?.(showScannedScope)
+    if (showParcels) {
+      setParcelOverlayMode('score')
+    }
+  }, [
+    isStyleReady,
+    mapRef,
+    setParcelOverlayMode,
+    onParcelsToggle,
+    onGemeentenToggle,
+    onBestemmingsplanToggle,
+    onScannedScopeToggle,
+    onScoreToggle,
+    onBuiltStatusToggle,
+    onReportStatusToggle,
+    onVacancySignalToggle,
+    onBuildCapacityToggle,
+    showParcels,
+    showGemeenten,
+    showBestemmingsplan,
+    showScannedScope,
+    showScore,
+    showBuiltStatus,
+    showReportStatus,
+    showVacancySignal,
+    showBuildCapacity,
+  ])
+
+  useEffect(() => {
+    const activeParcelOverlay = showScore
+      ? MAP_LAYER_CATALOG.parcelOverlays[0].id
+      : showBuiltStatus
+        ? MAP_LAYER_CATALOG.parcelOverlays[1].id
+        : showReportStatus
+          ? MAP_LAYER_CATALOG.parcelOverlays[2].id
+          : showVacancySignal
+            ? MAP_LAYER_CATALOG.parcelOverlays[3].id
+            : showBuildCapacity
+              ? MAP_LAYER_CATALOG.parcelOverlays[4].id
+          : null
+    writePersistedMapLayerState({
+      basemap: activeLayer,
+      showParcels,
+      showGemeenten,
+      showBestemmingsplan,
+      showWijken,
+      showScannedScope,
+      activeParcelOverlay,
+    })
+  }, [
+    activeLayer,
+    showParcels,
+    showGemeenten,
+    showBestemmingsplan,
+    showWijken,
+    showScannedScope,
+    showScore,
+    showBuiltStatus,
+    showReportStatus,
+    showVacancySignal,
+    showBuildCapacity,
+  ])
 
   const handleLayerChange = (layer: LayerType) => {
-    if (!mapRef.current || layer === activeLayer) return;
-
-    const map = mapRef.current;
-
-    if (layer === 'aerial') {
-      map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 1);
-      map.setPaintProperty('carto-light-layer', 'raster-opacity', 0);
-    } else {
-      map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 0);
-      map.setPaintProperty('carto-light-layer', 'raster-opacity', 1);
-    }
-
-    setActiveLayer(layer);
-  };
+    if (layer === activeLayer) return
+    setActiveLayer(layer)
+  }
 
   const handleParcelsToggle = () => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-    const newShowParcels = !showParcels;
-
-    // If source doesn't exist yet, add it first
+    if (!mapRef.current || !isStyleReady()) return
+    const map = mapRef.current
+    const nextShowParcels = !showParcels
     if (!map.getSource('pdok-parcels')) {
-      addParcelBoundariesLayer(map);
+      addParcelBoundariesLayer(map)
     }
-
-    // Toggle visibility
-    setParcelBoundariesVisibility(map, newShowParcels);
-    setShowParcels(newShowParcels);
-
-    // Notify parent component
-    if (onParcelsToggle) {
-      onParcelsToggle(newShowParcels);
+    setParcelBoundariesVisibility(map, nextShowParcels)
+    setShowParcels(nextShowParcels)
+    onParcelsToggle?.(nextShowParcels)
+    if (nextShowParcels) {
+      ensureParcelInteractionZoom()
+      // Default parcel mode: always show the standard potential colors.
+      setParcelOverlayMode('score')
     }
-
-    // When parcels are turned off, also hide data overlays.
-    if (!newShowParcels && showScore) {
-      setShowScore(false);
-      if (onScoreToggle) {
-        onScoreToggle(false);
-      }
+    if (!nextShowParcels) {
+      // Hide active overlays while preserving selected mode in UI/localStorage.
+      onScoreToggle?.(false)
+      onBuiltStatusToggle?.(false)
+      onReportStatusToggle?.(false)
+      onVacancySignalToggle?.(false)
+      onBuildCapacityToggle?.(false)
     }
-    if (!newShowParcels && showBuiltStatus) {
-      setShowBuiltStatus(false);
-      if (onBuiltStatusToggle) {
-        onBuiltStatusToggle(false);
-      }
-    }
-  };
+  }
 
   const handleGemeentenToggle = () => {
-    if (!mapRef.current) return;
-
-    const newShowGemeenten = !showGemeenten;
-    setShowGemeenten(newShowGemeenten);
-
-    // Notify parent component to handle layer addition/removal
-    if (onGemeentenToggle) {
-      onGemeentenToggle(newShowGemeenten);
-    }
-  };
+    const nextShowGemeenten = !showGemeenten
+    setShowGemeenten(nextShowGemeenten)
+    onGemeentenToggle?.(nextShowGemeenten)
+  }
 
   const handleBestemmingsplanToggle = () => {
-    const newShowBestemmingsplan = !showBestemmingsplan;
-    setShowBestemmingsplan(newShowBestemmingsplan);
-
-    // Notify parent component to handle layer addition/removal
-    if (onBestemmingsplanToggle) {
-      onBestemmingsplanToggle(newShowBestemmingsplan);
-    }
-  };
+    const next = !showBestemmingsplan
+    setShowBestemmingsplan(next)
+    onBestemmingsplanToggle?.(next)
+  }
 
   const handleWijkenToggle = () => {
-    const newShowWijken = !showWijken;
-    setShowWijken(newShowWijken);
-    if (onWijkenToggle) {
-      onWijkenToggle(newShowWijken);
-    }
-  };
+    const next = !showWijken
+    setShowWijken(next)
+    onWijkenToggle?.(next)
+  }
+
+  const handleScannedScopeToggle = () => {
+    const next = !showScannedScope
+    setShowScannedScope(next)
+    onScannedScopeToggle?.(next)
+  }
 
   const handleScoreToggle = () => {
-    const newShowScore = !showScore;
-    setShowScore(newShowScore);
-    if (onScoreToggle) {
-      onScoreToggle(newShowScore);
-    }
-    if (newShowScore && showBuiltStatus) {
-      setShowBuiltStatus(false);
-      onBuiltStatusToggle?.(false);
-    }
-  };
+    setParcelOverlayMode(showScore ? 'none' : 'score')
+  }
 
   const handleBuiltStatusToggle = () => {
-    const newShowBuiltStatus = !showBuiltStatus;
-    setShowBuiltStatus(newShowBuiltStatus);
-    if (onBuiltStatusToggle) {
-      onBuiltStatusToggle(newShowBuiltStatus);
-    }
-    if (newShowBuiltStatus && showScore) {
-      setShowScore(false);
-      onScoreToggle?.(false);
-    }
-  };
+    setParcelOverlayMode(showBuiltStatus ? 'none' : 'built')
+  }
 
-  // Track when wijken toggle appears/disappears to reset state to default (visible)
-  const prevShowWijkenToggleRef = useRef(showWijkenToggle);
+  const handleReportStatusToggle = () => {
+    setParcelOverlayMode(showReportStatus ? 'none' : 'report')
+  }
+
+  const handleVacancySignalToggle = () => {
+    setParcelOverlayMode(showVacancySignal ? 'none' : 'vacancy')
+  }
+
+  const handleBuildCapacityToggle = () => {
+    setParcelOverlayMode(showBuildCapacity ? 'none' : 'capacity')
+  }
+
+  const prevShowWijkenToggleRef = useRef(showWijkenToggle)
   useEffect(() => {
-    // Only reset when transitioning from hidden -> visible (gemeente just became active)
+    if (!mapReady) return
     if (showWijkenToggle && !prevShowWijkenToggleRef.current) {
-      // Intentional: Reset toggle state to match layer visibility when gemeente becomes active
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowWijken(true);
+      setShowGemeenten(true)
+      onGemeentenToggle?.(true)
+      onWijkenToggle?.(showWijken)
     }
-    prevShowWijkenToggleRef.current = showWijkenToggle;
-  }, [showWijkenToggle]);
+    prevShowWijkenToggleRef.current = showWijkenToggle
+  }, [mapReady, showWijken, showWijkenToggle, onGemeentenToggle, onWijkenToggle])
 
-  // Track when score toggle appears/disappears to reset state to default (visible)
-  const prevShowScoreToggleRef = useRef(showScoreToggle);
+  const prevShowScoreToggleRef = useRef(showScoreToggle)
   useEffect(() => {
-    // Only reset when transitioning from hidden -> visible (scan just became active)
-    if (showScoreToggle && !prevShowScoreToggleRef.current) {
-      // Intentional: Reset toggle state to match layer visibility when scan becomes active
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowScore(true);
-      // Intentional: built-status overlay defaults to off for a new scan context.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowBuiltStatus(false);
+    if (!mapReady) return
+    if (showScoreToggle && !prevShowScoreToggleRef.current && showParcels) {
+      onScoreToggle?.(showScore)
+      onBuiltStatusToggle?.(showBuiltStatus)
+      onReportStatusToggle?.(showReportStatus)
+      onVacancySignalToggle?.(showVacancySignal)
+      onBuildCapacityToggle?.(showBuildCapacity)
     }
-    prevShowScoreToggleRef.current = showScoreToggle;
-  }, [showScoreToggle]);
+    prevShowScoreToggleRef.current = showScoreToggle
+  }, [
+    mapReady,
+    showScoreToggle,
+    showParcels,
+    showScore,
+    showBuiltStatus,
+    showReportStatus,
+    showVacancySignal,
+    showBuildCapacity,
+    onScoreToggle,
+    onBuiltStatusToggle,
+    onReportStatusToggle,
+    onVacancySignalToggle,
+    onBuildCapacityToggle,
+  ])
 
-  // Force-enable parcels from external navigation (e.g. "Bekijk op kaart" from meldingen)
-  const lastAutoEnableRef = useRef<string | null>(null);
+  const lastAutoEnableRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!autoEnableParcelsKey || !mapRef.current) return;
-    if (lastAutoEnableRef.current === autoEnableParcelsKey) return;
-    lastAutoEnableRef.current = autoEnableParcelsKey;
+    if (!autoEnableParcelsKey || !mapRef.current || !isStyleReady()) return
+    if (lastAutoEnableRef.current === autoEnableParcelsKey) return
+    lastAutoEnableRef.current = autoEnableParcelsKey
 
-    const map = mapRef.current;
+    const map = mapRef.current
     if (!map.getSource('pdok-parcels')) {
-      addParcelBoundariesLayer(map);
+      addParcelBoundariesLayer(map)
     }
-    setParcelBoundariesVisibility(map, true);
-    // Intentional sync to keep toggle UI aligned with external map navigation state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShowParcels(true);
-    onParcelsToggle?.(true);
-  }, [autoEnableParcelsKey, mapRef, onParcelsToggle]);
+    setParcelBoundariesVisibility(map, true)
+    setShowParcels(true)
+    onParcelsToggle?.(true)
+    ensureParcelInteractionZoom()
+    // Keep auto-enabled parcel mode consistent with default UX.
+    setParcelOverlayMode('score')
+  }, [
+    autoEnableParcelsKey,
+    ensureParcelInteractionZoom,
+    isStyleReady,
+    mapRef,
+    onParcelsToggle,
+    setParcelOverlayMode,
+  ])
 
-  const active = 'bg-amber-accent text-on-accent shadow-sm';
-  const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
-  const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm';
-  const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800';
+  useEffect(() => {
+    if (!showParcels || !isStyleReady()) return
+    if (showScore) return
+    if (showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity) return
+    // Persisted "none" state should not disable clickability in parcel mode.
+    setParcelOverlayMode('score')
+  }, [
+    isStyleReady,
+    setParcelOverlayMode,
+    showBuildCapacity,
+    showBuiltStatus,
+    showParcels,
+    showReportStatus,
+    showScore,
+    showVacancySignal,
+  ])
+
+  const active = 'bg-amber-accent text-on-accent shadow-sm'
+  const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
+  const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm'
+  const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
 
   return (
     <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
@@ -263,6 +459,20 @@ function LayerToggle({
         </>
       )}
 
+      {showScannedScopeToggle && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleScannedScopeToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showScannedScope ? overlayActive : overlayInactive
+            }`}
+          >
+            {MAP_LAYER_CATALOG.boundaryOverlays[0].label}
+          </button>
+        </>
+      )}
+
       {showScoreToggle && showParcels && (
         <>
           <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
@@ -272,7 +482,7 @@ function LayerToggle({
               showScore ? overlayActive : overlayInactive
             }`}
           >
-            Potentie
+            {MAP_LAYER_CATALOG.parcelOverlays[0].label}
           </button>
         </>
       )}
@@ -286,12 +496,54 @@ function LayerToggle({
               showBuiltStatus ? overlayActive : overlayInactive
             }`}
           >
-            Bebouwd
+            {MAP_LAYER_CATALOG.parcelOverlays[1].label}
+          </button>
+        </>
+      )}
+
+      {showReportStatusToggle && showParcels && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleReportStatusToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showReportStatus ? overlayActive : overlayInactive
+            }`}
+          >
+            {MAP_LAYER_CATALOG.parcelOverlays[2].label}
+          </button>
+        </>
+      )}
+
+      {showVacancySignalToggle && showParcels && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleVacancySignalToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showVacancySignal ? overlayActive : overlayInactive
+            }`}
+          >
+            {MAP_LAYER_CATALOG.parcelOverlays[3].label}
+          </button>
+        </>
+      )}
+
+      {showBuildCapacityToggle && showParcels && (
+        <>
+          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+          <button
+            onClick={handleBuildCapacityToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showBuildCapacity ? overlayActive : overlayInactive
+            }`}
+          >
+            {MAP_LAYER_CATALOG.parcelOverlays[4].label}
           </button>
         </>
       )}
     </div>
-  );
+  )
 }
 
-export default LayerToggle;
+export default LayerToggle

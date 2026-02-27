@@ -1,10 +1,13 @@
 import type maplibregl from 'maplibre-gl';
 
 const SOURCE_ID = 'parcel-scores';
-const FILL_LAYER_ID = 'parcel-score-fill';
+export const PARCEL_SCORE_FILL_LAYER_ID = 'parcel-score-fill';
 const OUTLINE_LAYER_ID = 'parcel-score-outline';
 const SELECTED_OUTLINE_LAYER_ID = 'parcel-score-selected-outline';
 export const PARCEL_BUILT_STATUS_FILL_LAYER_ID = 'parcel-built-status-fill';
+export const PARCEL_REPORT_STATUS_FILL_LAYER_ID = 'parcel-report-status-fill';
+export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
+export const PARCEL_BUILD_CAPACITY_FILL_LAYER_ID = 'parcel-build-capacity-fill';
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
@@ -42,7 +45,7 @@ export function addParcelScoreLayer(
 
   // Add fill layer with data-driven color based on score
   map.addLayer({
-    id: FILL_LAYER_ID,
+    id: PARCEL_SCORE_FILL_LAYER_ID,
     type: 'fill',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
@@ -106,6 +109,108 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
+  // Optional overlay layer to show report coverage status per parcel.
+  // Hidden by default and toggled from LayerToggle.
+  map.addLayer({
+    id: PARCEL_REPORT_STATUS_FILL_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    layout: {
+      visibility: 'none',
+    },
+    paint: {
+      'fill-color': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
+        ['true', '1', 'yes'],
+        '#f59e0b', // Rapport bestaat
+        '#64748b', // Nog geen rapport
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.9,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.8,
+        0.58,
+      ],
+    },
+    minzoom: 14,
+  });
+
+  // Optional overlay layer to highlight vacancy signals.
+  // Hidden by default and toggled from LayerToggle.
+  map.addLayer({
+    id: PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    layout: {
+      visibility: 'none',
+    },
+    paint: {
+      'fill-color': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'vacancy_signal'], 'onbekend']]],
+        'leeg_perceel',
+        '#22c55e',
+        'leegstaand_pand',
+        '#f59e0b',
+        'in_gebruik',
+        '#ef4444',
+        '#64748b',
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.9,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.8,
+        0.58,
+      ],
+    },
+    minzoom: 14,
+  });
+
+  // Optional overlay layer to show build capacity from FAR/TAR indicators.
+  // Hidden by default and toggled from LayerToggle.
+  map.addLayer({
+    id: PARCEL_BUILD_CAPACITY_FILL_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    layout: {
+      visibility: 'none',
+    },
+    paint: {
+      'fill-color': [
+        'case',
+        ['>=', ['coalesce', ['get', 'max_floor_area_ratio'], 0], 2.0],
+        '#16a34a',
+        ['>=', ['coalesce', ['get', 'max_floor_area_ratio'], 0], 1.2],
+        '#65a30d',
+        ['>=', ['coalesce', ['get', 'max_bebouwingspercentage'], 0], 70],
+        '#eab308',
+        ['>=', ['coalesce', ['get', 'max_floor_area_ratio'], 0], 0.8],
+        '#f59e0b',
+        '#64748b',
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.9,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.8,
+        0.58,
+      ],
+    },
+    minzoom: 14,
+  });
+
   // Add outline layer for visual separation between parcels
   map.addLayer({
     id: OUTLINE_LAYER_ID,
@@ -114,9 +219,27 @@ export function addParcelScoreLayer(
     'source-layer': sourceLayer,
     filter: ['has', 'score'],
     paint: {
-      'line-color': '#ffffff',
-      'line-width': 0.5,
-      'line-opacity': 0.8,
+      'line-color': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
+        ['true', '1', 'yes'],
+        '#f59e0b', // Rapport bestaat -> amber accent
+        '#ffffff',
+      ],
+      'line-width': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
+        ['true', '1', 'yes'],
+        1.4,
+        0.5,
+      ],
+      'line-opacity': [
+        'match',
+        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
+        ['true', '1', 'yes'],
+        1.0,
+        0.8,
+      ],
     },
     minzoom: 14,
   });
@@ -190,11 +313,17 @@ export function addParcelScoreLayer(
     }
   };
 
-  // Hover effect on both potential and built-status overlays.
-  map.on('mousemove', FILL_LAYER_ID, handleMouseMove);
+  // Hover effect on all parcel data overlays.
+  map.on('mousemove', PARCEL_SCORE_FILL_LAYER_ID, handleMouseMove);
   map.on('mousemove', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleMouseMove);
-  map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave);
+  map.on('mousemove', PARCEL_REPORT_STATUS_FILL_LAYER_ID, handleMouseMove);
+  map.on('mousemove', PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, handleMouseMove);
+  map.on('mousemove', PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, handleMouseMove);
+  map.on('mouseleave', PARCEL_SCORE_FILL_LAYER_ID, handleMouseLeave);
   map.on('mouseleave', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleMouseLeave);
+  map.on('mouseleave', PARCEL_REPORT_STATUS_FILL_LAYER_ID, handleMouseLeave);
+  map.on('mouseleave', PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, handleMouseLeave);
+  map.on('mouseleave', PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, handleMouseLeave);
 }
 
 /**
@@ -217,8 +346,8 @@ export function setupParcelScoreClickHandler(
     }
   };
 
-  map.on('click', FILL_LAYER_ID, handler);
-  return () => map.off('click', FILL_LAYER_ID, handler);
+  map.on('click', PARCEL_SCORE_FILL_LAYER_ID, handler);
+  return () => map.off('click', PARCEL_SCORE_FILL_LAYER_ID, handler);
 }
 
 /**
@@ -278,12 +407,24 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
     map.removeLayer(PARCEL_BUILT_STATUS_FILL_LAYER_ID);
   }
 
+  if (map.getLayer(PARCEL_REPORT_STATUS_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_REPORT_STATUS_FILL_LAYER_ID);
+  }
+
+  if (map.getLayer(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID);
+  }
+
+  if (map.getLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID);
+  }
+
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.removeLayer(OUTLINE_LAYER_ID);
   }
 
-  if (map.getLayer(FILL_LAYER_ID)) {
-    map.removeLayer(FILL_LAYER_ID);
+  if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_SCORE_FILL_LAYER_ID);
   }
 
   // Remove source
@@ -302,10 +443,11 @@ export function setParcelScoreVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
-  if (map.getLayer(FILL_LAYER_ID)) {
-    map.setLayoutProperty(FILL_LAYER_ID, 'visibility', visibility);
+  if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_SCORE_FILL_LAYER_ID, 'visibility', visibility);
   }
 
   if (map.getLayer(OUTLINE_LAYER_ID)) {
@@ -327,10 +469,65 @@ export function setParcelBuiltStatusVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
   if (map.getLayer(PARCEL_BUILT_STATUS_FILL_LAYER_ID)) {
     map.setLayoutProperty(PARCEL_BUILT_STATUS_FILL_LAYER_ID, 'visibility', visibility);
+  }
+}
+
+/**
+ * Toggle visibility of report-status parcel overlay.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param visible - Whether layer should be visible
+ */
+export function setParcelReportStatusVisibility(
+  map: maplibregl.Map,
+  visible: boolean
+): void {
+  if (!map.isStyleLoaded()) return;
+  const visibility = visible ? 'visible' : 'none';
+
+  if (map.getLayer(PARCEL_REPORT_STATUS_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_REPORT_STATUS_FILL_LAYER_ID, 'visibility', visibility);
+  }
+}
+
+/**
+ * Toggle visibility of vacancy-signal parcel overlay.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param visible - Whether layer should be visible
+ */
+export function setParcelVacancySignalVisibility(
+  map: maplibregl.Map,
+  visible: boolean
+): void {
+  if (!map.isStyleLoaded()) return;
+  const visibility = visible ? 'visible' : 'none';
+
+  if (map.getLayer(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, 'visibility', visibility);
+  }
+}
+
+/**
+ * Toggle visibility of build-capacity parcel overlay.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param visible - Whether layer should be visible
+ */
+export function setParcelBuildCapacityVisibility(
+  map: maplibregl.Map,
+  visible: boolean
+): void {
+  if (!map.isStyleLoaded()) return;
+  const visibility = visible ? 'visible' : 'none';
+
+  if (map.getLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, 'visibility', visibility);
   }
 }
 

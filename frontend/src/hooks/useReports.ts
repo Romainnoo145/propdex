@@ -28,6 +28,7 @@ import {
   generateReportFromParcel,
 } from '@/lib/api'
 import type {
+  GenerateReportFromParcelResponse,
   ReportFilters,
   ReportListResponse,
   ReportDetailResponse,
@@ -170,7 +171,7 @@ export function useGenerateReportFromParcel() {
   const { accessToken } = useAuth()
   const queryClient = useQueryClient()
 
-  return useMutation<ReportDetailResponse, Error, string>({
+  return useMutation<GenerateReportFromParcelResponse, Error, string>({
     mutationFn: (parcelId: string) =>
       generateReportFromParcel(parcelId, accessToken),
     onSuccess: () => {

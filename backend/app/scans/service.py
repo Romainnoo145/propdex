@@ -3,13 +3,29 @@
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import asc, delete, desc, func, or_, select, text, update
+from sqlalchemy import Float, asc, cast, delete, desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
+
+
+def _vacancy_subscore_expr():
+    """SQL expression for score-v2 subscore sorting from JSON flags."""
+    return cast(
+        func.coalesce(ScanResult.flags["subscores"]["vacancy"].astext, "0"),
+        Float,
+    )
+
+
+def _buildability_subscore_expr():
+    """SQL expression for score-v2 subscore sorting from JSON flags."""
+    return cast(
+        func.coalesce(ScanResult.flags["subscores"]["buildability"].astext, "0"),
+        Float,
+    )
 
 
 async def expire_stale_scans(
@@ -293,7 +309,8 @@ async def list_scan_results_by_ids(
         scan_id: Scan UUID
         organization_id: Tenant organization ID
         parcel_ids: List of parcel UUIDs to include
-        sort_by: Sort field (score, area_m2, address, bouwjaar)
+        sort_by: Sort field (score, vacancy_subscore, buildability_subscore,
+                 area_m2, address, bouwjaar)
         sort_order: Sort direction (asc, desc)
         session: Database session
 
@@ -314,6 +331,8 @@ async def list_scan_results_by_ids(
     # Apply sorting
     sort_field_map = {
         "score": ScanResult.score,
+        "vacancy_subscore": _vacancy_subscore_expr(),
+        "buildability_subscore": _buildability_subscore_expr(),
         "area_m2": ParcelCache.area_m2,
         "address": ParcelCache.address,
         "bouwjaar": ParcelCache.bouwjaar,
@@ -355,7 +374,8 @@ async def list_scan_results(
         min_area_m2: Minimum parcel area in square meters
         max_area_m2: Maximum parcel area in square meters
         score_category: Filter by score category ("High" >=65, "Medium" 40-64, "Low" <40)
-        sort_by: Sort field (score, area_m2, address, bouwjaar)
+        sort_by: Sort field (score, vacancy_subscore, buildability_subscore,
+                 area_m2, address, bouwjaar)
         sort_order: Sort direction (asc, desc)
         offset: Pagination offset
         limit: Page size
@@ -427,6 +447,8 @@ async def list_scan_results(
     # Apply sorting
     sort_field_map = {
         "score": ScanResult.score,
+        "vacancy_subscore": _vacancy_subscore_expr(),
+        "buildability_subscore": _buildability_subscore_expr(),
         "area_m2": ParcelCache.area_m2,
         "address": ParcelCache.address,
         "bouwjaar": ParcelCache.bouwjaar,

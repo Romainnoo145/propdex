@@ -170,6 +170,7 @@ export function setParcelVectorTileVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
   if (map.getLayer(FILL_LAYER_ID)) {

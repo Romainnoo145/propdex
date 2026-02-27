@@ -7,6 +7,7 @@ const projectenSearchSchema = z.object({
   gemeente_id: z.string().optional(),
   gemeente_code: z.string().optional(),
   wijk_id: z.string().optional(),
+  provincie_code: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_authenticated/projecten')({

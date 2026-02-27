@@ -4,28 +4,33 @@ import json
 import logging
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
-from shapely.geometry import box, shape
-from sqlalchemy import func, select
+from shapely.geometry import Point, box, shape
+from sqlalchemy import func, literal, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.government_apis.base import GovernmentAPIError
+from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
+from app.models.change_record import ChangeRecord
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
+from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
 from app.scans.schemas import (
+    ParcelAtPointResponse,
     ParcelCentroidResponse,
     ParcelEnrichmentResponse,
     ScanCreateRequest,
@@ -38,13 +43,20 @@ from app.scans.schemas import (
 )
 from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.excel_exporter import export_scan_results_to_excel
+from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.gemeente_service import get_gemeente_bbox
-from app.services.spatial_helpers import transform_bbox_to_rd
+from app.services.parcel_scoring import (
+    compute_vacancy_confidence,
+    extract_building_metrics,
+)
+from app.services.spatial_helpers import transform_bbox_to_rd, transform_point_to_wgs84
 from app.services.wijk_service import get_wijken_in_gemeente
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+
+pdok_cadastral_client = PDOKCadastralClient()
 
 
 def _normalize_area_name(value: str) -> str:
@@ -125,6 +137,262 @@ def _parse_address_components(address: str | None) -> tuple[str | None, str | No
     return street, number
 
 
+def _is_missing_address(address: str | None) -> bool:
+    """Return True when address is null/empty/placeholder-like."""
+    if not isinstance(address, str):
+        return True
+    normalized = address.strip().lower()
+    return normalized in {"", "onbekend", "unknown", "none", "null", "-"}
+
+
+def _extract_first_coordinate_pair(geometry: dict | None) -> tuple[float, float] | None:
+    """
+    Extract first coordinate pair from GeoJSON geometry coordinates.
+
+    Works for Point/LineString/Polygon/Multi* by descending into nested arrays.
+    """
+    if not isinstance(geometry, dict):
+        return None
+    node = geometry.get("coordinates")
+    while isinstance(node, (list, tuple)) and len(node) > 0:
+        if (
+            len(node) >= 2
+            and isinstance(node[0], (int, float))
+            and isinstance(node[1], (int, float))
+        ):
+            return float(node[0]), float(node[1])
+        node = node[0]
+    return None
+
+
+def _geometry_looks_wgs84(geometry: dict | None) -> bool:
+    """Best-effort CRS detection for GeoJSON: True when first coord looks like lon/lat."""
+    pair = _extract_first_coordinate_pair(geometry)
+    if pair is None:
+        return False
+    x, y = pair
+    return -180 <= x <= 180 and -90 <= y <= 90
+
+
+async def _resolve_pdok_cadastral_parcel_at_rd(
+    *,
+    x_rd: float,
+    y_rd: float,
+    db: AsyncSession,
+) -> dict | None:
+    """
+    Resolve containing PDOK cadastral parcel for an RD point.
+
+    Returns normalized payload with RD geometry + WGS84 geometry and display metadata.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            pdok_features = await pdok_cadastral_client.get_parcels_by_point(
+                x=x_rd,
+                y=y_rd,
+                client=client,
+                distance=3.0,
+            )
+    except Exception as e:
+        logger.debug("PDOK cadastral lookup failed at RD point (%s,%s): %s", x_rd, y_rd, e)
+        return None
+
+    click_point_rd = Point(float(x_rd), float(y_rd))
+    click_lng, click_lat = transform_point_to_wgs84(float(x_rd), float(y_rd))
+    click_point_wgs84 = Point(click_lng, click_lat)
+    selected_feature: dict | None = None
+    selected_shape = None
+    selected_is_wgs84: bool | None = None
+    fallback_feature: dict | None = None
+    fallback_shape = None
+    fallback_is_wgs84: bool | None = None
+
+    for feature in pdok_features:
+        if not isinstance(feature, dict):
+            continue
+        geometry_candidate = feature.get("geometry")
+        if not isinstance(geometry_candidate, dict):
+            continue
+        try:
+            geom_shape = shape(geometry_candidate)
+        except Exception:
+            continue
+        if geom_shape.is_empty:
+            continue
+        geometry_is_wgs84 = _geometry_looks_wgs84(geometry_candidate)
+        test_point = click_point_wgs84 if geometry_is_wgs84 else click_point_rd
+        if fallback_feature is None:
+            fallback_feature = feature
+            fallback_shape = geom_shape
+            fallback_is_wgs84 = geometry_is_wgs84
+        if geom_shape.contains(test_point) or geom_shape.touches(test_point):
+            selected_feature = feature
+            selected_shape = geom_shape
+            selected_is_wgs84 = geometry_is_wgs84
+            break
+
+    if selected_feature is None and fallback_feature is not None:
+        selected_feature = fallback_feature
+        selected_shape = fallback_shape
+        selected_is_wgs84 = fallback_is_wgs84
+
+    if selected_feature is None or selected_shape is None:
+        return None
+
+    geometry_raw = selected_feature.get("geometry")
+    if not isinstance(geometry_raw, dict):
+        return None
+
+    source_srid = 4326 if bool(selected_is_wgs84) else 28992
+    geometry_rd = None
+    geometry_wgs84 = None
+    try:
+        source_geom_expr = func.ST_SetSRID(
+            func.ST_GeomFromGeoJSON(json.dumps(geometry_raw)),
+            source_srid,
+        )
+        transformed_row = (
+            await db.execute(
+                select(
+                    func.ST_AsGeoJSON(func.ST_Transform(source_geom_expr, 28992)).label(
+                        "geometry_rd"
+                    ),
+                    func.ST_AsGeoJSON(func.ST_Transform(source_geom_expr, 4326)).label(
+                        "geometry_wgs84"
+                    ),
+                )
+            )
+        ).mappings().one_or_none()
+        if transformed_row is not None:
+            geometry_rd_raw = transformed_row.get("geometry_rd")
+            geometry_wgs84_raw = transformed_row.get("geometry_wgs84")
+            if isinstance(geometry_rd_raw, str) and geometry_rd_raw.strip():
+                parsed_rd = json.loads(geometry_rd_raw)
+                if isinstance(parsed_rd, dict):
+                    geometry_rd = parsed_rd
+            if isinstance(geometry_wgs84_raw, str) and geometry_wgs84_raw.strip():
+                parsed_wgs84 = json.loads(geometry_wgs84_raw)
+                if isinstance(parsed_wgs84, dict):
+                    geometry_wgs84 = parsed_wgs84
+    except Exception as e:
+        logger.debug("Failed to transform PDOK parcel geometry to WGS84: %s", e)
+
+    if geometry_wgs84 is None and bool(selected_is_wgs84):
+        geometry_wgs84 = geometry_raw
+    if geometry_rd is None and not bool(selected_is_wgs84):
+        geometry_rd = geometry_raw
+
+    props = selected_feature.get("properties", {})
+    parcel_code = None
+    area_m2 = None
+    if isinstance(props, dict):
+        municipality_name = props.get("kadastrale_gemeente_waarde")
+        section = props.get("sectie")
+        number = props.get("perceelnummer")
+        if (
+            isinstance(municipality_name, str)
+            and municipality_name.strip()
+            and isinstance(section, str)
+            and section.strip()
+            and number is not None
+        ):
+            parcel_code = f"{municipality_name.strip()} {section.strip()} {number}"
+        else:
+            identificatie = props.get("identificatie")
+            if isinstance(identificatie, str) and identificatie.strip():
+                parcel_code = identificatie.strip()
+
+        raw_size = props.get("kadastrale_grootte_waarde")
+        if isinstance(raw_size, (int, float)):
+            area_m2 = float(raw_size)
+        elif isinstance(raw_size, str):
+            try:
+                area_m2 = float(raw_size.replace(",", "."))
+            except ValueError:
+                area_m2 = None
+
+    centroid = selected_shape.centroid
+    if bool(selected_is_wgs84):
+        centroid_wgs84 = (float(centroid.x), float(centroid.y))
+    else:
+        centroid_wgs84 = transform_point_to_wgs84(float(centroid.x), float(centroid.y))
+
+    return {
+        "geometry_rd": geometry_rd,
+        "geometry_wgs84": geometry_wgs84,
+        "parcel_code": parcel_code,
+        "area_m2": area_m2,
+        "centroid_wgs84": centroid_wgs84,
+    }
+
+
+async def _resolve_parcel_address_from_centroid(
+    *,
+    request: Request,
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    parcel_id: uuid.UUID,
+    current_address: str | None,
+    centroid_rd_wkt: str | None = None,
+) -> str | None:
+    """
+    Best-effort address fallback via PDOK reverse geocoding on parcel centroid.
+
+    When ParcelCache.address is missing, this resolves an address from RD centroid
+    and persists it so future reads return an address immediately.
+    """
+    if not _is_missing_address(current_address):
+        return current_address
+
+    try:
+        centroid_wkt = centroid_rd_wkt
+        if not isinstance(centroid_wkt, str) or not centroid_wkt.strip():
+            from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+            centroid_wkt = (
+                await db.execute(
+                    select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
+                        ParcelCache.id == parcel_id,
+                        ParcelCache.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+
+        centroid_match = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_wkt or "")
+        if not centroid_match:
+            return current_address
+
+        rd_x = float(centroid_match.group(1))
+        rd_y = float(centroid_match.group(2))
+        http_client = getattr(request.app.state, "http_client", None)
+        if not isinstance(http_client, httpx.AsyncClient):
+            return current_address
+
+        locatieserver = PDOKLocatieserver()
+        resolved_address = await locatieserver.reverse(rd_x, rd_y, http_client)
+        if not isinstance(resolved_address, str) or not resolved_address.strip():
+            return current_address
+
+        normalized_address = resolved_address.strip()
+        await db.execute(
+            sa_update(ParcelCache)
+            .where(
+                ParcelCache.id == parcel_id,
+                ParcelCache.organization_id == organization_id,
+            )
+            .values(address=normalized_address)
+        )
+        await db.commit()
+        return normalized_address
+    except Exception as e:
+        logger.debug(
+            "Reverse geocode fallback failed for parcel %s: %s",
+            parcel_id,
+            e,
+        )
+        return current_address
+
+
 def _filter_vergunningen_for_parcel(
     records: list[dict],
     address: str | None,
@@ -181,6 +449,141 @@ def _filter_vergunningen_for_parcel(
     return []
 
 
+def _extract_listing_signal_from_enrichment(enrichment_data: dict | None) -> dict | None:
+    """Extract normalized listing signal from optional enrichment payload."""
+    if not isinstance(enrichment_data, dict):
+        return None
+
+    # Preferred explicit block if present.
+    listing = enrichment_data.get("listing_signal")
+    if isinstance(listing, dict):
+        return listing
+
+    # Backward-compatible flattening from top-level keys.
+    duration = (
+        enrichment_data.get("listing_duration_days")
+        or enrichment_data.get("listing_days_on_market")
+        or enrichment_data.get("days_on_market")
+    )
+    price_changes = (
+        enrichment_data.get("price_change_count")
+        or enrichment_data.get("listing_price_change_count")
+    )
+
+    if duration is None and price_changes is None:
+        return None
+
+    return {
+        "listing_duration_days": duration,
+        "price_change_count": price_changes,
+    }
+
+
+def _normalize_market_signals(raw: object) -> dict[str, int] | None:
+    if not isinstance(raw, dict):
+        return None
+    known_keys = (
+        "listing_duration_days",
+        "price_change_count",
+        "listing_snapshots_count",
+        "days_since_last_seen",
+    )
+    if not any(key in raw for key in known_keys):
+        return None
+
+    def _to_non_negative_int(value: object) -> int:
+        if isinstance(value, bool):
+            return 1 if value else 0
+        if isinstance(value, int):
+            return max(0, value)
+        if isinstance(value, float):
+            if value != value:
+                return 0
+            return max(0, int(value))
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return 0
+            try:
+                return max(0, int(float(stripped)))
+            except ValueError:
+                return 0
+        return 0
+
+    return {
+        "listing_duration_days": _to_non_negative_int(raw.get("listing_duration_days")),
+        "price_change_count": _to_non_negative_int(raw.get("price_change_count")),
+        "listing_snapshots_count": _to_non_negative_int(raw.get("listing_snapshots_count")),
+        "days_since_last_seen": _to_non_negative_int(raw.get("days_since_last_seen")),
+    }
+
+
+async def _build_permit_activity_map(
+    parcel_ids: list[uuid.UUID],
+    organization_id: uuid.UUID,
+    db: AsyncSession,
+) -> dict[uuid.UUID, dict[str, int]]:
+    """Aggregate permit activity per parcel for vacancy confidence modeling."""
+    if not parcel_ids:
+        return {}
+
+    now = datetime.utcnow()
+    cutoff_180d = now - timedelta(days=180)
+    cutoff_365d = now - timedelta(days=365)
+    cutoff_730d = now - timedelta(days=730)
+
+    rows = await db.execute(
+        select(
+            ChangeRecord.matched_parcel_id,
+            ChangeRecord.change_date,
+            ChangeRecord.title,
+        ).where(
+            ChangeRecord.organization_id == organization_id,
+            ChangeRecord.change_type == "permit",
+            ChangeRecord.matched_parcel_id.in_(parcel_ids),
+            ChangeRecord.change_date >= cutoff_730d,
+        )
+    )
+
+    activity: dict[uuid.UUID, dict[str, int]] = {}
+    for matched_parcel_id, change_date, title in rows.all():
+        if matched_parcel_id is None or change_date is None:
+            continue
+
+        stats = activity.setdefault(
+            matched_parcel_id,
+            {
+                "permit_count_180d": 0,
+                "permit_count_365d": 0,
+                "permit_count_730d": 0,
+                "demolition_count_365d": 0,
+                "granted_count_365d": 0,
+            },
+        )
+        stats["permit_count_730d"] += 1
+
+        normalized_date = (
+            change_date.replace(tzinfo=None)
+            if getattr(change_date, "tzinfo", None) is not None
+            else change_date
+        )
+        lower_title = (title or "").lower()
+
+        if normalized_date >= cutoff_365d:
+            stats["permit_count_365d"] += 1
+
+            if any(token in lower_title for token in ("sloop", "slopen", "gesloopt")):
+                stats["demolition_count_365d"] += 1
+
+            if any(token in lower_title for token in ("verleend", "vergunning verleend")):
+                stats["granted_count_365d"] += 1
+
+        if normalized_date >= cutoff_180d:
+            stats["permit_count_180d"] += 1
+
+    return activity
+
+
 @router.get("", response_model=ScanListResponse)
 @limiter.limit("60/minute")
 async def list_scans(
@@ -227,19 +630,37 @@ async def list_scans(
         status_filter=status_filter,
     )
 
-    scan_items = [
-        ScanListItem(
-            scan_id=scan.id,
-            gemeente_naam=scan.gemeente_naam,
-            gemeente_code=scan.gemeente_code,
-            wijk_naam=scan.wijk_naam,
-            scan_date=scan.created_at,
-            status=scan.status,
-            parcel_count=parcel_count or 0,
-            project_id=scan.project_id,
+    scan_items: list[ScanListItem] = []
+    for scan, parcel_count in scans:
+        bbox_wgs84 = None
+        if (
+            scan.bbox_minx is not None
+            and scan.bbox_miny is not None
+            and scan.bbox_maxx is not None
+            and scan.bbox_maxy is not None
+        ):
+            min_lon_raw, min_lat_raw = transform_point_to_wgs84(scan.bbox_minx, scan.bbox_miny)
+            max_lon_raw, max_lat_raw = transform_point_to_wgs84(scan.bbox_maxx, scan.bbox_maxy)
+            bbox_wgs84 = (
+                min(min_lon_raw, max_lon_raw),
+                min(min_lat_raw, max_lat_raw),
+                max(min_lon_raw, max_lon_raw),
+                max(min_lat_raw, max_lat_raw),
+            )
+
+        scan_items.append(
+            ScanListItem(
+                scan_id=scan.id,
+                gemeente_naam=scan.gemeente_naam,
+                gemeente_code=scan.gemeente_code,
+                wijk_naam=scan.wijk_naam,
+                bbox_wgs84=bbox_wgs84,
+                scan_date=scan.created_at,
+                status=scan.status,
+                parcel_count=parcel_count or 0,
+                project_id=scan.project_id,
+            )
         )
-        for scan, parcel_count in scans
-    ]
 
     return ScanListResponse(
         scans=scan_items,
@@ -730,10 +1151,14 @@ async def get_parcel_centroid(
 
     query = select(
         ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
+        ST_AsText(ST_Centroid(ParcelCache.geometry)),
         ParcelCache.address,
         ParcelCache.parcel_id,
         ParcelCache.gemeente_code,
         ParcelCache.area_m2,
+        ParcelCache.has_pand,
+        ParcelCache.bouwjaar,
+        ParcelCache.pand_status,
         ST_AsGeoJSON(ST_Transform(ParcelCache.geometry, 4326)),
     ).where(
         ParcelCache.id == parcel_id,
@@ -742,11 +1167,15 @@ async def get_parcel_centroid(
     result = await db.execute(query)
     row = result.one_or_none()
     wkt = row[0] if row else None
-    address = row[1] if row else None
-    parcel_code = row[2] if row else None
-    gemeente_code = row[3] if row else None
-    area_m2 = row[4] if row else None
-    geometry_raw = row[5] if row else None
+    centroid_rd_wkt = row[1] if row else None
+    address = row[2] if row else None
+    parcel_code = row[3] if row else None
+    gemeente_code = row[4] if row else None
+    area_m2 = row[5] if row else None
+    has_pand = row[6] if row else None
+    bouwjaar = row[7] if row else None
+    pand_status = row[8] if row else None
+    geometry_raw = row[9] if row else None
 
     if not wkt:
         raise HTTPException(
@@ -773,13 +1202,370 @@ async def get_parcel_centroid(
                 parcel_id,
             )
 
+    resolved_lng = float(m.group(1))
+    resolved_lat = float(m.group(2))
+    if isinstance(centroid_rd_wkt, str):
+        centroid_rd_match = re_mod.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_rd_wkt)
+        if centroid_rd_match:
+            try:
+                x_rd = float(centroid_rd_match.group(1))
+                y_rd = float(centroid_rd_match.group(2))
+                pdok_parcel = await _resolve_pdok_cadastral_parcel_at_rd(
+                    x_rd=x_rd,
+                    y_rd=y_rd,
+                    db=db,
+                )
+                if isinstance(pdok_parcel, dict):
+                    pdok_geometry = pdok_parcel.get("geometry_wgs84")
+                    if isinstance(pdok_geometry, dict):
+                        geometry = pdok_geometry
+                    pdok_code = pdok_parcel.get("parcel_code")
+                    if isinstance(pdok_code, str) and pdok_code.strip():
+                        parcel_code = pdok_code
+                    pdok_area = pdok_parcel.get("area_m2")
+                    if isinstance(pdok_area, (int, float)) and float(pdok_area) > 0:
+                        area_m2 = float(pdok_area)
+                    pdok_centroid = pdok_parcel.get("centroid_wgs84")
+                    if (
+                        isinstance(pdok_centroid, tuple)
+                        and len(pdok_centroid) == 2
+                        and all(isinstance(v, (int, float)) for v in pdok_centroid)
+                    ):
+                        resolved_lng = float(pdok_centroid[0])
+                        resolved_lat = float(pdok_centroid[1])
+            except Exception as e:
+                logger.debug(
+                    "Failed to resolve PDOK centroid geometry for parcel %s: %s",
+                    parcel_id,
+                    e,
+                )
+
+    address = await _resolve_parcel_address_from_centroid(
+        request=request,
+        db=db,
+        organization_id=organization_id,
+        parcel_id=parcel_id,
+        current_address=address,
+        centroid_rd_wkt=centroid_rd_wkt if isinstance(centroid_rd_wkt, str) else None,
+    )
+
     return ParcelCentroidResponse(
-        lng=float(m.group(1)),
-        lat=float(m.group(2)),
+        lng=resolved_lng,
+        lat=resolved_lat,
         address=address,
         parcel_code=parcel_code,
         gemeente_code=gemeente_code,
         area_m2=area_m2,
+        has_pand=bool(has_pand) if isinstance(has_pand, bool) else None,
+        bouwjaar=bouwjaar if isinstance(bouwjaar, int) else None,
+        pand_status=pand_status if isinstance(pand_status, str) else None,
+        geometry=geometry,
+    )
+
+
+@router.get("/parcels/at-point", response_model=ParcelAtPointResponse)
+@limiter.limit("120/minute")
+async def get_parcel_at_point(
+    request: Request,
+    lng: float = Query(..., ge=-180, le=180),
+    lat: float = Query(..., ge=-90, le=90),
+    scan_id: uuid.UUID | None = Query(
+        default=None,
+        description="Optional scan_id to include scan-specific score/flags for this parcel",
+    ),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ParcelAtPointResponse:
+    """Resolve the parcel that intersects a clicked WGS84 map point."""
+    from geoalchemy2.functions import ST_AsGeoJSON, ST_AsText, ST_Centroid, ST_Transform
+
+    point_rd = func.ST_Transform(
+        func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326),
+        28992,
+    )
+
+    scan_scope_condition = None
+    if scan_id is not None:
+        scan_scope_condition = (
+            select(ScanResult.id)
+            .where(
+                ScanResult.organization_id == organization_id,
+                ScanResult.scan_id == scan_id,
+                ScanResult.parcel_id == ParcelCache.id,
+            )
+            .exists()
+        )
+
+    has_report_subquery = (
+        select(func.count(SavedReport.id) > 0)
+        .where(
+            SavedReport.organization_id == organization_id,
+            SavedReport.deleted_at.is_(None),
+            SavedReport.source_parcel_id == ParcelCache.id,
+        )
+        .scalar_subquery()
+    )
+    scan_score_subquery = literal(None)
+    scan_flags_subquery = literal(None)
+    if scan_id is not None:
+        scan_score_subquery = (
+            select(ScanResult.score)
+            .where(
+                ScanResult.organization_id == organization_id,
+                ScanResult.scan_id == scan_id,
+                ScanResult.parcel_id == ParcelCache.id,
+            )
+            .limit(1)
+            .scalar_subquery()
+        )
+        scan_flags_subquery = (
+            select(ScanResult.flags)
+            .where(
+                ScanResult.organization_id == organization_id,
+                ScanResult.scan_id == scan_id,
+                ScanResult.parcel_id == ParcelCache.id,
+            )
+            .limit(1)
+            .scalar_subquery()
+        )
+
+    pdok_geometry_wgs84: dict | None = None
+    pdok_parcel_code: str | None = None
+    pdok_area_m2: float | None = None
+    pdok_centroid_wgs84: tuple[float, float] | None = None
+    pdok_geom_rd_expr = None
+
+    try:
+        rd_coords = (
+            await db.execute(
+                select(
+                    func.ST_X(point_rd).label("x_rd"),
+                    func.ST_Y(point_rd).label("y_rd"),
+                )
+            )
+        ).mappings().one_or_none()
+
+        if rd_coords is not None:
+            x_rd = rd_coords.get("x_rd")
+            y_rd = rd_coords.get("y_rd")
+            if isinstance(x_rd, (int, float)) and isinstance(y_rd, (int, float)):
+                pdok_parcel = await _resolve_pdok_cadastral_parcel_at_rd(
+                    x_rd=float(x_rd),
+                    y_rd=float(y_rd),
+                    db=db,
+                )
+                if isinstance(pdok_parcel, dict):
+                    pdok_geometry_rd = pdok_parcel.get("geometry_rd")
+                    if isinstance(pdok_geometry_rd, dict):
+                        pdok_geom_rd_expr = func.ST_SetSRID(
+                            func.ST_GeomFromGeoJSON(json.dumps(pdok_geometry_rd)),
+                            28992,
+                        )
+                    pdok_geometry_wgs84 = pdok_parcel.get("geometry_wgs84")
+                    pdok_parcel_code = pdok_parcel.get("parcel_code")
+                    pdok_area_m2 = pdok_parcel.get("area_m2")
+                    pdok_centroid_wgs84 = pdok_parcel.get("centroid_wgs84")
+    except Exception as e:
+        logger.debug("PDOK cadastral fallback failed for at-point lookup: %s", e)
+
+    def _build_lookup_query(
+        spatial_condition,
+        *,
+        order_by: list,
+    ):
+        conditions = [
+            ParcelCache.organization_id == organization_id,
+            spatial_condition,
+        ]
+        if scan_scope_condition is not None:
+            conditions.append(scan_scope_condition)
+
+        return (
+            select(
+                ParcelCache.id.label("parcel_id"),
+                ST_AsText(ST_Centroid(ParcelCache.geometry)).label("centroid_rd_wkt"),
+                ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)).label(
+                    "centroid_wkt"
+                ),
+                ParcelCache.address.label("address"),
+                ParcelCache.parcel_id.label("parcel_code"),
+                ParcelCache.gemeente_code.label("gemeente_code"),
+                ParcelCache.area_m2.label("area_m2"),
+                ParcelCache.has_pand.label("has_pand"),
+                ParcelCache.bouwjaar.label("bouwjaar"),
+                ParcelCache.pand_status.label("pand_status"),
+                ParcelCache.bestemmingen.label("bestemmingen"),
+                has_report_subquery.label("has_report"),
+                ST_AsGeoJSON(ST_Transform(ParcelCache.geometry, 4326)).label("geometry_raw"),
+                scan_score_subquery.label("scan_score"),
+                scan_flags_subquery.label("scan_flags"),
+            )
+            .where(*conditions)
+            .order_by(*order_by)
+            .limit(1)
+        )
+
+    row = None
+    if pdok_geom_rd_expr is not None:
+        pdok_query = _build_lookup_query(
+            func.ST_Intersects(ParcelCache.geometry, pdok_geom_rd_expr),
+            order_by=[
+                func.ST_Area(
+                    func.ST_Intersection(ParcelCache.geometry, pdok_geom_rd_expr)
+                ).desc(),
+                func.ST_Distance(ST_Centroid(ParcelCache.geometry), point_rd).asc(),
+            ],
+        )
+        row = (await db.execute(pdok_query)).mappings().one_or_none()
+
+    if row is None:
+        fallback_query = _build_lookup_query(
+            func.ST_Intersects(ParcelCache.geometry, point_rd),
+            order_by=[func.ST_Area(ParcelCache.geometry).asc()],
+        )
+        row = (await db.execute(fallback_query)).mappings().one_or_none()
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found at point",
+        )
+
+    centroid_wkt = row["centroid_wkt"]
+    if not isinstance(centroid_wkt, str):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to parse parcel centroid",
+        )
+    centroid_match = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_wkt)
+    if not centroid_match:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to parse centroid",
+        )
+
+    geometry = None
+    geometry_raw = row.get("geometry_raw")
+    if isinstance(geometry_raw, str) and geometry_raw.strip():
+        try:
+            parsed_geometry = json.loads(geometry_raw)
+            if isinstance(parsed_geometry, dict):
+                geometry = parsed_geometry
+        except json.JSONDecodeError:
+            logger.debug(
+                "Failed to parse parcel geometry JSON for parcel_id=%s",
+                row["parcel_id"],
+            )
+    if pdok_geometry_wgs84 is not None:
+        geometry = pdok_geometry_wgs84
+
+    score = row.get("scan_score")
+    score_value = (
+        float(score)
+        if isinstance(score, (int, float)) and not isinstance(score, bool)
+        else None
+    )
+
+    score_category = None
+    score_breakdown = None
+    vacancy_signal = None
+    opportunity_signals = None
+    building_metrics = None
+    market_signals = None
+    scan_flags = row.get("scan_flags")
+    if isinstance(scan_flags, str) and scan_flags.strip():
+        try:
+            parsed_flags = json.loads(scan_flags)
+            scan_flags = parsed_flags if isinstance(parsed_flags, dict) else None
+        except json.JSONDecodeError:
+            scan_flags = None
+    if isinstance(scan_flags, dict):
+        raw_category = scan_flags.get("category")
+        score_category = raw_category if isinstance(raw_category, str) else None
+        raw_vacancy = scan_flags.get("vacancy_signal")
+        vacancy_signal = raw_vacancy if isinstance(raw_vacancy, str) else None
+        raw_signals = scan_flags.get("opportunity_signals")
+        opportunity_signals = (
+            [str(s) for s in raw_signals]
+            if isinstance(raw_signals, list)
+            else None
+        )
+        raw_metrics = scan_flags.get("building_metrics")
+        building_metrics = raw_metrics if isinstance(raw_metrics, dict) else None
+        market_signals = _normalize_market_signals(scan_flags.get("market_signals"))
+
+        factors = scan_flags.get("factors")
+        if isinstance(factors, dict):
+            score_breakdown = {"factors": factors}
+            raw_subscores = scan_flags.get("subscores")
+            if isinstance(raw_subscores, dict):
+                score_breakdown["subscores"] = raw_subscores
+            model_version = scan_flags.get("score_model_version")
+            if isinstance(model_version, str) and model_version:
+                score_breakdown["model_version"] = model_version
+        else:
+            legacy_breakdown = {
+                k: v for k, v in scan_flags.items() if k != "category"
+            }
+            score_breakdown = legacy_breakdown if legacy_breakdown else None
+
+    if building_metrics is None:
+        raw_bestemmingen = row.get("bestemmingen")
+        if isinstance(raw_bestemmingen, list):
+            try:
+                derived_metrics = extract_building_metrics(raw_bestemmingen)
+                if any(value is not None for value in derived_metrics.values()):
+                    building_metrics = derived_metrics
+            except Exception:
+                logger.debug(
+                    "Failed to derive building metrics from bestemmingen for parcel_id=%s",
+                    row["parcel_id"],
+                )
+
+    resolved_address = await _resolve_parcel_address_from_centroid(
+        request=request,
+        db=db,
+        organization_id=organization_id,
+        parcel_id=row["parcel_id"],
+        current_address=row["address"],
+        centroid_rd_wkt=row.get("centroid_rd_wkt"),
+    )
+
+    resolved_area_m2 = row.get("area_m2")
+    if isinstance(pdok_area_m2, float) and pdok_area_m2 > 0:
+        resolved_area_m2 = pdok_area_m2
+
+    resolved_parcel_code = pdok_parcel_code or row.get("parcel_code")
+    resolved_lng = float(centroid_match.group(1))
+    resolved_lat = float(centroid_match.group(2))
+    if (
+        isinstance(pdok_centroid_wgs84, tuple)
+        and len(pdok_centroid_wgs84) == 2
+        and all(isinstance(v, (int, float)) for v in pdok_centroid_wgs84)
+    ):
+        resolved_lng = float(pdok_centroid_wgs84[0])
+        resolved_lat = float(pdok_centroid_wgs84[1])
+
+    return ParcelAtPointResponse(
+        parcel_id=row["parcel_id"],
+        lng=resolved_lng,
+        lat=resolved_lat,
+        address=resolved_address,
+        parcel_code=resolved_parcel_code,
+        gemeente_code=row["gemeente_code"],
+        area_m2=resolved_area_m2,
+        has_pand=bool(row["has_pand"]),
+        bouwjaar=row["bouwjaar"],
+        pand_status=row["pand_status"],
+        score=score_value,
+        score_category=score_category,
+        score_breakdown=score_breakdown,
+        vacancy_signal=vacancy_signal,
+        market_signals=market_signals,
+        opportunity_signals=opportunity_signals,
+        building_metrics=building_metrics,
+        has_report=bool(row["has_report"]),
         geometry=geometry,
     )
 
@@ -1054,7 +1840,7 @@ async def list_results(
         max_area_m2: Maximum parcel area
         score_category: Filter by score category (High/Medium/Low)
         pand_status: Filter by building status
-        sort_by: Sort field (score/area_m2/address/bouwjaar)
+        sort_by: Sort field (score/vacancy_subscore/buildability_subscore/area_m2/address/bouwjaar)
         sort_order: Sort direction (asc/desc)
         offset: Pagination offset
         limit: Page size (max 100)
@@ -1098,6 +1884,32 @@ async def list_results(
         pand_status=pand_status,
     )
 
+    parcel_ids = [parcel.id for _, parcel in rows]
+    parcels_with_report: set[uuid.UUID] = set()
+    if parcel_ids:
+        report_rows = await db.execute(
+            select(SavedReport.source_parcel_id).where(
+                SavedReport.organization_id == organization_id,
+                SavedReport.deleted_at.is_(None),
+                SavedReport.source_parcel_id.in_(parcel_ids),
+            )
+        )
+        parcels_with_report = {
+            value
+            for value in report_rows.scalars().all()
+            if value is not None
+        }
+    permit_activity_by_parcel = await _build_permit_activity_map(
+        parcel_ids,
+        organization_id,
+        db,
+    )
+    listing_signal_by_parcel = await build_funda_listing_signal_map(
+        parcel_ids,
+        organization_id,
+        db,
+    )
+
     # Map to ScanResultItem
     result_items = []
     for result, parcel in rows:
@@ -1107,11 +1919,13 @@ async def list_results(
         vacancy_signal = None
         opportunity_signals = None
         building_metrics = None
+        market_signals = None
         if result.flags:
             score_category_value = result.flags.get("category")
             raw_vacancy = result.flags.get("vacancy_signal")
             raw_signals = result.flags.get("opportunity_signals")
             raw_metrics = result.flags.get("building_metrics")
+            raw_market_signals = result.flags.get("market_signals")
 
             vacancy_signal = raw_vacancy if isinstance(raw_vacancy, str) else None
             opportunity_signals = (
@@ -1120,15 +1934,34 @@ async def list_results(
                 else None
             )
             building_metrics = raw_metrics if isinstance(raw_metrics, dict) else None
+            market_signals = _normalize_market_signals(raw_market_signals)
 
             factors = result.flags.get("factors")
             if isinstance(factors, dict):
                 score_breakdown = {"factors": factors}
+                raw_subscores = result.flags.get("subscores")
+                if isinstance(raw_subscores, dict):
+                    score_breakdown["subscores"] = raw_subscores
+                model_version = result.flags.get("score_model_version")
+                if isinstance(model_version, str) and model_version:
+                    score_breakdown["model_version"] = model_version
             else:
                 legacy_breakdown = {
                     k: v for k, v in result.flags.items() if k != "category"
                 }
                 score_breakdown = legacy_breakdown if legacy_breakdown else None
+
+        listing_signal = (
+            listing_signal_by_parcel.get(parcel.id)
+            or _extract_listing_signal_from_enrichment(parcel.enrichment_data)
+        )
+        if listing_signal:
+            market_signals = _normalize_market_signals(listing_signal)
+        vacancy_confidence = compute_vacancy_confidence(
+            parcel,
+            permit_activity=permit_activity_by_parcel.get(parcel.id),
+            listing_signal=listing_signal,
+        )
 
         result_items.append(
             ScanResultItem(
@@ -1145,8 +1978,13 @@ async def list_results(
                 score_category=score_category_value,
                 score_breakdown=score_breakdown,
                 vacancy_signal=vacancy_signal,
+                vacancy_confidence=vacancy_confidence.confidence,
+                vacancy_reasons=vacancy_confidence.reasons,
+                vacancy_model_version=vacancy_confidence.model_version,
+                market_signals=market_signals,
                 opportunity_signals=opportunity_signals,
                 building_metrics=building_metrics,
+                has_report=parcel.id in parcels_with_report,
             )
         )
 
@@ -1241,7 +2079,7 @@ async def export_selection(
         request: FastAPI request object
         scan_id: Scan UUID
         parcel_ids: Comma-separated parcel UUIDs to include in export
-        sort_by: Sort field (score/area_m2/address/bouwjaar)
+        sort_by: Sort field (score/vacancy_subscore/buildability_subscore/area_m2/address/bouwjaar)
         sort_order: Sort direction (asc/desc)
         current_user: Authenticated user
         organization_id: Tenant ID
@@ -1353,7 +2191,7 @@ async def export_results(
         min_area_m2: Minimum parcel area
         max_area_m2: Maximum parcel area
         score_category: Filter by score category (High/Medium/Low)
-        sort_by: Sort field (score/area_m2/address)
+        sort_by: Sort field (score/vacancy_subscore/buildability_subscore/area_m2/address)
         sort_order: Sort direction (asc/desc)
         current_user: Authenticated user
         organization_id: Tenant ID

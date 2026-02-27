@@ -99,12 +99,27 @@ async def generate_mvt_tile(
                 sr.score,
                 sr.flags->>'category' AS score_category,
                 sr.flags->>'vacancy_signal' AS vacancy_signal,
+                (sr.flags->>'vacancy_confidence')::float AS vacancy_confidence,
+                sr.flags->>'vacancy_model_version' AS vacancy_model_version,
+                (sr.flags->'market_signals'->>'listing_duration_days')::int
+                    AS listing_duration_days,
+                (sr.flags->'market_signals'->>'price_change_count')::int
+                    AS price_change_count,
+                (sr.flags->'market_signals'->>'listing_snapshots_count')::int
+                    AS listing_snapshots_count,
+                (sr.flags->'market_signals'->>'days_since_last_seen')::int
+                    AS days_since_last_seen,
                 (sr.flags->'building_metrics'->>'max_bebouwingspercentage')::float
                     AS max_bebouwingspercentage,
                 (sr.flags->'building_metrics'->>'max_floor_area_ratio')::float
-                    AS max_floor_area_ratio
+                    AS max_floor_area_ratio,
+                (rep.id IS NOT NULL) AS has_report
             FROM parcel_cache pc
             JOIN scan_results sr ON sr.parcel_id = pc.id
+            LEFT JOIN saved_reports rep
+              ON rep.organization_id = pc.organization_id
+             AND rep.source_parcel_id = pc.id
+             AND rep.deleted_at IS NULL
             CROSS JOIN bounds
             WHERE pc.organization_id = :org_id
             AND sr.scan_id = :scan_id

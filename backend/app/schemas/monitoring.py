@@ -96,3 +96,31 @@ class MonitoringSubscriptionResponse(BaseModel):
     enabled: bool
     project_id: str | None = None
     affected_projects: int = 0
+    monitored_projects: int = 0
+    total_projects: int = 0
+    has_root_project: bool = False
+
+
+class FundaSnapshotRequest(BaseModel):
+    """Manual trigger payload for Funda listing snapshot ingestion."""
+
+    area_names: list[str] = ["arcen"]
+    max_listings: int = 60
+
+
+class FundaSnapshotResponse(BaseModel):
+    """Queue response for Funda snapshot ingestion job."""
+
+    status: str
+    job_id: str
+    area_names: list[str]
+    max_listings: int
+
+
+class FundaSnapshotStatsResponse(BaseModel):
+    """High-level stats for ingested Funda listing snapshots."""
+
+    total_snapshots: int
+    unique_listings: int
+    matched_parcels: int
+    latest_snapshot_date: str | None = None

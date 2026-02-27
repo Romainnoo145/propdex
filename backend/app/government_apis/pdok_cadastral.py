@@ -18,12 +18,14 @@ class PDOKCadastralClient:
     """
 
     BASE_URL = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1"
+    PAGE_SIZE = 1000
+    MAX_FEATURES = 50000
 
     async def get_parcels_by_bbox(
         self,
         bbox: str,
         client: httpx.AsyncClient,
-        limit: int = 10,
+        limit: int = PAGE_SIZE,
     ) -> list[dict]:
         """
         Get cadastral parcels within bounding box.
@@ -39,24 +41,73 @@ class PDOKCadastralClient:
         Raises:
             GovernmentAPIError: If API request fails
         """
+        page_size = max(1, min(int(limit), self.PAGE_SIZE))
         url = f"{self.BASE_URL}/collections/perceel/items"
         params = {
             "bbox": bbox,
             "bbox-crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
-            "limit": limit,
+            # Ask PDOK to return geometries in RD to match scan storage/query CRS.
+            # (Some deployments may still return CRS84; callers should stay defensive.)
+            "crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
+            "limit": page_size,
             "f": "json",
         }
 
         logger.info(f"Fetching cadastral parcels for bbox: {bbox}")
 
         try:
-            response = await client.get(url, params=params, timeout=30.0)
-            data = handle_api_response(response, source="pdok-cadastral")
+            all_features: list[dict] = []
+            page_num = 0
+            next_url: str | None = url
+            next_params: dict | None = params
+            seen_next: set[str] = set()
 
-            features = data.get("features", [])
-            logger.info(f"Found {len(features)} cadastral parcels")
+            while next_url:
+                page_num += 1
+                response = await client.get(next_url, params=next_params, timeout=30.0)
+                data = handle_api_response(response, source="pdok-cadastral")
 
-            return features
+                page_features = data.get("features", [])
+                if isinstance(page_features, list):
+                    all_features.extend(page_features)
+
+                logger.debug(
+                    "PDOK cadastral page %s fetched %s features (total=%s)",
+                    page_num,
+                    len(page_features) if isinstance(page_features, list) else 0,
+                    len(all_features),
+                )
+
+                if len(all_features) >= self.MAX_FEATURES:
+                    logger.warning(
+                        "PDOK cadastral: capped at %s parcels for bbox %s",
+                        self.MAX_FEATURES,
+                        bbox,
+                    )
+                    break
+
+                next_href = None
+                links = data.get("links", [])
+                if isinstance(links, list):
+                    for link in links:
+                        if not isinstance(link, dict):
+                            continue
+                        if link.get("rel") == "next" and isinstance(link.get("href"), str):
+                            next_href = link["href"]
+                            break
+
+                if not next_href:
+                    break
+                if next_href in seen_next:
+                    logger.warning("PDOK cadastral pagination loop detected, stopping")
+                    break
+
+                seen_next.add(next_href)
+                next_url = next_href
+                next_params = None
+
+            logger.info(f"Found {len(all_features)} cadastral parcels")
+            return all_features
 
         except httpx.TimeoutException as e:
             from app.government_apis.base import APITimeoutError

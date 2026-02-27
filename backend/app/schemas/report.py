@@ -97,6 +97,10 @@ class ReportListItem(BaseModel):
     project_id: uuid.UUID | None = Field(
         description="Project folder ID (if assigned)",
     )
+    source_parcel_id: uuid.UUID | None = Field(
+        default=None,
+        description="Source ParcelCache UUID (if report was generated from parcel flow)",
+    )
     completeness_score: float = Field(
         description="Report completeness score (0.0 to 1.0)",
         ge=0.0,
@@ -147,11 +151,26 @@ class ReportDetailResponse(BaseModel):
     project_id: uuid.UUID | None = Field(
         description="Project folder ID (if assigned)",
     )
+    source_parcel_id: uuid.UUID | None = Field(
+        default=None,
+        description="Source ParcelCache UUID (if report was generated from parcel flow)",
+    )
     created_at: datetime = Field(
         description="Report creation timestamp",
     )
     updated_at: datetime = Field(
         description="Report last update timestamp",
+    )
+
+
+class GenerateReportFromParcelResponse(BaseModel):
+    """Schema for parcel-based report generation with explicit idempotency state."""
+
+    report: ReportDetailResponse = Field(
+        description="Saved report payload",
+    )
+    created: bool = Field(
+        description="True when a new report row was created, false when existing report was reused",
     )
 
 

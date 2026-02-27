@@ -17,6 +17,7 @@ import { useMarkChangeRead } from '@/hooks/useNotifications'
 
 export interface UseReadTrackingOptions {
   readChangeIds: string[] | undefined
+  reportSource?: 'projecten' | 'meldingen'
 }
 
 export interface UseReadTrackingResult {
@@ -44,6 +45,7 @@ export interface UseReadTrackingResult {
  */
 export function useReadTracking({
   readChangeIds,
+  reportSource = 'projecten',
 }: UseReadTrackingOptions): UseReadTrackingResult {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -75,14 +77,18 @@ export function useReadTracking({
     async (parcelId: string, projectId?: string) => {
       setGeneratingId(parcelId)
       try {
-        const report = await generateReportFromParcel(parcelId, accessToken, {
+        const result = await generateReportFromParcel(parcelId, accessToken, {
           ...(projectId && { project_id: projectId }),
         })
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['reports'] }),
           queryClient.invalidateQueries({ queryKey: ['projects'] }),
         ])
-        navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+        navigate({
+          to: '/rapport/$id',
+          params: { id: String(result.report.id) },
+          search: { from: reportSource },
+        })
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : 'Rapport genereren mislukt'
@@ -91,7 +97,7 @@ export function useReadTracking({
         setGeneratingId(null)
       }
     },
-    [accessToken, navigate, queryClient]
+    [accessToken, navigate, queryClient, reportSource]
   )
 
   const handleGenerateReportByAddress = useCallback(
@@ -119,7 +125,11 @@ export function useReadTracking({
           queryClient.invalidateQueries({ queryKey: ['reports'] }),
           queryClient.invalidateQueries({ queryKey: ['projects'] }),
         ])
-        navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+        navigate({
+          to: '/rapport/$id',
+          params: { id: String(report.id) },
+          search: { from: reportSource },
+        })
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : 'Rapport genereren mislukt'
@@ -128,7 +138,7 @@ export function useReadTracking({
         setGeneratingId(null)
       }
     },
-    [accessToken, navigate, queryClient]
+    [accessToken, navigate, queryClient, reportSource]
   )
 
   return {

@@ -4,9 +4,10 @@ import type { ProjectResponse } from '@/lib/types/project'
 import { useProjectScans, useTriggerScan } from '@/hooks/useScans'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { useReports } from '@/hooks/useReports'
-import { calculateBboxFromGeometry } from '@/lib/geo-utils'
+import { resolveWijkBbox } from '@/lib/geo-utils'
 import ReportCard from '@/components/reports/ReportCard'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { SearchInput } from '@/components/primitives'
 import { toast } from 'sonner'
 
 interface WijkDetailViewProps {
@@ -63,35 +64,6 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
   month: 'short',
   year: 'numeric',
 })
-
-function normalizeAreaName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[’']/g, '')
-    .trim()
-}
-
-function resolveWijkBbox(
-  geojson: GeoJSON.FeatureCollection | undefined,
-  wijkNaam: string | null
-): [number, number, number, number] | null {
-  if (!geojson || !wijkNaam) return null
-
-  const target = normalizeAreaName(wijkNaam)
-  const match = geojson.features.find((feature) => {
-    const name = String(feature.properties?.statnaam ?? '')
-    return normalizeAreaName(name) === target
-  })
-  if (!match) return null
-
-  const geometry = match.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
-  if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) {
-    return null
-  }
-
-  return calculateBboxFromGeometry(geometry)
-}
 
 /**
  * Shows latest scan info with quick action buttons.
@@ -306,23 +278,12 @@ function ReportListSection({ wijkId }: { wijkId: string }) {
       </div>
       {reports.length > 0 ? (
         <div className="p-4">
-          <input
-            type="search"
+          <SearchInput
             value={reportSearch}
             onChange={(e) => setReportSearch(e.target.value)}
             placeholder="Zoek rapporten (adres, postcode, plaats)"
-            autoComplete="new-password"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            inputMode="search"
-            enterKeyHint="search"
             name="q_wijk_reports"
-            data-lpignore="true"
-            data-1p-ignore="true"
-            data-bwignore="true"
-            data-form-type="other"
-            className="mb-3 w-full rounded-md border border-grey-700 bg-grey-850 px-3 py-2 text-xs text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/50 focus:outline-none"
+            className="mb-3 h-auto w-full rounded-md border-grey-700 bg-grey-850 py-2 text-xs placeholder:text-grey-500 focus:border-amber-accent/50"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {filteredReports.map((report) => (
@@ -330,7 +291,11 @@ function ReportListSection({ wijkId }: { wijkId: string }) {
                 key={report.id}
                 report={report}
                 onClick={() =>
-                  navigate({ to: '/rapport/$id', params: { id: report.id } })
+                  navigate({
+                    to: '/rapport/$id',
+                    params: { id: report.id },
+                    search: { from: 'projecten' },
+                  })
                 }
               />
             ))}

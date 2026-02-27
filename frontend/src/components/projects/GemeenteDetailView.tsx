@@ -8,12 +8,14 @@ import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { WijkCard } from './WijkCard'
 import { WijkCardGrid } from './WijkCardGrid'
 import { WijkDetailView } from './WijkDetailView'
+import { normalizeAreaName } from '@/lib/geo/normalizers'
 
 interface GemeenteDetailViewProps {
   gemeente: ProjectResponse
   wijkProjects: ProjectResponse[]
   unreadData: UnreadDetailResponse | undefined
   gemeenteGeojson: GeoJSON.FeatureCollection | null
+  scannedWijkNames?: ReadonlySet<string> | null
 }
 
 /**
@@ -28,6 +30,7 @@ export function GemeenteDetailView({
   wijkProjects,
   unreadData,
   gemeenteGeojson,
+  scannedWijkNames = null,
 }: GemeenteDetailViewProps) {
   const queryClient = useQueryClient()
   const wijkenCount = wijkProjects.length
@@ -37,7 +40,16 @@ export function GemeenteDetailView({
 
   const [isSpinning, setIsSpinning] = useState(false)
   const [selectedWijkId, setSelectedWijkId] = useState<string | null>(null)
+  const monitoringEnabled = Boolean(gemeente.is_monitored)
+  const monitoredWijkenCount = useMemo(
+    () => wijkProjects.filter((wijk) => wijk.is_monitored).length,
+    [wijkProjects]
+  )
   const handleRefresh = useCallback(async () => {
+    if (!monitoringEnabled) {
+      toast.info('Monitoring staat uit voor deze gemeente')
+      return
+    }
     setIsSpinning(true)
     const minDuration = new Promise((r) => setTimeout(r, 500))
     try {
@@ -70,7 +82,7 @@ export function GemeenteDetailView({
     } finally {
       setIsSpinning(false)
     }
-  }, [gemeente.id, queryClient, refreshMonitoring])
+  }, [gemeente.id, monitoringEnabled, queryClient, refreshMonitoring])
   const meldingenCount = changesData?.total ?? 0
   const gemeenteUnread =
     unreadData?.per_project.find((p) => p.project_id === gemeente.id)?.unread_count ?? 0
@@ -117,6 +129,10 @@ export function GemeenteDetailView({
                       wijk={wijk}
                       svgData={svgData}
                       unreadCount={unreadCount}
+                      hasCompletedScan={Boolean(
+                        scannedWijkNames?.has(normalizeAreaName(wijk.wijk_naam ?? wijk.name))
+                      )}
+                      reportCount={wijk.report_count}
                       isActive={selectedWijk?.id === wijk.id}
                       onClick={() => setSelectedWijkId(wijk.id)}
                     />
@@ -146,6 +162,18 @@ export function GemeenteDetailView({
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
           <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">Recente meldingen</span>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+              monitoringEnabled
+                ? 'border-amber-accent/35 bg-amber-accent/10 text-amber-accent'
+                : 'border-overlay/[0.14] bg-overlay/[0.06] text-grey-400'
+            }`}
+          >
+            {monitoringEnabled ? 'Monitoring aan' : 'Monitoring uit'}
+          </span>
+          <span className="text-xs text-grey-600">
+            {monitoredWijkenCount}/{wijkenCount} wijken
+          </span>
           {gemeenteUnread > 0 && (
             <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1.5 text-[11px] font-semibold text-on-accent">
               {gemeenteUnread}
@@ -153,9 +181,10 @@ export function GemeenteDetailView({
           )}
           <button
             onClick={handleRefresh}
-            disabled={isSpinning}
+            disabled={isSpinning || !monitoringEnabled}
             className="ml-auto rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
             aria-label="Ververs meldingen"
+            title={monitoringEnabled ? 'Ververs meldingen' : 'Schakel monitoring in om te verversen'}
           >
             <RefreshIcon spinning={isSpinning} />
           </button>
@@ -163,6 +192,11 @@ export function GemeenteDetailView({
             <span className="text-xs text-grey-600">{meldingenCount}</span>
           )}
         </div>
+        {!monitoringEnabled && (
+          <div className="border-b border-overlay/[0.06] bg-overlay/[0.03] px-4 py-2 text-xs text-grey-500">
+            Monitoring staat uit voor deze gemeente. Zet 'Meldingen ontvangen' aan om updates te verzamelen.
+          </div>
+        )}
         <ChangeTimeline
           projectId={gemeente.id}
           unreadCount={gemeenteUnread}

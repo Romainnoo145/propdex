@@ -56,6 +56,11 @@ class SavedReport(Base, TenantMixin, TimestampMixin):
         nullable=True,
     )
 
+    source_parcel_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("parcel_cache.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     deleted_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
     )
@@ -65,6 +70,16 @@ class SavedReport(Base, TenantMixin, TimestampMixin):
         Index("ix_saved_reports_org_updated", "organization_id", "updated_at"),
         Index("ix_saved_reports_org_city", "organization_id", "city"),
         Index("ix_saved_reports_org_project", "organization_id", "project_id"),
+        Index("ix_saved_reports_org_source_parcel", "organization_id", "source_parcel_id"),
+        Index(
+            "uq_saved_reports_org_source_parcel_active",
+            "organization_id",
+            "source_parcel_id",
+            unique=True,
+            postgresql_where=text(
+                "deleted_at IS NULL AND source_parcel_id IS NOT NULL"
+            ),
+        ),
         Index(
             "ix_saved_reports_name_gin",
             "report_name",

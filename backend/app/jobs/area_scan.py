@@ -4,17 +4,22 @@ import asyncio
 import json
 import logging
 import uuid
+from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
 from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
 from shapely.geometry import shape
-from sqlalchemy import select
+from shapely.geometry.base import BaseGeometry
+from shapely.strtree import STRtree
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 from app.government_apis.bag_wfs import bag_wfs_client
+from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.plu_wfs import plu_wms_client
 from app.models.area_scan import AreaScan
@@ -22,12 +27,15 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
+from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
     compute_opportunity_score,
+    compute_vacancy_confidence,
     derive_opportunity_insights,
 )
+from app.services.spatial_helpers import transform_point_to_rd
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +48,158 @@ REVERSE_GEOCODE_CONCURRENCY = 10
 MAX_ADDRESS_LOOKUPS = 5000
 
 locatieserver = PDOKLocatieserver()
+pdok_cadastral_client = PDOKCadastralClient()
+
+
+@dataclass(slots=True)
+class BagSpatialIndex:
+    """In-memory spatial index for BAG building footprints in RD."""
+
+    tree: STRtree
+    geometries: list[BaseGeometry]
+    bouwjaren: list[int | None]
+    statuses: list[str | None]
+
+
+def _extract_first_coordinate_pair(geometry: dict | None) -> tuple[float, float] | None:
+    """Extract first [x,y] pair from a GeoJSON geometry coordinate tree."""
+    if not isinstance(geometry, dict):
+        return None
+    node = geometry.get("coordinates")
+    while isinstance(node, (list, tuple)) and len(node) > 0:
+        if (
+            len(node) >= 2
+            and isinstance(node[0], (int, float))
+            and isinstance(node[1], (int, float))
+        ):
+            return float(node[0]), float(node[1])
+        node = node[0]
+    return None
+
+
+def _geometry_looks_wgs84(geometry: dict | None) -> bool:
+    """Best-effort CRS check for GeoJSON geometry."""
+    pair = _extract_first_coordinate_pair(geometry)
+    if pair is None:
+        return False
+    x, y = pair
+    return -180 <= x <= 180 and -90 <= y <= 90
+
+
+def _parse_int(value: object) -> int | None:
+    """Safely parse integer-like values from API payloads."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw.isdigit():
+            return int(raw)
+    return None
+
+
+def _parse_float(value: object) -> float | None:
+    """Safely parse float-like values from API payloads."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        raw = value.strip().replace(",", ".")
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+    return None
+
+
+def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
+    """Build a STRtree for BAG building footprints to cross-reference parcels."""
+    geometries: list[BaseGeometry] = []
+    bouwjaren: list[int | None] = []
+    statuses: list[str | None] = []
+
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        geometry = feature.get("geometry")
+        if not isinstance(geometry, dict):
+            continue
+        try:
+            geom_shape = shape(geometry)
+        except Exception:
+            continue
+        if geom_shape.is_empty:
+            continue
+
+        props = feature.get("properties", {})
+        if not isinstance(props, dict):
+            props = {}
+
+        geometries.append(geom_shape)
+        bouwjaren.append(_parse_int(props.get("bouwjaar")))
+        status_raw = props.get("status")
+        statuses.append(status_raw.strip() if isinstance(status_raw, str) and status_raw.strip() else None)
+
+    if not geometries:
+        return None
+
+    return BagSpatialIndex(
+        tree=STRtree(geometries),
+        geometries=geometries,
+        bouwjaren=bouwjaren,
+        statuses=statuses,
+    )
+
+
+def _derive_bag_attributes_for_parcel(
+    parcel_geometry: BaseGeometry,
+    bag_index: BagSpatialIndex | None,
+) -> tuple[bool, int | None, str | None]:
+    """Derive parcel-level BAG attributes from intersecting building footprints."""
+    if bag_index is None:
+        return False, None, None
+
+    candidate_indices = bag_index.tree.query(parcel_geometry)
+    if len(candidate_indices) == 0:
+        return False, None, None
+
+    intersect_count = 0
+    matched_bouwjaren: list[int] = []
+    matched_statuses: list[str] = []
+
+    iterable_indices = (
+        candidate_indices.tolist()
+        if hasattr(candidate_indices, "tolist")
+        else candidate_indices
+    )
+    for raw_idx in iterable_indices:
+        idx = int(raw_idx)
+        bag_geom = bag_index.geometries[idx]
+        if not bag_geom.intersects(parcel_geometry):
+            continue
+        intersect_count += 1
+
+        bouwjaar = bag_index.bouwjaren[idx]
+        if isinstance(bouwjaar, int) and bouwjaar > 0:
+            matched_bouwjaren.append(bouwjaar)
+
+        status = bag_index.statuses[idx]
+        if isinstance(status, str) and status:
+            matched_statuses.append(status)
+
+    if intersect_count == 0:
+        return False, None, None
+
+    bouwjaar_value = min(matched_bouwjaren) if matched_bouwjaren else None
+    pand_status_value = None
+    if matched_statuses:
+        pand_status_value = Counter(matched_statuses).most_common(1)[0][0]
+
+    return True, bouwjaar_value, pand_status_value
 
 
 async def area_scan_job(
@@ -51,8 +211,8 @@ async def area_scan_job(
     Background job: Scan area for parcels, qualify, resolve addresses, create project.
 
     Pipeline:
-        Phase 1 (0-20%):   Fetch BAG panden in bbox
-        Phase 2 (20-40%):  Fetch bestemmingen per parcel via WMS GetFeatureInfo
+        Phase 1 (0-20%):   Fetch kadastrale percelen (PDOK BRK) in bbox
+        Phase 2 (20-40%):  Cross-reference BAG panden + fetch bestemmingen
         Phase 3 (40-70%):  Upsert ALL parcels + compute scores (cache everything)
         Phase 4 (70-80%):  Rank — persist all scored parcels into ScanResult
         Phase 5 (80-95%):  Addresses — reverse geocode ranked parcels (capped)
@@ -111,21 +271,22 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
-            # ── Phase 1: Fetch BAG panden (0-20%) ──
-            logger.info(f"Scan {scan_id}: fetching parcels from BAG WFS")
+            # ── Phase 1: Fetch kadastrale percelen (0-20%) ──
+            logger.info(f"Scan {scan_id}: fetching cadastral parcels from PDOK BRK")
 
             try:
-                features = await bag_wfs_client.get_panden_in_bbox(
-                    scan.bbox_minx,
-                    scan.bbox_miny,
-                    scan.bbox_maxx,
-                    scan.bbox_maxy,
-                    http_client,
+                bbox = (
+                    f"{scan.bbox_minx},{scan.bbox_miny},"
+                    f"{scan.bbox_maxx},{scan.bbox_maxy}"
+                )
+                features = await pdok_cadastral_client.get_parcels_by_bbox(
+                    bbox=bbox,
+                    client=http_client,
                 )
             except Exception as e:
-                logger.error(f"Scan {scan_id}: BAG WFS fetch failed: {e}")
+                logger.error(f"Scan {scan_id}: PDOK BRK fetch failed: {e}")
                 scan.status = "failed"
-                scan.error_message = f"BAG WFS fetch failed: {str(e)}"
+                scan.error_message = f"PDOK BRK fetch failed: {str(e)}"
                 session.add(scan)
                 await session.flush()
                 await session.commit()
@@ -137,9 +298,9 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
-            logger.info(f"Scan {scan_id}: fetched {len(features)} panden")
+            logger.info(f"Scan {scan_id}: fetched {len(features)} cadastral parcels")
 
-            # ── Phase 2: Fetch bestemmingen per parcel via WMS (20-40%) ──
+            # ── Phase 2: BAG cross-reference + bestemmingen (20-40%) ──
             scan.current_phase = "fetching_bestemmingen"
             scan.progress_pct = 20
             session.add(scan)
@@ -147,13 +308,27 @@ async def area_scan_job(
             await session.commit()
 
             logger.info(
-                f"Scan {scan_id}: fetching bestemmingen via WMS GetFeatureInfo "
-                f"({len(features)} parcels, concurrency={WMS_CONCURRENCY})"
+                f"Scan {scan_id}: fetching BAG cross-reference + bestemmingen "
+                f"({len(features)} parcels, WMS concurrency={WMS_CONCURRENCY})"
             )
 
-            bestemmingen_list = await _batch_fetch_bestemmingen(
-                features, http_client
-            )
+            bag_features: list[dict] = []
+            try:
+                bag_features = await bag_wfs_client.get_panden_in_bbox(
+                    scan.bbox_minx,
+                    scan.bbox_miny,
+                    scan.bbox_maxx,
+                    scan.bbox_maxy,
+                    http_client,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Scan {scan_id}: BAG cross-reference unavailable (continuing): {e}"
+                )
+                bag_features = []
+
+            bag_index = _build_bag_spatial_index(bag_features)
+            bestemmingen_list = await _batch_fetch_bestemmingen(features, http_client)
 
             enriched_count = sum(1 for b in bestemmingen_list if b is not None)
             scan.progress_pct = 40
@@ -162,8 +337,8 @@ async def area_scan_job(
             await session.commit()
 
             logger.info(
-                f"Scan {scan_id}: enriched {enriched_count}/{len(features)} "
-                f"parcels with bestemmingen"
+                f"Scan {scan_id}: BAG buildings={len(bag_features)} "
+                f"(indexed={bag_index is not None}), bestemmingen={enriched_count}/{len(features)}"
             )
 
             # ── Phase 3: Upsert ALL parcels + compute scores (40-70%) ──
@@ -180,6 +355,9 @@ async def area_scan_job(
                     float,
                     str,
                     dict,
+                    float,
+                    float,
+                    str,
                     str,
                     list[str],
                     dict[str, float | None],
@@ -194,6 +372,7 @@ async def area_scan_job(
                     parcel, centroid_xy = await _upsert_parcel_cache(
                         feature, org_id, scan.gemeente_code, session,
                         bestemmingen=bestemmingen,
+                        bag_index=bag_index,
                     )
 
                     score_breakdown = compute_opportunity_score(parcel)
@@ -204,6 +383,9 @@ async def area_scan_job(
                         score_breakdown.total_score,
                         score_breakdown.category,
                         score_breakdown.factors,
+                        score_breakdown.vacancy_subscore,
+                        score_breakdown.buildability_subscore,
+                        score_breakdown.model_version,
                         insights.vacancy_signal,
                         insights.signals,
                         insights.building_metrics,
@@ -212,7 +394,11 @@ async def area_scan_job(
 
                     # Update progress every 10 parcels
                     if (idx + 1) % 10 == 0 or (idx + 1) == len(features):
-                        progress_pct = 40 + int((idx + 1) / len(features) * 30)
+                        progress_pct = (
+                            70
+                            if len(features) == 0
+                            else 40 + int((idx + 1) / len(features) * 30)
+                        )
                         await _update_scan_progress(
                             scan, "processing_parcels", progress_pct, idx + 1, session
                         )
@@ -261,31 +447,55 @@ async def area_scan_job(
             )
 
             if all_ranked:
-                ranked_values = [
-                    {
-                        "organization_id": org_id,
-                        "scan_id": scan.id,
-                        "parcel_id": parcel.id,
-                        "score": score,
-                        "flags": {
-                            "category": category,
-                            "factors": factors,
-                            "vacancy_signal": vacancy_signal,
-                            "opportunity_signals": opportunity_signals,
-                            "building_metrics": building_metrics,
-                        },
-                    }
-                    for (
+                listing_signal_by_parcel = await build_funda_listing_signal_map(
+                    [parcel.id for parcel, *_rest in all_ranked],
+                    org_id,
+                    session,
+                )
+
+                ranked_values = []
+                for (
+                    parcel,
+                    score,
+                    category,
+                    factors,
+                    vacancy_subscore,
+                    buildability_subscore,
+                    score_model_version,
+                    vacancy_signal,
+                    opportunity_signals,
+                    building_metrics,
+                    _centroid,
+                ) in all_ranked:
+                    listing_signal = listing_signal_by_parcel.get(parcel.id)
+                    vacancy_assessment = compute_vacancy_confidence(
                         parcel,
-                        score,
-                        category,
-                        factors,
-                        vacancy_signal,
-                        opportunity_signals,
-                        building_metrics,
-                        _centroid,
-                    ) in all_ranked
-                ]
+                        listing_signal=listing_signal,
+                    )
+                    ranked_values.append(
+                        {
+                            "organization_id": org_id,
+                            "scan_id": scan.id,
+                            "parcel_id": parcel.id,
+                            "score": score,
+                            "flags": {
+                                "category": category,
+                                "factors": factors,
+                                "subscores": {
+                                    "vacancy": vacancy_subscore,
+                                    "buildability": buildability_subscore,
+                                },
+                                "score_model_version": score_model_version,
+                                "vacancy_signal": vacancy_signal,
+                                "vacancy_confidence": vacancy_assessment.confidence,
+                                "vacancy_reasons": vacancy_assessment.reasons,
+                                "vacancy_model_version": vacancy_assessment.model_version,
+                                "market_signals": listing_signal,
+                                "opportunity_signals": opportunity_signals,
+                                "building_metrics": building_metrics,
+                            },
+                        }
+                    )
                 stmt = pg_insert(ScanResult).values(ranked_values).on_conflict_do_nothing(
                     index_elements=["scan_id", "parcel_id"]
                 )
@@ -306,7 +516,10 @@ async def area_scan_job(
             await session.commit()
 
             await _batch_resolve_addresses(
-                [(p, c) for p, _s, _cat, _f, _vs, _os, _bm, c in address_targets],
+                [
+                    (p, c)
+                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c in address_targets
+                ],
                 http_client,
                 session,
             )
@@ -422,7 +635,7 @@ async def _batch_fetch_bestemmingen(
     Each parcel's centroid is queried for its bestemmingshoofdgroep.
 
     Args:
-        features: List of GeoJSON features from BAG WFS
+        features: List of GeoJSON parcel features from PDOK BRK
         client: Shared httpx AsyncClient
 
     Returns:
@@ -438,8 +651,12 @@ async def _batch_fetch_bestemmingen(
             try:
                 geom = shape(geom_data)
                 centroid = geom.centroid
+                x = float(centroid.x)
+                y = float(centroid.y)
+                if _geometry_looks_wgs84(geom_data):
+                    x, y = transform_point_to_rd(x, y)
                 return await plu_wms_client.get_bestemming_at_point(
-                    centroid.x, centroid.y, client
+                    x, y, client
                 )
             except Exception:
                 return None
@@ -453,39 +670,82 @@ async def _upsert_parcel_cache(
     gemeente_code: str | None,
     session: AsyncSession,
     bestemmingen: list[dict] | None = None,
+    bag_index: BagSpatialIndex | None = None,
 ) -> tuple[ParcelCache, tuple[float, float] | None]:
     """
-    Upsert BAG WFS feature into ParcelCache.
+    Upsert cadastral parcel feature into ParcelCache.
 
     Args:
-        feature: GeoJSON feature from BAG WFS with geometry and properties
+        feature: GeoJSON feature from PDOK BRK with geometry and properties
         org_id: Organization UUID
         gemeente_code: Municipality code for this scan
         session: Database session
         bestemmingen: Matched bestemmingsplan data from WMS GetFeatureInfo
+        bag_index: Optional BAG building spatial index for has_pand/bouwjaar/status
 
     Returns:
         Tuple of (ParcelCache entry, centroid_xy in RD coords or None)
     """
     properties = feature.get("properties", {})
-    identificatie = properties.get("identificatie", "")
+    if not isinstance(properties, dict):
+        properties = {}
 
-    # Extract BAG building attributes
-    bouwjaar = properties.get("bouwjaar")  # int or None
-    pand_status = properties.get("status", "")  # str
+    identificatie = properties.get("identificatie_lokaal_id")
+    if not isinstance(identificatie, str) or not identificatie.strip():
+        identificatie = properties.get("identificatie")
+    if not isinstance(identificatie, str) or not identificatie.strip():
+        gemeente_code_raw = properties.get("akr_kadastrale_gemeente_code_waarde")
+        if not isinstance(gemeente_code_raw, str) or not gemeente_code_raw.strip():
+            gemeente_code_raw = properties.get("kadastrale_gemeente_waarde")
+        sectie = properties.get("sectie")
+        perceelnummer = properties.get("perceelnummer")
+        if (
+            isinstance(gemeente_code_raw, str)
+            and gemeente_code_raw.strip()
+            and isinstance(sectie, str)
+            and sectie.strip()
+            and perceelnummer is not None
+        ):
+            identificatie = (
+                f"{gemeente_code_raw.strip()}-{sectie.strip()}-{perceelnummer}"
+            )
+    if not isinstance(identificatie, str) or not identificatie.strip():
+        raise ValueError("Missing cadastral parcel identifier")
+    identificatie = identificatie.strip()
 
     # Compute area and centroid from geometry
     geometry = feature.get("geometry")
+    if not isinstance(geometry, dict):
+        raise ValueError("Missing cadastral parcel geometry")
+
     area_m2 = None
     centroid_xy: tuple[float, float] | None = None
-    if geometry:
-        try:
-            geom_shape = shape(geometry)
-            area_m2 = geom_shape.area
-            centroid = geom_shape.centroid
-            centroid_xy = (centroid.x, centroid.y)
-        except Exception as e:
-            logger.warning(f"Failed to compute area for {identificatie}: {e}")
+    source_srid = 28992
+    parcel_geom_shape: BaseGeometry | None = None
+    try:
+        parcel_geom_shape = shape(geometry)
+        source_srid = 4326 if _geometry_looks_wgs84(geometry) else 28992
+
+        # Prefer authoritative cadastral size value when present.
+        area_m2 = _parse_float(properties.get("kadastrale_grootte_waarde"))
+        if area_m2 is None and source_srid == 28992:
+            area_m2 = parcel_geom_shape.area
+
+        centroid = parcel_geom_shape.centroid
+        centroid_xy = (float(centroid.x), float(centroid.y))
+        if source_srid == 4326:
+            centroid_xy = transform_point_to_rd(centroid_xy[0], centroid_xy[1])
+    except Exception as e:
+        logger.warning(f"Failed to compute area for {identificatie}: {e}")
+
+    has_pand = False
+    bouwjaar = None
+    pand_status = None
+    if parcel_geom_shape is not None:
+        has_pand, bouwjaar, pand_status = _derive_bag_attributes_for_parcel(
+            parcel_geom_shape,
+            bag_index,
+        )
 
     # Check if entry already exists
     stmt = select(ParcelCache).where(
@@ -497,13 +757,16 @@ async def _upsert_parcel_cache(
 
     # Convert GeoJSON geometry to PostGIS geometry
     geojson_str = json.dumps(geometry)
-    # BAG WFS returns RD coordinates (EPSG:28992)
-    geom_expr = ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 28992))
+    source_geom_expr = ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), source_srid)
+    if source_srid == 28992:
+        geom_expr = ST_Multi(source_geom_expr)
+    else:
+        geom_expr = ST_Multi(func.ST_Transform(source_geom_expr, 28992))
 
     if parcel:
         parcel.geometry = geom_expr
         parcel.area_m2 = area_m2
-        parcel.has_pand = True
+        parcel.has_pand = has_pand
         parcel.gemeente_code = gemeente_code
         parcel.bestemmingen = bestemmingen
         parcel.bouwjaar = bouwjaar
@@ -516,7 +779,7 @@ async def _upsert_parcel_cache(
             parcel_id=identificatie,
             geometry=geom_expr,
             area_m2=area_m2,
-            has_pand=True,
+            has_pand=has_pand,
             gemeente_code=gemeente_code,
             bestemmingen=bestemmingen,
             bouwjaar=bouwjaar,

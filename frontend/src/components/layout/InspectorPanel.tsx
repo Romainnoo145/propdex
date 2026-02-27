@@ -2,6 +2,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { useParcelEnrichment } from '@/hooks/useScans'
 import { ParcelEnrichmentCard } from '@/components/results/ParcelEnrichmentCard'
+import { MarketSignalsCards } from '@/components/results/MarketSignalsCards'
 import { toast } from 'sonner'
 import { X, FileText } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
@@ -10,6 +11,69 @@ interface InspectorPanelProps {
   isOpen: boolean
   onClose: () => void
   parcel: ScanResultItem | null
+}
+
+function toMetricNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.replace(',', '.'))
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+function deriveBuildabilityForInspector(parcel: ScanResultItem): {
+  maxBebouwingspercentage: number | null
+  maxFar: number | null
+  maxBuildableAreaM2: number | null
+  remainingBuildableAreaM2: number | null
+  confidence: 'high' | 'medium' | 'low'
+  notes: string[]
+} | null {
+  const metrics = (parcel.building_metrics as {
+    max_bebouwingspercentage?: unknown
+    max_floor_area_ratio?: unknown
+  } | null) ?? null
+
+  const maxBebouwingspercentage = toMetricNumber(metrics?.max_bebouwingspercentage)
+  const maxFar = toMetricNumber(metrics?.max_floor_area_ratio)
+  const areaM2 = parcel.area_m2 != null ? Math.max(0, parcel.area_m2) : null
+
+  if (maxBebouwingspercentage == null && maxFar == null && areaM2 == null) {
+    return null
+  }
+
+  const maxBuildableAreaM2 =
+    areaM2 != null && maxBebouwingspercentage != null
+      ? (maxBebouwingspercentage / 100) * areaM2
+      : null
+
+  const remainingBuildableAreaM2 =
+    maxBuildableAreaM2 != null && !parcel.has_pand ? maxBuildableAreaM2 : null
+
+  const confidence: 'high' | 'medium' | 'low' =
+    areaM2 != null && (maxBebouwingspercentage != null || maxFar != null)
+      ? parcel.has_pand
+        ? 'medium'
+        : 'high'
+      : 'low'
+
+  const notes: string[] = []
+  if (parcel.has_pand && maxBuildableAreaM2 != null) {
+    notes.push('Resterende m² onbekend: huidige footprint ontbreekt in scanlaag.')
+  }
+  if (maxBebouwingspercentage == null && maxFar == null) {
+    notes.push('Geen expliciete FAR/TAR-limiet gevonden in beschikbare bestemmingen.')
+  }
+
+  return {
+    maxBebouwingspercentage,
+    maxFar,
+    maxBuildableAreaM2,
+    remainingBuildableAreaM2,
+    confidence,
+    notes,
+  }
 }
 
 /**
@@ -33,13 +97,19 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
     isOpen && parcel?.parcel_id ? parcel.parcel_id : null,
     { enabled: isOpen && !!parcel?.parcel_id }
   )
+  const buildability = parcel ? deriveBuildabilityForInspector(parcel) : null
 
   const handleGenerateReport = async () => {
     if (!parcel?.parcel_id) return
-    const toastId = toast.loading('Rapport wordt gegenereerd...')
+    const toastId = toast.loading('Rapport laden...')
     try {
-      await generateReport.mutateAsync(parcel.parcel_id)
-      toast.success('Rapport opgeslagen in Rapporten', { id: toastId })
+      const result = await generateReport.mutateAsync(parcel.parcel_id)
+      toast.success(
+        result.created
+          ? 'Rapport opgeslagen in Rapporten'
+          : 'Bestaand rapport geopend in Rapporten',
+        { id: toastId }
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Genereren mislukt'
       toast.error(message, { id: toastId })
@@ -152,20 +222,100 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
               </div>
             )}
 
-            {/* Build metrics */}
-            {(((parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)?.max_bebouwingspercentage ?? null) != null ||
-              ((parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)?.max_floor_area_ratio ?? null) != null) && (
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwregels</p>
-                {(parcel.building_metrics as { max_bebouwingspercentage?: number | null }).max_bebouwingspercentage != null && (
+            {/* Vacancy confidence */}
+            {parcel.vacancy_confidence != null && (
+              <div>
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">
+                  Leegstand confidence
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-grey-800">
+                    <div
+                      className="h-full rounded-full bg-amber-accent"
+                      style={{ width: `${Math.round(parcel.vacancy_confidence * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-grey-100">
+                    {Math.round(parcel.vacancy_confidence * 100)}%
+                  </span>
+                </div>
+                {parcel.vacancy_model_version && (
+                  <p className="mt-1 text-[11px] text-grey-500">{parcel.vacancy_model_version}</p>
+                )}
+              </div>
+            )}
+
+            {/* Vacancy reasons */}
+            {parcel.vacancy_reasons && parcel.vacancy_reasons.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">
+                  Top redenen
+                </p>
+                <div className="mt-1 space-y-1">
+                  {parcel.vacancy_reasons.slice(0, 3).map((reason) => (
+                    <p key={reason} className="text-xs text-grey-300">
+                      {reason}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {parcel.market_signals && (
+              <div>
+                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider mb-1.5">
+                  Marktsignalen
+                </p>
+                <MarketSignalsCards signals={parcel.market_signals} compact />
+              </div>
+            )}
+
+            {/* Buildability delta (condensed for map workflow) */}
+            {buildability && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwruimte Delta</p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                    buildability.confidence === 'high'
+                      ? 'border-success/30 bg-success/[0.08] text-success'
+                      : buildability.confidence === 'medium'
+                        ? 'border-amber-accent/30 bg-amber-accent/10 text-amber-accent'
+                        : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
+                  }`}>
+                    {buildability.confidence === 'high'
+                      ? 'hoog'
+                      : buildability.confidence === 'medium'
+                        ? 'middel'
+                        : 'laag'}
+                  </span>
+                </div>
+
+                {buildability.maxBebouwingspercentage != null && (
                   <p className="text-sm text-grey-100">
-                    Max bebouwings%: {(parcel.building_metrics as { max_bebouwingspercentage: number }).max_bebouwingspercentage.toFixed(1)}%
+                    Max bebouwings%: {buildability.maxBebouwingspercentage.toFixed(1)}%
                   </p>
                 )}
-                {(parcel.building_metrics as { max_floor_area_ratio?: number | null }).max_floor_area_ratio != null && (
+                {buildability.maxFar != null && (
                   <p className="text-sm text-grey-100">
-                    Max FAR: {(parcel.building_metrics as { max_floor_area_ratio: number }).max_floor_area_ratio.toFixed(2)}
+                    Max FAR: {buildability.maxFar.toFixed(2)}
                   </p>
+                )}
+                {buildability.maxBuildableAreaM2 != null && (
+                  <p className="text-sm text-grey-100">
+                    Max bebouwbaar: {Math.round(buildability.maxBuildableAreaM2).toLocaleString('nl-NL')} m&sup2;
+                  </p>
+                )}
+                {buildability.remainingBuildableAreaM2 != null && (
+                  <p className="text-sm text-amber-accent">
+                    Resterend (benadering): {Math.round(buildability.remainingBuildableAreaM2).toLocaleString('nl-NL')} m&sup2;
+                  </p>
+                )}
+                {buildability.notes.length > 0 && (
+                  <div className="space-y-1">
+                    {buildability.notes.slice(0, 2).map((note) => (
+                      <p key={note} className="text-xs text-grey-500">{note}</p>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -234,7 +384,11 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
                          transition-colors motion-reduce:transition-none min-h-[44px]"
             >
               <FileText size={14} />
-              {generateReport.isPending ? 'Bezig met genereren...' : 'Genereer rapport'}
+              {generateReport.isPending
+                ? 'Rapport laden...'
+                : parcel.has_report
+                  ? 'Open bestaand rapport'
+                  : 'Genereer rapport'}
             </button>
           </div>
         ) : (

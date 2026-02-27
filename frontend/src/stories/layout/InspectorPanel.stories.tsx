@@ -39,8 +39,22 @@ const mockParcel: ScanResultItem = {
   score_category: 'High',
   score_breakdown: { unbebouwd_bonus: 0, age_factor: 30, area_factor: 48 },
   vacancy_signal: 'in_gebruik',
+  vacancy_confidence: 0.42,
+  vacancy_reasons: [
+    'HARD: Pandstatus staat op in gebruik',
+    'PROXY: Hoge FAR geeft extra planruimte',
+    'PROXY: Groot perceel ondersteunt herontwikkeling',
+  ],
+  vacancy_model_version: 'vacancy-confidence-v1',
+  market_signals: {
+    listing_duration_days: 132,
+    price_change_count: 2,
+    listing_snapshots_count: 7,
+    days_since_last_seen: 1,
+  },
   opportunity_signals: ['Pand momenteel in gebruik', 'Bestemming ondersteunt wonen/gemengd'],
   building_metrics: { max_bebouwingspercentage: 75, max_floor_area_ratio: null },
+  has_report: true,
 }
 
 // ---------------------------------------------------------------------------
@@ -120,8 +134,13 @@ export const OpenMinimalParcel: Story = {
           score_category: null,
           score_breakdown: null,
           vacancy_signal: null,
+          vacancy_confidence: null,
+          vacancy_reasons: null,
+          vacancy_model_version: null,
+          market_signals: null,
           opportunity_signals: null,
           building_metrics: null,
+          has_report: false,
         }}
       />
     </MapWrapper>

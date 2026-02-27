@@ -70,4 +70,7 @@ export interface MonitoringSubscriptionResponse {
   enabled: boolean
   project_id: string | null
   affected_projects: number
+  monitored_projects: number
+  total_projects: number
+  has_root_project: boolean
 }

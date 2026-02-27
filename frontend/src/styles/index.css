@@ -184,31 +184,6 @@ html.light .propdex-property-popup .maplibregl-popup-tip {
   border-top-color: rgba(255, 255, 255, 0.85);
 }
 
-/* Focused marker popup — compact utility CTA */
-.focused-parcel-popup .maplibregl-popup-content {
-  background: rgba(18, 18, 22, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 6px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-}
-
-.focused-parcel-popup .maplibregl-popup-tip {
-  border-top-color: rgba(18, 18, 22, 0.96);
-  border-bottom-color: rgba(18, 18, 22, 0.96);
-}
-
-html.light .focused-parcel-popup .maplibregl-popup-content {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-}
-
-html.light .focused-parcel-popup .maplibregl-popup-tip {
-  border-top-color: rgba(255, 255, 255, 0.96);
-  border-bottom-color: rgba(255, 255, 255, 0.96);
-}
-
 /* Bottom sheet slide-up animation */
 @keyframes slide-up {
   from { transform: translateY(100%); }

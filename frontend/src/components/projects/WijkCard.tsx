@@ -1,4 +1,5 @@
 import type { ProjectResponse } from '@/lib/types/project'
+import { MetricChip } from '@/components/primitives'
 
 interface WijkCardProps {
   /** Wijk-level monitored project */
@@ -7,6 +8,10 @@ interface WijkCardProps {
   svgData: { primaryD: string; backgroundD?: string; siblingsD?: string; viewBox: string } | null
   /** Unread change count for this wijk project */
   unreadCount: number
+  /** True when this wijk has at least one completed scan */
+  hasCompletedScan?: boolean
+  /** Total reports linked to this wijk */
+  reportCount?: number
   /** Card click handler — parent decides navigation behavior */
   onClick?: () => void
   /** Optional active state (e.g. selected in a master-detail list) */
@@ -28,6 +33,8 @@ export function WijkCard({
   wijk,
   svgData,
   unreadCount,
+  hasCompletedScan = false,
+  reportCount = 0,
   onClick,
   isActive = false,
 }: WijkCardProps) {
@@ -81,19 +88,35 @@ export function WijkCard({
 
       {/* Text area — no gemeente_code subtitle (wijk cards don't have a meaningful code to display) */}
       <div className="px-3.5 py-2.5">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
           <h4
-            className="truncate text-sm font-semibold text-grey-100"
+            className="min-w-0 flex-1 truncate text-sm font-semibold text-grey-100"
             title={wijk.wijk_naam ?? wijk.name}
           >
             {wijk.wijk_naam ?? wijk.name}
           </h4>
-          {/* Unread badge */}
-          {unreadCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1 text-xs font-semibold text-on-accent shrink-0">
-              {unreadCount}
-            </span>
-          )}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <MetricChip
+              value={hasCompletedScan ? 1 : 0}
+              ariaLabel="Gescand"
+              icon={<ScanStatusIcon />}
+              tone="amber"
+              compact
+            />
+            <MetricChip
+              value={reportCount}
+              ariaLabel="Rapporten"
+              icon={<ReportIcon />}
+              tone="amber"
+              compact
+            />
+            {/* Unread badge */}
+            {unreadCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1 text-xs font-semibold text-on-accent shrink-0">
+                {unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -119,6 +142,24 @@ function AreaGridIcon() {
       <rect x="14" y="3" width="7" height="7" />
       <rect x="14" y="14" width="7" height="7" />
       <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  )
+}
+
+function ScanStatusIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
+}
+
+function ReportIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
     </svg>
   )
 }

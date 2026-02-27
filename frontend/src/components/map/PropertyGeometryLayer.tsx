@@ -13,7 +13,8 @@ const CENTER_MARKER_PULSE_LAYER = 'property-center-marker-pulse';
 
 /**
  * Update property geometry on the map
- * Renders property polygon in blue and parcel polygons in amber
+ * Renders parcel polygons as primary highlight and (when available)
+ * building/property geometry as a secondary overlay.
  */
 export function updatePropertyGeometry(
   map: maplibregl.Map,
@@ -22,7 +23,64 @@ export function updatePropertyGeometry(
   // Clear existing layers first
   clearPropertyGeometry(map);
 
-  // Add property geometry if available
+  const parcelFeaturesFromCadastral = (data.cadastral_parcels ?? [])
+    .filter((parcel) => parcel.geometry)
+    .map((parcel) => ({
+      type: 'Feature' as const,
+      geometry: parcel.geometry as unknown as GeoJSON.Geometry,
+      properties: {
+        kadastrale_aanduiding: parcel.kadastrale_aanduiding ?? '',
+      },
+    }));
+
+  const parcelFeaturesFromMapData = (data.map_data?.parcel_geometries ?? [])
+    .filter((geometry) => !!geometry)
+    .map((geometry, index) => ({
+      type: 'Feature' as const,
+      geometry: geometry as unknown as GeoJSON.Geometry,
+      properties: {
+        kadastrale_aanduiding: `perceel-${index + 1}`,
+      },
+    }));
+
+  const parcelFeatures =
+    parcelFeaturesFromCadastral.length > 0
+      ? parcelFeaturesFromCadastral
+      : parcelFeaturesFromMapData
+
+  if (parcelFeatures.length > 0) {
+    map.addSource(PARCEL_SOURCE, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: parcelFeatures,
+      },
+    });
+
+    // Primary parcel fill + border (amber).
+    map.addLayer({
+      id: PARCEL_FILL_LAYER,
+      type: 'fill',
+      source: PARCEL_SOURCE,
+      paint: {
+        'fill-color': '#f59e0b',
+        'fill-opacity': 0.14,
+      },
+    });
+
+    map.addLayer({
+      id: PARCEL_LINE_LAYER,
+      type: 'line',
+      source: PARCEL_SOURCE,
+      paint: {
+        'line-color': '#f59e0b',
+        'line-width': 2.2,
+        'line-opacity': 0.95,
+      },
+    });
+  }
+
+  // Secondary building/property overlay (inside parcel when available).
   if (data.map_data?.property_geometry) {
     map.addSource(PROPERTY_SOURCE, {
       type: 'geojson',
@@ -33,74 +91,27 @@ export function updatePropertyGeometry(
       },
     });
 
-    // Fill layer
     map.addLayer({
       id: PROPERTY_FILL_LAYER,
       type: 'fill',
       source: PROPERTY_SOURCE,
       paint: {
-        'fill-color': '#d97706',
-        'fill-opacity': 0.15,
+        'fill-color': '#a3e635',
+        'fill-opacity': 0.08,
       },
     });
 
-    // Line layer
     map.addLayer({
       id: PROPERTY_LINE_LAYER,
       type: 'line',
       source: PROPERTY_SOURCE,
       paint: {
-        'line-color': '#d97706',
-        'line-width': 2,
-        'line-opacity': 0.8,
+        'line-color': '#a3e635',
+        'line-width': 1.6,
+        'line-opacity': 0.9,
+        'line-dasharray': [2, 2],
       },
     });
-  }
-
-  // Add parcel geometries if available
-  if (data.cadastral_parcels && data.cadastral_parcels.length > 0) {
-    const parcelFeatures = data.cadastral_parcels
-      .filter((parcel) => parcel.geometry)
-      .map((parcel) => ({
-        type: 'Feature' as const,
-        geometry: parcel.geometry as unknown as GeoJSON.Geometry,
-        properties: {
-          kadastrale_aanduiding: parcel.kadastrale_aanduiding ?? '',
-        },
-      }));
-
-    if (parcelFeatures.length > 0) {
-      map.addSource(PARCEL_SOURCE, {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: parcelFeatures,
-        },
-      });
-
-      // Fill layer for parcels
-      map.addLayer({
-        id: PARCEL_FILL_LAYER,
-        type: 'fill',
-        source: PARCEL_SOURCE,
-        paint: {
-          'fill-color': '#f59e0b',
-          'fill-opacity': 0.08,
-        },
-      });
-
-      // Dashed line layer for parcels
-      map.addLayer({
-        id: PARCEL_LINE_LAYER,
-        type: 'line',
-        source: PARCEL_SOURCE,
-        paint: {
-          'line-color': '#f59e0b',
-          'line-width': 1.5,
-          'line-dasharray': [4, 2],
-        },
-      });
-    }
   }
 
   // Add amber center marker

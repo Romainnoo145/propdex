@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useProjects, useDeleteProject } from '@/hooks/useProjects'
@@ -8,21 +8,31 @@ import {
   useSetGemeenteMonitoringSubscription,
 } from '@/hooks/useNotifications'
 import { useProjectScans, useScanHistory, useTriggerScan } from '@/hooks/useScans'
+import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
+import {
+  useMunicipalityWorkspaceStats,
+  type ProvinceOption,
+  type GemeenteScopeCard,
+} from '@/hooks/useMunicipalityWorkspaceStats'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { toast } from 'sonner'
 import type { ProjectResponse } from '@/lib/types/project'
 import type { ScanListItem } from '@/lib/types/scan'
+import { useWorkspace } from '@/lib/workspace/useWorkspace'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { fetchGemeenteGeoJSON, fetchProvincieGeoJSON } from '@/components/map/GemeenteBoundariesLayer'
+import { MetricChip } from '@/components/primitives'
 import {
   geoJsonToSvgPath,
   geoJsonToSvgDualPath,
-  pointInPolygon,
-  bboxCenter,
   calculateBboxFromGeometry,
+  resolveWijkBbox,
 } from '@/lib/geo-utils'
+import { normalizeAreaName, normalizeGemeenteCode } from '@/lib/geo/normalizers'
+import { toMapGemeenteWijkSearch } from '@/lib/navigation/mapSearch'
+import { toProjectenGemeenteSearch, toProjectenRootSearch } from '@/lib/navigation/workspaceSearch'
 import { GemeenteCard } from './GemeenteCard'
 import { GemeenteCardGrid, GemeenteCardGridSkeleton } from './GemeenteCardGrid'
 import { GemeenteDetailView } from './GemeenteDetailView'
@@ -84,24 +94,6 @@ const FAVORITE_GEMEENTEN_KEY = 'propdex:favorite-gemeenten'
 const RECENT_GEMEENTEN_KEY = 'propdex:recent-gemeenten'
 const MAX_RECENT_GEMEENTEN = 6
 
-function normalizeAreaName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[’']/g, '')
-    .trim()
-}
-
-function normalizeGemeenteCode(value: string | null | undefined): string | null {
-  if (!value) return null
-  const code = value.trim().toUpperCase()
-  if (!code) return null
-  if (/^GM\d{4}$/.test(code)) return code
-  const digits = code.startsWith('GM') ? code.slice(2) : code
-  if (/^\d{4}$/.test(digits)) return `GM${digits}`
-  return code
-}
-
 function isMunicipalityLikeProjectName(
   projectName: string,
   municipalityName: string,
@@ -119,51 +111,13 @@ function isMunicipalityLikeProjectName(
   )
 }
 
-function resolveWijkBbox(
-  geojson: GeoJSON.FeatureCollection | undefined,
-  wijkNaam: string | null
-): [number, number, number, number] | null {
-  if (!geojson || !wijkNaam) return null
-
-  const target = normalizeAreaName(wijkNaam)
-  const match = geojson.features.find((feature) => {
-    const name = String(feature.properties?.statnaam ?? '')
-    return normalizeAreaName(name) === target
-  })
-  if (!match) return null
-
-  const geometry = match.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
-  if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) {
-    return null
-  }
-
-  return calculateBboxFromGeometry(geometry)
-}
-
-interface ProvinceOption {
-  code: string
-  naam: string
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
-}
-
-interface GemeenteScopeCard {
-  code: string
-  naam: string
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
-  provinceCode: string
-  project: ProjectResponse | null
-  scannedWijken: number
-  rapporten: number
-  meldingen: number
-  totalUnread: number
-}
-
 /**
  * Project list with expandable report rows.
  * Dark theme — Industrial Amber design system (grey-* tokens).
  * Falls back to demo data when API is unavailable.
  */
 export default function ProjectList() {
+  const { roleMeta } = useWorkspace()
   const { data, isLoading } = useProjects()
   const { data: unreadData } = useUnreadCounts()
   const { data: scanHistory } = useScanHistory({ limit: 100, status: 'completed' })
@@ -173,6 +127,7 @@ export default function ProjectList() {
   const search = useSearch({ from: '/_authenticated/projecten' })
   const selectedGemeenteId = search.gemeente_id ?? null
   const selectedGemeenteCode = normalizeGemeenteCode(search.gemeente_code)
+  const selectedProvinceCode = search.provincie_code?.trim() || null
   const selectedWijkId = search.wijk_id ?? null
   const { data: selectedGemeenteChanges } = useProjectChanges(selectedGemeenteId)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -180,8 +135,18 @@ export default function ProjectList() {
   const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null)
   const [favoriteGemeenteCodes, setFavoriteGemeenteCodes] = useState<string[]>([])
   const [recentGemeenteCodes, setRecentGemeenteCodes] = useState<string[]>([])
-  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | null>(null)
   const [preferencesHydrated, setPreferencesHydrated] = useState(false)
+
+  const setSelectedProvinceCode = useCallback((provinceCode: string | null) => {
+    navigate({
+      to: '/projecten',
+      search: (prev) => ({
+        ...prev,
+        provincie_code: provinceCode?.trim() || undefined,
+      }),
+      replace: true,
+    })
+  }, [navigate])
 
   const isDemo = !data && !isLoading
   const allProjects = data?.projects ?? (isDemo ? DEMO_PROJECTS : [])
@@ -189,17 +154,9 @@ export default function ProjectList() {
   // Separate top-level projects (no parent) from hierarchical projects
   const topLevelProjects = allProjects.filter((p) => p.parent_id === null)
 
-  const [gemeenteGeojson, setGemeenteGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  const [provincieGeojson, setProvincieGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-
-  // Fetch CBS gemeente + provincie boundaries once when projects are available.
-  // Gemeente shapes are also used to resolve gemeente_code for legacy report-only projects.
-  useEffect(() => {
-    if (allProjects.length === 0) return
-    fetchGemeenteGeoJSON().then(setGemeenteGeojson).catch(console.error)
-    // Province data is non-blocking — cards render without it, re-render when it arrives
-    fetchProvincieGeoJSON().then(setProvincieGeojson).catch(console.error)
-  }, [allProjects.length])
+  const shouldLoadBoundaries = allProjects.length > 0
+  const { data: gemeenteGeojson } = useGemeenteGeoJSON(shouldLoadBoundaries)
+  const { data: provincieGeojson } = useProvincieGeoJSON(shouldLoadBoundaries)
 
   useEffect(() => {
     try {
@@ -527,73 +484,21 @@ export default function ProjectList() {
     [provinceOptions, selectedProvinceCode]
   )
 
-  const allGemeenteCards = useMemo<GemeenteScopeCard[]>(() => {
-    if (!gemeenteGeojson || provinceOptions.length === 0) return []
-
-    const cards: GemeenteScopeCard[] = []
-
-    for (const feature of gemeenteGeojson.features) {
-      const code = normalizeGemeenteCode(String(feature.properties?.statcode ?? '').trim())
-      const naam = String(feature.properties?.statnaam ?? '').trim()
-      const geometry = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon | undefined
-      if (!code || !naam || !geometry) continue
-      if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue
-
-      const center = bboxCenter(geometry)
-      const province = provinceOptions.find((candidate) =>
-        pointInPolygon(center, candidate.geometry)
-      )
-      if (!province) continue
-
-      const project = municipalityProjectsByCode.get(code) ?? null
-      const linkedWijkProjects = project ? (childrenByParentId.get(project.id) ?? []) : []
-      const standaloneWijken = standaloneWijkProjectsByCode.get(code) ?? []
-      const reportCount =
-        (project?.report_count ?? 0) +
-        linkedWijkProjects.reduce((sum, wijk) => sum + wijk.report_count, 0) +
-        standaloneWijken.reduce((sum, wijk) => sum + wijk.report_count, 0)
-
-      const unreadCount =
-        (project ? (unreadByProjectId.get(project.id) ?? 0) : 0) +
-        linkedWijkProjects.reduce(
-          (sum, wijk) => sum + (unreadByProjectId.get(wijk.id) ?? 0),
-          0
-        ) +
-        standaloneWijken.reduce(
-          (sum, wijk) => sum + (unreadByProjectId.get(wijk.id) ?? 0),
-          0
-        )
-
-      const wijkNames = new Set(scanWijkNamesByGemeenteCode.get(code) ?? [])
-      for (const wijk of [...linkedWijkProjects, ...standaloneWijken]) {
-        const wijkName = normalizeAreaName(wijk.wijk_naam ?? wijk.name)
-        if (!wijkName) continue
-        wijkNames.add(wijkName)
-      }
-
-      cards.push({
-        code,
-        naam,
-        geometry,
-        provinceCode: province.code,
-        project,
-        scannedWijken: wijkNames.size,
-        rapporten: reportCount,
-        meldingen: unreadCount,
-        totalUnread: unreadCount,
-      })
-    }
-
-    return cards.sort((a, b) => a.naam.localeCompare(b.naam, 'nl-NL'))
-  }, [
-    gemeenteGeojson,
+  const {
+    allGemeenteCards,
+    selectedGemeenteCard,
+    selectedGemeenteWijkReportCounts,
+    provinceStatsByCode,
+  } = useMunicipalityWorkspaceStats({
+    gemeenteGeojson: gemeenteGeojson ?? null,
     provinceOptions,
     municipalityProjectsByCode,
     childrenByParentId,
     standaloneWijkProjectsByCode,
     unreadByProjectId,
     scanWijkNamesByGemeenteCode,
-  ])
+    selectedGemeenteCode,
+  })
 
   const selectedProvinceGemeenteCards = useMemo(
     () =>
@@ -601,16 +506,6 @@ export default function ProjectList() {
         ? allGemeenteCards.filter((card) => card.provinceCode === selectedProvince.code)
         : [],
     [allGemeenteCards, selectedProvince]
-  )
-
-  const gemeenteCardByCode = useMemo(
-    () => new Map(allGemeenteCards.map((card) => [card.code, card])),
-    [allGemeenteCards]
-  )
-
-  const selectedGemeenteCard = useMemo(
-    () => (selectedGemeenteCode ? (gemeenteCardByCode.get(selectedGemeenteCode) ?? null) : null),
-    [selectedGemeenteCode, gemeenteCardByCode]
   )
 
   const hasGemeenteDetail = Boolean(
@@ -669,6 +564,12 @@ export default function ProjectList() {
   const totaalMeldingen = unreadData?.total_unread ?? 0
   const totaalProvincies = provinceOptions.length
   const gemeentenInSelectedProvince = selectedProvinceGemeenteCards.length
+  const workspaceTitle = roleMeta.summaryLabel === 'Borgingsworkspace' ? 'Dossiers' : 'Projecten'
+  const workspaceSubtitle = `${roleMeta.summaryLabel} · ${allProjects.length} ${
+    allProjects.length === 1 ? 'project' : 'projecten'
+  } in totaal${
+    selectedProvince ? ` · ${gemeentenInSelectedProvince} gemeenten in ${selectedProvince.naam}` : ''
+  }`
 
   const favoriteCodeSet = useMemo(
     () => new Set(favoriteGemeenteCodes),
@@ -711,17 +612,6 @@ export default function ProjectList() {
     [orderedSelectedProvinceCards, favoriteCodeSet]
   )
 
-  const provinceStatsByCode = useMemo(() => {
-    const stats = new Map<string, { gemeenten: number; meldingen: number }>()
-    for (const card of allGemeenteCards) {
-      const current = stats.get(card.provinceCode) ?? { gemeenten: 0, meldingen: 0 }
-      current.gemeenten += 1
-      current.meldingen += card.totalUnread
-      stats.set(card.provinceCode, current)
-    }
-    return stats
-  }, [allGemeenteCards])
-
   const toggleFavoriteGemeente = (gemeenteCode: string) => {
     const normalizedCode = normalizeGemeenteCode(gemeenteCode)
     if (!normalizedCode) return
@@ -761,7 +651,7 @@ export default function ProjectList() {
         onSuccess: (result) => {
           toast.success(
             result.enabled
-              ? `Meldingen geactiveerd voor ${result.gemeente_naam}`
+              ? `Meldingen geactiveerd voor ${result.gemeente_naam} (${result.monitored_projects}/${result.total_projects} projecten)`
               : `Meldingen uitgeschakeld voor ${result.gemeente_naam}`
           )
         },
@@ -803,11 +693,21 @@ export default function ProjectList() {
           if (card.project) {
             navigate({
               to: '/projecten',
-              search: { gemeente_id: card.project.id, gemeente_code: card.code },
+              search: toProjectenGemeenteSearch({
+                gemeenteId: card.project.id,
+                gemeenteCode: card.code,
+                provincieCode: selectedProvinceCode ?? card.provinceCode,
+              }),
             })
             return
           }
-          navigate({ to: '/projecten', search: { gemeente_code: card.code } })
+          navigate({
+            to: '/projecten',
+            search: toProjectenGemeenteSearch({
+              gemeenteCode: card.code,
+              provincieCode: selectedProvinceCode ?? card.provinceCode,
+            }),
+          })
         }}
       />
     )
@@ -857,10 +757,8 @@ export default function ProjectList() {
 
       {!hasGemeenteDetail && (
         <ProjectWorkspaceHeader
-          title="Projecten"
-          subtitle={`${allProjects.length} ${allProjects.length === 1 ? 'project' : 'projecten'} in totaal${
-            selectedProvince ? ` · ${gemeentenInSelectedProvince} gemeenten in ${selectedProvince.naam}` : ''
-          }`}
+          title={workspaceTitle}
+          subtitle={workspaceSubtitle}
           metrics={[
             { label: 'Provincies', value: totaalProvincies, icon: <ProvinceStatIcon /> },
             { label: 'Gemeenten', value: gemeentenInSelectedProvince, icon: <GemeenteStatIcon /> },
@@ -945,7 +843,10 @@ export default function ProjectList() {
                     <ProjectWorkspaceHeader
                       title={gemeente.name}
                       subtitle={`${1 + allWijkChildren.length} ${1 + allWijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
-                      onBack={() => navigate({ to: '/projecten', search: {} })}
+                      onBack={() => navigate({
+                        to: '/projecten',
+                        search: toProjectenRootSearch({ provincieCode: selectedProvinceCode }),
+                      })}
                       backLabel="Terug naar projecten"
                       metrics={[
                         { label: 'Wijken', value: allWijkChildren.length, icon: <WijkStatIcon /> },
@@ -964,7 +865,10 @@ export default function ProjectList() {
                       actionLabel="Bekijk op kaart"
                       onAction={
                         gemeenteCode
-                          ? () => navigate({ to: '/map', search: { gemeente_code: gemeenteCode } })
+                          ? () => navigate({
+                            to: '/map',
+                            search: toMapGemeenteWijkSearch({ gemeenteCode }),
+                          })
                           : undefined
                       }
                       extraActions={
@@ -985,7 +889,10 @@ export default function ProjectList() {
                       gemeente={gemeenteForDetail}
                       wijkProjects={allWijkChildren}
                       unreadData={unreadData}
-                      gemeenteGeojson={gemeenteGeojson}
+                      gemeenteGeojson={gemeenteGeojson ?? null}
+                      scannedWijkNames={
+                        gemeenteCode ? (scanWijkNamesByGemeenteCode.get(gemeenteCode) ?? null) : null
+                      }
                     />
                   </>
                 )
@@ -997,7 +904,10 @@ export default function ProjectList() {
                     <ProjectWorkspaceHeader
                       title={selectedGemeenteCard.naam}
                       subtitle="Gemeenteflow zonder gekoppeld gemeenteproject"
-                      onBack={() => navigate({ to: '/projecten', search: {} })}
+                      onBack={() => navigate({
+                        to: '/projecten',
+                        search: toProjectenRootSearch({ provincieCode: selectedProvinceCode }),
+                      })}
                       backLabel="Terug naar projecten"
                       metrics={[
                         { label: 'Wijken', value: selectedGemeenteCard.scannedWijken, icon: <WijkStatIcon /> },
@@ -1010,7 +920,10 @@ export default function ProjectList() {
                         },
                       ]}
                       actionLabel="Bekijk op kaart"
-                      onAction={() => navigate({ to: '/map', search: { gemeente_code: selectedGemeenteCard.code } })}
+                      onAction={() => navigate({
+                        to: '/map',
+                        search: toMapGemeenteWijkSearch({ gemeenteCode: selectedGemeenteCard.code }),
+                      })}
                       extraActions={
                         <MonitoringToggleAction
                           enabled={Boolean(selectedGemeenteCard.project?.is_monitored)}
@@ -1030,6 +943,7 @@ export default function ProjectList() {
                       gemeenteName={selectedGemeenteCard.naam}
                       gemeenteGeometry={selectedGemeenteCard.geometry}
                       scanHistory={scanHistory?.scans ?? []}
+                      wijkReportCounts={selectedGemeenteWijkReportCounts}
                     />
                   </>
                 )
@@ -1111,11 +1025,21 @@ export default function ProjectList() {
                                     if (card.project) {
                                       navigate({
                                         to: '/projecten',
-                                        search: { gemeente_id: card.project.id, gemeente_code: card.code },
+                                        search: toProjectenGemeenteSearch({
+                                          gemeenteId: card.project.id,
+                                          gemeenteCode: card.code,
+                                          provincieCode: selectedProvinceCode ?? card.provinceCode,
+                                        }),
                                       })
                                       return
                                     }
-                                    navigate({ to: '/projecten', search: { gemeente_code: card.code } })
+                                    navigate({
+                                      to: '/projecten',
+                                      search: toProjectenGemeenteSearch({
+                                        gemeenteCode: card.code,
+                                        provincieCode: selectedProvinceCode ?? card.provinceCode,
+                                      }),
+                                    })
                                   }}
                                   className="rounded-full border border-overlay/[0.1] bg-overlay/[0.06] px-3 py-1 text-xs text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
                                 >
@@ -1388,11 +1312,13 @@ function UnlinkedGemeenteWorkspace({
   gemeenteName,
   gemeenteGeometry,
   scanHistory,
+  wijkReportCounts,
 }: {
   gemeenteCode: string
   gemeenteName: string
   gemeenteGeometry: GeoJSON.Polygon | GeoJSON.MultiPolygon
   scanHistory: ScanListItem[]
+  wijkReportCounts: Map<string, number>
 }) {
   const navigate = useNavigate()
   const triggerScan = useTriggerScan()
@@ -1495,6 +1421,7 @@ function UnlinkedGemeenteWorkspace({
                 {wijkItems.map((wijk) => {
                   const isActive = wijk.name === selectedWijkNaam
                   const wijkScan = latestScanByWijkName.get(normalizeAreaName(wijk.name))
+                  const reportCount = wijkReportCounts.get(normalizeAreaName(wijk.name)) ?? 0
                   return (
                     <button
                       key={wijk.name}
@@ -1541,7 +1468,25 @@ function UnlinkedGemeenteWorkspace({
                         )}
                       </div>
                       <div className="px-3.5 py-2.5">
-                        <p className="truncate text-sm font-semibold text-grey-100">{wijk.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-grey-100">{wijk.name}</p>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <MetricChip
+                              value={wijkScan ? 1 : 0}
+                              ariaLabel="Gescand"
+                              icon={<WijkScanStatusIcon />}
+                              tone="amber"
+                              compact
+                            />
+                            <MetricChip
+                              value={reportCount}
+                              ariaLabel="Rapporten"
+                              icon={<ReportStatIcon />}
+                              tone="amber"
+                              compact
+                            />
+                          </div>
+                        </div>
                         <p className="mt-1 text-[11px] text-grey-500">
                           {wijkScan
                             ? `Scan: ${dateFmt.format(new Date(wijkScan.scan_date))}`
@@ -1585,7 +1530,10 @@ function UnlinkedGemeenteWorkspace({
                       onClick={() =>
                         navigate({
                           to: '/map',
-                          search: { gemeente_code: gemeenteCode },
+                          search: toMapGemeenteWijkSearch({
+                            gemeenteCode,
+                            wijkNaam: selectedWijk.name,
+                          }),
                         })
                       }
                       className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
@@ -1901,6 +1849,15 @@ function BellStatIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+function WijkScanStatusIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m9 12 2 2 4-4" />
     </svg>
   )
 }

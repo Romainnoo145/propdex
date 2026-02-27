@@ -1,12 +1,6 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import { Map, FolderOpen, FileText } from 'lucide-react'
 
-interface NavItem {
-  icon: React.ReactNode
-  label: string
-  to: string
-}
-
 /**
  * Bottom tab bar navigation for mobile viewports.
  *
@@ -19,44 +13,41 @@ interface NavItem {
 export default function BottomTabNav() {
   const matchRoute = useMatchRoute()
 
-  const navItems: NavItem[] = [
-    {
-      icon: <Map size={20} />,
-      label: 'Kaart',
-      to: '/map',
-    },
-    {
-      icon: <FolderOpen size={20} />,
-      label: 'Projecten',
-      to: '/projecten',
-    },
-    {
-      icon: <FileText size={20} />,
-      label: 'Rapporten',
-      to: '/rapporten',
-    },
-  ]
-
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 flex md:hidden border-t border-grey-800 bg-grey-900"
+      className="fixed inset-x-0 bottom-0 flex border-t border-grey-800 bg-grey-900 md:hidden"
       style={{ zIndex: 'var(--z-bottom-nav)' }}
     >
-      {navItems.map((item) => {
-        const isActive = matchRoute({ to: item.to })
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            className={`flex flex-1 flex-col items-center justify-center min-h-[56px] gap-0.5 transition-colors ${
-              isActive ? 'text-amber-accent' : 'text-grey-400'
-            }`}
-          >
-            {item.icon}
-            <span className="text-xs">{item.label}</span>
-          </Link>
-        )
-      })}
+      <Link
+        to="/map"
+        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+          matchRoute({ to: '/map' }) ? 'text-amber-accent' : 'text-grey-400'
+        }`}
+      >
+        <Map size={20} />
+        <span className="text-xs">Kaart</span>
+      </Link>
+
+      <Link
+        to="/projecten"
+        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+          matchRoute({ to: '/projecten' }) ? 'text-amber-accent' : 'text-grey-400'
+        }`}
+      >
+        <FolderOpen size={20} />
+        <span className="text-xs">Projecten</span>
+      </Link>
+
+      <Link
+        to="/rapporten"
+        search={{ project_id: undefined, q: undefined }}
+        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+          matchRoute({ to: '/rapporten' }) ? 'text-amber-accent' : 'text-grey-400'
+        }`}
+      >
+        <FileText size={20} />
+        <span className="text-xs">Rapporten</span>
+      </Link>
     </nav>
   )
 }

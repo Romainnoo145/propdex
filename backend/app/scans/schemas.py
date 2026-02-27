@@ -176,6 +176,27 @@ class ScanResultItem(BaseModel):
         default=None,
         description="Vacancy classification: leeg_perceel, leegstaand_pand, in_gebruik, onbekend",
     )
+    vacancy_confidence: float | None = Field(
+        default=None,
+        description="Vacancy confidence score (0-1) based on BAG + permit/listing behavior",
+        ge=0,
+        le=1,
+    )
+    vacancy_reasons: list[str] | None = Field(
+        default=None,
+        description="Top 3 explainable reasons behind vacancy confidence",
+    )
+    vacancy_model_version: str | None = Field(
+        default=None,
+        description="Version id of vacancy confidence model",
+    )
+    market_signals: dict[str, int] | None = Field(
+        default=None,
+        description=(
+            "External market friction signals per parcel "
+            "(e.g., listing_duration_days, price_change_count)"
+        ),
+    )
     opportunity_signals: list[str] | None = Field(
         default=None,
         description="Human-readable development opportunity signals",
@@ -183,6 +204,10 @@ class ScanResultItem(BaseModel):
     building_metrics: dict | None = Field(
         default=None,
         description="Zoning build metrics (e.g., max_bebouwingspercentage, max_floor_area_ratio)",
+    )
+    has_report: bool = Field(
+        default=False,
+        description="Whether this parcel already has an active saved report",
     )
 
 
@@ -252,6 +277,59 @@ class ParcelCentroidResponse(BaseModel):
     parcel_code: str | None = Field(default=None, description="Kadastrale aanduiding")
     gemeente_code: str | None = Field(default=None, description="CBS gemeentecode")
     area_m2: float | None = Field(default=None, description="Parcel area in m2")
+    has_pand: bool | None = Field(default=None, description="True when parcel has BAG building")
+    bouwjaar: int | None = Field(default=None, description="BAG bouwjaar")
+    pand_status: str | None = Field(default=None, description="BAG pandstatus")
+    geometry: dict | None = Field(
+        default=None,
+        description="Parcel geometry as GeoJSON (WGS84)",
+    )
+
+
+class ParcelAtPointResponse(BaseModel):
+    """Parcel lookup response for map clicks at a WGS84 coordinate."""
+
+    parcel_id: uuid.UUID = Field(description="ParcelCache UUID")
+    lng: float = Field(description="Parcel centroid longitude in WGS84")
+    lat: float = Field(description="Parcel centroid latitude in WGS84")
+    address: str | None = Field(default=None, description="Display address")
+    parcel_code: str | None = Field(default=None, description="Kadastrale aanduiding")
+    gemeente_code: str | None = Field(default=None, description="CBS gemeentecode")
+    area_m2: float | None = Field(default=None, description="Parcel area in m2")
+    has_pand: bool = Field(description="True when parcel has a BAG building")
+    bouwjaar: int | None = Field(default=None, description="BAG bouwjaar")
+    pand_status: str | None = Field(default=None, description="BAG pandstatus")
+    score: float | None = Field(
+        default=None,
+        description="Optional scan score when scan_id context is provided",
+        ge=0,
+        le=100,
+    )
+    score_category: str | None = Field(
+        default=None,
+        description="Score category from scan flags (High/Medium/Low)",
+    )
+    score_breakdown: dict | None = Field(
+        default=None,
+        description="Per-factor score contributions from scan flags",
+    )
+    vacancy_signal: str | None = Field(
+        default=None,
+        description="Vacancy classification from scan flags",
+    )
+    market_signals: dict[str, int] | None = Field(
+        default=None,
+        description="Market listing friction signals from scan flags",
+    )
+    opportunity_signals: list[str] | None = Field(
+        default=None,
+        description="Human-readable opportunity signals from scan flags",
+    )
+    building_metrics: dict | None = Field(
+        default=None,
+        description="Zoning build metrics from scan flags",
+    )
+    has_report: bool = Field(description="True when at least one saved report exists")
     geometry: dict | None = Field(
         default=None,
         description="Parcel geometry as GeoJSON (WGS84)",
@@ -265,6 +343,10 @@ class ScanListItem(BaseModel):
     gemeente_naam: str = Field(description="Gemeente display name")
     gemeente_code: str = Field(description="CBS gemeentecode")
     wijk_naam: str | None = Field(default=None, description="CBS wijk name")
+    bbox_wgs84: tuple[float, float, float, float] | None = Field(
+        default=None,
+        description="Scan bounding box in WGS84 (min_lon, min_lat, max_lon, max_lat)",
+    )
     scan_date: datetime = Field(description="Scan creation timestamp")
     status: str = Field(description="Scan status: pending, running, completed, failed, cancelled")
     parcel_count: int = Field(description="Number of qualifying scan results (COUNT of scan_results)", ge=0)

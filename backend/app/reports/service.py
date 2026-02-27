@@ -6,6 +6,7 @@ from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import asc, desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
@@ -342,7 +343,8 @@ async def save_report(
     organization_id: uuid.UUID,
     session: AsyncSession,
     parcel_id: uuid.UUID | None = None,
-) -> SavedReport:
+    return_status: bool = False,
+) -> SavedReport | tuple[SavedReport, bool]:
     """
     Save a property intelligence report.
 
@@ -355,7 +357,8 @@ async def save_report(
         parcel_id: Optional ParcelCache ID (used to resolve wijk context)
 
     Returns:
-        SavedReport: The created report
+        SavedReport by default.
+        If return_status=True, returns (SavedReport, created_bool).
 
     Raises:
         ValueError: If report_data is invalid
@@ -391,7 +394,26 @@ async def save_report(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Project not found",
             )
-    else:
+
+    # Idempotency guard: one active report per source parcel per organization.
+    # Prevents duplicate report generation on repeated "Genereer rapport" clicks.
+    if parcel_id is not None:
+        existing_for_parcel = await get_report_by_source_parcel(
+            parcel_id=parcel_id,
+            organization_id=organization_id,
+            session=session,
+        )
+        if existing_for_parcel is not None:
+            if resolved_project_id is not None and existing_for_parcel.project_id != resolved_project_id:
+                existing_for_parcel.project_id = resolved_project_id
+                await session.commit()
+            if notes is not None and existing_for_parcel.notes != notes:
+                existing_for_parcel.notes = notes
+                await session.commit()
+            if return_status:
+                return existing_for_parcel, False
+            return existing_for_parcel
+    if resolved_project_id is None:
         if parcel_id is not None:
             gemeente_naam, gemeente_code, wijk_naam = (
                 await _resolve_location_context_from_parcel(
@@ -432,13 +454,49 @@ async def save_report(
         city=city,
         notes=notes,
         project_id=resolved_project_id,
+        source_parcel_id=parcel_id,
     )
 
     session.add(report)
-    await session.flush()
-    await session.commit()
+    try:
+        await session.flush()
+        await session.commit()
+    except IntegrityError as e:
+        # Race-safe idempotency fallback for concurrent from-parcel requests.
+        await session.rollback()
+        if parcel_id is not None:
+            existing_for_parcel = await get_report_by_source_parcel(
+                parcel_id=parcel_id,
+                organization_id=organization_id,
+                session=session,
+            )
+            if existing_for_parcel is not None:
+                if return_status:
+                    return existing_for_parcel, False
+                return existing_for_parcel
+        raise e
 
+    if return_status:
+        return report, True
     return report
+
+
+async def get_report_by_source_parcel(
+    parcel_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+) -> SavedReport | None:
+    """
+    Return active report linked to a source parcel for this organization.
+    """
+    result = await session.execute(
+        select(SavedReport).where(
+            SavedReport.organization_id == organization_id,
+            SavedReport.source_parcel_id == parcel_id,
+            SavedReport.deleted_at.is_(None),
+        ).limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def list_reports(

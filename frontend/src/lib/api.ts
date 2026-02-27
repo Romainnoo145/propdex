@@ -14,6 +14,7 @@ import type {
 } from './types/property'
 import type {
   ReportFilters,
+  GenerateReportFromParcelResponse,
   ReportListResponse,
   ReportDetailResponse,
   ReportSaveRequest,
@@ -566,16 +567,44 @@ export async function generateReportFromParcel(
   parcelId: string,
   accessToken: string | null,
   options?: { notes?: string; project_id?: string }
-): Promise<ReportDetailResponse> {
-  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/from-parcel`, {
+): Promise<GenerateReportFromParcelResponse> {
+  const headers = new Headers()
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+  headers.set('Content-Type', 'application/json')
+
+  const response = await fetch(`${REPORTS_BASE}/from-parcel`, {
     method: 'POST',
-    accessToken,
+    headers,
+    credentials: 'include',
     body: JSON.stringify({
       parcel_id: parcelId,
       ...(options?.notes && { notes: options.notes }),
       ...(options?.project_id && { project_id: options.project_id }),
     }),
   })
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Request failed with status ${response.status}` }))
+    throw new Error(error.detail || `Request failed with status ${response.status}`)
+  }
+
+  const payload = await response.json() as
+    | GenerateReportFromParcelResponse
+    | ReportDetailResponse
+
+  // Backward-compatible fallback for pre-wrapper backend responses.
+  if ('report' in payload && 'created' in payload) {
+    return payload
+  }
+
+  return {
+    report: payload,
+    created: response.status === 201,
+  }
 }
 
 /**
@@ -673,7 +702,7 @@ export async function cancelScan(
  * GET /api/scans/{scanId}/results
  *
  * @param scanId - Scan UUID
- * @param filters - Optional filters for has_pand, bestemming_type, area range, score, sort, pagination
+ * @param filters - Optional filters for has_pand, bestemming_type, area range, score, sort (including subscore sorts), pagination
  * @param accessToken - JWT access token from useAuth()
  * @returns Paginated scan results with total count
  */
@@ -716,7 +745,7 @@ export async function fetchScanResults(
  * @returns Tile URL template with {z}/{x}/{y} placeholders
  */
 export function getScanTileUrl(scanId: string): string {
-  const TILE_SCHEMA_VERSION = '2'
+  const TILE_SCHEMA_VERSION = '3'
   return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf?v=${TILE_SCHEMA_VERSION}`
 }
 
@@ -761,6 +790,9 @@ export async function fetchParcelCentroid(
   parcel_code?: string | null
   gemeente_code?: string | null
   area_m2?: number | null
+  has_pand?: boolean | null
+  bouwjaar?: number | null
+  pand_status?: string | null
   geometry?: GeoJSON.Geometry | null
 }> {
   return apiFetch<{
@@ -770,9 +802,86 @@ export async function fetchParcelCentroid(
     parcel_code?: string | null
     gemeente_code?: string | null
     area_m2?: number | null
+    has_pand?: boolean | null
+    bouwjaar?: number | null
+    pand_status?: string | null
     geometry?: GeoJSON.Geometry | null
   }>(
     `${SCANS_BASE}/parcels/${parcelId}/centroid`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
+ * Resolve parcel by clicked WGS84 map point.
+ *
+ * GET /api/scans/parcels/at-point?lng=...&lat=...
+ */
+export async function fetchParcelAtPoint(
+  lng: number,
+  lat: number,
+  accessToken: string | null,
+  options?: { scanId?: string | null }
+): Promise<{
+  parcel_id: string
+  lng: number
+  lat: number
+  address: string | null
+  parcel_code?: string | null
+  gemeente_code?: string | null
+  area_m2?: number | null
+  has_pand: boolean
+  bouwjaar?: number | null
+  pand_status?: string | null
+  score?: number | null
+  score_category?: string | null
+  score_breakdown?: Record<string, unknown> | null
+  vacancy_signal?: string | null
+  market_signals?: {
+    listing_duration_days: number
+    price_change_count: number
+    listing_snapshots_count: number
+    days_since_last_seen: number
+  } | null
+  opportunity_signals?: string[] | null
+  building_metrics?: Record<string, unknown> | null
+  has_report: boolean
+  geometry?: GeoJSON.Geometry | null
+}> {
+  const query = new URLSearchParams({
+    lng: String(lng),
+    lat: String(lat),
+  })
+  if (options?.scanId) {
+    query.set('scan_id', options.scanId)
+  }
+  return apiFetch<{
+    parcel_id: string
+    lng: number
+    lat: number
+    address: string | null
+    parcel_code?: string | null
+    gemeente_code?: string | null
+    area_m2?: number | null
+    has_pand: boolean
+    bouwjaar?: number | null
+    pand_status?: string | null
+    score?: number | null
+    score_category?: string | null
+    score_breakdown?: Record<string, unknown> | null
+    vacancy_signal?: string | null
+    market_signals?: {
+      listing_duration_days: number
+      price_change_count: number
+      listing_snapshots_count: number
+      days_since_last_seen: number
+    } | null
+    opportunity_signals?: string[] | null
+    building_metrics?: Record<string, unknown> | null
+    has_report: boolean
+    geometry?: GeoJSON.Geometry | null
+  }>(
+    `${SCANS_BASE}/parcels/at-point?${query.toString()}`,
     { method: 'GET', accessToken }
   )
 }

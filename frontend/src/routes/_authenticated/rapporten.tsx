@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { FileText, Trash2, ExternalLink, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import ResultsShell from '@/components/layout/ResultsShell'
@@ -7,10 +7,16 @@ import { useReports, useDeleteReport } from '@/hooks/useReports'
 import { useProjects } from '@/hooks/useProjects'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { Select } from '@/components/primitives/Select'
+import { SearchInput, Select } from '@/components/primitives'
 import type { ReportListItem } from '@/lib/types/report'
 
 export const Route = createFileRoute('/_authenticated/rapporten')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    project_id: typeof search.project_id === 'string' && search.project_id.trim()
+      ? search.project_id
+      : undefined,
+    q: typeof search.q === 'string' ? search.q : undefined,
+  }),
   component: RapportenPage,
 })
 
@@ -22,15 +28,42 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
 
 function RapportenPage() {
   const navigate = useNavigate()
-  const [projectFilter, setProjectFilter] = useState<string | undefined>(
-    undefined,
-  )
+  const search = Route.useSearch()
+  const projectFilter = search.project_id
   const { data, isLoading } = useReports({ project_id: projectFilter })
   const { data: projectsData } = useProjects()
   const deleteMutation = useDeleteReport()
-  const [searchQuery, setSearchQuery] = useState('')
+  const searchQuery = search.q ?? ''
 
   const reports = data?.reports ?? []
+  const projectNameById = useMemo(
+    () => new Map((projectsData?.projects ?? []).map((project) => [project.id, project.name])),
+    [projectsData?.projects]
+  )
+  const activeProjectName = projectFilter ? projectNameById.get(projectFilter) : null
+
+  const setSearchQuery = (nextQuery: string) => {
+    navigate({
+      to: '/rapporten',
+      search: {
+        project_id: projectFilter ?? undefined,
+        q: nextQuery.trim() ? nextQuery : undefined,
+      },
+      replace: true,
+    })
+  }
+
+  const setProjectFilter = (nextProjectId: string | undefined) => {
+    navigate({
+      to: '/rapporten',
+      search: {
+        project_id: nextProjectId || undefined,
+        q: searchQuery.trim() ? searchQuery : undefined,
+      },
+      replace: true,
+    })
+  }
+
   const filteredReports = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return reports
@@ -43,7 +76,11 @@ function RapportenPage() {
   }, [reports, searchQuery])
 
   const handleOpenReport = (report: ReportListItem) => {
-    navigate({ to: '/rapport/$id', params: { id: report.id } })
+    navigate({
+      to: '/rapport/$id',
+      params: { id: report.id },
+      search: { from: 'rapporten' },
+    })
   }
 
   const handleDelete = (e: React.MouseEvent, report: ReportListItem) => {
@@ -69,36 +106,20 @@ function RapportenPage() {
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-accent bg-amber-accent px-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover"
         >
           <Plus size={14} />
-          Nieuw rapport +
+          Nieuw rapport
         </button>
       </div>
 
       <div className="mb-5 rounded-xl border border-overlay/[0.08] bg-grey-900 p-3 sm:p-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="relative">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-grey-600"
-            />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek rapporten (adres, postcode, plaats)"
-              autoComplete="new-password"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              inputMode="search"
-              enterKeyHint="search"
-              name="search_reports_global"
-              data-lpignore="true"
-              data-1p-ignore="true"
-              data-bwignore="true"
-              data-form-type="other"
-              className="h-10 w-full rounded-lg border border-overlay/[0.12] bg-overlay/[0.04] pl-9 pr-3 text-sm text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/40 focus:outline-none"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek rapporten (adres, postcode, plaats)"
+            name="q_reports"
+            leftIcon={<Search size={14} />}
+            className="h-10"
+          />
           <Select
             id="project-filter"
             value={projectFilter || ''}
@@ -113,8 +134,21 @@ function RapportenPage() {
                   {project.name}
                 </option>
               ))}
-          </Select>
+            </Select>
         </div>
+        {activeProjectName && (
+          <div className="mt-3 flex items-center gap-2 text-xs">
+            <span className="inline-flex items-center rounded-full border border-amber-accent/35 bg-amber-accent/12 px-2.5 py-1 text-amber-accent">
+              Scope: {activeProjectName}
+            </span>
+            <button
+              onClick={() => setProjectFilter(undefined)}
+              className="text-grey-400 transition-colors hover:text-grey-100"
+            >
+              Wis scope
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Loading state */}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { MetricChip } from '@/components/primitives'
 
 interface GemeenteCardProps {
   /** Display name of the municipality */
@@ -177,44 +177,6 @@ function HeartIcon({ filled }: { filled: boolean }) {
     >
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
-  )
-}
-
-function MetricChip({
-  value,
-  tone,
-  icon,
-  ariaLabel,
-}: {
-  value: number
-  tone: 'amber' | 'info' | 'error'
-  icon: ReactNode
-  ariaLabel: string
-}) {
-  const isZero = value === 0
-  const toneClass = tone === 'amber'
-    ? 'border-amber-accent/30 bg-amber-accent/12 text-amber-accent'
-    : tone === 'info'
-      ? 'border-info/30 bg-info/12 text-info'
-      : 'border-error/30 bg-error/12 text-error'
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${
-        isZero
-          ? 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-500'
-          : toneClass
-      }`}
-      title={`${ariaLabel}: ${value}`}
-      aria-label={`${ariaLabel}: ${value}`}
-    >
-      <span className="inline-flex items-center justify-center">
-        {icon}
-      </span>
-      <span className="text-xs font-semibold tabular-nums leading-none">
-        {value}
-      </span>
-    </span>
   )
 }
 

@@ -3,3 +3,5 @@ export { Card, CardHeader, CardTitle, CardContent, CardFooter, type CardProps } 
 export { Badge, type BadgeProps } from './Badge';
 export { Input, type InputProps } from './Input';
 export { Select, type SelectProps } from './Select';
+export { MetricChip, type MetricChipProps } from './MetricChip';
+export { SearchInput, DEFAULT_SEARCH_INPUT_PROPS, type SearchInputProps } from './SearchInput';

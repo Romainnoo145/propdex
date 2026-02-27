@@ -7,6 +7,7 @@ import ResultsTable from '@/components/results/ResultsTable'
 import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
 import { BulkActionBar } from '@/components/results/BulkActionBar'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { SearchInput } from '@/components/primitives'
 import { useScanHistory } from '@/hooks/useScans'
 import type { ScanResultsFilters, ScanResultItem } from '@/lib/types/scan'
 
@@ -136,21 +137,15 @@ function ResultatenPage() {
             <label htmlFor="parcel-search-results" className="sr-only">
               Zoek percelen
             </label>
-            <div className="relative">
-              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-grey-600" />
-              <input
-                id="parcel-search-results"
-                type="search"
-                value={search.parcel_q ?? ''}
-                onChange={(e) => handleParcelSearchChange(e.target.value)}
-                placeholder="Zoek percelen (adres, perceelcode, status)"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                className="w-full rounded-md border border-grey-700 bg-grey-900 py-2 pl-9 pr-3 text-xs text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/50 focus:outline-none"
-              />
-            </div>
+            <SearchInput
+              id="parcel-search-results"
+              value={search.parcel_q ?? ''}
+              onChange={(e) => handleParcelSearchChange(e.target.value)}
+              placeholder="Zoek percelen (adres, perceelcode, status)"
+              name="q_scan_results"
+              leftIcon={<Search size={14} />}
+              className="h-9 rounded-md border-grey-700 bg-grey-900 py-2 text-xs focus:border-amber-accent/50"
+            />
             {recentScans.length > 0 && (
               <div className="scrollbar-hidden mt-2 max-h-36 space-y-1 overflow-auto">
                 <p className="px-1 text-[11px] uppercase tracking-wide text-grey-600">Recente scans</p>

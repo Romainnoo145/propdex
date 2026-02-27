@@ -71,6 +71,7 @@ export function setBestemmingsplanVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
   if (map.getLayer(BESTEMMINGSPLAN_LAYER_ID)) {

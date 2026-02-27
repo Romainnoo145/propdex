@@ -2,9 +2,16 @@
 
 import uuid
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+from geoalchemy2 import WKTElement
 from httpx import AsyncClient
+from sqlalchemy import func, select
+
+from app.models.parcel_cache import ParcelCache
+from app.models.report import SavedReport
+from app.main import app
+from app.schemas.property import PropertyReportResponse
 
 
 def _make_report_data(
@@ -126,6 +133,71 @@ class TestSaveReport:
         assert response.status_code == 201
         data = response.json()
         assert data["notes"] == "Important property for client X"
+
+
+class TestGenerateFromParcel:
+    """Test POST /api/reports/from-parcel endpoint."""
+
+    async def test_from_parcel_is_idempotent(
+        self,
+        async_client: AsyncClient,
+        create_test_user,
+        test_db,
+    ):
+        """Second generate call for the same parcel returns existing report (no duplicate row)."""
+        user, org = await create_test_user()
+        token = await _get_auth_token(async_client, user.email)
+
+        parcel = ParcelCache(
+            organization_id=org.id,
+            parcel_id="TEST-PARCEL-001",
+            geometry=WKTElement(
+                "MULTIPOLYGON(((155000 463000,155010 463000,155010 463010,155000 463010,155000 463000)))",
+                srid=28992,
+            ),
+            address="Keizersgracht 123, 1015 CJ Amsterdam",
+            gemeente_code="GM0363",
+            area_m2=100.0,
+            has_pand=True,
+        )
+        test_db.add(parcel)
+        await test_db.commit()
+        await test_db.refresh(parcel)
+
+        mocked_report = PropertyReportResponse.model_validate(_make_report_data())
+        app.state.http_client = AsyncMock()
+        app.state.arq_pool = None
+        with patch(
+            "app.reports.router.aggregate_property_data",
+            new=AsyncMock(return_value=mocked_report),
+        ) as mocked_aggregate:
+            first = await async_client.post(
+                "/api/reports/from-parcel",
+                json={"parcel_id": str(parcel.id)},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            second = await async_client.post(
+                "/api/reports/from-parcel",
+                json={"parcel_id": str(parcel.id)},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert first.status_code == 201
+        assert second.status_code == 200
+        first_data = first.json()
+        second_data = second.json()
+        assert first_data["created"] is True
+        assert second_data["created"] is False
+        assert first_data["report"]["id"] == second_data["report"]["id"]
+        assert mocked_aggregate.await_count == 1
+
+        count_query = select(func.count()).select_from(SavedReport).where(
+            SavedReport.organization_id == org.id,
+            SavedReport.deleted_at.is_(None),
+            SavedReport.source_parcel_id == parcel.id,
+        )
+        count = (await test_db.execute(count_query)).scalar_one()
+        assert count == 1
 
 
 class TestGetReport:

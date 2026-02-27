@@ -1,4 +1,5 @@
 import type { ScanResultItem } from '@/lib/types/scan'
+import { extractScoreSubscores } from '@/lib/score'
 
 // Score badge — amber-based glow system (matches ResultsTable)
 function ScoreBadge({
@@ -63,6 +64,15 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
       : parcel.vacancy_signal === 'in_gebruik' ? 'In gebruik'
       : parcel.vacancy_signal === 'onbekend' ? 'Onbekend'
       : null
+  const vacancyConfidenceLabel =
+    parcel.vacancy_confidence != null
+      ? `${Math.round(parcel.vacancy_confidence * 100)}% leegstand`
+      : null
+  const topVacancyReason =
+    parcel.vacancy_reasons && parcel.vacancy_reasons.length > 0
+      ? parcel.vacancy_reasons[0]
+      : null
+  const subscores = extractScoreSubscores(parcel.score_breakdown)
 
   return (
     <button
@@ -105,6 +115,34 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
           </>
         )}
       </div>
+
+      {(vacancyConfidenceLabel || topVacancyReason) && (
+        <div className="flex items-center gap-2 text-[11px] text-grey-500">
+          {vacancyConfidenceLabel && (
+            <span className="tabular-nums text-amber-accent">{vacancyConfidenceLabel}</span>
+          )}
+          {vacancyConfidenceLabel && topVacancyReason && (
+            <span className="text-grey-700">·</span>
+          )}
+          {topVacancyReason && (
+            <span className="truncate">{topVacancyReason}</span>
+          )}
+        </div>
+      )}
+
+      {(subscores.vacancy != null || subscores.buildability != null) && (
+        <div className="flex items-center gap-2 text-[11px] text-grey-500">
+          {subscores.vacancy != null && (
+            <span className="tabular-nums">Leegstand {Math.round(subscores.vacancy)}</span>
+          )}
+          {subscores.vacancy != null && subscores.buildability != null && (
+            <span className="text-grey-700">·</span>
+          )}
+          {subscores.buildability != null && (
+            <span className="tabular-nums">Bouwruimte {Math.round(subscores.buildability)}</span>
+          )}
+        </div>
+      )}
     </button>
   )
 }

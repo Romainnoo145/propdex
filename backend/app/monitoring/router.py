@@ -18,6 +18,7 @@ from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.middleware.rate_limit import limiter
 from app.models.change_read_state import ChangeReadState
 from app.models.change_record import ChangeRecord
+from app.models.funda_listing_snapshot import FundaListingSnapshot
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.user import User
@@ -25,6 +26,9 @@ from app.models.user_notification_state import UserNotificationState
 from app.schemas.monitoring import (
     ChangeRecordListResponse,
     ChangeRecordResponse,
+    FundaSnapshotRequest,
+    FundaSnapshotResponse,
+    FundaSnapshotStatsResponse,
     MarkAllReadResponse,
     MatchedParcel,
     MatchedReport,
@@ -1122,12 +1126,17 @@ async def set_gemeente_subscription(
 
         await db.commit()
 
+        monitored_projects = sum(1 for project in projects if project.is_monitored)
+
         return MonitoringSubscriptionResponse(
             gemeente_code=gemeente_code,
             gemeente_naam=gemeente_naam,
             enabled=payload.enabled,
             project_id=str(root_project.id) if root_project else None,
             affected_projects=affected_projects,
+            monitored_projects=monitored_projects,
+            total_projects=len(projects),
+            has_root_project=root_project is not None,
         )
     except HTTPException:
         raise
@@ -1138,6 +1147,59 @@ async def set_gemeente_subscription(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update gemeente monitoring subscription",
         ) from e
+
+
+@router.get(
+    "/subscriptions/{gemeente_code}",
+    response_model=MonitoringSubscriptionResponse,
+)
+@limiter.limit("60/minute")
+async def get_gemeente_subscription(
+    request: Request,
+    gemeente_code: str,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> MonitoringSubscriptionResponse:
+    """Get current monitoring status for one gemeente code."""
+    normalized_code = _normalize_gemeente_code(gemeente_code)
+    if not normalized_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid gemeente_code",
+        )
+
+    project_query = (
+        select(Project)
+        .where(
+            Project.organization_id == organization_id,
+            Project.gemeente_code == normalized_code,
+        )
+        .order_by(Project.created_at.asc())
+    )
+    project_result = await db.execute(project_query)
+    projects = list(project_result.scalars().all())
+
+    root_project = next((p for p in projects if p.parent_id is None), None)
+    enabled = any(project.is_monitored for project in projects)
+    monitored_projects = sum(1 for project in projects if project.is_monitored)
+
+    gemeente_naam = (
+        root_project.name
+        if root_project and root_project.name
+        else normalized_code
+    )
+
+    return MonitoringSubscriptionResponse(
+        gemeente_code=normalized_code,
+        gemeente_naam=gemeente_naam,
+        enabled=enabled,
+        project_id=str(root_project.id) if root_project else None,
+        affected_projects=0,
+        monitored_projects=monitored_projects,
+        total_projects=len(projects),
+        has_root_project=root_project is not None,
+    )
 
 
 @router.post("/refresh/{project_id}")
@@ -1298,3 +1360,74 @@ async def refresh_monitoring(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to refresh monitoring",
         ) from e
+
+
+@router.post(
+    "/listings/funda/snapshot",
+    response_model=FundaSnapshotResponse,
+)
+@limiter.limit("3/minute")
+async def trigger_funda_snapshot(
+    request: Request,
+    payload: FundaSnapshotRequest,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+) -> FundaSnapshotResponse:
+    """Queue a manual Funda snapshot ingestion job for this organization."""
+    area_names = [name.strip() for name in payload.area_names if isinstance(name, str) and name.strip()]
+    if not area_names:
+        area_names = ["arcen"]
+    max_listings = max(1, min(payload.max_listings, 200))
+
+    arq_pool = request.app.state.arq_pool
+    job = await arq_pool.enqueue_job(
+        "funda_snapshot_job",
+        str(organization_id),
+        area_names,
+        max_listings,
+    )
+
+    return FundaSnapshotResponse(
+        status="queued",
+        job_id=job.job_id,
+        area_names=area_names,
+        max_listings=max_listings,
+    )
+
+
+@router.get(
+    "/listings/funda/stats",
+    response_model=FundaSnapshotStatsResponse,
+)
+@limiter.limit("30/minute")
+async def get_funda_snapshot_stats(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> FundaSnapshotStatsResponse:
+    """Return coarse ingestion stats for Funda snapshots."""
+    total_snapshots, unique_listings, matched_parcels, latest_snapshot_date = (
+        await db.execute(
+            select(
+                func.count(FundaListingSnapshot.id),
+                func.count(func.distinct(FundaListingSnapshot.listing_external_id)),
+                func.count(func.distinct(FundaListingSnapshot.matched_parcel_id)),
+                func.max(FundaListingSnapshot.snapshot_date),
+            ).where(
+                FundaListingSnapshot.organization_id == organization_id,
+                FundaListingSnapshot.source == "funda",
+            )
+        )
+    ).one()
+
+    return FundaSnapshotStatsResponse(
+        total_snapshots=int(total_snapshots or 0),
+        unique_listings=int(unique_listings or 0),
+        matched_parcels=int(matched_parcels or 0),
+        latest_snapshot_date=(
+            latest_snapshot_date.isoformat()
+            if latest_snapshot_date is not None
+            else None
+        ),
+    )

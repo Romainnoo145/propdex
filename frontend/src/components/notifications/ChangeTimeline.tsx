@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
 import { formatDate, formatRelativeTime } from '@/lib/utils/date'
+import { toMapAddressSearch, toMapParcelSearch } from '@/lib/navigation/mapSearch'
 
 interface ChangeTimelineProps {
   projectId: string
@@ -41,7 +42,7 @@ export default function ChangeTimeline({
     handleGenerateReport,
     handleGenerateReportByAddress,
     generatingId,
-  } = useReadTracking({ readChangeIds: data?.read_change_ids })
+  } = useReadTracking({ readChangeIds: data?.read_change_ids, reportSource: 'projecten' })
 
   const changes = data?.changes ?? []
 
@@ -286,15 +287,10 @@ export default function ChangeTimeline({
                                     onClick={() =>
                                       navigate({
                                         to: '/map',
-                                        search: {
-                                          parcel_id: m.parcel_id,
-                                          ...(m.address
-                                            ? { fallback_address: m.address }
-                                            : change.address
-                                              ? { fallback_address: change.address }
-                                              : {}),
-                                          _t: Date.now(),
-                                        },
+                                        search: toMapParcelSearch({
+                                          parcelId: m.parcel_id,
+                                          fallbackAddress: m.address ?? change.address,
+                                        }),
                                       })
                                     }
                                     className="flex items-center gap-1.5 text-sm text-info hover:text-info/80 hover:underline"
@@ -317,6 +313,7 @@ export default function ChangeTimeline({
                                       navigate({
                                         to: '/rapport/$id',
                                         params: { id: m.report_id },
+                                        search: { from: 'projecten' },
                                       })
                                     }
                                     className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
@@ -348,25 +345,19 @@ export default function ChangeTimeline({
                                 if (primaryParcelId) {
                                   navigate({
                                     to: '/map',
-                                    search: {
-                                      parcel_id: primaryParcelId,
-                                      ...(matchedParcels[0]?.address
-                                        ? { fallback_address: matchedParcels[0].address }
-                                        : change.address
-                                          ? { fallback_address: change.address }
-                                          : {}),
-                                      _t: Date.now(),
-                                    },
+                                    search: toMapParcelSearch({
+                                      parcelId: primaryParcelId,
+                                      fallbackAddress: matchedParcels[0]?.address ?? change.address,
+                                    }),
                                   })
                                   return
                                 }
                                 navigate({
                                   to: '/map',
-                                  search: {
+                                  search: toMapAddressSearch({
                                     postcode: formatPostcode(change.postcode!),
                                     huisnummer: hn!,
-                                    _t: Date.now(),
-                                  },
+                                  }),
                                 })
                               }}
                               disabled={!canViewOnMap}
@@ -542,25 +533,19 @@ function ChangeDetailPanel({
     if (primaryParcelId) {
       onNavigate({
         to: '/map',
-        search: {
-          parcel_id: primaryParcelId,
-          ...(matchedParcels[0]?.address
-            ? { fallback_address: matchedParcels[0].address }
-            : change.address
-              ? { fallback_address: change.address }
-              : {}),
-          _t: Date.now(),
-        },
+        search: toMapParcelSearch({
+          parcelId: primaryParcelId,
+          fallbackAddress: matchedParcels[0]?.address ?? change.address,
+        }),
       })
       return
     }
     onNavigate({
       to: '/map',
-      search: {
+      search: toMapAddressSearch({
         postcode: formatPostcode(change.postcode!),
         huisnummer: expandedHn!,
-        _t: Date.now(),
-      },
+      }),
     })
   }
 
@@ -664,11 +649,10 @@ function ChangeDetailPanel({
               onClick={() =>
                 onNavigate({
                   to: '/map',
-                  search: {
-                    parcel_id: m.parcel_id,
-                    ...(m.address ? { fallback_address: m.address } : {}),
-                    _t: Date.now(),
-                  },
+                  search: toMapParcelSearch({
+                    parcelId: m.parcel_id,
+                    fallbackAddress: m.address,
+                  }),
                 })
               }
               className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
@@ -684,6 +668,7 @@ function ChangeDetailPanel({
                 onNavigate({
                   to: '/rapport/$id',
                   params: { id: m.report_id },
+                  search: { from: 'projecten' },
                 })
               }
               className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"

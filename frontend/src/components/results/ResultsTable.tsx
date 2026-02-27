@@ -12,6 +12,7 @@ import {
 import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react'
 import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
+import { extractScoreSubscores } from '@/lib/score'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -65,7 +66,13 @@ function ScoreBadge({
   )
 }
 
-function VacancyBadge({ value }: { value: string | null }) {
+function VacancyBadge({
+  value,
+  confidence,
+}: {
+  value: string | null
+  confidence: number | null
+}) {
   if (!value) {
     return <span className="text-grey-600">--</span>
   }
@@ -95,8 +102,34 @@ function VacancyBadge({ value }: { value: string | null }) {
   }
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {label}
+    <div className="inline-flex items-center gap-1.5">
+      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
+        {label}
+      </span>
+      {confidence !== null && (
+        <span className="text-[11px] tabular-nums text-grey-500">
+          {Math.round(confidence * 100)}%
+        </span>
+      )}
+    </div>
+  )
+}
+
+function SubscoreBadge({ value }: { value: number | null }) {
+  if (value === null) {
+    return <span className="text-grey-600">--</span>
+  }
+
+  const cls =
+    value >= 70
+      ? 'bg-amber-accent/15 text-amber-accent border-amber-accent/30'
+      : value >= 45
+        ? 'bg-amber-accent/8 text-amber-accent/75 border-amber-accent/20'
+        : 'bg-grey-800/70 text-grey-400 border-overlay/8'
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${cls}`}>
+      {Math.round(value)}
     </span>
   )
 }
@@ -299,8 +332,31 @@ export default function ResultsTable({
     columnHelper.accessor('vacancy_signal', {
       header: 'Potentie-signaal',
       enableSorting: false,
-      cell: (info) => <VacancyBadge value={info.getValue()} />,
+      cell: (info) => (
+        <VacancyBadge
+          value={info.getValue()}
+          confidence={info.row.original.vacancy_confidence}
+        />
+      ),
     }),
+    columnHelper.accessor(
+      (row) => extractScoreSubscores(row.score_breakdown).vacancy,
+      {
+        id: 'vacancy_subscore',
+        header: 'Leegstandskans',
+        enableSorting: true,
+        cell: (info) => <SubscoreBadge value={info.getValue()} />,
+      }
+    ),
+    columnHelper.accessor(
+      (row) => extractScoreSubscores(row.score_breakdown).buildability,
+      {
+        id: 'buildability_subscore',
+        header: 'Bouwruimte',
+        enableSorting: true,
+        cell: (info) => <SubscoreBadge value={info.getValue()} />,
+      }
+    ),
     columnHelper.accessor('score', {
       header: 'Score',
       enableSorting: true,

@@ -83,6 +83,7 @@ export function setParcelBoundariesVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
   if (map.getLayer(PARCEL_LAYER_ID)) {

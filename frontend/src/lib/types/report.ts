@@ -18,6 +18,7 @@ export interface ReportListItem {
   city: string;
   notes: string | null;
   project_id: string | null;
+  source_parcel_id: string | null;
   completeness_score: number;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
@@ -38,8 +39,14 @@ export interface ReportDetailResponse {
   city: string;
   notes: string | null;
   project_id: string | null;
+  source_parcel_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface GenerateReportFromParcelResponse {
+  report: ReportDetailResponse;
+  created: boolean;
 }
 
 // ReportFreshnessResponse — GET /api/reports/{id}/freshness

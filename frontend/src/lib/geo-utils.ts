@@ -1,3 +1,5 @@
+import { normalizeAreaName } from '@/lib/geo/normalizers'
+
 /**
  * Calculate bounding box from GeoJSON Polygon or MultiPolygon geometry.
  * Handles both single polygons and multi-polygons (e.g., island gemeentes).
@@ -41,6 +43,27 @@ export function calculateBboxFromGeometry(
   }
 
   return [minLon, minLat, maxLon, maxLat];
+}
+
+export function resolveWijkBbox(
+  geojson: GeoJSON.FeatureCollection | undefined,
+  wijkNaam: string | null
+): [number, number, number, number] | null {
+  if (!geojson || !wijkNaam) return null
+
+  const target = normalizeAreaName(wijkNaam)
+  const match = geojson.features.find((feature) => {
+    const name = String(feature.properties?.statnaam ?? '')
+    return normalizeAreaName(name) === target
+  })
+  if (!match) return null
+
+  const geometry = match.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+  if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) {
+    return null
+  }
+
+  return calculateBboxFromGeometry(geometry)
 }
 
 /**

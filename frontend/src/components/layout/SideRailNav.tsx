@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
 import { useUnreadCounts } from '@/hooks/useNotifications'
 import { NotificationBadge } from '@/components/notifications/NotificationBadge'
+import WorkspaceSwitcher from '@/components/layout/WorkspaceSwitcher'
 import { Map, FolderOpen, Bell, FileText, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
@@ -52,6 +53,11 @@ export default function SideRailNav() {
     >
       {/* Top section: Main navigation */}
       <div className="flex flex-col items-center gap-2">
+        <WorkspaceSwitcher />
+
+        {/* Divider */}
+        <div className="my-1 h-px w-8 bg-grey-800" />
+
         {navItems.map((item) => {
           const isActive = matchRoute({ to: item.to })
           return (
@@ -82,7 +88,7 @@ export default function SideRailNav() {
         <div className="my-2 h-px w-8 bg-grey-800" />
 
         {/* Notification bell */}
-        <Link to="/meldingen" className="group relative">
+        <Link to="/meldingen" search={{ gemeente: undefined }} className="group relative">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/meldingen' })
@@ -100,7 +106,11 @@ export default function SideRailNav() {
         </Link>
 
         {/* Rapporten page link */}
-        <Link to="/rapporten" className="group relative">
+        <Link
+          to="/rapporten"
+          search={{ project_id: undefined, q: undefined }}
+          className="group relative"
+        >
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/rapporten' })

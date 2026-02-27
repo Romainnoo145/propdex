@@ -238,6 +238,7 @@ export function setWijkBoundariesVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
+  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
   if (map.getLayer(WIJK_FILL_LAYER)) {

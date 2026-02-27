@@ -78,6 +78,17 @@ export interface ScanStatusResponse {
  * Schema for a single parcel result in scan list
  * Backend: ScanResultItem
  */
+export interface MarketSignals {
+  /** Number of days listing has been visible */
+  listing_duration_days: number
+  /** Number of observed price changes */
+  price_change_count: number
+  /** Number of captured listing snapshots */
+  listing_snapshots_count: number
+  /** Days since this listing was last observed */
+  days_since_last_seen: number
+}
+
 export interface ScanResultItem {
   /** ParcelCache UUID (serialized as string) */
   parcel_id: string
@@ -105,10 +116,20 @@ export interface ScanResultItem {
   score_breakdown: Record<string, unknown> | null
   /** Vacancy classification for development focus */
   vacancy_signal: string | null
+  /** Vacancy confidence score (0-1) */
+  vacancy_confidence: number | null
+  /** Top explainable reasons for vacancy confidence */
+  vacancy_reasons: string[] | null
+  /** Version id of vacancy confidence model */
+  vacancy_model_version: string | null
+  /** External market friction signals (Funda snapshots) */
+  market_signals: MarketSignals | null
   /** Human-readable development opportunity signals */
   opportunity_signals: string[] | null
   /** Zoning build metrics (if available in source data) */
   building_metrics: Record<string, unknown> | null
+  /** Whether this parcel already has a saved report */
+  has_report: boolean
 }
 
 /**
@@ -155,7 +176,7 @@ export interface ScanResultsFilters {
   score_category?: string
   /** Filter by building status */
   pand_status?: string
-  /** Sort field name */
+  /** Sort field name (score, vacancy_subscore, buildability_subscore, area_m2, address, bouwjaar) */
   sort_by?: string
   /** Sort direction: asc | desc */
   sort_order?: string
@@ -213,6 +234,7 @@ export interface ScanListItem {
   gemeente_naam: string
   gemeente_code: string
   wijk_naam: string | null
+  bbox_wgs84?: [number, number, number, number] | null
   scan_date: string
   status: string
   parcel_count: number

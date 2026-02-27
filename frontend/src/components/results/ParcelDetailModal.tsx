@@ -3,32 +3,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/primitives'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
+import { MarketSignalsCards } from './MarketSignalsCards'
 import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { useParcelChanges } from '@/hooks/useNotifications'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { toast } from 'sonner'
-import { FileText, Info, MapPin } from 'lucide-react'
+import { FileText, MapPin } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
-
-/** Dutch labels for score factors */
-const FACTOR_LABELS: Record<string, string> = {
-  pand_status_signal: 'Pandstatus',
-  building_age: 'Bouwjaar',
-  zoning_value: 'TAR/FAR',
-  footprint_size: 'Oppervlakte',
-  underutilization: 'Onderbenutting',
-  vacancy_guardrail: 'Leegstands-correctie',
-}
-
-/** Max points per factor (for progress bar scaling) */
-const FACTOR_MAX: Record<string, number> = {
-  pand_status_signal: 40,
-  building_age: 5,
-  zoning_value: 20,
-  footprint_size: 5,
-  underutilization: 30,
-  vacancy_guardrail: 35,
-}
+import { extractScoreSubscores } from '@/lib/score'
 
 const VACANCY_LABELS: Record<string, string> = {
   leeg_perceel: 'Leeg perceel',
@@ -37,11 +20,266 @@ const VACANCY_LABELS: Record<string, string> = {
   onbekend: 'Onbekend',
 }
 
+function formatPandStatusLabel(status: string | null | undefined): string {
+  if (!status) return 'Onbekend'
+  const normalized = status.trim().toLowerCase()
+  if (normalized.includes('in gebruik')) return 'Pand in gebruik'
+  if (normalized.includes('verbouwing')) return 'In verbouwing'
+  if (normalized.includes('gesloopt')) return 'Gesloopt'
+  if (normalized.includes('buiten gebruik')) return 'Buiten gebruik'
+  return status
+}
+
+function hasResidentialMixedBestemming(
+  bestemmingen: ScanResultItem['bestemmingen']
+): boolean {
+  if (!Array.isArray(bestemmingen)) return false
+  return bestemmingen.some((bestemming) => {
+    const type = (bestemming as { type?: string | null }).type ?? ''
+    const naam = (bestemming as { naam?: string | null }).naam ?? ''
+    const candidate = `${type} ${naam}`.toLowerCase()
+    return (
+      candidate.includes('wonen') ||
+      candidate.includes('gemengd') ||
+      candidate.includes('centrum')
+    )
+  })
+}
+
+function formatPlanruimteLabel(
+  maxBebouwingspercentage: number | null,
+  maxFloorAreaRatio: number | null,
+  supportsResidentialMixed: boolean
+): { label: string; farTar: string } {
+  if (maxBebouwingspercentage == null && maxFloorAreaRatio == null) {
+    if (supportsResidentialMixed) {
+      return {
+        label: 'Functioneel toegestaan',
+        farTar: 'FAR onbekend · TAR onbekend',
+      }
+    }
+    return { label: 'Onbekend', farTar: 'FAR onbekend · TAR onbekend' }
+  }
+  const far = maxFloorAreaRatio
+  const tar = maxBebouwingspercentage
+  const farLabel = far != null ? far.toFixed(2) : 'onbekend'
+  const tarLabel = tar != null ? `${tar.toFixed(0)}%` : 'onbekend'
+
+  if ((far != null && far >= 1.5) || (tar != null && tar >= 70)) {
+    return {
+      label: 'Hoog',
+      farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
+    }
+  }
+  if ((far != null && far >= 1.0) || (tar != null && tar >= 50)) {
+    return {
+      label: 'Middel',
+      farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
+    }
+  }
+  return {
+    label: 'Beperkt',
+    farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
+  }
+}
+
+function getScoreBadgeClass(score: number | null): string {
+  if (score == null) {
+    return 'bg-grey-800 text-grey-300'
+  }
+  if (score >= 65) {
+    return 'bg-amber-accent/20 text-amber-accent'
+  }
+  if (score >= 35) {
+    return 'bg-amber-accent/15 text-amber-accent'
+  }
+  return 'bg-amber-accent/10 text-amber-accent'
+}
+
+function clampPercent(value: number | null): number {
+  if (value == null || Number.isNaN(value)) return 0
+  return Math.max(0, Math.min(100, value))
+}
+
+function formatScoreLabel(score: number | null): string {
+  if (score == null) return 'Onbekend'
+  if (score >= 70) return 'Zeer interessant'
+  if (score >= 50) return 'Interessant'
+  if (score >= 30) return 'Twijfelachtig'
+  return 'Laag potentieel'
+}
+
+function formatPillarLevel(value: number | null): string {
+  if (value == null) return 'Onbekend'
+  if (value >= 80) return 'Zeer hoog'
+  if (value >= 60) return 'Hoog'
+  if (value >= 35) return 'Matig'
+  return 'Laag'
+}
+
+function deriveBuildabilityScore(
+  subscore: number | null,
+  maxBebouwingspercentage: number | null,
+  maxFloorAreaRatio: number | null,
+  supportsResidentialMixed: boolean
+): number | null {
+  if (subscore != null) return clampPercent(subscore)
+
+  const farScore =
+    maxFloorAreaRatio == null
+      ? null
+      : maxFloorAreaRatio >= 2
+        ? 90
+        : maxFloorAreaRatio >= 1.4
+          ? 75
+          : maxFloorAreaRatio >= 1
+            ? 60
+            : maxFloorAreaRatio >= 0.7
+              ? 45
+              : 25
+
+  const tarScore =
+    maxBebouwingspercentage == null
+      ? null
+      : maxBebouwingspercentage >= 80
+        ? 85
+        : maxBebouwingspercentage >= 65
+          ? 70
+          : maxBebouwingspercentage >= 50
+            ? 55
+            : maxBebouwingspercentage >= 35
+              ? 40
+              : 25
+
+  if (farScore == null && tarScore == null) {
+    return supportsResidentialMixed ? 45 : null
+  }
+
+  if (farScore != null && tarScore != null) {
+    return Math.round((farScore + tarScore) / 2)
+  }
+  return farScore ?? tarScore
+}
+
+function deriveVacancyScore(
+  subscore: number | null,
+  vacancyConfidence: number | null,
+  vacancySignal: ScanResultItem['vacancy_signal']
+): number | null {
+  if (subscore != null) return clampPercent(subscore)
+  if (vacancyConfidence != null) return clampPercent(vacancyConfidence * 100)
+
+  if (vacancySignal === 'leeg_perceel') return 90
+  if (vacancySignal === 'leegstaand_pand') return 75
+  if (vacancySignal === 'in_gebruik') return 20
+  if (vacancySignal === 'onbekend') return 35
+  return null
+}
+
+function deriveTransformationScore(
+  totalScore: number | null,
+  buildabilityScore: number | null,
+  vacancyScore: number | null,
+  supportsResidentialMixed: boolean,
+  opportunitySignalCount: number
+): number | null {
+  let base: number | null = totalScore
+  if (base == null && buildabilityScore != null && vacancyScore != null) {
+    base = (buildabilityScore + vacancyScore) / 2
+  } else if (base == null) {
+    base = buildabilityScore ?? vacancyScore
+  }
+  if (base == null) return null
+
+  let boosted = base
+  if (supportsResidentialMixed) boosted += 10
+  boosted += Math.min(18, opportunitySignalCount * 6)
+  return clampPercent(boosted)
+}
+
+function ScoreDonut({
+  score,
+}: {
+  score: number | null
+}) {
+  const normalized = clampPercent(score)
+  const radius = 52
+  const circumference = 2 * Math.PI * radius
+  const progress = (normalized / 100) * circumference
+
+  return (
+    <div className="relative h-[132px] w-[132px] shrink-0">
+      <svg viewBox="0 0 132 132" className="h-full w-full">
+        <circle
+          cx="66"
+          cy="66"
+          r={radius}
+          fill="none"
+          stroke="rgba(148, 163, 184, 0.2)"
+          strokeWidth={10}
+        />
+        <circle
+          cx="66"
+          cy="66"
+          r={radius}
+          fill="none"
+          stroke="#f59e0b"
+          strokeWidth={10}
+          strokeLinecap="round"
+          strokeDasharray={`${progress} ${circumference}`}
+          transform="rotate(-90 66 66)"
+        />
+      </svg>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <p className="text-2xl font-semibold tabular-nums text-grey-100">
+          {score != null ? Math.round(score) : '--'}
+        </p>
+        <p className="text-[10px] uppercase tracking-wide text-grey-500">Score</p>
+      </div>
+    </div>
+  )
+}
+
+function ScorePillarRows({
+  label,
+  value,
+  context,
+}: {
+  label: string
+  value: number | null
+  context?: string
+}) {
+  const widthPct = clampPercent(value)
+  const opacity = value == null ? 0.35 : value >= 65 ? 1 : value >= 40 ? 0.85 : 0.65
+
+  return (
+    <div className="rounded-md border border-grey-800 bg-grey-900/70 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-grey-300">{label}</p>
+        <p className="text-xs tabular-nums text-amber-accent">
+          {value != null ? `${Math.round(value)}%` : '--'}
+        </p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-grey-800">
+        <div
+          className="h-full bg-amber-accent"
+          style={{ width: `${widthPct}%`, opacity }}
+        />
+      </div>
+      <p className="mt-1.5 text-[11px] text-grey-500">
+        {formatPillarLevel(value)}
+        {context ? ` · ${context}` : ''}
+      </p>
+    </div>
+  )
+}
+
 interface ParcelDetailModalProps {
   parcel: ScanResultItem | null
   isOpen: boolean
   onClose: () => void
   onViewOnMap?: () => void
+  presentation?: 'modal' | 'map-panel'
 }
 
 /**
@@ -61,6 +299,7 @@ export function ParcelDetailModal({
   isOpen,
   onClose,
   onViewOnMap,
+  presentation = 'modal',
 }: ParcelDetailModalProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -78,33 +317,106 @@ export function ParcelDetailModal({
 
   const handleGenerateReport = async () => {
     if (!parcel?.parcel_id) return
-    const toastId = toast.loading('Rapport wordt gegenereerd...')
+    const toastId = toast.loading('Rapport laden...')
     try {
-      const report = await generateReport.mutateAsync(parcel.parcel_id)
+      const result = await generateReport.mutateAsync(parcel.parcel_id)
       await queryClient.invalidateQueries({ queryKey: ['projects'] })
-      toast.success('Rapport opgeslagen', { id: toastId })
+      toast.success(result.created ? 'Rapport opgeslagen' : 'Bestaand rapport geopend', { id: toastId })
       onClose()
-      void navigate({ to: '/rapport/$id', params: { id: String(report.id) } })
+      void navigate({
+        to: '/rapport/$id',
+        params: { id: String(result.report.id) },
+        search: { from: 'resultaten' },
+      })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Genereren mislukt'
       toast.error(message, { id: toastId })
     }
   }
 
+  useEscapeKey(onClose, presentation === 'map-panel' && isOpen)
+
   if (!parcel) return null
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <div className="p-6 space-y-6">
+  const statusLabel = formatPandStatusLabel(parcel.pand_status)
+  const vacancyLabel = parcel.vacancy_signal
+    ? (VACANCY_LABELS[parcel.vacancy_signal] ?? parcel.vacancy_signal)
+    : null
+  const showVacancySignal =
+    !!vacancyLabel &&
+    statusLabel.trim().toLowerCase() !== vacancyLabel.trim().toLowerCase()
+  const hasAddress = !!parcel.address?.trim()
+  const titleLabel = hasAddress ? (parcel.address as string).trim() : 'Adres onbekend'
+  const secondaryLabel = parcel.parcel_code || null
+  const maxBebouwingspercentage =
+    (parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)
+      ?.max_bebouwingspercentage ?? null
+  const maxFloorAreaRatio =
+    (parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)
+      ?.max_floor_area_ratio ?? null
+  const supportsResidentialMixed = hasResidentialMixedBestemming(parcel.bestemmingen)
+  const planruimte = formatPlanruimteLabel(
+    maxBebouwingspercentage,
+    maxFloorAreaRatio,
+    supportsResidentialMixed
+  )
+  const scoreBadgeClass = getScoreBadgeClass(parcel.score)
+  const scoreSubscores = extractScoreSubscores(parcel.score_breakdown)
+  const actionableOpportunitySignals = (parcel.opportunity_signals ?? []).filter((signal) => {
+    const normalized = signal.toLowerCase()
+    return (
+      !normalized.includes('pand momenteel in gebruik') &&
+      !normalized.includes('leegstand onbekend')
+    )
+  })
+  const buildabilityPillar = deriveBuildabilityScore(
+    scoreSubscores.buildability,
+    maxBebouwingspercentage,
+    maxFloorAreaRatio,
+    supportsResidentialMixed
+  )
+  const vacancyPillar = deriveVacancyScore(
+    scoreSubscores.vacancy,
+    parcel.vacancy_confidence,
+    parcel.vacancy_signal
+  )
+  const transformationPillar = deriveTransformationScore(
+    parcel.score,
+    buildabilityPillar,
+    vacancyPillar,
+    supportsResidentialMixed,
+    actionableOpportunitySignals.length
+  )
+
+  const content = (
+    <div className="p-5 space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold text-grey-100">
-              {parcel.parcel_code}
+              {titleLabel}
             </h2>
-            {parcel.address && (
-              <p className="text-sm text-grey-400 mt-1">{parcel.address}</p>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {secondaryLabel && (
+                <p className="text-sm text-grey-400">{secondaryLabel}</p>
+              )}
+              <span
+                className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                  parcel.has_report
+                    ? 'bg-amber-accent/15 text-amber-accent'
+                    : 'bg-grey-800 text-grey-300'
+                }`}
+              >
+                {parcel.has_report ? 'Rapport aanwezig' : 'Nog geen rapport'}
+              </span>
+              {parcel.score != null && (
+                <span
+                  className={`rounded px-2 py-0.5 text-[11px] font-medium ${scoreBadgeClass}`}
+                >
+                  Potentie {Math.round(parcel.score)}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -130,56 +442,39 @@ export function ParcelDetailModal({
         {/* Score Section */}
         {parcel.score !== null && (
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-success/15 border border-success/20">
-                <span className="text-2xl font-bold text-success">
-                  {parcel.score.toFixed(0)}
-                </span>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium text-grey-100">Propdex Potentiescore</p>
+              <span className="rounded bg-grey-900 px-2 py-0.5 text-[11px] text-grey-400">
+                0-100
+              </span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-[132px_1fr]">
+              <div>
+                <ScoreDonut score={parcel.score} />
+                <p className="mt-2 text-center text-[11px] text-grey-500">
+                  {formatScoreLabel(parcel.score)}
+                </p>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <p className="text-sm font-medium text-grey-100">
-                    Score opbouw
-                  </p>
-                  <div className="group relative">
-                    <Info size={13} className="text-grey-600 cursor-help" />
-                    <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-3 py-2 text-xs text-grey-300 opacity-0 transition-opacity group-hover:opacity-100">
-                      Score 0-100 op basis van pandstatus,<br />bouwjaar, bestemming, oppervlakte<br />en onderbenutting
-                    </div>
-                  </div>
-                </div>
-                {parcel.score_breakdown && (
-                  <div className="space-y-1">
-                    {Object.entries(
-                      (parcel.score_breakdown as { factors?: Record<string, number> }).factors ?? parcel.score_breakdown
-                    )
-                      .filter(([, v]) => typeof v === 'number')
-                      .map(([key, value]) => {
-                        const numeric = value as number
-                        const isNegative = numeric < 0
-                        const max = FACTOR_MAX[key] ?? 100
-                        const widthPct = Math.min(100, (Math.abs(numeric) / max) * 100)
-
-                        return (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className="text-xs text-grey-400 w-24 truncate">
-                          {FACTOR_LABELS[key] ?? key}
-                        </span>
-                        <div className="flex-1 h-1.5 bg-grey-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${isNegative ? 'bg-error/60' : 'bg-success/60'}`}
-                            style={{
-                              width: `${widthPct}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs tabular-nums text-grey-400 w-8 text-right">
-                          {numeric.toFixed(0)}
-                        </span>
-                      </div>
-                    )})}
-                  </div>
-                )}
+              <div className="space-y-2">
+                <ScorePillarRows
+                  label="Bouwruimte (TAR/FAR)"
+                  value={buildabilityPillar}
+                  context={planruimte.farTar}
+                />
+                <ScorePillarRows
+                  label="Leegstandsrisico"
+                  value={vacancyPillar}
+                  context={showVacancySignal ? vacancyLabel ?? undefined : statusLabel}
+                />
+                <ScorePillarRows
+                  label="Transformatiekans"
+                  value={transformationPillar}
+                  context={
+                    supportsResidentialMixed
+                      ? 'Wonen/gemengd binnen plan'
+                      : 'Plancheck vereist'
+                  }
+                />
               </div>
             </div>
           </div>
@@ -202,15 +497,26 @@ export function ParcelDetailModal({
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
             <p className="text-xs text-grey-400 mb-1">Status</p>
             <p className="text-sm font-medium text-grey-100">
-              {parcel.pand_status || 'Onbekend'}
+              {statusLabel}
             </p>
           </div>
-          {parcel.vacancy_signal && (
+          {showVacancySignal && (
             <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
               <p className="text-xs text-grey-400 mb-1">Leegstandsignaal</p>
               <p className="text-sm font-medium text-grey-100">
-                {VACANCY_LABELS[parcel.vacancy_signal] ?? parcel.vacancy_signal}
+                {vacancyLabel}
               </p>
+            </div>
+          )}
+          {parcel.vacancy_confidence != null && (
+            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+              <p className="text-xs text-grey-400 mb-1">Leegstand confidence</p>
+              <p className="text-sm font-medium text-grey-100 tabular-nums">
+                {Math.round(parcel.vacancy_confidence * 100)}%
+              </p>
+              {parcel.vacancy_model_version && (
+                <p className="mt-1 text-[11px] text-grey-500">{parcel.vacancy_model_version}</p>
+              )}
             </div>
           )}
           {parcel.gemeente_code && (
@@ -224,49 +530,65 @@ export function ParcelDetailModal({
         </div>
 
         {/* Build metrics */}
-        {((((parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)?.max_bebouwingspercentage ?? null) != null) ||
-          (((parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)?.max_floor_area_ratio ?? null) != null)) && (
-          <div>
-            <h3 className="text-sm font-medium text-grey-100 mb-3">
-              Bouwregels (bestemmingsplan)
+        <div>
+          <div className="mb-3 flex items-center gap-1.5">
+            <h3 className="text-sm font-medium text-grey-100">
+              Planruimte (FAR/TAR)
             </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-                <p className="text-xs text-grey-400 mb-1">Max bebouwings%</p>
-                <p className="text-sm font-medium text-grey-100">
-                  {(parcel.building_metrics as { max_bebouwingspercentage?: number | null }).max_bebouwingspercentage != null
-                    ? `${(parcel.building_metrics as { max_bebouwingspercentage: number }).max_bebouwingspercentage.toFixed(1)}%`
-                    : 'Onbekend'}
-                </p>
-              </div>
-              <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-                <p className="text-xs text-grey-400 mb-1">Max FAR</p>
-                <p className="text-sm font-medium text-grey-100">
-                  {(parcel.building_metrics as { max_floor_area_ratio?: number | null }).max_floor_area_ratio != null
-                    ? (parcel.building_metrics as { max_floor_area_ratio: number }).max_floor_area_ratio.toFixed(2)
-                    : 'Onbekend'}
-                </p>
-              </div>
+            <span className="rounded bg-grey-800 px-2 py-0.5 text-[11px] text-grey-300">
+              {planruimte.label}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+              <p className="text-xs text-grey-400 mb-1">TAR (max bebouwd %)</p>
+              <p className="text-sm font-medium text-grey-100">
+                {maxBebouwingspercentage != null
+                  ? `${maxBebouwingspercentage.toFixed(1)}%`
+                  : 'Onbekend'}
+              </p>
+            </div>
+            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+              <p className="text-xs text-grey-400 mb-1">FAR (max vloerfactor)</p>
+              <p className="text-sm font-medium text-grey-100">
+                {maxFloorAreaRatio != null
+                  ? maxFloorAreaRatio.toFixed(2)
+                  : 'Onbekend'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {(parcel.vacancy_reasons?.length || actionableOpportunitySignals.length > 0) && (
+          <div>
+            <h3 className="text-sm font-medium text-grey-100 mb-3">Kansen & aandachtspunten</h3>
+            <div className="flex flex-wrap gap-2">
+              {actionableOpportunitySignals.slice(0, 5).map((signal) => (
+                <span
+                  key={`opp-${signal}`}
+                  className="rounded-full border border-amber-accent/40 bg-amber-accent/10 px-2.5 py-1 text-xs text-amber-accent"
+                >
+                  {signal}
+                </span>
+              ))}
+              {(parcel.vacancy_reasons ?? []).slice(0, 3).map((reason) => (
+                <span
+                  key={`risk-${reason}`}
+                  className="rounded-full border border-grey-700 bg-grey-850 px-2.5 py-1 text-xs text-grey-300"
+                >
+                  {reason}
+                </span>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Opportunity signals */}
-        {parcel.opportunity_signals && parcel.opportunity_signals.length > 0 && (
+        {parcel.market_signals && (
           <div>
             <h3 className="text-sm font-medium text-grey-100 mb-3">
-              Ontwikkelsignalen
+              Marktsignalen
             </h3>
-            <div className="space-y-2">
-              {parcel.opportunity_signals.map((signal) => (
-                <div
-                  key={signal}
-                  className="rounded-md border border-grey-800 bg-grey-850 px-3 py-2 text-sm text-grey-300"
-                >
-                  {signal}
-                </div>
-              ))}
-            </div>
+            <MarketSignalsCards signals={parcel.market_signals} />
           </div>
         )}
 
@@ -278,7 +600,7 @@ export function ParcelDetailModal({
             </h3>
             <div className="flex flex-wrap gap-2">
               {parcel.bestemmingen.map((bestemming, idx) => (
-                <Badge key={idx} variant="teal">
+                <Badge key={idx} variant="amber">
                   {(bestemming as { type?: string }).type ||
                     (bestemming as { naam?: string }).naam ||
                     'Onbekend'}
@@ -313,11 +635,7 @@ export function ParcelDetailModal({
                   className="flex items-start gap-2.5 rounded-md border border-grey-800 bg-grey-850 px-3 py-2.5"
                 >
                   <div
-                    className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
-                      change.change_type === 'permit'
-                        ? 'bg-info'
-                        : 'bg-success'
-                    }`}
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-accent"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-grey-300 line-clamp-2">
@@ -384,10 +702,45 @@ export function ParcelDetailModal({
                        transition-colors motion-reduce:transition-none min-h-[44px]"
           >
             <FileText size={14} />
-            {generateReport.isPending ? 'Bezig met genereren...' : 'Genereer rapport'}
+            {generateReport.isPending
+              ? 'Rapport laden...'
+              : parcel.has_report
+                ? 'Open bestaand rapport'
+                : 'Genereer rapport'}
           </button>
         </div>
-      </div>
+    </div>
+  )
+
+  if (presentation === 'map-panel') {
+    if (!isOpen) return null
+
+    return (
+      <>
+        <div
+          className="fixed right-4 top-20 bottom-4 hidden md:block w-96"
+          style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
+        >
+          <div className="h-full overflow-y-auto rounded-lg border border-grey-800 bg-grey-900 shadow-2xl">
+            {content}
+          </div>
+        </div>
+
+        <div
+          className="fixed inset-x-0 bottom-0 md:hidden max-h-[72vh]"
+          style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
+        >
+          <div className="h-full overflow-y-auto rounded-t-lg border border-grey-800 bg-grey-900 shadow-2xl">
+            {content}
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      {content}
     </Modal>
   )
 }

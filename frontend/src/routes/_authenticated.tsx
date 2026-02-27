@@ -6,6 +6,7 @@ import BottomTabNav from '@/components/layout/BottomTabNav'
 import MapView from '@/components/map/MapView'
 import { MapContext } from '@/lib/MapContext'
 import { useAuth } from '@/lib/auth/useAuth'
+import { WorkspaceProvider } from '@/lib/workspace/WorkspaceContext'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: ({ context, location }) => {
@@ -65,26 +66,28 @@ function AuthenticatedLayout() {
   }, [isMapVisible])
 
   return (
-    <div className="flex h-screen">
-      <SideRailNav />
-      <main className="flex-1 relative overflow-hidden">
-        {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
-        <div
-          className="absolute inset-0"
-          style={{ display: isMapVisible ? 'block' : 'none' }}
-        >
-          <MapView
-            mapRef={mapRef}
-            onMapReady={() => setMapReady(true)}
-            transformRequest={transformRequest}
-          />
-        </div>
-        {/* Route content rendered on top / instead of map */}
-        <MapContext.Provider value={{ mapRef, mapReady }}>
-          <Outlet />
-        </MapContext.Provider>
-      </main>
-      <BottomTabNav />
-    </div>
+    <WorkspaceProvider>
+      <div className="flex h-screen">
+        <SideRailNav />
+        <main className="flex-1 relative overflow-hidden">
+          {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
+          <div
+            className="absolute inset-0"
+            style={{ display: isMapVisible ? 'block' : 'none' }}
+          >
+            <MapView
+              mapRef={mapRef}
+              onMapReady={() => setMapReady(true)}
+              transformRequest={transformRequest}
+            />
+          </div>
+          {/* Route content rendered on top / instead of map */}
+          <MapContext.Provider value={{ mapRef, mapReady }}>
+            <Outlet />
+          </MapContext.Provider>
+        </main>
+        <BottomTabNav />
+      </div>
+    </WorkspaceProvider>
   )
 }
