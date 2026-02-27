@@ -2,7 +2,10 @@
 
 ## Milestones
 
+- ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
+- ✅ **v7.1 Workspace Productization** -- Phase 58 (shipped 2026-02-27)
 - 🚧 **v7.0 Deep Property Data** -- Phases 52-56 (in progress)
+- ✅ **v7.05 Codebase Globalization** -- Phase 57 (shipped 2026-02-26)
 - ✅ **v6.0 Meldingen Intelligence** -- Phases 47-51 (shipped 2026-02-23)
 - ✅ **v5.1 Data Presentation Overhaul** -- Phases 42-46 (shipped 2026-02-22)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
@@ -61,8 +64,51 @@
     - [ ] 56-02-PLAN.md — EigendomSection + enhanced MonumentSection with RCE detail
     - [ ] 56-03-PLAN.md — Section reordering + 6-card metrics grid + PropertyDetailPanel condensed sections
 
-**Next Candidate Milestone:** v7.1 Opportunity Intelligence (proposed phases 57-62)  
-Reference: `.planning/quick/4-opportunity-thesis-gsd/4-PLAN.md`
+### v7.05 Codebase Globalization (Phase 57)
+
+**Goal:** Consolidate duplicated frontend logic into shared helpers, primitives, hooks, and guardrails before continuing dedicated workspace UX work.
+
+- [x] **Phase 57: Codebase Globalization** — shared geo/map helper modules, shared metric/search primitives, shared GeoJSON/stats hooks, and anti-regression checks *(completed 2026-02-26)*
+  - Depends on: Stable v7.0 UI behavior (Phase 56 work-in-progress)
+  - **Plans:** 4 plans (Wave 1-4 sequential)
+    - [x] 57-01-PLAN.md — Shared normalizers + wijk bbox resolver + map navigation builders *(completed 2026-02-26)*
+    - [x] 57-02-PLAN.md — Shared `MetricChip` + shared `SearchInput` primitives *(completed 2026-02-26)*
+    - [x] 57-03-PLAN.md — Shared GeoJSON query hooks + municipality workspace selectors *(completed 2026-02-26)*
+    - [x] 57-04-PLAN.md — Guardrails, verification, and UX handoff *(completed 2026-02-26)*
+
+### v7.1 Workspace Productization (Phase 58)
+
+**Goal:** Build a scalable, role-aware workspace for municipality and wijk operations, starting with vastgoedontwikkelaar workflows while keeping one codebase.
+
+- [x] **Phase 58: Workspace Productization** — role-aware shell foundation, scoped navigation hardening, operational UX upgrades, map-layer execution flow, and monetization-ready handoff *(completed 2026-02-27)*
+  - Depends on: Phase 57 shared foundations
+  - **Plans:** 5 plans (Wave 1-5 sequential)
+    - [x] 58-01-PLAN.md — Workspace role context + side-rail switcher + first role-aware copy *(completed 2026-02-27)*
+    - [x] 58-02-PLAN.md — Scoped municipality/wijk navigation contract + URL-state hardening *(completed 2026-02-27)*
+    - [x] 58-03-PLAN.md — Meldingen/Rapporten operational UX under workspace scope *(completed 2026-02-27)*
+    - [x] 58-04-PLAN.md — Canonical parcel map workflow + extensible layer model *(completed 2026-02-27)*
+    - [x] 58-05-PLAN.md — Monitoring/report idempotency hardening + milestone verification handoff *(completed 2026-02-27)*
+
+### v7.2 Developer Dossier Intelligence (Phases 59-61)
+
+**Goal:** Turn reports into decision-grade dossiers for vastgoedontwikkelaars (and later kwaliteitsborgers) with concrete buildability, compliance, and permit benchmark intelligence.
+
+- [x] **Phase 59: Bouwruimte Delta** — deterministic buildability envelope per perceel (huidig vs toegestaan), incl. confidence and missing-data reasons *(completed 2026-02-27)*
+  - Depends on: Phase 58 workspace baseline + existing zoning/BAG parcel flows
+  - **Plans:** 1 plan (Wave 1)
+    - [x] 59-01-PLAN.md — Buildability Delta contract + calculation pipeline + report/map presentation *(completed 2026-02-27)*
+
+- [x] **Phase 60: Wkb Startdossier Precheck** — Layer A automatic precheck in report; Layer B optional refinement input (not mandatory wizard) *(completed 2026-02-27)*
+  - Depends on: Phase 59 buildability signals
+  - **Plans:** 1 plan (Wave 1)
+    - [x] 60-01-PLAN.md — Wkb rules engine + explainable output + optional refinement contract *(completed 2026-02-27)*
+
+- [x] **Phase 61: Vergunning Precedenten Benchmark** — municipality-level precedent outcomes and expected timelines for similar permit types *(completed 2026-02-27)*
+  - Depends on: Phase 59 and existing change-monitoring dataset (Phase 26)
+  - **Plans:** 1 plan (Wave 1)
+    - [x] 61-01-PLAN.md — Comparable permit cohorting + throughput/outcome metrics + report integration *(completed 2026-02-27)*
+
+Opportunity intelligence thesis remains tracked in `.planning/quick/4-opportunity-thesis-gsd/4-PLAN.md`.
 
 ---
 
@@ -199,4 +245,4 @@ Reference: `.planning/quick/4-opportunity-thesis-gsd/4-PLAN.md`
 
 ---
 
-*Last updated: 2026-02-24 -- Phase 55 complete (EP-Online + WOZ wired, completeness 6->9, AGG-03 verified)*
+*Last updated: 2026-02-27 -- v7.2 (Phases 59-61) completed and shipped*

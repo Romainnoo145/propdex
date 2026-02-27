@@ -6,7 +6,7 @@ import logging
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ from app.reports.pdf_export import generate_report_pdf
 from app.schemas.address import AddressInput
 from app.schemas.property import CadastralParcel
 from app.schemas.report import (
+    GenerateReportFromParcelResponse,
     ReportAssignProject,
     ReportDetailResponse,
     ReportFreshnessResponse,
@@ -76,6 +77,10 @@ def _report_needs_v7_backfill(report_data: dict) -> bool:
     required_keys = (
         "energy_label",
         "woz_data",
+        "market_signals",
+        "buildability_delta",
+        "wkb_precheck",
+        "permit_precedents",
         "map_data",
         "monuments",
         "section_sources",
@@ -153,7 +158,7 @@ async def save_report(
         db: Database session
 
     Returns:
-        ReportDetailResponse: The saved report with full details
+        GenerateReportFromParcelResponse: report payload + explicit created/reused flag
 
     Raises:
         HTTPException 400: Invalid report_data
@@ -161,12 +166,13 @@ async def save_report(
         HTTPException 500: Internal server error
     """
     try:
-        report = await service.save_report(
+        report, _created = await service.save_report(
             report_data=report_request.report_data,
             notes=report_request.notes,
             project_id=report_request.project_id,
             organization_id=organization_id,
             session=db,
+            return_status=True,
         )
 
         return ReportDetailResponse(
@@ -177,6 +183,7 @@ async def save_report(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -262,6 +269,7 @@ async def list_reports(
                 city=report.city,
                 notes=report.notes,
                 project_id=report.project_id,
+                source_parcel_id=report.source_parcel_id,
                 completeness_score=report.report_data.get("completeness_score", 0.0),
                 created_at=report.created_at,
                 updated_at=report.updated_at,
@@ -359,13 +367,14 @@ async def generate_report_from_address(
                 detail=f"Fout bij ophalen van adresdata: {e}",
             ) from e
 
-        report = await service.save_report(
+        report, _created = await service.save_report(
             report_data=property_data.model_dump(mode="json"),
             notes=body.notes,
             project_id=body.project_id,
             organization_id=organization_id,
             session=db,
             parcel_id=None,
+            return_status=True,
         )
 
         return ReportDetailResponse(
@@ -376,6 +385,7 @@ async def generate_report_from_address(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -396,17 +406,18 @@ async def generate_report_from_address(
 
 @router.post(
     "/from-parcel",
-    response_model=ReportDetailResponse,
+    response_model=GenerateReportFromParcelResponse,
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("10/minute")
 async def generate_report_from_parcel(
     request: Request,
+    response: Response,
     body: ReportFromParcelRequest,
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
-) -> ReportDetailResponse:
+) -> GenerateReportFromParcelResponse:
     """
     Generate a full property intelligence report from a scan result parcel.
 
@@ -444,6 +455,46 @@ async def generate_report_from_parcel(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Perceel niet gevonden",
+            )
+
+        # Idempotency shortcut: return existing report for this parcel if present.
+        # This avoids duplicate reports and skips costly re-aggregation.
+        existing_report = await service.get_report_by_source_parcel(
+            parcel_id=body.parcel_id,
+            organization_id=organization_id,
+            session=db,
+        )
+        if existing_report is not None:
+            if body.project_id is not None and existing_report.project_id != body.project_id:
+                existing_report = await service.assign_report_to_project(
+                    report_id=existing_report.id,
+                    organization_id=organization_id,
+                    project_id=body.project_id,
+                    session=db,
+                )
+            if body.notes is not None and existing_report.notes != body.notes:
+                existing_report = await service.update_report_notes(
+                    report_id=existing_report.id,
+                    organization_id=organization_id,
+                    notes=body.notes,
+                    session=db,
+                )
+
+            response.status_code = status.HTTP_200_OK
+            return GenerateReportFromParcelResponse(
+                report=ReportDetailResponse(
+                    id=existing_report.id,
+                    report_name=existing_report.report_name,
+                    report_data=existing_report.report_data,
+                    postcode=existing_report.postcode,
+                    city=existing_report.city,
+                    notes=existing_report.notes,
+                    project_id=existing_report.project_id,
+                    source_parcel_id=existing_report.source_parcel_id,
+                    created_at=existing_report.created_at,
+                    updated_at=existing_report.updated_at,
+                ),
+                created=False,
             )
 
         # 2. Parse address to postcode + huisnummer.
@@ -508,26 +559,34 @@ async def generate_report_from_parcel(
             ) from e
 
         # 5. Save report
-        report = await service.save_report(
+        report, created = await service.save_report(
             report_data=property_data.model_dump(mode="json"),
             notes=body.notes,
             project_id=body.project_id,
             organization_id=organization_id,
             session=db,
             parcel_id=body.parcel_id,
+            return_status=True,
         )
 
         # 6. Return report detail
-        return ReportDetailResponse(
-            id=report.id,
-            report_name=report.report_name,
-            report_data=report.report_data,
-            postcode=report.postcode,
-            city=report.city,
-            notes=report.notes,
-            project_id=report.project_id,
-            created_at=report.created_at,
-            updated_at=report.updated_at,
+        if not created:
+            response.status_code = status.HTTP_200_OK
+
+        return GenerateReportFromParcelResponse(
+            report=ReportDetailResponse(
+                id=report.id,
+                report_name=report.report_name,
+                report_data=report.report_data,
+                postcode=report.postcode,
+                city=report.city,
+                notes=report.notes,
+                project_id=report.project_id,
+                source_parcel_id=report.source_parcel_id,
+                created_at=report.created_at,
+                updated_at=report.updated_at,
+            ),
+            created=created,
         )
 
     except ValueError as e:
@@ -631,6 +690,7 @@ async def get_report(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -737,6 +797,7 @@ async def restore_report(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -796,6 +857,7 @@ async def update_notes(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -858,6 +920,7 @@ async def assign_project(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )
@@ -923,6 +986,7 @@ async def refresh_report(
             city=report.city,
             notes=report.notes,
             project_id=report.project_id,
+            source_parcel_id=report.source_parcel_id,
             created_at=report.created_at,
             updated_at=report.updated_at,
         )

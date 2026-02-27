@@ -5,20 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v7.0 Deep Property Data — enriching reports with WOZ, energielabel, BRK, and RCE data
+**Current focus:** Post-v7.2 validation and next milestone definition (workspace UX + monetization workflows)
 
 ---
 
 ## Current Position
 
-Phase: 55 — Aggregator Integration
-Plan: 2/2 complete
-Status: Phase 55 complete — EP-Online + WOZ wired into 5-parallel Step 2a gather, completeness 6->9, AGG-03 verified
-Last activity: 2026-02-24 — Phase 55 Plan 02 complete (2 min, 2 tasks, 1 file)
+Phase: 61 — Vergunning Precedenten Benchmark
+Plan: 1/1 completed
+Status: v7.2 shipped (Phases 59-61 complete)
+Last activity: 2026-02-27 — Completed phase 61 and shipped v7.2 Developer Dossier Intelligence
 
 ---
 
 ## Performance Metrics
+
+**v7.2 Developer Dossier Intelligence (Completed)**
+- Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
+- Phase 60 Plan 01: completed (Layer A Wkb precheck + optional Layer B refinement contract)
+- Phase 61 Plan 01: completed (permit precedent benchmark by municipality + comparable type + report integration)
+
+**v7.1 Workspace Productization (Completed)**
+- Phase 58 Plan 01: completed (workspace role context + side-rail switcher + role-aware copy foundation)
+- Phase 58 Plan 02: completed (project workspace URL-state hardening + source-aware report navigation)
+- Phase 58 Plan 03: completed (meldingen/rapporten scope-aware controls + streamlined detail actions)
+- Phase 58 Plan 04: completed (canonical map parcel flow + layer catalog + refresh-safe selection reset)
+- Phase 58 Plan 05: completed (monitoring contract clarity + parcel report idempotency visibility + milestone handoff docs)
 
 **v7.0 Deep Property Data (In Progress)**
 - Phase 54 Plan 01: 3 min (BRK schema + aggregator wiring)
@@ -76,6 +88,7 @@ Last activity: 2026-02-24 — Phase 55 Plan 02 complete (2 min, 2 tasks, 1 file)
 - **GovernmentAPIError signature**: GovernmentAPIError(source, message, status_code) — source is first positional arg
 - **Post-parallel enrichment**: RCE Linked Data detail fetched after asyncio.gather completes, not inside it (Phase 55)
 - **Inner async def for cache-manager wrap**: `_fetch_rce_detail()` closure wraps Pydantic-returning client with `.model_dump()` for get_cached_or_fetch compatibility (Phase 55)
+- **Parcel report idempotency**: `saved_reports.source_parcel_id` + active unique index ensures one active report per parcel/org; repeated `/from-parcel` returns existing report
 
 ### Ongoing TODOs
 
@@ -120,6 +133,25 @@ Last activity: 2026-02-24 — Phase 55 Plan 02 complete (2 min, 2 tasks, 1 file)
 - fetch_energy_label() None-guards verblijfsobject_id — some addresses lack VBO ID (Phase 55 Plan 02)
 - fetch_woz_data() uses nummeraanduiding_id without None guard — always present on BAGAddressResponse (Phase 55 Plan 02)
 
+### Decisions (v7.1)
+
+- Keep one app and layer persona-specific workspace framing via shared context (no app clone now).
+- Municipality monitoring remains opt-in per gemeente to prevent external API overcapacity.
+- Scope model is explicit and sequential: provincie -> gemeente -> wijk -> perceel -> actie.
+
+### Decisions (v7.2 Planning)
+
+- No dedicated "opportunity mode" toggle as separate workflow; intelligence must surface in the base report/map contract.
+- Buildability Delta is first priority because it answers the core developer question ("hoeveel kan hier nog?").
+- Wkb is staged as Layer A auto-precheck (default) plus optional Layer B refinement (not a forced wizard flow).
+- Permit precedents start with pragmatic v1 scope: same municipality + comparable permit type + recent time window.
+
+### Decisions (v7.2 Execution)
+
+- Buildability Delta is a first-class report/map contract (`buildability_delta`) with explicit confidence and missing fields.
+- Wkb precheck is always generated as Layer A output in each report payload (`wkb_precheck`), no wizard dependency.
+- Layer B refinement is modeled as optional contract metadata in the same payload and can refine status/confidence when provided.
+
 ### Blockers/Concerns
 
 None.
@@ -128,12 +160,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-24T09:16:36.889Z
-**Stopped At:** Phase 56 context gathered
-**Resume File:** .planning/phases/56-frontend-sections/56-CONTEXT.md
+**Last Session:** 2026-02-27T00:00:00Z
+**Stopped At:** v7.2 shipped (59/60/61 complete)
+**Resume File:** .planning/ROADMAP.md
 
-**Next Action:** Phase 55 complete. Continue v7.0 — Phase 56 (frontend property report displaying WOZ, energielabel, BRK) or live API validation (Phase 53).
+**Next Action:** Define and execute next milestone phase plan (starting from product validation and UX workflow hardening).
 
 ---
 
-*State updated: 2026-02-24 — Phase 55 Plan 02 complete (EP-Online + WOZ into 5-parallel gather, completeness 6->9, AGG-03 verified, 2 min, 2 tasks, 1 file)*
+*State updated: 2026-02-27 — v7.2 phases 59-61 completed and shipped*

@@ -2,13 +2,15 @@
 
 import asyncio
 import logging
+import re
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 import httpx
 from arq import ArqRedis
 from fastapi import HTTPException, status
 from shapely.geometry import shape
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import AIParsingSection
@@ -18,29 +20,37 @@ from app.government_apis.ep_online import ep_online_client
 from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.rce_monuments import rd_to_wgs84
 from app.government_apis.woz_waardeloket import woz_waardeloket_client
-from app.schemas.address import AddressInput
+from app.models.funda_listing_snapshot import FundaListingSnapshot
+from app.schemas.address import AddressInput, BuildingData
 from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGerechtigde
 from app.schemas.energy_label import EnergyLabel
 from app.schemas.monument import MonumentStatus
 from app.schemas.property import (
+    BuildabilityDelta,
     CadastralParcel,
     DataSourceInfo,
     MapData,
+    MarketSignals,
+    PermitPrecedentBenchmark,
     PropertyReportResponse,
     SectionSourceInfo,
+    WkbPrecheck,
 )
 from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
 from app.services.cache_manager import get_cached_or_fetch
 from app.services.monument_aggregator import fetch_monument_status
+from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
 from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
+from app.services.wkb_precheck import evaluate_wkb_precheck
 from app.services.zoning_aggregator import fetch_zoning_data
 
 logger = logging.getLogger(__name__)
 
 # Module-level singleton
 _cadastral_client = PDOKCadastralClient()
+_HOUSE_NUMBER_RE = re.compile(r"(\d+)")
 
 
 def _extract_rd_coordinates(geometry: dict | None) -> tuple[float, float] | None:
@@ -77,6 +87,224 @@ def _extract_rd_coordinates(geometry: dict | None) -> tuple[float, float] | None
             except Exception:
                 return None
         return None
+
+
+def _extract_house_number(value: str | None) -> int | None:
+    """Parse first house-number sequence from free-form string."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    match = _HOUSE_NUMBER_RE.search(value)
+    if not match:
+        return None
+    try:
+        number = int(match.group(1))
+    except ValueError:
+        return None
+    return number if number > 0 else None
+
+
+async def _fetch_market_signals(
+    *,
+    organization_id: uuid.UUID,
+    postcode: str | None,
+    huisnummer: int | None,
+    city: str | None,
+    session: AsyncSession,
+) -> MarketSignals | None:
+    """
+    Resolve Funda listing behavior for a single address.
+
+    Matching strategy:
+    - strict postcode match (normalized, no spaces)
+    - strict numeric house-number match
+    - optional city pre-filter when available
+    """
+    if not postcode or not huisnummer or huisnummer <= 0:
+        return None
+
+    postcode_norm = postcode.upper().replace(" ", "")
+    city_norm = city.lower().strip() if isinstance(city, str) and city.strip() else None
+
+    query = select(
+        FundaListingSnapshot.listing_external_id,
+        FundaListingSnapshot.snapshot_date,
+        FundaListingSnapshot.price_eur,
+        FundaListingSnapshot.house_number,
+    ).where(
+        FundaListingSnapshot.organization_id == organization_id,
+        FundaListingSnapshot.source == "funda",
+        func.upper(func.replace(func.coalesce(FundaListingSnapshot.postcode, ""), " ", ""))
+        == postcode_norm,
+    )
+    if city_norm:
+        query = query.where(func.lower(func.coalesce(FundaListingSnapshot.city, "")) == city_norm)
+
+    rows = (await session.execute(query)).all()
+    if not rows:
+        return None
+
+    # Strictly match house-number to avoid cross-address contamination.
+    filtered = [
+        row for row in rows if _extract_house_number(row.house_number) == huisnummer
+    ]
+    if not filtered:
+        return None
+
+    grouped: dict[str, dict[str, object]] = {}
+    for row in filtered:
+        listing_id = row.listing_external_id
+        snapshot_date = row.snapshot_date
+        if not listing_id or snapshot_date is None:
+            continue
+
+        state = grouped.setdefault(
+            listing_id,
+            {
+                "first_seen": snapshot_date,
+                "last_seen": snapshot_date,
+                "prices": set(),
+                "snapshots": 0,
+            },
+        )
+        if snapshot_date < state["first_seen"]:
+            state["first_seen"] = snapshot_date
+        if snapshot_date > state["last_seen"]:
+            state["last_seen"] = snapshot_date
+        if isinstance(row.price_eur, int) and row.price_eur > 0:
+            state["prices"].add(row.price_eur)
+        state["snapshots"] = int(state["snapshots"]) + 1
+
+    if not grouped:
+        return None
+
+    # Use most recently observed listing for address-level signals.
+    selected = max(grouped.values(), key=lambda s: s["last_seen"])
+    first_seen: date = selected["first_seen"]
+    last_seen: date = selected["last_seen"]
+    prices: set[int] = selected["prices"]
+    snapshots = int(selected["snapshots"])
+
+    return MarketSignals(
+        listing_duration_days=max(0, (last_seen - first_seen).days + 1),
+        price_change_count=max(0, len(prices) - 1),
+        listing_snapshots_count=max(0, snapshots),
+        days_since_last_seen=max(0, (date.today() - last_seen).days),
+        source="funda",
+    )
+
+
+def _derive_buildability_delta(
+    *,
+    cadastral_parcels: list[CadastralParcel],
+    building: BuildingData | None,
+    zoning_data: ZoningData | None,
+) -> BuildabilityDelta | None:
+    """Compute a normalized current-vs-allowed build envelope with explicit confidence."""
+    parcel_areas = [
+        float(parcel.oppervlakte)
+        for parcel in cadastral_parcels
+        if parcel.oppervlakte is not None and parcel.oppervlakte > 0
+    ]
+    parcel_area_m2 = sum(parcel_areas) if parcel_areas else None
+
+    current_built_area_m2 = None
+    if building and building.oppervlakte is not None and building.oppervlakte > 0:
+        current_built_area_m2 = float(building.oppervlakte)
+
+    dims = zoning_data.building_dimensions if zoning_data else None
+    max_bebouwingspercentage_pct = None
+    max_far = None
+    if dims and dims.max_bebouwingspercentage is not None and dims.max_bebouwingspercentage > 0:
+        max_bebouwingspercentage_pct = float(dims.max_bebouwingspercentage)
+    if dims and dims.max_floor_area_ratio is not None and dims.max_floor_area_ratio > 0:
+        max_far = float(dims.max_floor_area_ratio)
+
+    if (
+        parcel_area_m2 is None
+        and current_built_area_m2 is None
+        and max_bebouwingspercentage_pct is None
+        and max_far is None
+    ):
+        return None
+
+    current_built_ratio_pct = None
+    current_far = None
+    if parcel_area_m2 and current_built_area_m2 is not None:
+        current_built_ratio_pct = (current_built_area_m2 / parcel_area_m2) * 100.0
+        current_far = current_built_area_m2 / parcel_area_m2
+
+    max_buildable_area_m2 = None
+    if parcel_area_m2 and max_bebouwingspercentage_pct is not None:
+        max_buildable_area_m2 = (max_bebouwingspercentage_pct / 100.0) * parcel_area_m2
+
+    remaining_buildable_area_m2 = None
+    if max_buildable_area_m2 is not None and current_built_area_m2 is not None:
+        remaining_buildable_area_m2 = max_buildable_area_m2 - current_built_area_m2
+
+    remaining_far = None
+    if max_far is not None and current_far is not None:
+        remaining_far = max_far - current_far
+
+    has_limit = max_bebouwingspercentage_pct is not None or max_far is not None
+    if parcel_area_m2 is not None and current_built_area_m2 is not None and has_limit:
+        confidence: str = "high"
+    elif parcel_area_m2 is not None and has_limit:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    missing_fields: list[str] = []
+    if parcel_area_m2 is None:
+        missing_fields.append("parcel_area_m2")
+    if current_built_area_m2 is None:
+        missing_fields.append("current_built_area_m2")
+    if max_bebouwingspercentage_pct is None:
+        missing_fields.append("max_bebouwingspercentage_pct")
+    if max_far is None:
+        missing_fields.append("max_far")
+
+    notes: list[str] = []
+    if current_built_area_m2 is not None:
+        notes.append(
+            "Gebruiksoppervlakte (BAG VBO) gebruikt als proxy voor huidig bebouwd oppervlak."
+        )
+    if len(cadastral_parcels) > 1 and parcel_area_m2 is not None:
+        notes.append("Meerdere gekoppelde percelen samengevoegd voor totale perceeloppervlakte.")
+    if max_bebouwingspercentage_pct is None and max_far is None:
+        notes.append("Geen expliciete FAR/TAR-limieten gevonden in beschikbare planregels.")
+    if remaining_buildable_area_m2 is not None and remaining_buildable_area_m2 < 0:
+        notes.append("Huidige benadering ligt boven de gevonden bebouwingslimiet.")
+    if remaining_far is not None and remaining_far < 0:
+        notes.append("Huidige benadering ligt boven de gevonden FAR-limiet.")
+
+    return BuildabilityDelta(
+        parcel_area_m2=round(parcel_area_m2, 1) if parcel_area_m2 is not None else None,
+        current_built_area_m2=(
+            round(current_built_area_m2, 1) if current_built_area_m2 is not None else None
+        ),
+        current_built_ratio_pct=(
+            round(current_built_ratio_pct, 1) if current_built_ratio_pct is not None else None
+        ),
+        max_bebouwingspercentage_pct=(
+            round(max_bebouwingspercentage_pct, 1)
+            if max_bebouwingspercentage_pct is not None
+            else None
+        ),
+        max_buildable_area_m2=(
+            round(max_buildable_area_m2, 1) if max_buildable_area_m2 is not None else None
+        ),
+        remaining_buildable_area_m2=(
+            round(remaining_buildable_area_m2, 1)
+            if remaining_buildable_area_m2 is not None
+            else None
+        ),
+        current_far=round(current_far, 3) if current_far is not None else None,
+        max_far=round(max_far, 3) if max_far is not None else None,
+        remaining_far=round(remaining_far, 3) if remaining_far is not None else None,
+        confidence=confidence,
+        missing_fields=missing_fields,
+        notes=notes,
+    )
 
 
 def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
@@ -268,6 +496,10 @@ async def aggregate_property_data(
     cadastral_parcels: list[CadastralParcel] = []
     zoning_data: ZoningData | None = None
     monument_status: MonumentStatus | None = None
+    market_signals: MarketSignals | None = None
+    buildability_delta: BuildabilityDelta | None = None
+    wkb_precheck: WkbPrecheck | None = None
+    permit_precedents: PermitPrecedentBenchmark | None = None
 
     # STEP 1 (SEQUENTIAL): Resolve address via BAG
     # This MUST succeed - if it fails, we can't continue
@@ -466,13 +698,29 @@ async def aggregate_property_data(
             errors.append(f"WOZ-waarde niet beschikbaar: {str(e)}")
             return None
 
-    # Execute ALL Step 2a fetches in parallel (5 tasks: cadastral, zoning, monuments, energy_label, woz)
+    async def fetch_market_data() -> MarketSignals | None:
+        """Fetch Funda market-friction signals for this exact address."""
+        try:
+            return await _fetch_market_signals(
+                organization_id=organization_id,
+                postcode=address.postcode,
+                huisnummer=address.huisnummer,
+                city=address.woonplaats,
+                session=session,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch market signals: {e}")
+            errors.append(f"Marktsignalen niet beschikbaar: {str(e)}")
+            return None
+
+    # Execute ALL Step 2a fetches in parallel
     results = await asyncio.gather(
         fetch_cadastral_parcels(),
         fetch_zoning(),
         fetch_monuments(),
         fetch_energy_label(),
         fetch_woz_data(),
+        fetch_market_data(),
         return_exceptions=True,
     )
 
@@ -513,6 +761,32 @@ async def aggregate_property_data(
         errors.append(f"WOZ data fetch failed: {str(woz_result)}")
     else:
         woz_data = woz_result
+
+    market_result = results[5]
+    if isinstance(market_result, Exception):
+        logger.error(f"Market signal fetch failed: {market_result}")
+        errors.append(f"Marktsignalen fetch failed: {str(market_result)}")
+    else:
+        market_signals = market_result
+
+    buildability_delta = _derive_buildability_delta(
+        cadastral_parcels=cadastral_parcels,
+        building=building,
+        zoning_data=zoning_data,
+    )
+    wkb_precheck = evaluate_wkb_precheck(
+        building=building,
+        monuments=monument_status,
+        zoning_data=zoning_data,
+        buildability_delta=buildability_delta,
+    )
+    permit_precedents = await build_permit_precedent_benchmark(
+        organization_id=organization_id,
+        session=session,
+        postcode=address.postcode,
+        huisnummer=address.huisnummer,
+        city=address.woonplaats,
+    )
 
     # STEP 2b (SEQUENTIAL): BRK ownership — requires cadastral identificatie from Step 2a
     # NOTE: Never cache BRK data (Kadaster Tier 3). fetch_brk_ownership() always returns,
@@ -623,6 +897,120 @@ async def aggregate_property_data(
             )
         )
 
+    # Market signals section
+    if market_signals is not None:
+        section_sources.append(
+            SectionSourceInfo(
+                section="market_signals",
+                sources=[
+                    DataSourceInfo(
+                        source="Funda listing snapshots",
+                        confidence="MEDIUM",
+                        is_cached=True,
+                    )
+                ],
+                age_seconds=market_signals.days_since_last_seen * 86400,
+            )
+        )
+
+    # Buildability delta section
+    if buildability_delta is not None:
+        buildability_sources: list[DataSourceInfo] = [
+            DataSourceInfo(
+                source="BAG API v2",
+                confidence="HIGH",
+                is_cached=False,
+            )
+        ]
+        if cadastral_parcels:
+            buildability_sources.append(
+                DataSourceInfo(
+                    source="PDOK Cadastral OGC API",
+                    confidence="HIGH",
+                    is_cached=True,
+                )
+            )
+        if zoning_data is not None:
+            buildability_sources.append(
+                DataSourceInfo(
+                    source="DSO Ruimtelijke Plannen API v4",
+                    confidence="HIGH",
+                    is_cached=True,
+                )
+            )
+        section_sources.append(
+            SectionSourceInfo(
+                section="buildability_delta",
+                sources=buildability_sources,
+            )
+        )
+
+    # Wkb precheck section
+    if wkb_precheck is not None:
+        wkb_sources: list[DataSourceInfo] = [
+            DataSourceInfo(
+                source="Wkb Layer A rules engine",
+                confidence="MEDIUM",
+                is_cached=False,
+            ),
+            DataSourceInfo(
+                source="BAG API v2",
+                confidence="HIGH",
+                is_cached=False,
+            ),
+        ]
+        if zoning_data is not None:
+            wkb_sources.append(
+                DataSourceInfo(
+                    source="DSO Ruimtelijke Plannen API v4",
+                    confidence="HIGH",
+                    is_cached=True,
+                )
+            )
+        if monument_status is not None:
+            wkb_sources.append(
+                DataSourceInfo(
+                    source="RCE/BAG monumentenaggregatie",
+                    confidence="MEDIUM",
+                    is_cached=True,
+                )
+            )
+        if buildability_delta is not None:
+            wkb_sources.append(
+                DataSourceInfo(
+                    source="Buildability Delta (afgeleid)",
+                    confidence=(
+                        "HIGH"
+                        if buildability_delta.confidence == "high"
+                        else "MEDIUM"
+                        if buildability_delta.confidence == "medium"
+                        else "LOW"
+                    ),
+                    is_cached=True,
+                )
+            )
+        section_sources.append(
+            SectionSourceInfo(
+                section="wkb_precheck",
+                sources=wkb_sources,
+            )
+        )
+
+    # Permit precedents benchmark section
+    if permit_precedents is not None:
+        section_sources.append(
+            SectionSourceInfo(
+                section="permit_precedents",
+                sources=[
+                    DataSourceInfo(
+                        source="Monitoring change_records (SRU vergunninghistorie)",
+                        confidence="MEDIUM",
+                        is_cached=True,
+                    )
+                ],
+            )
+        )
+
     # Calculate completeness score
     # Sections: address (1), building (1), parcels (1), zoning (1), monuments (1), ai_parsing (1),
     #           energy_label (1), woz_data (1), brk_ownership (1) — total 9 — INF-05
@@ -667,5 +1055,9 @@ async def aggregate_property_data(
         ai_parsing=ai_parsing_section,
         energy_label=energy_label,
         woz_data=woz_data,
+        market_signals=market_signals,
+        buildability_delta=buildability_delta,
+        wkb_precheck=wkb_precheck,
+        permit_precedents=permit_precedents,
         brk_ownership=brk_ownership,
     )

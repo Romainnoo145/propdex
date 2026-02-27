@@ -7,6 +7,8 @@ import type { PropertyReportResponse } from '@/lib/types/property'
 interface ReportDetailPageProps {
   data: PropertyReportResponse | null
   isLoading: boolean
+  backLabel?: string
+  sourceParcelId?: string | null
   onBack: () => void
   onViewOnMap: () => void
 }
@@ -96,6 +98,8 @@ function formatCurrency(value: number | null | undefined): string {
 export default function ReportDetailPage({
   data,
   isLoading,
+  backLabel = 'Terug naar projecten',
+  sourceParcelId = null,
   onBack,
   onViewOnMap,
 }: ReportDetailPageProps) {
@@ -128,7 +132,7 @@ export default function ReportDetailPage({
         <div className="mx-auto max-w-7xl px-4 py-8 text-center sm:px-6 lg:px-8">
           <p className="text-grey-600">Rapport niet gevonden</p>
           <button onClick={onBack} className="mt-4 text-sm text-grey-400 underline hover:text-grey-100">
-            Terug naar projecten
+            {backLabel}
           </button>
         </div>
       </div>
@@ -154,7 +158,7 @@ export default function ReportDetailPage({
                   className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
                 >
                   <ArrowLeftIcon />
-                  Terug naar projecten
+                  {backLabel}
                 </button>
                 <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">
                   {address.straat} {address.huisnummer}
@@ -178,6 +182,16 @@ export default function ReportDetailPage({
                   <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
                     {data.cadastral_parcels.length} percelen gekoppeld
                   </span>
+                  {sourceParcelId && (
+                    <>
+                      <span className="rounded-full border border-amber-accent/35 bg-amber-accent/10 px-2.5 py-1 font-medium text-amber-accent">
+                        Perceelrapport gekoppeld
+                      </span>
+                      <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
+                        Duplicaatbeveiliging actief
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <button
@@ -250,6 +264,10 @@ export default function ReportDetailPage({
           <div className="space-y-5">
             <GebouwSection data={data} />
             <KadasterSection data={data} />
+            <BuildabilityDeltaSection data={data} />
+            <WkbPrecheckSection data={data} />
+            <PermitPrecedentsSection data={data} />
+            <MarketSignalsSection data={data} />
             <WOZSection data={data} />
             <EnergyLabelSection data={data} />
             <BRKOwnershipSection data={data} />
@@ -587,6 +605,404 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
             <span className="text-xs text-grey-600">Totaal: <strong className="text-grey-300">{formatArea(totalOpp)}</strong></span>
           </div>
         )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Bouwruimte Delta ─────────────────────────────────────── */
+
+function BuildabilityDeltaSection({ data }: { data: PropertyReportResponse }) {
+  const delta = data.buildability_delta
+
+  if (!delta) {
+    return (
+      <Section title="Bouwruimte Delta" icon={<BuildabilityIcon />}>
+        <p className="text-sm italic text-grey-600">
+          Nog geen berekende bouwruimte beschikbaar voor dit dossier
+        </p>
+      </Section>
+    )
+  }
+
+  const confidenceLabel =
+    delta.confidence === 'high' ? 'Hoog' : delta.confidence === 'medium' ? 'Middel' : 'Laag'
+  const confidenceClass =
+    delta.confidence === 'high'
+      ? 'border-success/25 bg-success/[0.08] text-success'
+      : delta.confidence === 'medium'
+        ? 'border-amber-accent/25 bg-amber-accent/10 text-amber-accent'
+        : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
+
+  const missingLabels: Record<string, string> = {
+    parcel_area_m2: 'Perceeloppervlakte',
+    current_built_area_m2: 'Huidig bebouwd oppervlak',
+    max_bebouwingspercentage_pct: 'Max bebouwingspercentage',
+    max_far: 'Max FAR',
+  }
+
+  const formatPct = (value: number | null | undefined) =>
+    value == null ? '–' : `${value.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}%`
+
+  const formatFar = (value: number | null | undefined) =>
+    value == null ? '–' : value.toLocaleString('nl-NL', { maximumFractionDigits: 3 })
+
+  const remainingAreaTone =
+    delta.remaining_buildable_area_m2 != null && delta.remaining_buildable_area_m2 < 0
+      ? 'text-warning'
+      : 'text-grey-100'
+
+  return (
+    <Section title="Bouwruimte Delta" icon={<BuildabilityIcon />}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-grey-600">Huidig vs toegestaan bouwvolume (v1 benadering)</p>
+          <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${confidenceClass}`}>
+            Confidence: {confidenceLabel}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Perceeloppervlakte</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatArea(delta.parcel_area_m2)}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Huidig bebouwd</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatArea(delta.current_built_area_m2)}</p>
+            <p className="text-[11px] text-grey-500">{formatPct(delta.current_built_ratio_pct)}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Toegestaan (TAR)</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatPct(delta.max_bebouwingspercentage_pct)}</p>
+            <p className="text-[11px] text-grey-500">{formatArea(delta.max_buildable_area_m2)}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Resterend bebouwbaar</p>
+            <p className={`mt-0.5 text-sm font-semibold ${remainingAreaTone}`}>
+              {formatArea(delta.remaining_buildable_area_m2)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">FAR huidig</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatFar(delta.current_far)}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">FAR max</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatFar(delta.max_far)}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">FAR resterend</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{formatFar(delta.remaining_far)}</p>
+          </div>
+        </div>
+
+        {delta.missing_fields.length > 0 && (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs font-medium text-grey-500">Ontbrekende inputs</p>
+            <p className="mt-1 text-xs text-grey-400">
+              {delta.missing_fields.map((field) => missingLabels[field] ?? field).join(' · ')}
+            </p>
+          </div>
+        )}
+
+        {delta.notes.length > 0 && (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs font-medium text-grey-500">Toelichting</p>
+            <div className="mt-1 space-y-1">
+              {delta.notes.slice(0, 3).map((note) => (
+                <p key={note} className="text-xs text-grey-400">{note}</p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Wkb Startdossier ─────────────────────────────────────── */
+
+function WkbPrecheckSection({ data }: { data: PropertyReportResponse }) {
+  const precheck = data.wkb_precheck
+
+  if (!precheck) {
+    return (
+      <Section title="Wkb Startdossier" icon={<WkbIcon />}>
+        <p className="text-sm italic text-grey-600">
+          Nog geen Wkb precheck beschikbaar voor dit dossier
+        </p>
+      </Section>
+    )
+  }
+
+  const statusLabel =
+    precheck.status === 'likely_required'
+      ? 'Waarschijnlijk vereist'
+      : precheck.status === 'likely_not_required'
+        ? 'Waarschijnlijk niet vereist'
+        : precheck.status === 'not_applicable'
+          ? 'Niet toepasbaar'
+          : 'Onzeker'
+
+  const statusClass =
+    precheck.status === 'likely_required'
+      ? 'border-amber-accent/30 bg-amber-accent/10 text-amber-accent'
+      : precheck.status === 'likely_not_required'
+        ? 'border-success/25 bg-success/[0.08] text-success'
+        : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-300'
+
+  const confidenceLabel =
+    precheck.confidence === 'high'
+      ? 'Hoog'
+      : precheck.confidence === 'medium'
+        ? 'Middel'
+        : 'Laag'
+
+  const missingLabels: Record<string, string> = {
+    project_scope: 'Projectscope',
+    constructieve_wijziging: 'Constructieve wijziging',
+    uitbreiding_m2: 'Uitbreidingsomvang',
+    functiewijziging: 'Functiewijziging',
+    bag_building_status: 'BAG-status',
+    zoning_primary_bestemming: 'Bestemming',
+    buildability_delta: 'Bouwruimte-delta',
+    monument_status: 'Monumentstatus',
+  }
+
+  return (
+    <Section title="Wkb Startdossier" icon={<WkbIcon />}>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+            {statusLabel}
+          </span>
+          <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 text-xs font-medium text-grey-400">
+            Confidence: {confidenceLabel}
+          </span>
+        </div>
+
+        {precheck.triggered_rules.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-grey-500">Regelhits</p>
+            {precheck.triggered_rules.slice(0, 4).map((rule) => (
+              <div key={rule.code} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-grey-300">{rule.title}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    rule.impact === 'increase'
+                      ? 'border border-amber-accent/25 bg-amber-accent/10 text-amber-accent'
+                      : rule.impact === 'decrease'
+                        ? 'border border-success/25 bg-success/[0.08] text-success'
+                        : 'border border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
+                  }`}>
+                    {rule.impact === 'increase'
+                      ? 'Verhoogt'
+                      : rule.impact === 'decrease'
+                        ? 'Verlaagt'
+                        : 'Onzeker'}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-grey-400">{rule.reason}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm italic text-grey-600">Geen regelhits beschikbaar</p>
+        )}
+
+        {precheck.required_documents.length > 0 && (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs font-medium text-grey-500">Vervolgdocumenten</p>
+            <ul className="mt-1 space-y-1">
+              {precheck.required_documents.slice(0, 5).map((doc) => (
+                <li key={doc} className="text-xs text-grey-400">• {doc}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {precheck.missing_inputs.length > 0 && (
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs font-medium text-grey-500">Ontbrekende inputs</p>
+            <p className="mt-1 text-xs text-grey-400">
+              {precheck.missing_inputs.map((key) => missingLabels[key] ?? key).join(' · ')}
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs font-medium text-grey-500">Layer B verfijning</p>
+          <p className="mt-1 text-xs text-grey-400">
+            {precheck.layer_b.applied
+              ? (precheck.layer_b.effect_note ?? 'Layer B toegepast.')
+              : `Optioneel beschikbaar: ${precheck.layer_b.available_inputs.join(', ')}`}
+          </p>
+        </div>
+
+        <p className="text-[11px] text-grey-600">{precheck.disclaimer}</p>
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Vergunning Precedenten ──────────────────────────────── */
+
+function PermitPrecedentsSection({ data }: { data: PropertyReportResponse }) {
+  const benchmark = data.permit_precedents
+
+  if (!benchmark) {
+    return (
+      <Section title="Vergunning Precedenten" icon={<PermitPrecedentIcon />}>
+        <p className="text-sm italic text-grey-600">
+          Nog geen precedentbenchmark beschikbaar voor dit dossier
+        </p>
+      </Section>
+    )
+  }
+
+  const outcomes = benchmark.outcome_distribution || {}
+  const orderedOutcomeKeys = ['granted', 'requested', 'rejected', 'withdrawn', 'other']
+  const outcomeLabels: Record<string, string> = {
+    granted: 'Verleend',
+    requested: 'Aangevraagd',
+    rejected: 'Geweigerd',
+    withdrawn: 'Ingetrokken',
+    other: 'Overig',
+  }
+
+  return (
+    <Section title="Vergunning Precedenten" icon={<PermitPrecedentIcon />}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Gemeente</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{benchmark.gemeente_scope}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Type</p>
+            <p className="mt-0.5 text-sm font-medium text-grey-300">{benchmark.comparable_type}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Steekproef</p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">{benchmark.sample_size}</p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Venster</p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">{benchmark.lookback_days} dagen</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">Median doorlooptijd</p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+              {benchmark.median_processing_days != null ? `${benchmark.median_processing_days} dagen` : 'Onbekend'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+            <p className="text-xs text-grey-600">P75 doorlooptijd</p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+              {benchmark.p75_processing_days != null ? `${benchmark.p75_processing_days} dagen` : 'Onbekend'}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs font-medium text-grey-500">Uitkomstverdeling</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {orderedOutcomeKeys
+              .filter((key) => outcomes[key] != null)
+              .map((key) => (
+                <span key={key} className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-0.5 text-xs font-medium text-grey-300">
+                  {outcomeLabels[key] ?? key}: {outcomes[key]}
+                </span>
+              ))}
+          </div>
+        </div>
+
+        {benchmark.low_sample_warning && (
+          <div className="rounded-lg border border-amber-accent/20 bg-amber-accent/[0.06] px-3 py-2">
+            <p className="text-xs text-amber-accent">{benchmark.low_sample_warning}</p>
+          </div>
+        )}
+
+        {benchmark.references.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-grey-500">Recente referenties</p>
+            {benchmark.references.map((ref) => (
+              <div key={ref.change_record_id} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+                <p className="text-sm font-medium text-grey-300">{ref.title}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-grey-500">
+                  <span>{new Date(ref.change_date).toLocaleDateString('nl-NL')}</span>
+                  <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2 py-0.5 text-[11px] font-medium text-grey-400">
+                    {outcomeLabels[ref.outcome] ?? ref.outcome}
+                  </span>
+                  {ref.source_url && (
+                    <a
+                      href={ref.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-accent underline decoration-amber-accent/40 underline-offset-2 hover:text-amber-accent/80"
+                    >
+                      Bron
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Markt (Funda) ────────────────────────────────────────── */
+
+function MarketSignalsSection({ data }: { data: PropertyReportResponse }) {
+  const signals = data.market_signals
+
+  if (!signals) {
+    return (
+      <Section title="Marktsignalen" icon={<SignalIcon />}>
+        <p className="text-sm italic text-grey-600">
+          Nog geen Funda-signalen beschikbaar voor dit adres
+        </p>
+      </Section>
+    )
+  }
+
+  return (
+    <Section title="Marktsignalen" icon={<SignalIcon />}>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs text-grey-600">Te koop sinds</p>
+          <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+            {signals.listing_duration_days} dagen
+          </p>
+        </div>
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs text-grey-600">Prijswijzigingen</p>
+          <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+            {signals.price_change_count}
+          </p>
+        </div>
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs text-grey-600">Snapshots</p>
+          <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+            {signals.listing_snapshots_count}
+          </p>
+        </div>
+        <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
+          <p className="text-xs text-grey-600">Laatste waarneming</p>
+          <p className="mt-0.5 text-sm font-medium tabular-nums text-grey-300">
+            {signals.days_since_last_seen} dagen geleden
+          </p>
+        </div>
       </div>
     </Section>
   )
@@ -1550,6 +1966,46 @@ function ChartIcon() {
       <rect x="6" y="11" width="3" height="7" rx="1" />
       <rect x="11" y="8" width="3" height="10" rx="1" />
       <rect x="16" y="5" width="3" height="13" rx="1" />
+    </svg>
+  )
+}
+
+function SignalIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12h3l2-5 4 10 2-5h7" />
+    </svg>
+  )
+}
+
+function BuildabilityIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h16" />
+      <path d="M6 20v-7h4v7" />
+      <path d="M14 20v-11h4v11" />
+      <path d="M12 9h-1.5a2.5 2.5 0 1 1 0-5H12" />
+      <path d="M12 4h1.5a2.5 2.5 0 0 1 0 5H12" />
+    </svg>
+  )
+}
+
+function WkbIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z" />
+      <path d="M9 12.5 11 14.5l4-4" />
+    </svg>
+  )
+}
+
+function PermitPrecedentIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h16" />
+      <path d="M6 20V8h3v12" />
+      <path d="M11 20V4h3v16" />
+      <path d="M16 20v-6h3v6" />
     </svg>
   )
 }

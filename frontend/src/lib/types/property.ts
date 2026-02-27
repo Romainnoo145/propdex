@@ -308,6 +308,79 @@ export interface BRKOwnership {
   admin_hint: string | null
 }
 
+export interface MarketSignals {
+  listing_duration_days: number
+  price_change_count: number
+  listing_snapshots_count: number
+  days_since_last_seen: number
+  source?: string
+}
+
+export interface BuildabilityDelta {
+  parcel_area_m2: number | null
+  current_built_area_m2: number | null
+  current_built_ratio_pct: number | null
+  max_bebouwingspercentage_pct: number | null
+  max_buildable_area_m2: number | null
+  remaining_buildable_area_m2: number | null
+  current_far: number | null
+  max_far: number | null
+  remaining_far: number | null
+  confidence: 'high' | 'medium' | 'low'
+  missing_fields: string[]
+  notes: string[]
+}
+
+export interface WkbRefinementInput {
+  constructieve_wijziging: boolean | null
+  uitbreiding_m2: number | null
+  functiewijziging: boolean | null
+}
+
+export interface WkbRuleHit {
+  code: string
+  title: string
+  impact: 'increase' | 'decrease' | 'uncertainty'
+  reason: string
+}
+
+export interface WkbLayerBResult {
+  applied: boolean
+  input: WkbRefinementInput | null
+  effect_note: string | null
+  available_inputs: string[]
+}
+
+export interface WkbPrecheck {
+  status: 'likely_required' | 'uncertain' | 'likely_not_required' | 'not_applicable'
+  confidence: 'high' | 'medium' | 'low'
+  triggered_rules: WkbRuleHit[]
+  missing_inputs: string[]
+  required_documents: string[]
+  disclaimer: string
+  layer_b: WkbLayerBResult
+}
+
+export interface PermitPrecedentReference {
+  change_record_id: string
+  title: string
+  change_date: string
+  outcome: string
+  source_url: string | null
+}
+
+export interface PermitPrecedentBenchmark {
+  gemeente_scope: string
+  comparable_type: string
+  sample_size: number
+  lookback_days: number
+  median_processing_days: number | null
+  p75_processing_days: number | null
+  outcome_distribution: Record<string, number>
+  low_sample_warning: string | null
+  references: PermitPrecedentReference[]
+}
+
 /**
  * Extended property report with zoning, monuments, and map data
  *
@@ -336,5 +409,9 @@ export interface PropertyReportResponse {
   // Phase 7 additions
   energy_label?: EnergyLabel | null
   woz_data?: WOZData | null
+  market_signals?: MarketSignals | null
+  buildability_delta?: BuildabilityDelta | null
+  wkb_precheck?: WkbPrecheck | null
+  permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
 }
