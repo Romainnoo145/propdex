@@ -89,31 +89,83 @@ async def retry_with_backoff(
     fn: Callable[[], Awaitable[httpx.Response]],
     source: str,
     retries: int = 3,
+    retry_on_errors: bool = False,
 ) -> httpx.Response:
-    """Retry HTTP request with exponential backoff on 429 responses.
+    """Retry HTTP request with exponential backoff on 429 responses or errors.
 
     Args:
         fn: Async callable that returns an httpx.Response
         source: API source name for logging
         retries: Maximum number of retry attempts (default 3)
+        retry_on_errors: When True, also retry on 5xx responses and network
+            exceptions (httpx.HTTPStatusError, httpx.RequestError). Default False
+            preserves existing 429-only behavior.
 
     Returns:
         httpx.Response: The final response (may still be 429 if all retries exhausted)
+
+    Raises:
+        httpx.RequestError: When retry_on_errors=True and all retries are exhausted
+            due to network failures.
     """
     import asyncio
 
-    response = await fn()
-    for attempt in range(1, retries + 1):
-        if response.status_code != 429:
-            return response
-        delay = 2 ** (attempt - 1)  # 1, 2, 4 seconds
-        logger.warning(
-            "[%s] Rate limited (429), retry %d/%d in %ds",
-            source,
-            attempt,
-            retries,
-            delay,
-        )
-        await asyncio.sleep(delay)
+    if not retry_on_errors:
+        # Original behavior: retry only on 429
         response = await fn()
-    return response  # Return last response; handle_api_response raises APIRateLimitError
+        for attempt in range(1, retries + 1):
+            if response.status_code != 429:
+                return response
+            delay = 2 ** (attempt - 1)  # 1, 2, 4 seconds
+            logger.warning(
+                "[%s] Rate limited (429), retry %d/%d in %ds",
+                source,
+                attempt,
+                retries,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            response = await fn()
+        return response  # Return last response; handle_api_response raises APIRateLimitError
+
+    # Extended behavior: retry on 429, 5xx, and network exceptions
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            response = await fn()
+        except httpx.RequestError as exc:
+            last_exc = exc
+            if attempt < retries:
+                delay = 2 ** attempt  # 1, 2, 4 seconds
+                logger.warning(
+                    "[%s] Network error (attempt %d/%d), retrying in %ds: %s",
+                    source,
+                    attempt + 1,
+                    retries,
+                    delay,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+                continue
+            raise
+
+        if response.status_code in (429,) or 500 <= response.status_code <= 599:
+            if attempt < retries:
+                delay = 2 ** attempt  # 1, 2, 4 seconds
+                logger.warning(
+                    "[%s] HTTP %d (attempt %d/%d), retrying in %ds",
+                    source,
+                    response.status_code,
+                    attempt + 1,
+                    retries,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+
+        return response
+
+    # Should not be reached, but satisfy type checker
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError(f"[{source}] retry_with_backoff exhausted without result")

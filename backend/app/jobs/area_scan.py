@@ -7,6 +7,7 @@ import uuid
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TypeVar
 
 import httpx
 from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
@@ -28,6 +29,7 @@ from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
+from app.services.parcel_addressing import MIN_BUILDING_OVERLAP_M2, reverse_geocode_rd_point
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
@@ -43,12 +45,13 @@ logger = logging.getLogger(__name__)
 WMS_CONCURRENCY = 15
 # Concurrent reverse geocode requests
 REVERSE_GEOCODE_CONCURRENCY = 10
-# Resolve addresses for all ranked parcels up to this cap.
-# For very large scans, we still prioritize top-scoring parcels to keep runtime bounded.
-MAX_ADDRESS_LOOKUPS = 5000
+# PostgreSQL/asyncpg hard-limits bind parameters to 32767 per statement.
+# A scan_result insert uses 5 bind params per row, so stay well below the ceiling.
+SCAN_RESULT_INSERT_BATCH_SIZE = 5000
 
 locatieserver = PDOKLocatieserver()
 pdok_cadastral_client = PDOKCadastralClient()
+T = TypeVar("T")
 
 
 @dataclass(slots=True)
@@ -59,6 +62,7 @@ class BagSpatialIndex:
     geometries: list[BaseGeometry]
     bouwjaren: list[int | None]
     statuses: list[str | None]
+    representative_points: list[tuple[float, float]]
 
 
 def _extract_first_coordinate_pair(geometry: dict | None) -> tuple[float, float] | None:
@@ -116,6 +120,13 @@ def _parse_float(value: object) -> float | None:
     return None
 
 
+def _chunk_rows(rows: list[T], size: int) -> list[list[T]]:
+    """Split a list into fixed-size chunks for bounded bulk inserts."""
+    if size <= 0:
+        raise ValueError("Chunk size must be positive")
+    return [rows[i:i + size] for i in range(0, len(rows), size)]
+
+
 def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
     """Build a STRtree for BAG building footprints to cross-reference parcels."""
     geometries: list[BaseGeometry] = []
@@ -152,24 +163,30 @@ def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
         geometries=geometries,
         bouwjaren=bouwjaren,
         statuses=statuses,
+        representative_points=[
+            (float(geom.representative_point().x), float(geom.representative_point().y))
+            for geom in geometries
+        ],
     )
 
 
 def _derive_bag_attributes_for_parcel(
     parcel_geometry: BaseGeometry,
     bag_index: BagSpatialIndex | None,
-) -> tuple[bool, int | None, str | None]:
+) -> tuple[bool, int | None, str | None, tuple[float, float] | None]:
     """Derive parcel-level BAG attributes from intersecting building footprints."""
     if bag_index is None:
-        return False, None, None
+        return False, None, None, None
 
     candidate_indices = bag_index.tree.query(parcel_geometry)
     if len(candidate_indices) == 0:
-        return False, None, None
+        return False, None, None, None
 
     intersect_count = 0
     matched_bouwjaren: list[int] = []
     matched_statuses: list[str] = []
+    best_address_point: tuple[float, float] | None = None
+    best_overlap_area = -1.0
 
     iterable_indices = (
         candidate_indices.tolist()
@@ -181,7 +198,13 @@ def _derive_bag_attributes_for_parcel(
         bag_geom = bag_index.geometries[idx]
         if not bag_geom.intersects(parcel_geometry):
             continue
+        overlap_area = bag_geom.intersection(parcel_geometry).area
+        if overlap_area < MIN_BUILDING_OVERLAP_M2:
+            continue
         intersect_count += 1
+        if overlap_area > best_overlap_area:
+            best_overlap_area = overlap_area
+            best_address_point = bag_index.representative_points[idx]
 
         bouwjaar = bag_index.bouwjaren[idx]
         if isinstance(bouwjaar, int) and bouwjaar > 0:
@@ -192,14 +215,14 @@ def _derive_bag_attributes_for_parcel(
             matched_statuses.append(status)
 
     if intersect_count == 0:
-        return False, None, None
+        return False, None, None, None
 
     bouwjaar_value = min(matched_bouwjaren) if matched_bouwjaren else None
     pand_status_value = None
     if matched_statuses:
         pand_status_value = Counter(matched_statuses).most_common(1)[0][0]
 
-    return True, bouwjaar_value, pand_status_value
+    return True, bouwjaar_value, pand_status_value, best_address_point
 
 
 async def area_scan_job(
@@ -312,7 +335,6 @@ async def area_scan_job(
                 f"({len(features)} parcels, WMS concurrency={WMS_CONCURRENCY})"
             )
 
-            bag_features: list[dict] = []
             try:
                 bag_features = await bag_wfs_client.get_panden_in_bbox(
                     scan.bbox_minx,
@@ -322,10 +344,25 @@ async def area_scan_job(
                     http_client,
                 )
             except Exception as e:
-                logger.warning(
-                    f"Scan {scan_id}: BAG cross-reference unavailable (continuing): {e}"
+                logger.error(
+                    "Scan %s: BAG WFS fetch failed after retries, aborting scan: %s",
+                    scan_id, e,
                 )
-                bag_features = []
+                scan.status = "failed"
+                scan.error_message = f"BAG WFS fetch failed: {e}"
+                scan.error_detail = {
+                    "stage": "bag_wfs_fetch",
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "bbox": (
+                        f"{scan.bbox_minx},{scan.bbox_miny},"
+                        f"{scan.bbox_maxx},{scan.bbox_maxy}"
+                    ),
+                }
+                session.add(scan)
+                await session.flush()
+                await session.commit()
+                return {"scan_id": scan_id, "status": "failed", "error": f"BAG WFS: {e}"}
 
             bag_index = _build_bag_spatial_index(bag_features)
             bestemmingen_list = await _batch_fetch_bestemmingen(features, http_client)
@@ -348,7 +385,7 @@ async def area_scan_job(
             await session.commit()
 
             failed_count = 0
-            # Collect (parcel + score + insights + centroid) for ranking/persistence
+            # Collect (parcel + score + insights + address lookup point) for ranking/persistence
             scored_parcels: list[
                 tuple[
                     ParcelCache,
@@ -427,23 +464,17 @@ async def area_scan_job(
             # Persist ALL scored parcels so users can inspect full wijk potential.
             all_ranked = scored_sorted
 
-            # Resolve addresses for all ranked parcels in normal wijk scans.
-            # For very large scans, keep a bounded prioritized subset.
-            if len(all_ranked) <= MAX_ADDRESS_LOOKUPS:
-                address_targets = all_ranked
-                address_strategy = "all-ranked"
-            else:
-                prioritized = [
-                    p for p in scored_sorted if p[1] >= QUALIFICATION_THRESHOLD
-                ][:MAX_QUALIFYING]
-                address_targets = prioritized if prioritized else scored_sorted[:MAX_ADDRESS_LOOKUPS]
-                address_strategy = "priority-capped"
+            # Data quality wins here: for wijk scans we resolve addresses for the
+            # full ranked set. Empty parcels have no BAG-based lookup point and
+            # are skipped cheaply by _batch_resolve_addresses.
+            address_targets = all_ranked
+            address_strategy = "all-ranked"
 
             logger.info(
                 f"Scan {scan_id}: ranked {len(all_ranked)} parcels total; "
                 f"address-targets {len(address_targets)} "
                 f"(strategy={address_strategy}, threshold={QUALIFICATION_THRESHOLD}, "
-                f"priority_cap={MAX_QUALIFYING}, max_lookups={MAX_ADDRESS_LOOKUPS})"
+                f"priority_cap={MAX_QUALIFYING})"
             )
 
             if all_ranked:
@@ -496,10 +527,18 @@ async def area_scan_job(
                             },
                         }
                     )
-                stmt = pg_insert(ScanResult).values(ranked_values).on_conflict_do_nothing(
-                    index_elements=["scan_id", "parcel_id"]
-                )
-                await session.execute(stmt)
+                for ranked_batch in _chunk_rows(
+                    ranked_values,
+                    SCAN_RESULT_INSERT_BATCH_SIZE,
+                ):
+                    stmt = (
+                        pg_insert(ScanResult)
+                        .values(ranked_batch)
+                        .on_conflict_do_nothing(
+                            index_elements=["scan_id", "parcel_id"]
+                        )
+                    )
+                    await session.execute(stmt)
 
             await session.flush()
             await session.commit()
@@ -529,6 +568,50 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
+            # ── Coverage validation ──
+            parcels_with_buildings = sum(1 for p, *_ in scored_parcels if p.has_pand)
+            total_parcels = len(scored_parcels)
+            coverage_ratio = (
+                parcels_with_buildings / total_parcels if total_parcels > 0 else 0.0
+            )
+
+            # Address resolution: of parcels with buildings, how many got an address?
+            parcels_with_address = sum(
+                1 for p, *_ in scored_parcels if p.has_pand and p.address
+            )
+            address_resolution_ratio = (
+                parcels_with_address / parcels_with_buildings
+                if parcels_with_buildings > 0
+                else 0.0
+            )
+
+            scan.coverage_ratio = coverage_ratio
+            scan.address_resolution_ratio = address_resolution_ratio
+
+            # Warn on suspiciously low building coverage (>90% has_pand=false)
+            if total_parcels > 0 and coverage_ratio < 0.10:
+                logger.warning(
+                    "Scan %s [%s]: suspiciously low building coverage: %.1f%% "
+                    "(%d/%d parcels have buildings). BAG data may be incomplete.",
+                    scan_id, scan.wijk_naam or "unknown",
+                    coverage_ratio * 100, parcels_with_buildings, total_parcels,
+                )
+
+            # Warn on low address resolution (>50% of building-parcels unresolved)
+            if parcels_with_buildings > 0 and address_resolution_ratio < 0.50:
+                logger.warning(
+                    "Scan %s [%s]: low address resolution: %.1f%% "
+                    "(%d/%d parcels with buildings have addresses).",
+                    scan_id, scan.wijk_naam or "unknown",
+                    address_resolution_ratio * 100, parcels_with_address, parcels_with_buildings,
+                )
+
+            # Set status to completed_with_warnings if thresholds breached
+            has_coverage_warning = total_parcels > 0 and coverage_ratio < 0.10
+            has_address_warning = (
+                parcels_with_buildings > 0 and address_resolution_ratio < 0.50
+            )
+
             # ── Phase 6: Project — auto-create wijk project (95-100%) ──
             scan.current_phase = "finalizing"
             session.add(scan)
@@ -541,7 +624,11 @@ async def area_scan_job(
                 )
                 scan.project_id = project.id
 
-            scan.status = "completed"
+            scan.status = (
+                "completed_with_warnings"
+                if (has_coverage_warning or has_address_warning)
+                else "completed"
+            )
             scan.completed_at = datetime.utcnow()
             scan.progress_pct = 100
             scan.parcels_failed = failed_count
@@ -684,7 +771,7 @@ async def _upsert_parcel_cache(
         bag_index: Optional BAG building spatial index for has_pand/bouwjaar/status
 
     Returns:
-        Tuple of (ParcelCache entry, centroid_xy in RD coords or None)
+        Tuple of (ParcelCache entry, BAG-based address lookup point in RD coords or None)
     """
     properties = feature.get("properties", {})
     if not isinstance(properties, dict):
@@ -720,6 +807,7 @@ async def _upsert_parcel_cache(
 
     area_m2 = None
     centroid_xy: tuple[float, float] | None = None
+    address_lookup_xy: tuple[float, float] | None = None
     source_srid = 28992
     parcel_geom_shape: BaseGeometry | None = None
     try:
@@ -742,7 +830,7 @@ async def _upsert_parcel_cache(
     bouwjaar = None
     pand_status = None
     if parcel_geom_shape is not None:
-        has_pand, bouwjaar, pand_status = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_lookup_xy = _derive_bag_attributes_for_parcel(
             parcel_geom_shape,
             bag_index,
         )
@@ -791,7 +879,7 @@ async def _upsert_parcel_cache(
         session.add(parcel)
 
     await session.flush()
-    return parcel, centroid_xy
+    return parcel, address_lookup_xy
 
 
 async def _batch_resolve_addresses(
@@ -805,6 +893,9 @@ async def _batch_resolve_addresses(
     Usually runs for all ranked parcels in a wijk scan. For very large scans,
     caller can pass a capped prioritized subset.
     Uses PDOK Locatieserver /reverse with RD coordinates.
+    The lookup point should come from an intersecting BAG building footprint.
+    Parcels without a BAG building keep address=None to avoid assigning the
+    nearest street address to a neighboring empty parcel.
 
     Args:
         parcels_with_centroids: List of (parcel, centroid_xy) tuples
@@ -817,7 +908,7 @@ async def _batch_resolve_addresses(
         if centroid is None:
             return
         async with semaphore:
-            address = await locatieserver.reverse(centroid[0], centroid[1], client)
+            address = await reverse_geocode_rd_point(centroid, client)
             normalized = address.strip() if isinstance(address, str) else None
             if normalized:
                 parcel.address = normalized

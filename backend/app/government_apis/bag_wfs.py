@@ -30,7 +30,7 @@ import logging
 
 import httpx
 
-from app.government_apis.base import handle_api_response
+from app.government_apis.base import handle_api_response, retry_with_backoff
 from app.government_apis.rate_limiter import bag_wfs_limiter
 
 logger = logging.getLogger(__name__)
@@ -104,15 +104,17 @@ class BAGWFSClient:
                 "startIndex": start_index,
             }
 
-            # Rate limit each page request
-            async with bag_wfs_limiter:
-                logger.debug(
-                    f"BAG WFS: fetching page {page_num} (startIndex={start_index})"
-                )
-                response = await client.get(
-                    self.BASE_URL, params=params, timeout=30.0
-                )
-                data = handle_api_response(response, source="bag-wfs")
+            # Rate limit + retry each page request
+            logger.debug("BAG WFS: page %d fetch with retry", page_num)
+
+            async def _fetch_page(_params: dict = params) -> httpx.Response:
+                async with bag_wfs_limiter:
+                    return await client.get(self.BASE_URL, params=_params, timeout=30.0)
+
+            response = await retry_with_backoff(
+                _fetch_page, source="bag-wfs", retries=3, retry_on_errors=True,
+            )
+            data = handle_api_response(response, source="bag-wfs")
 
             features = data.get("features", [])
             all_features.extend(features)
