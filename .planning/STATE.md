@@ -94,9 +94,9 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-28T12:28:47Z
-**Stopped At:** Completed 62-02-PLAN.md (force-mode rescan + summary table). v9.0 roadmap planned 2026-03-01.
-**Resume File:** .planning/phases/62-scan-pipeline-reliability/62-02-SUMMARY.md
+**Last Session:** 2026-02-28T23:36:17.687Z
+**Stopped At:** Phase 67 context gathered
+**Resume File:** .planning/phases/67-wkb-classification-engine/67-CONTEXT.md
 
 **Next Action:** Run `/gsd:execute-phase 63` to continue v8.0.
 
