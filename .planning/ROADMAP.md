@@ -2,10 +2,11 @@
 
 ## Milestones
 
+- 🚧 **v8.0 Client Demo Readiness** -- Phases 62-66 (in progress)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
 - ✅ **v7.1 Workspace Productization** -- Phase 58 (shipped 2026-02-27)
-- 🚧 **v7.0 Deep Property Data** -- Phases 52-56 (in progress)
 - ✅ **v7.05 Codebase Globalization** -- Phase 57 (shipped 2026-02-26)
+- ✅ **v7.0 Deep Property Data** -- Phases 52-56 (shipped 2026-02-25)
 - ✅ **v6.0 Meldingen Intelligence** -- Phases 47-51 (shipped 2026-02-23)
 - ✅ **v5.1 Data Presentation Overhaul** -- Phases 42-46 (shipped 2026-02-22)
 - ✅ **v5.0 Scan Intelligence** -- Phases 37-41 (shipped 2026-02-20)
@@ -20,97 +21,144 @@
 
 ## Phases
 
-### v7.0 Deep Property Data (Phases 52-56)
+### v8.0 Client Demo Readiness (Phases 62-66)
 
-**Goal:** Enrich property reports with WOZ-waarde, energielabel, BRK ownership, and detailed RCE monument data from Dutch government APIs.
+**Milestone Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
 
-- [x] **Phase 52: Schema & Config Foundation** — Pydantic models for EnergyLabel, WOZData, BRKOwnership; PropertyReportResponse extended with 3 new Optional sections; cache TTL entries; EP_ONLINE_API_KEY setting; rate limiter config *(completed 2026-02-24)*
-  - Requirements: INF-01, INF-02, INF-03, INF-04, INF-05
-  - Risk: None (pure type definitions, zero external dependencies)
-  - **Plans:** 2 plans (Wave 1 parallel)
-    - [x] 52-01-PLAN.md — Pydantic schemas (EnergyLabel, WOZData, BRKOwnership, RCEMonumentDetail) + PropertyReportResponse extension
-    - [x] 52-02-PLAN.md — Cache TTL entries, EP_ONLINE_API_KEY setting, rate limiter singletons
+- [ ] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill
+- [ ] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage
+- [ ] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements
+- [ ] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section
+- [ ] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels
 
-- [x] **Phase 53: API Clients** — EP-Online V5 client (by VBO ID, graceful 404); WOZ waardeloket client (low-confidence flag); RCE Linked Data detail method (by rijksmonumentnummer); new rate limiters *(completed 2026-02-24)*
-  - Requirements: NRG-01, NRG-03, RCE-01, RCE-03, RCE-04, WOZ-01, WOZ-04
-  - Risk: EP-Online V5 field names need live validation; WOZ access path decision required
-  - Depends on: Phase 52 (schemas imported by clients)
-  - **Plans:** 3 plans (Wave 1: 2 parallel, Wave 2: 1 sequential)
-    - [x] 53-01-PLAN.md — EP-Online V5 client + WOZ Waardeloket client + WOZ rate limiter *(completed 2026-02-24)*
-    - [x] 53-02-PLAN.md — RCE Linked Data client with JSON-LD parsing + live API validation *(completed 2026-02-24)*
-    - [x] 53-03-PLAN.md — Unit tests for all three clients (22 test cases) *(completed 2026-02-24)*
+## Phase Details
 
-- [x] **Phase 54: BRK Wiring & No-Cache Enforcement** — Wire existing BRK client into aggregator as Step 2b; enforce never-cache constraint; strip brk_ownership before JSONB save; graceful degradation when unconfigured *(completed 2026-02-24)*
-  - Requirements: BRK-01, BRK-04, BRK-05
-  - Risk: BRK identificatie format mapping needs PDOK field validation
-  - Depends on: Phase 52 (BRK schema)
-  - **Plans:** 2 plans (Wave 1: 1 plan, Wave 2: 1 plan)
-    - [x] 54-01-PLAN.md — Schema evolution (three-state BRKOwnership, PerceelOwnership, CadastralParcel.identificatie) + aggregator Step 2b wiring *(completed 2026-02-24)*
-    - [x] 54-02-PLAN.md — Never-cache enforcement (strip before save, re-fetch on view) + integration tests *(completed 2026-02-24)*
+### Phase 62: Scan Pipeline Reliability
+**Goal**: Users can trust that area scans produce complete, correct data with no silent data loss
+**Depends on**: Nothing (prerequisite for all other v8.0 phases)
+**Requirements**: SCAN-01, SCAN-02, SCAN-03
+**Success Criteria** (what must be TRUE):
+  1. Running a wijk scan where BAG WFS fails causes a retried fetch with backoff, not silent continuation with empty building data
+  2. After a scan completes, a warning is visible in logs/scan output when more than 90% of parcels have has_pand=false (suspiciously low coverage)
+  3. Re-running a wijk scan with --force-all overwrites existing ScanResult rows and repopulates bouwjaar, address, and pand_status fields correctly
+**Plans**: TBD
 
-- [x] **Phase 55: Aggregator Integration** — Wire EP-Online + WOZ + RCE detail into parallel gather; two-step monument enrichment; update completeness_score denominator (6→9) *(completed 2026-02-24)*
-  - Requirements: AGG-01, AGG-02, AGG-03, AGG-04
-  - Risk: BRK Step 2b data dependency on Step 2a cadastral output
-  - Depends on: Phase 53, Phase 54 (all clients ready)
-  - **Plans:** 2 plans (Wave 1 parallel)
-    - [x] 55-01-PLAN.md — Monument two-step enrichment (PDOK spatial → RCE Linked Data detail) *(completed 2026-02-24)*
-    - [x] 55-02-PLAN.md — EP-Online + WOZ wiring into Step 2a + completeness score update + AGG-03 verification *(completed 2026-02-24)*
+Plans:
+- [ ] 62-01: BAG WFS retry logic + coverage ratio validation
+- [ ] 62-02: --force-all backfill mode for existing scan data
 
-- [ ] **Phase 56: Frontend Sections** — EnergieLabelSection (EU color badge, expiry, monument warning); WOZSection (value + peildatum + per-m²); EigendomSection (owner type, rights, hypotheek, "actueel opgevraagd"); enhanced MonumentSection (collapsible redengevende omschrijving, functie, bouwperiode)
-  - Requirements: NRG-02, NRG-04, NRG-05, WOZ-02, WOZ-03, WOZ-05, BRK-02, BRK-03, BRK-06, RCE-02
-  - Depends on: Phase 55 (backend returns data)
-  - **Plans:** 3 plans (Wave 1: 1 plan, Wave 2: 1 plan, Wave 3: 1 plan)
-    - [ ] 56-01-PLAN.md — TypeScript types + EnergieLabelSection + WOZSection
-    - [ ] 56-02-PLAN.md — EigendomSection + enhanced MonumentSection with RCE detail
-    - [ ] 56-03-PLAN.md — Section reordering + 6-card metrics grid + PropertyDetailPanel condensed sections
+### Phase 63: Venlo Data Completeness
+**Goal**: Venlo gemeente has complete, validated scan data across all 21 wijken ready for demo
+**Depends on**: Phase 62 (pipeline must produce correct data before re-running)
+**Requirements**: DATA-01, DATA-02, DATA-03
+**Success Criteria** (what must be TRUE):
+  1. All 21 Venlo wijken appear in the scan history with parcel counts matching expected Venlo density
+  2. Parcels that contain BAG buildings show bouwjaar populated (not null) for all scanned Venlo wijken
+  3. Parcels with buildings show a resolved Dutch address via PDOK reverse geocoding, not just perceel ID
+  4. Parcel opportunity scores reflect actual BAG pand_status (in_gebruik parcels score lower, leeg/buiten_gebruik score higher)
+**Plans**: TBD
 
-### v7.05 Codebase Globalization (Phase 57)
+Plans:
+- [ ] 63-01: Venlo full re-scan execution (21 wijken) + data validation script
 
-**Goal:** Consolidate duplicated frontend logic into shared helpers, primitives, hooks, and guardrails before continuing dedicated workspace UX work.
+### Phase 64: Map Visualization
+**Goal**: The map gives users a clear, accurate spatial picture of Venlo's development opportunities
+**Depends on**: Phase 63 (score colors must reflect corrected data)
+**Requirements**: MAP-01, MAP-02, MAP-03
+**Success Criteria** (what must be TRUE):
+  1. A "BAG Panden" toggle appears in the map layer catalog and, when enabled, draws building footprint outlines over parcels
+  2. Parcel score colors on the map accurately reflect opportunity level using the corrected post-backfill data (vacant land is green/amber, occupied buildings are grey)
+  3. Map labels are readable at default zoom for Venlo wijken with no overlapping text or element clutter
+**Plans**: TBD
 
-- [x] **Phase 57: Codebase Globalization** — shared geo/map helper modules, shared metric/search primitives, shared GeoJSON/stats hooks, and anti-regression checks *(completed 2026-02-26)*
-  - Depends on: Stable v7.0 UI behavior (Phase 56 work-in-progress)
-  - **Plans:** 4 plans (Wave 1-4 sequential)
-    - [x] 57-01-PLAN.md — Shared normalizers + wijk bbox resolver + map navigation builders *(completed 2026-02-26)*
-    - [x] 57-02-PLAN.md — Shared `MetricChip` + shared `SearchInput` primitives *(completed 2026-02-26)*
-    - [x] 57-03-PLAN.md — Shared GeoJSON query hooks + municipality workspace selectors *(completed 2026-02-26)*
-    - [x] 57-04-PLAN.md — Guardrails, verification, and UX handoff *(completed 2026-02-26)*
+Plans:
+- [ ] 64-01: BAG building footprints map layer (toggleable)
+- [ ] 64-02: Score color accuracy verification + map clarity improvements
 
-### v7.1 Workspace Productization (Phase 58)
+### Phase 65: Report Polish
+**Goal**: Reports are presentable for client demonstration with clean layout and working PDF export
+**Depends on**: Phase 63 (report data must be correct before polishing presentation)
+**Requirements**: RPT-01, RPT-02, RPT-03, RPT-04
+**Success Criteria** (what must be TRUE):
+  1. Opening a property report shows all sections in a consistent, visually clean layout with no rendering artifacts or layout breaks in the v7.x sections (WOZ, energielabel, BRK, buildability, Wkb, permit precedents)
+  2. Clicking "Download PDF" generates a PDF that contains all report sections in readable format with correct Dutch typography
+  3. Reports for Wkb-plichtige properties show an "Actie vereist" section listing concrete warnings (e.g., Wkb-plichtig, asbestrisico bij bouwjaar <1994, vergunningsstatus)
+  4. The "Actie vereist" section is absent (or empty) for parcels with no actionable warnings, keeping clean reports clean
+**Plans**: TBD
 
-**Goal:** Build a scalable, role-aware workspace for municipality and wijk operations, starting with vastgoedontwikkelaar workflows while keeping one codebase.
+Plans:
+- [ ] 65-01: Report layout audit + v7.x section rendering fixes
+- [ ] 65-02: PDF export audit + fix
+- [ ] 65-03: Actie vereist section (actionable warnings from existing data)
 
-- [x] **Phase 58: Workspace Productization** — role-aware shell foundation, scoped navigation hardening, operational UX upgrades, map-layer execution flow, and monetization-ready handoff *(completed 2026-02-27)*
-  - Depends on: Phase 57 shared foundations
-  - **Plans:** 5 plans (Wave 1-5 sequential)
-    - [x] 58-01-PLAN.md — Workspace role context + side-rail switcher + first role-aware copy *(completed 2026-02-27)*
-    - [x] 58-02-PLAN.md — Scoped municipality/wijk navigation contract + URL-state hardening *(completed 2026-02-27)*
-    - [x] 58-03-PLAN.md — Meldingen/Rapporten operational UX under workspace scope *(completed 2026-02-27)*
-    - [x] 58-04-PLAN.md — Canonical parcel map workflow + extensible layer model *(completed 2026-02-27)*
-    - [x] 58-05-PLAN.md — Monitoring/report idempotency hardening + milestone verification handoff *(completed 2026-02-27)*
+### Phase 66: Results Table Noise Reduction
+**Goal**: The results table surfaces genuine development opportunities, not the full undifferentiated parcel list
+**Depends on**: Phase 63 (results must reflect corrected data)
+**Requirements**: RES-01, RES-02
+**Success Criteria** (what must be TRUE):
+  1. The default results view shows parcels pre-filtered to likely development opportunities (residential zoning, no recent permits, has vacant land or old buildings), not all parcels from the scan
+  2. Results are sorted by opportunity score descending by default, so the highest-value parcels appear at the top without user interaction
+**Plans**: TBD
 
-### v7.2 Developer Dossier Intelligence (Phases 59-61)
-
-**Goal:** Turn reports into decision-grade dossiers for vastgoedontwikkelaars (and later kwaliteitsborgers) with concrete buildability, compliance, and permit benchmark intelligence.
-
-- [x] **Phase 59: Bouwruimte Delta** — deterministic buildability envelope per perceel (huidig vs toegestaan), incl. confidence and missing-data reasons *(completed 2026-02-27)*
-  - Depends on: Phase 58 workspace baseline + existing zoning/BAG parcel flows
-  - **Plans:** 1 plan (Wave 1)
-    - [x] 59-01-PLAN.md — Buildability Delta contract + calculation pipeline + report/map presentation *(completed 2026-02-27)*
-
-- [x] **Phase 60: Wkb Startdossier Precheck** — Layer A automatic precheck in report; Layer B optional refinement input (not mandatory wizard) *(completed 2026-02-27)*
-  - Depends on: Phase 59 buildability signals
-  - **Plans:** 1 plan (Wave 1)
-    - [x] 60-01-PLAN.md — Wkb rules engine + explainable output + optional refinement contract *(completed 2026-02-27)*
-
-- [x] **Phase 61: Vergunning Precedenten Benchmark** — municipality-level precedent outcomes and expected timelines for similar permit types *(completed 2026-02-27)*
-  - Depends on: Phase 59 and existing change-monitoring dataset (Phase 26)
-  - **Plans:** 1 plan (Wave 1)
-    - [x] 61-01-PLAN.md — Comparable permit cohorting + throughput/outcome metrics + report integration *(completed 2026-02-27)*
-
-Opportunity intelligence thesis remains tracked in `.planning/quick/4-opportunity-thesis-gsd/4-PLAN.md`.
+Plans:
+- [ ] 66-01: Default filter preset + default sort order for results table
 
 ---
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 62. Scan Pipeline Reliability | 0/2 | Not started | - |
+| 63. Venlo Data Completeness | 0/1 | Not started | - |
+| 64. Map Visualization | 0/2 | Not started | - |
+| 65. Report Polish | 0/3 | Not started | - |
+| 66. Results Table Noise Reduction | 0/1 | Not started | - |
+
+---
+
+<details>
+<summary>✅ v7.2 Developer Dossier Intelligence (Phases 59-61) -- SHIPPED 2026-02-27</summary>
+
+- [x] Phase 59: Bouwruimte Delta (1/1 plan) -- buildability envelope per perceel, confidence, missing-data reasons
+- [x] Phase 60: Wkb Startdossier Precheck (1/1 plan) -- Layer A auto-precheck, Layer B optional refinement contract
+- [x] Phase 61: Vergunning Precedenten Benchmark (1/1 plan) -- municipality-level precedent outcomes and expected timelines
+
+**3 plans, 3 requirements, 3 commits**
+**Archive:** `.planning/milestones/v7.2-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v7.1 Workspace Productization (Phase 58) -- SHIPPED 2026-02-27</summary>
+
+- [x] Phase 58: Workspace Productization (5/5 plans) -- role-aware shell, URL-state hardening, operational UX, canonical parcel flow, monitoring handoff
+
+**5 plans**
+**Archive:** `.planning/milestones/v7.1-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v7.05 Codebase Globalization (Phase 57) -- SHIPPED 2026-02-26</summary>
+
+- [x] Phase 57: Codebase Globalization (4/4 plans) -- shared geo/map helpers, metric/search primitives, GeoJSON/stats hooks, anti-regression checks
+
+</details>
+
+<details>
+<summary>✅ v7.0 Deep Property Data (Phases 52-56) -- SHIPPED 2026-02-25</summary>
+
+- [x] Phase 52: Schema & Config Foundation (2/2 plans) -- Pydantic models, PropertyReportResponse extension, cache TTL entries
+- [x] Phase 53: API Clients (3/3 plans) -- EP-Online V5, WOZ Waardeloket, RCE Linked Data, rate limiters + tests
+- [x] Phase 54: BRK Wiring & No-Cache Enforcement (2/2 plans) -- BRK aggregator wiring, never-cache constraint, integration tests
+- [x] Phase 55: Aggregator Integration (2/2 plans) -- EP-Online + WOZ + RCE in parallel gather, completeness score 6->9
+- [x] Phase 56: Frontend Sections (3/3 plans) -- EnergieLabelSection, WOZSection, EigendomSection, enhanced MonumentSection
+
+**12 plans, 21 requirements**
+**Archive:** `.planning/milestones/v7.0-ROADMAP.md`
+
+</details>
 
 <details>
 <summary>✅ v6.0 Meldingen Intelligence (Phases 47-51) -- SHIPPED 2026-02-23</summary>
@@ -131,7 +179,7 @@ Opportunity intelligence thesis remains tracked in `.planning/quick/4-opportunit
 
 - [x] Phase 42: Theme Consistency (2/2 plans) -- on-accent token, FOUC prevention, semantic token sweep
 - [x] Phase 43: Gemeente Card Navigation (2/2 plans) -- SVG boundary silhouettes, GeoJSON projection, card grid
-- [x] Phase 44: Wijk Cards and Drill-Down (2/2 plans) -- WijkCard, WijkCardGrid, gemeente→wijk navigation
+- [x] Phase 44: Wijk Cards and Drill-Down (2/2 plans) -- WijkCard, WijkCardGrid, gemeente->wijk navigation
 - [x] Phase 45: URL State + Gemeente Detail View (2/2 plans) -- validateSearch, DrilldownBreadcrumb, GemeenteDetailView
 - [x] Phase 46: Wijk Detail View (2/2 plans) -- scan summary, ChangeTimeline, report list, 3-level breadcrumb
 
@@ -245,4 +293,4 @@ Opportunity intelligence thesis remains tracked in `.planning/quick/4-opportunit
 
 ---
 
-*Last updated: 2026-02-27 -- v7.2 (Phases 59-61) completed and shipped*
+*Last updated: 2026-02-28 -- v8.0 Client Demo Readiness roadmap created (Phases 62-66)*

@@ -65,27 +65,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SCAN-03 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| MAP-01 | — | Pending |
-| MAP-02 | — | Pending |
-| MAP-03 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
-| RPT-03 | — | Pending |
-| RPT-04 | — | Pending |
-| RES-01 | — | Pending |
-| RES-02 | — | Pending |
+| SCAN-01 | Phase 62 | Pending |
+| SCAN-02 | Phase 62 | Pending |
+| SCAN-03 | Phase 62 | Pending |
+| DATA-01 | Phase 63 | Pending |
+| DATA-02 | Phase 63 | Pending |
+| DATA-03 | Phase 63 | Pending |
+| MAP-01 | Phase 64 | Pending |
+| MAP-02 | Phase 64 | Pending |
+| MAP-03 | Phase 64 | Pending |
+| RPT-01 | Phase 65 | Pending |
+| RPT-02 | Phase 65 | Pending |
+| RPT-03 | Phase 65 | Pending |
+| RPT-04 | Phase 65 | Pending |
+| RES-01 | Phase 66 | Pending |
+| RES-02 | Phase 66 | Pending |
 
 **Coverage:**
 - v8.0 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 — traceability populated after roadmap creation*
