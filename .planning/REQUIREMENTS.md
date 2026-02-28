@@ -11,7 +11,7 @@ Requirements for making Venlo the showcase gemeente with complete data and polis
 
 - [x] **SCAN-01**: Scan pipeline retries BAG WFS fetch on failure instead of silently continuing with no building data
 - [x] **SCAN-02**: Scan pipeline validates BAG coverage ratio and warns if suspiciously low (>90% has_pand=false)
-- [ ] **SCAN-03**: Existing scan data can be backfilled by re-running a wijk scan with --force-all
+- [x] **SCAN-03**: Existing scan data can be backfilled by re-running a wijk scan with --force-all
 
 ### Data Completeness
 
@@ -67,7 +67,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SCAN-01 | Phase 62 Plan 01 | Complete |
 | SCAN-02 | Phase 62 Plan 01 | Complete |
-| SCAN-03 | Phase 62 | Pending |
+| SCAN-03 | Phase 62 | Complete |
 | DATA-01 | Phase 63 | Pending |
 | DATA-02 | Phase 63 | Pending |
 | DATA-03 | Phase 63 | Pending |

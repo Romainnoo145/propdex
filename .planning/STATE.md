@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 62 of 66 (Scan Pipeline Reliability)
-Plan: 1 of 2 complete
+Plan: 2 of 2 complete
 Status: In progress
-Last activity: 2026-02-28 — Plan 01 complete (BAG WFS retry + coverage tracking)
+Last activity: 2026-02-28 — Plan 02 complete (force-mode rescan + summary table)
 
-Progress: [█░░░░░░░░░] 11% (1/9 plans complete)
+Progress: [██░░░░░░░░] 22% (2/9 plans complete)
 
 ---
 
@@ -24,6 +24,7 @@ Progress: [█░░░░░░░░░] 11% (1/9 plans complete)
 
 **v8.0 Client Demo Readiness (In Progress)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
+- Phase 62 Plan 02: completed ~2min (force-mode clean-slate rescan + FORCE MODE log + WijkOutcome summary table)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
 - Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
@@ -53,6 +54,9 @@ Progress: [█░░░░░░░░░] 11% (1/9 plans complete)
 - retry_with_backoff: shared helper in base.py, wraps any async HTTP callable; 429-aware by default; retry_on_errors=True adds 5xx/network retry
 - BAG WFS abort-on-failure: area_scan_job sets status=failed + error_detail JSONB, returns early (no silent garbage data)
 - coverage_ratio + address_resolution_ratio tracked on AreaScan post-scan; completed_with_warnings when thresholds breached
+- --force-all clean-slate rescan: deletes ScanResult rows + clears coverage/address/error fields, prominently logs "FORCE MODE: Deleting N existing results for {wijk}"
+- WijkOutcome dataclass tracks per-wijk scan quality; _print_summary() prints OK/WARN/FAIL table after all wijken processed
+- Force-mode continue-on-failure: --force-all and --force-failed continue batch after individual wijk failure; normal mode still stops
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
 - text-on-accent: all amber/accent-background elements use this utility
 - Defined grey scale: only 100, 300, 400, 600, 700, 800, 850, 900, 950
@@ -82,12 +86,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-28T19:40:00Z
-**Stopped At:** Completed 62-01-PLAN.md (BAG WFS retry + coverage tracking)
-**Resume File:** .planning/phases/62-scan-pipeline-reliability/62-01-SUMMARY.md
+**Last Session:** 2026-02-28T12:28:47Z
+**Stopped At:** Completed 62-02-PLAN.md (force-mode rescan + summary table)
+**Resume File:** .planning/phases/62-scan-pipeline-reliability/62-02-SUMMARY.md
 
-**Next Action:** Run `/gsd:execute-phase 62` to continue with Plan 02.
+**Next Action:** Run `/gsd:execute-phase 62` to continue with next phase.
 
 ---
 
-*State updated: 2026-02-28 -- Phase 62 Plan 01 complete, BAG WFS scan pipeline reliability established*
+*State updated: 2026-02-28 -- Phase 62 Plan 02 complete, scan orchestrator has clean-slate force mode and operator summary table*

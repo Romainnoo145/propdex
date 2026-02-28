@@ -25,7 +25,7 @@
 
 **Milestone Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
 
-- [ ] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill
+- [x] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill (completed 2026-02-28)
 - [ ] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage
 - [ ] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements
 - [ ] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section
@@ -109,7 +109,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. Scan Pipeline Reliability | 1/2 | In progress | 2026-02-28 (plan 01) |
+| 62. Scan Pipeline Reliability | 2/2 | Complete   | 2026-02-28 |
 | 63. Venlo Data Completeness | 0/1 | Not started | - |
 | 64. Map Visualization | 0/2 | Not started | - |
 | 65. Report Polish | 0/3 | Not started | - |
