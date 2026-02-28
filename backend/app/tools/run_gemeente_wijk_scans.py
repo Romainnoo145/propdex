@@ -171,7 +171,7 @@ async def _build_queue(
     queue: list[WijkQueueItem] = []
     for wijk_naam in wijk_names:
         latest_scan = await _latest_scan_for_wijk(session_factory, org_id, gemeente_code, wijk_naam)
-        if latest_scan and latest_scan.status == "completed":
+        if latest_scan and latest_scan.status in {"completed", "completed_with_warnings"}:
             if force_all:
                 queue.append(WijkQueueItem(wijk_naam=wijk_naam, action="rescan", scan_id=str(latest_scan.id)))
                 continue
