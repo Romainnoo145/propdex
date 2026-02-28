@@ -1,63 +1,87 @@
-# Requirements: Propdex v8.0 — Client Demo Readiness
+# Requirements: Propdex v9.0 — Professional Marketplace
 
-**Defined:** 2026-02-28
+**Defined:** 2026-03-01
 **Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
+**Milestone Goal:** Transform Propdex from data analysis tool into lead generation platform, starting with kwaliteitsborgers (Wkb) as first vertical.
 
-## v8.0 Requirements
+## v9.0 Requirements
 
-Requirements for making Venlo the showcase gemeente with complete data and polished presentation for client PVP.
+Requirements for the kwaliteitsborger lead generation vertical — from Wkb classification through dossier generation to professional matching.
 
-### Scan Pipeline Reliability
+### Wkb Intelligence
 
-- [x] **SCAN-01**: Scan pipeline retries BAG WFS fetch on failure instead of silently continuing with no building data
-- [x] **SCAN-02**: Scan pipeline validates BAG coverage ratio and warns if suspiciously low (>90% has_pand=false)
-- [x] **SCAN-03**: Existing scan data can be backfilled by re-running a wijk scan with --force-all
+- [ ] **WKB-01**: User can see gevolgklasse classification (1/2/3) for any property in the report, labeled as "indicatief"
+- [ ] **WKB-02**: User can see asbest risk indicator based on bouwjaar (hoog: 1963-1993, middel: pre-1963, geen: post-1993) in the report
+- [ ] **WKB-03**: Verbouwing projects are flagged with "Wkb niet van toepassing" notice (Dec 2024 ministerial ruling)
+- [ ] **WKB-04**: Wkb classification excludes rijksmonumenten (monument status from existing RCE data)
 
-### Data Completeness
+### Bodemkwaliteit
 
-- [ ] **DATA-01**: All 21 Venlo wijken have complete scan data with bouwjaar populated for parcels with buildings
-- [ ] **DATA-02**: All parcels with buildings have resolved addresses via PDOK reverse geocoding
-- [ ] **DATA-03**: Parcel scoring accurately reflects BAG pand_status (in_gebruik vs leeg vs buiten_gebruik)
+- [ ] **BODEM-01**: System queries Bodemloket for soil contamination data at parcel coordinates
+- [ ] **BODEM-02**: Property report includes "Bodemkwaliteit" section showing contamination status and WBB dossier references
+- [ ] **BODEM-03**: Absent Bodemloket data displayed as "geen gegevens beschikbaar" (never "schone grond")
 
-### Map Visualization
+### Risicobeoordeling Dossier
 
-- [ ] **MAP-01**: BAG building footprints visible as toggleable map layer
-- [ ] **MAP-02**: Score colors accurately reflect opportunity level after data fix
-- [ ] **MAP-03**: Map visual clarity improved (readable labels, clear parcel boundaries, no overlapping elements)
+- [ ] **DOSSIER-01**: User can generate a "Risicobeoordeling Startdossier" PDF for any property
+- [ ] **DOSSIER-02**: Dossier includes: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, Wkb classificatie
+- [ ] **DOSSIER-03**: Dossier includes legal disclaimer (data is indicatief, assembled from public sources)
 
-### Report Polish
+### Lead Capture
 
-- [ ] **RPT-01**: Report layout and formatting polished for client presentation
-- [ ] **RPT-02**: All v7.x data sections (WOZ, energielabel, BRK, buildability, Wkb, permit precedents) render cleanly in report view
-- [ ] **RPT-03**: PDF export generates a presentable document with all report sections
-- [ ] **RPT-04**: Report includes "Actie vereist" section that surfaces actionable warnings based on existing data (Wkb-plichtig, asbestrisico bij bouwjaar <1994, vergunningsstatus)
+- [ ] **LEAD-01**: User sees "Schakel kwaliteitsborger in" CTA when property is Wkb-plichtig (GK1)
+- [ ] **LEAD-02**: User can submit a lead request with project details (type, omschrijving, gewenste startdatum)
+- [ ] **LEAD-03**: Lead request triggers email notification to matched kwaliteitsborger(s)
+- [ ] **LEAD-04**: Lead request includes the generated risicobeoordeling dossier as attachment
 
-### Results Table
+### Professional Directory
 
-- [ ] **RES-01**: Results table filters out noise to surface genuine development opportunities
-- [ ] **RES-02**: Default view prioritizes high-value parcels (vacant land, old buildings, residential zoning)
+- [ ] **DIR-01**: Admin can add kwaliteitsborger profiles (naam, bedrijf, werkgebied, gevolgklassen, contact)
+- [ ] **DIR-02**: Kwaliteitsborgers matched to leads based on werkgebied (gemeente) and gevolgklasse
+- [ ] **DIR-03**: Professional profiles are platform-wide (not tenant-isolated) with admin-only management
+- [ ] **DIR-04**: Professional profile links to TloKB public register for verification
+
+### Privacy & Consent
+
+- [ ] **AVG-01**: User gives explicit consent before contact data is shared (two-step consent screen)
+- [ ] **AVG-02**: Consent logged with timestamp, scope, and user identity for audit trail
+- [ ] **AVG-03**: Privacy policy section explains data sharing with professionals
+
+## v8.0 Requirements (In Progress)
+
+Previous milestone — Client Demo Readiness. Tracked in `.planning/ROADMAP.md` phases 62-66.
+
+- [x] **SCAN-01**: BAG WFS retry on failure
+- [x] **SCAN-02**: BAG coverage ratio validation
+- [x] **SCAN-03**: Force-all backfill mode
+- [ ] **DATA-01-03**: Venlo data completeness (Phase 63)
+- [ ] **MAP-01-03**: Map visualization polish (Phase 64)
+- [ ] **RPT-01-04**: Report polish (Phase 65)
+- [ ] **RES-01-02**: Results table noise reduction (Phase 66)
 
 ## Future Requirements
 
-Deferred to v9.0+ — Lead marketplace and professional workflow platform.
+Deferred to v10.0+ — expanding the marketplace beyond kwaliteitsborgers.
 
-- **LEAD-01**: Professional partner onboarding flow (kwaliteitsborgers, tekenaars, constructeurs, bodem/asbestonderzoekers, aannemers)
-- **LEAD-02**: Lead routing and notification system (qualified lead → matched professional)
-- **LEAD-03**: "Genereer startdossier Risicobeoordeling" one-click document generation for kwaliteitsborgers
-- **LEAD-04**: Partner dashboard with lead tracking and conversion metrics
-- **LEAD-05**: No cure, no pay billing model (€25-50 per contacted lead)
-- **LEAD-06**: User journey design: natural flow from data check → professional recommendation → offerte aanvraag
+- **VERT-01**: Additional professional verticals: bouwkundig tekenaars, constructeurs, asbest/bodem onderzoekers, aannemers
+- **VERT-02**: Professional self-registration and profile management
+- **PAY-01**: Credit system / per-lead billing (Stripe integration)
+- **PAY-02**: Monthly subscription plans for professionals
+- **API-01**: B2B API for large borgingspartijen (Woningborg, Kiwa)
+- **DASH-01**: Professional dashboard with lead tracking and conversion metrics
+- **PIPE-01**: Lead pipeline stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Lead marketplace / partner routing | v9.0+ — requires partner onboarding, billing, legal agreements |
-| Startdossier Risicobeoordeling PDF generation | v9.0+ — requires Wkb-specific document templates and partner workflow |
-| Professional partner dashboard | v9.0+ — separate user role and interface |
-| Payment/billing infrastructure | v9.0+ — no monetization in demo phase |
-| Bodemkwaliteit data integration | v9.0+ — requires new data source (RIVM/BRO) |
-| Non-Venlo gemeente data fixes | v8.0 focuses on Venlo showcase only |
+| Multiple professional verticals | v9.0 proves model with one vertical (kwaliteitsborgers) first |
+| Payment infrastructure | Handle billing manually; no Stripe/payment in v9.0 |
+| Professional self-registration | Admin-managed directory in v9.0; self-serve in v10.0 |
+| Open bidding / price comparison | Anti-pattern for kwaliteitsborger relationships (long-term, legally constrained) |
+| Automated TloKB verification | No public API; manual admin verification in v9.0 |
+| GK2/GK3 detailed classification | Not yet mandated as of 2026; GK1 only in v9.0 |
+| Gemeentelijk monument data | RCE rijksmonumenten only; gemeentelijke monumenten require per-gemeente integration |
 
 ## Traceability
 
@@ -65,27 +89,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | Phase 62 Plan 01 | Complete |
-| SCAN-02 | Phase 62 Plan 01 | Complete |
-| SCAN-03 | Phase 62 | Complete |
-| DATA-01 | Phase 63 | Pending |
-| DATA-02 | Phase 63 | Pending |
-| DATA-03 | Phase 63 | Pending |
-| MAP-01 | Phase 64 | Pending |
-| MAP-02 | Phase 64 | Pending |
-| MAP-03 | Phase 64 | Pending |
-| RPT-01 | Phase 65 | Pending |
-| RPT-02 | Phase 65 | Pending |
-| RPT-03 | Phase 65 | Pending |
-| RPT-04 | Phase 65 | Pending |
-| RES-01 | Phase 66 | Pending |
-| RES-02 | Phase 66 | Pending |
+| WKB-01 | — | Pending |
+| WKB-02 | — | Pending |
+| WKB-03 | — | Pending |
+| WKB-04 | — | Pending |
+| BODEM-01 | — | Pending |
+| BODEM-02 | — | Pending |
+| BODEM-03 | — | Pending |
+| DOSSIER-01 | — | Pending |
+| DOSSIER-02 | — | Pending |
+| DOSSIER-03 | — | Pending |
+| LEAD-01 | — | Pending |
+| LEAD-02 | — | Pending |
+| LEAD-03 | — | Pending |
+| LEAD-04 | — | Pending |
+| DIR-01 | — | Pending |
+| DIR-02 | — | Pending |
+| DIR-03 | — | Pending |
+| DIR-04 | — | Pending |
+| AVG-01 | — | Pending |
+| AVG-02 | — | Pending |
+| AVG-03 | — | Pending |
 
 **Coverage:**
-- v8.0 requirements: 15 total
-- Mapped to phases: 15
-- Unmapped: 0 ✓
+- v9.0 requirements: 21 total
+- Mapped to phases: 0
+- Unmapped: 21
 
 ---
-*Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 — traceability populated after roadmap creation*
+*Requirements defined: 2026-03-01*
+*Last updated: 2026-03-01 — initial definition*
