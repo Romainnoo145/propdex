@@ -158,7 +158,7 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-## Current Milestone: v8.0 Client Demo Readiness
+## Current Milestone: v8.0 Client Demo Readiness (In Progress)
 
 **Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
 
@@ -177,8 +177,28 @@ This is the ONE thing that must work. Everything else is secondary.
 - [ ] PDF export functional and presentable
 - [ ] Results table surfaces real opportunities with minimal noise
 
+## Next Milestone: v9.0 Professional Marketplace (Planned)
+
+**Goal:** Transform Propdex from a data analysis tool into a lead generation platform by connecting property intelligence to professional services — starting with kwaliteitsborgers (Wkb) as the first vertical.
+
+**Target features:**
+- Bodemloket API integration (soil contamination data at parcel level)
+- Wkb classification engine (gevolgklasse 1/2/3 determination based on building type and zoning)
+- Asbest risk indicator (bouwjaar-based flagging for pre-1994 properties)
+- Risicobeoordeling dossier generator (aggregated PDF export for kwaliteitsborgers)
+- Lead capture flow (user journey that naturally leads to "vraag kwaliteitsborger aan" CTA)
+- Professional directory (kwaliteitsborger listings for lead routing)
+
+**Business model validation:**
+- No payment infrastructure yet — handle billing manually
+- Prove lead generation value with one vertical before expanding
+- Target: kwaliteitsborger saves 1-3 hours per project via instant dossier
+
 ### Future
 
+- [ ] Additional professional verticals: tekenaars, constructeurs, asbest/bodem onderzoekers, aannemers
+- [ ] Payment infrastructure: credit system, per-lead billing, subscriptions
+- [ ] B2B API for large borgingspartijen (Woningborg, Kiwa)
 - [ ] Lead pipeline with Dutch stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
 - [ ] Lead status visualization on map (color-coded by pipeline stage)
 - [ ] Role-based access (admin, analyst, viewer)
@@ -259,4 +279,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-02-28 after v8.0 Client Demo Readiness milestone started*
+*Last updated: 2026-03-01 after v9.0 Professional Marketplace milestone planned*

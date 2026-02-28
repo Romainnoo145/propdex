@@ -2,10 +2,11 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-28)
+See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
 **Current focus:** v8.0 Client Demo Readiness — Phase 62: Scan Pipeline Reliability
+**Next milestone:** v9.0 Professional Marketplace (planned, not started)
 
 ---
 
