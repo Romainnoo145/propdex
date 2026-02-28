@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, Index, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TenantMixin, TimestampMixin
@@ -17,7 +18,7 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     in a given gemeente bounding box. Each scan generates multiple ScanResult
     records linking to individual ParcelCache entries.
 
-    Status flow: pending -> running -> (completed | failed)
+    Status flow: pending -> running -> (completed | completed_with_warnings | failed | cancelled)
     Progress phases: fetching_parcels -> cross_referencing_bag -> querying_bestemmingen
 
     Multi-tenant isolated via organization_id.
@@ -50,8 +51,9 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
 
     # Status tracking
     # pending = queued, running = ARQ job active, completed = done, failed = error
+    # completed_with_warnings = done but coverage or address thresholds breached
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="pending", index=True,
+        String(30), nullable=False, default="pending", index=True,
     )
 
     # Progress tracking
@@ -61,6 +63,14 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     parcels_total: Mapped[int] = mapped_column(default=0, nullable=False)
     parcels_processed: Mapped[int] = mapped_column(default=0, nullable=False)
     parcels_failed: Mapped[int] = mapped_column(default=0, nullable=False)
+
+    # Coverage tracking — computed after scan completes
+    # coverage_ratio: fraction of parcels with has_pand=true (0.0-1.0)
+    coverage_ratio: Mapped[float | None] = mapped_column(nullable=True)
+    # address_resolution_ratio: fraction of building-parcels that got a PDOK address (0.0-1.0)
+    address_resolution_ratio: Mapped[float | None] = mapped_column(nullable=True)
+    # error_detail: structured failure context (stage, error, error_type, bbox)
+    error_detail: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)
 
     # Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
