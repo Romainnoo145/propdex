@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Post-v7.2 validation and next milestone definition (workspace UX + monetization workflows)
+**Current focus:** v8.0 Client Demo Readiness — fix scan pipeline, polish Venlo showcase
 
 ---
 
 ## Current Position
 
-Phase: 61 — Vergunning Precedenten Benchmark
-Plan: 1/1 completed
-Status: v7.2 shipped (Phases 59-61 complete)
-Last activity: 2026-02-27 — Completed phase 61 and shipped v7.2 Developer Dossier Intelligence
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v8.0
+Last activity: 2026-02-28 — Milestone v8.0 started
 
 ---
 
@@ -160,12 +160,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-27T00:00:00Z
-**Stopped At:** v7.2 shipped (59/60/61 complete)
+**Last Session:** 2026-02-28T00:00:00Z
+**Stopped At:** Defining v8.0 requirements
 **Resume File:** .planning/ROADMAP.md
 
-**Next Action:** Define and execute next milestone phase plan (starting from product validation and UX workflow hardening).
+**Next Action:** Complete requirements definition and create roadmap for v8.0.
 
 ---
 
-*State updated: 2026-02-27 — v7.2 phases 59-61 completed and shipped*
+*State updated: 2026-02-28 — Milestone v8.0 Client Demo Readiness started*

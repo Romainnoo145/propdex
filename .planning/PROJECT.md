@@ -22,7 +22,7 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v6.0 Meldingen Intelligence (2026-02-23)
+**Shipped:** v7.2 Developer Dossier Intelligence (2026-02-27)
 **Codebase:** ~26,294 lines Python + ~19,926 lines TypeScript/React (~46,220 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
@@ -47,7 +47,10 @@ This is the ONE thing that must work. Everything else is secondary.
 - Mobile responsive: BottomTabNav, InspectorPanel bottom sheet, ParcelCard layout, 44px touch targets, read-only mode
 - Settings page: account profile, password, notifications, appearance preferences
 - Bundle-split build: 4 vendor chunks + 15 route chunks
-- All previous v1.0-v5.1 functionality preserved
+- Deep property data: WOZ-waarde, energielabel, BRK eigendomsdata, RCE monument detail enrichment
+- Workspace productization: role context switching, URL-state hardening, scope-aware controls, canonical map parcel flow
+- Developer dossier intelligence: buildability delta, Wkb precheck (Layer A + optional Layer B), permit precedent benchmark
+- All previous v1.0-v6.0 functionality preserved
 
 ## Business Model
 
@@ -142,23 +145,37 @@ This is the ONE thing that must work. Everything else is secondary.
 - Server-side per-change read/unread tracking (ChangeReadState model replacing localStorage) — v6.0
 - Meldingen UX: gemeente filter, action state badges, infinite scroll pagination — v6.0
 - Report from address: standalone report creation without requiring area scan — v6.0
+- WOZ-waarde integration (government-assessed property valuations via Waardeloket) — v7.0
+- Energielabel integration (energy performance ratings from EP-Online/RVO) — v7.0
+- Kadaster BRK eigendomsdata (ownership, purchase history, mortgage status) — v7.0
+- RCE monument detail enrichment (property-specific heritage data replacing generic boilerplate) — v7.0
+- Workspace role context switching and scope-aware controls — v7.1
+- URL-state hardening and source-aware report navigation — v7.1
+- Canonical map parcel flow with layer catalog and refresh-safe selection — v7.1
+- Buildability delta contract (hoeveel kan hier nog?) with confidence scoring — v7.2
+- Wkb precheck (Layer A auto-check + optional Layer B refinement) — v7.2
+- Permit precedent benchmark by municipality and comparable type — v7.2
 
 ### Active
 
-## Current Milestone: v7.0 Deep Property Data
+## Current Milestone: v8.0 Client Demo Readiness
 
-**Goal:** Enrich property reports with government valuations, energy ratings, ownership data, and property-specific heritage information — making Propdex reports the single source of truth for property due diligence.
+**Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
 
 **Target features:**
-- WOZ-waarde integration (government-assessed property valuations)
-- Energielabel integration (energy performance ratings from EP-Online/RVO)
-- Kadaster BRK eigendomsdata (ownership, purchase history, mortgage status)
-- RCE monument improvements (property-specific heritage data replacing generic boilerplate)
+- Scan pipeline reliability (fix silent BAG failure, retry logic)
+- Venlo full re-scan (all 21 wijken with correct BAG data extraction)
+- BAG building footprints map layer
+- Report layout and formatting polish
+- PDF export audit and fix
+- Results table noise reduction
 
-- [ ] WOZ-waarde integration — government-assessed property valuation per parcel
-- [ ] Energielabel integration — energy performance ratings from EP-Online/RVO
-- [ ] Kadaster BRK eigendomsdata — ownership, purchase history, mortgage status
-- [ ] RCE monument improvements — property-specific heritage data instead of generic boilerplate
+- [ ] Scan pipeline produces complete data (bouwjaar, address, pand_status) reliably
+- [ ] Venlo gemeente has complete, validated scan data across all 21 wijken
+- [ ] BAG building footprints visible as toggleable map layer
+- [ ] Report layout polished and v7.x sections render cleanly
+- [ ] PDF export functional and presentable
+- [ ] Results table surfaces real opportunities with minimal noise
 
 ### Future
 
@@ -236,10 +253,10 @@ This is the ONE thing that must work. Everything else is secondary.
 - **Comparable platforms:** Transect (US, land GIS), Datagrid (zoning AI), Prophetic (deal intelligence), Spartner (NL, AI for vastgoed), LightBox (zoning data)
 - **Key Dutch data sources:** PDOK, BAG, Kadaster, ruimtelijkeplannen.nl, Rijksdienst voor het Cultureel Erfgoed
 - **Known issues:**
-  - Kadaster eigendomsdata requires paid API (deferred)
-  - Monument restrictions are generic boilerplate (not property-specific)
+  - BAG WFS fetch failure in area_scan.py is silent — causes entire scan to produce garbage data (no bouwjaar, no addresses, wrong scoring)
   - PLU WMS change detection needs live data validation (MON-02)
   - Parcel count pre-check disabled (CRS mismatch between CBS bbox and BAG WFS)
+  - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-02-23 after v7.0 Deep Property Data milestone started*
+*Last updated: 2026-02-28 after v8.0 Client Demo Readiness milestone started*
