@@ -1,524 +1,681 @@
 # Architecture Patterns
 
-**Domain:** Deep property data integration — WOZ-waarde, Energielabel, BRK eigendomsdata, improved RCE monument data
-**Researched:** 2026-02-23
-**Confidence:** HIGH — based on direct codebase analysis of existing aggregator pipeline + verified Dutch government API documentation
+**Domain:** Professional Marketplace — Bodemloket, Wkb classification, asbest risk, dossier generation, lead capture, professional directory
+**Researched:** 2026-03-01
+**Confidence:** HIGH — based on direct codebase analysis of existing v7.2 pipeline + verified Dutch government API documentation + Bodemloket WMS endpoint verification
 
 ---
 
-## Existing Pipeline Summary (What We Extend)
+## Context: What We're Building On
 
-The property aggregator follows a two-step pattern that all new data sources must fit:
+v9.0 adds six interconnected features to a mature platform. The existing architecture is stable and well-understood. This document focuses exclusively on how the new features integrate — not on the base architecture, which is documented in the v7.0 ARCHITECTURE.md.
+
+**Existing pipeline summary:**
 
 ```
-STEP 1 (sequential): resolve_address() via BAG — MUST succeed
-  Returns: verblijfsobject_id, pand_id, RD coordinates
-
-STEP 2 (parallel): asyncio.gather(N fetch functions)
-  Returns: cadastral_parcels, zoning_data, monument_status
-  Error handling: each fetch wraps exceptions → errors list, graceful None
-
-STEP 3 (sequential): AI parsing trigger, MapData build, source attribution
-
-STEP 4: Assemble PropertyReportResponse + completeness_score
+STEP 1: resolve_address(BAG) → verblijfsobject_id, pand_id, RD coordinates
+STEP 2a: asyncio.gather(cadastral, zoning, monuments, energy_label, woz)
+STEP 2b: fetch_brk_ownership(cadastral result) — BRK never cached
+STEP 3: AI parsing, MapData, completeness_score, PropertyReportResponse
 ```
 
-Key constraints from codebase analysis:
-- All fetches in Step 2 use `get_cached_or_fetch()` with source-specific TTLs from `CACHE_TTL`
-- Each new data source needs a key added to `CACHE_TTL` in `backend/app/core/config.py`
-- `PropertyReportResponse` is stored as JSONB in `reports.report_data` — all new fields must be Pydantic-serializable
-- `completeness_score` = `sections_available / total_sections` — new sections must increment `total_sections`
-- BRK eigendomsdata MUST NOT be cached (Kadaster Tier 3 terms) — this is the only source that bypasses `get_cached_or_fetch`
+**Central data contract:** `PropertyReportResponse` is the single schema that flows from aggregator through DB save to PDF export. All new data sources must produce Pydantic-serializable fields that extend this schema.
 
 ---
 
-## New Data Sources: Integration Map
+## System Overview: v9.0 Feature Map
 
-Each new source maps to exactly four integration points:
-
-| Source | API Client File | Schema Section | Aggregator Integration | Frontend Component |
-|--------|----------------|----------------|----------------------|-------------------|
-| Energielabel | `backend/app/government_apis/ep_online.py` (NEW) | `EnergyLabel` in `backend/app/schemas/energy.py` (NEW) | `fetch_energy_label()` nested func in `property_aggregator.py` | `EnergieLabelSection` in `ReportDetailPage.tsx` |
-| WOZ-waarde | `backend/app/government_apis/woz_waardeloket.py` (NEW) | `WOZData` in `backend/app/schemas/woz.py` (NEW) | `fetch_woz_data()` nested func in `property_aggregator.py` | `WOZSection` in `ReportDetailPage.tsx` |
-| BRK eigendomsdata | `backend/app/government_apis/brk_bevragen.py` (EXISTS — needs aggregator wiring) | `BRKOwnership` in `backend/app/schemas/brk.py` (NEW) | `fetch_brk_ownership()` nested func, NO caching | `EigendomSection` in `ReportDetailPage.tsx` |
-| RCE (improved) | `backend/app/government_apis/rce_monuments.py` (EXISTS — needs RCE Linked Data API) | `MonumentDetail` fields added to `MonumentSourceResult` | Enhance `_fetch_rce()` in `monument_aggregator.py` | Enhance `MonumentSection` in `ReportDetailPage.tsx` |
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         React Frontend                                   │
+│                                                                          │
+│  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────────┐    │
+│  │  ReportDetail   │  │ DossierExport│  │  ProfessionalDirectory   │    │
+│  │  + BodemSection │  │ (PDF + Lead) │  │  + LeadCaptureForm       │    │
+│  │  + WkbSection   │  └──────┬───────┘  └────────────┬─────────────┘   │
+│  │  + AsbstSection │         │                        │                 │
+│  └────────┬────────┘         │                        │                 │
+│           │                  │                        │                 │
+│           └──────────────────┴────────────────────────┘                 │
+│                              │ HTTP (TanStack Query)                     │
+└──────────────────────────────┼──────────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────────────────┐
+│                         FastAPI Backend                                   │
+│                                                                          │
+│  ┌─────────────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │  /api/reports        │  │ /api/dossier │  │  /api/professionals  │   │
+│  │  (extended: bodem,  │  │  POST generate│  │  GET list, POST lead │   │
+│  │   wkb_class,        │  │  GET download │  └──────────┬───────────┘   │
+│  │   asbest_risk)      │  └──────┬───────┘             │               │
+│  └─────────┬───────────┘         │                      │               │
+│            │                     │                      │               │
+│  ┌─────────▼─────────────────────▼──────────────────────▼────────────┐  │
+│  │                   Service Layer                                     │  │
+│  │                                                                     │  │
+│  │  property_aggregator   dossier_generator   professional_service    │  │
+│  │  + bodemloket_fetch    + pdf_export        + lead_capture          │  │
+│  │  + wkb_classifier      (extended)                                  │  │
+│  │  + asbest_indicator                                                │  │
+│  └───────┬─────────────────────┬──────────────────────────────────────┘  │
+│          │                     │                                         │
+│  ┌───────▼──────────┐  ┌───────▼──────────────────────────────────────┐ │
+│  │ Government APIs  │  │  PostgreSQL/PostGIS                           │ │
+│  │                  │  │                                               │ │
+│  │  bodemloket_wms  │  │  saved_reports (extended)                    │ │
+│  │  (existing APIs) │  │  professionals (NEW)                         │ │
+│  └──────────────────┘  │  lead_requests (NEW)                         │ │
+│                         └──────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Source 1: Energielabel (EP-Online)
+## Feature 1: Bodemloket API Integration
 
-### API Details
+### API Details (Verified)
 
-**Endpoint:** `https://public.ep-online.nl/api/v5/`
-**Authentication:** API key via `Authorization: Bearer {key}` header — free to request at `https://apikey.ep-online.nl/`
-**Query by VBO:** `GET /api/v5/PandEnergielabel/Adres?bagVerblijfsobjectId={verblijfsobject_id}` or by postcode+huisnummer
-**Response fields:** `energieklasse` (A+++ through G), `energieprestatie` (EI value), `registratiedatum`, `geldigTot` (validity date), `pand_registratienummer`
-**API Version:** V5 (live since November 2024; V4 deprecated July 2025; V3 gone January 2025) — MEDIUM confidence (Swagger docs not directly accessible, inferred from RVO handleiding)
-**Rate limits:** Not officially documented; conservative: 5 concurrent, 300/hour
-**TTL recommendation:** 90 days (energielabels change infrequently; validity periods are years)
+**Service:** Bodemloket (rijksoverheid) via GDN Geo Services ArcGIS MapServer
+**WMS Endpoint:** `https://gis.gdngeoservices.nl/standalone/services/blk_gdn/lks_blk_rd_v1/MapServer/WMSServer`
+**GetCapabilities confirms:** Three layers available:
+- `WBB_locaties` — contaminated site polygons (WBB = Wet Bodembescherming)
+- `Bevoegd_gezag` — jurisdiction/authority boundaries
+- `Beschikbaarheid_gegevens` — data availability zones
 
-### New File
+**Supported CRS:** EPSG:28992 (RD New — matches existing Propdex coordinate system)
+**GetFeatureInfo:** Supported via WMS. Formats include text/html and text/xml.
+
+**Alternative REST endpoint:** `https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer/1/query`
+Query parameters: `geometry={x},{y}&geometryType=esriGeometryPoint&inSR=28992&spatialRel=esriSpatialRelIntersects&outFields=*&f=json`
+Known fields: `NEN3610_ID_SOIL_LOCATION`, `STATUS_OORD`, `STATUSVER`, `WBB_DOSSIER_DBK`, `NEN3610_ID_SOIL_MANAGEMENT`, `SIKB_ID`, `LOCATIECODE_BEVOEGD_GEZAG`, `TYPE_CD`
+Limitation: Max 1,000 results per query — not an issue for point-in-polygon lookup
+
+**Confidence:** MEDIUM — WMS GetCapabilities verified live; REST endpoint documented by community sources but returned 404 during direct testing; WMS is the fallback
+
+### Integration Point: New API Client
 
 ```
-backend/app/government_apis/ep_online.py
+backend/app/government_apis/bodemloket_wms.py  (NEW)
 ```
+
+Pattern: Same as `woz_waardeloket.py` — public endpoint, no auth, three-state contract.
 
 ```python
-"""EP-Online energielabel API client.
+"""Bodemloket WMS client for soil contamination lookups.
 
-Fetches registered energy labels from RVO EP-Online Public API V5.
-Queries by BAG verblijfsobject ID (VBO).
+Queries the Bodemloket WMS (Wet Bodembescherming) for soil contamination
+status at a given RD coordinate. Returns contamination status for display
+in property reports.
 
-Authentication: Bearer API key (request at apikey.ep-online.nl).
-Free tier: yes, API key required but no cost.
+Authentication: None required (public government WMS).
+Input: RD coordinates (EPSG:28992) from BAG resolution (Step 1).
+
+Three-state contract:
+- Data found        -> BodemData with contamination status
+- Not found/no hit  -> None (most parcels have no contamination record)
+- API error         -> raise GovernmentAPIError
+
+WMS endpoint: https://gis.gdngeoservices.nl/standalone/services/blk_gdn/
+              lks_blk_rd_v1/MapServer/WMSServer
 """
 
-class EPOnlineClient:
-    BASE_URL = "https://public.ep-online.nl/api/v5"
+class BodemloketWMSClient:
+    WMS_URL = (
+        "https://gis.gdngeoservices.nl/standalone/services/"
+        "blk_gdn/lks_blk_rd_v1/MapServer/WMSServer"
+    )
 
-    async def get_energielabel(
+    async def get_soil_status_at(
         self,
-        verblijfsobject_id: str,
+        rd_x: float,
+        rd_y: float,
         client: httpx.AsyncClient,
-    ) -> dict | None:
-        """Fetch energy label for a verblijfsobject.
-        Returns None if no label registered (not all buildings have EP labels).
+    ) -> "BodemData | None":
+        """Query Bodemloket WMS for soil contamination at RD coordinates.
+
+        Uses GetFeatureInfo on WBB_locaties layer with a minimal bounding box
+        around the query point (50m buffer in RD units).
+
+        Returns None if no contamination record exists (normal for most parcels).
         """
-        url = f"{self.BASE_URL}/PandEnergielabel/Adres"
-        params = {"bagVerblijfsobjectId": verblijfsobject_id}
-        headers = {"Authorization": f"Bearer {settings.EP_ONLINE_API_KEY}"}
-        # ... standard error handling per base.py patterns
+        # GetFeatureInfo requires a bbox + pixel query
+        buffer = 50  # 50m in RD units
+        bbox = f"{rd_x - buffer},{rd_y - buffer},{rd_x + buffer},{rd_y + buffer}"
+
+        params = {
+            "SERVICE": "WMS",
+            "VERSION": "1.3.0",
+            "REQUEST": "GetFeatureInfo",
+            "LAYERS": "WBB_locaties",
+            "QUERY_LAYERS": "WBB_locaties",
+            "CRS": "EPSG:28992",
+            "BBOX": bbox,
+            "WIDTH": "100",
+            "HEIGHT": "100",
+            "I": "50",
+            "J": "50",
+            "INFO_FORMAT": "text/xml",
+        }
+        # ... parse response, return BodemData or None
 ```
 
-### New Schema File
+### New Schema
 
 ```
-backend/app/schemas/energy.py
+backend/app/schemas/bodem.py  (NEW)
 ```
 
 ```python
-class EnergyLabel(BaseModel):
-    """Energielabel data from EP-Online."""
-    energieklasse: str | None   # "A+++" through "G"
-    energie_index: float | None  # EI numeric value
-    registratiedatum: str | None # ISO 8601
-    geldig_tot: str | None       # label validity date
-    pand_nummer: str | None      # EP-Online registration number
-    source: str = "EP-Online V5"
+class BodemData(BaseModel):
+    """Soil contamination status from Bodemloket WBB registry."""
+
+    has_contamination_record: bool = Field(
+        description="Whether a WBB soil investigation record exists at this location"
+    )
+    status_oord: str | None = Field(
+        default=None,
+        description="Soil status code from WBB registry (e.g., 'Geheel gesaneerd')"
+    )
+    locatie_naam: str | None = Field(
+        default=None,
+        description="Name of the contamination location/dossier"
+    )
+    dossier_id: str | None = Field(
+        default=None,
+        description="WBB dossier reference (WBB_DOSSIER_DBK)"
+    )
+    bevoegd_gezag: str | None = Field(
+        default=None,
+        description="Competent authority for this soil case"
+    )
+    bodemloket_url: str | None = Field(
+        default=None,
+        description="Link to Bodemloket kaart for this location"
+    )
+    source: str = "Bodemloket WMS (Wet Bodembescherming)"
+    low_confidence: bool = Field(
+        default=False,
+        description="True if WMS query returned ambiguous result"
+    )
 ```
 
 ### Aggregator Integration
 
-In `aggregate_property_data()`, add `fetch_energy_label()` as a nested async function alongside `fetch_cadastral_parcels()`. Add to the `asyncio.gather()` call.
+Add `fetch_bodem_data()` nested function to `property_aggregator.py`, called in the existing `asyncio.gather()` (Step 2a). Input: `rd_x, rd_y` from BAG resolution.
 
-**Cache key:** `f"ep-online:label:{verblijfsobject_id}"`
-**CACHE_TTL key:** `"ep_online"` → 7776000 (90 days)
-
-Input: `verblijfsobject_id` from BAG resolution (available from Step 1).
-Graceful degradation: if no VBO available or API returns 404, return `None`. Append error to `errors` list.
-
-### PropertyReportResponse Addition
-
-```python
-# In backend/app/schemas/property.py
-energy_label: EnergyLabel | None = Field(
-    default=None,
-    description="Energielabel from EP-Online (None if not registered or VBO not available)",
-)
-```
-
-### Frontend Type Addition
-
-```typescript
-// In frontend/src/lib/types/property.ts
-export interface EnergyLabel {
-  energieklasse: string | null   // "A+++" through "G"
-  energie_index: number | null
-  registratiedatum: string | null
-  geldig_tot: string | null
-  pand_nummer: string | null
-  source: string
-}
-
-// Add to PropertyReportResponse:
-energy_label: EnergyLabel | null
-```
-
-### Frontend Component
-
-New section component added to `ReportDetailPage.tsx` as `EnergieLabelSection`. Renders:
-- Label badge (large letter: A through G with color coding — green A+++, red G)
-- Energie-index numeric value
-- Registration date + validity date
-- Link to EP-Online registration lookup
-
-Position in ReportDetailPage: between `GebouwSection` and `KadasterSection` (building-level data logically clusters together).
-
-**Color coding for label classes** (matches EU standard): A+++=`#009900`, A++=`#00bb00`, A+=`#33cc00`, A=`#66dd00`, B=`#99dd00`, C=`#ccee00`, D=`#ffee00`, E=`#ffcc00`, F=`#ff9900`, G=`#ff3300`.
-
----
-
-## Source 2: WOZ-waarde
-
-### API Details
-
-**Critical finding:** WOZ data has restricted access. The Kadaster WOZ API Bevragen requires OIN + PKIOverheid certificate (municipalities only). The WOZ-waardeloket has no public API.
-
-**Viable approach for Propdex:** The WOZ-waardeloket (`wozwaardeloket.nl`) exposes a public JSON endpoint that Propdex can scrape via HTTP: `https://www.wozwaardeloket.nl/woz-api/v1/objecten/nummeraanduidingen/{nummeraanduiding_id}`. This is the same endpoint the WOZ-waardeloket website uses internally.
-
-**Confidence:** LOW — this is an undocumented public endpoint, subject to change, rate limiting, or blocking. Not an official open API.
-
-**Alternative approach:** WOZ-waarden are also available as open data bulk download from PDOK (monthly snapshot), but bulk ingestion is a different architecture (ETL pipeline, not on-demand per-property lookup).
-
-**Recommended approach for this milestone:** Implement WOZ client with explicit LOW_CONFIDENCE flag on returned data. Mark the source as "WOZ-Waardeloket (publiek)" and show a disclaimer that this is publicly available data from the WOZ-waardeloket, not a certified government API connection.
-
-**TTL recommendation:** 365 days (WOZ values are set annually, usually communicated in February)
-**Cache key pattern:** `f"woz:object:{nummeraanduiding_id}"`
-
-### New File
-
-```
-backend/app/government_apis/woz_waardeloket.py
-```
-
-```python
-"""WOZ-waarde client via WOZ-waardeloket public endpoint.
-
-Fetches WOZ-waarde from the public WOZ-waardeloket API.
-Uses nummeraanduiding ID from BAG resolution.
-
-IMPORTANT: This is an undocumented public endpoint, not an official API.
-Data should be presented with LOW confidence and a disclaimer.
-"""
-
-class WOZWaardeloketClient:
-    BASE_URL = "https://www.wozwaardeloket.nl/woz-api/v1"
-
-    async def get_woz_waarde(
-        self,
-        nummeraanduiding_id: str,
-        client: httpx.AsyncClient,
-    ) -> dict | None:
-        """Fetch WOZ-waarde by nummeraanduiding ID.
-        Returns dict with wozWaarde, peildatum, or None if unavailable.
-        """
-        url = f"{self.BASE_URL}/objecten/nummeraanduidingen/{nummeraanduiding_id}"
-        # No authentication required (public endpoint)
-```
-
-### New Schema File
-
-```
-backend/app/schemas/woz.py
-```
-
-```python
-class WOZJaarwaarde(BaseModel):
-    """WOZ-waarde for a specific peildatum year."""
-    peildatum: str   # e.g., "2025-01-01"
-    waarde: int      # EUR value
-
-class WOZData(BaseModel):
-    """WOZ-waarde data from WOZ-waardeloket."""
-    woz_waarden: list[WOZJaarwaarde]  # Last 3-5 years
-    actuele_waarde: int | None        # Most recent value
-    actuele_peildatum: str | None     # Most recent reference date
-    object_id: str | None
-    source: str = "WOZ-Waardeloket"
-    confidence: str = "LOW"           # Non-official API
-```
-
-### Aggregator Integration
-
-Add `fetch_woz_data()` nested function. Input: `nummeraanduiding_id` from BAG address resolution (available from Step 1). Add to `asyncio.gather()`.
+**Cache key:** `f"bodemloket:wbb:{rd_x:.0f}:{rd_y:.0f}"`
+**CACHE_TTL:** `"bodemloket"` → 2592000 (30 days — contamination status changes slowly)
+**Rate limiter:** Add `bodemloket_limiter` (2 concurrent, 100/hour — public WMS is not meant for bulk)
 
 **PropertyReportResponse addition:**
 ```python
-woz: WOZData | None = Field(
+bodem_data: BodemData | None = Field(
     default=None,
-    description="WOZ-waarde from WOZ-waardeloket (LOW confidence — public endpoint)",
+    description="Soil contamination status from Bodemloket WBB registry"
 )
 ```
 
 ### Frontend Component
 
-New `WOZSection` in `ReportDetailPage.tsx`. Renders:
-- Current WOZ-waarde formatted as currency (e.g., "€ 485.000")
-- Peildatum (reference date)
-- WOZ history table (last 3-5 years) showing trend
-- Explicit LOW confidence disclaimer: "WOZ-waarde opgehaald via publiek waardeloket. Geen gecertificeerde API-verbinding."
-
-**Note on display:** WOZ-waarden for non-residential properties are not public under current law. If the API returns no data for commercial properties, show "WOZ-waarde niet openbaar voor dit type object" rather than a generic error.
+New `BodemSection` in `ReportDetailPage.tsx`:
+- Alert-style indicator when `has_contamination_record=True` (amber warning, not red — status varies)
+- Status badge showing `status_oord` value
+- Link to Bodemloket kaart (`bodemloket_url`) for detailed investigation
+- "Geen bodemverontreinigingsregistratie gevonden" state when None/False
 
 ---
 
-## Source 3: BRK Eigendomsdata
+## Feature 2: Wkb Classification Engine
 
-### API Details
+### Current State (v7.2)
 
-The `BRKBevragenClient` already exists in `backend/app/government_apis/brk_bevragen.py`. It implements `get_eigendom()` and `get_kadastraal_object()`. The gap is that it has never been wired into `aggregate_property_data()`.
+The existing `wkb_precheck.py` already evaluates Layer A (auto from report data) and Layer B (optional user refinement). This is the PRECHECK — it answers "does Wkb likely apply?".
 
-**Critical constraint (existing code comment):** "CRITICAL: Eigendomsdata must NEVER be cached or stored per Kadaster Tier 3 terms."
+v9.0 adds the **classification engine** — it answers "which gevolgklasse applies?" This is a distinct, deterministic calculation based on building type, bouwjaar, height, and usage — not a probabilistic precheck.
 
-**New requirement:** BRK queries need a `kadaster_identificatie` — the full cadastral object ID (e.g., `NL.IMKAD.KadastraalObject.12345`). This is NOT the same as the `kadastrale_aanduiding` (e.g., "Venlo M 1722") returned by PDOK Cadastral. A mapping step is needed.
+### Gevolgklasse Classification Rules (HIGH confidence — iplo.nl verified)
 
-**Mapping strategy:** PDOK Cadastral OGC API already returns a feature with properties. The `localid` or `kadastraleAanduiding` can be used to construct or find the BRK identificatie. Alternatively, the BRK API supports query by `kadastraleAanduiding` string. Research indicates BRK API accepts the formatted string directly: `GET /kadastraalonroerendezaken?kadastraleAanduiding=VENLO+M+1722`.
+**Gevolgklasse 1** (current implementation target): Ground-level dwellings (no care facilities, no shared rentals), industrial buildings max 2 stories, standalone holiday homes, structures max 20m height
+**Gevolgklasse 2:** Schools, libraries, municipal buildings, residential >3 stories but <70m
+**Gevolgklasse 3:** Hospitals, metro stations, stadiums, buildings >70m
 
-**Access constraint:** BRK requires PKIOverheid mTLS certificate + API key. The client `BRKBevragenClient` gracefully disables itself if not configured (logs warning, `_configured = False`). The aggregator must check `brk_client._configured` before attempting.
+Key finding: **Building year is NOT a gevolgklasse criterion.** The classification is based on current use and physical characteristics. However, bouwjaar IS relevant for asbest risk (separate feature).
 
-**No-cache requirement:** BRK eigendomsdata MUST NOT go through `get_cached_or_fetch()`. It bypasses the cache layer entirely. This is architecturally exceptional — document clearly.
-
-### New Schema File
+### New Service
 
 ```
-backend/app/schemas/brk.py
+backend/app/services/wkb_classifier.py  (NEW)
 ```
+
+This is a pure Python rule engine — no API calls, no DB access. Input from existing report data.
 
 ```python
-class BRKEigenaar(BaseModel):
-    """Single property owner/rights holder from BRK."""
-    naam: str | None            # Person/organization name
-    type: str | None            # "Natuurlijk persoon" or "Rechtspersoon"
-    recht: str | None           # "Eigendom", "Recht van erfpacht", etc.
-    aandeel: str | None         # Share fraction (e.g., "1/2")
+"""Wkb gevolgklasse classifier.
 
-class BRKOwnership(BaseModel):
-    """Eigendomsdata from BRK Bevragen API.
+Determines the likely gevolgklasse (1, 2, or 3) for a property based on:
+- BAG gebruiksdoel (usage function)
+- BAG oppervlakte (building area)
+- Zoning bestemming type
+- Building height from zoning dimensions (max_hoogte proxy)
 
-    NEVER cache or store this data (Kadaster Tier 3 terms).
-    """
-    eigenaren: list[BRKEigenaar]
-    zakelijk_rechten: list[str]   # Rights types present
-    is_available: bool             # False if BRK not configured or query failed
-    unavailable_reason: str | None # "BRK niet geconfigureerd" or error message
-    source: str = "Kadaster BRK Bevragen API v2"
-    retrieved_at: str              # ISO 8601 — timestamp of this fetch (not a cache timestamp)
-```
+This is NOT the same as wkb_precheck.py (which assesses probability of
+Wkb applicability). This classifier assesses which gevolgklasse applies
+ASSUMING Wkb is applicable.
 
-### Aggregator Integration
+Sources:
+- iplo.nl gevolgklasse criteria (Omgevingsregeling bijlage I)
+- BWT gevolgklasse factsheet (Rijksoverheid 2021)
+"""
 
-```python
-async def fetch_brk_ownership() -> BRKOwnership | None:
-    """Fetch BRK eigendomsdata — NEVER cached."""
-    if not brk_client._configured:
-        return BRKOwnership(
-            eigenaren=[],
-            zakelijk_rechten=[],
-            is_available=False,
-            unavailable_reason="BRK niet geconfigureerd",
-            retrieved_at=datetime.utcnow().isoformat() + "Z",
-        )
+class WkbGevolgklasse(str, Enum):
+    GK1 = "gevolgklasse_1"
+    GK2 = "gevolgklasse_2"
+    GK3 = "gevolgklasse_3"
+    UNKNOWN = "unknown"
 
-    if not cadastral_parcels:
-        return None  # Need parcel ID to query BRK
+class WkbClassification(BaseModel):
+    gevolgklasse: WkbGevolgklasse
+    confidence: Literal["high", "medium", "low"]
+    classification_basis: list[str]  # Human-readable rules that fired
+    missing_inputs: list[str]        # Fields that would improve confidence
+    notes: str | None = None
 
-    # Use first parcel's kadastrale_aanduiding
-    aanduiding = cadastral_parcels[0].kadastrale_aanduiding
-    if not aanduiding:
-        return None
 
-    try:
-        async with brk_client.create_client() as brk_http_client:
-            # BRK creates its OWN mTLS client, separate from shared httpx client
-            raw = await brk_client.get_eigendom(aanduiding, brk_http_client)
-            return _parse_brk_response(raw)
-    except GovernmentAPIError as e:
-        return BRKOwnership(
-            eigenaren=[], zakelijk_rechten=[],
-            is_available=False,
-            unavailable_reason=str(e.message),
-            retrieved_at=datetime.utcnow().isoformat() + "Z",
-        )
-```
-
-**Critical ordering constraint:** BRK fetch depends on `cadastral_parcels` being populated (needs parcel aanduiding). BRK cannot run in the same `asyncio.gather()` as parcel fetch. It needs a SECOND gather after cadastral parcels resolve.
-
-**Revised aggregation flow:**
-
-```
-STEP 2a (parallel): fetch_cadastral_parcels(), fetch_zoning(), fetch_monuments(),
-                    fetch_energy_label(), fetch_woz_data()
-  ↓ await
-STEP 2b (parallel): fetch_brk_ownership()  # depends on STEP 2a cadastral result
-```
-
-### PropertyReportResponse Addition
-
-```python
-# In backend/app/schemas/property.py
-brk_ownership: BRKOwnership | None = Field(
-    default=None,
-    description="Property ownership data from BRK (never cached per Kadaster terms)",
-)
-```
-
-**Frontend note:** `BRKOwnership.retrieved_at` replaces `cached_at`/`age_seconds` for source display. Show "Actueel opgevraagd: [timestamp]" instead of cache age.
-
-### Frontend Component
-
-New `EigendomSection` in `ReportDetailPage.tsx`. Renders:
-- Owner list (obfuscate partial names for privacy — show "J. de V..." not full name)
-- Rights type per owner (eigendom, erfpacht, etc.)
-- Aandeel (share fraction) if multiple owners
-- "Niet beschikbaar" state when `is_available = false` with `unavailable_reason`
-- No "Bekijk op cache" freshness indicator (data is always live)
-
-**Privacy consideration:** Eigendomsdata includes personal names. Display should match the WOZ-waardeloket convention: first initial + truncated surname. Full display is legally permitted (public register) but industry best practice is partial display.
-
----
-
-## Source 4: RCE Monument Data (Improved)
-
-### Current State
-
-`backend/app/government_apis/rce_monuments.py` queries the PDOK OGC Features API for spatial monument hits but returns minimal data: monument number, naam, and a register URL. The `monument_naam` field often gets populated with a generic "Rijksmonument {nr}" fallback.
-
-### What's Missing
-
-The RCE Linked Data API at `https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run` provides rich detail: volledigeOmschrijving (full description), oorspronkelijkeFunctie (original function), monumentaard (built/archaeological), provincieNaam, woonplaatsNaam, straat, and status. This API requires no authentication and is freely accessible.
-
-**Query:** `GET https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run?rijksmonumentnummer={nr}&pageSize=1`
-
-**TTL:** 30 days (monument register changes infrequently)
-
-### Integration Approach
-
-When the PDOK spatial query returns a monument with a monument number, make a SECOND call to the RCE Linked Data API to fetch full detail. This is a two-step enrichment within `_fetch_rce()`:
-
-```python
-async def _fetch_rce(x, y, client, organization_id, session, force_refresh):
-    # Step 1: spatial query (existing)
-    cache_key = f"rce:monument:{x:.0f}:{y:.0f}"
-    cache_result = await get_cached_or_fetch(
-        cache_key=cache_key, source="rce", ...
-        fetch_fn=_fetch_rce_with_detail(x, y, client)  # NEW: includes detail fetch
-    )
+def classify_gevolgklasse(
+    *,
+    building: BuildingData | None,
+    zoning_data: ZoningData | None,
+    buildability_delta: BuildabilityDelta | None,
+) -> WkbClassification:
+    """Classify Wkb gevolgklasse from available report data."""
     ...
-
-async def _fetch_rce_with_detail(x, y, client):
-    """Fetch monument spatial hit + enrich with RCE Linked Data detail."""
-    # Step 1: spatial hit (existing PDOK OGC query)
-    docs = await _rce_client.query_by_location(x, y, client)
-    if not docs:
-        return {}
-
-    monument_nr = docs[0].get("rce_objrijksnr")
-    if not monument_nr:
-        return docs[0]
-
-    # Step 2: detail enrichment via RCE Linked Data API
-    try:
-        detail = await _rce_client.get_detail_by_number(monument_nr, client)
-        return {**docs[0], **detail}  # Merge spatial + detail
-    except Exception:
-        return docs[0]  # Graceful: spatial data only if detail fails
 ```
 
-### New RCEMonumentClient Method
+### Integration Point
 
+`wkb_classifier.py` is called INSIDE `evaluate_wkb_precheck()` in `wkb_precheck.py` to produce a `WkbClassification` that gets embedded in `WkbPrecheck`. Alternatively, it can be a separate field in `PropertyReportResponse`. Recommended: separate field to keep concerns distinct.
+
+**PropertyReportResponse addition:**
 ```python
-async def get_detail_by_number(
-    self,
-    monument_number: str,
-    client: httpx.AsyncClient,
-) -> dict:
-    """Fetch full monument detail from RCE Linked Data API.
-
-    No authentication required. Free public API.
-    """
-    url = "https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run"
-    params = {
-        "rijksmonumentnummer": monument_number,
-        "pageSize": "1",
-    }
-    response = await client.get(url, params=params, timeout=15.0)
-    data = response.json()
-    if not data:
-        return {}
-    item = data[0]
-    return {
-        "volledigeOmschrijving": item.get("volledigeOmschrijving"),
-        "oorspronkelijkeFunctie": item.get("oorspronkelijkeFunctie"),
-        "monumentaard": item.get("monumentaard"),  # "Gebouwd" or "Archeologisch"
-        "bouwstijl": item.get("bouwstijl"),
-        "redengeving": item.get("redengevingOmschrijving"),
-        "rijksmonument_url": f"https://monumentenregister.cultureelerfgoed.nl/monuments/{monument_number}",
-    }
+wkb_classification: WkbClassification | None = Field(
+    default=None,
+    description="Wkb gevolgklasse classification (1/2/3) based on building type and zoning"
+)
 ```
 
-### Schema Changes
+### Frontend Component
 
-Extend `MonumentSourceResult` (in `backend/app/schemas/monument.py`) with optional enrichment fields:
-
-```python
-class MonumentSourceResult(BaseModel):
-    # ... existing fields ...
-    # NEW enrichment fields (only populated by RCE source):
-    volledigeOmschrijving: str | None = None  # Full monument description
-    oorspronkelijkeFunctie: str | None = None  # e.g., "Woonhuis", "Kerk"
-    monumentaard: str | None = None            # "Gebouwd" or "Archeologisch"
-    bouwstijl: str | None = None               # e.g., "Jugendstil"
-    redengeving: str | None = None             # Why it was listed
-    rijksmonument_url: str | None = None       # Link to official register
-```
-
-These fields are nullable so existing BAG and Kadaster `MonumentSourceResult` objects are unaffected.
-
-### Frontend Changes
-
-Enhance `MonumentSection` in `ReportDetailPage.tsx` to display new fields when present:
-- Official register link: `<a href={src.rijksmonument_url}>Bekijk in Rijksmonumentenregister</a>`
-- `volledigeOmschrijving` — collapsible (potentially long text)
-- `oorspronkelijkeFunctie` + `bouwstijl` as metadata chips
-- `monumentaard` badge ("Gebouwen" or "Archeologisch")
+Extend existing `WkbSection` in `ReportDetailPage.tsx`:
+- Add gevolgklasse badge (GK1/GK2/GK3) as a colored chip
+- Classification basis bullets (what rules fired)
+- "This determines which kwaliteitsborger type is needed" educational tooltip
 
 ---
 
-## Data Flow (Complete Updated Picture)
+## Feature 3: Asbest Risk Indicator
+
+### Rules (HIGH confidence — Dutch legislation verified)
+
+**Rule:** Properties with `bouwjaar < 1994` carry asbest risk. The Netherlands banned asbestos trading/application in 1994 (Besluit asbestverwijdering). Before 1994 is the risk window; highest risk period is 1963–1993.
+
+**No API required.** This is a pure rule-based indicator computed from `bouwjaar` already stored in `ParcelCache.bouwjaar` and `BuildingData.bouwjaar` in the report.
+
+### New Service
 
 ```
-Input: { postcode, huisnummer }
-  │
-  ▼
-STEP 1 (sequential) ─────────────────────────────────────────────
-resolve_address(BAG)
-  → verblijfsobject_id  ← needed by EP-Online, WOZ
-  → nummeraanduiding_id ← needed by WOZ
-  → pand_id             ← needed by BRK (via parcel)
-  → coordinates (RD)    ← needed by cadastral, zoning, monuments
-  │
-  ▼
-STEP 2a (parallel) ───────────────────────────────────────────────
-asyncio.gather(
-  fetch_cadastral_parcels(coordinates),    # PDOK Cadastral OGC
-  fetch_zoning(coordinates),               # DSO Ruimtelijke Plannen
-  fetch_monuments(coordinates, pand_id),   # PDOK + RCE Linked Data
-  fetch_energy_label(verblijfsobject_id),  # EP-Online V5 [NEW]
-  fetch_woz_data(nummeraanduiding_id),     # WOZ-waardeloket [NEW]
-)
-  │
-  ▼
-STEP 2b (sequential, BRK only) ──────────────────────────────────
-if brk_client._configured and cadastral_parcels:
-  fetch_brk_ownership(cadastral_parcels[0].kadastrale_aanduiding)
-  # Uses mTLS client, NOT shared httpx client
-  # NEVER goes through get_cached_or_fetch
-  │
-  ▼
-STEP 3 (sequential) ─────────────────────────────────────────────
-AI parsing trigger (existing)
-MapData build (existing)
-section_sources build (existing + new sections)
-completeness_score (existing + new sections increment total_sections)
-  │
-  ▼
-PropertyReportResponse (extended)
-  address, building, cadastral_parcels       ← existing
-  zoning, monuments, map_data, ai_parsing    ← existing
-  energy_label [NEW]
-  woz [NEW]
-  brk_ownership [NEW]
+backend/app/services/asbest_indicator.py  (NEW)
 ```
+
+```python
+"""Asbest risk indicator based on bouwjaar.
+
+Dutch legislation (Besluit asbestverwijdering): asbestos was banned from
+1994 onwards. Buildings constructed before 1994 may contain asbestos and
+require mandatory inspection before demolition/renovation.
+
+NEN 2991 defines the risk assessment methodology.
+
+This is a pure rule engine — no external API calls.
+"""
+
+class AsbstRisk(BaseModel):
+    risk_level: Literal["high", "medium", "none", "unknown"]
+    bouwjaar: int | None
+    threshold_year: int = 1994
+    risk_label: str                  # Dutch label for display
+    norms_reference: str = "NEN 2991 / Besluit asbestverwijdering"
+    asbest_inventaris_required: bool  # True if demolition/renovation planned + pre-1994
+    notes: list[str]
+
+def assess_asbest_risk(bouwjaar: int | None) -> AsbstRisk:
+    """Assess asbestos risk from construction year.
+
+    high   = bouwjaar 1963-1993 (peak asbestos use period)
+    medium = bouwjaar < 1963 (earlier construction, less common asbestos types)
+    none   = bouwjaar >= 1994 (post-ban)
+    unknown = bouwjaar is None
+    """
+```
+
+### Integration Point
+
+Called in `property_aggregator.py` during Step 3 (sequential, after gather) — no API dependency, pure computation from `building.bouwjaar`.
+
+**PropertyReportResponse addition:**
+```python
+asbest_risk: AsbstRisk | None = Field(
+    default=None,
+    description="Asbestos risk indicator based on construction year"
+)
+```
+
+### Frontend Component
+
+New `AsbstSection` in `ReportDetailPage.tsx`:
+- Risk badge: "Hoog risico" (amber), "Mogelijk risico" (yellow), "Geen risico" (green), "Onbekend" (grey)
+- Bouwjaar display + threshold explanation
+- Link to NEN 2991 asbestinventarisatie information (external)
+- Context: "Verplicht bij sloop of renovatie" advisory
+
+---
+
+## Feature 4: Risicobeoordeling Dossier Generator
+
+### Architecture Decision
+
+The dossier is a **curated PDF export** of existing report data — it is NOT a new data source. It aggregates the Wkb precheck, Wkb classification, asbest risk, bodem data, monument status, and buildability delta into a kwaliteitsborger-oriented document.
+
+**Key design:** The dossier is generated from an existing `SavedReport.report_data` JSONB payload. No new API calls at generation time. The only compute is Jinja2 template rendering + WeasyPrint.
+
+### New API Endpoint
+
+```
+backend/app/dossier/router.py  (NEW)
+backend/app/dossier/generator.py  (NEW)
+```
+
+```
+POST /api/dossier/{report_id}/generate
+  Auth: required (JWT)
+  Rate limit: 5/minute (PDF generation is CPU-intensive)
+  Body: DossierGenerateRequest (type: "wkb_kwaliteitsborger" | "full")
+  Returns: DossierGenerateResponse (dossier_id, download_url)
+
+GET /api/dossier/{dossier_id}/download
+  Auth: required
+  Returns: StreamingResponse (application/pdf)
+```
+
+**Dossier types for v9.0:**
+- `"wkb_kwaliteitsborger"` — sections: property summary, Wkb precheck, Wkb classification, asbest risk, bodem data, monument status, buildability delta. Tailored for kwaliteitsborger intake.
+
+### New Model
+
+```
+backend/app/models/dossier.py  (NEW)
+```
+
+```python
+class GeneratedDossier(Base, TenantMixin, TimestampMixin):
+    """Generated dossier document linked to a saved report."""
+
+    __tablename__ = "generated_dossiers"
+
+    id: Mapped[uuid.UUID]
+    report_id: Mapped[uuid.UUID]          # FK to saved_reports
+    dossier_type: Mapped[str]             # "wkb_kwaliteitsborger"
+    generated_by: Mapped[uuid.UUID]       # FK to users
+    pdf_storage_key: Mapped[str | None]   # Future: S3/storage path
+    expires_at: Mapped[datetime | None]   # Future: time-limited share links
+    lead_request_id: Mapped[uuid.UUID | None]  # FK to lead_requests if generated via lead flow
+```
+
+**v9.0 storage approach:** Store PDF bytes in PostgreSQL BYTEA column (or generate on-demand without storage). At current scale, on-demand generation is simpler — no S3 needed. Store generation metadata only, regenerate on each download.
+
+### New Jinja2 Template
+
+```
+backend/app/dossier/templates/wkb_kwaliteitsborger.html  (NEW)
+```
+
+Template structure:
+1. Cover page: property address, generation date, "Risicobeoordeling voor kwaliteitsborger"
+2. Property summary: BAG data, bouwjaar, status, gebruiksdoel
+3. Wkb beoordeling: precheck status + classification gevolgklasse + required documents list
+4. Asbest risico: risk level + bouwjaar + NEN 2991 advisory
+5. Bodemkwaliteit: contamination status from Bodemloket (or "geen registratie")
+6. Monument/erfgoed: status if applicable
+7. Bouwruimte delta: remaining capacity summary
+8. Data bronnen: source attribution table
+9. CTA footer: "Vraag een gecertificeerde kwaliteitsborger aan via Propdex"
+
+### Data Flow: Dossier Generation
+
+```
+User clicks "Genereer dossier" in ReportDetailPage
+  │
+  ▼
+POST /api/dossier/{report_id}/generate
+  │
+  ├── Fetch SavedReport from DB (validates org + exists + not deleted)
+  ├── Validate report_data has required sections (wkb_precheck, etc.)
+  ├── Record GeneratedDossier row (status=pending)
+  │
+  ▼
+asyncio.to_thread(generate_dossier_pdf, report_data, dossier_type)
+  │
+  ├── Jinja2 template render (wkb_kwaliteitsborger.html)
+  ├── WeasyPrint HTML→PDF
+  ├── Return bytes
+  │
+  ▼
+Return DossierGenerateResponse(dossier_id, download_url)
+  │
+  ▼
+GET /api/dossier/{dossier_id}/download → StreamingResponse PDF
+```
+
+---
+
+## Feature 5: Lead Capture Flow
+
+### Architecture Decision
+
+Lead capture is a **workflow, not a data source**. It adds a user journey: generate dossier → see CTA → submit lead request → lead is routed to professional.
+
+**No payment processing in v9.0.** Leads are stored in DB and routed manually (email notification to kwaliteitsborger). Payment infrastructure is future work.
+
+### New Model
+
+```
+backend/app/models/lead_request.py  (NEW)
+```
+
+```python
+class LeadRequest(Base, TenantMixin, TimestampMixin):
+    """Lead request from developer to kwaliteitsborger.
+
+    Captures the intent to engage a professional service.
+    v9.0: Manual routing via email. No payment processing.
+    """
+
+    __tablename__ = "lead_requests"
+
+    id: Mapped[uuid.UUID]
+    organization_id: Mapped[uuid.UUID]    # Which developer org made the request
+    report_id: Mapped[uuid.UUID]          # Which property report
+    dossier_id: Mapped[uuid.UUID | None]  # Which dossier was generated (if any)
+    professional_id: Mapped[uuid.UUID | None]  # Target professional (if from directory)
+    vertical: Mapped[str]                 # "wkb_kwaliteitsborger" (future: more verticals)
+    status: Mapped[str]                   # "new" | "sent" | "contacted" | "closed"
+    requester_email: Mapped[str]          # Contact email for lead
+    requester_name: Mapped[str]
+    requester_phone: Mapped[str | None]
+    project_description: Mapped[str | None]  # Free text: what they're building
+    gemeente_code: Mapped[str | None]     # For geographic routing
+    notes: Mapped[str | None]            # Internal notes
+    contacted_at: Mapped[datetime | None]
+
+    __table_args__ = (
+        Index("ix_lead_requests_org_status", "organization_id", "status"),
+        Index("ix_lead_requests_org_report", "organization_id", "report_id"),
+        Index("ix_lead_requests_vertical", "vertical"),
+    )
+```
+
+### New API Endpoints
+
+```
+backend/app/leads/router.py  (NEW)
+```
+
+```
+POST /api/leads
+  Auth: required
+  Body: LeadCreateRequest
+  Returns: LeadResponse (201)
+  Effect: Creates LeadRequest row, triggers email notification
+
+GET /api/leads
+  Auth: required (admin only in v9.0)
+  Returns: list[LeadResponse] paginated
+```
+
+### Data Flow: Lead Capture
+
+```
+Report page → User sees Wkb precheck "likely_required"
+  │
+  ▼
+"Genereer dossier voor kwaliteitsborger" CTA
+  │
+  ▼
+POST /api/dossier/{report_id}/generate
+  ↓ (PDF ready)
+DossierReadyPage
+  │  Shows: PDF preview, "Deel met kwaliteitsborger" CTA
+  │
+  ▼
+LeadCaptureForm (inline or modal)
+  Fields: name, email, phone (optional), project description
+  │
+  ▼
+POST /api/leads
+  ├── Creates LeadRequest in DB
+  ├── Sends notification email to admin (v9.0: manual routing)
+  └── Future: routes to matched professional from directory
+  │
+  ▼
+ConfirmationPage: "Uw aanvraag is ontvangen. Een kwaliteitsborger neemt contact op."
+```
+
+### CTA Placement Strategy
+
+The lead capture CTA appears in THREE locations, in order of user intent:
+
+1. **WkbSection in ReportDetailPage** — soft CTA when `wkb_precheck.status === 'likely_required'`: "Download dossier voor kwaliteitsborger"
+2. **After dossier download** — hard CTA: "Kwaliteitsborger nodig? Vraag direct aan via Propdex"
+3. **ProfessionalDirectory listing page** — "Neem contact op" per professional card
+
+---
+
+## Feature 6: Professional Directory
+
+### Architecture Decision
+
+The directory is a **simple CRUD listing** of kwaliteitsborgers with geographic coverage and service area. No marketplace matching algorithm in v9.0 — just a searchable list that developers can browse.
+
+**Data management:** Professionals are added manually by Propdex admin. No self-signup portal in v9.0.
+
+### New Model
+
+```
+backend/app/models/professional.py  (NEW)
+```
+
+```python
+class Professional(Base, TimestampMixin):
+    """Kwaliteitsborger (or future: other professional) listing.
+
+    NOT tenant-isolated — professionals are visible to all organizations.
+    The directory is platform-wide, not per-tenant.
+    """
+
+    __tablename__ = "professionals"
+
+    id: Mapped[uuid.UUID]
+    vertical: Mapped[str]             # "wkb_kwaliteitsborger" (extensible)
+    bedrijfsnaam: Mapped[str]
+    contactpersoon: Mapped[str | None]
+    email: Mapped[str]
+    phone: Mapped[str | None]
+    website: Mapped[str | None]
+    gemeente_codes: Mapped[list | None]  # JSONB: ["0917", "0756"] CBS codes
+    provincies: Mapped[list | None]      # JSONB: ["Noord-Holland"] fallback
+    is_active: Mapped[bool]              # Admin can deactivate
+    is_certified: Mapped[bool]           # Certified kwaliteitsborger (BRL 5006)
+    certificaat_url: Mapped[str | None]  # Link to certification document
+    description: Mapped[str | None]      # Short pitch text
+    max_leads_per_month: Mapped[int | None]  # Future: lead throttling
+    notes_internal: Mapped[str | None]   # Admin-only notes
+
+    __table_args__ = (
+        Index("ix_professionals_vertical_active", "vertical", "is_active"),
+    )
+```
+
+### New API Endpoints
+
+```
+backend/app/professionals/router.py  (NEW)
+```
+
+```
+GET /api/professionals
+  Auth: required
+  Query params: vertical, gemeente_code, is_certified
+  Returns: ProfessionalListResponse
+
+GET /api/professionals/{professional_id}
+  Auth: required
+  Returns: ProfessionalDetailResponse
+
+POST /api/professionals (admin only)
+  Auth: required (admin check — use organization role or superuser flag)
+  Returns: ProfessionalResponse (201)
+```
+
+**Note on auth:** v9.0 does not add role-based access control. Admin endpoints use a simple `is_admin` check on the `User` model (add `is_admin: bool = False` field) or a hardcoded admin organization check. Full RBAC is future work.
+
+### Frontend Component
+
+New route: `/professionals` (or accessible from `/rapporten` as a sidebar tab)
+
+```
+frontend/src/components/professionals/
+  ProfessionalDirectory.tsx    (NEW) — listing + filter
+  ProfessionalCard.tsx          (NEW) — single professional card
+  LeadCaptureForm.tsx           (NEW) — shared: used here + post-dossier
+  LeadConfirmation.tsx          (NEW) — success state
+```
+
+**ProfessionalCard renders:**
+- Bedrijfsnaam + contactpersoon
+- Gecertificeerd badge (BRL 5006) if `is_certified`
+- Werkgebied (gemeenten or provincies)
+- "Neem contact op" button → LeadCaptureForm modal
+
+---
+
+## New Database Models Summary
+
+| Model | File | Notes |
+|-------|------|-------|
+| `GeneratedDossier` | `backend/app/models/dossier.py` | Tenant-isolated via `organization_id` |
+| `LeadRequest` | `backend/app/models/lead_request.py` | Tenant-isolated via `organization_id` |
+| `Professional` | `backend/app/models/professional.py` | NOT tenant-isolated — platform-wide |
+
+**No changes to existing models.** `PropertyReportResponse` extensions are backward-compatible (all new fields `Optional`/`None` default).
 
 ---
 
@@ -526,209 +683,322 @@ PropertyReportResponse (extended)
 
 ### New Backend Files
 
-| File | Type | Purpose | Caching |
-|------|------|---------|---------|
-| `backend/app/government_apis/ep_online.py` | API client | EP-Online V5 REST queries by VBO ID | Via `get_cached_or_fetch`, TTL 90d |
-| `backend/app/government_apis/woz_waardeloket.py` | API client | WOZ-waardeloket public JSON endpoint | Via `get_cached_or_fetch`, TTL 365d |
-| `backend/app/schemas/energy.py` | Pydantic schema | `EnergyLabel` model | N/A |
-| `backend/app/schemas/woz.py` | Pydantic schema | `WOZData`, `WOZJaarwaarde` models | N/A |
-| `backend/app/schemas/brk.py` | Pydantic schema | `BRKOwnership`, `BRKEigenaar` models | N/A |
+| File | Type | Purpose |
+|------|------|---------|
+| `backend/app/government_apis/bodemloket_wms.py` | API client | Bodemloket WMS GetFeatureInfo query |
+| `backend/app/schemas/bodem.py` | Pydantic schema | `BodemData` model |
+| `backend/app/services/wkb_classifier.py` | Pure service | Gevolgklasse classification engine |
+| `backend/app/services/asbest_indicator.py` | Pure service | Asbest risk assessment from bouwjaar |
+| `backend/app/dossier/router.py` | FastAPI router | POST generate, GET download |
+| `backend/app/dossier/generator.py` | Service | Jinja2 + WeasyPrint dossier PDF |
+| `backend/app/dossier/templates/wkb_kwaliteitsborger.html` | Template | Kwaliteitsborger dossier layout |
+| `backend/app/leads/router.py` | FastAPI router | POST lead, GET list |
+| `backend/app/leads/service.py` | Service | Lead CRUD + email notification |
+| `backend/app/professionals/router.py` | FastAPI router | GET list, GET detail, POST (admin) |
+| `backend/app/professionals/service.py` | Service | Professional CRUD |
+| `backend/app/models/dossier.py` | SQLAlchemy model | GeneratedDossier |
+| `backend/app/models/lead_request.py` | SQLAlchemy model | LeadRequest |
+| `backend/app/models/professional.py` | SQLAlchemy model | Professional |
 
 ### Modified Backend Files
 
 | File | Change | Scope |
 |------|--------|-------|
-| `backend/app/government_apis/rce_monuments.py` | Add `get_detail_by_number()` method to `RCEMonumentClient` | EXTEND — existing `query_by_location` unchanged |
-| `backend/app/services/monument_aggregator.py` | Modify `_fetch_rce()` to call enrichment after spatial hit | MODIFY — split fetch into two-step |
-| `backend/app/schemas/monument.py` | Add nullable enrichment fields to `MonumentSourceResult` | EXTEND — backward compatible |
-| `backend/app/schemas/property.py` | Add `energy_label`, `woz`, `brk_ownership` fields to `PropertyReportResponse` | EXTEND — all Optional |
-| `backend/app/services/property_aggregator.py` | Add 3 nested fetch functions, adjust gather call order, update completeness_score denominator | MODIFY — core orchestration |
-| `backend/app/core/config.py` | Add `CACHE_TTL` entries for `ep_online` and `woz` | EXTEND |
-| `backend/app/government_apis/rate_limiter.py` | Add `ep_online_limiter` (5 concurrent, 300/hour) | EXTEND |
+| `backend/app/schemas/property.py` | Add `bodem_data`, `wkb_classification`, `asbest_risk` fields to `PropertyReportResponse` | EXTEND — all Optional |
+| `backend/app/services/property_aggregator.py` | Add `fetch_bodem_data()` to asyncio.gather; add `wkb_classifier.classify_gevolgklasse()` and `asbest_indicator.assess_asbest_risk()` calls in Step 3 | MODIFY — core orchestration |
+| `backend/app/core/config.py` | Add `CACHE_TTL["bodemloket"]` = 2592000 (30 days) | EXTEND |
+| `backend/app/government_apis/rate_limiter.py` | Add `bodemloket_limiter` (2 concurrent, 100/hour) | EXTEND |
+| `backend/app/main.py` | Register new routers: dossier, leads, professionals | EXTEND |
+| `backend/app/models/user.py` | Add `is_admin: bool = False` field (for professional CRUD auth) | EXTEND |
 
 ### New Frontend Files
 
 | File | Purpose |
 |------|---------|
-| `frontend/src/components/reports/EnergieLabelSection.tsx` | Energy label badge + index + history |
-| `frontend/src/components/reports/WOZSection.tsx` | WOZ-waarde + history table + disclaimer |
-| `frontend/src/components/reports/EigendomSection.tsx` | BRK ownership list + rights + live-fetch indicator |
+| `frontend/src/components/reports/BodemSection.tsx` | Soil contamination status block |
+| `frontend/src/components/reports/AsbstSection.tsx` | Asbestos risk indicator block |
+| `frontend/src/components/reports/DossierCTA.tsx` | "Genereer dossier" CTA button + flow |
+| `frontend/src/components/dossier/DossierReadyPage.tsx` | Post-generation: preview + lead CTA |
+| `frontend/src/components/professionals/ProfessionalDirectory.tsx` | Directory listing + filter |
+| `frontend/src/components/professionals/ProfessionalCard.tsx` | Individual professional card |
+| `frontend/src/components/professionals/LeadCaptureForm.tsx` | Lead capture form (shared) |
+| `frontend/src/components/professionals/LeadConfirmation.tsx` | Success confirmation |
 
 ### Modified Frontend Files
 
 | File | Change |
 |------|--------|
-| `frontend/src/lib/types/property.ts` | Add `EnergyLabel`, `WOZData`, `WOZJaarwaarde`, `BRKOwnership`, `BRKEigenaar` interfaces; extend `MonumentSourceResult` with enrichment fields; extend `PropertyReportResponse` |
-| `frontend/src/components/reports/ReportDetailPage.tsx` | Import + render `EnergieLabelSection`, `WOZSection`, `EigendomSection` in section stack; enhance `MonumentSection` with RCE enrichment fields |
+| `frontend/src/lib/types/property.ts` | Add `BodemData`, `WkbClassification`, `AsbstRisk` interfaces; extend `PropertyReportResponse` |
+| `frontend/src/components/reports/ReportDetailPage.tsx` | Add `BodemSection`, `AsbstSection`, `DossierCTA`; extend `WkbSection` with gevolgklasse |
 
 ---
 
-## Settings / Config Changes
+## Data Flow Diagrams
 
-### New Settings (backend/app/core/config.py)
+### Flow 1: Report with New Sections
 
-```python
-CACHE_TTL = {
-    # ... existing ...
-    "ep_online": 7776000,   # 90 days (energy labels change infrequently)
-    "woz": 31536000,        # 365 days (set annually)
-}
+```
+POST /api/property/lookup  OR  POST /api/reports/from-parcel
+  │
+  ▼
+STEP 1: resolve_address(BAG)
+  → rd_x, rd_y               ← bodemloket query input
+  → verblijfsobject_id       ← (existing uses)
+  → bouwjaar                 ← asbest_indicator input (from BAG building)
+  │
+  ▼
+STEP 2a: asyncio.gather(
+  fetch_cadastral_parcels(),  ← existing
+  fetch_zoning(),             ← existing
+  fetch_monuments(),          ← existing
+  fetch_energy_label(),       ← existing (v7.0)
+  fetch_woz_data(),           ← existing (v7.0)
+  fetch_bodem_data(rd_x, rd_y),  ← NEW v9.0
+)
+  │
+  ▼
+STEP 2b: fetch_brk_ownership()  ← existing (v7.0, no cache)
+  │
+  ▼
+STEP 3 (sequential, no API calls):
+  evaluate_wkb_precheck(building, monuments, zoning, buildability_delta)  ← existing
+  classify_gevolgklasse(building, zoning, buildability_delta)              ← NEW
+  assess_asbest_risk(building.bouwjaar)                                    ← NEW
+  build_buildability_delta(...)  ← existing
+  trigger_ai_parsing(...)        ← existing
+  build_map_data(...)            ← existing
+  │
+  ▼
+PropertyReportResponse (extended with bodem_data, wkb_classification, asbest_risk)
 ```
 
-```python
-class Settings(BaseSettings):
-    # ... existing ...
-    EP_ONLINE_API_KEY: str = Field(
-        default="",
-        description="EP-Online Public API key (request at apikey.ep-online.nl — free)",
-    )
-    # BRK_API_KEY, BRK_CLIENT_CERT_PATH, etc. already exist
+### Flow 2: Dossier Generation
+
+```
+User is viewing ReportDetailPage (report already exists and saved)
+  │
+  ▼ Click "Genereer dossier voor kwaliteitsborger"
+POST /api/dossier/{report_id}/generate
+  │
+  ├── Validate SavedReport exists, belongs to org
+  ├── Check report_data has wkb_precheck, bodem_data, asbest_risk sections
+  ├── Create GeneratedDossier row (status=generating)
+  │
+  ▼
+asyncio.to_thread(generate_dossier_pdf(report_data, type="wkb_kwaliteitsborger"))
+  │
+  ├── Jinja2: render wkb_kwaliteitsborger.html with report_data context
+  ├── WeasyPrint: HTML → PDF bytes
+  └── Return DossierGenerateResponse(dossier_id)
+  │
+  ▼
+Frontend: DossierReadyPage
+  ├── Shows dossier download button
+  └── Shows "Kwaliteitsborger aanvragen" CTA → LeadCaptureForm
 ```
 
-### Environment Variables
+### Flow 3: Lead Capture
 
-| Variable | Required | Fallback Behavior |
-|----------|----------|------------------|
-| `EP_ONLINE_API_KEY` | Yes (for EP-Online) | Section returns None + error in errors list |
-| `BRK_API_KEY` + certs | Yes (for BRK) | `brk_client._configured = False`, section shows "niet geconfigureerd" |
-| No new vars for WOZ | N/A | WOZ public endpoint needs no auth |
+```
+User fills LeadCaptureForm (name, email, project description)
+  │
+  ▼
+POST /api/leads
+  │
+  ├── Validate input
+  ├── Create LeadRequest(status="new", professional_id=selected or null)
+  ├── Send notification email (admin receives lead details)
+  └── Return LeadResponse(id, status)
+  │
+  ▼
+Frontend: LeadConfirmation
+  "Uw aanvraag is ontvangen. Een kwaliteitsborger neemt binnen 2 werkdagen contact op."
+```
 
 ---
 
 ## Build Order
 
-Build order is driven by three constraints:
-1. Schema before aggregator (Pydantic models must exist before they're referenced)
+Build order is driven by three dependency chains:
+1. Schema layer before aggregator integration
 2. API client before aggregator integration
-3. BRK aggregation after cadastral parcel fetch (data dependency)
+3. New report sections before dossier (dossier reads from report_data)
+4. Dossier before lead capture (lead captures dossier intent)
+5. Lead capture before professional directory (directory provides lead routing target)
 
-### Phase 1: Schema Layer (no dependencies)
+### Phase A: Core Data Additions (no UI dependency)
 
-1. `backend/app/schemas/energy.py` — `EnergyLabel` model
-2. `backend/app/schemas/woz.py` — `WOZData`, `WOZJaarwaarde`
-3. `backend/app/schemas/brk.py` — `BRKOwnership`, `BRKEigenaar`
-4. Extend `backend/app/schemas/monument.py` — add nullable enrichment fields
-5. Extend `backend/app/schemas/property.py` — add 3 new fields to `PropertyReportResponse`
-6. Add CACHE_TTL entries + EP_ONLINE_API_KEY to `backend/app/core/config.py`
+1. `backend/app/schemas/bodem.py` — `BodemData`
+2. Add `bodem_data`, `wkb_classification`, `asbest_risk` to `PropertyReportResponse` in `property.py`
+3. `backend/app/government_apis/bodemloket_wms.py` — API client
+4. `backend/app/services/wkb_classifier.py` — pure classification engine
+5. `backend/app/services/asbest_indicator.py` — pure risk engine
+6. Add `bodemloket_limiter` to `rate_limiter.py`; add `CACHE_TTL["bodemloket"]` to `config.py`
+7. Wire all three into `property_aggregator.py` (bodem to gather, wkb_class + asbest to Step 3)
 
-**Gate:** `ruff check . && mypy .` — all type checks pass
+**Gate:** `ruff check . && mypy .`; manual test: `POST /api/property/lookup` returns `bodem_data`, `wkb_classification`, `asbest_risk` in response
 
-### Phase 2: API Clients (depends on Phase 1 schemas)
+**Why first:** These are pure data additions with no dependencies on other new features. They extend the existing, well-tested pipeline.
 
-7. `backend/app/government_apis/ep_online.py` — EPOnlineClient
-8. `backend/app/government_apis/woz_waardeloket.py` — WOZWaardeloketClient
-9. Add `ep_online_limiter` to `backend/app/government_apis/rate_limiter.py`
-10. Extend `backend/app/government_apis/rce_monuments.py` — `get_detail_by_number()` method
+### Phase B: Report UI (depends on Phase A)
 
-**Gate:** Manual curl tests against live APIs (EP-Online Swagger, WOZ-waardeloket, RCE Linked Data)
+8. Extend `frontend/src/lib/types/property.ts` with new interfaces
+9. `frontend/src/components/reports/BodemSection.tsx`
+10. `frontend/src/components/reports/AsbstSection.tsx`
+11. Extend `WkbSection` in `ReportDetailPage.tsx` with gevolgklasse display
+12. Mount new sections in `ReportDetailPage.tsx`
 
-### Phase 3: Aggregator Wiring (depends on Phases 1 + 2)
+**Gate:** `npm run check`; open a real report and verify all new sections render (including None/empty state)
 
-11. Extend `backend/app/services/monument_aggregator.py` — two-step RCE enrichment
-12. Extend `backend/app/services/property_aggregator.py` — add 3 nested fetch functions, second gather for BRK, update completeness_score
-13. Update `total_sections` denominator (currently 6, becomes 9 with 3 new sections)
+**Why here:** UI before dossier because dossier depends on confirmed section data rendering correctly.
 
-**Gate:** Full end-to-end test: `POST /api/property/lookup` returns response with all 3 new sections populated
+### Phase C: Dossier Generation (depends on Phases A + B)
 
-### Phase 4: Frontend Types + Components (depends on Phase 3 backend being stable)
+13. `backend/app/models/dossier.py` + Alembic migration
+14. `backend/app/dossier/templates/wkb_kwaliteitsborger.html`
+15. `backend/app/dossier/generator.py`
+16. `backend/app/dossier/router.py` + register in `main.py`
+17. `frontend/src/components/reports/DossierCTA.tsx`
+18. `frontend/src/components/dossier/DossierReadyPage.tsx`
 
-14. Extend `frontend/src/lib/types/property.ts` — all new interfaces
-15. `frontend/src/components/reports/EnergieLabelSection.tsx`
-16. `frontend/src/components/reports/WOZSection.tsx`
-17. `frontend/src/components/reports/EigendomSection.tsx`
-18. Modify `frontend/src/components/reports/ReportDetailPage.tsx` — wire in new sections
-19. Enhance `MonumentSection` within `ReportDetailPage.tsx` — RCE detail fields
+**Gate:** Generate a dossier PDF for a real report; verify all sections render; verify streaming download works
 
-**Gate:** `npm run check` passes; open a real report and verify all 3 new sections render (even in empty/unavailable state)
+**Why here:** Dossier references the report data already enriched in Phase A. The PDF template references the new sections added in Phase B.
 
-### Phase 5: BRK Stub (parallel-executable with Phases 1-4)
+### Phase D: Lead Capture (depends on Phase C)
 
-BRK requires mTLS certificates which are not yet obtained. Build with graceful degradation:
-- `EigendomSection` must render cleanly when `brk_ownership.is_available = false`
-- Show "Eigendomsdata niet geconfigureerd" with configuration instructions
-- Section should be visible but empty — not hidden — so users know the feature exists
+19. `backend/app/models/lead_request.py` + Alembic migration
+20. `backend/app/leads/service.py` (CRUD + email notification)
+21. `backend/app/leads/router.py` + register in `main.py`
+22. `frontend/src/components/professionals/LeadCaptureForm.tsx`
+23. `frontend/src/components/professionals/LeadConfirmation.tsx`
+24. Wire lead CTA into `DossierReadyPage.tsx`
+25. Wire lead CTA into `WkbSection` (soft CTA when `status === 'likely_required'`)
 
-The mTLS certificate procurement process (PKIOverheid via KPN/Digidentity) takes weeks. Build the full integration with the mock/graceful-fail path FIRST, then plug in real credentials.
+**Gate:** Submit a test lead; verify it appears in DB; verify notification email is sent
+
+**Why here:** Lead capture makes no sense without the dossier. Users generate the dossier, then see the lead CTA.
+
+### Phase E: Professional Directory (depends on Phase D, mostly independent)
+
+26. Add `is_admin: bool = False` to `User` model + migration
+27. `backend/app/models/professional.py` + migration
+28. `backend/app/professionals/service.py`
+29. `backend/app/professionals/router.py` + register in `main.py`
+30. `frontend/src/components/professionals/ProfessionalDirectory.tsx`
+31. `frontend/src/components/professionals/ProfessionalCard.tsx`
+32. Seed initial professional records (1-3 kwaliteitsborgers for demo)
+33. Wire `professional_id` selection from directory into `LeadCaptureForm.tsx`
+
+**Gate:** Browse directory; click "Neem contact op" on a card; submit lead form; verify `lead_request.professional_id` is populated
+
+**Why last:** The directory is the discovery surface for leads. Leads work without the directory (Phase D), but the directory makes lead routing more specific.
+
+---
+
+## Integration Points with Existing Code
+
+### Bodemloket ↔ Property Aggregator
+
+Integration point: `aggregate_property_data()` in `property_aggregator.py`, Step 2a gather. Input: `rd_x, rd_y` — already available from BAG resolution in Step 1. No new inputs needed.
+
+### Wkb Classifier ↔ Existing Wkb Precheck
+
+`wkb_precheck.py` evaluates probability. `wkb_classifier.py` evaluates class. They share input data (`building`, `zoning_data`, `buildability_delta`) but are independent functions. The classifier can be called alongside the precheck in Step 3. They share the `WkbPrecheck` and `WkbClassification` models but do not call each other.
+
+### Dossier Generator ↔ Report PDF Export
+
+Both use `WeasyPrint` + Jinja2. The existing `backend/app/reports/pdf_export.py` is a good pattern to follow. The dossier generator is a NEW file, not a modification of the existing PDF export. The existing report PDF covers all sections; the dossier PDF is kwaliteitsborger-scoped (subset of sections, different layout).
+
+### Lead Capture ↔ Saved Reports
+
+A `LeadRequest` has a FK to `SavedReport.id`. The lead references the specific property that triggered the professional inquiry. This enables future analytics: which properties generate the most leads.
+
+### Professional Directory ↔ Lead Routing
+
+`LeadRequest.professional_id` is nullable. In Phase D (lead capture without directory), it is null. In Phase E (with directory), the user selects a professional from the directory card, and that ID is sent with the lead request.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Caching BRK Eigendomsdata
+### Anti-Pattern 1: Blocking Dossier on Live API Calls
 
-**What goes wrong:** Using `get_cached_or_fetch()` for BRK ownership data.
-**Why it happens:** Every other source uses this pattern — easy to copy.
-**Consequences:** Violates Kadaster Tier 3 terms of service. Legal liability for Propdex.
-**Prevention:** `fetch_brk_ownership()` never calls `get_cached_or_fetch()`. Uses `brk_client.create_client()` directly. Add a `# NEVER CACHE — Kadaster Tier 3 terms` comment at the call site.
+**What goes wrong:** Triggering new Bodemloket/Wkb API calls at dossier generation time.
+**Why it happens:** Developer assumes dossier needs fresh data.
+**Consequences:** Dossier generation becomes slow + brittle (external API dependency).
+**Do this instead:** Dossier reads exclusively from `SavedReport.report_data` JSONB. All live data was fetched at report generation time. If data is stale, the user should refresh the report first, then generate the dossier.
 
-### Anti-Pattern 2: Including BRK Data in JSONB Report Store
+### Anti-Pattern 2: Making Professional Model Tenant-Isolated
 
-**What goes wrong:** Storing `brk_ownership` in `reports.report_data` JSONB when saving a report.
-**Why it happens:** `PropertyReportResponse` is saved wholesale to `report_data`.
-**Consequences:** Cached/stored eigendomsdata violates Kadaster terms.
-**Prevention:** Strip `brk_ownership` from `PropertyReportResponse` before saving to DB. Either (a) add a `to_storable_dict()` method that excludes it, or (b) set `brk_ownership = None` before the save operation in `reports/service.py`.
+**What goes wrong:** Adding `organization_id` to `Professional` like all other models.
+**Why it happens:** Following the TenantMixin convention without thinking about intent.
+**Consequences:** Each org has its own list — platform can't have a shared directory.
+**Do this instead:** `Professional` does NOT use `TenantMixin`. It is platform-wide. The API endpoint still requires auth (no public access), but the directory is shared across all orgs.
 
-### Anti-Pattern 3: Treating WOZ-waardeloket Endpoint as a Stable API
+### Anti-Pattern 3: Storing Lead Contact Details in Report JSONB
 
-**What goes wrong:** Building production code that depends on `wozwaardeloket.nl` internal endpoint without fallback.
-**Why it happens:** Endpoint happens to work today.
-**Consequences:** Non-zero probability of endpoint change or authentication requirement added without notice.
-**Prevention:** Wrap in try/except, return `WOZData` with `confidence="LOW"` and a disclaimer. Design frontend to show "WOZ-waarde tijdelijk niet beschikbaar" gracefully. Add health monitoring.
+**What goes wrong:** Embedding lead requester email/name in `SavedReport.report_data`.
+**Why it happens:** Trying to associate lead data with report.
+**Consequences:** PII stored in the wrong place, harder to delete per GDPR right-to-erasure requests.
+**Do this instead:** `LeadRequest` is its own model with its own table. `LeadRequest.report_id` FK provides the association. PII can be erased from `lead_requests` independently.
 
-### Anti-Pattern 4: Blocking Step 2b BRK on Zoning/Monument Completion
+### Anti-Pattern 4: Bodemloket WMS Without 50m Buffer
 
-**What goes wrong:** Awaiting ALL Step 2a results before starting BRK (including slow DSO API calls).
-**Why it happens:** Simple to await the full gather result.
-**Consequences:** BRK fetch adds latency equal to the slowest Step 2a call (DSO can be 3-8s).
-**Prevention:** Only BRK needs the cadastral parcel result. Use a separate `asyncio.Task` for cadastral that starts immediately, then await it specifically before BRK:
-```python
-cadastral_task = asyncio.create_task(fetch_cadastral_parcels())
-other_tasks = asyncio.gather(fetch_zoning(), fetch_monuments(), fetch_energy_label(), fetch_woz())
-cadastral_result = await cadastral_task
-brk_result = await fetch_brk_ownership(cadastral_result)
-await other_tasks  # Wait for remaining
-```
+**What goes wrong:** Using exact point coordinates for GetFeatureInfo without a bounding box buffer.
+**Why it happens:** Point-exact queries seem logical.
+**Consequences:** Point misses polygon edges; contamination records just outside the pixel may be missed.
+**Do this instead:** Use a 50-100m RD buffer around the point. The WMS GetFeatureInfo query requires a BBOX — make it meaningful (not 1m).
 
-### Anti-Pattern 5: Using Full Monument Description as Monument Name
+### Anti-Pattern 5: Asbest Risk as Hard Boolean
 
-**What goes wrong:** Populating `monument_naam` with `volledigeOmschrijving` (can be 500+ characters).
-**Why it happens:** The RCE detail provides this field and it seems like the "name".
-**Consequences:** `monument_naam` overflows in UI — it was designed for short names.
-**Prevention:** Keep `monument_naam` from the PDOK spatial query (short). Put `volledigeOmschrijving` in the new enrichment field, displayed in a collapsible panel.
+**What goes wrong:** Returning `is_asbest_risk: True/False` without nuance.
+**Why it happens:** Simple boolean seems clean.
+**Consequences:** Pre-1900 buildings have less asbestos risk than 1970s buildings; both get the same flag.
+**Do this instead:** Three levels: `high` (1963-1993 peak period), `medium` (pre-1963), `none` (post-1993), `unknown` (no bouwjaar). The 1963 cutoff is the start of widespread asbestos use in Dutch construction.
+
+### Anti-Pattern 6: Gevolgklasse Classification on New Construction Only
+
+**What goes wrong:** Assuming gevolgklasse only applies to new construction.
+**Why it happens:** Wkb started January 2024 for new builds in gevolgklasse 1.
+**Consequences:** Missing transformation/renovation cases that also require kwaliteitsborger.
+**Do this instead:** Classify based on building type and planned intervention (from Wkb precheck Layer B inputs). Transformation of existing buildings can trigger gevolgklasse 1 under certain conditions.
 
 ---
 
 ## Scalability Considerations
 
-| Concern | At Current Scale | With New Sources | Mitigation |
-|---------|-----------------|-----------------|------------|
-| API call count per lookup | 4-6 calls | +4-5 calls (EP-Online, WOZ, RCE detail, optional BRK) | Parallel gather; TTL caching keeps repeat lookups fast |
-| BRK mTLS overhead | N/A | Creates dedicated SSL client per request | `create_client()` overhead is ~5ms; acceptable for optional paid feature |
-| WOZ endpoint reliability | N/A | Single point of failure (undocumented endpoint) | Graceful degradation; 365d TTL means cache cushions outages |
-| completeness_score inflation | 6 sections | 9 sections | Denominator change means existing reports show lower scores — consider versioning |
-| JSONB storage size | ~20KB per report | +2-5KB per new section | No concern at current scale |
-| BRK in JSONB | N/A | MUST strip before save | Enforce in reports/service.py save path |
+| Concern | At Current Scale | With v9.0 | Mitigation |
+|---------|-----------------|-----------|------------|
+| Bodemloket WMS load | N/A | 1 call/report, low volume | 30d cache TTL; limiter prevents bulk |
+| Dossier PDF CPU | N/A | WeasyPrint per generation | asyncio.to_thread; no blocking |
+| Lead storage | N/A | Low volume (manual routing) | Simple CRUD; no queue needed |
+| Professional directory | N/A | Static list, rarely changes | 60min TanStack Query cache |
+| Report_data JSONB growth | ~20KB/report | +3-5KB (bodem+wkb_class+asbest) | Fine at current scale |
 
 ---
 
 ## Sources
 
 - Direct codebase analysis (HIGH confidence):
-  - `backend/app/services/property_aggregator.py` — aggregation pipeline structure
-  - `backend/app/government_apis/brk_bevragen.py` — existing BRK client (graceful degradation pattern)
-  - `backend/app/government_apis/rce_monuments.py` — existing RCE PDOK client
-  - `backend/app/services/monument_aggregator.py` — two-step aggregation pattern
-  - `backend/app/schemas/monument.py` — MonumentSourceResult extension approach
-  - `backend/app/schemas/property.py` — PropertyReportResponse structure
-  - `backend/app/core/config.py` — CACHE_TTL and Settings patterns
-  - `backend/app/services/cache_manager.py` — caching contract
+  - `backend/app/services/property_aggregator.py` — aggregation pipeline, Step 2a gather pattern
+  - `backend/app/services/wkb_precheck.py` — existing precheck service structure to extend from
+  - `backend/app/government_apis/base.py` — three-state contract, GovernmentAPIError
+  - `backend/app/government_apis/woz_waardeloket.py` — pattern for public WMS/JSON clients
+  - `backend/app/reports/pdf_export.py` — WeasyPrint + Jinja2 pattern for dossier generator
+  - `backend/app/models/report.py` — JSONB storage pattern, multi-tenant isolation
+  - `backend/app/models/base.py` — TenantMixin, TimestampMixin patterns
+  - `backend/app/schemas/property.py` — PropertyReportResponse extension points
+  - `frontend/src/lib/types/property.ts` — TypeScript interface extension pattern
   - `frontend/src/components/reports/ReportDetailPage.tsx` — section rendering pattern
-  - `frontend/src/lib/types/property.ts` — TypeScript interface extension points
-- [EP-Online Swagger UI](https://public.ep-online.nl/swagger/index.html) — V5 API endpoints (MEDIUM confidence — confirmed V5 is current, BAG VBO query supported)
-- [EP-Online API key request portal](https://apikey.ep-online.nl/) — free API key, registration required (HIGH confidence)
-- [RVO EP-Online handleiding February 2025](https://www.rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf) — V5 endpoint structure (HIGH confidence — official government documentation)
-- [RCE Linked Data API — rest-api-rijksmonumenten](https://linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9) — no auth, public REST endpoint (HIGH confidence — official RCE Linked Open Data)
-- [RCE PDOK OGC API](https://api.pdok.nl/rce/beschermde-gebieden-cultuurhistorie/ogc/v1) — existing integration confirmed working (HIGH confidence)
-- [Kadaster WOZ API Bevragen docs](https://kadaster.github.io/WOZ-bevragen/getting-started) — confirms municipal-only access (HIGH confidence — official Kadaster)
-- [WOZ-waardeloket public access](https://www.wozwaardeloket.nl/) — public website with undocumented JSON API (LOW confidence — reverse-engineered public endpoint)
-- [Kadaster BRK Bevragen Tier 3 terms](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen) — never-store eigendomsdata requirement (HIGH confidence — existing code comment + official Kadaster terms)
+- [Bodemloket GIS inladen (WMS endpoints)](https://www.bodemloket.nl/content/kan-ik-bodemloket-ook-mijn-gis-inladen) — confirmed WMS URL and GetFeatureInfo support (MEDIUM confidence — page content verified via WebFetch)
+- [De Friese Woudloper — bodemkwaliteitsgegevens ArcGIS REST](http://www.friesewoudloper.nl/2019/05/30/Hergebruik-van-bodemkwaliteitsgegevens.html) — WBB_locaties field names (MEDIUM confidence — community article; field list matches known WBB schema)
+- [iplo.nl gevolgklasse criteria](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — Wkb gevolgklasse 1/2/3 classification rules (HIGH confidence — official government source)
+- [Rijksoverheid Wkb factsheet gevolgklassen](https://www.rijksoverheid.nl/documenten/publicaties/2021/03/01/factsheet-de-wet-kwaliteitsborging-voor-het-bouwen-gevolgklassen) — building type examples per gevolgklasse (HIGH confidence — official government publication)
+- [NL Arbeidsinspectie asbest wetgeving](https://www.nlarbeidsinspectie.nl/onderwerpen/arbeidsomstandighedenwet-gevaarlijke-stoffen/asbest/wet--en-regelgeving-asbest) — 1994 ban confirmation (HIGH confidence — official authority)
+- [Bobex.nl — asbest verbod 1994](https://www.bobex.nl/nl-nl/asbest-verwijderen/wat-is-asbest/verbod/) — 1963-1993 peak risk period, mandatory inventory pre-1994 (MEDIUM confidence — verified against NL Arbeidsinspectie source)
+
+---
+
+*Architecture research for: Propdex v9.0 Professional Marketplace*
+*Researched: 2026-03-01*

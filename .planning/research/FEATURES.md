@@ -1,248 +1,290 @@
-# Feature Landscape: Deep Property Data Sources
+# Feature Landscape: v9.0 Professional Marketplace — Kwaliteitsborger Lead Generation
 
-**Domain:** Dutch Property Intelligence Platform — WOZ, Energielabel, BRK Eigendom, RCE Monumenten
-**Researched:** 2026-02-23
-**Confidence:** HIGH (official Dutch government API docs, existing codebase) / MEDIUM (developer UX patterns via web research)
+**Domain:** Dutch Construction Professional Marketplace — Wkb kwaliteitsborger lead generation on existing property intelligence platform
+**Researched:** 2026-03-01
+**Confidence:** HIGH (Wkb law, TloKB register, Bbl requirements via official Dutch government sources) / MEDIUM (marketplace patterns via web research and comparable platforms)
 
 ---
 
 ## Context: What Already Exists (Do Not Re-Build)
 
-This milestone adds four new data sources to an existing platform. The following report infrastructure is already shipped and must be extended, not replaced.
+This milestone transforms the existing property intelligence platform into a lead generation platform. The following infrastructure is already shipped and must be extended, not replaced.
 
-**Existing PropertyReportResponse sections:**
-- `address` — BAG address data (straat, huisnummer, postcode, woonplaats)
-- `building` — BAG pand data (pand_id, bouwjaar, status, oppervlakte, gebruiksdoel, geometry)
-- `cadastral_parcels` — PDOK parcel list (kadastrale_aanduiding, perceelnummer, sectie, oppervlakte, geometry)
-- `zoning` — DSO bestemmingsplan (bestemming, dimensions, functie/gebieds-aanduidingen, AI tekst parsing)
-- `monuments` — PDOK spatial query returning (monument_nummer, monument_naam, classification, register_url, legalfoundationdate)
-- `map_data` — GeoJSON geometries for map rendering
-- `ai_parsing` — AI-parsed bestemmingsplan PDF extraction
-- `section_sources` — Per-section data freshness attribution
+**Existing platform capabilities that feed this milestone:**
+- `PropertyReportResponse` pipeline — BAG, DSO, WOZ, EP-online, BRK, RCE data per address
+- `buildability_delta` — hoeveel kan hier nog gebouwd worden (m², units, height delta)
+- `wkb_precheck` — Layer A: gevolgklasse determination + Layer B: optional refinement (already built in v7.2)
+- `permit_precedent_benchmark` — comparable permits by gemeente and building type
+- `bouwjaar` from BAG — critical for asbest risk flagging (pre-1994 threshold)
+- `energielabel` from EP-online — registered label data
+- `bodemloket` — Bodemloket WMS available (WFS limited, ArcGIS REST documented at gdngeoservices.nl)
+- Area scan results — parcels with opportunity scores, bestemmingen, zoning data
+- Meldingen intelligence — bekendmakingen matched to parcels
+- PDF export pipeline via WeasyPrint — already generates structured reports
 
-**Monument gap (the RCE improvement):** Current RCE integration uses PDOK INSPIRE spatial query which returns only 5 fields (monument_nr, naam, classification, url, datum). The monumentenregister has much richer data (redengevende omschrijving, bouwperiode, oorspronkelijke functie, complexnummer) that is inaccessible via the current PDOK endpoint.
-
-**BRK gap:** A `BRKBevragenClient` is implemented and tested (mTLS, API key) but no schema exists yet for the returned ownership data in `PropertyReportResponse`. The data is fetched live and displayed directly (never stored — Kadaster Tier 3 terms).
-
-**WOZ gap:** No WOZ integration exists. No schema exists. WOZ data is not in `PropertyReportResponse`.
-
-**Energielabel gap:** No EP-online integration exists. No schema exists.
+**Wkb context (mandatory for feature decisions):**
+- Wet kwaliteitsborging voor het bouwen (Wkb) mandatory from January 1, 2024 for gevolgklasse 1
+- Gevolgklasse 1 = grondgebonden woningen, vakantiewoningen, industriegebouwen max 2 verdiepingen
+- Gevolgklassen 2 and 3 are NOT yet mandatory — current scope is exclusively GK1
+- TloKB (Toelatingsorganisatie) maintains the public register at register.tlokb.nl
+- VKBN is the professional association for kwaliteitsborgers
+- Kwaliteitsborger fee: approximately 1–1.5% of bouwsom (€3,750 for €250K bouwsom)
+- 33 projects were fully gereedgemeld by end of 2024 — market is early-stage, opportunity is real
 
 ---
 
 ## Table Stakes
 
-Features that Dutch projectontwikkelaars expect from a property intelligence platform at this price point. Missing these makes the report feel incomplete compared to kadasterdata.nl, brainbay.nl, or a manual Kadaster extract.
+Features that a property developer or kwaliteitsborger expects from a professional lead generation platform in this domain. Missing these makes the product feel unfinished or untrustworthy.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| WOZ taxatiewaarde (most recent) | Every deal starts with WOZ as a pricing anchor — below-WOZ purchases are flagged as distressed; above-WOZ means premium location | LOW | Single value + peildatum. Kadaster WOZ API Bevragen or LV-WOZ feed. Restricted to OIN-authenticated parties — may need Altum AI or WOZ Waardeloket scrape as fallback |
-| WOZ peildatum (valuation date) | The date determines which market cycle the value reflects — 2024 WOZ based on 1-1-2023 market, 2026 WOZ based on 1-1-2025 market | LOW | Always displayed alongside the waarde. Without it, the number is meaningless |
-| Energielabel klasse (A++++–G) | Directly signals renovation cost profile — G label on commercial means mandatory upgrade costs before rental; monument label reveals compliance exposure | LOW | EP-online webservice — single letter class. Free public data via RVO/EP-online API |
-| Energielabel registratiedatum | Labels older than 10 years are expired — outdated label means unknown energy status, which is a risk factor | LOW | EP-online field: `registratiedatum`. Must show expiry status (10-year validity) |
-| BRK eigenaar type (rechtsvorm) | Whether the owner is a natural person, BV, stichting, or gemeente determines outreach strategy and acquisition likelihood | MEDIUM | BRK Bevragen returns `zakelijkGerechtigde` with `persoon.rechtsvorm` or `persoon.naam`. mTLS + API key required. Never store (Tier 3 terms) |
-| BRK zakelijk recht type | Eigendom, erfpacht, opstalrecht, or hypotheek — determines what the buyer actually acquires and what encumbrances carry over | MEDIUM | BRK returns `aardZakelijkRecht` (e.g., "eigendom", "erfpacht") per rights holder |
-| RCE redengevende omschrijving | The legal text that defines what is protected — without this, developers cannot assess feasibility of internal changes, façade alterations, or function change | HIGH | Not available via current PDOK INSPIRE endpoint. Requires Rijksmonumentenregister API or RCE Linked Data SPARQL endpoint. Known working approach: monumentenregister.cultureelerfgoed.nl REST API |
-| RCE monumentnummer (exact) | The official registration number — required to look up formal restrictions, apply for permits, and contact RCE | LOW | Current implementation extracts this from PDOK `localid`. Needs validation against actual monumentenregister |
+| Gevolgklasse determination (GK1/2/3) | Every Wkb workflow starts here — the kwaliteitsborger cannot quote without knowing the class | LOW | Already partially built in v7.2 `wkb_precheck`. Extend with explicit GK label and rationale display. Rules: grondgebonden woning = GK1; functie + verdiepingen + span determine class |
+| Asbest risk indicator (bouwjaar-based) | Pre-1994 buildings have presumptive asbest risk — legally mandated inventory before sloop/verbouw. Kwaliteitsborger needs to know this upfront | LOW | Derived from existing BAG `bouwjaar`. Simple threshold: bouwjaar < 1994 → flag. Display as a prominent risk badge on the report. No new API needed |
+| Bodemloket soil contamination indicator | Kwaliteitsborger risicobeoordeling must address "bijzondere lokale omstandigheden" including bodemverontreiniging — missing this means incomplete dossier | MEDIUM | Bodemloket ArcGIS REST at `gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer`. Query by parcel geometry (ST_Contains or bbox). Returns WBB_punten (point contaminations) and WBB_locaties (polygon areas). Display as "Bodemverontreiniging aanwezig/niet aanwezig/onbekend" |
+| Risicobeoordeling dossier (structured PDF) | Kwaliteitsborger saves 1–3 hours per project if the initial dossier is pre-assembled. The risicobeoordeling must cover: constructieve veiligheid, brandveiligheid, energieprestatie, specifieke lokale omstandigheden | HIGH | Aggregate from existing report sections + new Bodemloket data + asbest indicator + GK classification into a structured PDF export. Uses existing WeasyPrint pipeline. New template only |
+| "Vraag kwaliteitsborger aan" CTA in report | Users expect an actionable next step after reading a property intelligence report — without a CTA, the lead generation journey breaks | LOW | A button/card in the report UI. Triggers a lead capture form. No payment required — manual matching in MVP. Must appear contextually after GK determination is shown |
+| Lead capture form (project brief) | Kwaliteitsborger needs: type bouwwerk, locatie, bouwjaar, GK, oppervlakte, geschatte bouwsom, contactgegevens. Without this, a professional cannot respond | MEDIUM | Form collects: address (auto-filled from report), bouwjaar (auto-filled), gevolgklasse (auto-filled), bouwtype, geschatte bouwsom, gewenste startdatum, opmerkingen, naam, email, telefoon. Pre-fill from existing report data where possible |
+| Professional directory listing (kwaliteitsborger profiles) | Users expect to see who they are contacting — anonymous lead routing is distrusted. TloKB register is public, VKBN lists members | MEDIUM | Display per listing: naam/organisatie, erkend instrument, werkgebied (provincie/gemeente), contactgegevens, TloKB register link. MVP: static or manually maintained. Phase 2: dynamic from TloKB public register |
+| Lead notification to professional | Kwaliteitsborger must be notified when a matching lead arrives — without this the marketplace is just a form | MEDIUM | Email notification to matched kwaliteitsborger with project brief summary. MVP: manual routing by Propdex team. Phase 2: automated matching by werkgebied/type |
+| Lead confirmation to developer | Developer must receive confirmation their request was received — no confirmation = no trust | LOW | Email confirmation to developer with: submitted project brief summary, expected response time (48 hours), contact for support. Transactional email via existing infra |
 
 ---
 
 ## Differentiators
 
-Features that make Propdex meaningfully better than a developer doing manual research across woz-waardeloket.nl, ep-online.nl, and monumentenregister.cultureelerfgoed.nl.
+Features that make Propdex meaningfully better than a generic marketplace (Werkspot, Bark.com) for this specific domain. These leverage the existing property intelligence platform in ways a general marketplace cannot.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| WOZ waarde per m² (calculated) | Raw WOZ number is meaningless without m² normalization — "€800K WOZ" tells you nothing; "€4.200/m² WOZ" immediately contextualizes against market benchmarks | LOW | Derived: `woz_waarde / building.oppervlakte` if BAG m² available; show only when both sources are present |
-| WOZ historical values (2–3 years) | Trajectory matters — a WOZ rising 15%/yr indicates hot area; flat WOZ in rising market signals distress | MEDIUM | LV-WOZ Individuele Bevragingen returns history. Kadaster WOZ API Bevragen returns current only; historical requires separate WOZ Individuele Bevragingen subscription |
-| Energielabel + bouwjaar correlation signal | Pre-1945 buildings with G label = massive renovation budget; post-2015 with G label = suspicious or data error | LOW | Simple computed signal from existing `bouwjaar` (BAG) + `label_klasse` (EP-online). No extra data needed — just logic |
-| Monument energielabel obligation flag | From May 2026, rijksmonumenten must have an energy label upon sale/rental. Propdex can flag when a monument property lacks a registered label — this is an actionable compliance insight | LOW | Cross-reference: `is_monument = True` AND `energielabel = None or expired`. Display as actionable warning card |
-| BRK multiple owners display | Properties with multiple eigenaren (e.g., fractional ownership, housing corporation + municipality) signal complex negotiation — single owner is simpler to approach | LOW | BRK returns list of zakelijkeGerechtigden — show count and types, suppress PII for natural persons |
-| RCE complex membership | Monument part of a complex (e.g., klooster, fabrieksterrein) — developing one building requires coordinating with the whole complex owner | MEDIUM | RCE monumentenregister has `complexnummer` and complex membership. Developer needs to know: is this standalone or part of a protected group? |
-| RCE oorspronkelijke functie (original use) | Kerk → wonen is a very different feasibility than kantoor → wonen. Original function determines structural design, spatial logic, and community opposition likelihood | LOW | RCE Rijksmonumentenregister field: `oorspronkelijkeFunctie`. Available via linked data API |
-| RCE bouwperiode | Exact construction era informs structural engineering assumptions — pre-WWII masonry vs 1970s concrete have different renovation approaches | LOW | RCE field: `bouwjaar` or `bouwperiode`. May differ from BAG bouwjaar (which is often approximate) |
-| WOZ vs marktwaarde delta signal | If WOZ is far below the apparent market value (calculated from transaction data or manual input), this signals a distressed seller or off-market opportunity | HIGH | Requires transaction data (not currently available). Cross-reference with future Altum AI AVM. Defer to a later milestone |
+| Pre-filled dossier from property data | Kwaliteitsborger typically asks developer for 5–10 documents before quoting. Propdex auto-assembles: gevolgklasse, bouwjaar, bestemmingsplan, bodemkwaliteit, asbest indicator, energielabel, BRK eigendomsdata, oppervlakte | HIGH | Depends on all existing data pipeline sections. The dossier replaces the "intake questionnaire" phase, saving 1–3 hours per project. Core differentiator vs any generic marketplace |
+| Gevolgklasse pre-determination with rationale | Generic platforms ask the user to select a category manually. Propdex determines GK1/2/3 automatically from BAG + bestemmingsplan data and explains why | MEDIUM | Leverages existing `wkb_precheck` Layer A. Display: GK badge + "Waarom GK1: grondgebonden woning, 2 verdiepingen, geen bijzondere functies" rationale card. Kwaliteitsborger trusts pre-screened leads |
+| Bodemloket risk flag in lead brief | Generic marketplaces send project descriptions. Propdex sends structured risk signals — kwaliteitsborger can immediately see: asbest Y/N, bodem Y/N, GK, oppervlakte. Faster decision on which leads to pursue | MEDIUM | Requires Bodemloket integration. Display as structured risk matrix in the lead notification email and professional dashboard |
+| Permit precedent in lead context | Showing comparable vergunningen for the gemeente and building type helps the kwaliteitsborger understand project complexity before accepting | LOW | Leverages existing `permit_precedent_benchmark` (v7.2). Include 2–3 comparable cases in the dossier PDF and lead notification |
+| Buildability delta context | For new construction leads, showing hoeveel er nog gebouwd kan worden gives the kwaliteitsborger immediate scope sizing | LOW | Leverages existing `buildability_delta` (v7.2). Include in dossier for nieuwbouw projects |
+| Meldingen context (active vergunningaanvragen) | Active bekendmakingen matched to the parcel (vergunningaanvraag, sloopmelding) tell the kwaliteitsborger the project timeline is real | LOW | Leverages existing meldingen intelligence pipeline. Include matched meldingen count and categories in the lead brief |
+| Lead quality scoring for professionals | Instead of receiving all leads, kwaliteitsborger sees a "lead score" based on: completeness of dossier, GK match to werkgebied, days to planned start. Prevents wasted time on low-quality leads | MEDIUM | Computed from: dossier completeness %, GK1 confirmed (vs estimated), start date specificity, developer contact verified. Display as 1–5 star or traffic light signal |
+| TloKB register verification badge | Display that the kwaliteitsborger is confirmed active in the TloKB register — reduces fraud risk for developers. Generic platforms cannot do this without domain knowledge | MEDIUM | Link to public TloKB register entry. Manual verification in MVP; can automate with register.tlokb.nl scrape or API in Phase 2 |
 
 ---
 
 ## Anti-Features
 
-Features that seem useful but create more problems than they solve for this user group.
+Features that seem natural for a marketplace but create specific problems in this domain.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Show BRK natural person name and address | Privacy violation risk under AVG/GDPR — natural persons in Kadaster have data subject rights; displaying their home address creates legal exposure | Show rechtsvorm (natural person vs. legal entity) and entity name for rechtspersonen only; suppress name/address for natural persons |
-| Cache or store BRK eigendomsdata | Kadaster Tier 3 API terms explicitly prohibit storage of eigendomsdata — non-compliance risks contract termination | BRK data is already architected as never-cached in the existing BRKBevragenClient. Keep this architecture |
-| WOZ "afwijkingspercentage" (deviation vs market) | Calculating a meaningful WOZ deviation requires up-to-date transaction data, which Propdex does not have | Display WOZ value + peildatum clearly. Add a tooltip explaining WOZ is a tax valuation, not market value. Defer deviation calculation to when transaction data is available |
-| Full RCE redengevende omschrijving as raw text dump | These descriptions can be 1,000–5,000 words of legal/architectural Dutch that is unreadable to non-specialists | Extract and display: (1) beschermingsomschrijving as a 1–2 sentence summary, (2) key protected elements as a bullet list using AI extraction; show full text behind a "Lees volledig" toggle |
-| Energielabel EPC/NTA8800 detailed calculation breakdown | The full calculation has 50+ parameters (heating system, insulation values, orientation, etc.) that are not in EP-online public data and require an on-site energy audit | Show label klasse, registratiedatum, validity status, and methodiek (EPC/NTA8800). Do not promise detail that isn't available via the API |
-| WOZ bezwaar (objection) workflow | Some tools try to help users contest their WOZ — this is a residential consumer feature, not a developer feature | Developers use WOZ as a benchmark, not to contest it. Remove any UX that implies objection functionality |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Open bidding / price comparison (aanbesteding) | Developers want to compare prices from multiple kwaliteitsborgers | Commoditizes a professional service that requires trust and ongoing collaboration. Kwaliteitsborgers are reluctant to participate in race-to-bottom bidding. Wkb requires an *ongoing relationship*, not a one-time transaction | Show market rate context (1–1.5% of bouwsom) as an informational reference. Route to 1–2 matched professionals instead of open bidding |
+| Star ratings and public reviews for kwaliteitsborgers | Every marketplace has reviews | Kwaliteitsborger-developer relationships are long-term and legally constrained (independence requirement). Bad reviews from a contractor they had to fail could be legally contentious. Market is too small (few hundred active kwaliteitsborgers NL) to get statistically meaningful reviews | Show TloKB registration status, instrument provider, years active, werkgebied coverage as trust signals. Reviews can be added post-market-fit |
+| Instant booking / automatic matching without human check | Faster is better | Kwaliteitsborger must be independent from all project parties (architect, aannemer, developer). Matching without checking for conflicts of interest creates legal liability | Lead routing with a manual conflict-of-interest step in MVP. Flag if same kwaliteitsborger already working for the aannemer on this project |
+| Payment processing in MVP | Monetize from day one | Payment infrastructure is complex (escrow, VAT, invoicing), legally constrained, and premature — v9.0 goal is to prove lead generation value first. Premature payment adds friction that kills lead volume | Manual invoicing to kwaliteitsborgers for a monthly subscription or per-lead fee. Payment infrastructure deferred to v10.0+ |
+| GK2 and GK3 lead generation | More scope = more leads | Wkb does not yet require kwaliteitsborging for GK2/GK3. Taking on GK2/GK3 leads before the law applies creates confusion and professional liability risk | Clearly scope to GK1 only. Show a "GK2/3: kwaliteitsborging nog niet verplicht" notice for higher-class buildings |
+| Gevolgklasse determination by user input only | Simpler form, user knows their building | Self-classification leads to systematic errors. A developer may underclassify to save cost. Kwaliteitsborger who acts on wrong GK faces liability | Use automated GK determination from BAG + bestemmingsplan as the primary source. Allow manual override with explicit warning |
+| Multi-vertical marketplace launch (kwaliteitsborger + constructeur + asbestbedrijf simultaneously) | One platform for all professionals | Scope explosion for first launch. Each vertical has different compliance requirements, different user journey, different trust signals | Prove the model with kwaliteitsborger vertical first. Leave database schema flexible for future verticals, but build only kwaliteitsborger UX in v9.0 |
+| Full CRM pipeline for professionals | Kwaliteitsborgers want to track leads through their sales process | This is a full CRM product (Salesforce/Hubspot), not a marketplace feature. Building it adds months of scope and zero benefit to the developer side | Show lead status (Nieuw / In behandeling / Offerte verstuurd / Afgewezen) updated by the professional via a simple status change. Nothing more |
 
 ---
 
 ## Feature Dependencies
 
 ```
-WOZ Section
-├── woz_waarde ──────────────────────────> new API integration (Kadaster WOZ API Bevragen or LV-WOZ)
-├── woz_peildatum ───────────────────────> co-fetched with woz_waarde
-├── woz_waarde_per_m2 ───────────────────> DERIVED from woz_waarde / building.oppervlakte
-│                                          requires: building.oppervlakte (existing BAG field)
-└── woz_history ─────────────────────────> SEPARATE: WOZ Individuele Bevragingen (different API, paid)
-                                           defer unless subscription available
+[GK Determination (wkb_precheck v7.2)]
+    └── already built ──> [GK display in report UI]
+                              └── feeds ──> [Gevolgklasse badge in risicobeoordeling dossier]
+                                                └── required by ──> [Lead capture form (auto-fill)]
 
-Energielabel Section
-├── label_klasse ────────────────────────> new API integration (RVO EP-online webservice)
-├── registratiedatum ────────────────────> co-fetched with label_klasse
-├── geldigheid (expired flag) ───────────> DERIVED: registratiedatum + 10 years vs today
-├── methode (EPC/NTA8800) ───────────────> co-fetched (EP-online field: berekeningsmethode)
-└── monument_no_label_warning ───────────> DERIVED: monuments.is_monument AND energielabel is None
-                                           requires: monuments section (existing)
+[Asbest risk indicator]
+    └── depends on ──> [BAG bouwjaar] (already in report)
+    └── feeds into ──> [Risicobeoordeling dossier]
 
-BRK Eigendom Section  [client already built — no new API integration needed]
-├── zakelijk_recht_type ─────────────────> existing BRKBevragenClient.get_eigendom()
-├── eigenaar_type (rechtsvorm) ──────────> existing BRKBevragenClient.get_eigendom()
-└── multi_owner_flag ────────────────────> DERIVED: count of zakelijkeGerechtigden > 1
-                                           note: NEVER store, display-only per Tier 3 terms
+[Bodemloket integration]
+    └── new API ──> [Bodemverontreiniging indicator]
+                       └── feeds into ──> [Risicobeoordeling dossier]
+                       └── feeds into ──> [Lead brief to kwaliteitsborger]
 
-RCE Monument Section  [extending existing MonumentStatus schema]
-├── monument_nummer ─────────────────────> already extracted from PDOK (needs validation)
-├── monument_naam ───────────────────────> already in MonumentSourceResult
-├── redengevende_omschrijving ───────────> NEW: requires monumentenregister.cultureelerfgoed.nl
-│                                          NOT available via current PDOK INSPIRE endpoint
-├── oorspronkelijke_functie ─────────────> NEW: same endpoint as redengevende_omschrijving
-├── bouwperiode ─────────────────────────> NEW: same endpoint
-├── complex_nummer ──────────────────────> NEW: same endpoint
-└── beschermingscategorie (rijks/gemeentelijk) -> partially exists in MonumentSourceResult.monument_type
+[Risicobeoordeling dossier PDF]
+    └── requires ──> [Existing WeasyPrint pipeline]
+    └── requires ──> [GK determination]
+    └── requires ──> [Asbest indicator]
+    └── requires ──> [Bodemloket indicator]
+    └── enhanced by ──> [Permit precedent benchmark (v7.2)]
+    └── enhanced by ──> [Buildability delta (v7.2)]
+    └── enhanced by ──> [Meldingen matched to parcel (v6.0)]
+
+["Vraag kwaliteitsborger aan" CTA]
+    └── depends on ──> [GK determination displayed in report]
+    └── triggers ──> [Lead capture form]
+
+[Lead capture form]
+    └── auto-fills from ──> [Report data (address, bouwjaar, GK, oppervlakte)]
+    └── on submit ──> [Lead record created in DB]
+                         └── triggers ──> [Email to developer (confirmation)]
+                         └── triggers ──> [Email to kwaliteitsborger (notification)]
+
+[Professional directory]
+    └── provides ──> [Routing target for lead notifications]
+    └── displays ──> [TloKB registration badge]
+
+[Lead notification to professional]
+    └── requires ──> [Professional directory listing]
+    └── includes ──> [Risicobeoordeling dossier summary]
+    └── includes ──> [Lead quality score]
 ```
 
----
+### Dependency Notes
 
-## Data Source Reference
-
-### WOZ Waarde
-
-| Field | Dutch Name | Source | Update Frequency | Notes |
-|-------|-----------|--------|-----------------|-------|
-| woz_waarde | WOZ-waarde | Kadaster LV-WOZ | Annual (Jan–Mar) | Tax valuation, not market value |
-| woz_peildatum | Peildatum | Kadaster LV-WOZ | Annual | Always 1 January of preceding year |
-| woz_object_type | Objecttype | Kadaster LV-WOZ | Annual | Woning / bedrijf / etc. |
-| woz_waarde_per_m2 | Waarde per m² | Derived | Annual | woz_waarde / BAG oppervlakte |
-| woz_history | Historische waarden | WOZ Individuele Bevragingen | Annual | Last 3 peildata; requires separate subscription |
-
-**API access:** Kadaster WOZ API Bevragen requires OIN-number + PKIO certificate (same as BRK). Alternative: Altum AI WOZ API (third-party, simpler auth). Current approach: check if existing BRK mTLS credentials grant WOZ API access; if not, use LV-WOZ public endpoint for basic data.
-
-**Confidence:** MEDIUM — WOZ API Bevragen is documented but access requires OIN which is a government entity identifier; commercial SaaS access path needs verification.
-
-### Energielabel
-
-| Field | Dutch Name | Source | Update Frequency | Notes |
-|-------|-----------|--------|-----------------|-------|
-| label_klasse | Label | EP-online (RVO) | On registration | A++++, A+++, A++, A+, A, B, C, D, E, F, G |
-| registratiedatum | Registratiedatum | EP-online | On registration | Date label was filed, not inspection date |
-| geldigheid_datum | Geldig tot | Derived | — | registratiedatum + 10 years |
-| is_geldig | Nog geldig | Derived | — | geldigheid_datum > today |
-| berekeningsmethode | Methode | EP-online | On registration | EPC (pre-2021) or NTA8800 (post Jan 2021) |
-| primair_energieverbruik | kWh/m²/jaar | EP-online | On registration | NTA8800 labels only |
-
-**API access:** EP-online public data (RVO). Bulk file (monthly) or webservice with API key (free, request from RVO at epbdwebservices.rvo.nl). HIGH confidence — officially documented, publicly available.
-
-**Missing label handling:** Many pre-1970 buildings, monuments, and industrial properties have no registered label. Display "Geen geregistreerd energielabel" with bouwjaar context. Until May 2026, monuments were legally exempt; after May 2026, label required on sale/rental.
-
-### BRK Eigendomsdata
-
-| Field | Dutch Name | Source | Update Frequency | Notes |
-|-------|-----------|--------|-----------------|-------|
-| aard_zakelijk_recht | Zakelijk recht | BRK Bevragen | Daily | eigendom / erfpacht / opstal / vruchtgebruik |
-| eigenaar_type | Eigenaar type | BRK Bevragen | Daily | Natuurlijk persoon / Rechtspersoon / Overheid |
-| eigenaar_naam | Naam | BRK Bevragen | Daily | Only for rechtspersonen — suppress for natural persons |
-| eigenaar_woonplaats | Vestigingsplaats | BRK Bevragen | Daily | Only for rechtspersonen |
-| aantal_eigenaren | Aantal rechthebbenden | Derived | Daily | Count of zakelijkeGerechtigden |
-| hypotheek_aanwezig | Hypotheek | BRK Bevragen | Daily | Boolean — mortgage/lien present |
-
-**API access:** BRK Bevragen v2 — mTLS (PKIOverheid) + X-Api-Key. Client already implemented. NEVER cache or store (Tier 3 terms). HIGH confidence — code already exists and was built in a prior milestone.
-
-**Privacy constraint:** For `persoon.typeNatuurlijkPersoon`, display only "Particulier" (anonymous). For `persoon.typeNietNatuurlijkPersoon`, display full naam and vestigingsplaats. This distinction is mandatory under AVG.
-
-### RCE Monument (Enriched)
-
-| Field | Dutch Name | Source | Update Frequency | Notes |
-|-------|-----------|--------|-----------------|-------|
-| monument_nummer | Rijksmonumentnummer | Monumentenregister | Nightly | Official registration number |
-| monument_naam | Naam | Monumentenregister | Nightly | Official monument name |
-| redengevende_omschrijving | Redengevende omschrijving | Monumentenregister | Nightly | Legal protection description; can be 1–5K words |
-| oorspronkelijke_functie | Oorspronkelijke functie | Monumentenregister | Nightly | E.g., kerk, school, woonhuis, fabriek |
-| bouwperiode | Bouwperiode | Monumentenregister | Nightly | E.g., "1880-1920" |
-| complex_nummer | Complexnummer | Monumentenregister | Nightly | Present only if part of a described complex |
-| beschermingscategorie | Bescherming | Monumentenregister / PDOK | Nightly | rijksmonument / gemeentelijk / stads-dorpsgezicht |
-| status | Aanwijzingsstatus | Monumentenregister | Nightly | "aangewezen" / "voorgenomen" (pre-protected) |
-
-**API access:** Current implementation uses PDOK INSPIRE spatial endpoint — this returns only 5 fields and does NOT include redengevende_omschrijving. For enriched data, use:
-1. `monumentenregister.cultureelerfgoed.nl` REST API — requires monument_nummer as input
-2. RCE Linked Data API at `linkeddata.cultureelerfgoed.nl` — SPARQL or REST, no auth required
-3. `api.rijksmonumenten.info` — Solr-based, returning 403 as of early 2026 (per existing codebase comment)
-
-**Recommended two-step flow:** (1) Use existing PDOK spatial query to find monument_nummer; (2) Use monument_nummer to call monumentenregister REST API for enriched fields. This avoids replacing working spatial discovery logic.
+- **Risicobeoordeling dossier requires GK determination:** Without a confirmed gevolgklasse, the dossier is legally incomplete. This means GK display in the report must ship before the dossier feature.
+- **Lead capture form requires dossier:** The value proposition of the lead form is "your dossier is pre-assembled." Without the dossier, the form is just another contact form (commodity, low conversion).
+- **Bodemloket enhances but does not block dossier:** Dossier can ship without Bodemloket data — show "Bodemkwaliteit: niet opgevraagd" as a placeholder. Add Bodemloket in the same phase if API integration is straightforward, or defer to v9.1.
+- **Professional directory is pre-condition for lead routing:** Without at least one listed kwaliteitsborger, leads cannot be routed. Seed with 3–5 known TloKB-registered professionals before launch.
 
 ---
 
-## MVP Recommendation
+## Risicobeoordeling Dossier: Required Content
 
-This milestone adds four data sources. Prioritize by implementation cost and developer workflow impact:
+Based on official Bbl requirements and TloKB guidelines, a compliant risicobeoordeling must cover:
 
-**Phase 1 — Quick wins, high value (no new auth needed):**
-1. Energielabel klasse + registratiedatum + validity (EP-online free API, simple REST)
-2. Derived signals: woz_waarde_per_m2, energielabel expiry flag, monument-without-label warning
-
-**Phase 2 — Moderate effort, core value:**
-3. WOZ waarde + peildatum (validate OIN access path; fallback to Altum AI if needed)
-4. RCE monument enrichment — redengevende_omschrijving, oorspronkelijke_functie, bouwperiode (second call to monumentenregister using existing monument_nummer)
-
-**Phase 3 — Complex, high value for power users:**
-5. BRK eigendomsdata display — schema + UI for already-implemented API client
-6. WOZ historical values — only if WOZ Individuele Bevragingen subscription is available
-
-**Defer:**
-- WOZ vs marktwaarde delta — requires transaction data not currently available
-- RCE complex membership deep linking — valid feature but requires complex-level API queries beyond MVP scope
+| Content Area | Source in Propdex | Notes |
+|-------------|-------------------|-------|
+| Gevolgklasse determination | wkb_precheck (v7.2) | GK1 classification + rationale |
+| Bouwwerk identificatie (adres, perceel, BAG-ID) | BAG + kadastrale aanduiding | Already in report |
+| Bouwjaar | BAG bouwjaar | Already in report |
+| Gebruiksfunctie (woonfunctie, industriefunctie) | BAG gebruiksdoel | Already in report |
+| Constructieve veiligheid risico's | Derived from bouwjaar + type + GK | Show risk level: low/medium/high based on age and type |
+| Brandveiligheid risico's | Derived from GK + function | GK1 residential has standard profile |
+| Energieprestatie (energielabel) | EP-online (v7.0) | Label klasse + geldigheid |
+| Bijzondere lokale omstandigheden: bodem | Bodemloket | NEW: bodemverontreiniging aanwezig/niet/onbekend |
+| Bijzondere lokale omstandigheden: asbest | BAG bouwjaar < 1994 | NEW: asbest risico indicator |
+| Gelijkwaardige oplossingen | User-supplied | Text field in lead capture form: "zijn er gelijkwaardige oplossingen gepland?" |
+| Vergunningenstatus (actieve aanvragen) | Meldingen intelligence (v6.0) | Matched bekendmakingen count + categories |
+| Referentieprojecten gemeente | Permit precedent benchmark (v7.2) | 2–3 comparable cases |
+| Bebouwingsmogelijkheden | Buildability delta (v7.2) | For nieuwbouw projects |
 
 ---
 
-## Display Format Recommendations
+## MVP Definition
 
-### WOZ Section
-Display as a card with: large value (€ formatted), peildatum below, waarde/m² as secondary metric. Historical mini-chart (sparkline) if 3 years available. Source badge: "Kadaster WOZ" with peildatum as freshness indicator.
+### Launch With (v9.0)
 
-### Energielabel Section
-Display as a prominent letter badge (A–G with color coding: A=green, G=red). Below: registration date + "Geldig tot [date]" or "Verlopen" in red. Method badge (EPC/NTA8800). Alert card if monument + no label.
+Minimum viable product — what's needed to validate kwaliteitsborger lead generation.
 
-### BRK Eigendom Section
-Display as a summary card: recht type, eigenaar type(s), hypotheek indicator. For rechtspersonen: naam + vestigingsplaats. For natural persons: "Particulier eigenaar" (no identifying details). Add disclaimer: "Eigendomsdata — niet opgeslagen per Kadaster voorwaarden."
+- [ ] GK determination prominently displayed in property report — the entry point for every kwaliteitsborger
+- [ ] Asbest risk indicator (bouwjaar < 1994 flag) — zero API cost, derived from existing BAG data
+- [ ] Bodemloket soil contamination query (at least WMS-based indicator) — required for risicobeoordeling completeness
+- [ ] "Vraag kwaliteitsborger aan" CTA in report, visible after GK is determined
+- [ ] Lead capture form with auto-fill from report data — reduces developer effort, increases conversion
+- [ ] Risicobeoordeling dossier PDF export — the core value proposition for kwaliteitsborgers
+- [ ] Professional directory: minimum 3–5 manually seeded kwaliteitsborger listings
+- [ ] Email notification to kwaliteitsborger with dossier summary
+- [ ] Email confirmation to developer with submitted brief
 
-### RCE Monument Section (enriched)
-Replace/extend existing monument alert card. Show: monumentnummer, naam, bouwperiode, oorspronkelijke functie, beschermingscategorie. Add "Redengevende omschrijving" collapsible section with full text. Show complex membership if present. Link to official monumentenregister page.
+### Add After Validation (v9.x)
+
+Features to add once first leads are flowing and kwaliteitsborgers provide feedback.
+
+- [ ] Lead quality scoring — add after seeing what information kwaliteitsborgers actually use to accept/reject leads
+- [ ] TloKB register verification badge — adds trust, implement once directory is being used
+- [ ] Dynamic professional directory from TloKB register (scrape or API) — replace manual seed data
+- [ ] Lead status updates by professional (Nieuw/In behandeling/Offerte) — add once professionals are logging in
+
+### Future Consideration (v10.0+)
+
+- [ ] Payment infrastructure — credit system, per-lead or subscription billing
+- [ ] Additional verticals: constructeurs, asbestbedrijven, bodemonderzoekers
+- [ ] B2B API for borgingspartijen (Woningborg, Kiwa, SWK)
+- [ ] Automated conflict-of-interest checking between professional and project parties
+- [ ] Full lead pipeline visualization on map (color-coded by pipeline stage)
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| GK display in report | HIGH | LOW (extends v7.2 wkb_precheck) | P1 |
+| Asbest risk indicator | HIGH | LOW (BAG bouwjaar already present) | P1 |
+| "Vraag kwaliteitsborger aan" CTA | HIGH | LOW (button + form trigger) | P1 |
+| Lead capture form (auto-fill) | HIGH | MEDIUM (form + DB model + email) | P1 |
+| Risicobeoordeling dossier PDF | HIGH | HIGH (new PDF template, multi-source aggregation) | P1 |
+| Bodemloket integration | MEDIUM | MEDIUM (new API client, WMS/REST query) | P1 |
+| Professional directory (seeded) | HIGH | LOW (static data, admin CRUD) | P1 |
+| Lead notification emails | HIGH | LOW (transactional email, existing infra) | P1 |
+| Lead quality scoring | MEDIUM | MEDIUM (scoring logic + display) | P2 |
+| TloKB verification badge | MEDIUM | LOW (static link, manual check) | P2 |
+| Dynamic TloKB directory | MEDIUM | MEDIUM (register.tlokb.nl scrape) | P2 |
+| Lead status tracking | MEDIUM | MEDIUM (status model + professional UI) | P2 |
+
+**Priority key:**
+- P1: Must have for v9.0 launch
+- P2: Add in v9.x after first leads validated
+- P3: Nice to have, future consideration
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | Werkspot (NL generic) | Bark.com (INT generic) | Propdex v9.0 Approach |
+|---------|----------------------|------------------------|----------------------|
+| Professional discovery | Browse by category + location | Browse by category + location | TloKB-verified directory filtered by GK and werkgebied |
+| Lead qualification | Consumer fills free-text form | Consumer fills category-specific form | Auto-filled from existing property intelligence data |
+| Project dossier | None | None | Structured risicobeoordeling PDF with government API data |
+| GK determination | Manual (user selects) | Not applicable | Automatic from BAG + bestemmingsplan |
+| Asbest/bodem risk | Not shown | Not applicable | Flagged from bouwjaar + Bodemloket |
+| Professional verification | Reviews only | Reviews + some manual checks | TloKB register link (legally authoritative) |
+| Conflict of interest check | None | None | Manual in MVP, automated in future |
+| Lead response time | Marketplace competition (fast) | Marketplace competition (fast) | Curated routing (slower but higher quality) |
+| Payment model | Per-lead credits | Per-lead credits | Manual billing in MVP (no payment infra) |
+
+---
+
+## User Journey: Property Check to Lead Capture
+
+This journey maps how a Propdex user (developer) naturally arrives at a kwaliteitsborger request.
+
+```
+1. Developer enters address → generates property report [existing]
+        ↓
+2. Report displays GK determination: "Gevolgklasse 1 — kwaliteitsborging verplicht" [NEW]
+        ↓
+3. Report shows asbest indicator (if bouwjaar < 1994) [NEW]
+        ↓
+4. Report shows bodem risk (if WBB contamination nearby) [NEW]
+        ↓
+5. Risicobeoordeling dossier generated (PDF export) [NEW]
+        ↓
+6. Developer sees CTA: "Vraag een kwaliteitsborger aan" [NEW]
+        ↓
+7. Lead capture form opens — auto-filled with address, bouwjaar, GK, oppervlakte [NEW]
+        ↓
+8. Developer adds: bouwtype, geschatte bouwsom, startdatum, contactgegevens
+        ↓
+9. Lead submitted → email confirmation to developer [NEW]
+        ↓
+10. Lead routed to matched kwaliteitsborger(s) with dossier summary [NEW]
+        ↓
+11. Kwaliteitsborger responds directly (email/phone) within 48 hours [MANUAL MVP]
+```
+
+**Key insight:** Steps 1–5 are the unique Propdex value — no other marketplace gives the kwaliteitsborger a pre-assembled dossier. The CTA (step 6) appears *after* the developer has already seen the intelligence, not before. This context-first approach is why Propdex leads will be higher quality than Werkspot/Bark leads.
 
 ---
 
 ## Sources
 
-- [Kadaster WOZ API Bevragen](https://www.kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen) — MEDIUM confidence, official product page
-- [WOZ Bevragen GitHub](https://kadaster.github.io/WOZ-bevragen/getting-started) — MEDIUM confidence, official Kadaster documentation
-- [EP-Online Public Data (RVO)](https://www.ep-online.nl/PublicData) — HIGH confidence, official RVO documentation
-- [EP-Online Webservice Data overheid](https://data.overheid.nl/en/dataset/ep-online-webservice--geregistreerde-energielabels-) — HIGH confidence, official
-- [RVO Energielabel Woningen](https://www.rvo.nl/onderwerpen/wetten-en-regels-gebouwen/energielabel-woningen) — HIGH confidence, official RVO
-- [BRK Bevragen Haal Centraal](https://vng-realisatie.github.io/Haal-Centraal-BRK-bevragen/) — HIGH confidence, VNG Realisatie official spec
-- [BRK Bevragen GitHub (VNG-Realisatie)](https://github.com/VNG-Realisatie/Haal-Centraal-BRK-bevragen) — HIGH confidence, open source spec
-- [Kadaster BRK Bevragen Product Page](https://www.kadaster.nl/zakelijk/producten/eigendom/brk-bevragen) — HIGH confidence, official
-- [Rijksmonumentenregister](https://monumentenregister.cultureelerfgoed.nl/) — HIGH confidence, official RCE register
-- [RCE Linked Data API](https://linkeddata.cultureelerfgoed.nl) — HIGH confidence, official RCE open data
-- [RCE API Documentation GitHub](https://cultureelerfgoed.github.io/API/) — MEDIUM confidence, official but sparse
-- [Rijksmonument Verbouwing Vergunning](https://www.rijksoverheid.nl/onderwerpen/erfgoed/vraag-en-antwoord/heb-ik-een-vergunning-nodig-voor-verbouwing-of-restauratie-van-een-monument) — HIGH confidence, official Rijksoverheid
-- [Redengevende Omschrijving en Bescherming](https://www.monumentenrecht.com/kennisblog/de-redengevende-omschrijving-en-de-bescherming-van-het-monument/) — MEDIUM confidence, legal practice blog
-- [Energielabelplicht Monumenten RCE](https://www.cultureelerfgoed.nl/onderwerpen/d/duurzaamheid/energielabel-voor-monumenten/energielabelplicht---vraag--antwoord) — HIGH confidence, official RCE
-- [Energielabel Monumenten vanaf 2026](https://labelvoorthuis.nl/vanaf-2026-energielabel-verplicht-voor-monumenten-bij-verkoop-of-verhuur/) — MEDIUM confidence, industry news
-- Codebase analysis: `brk_bevragen.py`, `rce_monuments.py`, `property_aggregator.py`, `monument.py`, `property.py` — HIGH confidence, direct source
+- [Wet kwaliteitsborging voor het bouwen — Rijksoverheid](https://www.rijksoverheid.nl/onderwerpen/bouwregelgeving/meer-toezicht-in-de-bouw-via-de-wet-kwaliteitsborging-voor-het-bouwen-wkb) — HIGH confidence, official
+- [Kwaliteitsborger — Informatiepunt Leefomgeving (IPLO)](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/kwaliteitsborger/) — HIGH confidence, official
+- [Bouwwerken in gevolgklasse 1 — IPLO](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — HIGH confidence, official
+- [Gevolgklassen — TloKB](https://www.tlokb.nl/wet-kwaliteitsborging/gevolgklassen) — HIGH confidence, official regulatory body
+- [TloKB Register (kwaliteitsborgers)](https://register.tlokb.nl/kb/kwaliteitsborger) — HIGH confidence, public official register
+- [VKBN — Vereniging Kwaliteitsborgers Nederland](https://www.vkbn.nl/) — HIGH confidence, professional association
+- [Dossier bevoegd gezag inhoud — BWTinfo](https://www.bwtinfo.nl/nieuws/2025/11/het-dossier-bevoegd-gezag-wat-moet-daarin) — HIGH confidence, November 2025 industry guidance
+- [Asbestinventarisatieplicht Bbl — IPLO](https://iplo.nl/regelgeving/regels-voor-activiteiten/sloopactiviteit/asbestinventarisatieplicht/) — HIGH confidence, official
+- [Bodemloket](https://www.bodemloket.nl/) — HIGH confidence, official national soil contamination portal
+- [Bodemloket ArcGIS REST endpoint](https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer) — MEDIUM confidence (2019 blog source, endpoint may have changed; needs verification)
+- [Kwaliteitsborger kosten — Borgingcompany.nl](https://borgingcompany.nl/wet-kwaliteitsborging-kosten/) — MEDIUM confidence, industry pricing data
+- [Services Marketplace Features — Rigby](https://www.rigbyjs.com/blog/services-marketplace-features) — MEDIUM confidence, web research
+- [Werkspot — Instapro Group](https://www.werkspot.nl/) — MEDIUM confidence, comparable NL platform
 
 ---
-*Feature research for: Deep Property Data Sources — Propdex v7*
-*Researched: 2026-02-23*
+*Feature research for: v9.0 Professional Marketplace — Kwaliteitsborger Lead Generation*
+*Researched: 2026-03-01*

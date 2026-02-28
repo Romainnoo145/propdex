@@ -1,221 +1,197 @@
 # Project Research Summary
 
-**Project:** Propdex — Deep Property Data APIs (v7.0)
-**Domain:** Dutch Government Property Data Integration — WOZ, EP-Online Energielabel, BRK Eigendom, RCE Monument Enrichment
-**Researched:** 2026-02-24
-**Confidence:** HIGH (BRK, EP-Online, RCE) / MEDIUM (WOZ — access path requires pre-milestone validation)
+**Project:** Propdex v9.0 Professional Marketplace
+**Domain:** Dutch PropTech — Wkb kwaliteitsborger lead generation on existing property intelligence platform
+**Researched:** 2026-03-01
+**Confidence:** HIGH (stack, architecture, Wkb rules, asbest rules) / MEDIUM (Bodemloket API access method, marketplace patterns)
 
 ## Executive Summary
 
-This milestone adds four new data sources to Propdex's existing property intelligence pipeline: WOZ-waarde (property tax valuation), EP-Online energielabel (energy label), BRK eigendomsdata (ownership and rights), and enriched RCE monument data (redengevende omschrijving, oorspronkelijke functie, bouwperiode). The architecture is already proven — FastAPI + asyncio + `asyncio.gather()` parallel fetches + JSONB caching + graceful degradation — and all four integrations fit cleanly into this established pattern. No new Python libraries are required. The primary structural addition is a sequential Step 2b in the aggregation pipeline for BRK, which depends on cadastral parcel data from the existing Step 2a and must bypass the cache layer entirely due to Kadaster Tier 3 terms.
+Propdex v9.0 extends a mature Dutch property intelligence platform (v1.0–v8.x, 8 shipped versions) into a B2B lead generation marketplace for Wkb kwaliteitsborgers. The pivot is well-timed: the Wet kwaliteitsborging voor het bouwen became mandatory for gevolgklasse 1 (GK1) new construction in January 2024, and renovation projects were explicitly excluded in December 2024, creating a focused, validated market need. The platform already has all the data infrastructure required (BAG, bestemmingsplan, RCE monuments, WeasyPrint PDF, fastapi-mail, TanStack Table) — v9.0 adds six new features with zero new npm or pip dependencies, which is an unusually low-risk milestone from a dependency perspective.
 
-The recommended build sequence is: schema layer first (Pydantic models precede aggregator wiring), then API clients, then aggregator integration, then frontend components. EP-Online and RCE enrichment are the lowest-risk integrations — free APIs, no procurement delay, well-documented. Register the EP-Online API key immediately (minutes, free at `apikey.ep-online.nl`). WOZ data carries the most uncertainty: the official Kadaster WOZ Bevragen API is restricted to municipalities and Propdex cannot qualify; the viable path is the unofficial WOZ-waardeloket public JSON endpoint (undocumented, no SLA) or the commercial Kadaster Objectinformatie API (€1.92/query, Mijn Kadaster registration required). This access path decision must be made before Phase 2 starts. BRK has the most operational complexity: PKIOverheid certificate procurement takes 2-4 weeks minimum and must start at milestone kickoff, but the client code already exists and gracefully degrades when unconfigured.
+The core differentiator over generic marketplaces (Werkspot, Bark.com) is the pre-assembled risicobeoordeling dossier: Propdex auto-generates the kwaliteitsborger intake document from government API data, saving 1–3 hours per project and making leads significantly higher quality than self-reported competitor leads. This context-first approach — developer first sees property intelligence, then sees a CTA — is the product's competitive moat and must be protected in every phase ordering decision. The two new data sources (Bodemloket soil contamination, Wkb gevolgklasse classifier) feed directly into the dossier's required content per official IPLO.nl and Bbl requirements.
 
-The most critical risk is regulatory: caching BRK eigendomsdata in any persistent layer (PostgreSQL, Redis, files) violates Kadaster Tier 3 terms and GDPR. This must be enforced architecturally — no `get_cached_or_fetch()` call for BRK, and `brk_ownership` must be stripped from `PropertyReportResponse` before saving to the JSONB report store. All other pitfalls (EP-Online V4 sunset, WOZ access restrictions, BRK identificatie format mapping) are well-understood and preventable with documented mitigations.
+The primary technical risk is the Bodemloket API access method: the ArcGIS REST endpoint documented in community sources returned 404 during direct architecture testing; the WMS GetCapabilities did confirm three layers. The integration must start with a spike to establish the actual viable query method before committing to scope. The primary regulatory risks are (1) presenting gevolgklasse classification as authoritative rather than indicative — monuments and verbouwingen are explicitly excluded from Wkb scope, (2) treating Bodemloket empty results as soil clearance when Bodemloket itself disclaims data completeness, and (3) routing developer contact data to professionals without explicit AVG consent logging. All three require disclaimer and consent design before UI implementation begins.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new Python libraries are needed. All four APIs return JSON and work with the existing `httpx.AsyncClient`, `aiolimiter.AsyncLimiter`, and `pydantic-settings` stack. The only new configuration entries are two settings (`EP_ONLINE_API_KEY`, optionally `KADASTER_OI_API_KEY`), three new cache TTL entries, and three new rate limiter instances.
+The v9.0 stack is entirely the existing stack. All six new features — Bodemloket API client, Wkb gevolgklasse classifier, asbest risk indicator, risicobeoordeling dossier PDF, lead capture flow, and professional directory — are implemented using already-installed packages. No changes to `pyproject.toml` or `package.json`.
 
-**Core technologies (existing — no change):**
-- `httpx.AsyncClient`: All four new API clients use the shared async HTTP client — no new HTTP library needed
-- `aiolimiter.AsyncLimiter` + `asyncio.Semaphore` via `APIRateLimiter`: New limiters for EP-Online (5 concurrent, 500/hr) and RCE detail (3 concurrent, 100/hr); Kadaster OI (2 concurrent, 100/hr) if WOZ path chosen
-- `get_cached_or_fetch()` in `cache_manager.py`: Used by EP-Online (30d TTL), WOZ (365d TTL), RCE enrichment (30d TTL); explicitly NOT used by BRK
-- `pyproj.Transformer`: Already handles RD/WGS84 transforms; existing CRS pattern must not be changed
+**Core technologies (all existing):**
+- httpx + pyproj: Bodemloket WMS client — existing government API pattern, WGS84 to RD New coordinate conversion already in use for RCE monuments
+- WeasyPrint + Jinja2: Dossier PDF — existing `asyncio.to_thread()` pipeline from `reports/pdf_export.py`, new Jinja2 template file only
+- fastapi-mail: Lead notification emails — existing pattern from `auth/email.py`
+- SQLAlchemy ARRAY(Integer) + ARRAY(String): Professional directory gevolgklassen/regio filtering — already supported via PostGIS Docker image
+- TanStack Table: Professional directory frontend — already installed in `package.json`
+- react-hook-form + zod + sonner: Lead capture form and toast feedback — all already installed
 
-**New API surface confirmed:**
-- EP-Online V5: `GET https://public.ep-online.nl/api/v5/PandEnergielabel/Adres` — free, API key required (minutes to register at `apikey.ep-online.nl`)
-- RCE Linked Data: `GET https://api.linkeddata.cultureelerfgoed.nl/queries/rce/rest-api-rijksmonumenten/run?rijksmonumentnummer={nr}` — free, no auth required
-- BRK Bevragen V2: Client already implemented in `government_apis/brk_bevragen.py` — needs aggregator wiring only; mTLS + API key
-- WOZ: Official WOZ Bevragen API is municipalities-only (blocked for Propdex); use WOZ-waardeloket undocumented public endpoint or Kadaster Objectinformatie API — decision required pre-implementation
-
-**What NOT to add:**
-- `zeep` — no SOAP APIs in scope
-- `lxml` / `xmltodict` — all APIs return JSON, not XML
-- `requests` — blocking; httpx already installed and async
-- `python-kadaster` — not a maintained package
+Two new database migrations are required (professionals table, lead_requests table). One new config field is needed (BODEMLOKET_BASE_URL). All existing patterns must be preserved: direct `db.add()/db.flush()/db.commit()` (never `async with db.begin()`), `datetime.utcnow()` (not timezone-aware), `Mapped[type]` + `mapped_column()` SQLAlchemy 2.x syntax throughout.
 
 ### Expected Features
 
-**Must have (table stakes — Dutch property developers expect these):**
-- WOZ-waarde + waardepeildatum — always displayed together; the date is mandatory context (WOZ can be 12-24 months behind market)
-- Energielabel klasse (A++++ to G) + registratiedatum + geldigheid (10-year validity flag)
-- BRK eigenaar type (rechtsvorm: natuurlijk persoon / rechtspersoon / overheid) + zakelijk recht type
-- BRK hypotheek indicator (boolean — mortgage/lien present)
-- RCE redengevende omschrijving + oorspronkelijke functie (only for monument properties, via two-step enrichment)
-- RCE monumentnummer exact match (already extracted from PDOK; needs enrichment from Linked Data)
+**Must have (table stakes) — v9.0 launch:**
+- Gevolgklasse determination (GK1) prominently displayed in property report — entry point for every kwaliteitsborger workflow
+- Asbest risk indicator (bouwjaar < 1994 flag) — zero API cost, derived from BAG data already present
+- Bodemloket soil contamination indicator — required for legally complete risicobeoordeling under Bbl
+- "Vraag kwaliteitsborger aan" CTA in report — contextual, appears only when `wkb_applicable === true`
+- Lead capture form with auto-fill from report data — address, bouwjaar, GK, oppervlakte pre-populated
+- Risicobeoordeling dossier PDF export — core value proposition for kwaliteitsborgers (saves 1–3 hours of intake work)
+- Professional directory (minimum 3–5 manually seeded TloKB-verified listings) — supply side required before CTA goes live
+- Email notification to kwaliteitsborger (manual routing in MVP) + confirmation to developer
 
-**Should have (differentiators — make Propdex better than manual research):**
-- WOZ-waarde per m² (derived: `woz_waarde / building.oppervlakte` — zero extra API cost, high value)
-- Energielabel expiry flag + monument-without-label compliance warning (May 2026 obligation for rijksmonumenten on sale/rental)
-- Energielabel + bouwjaar correlation signal (pre-1945 + G label = renovation cost flag)
-- BRK multiple owners display with count and rights types
-- RCE oorspronkelijke functie + bouwperiode + complex membership when applicable
+**Should have (differentiators) — v9.x post-validation:**
+- Lead quality scoring (dossier completeness %, GK match to professional's werkgebied, start date specificity)
+- TloKB register verification badge on professional listings
+- Dynamic professional directory populated from TloKB public register (replaces manual seed)
+- Lead status tracking by professional (Nieuw/In behandeling/Offerte verstuurd)
+- Pre-filled structured risk matrix in lead notification email (asbest Y/N, bodem Y/N, GK, oppervlakte)
 
-**Defer to later milestone:**
-- WOZ historical values (requires separate WOZ Individuele Bevragingen subscription — different API)
-- WOZ vs. marktwaarde delta (requires transaction data not currently available)
-- RCE complex membership deep-linking (beyond MVP scope)
-- Gemeentelijke monumenten (no national API exists; per-gemeente integration required)
+**Defer to v10.0+:**
+- Payment infrastructure (per-lead credits, subscription billing, escrow, VAT invoicing)
+- Additional professional verticals: constructeurs, asbestbedrijven, bodemonderzoekers
+- B2B API for borgingspartijen (Woningborg, Kiwa, SWK)
+- Automated conflict-of-interest checking between professional and project parties
 
-**Anti-features — explicitly do not build:**
-- Display of BRK natural person names or addresses (AVG/GDPR exposure — show "Particulier eigenaar" only)
-- Caching or storing BRK eigendomsdata in any persistent layer (Kadaster Tier 3 terms)
-- Full redengevende omschrijving as a raw text dump (can be 1,000-5,000 words; must be collapsible)
-- WOZ bezwaar (objection) workflow — developer use case, not residential consumer
-- Applying for official Kadaster WOZ Bevragen API as SaaS (application will be rejected)
+**Anti-features to explicitly avoid:**
+- Open bidding/price comparison — commoditizes a professional trust relationship that Wkb requires to be ongoing
+- Public star ratings — legally contentious in a small professional market with independence requirements
+- GK2/GK3 lead generation — Wkb does not yet require kwaliteitsborging for GK2/GK3
+- Multi-vertical marketplace launch — scope explosion; prove kwaliteitsborger model first
 
 ### Architecture Approach
 
-All four sources integrate into the existing two-step pipeline with one structural addition: BRK requires a sequential Step 2b after cadastral parcels are available, because it needs `kadastrale_aanduiding` from Step 2a. The recommended pattern uses `asyncio.create_task()` for the cadastral fetch, awaits it specifically before BRK, then awaits the remaining Step 2a tasks — avoiding the latency penalty of waiting for the slowest Step 2a call (DSO can be 3-8s) before starting BRK.
+v9.0 extends a stable three-tier architecture (React frontend, FastAPI backend, PostgreSQL/PostGIS) without restructuring it. The central data contract is `PropertyReportResponse` — all new data sources (bodem_data, wkb_classification, asbest_risk) add optional Pydantic fields to this schema, flowing through the existing aggregator, DB save, and PDF export pipeline. Two entirely new subsystems are added alongside the extended report pipeline: the dossier generator (POST/GET dossier endpoints, Jinja2 template, WeasyPrint) and the marketplace layer (professionals table, lead_requests table, email routing). The professional directory uses NULL organization_id (platform-level resource) rather than the tenant-scoped pattern used by all other models — this is a deliberate and critical exception requiring its own RLS policy and cross-tenant integration tests.
 
-**Major new components:**
-1. `government_apis/ep_online.py` (NEW): EP-Online V5 client — lookup by BAG VBO ID, explicit `None` on 404 (not an error state)
-2. `government_apis/woz_waardeloket.py` (NEW): WOZ public endpoint client — explicit LOW confidence flag, full graceful degradation, WOZ peildatum always co-fetched
-3. `government_apis/rce_monuments.py` (EXTEND): Add `get_detail_by_number()` method calling RCE Linked Data API by rijksmonumentnummer
-4. `services/property_aggregator.py` (MODIFY): Add `fetch_energy_label()`, `fetch_woz_data()`, `fetch_brk_ownership()` nested functions; restructure gather into Step 2a/2b; update `total_sections` from 6 to 9
-5. `services/monument_aggregator.py` (MODIFY): Two-step RCE enrichment — PDOK spatial detection (Step 1) then Linked Data detail call (Step 2) only when monument is found
-6. `schemas/energy.py`, `schemas/woz.py`, `schemas/brk.py` (NEW): Pydantic models for three new report sections
-7. `reports/service.py` (MODIFY): Strip `brk_ownership` from `PropertyReportResponse` before saving to JSONB
-8. Frontend: 3 new section components (`EnergieLabelSection`, `WOZSection`, `EigendomSection`) + enhanced `MonumentSection` with RCE enrichment fields
-
-**Critical architectural constraint:** `brk_ownership` must be stripped from `PropertyReportResponse` before any save to the `reports.report_data` JSONB column. This is the single most important architectural enforcement in the milestone.
-
-**Build order driven by three hard constraints:**
-- Schema models must exist before aggregators import and reference them (Phase 1)
-- API clients must exist before aggregator integration (Phase 2)
-- BRK Step 2b has a hard data dependency on Step 2a cadastral parcel output
+**Major components:**
+1. Bodemloket WMS client (`government_apis/bodemloket_wms.py`) — queries WBB_locaties layer via GetFeatureInfo with 50m bbox buffer, 30-day JSONB cache, 2 concurrent / 100 per hour rate limit
+2. Wkb classifier service (`services/wkb_classifier.py`) — pure Python rule engine, called from property_aggregator, returns WkbClassification with gevolgklasse + wkb_applicable + confidence + classification_basis list
+3. Asbest indicator service (`services/asbest_indicator.py`) — pure Python, bouwjaar threshold (< 1994), high/medium/none/unknown risk levels with NEN 2991 reference
+4. Dossier generator (`dossier/router.py`, `dossier/generator.py`, `dossier/templates/wkb_kwaliteitsborger.html`) — aggregates report sections, asyncio.to_thread WeasyPrint, POST generate + GET download pattern, GeneratedDossier model
+5. Lead capture (`leads/router.py`, `models/lead_request.py`) — org-scoped leads with consent logging fields, email notification via fastapi-mail, direct-commit pattern
+6. Professional directory (`professionals/router.py`, `models/professional.py`) — platform-scoped (NULL org_id), ARRAY GIN indexes for gevolgklassen and regio_gemeenten filtering, admin-managed in MVP
 
 ### Critical Pitfalls
 
-1. **Caching BRK eigendomsdata violates Kadaster Tier 3 terms** — never call `get_cached_or_fetch()` for BRK; strip `brk_ownership` before DB save in `reports/service.py`; add integration test asserting no `CachedAPIResponse` row with `source='brk'` exists after eigendom fetch
+1. **Wkb classification presented as authoritative** — The schema must include `wkb_applicable: bool` and `uncertainty_flags` from the start. Label as "Indicatief" in all UI copy. Monument exclusion (`is_rijksmonument`) and verbouw exclusion (December 2024 ministerial decision) must be built into the classifier before any CTA is built. The CTA component must check `wkb_applicable`, not just `gevolgklasse`. Gemeentelijke monumenten are not visible to RCE data — flag this uncertainty explicitly.
 
-2. **WOZ official API is restricted to municipalities** — do not apply for WOZ Bevragen API (Kadaster will reject SaaS applications); use unofficial WOZ-waardeloket public endpoint or Kadaster Objectinformatie API (commercial, €1.92/query); validate and decide access path before Phase 2 starts
+2. **Bodemloket empty result treated as soil clearance** — Bodemloket's own FAQ states its data is incomplete. Display must always read "Geen geregistreerde verontreiniging gevonden" not "Geen bodemverontreiniging." The ArcGIS REST endpoint returned 404 during testing; WMS is the verified fallback. A spike to confirm the viable access method is mandatory before integration work begins.
 
-3. **PKIOverheid certificate procurement takes 2-4 weeks** — start at milestone kickoff regardless of when the BRK code phase begins; BRK client already gracefully degrades when unconfigured; test against ESD-ETO staging environment while awaiting production certificate
+3. **AVG consent not logged for lead routing** — Sharing developer contact details with a professional requires explicit, specific, timestamped consent under Dutch AVG (GDPR). The LeadRequest model must store `consent_timestamp`, `consent_text_hash`, and `consent_given` before any lead data is transmitted. A verwerkersovereenkomst template for professionals must be drafted before the directory goes live.
 
-4. **EP-Online V4 endpoint was sunset January 30, 2026** — implement only against V5 at `https://public.ep-online.nl/api/v5/`; verify response field names against live V5 Swagger before writing parsers; do not copy field names from older examples
+4. **Professional directory multi-tenant isolation break** — Professional profiles are platform-level data visible to all tenants. Using `organization_id NOT NULL` on the Professional model would make all listings invisible across tenants. Use `organization_id = NULL` with a separate RLS policy. Cross-tenant read integration test is required before the directory API ships.
 
-5. **EP-Online 404 is a normal state, not an error** — approximately 20-30% of properties and the majority of non-residential/monument/agricultural properties have no registered label; EP-Online 404 must return `energielabel_status = "niet_geregistreerd"`, must not increment the error count, and must not reduce the completeness score
-
-6. **BRK identificatie must be in NL.IMKAD format** — `NL.IMKAD.KadastraalObject.<id>` is not derivable from the kadastrale aanduiding string; it must come from the PDOK OGC cadastral parcel feature properties or from a BRK search by `kadastraleAanduiding`; validate the PDOK → identificatie → BRK lookup chain with real parcels before building the full integration
-
-7. **RCE coverage is rijksmonumenten only** — the PDOK `rce_inspire_points` dataset does not contain gemeentelijke monumenten; UI must say "Rijksmonument (RCE)" not "Monument" in all labels; also query `rce_inspire_areas` for beschermde stads- en dorpsgezichten
+5. **Cold start: lead CTA enabled before supply is recruited** — The CTA must be gated by gemeente-based availability check. Supply-side recruitment (2–3 verified kwaliteitsborgers with TloKB confirmation) must happen before the CTA is enabled in production. Seeding the directory is a launch blocker, not an optional post-launch task.
 
 ## Implications for Roadmap
 
-Based on the combined research, a four-phase backend build followed by a frontend phase is the correct structure. The dependency chain is strict: schemas before clients before aggregator wiring before frontend. PKIOverheid procurement runs in parallel from day one as an operational track.
+Based on research, suggested phase structure (5 phases):
 
-### Phase 1: Schema and Config Foundation
+### Phase 1: Wkb Classification Engine + Asbest Risk Indicator
 
-**Rationale:** Every downstream component references Pydantic models. Nothing can be built until these types and cache config entries exist. This phase has zero external API dependencies and zero risk — pure Python type definitions following established project patterns.
-**Delivers:** `schemas/energy.py` (`EnergyLabel`), `schemas/woz.py` (`WOZData`, `WOZJaarwaarde`), `schemas/brk.py` (`BRKOwnership`, `BRKEigenaar`); extended `PropertyReportResponse` with 3 new Optional fields; extended `MonumentSourceResult` with nullable enrichment fields; new `CACHE_TTL` entries for `ep_online` (30d), `woz` (365d), `rce_detail` (30d); `EP_ONLINE_API_KEY` setting in `core/config.py`
-**Addresses:** Table stakes feature schemas — establishes the type contract for all four new data sources
-**Avoids:** Runtime `KeyError` from missing `CACHE_TTL` entries (Pitfall 12); `mypy` errors from undefined types in aggregator integration phase
-**Research flag:** No research phase needed — Pydantic model patterns are established and consistent throughout the codebase. Follow existing `schemas/monument.py` and `schemas/property.py` as templates.
+**Rationale:** The gevolgklasse determination is the entry point for the entire user journey. The CTA, the dossier, and the lead form all depend on a trustworthy GK classification being present in the report. Asbest indicator ships in the same phase — it is zero-cost (pure computation from existing bouwjaar) and feeds the same dossier. Both pitfalls around Wkb misclassification (monument exclusion, verbouw exclusion) must be addressed here before anything downstream is built.
+**Delivers:** `wkb_classification` field in PropertyReportResponse (gevolgklasse + wkb_applicable + uncertainty_flags + classification_basis); `asbest_risk` field (risk_level + bouwjaar + NEN 2991 reference); extended WkbSection and new AsbstSection in ReportDetailPage; `wkb_classifier.py` and `asbest_indicator.py` service files.
+**Features from FEATURES.md:** GK determination (P1), asbest risk indicator (P1)
+**Avoids:** Pitfalls 1, 3, 6, 12 (classification as authoritative; asbest as binary result; monument CTA; verbouw exclusion missing)
+**Research flag:** Skip research-phase. Pure Python rule engines with well-documented rules from IPLO.nl and TloKB (HIGH confidence). Follow existing `wkb_precheck.py` as structural template.
 
-### Phase 2: API Clients
+### Phase 2: Bodemloket Integration
 
-**Rationale:** Clients depend on schemas (import them) but have no aggregator dependencies. They can be built and verified against live APIs before any pipeline wiring. This is where the WOZ access path decision must be implemented and where EP-Online V5 field names are verified against real responses.
-**Delivers:** `ep_online.py` — EP-Online V5 client by VBO ID, graceful `None` on 404; `woz_waardeloket.py` — WOZ public endpoint client with explicit LOW confidence flag; `rce_monuments.py` extended with `get_detail_by_number()` calling RCE Linked Data API; new rate limiters (`ep_online_limiter`, `rce_detail_limiter`) in `rate_limiter.py`
-**Uses:** Existing `httpx.AsyncClient`, `APIRateLimiter`, `handle_api_response()` from `government_apis/base.py`
-**Avoids:** EP-Online V4 sunset (Pitfall 5) — pin to V5 Swagger from day one; WOZ API restriction (Pitfall 2) — use waardeloket or Objectinformatie approach, not official WOZ Bevragen API
-**Research flag:** Validate EP-Online V5 field names against live Swagger with a real VBO ID before writing the parser — V4 vs V5 field names differ. Confirm WOZ-waardeloket endpoint JSON structure with a real address (nummeraanduidingidentificatie). Test RCE Linked Data API for a known rijksmonumentnummer (e.g., 12340) to confirm `volledigeOmschrijving`, `oorspronkelijkeFunctie`, `bouwstijl` field availability in the REST response.
+**Rationale:** Bodemloket is required for a legally complete risicobeoordeling under Bbl, but its API access method is unconfirmed (MEDIUM confidence). Phase 2 starts with a mandatory spike to verify whether WMS GetFeatureInfo or ArcGIS REST is the viable query path. Only after the spike resolves does integration proceed. Keeping Bodemloket as a separate phase prevents the spike uncertainty from blocking Phase 1 delivery.
+**Delivers:** `bodem_data` field in PropertyReportResponse; BodemSection in ReportDetailPage with "Geen geregistreerde verontreiniging" framing plus coverage disclaimer; `bodemloket_wms.py` API client; 30-day JSONB cache; BodemData schema.
+**Features from FEATURES.md:** Bodemloket soil contamination indicator (P1)
+**Avoids:** Pitfalls 2 and 11 (absence treated as clearance; no REST JSON API assumed)
+**Research flag:** Mandatory spike at phase start. Verify actual viable Bodemloket query method (WMS GetFeatureInfo vs ArcGIS REST) before scoping integration. Document live response format for WBB_locaties layer with a known contaminated parcel before writing the parser.
 
-### Phase 3: Aggregator Wiring (Backend Integration)
+### Phase 3: Risicobeoordeling Dossier PDF Generator
 
-**Rationale:** This is the structurally complex change — rewiring `asyncio.gather()` into Step 2a/2b, integrating all four new data sources, and enforcing the BRK no-cache constraint at every touch point. Must happen after Phases 1 and 2 are complete and type-checked. The BRK integration requires the most care because of the data dependency on cadastral parcels and the regulatory constraint on storage.
-**Delivers:** `property_aggregator.py` with `fetch_energy_label()`, `fetch_woz_data()`, `fetch_brk_ownership()` nested functions; Step 2a/2b gather restructure using `asyncio.create_task()` for cadastral to avoid blocking BRK on slow DSO calls; `monument_aggregator.py` with two-step RCE enrichment (`_fetch_rce_with_detail()`); `completeness_score` `total_sections` denominator updated (6 → 9); `reports/service.py` with `brk_ownership` stripped before JSONB save
-**Avoids:** BRK caching violation (Pitfall 1) — no `get_cached_or_fetch()` call for BRK, `brk_ownership` stripped before DB save; BRK blocking on DSO latency (ARCHITECTURE.md Anti-Pattern 4) — `asyncio.create_task()` pattern; BRK identificatie format (Pitfall 7) — validate PDOK OGC field names before implementing; WOZ multiple objects per apartment (Pitfall 9) — filter by `nummeraanduidingidentificatie`; PDOK OGC CRS (Pitfall 10) — use existing RD coordinate + explicit `bbox-crs` header pattern
-**Research flag:** Validate which field in the PDOK OGC cadastral parcel response carries the `NL.IMKAD.KadastraalObject.<id>` format needed for BRK lookup — this must be confirmed against a real PDOK response before implementing `fetch_brk_ownership()`. Confirm `nummeraanduidingidentificatie` is returned from the existing BAG address resolution step in `property_aggregator.py`.
+**Rationale:** The dossier aggregates outputs from Phases 1 and 2 and is the core differentiator. It is the prerequisite for the lead capture CTA — without the dossier, the CTA is just another contact form with no competitive moat. Building Phase 3 after Phases 1 and 2 ensures real data flows through the template. The WeasyPrint pattern is already established; this phase is primarily a template authoring task with careful copy and disclaimer design.
+**Delivers:** POST /api/dossier/{report_id}/generate + GET /api/dossier/{dossier_id}/download; `wkb_kwaliteitsborger.html` Jinja2 template with mandatory "Propdex Datasamenvatting" title and disclaimer on every page; GeneratedDossier model; asyncio.to_thread generation flow; "Genereer dossier" CTA in ReportDetailPage.
+**Features from FEATURES.md:** Risicobeoordeling dossier PDF (P1)
+**Uses from STACK.md:** WeasyPrint + Jinja2 (existing), asyncio.to_thread pattern (established in pdf_export.py)
+**Avoids:** Pitfall 9 (PDF presented as formal Wkb compliance document — disclaimer and naming are hardcoded, non-configurable from first iteration)
+**Research flag:** Skip research-phase. Existing WeasyPrint pipeline is proven in production. Follow `reports/pdf_export.py` and `reports/templates/report.html` as structural templates.
 
-### Phase 4: Frontend Components
+### Phase 4: Professional Directory + Supply Recruitment
 
-**Rationale:** Frontend depends on stable backend types and a working API endpoint. Building after Phase 3 means components can be verified against real data. All three new section components follow the established `GebouwSection`/`KadasterSection` pattern.
-**Delivers:** `EnergieLabelSection.tsx` — label badge (A-G with EU color coding), registratiedatum, geldigheid, expired flag, monument compliance warning; `WOZSection.tsx` — WOZ-waarde + peildatum always together, per-m² calculation, LOW confidence disclaimer; `EigendomSection.tsx` — owner list with partial name obfuscation for natural persons, rights type, hypotheek indicator, "Actueel opgevraagd" timestamp instead of cache age; enhanced `MonumentSection` with RCE enrichment fields (volledigeOmschrijving collapsible, oorspronkelijkeFunctie, bouwstijl, rijksmonument link); TypeScript interfaces in `property.ts` for all new sections; `ReportDetailPage.tsx` wired with new sections
-**Addresses:** All display format recommendations from FEATURES.md — energielabel EU color scale, WOZ peildatum always shown, BRK partial name display, collapsible redengevende omschrijving
-**Avoids:** WOZ display without peildatum (Pitfall 13); "geen monument" false confidence (Pitfall 6 UX); energielabel shown without expiry status; BRK data without data source attribution
-**Research flag:** No research phase needed — React section component pattern is established in existing report sections. Follow `GebouwSection.tsx` and `KadasterSection.tsx` as structural templates.
+**Rationale:** The directory must be live and seeded with verified professionals before the lead CTA is enabled. This phase has the most nuanced technical requirement (NULL org_id RLS pattern, cross-tenant visibility tests) and a non-technical prerequisite (manual recruitment of 2–3 kwaliteitsborgers with TloKB link verification). Both must be complete and tested before Phase 5 ships. The database schema decision about NULL org_id must be made and tested before any API endpoint is built.
+**Delivers:** Professional model (NULL org_id, GIN indexes on gevolgklassen and regio_gemeenten arrays, TimestampMixin); GET /api/professionals with gemeente and gevolgklasse filters + pagination; ProfessionalDirectory frontend component (TanStack Table); TloKB link on each professional listing card; disclaimer copy about certification verification responsibility; admin CRUD for managing listings; seeded with 3–5 verified professionals with TloKB confirmation.
+**Features from FEATURES.md:** Professional directory listing (P1), TloKB verification link (P2 partial)
+**Avoids:** Pitfalls 5, 8, 10 (unverified professionals receiving leads; cold start CTA with empty directory; multi-tenant isolation break on Professional model)
+**Research flag:** Skip research-phase for technical implementation. Standard PostgreSQL ARRAY + CRUD. Operational dependency (supply recruitment and verwerkersovereenkomst draft) must be tracked as a parallel non-code task and must complete before Phase 5 launches.
 
-### Phase 5: BRK Live Integration (Operational Track — Parallel to Phases 1-4)
+### Phase 5: Lead Capture Flow + Email Routing
 
-**Rationale:** PKIOverheid certificate procurement is independent of all code work and takes 2-4 weeks minimum. This track starts at milestone kickoff and runs in parallel. Phases 1-4 code must gracefully degrade when BRK is unconfigured (`brk_client._configured = False`); this phase plugs in real credentials when procurement completes.
-**Delivers:** PKIOverheid certificate procured from an approved CA (DigiCert, QuoVadis, Sectigo); certificate files installed and paths configured in staging env; BRK switched from test endpoint (ESD-ETO) to production (ESD); `EigendomSection` showing live data instead of "Eigendomsdata niet geconfigureerd" state; Redis-backed rate limiter for BRK to prevent multi-worker rate limit violations (Pitfall 11); certificate expiry logging at application startup with warning when < 60 days remain
-**Avoids:** Certificate procurement blocking BRK demo (Pitfall 3) — start procurement day one; BRK rate limit multi-worker violation (Pitfall 11) — Redis-backed limiter before production traffic; certificate expiry surprise — startup monitoring
+**Rationale:** Lead capture is the final step in the user journey and depends on the dossier (Phase 3), the directory (Phase 4), and the GK determination (Phase 1). It carries the highest regulatory risk (AVG consent) and must be designed carefully before any frontend work begins. The consent screen design and consent logging model fields must be specified before the CTA button is built — retrofitting consent is structurally harder than designing it in from the start.
+**Delivers:** LeadRequest model with consent_timestamp, consent_text_hash, consent_given, and org-scoped isolation; POST /api/leads with AVG consent validation; admin GET /api/leads; lead notification email to admin (manual routing in MVP); developer confirmation email; "Vraag kwaliteitsborger aan" CTA in WkbSection (gated by `wkb_applicable === true` and gemeente availability); LeadCaptureForm with auto-fill (address, bouwjaar, GK, oppervlakte from report data); CTA not rendered when no professional serves the parcel's gemeente.
+**Features from FEATURES.md:** "Vraag kwaliteitsborger aan" CTA (P1), lead capture form with auto-fill (P1), lead notification to professional (P1), lead confirmation to developer (P1)
+**Avoids:** Pitfalls 4, 7, 8 (AVG consent violation in lead routing; direct-commit pattern broken by new B2B routers; cold start CTA before supply is live)
+**Research flag:** Skip research-phase. AVG consent flow is well-documented (Dutch AP guidelines). Direct-commit pattern is project-established in MEMORY.md. Verwerkersovereenkomst is a legal/operational deliverable, not a coding research question — must be complete before launch.
 
 ### Phase Ordering Rationale
 
-- Schema before aggregator is a hard Python import-time dependency
-- API clients before aggregator makes isolated testing feasible before pipeline integration
-- BRK Step 2b is a hard data dependency on Step 2a cadastral parcel output — cannot be parallelized with Step 2a
-- Frontend after backend because testing against mocks would require maintaining a mock layer that diverges from actual API responses
-- PKIOverheid procurement is operational (not code), runs in parallel from day one to avoid being the late blocker
-- The completeness_score denominator change (6 → 9) retroactively affects all existing stored reports — plan whether to recalculate or version-guard during Phase 3 planning
+- Phases 1 and 2 must precede Phase 3 because the dossier template aggregates their output fields. Bodemloket can render "Niet beschikbaar" in the dossier if Phase 2 encounters delays, but GK classification cannot be absent from the dossier.
+- Phase 2 is isolated from Phase 1 specifically because the Bodemloket spike carries uncertain scope — it must not block Phase 1 delivery.
+- Phase 4 must precede Phase 5 because lead routing requires at least one verified professional in the directory and the consent model requires the professional_id foreign key.
+- Phase 5 is last because it is the public-facing revenue-generating feature and requires all preceding infrastructure to be complete, tested, and have supply seeded.
+- Supply recruitment (Phase 4 operational track) and verwerkersovereenkomst drafting must run in parallel to coding and complete before Phase 5 CTA is enabled in production.
 
 ### Research Flags
 
-Phases needing live API validation during planning or early Phase 2 execution:
-- **Phase 2 (API Clients):** Validate EP-Online V5 response schema with a real VBO ID before writing the parser — field names changed between V4 and V5. Validate WOZ-waardeloket endpoint JSON structure with a real nummeraanduidingidentificatie. Test RCE Linked Data API for a known rijksmonumentnummer to confirm field availability.
-- **Phase 3 (Aggregator):** Validate which PDOK OGC cadastral parcel property field carries the BRK-compatible `NL.IMKAD.KadastraalObject.<id>` identificatie. Confirm `nummeraanduidingidentificatie` is returned from existing BAG resolution.
-- **Phase 5 (BRK Live):** Confirm current PKIOverheid certificate status in the existing environment — check whether a certificate was procured for a prior milestone or whether fresh procurement is required.
-- **Pre-milestone (WOZ access path):** Decide between WOZ-waardeloket undocumented endpoint vs. Kadaster Objectinformatie API before Phase 2 starts. Register for Kadaster Objectinformatie access via Mijn Kadaster immediately to assess timeline and confirm endpoint URL.
+Phases needing deeper research or validation:
+- **Phase 2 (Bodemloket):** Mandatory spike before any integration code is written. Verify WMS GetFeatureInfo vs ArcGIS REST for structured JSON data. Document live response format for WBB_locaties with a known contaminated parcel (e.g., a known WBB dossier location). If WMS-only returns HTML text/xml rather than structured JSON, the display capability changes from "status code + dossier ID" to "contamination indicator only" — this changes the frontend component scope.
 
-Phases with standard well-understood patterns (skip research-phase):
-- **Phase 1 (Schemas):** Pydantic model patterns are fully established in the codebase
-- **Phase 4 (Frontend):** React section component pattern is established in existing report sections
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Wkb/Asbest):** Official IPLO.nl and TloKB rules are clear, authoritative, and HIGH confidence. Follow existing `wkb_precheck.py` pattern.
+- **Phase 3 (Dossier PDF):** WeasyPrint + Jinja2 pattern is proven in production. Template authoring task.
+- **Phase 4 (Directory):** Standard PostgreSQL ARRAY + CRUD. The NULL org_id pattern is a design decision, not research.
+- **Phase 5 (Lead Capture):** Established patterns throughout. AVG consent requirements are documented by Dutch AP.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All APIs return JSON; existing httpx handles everything; no new libraries; settings patterns confirmed by codebase audit; EP-Online V5, RCE Linked Data, and BRK Bevragen V2 all verified against official documentation |
-| Features | HIGH | Official Dutch government documentation + direct codebase analysis of existing schema gaps; feature boundaries are precisely identified with source-level field mappings |
-| Architecture | HIGH | Based on direct codebase analysis of `property_aggregator.py`, `monument_aggregator.py`, `cache_manager.py`, `brk_bevragen.py`, `schemas/property.py`; integration points are explicit and the extension pattern is consistent |
-| Pitfalls | HIGH | Based on official Kadaster/RVO/EP-Online documentation + existing code comments that already document BRK no-cache constraint; regulatory pitfalls confirmed against official terms of service |
+| Stack | HIGH | Zero new dependencies confirmed by direct audit of pyproject.toml and package.json. All six features use existing packages. Version compatibility matrix verified. |
+| Features | HIGH | Wkb rules, asbest threshold, and dossier required content sourced from IPLO.nl, TloKB, Nederlandse Arbeidsinspectie (all official Dutch government). Marketplace patterns from Werkspot/Bark comparables. |
+| Architecture | HIGH | Based on direct codebase analysis of existing v7.2 pipeline. Integration points, component boundaries, and NULL org_id decision are explicit. One MEDIUM gap: Bodemloket API response format. |
+| Pitfalls | HIGH | Critical pitfalls sourced from official regulatory sources (VNG December 2024 decision, Bodemloket FAQ, Stichting IBK monument exclusion, Dutch AP AVG guidance). MEMORY.md constraints verified against codebase. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** HIGH, with one MEDIUM-confidence gap (Bodemloket API access method and response format).
 
 ### Gaps to Address
 
-- **WOZ access path (pre-milestone decision):** Kadaster Objectinformatie API is the recommended official commercial path (€1.92/query), but the exact endpoint URL requires Mijn Kadaster login to confirm and the timeline for access approval is unknown. The WOZ-waardeloket undocumented endpoint is the fallback but carries LOW confidence and no SLA. This decision must be made before Phase 2 begins. Register for Objectinformatie access immediately.
+- **Bodemloket REST API availability:** The ArcGIS REST endpoint returned 404 during architecture research testing. WMS GetCapabilities confirmed three layers. Phase 2 must begin with a live spike to determine whether structured JSON data is available via ArcGIS REST or whether the integration is WMS GetFeatureInfo only. If WMS GetFeatureInfo returns text/xml, field extraction via lxml (already installed) is the path; if it returns only a raster tile, the integration becomes a map overlay only with a link to Bodemloket.nl for detailed data.
 
-- **EP-Online multi-tenant API key terms:** RVO terms state the API key is "personal and may not be shared with third parties." For a multi-tenant SaaS using a shared backend key, RVO guidance is needed. Contact RVO at `fbni@rvo.nl` at milestone start to confirm whether a single backend key serving multiple organizations is permitted under the indirect-use exemption.
+- **Bodemloket municipality coverage data:** Bodemloket FAQ explicitly states data is incomplete and not all municipalities have delivered their data. No published list of contributing municipalities exists. The coverage disclaimer must be prominent in all display and PDF output, but a per-gemeente coverage indicator is not achievable without additional data sourcing.
 
-- **EP-Online V5 response schema field names:** The exact field names in the V5 JSON response were inferred from Swagger and the RVO handleiding but not directly verified with a live VBO ID call. Verify before writing the parser — V4 and V5 field naming is not identical.
+- **Kwaliteitsborger supply recruitment:** Seeding the professional directory with 2–3 TloKB-verified professionals before Phase 5 launches is an operational prerequisite that is external to the codebase. This must be tracked as a launch blocker alongside Phase 4 delivery. TloKB's public register at `register.tlokb.nl` provides the authoritative source for verification.
 
-- **RCE Linked Data field availability:** `bouwstijl`, `bouwperiode`, and architect fields are referenced in the CEO ontology but their presence in the REST API JSON response was not directly confirmed. Test with a known rijksmonumentnummer early in Phase 2.
-
-- **PDOK OGC cadastral identificatie field name:** It is not confirmed which property field in the PDOK cadastral OGC feature response carries the `NL.IMKAD.KadastraalObject.<id>` format. This must be validated against a real PDOK response before Phase 3 implementation.
-
-- **completeness_score versioning:** Increasing `total_sections` from 6 to 9 retroactively lowers completeness scores on all stored reports. Decide during Phase 3 planning whether to (a) accept the regression, (b) add a `score_version` field, or (c) trigger a background recalculation.
+- **Verwerkersovereenkomst template:** A data processing agreement for professionals receiving lead data is a legal/compliance prerequisite for Phase 5. Must be drafted and reviewed before lead routing is enabled in production. Not a coding task, but a Phase 5 launch gate.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Kadaster WOZ API Bevragen official — `kadaster.nl/zakelijk/producten/adressen-en-gebouwen/woz-api-bevragen` — municipal-only access confirmed; SaaS blocked
-- Kadaster WOZ Bevragen GitHub — `github.com/kadaster/WOZ-bevragen` — OIN + PKIOverheid requirement confirmed
-- Kadaster Objectinformatie API — `kadaster.nl/-/objectinformatie-api` — commercial WOZ access path confirmed
-- EP-Online Public API V5 Swagger — `public.ep-online.nl/swagger/index.html` — V5 endpoint structure
-- RVO EP-Online handleiding (February 2025) — `rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf` — V5 confirmed current, V3 end-of-life January 2025
-- EP-Online release notes — `ep-online.nl/Home/ReleaseNotes` — V4 sunset date January 30, 2026 confirmed
-- RCE Linked Data API documentation — `cultureelerfgoed.github.io/API/` — REST endpoint, no auth, parameters confirmed
-- RCE rijksmonumenten query spec — `linkeddata.cultureelerfgoed.nl/rce/-/queries/rest-api-rijksmonumenten/9` — query parameters and response shape
-- Kadaster BRK Bevragen official — `kadaster.nl/zakelijk/producten/eigendom/brk-bevragen` — Tier 3 never-store terms, mTLS confirmed
-- VNG Realisatie BRK Bevragen GitHub — `github.com/VNG-Realisatie/Haal-Centraal-BRK-bevragen` — V2 API specification
-- RCE energielabelplicht rijksmonumenten — `cultureelerfgoed.nl/onderwerpen/d/duurzaamheid/energielabel-voor-monumenten/energielabelplicht---vraag--antwoord` — May 2026 obligation confirmed
-- Propdex codebase audit (all of): `government_apis/brk_bevragen.py`, `government_apis/rce_monuments.py`, `services/property_aggregator.py`, `services/monument_aggregator.py`, `services/cache_manager.py`, `government_apis/rate_limiter.py`, `core/config.py`, `schemas/property.py`, `schemas/monument.py` — existing patterns, integration gaps, and constraints confirmed
+- [IPLO.nl — Bouwwerken in gevolgklasse](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — GK1 classification criteria, monument exclusion
+- [TloKB — Gevolgklassen overview](https://www.tlokb.nl/wet-kwaliteitsborging/gevolgklassen) — Three-class risk rationale, TloKB certification requirements
+- [IPLO.nl — Kwaliteitsborger dossier requirements](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/kwaliteitsborger/) — Borgingsplan and dossier required content per Bbl
+- [VNG — Verbouwingen voorlopig niet onder de Wkb](https://vng.nl/nieuws/verbouwingen-voorlopig-niet-onder-de-wkb) — December 2024 ministerial decision excluding renovations from Wkb scope
+- [Stichting IBK — Vallen monumenten ook onder de Wkb?](https://www.stichtingibk.nl/2024/01/24/vallen-monumenten-ook-onder-de-wkb/) — Monument exclusion from Wkb quality assurance requirement
+- [Nederlandse Arbeidsinspectie — Asbestinventarisatie](https://www.nlarbeidsinspectie.nl/onderwerpen/asbest/asbestinventarisatie) — Pre-1994 asbestos mandatory inventory rule (NEN 2991)
+- [Bodemloket — FAQ](https://bodemloket.nl/faq-page) — Explicit data completeness limitations disclaimer
+- [Bodemloket WMS GetCapabilities](https://gis.gdngeoservices.nl/standalone/services/blk_gdn/lks_blk_rd_v1/MapServer/WMSServer) — Three layers confirmed live: WBB_locaties, Bevoegd_gezag, Beschikbaarheid_gegevens; EPSG:28992 supported
+- MEMORY.md — Direct-commit pattern, datetime constraints, PyJWT/pwdlib patterns, multi-tenant isolation
+- Codebase audit: `backend/app/reports/pdf_export.py`, `backend/app/auth/email.py`, `backend/app/services/wkb_precheck.py`, `backend/pyproject.toml`, `frontend/package.json` — existing patterns confirmed, zero new dependencies verified
 
 ### Secondary (MEDIUM confidence)
-- WOZ-waardeloket.nl — public website with undocumented JSON endpoint at `/woz-api/v1/objecten/nummeraanduidingen/{id}`; multiple Dutch data aggregators (Altum AI, Matrixian) use this approach
-- RCE CEO ontology — field availability for `bouwperiode`, architect, `oorspronkelijkeFunctie` inferred but not directly tested against REST API JSON response
-- data.overheid.nl community discussion on WOZ access — confirms commercial SaaS access restrictions; MEDIUM confidence (community, not official)
+- [Bodemloket ArcGIS REST endpoint](https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer) — Documented in 2019 community blog; REST query returned 404 in architecture research; WMS is the confirmed fallback
+- [Friesewoudloper blog — Bodemloket layer structure](http://www.friesewoudloper.nl/2019/05/30/Hergebruik-van-bodemkwaliteitsgegevens.html) — WBB field names (2019, needs live verification in Phase 2 spike)
+- [Borgingcompany.nl — Wkb kosten](https://borgingcompany.nl/wet-kwaliteitsborging-kosten/) — Kwaliteitsborger fee approximately 1–1.5% of bouwsom
+- [DPO Centre NL — Leadgeneratie en de AVG](https://www.dpocentre.nl/en/2024/08/12/leadgeneratie-en-de-avg-is-uw-compliance-op-orde/) — AVG consent requirements for B2B lead routing
 
-### Tertiary (LOW confidence)
-- WOZ-waardeloket internal API endpoint — reverse-engineered from public website; no SLA, no official documentation; endpoint may change without notice
-- Altum AI WOZ API — confirmed as commercial alternative at `altum.ai/woz-api/`; pricing not public; not recommended as primary source
+### Tertiary (LOW confidence — needs live validation in Phase 2 spike)
+- Bodemloket field names `WBB_DOSSIER_DBK`, `STATUS_OORD`, `LOCATIECODE_BEVOEGD_GEZAG`, `NEN3610_ID_SOIL_LOCATION` — inferred from 2019 blog and architecture research docs; must be verified against live WMS GetFeatureInfo response before writing the parser
 
 ---
-*Research completed: 2026-02-24*
+*Research completed: 2026-03-01*
 *Ready for roadmap: yes*
