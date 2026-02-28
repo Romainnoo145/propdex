@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 📋 **v9.0 Professional Marketplace** -- Phases 67-71 (planned)
 - 🚧 **v8.0 Client Demo Readiness** -- Phases 62-66 (in progress)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
 - ✅ **v7.1 Workspace Productization** -- Phase 58 (shipped 2026-02-27)
@@ -31,6 +32,16 @@
 - [ ] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section
 - [ ] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels
 
+### v9.0 Professional Marketplace (Phases 67-71)
+
+**Milestone Goal:** Transform Propdex from data analysis tool into a lead generation platform by connecting property intelligence to professional services — starting with kwaliteitsborgers (Wkb) as the first vertical.
+
+- [ ] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions
+- [ ] **Phase 68: Bodemloket Integration** — Soil contamination data at parcel level with spike-first API discovery
+- [ ] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document
+- [ ] **Phase 70: Professional Directory** — Platform-wide kwaliteitsborger profiles with NULL org_id RLS pattern
+- [ ] **Phase 71: Lead Capture + AVG Consent** — "Vraag kwaliteitsborger aan" CTA, lead form, email routing, consent logging
+
 ## Phase Details
 
 ### Phase 62: Scan Pipeline Reliability
@@ -45,7 +56,7 @@
 
 Plans:
 - [x] 62-01-PLAN.md — BAG WFS per-page retry + coverage ratio validation + Alembic migration (SCAN-01, SCAN-02)
-- [ ] 62-02-PLAN.md — --force-all clean-slate backfill + end-of-run summary table (SCAN-03)
+- [x] 62-02-PLAN.md — --force-all clean-slate backfill + end-of-run summary table (SCAN-03)
 
 ### Phase 63: Venlo Data Completeness
 **Goal**: Venlo gemeente has complete, validated scan data across all 21 wijken ready for demo
@@ -103,17 +114,104 @@ Plans:
 Plans:
 - [ ] 66-01: Default filter preset + default sort order for results table
 
+### Phase 67: Wkb Classification Engine
+**Goal**: Users can see trustworthy, clearly-labelled Wkb gevolgklasse and asbest risk in every property report, with correct exclusions for monuments and verbouwingen
+**Depends on**: Phase 66 (v8.0 must ship before v9.0 begins)
+**Requirements**: WKB-01, WKB-02, WKB-03, WKB-04
+**Success Criteria** (what must be TRUE):
+  1. Opening a property report shows a "Wkb Classificatie" section with gevolgklasse (GK1 or "Niet van toepassing") labeled as "Indicatief"
+  2. A property with bouwjaar between 1963 and 1993 shows asbest risk "Hoog" with NEN 2991 reference; post-1993 shows "Geen asbest risico"
+  3. A property flagged as verbouwing (December 2024 ruling) shows "Wkb niet van toepassing — verbouwingen zijn uitgesloten" instead of a gevolgklasse
+  4. A rijksmonument property shows "Wkb niet van toepassing — rijksmonumenten zijn vrijgesteld" and the CTA is absent
+  5. The wkb_applicable boolean in the report schema is false whenever an exclusion applies, so downstream CTA logic has a single source of truth
+**Plans**: TBD
+
+Plans:
+- [ ] 67-01: wkb_classifier.py + asbest_indicator.py services + PropertyReportResponse schema extension
+- [ ] 67-02: WkbSection + AsbstSection frontend components in ReportDetailPage
+
+### Phase 68: Bodemloket Integration
+**Goal**: Users can see soil contamination status at parcel level, with honest coverage framing when Bodemloket data is absent
+**Depends on**: Phase 67 (can run in parallel, but shares dossier dependency with Phase 69)
+**Requirements**: BODEM-01, BODEM-02, BODEM-03
+**Success Criteria** (what must be TRUE):
+  1. A property report includes a "Bodemkwaliteit" section showing either WBB dossier references (if Bodemloket has records) or "Geen geregistreerde verontreiniging gevonden" (if no records)
+  2. The "Geen geregistreerde verontreiniging gevonden" message is always accompanied by a disclaimer that Bodemloket data is incomplete and absence is not a soil clearance certificate
+  3. Bodemloket data is cached for 30 days per parcel — opening the same report twice within 30 days does not trigger a second API call
+  4. The Bodemloket spike at phase start documents the actual viable query method (WMS GetFeatureInfo vs ArcGIS REST) and live response field names before integration code is written
+**Plans**: TBD
+
+Plans:
+- [ ] 68-01: Bodemloket spike — verify WMS vs REST, document live response format for WBB_locaties
+- [ ] 68-02: bodemloket_wms.py API client + BodemData schema + 30-day JSONB cache + aggregator wiring
+- [ ] 68-03: BodemSection frontend component in ReportDetailPage
+
+### Phase 69: Risicobeoordeling Dossier
+**Goal**: Users can generate a "Risicobeoordeling Startdossier" PDF that gives kwaliteitsborgers the intake information they need, saving them 1-3 hours per project
+**Depends on**: Phase 67 (Wkb classification required), Phase 68 (bodem data required — renders "niet beschikbaar" if absent)
+**Requirements**: DOSSIER-01, DOSSIER-02, DOSSIER-03
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Genereer Startdossier" on a property report triggers PDF generation and the user can download it within seconds
+  2. The generated PDF contains all required sections: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, and Wkb classificatie
+  3. Every page of the PDF carries a mandatory disclaimer: data is indicatief, assembled from public sources, and does not constitute a formal Wkb compliance document
+  4. A property without Bodemloket data renders "Bodemkwaliteit: geen gegevens beschikbaar" in the dossier rather than "schone grond" or an empty section
+**Plans**: TBD
+
+Plans:
+- [ ] 69-01: GeneratedDossier model + Alembic migration + POST/GET dossier endpoints
+- [ ] 69-02: wkb_kwaliteitsborger.html Jinja2 template + WeasyPrint generation + disclaimer copy
+- [ ] 69-03: "Genereer Startdossier" CTA in ReportDetailPage + download flow
+
+### Phase 70: Professional Directory
+**Goal**: Admins can manage a platform-wide directory of kwaliteitsborgers that is visible to all tenants and filterable by gemeente and gevolgklasse
+**Depends on**: Phase 67 (gevolgklasse filter requires GK values to exist)
+**Requirements**: DIR-01, DIR-02, DIR-03, DIR-04
+**Success Criteria** (what must be TRUE):
+  1. An admin can add a kwaliteitsborger profile with naam, bedrijf, werkgebied (lijst van gemeenten), gevolgklassen, and contact details via the admin API
+  2. A tenant user querying professionals for a specific gemeente sees only kwaliteitsborgers whose werkgebied includes that gemeente
+  3. Professional profiles are visible across all tenants — a kwaliteitsborger added by admin is visible to organization A and organization B without duplication
+  4. Each professional listing card links to their TloKB public register entry for verification by the user
+  5. A cross-tenant integration test confirms that professionals with NULL organization_id are returned correctly for any authenticated tenant
+**Plans**: TBD
+
+Plans:
+- [ ] 70-01: Professional model (NULL org_id, GIN indexes) + Alembic migration + RLS policy + cross-tenant integration test
+- [ ] 70-02: GET /api/professionals with gemeente + gevolgklasse filters + pagination + admin CRUD endpoints
+- [ ] 70-03: ProfessionalDirectory frontend component (TanStack Table, TloKB link, gemeente filter)
+
+### Phase 71: Lead Capture + AVG Consent
+**Goal**: A user can request a kwaliteitsborger for a Wkb-plichtige property, with explicit consent logging and email notification, completing the lead generation loop
+**Depends on**: Phase 69 (dossier attached to lead), Phase 70 (professional matching requires directory)
+**Requirements**: LEAD-01, LEAD-02, LEAD-03, LEAD-04, AVG-01, AVG-02, AVG-03
+**Success Criteria** (what must be TRUE):
+  1. A "Vraag kwaliteitsborger aan" CTA is visible in the report only when wkb_applicable is true AND at least one kwaliteitsborger serves the parcel's gemeente — it is absent otherwise
+  2. Clicking the CTA shows a two-step consent screen explaining exactly what data will be shared before the user can submit
+  3. After submitting a lead request, the user sees a confirmation and the matched kwaliteitsborger(s) receive an email notification with the generated risicobeoordeling dossier as attachment
+  4. The LeadRequest record in the database stores consent_timestamp, consent_text_hash, and consent_given = true before any professional contact data is transmitted
+  5. The privacy policy section visible from the lead form explains the data sharing arrangement with professionals
+**Plans**: TBD
+
+Plans:
+- [ ] 71-01: LeadRequest model (consent fields, org-scoped) + Alembic migration + POST/GET lead endpoints with AVG validation
+- [ ] 71-02: Lead notification email (fastapi-mail, dossier attachment) + developer confirmation email
+- [ ] 71-03: LeadCaptureForm frontend (auto-fill, two-step consent screen) + WkbSection CTA wiring + privacy policy section
+
 ---
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. Scan Pipeline Reliability | 2/2 | Complete    | 2026-02-28 |
+| 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
 | 63. Venlo Data Completeness | 0/1 | Not started | - |
 | 64. Map Visualization | 0/2 | Not started | - |
 | 65. Report Polish | 0/3 | Not started | - |
 | 66. Results Table Noise Reduction | 0/1 | Not started | - |
+| 67. Wkb Classification Engine | 0/2 | Not started | - |
+| 68. Bodemloket Integration | 0/3 | Not started | - |
+| 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
+| 70. Professional Directory | 0/3 | Not started | - |
+| 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
 ---
 
@@ -293,4 +391,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-28 -- v8.0 Client Demo Readiness roadmap created (Phases 62-66)*
+*Last updated: 2026-03-01 -- v9.0 Professional Marketplace roadmap created (Phases 67-71)*

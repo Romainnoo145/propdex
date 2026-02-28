@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v8.0 Client Demo Readiness — Phase 62: Scan Pipeline Reliability
-**Next milestone:** v9.0 Professional Marketplace (planned, not started)
+**Current focus:** v8.0 Client Demo Readiness — Phase 62 complete, Phase 63 next
+**Next milestone:** v9.0 Professional Marketplace (planned — Phases 67-71)
 
 ---
 
 ## Current Position
 
-Phase: 62 of 66 (Scan Pipeline Reliability)
+Phase: 62 of 66 (Scan Pipeline Reliability — COMPLETE)
 Plan: 2 of 2 complete
-Status: In progress
+Status: Phase 62 complete — ready to execute Phase 63
 Last activity: 2026-02-28 — Plan 02 complete (force-mode rescan + summary table)
 
-Progress: [██░░░░░░░░] 22% (2/9 plans complete)
+Progress (v8.0): [██░░░░░░░░] 22% (2/9 plans complete)
 
 ---
 
@@ -52,23 +52,28 @@ Progress: [██░░░░░░░░] 22% (2/9 plans complete)
 - 404 not 403 for cross-org access (prevents enumeration)
 - SET LOCAL f-string (not params): asyncpg doesn't support parameterized SET statements
 - Three-state contract: return model | None (not-found/unconfigured) | raise GovernmentAPIError (error)
-- retry_with_backoff: shared helper in base.py, wraps any async HTTP callable; 429-aware by default; retry_on_errors=True adds 5xx/network retry
-- BAG WFS abort-on-failure: area_scan_job sets status=failed + error_detail JSONB, returns early (no silent garbage data)
+- retry_with_backoff: shared helper in base.py, wraps any async HTTP callable; 429-aware by default
+- BAG WFS abort-on-failure: area_scan_job sets status=failed + error_detail JSONB, returns early
 - coverage_ratio + address_resolution_ratio tracked on AreaScan post-scan; completed_with_warnings when thresholds breached
-- --force-all clean-slate rescan: deletes ScanResult rows + clears coverage/address/error fields, prominently logs "FORCE MODE: Deleting N existing results for {wijk}"
-- WijkOutcome dataclass tracks per-wijk scan quality; _print_summary() prints OK/WARN/FAIL table after all wijken processed
-- Force-mode continue-on-failure: --force-all and --force-failed continue batch after individual wijk failure; normal mode still stops
+- --force-all clean-slate rescan: deletes ScanResult rows, logs "FORCE MODE: Deleting N existing results"
+- WijkOutcome dataclass: per-wijk scan quality tracking, _print_summary() OK/WARN/FAIL table
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
-- text-on-accent: all amber/accent-background elements use this utility
-- Defined grey scale: only 100, 300, 400, 600, 700, 800, 850, 900, 950
+- Professional model uses NULL org_id (platform-wide, not tenant-isolated) -- v9.0 critical pattern
 
 ### v8.0 Context
 
-- **Root cause known**: BAG WFS failure in area_scan.py is silent -- causes entire scan to produce garbage data (no bouwjaar, no addresses, wrong scoring). Fix this first before any data work.
-- **Venlo is the target**: 21 wijken, must all have complete data before demo.
-- **Phase 62 is the gate**: All subsequent phases depend on scan pipeline being reliable.
-- **retry_with_backoff already exists** in base.py -- reuse for SCAN-01 BAG retry.
-- **--force-all pattern needed**: Existing scan jobs skip rows with ON CONFLICT DO NOTHING; need override mode.
+- Root cause fixed: BAG WFS abort-on-failure + retry (Phase 62 complete)
+- Venlo is the target: 21 wijken, must all have complete data before demo
+- Phase 63 is next: re-run Venlo wijken, validate bouwjaar/address/pand_status
+
+### v9.0 Context (Planned)
+
+- Roadmap: .planning/ROADMAP.md Phases 67-71
+- Phase 67 first: pure Python Wkb classifier + asbest indicator (no API risk)
+- Phase 68 starts with mandatory Bodemloket spike (ArcGIS REST returned 404; WMS confirmed)
+- Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
+- AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
+- Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
 
 ### Ongoing TODOs
 
@@ -78,6 +83,8 @@ Progress: [██░░░░░░░░] 22% (2/9 plans complete)
 - DSO API key aanvragen (gratis)
 - Kadaster BRK Bevragen API toegang regelen (betaald)
 - PLU WMS change detection live validation (MON-02)
+- v9.0: Recruit 2-3 TloKB-verified kwaliteitsborgers before Phase 71 CTA is enabled
+- v9.0: Draft verwerkersovereenkomst for professionals receiving lead data (before Phase 71)
 
 ### Blockers/Concerns
 
@@ -88,11 +95,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-02-28T12:28:47Z
-**Stopped At:** Completed 62-02-PLAN.md (force-mode rescan + summary table)
+**Stopped At:** Completed 62-02-PLAN.md (force-mode rescan + summary table). v9.0 roadmap planned 2026-03-01.
 **Resume File:** .planning/phases/62-scan-pipeline-reliability/62-02-SUMMARY.md
 
-**Next Action:** Run `/gsd:execute-phase 62` to continue with next phase.
+**Next Action:** Run `/gsd:execute-phase 63` to continue v8.0.
 
 ---
 
-*State updated: 2026-02-28 -- Phase 62 Plan 02 complete, scan orchestrator has clean-slate force mode and operator summary table*
+*State updated: 2026-03-01 -- v9.0 Professional Marketplace roadmap added (Phases 67-71, planned)*

@@ -89,33 +89,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WKB-01 | — | Pending |
-| WKB-02 | — | Pending |
-| WKB-03 | — | Pending |
-| WKB-04 | — | Pending |
-| BODEM-01 | — | Pending |
-| BODEM-02 | — | Pending |
-| BODEM-03 | — | Pending |
-| DOSSIER-01 | — | Pending |
-| DOSSIER-02 | — | Pending |
-| DOSSIER-03 | — | Pending |
-| LEAD-01 | — | Pending |
-| LEAD-02 | — | Pending |
-| LEAD-03 | — | Pending |
-| LEAD-04 | — | Pending |
-| DIR-01 | — | Pending |
-| DIR-02 | — | Pending |
-| DIR-03 | — | Pending |
-| DIR-04 | — | Pending |
-| AVG-01 | — | Pending |
-| AVG-02 | — | Pending |
-| AVG-03 | — | Pending |
+| WKB-01 | Phase 67 | Pending |
+| WKB-02 | Phase 67 | Pending |
+| WKB-03 | Phase 67 | Pending |
+| WKB-04 | Phase 67 | Pending |
+| BODEM-01 | Phase 68 | Pending |
+| BODEM-02 | Phase 68 | Pending |
+| BODEM-03 | Phase 68 | Pending |
+| DOSSIER-01 | Phase 69 | Pending |
+| DOSSIER-02 | Phase 69 | Pending |
+| DOSSIER-03 | Phase 69 | Pending |
+| LEAD-01 | Phase 71 | Pending |
+| LEAD-02 | Phase 71 | Pending |
+| LEAD-03 | Phase 71 | Pending |
+| LEAD-04 | Phase 71 | Pending |
+| DIR-01 | Phase 70 | Pending |
+| DIR-02 | Phase 70 | Pending |
+| DIR-03 | Phase 70 | Pending |
+| DIR-04 | Phase 70 | Pending |
+| AVG-01 | Phase 71 | Pending |
+| AVG-02 | Phase 71 | Pending |
+| AVG-03 | Phase 71 | Pending |
 
 **Coverage:**
 - v9.0 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 — initial definition*
+*Last updated: 2026-03-01 — traceability completed, all 21 requirements mapped to Phases 67-71*
