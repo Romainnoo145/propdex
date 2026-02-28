@@ -1,117 +1,91 @@
-# Requirements: Propdex v7.0 — Deep Property Data
+# Requirements: Propdex v8.0 — Client Demo Readiness
 
-**Defined:** 2026-02-24
+**Defined:** 2026-02-28
 **Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
 
-## v7.0 Requirements
+## v8.0 Requirements
 
-### Energielabel (EP-Online)
+Requirements for making Venlo the showcase gemeente with complete data and polished presentation for client PVP.
 
-- [ ] **NRG-01**: Report fetches energielabel klasse (A++++ to G) from EP-Online V5 API by BAG VBO ID
-- [ ] **NRG-02**: Report displays registratiedatum and 10-year geldigheid status (valid/expired)
-- [ ] **NRG-03**: Properties without registered label show "Niet geregistreerd" (not an error — ~20-30% of properties)
-- [ ] **NRG-04**: Monument properties without label show compliance warning (May 2026 obligation)
-- [ ] **NRG-05**: Frontend EnergieLabelSection with EU color-coded badge (A=green to G=red)
+### Scan Pipeline Reliability
 
-### WOZ-waarde
+- [ ] **SCAN-01**: Scan pipeline retries BAG WFS fetch on failure instead of silently continuing with no building data
+- [ ] **SCAN-02**: Scan pipeline validates BAG coverage ratio and warns if suspiciously low (>90% has_pand=false)
+- [ ] **SCAN-03**: Existing scan data can be backfilled by re-running a wijk scan with --force-all
 
-- [ ] **WOZ-01**: Report fetches WOZ-waarde from public endpoint (waardeloket or Objectinformatie API)
-- [ ] **WOZ-02**: WOZ-waarde always displayed together with waardepeildatum (mandatory context)
-- [ ] **WOZ-03**: WOZ per m² derived from `woz_waarde / oppervlakte` when building data available
-- [ ] **WOZ-04**: Low-confidence disclaimer shown when using unofficial waardeloket endpoint
-- [ ] **WOZ-05**: Frontend WOZSection with value, peildatum, and per-m² calculation
+### Data Completeness
 
-### BRK Eigendom
+- [ ] **DATA-01**: All 21 Venlo wijken have complete scan data with bouwjaar populated for parcels with buildings
+- [ ] **DATA-02**: All parcels with buildings have resolved addresses via PDOK reverse geocoding
+- [ ] **DATA-03**: Parcel scoring accurately reflects BAG pand_status (in_gebruik vs leeg vs buiten_gebruik)
 
-- [ ] **BRK-01**: Report fetches ownership data from BRK Bevragen V2 (existing client, needs wiring)
-- [ ] **BRK-02**: Display eigenaar type (natuurlijk persoon / rechtspersoon / overheid) — never show personal names
-- [ ] **BRK-03**: Display zakelijk recht type and hypotheek indicator (boolean)
-- [ ] **BRK-04**: BRK data is NEVER cached or stored — stripped from report before DB save (Kadaster Tier 3)
-- [ ] **BRK-05**: Graceful degradation when BRK is unconfigured (PKIOverheid cert pending)
-- [ ] **BRK-06**: Frontend EigendomSection with "Actueel opgevraagd" timestamp, owner list, rights
+### Map Visualization
 
-### RCE Monument Enrichment
+- [ ] **MAP-01**: BAG building footprints visible as toggleable map layer
+- [ ] **MAP-02**: Score colors accurately reflect opportunity level after data fix
+- [ ] **MAP-03**: Map visual clarity improved (readable labels, clear parcel boundaries, no overlapping elements)
 
-- [ ] **RCE-01**: When monument detected (existing PDOK spatial), fetch detail from RCE Linked Data API
-- [ ] **RCE-02**: Display redengevende omschrijving in collapsible section (can be 1,000-5,000 words)
-- [ ] **RCE-03**: Display oorspronkelijke functie and bouwperiode when available
-- [ ] **RCE-04**: All monument labels say "Rijksmonument (RCE)" not generic "Monument"
+### Report Polish
 
-### Schema & Infrastructure
+- [ ] **RPT-01**: Report layout and formatting polished for client presentation
+- [ ] **RPT-02**: All v7.x data sections (WOZ, energielabel, BRK, buildability, Wkb, permit precedents) render cleanly in report view
+- [ ] **RPT-03**: PDF export generates a presentable document with all report sections
+- [ ] **RPT-04**: Report includes "Actie vereist" section that surfaces actionable warnings based on existing data (Wkb-plichtig, asbestrisico bij bouwjaar <1994, vergunningsstatus)
 
-- [ ] **INF-01**: Pydantic schemas for EnergyLabel, WOZData, BRKOwnership with all response fields
-- [ ] **INF-02**: PropertyReportResponse extended with 3 new Optional sections
-- [ ] **INF-03**: Cache TTL entries for ep_online (30d), woz (365d), rce_detail (30d) — BRK excluded
-- [ ] **INF-04**: EP_ONLINE_API_KEY setting in config; rate limiters for EP-Online and RCE detail
-- [ ] **INF-05**: Completeness score denominator updated (6 → 9 sections) with graceful handling of existing reports
+### Results Table
 
-### Aggregator Integration
+- [ ] **RES-01**: Results table filters out noise to surface genuine development opportunities
+- [ ] **RES-02**: Default view prioritizes high-value parcels (vacant land, old buildings, residential zoning)
 
-- [ ] **AGG-01**: property_aggregator restructured into Step 2a (existing) / Step 2b (BRK after cadastral)
-- [ ] **AGG-02**: EP-Online, WOZ, and RCE detail fetched in parallel via asyncio.gather
-- [ ] **AGG-03**: BRK ownership stripped from PropertyReportResponse before JSONB save in reports/service.py
-- [ ] **AGG-04**: Monument aggregator extended with two-step enrichment (PDOK spatial → RCE Linked Data)
+## Future Requirements
 
-## v7.1 Requirements (Deferred)
+Deferred to v9.0+ — Lead marketplace and professional workflow platform.
 
-### Future Enhancements
-
-- **WOZ-HIST**: WOZ historical values across multiple years (requires separate API subscription)
-- **WOZ-DELTA**: WOZ vs market value delta analysis (requires transaction data)
-- **RCE-COMPLEX**: Deep-linking to RCE complex membership details
-- **GEM-MON**: Gemeentelijke monumenten integration (no national API — per-gemeente effort)
-- **BRK-CERT**: PKIOverheid certificate lifecycle management and auto-renewal monitoring
+- **LEAD-01**: Professional partner onboarding flow (kwaliteitsborgers, tekenaars, constructeurs, bodem/asbestonderzoekers, aannemers)
+- **LEAD-02**: Lead routing and notification system (qualified lead → matched professional)
+- **LEAD-03**: "Genereer startdossier Risicobeoordeling" one-click document generation for kwaliteitsborgers
+- **LEAD-04**: Partner dashboard with lead tracking and conversion metrics
+- **LEAD-05**: No cure, no pay billing model (€25-50 per contacted lead)
+- **LEAD-06**: User journey design: natural flow from data check → professional recommendation → offerte aanvraag
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Display BRK natural person names/addresses | AVG/GDPR exposure — show "Particulier eigenaar" only |
-| Cache/store BRK eigendomsdata | Kadaster Tier 3 terms violation |
-| Full redengevende omschrijving as raw text dump | Must be collapsible, not inline |
-| WOZ bezwaar workflow | Developer use case, not residential |
-| Apply for official WOZ Bevragen API | Municipalities-only, SaaS will be rejected |
-| WOZ historical trend charts | Requires separate subscription (v7.1+) |
+| Lead marketplace / partner routing | v9.0+ — requires partner onboarding, billing, legal agreements |
+| Startdossier Risicobeoordeling PDF generation | v9.0+ — requires Wkb-specific document templates and partner workflow |
+| Professional partner dashboard | v9.0+ — separate user role and interface |
+| Payment/billing infrastructure | v9.0+ — no monetization in demo phase |
+| Bodemkwaliteit data integration | v9.0+ — requires new data source (RIVM/BRO) |
+| Non-Venlo gemeente data fixes | v8.0 focuses on Venlo showcase only |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INF-01 | Phase 52 | Pending |
-| INF-02 | Phase 52 | Pending |
-| INF-03 | Phase 52 | Pending |
-| INF-04 | Phase 52 | Pending |
-| INF-05 | Phase 52 | Pending |
-| NRG-01 | Phase 53 | Pending |
-| NRG-03 | Phase 53 | Pending |
-| RCE-01 | Phase 53 | Pending |
-| RCE-03 | Phase 53 | Pending |
-| RCE-04 | Phase 53 | Pending |
-| WOZ-01 | Phase 54 | Pending |
-| WOZ-04 | Phase 54 | Pending |
-| BRK-01 | Phase 54 | Pending |
-| BRK-04 | Phase 54 | Pending |
-| BRK-05 | Phase 54 | Pending |
-| AGG-01 | Phase 55 | Pending |
-| AGG-02 | Phase 55 | Pending |
-| AGG-03 | Phase 55 | Pending |
-| AGG-04 | Phase 55 | Pending |
-| NRG-02 | Phase 56 | Pending |
-| NRG-04 | Phase 56 | Pending |
-| NRG-05 | Phase 56 | Pending |
-| WOZ-02 | Phase 56 | Pending |
-| WOZ-03 | Phase 56 | Pending |
-| WOZ-05 | Phase 56 | Pending |
-| BRK-02 | Phase 56 | Pending |
-| BRK-03 | Phase 56 | Pending |
-| BRK-06 | Phase 56 | Pending |
-| RCE-02 | Phase 56 | Pending |
+| SCAN-01 | — | Pending |
+| SCAN-02 | — | Pending |
+| SCAN-03 | — | Pending |
+| DATA-01 | — | Pending |
+| DATA-02 | — | Pending |
+| DATA-03 | — | Pending |
+| MAP-01 | — | Pending |
+| MAP-02 | — | Pending |
+| MAP-03 | — | Pending |
+| RPT-01 | — | Pending |
+| RPT-02 | — | Pending |
+| RPT-03 | — | Pending |
+| RPT-04 | — | Pending |
+| RES-01 | — | Pending |
+| RES-02 | — | Pending |
 
 **Coverage:**
-- v7.0 requirements: 29 total
-- Mapped to phases: 29
-- Unmapped: 0
+- v8.0 requirements: 15 total
+- Mapped to phases: 0
+- Unmapped: 15 ⚠️
 
 ---
-*Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after research synthesis*
+*Requirements defined: 2026-02-28*
+*Last updated: 2026-02-28 after initial definition*
