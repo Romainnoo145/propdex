@@ -41,11 +41,11 @@
   1. Running a wijk scan where BAG WFS fails causes a retried fetch with backoff, not silent continuation with empty building data
   2. After a scan completes, a warning is visible in logs/scan output when more than 90% of parcels have has_pand=false (suspiciously low coverage)
   3. Re-running a wijk scan with --force-all overwrites existing ScanResult rows and repopulates bouwjaar, address, and pand_status fields correctly
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 62-01: BAG WFS retry logic + coverage ratio validation
-- [ ] 62-02: --force-all backfill mode for existing scan data
+- [ ] 62-01-PLAN.md — BAG WFS per-page retry + coverage ratio validation + Alembic migration (SCAN-01, SCAN-02)
+- [ ] 62-02-PLAN.md — --force-all clean-slate backfill + end-of-run summary table (SCAN-03)
 
 ### Phase 63: Venlo Data Completeness
 **Goal**: Venlo gemeente has complete, validated scan data across all 21 wijken ready for demo
