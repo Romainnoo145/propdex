@@ -258,6 +258,9 @@ async def reset_scan_for_rescan(
     scan.started_at = None
     scan.completed_at = None
     scan.job_id = None
+    scan.coverage_ratio = None
+    scan.address_resolution_ratio = None
+    scan.error_detail = None
 
     session.add(scan)
     await session.flush()
