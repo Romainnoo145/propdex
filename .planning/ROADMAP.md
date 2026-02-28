@@ -67,10 +67,11 @@ Plans:
   2. Parcels that contain BAG buildings show bouwjaar populated (not null) for all scanned Venlo wijken
   3. Parcels with buildings show a resolved Dutch address via PDOK reverse geocoding, not just perceel ID
   4. Parcel opportunity scores reflect actual BAG pand_status (in_gebruik parcels score lower, leeg/buiten_gebruik score higher)
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 + Wave 2 sequential)
 
 Plans:
-- [ ] 63-01: Venlo full re-scan execution (21 wijken) + data validation script
+- [ ] 63-01-PLAN.md — Formalize parcel_addressing.py + create validate_scan_data.py CLI tool + unit tests (DATA-01, DATA-02, DATA-03)
+- [ ] 63-02-PLAN.md — Execute Venlo 21-wijk re-scan + address backfill + validation + UI verification (DATA-01, DATA-02, DATA-03)
 
 ### Phase 64: Map Visualization
 **Goal**: The map gives users a clear, accurate spatial picture of Venlo's development opportunities
@@ -203,7 +204,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
-| 63. Venlo Data Completeness | 0/1 | Not started | - |
+| 63. Venlo Data Completeness | 0/2 | Not started | - |
 | 64. Map Visualization | 0/2 | Not started | - |
 | 65. Report Polish | 0/3 | Not started | - |
 | 66. Results Table Noise Reduction | 0/1 | Not started | - |
@@ -391,4 +392,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-01 -- v9.0 Professional Marketplace roadmap created (Phases 67-71)*
+*Last updated: 2026-03-01 -- Phase 63 plans finalized (2 plans, Wave 1 + Wave 2)*
