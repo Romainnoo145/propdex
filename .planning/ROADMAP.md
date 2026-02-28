@@ -44,7 +44,7 @@
 **Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 62-01-PLAN.md — BAG WFS per-page retry + coverage ratio validation + Alembic migration (SCAN-01, SCAN-02)
+- [x] 62-01-PLAN.md — BAG WFS per-page retry + coverage ratio validation + Alembic migration (SCAN-01, SCAN-02)
 - [ ] 62-02-PLAN.md — --force-all clean-slate backfill + end-of-run summary table (SCAN-03)
 
 ### Phase 63: Venlo Data Completeness
@@ -109,7 +109,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 62. Scan Pipeline Reliability | 0/2 | Not started | - |
+| 62. Scan Pipeline Reliability | 1/2 | In progress | 2026-02-28 (plan 01) |
 | 63. Venlo Data Completeness | 0/1 | Not started | - |
 | 64. Map Visualization | 0/2 | Not started | - |
 | 65. Report Polish | 0/3 | Not started | - |
