@@ -1,9 +1,14 @@
-"""ARQ worker configuration for PDF parsing jobs."""
+"""ARQ worker configuration for PDF parsing jobs.
 
+Run worker via: python -m app.jobs.worker
+"""
+
+import asyncio
 from urllib.parse import urlparse
 
 from arq.connections import RedisSettings
 from arq.cron import cron
+from arq.worker import Worker, get_kwargs
 
 from app.core.config import settings
 from app.jobs.area_scan import area_scan_job
@@ -52,3 +57,14 @@ class WorkerSettings:
     cron_jobs = [
         cron(daily_change_monitor_job, hour=3, minute=0, unique=True)
     ]
+
+
+if __name__ == "__main__":
+    # Python 3.14 removed asyncio.get_event_loop() outside async context.
+    # arq 0.27.0 calls it in Worker.__init__, so we create the worker inside
+    # an async function where a loop exists, then run it.
+    async def _run_worker() -> None:
+        worker = Worker(**get_kwargs(WorkerSettings))
+        await worker.async_run()
+
+    asyncio.run(_run_worker())
