@@ -27,7 +27,7 @@
 **Milestone Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
 
 - [x] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill (completed 2026-02-28)
-- [ ] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage
+- [x] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage (completed 2026-03-02)
 - [ ] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements
 - [ ] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section
 - [ ] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels
@@ -81,11 +81,11 @@ Plans:
   1. A "BAG Panden" toggle appears in the map layer catalog and, when enabled, draws building footprint outlines over parcels
   2. Parcel score colors on the map accurately reflect opportunity level using the corrected post-backfill data (vacant land is green/amber, occupied buildings are grey)
   3. Map labels are readable at default zoom for Venlo wijken with no overlapping text or element clutter
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 64-01: BAG building footprints map layer (toggleable)
-- [ ] 64-02: Score color accuracy verification + map clarity improvements
+- [ ] 64-01-PLAN.md — BAG building footprints WMS layer + layer catalog extension + gradient legend (MAP-01)
+- [ ] 64-02-PLAN.md — Grey-to-green score gradient + empty parcel hatch pattern + progressive labels + dashed wijk outline (MAP-02, MAP-03)
 
 ### Phase 65: Report Polish
 **Goal**: Reports are presentable for client demonstration with clean layout and working PDF export
@@ -204,7 +204,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
-| 63. Venlo Data Completeness | 1/2 | In Progress|  |
+| 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
 | 64. Map Visualization | 0/2 | Not started | - |
 | 65. Report Polish | 0/3 | Not started | - |
 | 66. Results Table Noise Reduction | 0/1 | Not started | - |
@@ -392,4 +392,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-01 -- Phase 63 plans finalized (2 plans, Wave 1 + Wave 2)*
+*Last updated: 2026-03-02 -- Phase 64 plans finalized (2 plans, Wave 1 parallel)*
