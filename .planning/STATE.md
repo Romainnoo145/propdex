@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v8.0 Client Demo Readiness — Phase 62 complete, Phase 63 next
+**Current focus:** v8.0 Client Demo Readiness — Phase 63 in progress (Plan 1/2 complete)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 67-71)
 
 ---
 
 ## Current Position
 
-Phase: 62 of 66 (Scan Pipeline Reliability — COMPLETE)
-Plan: 2 of 2 complete
-Status: Phase 62 complete — ready to execute Phase 63
-Last activity: 2026-02-28 — Plan 02 complete (force-mode rescan + summary table)
+Phase: 63 of 66 (Venlo Data Completeness — IN PROGRESS)
+Plan: 1 of 2 complete
+Status: Phase 63 Plan 01 complete — validate_scan_data CLI tool + parcel_addressing formalized
+Last activity: 2026-03-01 — Plan 01 complete (validate_scan_data CLI + WijkValidation dataclass)
 
-Progress (v8.0): [██░░░░░░░░] 22% (2/9 plans complete)
+Progress (v8.0): [███░░░░░░░] 33% (3/9 plans complete)
 
 ---
 
@@ -26,6 +26,7 @@ Progress (v8.0): [██░░░░░░░░] 22% (2/9 plans complete)
 **v8.0 Client Demo Readiness (In Progress)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
 - Phase 62 Plan 02: completed ~2min (force-mode clean-slate rescan + FORCE MODE log + WijkOutcome summary table)
+- Phase 63 Plan 01: completed ~2min (validate_scan_data CLI + WijkValidation dataclass + parcel_addressing formalized)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
 - Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
@@ -57,6 +58,9 @@ Progress (v8.0): [██░░░░░░░░] 22% (2/9 plans complete)
 - coverage_ratio + address_resolution_ratio tracked on AreaScan post-scan; completed_with_warnings when thresholds breached
 - --force-all clean-slate rescan: deletes ScanResult rows, logs "FORCE MODE: Deleting N existing results"
 - WijkOutcome dataclass: per-wijk scan quality tracking, _print_summary() OK/WARN/FAIL table
+- WijkValidation dataclass: per-wijk validation with bouwjaar_rate/address_rate/pand_status_rate computed from parcels_with_buildings (not total_parcels)
+- validate_scan_data CLI: exit codes 0/1/2, normalize_gemeente_code(raw) returns (with_prefix, bare) tuple
+- Conditional SQLAlchemy count: func.count(case(((condition), 1))) pattern for per-wijk aggregation
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
 - Professional model uses NULL org_id (platform-wide, not tenant-isolated) -- v9.0 critical pattern
 
@@ -64,7 +68,8 @@ Progress (v8.0): [██░░░░░░░░] 22% (2/9 plans complete)
 
 - Root cause fixed: BAG WFS abort-on-failure + retry (Phase 62 complete)
 - Venlo is the target: 21 wijken, must all have complete data before demo
-- Phase 63 is next: re-run Venlo wijken, validate bouwjaar/address/pand_status
+- Phase 63 Plan 01 complete: validate_scan_data CLI tool ready; parcel_addressing + backfill_parcel_addresses formalized
+- Phase 63 Plan 02 next: run Venlo scans + execute validate_scan_data to verify data completeness
 
 ### v9.0 Context (Planned)
 
@@ -94,12 +99,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-02-28T23:36:17.687Z
-**Stopped At:** Phase 67 context gathered
-**Resume File:** .planning/phases/67-wkb-classification-engine/67-CONTEXT.md
+**Last Session:** 2026-03-01T09:16:55Z
+**Stopped At:** Completed 63-01-PLAN.md (validate_scan_data CLI tool + parcel_addressing formalized)
+**Resume File:** .planning/phases/63-venlo-data-completeness/63-02-PLAN.md
 
-**Next Action:** Run `/gsd:execute-phase 63` to continue v8.0.
+**Next Action:** Run `/gsd:execute-phase 63` (Plan 02) to run Venlo scans and validate data completeness.
 
 ---
 
-*State updated: 2026-03-01 -- v9.0 Professional Marketplace roadmap added (Phases 67-71, planned)*
+*State updated: 2026-03-01 -- Phase 63 Plan 01 complete: validate_scan_data CLI + WijkValidation dataclass*
