@@ -178,6 +178,9 @@ async def _build_queue(
             queue.append(WijkQueueItem(wijk_naam=wijk_naam, action="skip_completed", scan_id=str(latest_scan.id)))
             continue
         if latest_scan and latest_scan.status in {"pending", "running"}:
+            if force_all:
+                queue.append(WijkQueueItem(wijk_naam=wijk_naam, action="rescan", scan_id=str(latest_scan.id)))
+                continue
             queue.append(WijkQueueItem(wijk_naam=wijk_naam, action="skip_in_progress", scan_id=str(latest_scan.id)))
             continue
         if latest_scan and latest_scan.status in {"failed", "cancelled"} and (force_failed or force_all):
@@ -246,7 +249,9 @@ async def _wait_for_scan(session_factory: async_sessionmaker, scan_id: str, poll
                 raise ValueError(f"Scan disappeared: {scan_id}")
             status = scan.status
             progress = scan.progress_pct
-            print(f"[{scan.wijk_naam}] status={status} progress={progress}% processed={scan.parcels_processed}/{scan.parcels_total}")
+            phase = scan.current_phase or ""
+            phase_label = f" ({phase})" if phase else ""
+            print(f"[{scan.wijk_naam}] status={status} progress={progress}%{phase_label} processed={scan.parcels_processed}/{scan.parcels_total}")
             if status not in {"pending", "running"}:
                 if status == "failed" and scan.error_message:
                     print(f"[{scan.wijk_naam}] error={scan.error_message}")

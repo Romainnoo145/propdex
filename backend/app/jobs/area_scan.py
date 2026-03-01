@@ -561,6 +561,7 @@ async def area_scan_job(
                 ],
                 http_client,
                 session,
+                scan=scan,
             )
 
             scan.progress_pct = 95
@@ -886,6 +887,7 @@ async def _batch_resolve_addresses(
     parcels_with_centroids: list[tuple[ParcelCache, tuple[float, float] | None]],
     client: httpx.AsyncClient,
     session: AsyncSession,
+    scan: object | None = None,
 ) -> None:
     """
     Batch reverse geocode parcels to resolve addresses.
@@ -901,11 +903,16 @@ async def _batch_resolve_addresses(
         parcels_with_centroids: List of (parcel, centroid_xy) tuples
         client: Shared httpx AsyncClient
         session: Database session
+        scan: Optional AreaScan to update progress_pct during resolution
     """
     semaphore = asyncio.Semaphore(REVERSE_GEOCODE_CONCURRENCY)
+    total = len(parcels_with_centroids)
+    resolved_count = 0
 
     async def resolve_one(parcel: ParcelCache, centroid: tuple[float, float] | None) -> None:
+        nonlocal resolved_count
         if centroid is None:
+            resolved_count += 1
             return
         async with semaphore:
             address = await reverse_geocode_rd_point(centroid, client)
@@ -913,6 +920,13 @@ async def _batch_resolve_addresses(
             if normalized:
                 parcel.address = normalized
                 session.add(parcel)
+            resolved_count += 1
+            # Update scan progress: 80-95% maps to address resolution
+            if scan is not None and total > 0 and resolved_count % 50 == 0:
+                scan.progress_pct = 80 + int(15 * resolved_count / total)
+                session.add(scan)
+                await session.flush()
+                await session.commit()
 
     tasks = [
         resolve_one(parcel, centroid)
