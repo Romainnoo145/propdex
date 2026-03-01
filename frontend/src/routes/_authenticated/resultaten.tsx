@@ -39,7 +39,7 @@ function ResultatenPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
   const { data: scanHistoryData } = useScanHistory({ limit: 200 })
-  const [total, setTotal] = useState(0)
+  const [, setTotal] = useState(0)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
   const [selectedParcelIds, setSelectedParcelIds] = useState<string[]>([])
   const [selectionKey, setSelectionKey] = useState(0)

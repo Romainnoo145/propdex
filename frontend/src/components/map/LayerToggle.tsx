@@ -173,7 +173,7 @@ function LayerToggle({
     onBestemmingsplanToggle?.(showBestemmingsplan)
     onScannedScopeToggle?.(showScannedScope)
     if (showParcels) {
-      setParcelOverlayMode('score')
+      queueMicrotask(() => setParcelOverlayMode('score'))
     }
   }, [
     isStyleReady,
@@ -312,7 +312,7 @@ function LayerToggle({
   useEffect(() => {
     if (!mapReady) return
     if (showWijkenToggle && !prevShowWijkenToggleRef.current) {
-      setShowGemeenten(true)
+      queueMicrotask(() => setShowGemeenten(true))
       onGemeentenToggle?.(true)
       onWijkenToggle?.(showWijken)
     }
@@ -357,11 +357,11 @@ function LayerToggle({
       addParcelBoundariesLayer(map)
     }
     setParcelBoundariesVisibility(map, true)
-    setShowParcels(true)
+    queueMicrotask(() => setShowParcels(true))
     onParcelsToggle?.(true)
     ensureParcelInteractionZoom()
     // Keep auto-enabled parcel mode consistent with default UX.
-    setParcelOverlayMode('score')
+    queueMicrotask(() => setParcelOverlayMode('score'))
   }, [
     autoEnableParcelsKey,
     ensureParcelInteractionZoom,
@@ -376,7 +376,7 @@ function LayerToggle({
     if (showScore) return
     if (showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity) return
     // Persisted "none" state should not disable clickability in parcel mode.
-    setParcelOverlayMode('score')
+    queueMicrotask(() => setParcelOverlayMode('score'))
   }, [
     isStyleReady,
     setParcelOverlayMode,

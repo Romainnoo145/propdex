@@ -66,11 +66,11 @@ export default function ChangeTimeline({
   useEffect(() => {
     if (variant !== 'inbox') return
     if (changes.length === 0) {
-      if (selectedId !== null) setSelectedId(null)
+      if (selectedId !== null) queueMicrotask(() => setSelectedId(null))
       return
     }
     if (!selectedId || !changes.some((change) => change.id === selectedId)) {
-      setSelectedId(changes[0]!.id)
+      queueMicrotask(() => setSelectedId(changes[0]!.id))
     }
   }, [variant, changes, selectedId])
 
