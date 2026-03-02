@@ -149,6 +149,8 @@ export interface ScanResultsResponse {
   parcels_total: number
   /** Total ranked results (before pagination) */
   total: number
+  /** Total results before score threshold filter (for hidden-count display) */
+  total_unfiltered: number
   /** Current offset */
   offset: number
   /** Page size */
@@ -176,6 +178,10 @@ export interface ScanResultsFilters {
   score_category?: string
   /** Filter by building status */
   pand_status?: string
+  /** Minimum score threshold for default filter preset */
+  min_score?: number
+  /** Exclude parcels with null scores */
+  exclude_null_scores?: boolean
   /** Sort field name (score, vacancy_subscore, buildability_subscore, area_m2, address, bouwjaar) */
   sort_by?: string
   /** Sort direction: asc | desc */

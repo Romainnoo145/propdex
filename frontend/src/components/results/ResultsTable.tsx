@@ -24,6 +24,7 @@ interface ResultsTableProps {
   selectedParcelId?: string | null
   onRowClick?: (parcel: ScanResultItem) => void
   onTotalChange?: (total: number) => void
+  onTotalUnfilteredChange?: (total: number) => void
   onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   onPageChange?: (page: number) => void
   currentPage?: number
@@ -66,52 +67,16 @@ function ScoreBadge({
   )
 }
 
-function VacancyBadge({
-  value,
-  confidence,
-}: {
-  value: string | null
-  confidence: number | null
-}) {
-  if (!value) {
-    return <span className="text-grey-600">--</span>
-  }
-
-  const map: Record<string, { label: string; cls: string }> = {
-    leeg_perceel: {
-      label: 'Leeg perceel',
-      cls: 'bg-success/12 text-success border-success/25',
-    },
-    leegstaand_pand: {
-      label: 'Leegstaand',
-      cls: 'bg-warning/15 text-warning border-warning/30',
-    },
-    in_gebruik: {
-      label: 'In gebruik',
-      cls: 'bg-grey-800/70 text-grey-400 border-overlay/8',
-    },
-    onbekend: {
-      label: 'Onbekend',
-      cls: 'bg-info/12 text-info border-info/25',
-    },
-  }
-
-  const { label, cls } = map[value] ?? {
-    label: value,
-    cls: 'bg-grey-800/70 text-grey-300 border-overlay/8',
-  }
+function LeegstandBadge({ hasPand }: { hasPand: boolean }) {
+  const isLeeg = !hasPand
+  const cls = isLeeg
+    ? 'bg-amber-accent/15 text-amber-accent border-amber-accent/30'
+    : 'bg-grey-800/70 text-grey-400 border-overlay/8'
 
   return (
-    <div className="inline-flex items-center gap-1.5">
-      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
-        {label}
-      </span>
-      {confidence !== null && (
-        <span className="text-[11px] tabular-nums text-grey-500">
-          {Math.round(confidence * 100)}%
-        </span>
-      )}
-    </div>
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {isLeeg ? 'Ja' : 'Nee'}
+    </span>
   )
 }
 
@@ -142,6 +107,7 @@ export default function ResultsTable({
   selectedParcelId,
   onRowClick,
   onTotalChange,
+  onTotalUnfilteredChange,
   onSortChange,
   onPageChange,
   currentPage,
@@ -227,6 +193,13 @@ export default function ResultsTable({
       onTotalChange?.(data.total)
     }
   }, [data?.total, onTotalChange])
+
+  // Propagate unfiltered total for hidden-count display
+  useEffect(() => {
+    if (data?.total_unfiltered !== undefined) {
+      onTotalUnfilteredChange?.(data.total_unfiltered)
+    }
+  }, [data?.total_unfiltered, onTotalUnfilteredChange])
 
   // Auto-scroll to selected row when selection changes
   useEffect(() => {
@@ -329,25 +302,11 @@ export default function ResultsTable({
         )
       },
     }),
-    columnHelper.accessor('vacancy_signal', {
-      header: 'Potentie-signaal',
-      enableSorting: false,
-      cell: (info) => (
-        <VacancyBadge
-          value={info.getValue()}
-          confidence={info.row.original.vacancy_confidence}
-        />
-      ),
+    columnHelper.accessor('has_pand', {
+      header: 'Leegstand',
+      enableSorting: true,
+      cell: (info) => <LeegstandBadge hasPand={info.getValue()} />,
     }),
-    columnHelper.accessor(
-      (row) => extractScoreSubscores(row.score_breakdown).vacancy,
-      {
-        id: 'vacancy_subscore',
-        header: 'Leegstandskans',
-        enableSorting: true,
-        cell: (info) => <SubscoreBadge value={info.getValue()} />,
-      }
-    ),
     columnHelper.accessor(
       (row) => extractScoreSubscores(row.score_breakdown).buildability,
       {

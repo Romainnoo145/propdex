@@ -8,6 +8,10 @@ interface ResultsFilterPanelProps {
   filters: ScanResultsFilters
   onChange: (filters: Partial<ScanResultsFilters>) => void
   total: number
+  totalUnfiltered: number
+  showOnlyTop: boolean
+  onShowOnlyTopChange: (value: boolean) => void
+  scanStatus?: string
 }
 
 // Pill button for discrete filter options
@@ -75,6 +79,10 @@ export default function ResultsFilterPanel({
   filters,
   onChange,
   total,
+  totalUnfiltered,
+  showOnlyTop,
+  onShowOnlyTopChange,
+  scanStatus,
 }: ResultsFilterPanelProps) {
   // Local state for debounced area inputs
   const [localMinArea, setLocalMinArea] = useState(
@@ -83,6 +91,16 @@ export default function ResultsFilterPanel({
   const [localMaxArea, setLocalMaxArea] = useState(
     filters.max_area_m2?.toString() ?? ''
   )
+
+  // Auto-disable toggle when filter would result in 0 visible rows
+  useEffect(() => {
+    if (showOnlyTop && total === 0 && totalUnfiltered > 0) {
+      onShowOnlyTopChange(false)
+      toast.info('Filter uitgeschakeld — geen percelen boven drempel', {
+        duration: 3000,
+      })
+    }
+  }, [total, totalUnfiltered, showOnlyTop, onShowOnlyTopChange])
 
   // Sync local area state when URL-derived filter changes (e.g. clear all)
   useEffect(() => {
@@ -146,8 +164,56 @@ export default function ResultsFilterPanel({
     })
   }
 
+  const hiddenCount = totalUnfiltered - total
+  const isToggleDisabled = scanStatus !== undefined && scanStatus !== 'completed'
+
   return (
     <div className="border-b border-overlay/5 bg-grey-900 px-5 py-3">
+      {/* Top kansen toggle */}
+      <div className="flex items-center justify-between mb-2.5">
+        <button
+          onClick={() => !isToggleDisabled && onShowOnlyTopChange(!showOnlyTop)}
+          disabled={isToggleDisabled}
+          className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+            isToggleDisabled
+              ? 'opacity-40 cursor-not-allowed text-grey-500'
+              : 'cursor-pointer'
+          }`}
+          aria-pressed={showOnlyTop}
+        >
+          {/* Toggle track */}
+          <span
+            className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors ${
+              showOnlyTop
+                ? 'bg-amber-accent/20 border-amber-accent/40'
+                : 'bg-grey-800 border-overlay/10'
+            }`}
+          >
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full transition-transform ${
+                showOnlyTop
+                  ? 'translate-x-3.5 bg-amber-accent'
+                  : 'translate-x-0.5 bg-grey-500'
+              }`}
+            />
+          </span>
+          {showOnlyTop ? (
+            <span className="text-amber-accent">
+              Top kansen{hiddenCount > 0 ? ` (${hiddenCount} verborgen)` : ''}
+            </span>
+          ) : (
+            <span className="text-grey-400">Alle percelen</span>
+          )}
+        </button>
+
+        {/* Count display */}
+        <span className="text-xs text-grey-600 tabular-nums">
+          {showOnlyTop && totalUnfiltered > total
+            ? `${total.toLocaleString('nl-NL')} van ${totalUnfiltered.toLocaleString('nl-NL')} percelen`
+            : `${total.toLocaleString('nl-NL')} percelen`}
+        </span>
+      </div>
+
       {/* Single horizontal row of filters */}
       <div className="flex items-center gap-4 flex-wrap">
         {/* Score pills */}
@@ -253,9 +319,6 @@ export default function ResultsFilterPanel({
               Wis
             </button>
           )}
-          <span className="text-xs text-grey-600 tabular-nums">
-            {total.toLocaleString('nl-NL')} resultaten
-          </span>
         </div>
       </div>
     </div>

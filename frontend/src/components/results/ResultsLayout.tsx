@@ -13,9 +13,14 @@ interface ResultsLayoutProps {
   onClose?: () => void
 }
 
+/** Minimum score for the "Top kansen" default preset — matches QUALIFICATION_THRESHOLD */
+const SCORE_CUTOFF = 40
+
 export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: ResultsLayoutProps) {
   const [filters, setFilters] = useState<ScanResultsFilters>({})
+  const [showOnlyTop, setShowOnlyTop] = useState(true)
   const [total, setTotal] = useState(0)
+  const [totalUnfiltered, setTotalUnfiltered] = useState(0)
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
   const selectionSourceRef = useRef<'table' | 'map' | null>(null)
   const [modalParcel, setModalParcel] = useState<ScanResultItem | null>(null)
@@ -162,6 +167,9 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
             filters={filters}
             onChange={setFilters}
             total={total}
+            totalUnfiltered={totalUnfiltered}
+            showOnlyTop={showOnlyTop}
+            onShowOnlyTopChange={setShowOnlyTop}
           />
         )}
 
@@ -170,7 +178,12 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
           {scanId && (
             <ResultsTable
               scanId={scanId}
-              filters={filters}
+              filters={{
+                ...filters,
+                ...(showOnlyTop
+                  ? { min_score: SCORE_CUTOFF, exclude_null_scores: true }
+                  : {}),
+              }}
               selectedParcelId={selectedParcelId}
               onRowClick={(parcel) => {
                 selectionSourceRef.current = 'table'
@@ -178,6 +191,7 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
                 setModalParcel(parcel)
               }}
               onTotalChange={setTotal}
+              onTotalUnfilteredChange={setTotalUnfiltered}
               onRowHover={handleRowHover}
             />
           )}
