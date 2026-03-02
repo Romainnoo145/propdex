@@ -41,11 +41,11 @@ from app.schemas.property import (
 from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
+from app.services.asbest_indicator import assess_asbest_risk
 from app.services.cache_manager import get_cached_or_fetch
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
 from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
-from app.services.asbest_indicator import assess_asbest_risk
 from app.services.wkb_classifier import classify_wkb
 from app.services.wkb_precheck import evaluate_wkb_precheck
 from app.services.zoning_aggregator import fetch_zoning_data
