@@ -58,12 +58,16 @@ export function addBAGPandLayer(map: maplibregl.Map): void {
  * @param map - MapLibre GL JS map instance
  */
 export function removeBAGPandLayer(map: maplibregl.Map): void {
+  try {
   if (map.getLayer(BAG_PAND_LAYER_ID)) {
     map.removeLayer(BAG_PAND_LAYER_ID);
   }
 
   if (map.getSource(BAG_PAND_SOURCE_ID)) {
     map.removeSource(BAG_PAND_SOURCE_ID);
+  }
+  } catch {
+    // Map already destroyed during unmount — safe to ignore
   }
 }
 

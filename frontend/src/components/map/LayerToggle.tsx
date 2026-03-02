@@ -425,8 +425,6 @@ function LayerToggle({
       )}
 
       <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
-        {/* Group 1 — Kaart (Basemap) */}
-        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Kaart</span>
         <button
           onClick={() => handleLayerChange('kaart')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
@@ -444,9 +442,7 @@ function LayerToggle({
           Satellite
         </button>
 
-        {/* Group 2 — Data layers */}
         <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
-        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Data</span>
 
         <button
           onClick={handleParcelsToggle}

@@ -457,7 +457,7 @@ export function ParcelDetailModal({
               </div>
               <div className="space-y-2">
                 <ScorePillarRows
-                  label="Bouwruimte (TAR/FAR)"
+                  label="Bebouwbaarheid"
                   value={buildabilityPillar}
                   context={planruimte.farTar}
                 />

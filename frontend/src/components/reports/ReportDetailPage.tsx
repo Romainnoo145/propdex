@@ -515,14 +515,14 @@ function KadasterSection({ data }: { data: PropertyReportResponse }) {
   )
 }
 
-/* ─── Bouwruimte Delta ─────────────────────────────────────── */
+/* ─── Bebouwingsanalyse ────────────────────────────────────── */
 
 function BuildabilityDeltaSection({ data }: { data: PropertyReportResponse }) {
   const delta = data.buildability_delta
 
   if (!delta) {
     return (
-      <Section title="Bouwruimte Delta" icon={<BuildabilityIcon />}>
+      <Section title="Bebouwingsanalyse" icon={<BuildabilityIcon />}>
         <p className="text-sm text-grey-600">
           Nog geen berekende bouwruimte beschikbaar voor dit dossier
         </p>
@@ -630,9 +630,10 @@ function BuildabilityDeltaSection({ data }: { data: PropertyReportResponse }) {
 
         {hasPlanBlocker ? (
           <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-3 py-2">
-            <p className="text-sm font-medium text-grey-200">Kan resterende bouwruimte niet berekenen.</p>
+            <p className="text-sm font-medium text-grey-200">Resterende bouwruimte niet te berekenen</p>
             <p className="mt-1 text-xs text-grey-500">
-              Ontbrekende inputs in bestemmingsplan: {missingPlanInputs.join(' en ')}.
+              Niet in bestemmingsplan gevonden: {missingPlanInputs.join(' en ')}.
+              Bovenstaande balk toont alleen het huidige bebouwingspercentage.
             </p>
           </div>
         ) : (
@@ -873,7 +874,7 @@ function WkbPrecheckSection({ data }: { data: PropertyReportResponse }) {
     functiewijziging: 'Functiewijziging',
     bag_building_status: 'BAG-status',
     zoning_primary_bestemming: 'Bestemming',
-    buildability_delta: 'Bouwruimte-delta',
+    buildability_delta: 'Bebouwingsanalyse',
     monument_status: 'Monumentstatus',
   }
 
