@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { uploadBestemmingsplanPDF } from '@/lib/api'
 import { splitZoningPlans } from '@/lib/zoningPlans'
 import type { PropertyReportResponse } from '@/lib/types/property'
+import ReportHeader from './ReportHeader'
 
 interface ReportDetailPageProps {
   data: PropertyReportResponse | null
@@ -139,103 +140,20 @@ export default function ReportDetailPage({
     )
   }
 
-  const { address, building, ai_parsing, completeness_score } = data
+  const { building, ai_parsing, completeness_score } = data
   const statusInfo = getStatusInfo(building?.status)
-
   const completenessPct = Math.round(completeness_score * 100)
 
   return (
     <div className="h-full overflow-y-auto bg-grey-950">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="relative mb-6 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-amber-accent/10 blur-3xl" />
-          <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-overlay/[0.04] blur-3xl" />
-          <div className="relative">
-            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <button
-                  onClick={onBack}
-                  className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
-                >
-                  <ArrowLeftIcon />
-                  {backLabel}
-                </button>
-                <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">
-                  {address.straat} {address.huisnummer}
-                  {address.huisletter ?? ''}{address.toevoeging ?? ''}
-                </h1>
-                <p className="mt-1 text-grey-600">
-                  {address.postcode}, {address.woonplaats}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  {statusInfo && (
-                    <span className={`rounded-full border px-2.5 py-1 font-medium ${
-                      statusInfo.severity === 'high'
-                        ? 'border-amber-accent/35 bg-amber-accent/10 text-amber-accent'
-                        : statusInfo.severity === 'medium'
-                          ? 'border-overlay/15 bg-overlay/[0.06] text-grey-300'
-                          : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
-                    }`}>
-                      {statusInfo.label}
-                    </span>
-                  )}
-                  <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
-                    {data.cadastral_parcels.length} percelen gekoppeld
-                  </span>
-                  {sourceParcelId && (
-                    <>
-                      <span className="rounded-full border border-amber-accent/35 bg-amber-accent/10 px-2.5 py-1 font-medium text-amber-accent">
-                        Perceelrapport gekoppeld
-                      </span>
-                      <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
-                        Duplicaatbeveiliging actief
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="w-full max-w-xs rounded-xl border border-overlay/[0.08] bg-overlay/[0.04] px-3 py-2">
-                <div className="flex items-center gap-2.5">
-                  <CompletenessRing value={completeness_score} />
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-grey-800/80">
-                    <div
-                      className="h-full rounded-full bg-amber-accent transition-all"
-                      style={{
-                        width: `${completeness_score * 100}%`,
-                        opacity: completeness_score >= 0.8 ? 1 : completeness_score >= 0.5 ? 0.75 : 0.45,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <MetricCard
-                label="Bouwjaar"
-                value={building?.bouwjaar?.toString() ?? '–'}
-                sublabel={building?.bouwjaar ? `${new Date().getFullYear() - building.bouwjaar} jaar oud` : undefined}
-                icon={<CalendarIcon />}
-              />
-              <MetricCard
-                label="Vloeroppervlak"
-                value={formatArea(building?.oppervlakte)}
-                sublabel="gebruiksoppervlakte"
-                icon={<ScaleIcon />}
-              />
-              <MetricCard
-                label="Gebruiksdoel"
-                value={building?.gebruiksdoel?.[0] ?? '–'}
-                icon={<BuildingIcon />}
-              />
-              <MetricCard
-                label="Compleetheid"
-                value={`${completenessPct}%`}
-                icon={<SparkIcon />}
-              />
-            </div>
-          </div>
-        </div>
+        <ReportHeader
+          data={data}
+          backLabel={backLabel}
+          sourceParcelId={sourceParcelId}
+          onBack={onBack}
+          onViewOnMap={onViewOnMap}
+        />
 
         {/* Replaced by ActieVereistSection — Plan 65-03 */}
         {/* {isActionableStatus && (
@@ -353,62 +271,7 @@ function SignalBanner({
   )
 }
 
-/* ─── Metric Card ───────────────────────────────────────────── */
-
-function MetricCard({
-  label,
-  value,
-  sublabel,
-  bar,
-  icon,
-}: {
-  label: string
-  value: string
-  sublabel?: string
-  bar?: number
-  icon?: React.ReactNode
-}) {
-  return (
-    <div className="rounded-xl border border-overlay/[0.08] bg-overlay/[0.04] px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-grey-600">{label}</p>
-        {icon && <span className="text-grey-500">{icon}</span>}
-      </div>
-      <p className="mt-1 truncate text-2xl font-semibold leading-none text-grey-100">{value}</p>
-      {sublabel && <p className="mt-0.5 text-xs text-grey-600">{sublabel}</p>}
-      {bar !== undefined && (
-        <div className="mt-3 flex items-center gap-2.5">
-          <CompletenessRing value={bar} />
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-grey-800/80">
-            <div
-              className="h-full rounded-full bg-amber-accent transition-all"
-              style={{ width: `${bar * 100}%`, opacity: bar >= 0.8 ? 1 : bar >= 0.5 ? 0.75 : 0.45 }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CompletenessRing({ value }: { value: number }) {
-  const safeValue = Math.max(0, Math.min(1, value))
-  const percentage = Math.round(safeValue * 100)
-  const angle = Math.round(safeValue * 360)
-
-  return (
-    <div
-      className="relative h-8 w-8 shrink-0 rounded-full"
-      style={{
-        background: `conic-gradient(rgba(217, 170, 56, 0.95) ${angle}deg, rgba(255, 255, 255, 0.12) ${angle}deg 360deg)`,
-      }}
-    >
-      <div className="absolute inset-[3px] flex items-center justify-center rounded-full bg-grey-900 text-[9px] font-semibold text-amber-accent">
-        {percentage}
-      </div>
-    </div>
-  )
-}
+/* MetricCard and CompletenessRing moved to ReportHeader.tsx */
 
 function ReportMetaCard({
   resolvedAt,
@@ -1948,15 +1811,7 @@ function BronnenSection({ data }: { data: PropertyReportResponse }) {
 }
 
 /* ─── Icons ─────────────────────────────────────────────────── */
-
-function ArrowLeftIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="19" y1="12" x2="5" y2="12" />
-      <polyline points="12 19 5 12 12 5" />
-    </svg>
-  )
-}
+/* ArrowLeftIcon moved to ReportHeader.tsx */
 
 function MapPinIcon() {
   return (
@@ -2113,34 +1968,4 @@ function DatabaseIcon() {
   )
 }
 
-function CalendarIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-      <line x1="16" y1="3" x2="16" y2="7" />
-      <line x1="8" y1="3" x2="8" y2="7" />
-      <line x1="3" y1="11" x2="21" y2="11" />
-    </svg>
-  )
-}
-
-function ScaleIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 20h16" />
-      <path d="M7 16h10" />
-      <path d="M10 16V7h4v9" />
-      <path d="M12 7V4" />
-    </svg>
-  )
-}
-
-function SparkIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m12 2 2.1 5.4L19 9.5l-4.9 2.1L12 17l-2.1-5.4L5 9.5l4.9-2.1L12 2Z" />
-      <path d="M5 20h.01" />
-      <path d="M19 20h.01" />
-    </svg>
-  )
-}
+/* CalendarIcon, ScaleIcon, SparkIcon moved to ReportHeader.tsx */
