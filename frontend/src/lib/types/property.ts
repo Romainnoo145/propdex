@@ -217,6 +217,7 @@ export interface BuildingDimensionsAI {
   max_bouwhoogte: number | null
   max_goothoogte: number | null
   max_bebouwingspercentage: number | null
+  max_floor_area_ratio?: number | null
   max_oppervlakte: number | null
   max_inhoud: number | null
   overige: Record<string, string>
@@ -326,6 +327,8 @@ export interface BuildabilityDelta {
   current_far: number | null
   max_far: number | null
   remaining_far: number | null
+  limit_source?: string | null
+  limit_confidence?: 'high' | 'medium' | 'low' | null
   confidence: 'high' | 'medium' | 'low'
   missing_fields: string[]
   notes: string[]
@@ -359,6 +362,21 @@ export interface WkbPrecheck {
   required_documents: string[]
   disclaimer: string
   layer_b: WkbLayerBResult
+}
+
+// Phase 9 additions (v9.0 Professional Marketplace)
+export interface WkbClassification {
+  wkb_applicable: boolean
+  gevolgklasse: 'GK1' | 'niet_van_toepassing' | 'onbekend'
+  exclusion_reason: 'rijksmonument' | 'verbouwing' | null
+  disclaimer: string
+}
+
+export interface AsbestIndicator {
+  risk: 'hoog' | 'middel' | 'geen' | 'onbekend'
+  bouwjaar: number | null
+  norm_reference: string | null
+  reden: string
 }
 
 export interface PermitPrecedentReference {
@@ -412,6 +430,9 @@ export interface PropertyReportResponse {
   market_signals?: MarketSignals | null
   buildability_delta?: BuildabilityDelta | null
   wkb_precheck?: WkbPrecheck | null
+  // Phase 9 additions (v9.0 Professional Marketplace)
+  wkb_classification?: WkbClassification | null
+  asbest_indicator?: AsbestIndicator | null
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
 }
