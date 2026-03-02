@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v8.0 Client Demo Readiness — Phase 64 next (Map Visualization)
+**Current focus:** v8.0 Client Demo Readiness — Phase 65 Report Polish (IN PROGRESS)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 67-71)
 
 ---
 
 ## Current Position
 
-Phase: 64 of 66 (Map Visualization — IN PROGRESS)
-Plan: 2 of 2 complete
-Status: Phase 64 Plan 02 complete — grey-to-green gradient, hatch pattern, progressive labels, dashed wijk, BAGPanden wiring
-Last activity: 2026-03-02 — Phase 64 Plan 02 complete (map visualization layer enhancements)
+Phase: 65 of 66 (Report Polish — IN PROGRESS)
+Plan: 1 of 3 complete
+Status: Phase 65 Plan 01 complete — section reorder, empty state standardization, ReportHeader + SatelliteThumbnail extracted
+Last activity: 2026-03-02 — Phase 65 Plan 01 complete (report layout polish + header extraction)
 
-Progress (v8.0): [██████░░░░] 66% (6/9 plans complete)
+Progress (v8.0): [███████░░░] 77% (7/9 plans complete)
 
 ---
 
@@ -29,6 +29,7 @@ Progress (v8.0): [██████░░░░] 66% (6/9 plans complete)
 - Phase 63 Plan 01: completed ~2min (validate_scan_data CLI + WijkValidation dataclass + parcel_addressing formalized)
 - Phase 63 Plan 02: completed ~4hrs (21-wijk scan execution + validation — 108,789 parcels, 100% coverage)
 - Phase 64 Plan 01: completed ~7min (BAGPandLayer.tsx + PDOK_BAG_PAND_WMS + showBAGPanden state + LayerToggle groups + gradient legend)
+- Phase 65 Plan 01: completed ~6min (section reorder + empty states + ReportHeader + SatelliteThumbnail extraction)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
 - Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
@@ -75,6 +76,10 @@ Progress (v8.0): [██████░░░░] 66% (6/9 plans complete)
 - Canvas hatch pattern pattern: draw -> getImageData() -> addImage({width, height, data: Uint8Array}) — HTMLCanvasElement NOT accepted by MapLibre addImage()
 - Progressive label disclosure: separate minzoom/maxzoom symbol layers, not JS zoom listeners
 - fitBounds maxZoom guards: gemeente=15, wijk=17 to prevent over-zoom on small boundaries
+- Phase 65 Plan 01: Section order locked: Bestemmingsplan → Kadaster → BRK → Gebouw → WOZ → Energielabel → Buildability → Wkb → Permits → Market → AI
+- ESRI World Imagery static thumbnail: ArcGIS REST MapServer/export, no API key, bbox from center_wgs84 deltaKm=0.3
+- ReportHeader extracted: full data prop, satellite thumbnail, kadaster perceel ID, 6-card metric grid (adds Bestemming + WOZ-waarde)
+- SignalBanner/monument alert commented out in ReportDetailPage (kept for Plan 65-03 ActieVereistSection)
 
 ### v9.0 Context (Planned)
 
@@ -104,12 +109,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T02:37:09.147Z
-**Stopped At:** Phase 65 context gathered
-**Resume File:** .planning/phases/65-report-polish/65-CONTEXT.md
+**Last Session:** 2026-03-02T03:17:00Z
+**Stopped At:** Completed 65-01-PLAN.md
+**Resume File:** .planning/phases/65-report-polish/65-02-PLAN.md
 
-**Next Action:** Phase 64 complete — check ROADMAP.md for next phase in v8.0 Client Demo Readiness.
+**Next Action:** Execute Phase 65 Plan 02 (PDF Export).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 63 complete: Venlo 21 wijken validated, 108,789 parcels demo-ready*
+*State updated: 2026-03-02 -- Phase 65 Plan 01 complete: report sections reordered, ReportHeader + SatelliteThumbnail extracted*
