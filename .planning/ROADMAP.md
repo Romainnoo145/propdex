@@ -110,10 +110,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The default results view shows parcels pre-filtered to likely development opportunities (residential zoning, no recent permits, has vacant land or old buildings), not all parcels from the scan
   2. Results are sorted by opportunity score descending by default, so the highest-value parcels appear at the top without user interaction
-**Plans**: TBD
+**Plans**: 1 plan (Wave 1)
 
 Plans:
-- [ ] 66-01: Default filter preset + default sort order for results table
+- [ ] 66-01-PLAN.md — Server-side score threshold filter + nulls_last sort + toggle switch with count display (RES-01, RES-02)
 
 ### Phase 67: Wkb Classification Engine
 **Goal**: Users can see trustworthy, clearly-labelled Wkb gevolgklasse and asbest risk in every property report, with correct exclusions for monuments and verbouwingen
@@ -207,7 +207,7 @@ Plans:
 | 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
 | 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
-| 66. Results Table Noise Reduction | 0/1 | Not started | - |
+| 66. Results Table Noise Reduction | 0/1 | Planned | - |
 | 67. Wkb Classification Engine | 0/2 | Not started | - |
 | 68. Bodemloket Integration | 0/3 | Not started | - |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
