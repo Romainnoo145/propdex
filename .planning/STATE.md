@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier COMPLETE (both plans shipped); next: Phase 70
+**Current focus:** v9.0 Professional Marketplace — Phase 70 Plan 01 COMPLETE (Professional model + RLS migration + cross-tenant tests); next: Phase 70 Plan 02
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 69 of 71 (Risicobeoordeling Dossier — COMPLETE)
-Plan: 2 of 2 — COMPLETE (human-verify APPROVED)
-Status: Phase 69 complete — DOSSIER-01 DOSSIER-02 DOSSIER-03 all satisfied; next: Phase 70 (supply recruitment)
-Last activity: 2026-03-02 — Phase 69 Plan 02 complete; user approved checkpoint ("het werkt hoor"); PDF generation + download + 7 sections confirmed
+Phase: 70 of 71 (Professional Directory — IN PROGRESS)
+Plan: 1 of 3 — COMPLETE
+Status: Phase 70 Plan 01 complete — DIR-01 DIR-03 satisfied; professionals table + RLS + cross-tenant tests GREEN
+Last activity: 2026-03-02 — Phase 70 Plan 01 complete; Professional model (NULL org_id, GIN indexes, RLS FOR SELECT USING TRUE) + 9 cross-tenant tests passing
 
-Progress (v9.0): [████████░░] 80% (8/10 plans complete)
+Progress (v9.0): [█████████░] 90% (9/10 plans complete)
 
 ---
 
@@ -28,6 +28,7 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 - Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
 - Phase 68 Plan 02: completed ~18min (Bodemloket backend TDD — BodemloketClient + WBBDossierRef + BodemData + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data wiring — 11 tests GREEN)
+- Phase 70 Plan 01: completed ~8min (Professional model NULL org_id + Alembic migration b166d55eeb91 + RLS FOR SELECT USING TRUE + ADMIN_API_KEY config + 9 cross-tenant tests GREEN — DIR-01 DIR-03)
 - Phase 69 Plan 01: completed ~3min (GeneratedDossier model + Alembic migration + generate_dossier_pdf() + POST/GET dossier router endpoints — DOSSIER-01)
 - Phase 69 Plan 02: completed ~5min (Full wkb_kwaliteitsborger.html Jinja2 template 7 sections + per-page INDICATIEF footer + Genereer Startdossier CTA button — DOSSIER-01 DOSSIER-02 DOSSIER-03)
 
@@ -125,7 +126,9 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 - Phase 68 Plan 03 COMPLETE: BodemSection 3-state component (null/empty/populated), WBBDossierRef + BodemData TypeScript types, bodem_data on PropertyReportResponse, inserted after AsbestSection — human-verify APPROVED (BODEM-02 + BODEM-03)
 - BodemSection import pattern: only import WBBDossierRef (not BodemData) — BodemData accessed via data.bodem_data typing, direct import unused
 - AsyncMock passthrough pattern: use named `async def _passthrough_retry(fn, **kwargs): return await fn()` — lambdas cannot await coroutines in side_effect
-- Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
+- Professional model: NULL org_id with RLS FOR SELECT USING (TRUE) — platform-wide resource pattern (v9.0 DIR-03)
+- ARRAY GIN indexes pattern: postgresql_using='gin' for werkgebied + gevolgklassen @> containment queries
+- ARRAY SQL cast pattern: ARRAY['value']::varchar[] required for raw SQL @> with character varying[] columns
 - AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
 - Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
 - Phase 69 Plan 01 complete: GeneratedDossier model (TenantMixin, FK saved_reports + users), Alembic migration 3d97e34821f2, generate_dossier_pdf() WeasyPrint sync fn, POST /{report_id}/dossier (5/min) + GET /{report_id}/dossiers (30/min) endpoints, GeneratedDossierResponse schema
@@ -154,11 +157,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T15:39:04.391Z
-**Stopped At:** Phase 70 context gathered
-**Resume File:** .planning/phases/70-professional-directory/70-CONTEXT.md
+**Last Session:** 2026-03-02T16:41:10Z
+**Stopped At:** Phase 70 Plan 01 complete (Professional model + migration + cross-tenant tests)
+**Resume File:** .planning/phases/70-professional-directory/70-01-SUMMARY.md
 
-**Next Action:** Phase 70 — supply recruitment / kwaliteitsborger onboarding (launch gate before Phase 71 CTA).
+**Next Action:** Phase 70 Plan 02 — admin CRUD API for professionals (POST/PUT/DELETE with ADMIN_API_KEY auth).
 
 ---
 

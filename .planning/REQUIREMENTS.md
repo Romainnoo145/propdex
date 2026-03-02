@@ -36,9 +36,9 @@ Requirements for the kwaliteitsborger lead generation vertical — from Wkb clas
 
 ### Professional Directory
 
-- [ ] **DIR-01**: Admin can add kwaliteitsborger profiles (naam, bedrijf, werkgebied, gevolgklassen, contact)
+- [x] **DIR-01**: Admin can add kwaliteitsborger profiles (naam, bedrijf, werkgebied, gevolgklassen, contact)
 - [ ] **DIR-02**: Kwaliteitsborgers matched to leads based on werkgebied (gemeente) and gevolgklasse
-- [ ] **DIR-03**: Professional profiles are platform-wide (not tenant-isolated) with admin-only management
+- [x] **DIR-03**: Professional profiles are platform-wide (not tenant-isolated) with admin-only management
 - [ ] **DIR-04**: Professional profile links to TloKB public register for verification
 
 ### Privacy & Consent
@@ -103,9 +103,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEAD-02 | Phase 71 | Pending |
 | LEAD-03 | Phase 71 | Pending |
 | LEAD-04 | Phase 71 | Pending |
-| DIR-01 | Phase 70 | Pending |
+| DIR-01 | Phase 70 | Complete |
 | DIR-02 | Phase 70 | Pending |
-| DIR-03 | Phase 70 | Pending |
+| DIR-03 | Phase 70 | Complete |
 | DIR-04 | Phase 70 | Pending |
 | AVG-01 | Phase 71 | Pending |
 | AVG-02 | Phase 71 | Pending |
