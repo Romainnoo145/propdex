@@ -28,6 +28,7 @@ Progress (v8.0): [██████░░░░] 66% (6/9 plans complete)
 - Phase 62 Plan 02: completed ~2min (force-mode clean-slate rescan + FORCE MODE log + WijkOutcome summary table)
 - Phase 63 Plan 01: completed ~2min (validate_scan_data CLI + WijkValidation dataclass + parcel_addressing formalized)
 - Phase 63 Plan 02: completed ~4hrs (21-wijk scan execution + validation — 108,789 parcels, 100% coverage)
+- Phase 64 Plan 01: completed ~7min (BAGPandLayer.tsx + PDOK_BAG_PAND_WMS + showBAGPanden state + LayerToggle groups + gradient legend)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
 - Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
@@ -103,9 +104,9 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T07:50:06Z
-**Stopped At:** Completed 64-02-PLAN.md — Map Visualization Phase 64 complete
-**Resume File:** .planning/phases/64-map-visualization/64-02-SUMMARY.md
+**Last Session:** 2026-03-02T07:51:29Z
+**Stopped At:** Completed 64-01-PLAN.md — BAGPandLayer, LayerToggle groups, gradient legend
+**Resume File:** .planning/phases/64-map-visualization/64-01-SUMMARY.md
 
 **Next Action:** Phase 64 complete — check ROADMAP.md for next phase in v8.0 Client Demo Readiness.
 

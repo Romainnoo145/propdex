@@ -55,7 +55,7 @@ Previous milestone — Client Demo Readiness. Tracked in `.planning/ROADMAP.md` 
 - [x] **SCAN-02**: BAG coverage ratio validation
 - [x] **SCAN-03**: Force-all backfill mode
 - [ ] **DATA-01-03**: Venlo data completeness (Phase 63)
-- [ ] **MAP-01-03**: Map visualization polish (Phase 64)
+- [x] **MAP-01-03**: Map visualization polish (Phase 64)
 - [ ] **RPT-01-04**: Report polish (Phase 65)
 - [ ] **RES-01-02**: Results table noise reduction (Phase 66)
 

@@ -28,7 +28,7 @@
 
 - [x] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill (completed 2026-02-28)
 - [x] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage (completed 2026-03-02)
-- [ ] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements
+- [x] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements (completed 2026-03-02)
 - [ ] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section
 - [ ] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels
 
@@ -205,7 +205,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
 | 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
-| 64. Map Visualization | 1/2 | In Progress|  |
+| 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 0/3 | Not started | - |
 | 66. Results Table Noise Reduction | 0/1 | Not started | - |
 | 67. Wkb Classification Engine | 0/2 | Not started | - |
