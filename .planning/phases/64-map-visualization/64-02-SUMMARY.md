@@ -137,6 +137,16 @@ None — no external service configuration required.
 - Dashed wijk boundaries provide spatial context without competing with parcel colors
 - v8.0 demo readiness: map layers complete, ready for final phase integration testing
 
+## Self-Check: PASSED
+
+- FOUND: frontend/src/components/map/ParcelScoreLayer.tsx
+- FOUND: frontend/src/components/map/WijkBoundariesLayer.tsx
+- FOUND: frontend/src/routes/_authenticated/map.tsx
+- FOUND: .planning/phases/64-map-visualization/64-02-SUMMARY.md
+- FOUND commit: af7937f (Task 1)
+- FOUND commit: 963c838 (Task 2)
+- TypeScript: 0 errors (521 pre-existing warnings from unrelated files)
+
 ---
 *Phase: 64-map-visualization*
 *Completed: 2026-03-02*
