@@ -207,7 +207,7 @@ Plans:
 | 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
 | 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
-| 66. Results Table Noise Reduction | 1/1 | Complete   | 2026-03-02 |
+| 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
 | 67. Wkb Classification Engine | 0/2 | Not started | - |
 | 68. Bodemloket Integration | 0/3 | Not started | - |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
