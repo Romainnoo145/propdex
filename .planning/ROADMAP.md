@@ -125,11 +125,11 @@ Plans:
   3. A property flagged as verbouwing (December 2024 ruling) shows "Wkb niet van toepassing — verbouwingen zijn uitgesloten" instead of a gevolgklasse
   4. A rijksmonument property shows "Wkb niet van toepassing — rijksmonumenten zijn vrijgesteld" and the CTA is absent
   5. The wkb_applicable boolean in the report schema is false whenever an exclusion applies, so downstream CTA logic has a single source of truth
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 67-01: wkb_classifier.py + asbest_indicator.py services + PropertyReportResponse schema extension
-- [ ] 67-02: WkbSection + AsbstSection frontend components in ReportDetailPage
+- [ ] 67-01-PLAN.md — TDD: wkb_classifier.py + asbest_indicator.py services + schema extension + aggregator wiring + unit tests (WKB-01, WKB-02, WKB-03, WKB-04)
+- [ ] 67-02-PLAN.md — Frontend: WkbClassificatieSection + AsbestSection components in ReportDetailPage.tsx (WKB-01, WKB-02, WKB-03, WKB-04)
 
 ### Phase 68: Bodemloket Integration
 **Goal**: Users can see soil contamination status at parcel level, with honest coverage framing when Bodemloket data is absent
@@ -208,7 +208,7 @@ Plans:
 | 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
 | 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
-| 67. Wkb Classification Engine | 0/2 | Not started | - |
+| 67. Wkb Classification Engine | 0/2 | Planned | - |
 | 68. Bodemloket Integration | 0/3 | Not started | - |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
 | 70. Professional Directory | 0/3 | Not started | - |
