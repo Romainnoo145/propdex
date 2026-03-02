@@ -375,6 +375,41 @@ export async function exportReportPDF(
 }
 
 /**
+ * Generate Risicobeoordeling Startdossier PDF
+ *
+ * POST /api/reports/{reportId}/dossier
+ *
+ * @param reportId - Report UUID to generate dossier for
+ * @param accessToken - JWT access token from useAuth()
+ * @returns PDF blob for download
+ */
+export async function generateStartdossier(
+  reportId: string,
+  accessToken: string | null
+): Promise<Blob> {
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(`${REPORTS_BASE}/${reportId}/dossier`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Dossier generation failed with status ${response.status}` }))
+    throw new Error(error.detail || `Dossier generation failed with status ${response.status}`)
+  }
+
+  return response.blob()
+}
+
+/**
  * Upload bestemmingsplan PDF for AI parsing
  *
  * POST /api/properties/upload-pdf?plan_idn={planIdn}

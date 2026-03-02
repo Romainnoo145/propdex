@@ -5,7 +5,10 @@
  * satellite thumbnail, and key property stat cards.
  */
 
+import { useState, useCallback } from 'react'
 import type { PropertyReportResponse } from '@/lib/types/property'
+import { generateStartdossier } from '@/lib/api'
+import { useAuth } from '@/lib/auth/useAuth'
 import SatelliteThumbnail from './SatelliteThumbnail'
 
 /* ─── Props ─────────────────────────────────────────────────── */
@@ -14,6 +17,7 @@ interface ReportHeaderProps {
   data: PropertyReportResponse
   backLabel: string
   sourceParcelId: string | null
+  reportId?: string | null
   onBack: () => void
   onViewOnMap: () => void
   onPrint?: () => void
@@ -195,17 +199,61 @@ function PrinterIcon() {
   )
 }
 
+function DocumentIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  )
+}
+
+function SpinnerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </svg>
+  )
+}
+
 /* ─── ReportHeader ───────────────────────────────────────────── */
 
 export default function ReportHeader({
   data,
   backLabel,
   sourceParcelId,
+  reportId = null,
   onBack,
   onViewOnMap,
   onPrint,
 }: ReportHeaderProps) {
   const { address, building, completeness_score, cadastral_parcels } = data
+  const { accessToken } = useAuth()
+  const [isDossierGenerating, setIsDossierGenerating] = useState(false)
+
+  const handleGenerateDossier = useCallback(async () => {
+    if (!reportId || !accessToken) return
+    setIsDossierGenerating(true)
+    try {
+      const blob = await generateStartdossier(reportId, accessToken)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `risicobeoordeling-${data.address?.postcode?.replace(' ', '') || 'rapport'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Dossier generation failed:', err)
+    } finally {
+      setIsDossierGenerating(false)
+    }
+  }, [reportId, accessToken, data.address?.postcode])
   const completenessPct = Math.round(completeness_score * 100)
 
   const severity = statusSeverity(building?.status)
@@ -243,15 +291,25 @@ export default function ReportHeader({
                 <ArrowLeftIcon />
                 {backLabel}
               </button>
-              {onPrint && (
+              <div className="ml-auto flex items-center gap-2">
                 <button
-                  onClick={onPrint}
-                  className="ml-auto flex items-center gap-2 rounded-lg border border-overlay/[0.08] bg-overlay/[0.04] px-3 py-2 text-sm text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+                  onClick={handleGenerateDossier}
+                  disabled={!reportId || isDossierGenerating}
+                  className="flex items-center gap-2 rounded-lg border border-amber-accent/25 bg-amber-accent/10 px-3 py-2 text-sm font-medium text-amber-accent transition-colors hover:bg-amber-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <PrinterIcon />
-                  Download PDF
+                  {isDossierGenerating ? <SpinnerIcon /> : <DocumentIcon />}
+                  {isDossierGenerating ? 'Bezig...' : 'Genereer Startdossier'}
                 </button>
-              )}
+                {onPrint && (
+                  <button
+                    onClick={onPrint}
+                    className="flex items-center gap-2 rounded-lg border border-overlay/[0.08] bg-overlay/[0.04] px-3 py-2 text-sm text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+                  >
+                    <PrinterIcon />
+                    Download PDF
+                  </button>
+                )}
+              </div>
             </div>
 
             <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">

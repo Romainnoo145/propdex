@@ -88,6 +88,7 @@ function RapportPage() {
       isLoading={savedReport.isLoading}
       backLabel={backLabel}
       sourceParcelId={savedReport.data?.source_parcel_id ?? null}
+      reportId={id.startsWith('r') ? null : id}
       onBack={handleBack}
       onViewOnMap={handleViewOnMap}
     />

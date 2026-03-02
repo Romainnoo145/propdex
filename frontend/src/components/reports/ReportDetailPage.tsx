@@ -11,6 +11,7 @@ interface ReportDetailPageProps {
   isLoading: boolean
   backLabel?: string
   sourceParcelId?: string | null
+  reportId?: string | null
   onBack: () => void
   onViewOnMap: () => void
 }
@@ -102,6 +103,7 @@ export default function ReportDetailPage({
   isLoading,
   backLabel = 'Terug naar projecten',
   sourceParcelId = null,
+  reportId = null,
   onBack,
   onViewOnMap,
 }: ReportDetailPageProps) {
@@ -176,6 +178,7 @@ export default function ReportDetailPage({
           data={data}
           backLabel={backLabel}
           sourceParcelId={sourceParcelId}
+          reportId={reportId}
           onBack={onBack}
           onViewOnMap={onViewOnMap}
           onPrint={handlePrint}
