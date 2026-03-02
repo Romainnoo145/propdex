@@ -154,9 +154,9 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02
-**Stopped At:** Completed Phase 69 Plan 02 — Risicobeoordeling Dossier full feature shipped (DOSSIER-01 DOSSIER-02 DOSSIER-03)
-**Resume File:** .planning/phases/70-*/70-01-PLAN.md
+**Last Session:** 2026-03-02T15:39:04.391Z
+**Stopped At:** Phase 70 context gathered
+**Resume File:** .planning/phases/70-professional-directory/70-CONTEXT.md
 
 **Next Action:** Phase 70 — supply recruitment / kwaliteitsborger onboarding (launch gate before Phase 71 CTA).
 
