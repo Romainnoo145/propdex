@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 67 Wkb Classification Engine (IN PROGRESS)
-**Next milestone:** v9.0 Professional Marketplace (planned — Phases 67-71)
+**Current focus:** v9.0 Professional Marketplace — Phase 67 Wkb Classification Engine (COMPLETE)
+**Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 67 of 71 (Wkb Classification Engine — IN PROGRESS)
-Plan: 1 of 2 complete
-Status: Phase 67 Plan 01 complete — classify_wkb() + assess_asbest_risk() services, WkbClassification + AsbestIndicator schemas, aggregator wiring, WKB-01 through WKB-04 backend satisfied
-Last activity: 2026-03-02 — Phase 67 Plan 01 complete (wkb_classifier + asbest_indicator TDD)
+Phase: 67 of 71 (Wkb Classification Engine — COMPLETE)
+Plan: 2 of 2 complete
+Status: Phase 67 complete — WkbClassificatieSection + AsbestSection frontend components, WkbClassification + AsbestIndicator TypeScript interfaces, all WKB requirements satisfied
+Last activity: 2026-03-02 — Phase 67 Plan 02 complete (WkbClassificatieSection + AsbestSection frontend)
 
-Progress (v9.0): [█░░░░░░░░░] 10% (1/10 plans complete)
+Progress (v9.0): [██░░░░░░░░] 20% (2/10 plans complete)
 
 ---
 
@@ -25,6 +25,7 @@ Progress (v9.0): [█░░░░░░░░░] 10% (1/10 plans complete)
 
 **v9.0 Professional Marketplace (In Progress)**
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
+- Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 
 **v8.0 Client Demo Readiness (Completed)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
@@ -72,14 +73,18 @@ Progress (v9.0): [█░░░░░░░░░] 10% (1/10 plans complete)
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
 - Professional model uses NULL org_id (platform-wide, not tenant-isolated) -- v9.0 critical pattern
 
-### Phase 67 Context
+### Phase 67 Context (COMPLETE)
 
 - Phase 67 Plan 01: Wkb Classification Engine backend complete
+- Phase 67 Plan 02: Wkb Classification Engine frontend complete
 - classify_wkb() exclusion order: rijksmonument (consensus_status == "rijksmonument") > verbouwing ("verbouwing pand" stripped+lowercased) > GK1 ("woonfunctie" in gebruiksdoel) > onbekend
 - assess_asbest_risk() bands: >= 1994 geen, 1963-1993 hoog (NEN 2991), < 1963 middel (NEN 2991), None onbekend
 - wkb_applicable=True for "onbekend" (optimistic — Phase 71 CTA will not be suppressed for unknown cases)
 - Only rijksmonumenten excluded (not gemeentelijke) — checked via consensus_status field, not is_monument
 - Pre-existing mypy dict[str, Any] type parameter errors exist in zoning.py, address.py — out of scope
+- Frontend: WkbClassificatieSection 3-state render (null/exclusion/classification), AsbestSection returns null when indicator is null
+- Frontend: ASBEST_RISK_STYLES module-level const for risk badge color mapping
+- Frontend: WkbClassificatieSection shows "Indicatief" badge alongside gevolgklasse badge when wkb_applicable=true
 
 ### Phase 66 Context
 
@@ -135,12 +140,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T04:35:21Z
-**Stopped At:** Completed Phase 67 Plan 01
-**Resume File:** .planning/phases/67-wkb-classification-engine/67-01-SUMMARY.md
+**Last Session:** 2026-03-02T04:42:40Z
+**Stopped At:** Completed Phase 67 Plan 02
+**Resume File:** .planning/phases/67-wkb-classification-engine/67-02-SUMMARY.md
 
-**Next Action:** Execute Phase 67 Plan 02 — frontend WkbClassificatieSection + AsbestSection components in ReportDetailPage.tsx.
+**Next Action:** Execute Phase 68 — Bodemloket integration (starts with mandatory ArcGIS/WMS spike).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 67 Plan 01 complete: classify_wkb() + assess_asbest_risk() TDD backend, WKB-01 through WKB-04 backend satisfied*
+*State updated: 2026-03-02 -- Phase 67 complete: WkbClassificatieSection + AsbestSection frontend, WKB-01 through WKB-04 fully satisfied (backend + frontend)*

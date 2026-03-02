@@ -36,7 +36,7 @@
 
 **Milestone Goal:** Transform Propdex from data analysis tool into a lead generation platform by connecting property intelligence to professional services — starting with kwaliteitsborgers (Wkb) as the first vertical.
 
-- [ ] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions
+- [x] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions (completed 2026-03-02)
 - [ ] **Phase 68: Bodemloket Integration** — Soil contamination data at parcel level with spike-first API discovery
 - [ ] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document
 - [ ] **Phase 70: Professional Directory** — Platform-wide kwaliteitsborger profiles with NULL org_id RLS pattern
@@ -208,7 +208,7 @@ Plans:
 | 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
 | 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
-| 67. Wkb Classification Engine | 1/2 | In Progress|  |
+| 67. Wkb Classification Engine | 2/2 | Complete   | 2026-03-02 |
 | 68. Bodemloket Integration | 0/3 | Not started | - |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
 | 70. Professional Directory | 0/3 | Not started | - |
