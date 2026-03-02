@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration (Plan 01 complete)
+**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration (Plan 02 complete)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 68 of 71 (Bodemloket Integration — Plan 01 complete)
-Plan: 1 of 3 complete
-Status: Phase 68 Plan 01 complete — Bodemloket ArcGIS REST spike, BUFFER_M=10 decision, confirmed field names
-Last activity: 2026-03-02 — Phase 68 Plan 01 complete (Bodemloket spike — BUFFER_M=10 decided)
+Phase: 68 of 71 (Bodemloket Integration — Plan 02 complete)
+Plan: 2 of 3 complete
+Status: Phase 68 Plan 02 complete — Bodemloket ArcGIS REST client + BodemData schema + bodem_aggregator + PropertyReportResponse.bodem_data wiring
+Last activity: 2026-03-02 — Phase 68 Plan 02 complete (Bodemloket backend — TDD GREEN, 11 tests pass)
 
-Progress (v9.0): [███░░░░░░░] 30% (3/10 plans complete)
+Progress (v9.0): [████░░░░░░] 40% (4/10 plans complete)
 
 ---
 
@@ -27,6 +27,7 @@ Progress (v9.0): [███░░░░░░░] 30% (3/10 plans complete)
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 - Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
+- Phase 68 Plan 02: completed ~18min (Bodemloket backend TDD — BodemloketClient + WBBDossierRef + BodemData + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data wiring — 11 tests GREEN)
 
 **v8.0 Client Demo Readiness (Completed)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
@@ -118,7 +119,9 @@ Progress (v9.0): [███░░░░░░░] 30% (3/10 plans complete)
 - Roadmap: .planning/ROADMAP.md Phases 67-71
 - Phase 67 complete: Wkb Classification Engine (backend + frontend)
 - Phase 68 Plan 01 complete: Bodemloket spike — BUFFER_M=10 (not 25), RESEARCH.md Schiermonnikoog coords were approximate (actual polygon centroid x=206259,y=610965)
-- Phase 68 Plan 02 next: bodemloket_arcgis.py client + bodem_aggregator.py + BodemData schema
+- Phase 68 Plan 02 complete: BodemloketClient + WBBDossierRef schema + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data — 11 TDD tests GREEN
+- Phase 68 Plan 03 next: Frontend BodemSection component using BodemData schema
+- AsyncMock passthrough pattern: use named `async def _passthrough_retry(fn, **kwargs): return await fn()` — lambdas cannot await coroutines in side_effect
 - Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
 - AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
 - Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
@@ -142,12 +145,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T08:23:00Z
-**Stopped At:** Completed Phase 68 Plan 01
-**Resume File:** .planning/phases/68-bodemloket-integration/68-01-SUMMARY.md
+**Last Session:** 2026-03-02T08:45:30Z
+**Stopped At:** Completed Phase 68 Plan 02
+**Resume File:** .planning/phases/68-bodemloket-integration/68-02-SUMMARY.md
 
-**Next Action:** Execute Phase 68 Plan 02 — Bodemloket client + schema + aggregator implementation.
+**Next Action:** Execute Phase 68 Plan 03 — Frontend BodemSection component.
 
 ---
 
-*State updated: 2026-03-02 -- Phase 68 Plan 01 complete: Bodemloket spike (BUFFER_M=10, confirmed field names, SPIKE.md created for Plan 68-02)*
+*State updated: 2026-03-02 -- Phase 68 Plan 02 complete: Bodemloket backend TDD (BodemloketClient + schema + 30-day cache + PropertyReportResponse.bodem_data — 11 tests GREEN)*

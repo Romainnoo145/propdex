@@ -18,8 +18,8 @@ Requirements for the kwaliteitsborger lead generation vertical — from Wkb clas
 ### Bodemkwaliteit
 
 - [x] **BODEM-01**: System queries Bodemloket for soil contamination data at parcel coordinates
-- [ ] **BODEM-02**: Property report includes "Bodemkwaliteit" section showing contamination status and WBB dossier references
-- [ ] **BODEM-03**: Absent Bodemloket data displayed as "geen gegevens beschikbaar" (never "schone grond")
+- [x] **BODEM-02**: Property report includes "Bodemkwaliteit" section showing contamination status and WBB dossier references
+- [x] **BODEM-03**: Absent Bodemloket data displayed as "geen gegevens beschikbaar" (never "schone grond")
 
 ### Risicobeoordeling Dossier
 
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WKB-03 | Phase 67 | Complete |
 | WKB-04 | Phase 67 | Complete |
 | BODEM-01 | Phase 68 | Complete |
-| BODEM-02 | Phase 68 | Pending |
-| BODEM-03 | Phase 68 | Pending |
+| BODEM-02 | Phase 68 | Complete |
+| BODEM-03 | Phase 68 | Complete |
 | DOSSIER-01 | Phase 69 | Pending |
 | DOSSIER-02 | Phase 69 | Pending |
 | DOSSIER-03 | Phase 69 | Pending |
