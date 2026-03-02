@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration COMPLETE — Phase 69 next
+**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier IN PROGRESS (Plan 01 complete)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 68 of 71 (Bodemloket Integration — COMPLETE)
-Plan: 3 of 3 complete (all plans done — Phase 68 complete)
-Status: Phase 68 complete — Bodemloket integration end-to-end (ArcGIS REST client + WBB schema + 30-day cache + BodemSection frontend). Human checkpoint APPROVED.
-Last activity: 2026-03-02 — Phase 68 Plan 03 complete (BodemSection human-verify approved — BODEM-02 + BODEM-03 satisfied)
+Phase: 69 of 71 (Risicobeoordeling Dossier — IN PROGRESS)
+Plan: 1 of 2 complete
+Status: Phase 69 Plan 01 complete — GeneratedDossier model + Alembic migration + dossier_export.py + POST/GET dossier endpoints
+Last activity: 2026-03-02 — Phase 69 Plan 01 complete (DOSSIER-01 satisfied)
 
-Progress (v9.0): [█████░░░░░] 50% (5/10 plans complete)
+Progress (v9.0): [██████░░░░] 60% (6/10 plans complete)
 
 ---
 
@@ -28,6 +28,7 @@ Progress (v9.0): [█████░░░░░] 50% (5/10 plans complete)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 - Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
 - Phase 68 Plan 02: completed ~18min (Bodemloket backend TDD — BodemloketClient + WBBDossierRef + BodemData + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data wiring — 11 tests GREEN)
+- Phase 69 Plan 01: completed ~3min (GeneratedDossier model + Alembic migration + generate_dossier_pdf() + POST/GET dossier router endpoints — DOSSIER-01)
 
 **v8.0 Client Demo Readiness (Completed)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
@@ -126,6 +127,9 @@ Progress (v9.0): [█████░░░░░] 50% (5/10 plans complete)
 - Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
 - AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
 - Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
+- Phase 69 Plan 01 complete: GeneratedDossier model (TenantMixin, FK saved_reports + users), Alembic migration 3d97e34821f2, generate_dossier_pdf() WeasyPrint sync fn, POST /{report_id}/dossier (5/min) + GET /{report_id}/dossiers (30/min) endpoints, GeneratedDossierResponse schema
+- Alembic autogenerate PostGIS noise pattern: autogenerate detects tiger/postgis tables — manually clean migration to only include new tables
+- generate_dossier_pdf(): file_size_bytes saved AFTER pdf_bytes in memory (ensures accurate size in audit record)
 
 ### Ongoing TODOs
 
@@ -146,12 +150,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T09:00:00Z
-**Stopped At:** Phase 68 Plan 03 complete (all 3 tasks done, checkpoint approved)
-**Resume File:** .planning/phases/69-*/69-01-PLAN.md
+**Last Session:** 2026-03-02T13:33:09Z
+**Stopped At:** Phase 69 Plan 01 complete (GeneratedDossier model + dossier endpoints — DOSSIER-01)
+**Resume File:** .planning/phases/69-risicobeoordeling-dossier/69-02-PLAN.md
 
-**Next Action:** Begin Phase 69 (next v9.0 Professional Marketplace phase).
+**Next Action:** Execute Phase 69 Plan 02 (full Jinja2 dossier template with WKB sections, risk table, disclaimer).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 68 complete: Bodemloket integration end-to-end — BodemSection human-verify APPROVED (BODEM-02 + BODEM-03)*
+*State updated: 2026-03-02 -- Phase 69 Plan 01 complete: GeneratedDossier model + Alembic migration + generate_dossier_pdf() + POST/GET dossier endpoints (DOSSIER-01)*
