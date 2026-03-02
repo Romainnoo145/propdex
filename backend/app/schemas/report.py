@@ -16,9 +16,7 @@ class ReportFromParcelRequest(BaseModel):
 
     parcel_id: uuid.UUID = Field(description="ParcelCache UUID")
     notes: str | None = Field(default=None, description="Optional notes for the report")
-    project_id: uuid.UUID | None = Field(
-        default=None, description="Optional project folder ID"
-    )
+    project_id: uuid.UUID | None = Field(default=None, description="Optional project folder ID")
 
 
 class ReportFromAddressRequest(BaseModel):
@@ -27,9 +25,7 @@ class ReportFromAddressRequest(BaseModel):
     postcode: str = Field(description="Dutch postcode (e.g. '1234AB' or '1234 AB')")
     huisnummer: int = Field(ge=1, description="House number")
     notes: str | None = Field(default=None, description="Optional notes for the report")
-    project_id: uuid.UUID | None = Field(
-        default=None, description="Optional project folder ID"
-    )
+    project_id: uuid.UUID | None = Field(default=None, description="Optional project folder ID")
 
 
 class ReportSaveRequest(BaseModel):
@@ -187,6 +183,22 @@ class ReportFreshnessResponse(BaseModel):
         default_factory=list,
         description="Sections with available updates",
     )
+
+
+class GeneratedDossierResponse(BaseModel):
+    """Schema for a generated dossier audit record."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID = Field(description="Dossier generation record ID")
+    report_id: uuid.UUID = Field(description="SavedReport ID this dossier was generated from")
+    generated_by_user_id: uuid.UUID | None = Field(
+        default=None,
+        description="User ID who generated the dossier (null if user deleted)",
+    )
+    file_size_bytes: int = Field(description="PDF file size in bytes")
+    template_version: str = Field(description="Template version used for generation")
+    created_at: datetime = Field(description="Generation timestamp")
 
 
 # Type aliases for sort parameters

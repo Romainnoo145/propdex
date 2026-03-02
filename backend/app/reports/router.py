@@ -18,11 +18,13 @@ from app.middleware.rate_limit import limiter
 from app.models.parcel_cache import ParcelCache
 from app.models.user import User
 from app.reports import service
+from app.reports.dossier_export import generate_dossier_pdf
 from app.reports.freshness import check_report_freshness
 from app.reports.pdf_export import generate_report_pdf
 from app.schemas.address import AddressInput
 from app.schemas.property import CadastralParcel
 from app.schemas.report import (
+    GeneratedDossierResponse,
     GenerateReportFromParcelResponse,
     ReportAssignProject,
     ReportDetailResponse,
@@ -101,14 +103,14 @@ def _parse_parcel_address(address: str) -> tuple[str, int] | None:
     upper = address.upper()
 
     # Extract postcode: 4 digits + optional space + 2 letters
-    postcode_match = re.search(r'(\d{4})\s*([A-Z]{2})\b', upper)
+    postcode_match = re.search(r"(\d{4})\s*([A-Z]{2})\b", upper)
     if not postcode_match:
         return None
     postcode = f"{postcode_match.group(1)} {postcode_match.group(2)}"
 
     # Extract huisnummer: first number sequence before the comma
-    pre_comma = address.split(',')[0] if ',' in address else address
-    hn_match = re.search(r'(\d+)', pre_comma)
+    pre_comma = address.split(",")[0] if "," in address else address
+    hn_match = re.search(r"(\d+)", pre_comma)
     if not hn_match:
         return None
 
@@ -505,9 +507,7 @@ async def generate_report_from_parcel(
         if parsed is None:
             from geoalchemy2.functions import ST_AsText, ST_Centroid
 
-            centroid_query = select(
-                ST_AsText(ST_Centroid(ParcelCache.geometry))
-            ).where(
+            centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
                 ParcelCache.id == body.parcel_id,
                 ParcelCache.organization_id == organization_id,
             )
@@ -1072,6 +1072,144 @@ async def export_report_pdf(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate PDF",
+        ) from e
+
+
+@router.post("/{report_id}/dossier")
+@limiter.limit("5/minute")
+async def generate_startdossier(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """
+    Generate a Risicobeoordeling Startdossier PDF for a saved report.
+
+    Renders a WKB Kwaliteitsborger dossier PDF from the report data, saves an
+    audit record in generated_dossiers, and returns the PDF as a streaming download.
+
+    PDF generation runs in an executor to avoid blocking the async event loop.
+    Rate limited to 5 requests per minute (CPU-intensive WeasyPrint rendering).
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        StreamingResponse: PDF file with application/pdf content type
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: PDF generation failed
+    """
+    try:
+        # Fetch report (validates tenant + exists + not deleted)
+        report = await service.get_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        # Determine generator display name
+        generated_by = current_user.full_name or current_user.email
+
+        # Generate PDF in executor to avoid blocking event loop
+        pdf_bytes = await asyncio.to_thread(
+            generate_dossier_pdf,
+            report.report_data,
+            report.report_name,
+            generated_by,
+        )
+
+        # Save audit record
+        await service.save_generated_dossier(
+            report_id=report.id,
+            organization_id=organization_id,
+            user_id=current_user.id,
+            file_size=len(pdf_bytes),
+            session=db,
+        )
+
+        # Build filename from postcode
+        postcode_clean = report.postcode.replace(" ", "")
+        filename = f"risicobeoordeling-{postcode_clean}.pdf"
+
+        # Return as streaming response
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate dossier PDF",
+        ) from e
+
+
+@router.get("/{report_id}/dossiers", response_model=list[GeneratedDossierResponse])
+@limiter.limit("30/minute")
+async def list_dossiers(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[GeneratedDossierResponse]:
+    """
+    List previously generated dossiers for a report.
+
+    Returns generation history ordered by newest first, including file sizes
+    and template versions for each generation event.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+
+    Args:
+        request: FastAPI request object
+        report_id: Report ID
+        current_user: Authenticated user
+        organization_id: Tenant ID
+        db: Database session
+
+    Returns:
+        list[GeneratedDossierResponse]: List of dossier generation records
+
+    Raises:
+        HTTPException 404: Report not found
+        HTTPException 500: Internal server error
+    """
+    try:
+        # Verify report exists and belongs to this org
+        await service.get_report(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        dossiers = await service.list_generated_dossiers(
+            report_id=report_id,
+            organization_id=organization_id,
+            session=db,
+        )
+
+        return [GeneratedDossierResponse.model_validate(d) for d in dossiers]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list dossiers",
         ) from e
 
 

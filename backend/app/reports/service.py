@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
+from app.models.generated_dossier import GeneratedDossier
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.report import SavedReport
@@ -73,11 +74,13 @@ async def _find_existing_gemeente_project_by_code(
 ) -> Project | None:
     """Return existing top-level gemeente project for a CBS code."""
     project_result = await session.execute(
-        select(Project).where(
+        select(Project)
+        .where(
             Project.organization_id == organization_id,
             Project.parent_id.is_(None),
             Project.gemeente_code == gemeente_code,
-        ).limit(1)
+        )
+        .limit(1)
     )
     return project_result.scalar_one_or_none()
 
@@ -151,22 +154,26 @@ async def _get_or_create_project_for_location(
     # Prefer exact gemeente_code match when available.
     if normalized_gemeente_code is not None:
         gemeente_by_code_result = await session.execute(
-            select(Project).where(
+            select(Project)
+            .where(
                 Project.organization_id == organization_id,
                 Project.parent_id.is_(None),
                 Project.gemeente_code == normalized_gemeente_code,
-            ).limit(1)
+            )
+            .limit(1)
         )
         gemeente_project = gemeente_by_code_result.scalar_one_or_none()
 
     # Fallback to case-insensitive gemeente name match.
     if gemeente_project is None:
         gemeente_by_name_result = await session.execute(
-            select(Project).where(
+            select(Project)
+            .where(
                 Project.organization_id == organization_id,
                 Project.parent_id.is_(None),
                 func.lower(Project.name) == normalized_gemeente_naam.lower(),
-            ).limit(1)
+            )
+            .limit(1)
         )
         gemeente_project = gemeente_by_name_result.scalar_one_or_none()
 
@@ -188,11 +195,13 @@ async def _get_or_create_project_for_location(
         return gemeente_project.id
 
     wijk_result = await session.execute(
-        select(Project).where(
+        select(Project)
+        .where(
             Project.organization_id == organization_id,
             Project.parent_id == gemeente_project.id,
             func.lower(Project.name) == normalized_wijk_naam.lower(),
-        ).limit(1)
+        )
+        .limit(1)
     )
     wijk_project = wijk_result.scalar_one_or_none()
 
@@ -404,7 +413,10 @@ async def save_report(
             session=session,
         )
         if existing_for_parcel is not None:
-            if resolved_project_id is not None and existing_for_parcel.project_id != resolved_project_id:
+            if (
+                resolved_project_id is not None
+                and existing_for_parcel.project_id != resolved_project_id
+            ):
                 existing_for_parcel.project_id = resolved_project_id
                 await session.commit()
             if notes is not None and existing_for_parcel.notes != notes:
@@ -415,13 +427,11 @@ async def save_report(
             return existing_for_parcel
     if resolved_project_id is None:
         if parcel_id is not None:
-            gemeente_naam, gemeente_code, wijk_naam = (
-                await _resolve_location_context_from_parcel(
-                    organization_id=organization_id,
-                    parcel_id=parcel_id,
-                    default_gemeente_naam=city,
-                    session=session,
-                )
+            gemeente_naam, gemeente_code, wijk_naam = await _resolve_location_context_from_parcel(
+                organization_id=organization_id,
+                parcel_id=parcel_id,
+                default_gemeente_naam=city,
+                session=session,
             )
         else:
             gemeente_naam, gemeente_code, wijk_naam = await _resolve_report_location_context(
@@ -490,11 +500,13 @@ async def get_report_by_source_parcel(
     Return active report linked to a source parcel for this organization.
     """
     result = await session.execute(
-        select(SavedReport).where(
+        select(SavedReport)
+        .where(
             SavedReport.organization_id == organization_id,
             SavedReport.source_parcel_id == parcel_id,
             SavedReport.deleted_at.is_(None),
-        ).limit(1)
+        )
+        .limit(1)
     )
     return result.scalar_one_or_none()
 
@@ -846,3 +858,63 @@ async def get_distinct_cities(
     result = await session.execute(query)
     cities = [row[0] for row in result.all()]
     return cities
+
+
+async def save_generated_dossier(
+    report_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    file_size: int,
+    session: AsyncSession,
+) -> GeneratedDossier:
+    """
+    Create a GeneratedDossier audit record after PDF generation.
+
+    Args:
+        report_id: SavedReport ID the dossier belongs to
+        organization_id: Tenant organization ID
+        user_id: ID of the user who generated the dossier
+        file_size: PDF file size in bytes
+        session: Database session
+
+    Returns:
+        GeneratedDossier: The created audit record
+    """
+    dossier = GeneratedDossier(
+        organization_id=organization_id,
+        report_id=report_id,
+        generated_by_user_id=user_id,
+        file_size_bytes=file_size,
+        template_version="v1",
+    )
+    session.add(dossier)
+    await session.flush()
+    await session.commit()
+    return dossier
+
+
+async def list_generated_dossiers(
+    report_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+) -> list[GeneratedDossier]:
+    """
+    List all generated dossiers for a report, newest first.
+
+    Args:
+        report_id: SavedReport ID to list dossiers for
+        organization_id: Tenant organization ID
+        session: Database session
+
+    Returns:
+        list[GeneratedDossier]: Dossiers ordered by created_at descending
+    """
+    result = await session.execute(
+        select(GeneratedDossier)
+        .where(
+            GeneratedDossier.organization_id == organization_id,
+            GeneratedDossier.report_id == report_id,
+        )
+        .order_by(desc(GeneratedDossier.created_at))
+    )
+    return list(result.scalars().all())
