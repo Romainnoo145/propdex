@@ -235,6 +235,10 @@ class ScanResultsResponse(BaseModel):
         description="Total ranked results (before pagination)",
         ge=0,
     )
+    total_unfiltered: int = Field(
+        description="Total results before score threshold filter (for hidden-count display)",
+        ge=0,
+    )
     offset: int = Field(
         description="Current offset",
         ge=0,

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import Float, asc, cast, delete, desc, func, or_, select, text, update
+from sqlalchemy import Float, asc, cast, delete, desc, func, nulls_last, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area_scan import AreaScan
@@ -364,7 +364,9 @@ async def list_scan_results(
     limit: int,
     session: AsyncSession,
     pand_status: str | None = None,
-) -> tuple[list[tuple], int]:
+    min_score: float | None = None,
+    exclude_null_scores: bool = False,
+) -> tuple[list[tuple], int, int]:
     """
     List scan results with server-side filtering, sorting, and pagination.
 
@@ -384,9 +386,11 @@ async def list_scan_results(
         limit: Page size
         session: Database session
         pand_status: Filter by building status substring
+        min_score: Minimum score threshold (applied after unfiltered count)
+        exclude_null_scores: Exclude parcels with null scores (applied after unfiltered count)
 
     Returns:
-        tuple[list[tuple], int]: List of (ScanResult, ParcelCache) tuples and total count
+        tuple[list[tuple], int, int]: (rows, filtered_total, unfiltered_total)
     """
     # Base query: join ScanResult to ParcelCache
     query = (
@@ -442,12 +446,23 @@ async def list_scan_results(
             ParcelCache.pand_status.ilike(f"%{pand_status}%")
         )
 
-    # Count total before pagination
+    # Compute unfiltered total BEFORE score threshold filters
+    unfiltered_count_q = select(func.count()).select_from(query.subquery())
+    unfiltered_total = (await session.execute(unfiltered_count_q)).scalar() or 0
+
+    # Apply score threshold filters (for "Top kansen" default preset)
+    if exclude_null_scores:
+        query = query.where(ScanResult.score.is_not(None))
+    if min_score is not None:
+        query = query.where(ScanResult.score >= min_score)
+
+    # Count filtered total before pagination
     count_query = select(func.count()).select_from(query.subquery())
     count_result = await session.execute(count_query)
-    total = count_result.scalar() or 0
+    filtered_total = count_result.scalar() or 0
 
-    # Apply sorting
+    # Apply sorting — nulls_last ensures null-score parcels sort to bottom
+    # regardless of ASC/DESC direction
     sort_field_map = {
         "score": ScanResult.score,
         "vacancy_subscore": _vacancy_subscore_expr(),
@@ -458,8 +473,10 @@ async def list_scan_results(
     }
 
     sort_field = sort_field_map.get(sort_by, ScanResult.score)
-    sort_func = desc if sort_order == "desc" else asc
-    query = query.order_by(sort_func(sort_field))
+    if sort_order == "desc":
+        query = query.order_by(nulls_last(desc(sort_field)))
+    else:
+        query = query.order_by(nulls_last(asc(sort_field)))
 
     # Apply pagination
     query = query.offset(offset).limit(limit)
@@ -468,7 +485,7 @@ async def list_scan_results(
     result = await session.execute(query)
     rows = result.all()
 
-    return rows, total
+    return rows, filtered_total, unfiltered_total
 
 
 async def list_scans(

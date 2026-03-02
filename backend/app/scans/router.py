@@ -45,6 +45,10 @@ from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.excel_exporter import export_scan_results_to_excel
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.gemeente_service import get_gemeente_bbox
+from app.services.parcel_addressing import (
+    find_bag_building_lookup_point,
+    reverse_geocode_rd_point,
+)
 from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     extract_building_metrics,
@@ -336,44 +340,65 @@ async def _resolve_parcel_address_from_centroid(
     centroid_rd_wkt: str | None = None,
 ) -> str | None:
     """
-    Best-effort address fallback via PDOK reverse geocoding on parcel centroid.
+    Best-effort address resolution tied to actual BAG building overlap.
 
-    When ParcelCache.address is missing, this resolves an address from RD centroid
-    and persists it so future reads return an address immediately.
+    This intentionally avoids parcel-centroid reverse geocoding for empty
+    parcels, because that assigns a neighbor's house address to undeveloped land.
     """
-    if not _is_missing_address(current_address):
-        return current_address
-
     try:
-        centroid_wkt = centroid_rd_wkt
-        if not isinstance(centroid_wkt, str) or not centroid_wkt.strip():
-            from geoalchemy2.functions import ST_AsText, ST_Centroid
-
-            centroid_wkt = (
-                await db.execute(
-                    select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
-                        ParcelCache.id == parcel_id,
-                        ParcelCache.organization_id == organization_id,
-                    )
-                )
-            ).scalar_one_or_none()
-
-        centroid_match = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_wkt or "")
-        if not centroid_match:
-            return current_address
-
-        rd_x = float(centroid_match.group(1))
-        rd_y = float(centroid_match.group(2))
         http_client = getattr(request.app.state, "http_client", None)
         if not isinstance(http_client, httpx.AsyncClient):
             return current_address
 
-        locatieserver = PDOKLocatieserver()
-        resolved_address = await locatieserver.reverse(rd_x, rd_y, http_client)
-        if not isinstance(resolved_address, str) or not resolved_address.strip():
+        parcel_row = (
+            await db.execute(
+                select(
+                    ParcelCache.has_pand,
+                    func.ST_AsGeoJSON(ParcelCache.geometry).label("geometry_raw"),
+                ).where(
+                    ParcelCache.id == parcel_id,
+                    ParcelCache.organization_id == organization_id,
+                )
+            )
+        ).mappings().one_or_none()
+        if parcel_row is None:
             return current_address
 
-        normalized_address = resolved_address.strip()
+        has_pand = bool(parcel_row.get("has_pand"))
+        if not has_pand:
+            if not _is_missing_address(current_address):
+                await db.execute(
+                    sa_update(ParcelCache)
+                    .where(
+                        ParcelCache.id == parcel_id,
+                        ParcelCache.organization_id == organization_id,
+                    )
+                    .values(address=None)
+                )
+                await db.commit()
+            return None
+
+        if not _is_missing_address(current_address):
+            return current_address
+
+        geometry_raw = parcel_row.get("geometry_raw")
+        if not isinstance(geometry_raw, str) or not geometry_raw.strip():
+            return current_address
+        try:
+            parcel_geometry = json.loads(geometry_raw)
+        except json.JSONDecodeError:
+            return current_address
+        if not isinstance(parcel_geometry, dict):
+            return current_address
+
+        lookup_point = await find_bag_building_lookup_point(parcel_geometry, http_client)
+        if lookup_point is None:
+            return current_address
+
+        normalized_address = await reverse_geocode_rd_point(lookup_point, http_client)
+        if not normalized_address:
+            return current_address
+
         await db.execute(
             sa_update(ParcelCache)
             .where(
@@ -1813,6 +1838,8 @@ async def list_results(
     max_area_m2: float | None = None,
     score_category: str | None = None,
     pand_status: str | None = None,
+    min_score: float | None = Query(None, description="Minimum score threshold"),
+    exclude_null_scores: bool = Query(False, description="Exclude parcels with null scores"),
     sort_by: str = "score",
     sort_order: str = "desc",
     offset: int = 0,
@@ -1867,7 +1894,7 @@ async def list_results(
         )
 
     # Query results with filters and pagination
-    rows, total = await service.list_scan_results(
+    rows, total, total_unfiltered = await service.list_scan_results(
         scan_id=scan_id,
         organization_id=organization_id,
         has_pand=has_pand,
@@ -1882,6 +1909,8 @@ async def list_results(
         limit=limit,
         session=db,
         pand_status=pand_status,
+        min_score=min_score,
+        exclude_null_scores=exclude_null_scores,
     )
 
     parcel_ids = [parcel.id for _, parcel in rows]
@@ -1967,7 +1996,7 @@ async def list_results(
             ScanResultItem(
                 parcel_id=parcel.id,
                 parcel_code=parcel.parcel_id,
-                address=parcel.address,
+                address=parcel.address if parcel.has_pand else None,
                 gemeente_code=parcel.gemeente_code,
                 area_m2=parcel.area_m2,
                 has_pand=parcel.has_pand,
@@ -1995,6 +2024,7 @@ async def list_results(
         scan_date=scan.created_at,
         parcels_total=scan.parcels_total,
         total=total,
+        total_unfiltered=total_unfiltered,
         offset=offset,
         limit=limit,
         results=result_items,
@@ -2213,7 +2243,7 @@ async def export_results(
         )
 
     # Fetch ALL filtered results (no pagination -- export everything)
-    rows, _total = await service.list_scan_results(
+    rows, _total, _unfiltered = await service.list_scan_results(
         scan_id=scan_id,
         organization_id=organization_id,
         has_pand=has_pand,
