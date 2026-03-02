@@ -4,10 +4,14 @@ const SOURCE_ID = 'parcel-scores';
 export const PARCEL_SCORE_FILL_LAYER_ID = 'parcel-score-fill';
 const OUTLINE_LAYER_ID = 'parcel-score-outline';
 const SELECTED_OUTLINE_LAYER_ID = 'parcel-score-selected-outline';
+export const PARCEL_EMPTY_HATCH_LAYER_ID = 'parcel-empty-hatch';
 export const PARCEL_BUILT_STATUS_FILL_LAYER_ID = 'parcel-built-status-fill';
 export const PARCEL_REPORT_STATUS_FILL_LAYER_ID = 'parcel-report-status-fill';
 export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
 export const PARCEL_BUILD_CAPACITY_FILL_LAYER_ID = 'parcel-build-capacity-fill';
+
+const PARCEL_SCORE_LABEL_LAYER_ID = 'parcel-score-label';
+const PARCEL_ADDRESS_LABEL_LAYER_ID = 'parcel-address-label';
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
@@ -16,10 +20,41 @@ let hoveredScoreParcelId: string | number | null = null;
 let selectedScoreParcelId: string | number | null = null;
 
 /**
+ * Create a diagonal stripe hatch pattern canvas for empty parcel overlay.
+ *
+ * Returns a 16x16 canvas with a diagonal line pattern.
+ * Used as a fill-pattern in MapLibre GL JS to visually distinguish
+ * empty land parcels (no building) from built parcels.
+ */
+function createHatchPattern(): HTMLCanvasElement {
+  const size = 16;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.strokeStyle = '#555555';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, size);
+  ctx.lineTo(size, 0);
+  ctx.moveTo(-size / 2, size / 2);
+  ctx.lineTo(size / 2, -size / 2);
+  ctx.moveTo(size / 2, size + size / 2);
+  ctx.lineTo(size + size / 2, size / 2);
+  ctx.stroke();
+  return canvas;
+}
+
+/**
  * Add a score-based color overlay layer for parcel visualization.
  *
  * Renders colored fill polygons based on parcel score values (0-100).
- * Color gradient: red (0) → orange (25) → yellow (50) → green (75) → dark green (100).
+ * Color gradient: grey (0) → amber (45) → green (65) → dark green (100).
+ * Grey = low opportunity (in_gebruik), green = high opportunity (vacant/empty).
+ *
+ * Also adds a diagonal hatch overlay for empty parcels (has_pand = false)
+ * and progressive label layers that appear at higher zoom levels.
  *
  * @param map - MapLibre GL JS map instance
  * @param tileUrl - Vector tile URL template pointing to score tiles
@@ -43,7 +78,15 @@ export function addParcelScoreLayer(
     maxzoom: 18,
   });
 
+  // Register hatch pattern image for empty parcels (no building)
+  // Must be added after source but before the hatch layer
+  if (!map.hasImage('parcel-hatch')) {
+    const hatchCanvas = createHatchPattern();
+    map.addImage('parcel-hatch', hatchCanvas);
+  }
+
   // Add fill layer with data-driven color based on score
+  // Grey-to-green gradient: grey = in_gebruik/low opportunity, green = high opportunity
   map.addLayer({
     id: PARCEL_SCORE_FILL_LAYER_ID,
     type: 'fill',
@@ -55,16 +98,12 @@ export function addParcelScoreLayer(
         'interpolate',
         ['linear'],
         ['get', 'score'],
-        0,
-        '#dc2626', // Red: Low score (Tailwind red-600)
-        25,
-        '#f97316', // Orange (Tailwind orange-500)
-        50,
-        '#eab308', // Yellow (Tailwind yellow-500)
-        75,
-        '#22c55e', // Green (Tailwind green-500)
-        100,
-        '#16a34a', // Dark green (Tailwind green-600)
+        0,   '#64748b', // Slate grey — in_gebruik, low opportunity
+        25,  '#94a3b8', // Light grey — marginal
+        45,  '#eab308', // Amber — borderline opportunity
+        65,  '#84cc16', // Lime — good opportunity
+        80,  '#22c55e', // Green — strong opportunity (leegstaand_pand)
+        100, '#16a34a', // Dark green — highest (leeg_perceel)
       ],
       'fill-opacity': [
         'case',
@@ -74,6 +113,25 @@ export function addParcelScoreLayer(
         0.85, // Hover opacity
         0.6, // Default opacity
       ],
+    },
+    minzoom: 14,
+  });
+
+  // Hatch overlay for empty parcels (no building — has_pand = false)
+  // Separate layer from score fill because fill-pattern replaces fill-color in MapLibre
+  map.addLayer({
+    id: PARCEL_EMPTY_HATCH_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: [
+      'all',
+      ['has', 'score'],
+      ['==', ['downcase', ['to-string', ['coalesce', ['get', 'has_pand'], 'false']]], 'false'],
+    ],
+    paint: {
+      'fill-pattern': 'parcel-hatch',
+      'fill-opacity': 0.4,
     },
     minzoom: 14,
   });
@@ -269,6 +327,58 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
+  // Score number label — visible at medium zoom (15.5-17)
+  // Only labels parcels >= 200 m2 to avoid text blobs on tiny parcels
+  map.addLayer({
+    id: PARCEL_SCORE_LABEL_LAYER_ID,
+    type: 'symbol',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['all', ['has', 'score'], ['>=', ['coalesce', ['get', 'area_m2'], 0], 200]],
+    minzoom: 15.5,
+    maxzoom: 17,
+    layout: {
+      'text-field': ['to-string', ['round', ['get', 'score']]],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 15.5, 9, 17, 13],
+      'text-allow-overlap': false,
+      'text-ignore-placement': false,
+      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+    },
+    paint: {
+      'text-color': '#ffffff',
+      'text-halo-color': '#000000',
+      'text-halo-width': 1,
+    },
+  });
+
+  // Address + score label — visible at street zoom (17+)
+  map.addLayer({
+    id: PARCEL_ADDRESS_LABEL_LAYER_ID,
+    type: 'symbol',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['all', ['has', 'score']],
+    minzoom: 17,
+    layout: {
+      'text-field': [
+        'case',
+        ['has', 'address'],
+        ['concat', ['get', 'address'], '\n', ['to-string', ['round', ['get', 'score']]]],
+        ['to-string', ['round', ['get', 'score']]],
+      ],
+      'text-size': 11,
+      'text-allow-overlap': false,
+      'text-ignore-placement': false,
+      'text-anchor': 'center',
+      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+    },
+    paint: {
+      'text-color': '#ffffff',
+      'text-halo-color': '#000000',
+      'text-halo-width': 1.5,
+    },
+  });
+
   const handleMouseMove = (e: maplibregl.MapLayerMouseEvent) => {
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
@@ -398,6 +508,15 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
     canvas.style.cursor = '';
   }
 
+  // Remove label layers first (top of stack)
+  if (map.getLayer(PARCEL_ADDRESS_LABEL_LAYER_ID)) {
+    map.removeLayer(PARCEL_ADDRESS_LABEL_LAYER_ID);
+  }
+
+  if (map.getLayer(PARCEL_SCORE_LABEL_LAYER_ID)) {
+    map.removeLayer(PARCEL_SCORE_LABEL_LAYER_ID);
+  }
+
   // Remove layers (this also removes layer-specific event handlers)
   if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
     map.removeLayer(SELECTED_OUTLINE_LAYER_ID);
@@ -421,6 +540,11 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
 
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.removeLayer(OUTLINE_LAYER_ID);
+  }
+
+  // Remove hatch overlay before score fill (hatch is on top of score fill)
+  if (map.getLayer(PARCEL_EMPTY_HATCH_LAYER_ID)) {
+    map.removeLayer(PARCEL_EMPTY_HATCH_LAYER_ID);
   }
 
   if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
@@ -450,12 +574,24 @@ export function setParcelScoreVisibility(
     map.setLayoutProperty(PARCEL_SCORE_FILL_LAYER_ID, 'visibility', visibility);
   }
 
+  if (map.getLayer(PARCEL_EMPTY_HATCH_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_EMPTY_HATCH_LAYER_ID, 'visibility', visibility);
+  }
+
   if (map.getLayer(OUTLINE_LAYER_ID)) {
     map.setLayoutProperty(OUTLINE_LAYER_ID, 'visibility', visibility);
   }
 
   if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
     map.setLayoutProperty(SELECTED_OUTLINE_LAYER_ID, 'visibility', visibility);
+  }
+
+  if (map.getLayer(PARCEL_SCORE_LABEL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_SCORE_LABEL_LAYER_ID, 'visibility', visibility);
+  }
+
+  if (map.getLayer(PARCEL_ADDRESS_LABEL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_ADDRESS_LABEL_LAYER_ID, 'visibility', visibility);
   }
 }
 
