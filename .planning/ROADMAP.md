@@ -140,12 +140,12 @@ Plans:
   2. The "Geen geregistreerde verontreiniging gevonden" message is always accompanied by a disclaimer that Bodemloket data is incomplete and absence is not a soil clearance certificate
   3. Bodemloket data is cached for 30 days per parcel — opening the same report twice within 30 days does not trigger a second API call
   4. The Bodemloket spike at phase start documents the actual viable query method (WMS GetFeatureInfo vs ArcGIS REST) and live response field names before integration code is written
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
 
 Plans:
-- [ ] 68-01: Bodemloket spike — verify WMS vs REST, document live response format for WBB_locaties
-- [ ] 68-02: bodemloket_wms.py API client + BodemData schema + 30-day JSONB cache + aggregator wiring
-- [ ] 68-03: BodemSection frontend component in ReportDetailPage
+- [ ] 68-01-PLAN.md — Bodemloket spike: run live ArcGIS REST query against real address, confirm buffer size, write SPIKE.md (BODEM-01)
+- [ ] 68-02-PLAN.md — TDD: BodemloketClient + BodemData schema + bodem_aggregator + 30-day JSONB cache + aggregator wiring (BODEM-01, BODEM-02, BODEM-03)
+- [ ] 68-03-PLAN.md — Frontend: WBBDossierRef + BodemData TypeScript types + BodemSection 3-state component in ReportDetailPage (BODEM-02, BODEM-03)
 
 ### Phase 69: Risicobeoordeling Dossier
 **Goal**: Users can generate a "Risicobeoordeling Startdossier" PDF that gives kwaliteitsborgers the intake information they need, saving them 1-3 hours per project
