@@ -53,3 +53,12 @@ export const PDOK_BESTEMMINGSPLAN_WMS =
   '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}' +
   '&WIDTH=256&HEIGHT=256' +
   '&FORMAT=image/png&TRANSPARENT=true';
+
+/** PDOK BAG WMS v2.0 — building footprint layer (pand). Free, no API key. */
+export const PDOK_BAG_PAND_WMS =
+  'https://service.pdok.nl/lv/bag/wms/v2_0' +
+  '?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap' +
+  '&LAYERS=pand&STYLES=' +
+  '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}' +
+  '&WIDTH=256&HEIGHT=256' +
+  '&FORMAT=image/png&TRANSPARENT=true';
