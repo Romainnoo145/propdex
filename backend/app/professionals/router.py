@@ -59,7 +59,7 @@ async def list_professionals(
 
     if gevolgklasse:
         query = query.where(
-            text("gevolgklassen @> ARRAY[:gk]::text[]").bindparams(gk=gevolgklasse)
+            text("gevolgklassen @> ARRAY[:gk]::varchar[]").bindparams(gk=gevolgklasse)
         )
 
     query = query.order_by(Professional.naam)
