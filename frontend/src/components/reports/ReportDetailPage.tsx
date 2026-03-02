@@ -220,6 +220,8 @@ export default function ReportDetailPage({
             <WOZSection data={data} />
             <EnergyLabelSection data={data} />
             <BuildabilityDeltaSection data={data} />
+            <WkbClassificatieSection data={data} />
+            <AsbestSection data={data} />
             <WkbPrecheckSection data={data} />
             <PermitPrecedentsSection data={data} />
             <MarketSignalsSection data={data} />
@@ -653,6 +655,98 @@ function BuildabilityDeltaSection({ data }: { data: PropertyReportResponse }) {
             </div>
           </div>
         )}
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Wkb Classificatie ─────────────────────────────────────── */
+
+const ASBEST_RISK_STYLES: Record<string, string> = {
+  hoog: 'border-red-500/30 bg-red-500/10 text-red-400',
+  middel: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+  geen: 'border-green-500/25 bg-green-500/[0.08] text-green-400',
+  onbekend: 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400',
+}
+
+const ASBEST_RISK_LABELS: Record<string, string> = {
+  hoog: 'Hoog',
+  middel: 'Middel',
+  geen: 'Geen',
+  onbekend: 'Onbekend',
+}
+
+function WkbClassificatieSection({ data }: { data: PropertyReportResponse }) {
+  const classification = data.wkb_classification
+
+  if (!classification) {
+    return (
+      <Section title="Wkb Classificatie" icon={<WkbClassificatieIcon />}>
+        <p className="text-sm text-grey-600">Classificatie niet beschikbaar</p>
+      </Section>
+    )
+  }
+
+  if (!classification.wkb_applicable) {
+    const exclusionMessage =
+      classification.exclusion_reason === 'rijksmonument'
+        ? 'Wkb niet van toepassing — rijksmonumenten zijn vrijgesteld'
+        : classification.exclusion_reason === 'verbouwing'
+          ? 'Wkb niet van toepassing — verbouwingen zijn uitgesloten (december 2024)'
+          : 'Wkb niet van toepassing'
+
+    return (
+      <Section title="Wkb Classificatie" icon={<WkbClassificatieIcon />}>
+        <div className="space-y-2">
+          <p className="text-sm text-grey-400">{exclusionMessage}</p>
+          <p className="text-[11px] text-grey-600">{classification.disclaimer}</p>
+        </div>
+      </Section>
+    )
+  }
+
+  const gevolgklasseLabel =
+    classification.gevolgklasse === 'GK1'
+      ? 'Gevolgklasse 1'
+      : classification.gevolgklasse
+
+  return (
+    <Section title="Wkb Classificatie" icon={<WkbClassificatieIcon />}>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-amber-accent/30 bg-amber-accent/10 px-3 py-1 text-xs font-semibold text-amber-accent">
+            {gevolgklasseLabel}
+          </span>
+          <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 text-xs font-medium text-grey-400">
+            Indicatief
+          </span>
+        </div>
+        <p className="text-[11px] text-grey-600">{classification.disclaimer}</p>
+      </div>
+    </Section>
+  )
+}
+
+function AsbestSection({ data }: { data: PropertyReportResponse }) {
+  const indicator = data.asbest_indicator
+
+  if (!indicator) return null
+
+  const riskStyle = ASBEST_RISK_STYLES[indicator.risk] ?? ASBEST_RISK_STYLES.onbekend
+  const riskLabel = ASBEST_RISK_LABELS[indicator.risk] ?? indicator.risk
+
+  return (
+    <Section title="Asbestrisico" icon={<AsbestIcon />}>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskStyle}`}>
+            {riskLabel}
+          </span>
+          {indicator.norm_reference && (
+            <span className="text-xs text-grey-500">{indicator.norm_reference}</span>
+          )}
+        </div>
+        <p className="text-sm text-grey-400">{indicator.reden}</p>
       </div>
     </Section>
   )
@@ -1935,6 +2029,26 @@ function WkbIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z" />
       <path d="M9 12.5 11 14.5l4-4" />
+    </svg>
+  )
+}
+
+function WkbClassificatieIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+  )
+}
+
+function AsbestIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   )
 }
