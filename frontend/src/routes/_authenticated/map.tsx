@@ -34,6 +34,11 @@ import {
   removeScanAreaHighlight,
 } from '@/components/map/ScanAreaHighlightLayer'
 import {
+  addBAGPandLayer,
+  removeBAGPandLayer,
+  setBAGPandVisibility,
+} from '@/components/map/BAGPandLayer'
+import {
   addParcelScoreLayer,
   updateParcelScoreSource,
   PARCEL_SCORE_FILL_LAYER_ID,
@@ -1243,12 +1248,13 @@ function MapPage() {
     }
   }, [accessToken, isParcelsVisible, makeInspectorParcel, mapReady, mapRef])
 
-  // Cleanup highlight on unmount
+  // Cleanup highlight and BAG layer on unmount
   useEffect(() => {
     const map = mapRef.current
     return () => {
       if (map) {
         removeScanAreaHighlight(map)
+        removeBAGPandLayer(map)
       }
     }
   }, [])
@@ -1547,7 +1553,7 @@ function MapPage() {
       setActiveGemeente({ code: gemeenteCode, naam: gemeenteNaam, bbox })
       mapRef.current.fitBounds(
         [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
-        { padding: 50, duration: 800 }
+        { padding: 50, duration: 800, maxZoom: 15 }
       )
 
       // Fetch wijken from backend
@@ -1688,7 +1694,7 @@ function MapPage() {
           const wijkBbox = calculateBboxFromGeometry(targetWijkGeometry)
           mapRef.current.fitBounds(
             [wijkBbox[0], wijkBbox[1], wijkBbox[2], wijkBbox[3]] as [number, number, number, number],
-            { padding: 70, duration: 900 }
+            { padding: 80, duration: 900, maxZoom: 17 }
           )
         }
       }
@@ -1735,6 +1741,24 @@ function MapPage() {
         setBestemmingsplanVisibility(map, false)
         setShowBestemmingsplan(false)
         setZoneInfo(null)
+      }
+    },
+    []
+  )
+
+  // BAG Panden layer toggle handler
+  const handleBAGPandenToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+      const map = mapRef.current
+
+      if (visible) {
+        if (!map.getSource('pdok-bag-pand')) {
+          addBAGPandLayer(map)
+        }
+        setBAGPandVisibility(map, true)
+      } else {
+        setBAGPandVisibility(map, false)
       }
     },
     []
@@ -2043,6 +2067,8 @@ function MapPage() {
         onParcelsToggle={handleParcelsLayerToggle}
         onGemeentenToggle={handleGemeentenToggle}
         onBestemmingsplanToggle={handleBestemmingsplanToggle}
+        onBAGPandenToggle={handleBAGPandenToggle}
+        showBAGPandenToggle={true}
         onWijkenToggle={handleWijkenToggle}
         showWijkenToggle={!!activeGemeente}
         onScannedScopeToggle={handleScannedScopeToggle}

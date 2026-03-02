@@ -82,7 +82,13 @@ export function addParcelScoreLayer(
   // Must be added after source but before the hatch layer
   if (!map.hasImage('parcel-hatch')) {
     const hatchCanvas = createHatchPattern();
-    map.addImage('parcel-hatch', hatchCanvas);
+    const ctx = hatchCanvas.getContext('2d')!;
+    const imageData = ctx.getImageData(0, 0, hatchCanvas.width, hatchCanvas.height);
+    map.addImage('parcel-hatch', {
+      width: hatchCanvas.width,
+      height: hatchCanvas.height,
+      data: new Uint8Array(imageData.data.buffer),
+    });
   }
 
   // Add fill layer with data-driven color based on score

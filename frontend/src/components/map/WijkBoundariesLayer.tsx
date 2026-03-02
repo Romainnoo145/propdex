@@ -74,7 +74,7 @@ export function addWijkBoundariesLayer(
     beforeLayer
   );
 
-  // Add line layer for wijk borders
+  // Add line layer for wijk borders (dashed — subordinate to parcel data)
   map.addLayer(
     {
       id: WIJK_LINE_LAYER,
@@ -82,8 +82,9 @@ export function addWijkBoundariesLayer(
       source: WIJK_SOURCE_ID,
       paint: {
         'line-color': '#10b981', // Emerald green
-        'line-width': 2,
-        'line-opacity': 0.8,
+        'line-width': 1.5,
+        'line-dasharray': [4, 3],
+        'line-opacity': 0.6,
       },
     },
     beforeLayer
