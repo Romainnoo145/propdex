@@ -24,8 +24,8 @@ Requirements for the kwaliteitsborger lead generation vertical — from Wkb clas
 ### Risicobeoordeling Dossier
 
 - [x] **DOSSIER-01**: User can generate a "Risicobeoordeling Startdossier" PDF for any property
-- [ ] **DOSSIER-02**: Dossier includes: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, Wkb classificatie
-- [ ] **DOSSIER-03**: Dossier includes legal disclaimer (data is indicatief, assembled from public sources)
+- [x] **DOSSIER-02**: Dossier includes: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, Wkb classificatie
+- [x] **DOSSIER-03**: Dossier includes legal disclaimer (data is indicatief, assembled from public sources)
 
 ### Lead Capture
 
@@ -97,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BODEM-02 | Phase 68 | Complete |
 | BODEM-03 | Phase 68 | Complete |
 | DOSSIER-01 | Phase 69 | Complete |
-| DOSSIER-02 | Phase 69 | Pending |
-| DOSSIER-03 | Phase 69 | Pending |
+| DOSSIER-02 | Phase 69 | Complete |
+| DOSSIER-03 | Phase 69 | Complete |
 | LEAD-01 | Phase 71 | Pending |
 | LEAD-02 | Phase 71 | Pending |
 | LEAD-03 | Phase 71 | Pending |

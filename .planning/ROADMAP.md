@@ -38,7 +38,7 @@
 
 - [x] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions (completed 2026-03-02)
 - [x] **Phase 68: Bodemloket Integration** — Soil contamination data at parcel level with spike-first API discovery (completed 2026-03-02)
-- [ ] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document
+- [x] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document (completed 2026-03-02)
 - [ ] **Phase 70: Professional Directory** — Platform-wide kwaliteitsborger profiles with NULL org_id RLS pattern
 - [ ] **Phase 71: Lead Capture + AVG Consent** — "Vraag kwaliteitsborger aan" CTA, lead form, email routing, consent logging
 
@@ -209,7 +209,7 @@ Plans:
 | 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
-| 69. Risicobeoordeling Dossier | 1/2 | In Progress|  |
+| 69. Risicobeoordeling Dossier | 2/2 | Complete   | 2026-03-02 |
 | 70. Professional Directory | 0/3 | Not started | - |
 | 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
