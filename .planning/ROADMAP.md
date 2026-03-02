@@ -96,12 +96,12 @@ Plans:
   2. Clicking "Download PDF" generates a PDF that contains all report sections in readable format with correct Dutch typography
   3. Reports for Wkb-plichtige properties show an "Actie vereist" section listing concrete warnings (e.g., Wkb-plichtig, asbestrisico bij bouwjaar <1994, vergunningsstatus)
   4. The "Actie vereist" section is absent (or empty) for parcels with no actionable warnings, keeping clean reports clean
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1 + Wave 2)
 
 Plans:
-- [ ] 65-01: Report layout audit + v7.x section rendering fixes
-- [ ] 65-02: PDF export audit + fix
-- [ ] 65-03: Actie vereist section (actionable warnings from existing data)
+- [ ] 65-01-PLAN.md — Section reorder + empty state standardization + ReportHeader extraction with satellite thumbnail (RPT-01)
+- [ ] 65-02-PLAN.md — CSS @media print rules + window.print() PDF export + white-label header/footer (RPT-02)
+- [ ] 65-03-PLAN.md — ActieVereistSection component with derived warnings from existing data (RPT-03, RPT-04)
 
 ### Phase 66: Results Table Noise Reduction
 **Goal**: The results table surfaces genuine development opportunities, not the full undifferentiated parcel list
