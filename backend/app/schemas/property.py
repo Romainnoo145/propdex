@@ -202,6 +202,14 @@ class BuildabilityDelta(BaseModel):
         default=None,
         description="Remaining FAR headroom (max_far - current_far)",
     )
+    limit_source: str | None = Field(
+        default=None,
+        description="Primary source used for TAR/FAR limits (e.g., DSO maatvoering, AI planregels)",
+    )
+    limit_confidence: Literal["high", "medium", "low"] | None = Field(
+        default=None,
+        description="Confidence of TAR/FAR limit source interpretation",
+    )
     confidence: Literal["high", "medium", "low"] = Field(
         default="low",
         description="Confidence level based on available dimensional inputs",
@@ -308,6 +316,43 @@ class WkbPrecheck(BaseModel):
     layer_b: WkbLayerBResult = Field(
         default_factory=WkbLayerBResult,
         description="Optional refinement metadata",
+    )
+
+
+class WkbClassification(BaseModel):
+    """Deterministic Wkb gevolgklasse classification block. Phase 9 (v9.0)."""
+
+    wkb_applicable: bool = Field(
+        description="False when monument or verbouwing exclusion applies",
+    )
+    gevolgklasse: Literal["GK1", "niet_van_toepassing", "onbekend"] = Field(
+        description="Determined gevolgklasse — GK1 for ground-level residential; 'niet_van_toepassing' when excluded; 'onbekend' when data insufficient",
+    )
+    exclusion_reason: Literal["rijksmonument", "verbouwing"] | None = Field(
+        default=None,
+        description="Why Wkb is not applicable, or None if applicable",
+    )
+    disclaimer: str = Field(
+        default="Indicatieve classificatie op basis van openbare BAG- en monumentendata. Geen juridisch bindend advies.",
+    )
+
+
+class AsbestIndicator(BaseModel):
+    """Bouwjaar-based asbest risk indicator per NEN 2991. Phase 9 (v9.0)."""
+
+    risk: Literal["hoog", "middel", "geen", "onbekend"] = Field(
+        description="hoog: bouwjaar 1963-1993; middel: pre-1963; geen: post-1993; onbekend: bouwjaar missing",
+    )
+    bouwjaar: int | None = Field(
+        default=None,
+        description="Bouwjaar used in determination",
+    )
+    norm_reference: str | None = Field(
+        default=None,
+        description="Applicable norm (e.g. 'NEN 2991') when risk is hoog or middel",
+    )
+    reden: str = Field(
+        description="Human-readable explanation of the risk level",
     )
 
 
@@ -481,6 +526,15 @@ class PropertyReportResponse(BaseModel):
     wkb_precheck: WkbPrecheck | None = Field(
         default=None,
         description="Layer A automatic Wkb precheck with optional Layer B refinement metadata",
+    )
+    # Phase 9 additions (v9.0 Professional Marketplace)
+    wkb_classification: WkbClassification | None = Field(
+        default=None,
+        description="Deterministic gevolgklasse classification with exclusion flags",
+    )
+    asbest_indicator: AsbestIndicator | None = Field(
+        default=None,
+        description="Bouwjaar-based asbest risk indicator per NEN 2991",
     )
     permit_precedents: PermitPrecedentBenchmark | None = Field(
         default=None,

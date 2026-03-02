@@ -26,6 +26,7 @@ from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGe
 from app.schemas.energy_label import EnergyLabel
 from app.schemas.monument import MonumentStatus
 from app.schemas.property import (
+    AsbestIndicator,
     BuildabilityDelta,
     CadastralParcel,
     DataSourceInfo,
@@ -34,6 +35,7 @@ from app.schemas.property import (
     PermitPrecedentBenchmark,
     PropertyReportResponse,
     SectionSourceInfo,
+    WkbClassification,
     WkbPrecheck,
 )
 from app.schemas.woz import WOZData
@@ -43,6 +45,8 @@ from app.services.cache_manager import get_cached_or_fetch
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
 from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
+from app.services.asbest_indicator import assess_asbest_risk
+from app.services.wkb_classifier import classify_wkb
 from app.services.wkb_precheck import evaluate_wkb_precheck
 from app.services.zoning_aggregator import fetch_zoning_data
 
@@ -51,6 +55,7 @@ logger = logging.getLogger(__name__)
 # Module-level singleton
 _cadastral_client = PDOKCadastralClient()
 _HOUSE_NUMBER_RE = re.compile(r"(\d+)")
+_NUMERIC_VALUE_RE = re.compile(r"-?\d+(?:[.,]\d+)?")
 
 
 def _extract_rd_coordinates(geometry: dict | None) -> tuple[float, float] | None:
@@ -101,6 +106,109 @@ def _extract_house_number(value: str | None) -> int | None:
     except ValueError:
         return None
     return number if number > 0 else None
+
+
+def _extract_numeric_values(text: str) -> list[float]:
+    values: list[float] = []
+    for raw in _NUMERIC_VALUE_RE.findall(text):
+        try:
+            values.append(float(raw.replace(",", ".")))
+        except ValueError:
+            continue
+    return values
+
+
+def _extract_tar_far_from_text(text: str) -> tuple[float | None, float | None]:
+    lower = text.lower()
+    tar: float | None = None
+    far: float | None = None
+
+    if "bebouwingspercentage" in lower:
+        candidates = [v for v in _extract_numeric_values(lower) if 0 < v <= 100]
+        if candidates:
+            tar = max(candidates)
+
+    if any(
+        token in lower
+        for token in (
+            " fsi",
+            "fsi ",
+            " far",
+            "far ",
+            "vloerfactor",
+            "vloerindex",
+            "vloeroppervlakteverhouding",
+            "floor area ratio",
+        )
+    ):
+        candidates = [v for v in _extract_numeric_values(lower) if 0 < v <= 12]
+        if candidates:
+            far = max(candidates)
+
+    return tar, far
+
+
+def _ai_confidence_to_limit_confidence(overall_confidence: str | None) -> str:
+    """
+    Map AI parsing certainty to limit-source confidence conservatively.
+
+    AI-derived TAR/FAR remains inferred text extraction, so we cap at medium.
+    """
+    if overall_confidence == "HIGH":
+        return "medium"
+    return "low"
+
+
+def _extract_ai_limit_candidates(
+    ai_parsing_section: AIParsingSection | None,
+) -> tuple[float | None, float | None, str | None]:
+    """
+    Extract TAR/FAR candidates from AI-parsed plan rules.
+
+    Returns (tar, far, confidence) where confidence is the source confidence
+    for AI-derived limits (independent from overall buildability confidence).
+    """
+    if (
+        ai_parsing_section is None
+        or ai_parsing_section.status != "complete"
+        or ai_parsing_section.parsed_plan is None
+    ):
+        return None, None, None
+
+    tar_candidates: list[float] = []
+    far_candidates: list[float] = []
+
+    for regel in ai_parsing_section.parsed_plan.regels:
+        bouwregels = regel.bouwregels
+        if bouwregels is None:
+            continue
+
+        if (
+            bouwregels.max_bebouwingspercentage is not None
+            and 0 < bouwregels.max_bebouwingspercentage <= 100
+        ):
+            tar_candidates.append(float(bouwregels.max_bebouwingspercentage))
+
+        max_far_direct = getattr(bouwregels, "max_floor_area_ratio", None)
+        if max_far_direct is not None and 0 < max_far_direct <= 12:
+            far_candidates.append(float(max_far_direct))
+
+        for key, value in (bouwregels.overige or {}).items():
+            tar, far = _extract_tar_far_from_text(f"{key} {value}")
+            if tar is not None:
+                tar_candidates.append(tar)
+            if far is not None:
+                far_candidates.append(far)
+
+    tar_value = max(tar_candidates) if tar_candidates else None
+    far_value = max(far_candidates) if far_candidates else None
+    if tar_value is None and far_value is None:
+        return None, None, None
+
+    source_confidence = _ai_confidence_to_limit_confidence(
+        ai_parsing_section.parsed_plan.overall_confidence
+    )
+    return tar_value, far_value, source_confidence
 
 
 async def _fetch_market_signals(
@@ -198,6 +306,7 @@ def _derive_buildability_delta(
     cadastral_parcels: list[CadastralParcel],
     building: BuildingData | None,
     zoning_data: ZoningData | None,
+    ai_parsing_section: AIParsingSection | None = None,
 ) -> BuildabilityDelta | None:
     """Compute a normalized current-vs-allowed build envelope with explicit confidence."""
     parcel_areas = [
@@ -212,12 +321,42 @@ def _derive_buildability_delta(
         current_built_area_m2 = float(building.oppervlakte)
 
     dims = zoning_data.building_dimensions if zoning_data else None
-    max_bebouwingspercentage_pct = None
-    max_far = None
+    dso_tar = None
+    dso_far = None
     if dims and dims.max_bebouwingspercentage is not None and dims.max_bebouwingspercentage > 0:
-        max_bebouwingspercentage_pct = float(dims.max_bebouwingspercentage)
+        dso_tar = float(dims.max_bebouwingspercentage)
     if dims and dims.max_floor_area_ratio is not None and dims.max_floor_area_ratio > 0:
-        max_far = float(dims.max_floor_area_ratio)
+        dso_far = float(dims.max_floor_area_ratio)
+
+    ai_tar, ai_far, ai_limit_confidence = _extract_ai_limit_candidates(ai_parsing_section)
+
+    max_bebouwingspercentage_pct = dso_tar
+    max_far = dso_far
+    used_ai_tar = False
+    used_ai_far = False
+    if max_bebouwingspercentage_pct is None and ai_tar is not None:
+        max_bebouwingspercentage_pct = ai_tar
+        used_ai_tar = True
+    if max_far is None and ai_far is not None:
+        max_far = ai_far
+        used_ai_far = True
+
+    used_dso_tar = dso_tar is not None
+    used_dso_far = dso_far is not None
+    used_ai_any = used_ai_tar or used_ai_far
+    used_dso_any = used_dso_tar or used_dso_far
+
+    limit_source: str | None = None
+    limit_confidence: str | None = None
+    if used_dso_any and used_ai_any:
+        limit_source = "DSO maatvoering + AI planregels"
+        limit_confidence = "medium"
+    elif used_dso_any:
+        limit_source = "DSO maatvoering"
+        limit_confidence = "high" if used_dso_tar and used_dso_far else "medium"
+    elif used_ai_any:
+        limit_source = "AI planregels"
+        limit_confidence = ai_limit_confidence or "low"
 
     if (
         parcel_area_m2 is None
@@ -270,6 +409,8 @@ def _derive_buildability_delta(
         )
     if len(cadastral_parcels) > 1 and parcel_area_m2 is not None:
         notes.append("Meerdere gekoppelde percelen samengevoegd voor totale perceeloppervlakte.")
+    if used_ai_any:
+        notes.append("TAR/FAR deels aangevuld via AI-geparseerde planregels.")
     if max_bebouwingspercentage_pct is None and max_far is None:
         notes.append("Geen expliciete FAR/TAR-limieten gevonden in beschikbare planregels.")
     if remaining_buildable_area_m2 is not None and remaining_buildable_area_m2 < 0:
@@ -301,6 +442,8 @@ def _derive_buildability_delta(
         current_far=round(current_far, 3) if current_far is not None else None,
         max_far=round(max_far, 3) if max_far is not None else None,
         remaining_far=round(remaining_far, 3) if remaining_far is not None else None,
+        limit_source=limit_source,
+        limit_confidence=limit_confidence,  # type: ignore[arg-type]
         confidence=confidence,
         missing_fields=missing_fields,
         notes=notes,
@@ -769,17 +912,6 @@ async def aggregate_property_data(
     else:
         market_signals = market_result
 
-    buildability_delta = _derive_buildability_delta(
-        cadastral_parcels=cadastral_parcels,
-        building=building,
-        zoning_data=zoning_data,
-    )
-    wkb_precheck = evaluate_wkb_precheck(
-        building=building,
-        monuments=monument_status,
-        zoning_data=zoning_data,
-        buildability_delta=buildability_delta,
-    )
     permit_precedents = await build_permit_precedent_benchmark(
         organization_id=organization_id,
         session=session,
@@ -822,6 +954,24 @@ async def aggregate_property_data(
             status="not_available",
             error_message="AI parsing niet beschikbaar",
         )
+
+    buildability_delta = _derive_buildability_delta(
+        cadastral_parcels=cadastral_parcels,
+        building=building,
+        zoning_data=zoning_data,
+        ai_parsing_section=ai_parsing_section,
+    )
+    wkb_precheck = evaluate_wkb_precheck(
+        building=building,
+        monuments=monument_status,
+        zoning_data=zoning_data,
+        buildability_delta=buildability_delta,
+    )
+    wkb_classification: WkbClassification = classify_wkb(
+        building=building,
+        monuments=monument_status,
+    )
+    asbest_result: AsbestIndicator = assess_asbest_risk(building=building)
 
     # Build MapData with WGS84 coordinate transformation
     map_data: MapData | None = None
@@ -935,6 +1085,24 @@ async def aggregate_property_data(
                 DataSourceInfo(
                     source="DSO Ruimtelijke Plannen API v4",
                     confidence="HIGH",
+                    is_cached=True,
+                )
+            )
+        if (
+            buildability_delta.limit_source is not None
+            and "AI" in buildability_delta.limit_source
+        ):
+            ai_confidence = (
+                "HIGH"
+                if buildability_delta.limit_confidence == "high"
+                else "MEDIUM"
+                if buildability_delta.limit_confidence == "medium"
+                else "LOW"
+            )
+            buildability_sources.append(
+                DataSourceInfo(
+                    source="AI planregels (bestemmingsplan PDF)",
+                    confidence=ai_confidence,  # type: ignore[arg-type]
                     is_cached=True,
                 )
             )
@@ -1058,6 +1226,8 @@ async def aggregate_property_data(
         market_signals=market_signals,
         buildability_delta=buildability_delta,
         wkb_precheck=wkb_precheck,
+        wkb_classification=wkb_classification,
+        asbest_indicator=asbest_result,
         permit_precedents=permit_precedents,
         brk_ownership=brk_ownership,
     )
