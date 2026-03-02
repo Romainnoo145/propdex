@@ -365,6 +365,24 @@ export interface WkbPrecheck {
 }
 
 // Phase 9 additions (v9.0 Professional Marketplace)
+
+export interface WBBDossierRef {
+  wbb_dossier_dbk: number | null
+  sikb_id: string | null
+  type_cd: string | null
+  vervolg_wbb: string | null
+  statusver: string | null
+  status_oord: string | null
+  administrator_nm: string | null
+  locatiecode_bevoegd_gezag: string | null
+  bis_loccode: string | null
+}
+
+export interface BodemData {
+  dossiers: WBBDossierRef[]
+  disclaimer: string
+}
+
 export interface WkbClassification {
   wkb_applicable: boolean
   gevolgklasse: 'GK1' | 'niet_van_toepassing' | 'onbekend'
@@ -433,6 +451,7 @@ export interface PropertyReportResponse {
   // Phase 9 additions (v9.0 Professional Marketplace)
   wkb_classification?: WkbClassification | null
   asbest_indicator?: AsbestIndicator | null
+  bodem_data?: BodemData | null
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
 }
