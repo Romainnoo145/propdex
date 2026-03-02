@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 67 Wkb Classification Engine (COMPLETE)
+**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration (Plan 01 complete)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 67 of 71 (Wkb Classification Engine — COMPLETE)
-Plan: 2 of 2 complete
-Status: Phase 67 complete — WkbClassificatieSection + AsbestSection frontend components, WkbClassification + AsbestIndicator TypeScript interfaces, all WKB requirements satisfied
-Last activity: 2026-03-02 — Phase 67 Plan 02 complete (WkbClassificatieSection + AsbestSection frontend)
+Phase: 68 of 71 (Bodemloket Integration — Plan 01 complete)
+Plan: 1 of 3 complete
+Status: Phase 68 Plan 01 complete — Bodemloket ArcGIS REST spike, BUFFER_M=10 decision, confirmed field names
+Last activity: 2026-03-02 — Phase 68 Plan 01 complete (Bodemloket spike — BUFFER_M=10 decided)
 
-Progress (v9.0): [██░░░░░░░░] 20% (2/10 plans complete)
+Progress (v9.0): [███░░░░░░░] 30% (3/10 plans complete)
 
 ---
 
@@ -26,6 +26,7 @@ Progress (v9.0): [██░░░░░░░░] 20% (2/10 plans complete)
 **v9.0 Professional Marketplace (In Progress)**
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
+- Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
 
 **v8.0 Client Demo Readiness (Completed)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
@@ -112,11 +113,12 @@ Progress (v9.0): [██░░░░░░░░] 20% (2/10 plans complete)
 - computeWarnings returns [] for clean properties → component returns null (RPT-04 pattern)
 - STATUS_WARNING_DESCRIPTIONS inlined in ActieVereistSection (separate from STATUS_EXPLANATIONS in ReportDetailPage — different purpose)
 
-### v9.0 Context (Planned)
+### v9.0 Context (In Progress)
 
 - Roadmap: .planning/ROADMAP.md Phases 67-71
-- Phase 67 first: pure Python Wkb classifier + asbest indicator (no API risk)
-- Phase 68 starts with mandatory Bodemloket spike (ArcGIS REST returned 404; WMS confirmed)
+- Phase 67 complete: Wkb Classification Engine (backend + frontend)
+- Phase 68 Plan 01 complete: Bodemloket spike — BUFFER_M=10 (not 25), RESEARCH.md Schiermonnikoog coords were approximate (actual polygon centroid x=206259,y=610965)
+- Phase 68 Plan 02 next: bodemloket_arcgis.py client + bodem_aggregator.py + BodemData schema
 - Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
 - AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
 - Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
@@ -140,12 +142,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T04:42:40Z
-**Stopped At:** Completed Phase 67 Plan 02
-**Resume File:** .planning/phases/67-wkb-classification-engine/67-02-SUMMARY.md
+**Last Session:** 2026-03-02T08:23:00Z
+**Stopped At:** Completed Phase 68 Plan 01
+**Resume File:** .planning/phases/68-bodemloket-integration/68-01-SUMMARY.md
 
-**Next Action:** Execute Phase 68 — Bodemloket integration (starts with mandatory ArcGIS/WMS spike).
+**Next Action:** Execute Phase 68 Plan 02 — Bodemloket client + schema + aggregator implementation.
 
 ---
 
-*State updated: 2026-03-02 -- Phase 67 complete: WkbClassificatieSection + AsbestSection frontend, WKB-01 through WKB-04 fully satisfied (backend + frontend)*
+*State updated: 2026-03-02 -- Phase 68 Plan 01 complete: Bodemloket spike (BUFFER_M=10, confirmed field names, SPIKE.md created for Plan 68-02)*

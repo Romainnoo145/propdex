@@ -209,7 +209,7 @@ Plans:
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
 | 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
-| 68. Bodemloket Integration | 0/3 | Not started | - |
+| 68. Bodemloket Integration | 1/3 | In Progress|  |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
 | 70. Professional Directory | 0/3 | Not started | - |
 | 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
