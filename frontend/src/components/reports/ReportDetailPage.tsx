@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { uploadBestemmingsplanPDF } from '@/lib/api'
 import { splitZoningPlans } from '@/lib/zoningPlans'
-import type { PropertyReportResponse } from '@/lib/types/property'
+import type { PropertyReportResponse, WBBDossierRef } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
 import ActieVereistSection from './ActieVereistSection'
 
@@ -222,6 +222,7 @@ export default function ReportDetailPage({
             <BuildabilityDeltaSection data={data} />
             <WkbClassificatieSection data={data} />
             <AsbestSection data={data} />
+            <BodemSection data={data} />
             <WkbPrecheckSection data={data} />
             <PermitPrecedentsSection data={data} />
             <MarketSignalsSection data={data} />
@@ -747,6 +748,81 @@ function AsbestSection({ data }: { data: PropertyReportResponse }) {
           )}
         </div>
         <p className="text-sm text-grey-400">{indicator.reden}</p>
+      </div>
+    </Section>
+  )
+}
+
+/* ─── Bodemkwaliteit ─────────────────────────────────────── */
+
+function BodemIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Layers icon — represents soil strata */}
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  )
+}
+
+function WBBDossierRow({ dossier }: { dossier: WBBDossierRef }) {
+  return (
+    <div className="rounded-md border border-overlay/[0.06] bg-overlay/[0.03] p-3 space-y-1">
+      {dossier.status_oord && (
+        <p className="text-sm font-medium text-grey-200">{dossier.status_oord}</p>
+      )}
+      {dossier.vervolg_wbb && (
+        <p className="text-xs text-grey-400">Vervolg: {dossier.vervolg_wbb}</p>
+      )}
+      {dossier.administrator_nm && (
+        <p className="text-xs text-grey-500">Bevoegd gezag: {dossier.administrator_nm}</p>
+      )}
+      {dossier.wbb_dossier_dbk && (
+        <p className="text-[11px] text-grey-600">Dossier: {dossier.wbb_dossier_dbk}</p>
+      )}
+    </div>
+  )
+}
+
+function BodemSection({ data }: { data: PropertyReportResponse }) {
+  const bodem = data.bodem_data
+
+  if (!bodem) {
+    return (
+      <Section title="Bodemkwaliteit" icon={<BodemIcon />}>
+        <p className="text-sm text-grey-600">Bodemdata niet beschikbaar</p>
+      </Section>
+    )
+  }
+
+  if (bodem.dossiers.length === 0) {
+    return (
+      <Section title="Bodemkwaliteit" icon={<BodemIcon />}>
+        <div className="space-y-2">
+          <p className="text-sm text-grey-400">Geen geregistreerde verontreiniging gevonden</p>
+          <p className="text-[11px] text-grey-600">{bodem.disclaimer}</p>
+        </div>
+      </Section>
+    )
+  }
+
+  return (
+    <Section title="Bodemkwaliteit" icon={<BodemIcon />}>
+      <div className="space-y-3">
+        {bodem.dossiers.map((d, idx) => (
+          <WBBDossierRow key={d.wbb_dossier_dbk ?? idx} dossier={d} />
+        ))}
+        <p className="text-[11px] text-grey-600 mt-2">{bodem.disclaimer}</p>
       </div>
     </Section>
   )
