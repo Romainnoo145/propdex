@@ -10,10 +10,10 @@ Requirements for the kwaliteitsborger lead generation vertical — from Wkb clas
 
 ### Wkb Intelligence
 
-- [ ] **WKB-01**: User can see gevolgklasse classification (1/2/3) for any property in the report, labeled as "indicatief"
-- [ ] **WKB-02**: User can see asbest risk indicator based on bouwjaar (hoog: 1963-1993, middel: pre-1963, geen: post-1993) in the report
-- [ ] **WKB-03**: Verbouwing projects are flagged with "Wkb niet van toepassing" notice (Dec 2024 ministerial ruling)
-- [ ] **WKB-04**: Wkb classification excludes rijksmonumenten (monument status from existing RCE data)
+- [x] **WKB-01**: User can see gevolgklasse classification (1/2/3) for any property in the report, labeled as "indicatief"
+- [x] **WKB-02**: User can see asbest risk indicator based on bouwjaar (hoog: 1963-1993, middel: pre-1963, geen: post-1993) in the report
+- [x] **WKB-03**: Verbouwing projects are flagged with "Wkb niet van toepassing" notice (Dec 2024 ministerial ruling)
+- [x] **WKB-04**: Wkb classification excludes rijksmonumenten (monument status from existing RCE data)
 
 ### Bodemkwaliteit
 
@@ -89,10 +89,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WKB-01 | Phase 67 | Pending |
-| WKB-02 | Phase 67 | Pending |
-| WKB-03 | Phase 67 | Pending |
-| WKB-04 | Phase 67 | Pending |
+| WKB-01 | Phase 67 | Complete |
+| WKB-02 | Phase 67 | Complete |
+| WKB-03 | Phase 67 | Complete |
+| WKB-04 | Phase 67 | Complete |
 | BODEM-01 | Phase 68 | Pending |
 | BODEM-02 | Phase 68 | Pending |
 | BODEM-03 | Phase 68 | Pending |

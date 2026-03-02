@@ -5,25 +5,28 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v8.0 Client Demo Readiness — Phase 65 Report Polish (IN PROGRESS)
+**Current focus:** v9.0 Professional Marketplace — Phase 67 Wkb Classification Engine (IN PROGRESS)
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 67-71)
 
 ---
 
 ## Current Position
 
-Phase: 66 of 66 (Results Table Noise Reduction — IN PROGRESS)
-Plan: 1 of 1 complete
-Status: Phase 66 Plan 01 complete — score threshold filter + Top kansen toggle, RES-01 and RES-02 satisfied
-Last activity: 2026-03-02 — Phase 66 Plan 01 complete (Top kansen toggle with nulls_last sort)
+Phase: 67 of 71 (Wkb Classification Engine — IN PROGRESS)
+Plan: 1 of 2 complete
+Status: Phase 67 Plan 01 complete — classify_wkb() + assess_asbest_risk() services, WkbClassification + AsbestIndicator schemas, aggregator wiring, WKB-01 through WKB-04 backend satisfied
+Last activity: 2026-03-02 — Phase 67 Plan 01 complete (wkb_classifier + asbest_indicator TDD)
 
-Progress (v8.0): [██████████] 100% (10/10 plans complete)
+Progress (v9.0): [█░░░░░░░░░] 10% (1/10 plans complete)
 
 ---
 
 ## Performance Metrics
 
-**v8.0 Client Demo Readiness (In Progress)**
+**v9.0 Professional Marketplace (In Progress)**
+- Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
+
+**v8.0 Client Demo Readiness (Completed)**
 - Phase 62 Plan 01: completed ~25min (BAG WFS retry + abort-on-failure + coverage_ratio + completed_with_warnings)
 - Phase 62 Plan 02: completed ~2min (force-mode clean-slate rescan + FORCE MODE log + WijkOutcome summary table)
 - Phase 63 Plan 01: completed ~2min (validate_scan_data CLI + WijkValidation dataclass + parcel_addressing formalized)
@@ -68,6 +71,15 @@ Progress (v8.0): [██████████] 100% (10/10 plans complete)
 - Conditional SQLAlchemy count: func.count(case(((condition), 1))) pattern for per-wijk aggregation
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
 - Professional model uses NULL org_id (platform-wide, not tenant-isolated) -- v9.0 critical pattern
+
+### Phase 67 Context
+
+- Phase 67 Plan 01: Wkb Classification Engine backend complete
+- classify_wkb() exclusion order: rijksmonument (consensus_status == "rijksmonument") > verbouwing ("verbouwing pand" stripped+lowercased) > GK1 ("woonfunctie" in gebruiksdoel) > onbekend
+- assess_asbest_risk() bands: >= 1994 geen, 1963-1993 hoog (NEN 2991), < 1963 middel (NEN 2991), None onbekend
+- wkb_applicable=True for "onbekend" (optimistic — Phase 71 CTA will not be suppressed for unknown cases)
+- Only rijksmonumenten excluded (not gemeentelijke) — checked via consensus_status field, not is_monument
+- Pre-existing mypy dict[str, Any] type parameter errors exist in zoning.py, address.py — out of scope
 
 ### Phase 66 Context
 
@@ -123,12 +135,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T04:07:00Z
-**Stopped At:** Completed Phase 66 Plan 01
-**Resume File:** .planning/phases/66-results-table-noise-reduction/66-01-SUMMARY.md
+**Last Session:** 2026-03-02T04:35:21Z
+**Stopped At:** Completed Phase 67 Plan 01
+**Resume File:** .planning/phases/67-wkb-classification-engine/67-01-SUMMARY.md
 
-**Next Action:** Phase 66 complete. v8.0 Client Demo Readiness — all plans done. Ready to tag v8.0 or begin v9.0 planning.
+**Next Action:** Execute Phase 67 Plan 02 — frontend WkbClassificatieSection + AsbestSection components in ReportDetailPage.tsx.
 
 ---
 
-*State updated: 2026-03-02 -- Phase 66 Plan 01 complete: Top kansen toggle + score threshold filter shipped, RES-01 + RES-02 satisfied*
+*State updated: 2026-03-02 -- Phase 67 Plan 01 complete: classify_wkb() + assess_asbest_risk() TDD backend, WKB-01 through WKB-04 backend satisfied*
