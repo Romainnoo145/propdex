@@ -172,12 +172,12 @@ Plans:
   3. Professional profiles are visible across all tenants — a kwaliteitsborger added by admin is visible to organization A and organization B without duplication
   4. Each professional listing card links to their TloKB public register entry for verification by the user
   5. A cross-tenant integration test confirms that professionals with NULL organization_id are returned correctly for any authenticated tenant
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
 
 Plans:
-- [ ] 70-01: Professional model (NULL org_id, GIN indexes) + Alembic migration + RLS policy + cross-tenant integration test
-- [ ] 70-02: GET /api/professionals with gemeente + gevolgklasse filters + pagination + admin CRUD endpoints
-- [ ] 70-03: ProfessionalDirectory frontend component (TanStack Table, TloKB link, gemeente filter)
+- [ ] 70-01-PLAN.md — Professional model (NULL org_id, GIN indexes) + Alembic migration + RLS policy + ADMIN_API_KEY config + cross-tenant integration test (DIR-01, DIR-03)
+- [ ] 70-02-PLAN.md — Pydantic schemas + FastAPI router with gemeente/gevolgklasse filters + admin CRUD endpoints (DIR-01, DIR-02, DIR-04)
+- [ ] 70-03-PLAN.md — ProfessionalCard + ProfessionalDirectory frontend + TanStack Router route with search param filters (DIR-02, DIR-04)
 
 ### Phase 71: Lead Capture + AVG Consent
 **Goal**: A user can request a kwaliteitsborger for a Wkb-plichtige property, with explicit consent logging and email notification, completing the lead generation loop
@@ -210,7 +210,7 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 70. Professional Directory | 0/3 | Not started | - |
+| 70. Professional Directory | 0/3 | Planned | - |
 | 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
 ---
@@ -391,4 +391,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-02 -- Phase 69 plans finalized (2 plans, Wave 1 + Wave 2 sequential)*
+*Last updated: 2026-03-02 -- Phase 70 plans finalized (3 plans, Wave 1 → Wave 2 → Wave 3 sequential)*
