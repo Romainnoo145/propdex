@@ -30,6 +30,7 @@ Progress (v8.0): [█████████░] 100% (9/9 plans complete)
 - Phase 63 Plan 02: completed ~4hrs (21-wijk scan execution + validation — 108,789 parcels, 100% coverage)
 - Phase 64 Plan 01: completed ~7min (BAGPandLayer.tsx + PDOK_BAG_PAND_WMS + showBAGPanden state + LayerToggle groups + gradient legend)
 - Phase 65 Plan 01: completed ~6min (section reorder + empty states + ReportHeader + SatelliteThumbnail extraction)
+- Phase 65 Plan 02: completed ~10min (@media print CSS + window.print() PDF export + white-label header/footer — RPT-02)
 - Phase 65 Plan 03: completed ~5min (ActieVereistSection + computeWarnings — RPT-03 + RPT-04)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
@@ -80,6 +81,7 @@ Progress (v8.0): [█████████░] 100% (9/9 plans complete)
 - Phase 65 Plan 01: Section order locked: Bestemmingsplan → Kadaster → BRK → Gebouw → WOZ → Energielabel → Buildability → Wkb → Permits → Market → AI
 - ESRI World Imagery static thumbnail: ArcGIS REST MapServer/export, no API key, bbox from center_wgs84 deltaKm=0.3
 - ReportHeader extracted: full data prop, satellite thumbnail, kadaster perceel ID, 6-card metric grid (adds Bestemming + WOZ-waarde)
+- Phase 65 Plan 02: @media print overrides CSS custom properties inline — no JS class toggle needed; window.print() = zero-dependency PDF; pdf-only/print-hide utility classes; report-grid/report-aside/section-card semantic print targets
 - Phase 65 Plan 03: ActieVereistSection at top of main column; computeWarnings pure function (Wkb/asbest/BAG-status/monument)
 - computeWarnings returns [] for clean properties → component returns null (RPT-04 pattern)
 - STATUS_WARNING_DESCRIPTIONS inlined in ActieVereistSection (separate from STATUS_EXPLANATIONS in ReportDetailPage — different purpose)
@@ -112,9 +114,9 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T03:25:00Z
-**Stopped At:** Completed 65-03-PLAN.md
-**Resume File:** None — Phase 65 complete (3/3 plans done)
+**Last Session:** 2026-03-02T03:29:24.004Z
+**Stopped At:** Completed 65-02-PLAN.md
+**Resume File:** None
 
 **Next Action:** Phase 65 complete. v8.0 Client Demo Readiness — all 9 plans done. Begin v9.0 planning or tag v8.0.
 
