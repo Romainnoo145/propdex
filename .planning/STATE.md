@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration (Plan 03 checkpoint pending)
+**Current focus:** v9.0 Professional Marketplace — Phase 68 Bodemloket Integration COMPLETE — Phase 69 next
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 68 of 71 (Bodemloket Integration — Plan 03 checkpoint: awaiting human-verify)
-Plan: 2 of 3 complete (Plan 03 Tasks 1+2 done — checkpoint Task 3 awaiting approval)
-Status: Phase 68 Plan 03 Tasks 1+2 complete — BodemSection frontend component + TypeScript types. Awaiting human visual verification checkpoint.
-Last activity: 2026-03-02 — Phase 68 Plan 03 tasks 1+2 complete (BodemSection 3-state component, WBBDossierRef + BodemData TypeScript types, npm run check 0 errors)
+Phase: 68 of 71 (Bodemloket Integration — COMPLETE)
+Plan: 3 of 3 complete (all plans done — Phase 68 complete)
+Status: Phase 68 complete — Bodemloket integration end-to-end (ArcGIS REST client + WBB schema + 30-day cache + BodemSection frontend). Human checkpoint APPROVED.
+Last activity: 2026-03-02 — Phase 68 Plan 03 complete (BodemSection human-verify approved — BODEM-02 + BODEM-03 satisfied)
 
-Progress (v9.0): [████░░░░░░] 40% (4/10 plans complete)
+Progress (v9.0): [█████░░░░░] 50% (5/10 plans complete)
 
 ---
 
@@ -120,7 +120,7 @@ Progress (v9.0): [████░░░░░░] 40% (4/10 plans complete)
 - Phase 67 complete: Wkb Classification Engine (backend + frontend)
 - Phase 68 Plan 01 complete: Bodemloket spike — BUFFER_M=10 (not 25), RESEARCH.md Schiermonnikoog coords were approximate (actual polygon centroid x=206259,y=610965)
 - Phase 68 Plan 02 complete: BodemloketClient + WBBDossierRef schema + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data — 11 TDD tests GREEN
-- Phase 68 Plan 03 Tasks 1+2 done: BodemSection 3-state component (null/empty/populated), WBBDossierRef + BodemData TypeScript types, bodem_data on PropertyReportResponse, inserted after AsbestSection — awaiting checkpoint Task 3
+- Phase 68 Plan 03 COMPLETE: BodemSection 3-state component (null/empty/populated), WBBDossierRef + BodemData TypeScript types, bodem_data on PropertyReportResponse, inserted after AsbestSection — human-verify APPROVED (BODEM-02 + BODEM-03)
 - BodemSection import pattern: only import WBBDossierRef (not BodemData) — BodemData accessed via data.bodem_data typing, direct import unused
 - AsyncMock passthrough pattern: use named `async def _passthrough_retry(fn, **kwargs): return await fn()` — lambdas cannot await coroutines in side_effect
 - Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
@@ -146,12 +146,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T08:52:05Z
-**Stopped At:** Phase 68 Plan 03 Task 3 checkpoint (human-verify: visual verification of BodemSection in browser)
-**Resume File:** .planning/phases/68-bodemloket-integration/68-03-SUMMARY.md
+**Last Session:** 2026-03-02T09:00:00Z
+**Stopped At:** Phase 68 Plan 03 complete (all 3 tasks done, checkpoint approved)
+**Resume File:** .planning/phases/69-*/69-01-PLAN.md
 
-**Next Action:** Human approves checkpoint at http://localhost:9300 — verify "Bodemkwaliteit" section renders after "Asbestrisico" with disclaimer text. Then complete Phase 68 and begin Phase 69.
+**Next Action:** Begin Phase 69 (next v9.0 Professional Marketplace phase).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 68 Plan 03 Tasks 1+2 complete: BodemSection 3-state component + WBBDossierRef/BodemData TypeScript types — awaiting human-verify checkpoint*
+*State updated: 2026-03-02 -- Phase 68 complete: Bodemloket integration end-to-end — BodemSection human-verify APPROVED (BODEM-02 + BODEM-03)*
