@@ -210,7 +210,7 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 70. Professional Directory | 1/3 | In Progress|  |
+| 70. Professional Directory | 2/3 | In Progress|  |
 | 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
 ---
