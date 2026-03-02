@@ -205,3 +205,93 @@ html.light .propdex-property-popup .maplibregl-popup-tip {
   height: 0;
   display: none; /* Chromium/Safari */
 }
+
+/* ─── Print / PDF export ────────────────────────────────────── */
+
+@media print {
+  /* Force light background — readable on paper */
+  body {
+    background: white !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Override CSS custom properties for print readability */
+  :root {
+    --color-grey-950: white;
+    --color-grey-900: #f9fafb;
+    --color-grey-850: #f3f4f6;
+    --color-grey-800: #e5e7eb;
+    --color-grey-700: #d1d5db;
+    --color-grey-600: #6b7280;
+    --color-grey-400: #374151;
+    --color-grey-300: #1f2937;
+    --color-grey-100: #111827;
+    --color-overlay: black;
+    --color-amber-accent: #b45309;
+    --color-error: #dc2626;
+    --color-warning: #d97706;
+    --color-info: #2563eb;
+    --color-success: #059669;
+  }
+
+  /* Hide navigation, interactive elements, decorative blurs */
+  nav,
+  .print-hide,
+  [class*="blur-3xl"] {
+    display: none !important;
+  }
+
+  /* Force single-column layout — no sidebar grid in print */
+  .report-grid {
+    display: block !important;
+  }
+
+  .report-aside {
+    position: static !important;
+    display: block !important;
+    margin-top: 1rem;
+  }
+
+  /* Section cards — visible borders on white, avoid page breaks inside */
+  .section-card {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    break-inside: avoid;
+    margin-bottom: 0.75rem;
+    page-break-inside: avoid;
+  }
+
+  /* Page break after actie vereist section */
+  .actie-vereist-section {
+    break-after: page;
+  }
+
+  /* Print-only elements (PDF header/footer) */
+  .pdf-only {
+    display: block !important;
+  }
+
+  /* Ensure images print (satellite thumbnail) */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Remove shadows in print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Page margins for PDF */
+  @page {
+    margin: 1.5cm 1cm;
+  }
+}
+
+/* Screen: hide print-only elements */
+.pdf-only {
+  display: none;
+}
