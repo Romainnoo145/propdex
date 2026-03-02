@@ -61,6 +61,11 @@ def _make_limiter_mock() -> AsyncMock:
     return limiter
 
 
+async def _passthrough_retry(fn: object, **kwargs: object) -> object:
+    """Async passthrough for retry_with_backoff — just calls and awaits fn()."""
+    return await fn()  # type: ignore[operator]
+
+
 @pytest.mark.asyncio
 async def test_query_returns_bodemdata_with_dossiers():
     """BODEM-01/BODEM-02: query_by_point with matching features returns BodemData with dossiers."""
@@ -71,7 +76,7 @@ async def test_query_returns_bodemdata_with_dossiers():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         result = await bodem_client.query_by_point(x=206259, y=610965, client=mock_client)
@@ -92,7 +97,7 @@ async def test_query_empty_features_returns_bodemdata_not_error():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         result = await bodem_client.query_by_point(x=208888, y=378594, client=mock_client)
@@ -112,7 +117,7 @@ async def test_disclaimer_always_present():
             patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
             patch(
                 "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-                side_effect=lambda fn, **kwargs: fn(),
+                new=_passthrough_retry,
             ),
         ):
             result = await bodem_client.query_by_point(x=206259, y=610965, client=mock_client)
@@ -131,7 +136,7 @@ async def test_disclaimer_text_mentions_bodemloket():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         result = await bodem_client.query_by_point(x=208888, y=378594, client=mock_client)
@@ -151,7 +156,7 @@ async def test_http_error_raises_government_api_error():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
         pytest.raises(GovernmentAPIError),
     ):
@@ -168,7 +173,7 @@ async def test_query_builds_envelope_with_buffer():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         await bodem_client.query_by_point(x=100000, y=400000, client=mock_client, buffer_m=25)
@@ -195,7 +200,7 @@ async def test_parse_all_fields():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         result = await bodem_client.query_by_point(x=206259, y=610965, client=mock_client)
@@ -224,7 +229,7 @@ async def test_insrc_is_28992():
         patch("app.government_apis.bodemloket_arcgis.bodemloket_limiter", _make_limiter_mock()),
         patch(
             "app.government_apis.bodemloket_arcgis.retry_with_backoff",
-            side_effect=lambda fn, **kwargs: fn(),
+            new=_passthrough_retry,
         ),
     ):
         await bodem_client.query_by_point(x=206259, y=610965, client=mock_client)

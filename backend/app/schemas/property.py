@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.ai.schemas import AIParsingSection
 from app.schemas.address import BAGAddressResponse, BuildingData
+from app.schemas.bodem import BodemData
 from app.schemas.brk_ownership import BRKOwnership
 from app.schemas.energy_label import EnergyLabel
 from app.schemas.monument import MonumentStatus
@@ -535,6 +536,10 @@ class PropertyReportResponse(BaseModel):
     asbest_indicator: AsbestIndicator | None = Field(
         default=None,
         description="Bouwjaar-based asbest risk indicator per NEN 2991",
+    )
+    bodem_data: BodemData | None = Field(
+        default=None,
+        description="Bodemkwaliteit data from Bodemloket (WBB dossiers). Phase 68.",
     )
     permit_precedents: PermitPrecedentBenchmark | None = Field(
         default=None,

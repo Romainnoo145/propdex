@@ -39,9 +39,11 @@ from app.schemas.property import (
     WkbPrecheck,
 )
 from app.schemas.woz import WOZData
+from app.schemas.bodem import BodemData
 from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
 from app.services.asbest_indicator import assess_asbest_risk
+from app.services.bodem_aggregator import fetch_bodem_data as _fetch_bodem
 from app.services.cache_manager import get_cached_or_fetch
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
@@ -856,6 +858,26 @@ async def aggregate_property_data(
             errors.append(f"Marktsignalen niet beschikbaar: {str(e)}")
             return None
 
+    async def fetch_bodem() -> BodemData | None:
+        """Fetch Bodemloket soil contamination data for this parcel's RD coordinates."""
+        try:
+            rd_coords = _extract_rd_coordinates(building.geometry if building else None)
+            if rd_coords is None:
+                return None
+            rd_x, rd_y = rd_coords
+            return await _fetch_bodem(
+                x=rd_x,
+                y=rd_y,
+                client=client,
+                organization_id=organization_id,
+                session=session,
+                force_refresh=force_refresh,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch bodem data: {e}")
+            errors.append(f"Bodemkwaliteit niet beschikbaar: {str(e)}")
+            return None
+
     # Execute ALL Step 2a fetches in parallel
     results = await asyncio.gather(
         fetch_cadastral_parcels(),
@@ -864,6 +886,7 @@ async def aggregate_property_data(
         fetch_energy_label(),
         fetch_woz_data(),
         fetch_market_data(),
+        fetch_bodem(),          # index 6
         return_exceptions=True,
     )
 
@@ -911,6 +934,14 @@ async def aggregate_property_data(
         errors.append(f"Marktsignalen fetch failed: {str(market_result)}")
     else:
         market_signals = market_result
+
+    bodem_data: BodemData | None = None
+    bodem_result = results[6]
+    if isinstance(bodem_result, Exception):
+        logger.error(f"Bodem fetch failed: {bodem_result}")
+        errors.append(f"Bodemkwaliteit fetch failed: {str(bodem_result)}")
+    else:
+        bodem_data = bodem_result
 
     permit_precedents = await build_permit_precedent_benchmark(
         organization_id=organization_id,
@@ -1230,4 +1261,5 @@ async def aggregate_property_data(
         asbest_indicator=asbest_result,
         permit_precedents=permit_precedents,
         brk_ownership=brk_ownership,
+        bodem_data=bodem_data,
     )

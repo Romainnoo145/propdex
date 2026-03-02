@@ -89,6 +89,10 @@ plu_wfs_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
 # SRU (PDOK Search) is less tolerant of heavy usage
 sru_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
+# PDOK Locatieserver reverse/search — public, no auth required.
+# 10 concurrent matches scan semaphore. High hourly cap for batch scans.
+pdok_locatieserver_limiter = APIRateLimiter(max_concurrent=10, max_per_hour=50000)
+
 # BRK (Kadaster) is a paid API, use conservative limits
 brk_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=200)
 
@@ -100,3 +104,6 @@ rce_detail_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
 
 # WOZ Waardeloket (Kadaster) — public endpoint, conservative polite limits
 woz_waardeloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
+
+# Bodemloket (Rijkswaterstaat / ArcGIS) — public endpoint, polite limits
+bodemloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)

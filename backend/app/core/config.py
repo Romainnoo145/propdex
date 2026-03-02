@@ -14,6 +14,7 @@ CACHE_TTL = {
     "rce": 2592000,         # 30 days (monument status changes infrequently)
     "rce_detail": 2592000,  # 30 days (monument descriptions are stable)
     "woz": 31536000,        # 365 days (WOZ values set once per year on Jan 1)
+    "bodemloket": 2592000,  # 30 days (soil contamination status changes rarely)
     # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 
