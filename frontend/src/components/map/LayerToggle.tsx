@@ -19,6 +19,7 @@ interface LayerToggleProps {
   onParcelsToggle?: (visible: boolean) => void
   onGemeentenToggle?: (visible: boolean) => void
   onBestemmingsplanToggle?: (visible: boolean) => void
+  onBAGPandenToggle?: (visible: boolean) => void
   onWijkenToggle?: (visible: boolean) => void
   showWijkenToggle?: boolean
   onScoreToggle?: (visible: boolean) => void
@@ -33,6 +34,7 @@ interface LayerToggleProps {
   showBuildCapacityToggle?: boolean
   onScannedScopeToggle?: (visible: boolean) => void
   showScannedScopeToggle?: boolean
+  showBAGPandenToggle?: boolean
   autoEnableParcelsKey?: string | null
 }
 
@@ -42,6 +44,7 @@ function LayerToggle({
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
+  onBAGPandenToggle,
   onWijkenToggle,
   showWijkenToggle,
   onScoreToggle,
@@ -56,6 +59,7 @@ function LayerToggle({
   showBuildCapacityToggle,
   onScannedScopeToggle,
   showScannedScopeToggle,
+  showBAGPandenToggle,
   autoEnableParcelsKey,
 }: LayerToggleProps) {
   const persisted = useMemo(() => readPersistedMapLayerState(), [])
@@ -66,6 +70,7 @@ function LayerToggle({
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(
     persisted.showBestemmingsplan
   )
+  const [showBAGPanden, setShowBAGPanden] = useState(persisted.showBAGPanden)
   const [showWijken, setShowWijken] = useState(persisted.showWijken)
   const [showScannedScope, setShowScannedScope] = useState(persisted.showScannedScope)
   const [showScore, setShowScore] = useState(
@@ -171,6 +176,7 @@ function LayerToggle({
     onParcelsToggle?.(showParcels)
     onGemeentenToggle?.(showGemeenten)
     onBestemmingsplanToggle?.(showBestemmingsplan)
+    onBAGPandenToggle?.(showBAGPanden)
     onScannedScopeToggle?.(showScannedScope)
     if (showParcels) {
       queueMicrotask(() => setParcelOverlayMode('score'))
@@ -182,6 +188,7 @@ function LayerToggle({
     onParcelsToggle,
     onGemeentenToggle,
     onBestemmingsplanToggle,
+    onBAGPandenToggle,
     onScannedScopeToggle,
     onScoreToggle,
     onBuiltStatusToggle,
@@ -191,6 +198,7 @@ function LayerToggle({
     showParcels,
     showGemeenten,
     showBestemmingsplan,
+    showBAGPanden,
     showScannedScope,
     showScore,
     showBuiltStatus,
@@ -216,6 +224,7 @@ function LayerToggle({
       showParcels,
       showGemeenten,
       showBestemmingsplan,
+      showBAGPanden,
       showWijken,
       showScannedScope,
       activeParcelOverlay,
@@ -225,6 +234,7 @@ function LayerToggle({
     showParcels,
     showGemeenten,
     showBestemmingsplan,
+    showBAGPanden,
     showWijken,
     showScannedScope,
     showScore,
@@ -274,6 +284,12 @@ function LayerToggle({
     const next = !showBestemmingsplan
     setShowBestemmingsplan(next)
     onBestemmingsplanToggle?.(next)
+  }
+
+  const handleBAGPandenToggle = () => {
+    const next = !showBAGPanden
+    setShowBAGPanden(next)
+    onBAGPandenToggle?.(next)
   }
 
   const handleWijkenToggle = () => {
@@ -393,156 +409,190 @@ function LayerToggle({
   const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm'
   const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
 
+  const showGradientLegend = showScore && showParcels
+
   return (
-    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
-      <button
-        onClick={() => handleLayerChange('kaart')}
-        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          activeLayer === 'kaart' ? active : inactive
-        }`}
-      >
-        Kaart
-      </button>
-      <button
-        onClick={() => handleLayerChange('aerial')}
-        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          activeLayer === 'aerial' ? active : inactive
-        }`}
-      >
-        Satellite
-      </button>
-
-      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-
-      <button
-        onClick={handleParcelsToggle}
-        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showParcels ? overlayActive : overlayInactive
-        }`}
-      >
-        Percelen
-      </button>
-
-      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-
-      <button
-        onClick={handleGemeentenToggle}
-        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showGemeenten ? overlayActive : overlayInactive
-        }`}
-      >
-        Gemeenten
-      </button>
-
-      <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-
-      <button
-        onClick={handleBestemmingsplanToggle}
-        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-          showBestemmingsplan ? overlayActive : overlayInactive
-        }`}
-      >
-        Bestemmingsplan
-      </button>
-
-      {showWijkenToggle && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleWijkenToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showWijken ? overlayActive : overlayInactive
-            }`}
-          >
-            Wijken
-          </button>
-        </>
+    <>
+      {showGradientLegend && (
+        <div className="absolute bottom-16 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
+          <span className="text-xs text-grey-400">Laag</span>
+          <div
+            className="h-3 w-32 rounded-full"
+            style={{ background: 'linear-gradient(to right, #64748b, #eab308, #22c55e)' }}
+          />
+          <span className="text-xs text-grey-400">Hoog</span>
+        </div>
       )}
 
-      {showScannedScopeToggle && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleScannedScopeToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showScannedScope ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.boundaryOverlays[0].label}
-          </button>
-        </>
-      )}
+      <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
+        {/* Group 1 — Kaart (Basemap) */}
+        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Kaart</span>
+        <button
+          onClick={() => handleLayerChange('kaart')}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            activeLayer === 'kaart' ? active : inactive
+          }`}
+        >
+          Kaart
+        </button>
+        <button
+          onClick={() => handleLayerChange('aerial')}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            activeLayer === 'aerial' ? active : inactive
+          }`}
+        >
+          Satellite
+        </button>
 
-      {showScoreToggle && showParcels && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleScoreToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showScore ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.parcelOverlays[0].label}
-          </button>
-        </>
-      )}
+        {/* Group 2 — Data layers */}
+        <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
+        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Data</span>
 
-      {showBuiltStatusToggle && showParcels && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleBuiltStatusToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showBuiltStatus ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.parcelOverlays[1].label}
-          </button>
-        </>
-      )}
+        <button
+          onClick={handleParcelsToggle}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            showParcels ? overlayActive : overlayInactive
+          }`}
+        >
+          Percelen
+        </button>
 
-      {showReportStatusToggle && showParcels && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleReportStatusToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showReportStatus ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.parcelOverlays[2].label}
-          </button>
-        </>
-      )}
+        {showBAGPandenToggle && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleBAGPandenToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showBAGPanden ? overlayActive : overlayInactive
+              }`}
+            >
+              BAG Panden
+            </button>
+          </>
+        )}
 
-      {showVacancySignalToggle && showParcels && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleVacancySignalToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showVacancySignal ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.parcelOverlays[3].label}
-          </button>
-        </>
-      )}
+        {showWijkenToggle && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleWijkenToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showWijken ? overlayActive : overlayInactive
+              }`}
+            >
+              Wijken
+            </button>
+          </>
+        )}
 
-      {showBuildCapacityToggle && showParcels && (
-        <>
-          <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-          <button
-            onClick={handleBuildCapacityToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showBuildCapacity ? overlayActive : overlayInactive
-            }`}
-          >
-            {MAP_LAYER_CATALOG.parcelOverlays[4].label}
-          </button>
-        </>
-      )}
-    </div>
+        <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+        <button
+          onClick={handleGemeentenToggle}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            showGemeenten ? overlayActive : overlayInactive
+          }`}
+        >
+          Gemeenten
+        </button>
+
+        {showScannedScopeToggle && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleScannedScopeToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showScannedScope ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.boundaryOverlays[0].label}
+            </button>
+          </>
+        )}
+
+        {/* Group 3 — Overlays */}
+        <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
+        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Overlays</span>
+
+        <button
+          onClick={handleBestemmingsplanToggle}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            showBestemmingsplan ? overlayActive : overlayInactive
+          }`}
+        >
+          Bestemmingsplan
+        </button>
+
+        {showScoreToggle && showParcels && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleScoreToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showScore ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.parcelOverlays[0].label}
+            </button>
+          </>
+        )}
+
+        {showBuiltStatusToggle && showParcels && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleBuiltStatusToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showBuiltStatus ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.parcelOverlays[1].label}
+            </button>
+          </>
+        )}
+
+        {showReportStatusToggle && showParcels && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleReportStatusToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showReportStatus ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.parcelOverlays[2].label}
+            </button>
+          </>
+        )}
+
+        {showVacancySignalToggle && showParcels && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleVacancySignalToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showVacancySignal ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.parcelOverlays[3].label}
+            </button>
+          </>
+        )}
+
+        {showBuildCapacityToggle && showParcels && (
+          <>
+            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+            <button
+              onClick={handleBuildCapacityToggle}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+                showBuildCapacity ? overlayActive : overlayInactive
+              }`}
+            >
+              {MAP_LAYER_CATALOG.parcelOverlays[4].label}
+            </button>
+          </>
+        )}
+      </div>
+    </>
   )
 }
 

@@ -12,6 +12,7 @@ export interface PersistedMapLayerState {
   showParcels: boolean
   showGemeenten: boolean
   showBestemmingsplan: boolean
+  showBAGPanden: boolean
   showWijken: boolean
   showScannedScope: boolean
   activeParcelOverlay: ParcelOverlayLayerId | null
@@ -56,15 +57,16 @@ export const MAP_LAYER_CATALOG = {
 
 export const DEFAULT_MAP_LAYER_STATE: PersistedMapLayerState = {
   basemap: 'kaart',
-  showParcels: false,
+  showParcels: true,
   showGemeenten: false,
   showBestemmingsplan: false,
+  showBAGPanden: false,
   showWijken: true,
   showScannedScope: true,
   activeParcelOverlay: 'potential',
 }
 
-const STORAGE_KEY = 'propdex.map.layers.v2'
+const STORAGE_KEY = 'propdex.map.layers.v3'
 
 function coerceBoolean(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value
@@ -84,14 +86,13 @@ export function readPersistedMapLayerState(): PersistedMapLayerState {
 
     return {
       basemap: coerceBasemap(parsed.basemap),
-      // Do not auto-restore parcel mode on refresh/login.
-      // Parcel overlays should only activate after an explicit user action.
-      showParcels: DEFAULT_MAP_LAYER_STATE.showParcels,
+      showParcels: coerceBoolean(parsed.showParcels, DEFAULT_MAP_LAYER_STATE.showParcels),
       showGemeenten: coerceBoolean(parsed.showGemeenten, DEFAULT_MAP_LAYER_STATE.showGemeenten),
       showBestemmingsplan: coerceBoolean(
         parsed.showBestemmingsplan,
         DEFAULT_MAP_LAYER_STATE.showBestemmingsplan
       ),
+      showBAGPanden: coerceBoolean(parsed.showBAGPanden, DEFAULT_MAP_LAYER_STATE.showBAGPanden),
       showWijken: coerceBoolean(parsed.showWijken, DEFAULT_MAP_LAYER_STATE.showWijken),
       showScannedScope: coerceBoolean(
         parsed.showScannedScope,
