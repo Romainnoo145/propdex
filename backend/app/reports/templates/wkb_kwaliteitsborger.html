@@ -4,15 +4,593 @@
   <meta charset="UTF-8" />
   <title>Risicobeoordeling Startdossier -- {{ report_name }}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; color: #222; }
-    h1 { font-size: 22px; margin-bottom: 8px; }
-    p { font-size: 14px; margin: 4px 0; }
+    :root {
+      --brand-primary: #0066cc;
+      --warning-amber: #e67e00;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 2cm 2cm 3cm 2cm;
+      @bottom-center {
+        content: element(footer);
+      }
+    }
+
+    .page-footer {
+      position: running(footer);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 7.5pt;
+      color: #555;
+      text-align: center;
+      border-top: 1px solid #ccc;
+      padding-top: 0.4em;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 18pt;
+      color: var(--brand-primary);
+      margin-bottom: 0.3em;
+      border-bottom: 3px solid var(--brand-primary);
+      padding-bottom: 0.3em;
+    }
+
+    h2 {
+      font-size: 13pt;
+      color: var(--brand-primary);
+      margin-bottom: 0.4em;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.2em;
+      page-break-after: avoid;
+    }
+
+    .doc-header {
+      margin-bottom: 1.5em;
+    }
+
+    .doc-subtitle {
+      font-size: 13pt;
+      color: #444;
+      margin-top: 0.2em;
+    }
+
+    .doc-meta {
+      font-size: 9pt;
+      color: #666;
+      margin-top: 0.4em;
+    }
+
+    .disclaimer-box {
+      background: #fff8e1;
+      border-left: 4px solid var(--warning-amber);
+      padding: 0.8em 1em;
+      font-size: 9pt;
+      margin-bottom: 1.5em;
+      line-height: 1.5;
+    }
+
+    .disclaimer-box strong {
+      color: var(--warning-amber);
+    }
+
+    .section {
+      margin-top: 1.5em;
+      page-break-inside: avoid;
+    }
+
+    .data-row {
+      display: flex;
+      border-bottom: 1px solid #eee;
+      padding: 0.4em 0;
+    }
+
+    .data-row:last-child {
+      border-bottom: none;
+    }
+
+    .data-label {
+      width: 40%;
+      font-weight: 600;
+      color: #555;
+      flex-shrink: 0;
+    }
+
+    .data-value {
+      width: 60%;
+      color: #222;
+    }
+
+    .no-data {
+      color: #999;
+      font-style: italic;
+      padding: 0.5em 0;
+    }
+
+    .info-note {
+      background: #f0f4ff;
+      border-left: 4px solid var(--brand-primary);
+      padding: 0.6em 0.8em;
+      font-size: 9pt;
+      margin-top: 0.6em;
+    }
+
+    .caution-note {
+      background: #fff8e1;
+      border-left: 4px solid var(--warning-amber);
+      padding: 0.6em 0.8em;
+      font-size: 9pt;
+      margin-top: 0.6em;
+    }
+
+    .dossier-entry {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+      padding: 0.6em 0.8em;
+      margin-top: 0.6em;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.1em 0.5em;
+      border-radius: 3px;
+      font-size: 8pt;
+      font-weight: 600;
+      margin-left: 0.4em;
+    }
+
+    .badge-indicatief {
+      background: #e3f2fd;
+      color: var(--brand-primary);
+      border: 1px solid #90caf9;
+    }
+
+    .badge-warning {
+      background: #fff3e0;
+      color: var(--warning-amber);
+      border: 1px solid #ffcc80;
+    }
   </style>
 </head>
 <body>
-  <h1>Risicobeoordeling Startdossier</h1>
-  <p>{{ report_name }}</p>
-  <p>Gegenereerd: {{ generated_at }}</p>
-  <p>Door: {{ generated_by }}</p>
+
+  <!-- Per-page running footer: INDICATIEF disclaimer on every page -->
+  <div class="page-footer">
+    INDICATIEF | Risicobeoordeling Startdossier | Propdex | {{ generated_at }} | Niet geschikt als formeel Wkb-nalevingsdocument
+  </div>
+
+  <!-- Document header -->
+  <div class="doc-header">
+    <h1>Risicobeoordeling Startdossier</h1>
+    <p class="doc-subtitle">{{ report_name }}</p>
+    <p class="doc-meta">Opgesteld door: {{ generated_by }} | Datum: {{ generated_at }}</p>
+  </div>
+
+  <!-- Prominent disclaimer box (DOSSIER-03) -->
+  <div class="disclaimer-box">
+    <strong>Let op — Indicatief document:</strong>
+    De gegevens in dit dossier zijn afkomstig uit openbare bronnen (BAG, Kadaster, DSO, Bodemloket, EP-Online) en zijn indicatief van aard.
+    Dit document is <strong>geen formeel Wkb-nalevingsdocument</strong> en vervangt niet het oordeel van een erkend kwaliteitsborger of bevoegde instantie.
+    Verifieer alle gegevens bij de betreffende bronhouder.
+  </div>
+
+  <!-- Section 1: Perceelgegevens -->
+  <div class="section">
+    <h2>1. Perceelgegevens</h2>
+    {% if report_data.address is not none %}
+    <div class="data-row">
+      <div class="data-label">Adres</div>
+      <div class="data-value">
+        {{ report_data.address.straat | default('') }} {{ report_data.address.huisnummer | default('') }}{% if report_data.address.huisletter %}{{ report_data.address.huisletter }}{% endif %}{% if report_data.address.toevoeging %} {{ report_data.address.toevoeging }}{% endif %}
+      </div>
+    </div>
+    <div class="data-row">
+      <div class="data-label">Postcode</div>
+      <div class="data-value">{{ report_data.address.postcode | default('Niet beschikbaar') }}</div>
+    </div>
+    <div class="data-row">
+      <div class="data-label">Woonplaats</div>
+      <div class="data-value">{{ report_data.address.woonplaats | default('Niet beschikbaar') }}</div>
+    </div>
+    {% else %}
+    <div class="no-data">Geen adresgegevens beschikbaar.</div>
+    {% endif %}
+
+    {% if report_data.cadastral_parcels is not none and report_data.cadastral_parcels | length > 0 %}
+    <div class="data-row">
+      <div class="data-label">Kadaster perceel</div>
+      <div class="data-value">{{ report_data.cadastral_parcels[0].kadastrale_aanduiding | default('Niet beschikbaar') }}</div>
+    </div>
+    <div class="data-row">
+      <div class="data-label">Perceeloppervlakte</div>
+      <div class="data-value">
+        {% if report_data.cadastral_parcels[0].oppervlakte is not none %}
+          {{ report_data.cadastral_parcels[0].oppervlakte }} m²
+        {% else %}
+          Niet beschikbaar
+        {% endif %}
+      </div>
+    </div>
+    {% if report_data.cadastral_parcels | length > 1 %}
+    <div class="data-row">
+      <div class="data-label">Aantal percelen</div>
+      <div class="data-value">{{ report_data.cadastral_parcels | length }} percelen gekoppeld</div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="data-row">
+      <div class="data-label">Kadaster perceel</div>
+      <div class="data-value no-data">Niet beschikbaar</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Section 2: Gebouwgegevens -->
+  <div class="section">
+    <h2>2. Gebouwgegevens</h2>
+    {% if report_data.building is not none %}
+    <div class="data-row">
+      <div class="data-label">Bouwjaar</div>
+      <div class="data-value">{{ report_data.building.bouwjaar | default('Niet beschikbaar') }}</div>
+    </div>
+    <div class="data-row">
+      <div class="data-label">Status</div>
+      <div class="data-value">{{ report_data.building.status | default('Niet beschikbaar') }}</div>
+    </div>
+    <div class="data-row">
+      <div class="data-label">Gebruiksdoel</div>
+      <div class="data-value">
+        {% if report_data.building.gebruiksdoel is not none and report_data.building.gebruiksdoel | length > 0 %}
+          {{ report_data.building.gebruiksdoel | join(', ') }}
+        {% else %}
+          Niet beschikbaar
+        {% endif %}
+      </div>
+    </div>
+    {% if report_data.building.oppervlakte is not none %}
+    <div class="data-row">
+      <div class="data-label">Gebruiksoppervlakte</div>
+      <div class="data-value">{{ report_data.building.oppervlakte }} m²</div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="no-data">Geen gebouwgegevens beschikbaar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 3: Bodemkwaliteit (THREE-STATE — DOSSIER-03) -->
+  <div class="section">
+    <h2>3. Bodemkwaliteit</h2>
+    {% if report_data.bodem_data is none %}
+      <div class="no-data">Geen gegevens beschikbaar — Bodemloket is niet bevraagd of heeft geen data voor deze locatie.</div>
+    {% elif report_data.bodem_data.dossiers | length == 0 %}
+      <div class="info-note">
+        Geen geregistreerde verontreiniging gevonden binnen de zoekradius van deze locatie in het Bodemloket.
+      </div>
+      <div class="caution-note">
+        <strong>Let op:</strong> Afwezigheid in het Bodemloket is <strong>geen bewijs van schone grond</strong>.
+        Het register is niet uitputtend. Raadpleeg voor zekerheid het bevoegd gezag of voer een bodemonderzoek (NEN 5740) uit.
+      </div>
+      {% if report_data.bodem_data.disclaimer is not none %}
+      <div class="data-row" style="margin-top: 0.6em;">
+        <div class="data-label">Bronvermelding</div>
+        <div class="data-value" style="font-size: 8.5pt; color: #666;">{{ report_data.bodem_data.disclaimer }}</div>
+      </div>
+      {% endif %}
+    {% else %}
+      {% for dossier in report_data.bodem_data.dossiers %}
+      <div class="dossier-entry">
+        <strong>Dossier {{ loop.index }}</strong>
+        {% if dossier.wbb_dossier_dbk is not none %}
+        <div class="data-row">
+          <div class="data-label">WBB Dossier ID</div>
+          <div class="data-value">{{ dossier.wbb_dossier_dbk }}</div>
+        </div>
+        {% endif %}
+        {% if dossier.sikb_id is not none %}
+        <div class="data-row">
+          <div class="data-label">SIKB referentie</div>
+          <div class="data-value">{{ dossier.sikb_id }}</div>
+        </div>
+        {% endif %}
+        {% if dossier.vervolg_wbb is not none %}
+        <div class="data-row">
+          <div class="data-label">Vervolg WBB</div>
+          <div class="data-value">{{ dossier.vervolg_wbb }}</div>
+        </div>
+        {% endif %}
+        {% if dossier.status_oord is not none %}
+        <div class="data-row">
+          <div class="data-label">Beoordeling</div>
+          <div class="data-value">{{ dossier.status_oord }}</div>
+        </div>
+        {% endif %}
+        {% if dossier.statusver is not none %}
+        <div class="data-row">
+          <div class="data-label">Saneringsstatus</div>
+          <div class="data-value">{{ dossier.statusver }}</div>
+        </div>
+        {% endif %}
+        {% if dossier.administrator_nm is not none %}
+        <div class="data-row">
+          <div class="data-label">Bevoegd gezag</div>
+          <div class="data-value">{{ dossier.administrator_nm }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      <div class="caution-note" style="margin-top: 0.8em;">
+        <strong>Let op:</strong> Bodemverontreiniging geconstateerd in het Bodemloket.
+        Raadpleeg het bevoegd gezag voor de actuele saneringsstatus en mogelijke gebruiksbeperkingen.
+      </div>
+      {% if report_data.bodem_data.disclaimer is not none %}
+      <div class="data-row" style="margin-top: 0.6em;">
+        <div class="data-label">Bronvermelding</div>
+        <div class="data-value" style="font-size: 8.5pt; color: #666;">{{ report_data.bodem_data.disclaimer }}</div>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- Section 4: Bestemmingsplan -->
+  <div class="section">
+    <h2>4. Bestemmingsplan</h2>
+    {% if report_data.zoning is not none %}
+    {% if report_data.zoning.primary_bestemming is not none %}
+    <div class="data-row">
+      <div class="data-label">Primaire bestemming</div>
+      <div class="data-value">{{ report_data.zoning.primary_bestemming }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.zoning.plans is not none and report_data.zoning.plans | length > 0 %}
+    <div class="data-row">
+      <div class="data-label">Plannaam</div>
+      <div class="data-value">{{ report_data.zoning.plans[0].plan_naam | default('Niet beschikbaar') }}</div>
+    </div>
+    {% if report_data.zoning.plans[0].plan_status is not none %}
+    <div class="data-row">
+      <div class="data-label">Planstatus</div>
+      <div class="data-value">{{ report_data.zoning.plans[0].plan_status }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.zoning.plans[0].plan_datum is not none %}
+    <div class="data-row">
+      <div class="data-label">Plandatum</div>
+      <div class="data-value">{{ report_data.zoning.plans[0].plan_datum }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.zoning.plans[0].plan_id is not none %}
+    <div class="data-row">
+      <div class="data-label">Plan-idn</div>
+      <div class="data-value" style="font-size: 8.5pt;">
+        {{ report_data.zoning.plans[0].plan_id }}
+        <br/>
+        <span style="color: #888;">ruimtelijkeplannen.nl: https://www.ruimtelijkeplannen.nl/viewer?planidn={{ report_data.zoning.plans[0].plan_id }}</span>
+      </div>
+    </div>
+    {% endif %}
+    {% if report_data.zoning.plans[0].rules is not none and report_data.zoning.plans[0].rules | length > 0 %}
+    <div class="data-row">
+      <div class="data-label">Bestemmingen</div>
+      <div class="data-value">
+        {{ report_data.zoning.plans[0].rules | map(attribute='bestemming') | select | join(', ') }}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if report_data.zoning.building_dimensions is not none %}
+      {% set dims = report_data.zoning.building_dimensions %}
+      {% if dims.max_hoogte is not none %}
+      <div class="data-row">
+        <div class="data-label">Max. bouwhoogte</div>
+        <div class="data-value">{{ dims.max_hoogte }} m</div>
+      </div>
+      {% endif %}
+      {% if dims.max_bebouwingspercentage is not none %}
+      <div class="data-row">
+        <div class="data-label">Max. bebouwings%</div>
+        <div class="data-value">{{ dims.max_bebouwingspercentage }}%</div>
+      </div>
+      {% endif %}
+    {% endif %}
+    {% else %}
+    <div class="no-data">Geen bestemmingsplangegevens beschikbaar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 5: Monumentstatus -->
+  <div class="section">
+    <h2>5. Monumentstatus</h2>
+    {% if report_data.monuments is not none %}
+    <div class="data-row">
+      <div class="data-label">Monumentstatus</div>
+      <div class="data-value">
+        {% if report_data.monuments.is_monument %}
+          <strong>Monument</strong>
+          {% if report_data.monuments.consensus_status is not none %}
+            — {{ report_data.monuments.consensus_status }}
+          {% endif %}
+        {% else %}
+          Geen monument
+        {% endif %}
+      </div>
+    </div>
+    {% if report_data.monuments.is_monument %}
+    {% for source in report_data.monuments.sources %}
+      {% if source.is_monument and source.monument_nummer is not none %}
+      <div class="data-row">
+        <div class="data-label">Monumentnummer ({{ source.source }})</div>
+        <div class="data-value">{{ source.monument_nummer }}</div>
+      </div>
+      {% endif %}
+      {% if source.is_monument and source.monument_naam is not none %}
+      <div class="data-row">
+        <div class="data-label">Monumentnaam</div>
+        <div class="data-value">{{ source.monument_naam }}</div>
+      </div>
+      {% endif %}
+    {% endfor %}
+    {% if report_data.monuments.restrictions_summary is not none and report_data.monuments.restrictions_summary | length > 0 %}
+    <div class="caution-note" style="margin-top: 0.6em;">
+      <strong>Beperkingen:</strong>
+      <ul style="margin-left: 1.2em; margin-top: 0.3em;">
+        {% for restriction in report_data.monuments.restrictions_summary %}
+        <li>{{ restriction }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if report_data.monuments.has_conflict %}
+    <div class="caution-note" style="margin-top: 0.6em;">
+      <strong>Let op:</strong> Tegenstrijdige brondata — raadpleeg het RCE-register voor definitieve bevestiging.
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="no-data">Geen monumentgegevens beschikbaar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 6: Energielabel -->
+  <div class="section">
+    <h2>6. Energielabel</h2>
+    {% if report_data.energy_label is not none %}
+    <div class="data-row">
+      <div class="data-label">Energieklasse</div>
+      <div class="data-value">
+        {% if report_data.energy_label.is_geregistreerd and report_data.energy_label.energieklasse is not none %}
+          <strong>{{ report_data.energy_label.energieklasse }}</strong>
+        {% else %}
+          Niet beschikbaar
+        {% endif %}
+      </div>
+    </div>
+    {% if report_data.energy_label.registratie_datum is not none %}
+    <div class="data-row">
+      <div class="data-label">Registratiedatum</div>
+      <div class="data-value">{{ report_data.energy_label.registratie_datum }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.energy_label.geldig_tot is not none %}
+    <div class="data-row">
+      <div class="data-label">Geldig tot</div>
+      <div class="data-value">{{ report_data.energy_label.geldig_tot }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.energy_label.is_geldig is not none %}
+    <div class="data-row">
+      <div class="data-label">Huidig geldig</div>
+      <div class="data-value">{{ 'Ja' if report_data.energy_label.is_geldig else 'Nee (verlopen)' }}</div>
+    </div>
+    {% endif %}
+    {% if report_data.energy_label.berekenings_type is not none %}
+    <div class="data-row">
+      <div class="data-label">Berekeningsmethode</div>
+      <div class="data-value">{{ report_data.energy_label.berekenings_type }}</div>
+    </div>
+    {% endif %}
+    {% if not report_data.energy_label.is_geregistreerd %}
+    <div class="info-note">
+      Geen geregistreerd energielabel gevonden in EP-Online voor dit verblijfsobject.
+      {% if report_data.energy_label.niet_geregistreerd_reden is not none %}
+        {{ report_data.energy_label.niet_geregistreerd_reden }}
+      {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="no-data">Geen energielabelgegevens beschikbaar.</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 7: Wkb Classificatie -->
+  <div class="section">
+    <h2>7. Wkb Classificatie <span class="badge badge-indicatief">INDICATIEF</span></h2>
+    {% if report_data.wkb_classification is none %}
+      <div class="no-data">Niet beschikbaar — Wkb-classificatie kon niet worden bepaald.</div>
+    {% elif not report_data.wkb_classification.wkb_applicable %}
+      <div class="data-row">
+        <div class="data-label">Wkb van toepassing</div>
+        <div class="data-value">Nee</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">Uitsluitingsreden</div>
+        <div class="data-value">
+          {% if report_data.wkb_classification.exclusion_reason == 'rijksmonument' %}
+            Rijksmonument — Wkb-kwaliteitsborging niet van toepassing op beschermde monumenten
+          {% elif report_data.wkb_classification.exclusion_reason == 'verbouwing' %}
+            Verbouwing — de huidige status betreft een verbouwing (niet nieuwbouw)
+          {% else %}
+            {{ report_data.wkb_classification.exclusion_reason | default('Niet van toepassing') }}
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="data-row">
+        <div class="data-label">Wkb van toepassing</div>
+        <div class="data-value">Ja</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">Gevolgklasse</div>
+        <div class="data-value">
+          {% if report_data.wkb_classification.gevolgklasse == 'GK1' %}
+            <strong>Gevolgklasse 1 (GK1)</strong> — Grondgebonden woningbouw
+          {% elif report_data.wkb_classification.gevolgklasse == 'onbekend' %}
+            Onbekend — onvoldoende gegevens voor classificatie
+          {% else %}
+            {{ report_data.wkb_classification.gevolgklasse }}
+          {% endif %}
+        </div>
+      </div>
+      {% if report_data.wkb_classification.disclaimer is not none %}
+      <div class="info-note" style="margin-top: 0.8em;">
+        {{ report_data.wkb_classification.disclaimer }}
+      </div>
+      {% endif %}
+
+      <!-- Asbest risico (onderdeel van Wkb risicoassessment) -->
+      {% if report_data.asbest_indicator is not none %}
+      <div class="data-row" style="margin-top: 0.8em; border-top: 1px solid #eee; padding-top: 0.6em;">
+        <div class="data-label">Asbestrisico</div>
+        <div class="data-value">
+          {% if report_data.asbest_indicator.risk == 'hoog' %}
+            <strong><span style="color: #cc0000;">Hoog</span></strong>
+            {% if report_data.asbest_indicator.norm_reference is not none %}
+              ({{ report_data.asbest_indicator.norm_reference }})
+            {% endif %}
+          {% elif report_data.asbest_indicator.risk == 'middel' %}
+            <strong><span style="color: var(--warning-amber);">Middel</span></strong>
+            {% if report_data.asbest_indicator.norm_reference is not none %}
+              ({{ report_data.asbest_indicator.norm_reference }})
+            {% endif %}
+          {% elif report_data.asbest_indicator.risk == 'geen' %}
+            Geen (bouwjaar na 1993)
+          {% else %}
+            Onbekend
+          {% endif %}
+        </div>
+      </div>
+      {% if report_data.asbest_indicator.reden is not none %}
+      <div class="data-row">
+        <div class="data-label">Toelichting</div>
+        <div class="data-value" style="font-size: 9pt; color: #555;">{{ report_data.asbest_indicator.reden }}</div>
+      </div>
+      {% endif %}
+      {% endif %}
+    {% endif %}
+  </div>
+
 </body>
 </html>
