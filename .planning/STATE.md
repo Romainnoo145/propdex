@@ -13,11 +13,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 65 of 66 (Report Polish — IN PROGRESS)
-Plan: 1 of 3 complete
-Status: Phase 65 Plan 01 complete — section reorder, empty state standardization, ReportHeader + SatelliteThumbnail extracted
-Last activity: 2026-03-02 — Phase 65 Plan 01 complete (report layout polish + header extraction)
+Plan: 3 of 3 complete
+Status: Phase 65 Plan 03 complete — ActieVereistSection with computeWarnings, RPT-03 and RPT-04 satisfied
+Last activity: 2026-03-02 — Phase 65 Plan 03 complete (Actie vereist warning section)
 
-Progress (v8.0): [███████░░░] 77% (7/9 plans complete)
+Progress (v8.0): [█████████░] 100% (9/9 plans complete)
 
 ---
 
@@ -30,6 +30,7 @@ Progress (v8.0): [███████░░░] 77% (7/9 plans complete)
 - Phase 63 Plan 02: completed ~4hrs (21-wijk scan execution + validation — 108,789 parcels, 100% coverage)
 - Phase 64 Plan 01: completed ~7min (BAGPandLayer.tsx + PDOK_BAG_PAND_WMS + showBAGPanden state + LayerToggle groups + gradient legend)
 - Phase 65 Plan 01: completed ~6min (section reorder + empty states + ReportHeader + SatelliteThumbnail extraction)
+- Phase 65 Plan 03: completed ~5min (ActieVereistSection + computeWarnings — RPT-03 + RPT-04)
 
 **v7.2 Developer Dossier Intelligence (Completed)**
 - Phase 59 Plan 01: completed (buildability delta contract + calculations + report/map presentation)
@@ -79,7 +80,9 @@ Progress (v8.0): [███████░░░] 77% (7/9 plans complete)
 - Phase 65 Plan 01: Section order locked: Bestemmingsplan → Kadaster → BRK → Gebouw → WOZ → Energielabel → Buildability → Wkb → Permits → Market → AI
 - ESRI World Imagery static thumbnail: ArcGIS REST MapServer/export, no API key, bbox from center_wgs84 deltaKm=0.3
 - ReportHeader extracted: full data prop, satellite thumbnail, kadaster perceel ID, 6-card metric grid (adds Bestemming + WOZ-waarde)
-- SignalBanner/monument alert commented out in ReportDetailPage (kept for Plan 65-03 ActieVereistSection)
+- Phase 65 Plan 03: ActieVereistSection at top of main column; computeWarnings pure function (Wkb/asbest/BAG-status/monument)
+- computeWarnings returns [] for clean properties → component returns null (RPT-04 pattern)
+- STATUS_WARNING_DESCRIPTIONS inlined in ActieVereistSection (separate from STATUS_EXPLANATIONS in ReportDetailPage — different purpose)
 
 ### v9.0 Context (Planned)
 
@@ -109,12 +112,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T03:17:00Z
-**Stopped At:** Completed 65-01-PLAN.md
-**Resume File:** .planning/phases/65-report-polish/65-02-PLAN.md
+**Last Session:** 2026-03-02T03:25:00Z
+**Stopped At:** Completed 65-03-PLAN.md
+**Resume File:** None — Phase 65 complete (3/3 plans done)
 
-**Next Action:** Execute Phase 65 Plan 02 (PDF Export).
+**Next Action:** Phase 65 complete. v8.0 Client Demo Readiness — all 9 plans done. Begin v9.0 planning or tag v8.0.
 
 ---
 
-*State updated: 2026-03-02 -- Phase 65 Plan 01 complete: report sections reordered, ReportHeader + SatelliteThumbnail extracted*
+*State updated: 2026-03-02 -- Phase 65 Plan 03 complete: ActieVereistSection shipped, RPT-03 + RPT-04 satisfied, Phase 65 done*
