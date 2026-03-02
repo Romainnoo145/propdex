@@ -30,7 +30,7 @@
 - [x] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage (completed 2026-03-02)
 - [x] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements (completed 2026-03-02)
 - [x] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section (completed 2026-03-02)
-- [ ] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels
+- [x] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels (completed 2026-03-02)
 
 ### v9.0 Professional Marketplace (Phases 67-71)
 
@@ -207,7 +207,7 @@ Plans:
 | 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
 | 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
 | 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
-| 66. Results Table Noise Reduction | 0/1 | Planned | - |
+| 66. Results Table Noise Reduction | 1/1 | Complete   | 2026-03-02 |
 | 67. Wkb Classification Engine | 0/2 | Not started | - |
 | 68. Bodemloket Integration | 0/3 | Not started | - |
 | 69. Risicobeoordeling Dossier | 0/3 | Not started | - |

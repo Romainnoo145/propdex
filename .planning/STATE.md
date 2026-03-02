@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 65 of 66 (Report Polish — IN PROGRESS)
-Plan: 3 of 3 complete
-Status: Phase 65 Plan 03 complete — ActieVereistSection with computeWarnings, RPT-03 and RPT-04 satisfied
-Last activity: 2026-03-02 — Phase 65 Plan 03 complete (Actie vereist warning section)
+Phase: 66 of 66 (Results Table Noise Reduction — IN PROGRESS)
+Plan: 1 of 1 complete
+Status: Phase 66 Plan 01 complete — score threshold filter + Top kansen toggle, RES-01 and RES-02 satisfied
+Last activity: 2026-03-02 — Phase 66 Plan 01 complete (Top kansen toggle with nulls_last sort)
 
-Progress (v8.0): [█████████░] 100% (9/9 plans complete)
+Progress (v8.0): [██████████] 100% (10/10 plans complete)
 
 ---
 
@@ -69,6 +69,15 @@ Progress (v8.0): [█████████░] 100% (9/9 plans complete)
 - ClassVar[bool] never_cache marker: BRKOwnership.never_cache = True
 - Professional model uses NULL org_id (platform-wide, not tenant-isolated) -- v9.0 critical pattern
 
+### Phase 66 Context
+
+- Phase 66 Plan 01: Results Table Noise Reduction complete
+- SCORE_CUTOFF=40 matches QUALIFICATION_THRESHOLD — Top kansen toggle defaults ON, hides null-score + sub-40 parcels
+- list_scan_results returns 3-tuple: (rows, filtered_total, unfiltered_total) — unfiltered count computed BEFORE score filters
+- nulls_last() wraps all SQLAlchemy sort expressions (all columns, not just score)
+- Toggle state is React useState only — not URL-persisted, resets to ON on mount
+- Pre-existing bug fixed: pand_status filter was not being serialized in fetchScanResults API call
+
 ### v8.0 Context
 
 - Root cause fixed: BAG WFS abort-on-failure + retry (Phase 62 complete)
@@ -114,12 +123,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T03:46:21.939Z
-**Stopped At:** Phase 66 context gathered
-**Resume File:** .planning/phases/66-results-table-noise-reduction/66-CONTEXT.md
+**Last Session:** 2026-03-02T04:07:00Z
+**Stopped At:** Completed Phase 66 Plan 01
+**Resume File:** .planning/phases/66-results-table-noise-reduction/66-01-SUMMARY.md
 
-**Next Action:** Phase 65 complete. v8.0 Client Demo Readiness — all 9 plans done. Begin v9.0 planning or tag v8.0.
+**Next Action:** Phase 66 complete. v8.0 Client Demo Readiness — all plans done. Ready to tag v8.0 or begin v9.0 planning.
 
 ---
 
-*State updated: 2026-03-02 -- Phase 65 Plan 03 complete: ActieVereistSection shipped, RPT-03 + RPT-04 satisfied, Phase 65 done*
+*State updated: 2026-03-02 -- Phase 66 Plan 01 complete: Top kansen toggle + score threshold filter shipped, RES-01 + RES-02 satisfied*
