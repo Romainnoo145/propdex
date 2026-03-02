@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier IN PROGRESS (Plan 02 Tasks 1+2 complete, checkpoint Task 3 pending)
+**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier COMPLETE (both plans shipped); next: Phase 70
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 69 of 71 (Risicobeoordeling Dossier — IN PROGRESS)
-Plan: 2 of 2 — Tasks 1+2 complete, awaiting human-verify checkpoint (Task 3)
-Status: Phase 69 Plan 02 checkpoint — full Jinja2 dossier template + Genereer Startdossier CTA button implemented; user must verify PDF download and all 7 sections
-Last activity: 2026-03-02 — Phase 69 Plan 02 Tasks 1+2 complete (DOSSIER-01 DOSSIER-02 DOSSIER-03 pending human-verify)
+Phase: 69 of 71 (Risicobeoordeling Dossier — COMPLETE)
+Plan: 2 of 2 — COMPLETE (human-verify APPROVED)
+Status: Phase 69 complete — DOSSIER-01 DOSSIER-02 DOSSIER-03 all satisfied; next: Phase 70 (supply recruitment)
+Last activity: 2026-03-02 — Phase 69 Plan 02 complete; user approved checkpoint ("het werkt hoor"); PDF generation + download + 7 sections confirmed
 
-Progress (v9.0): [███████░░░] 70% (7/10 plans complete)
+Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
 ---
 
@@ -131,7 +131,7 @@ Progress (v9.0): [███████░░░] 70% (7/10 plans complete)
 - Phase 69 Plan 01 complete: GeneratedDossier model (TenantMixin, FK saved_reports + users), Alembic migration 3d97e34821f2, generate_dossier_pdf() WeasyPrint sync fn, POST /{report_id}/dossier (5/min) + GET /{report_id}/dossiers (30/min) endpoints, GeneratedDossierResponse schema
 - Alembic autogenerate PostGIS noise pattern: autogenerate detects tiger/postgis tables — manually clean migration to only include new tables
 - generate_dossier_pdf(): file_size_bytes saved AFTER pdf_bytes in memory (ensures accurate size in audit record)
-- Phase 69 Plan 02 Tasks 1+2 complete: wkb_kwaliteitsborger.html full 7-section template with running footer disclaimer (position: running(footer) + @page @bottom-center) + generateStartdossier() API (POST /dossier, returns Blob) + Genereer Startdossier CTA button (amber/accent, disabled state, loading spinner)
+- Phase 69 Plan 02 COMPLETE: wkb_kwaliteitsborger.html full 7-section template with running footer disclaimer (position: running(footer) + @page @bottom-center) + generateStartdossier() API (POST /dossier, returns Blob) + Genereer Startdossier CTA button (amber/accent, disabled state, loading spinner) — human-verify APPROVED; user noted visual quality is mediocre (polish deferred to future phase)
 - Jinja2 null-safe pattern for nested dicts: 'is not none' guard + | default() filter; 'report_data.zoning.plans[0]' requires zoning not none AND plans | length > 0
 - reportId prop thread: rapport.$id.tsx (id.startsWith('r') ? null : id) -> ReportDetailPage -> ReportHeader -> handleGenerateDossier()
 
@@ -154,11 +154,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T13:40:43Z
-**Stopped At:** Phase 69 Plan 02 checkpoint — Tasks 1+2 complete (template + CTA), awaiting human-verify Task 3
-**Resume File:** .planning/phases/69-risicobeoordeling-dossier/69-02-PLAN.md (Task 3 checkpoint)
+**Last Session:** 2026-03-02
+**Stopped At:** Completed Phase 69 Plan 02 — Risicobeoordeling Dossier full feature shipped (DOSSIER-01 DOSSIER-02 DOSSIER-03)
+**Resume File:** .planning/phases/70-*/70-01-PLAN.md
 
-**Next Action:** Human verification of dossier PDF download and content (Task 3). Open report at localhost:9300, click "Genereer Startdossier", verify PDF has all 7 sections and per-page INDICATIEF footer.
+**Next Action:** Phase 70 — supply recruitment / kwaliteitsborger onboarding (launch gate before Phase 71 CTA).
 
 ---
 
