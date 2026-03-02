@@ -16,6 +16,7 @@ import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-cal
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
+import { Route as AuthenticatedProfessionalsRouteImport } from './routes/_authenticated/professionals'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
@@ -56,6 +57,12 @@ const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
   path: '/projecten',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedProfessionalsRoute =
+  AuthenticatedProfessionalsRouteImport.update({
+    id: '/professionals',
+    path: '/professionals',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
   id: '/meldingen',
   path: '/meldingen',
@@ -89,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
+  '/professionals': typeof AuthenticatedProfessionalsRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
+  '/professionals': typeof AuthenticatedProfessionalsRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -117,6 +126,7 @@ export interface FileRoutesById {
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
+  '/_authenticated/professionals': typeof AuthenticatedProfessionalsRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/meldingen'
+    | '/professionals'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/instellingen'
     | '/map'
     | '/meldingen'
+    | '/professionals'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -159,6 +171,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instellingen'
     | '/_authenticated/map'
     | '/_authenticated/meldingen'
+    | '/_authenticated/professionals'
     | '/_authenticated/projecten'
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/professionals': {
+      id: '/_authenticated/professionals'
+      path: '/professionals'
+      fullPath: '/professionals'
+      preLoaderRoute: typeof AuthenticatedProfessionalsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/meldingen': {
       id: '/_authenticated/meldingen'
       path: '/meldingen'
@@ -268,6 +288,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
+  AuthenticatedProfessionalsRoute: typeof AuthenticatedProfessionalsRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
@@ -279,6 +300,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
+  AuthenticatedProfessionalsRoute: AuthenticatedProfessionalsRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
