@@ -4,6 +4,7 @@ import { uploadBestemmingsplanPDF } from '@/lib/api'
 import { splitZoningPlans } from '@/lib/zoningPlans'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
+import ActieVereistSection from './ActieVereistSection'
 
 interface ReportDetailPageProps {
   data: PropertyReportResponse | null
@@ -186,6 +187,7 @@ export default function ReportDetailPage({
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <div className="space-y-5">
+            <ActieVereistSection data={data} />
             <BestemmingSection data={data} />
             <KadasterSection data={data} />
             <BRKOwnershipSection data={data} />
