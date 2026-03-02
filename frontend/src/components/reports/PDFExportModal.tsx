@@ -1,3 +1,4 @@
+/** @deprecated Replaced by browser print-to-PDF in Phase 65. Kept for reference. */
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 import { useExportPDF } from '@/hooks/useReports'

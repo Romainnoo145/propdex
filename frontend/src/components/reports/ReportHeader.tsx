@@ -16,6 +16,7 @@ interface ReportHeaderProps {
   sourceParcelId: string | null
   onBack: () => void
   onViewOnMap: () => void
+  onPrint?: () => void
 }
 
 /* ─── Helpers (shared with ReportDetailPage) ─────────────────── */
@@ -184,6 +185,16 @@ function MapPinIcon() {
   )
 }
 
+function PrinterIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 6 2 18 2 18 9" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <rect x="6" y="14" width="12" height="8" />
+    </svg>
+  )
+}
+
 /* ─── ReportHeader ───────────────────────────────────────────── */
 
 export default function ReportHeader({
@@ -192,6 +203,7 @@ export default function ReportHeader({
   sourceParcelId,
   onBack,
   onViewOnMap,
+  onPrint,
 }: ReportHeaderProps) {
   const { address, building, completeness_score, cadastral_parcels } = data
   const completenessPct = Math.round(completeness_score * 100)
@@ -223,13 +235,24 @@ export default function ReportHeader({
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           {/* Left: back button, address, perceel badge, status badges */}
           <div className="min-w-0 flex-1">
-            <button
-              onClick={onBack}
-              className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
-            >
-              <ArrowLeftIcon />
-              {backLabel}
-            </button>
+            <div className="print-hide mb-3 flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
+              >
+                <ArrowLeftIcon />
+                {backLabel}
+              </button>
+              {onPrint && (
+                <button
+                  onClick={onPrint}
+                  className="ml-auto flex items-center gap-2 rounded-lg border border-overlay/[0.08] bg-overlay/[0.04] px-3 py-2 text-sm text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+                >
+                  <PrinterIcon />
+                  Download PDF
+                </button>
+              )}
+            </div>
 
             <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">
               {address.straat} {address.huisnummer}
@@ -289,7 +312,7 @@ export default function ReportHeader({
             )}
             <button
               onClick={onViewOnMap}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+              className="print-hide inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
             >
               <MapPinIcon />
               Bekijk op kaart

@@ -105,6 +105,12 @@ export default function ReportDetailPage({
   onBack,
   onViewOnMap,
 }: ReportDetailPageProps) {
+  const { user } = useAuth()
+
+  const handlePrint = useCallback(() => {
+    window.print()
+  }, [])
+
   if (isLoading) {
     return (
       <div className="h-full overflow-y-auto bg-grey-950">
@@ -144,16 +150,35 @@ export default function ReportDetailPage({
   const { building, ai_parsing, completeness_score } = data
   const statusInfo = getStatusInfo(building?.status)
   const completenessPct = Math.round(completeness_score * 100)
+  const { address } = data
 
   return (
     <div className="h-full overflow-y-auto bg-grey-950">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* PDF-only header — hidden on screen, visible in print */}
+        <div className="pdf-only mb-6 border-b border-grey-700 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold text-grey-100">Vastgoedrapport</p>
+              <p className="text-sm text-grey-400">
+                {address.straat} {address.huisnummer}{address.huisletter ?? ''}{address.toevoeging ?? ''}, {address.woonplaats}
+              </p>
+            </div>
+            <div className="text-right text-sm text-grey-600">
+              <p>Opgesteld door: {user?.full_name ?? 'Propdex'}</p>
+              <p>{dateFmt.format(new Date(data.resolved_at))}</p>
+            </div>
+          </div>
+        </div>
+
         <ReportHeader
           data={data}
           backLabel={backLabel}
           sourceParcelId={sourceParcelId}
           onBack={onBack}
           onViewOnMap={onViewOnMap}
+          onPrint={handlePrint}
         />
 
         {/* Replaced by ActieVereistSection — Plan 65-03 */}
@@ -185,7 +210,7 @@ export default function ReportDetailPage({
           </div>
         )} */}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+        <div className="report-grid grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <div className="space-y-5">
             <ActieVereistSection data={data} />
             <BestemmingSection data={data} />
@@ -204,7 +229,7 @@ export default function ReportDetailPage({
               <PDFUploadSection data={data} />
             )}
           </div>
-          <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
+          <aside className="report-aside space-y-5 xl:sticky xl:top-5 xl:self-start">
             <ReportMetaCard
               resolvedAt={data.resolved_at}
               status={statusInfo?.label}
@@ -217,9 +242,14 @@ export default function ReportDetailPage({
           </aside>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 border-t border-overlay/[0.08] pt-4 text-center text-xs text-grey-600">
+        {/* Screen footer */}
+        <div className="print-hide mt-8 border-t border-overlay/[0.08] pt-4 text-center text-xs text-grey-600">
           Rapport gegenereerd op {dateFmtFull.format(new Date(data.resolved_at))}
+        </div>
+
+        {/* PDF-only footer — hidden on screen, visible in print */}
+        <div className="pdf-only mt-8 border-t border-grey-700 pt-4 text-center text-xs text-grey-600">
+          Gegenereerd via Propdex | {dateFmt.format(new Date())}
         </div>
       </div>
     </div>
@@ -311,7 +341,7 @@ function ReportMetaCard({
       </div>
       <button
         onClick={onViewOnMap}
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+        className="print-hide mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
       >
         <MapPinIcon />
         Bekijk op kaart
@@ -332,7 +362,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-overlay/[0.08] bg-grey-900">
+    <div className="section-card rounded-2xl border border-overlay/[0.08] bg-grey-900">
       <div className="border-b border-overlay/[0.08] px-5 py-3.5">
         <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide leading-none text-grey-500">
           {icon && (
