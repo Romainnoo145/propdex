@@ -156,12 +156,11 @@ Plans:
   2. The generated PDF contains all required sections: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, and Wkb classificatie
   3. Every page of the PDF carries a mandatory disclaimer: data is indicatief, assembled from public sources, and does not constitute a formal Wkb compliance document
   4. A property without Bodemloket data renders "Bodemkwaliteit: geen gegevens beschikbaar" in the dossier rather than "schone grond" or an empty section
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 + Wave 2 sequential)
 
 Plans:
-- [ ] 69-01: GeneratedDossier model + Alembic migration + POST/GET dossier endpoints
-- [ ] 69-02: wkb_kwaliteitsborger.html Jinja2 template + WeasyPrint generation + disclaimer copy
-- [ ] 69-03: "Genereer Startdossier" CTA in ReportDetailPage + download flow
+- [ ] 69-01-PLAN.md — GeneratedDossier model + Alembic migration + dossier_export.py + POST/GET dossier endpoints (DOSSIER-01)
+- [ ] 69-02-PLAN.md — wkb_kwaliteitsborger.html Jinja2 template (7 sections + disclaimer) + frontend CTA button + download flow (DOSSIER-01, DOSSIER-02, DOSSIER-03)
 
 ### Phase 70: Professional Directory
 **Goal**: Admins can manage a platform-wide directory of kwaliteitsborgers that is visible to all tenants and filterable by gemeente and gevolgklasse
@@ -210,7 +209,7 @@ Plans:
 | 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
-| 69. Risicobeoordeling Dossier | 0/3 | Not started | - |
+| 69. Risicobeoordeling Dossier | 0/2 | Not started | - |
 | 70. Professional Directory | 0/3 | Not started | - |
 | 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
@@ -392,4 +391,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-02 -- Phase 64 plans finalized (2 plans, Wave 1 parallel)*
+*Last updated: 2026-03-02 -- Phase 69 plans finalized (2 plans, Wave 1 + Wave 2 sequential)*
