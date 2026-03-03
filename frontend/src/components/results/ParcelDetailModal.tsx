@@ -19,13 +19,14 @@ const VACANCY_LABELS: Record<string, string> = {
   onbekend: 'Onbekend',
 }
 
-function formatPandStatusLabel(status: string | null | undefined): string {
-  if (!status) return 'Onbekend'
+function formatPandStatusLabel(status: string | null | undefined, hasPand: boolean): string {
+  if (!status) return hasPand ? 'Onbekend' : 'Geen gebouw'
   const normalized = status.trim().toLowerCase()
   if (normalized.includes('in gebruik')) return 'Pand in gebruik'
   if (normalized.includes('verbouwing')) return 'In verbouwing'
   if (normalized.includes('gesloopt')) return 'Gesloopt'
   if (normalized.includes('buiten gebruik')) return 'Buiten gebruik'
+  if (normalized.includes('bouw gestart')) return 'Bouw gestart'
   return status
 }
 
@@ -296,7 +297,7 @@ export function ParcelDetailModal({
 
   if (!parcel) return null
 
-  const statusLabel = formatPandStatusLabel(parcel.pand_status)
+  const statusLabel = formatPandStatusLabel(parcel.pand_status, parcel.has_pand)
   const vacancyLabel = parcel.vacancy_signal
     ? (VACANCY_LABELS[parcel.vacancy_signal] ?? parcel.vacancy_signal)
     : null
@@ -333,7 +334,7 @@ export function ParcelDetailModal({
   )
 
   // Status is "niet in gebruik" when it's anything other than "Pand in gebruik"
-  const isNotInUse = statusLabel !== 'Pand in gebruik' && statusLabel !== 'Onbekend'
+  const isNotInUse = statusLabel !== 'Pand in gebruik' && statusLabel !== 'Onbekend' && statusLabel !== 'Geen gebouw'
 
   const content = (
     <div className="p-5 space-y-5">
@@ -386,43 +387,45 @@ export function ParcelDetailModal({
           </button>
         </div>
 
-        {/* Score Section */}
-        {parcel.score !== null && (
-          <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+        {/* Score + Pillar Section */}
+        <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+          {parcel.score != null && (
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium text-grey-100">Propdex Potentiescore</p>
               <span className="rounded bg-grey-900 px-2 py-0.5 text-[11px] text-grey-400">
                 0-100
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-[132px_1fr]">
+          )}
+          <div className={`grid gap-4 ${parcel.score != null ? 'sm:grid-cols-[132px_1fr]' : ''}`}>
+            {parcel.score != null && (
               <div>
                 <ScoreDonut score={parcel.score} />
                 <p className="mt-2 text-center text-[11px] text-grey-500">
                   {formatScoreLabel(parcel.score)}
                 </p>
               </div>
-              <div className="space-y-2">
-                <ScorePillarRows
-                  label="Vrije ruimte"
-                  value={vrijeRuimtePct}
-                  context={
-                    pandOppervlaktM2 != null && parcel.area_m2 != null
-                      ? `${Math.round(pandOppervlaktM2)} m\u00b2 bebouwd`
-                      : parcel.has_pand
-                        ? 'Footprint onbekend'
-                        : 'Geen pand'
-                  }
-                />
-                <ScorePillarRows
-                  label="Transformatiepotentie"
-                  value={transformatiePotentie.score}
-                  context={transformatiePotentie.label}
-                />
-              </div>
+            )}
+            <div className="space-y-2">
+              <ScorePillarRows
+                label="Vrije ruimte"
+                value={vrijeRuimtePct}
+                context={
+                  pandOppervlaktM2 != null && parcel.area_m2 != null
+                    ? `${Math.round(pandOppervlaktM2)} m\u00b2 bebouwd`
+                    : parcel.has_pand
+                      ? 'Footprint onbekend'
+                      : 'Geen pand'
+                }
+              />
+              <ScorePillarRows
+                label="Transformatiepotentie"
+                value={transformatiePotentie.score}
+                context={transformatiePotentie.label}
+              />
             </div>
           </div>
-        )}
+        </div>
 
         {/* Property Info Grid */}
         <div className="grid grid-cols-2 gap-4">

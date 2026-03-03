@@ -330,7 +330,7 @@ function LayerToggle({
   return (
     <>
       {showGradientLegend && (
-        <div className="absolute bottom-16 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
+        <div className="absolute bottom-16 right-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
           <span className="text-xs text-grey-400">40</span>
           <div
             className="h-3 w-24 rounded-full"

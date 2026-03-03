@@ -4,7 +4,6 @@ const SOURCE_ID = 'parcel-scores';
 export const PARCEL_SCORE_FILL_LAYER_ID = 'parcel-score-fill';
 const OUTLINE_LAYER_ID = 'parcel-score-outline';
 const SELECTED_OUTLINE_LAYER_ID = 'parcel-score-selected-outline';
-export const PARCEL_EMPTY_HATCH_LAYER_ID = 'parcel-empty-hatch';
 export const PARCEL_BUILT_STATUS_FILL_LAYER_ID = 'parcel-built-status-fill';
 export const PARCEL_REPORT_STATUS_FILL_LAYER_ID = 'parcel-report-status-fill';
 export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
@@ -16,33 +15,6 @@ let hoveredScoreParcelId: string | number | null = null;
 
 // Track selected parcel separately from hover
 let selectedScoreParcelId: string | number | null = null;
-
-/**
- * Create a diagonal stripe hatch pattern canvas for empty parcel overlay.
- *
- * Returns a 16x16 canvas with a diagonal line pattern.
- * Used as a fill-pattern in MapLibre GL JS to visually distinguish
- * empty land parcels (no building) from built parcels.
- */
-function createHatchPattern(): HTMLCanvasElement {
-  const size = 16;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, size, size);
-  ctx.strokeStyle = '#555555';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, size);
-  ctx.lineTo(size, 0);
-  ctx.moveTo(-size / 2, size / 2);
-  ctx.lineTo(size / 2, -size / 2);
-  ctx.moveTo(size / 2, size + size / 2);
-  ctx.lineTo(size + size / 2, size / 2);
-  ctx.stroke();
-  return canvas;
-}
 
 /**
  * Add a score-based color overlay layer for parcel visualization.
@@ -76,19 +48,6 @@ export function addParcelScoreLayer(
     maxzoom: 18,
   });
 
-  // Register hatch pattern image for empty parcels (no building)
-  // Must be added after source but before the hatch layer
-  if (!map.hasImage('parcel-hatch')) {
-    const hatchCanvas = createHatchPattern();
-    const ctx = hatchCanvas.getContext('2d')!;
-    const imageData = ctx.getImageData(0, 0, hatchCanvas.width, hatchCanvas.height);
-    map.addImage('parcel-hatch', {
-      width: hatchCanvas.width,
-      height: hatchCanvas.height,
-      data: new Uint8Array(imageData.data.buffer),
-    });
-  }
-
   // Add fill layer with data-driven color based on score
   // Grey-to-green gradient: grey = in_gebruik/low opportunity, green = high opportunity
   map.addLayer({
@@ -117,26 +76,6 @@ export function addParcelScoreLayer(
         80, 0.6,   // Strong
         100, 0.7,  // Brightest
       ],
-    },
-    minzoom: 14,
-  });
-
-  // Hatch overlay for empty parcels (no building — has_pand = false)
-  // Separate layer from score fill because fill-pattern replaces fill-color in MapLibre
-  map.addLayer({
-    id: PARCEL_EMPTY_HATCH_LAYER_ID,
-    type: 'fill',
-    source: SOURCE_ID,
-    'source-layer': sourceLayer,
-    filter: [
-      'all',
-      ['has', 'score'],
-      ['>=', ['get', 'score'], 40],
-      ['==', ['downcase', ['to-string', ['coalesce', ['get', 'has_pand'], 'false']]], 'false'],
-    ],
-    paint: {
-      'fill-pattern': 'parcel-hatch',
-      'fill-opacity': 0.4,
     },
     minzoom: 14,
   });
@@ -469,11 +408,6 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
     map.removeLayer(OUTLINE_LAYER_ID);
   }
 
-  // Remove hatch overlay before score fill (hatch is on top of score fill)
-  if (map.getLayer(PARCEL_EMPTY_HATCH_LAYER_ID)) {
-    map.removeLayer(PARCEL_EMPTY_HATCH_LAYER_ID);
-  }
-
   if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
     map.removeLayer(PARCEL_SCORE_FILL_LAYER_ID);
   }
@@ -499,10 +433,6 @@ export function setParcelScoreVisibility(
 
   if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
     map.setLayoutProperty(PARCEL_SCORE_FILL_LAYER_ID, 'visibility', visibility);
-  }
-
-  if (map.getLayer(PARCEL_EMPTY_HATCH_LAYER_ID)) {
-    map.setLayoutProperty(PARCEL_EMPTY_HATCH_LAYER_ID, 'visibility', visibility);
   }
 
   if (map.getLayer(OUTLINE_LAYER_ID)) {
