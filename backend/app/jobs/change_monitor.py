@@ -510,6 +510,7 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                         client=http_client,
                         session=session,
                         organization_id=str(org_id) if org_id else None,
+                        gemeente_naam=gemeente_naam,
                     )
 
                     logger.info(

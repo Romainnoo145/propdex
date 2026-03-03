@@ -236,6 +236,7 @@ async def detect_zoning_changes(
     client: httpx.AsyncClient,
     session: AsyncSession,
     organization_id: str | None = None,
+    gemeente_naam: str | None = None,
 ) -> list[ChangeRecord]:
     """Detect zoning plan changes via DSO Ruimtelijke Plannen API v4.
 
@@ -356,7 +357,7 @@ async def detect_zoning_changes(
                 title=f"Nieuw plan: {info['naam']} ({info['status']})",
                 detected_at=now,
                 change_date=now,
-                gemeente_naam=gemeente_code,
+                gemeente_naam=gemeente_naam or gemeente_code,
                 metadata_json={
                     "plan_id": plan_id,
                     "plan_naam": info["naam"],
@@ -390,7 +391,7 @@ async def detect_zoning_changes(
                     title=f"Plan gewijzigd: {info['naam']} ({change_desc})",
                     detected_at=now,
                     change_date=now,
-                    gemeente_naam=gemeente_code,
+                    gemeente_naam=gemeente_naam or gemeente_code,
                     metadata_json={
                         "plan_id": plan_id,
                         "plan_naam": info["naam"],
