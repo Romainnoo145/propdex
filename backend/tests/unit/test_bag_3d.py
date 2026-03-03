@@ -26,31 +26,58 @@ async def _passthrough_retry(fn: object, **kwargs: object) -> object:
     return await fn()  # type: ignore[operator]
 
 
-def _make_feature(
+def _make_city_object(
     pand_id: str,
     dak: float | None,
     maaiveld: float | None,
     bouwlagen: float | None,
+    *,
+    include_child: bool = False,
 ) -> dict:
-    """Build a minimal OGC API Features GeoJSON feature dict."""
-    props: dict = {}
+    """Build a CityJSON feature with CityObjects dict.
+
+    The 3D BAG API returns CityJSON format where each feature contains a
+    CityObjects dict keyed by pand ID. Child geometry features have a "-N"
+    suffix and should be filtered out by the client.
+    """
+    attrs: dict = {"identificatie": pand_id}
     if dak is not None:
-        props["b3_h_dak_50p"] = dak
+        attrs["b3_h_dak_50p"] = dak
     if maaiveld is not None:
-        props["b3_h_maaiveld"] = maaiveld
+        attrs["b3_h_maaiveld"] = maaiveld
     if bouwlagen is not None:
-        props["b3_bouwlagen"] = bouwlagen
+        attrs["b3_bouwlagen"] = bouwlagen
+
+    city_objects: dict = {
+        pand_id: {
+            "attributes": attrs,
+            "type": "Building",
+        }
+    }
+
+    if include_child:
+        child_id = f"{pand_id}-0"
+        city_objects[child_id] = {
+            "attributes": {**attrs, "identificatie": child_id},
+            "type": "BuildingPart",
+        }
+
     return {
+        "CityObjects": city_objects,
         "id": pand_id,
-        "type": "Feature",
-        "properties": props,
-        "geometry": {"type": "Polygon", "coordinates": [[]]},
+        "type": "CityJSONFeature",
+        "vertices": [],
     }
 
 
-def _make_feature_collection(features: list[dict]) -> dict:
-    """Wrap features in an OGC API FeatureCollection dict."""
-    return {"type": "FeatureCollection", "features": features}
+def _make_cityjson_collection(features: list[dict]) -> dict:
+    """Wrap CityJSON features in a collection response."""
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "numberReturned": len(features),
+        "numberMatched": len(features),
+    }
 
 
 _PATCH_LIMITER = "app.government_apis.bag_3d.bag_3d_limiter"
@@ -64,11 +91,11 @@ _PATCH_RETRY = "app.government_apis.bag_3d.retry_with_backoff"
 async def test_single_page_response() -> None:
     """Single page (<1000 features) returns dict with correct pand IDs and values."""
     features = [
-        _make_feature("NL.IMBAG.Pand.0363100012345678", dak=15.3, maaiveld=2.1, bouwlagen=4),
-        _make_feature("NL.IMBAG.Pand.0363100012345679", dak=8.0, maaiveld=0.5, bouwlagen=2),
-        _make_feature("NL.IMBAG.Pand.0363100012345680", dak=22.6, maaiveld=1.0, bouwlagen=7),
+        _make_city_object("NL.IMBAG.Pand.0363100012345678", dak=15.3, maaiveld=2.1, bouwlagen=4),
+        _make_city_object("NL.IMBAG.Pand.0363100012345679", dak=8.0, maaiveld=0.5, bouwlagen=2),
+        _make_city_object("NL.IMBAG.Pand.0363100012345680", dak=22.6, maaiveld=1.0, bouwlagen=7),
     ]
-    response_data = _make_feature_collection(features)
+    response_data = _make_cityjson_collection(features)
     mock_client = make_mock_client(get=make_mock_response(json_data=response_data))
 
     bag_client = BAG3DClient()
@@ -104,17 +131,17 @@ async def test_pagination() -> None:
     """Two pages: first=1000 features (triggers next request), second=500. Total=1500."""
     # Build 1000 features for page 1
     page1_features = [
-        _make_feature(f"NL.IMBAG.Pand.{i:016d}", dak=10.0, maaiveld=0.0, bouwlagen=3)
+        _make_city_object(f"NL.IMBAG.Pand.{i:016d}", dak=10.0, maaiveld=0.0, bouwlagen=3)
         for i in range(1000)
     ]
     # Build 500 features for page 2
     page2_features = [
-        _make_feature(f"NL.IMBAG.Pand.{i:016d}", dak=12.0, maaiveld=0.5, bouwlagen=4)
+        _make_city_object(f"NL.IMBAG.Pand.{i:016d}", dak=12.0, maaiveld=0.5, bouwlagen=4)
         for i in range(1000, 1500)
     ]
 
-    page1_response = make_mock_response(json_data=_make_feature_collection(page1_features))
-    page2_response = make_mock_response(json_data=_make_feature_collection(page2_features))
+    page1_response = make_mock_response(json_data=_make_cityjson_collection(page1_features))
+    page2_response = make_mock_response(json_data=_make_cityjson_collection(page2_features))
 
     mock_client = AsyncMock()
     mock_client.get = AsyncMock(side_effect=[page1_response, page2_response])
@@ -139,15 +166,15 @@ async def test_height_sanity_bounds() -> None:
     """Height outside [1.5m, 200.0m] returns actual_bouwhoogte=None; valid height returns value."""
     features = [
         # Height = 0.5m — below min (1.5m)
-        _make_feature("NL.IMBAG.Pand.0000000000000001", dak=1.0, maaiveld=0.5, bouwlagen=1),
+        _make_city_object("NL.IMBAG.Pand.0000000000000001", dak=1.0, maaiveld=0.5, bouwlagen=1),
         # Height = 201.0m — above max (200.0m)
-        _make_feature("NL.IMBAG.Pand.0000000000000002", dak=202.0, maaiveld=1.0, bouwlagen=50),
+        _make_city_object("NL.IMBAG.Pand.0000000000000002", dak=202.0, maaiveld=1.0, bouwlagen=50),
         # Height = 12.5m — within bounds
-        _make_feature("NL.IMBAG.Pand.0000000000000003", dak=13.0, maaiveld=0.5, bouwlagen=4),
+        _make_city_object("NL.IMBAG.Pand.0000000000000003", dak=13.0, maaiveld=0.5, bouwlagen=4),
         # Height exactly at lower bound = 1.5m — should be valid
-        _make_feature("NL.IMBAG.Pand.0000000000000004", dak=2.0, maaiveld=0.5, bouwlagen=1),
+        _make_city_object("NL.IMBAG.Pand.0000000000000004", dak=2.0, maaiveld=0.5, bouwlagen=1),
     ]
-    mock_client = make_mock_client(get=make_mock_response(json_data=_make_feature_collection(features)))
+    mock_client = make_mock_client(get=make_mock_response(json_data=_make_cityjson_collection(features)))
 
     bag_client = BAG3DClient()
 
@@ -170,15 +197,15 @@ async def test_bouwlagen_sanity_bounds() -> None:
     """Floor count outside [1, 100] returns None; float 3.6 returns 4 via int(round())."""
     features = [
         # bouwlagen=0 — below min (1)
-        _make_feature("NL.IMBAG.Pand.0000000000000011", dak=5.0, maaiveld=0.5, bouwlagen=0),
+        _make_city_object("NL.IMBAG.Pand.0000000000000011", dak=5.0, maaiveld=0.5, bouwlagen=0),
         # bouwlagen=101 — above max (100)
-        _make_feature("NL.IMBAG.Pand.0000000000000012", dak=300.0, maaiveld=0.5, bouwlagen=101),
+        _make_city_object("NL.IMBAG.Pand.0000000000000012", dak=300.0, maaiveld=0.5, bouwlagen=101),
         # bouwlagen=3.6 — valid, should round to 4
-        _make_feature("NL.IMBAG.Pand.0000000000000013", dak=12.0, maaiveld=0.5, bouwlagen=3.6),
+        _make_city_object("NL.IMBAG.Pand.0000000000000013", dak=12.0, maaiveld=0.5, bouwlagen=3.6),
         # bouwlagen=1 — exactly at lower bound
-        _make_feature("NL.IMBAG.Pand.0000000000000014", dak=4.0, maaiveld=0.5, bouwlagen=1),
+        _make_city_object("NL.IMBAG.Pand.0000000000000014", dak=4.0, maaiveld=0.5, bouwlagen=1),
     ]
-    mock_client = make_mock_client(get=make_mock_response(json_data=_make_feature_collection(features)))
+    mock_client = make_mock_client(get=make_mock_response(json_data=_make_cityjson_collection(features)))
 
     bag_client = BAG3DClient()
 
@@ -199,19 +226,11 @@ async def test_bouwlagen_sanity_bounds() -> None:
 @pytest.mark.asyncio
 async def test_missing_maaiveld_yields_none() -> None:
     """Feature with b3_h_dak_50p but no b3_h_maaiveld returns actual_bouwhoogte=None."""
-    # Feature with dak but without maaiveld in props
-    feature = {
-        "id": "NL.IMBAG.Pand.0363100099999999",
-        "type": "Feature",
-        "properties": {
-            "b3_h_dak_50p": 15.0,
-            # b3_h_maaiveld intentionally absent
-            "b3_bouwlagen": 4,
-        },
-        "geometry": {"type": "Polygon", "coordinates": [[]]},
-    }
+    feature = _make_city_object(
+        "NL.IMBAG.Pand.0363100099999999", dak=15.0, maaiveld=None, bouwlagen=4
+    )
     mock_client = make_mock_client(
-        get=make_mock_response(json_data=_make_feature_collection([feature]))
+        get=make_mock_response(json_data=_make_cityjson_collection([feature]))
     )
 
     bag_client = BAG3DClient()
@@ -254,7 +273,7 @@ async def test_401_raises_government_api_error() -> None:
 async def test_empty_bbox_returns_empty_dict() -> None:
     """Mock response with empty features list returns empty dict without error."""
     mock_client = make_mock_client(
-        get=make_mock_response(json_data=_make_feature_collection([]))
+        get=make_mock_response(json_data=_make_cityjson_collection([]))
     )
 
     bag_client = BAG3DClient()
@@ -268,3 +287,37 @@ async def test_empty_bbox_returns_empty_dict() -> None:
         )
 
     assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_child_features_filtered_out() -> None:
+    """Child geometry features (e.g. 'NL.IMBAG.Pand.xxx-0') are excluded from results."""
+    features = [
+        _make_city_object(
+            "NL.IMBAG.Pand.0984100001093000",
+            dak=12.0,
+            maaiveld=2.0,
+            bouwlagen=3,
+            include_child=True,
+        ),
+    ]
+    mock_client = make_mock_client(
+        get=make_mock_response(json_data=_make_cityjson_collection(features))
+    )
+
+    bag_client = BAG3DClient()
+
+    with (
+        patch(_PATCH_LIMITER, _make_limiter_mock()),
+        patch(_PATCH_RETRY, new=_passthrough_retry),
+    ):
+        result = await bag_client.get_panden_in_bbox(
+            minx=204000, miny=394000, maxx=205000, maxy=395000, client=mock_client
+        )
+
+    # Only parent pand should be in results, not the child "-0" feature
+    assert len(result) == 1
+    assert "NL.IMBAG.Pand.0984100001093000" in result
+    assert "NL.IMBAG.Pand.0984100001093000-0" not in result
+    assert result["NL.IMBAG.Pand.0984100001093000"]["actual_bouwhoogte"] == 10.0
+    assert result["NL.IMBAG.Pand.0984100001093000"]["actual_bouwlagen"] == 3

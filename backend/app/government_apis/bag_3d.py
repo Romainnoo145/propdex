@@ -96,10 +96,8 @@ class BAG3DClient:
         while True:
             params: dict[str, Any] = {
                 "bbox": bbox_str,
-                "bbox-crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
                 "limit": _PAGE_SIZE,
                 "offset": offset,
-                "f": "json",
             }
 
             async with bag_3d_limiter:
@@ -130,17 +128,24 @@ class BAG3DClient:
             data = response.json()
             features: list[dict[str, Any]] = data.get("features", [])
 
+            # 3D BAG returns CityJSON format: each feature has a CityObjects
+            # dict keyed by pand ID. Child geometry features have "-N" suffix
+            # (e.g. "NL.IMBAG.Pand.xxx-0") — skip those.
             for feature in features:
-                pand_id: str = feature.get("id", "")
-                props: dict[str, Any] = feature.get("properties", {})
+                city_objects: dict[str, Any] = feature.get("CityObjects", {})
+                for pand_id, obj in city_objects.items():
+                    # Skip child geometry features (e.g. "-0", "-1")
+                    if "-" in pand_id.split(".")[-1]:
+                        continue
+                    attrs: dict[str, Any] = obj.get("attributes", {})
 
-                actual_bouwhoogte = _derive_height(props)
-                actual_bouwlagen = _derive_bouwlagen(props)
+                    actual_bouwhoogte = _derive_height(attrs)
+                    actual_bouwlagen = _derive_bouwlagen(attrs)
 
-                results[pand_id] = {
-                    "actual_bouwhoogte": actual_bouwhoogte,
-                    "actual_bouwlagen": actual_bouwlagen,
-                }
+                    results[pand_id] = {
+                        "actual_bouwhoogte": actual_bouwhoogte,
+                        "actual_bouwlagen": actual_bouwlagen,
+                    }
 
             feature_count = len(features)
             logger.debug(
