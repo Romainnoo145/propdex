@@ -51,11 +51,11 @@
   3. "Transformatiepotentie" shows weighted mix of bouwjaar + bestemming + perceelgrootte with contextual label
   4. All FAR/TAR references removed from ParcelDetailModal and InspectorPanel
   5. No "onbekend" placeholders for FAR/TAR — section removed entirely
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 72-01: Backend — store pand_oppervlakte_m2 in ScanResult + Alembic migration + backfill existing scans
-- [ ] 72-02: Frontend — rewrite three pillar bars with real data, remove FAR/TAR, cleanup dead code
+- [ ] 72-01-PLAN.md — Backend: capture pand_oppervlakte_m2 in scan pipeline + store in flags JSONB + update unit tests (UX-01)
+- [ ] 72-02-PLAN.md — Frontend: rewrite three pillar bars with real data + remove FAR/TAR dead code from modal/panel/card (UX-01)
 
 ### v9.0 Risk Intelligence (Phases 67-69)
 
@@ -163,7 +163,7 @@ Plans:
   2. The "Geen geregistreerde verontreiniging gevonden" message is always accompanied by a disclaimer that Bodemloket data is incomplete and absence is not a soil clearance certificate
   3. Bodemloket data is cached for 30 days per parcel — opening the same report twice within 30 days does not trigger a second API call
   4. The Bodemloket spike at phase start documents the actual viable query method (WMS GetFeatureInfo vs ArcGIS REST) and live response field names before integration code is written
-**Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
+**Plans**: 3 plans (Wave 1 -> Wave 2 -> Wave 3 sequential)
 
 Plans:
 - [ ] 68-01-PLAN.md — Bodemloket spike: run live ArcGIS REST query against real address, confirm buffer size, write SPIKE.md (BODEM-01)
@@ -199,6 +199,7 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
+| 72. Parcel Detail Panel Redesign | 0/2 | Planned | — |
 
 ---
 
@@ -378,4 +379,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-03 -- Phases 70-71 dropped (B2B pivot: professional directory/lead capture not needed for developer users). v9.0 shipped as Risk Intelligence (Phases 67-69).*
+*Last updated: 2026-03-03 -- Phase 72 planned (2 plans, Wave 1 parallel). Phases 70-71 dropped (B2B pivot).*
