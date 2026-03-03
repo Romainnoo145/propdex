@@ -107,3 +107,6 @@ woz_waardeloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
 # Bodemloket (Rijkswaterstaat / ArcGIS) — public endpoint, polite limits
 bodemloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
+
+# 3D BAG (TU Delft) — authenticated, conservative limits
+bag_3d_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=200)

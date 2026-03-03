@@ -15,6 +15,7 @@ CACHE_TTL = {
     "rce_detail": 2592000,  # 30 days (monument descriptions are stable)
     "woz": 31536000,        # 365 days (WOZ values set once per year on Jan 1)
     "bodemloket": 2592000,  # 30 days (soil contamination status changes rarely)
+    "bag_3d": 604800,       # 7 days (3D BAG updated quarterly)
     # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 
@@ -138,6 +139,16 @@ class Settings(BaseSettings):
     BRK_CA_BUNDLE_PATH: str = Field(
         default="",
         description="Path to PKIOverheid CA bundle for BRK server verification",
+    )
+
+    # 3D BAG (TU Delft) — HTTP Basic Auth for building height/floor data
+    BAG_3D_USERNAME: str = Field(
+        default="",
+        description="3D BAG username for HTTP Basic Auth (register at 3dbag.nl — free)",
+    )
+    BAG_3D_PASSWORD: str = Field(
+        default="",
+        description="3D BAG password for HTTP Basic Auth (register at 3dbag.nl — free)",
     )
 
     # AI Configuration
