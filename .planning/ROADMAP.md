@@ -199,7 +199,7 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 72. Parcel Detail Panel Redesign | 2/2 | Complete   | 2026-03-03 |
+| 72. Parcel Detail Panel Redesign | 2/2 | Complete    | 2026-03-03 |
 
 ---
 
