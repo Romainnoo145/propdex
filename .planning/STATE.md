@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 73 of 73 (DSO Omgevingsplan Bouwregels — In Progress)
-Plan: 1 of 2 — Plan 01 COMPLETE; Plan 02 pending
-Status: Phase 73 Plan 01 complete — max_bouwlagen DSO schema + PLU WMS bouwhoogte/bouwlagen extraction + area_scan persistence via dict copy; cache v4 bumped
-Last activity: 2026-03-03 — Phase 73 Plan 01 complete; backend bouwregels extraction flowing into ScanResult.flags["building_metrics"]
+Phase: 73 of 73 (DSO Omgevingsplan Bouwregels — COMPLETE)
+Plan: 2 of 2 — Plan 01 COMPLETE; Plan 02 COMPLETE
+Status: Phase 73 complete — BuildingMetrics TypeScript interface + data-driven Transformatiepotentie formula with DSO path (max_bouwhoogte/max_bouwlagen) + heuristic fallback; human-verified APPROVED
+Last activity: 2026-03-03 — Phase 73 Plan 02 complete; frontend Transformatiepotentie now uses PLU WMS bouwregel data when available
 
-Progress (Phase 73): [█████░░░░░] 50% (1/2 plans complete)
+Progress (Phase 73): [██████████] 100% (2/2 plans complete)
 
 ---
 
@@ -156,7 +156,7 @@ Progress (Phase 73): [█████░░░░░] 50% (1/2 plans complete)
 - formatPlanruimteLabel, deriveBuildabilityScore, deriveTransformationScore, toMetricNumber, deriveBuildabilityForInspector all deleted
 - extractScoreSubscores import removed from both ParcelDetailModal and ParcelCard
 
-### Phase 73 Context (In Progress)
+### Phase 73 Context (COMPLETE)
 
 - Phase 73 Plan 01 complete: BuildingDimensions.max_bouwlagen (int | None) + has_any_data updated; _merge_building_dimensions handles bouwlagen; _extract_building_dimensions extracts bouwlagen from Dutch synonyms (bouwlagen/bouwlaag/verdieping/woonlagen); cache key bumped v3→v4
 - int(round(waarde)) pattern for float→int rounding (NOT round(int(waarde)) which truncates)
@@ -165,6 +165,10 @@ Progress (Phase 73): [█████░░░░░] 50% (1/2 plans complete)
 - extract_building_metrics() now always returns 4 keys: max_bebouwingspercentage, max_floor_area_ratio, max_bouwhoogte, max_bouwlagen
 - area_scan.py: final_bm = dict(building_metrics) automatically carries max_bouwhoogte/max_bouwlagen — no code changes needed
 - 38 zoning aggregator tests GREEN; ruff check all modified files: clean
+- Phase 73 Plan 02 complete: BuildingMetrics interface (5 fields) in scan.ts; ScanResultItem.building_metrics typed as BuildingMetrics | null; deriveTransformatiePotentie hasDSOData path uses max_bouwhoogte/max_bouwlagen; heuristic fallback unchanged; human-verify APPROVED
+- Math.max(hoogtePts, lagenPts) when both signals present — avoids double-counting correlated building envelope dimensions
+- DSO label format: "X lagen · Ym · wonen ok" using U+00B7 middle dot; heuristic label: "Bouwjaar YYYY · wonen ok"
+- pandOppervlaktM2 simplified to direct typed access: parcel.building_metrics?.pand_oppervlakte_m2 ?? null
 
 ### Ongoing TODOs
 
@@ -186,11 +190,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-03
-**Stopped At:** Completed Phase 73 Plan 01 — backend bouwregels extraction (max_bouwhoogte + max_bouwlagen) from PLU WMS + DSO into ScanResult.flags["building_metrics"]
-**Resume File:** .planning/phases/73-dso-omgevingsplan-bouwregels/73-02-PLAN.md
+**Stopped At:** Completed Phase 73 Plan 02 — BuildingMetrics TypeScript interface + data-driven Transformatiepotentie formula rewrite; human-verify APPROVED
+**Resume File:** None — Phase 73 complete
 
-**Next Action:** Execute Phase 73 Plan 02 — frontend Transformatiepotentie formula rewrite using max_bouwlagen data from building_metrics.
+**Next Action:** Phase 73 complete. All 2 plans shipped. v10.0 milestone review.
 
 ---
 
-*State updated: 2026-03-03 -- Phase 73 Plan 01 complete: BuildingDimensions.max_bouwlagen + PLU WMS bouwregels extraction + extract_building_metrics 4-key return; DSO cache v4*
+*State updated: 2026-03-03 -- Phase 73 Plan 02 complete: BuildingMetrics interface + deriveTransformatiePotentie DSO path with max_bouwhoogte/max_bouwlagen; human-verify APPROVED*

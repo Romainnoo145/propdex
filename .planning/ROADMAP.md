@@ -377,16 +377,16 @@ Plans:
 
 </details>
 
-### Phase 73: DSO Omgevingsplan Bouwregels
+### Phase 73: DSO Omgevingsplan Bouwregels — COMPLETE
 
 **Goal:** Transformatiepotentie pillar bar uses real bouwregel data (max_bouwhoogte, max_bouwlagen) extracted from PLU WMS maatvoering layer + DSO maatvoeringen, with graceful heuristic fallback when data is absent
 **Depends on:** Phase 72
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 73-01-PLAN.md — Backend: max_bouwlagen schema + zoning aggregator + PLU WMS parser + scan job persistence (DSO-01, DSO-02)
-- [ ] 73-02-PLAN.md — Frontend: BuildingMetrics typed interface + deriveTransformatiePotentie DSO-path + heuristic fallback (DSO-03)
+- [x] 73-01-PLAN.md — Backend: max_bouwlagen schema + zoning aggregator + PLU WMS parser + scan job persistence (DSO-01, DSO-02)
+- [x] 73-02-PLAN.md — Frontend: BuildingMetrics typed interface + deriveTransformatiePotentie DSO-path + heuristic fallback (DSO-03)
 
 ---
 
-*Last updated: 2026-03-03 -- Phase 73 planned (2 plans, Wave 1 + Wave 2 sequential).*
+*Last updated: 2026-03-03 -- Phase 73 complete (2/2 plans shipped, human-verify APPROVED).*
