@@ -12,20 +12,21 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 73 of 73 (DSO Omgevingsplan Bouwregels — COMPLETE)
-Plan: 2 of 2 — Plan 01 COMPLETE; Plan 02 COMPLETE
-Status: Phase 73 complete — BuildingMetrics TypeScript interface + data-driven Transformatiepotentie formula with DSO path (max_bouwhoogte/max_bouwlagen) + heuristic fallback; human-verified APPROVED
-Last activity: 2026-03-03 — Phase 73 Plan 02 complete; frontend Transformatiepotentie now uses PLU WMS bouwregel data when available
+Phase: 74 of 74 (3D BAG Building Data — COMPLETE)
+Plan: 3 of 3 — Plan 01 COMPLETE; Plan 02 COMPLETE; Plan 03 COMPLETE
+Status: Phase 74 complete — three-tier deriveTransformatiePotentie (headroom > DSO > heuristic) with actual_bouwhoogte + actual_bouwlagen from 3D BAG; 3DBAG-01 requirement fulfilled
+Last activity: 2026-03-03 — Phase 74 Plan 03 complete; BuildingMetrics extended + headroom path added to deriveTransformatiePotentie
 
-Progress (Phase 73): [██████████] 100% (2/2 plans complete)
+Progress (Phase 74): [██████████] 100% (3/3 plans complete)
 
 ---
 
 ## Performance Metrics
 
-**v10.0 Parcel Detail Panel Redesign (Completed)**
+**v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: completed ~3min (5-tuple _derive_bag_attributes_for_parcel + total_footprint_area accumulator + pand_oppervlakte_m2 in ScanResult.flags.building_metrics — 6 unit tests GREEN)
 - Phase 72 Plan 02: completed ~3min (ParcelDetailModal three real data pillar bars: Vrije ruimte + Beschikbaarheid + Transformatiepotentie; FAR/TAR dead code removed from ParcelDetailModal + InspectorPanel + ParcelCard)
+- Phase 74 Plan 03: completed ~2min (BuildingMetrics interface extended with actual_bouwhoogte + actual_bouwlagen; three-tier deriveTransformatiePotentie with headroom path; 3DBAG-01 fulfilled)
 
 **v9.0 Professional Marketplace (Completed)**
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
@@ -170,6 +171,15 @@ Progress (Phase 73): [██████████] 100% (2/2 plans complete)
 - DSO label format: "X lagen · Ym · wonen ok" using U+00B7 middle dot; heuristic label: "Bouwjaar YYYY · wonen ok"
 - pandOppervlaktM2 simplified to direct typed access: parcel.building_metrics?.pand_oppervlakte_m2 ?? null
 
+### Phase 74 Context (COMPLETE)
+
+- Phase 74 Plan 03 complete: BuildingMetrics interface extended with actual_bouwhoogte + actual_bouwlagen (Phase 74 fields); deriveTransformatiePotentie has three-tier priority: headroom (has3DData && hasDSOData) > DSO-only (hasDSOData) > heuristic fallback
+- Headroom fraction = Math.max(0, 1 - actual/permitted); Math.max(hoogteHeadroom, lagenHeadroom) avoids double-counting correlated envelope signals
+- Headroom score bands: >=0.6 -> 50pts, >=0.4 -> 35pts, >=0.2 -> 20pts, else 10pts
+- Headroom label format: "3/5 lagen · 8.5/15m · wonen ok" (bouwlagen before bouwhoogte — more business-legible)
+- Headroom path requires BOTH 3D BAG actual data AND DSO permitted data — no partial headroom scoring
+- 3DBAG-01 requirement fulfilled: actual building dimensions from 3D BAG used in headroom vs PLU WMS permitted dimensions
+
 ### Ongoing TODOs
 
 - Production deployment: Create app_role (sql/setup_app_role.sql)
@@ -190,11 +200,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-03
-**Stopped At:** Completed Phase 73 Plan 02 — BuildingMetrics TypeScript interface + data-driven Transformatiepotentie formula rewrite; human-verify APPROVED
-**Resume File:** None — Phase 73 complete
+**Stopped At:** Completed Phase 74 Plan 03 — three-tier deriveTransformatiePotentie with headroom path; BuildingMetrics extended with actual_bouwhoogte + actual_bouwlagen; 3DBAG-01 fulfilled
+**Resume File:** None — Phase 74 complete
 
-**Next Action:** Phase 73 complete. All 2 plans shipped. v10.0 milestone review.
+**Next Action:** Phase 74 complete. All 3 plans shipped. v10.0 milestone (Phases 72+73+74) now complete — all three tiers of transformatiepotentie scoring shipped.
 
 ---
 
-*State updated: 2026-03-03 -- Phase 73 Plan 02 complete: BuildingMetrics interface + deriveTransformatiePotentie DSO path with max_bouwhoogte/max_bouwlagen; human-verify APPROVED*
+*State updated: 2026-03-03 -- Phase 74 Plan 03 complete: BuildingMetrics extended with actual_bouwhoogte + actual_bouwlagen; three-tier deriveTransformatiePotentie headroom path; 3DBAG-01 fulfilled*
