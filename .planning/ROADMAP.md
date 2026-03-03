@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🚧 **v10.0 UX Polish** -- Phase 72 (in progress)
+- 🚧 **v10.0 UX Polish** -- Phases 72-74 (in progress)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
 - ✅ **v8.0 Client Demo Readiness** -- Phases 62-66 (shipped 2026-03-02)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
@@ -38,6 +38,7 @@
 **Milestone Goal:** Replace abstract scoring pillars with real data bars and clean up the parcel detail panel for demo readiness.
 
 - [x] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie) (completed 2026-03-03)
+- [ ] **Phase 74: 3D BAG Building Data** — Enrich scan pipeline with actual building height/floors from 3D BAG for headroom-based transformatiepotentie
 
 ## Phase Details
 
@@ -200,6 +201,8 @@ Plans:
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
 | 72. Parcel Detail Panel Redesign | 2/2 | Complete    | 2026-03-03 |
+| 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete    | 2026-03-03 |
+| 74. 3D BAG Building Data | 0/3 | Planning    | — |
 
 ---
 
@@ -377,6 +380,22 @@ Plans:
 
 </details>
 
+### Phase 74: 3D BAG Building Data
+**Goal**: Area scan parcels show actual building height and floor count from 3D BAG, enabling transformatiepotentie scoring based on real building dimensions vs permitted envelope
+**Depends on**: Phase 73 (uses existing BuildingMetrics pipeline)
+**Requirements**: 3DBAG-01
+**Success Criteria** (what must be TRUE):
+  1. After an area scan, parcels with BAG buildings have actual_bouwhoogte and actual_bouwlagen stored in building_metrics JSONB
+  2. deriveTransformatiePotentie uses actual building dimensions (from 3D BAG) compared to permitted dimensions (from PLU WMS) when both are available
+  3. Parcels without 3D BAG data gracefully fall back to the existing heuristic scoring
+  4. The 3D BAG client handles rate limiting and caches responses to avoid redundant API calls during scans
+**Plans**: 3 plans (Wave 1 + Wave 2)
+
+Plans:
+- [ ] 74-01-PLAN.md — BAG3DClient API client + rate limiter + config + unit tests (3DBAG-01)
+- [ ] 74-02-PLAN.md — Scan pipeline integration: BagSpatialIndex extension + 3D BAG fetch + actual dimension merge (3DBAG-01)
+- [ ] 74-03-PLAN.md — Frontend: BuildingMetrics extension + headroom-based deriveTransformatiePotentie (3DBAG-01)
+
 ### Phase 73: DSO Omgevingsplan Bouwregels — COMPLETE
 
 **Goal:** Transformatiepotentie pillar bar uses real bouwregel data (max_bouwhoogte, max_bouwlagen) extracted from PLU WMS maatvoering layer + DSO maatvoeringen, with graceful heuristic fallback when data is absent
@@ -389,4 +408,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-03 -- Phase 73 complete (2/2 plans shipped, human-verify APPROVED).*
+*Last updated: 2026-03-03 -- Phase 74 planned (3 plans in 2 waves).*
