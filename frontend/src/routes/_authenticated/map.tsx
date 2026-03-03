@@ -1348,8 +1348,7 @@ function MapPage() {
       clearPropertyGeometry(mapRef.current)
     }
 
-    // Show QuickCard immediately (for loading state)
-    setTier('quick')
+    setTier('none')
     setPropertyLngLat(null)
 
     try {
@@ -1361,7 +1360,6 @@ function MapPage() {
 
       if (!pc || !hn) {
         console.warn('Could not extract postcode/huisnummer from PDOK lookup:', details)
-        setTier('none')
         return
       }
 
@@ -1373,7 +1371,10 @@ function MapPage() {
         }
       }
 
-      // Trigger property lookup mutation with demo fallback
+      // Set pending ref so the useEffect auto-opens ParcelDetailModal on lookup success
+      pendingLookupInspectorRef.current = { postcode: pc, huisnummer: hn }
+
+      // Trigger property lookup — parcel detail panel opens via pendingLookupInspectorRef effect
       lookup.mutate(
         { postcode: pc, huisnummer: hn },
         {
@@ -1387,13 +1388,13 @@ function MapPage() {
             })
           },
           onError: () => {
+            pendingLookupInspectorRef.current = null
             toast.error('Adres niet gevonden')
           },
         }
       )
     } catch (err) {
       console.error('PDOK address lookup failed:', err)
-      setTier('none')
     }
   }, [lookup, addRecentItem])
 
