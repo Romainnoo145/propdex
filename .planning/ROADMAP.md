@@ -37,7 +37,7 @@
 
 **Milestone Goal:** Replace abstract scoring pillars with real data bars and clean up the parcel detail panel for demo readiness.
 
-- [ ] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie)
+- [x] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie) (completed 2026-03-03)
 
 ## Phase Details
 
@@ -199,7 +199,7 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 72. Parcel Detail Panel Redesign | 1/2 | In Progress|  |
+| 72. Parcel Detail Panel Redesign | 2/2 | Complete   | 2026-03-03 |
 
 ---
 

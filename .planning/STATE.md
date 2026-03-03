@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 72 of 72 (Parcel Detail Panel Redesign — IN PROGRESS)
-Plan: 1 of 2 — COMPLETE
-Status: Phase 72 Plan 01 complete — pand_oppervlakte_m2 flows from BAG scan through to ScanResult.flags.building_metrics; next: Phase 72 Plan 02 (frontend pillar bar rewrite)
-Last activity: 2026-03-03 — Phase 72 Plan 01 complete; scan pipeline captures total BAG pand footprint area
+Phase: 72 of 72 (Parcel Detail Panel Redesign — COMPLETE)
+Plan: 2 of 2 — COMPLETE
+Status: Phase 72 complete — both plans shipped; pand_oppervlakte_m2 backend + three real data pillar bars frontend (UX-01 satisfied)
+Last activity: 2026-03-03 — Phase 72 Plan 02 complete; ParcelDetailModal shows Vrije ruimte / Beschikbaarheid / Transformatiepotentie; FAR/TAR dead code removed
 
 Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
@@ -23,8 +23,9 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
 ## Performance Metrics
 
-**v10.0 Parcel Detail Panel Redesign (In Progress)**
+**v10.0 Parcel Detail Panel Redesign (Completed)**
 - Phase 72 Plan 01: completed ~3min (5-tuple _derive_bag_attributes_for_parcel + total_footprint_area accumulator + pand_oppervlakte_m2 in ScanResult.flags.building_metrics — 6 unit tests GREEN)
+- Phase 72 Plan 02: completed ~3min (ParcelDetailModal three real data pillar bars: Vrije ruimte + Beschikbaarheid + Transformatiepotentie; FAR/TAR dead code removed from ParcelDetailModal + InspectorPanel + ParcelCard)
 
 **v9.0 Professional Marketplace (Completed)**
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
@@ -138,12 +139,19 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 - Jinja2 null-safe pattern for nested dicts: 'is not none' guard + | default() filter; 'report_data.zoning.plans[0]' requires zoning not none AND plans | length > 0
 - reportId prop thread: rapport.$id.tsx (id.startsWith('r') ? null : id) -> ReportDetailPage -> ReportHeader -> handleGenerateDossier()
 
-### Phase 72 Context (In Progress)
+### Phase 72 Context (COMPLETE)
 
 - Phase 72 Plan 01 complete: _derive_bag_attributes_for_parcel returns 5-tuple with pand_oppervlakte_m2; total_footprint_area accumulates all qualifying BAG pand overlaps (post MIN_BUILDING_OVERLAP_M2 guard); stored in ScanResult.flags["building_metrics"]["pand_oppervlakte_m2"]
 - Return None (not 0.0) for empty parcels — consumer distinguishes missing vs zero
 - Phase 4 uses final_bm dict copy-merge pattern — preserves existing building_metrics keys
 - No schema migration needed — pand_oppervlakte_m2 stored in existing JSONB flags column
+- Phase 72 Plan 02 complete: ParcelDetailModal three pillars replaced (Bebouwbaarheid→Vrije ruimte, Leegstandsrisico→Beschikbaarheid, Transformatiekans→Transformatiepotentie)
+- deriveTransformatiePotentie: 40pt bouwjaar + 40pt bestemming(wonen/gemengd=true) + 20pt area — score always 20-100 range
+- Vrije ruimte null for pre-Phase-72 scans (pand_oppervlakte_m2 not yet in building_metrics) — shows "Footprint onbekend" context
+- Beschikbaarheid uses vacancy_confidence * 100 directly (not deriveVacancyScore fallback chain)
+- topVacancyReason strips /^(HARD|PROXY):\s*/i prefix before display in Beschikbaarheid pillar context
+- formatPlanruimteLabel, deriveBuildabilityScore, deriveTransformationScore, toMetricNumber, deriveBuildabilityForInspector all deleted
+- extractScoreSubscores import removed from both ParcelDetailModal and ParcelCard
 
 ### Ongoing TODOs
 
@@ -165,11 +173,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-03
-**Stopped At:** Completed Phase 72 Plan 01 — BAG pand footprint area capture in scan pipeline
-**Resume File:** .planning/phases/72-parcel-detail-redesign/72-02-PLAN.md
+**Stopped At:** Completed Phase 72 Plan 02 — frontend pillar bar rewrite; Phase 72 COMPLETE (UX-01 satisfied)
+**Resume File:** Next phase TBD
 
-**Next Action:** Phase 72 Plan 02 — frontend pillar bar rewrite (Vrije Ruimte unbuilt percentage using pand_oppervlakte_m2).
+**Next Action:** Phase 72 complete. Plan next phase or continue with deferred work.
 
 ---
 
-*State updated: 2026-03-03 -- Phase 72 Plan 01 Tasks 1+2 complete: scan pipeline captures pand_oppervlakte_m2 + 6 unit tests GREEN (UX-01 backend data)*
+*State updated: 2026-03-03 -- Phase 72 Plan 02 Tasks 1+2 complete: three real data pillar bars + FAR/TAR dead code removed (UX-01 frontend)*
