@@ -11,7 +11,6 @@ import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { toast } from 'sonner'
 import { FileText, MapPin } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
-import { extractScoreSubscores } from '@/lib/score'
 
 const VACANCY_LABELS: Record<string, string> = {
   leeg_perceel: 'Leeg perceel',
@@ -44,43 +43,6 @@ function hasResidentialMixedBestemming(
       candidate.includes('centrum')
     )
   })
-}
-
-function formatPlanruimteLabel(
-  maxBebouwingspercentage: number | null,
-  maxFloorAreaRatio: number | null,
-  supportsResidentialMixed: boolean
-): { label: string; farTar: string } {
-  if (maxBebouwingspercentage == null && maxFloorAreaRatio == null) {
-    if (supportsResidentialMixed) {
-      return {
-        label: 'Functioneel toegestaan',
-        farTar: 'FAR onbekend · TAR onbekend',
-      }
-    }
-    return { label: 'Onbekend', farTar: 'FAR onbekend · TAR onbekend' }
-  }
-  const far = maxFloorAreaRatio
-  const tar = maxBebouwingspercentage
-  const farLabel = far != null ? far.toFixed(2) : 'onbekend'
-  const tarLabel = tar != null ? `${tar.toFixed(0)}%` : 'onbekend'
-
-  if ((far != null && far >= 1.5) || (tar != null && tar >= 70)) {
-    return {
-      label: 'Hoog',
-      farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
-    }
-  }
-  if ((far != null && far >= 1.0) || (tar != null && tar >= 50)) {
-    return {
-      label: 'Middel',
-      farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
-    }
-  }
-  return {
-    label: 'Beperkt',
-    farTar: `FAR ${farLabel} · TAR ${tarLabel}`,
-  }
 }
 
 function getScoreBadgeClass(score: number | null): string {
@@ -117,50 +79,6 @@ function formatPillarLevel(value: number | null): string {
   return 'Laag'
 }
 
-function deriveBuildabilityScore(
-  subscore: number | null,
-  maxBebouwingspercentage: number | null,
-  maxFloorAreaRatio: number | null,
-  supportsResidentialMixed: boolean
-): number | null {
-  if (subscore != null) return clampPercent(subscore)
-
-  const farScore =
-    maxFloorAreaRatio == null
-      ? null
-      : maxFloorAreaRatio >= 2
-        ? 90
-        : maxFloorAreaRatio >= 1.4
-          ? 75
-          : maxFloorAreaRatio >= 1
-            ? 60
-            : maxFloorAreaRatio >= 0.7
-              ? 45
-              : 25
-
-  const tarScore =
-    maxBebouwingspercentage == null
-      ? null
-      : maxBebouwingspercentage >= 80
-        ? 85
-        : maxBebouwingspercentage >= 65
-          ? 70
-          : maxBebouwingspercentage >= 50
-            ? 55
-            : maxBebouwingspercentage >= 35
-              ? 40
-              : 25
-
-  if (farScore == null && tarScore == null) {
-    return supportsResidentialMixed ? 45 : null
-  }
-
-  if (farScore != null && tarScore != null) {
-    return Math.round((farScore + tarScore) / 2)
-  }
-  return farScore ?? tarScore
-}
-
 function deriveVacancyScore(
   subscore: number | null,
   vacancyConfidence: number | null,
@@ -176,25 +94,39 @@ function deriveVacancyScore(
   return null
 }
 
-function deriveTransformationScore(
-  totalScore: number | null,
-  buildabilityScore: number | null,
-  vacancyScore: number | null,
+function deriveTransformatiePotentie(
+  bouwjaar: number | null,
   supportsResidentialMixed: boolean,
-  opportunitySignalCount: number
-): number | null {
-  let base: number | null = totalScore
-  if (base == null && buildabilityScore != null && vacancyScore != null) {
-    base = (buildabilityScore + vacancyScore) / 2
-  } else if (base == null) {
-    base = buildabilityScore ?? vacancyScore
-  }
-  if (base == null) return null
+  area_m2: number | null,
+): { score: number; label: string } {
+  // Bouwjaar score: older = higher potential (0-40 points)
+  const bouwjaarScore =
+    bouwjaar == null ? 20
+    : bouwjaar < 1960 ? 40
+    : bouwjaar < 1980 ? 30
+    : bouwjaar < 2000 ? 20
+    : bouwjaar < 2010 ? 10
+    : 5
 
-  let boosted = base
-  if (supportsResidentialMixed) boosted += 10
-  boosted += Math.min(18, opportunitySignalCount * 6)
-  return clampPercent(boosted)
+  // Bestemming score: wonen/gemengd = higher (0-40 points)
+  const bestemmingScore = supportsResidentialMixed ? 40 : 15
+
+  // Perceelgrootte score: bigger = higher (0-20 points)
+  const areaScore =
+    area_m2 == null ? 10
+    : area_m2 >= 1500 ? 20
+    : area_m2 >= 750 ? 15
+    : area_m2 >= 300 ? 10
+    : 5
+
+  const score = bouwjaarScore + bestemmingScore + areaScore
+
+  const parts: string[] = []
+  if (bouwjaar != null) parts.push(`Bouwjaar ${bouwjaar}`)
+  parts.push(supportsResidentialMixed ? 'wonen ok' : 'niet-wonen')
+  const label = parts.join(' \u00b7 ')
+
+  return { score, label }
 }
 
 function ScoreDonut({
@@ -348,20 +280,8 @@ export function ParcelDetailModal({
   const hasAddress = !!parcel.address?.trim()
   const titleLabel = hasAddress ? (parcel.address as string).trim() : 'Adres onbekend'
   const secondaryLabel = parcel.parcel_code || null
-  const maxBebouwingspercentage =
-    (parcel.building_metrics as { max_bebouwingspercentage?: number | null } | null)
-      ?.max_bebouwingspercentage ?? null
-  const maxFloorAreaRatio =
-    (parcel.building_metrics as { max_floor_area_ratio?: number | null } | null)
-      ?.max_floor_area_ratio ?? null
   const supportsResidentialMixed = hasResidentialMixedBestemming(parcel.bestemmingen)
-  const planruimte = formatPlanruimteLabel(
-    maxBebouwingspercentage,
-    maxFloorAreaRatio,
-    supportsResidentialMixed
-  )
   const scoreBadgeClass = getScoreBadgeClass(parcel.score)
-  const scoreSubscores = extractScoreSubscores(parcel.score_breakdown)
   const actionableOpportunitySignals = (parcel.opportunity_signals ?? []).filter((signal) => {
     const normalized = signal.toLowerCase()
     return (
@@ -369,24 +289,35 @@ export function ParcelDetailModal({
       !normalized.includes('leegstand onbekend')
     )
   })
-  const buildabilityPillar = deriveBuildabilityScore(
-    scoreSubscores.buildability,
-    maxBebouwingspercentage,
-    maxFloorAreaRatio,
-    supportsResidentialMixed
+
+  // Pillar 1: Vrije ruimte from pand_oppervlakte_m2
+  const pandOppervlaktM2 = (parcel.building_metrics as {
+    pand_oppervlakte_m2?: number | null
+  } | null)?.pand_oppervlakte_m2 ?? null
+  const vrijeRuimtePct: number | null =
+    pandOppervlaktM2 != null && parcel.area_m2 != null && parcel.area_m2 > 0
+      ? Math.max(0, Math.min(100, (1 - pandOppervlaktM2 / parcel.area_m2) * 100))
+      : null
+
+  // Pillar 2: Beschikbaarheid from vacancy_confidence
+  const beschikbaarheidPct: number | null =
+    parcel.vacancy_confidence != null
+      ? Math.round(parcel.vacancy_confidence * 100)
+      : null
+  const topVacancyReason: string | undefined =
+    (parcel.vacancy_reasons?.[0] ?? '').replace(/^(HARD|PROXY):\s*/i, '').trim() || undefined
+
+  // Pillar 3: Transformatiepotentie
+  const transformatiePotentie = deriveTransformatiePotentie(
+    parcel.bouwjaar, supportsResidentialMixed, parcel.area_m2
   )
+
   const vacancyPillar = deriveVacancyScore(
-    scoreSubscores.vacancy,
+    null,
     parcel.vacancy_confidence,
     parcel.vacancy_signal
   )
-  const transformationPillar = deriveTransformationScore(
-    parcel.score,
-    buildabilityPillar,
-    vacancyPillar,
-    supportsResidentialMixed,
-    actionableOpportunitySignals.length
-  )
+  void vacancyPillar // kept for potential future use
 
   const content = (
     <div className="p-5 space-y-5">
@@ -457,23 +388,25 @@ export function ParcelDetailModal({
               </div>
               <div className="space-y-2">
                 <ScorePillarRows
-                  label="Bebouwbaarheid"
-                  value={buildabilityPillar}
-                  context={planruimte.farTar}
-                />
-                <ScorePillarRows
-                  label="Leegstandsrisico"
-                  value={vacancyPillar}
-                  context={showVacancySignal ? vacancyLabel ?? undefined : statusLabel}
-                />
-                <ScorePillarRows
-                  label="Transformatiekans"
-                  value={transformationPillar}
+                  label="Vrije ruimte"
+                  value={vrijeRuimtePct}
                   context={
-                    supportsResidentialMixed
-                      ? 'Wonen/gemengd binnen plan'
-                      : 'Plancheck vereist'
+                    pandOppervlaktM2 != null && parcel.area_m2 != null
+                      ? `${Math.round(pandOppervlaktM2)} m\u00b2 bebouwd`
+                      : parcel.has_pand
+                        ? 'Footprint onbekend'
+                        : 'Geen pand'
                   }
+                />
+                <ScorePillarRows
+                  label="Beschikbaarheid"
+                  value={beschikbaarheidPct}
+                  context={topVacancyReason}
+                />
+                <ScorePillarRows
+                  label="Transformatiepotentie"
+                  value={transformatiePotentie.score}
+                  context={transformatiePotentie.label}
                 />
               </div>
             </div>
@@ -527,36 +460,6 @@ export function ParcelDetailModal({
               </p>
             </div>
           )}
-        </div>
-
-        {/* Build metrics */}
-        <div>
-          <div className="mb-3 flex items-center gap-1.5">
-            <h3 className="text-sm font-medium text-grey-100">
-              Planruimte (FAR/TAR)
-            </h3>
-            <span className="rounded bg-grey-800 px-2 py-0.5 text-[11px] text-grey-300">
-              {planruimte.label}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-              <p className="text-xs text-grey-400 mb-1">TAR (max bebouwd %)</p>
-              <p className="text-sm font-medium text-grey-100">
-                {maxBebouwingspercentage != null
-                  ? `${maxBebouwingspercentage.toFixed(1)}%`
-                  : 'Onbekend'}
-              </p>
-            </div>
-            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-              <p className="text-xs text-grey-400 mb-1">FAR (max vloerfactor)</p>
-              <p className="text-sm font-medium text-grey-100">
-                {maxFloorAreaRatio != null
-                  ? maxFloorAreaRatio.toFixed(2)
-                  : 'Onbekend'}
-              </p>
-            </div>
-          </div>
         </div>
 
         {(parcel.vacancy_reasons?.length || actionableOpportunitySignals.length > 0) && (
