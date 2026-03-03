@@ -14,14 +14,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import uuid
 from dataclasses import dataclass
 
 import httpx
 from geoalchemy2.shape import to_shape
-from sqlalchemy import bindparam, select, text
-from sqlalchemy import update as sa_update
+from sqlalchemy import select, text
 
 from app.core.database import async_session_factory
 from app.government_apis.bag_wfs import bag_wfs_client
@@ -127,11 +127,9 @@ async def _backfill_scan(
     async with async_session_factory() as session:
         await session.execute(text(f"SET app.current_tenant_id = '{org_id}'"))
 
-        update_stmt = (
-            sa_update(ScanResult)
-            .where(ScanResult.id == bindparam("scan_result_id"))
-            .values(flags=bindparam("new_flags"))
-            .execution_options(synchronize_session=None)
+        update_stmt = text(
+            "UPDATE scan_results SET flags = :new_flags"
+            " WHERE id = :scan_result_id"
         )
 
         last_id: uuid.UUID | None = None
@@ -203,8 +201,8 @@ async def _backfill_scan(
                 next_bm["pand_oppervlakte_m2"] = pand_oppervlakte_m2
                 next_flags["building_metrics"] = next_bm
                 updates.append({
-                    "scan_result_id": scan_result_id,
-                    "new_flags": next_flags,
+                    "scan_result_id": str(scan_result_id),
+                    "new_flags": json.dumps(next_flags),
                 })
                 last_id = scan_result_id
 
