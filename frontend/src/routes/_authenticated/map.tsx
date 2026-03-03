@@ -675,8 +675,8 @@ function MapPage() {
     )
   }, [makeInspectorParcel])
 
-  // For URL-driven postcode/huisnummer navigation: auto-open the same parcel detail modal
-  // once we can resolve a concrete parcel_id from the lookup response.
+  // For URL-driven postcode/huisnummer navigation and address search:
+  // resolve parcel_id then fetch full scan data (same as map click) for rich detail panel.
   useEffect(() => {
     if (!lookup.data) return
     const pending = pendingLookupInspectorRef.current
@@ -693,58 +693,91 @@ function MapPage() {
       },
       accessToken
     )
-      .then((resolved) => {
-        const firstParcel = data.cadastral_parcels?.[0]
-        const primaryBestemming = data.zoning?.primary_bestemming
-        const hasPand = Boolean(data.building?.pand_id)
-
+      .then(async (resolved) => {
         setAutoEnableParcelsKey(
           `addr:${pending.postcode.replace(/\s/g, '').toUpperCase()}:${pending.huisnummer}`
         )
         setTier('none')
         setParcelGeometryHighlight(null)
-        setInspectorParcel(
-          makeInspectorParcel({
-            parcelId: resolved.parcel_id,
-            address:
-              resolved.address ??
-              `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
-            parcelCode: firstParcel?.kadastrale_aanduiding ?? null,
-            areaM2: firstParcel?.oppervlakte ?? data.building?.oppervlakte ?? null,
-            hasPand,
-            bouwjaar: data.building?.bouwjaar ?? null,
-            pandStatus: data.building?.status ?? null,
-            vacancySignal: deriveVacancySignalFromPandStatus(
-              data.building?.status ?? null,
-              hasPand
-            ),
-            bestemmingen: primaryBestemming
-              ? [{ type: primaryBestemming, naam: primaryBestemming }]
-              : null,
-            maxBebouwingspercentage:
-              data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
-            maxFloorAreaRatio:
-              data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
-          })
-        )
-        void fetchParcelCentroid(resolved.parcel_id, accessToken)
-          .then((centroid) => {
-            if (centroid.geometry) {
-              setParcelGeometryHighlight({
-                lng: centroid.lng,
-                lat: centroid.lat,
-                parcelCode: centroid.parcel_code ?? firstParcel?.kadastrale_aanduiding ?? null,
-                areaM2: centroid.area_m2 ?? firstParcel?.oppervlakte ?? null,
-                geometry: centroid.geometry,
-              })
-            }
-          })
-          .catch(() => {
-            // Keep inspector open even when centroid enrichment fails.
-          })
+
+        // Use fetchParcelAtPoint to get full scan data (score, building_metrics,
+        // vacancy, market signals) — same path as clicking a parcel on the map.
+        try {
+          const full = await fetchParcelAtPoint(
+            resolved.lng,
+            resolved.lat,
+            accessToken,
+            { scanId: activeScanIdRef.current },
+          )
+          setInspectorParcel(
+            makeInspectorParcel({
+              parcelId: full.parcel_id,
+              address: full.address ?? resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
+              parcelCode: full.parcel_code ?? null,
+              gemeenteCode: full.gemeente_code ?? null,
+              areaM2: full.area_m2 ?? null,
+              hasPand: full.has_pand,
+              bouwjaar: full.bouwjaar ?? null,
+              pandStatus: full.pand_status ?? null,
+              score: full.score ?? null,
+              scoreCategory: full.score_category ?? null,
+              scoreBreakdown: full.score_breakdown ?? null,
+              vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
+              vacancyConfidence: full.vacancy_confidence ?? null,
+              vacancyReasons: full.vacancy_reasons ?? null,
+              vacancyModelVersion: full.vacancy_model_version ?? null,
+              marketSignals: full.market_signals ?? null,
+              opportunitySignals: full.opportunity_signals ?? null,
+              buildingMetrics: full.building_metrics ?? null,
+              hasReport: full.has_report,
+            })
+          )
+          if (full.geometry) {
+            setParcelGeometryHighlight({
+              lng: full.lng,
+              lat: full.lat,
+              parcelCode: full.parcel_code ?? null,
+              areaM2: full.area_m2 ?? null,
+              geometry: full.geometry,
+            })
+          }
+          setPropertyLngLat([full.lng, full.lat])
+        } catch {
+          // Fallback: parcel not in any scan — use basic property lookup data
+          const firstParcel = data.cadastral_parcels?.[0]
+          const primaryBestemming = data.zoning?.primary_bestemming
+          const hasPand = Boolean(data.building?.pand_id)
+          setInspectorParcel(
+            makeInspectorParcel({
+              parcelId: resolved.parcel_id,
+              address: resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
+              parcelCode: firstParcel?.kadastrale_aanduiding ?? null,
+              areaM2: firstParcel?.oppervlakte ?? data.building?.oppervlakte ?? null,
+              hasPand,
+              bouwjaar: data.building?.bouwjaar ?? null,
+              pandStatus: data.building?.status ?? null,
+              bestemmingen: primaryBestemming ? [{ type: primaryBestemming, naam: primaryBestemming }] : null,
+              maxBebouwingspercentage: data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
+              maxFloorAreaRatio: data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
+            })
+          )
+          void fetchParcelCentroid(resolved.parcel_id, accessToken)
+            .then((centroid) => {
+              if (centroid.geometry) {
+                setParcelGeometryHighlight({
+                  lng: centroid.lng,
+                  lat: centroid.lat,
+                  parcelCode: centroid.parcel_code ?? firstParcel?.kadastrale_aanduiding ?? null,
+                  areaM2: centroid.area_m2 ?? firstParcel?.oppervlakte ?? null,
+                  geometry: centroid.geometry,
+                })
+              }
+            })
+            .catch(() => {})
+        }
       })
       .catch(() => {
-        // Keep quick card fallback if parcel resolution fails.
+        // Address resolution failed — no parcel match.
       })
   }, [lookup.data, accessToken, makeInspectorParcel])
 
