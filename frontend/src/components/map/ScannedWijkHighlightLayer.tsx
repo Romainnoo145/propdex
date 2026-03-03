@@ -52,15 +52,16 @@ export function addScannedWijkHighlight(
   // Determine insertion point (before wijk-fill if it exists, so scanned overlay is below)
   const beforeLayer = map.getLayer('wijk-fill') ? 'wijk-fill' : undefined;
 
-  // Add fill layer with semi-transparent amber
+  // No fill — parcel score colors must not be obscured.
+  // Only the amber outline (below) marks scanned wijken.
   map.addLayer(
     {
       id: SCANNED_FILL_LAYER,
       type: 'fill',
       source: SCANNED_SOURCE_ID,
       paint: {
-        'fill-color': 'rgba(245, 158, 11, 0.25)', // Amber semi-transparent
-        'fill-antialias': true,
+        'fill-color': 'rgba(245, 158, 11, 0)',
+        'fill-opacity': 0,
       },
     },
     beforeLayer

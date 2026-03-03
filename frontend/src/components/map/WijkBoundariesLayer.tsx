@@ -55,20 +55,16 @@ export function addWijkBoundariesLayer(
   // Determine insertion point (before gemeente layers if they exist)
   const beforeLayer = map.getLayer('gemeente-fill') ? 'gemeente-fill' : undefined;
 
-  // Add fill layer with hover effect
+  // Invisible fill layer for click/hover interaction (no visual fill —
+  // parcel score colors must not be obscured by wijk fills).
   map.addLayer(
     {
       id: WIJK_FILL_LAYER,
       type: 'fill',
       source: WIJK_SOURCE_ID,
       paint: {
-        'fill-color': '#10b981', // Emerald green
-        'fill-opacity': [
-          'case',
-          ['boolean', ['feature-state', 'hover'], false],
-          0.4, // Hover opacity
-          0.2, // Default opacity
-        ],
+        'fill-color': '#10b981',
+        'fill-opacity': 0,
       },
     },
     beforeLayer

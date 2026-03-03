@@ -403,9 +403,17 @@ function MapPage() {
       }
     }
 
-    // Avoid silently switching users to a random wijk scan when multiple scans exist.
+    // When a gemeente is selected and only one scan exists, use it.
     if (activeGemeente && gemeentePool.length === 1) {
       return gemeentePool[0] ?? null
+    }
+
+    // When browsing without gemeente context, pick the most recent completed scan
+    // so parcel score colors show automatically when zooming into scanned areas.
+    if (!activeGemeente && completed.length > 0) {
+      return [...completed].sort(
+        (a, b) => new Date(b.scan_date).getTime() - new Date(a.scan_date).getTime()
+      )[0] ?? null
     }
 
     return null
@@ -434,16 +442,19 @@ function MapPage() {
       currentCenteredWijkNameRef.current = null
     }
 
-    if (!visible || activeScanId) return
-    activatePreferredScan()
+    if (!visible) return
+    if (!activeScanId) {
+      activatePreferredScan()
+    }
   }, [activeScanId, activatePreferredScan, mapRef, readCenteredWijkName])
 
-  // If parcels were enabled before scan history finished loading, auto-attach
-  // the preferred completed scan as soon as it becomes available.
+  // Auto-activate preferred scan on map load so parcel score colors
+  // show immediately when zooming into scanned areas — no manual scan
+  // selection needed.
   useEffect(() => {
-    if (!isParcelsVisible || activeScanId) return
+    if (activeScanId) return
     activatePreferredScan()
-  }, [activeScanId, activatePreferredScan, isParcelsVisible])
+  }, [activeScanId, activatePreferredScan])
 
   const gemeenteGeojsonErrorNotifiedRef = useRef(false)
   useEffect(() => {
@@ -980,15 +991,28 @@ function MapPage() {
     })
   }, [postcode, huisnummer, navTs, navigate, focusAddressWithLookup])
 
+  const loadedScoreLayerScanIdRef = useRef<string | null>(null)
+  const scoreLayerPendingRef = useRef(false)
+
   const ensureParcelScoreLayer = useCallback((scanId: string) => {
     const map = mapRef.current
     if (!map) return
+
+    // Skip if this exact scan is already loaded
+    if (loadedScoreLayerScanIdRef.current === scanId && map.getSource('parcel-scores')) {
+      return
+    }
+
+    // Skip if another call is already in-flight for the same scan
+    if (scoreLayerPendingRef.current) return
+    scoreLayerPendingRef.current = true
+
     const tileUrl = getScanTileUrl(scanId)
 
     const addLayerSafe = () => {
       if (!map.isStyleLoaded()) {
         map.once('styledata', addLayerSafe)
-        return
+        return // Don't clear pending — still waiting
       }
       try {
         if (map.getSource('parcel-scores')) {
@@ -996,14 +1020,16 @@ function MapPage() {
         } else {
           addParcelScoreLayer(map, tileUrl, 'parcel_scores')
         }
+        loadedScoreLayerScanIdRef.current = scanId
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (message.includes('Style is not done loading')) {
           map.once('styledata', addLayerSafe)
-          return
+          return // Don't clear pending — still waiting
         }
         throw error
       }
+      scoreLayerPendingRef.current = false
     }
 
     addLayerSafe()
@@ -1019,12 +1045,11 @@ function MapPage() {
     }
   }, [scanStatus.data, activeScanId, mapReady, ensureParcelScoreLayer])
 
-  // Restore score layer when returning to map with ?scan_id=X (no active polling for pre-existing scan)
+  // Load score layer when activeScanId is set or parcels toggled on
   useEffect(() => {
     if (!mapReady || !mapRef.current || !activeScanId) return
-    // Safe add with style-load retry.
     ensureParcelScoreLayer(activeScanId)
-  }, [activeScanId, mapReady, ensureParcelScoreLayer])
+  }, [activeScanId, mapReady, ensureParcelScoreLayer, isParcelsVisible])
 
   // Handle scan completion and failure
   useEffect(() => {
@@ -2083,6 +2108,7 @@ function MapPage() {
         showVacancySignalToggle={false}
         onBuildCapacityToggle={handleBuildCapacityToggle}
         showBuildCapacityToggle={false}
+        hasScoreData={!!activeScanId}
       />
 
       {/* Parcel details modal — same component as scan results row click */}

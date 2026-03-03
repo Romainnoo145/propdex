@@ -36,6 +36,7 @@ interface LayerToggleProps {
   showScannedScopeToggle?: boolean
   showBAGPandenToggle?: boolean
   autoEnableParcelsKey?: string | null
+  hasScoreData?: boolean
 }
 
 function LayerToggle({
@@ -45,34 +46,27 @@ function LayerToggle({
   onGemeentenToggle,
   onBestemmingsplanToggle,
   onBAGPandenToggle,
-  onWijkenToggle,
-  showWijkenToggle,
+  onWijkenToggle: _onWijkenToggle,
   onScoreToggle,
-  showScoreToggle,
   onBuiltStatusToggle,
-  showBuiltStatusToggle,
   onReportStatusToggle,
-  showReportStatusToggle,
   onVacancySignalToggle,
-  showVacancySignalToggle,
   onBuildCapacityToggle,
-  showBuildCapacityToggle,
   onScannedScopeToggle,
-  showScannedScopeToggle,
-  showBAGPandenToggle,
   autoEnableParcelsKey,
+  hasScoreData,
 }: LayerToggleProps) {
   const persisted = useMemo(() => readPersistedMapLayerState(), [])
 
   const [activeLayer, setActiveLayer] = useState<LayerType>(persisted.basemap)
   const [showParcels, setShowParcels] = useState(persisted.showParcels)
-  const [showGemeenten, setShowGemeenten] = useState(persisted.showGemeenten)
+  const [showGemeenten] = useState(persisted.showGemeenten)
   const [showBestemmingsplan, setShowBestemmingsplan] = useState(
     persisted.showBestemmingsplan
   )
-  const [showBAGPanden, setShowBAGPanden] = useState(persisted.showBAGPanden)
-  const [showWijken, setShowWijken] = useState(persisted.showWijken)
-  const [showScannedScope, setShowScannedScope] = useState(persisted.showScannedScope)
+  const [showBAGPanden] = useState(persisted.showBAGPanden)
+  const [showWijken] = useState(persisted.showWijken)
+  const [showScannedScope] = useState(persisted.showScannedScope)
   const [showScore, setShowScore] = useState(
     persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
   )
@@ -174,10 +168,10 @@ function LayerToggle({
       setParcelBoundariesVisibility(map, showParcels)
     }
     onParcelsToggle?.(showParcels)
-    onGemeentenToggle?.(showGemeenten)
+    onGemeentenToggle?.(false)
     onBestemmingsplanToggle?.(showBestemmingsplan)
-    onBAGPandenToggle?.(showBAGPanden)
-    onScannedScopeToggle?.(showScannedScope)
+    onBAGPandenToggle?.(false)
+    onScannedScopeToggle?.(false)
     if (showParcels) {
       queueMicrotask(() => setParcelOverlayMode('score'))
     }
@@ -274,93 +268,15 @@ function LayerToggle({
     }
   }
 
-  const handleGemeentenToggle = () => {
-    const nextShowGemeenten = !showGemeenten
-    setShowGemeenten(nextShowGemeenten)
-    onGemeentenToggle?.(nextShowGemeenten)
-  }
-
   const handleBestemmingsplanToggle = () => {
     const next = !showBestemmingsplan
     setShowBestemmingsplan(next)
     onBestemmingsplanToggle?.(next)
   }
 
-  const handleBAGPandenToggle = () => {
-    const next = !showBAGPanden
-    setShowBAGPanden(next)
-    onBAGPandenToggle?.(next)
-  }
-
-  const handleWijkenToggle = () => {
-    const next = !showWijken
-    setShowWijken(next)
-    onWijkenToggle?.(next)
-  }
-
-  const handleScannedScopeToggle = () => {
-    const next = !showScannedScope
-    setShowScannedScope(next)
-    onScannedScopeToggle?.(next)
-  }
-
-  const handleScoreToggle = () => {
-    setParcelOverlayMode(showScore ? 'none' : 'score')
-  }
-
-  const handleBuiltStatusToggle = () => {
-    setParcelOverlayMode(showBuiltStatus ? 'none' : 'built')
-  }
-
-  const handleReportStatusToggle = () => {
-    setParcelOverlayMode(showReportStatus ? 'none' : 'report')
-  }
-
-  const handleVacancySignalToggle = () => {
-    setParcelOverlayMode(showVacancySignal ? 'none' : 'vacancy')
-  }
-
-  const handleBuildCapacityToggle = () => {
-    setParcelOverlayMode(showBuildCapacity ? 'none' : 'capacity')
-  }
-
-  const prevShowWijkenToggleRef = useRef(showWijkenToggle)
-  useEffect(() => {
-    if (!mapReady) return
-    if (showWijkenToggle && !prevShowWijkenToggleRef.current) {
-      queueMicrotask(() => setShowGemeenten(true))
-      onGemeentenToggle?.(true)
-      onWijkenToggle?.(showWijken)
-    }
-    prevShowWijkenToggleRef.current = showWijkenToggle
-  }, [mapReady, showWijken, showWijkenToggle, onGemeentenToggle, onWijkenToggle])
-
-  const prevShowScoreToggleRef = useRef(showScoreToggle)
-  useEffect(() => {
-    if (!mapReady) return
-    if (showScoreToggle && !prevShowScoreToggleRef.current && showParcels) {
-      onScoreToggle?.(showScore)
-      onBuiltStatusToggle?.(showBuiltStatus)
-      onReportStatusToggle?.(showReportStatus)
-      onVacancySignalToggle?.(showVacancySignal)
-      onBuildCapacityToggle?.(showBuildCapacity)
-    }
-    prevShowScoreToggleRef.current = showScoreToggle
-  }, [
-    mapReady,
-    showScoreToggle,
-    showParcels,
-    showScore,
-    showBuiltStatus,
-    showReportStatus,
-    showVacancySignal,
-    showBuildCapacity,
-    onScoreToggle,
-    onBuiltStatusToggle,
-    onReportStatusToggle,
-    onVacancySignalToggle,
-    onBuildCapacityToggle,
-  ])
+  // Removed toggle handlers for BAG Panden, Wijken, Scangebied, Score overlays —
+  // these buttons are no longer in the toggle bar. Underlying layer callbacks
+  // (onScoreToggle, etc.) are still called via setParcelOverlayMode.
 
   const lastAutoEnableRef = useRef<string | null>(null)
   useEffect(() => {
@@ -409,18 +325,18 @@ function LayerToggle({
   const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm'
   const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
 
-  const showGradientLegend = showScore && showParcels
+  const showGradientLegend = showScore && showParcels && hasScoreData
 
   return (
     <>
       {showGradientLegend && (
         <div className="absolute bottom-16 left-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
-          <span className="text-xs text-grey-400">Laag</span>
+          <span className="text-xs text-grey-400">40</span>
           <div
-            className="h-3 w-32 rounded-full"
-            style={{ background: 'linear-gradient(to right, #64748b, #eab308, #22c55e)' }}
+            className="h-3 w-24 rounded-full"
+            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
           />
-          <span className="text-xs text-grey-400">Hoog</span>
+          <span className="text-xs text-grey-400">100</span>
         </div>
       )}
 
@@ -453,61 +369,7 @@ function LayerToggle({
           Percelen
         </button>
 
-        {showBAGPandenToggle && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleBAGPandenToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showBAGPanden ? overlayActive : overlayInactive
-              }`}
-            >
-              BAG Panden
-            </button>
-          </>
-        )}
-
-        {showWijkenToggle && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleWijkenToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showWijken ? overlayActive : overlayInactive
-              }`}
-            >
-              Wijken
-            </button>
-          </>
-        )}
-
         <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-        <button
-          onClick={handleGemeentenToggle}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            showGemeenten ? overlayActive : overlayInactive
-          }`}
-        >
-          Gemeenten
-        </button>
-
-        {showScannedScopeToggle && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleScannedScopeToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showScannedScope ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.boundaryOverlays[0].label}
-            </button>
-          </>
-        )}
-
-        {/* Group 3 — Overlays */}
-        <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
-        <span className="text-[10px] text-grey-500 uppercase tracking-widest px-1 self-center">Overlays</span>
 
         <button
           onClick={handleBestemmingsplanToggle}
@@ -517,76 +379,6 @@ function LayerToggle({
         >
           Bestemmingsplan
         </button>
-
-        {showScoreToggle && showParcels && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleScoreToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showScore ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.parcelOverlays[0].label}
-            </button>
-          </>
-        )}
-
-        {showBuiltStatusToggle && showParcels && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleBuiltStatusToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showBuiltStatus ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.parcelOverlays[1].label}
-            </button>
-          </>
-        )}
-
-        {showReportStatusToggle && showParcels && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleReportStatusToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showReportStatus ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.parcelOverlays[2].label}
-            </button>
-          </>
-        )}
-
-        {showVacancySignalToggle && showParcels && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleVacancySignalToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showVacancySignal ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.parcelOverlays[3].label}
-            </button>
-          </>
-        )}
-
-        {showBuildCapacityToggle && showParcels && (
-          <>
-            <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-            <button
-              onClick={handleBuildCapacityToggle}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-                showBuildCapacity ? overlayActive : overlayInactive
-              }`}
-            >
-              {MAP_LAYER_CATALOG.parcelOverlays[4].label}
-            </button>
-          </>
-        )}
       </div>
     </>
   )

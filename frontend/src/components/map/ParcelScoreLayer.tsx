@@ -98,26 +98,26 @@ export function addParcelScoreLayer(
     type: 'fill',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['has', 'score'], // Only show parcels with score data
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]], // Only parcels above threshold
     paint: {
       'fill-color': [
         'interpolate',
         ['linear'],
         ['get', 'score'],
-        0,   '#64748b', // Slate grey — in_gebruik, low opportunity
-        25,  '#94a3b8', // Light grey — marginal
-        45,  '#eab308', // Amber — borderline opportunity
-        65,  '#84cc16', // Lime — good opportunity
-        80,  '#22c55e', // Green — strong opportunity (leegstaand_pand)
-        100, '#16a34a', // Dark green — highest (leeg_perceel)
+        40,  '#f59e0b', // Amber — borderline opportunity
+        60,  '#eab308', // Strong amber — solid opportunity
+        75,  '#84cc16', // Lime — good opportunity
+        90,  '#22c55e', // Green — strong opportunity
+        100, '#16a34a', // Dark green — highest
       ],
       'fill-opacity': [
-        'case',
-        ['boolean', ['feature-state', 'selected'], false],
-        0.95, // Selected: almost fully opaque
-        ['boolean', ['feature-state', 'hover'], false],
-        0.85, // Hover opacity
-        0.6, // Default opacity
+        'interpolate',
+        ['linear'],
+        ['get', 'score'],
+        40, 0.25,  // Subtle at threshold
+        60, 0.45,  // Medium
+        80, 0.6,   // Strong
+        100, 0.7,  // Brightest
       ],
     },
     minzoom: 14,
@@ -133,6 +133,7 @@ export function addParcelScoreLayer(
     filter: [
       'all',
       ['has', 'score'],
+      ['>=', ['get', 'score'], 40],
       ['==', ['downcase', ['to-string', ['coalesce', ['get', 'has_pand'], 'false']]], 'false'],
     ],
     paint: {
@@ -275,35 +276,17 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
-  // Add outline layer for visual separation between parcels
+  // Add outline layer only for qualifying parcels (score >= 40)
   map.addLayer({
     id: OUTLINE_LAYER_ID,
     type: 'line',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['has', 'score'],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
     paint: {
-      'line-color': [
-        'match',
-        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
-        ['true', '1', 'yes'],
-        '#f59e0b', // Rapport bestaat -> amber accent
-        '#ffffff',
-      ],
-      'line-width': [
-        'match',
-        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
-        ['true', '1', 'yes'],
-        1.4,
-        0.5,
-      ],
-      'line-opacity': [
-        'match',
-        ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
-        ['true', '1', 'yes'],
-        1.0,
-        0.8,
-      ],
+      'line-color': '#f59e0b', // Amber outline for highlighted parcels
+      'line-width': 1.2,
+      'line-opacity': 0.7,
     },
     minzoom: 14,
   });
@@ -314,7 +297,7 @@ export function addParcelScoreLayer(
     type: 'line',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['has', 'score'],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
     paint: {
       'line-color': '#ffffff',
       'line-width': [
@@ -340,7 +323,7 @@ export function addParcelScoreLayer(
     type: 'symbol',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['coalesce', ['get', 'area_m2'], 0], 200]],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40], ['>=', ['coalesce', ['get', 'area_m2'], 0], 200]],
     minzoom: 15.5,
     maxzoom: 17,
     layout: {
@@ -363,7 +346,7 @@ export function addParcelScoreLayer(
     type: 'symbol',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score']],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
     minzoom: 17,
     layout: {
       'text-field': [

@@ -790,7 +790,10 @@ export async function fetchScanResults(
  */
 export function getScanTileUrl(scanId: string): string {
   const TILE_SCHEMA_VERSION = '3'
-  return `${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf?v=${TILE_SCHEMA_VERSION}`
+  // Absolute URL required — MapLibre fetches vector tiles in a web worker
+  // which cannot resolve relative paths.
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${origin}${SCANS_BASE}/${scanId}/tiles/{z}/{x}/{y}.pbf?v=${TILE_SCHEMA_VERSION}`
 }
 
 /**

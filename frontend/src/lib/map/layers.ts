@@ -57,63 +57,24 @@ export const MAP_LAYER_CATALOG = {
 
 export const DEFAULT_MAP_LAYER_STATE: PersistedMapLayerState = {
   basemap: 'kaart',
-  showParcels: true,
+  showParcels: false,
   showGemeenten: false,
   showBestemmingsplan: false,
   showBAGPanden: false,
-  showWijken: true,
-  showScannedScope: true,
-  activeParcelOverlay: 'potential',
-}
-
-const STORAGE_KEY = 'propdex.map.layers.v3'
-
-function coerceBoolean(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value
-  return fallback
-}
-
-function coerceBasemap(value: unknown): BaseMapLayerId {
-  return value === 'aerial' ? 'aerial' : 'kaart'
+  showWijken: false,
+  showScannedScope: false,
+  activeParcelOverlay: null,
 }
 
 export function readPersistedMapLayerState(): PersistedMapLayerState {
-  if (typeof window === 'undefined') return DEFAULT_MAP_LAYER_STATE
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_MAP_LAYER_STATE
-    const parsed = JSON.parse(raw) as Partial<PersistedMapLayerState>
-
-    return {
-      basemap: coerceBasemap(parsed.basemap),
-      showParcels: coerceBoolean(parsed.showParcels, DEFAULT_MAP_LAYER_STATE.showParcels),
-      showGemeenten: coerceBoolean(parsed.showGemeenten, DEFAULT_MAP_LAYER_STATE.showGemeenten),
-      showBestemmingsplan: coerceBoolean(
-        parsed.showBestemmingsplan,
-        DEFAULT_MAP_LAYER_STATE.showBestemmingsplan
-      ),
-      showBAGPanden: coerceBoolean(parsed.showBAGPanden, DEFAULT_MAP_LAYER_STATE.showBAGPanden),
-      showWijken: coerceBoolean(parsed.showWijken, DEFAULT_MAP_LAYER_STATE.showWijken),
-      showScannedScope: coerceBoolean(
-        parsed.showScannedScope,
-        DEFAULT_MAP_LAYER_STATE.showScannedScope
-      ),
-      activeParcelOverlay: DEFAULT_MAP_LAYER_STATE.activeParcelOverlay,
-    }
-  } catch {
-    return DEFAULT_MAP_LAYER_STATE
-  }
+  // Always start with a clean map — no localStorage persistence.
+  return DEFAULT_MAP_LAYER_STATE
 }
 
 export function writePersistedMapLayerState(
-  state: PersistedMapLayerState
+  _state: PersistedMapLayerState
 ): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {
-    // localStorage unavailable
-  }
+  // No-op — map always starts clean, no persistence.
 }
 
 export function updatePersistedMapLayerState(

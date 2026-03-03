@@ -39,7 +39,7 @@ function AuthenticatedLayout() {
   // Stable transformRequest — reads token from ref, never re-initializes MapLibre
   const transformRequest = useCallback(
     (url: string, resourceType?: string) => {
-      if (url.startsWith('/api/') && resourceType === 'Tile') {
+      if ((url.startsWith('/api/') || url.includes('/api/scans/')) && resourceType === 'Tile') {
         const headers: Record<string, string> = {}
         if (accessTokenRef.current) {
           headers['Authorization'] = `Bearer ${accessTokenRef.current}`
