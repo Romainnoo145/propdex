@@ -202,7 +202,7 @@ Plans:
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
 | 72. Parcel Detail Panel Redesign | 2/2 | Complete    | 2026-03-03 |
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete    | 2026-03-03 |
-| 74. 3D BAG Building Data | 3/3 | Complete   | 2026-03-03 |
+| 74. 3D BAG Building Data | 3/3 | Complete    | 2026-03-03 |
 
 ---
 
