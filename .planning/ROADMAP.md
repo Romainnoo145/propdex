@@ -381,7 +381,7 @@ Plans:
 
 **Goal:** Transformatiepotentie pillar bar uses real bouwregel data (max_bouwhoogte, max_bouwlagen) extracted from PLU WMS maatvoering layer + DSO maatvoeringen, with graceful heuristic fallback when data is absent
 **Depends on:** Phase 72
-**Plans:** 2 plans (Wave 1 + Wave 2 sequential)
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 73-01-PLAN.md — Backend: max_bouwlagen schema + zoning aggregator + PLU WMS parser + scan job persistence (DSO-01, DSO-02)

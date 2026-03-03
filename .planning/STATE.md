@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 72 of 72 (Parcel Detail Panel Redesign — COMPLETE)
-Plan: 2 of 2 — COMPLETE
-Status: Phase 72 complete — both plans shipped; pand_oppervlakte_m2 backend + three real data pillar bars frontend (UX-01 satisfied)
-Last activity: 2026-03-03 — Phase 72 Plan 02 complete; ParcelDetailModal shows Vrije ruimte / Beschikbaarheid / Transformatiepotentie; FAR/TAR dead code removed
+Phase: 73 of 73 (DSO Omgevingsplan Bouwregels — In Progress)
+Plan: 1 of 2 — Plan 01 COMPLETE; Plan 02 pending
+Status: Phase 73 Plan 01 complete — max_bouwlagen DSO schema + PLU WMS bouwhoogte/bouwlagen extraction + area_scan persistence via dict copy; cache v4 bumped
+Last activity: 2026-03-03 — Phase 73 Plan 01 complete; backend bouwregels extraction flowing into ScanResult.flags["building_metrics"]
 
-Progress (v9.0): [████████░░] 80% (8/10 plans complete)
+Progress (Phase 73): [█████░░░░░] 50% (1/2 plans complete)
 
 ---
 
@@ -62,6 +62,9 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 ---
 
 ## Accumulated Context
+
+### Roadmap Evolution
+- Phase 73 added: DSO Omgevingsplan Bouwregels — extract max_bebouwingspercentage, max_bouwhoogte, max_bouwlagen via STTR/IMOW APIs, rewrite Transformatiepotentie to objective formula
 
 ### Key Patterns (carry forward)
 
@@ -153,6 +156,16 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 - formatPlanruimteLabel, deriveBuildabilityScore, deriveTransformationScore, toMetricNumber, deriveBuildabilityForInspector all deleted
 - extractScoreSubscores import removed from both ParcelDetailModal and ParcelCard
 
+### Phase 73 Context (In Progress)
+
+- Phase 73 Plan 01 complete: BuildingDimensions.max_bouwlagen (int | None) + has_any_data updated; _merge_building_dimensions handles bouwlagen; _extract_building_dimensions extracts bouwlagen from Dutch synonyms (bouwlagen/bouwlaag/verdieping/woonlagen); cache key bumped v3→v4
+- int(round(waarde)) pattern for float→int rounding (NOT round(int(waarde)) which truncates)
+- Bouwlagen branch must come BEFORE generic "hoogte" branch in _extract_building_dimensions
+- PLU WMS _extract_metrics_from_features: max_bouwhoogte (2.0-100.0m, excludes "goot" text), max_bouwlagen (1 < v <= 50 int); both propagated into bestemmingen dict entries
+- extract_building_metrics() now always returns 4 keys: max_bebouwingspercentage, max_floor_area_ratio, max_bouwhoogte, max_bouwlagen
+- area_scan.py: final_bm = dict(building_metrics) automatically carries max_bouwhoogte/max_bouwlagen — no code changes needed
+- 38 zoning aggregator tests GREEN; ruff check all modified files: clean
+
 ### Ongoing TODOs
 
 - Production deployment: Create app_role (sql/setup_app_role.sql)
@@ -173,11 +186,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-03
-**Stopped At:** Completed Phase 72 Plan 02 — frontend pillar bar rewrite; Phase 72 COMPLETE (UX-01 satisfied)
-**Resume File:** Next phase TBD
+**Stopped At:** Completed Phase 73 Plan 01 — backend bouwregels extraction (max_bouwhoogte + max_bouwlagen) from PLU WMS + DSO into ScanResult.flags["building_metrics"]
+**Resume File:** .planning/phases/73-dso-omgevingsplan-bouwregels/73-02-PLAN.md
 
-**Next Action:** Phase 72 complete. Plan next phase or continue with deferred work.
+**Next Action:** Execute Phase 73 Plan 02 — frontend Transformatiepotentie formula rewrite using max_bouwlagen data from building_metrics.
 
 ---
 
-*State updated: 2026-03-03 -- Phase 72 Plan 02 Tasks 1+2 complete: three real data pillar bars + FAR/TAR dead code removed (UX-01 frontend)*
+*State updated: 2026-03-03 -- Phase 73 Plan 01 complete: BuildingDimensions.max_bouwlagen + PLU WMS bouwregels extraction + extract_building_metrics 4-key return; DSO cache v4*
