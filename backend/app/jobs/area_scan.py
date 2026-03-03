@@ -173,20 +173,21 @@ def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
 def _derive_bag_attributes_for_parcel(
     parcel_geometry: BaseGeometry,
     bag_index: BagSpatialIndex | None,
-) -> tuple[bool, int | None, str | None, tuple[float, float] | None]:
+) -> tuple[bool, int | None, str | None, tuple[float, float] | None, float | None]:
     """Derive parcel-level BAG attributes from intersecting building footprints."""
     if bag_index is None:
-        return False, None, None, None
+        return False, None, None, None, None
 
     candidate_indices = bag_index.tree.query(parcel_geometry)
     if len(candidate_indices) == 0:
-        return False, None, None, None
+        return False, None, None, None, None
 
     intersect_count = 0
     matched_bouwjaren: list[int] = []
     matched_statuses: list[str] = []
     best_address_point: tuple[float, float] | None = None
     best_overlap_area = -1.0
+    total_footprint_area = 0.0
 
     iterable_indices = (
         candidate_indices.tolist()
@@ -201,6 +202,7 @@ def _derive_bag_attributes_for_parcel(
         overlap_area = bag_geom.intersection(parcel_geometry).area
         if overlap_area < MIN_BUILDING_OVERLAP_M2:
             continue
+        total_footprint_area += overlap_area
         intersect_count += 1
         if overlap_area > best_overlap_area:
             best_overlap_area = overlap_area
@@ -215,14 +217,15 @@ def _derive_bag_attributes_for_parcel(
             matched_statuses.append(status)
 
     if intersect_count == 0:
-        return False, None, None, None
+        return False, None, None, None, None
 
     bouwjaar_value = min(matched_bouwjaren) if matched_bouwjaren else None
     pand_status_value = None
     if matched_statuses:
         pand_status_value = Counter(matched_statuses).most_common(1)[0][0]
 
-    return True, bouwjaar_value, pand_status_value, best_address_point
+    pand_oppervlakte_m2: float | None = total_footprint_area if total_footprint_area > 0 else None
+    return True, bouwjaar_value, pand_status_value, best_address_point, pand_oppervlakte_m2
 
 
 async def area_scan_job(
@@ -399,6 +402,7 @@ async def area_scan_job(
                     list[str],
                     dict[str, float | None],
                     tuple[float, float] | None,
+                    float | None,
                 ]
             ] = []
 
@@ -406,7 +410,7 @@ async def area_scan_job(
                 zip(features, bestemmingen_list, strict=True)
             ):
                 try:
-                    parcel, centroid_xy = await _upsert_parcel_cache(
+                    parcel, centroid_xy, pand_oppervlakte_m2 = await _upsert_parcel_cache(
                         feature, org_id, scan.gemeente_code, session,
                         bestemmingen=bestemmingen,
                         bag_index=bag_index,
@@ -427,6 +431,7 @@ async def area_scan_job(
                         insights.signals,
                         insights.building_metrics,
                         centroid_xy,
+                        pand_oppervlakte_m2,
                     ))
 
                     # Update progress every 10 parcels
@@ -497,12 +502,16 @@ async def area_scan_job(
                     opportunity_signals,
                     building_metrics,
                     _centroid,
+                    pand_oppervlakte_m2,
                 ) in all_ranked:
                     listing_signal = listing_signal_by_parcel.get(parcel.id)
                     vacancy_assessment = compute_vacancy_confidence(
                         parcel,
                         listing_signal=listing_signal,
                     )
+                    final_bm: dict = dict(building_metrics) if isinstance(building_metrics, dict) else {}
+                    if pand_oppervlakte_m2 is not None:
+                        final_bm["pand_oppervlakte_m2"] = pand_oppervlakte_m2
                     ranked_values.append(
                         {
                             "organization_id": org_id,
@@ -523,7 +532,7 @@ async def area_scan_job(
                                 "vacancy_model_version": vacancy_assessment.model_version,
                                 "market_signals": listing_signal,
                                 "opportunity_signals": opportunity_signals,
-                                "building_metrics": building_metrics,
+                                "building_metrics": final_bm,
                             },
                         }
                     )
@@ -557,7 +566,7 @@ async def area_scan_job(
             await _batch_resolve_addresses(
                 [
                     (p, c)
-                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c in address_targets
+                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c, _pom in address_targets
                 ],
                 http_client,
                 session,
@@ -759,7 +768,7 @@ async def _upsert_parcel_cache(
     session: AsyncSession,
     bestemmingen: list[dict] | None = None,
     bag_index: BagSpatialIndex | None = None,
-) -> tuple[ParcelCache, tuple[float, float] | None]:
+) -> tuple[ParcelCache, tuple[float, float] | None, float | None]:
     """
     Upsert cadastral parcel feature into ParcelCache.
 
@@ -772,7 +781,8 @@ async def _upsert_parcel_cache(
         bag_index: Optional BAG building spatial index for has_pand/bouwjaar/status
 
     Returns:
-        Tuple of (ParcelCache entry, BAG-based address lookup point in RD coords or None)
+        Tuple of (ParcelCache entry, BAG-based address lookup point in RD coords or None,
+                  total BAG pand footprint area in m2 or None)
     """
     properties = feature.get("properties", {})
     if not isinstance(properties, dict):
@@ -830,8 +840,9 @@ async def _upsert_parcel_cache(
     has_pand = False
     bouwjaar = None
     pand_status = None
+    pand_oppervlakte_m2: float | None = None
     if parcel_geom_shape is not None:
-        has_pand, bouwjaar, pand_status, address_lookup_xy = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_lookup_xy, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
             parcel_geom_shape,
             bag_index,
         )
@@ -880,7 +891,7 @@ async def _upsert_parcel_cache(
         session.add(parcel)
 
     await session.flush()
-    return parcel, address_lookup_xy
+    return parcel, address_lookup_xy, pand_oppervlakte_m2
 
 
 async def _batch_resolve_addresses(
