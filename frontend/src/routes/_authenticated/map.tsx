@@ -574,6 +574,9 @@ function MapPage() {
     bouwjaar?: number | null
     pandStatus?: string | null
     vacancySignal?: ScanResultItem['vacancy_signal']
+    vacancyConfidence?: number | null
+    vacancyReasons?: string[] | null
+    vacancyModelVersion?: string | null
     bestemmingen?: Record<string, unknown>[] | null
     maxBebouwingspercentage?: number | null
     maxFloorAreaRatio?: number | null
@@ -615,9 +618,9 @@ function MapPage() {
       score_category: input.scoreCategory ?? null,
       score_breakdown: input.scoreBreakdown ?? null,
       vacancy_signal: vacancySignal,
-      vacancy_confidence: null,
-      vacancy_reasons: null,
-      vacancy_model_version: null,
+      vacancy_confidence: input.vacancyConfidence ?? null,
+      vacancy_reasons: input.vacancyReasons ?? null,
+      vacancy_model_version: input.vacancyModelVersion ?? null,
       market_signals: input.marketSignals ?? null,
       opportunity_signals: input.opportunitySignals ?? null,
       building_metrics: mergedBuildingMetrics,
@@ -1227,6 +1230,9 @@ function MapPage() {
               vacancySignal:
                 (resolved.vacancy_signal as ScanResultItem['vacancy_signal']) ??
                 null,
+              vacancyConfidence: resolved.vacancy_confidence ?? null,
+              vacancyReasons: resolved.vacancy_reasons ?? null,
+              vacancyModelVersion: resolved.vacancy_model_version ?? null,
               marketSignals: resolved.market_signals ?? null,
               opportunitySignals: resolved.opportunity_signals ?? null,
               buildingMetrics: resolved.building_metrics ?? null,

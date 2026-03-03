@@ -1495,6 +1495,9 @@ async def get_parcel_at_point(
     score_category = None
     score_breakdown = None
     vacancy_signal = None
+    vacancy_confidence = None
+    vacancy_reasons = None
+    vacancy_model_version = None
     opportunity_signals = None
     building_metrics = None
     market_signals = None
@@ -1510,6 +1513,18 @@ async def get_parcel_at_point(
         score_category = raw_category if isinstance(raw_category, str) else None
         raw_vacancy = scan_flags.get("vacancy_signal")
         vacancy_signal = raw_vacancy if isinstance(raw_vacancy, str) else None
+        raw_vc = scan_flags.get("vacancy_confidence")
+        vacancy_confidence = (
+            float(raw_vc)
+            if isinstance(raw_vc, (int, float)) and not isinstance(raw_vc, bool)
+            else None
+        )
+        raw_vr = scan_flags.get("vacancy_reasons")
+        vacancy_reasons = (
+            [str(r) for r in raw_vr] if isinstance(raw_vr, list) else None
+        )
+        raw_vmv = scan_flags.get("vacancy_model_version")
+        vacancy_model_version = raw_vmv if isinstance(raw_vmv, str) else None
         raw_signals = scan_flags.get("opportunity_signals")
         opportunity_signals = (
             [str(s) for s in raw_signals]
@@ -1587,6 +1602,9 @@ async def get_parcel_at_point(
         score_category=score_category,
         score_breakdown=score_breakdown,
         vacancy_signal=vacancy_signal,
+        vacancy_confidence=vacancy_confidence,
+        vacancy_reasons=vacancy_reasons,
+        vacancy_model_version=vacancy_model_version,
         market_signals=market_signals,
         opportunity_signals=opportunity_signals,
         building_metrics=building_metrics,

@@ -321,6 +321,20 @@ class ParcelAtPointResponse(BaseModel):
         default=None,
         description="Vacancy classification from scan flags",
     )
+    vacancy_confidence: float | None = Field(
+        default=None,
+        description="Vacancy confidence score (0-1) based on BAG + permit/listing behavior",
+        ge=0,
+        le=1,
+    )
+    vacancy_reasons: list[str] | None = Field(
+        default=None,
+        description="Top 3 explainable reasons behind vacancy confidence",
+    )
+    vacancy_model_version: str | None = Field(
+        default=None,
+        description="Version id of vacancy confidence model",
+    )
     market_signals: dict[str, int] | None = Field(
         default=None,
         description="Market listing friction signals from scan flags",

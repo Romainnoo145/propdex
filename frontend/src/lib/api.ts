@@ -879,6 +879,9 @@ export async function fetchParcelAtPoint(
   score_category?: string | null
   score_breakdown?: Record<string, unknown> | null
   vacancy_signal?: string | null
+  vacancy_confidence?: number | null
+  vacancy_reasons?: string[] | null
+  vacancy_model_version?: string | null
   market_signals?: {
     listing_duration_days: number
     price_change_count: number

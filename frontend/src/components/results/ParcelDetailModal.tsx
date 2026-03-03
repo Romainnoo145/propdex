@@ -79,45 +79,30 @@ function formatPillarLevel(value: number | null): string {
   return 'Laag'
 }
 
-function deriveVacancyScore(
-  subscore: number | null,
-  vacancyConfidence: number | null,
-  vacancySignal: ScanResultItem['vacancy_signal']
-): number | null {
-  if (subscore != null) return clampPercent(subscore)
-  if (vacancyConfidence != null) return clampPercent(vacancyConfidence * 100)
-
-  if (vacancySignal === 'leeg_perceel') return 90
-  if (vacancySignal === 'leegstaand_pand') return 75
-  if (vacancySignal === 'in_gebruik') return 20
-  if (vacancySignal === 'onbekend') return 35
-  return null
-}
-
 function deriveTransformatiePotentie(
   bouwjaar: number | null,
   supportsResidentialMixed: boolean,
   area_m2: number | null,
 ): { score: number; label: string } {
-  // Bouwjaar score: older = higher potential (0-40 points)
+  // Bouwjaar score: older = higher potential (0-30 points)
   const bouwjaarScore =
-    bouwjaar == null ? 20
-    : bouwjaar < 1960 ? 40
-    : bouwjaar < 1980 ? 30
-    : bouwjaar < 2000 ? 20
-    : bouwjaar < 2010 ? 10
-    : 5
+    bouwjaar == null ? 10
+    : bouwjaar < 1960 ? 30
+    : bouwjaar < 1980 ? 22
+    : bouwjaar < 2000 ? 14
+    : bouwjaar < 2010 ? 8
+    : 3
 
-  // Bestemming score: wonen/gemengd = higher (0-40 points)
-  const bestemmingScore = supportsResidentialMixed ? 40 : 15
+  // Bestemming score: wonen/gemengd = higher (10-30 points)
+  const bestemmingScore = supportsResidentialMixed ? 30 : 10
 
   // Perceelgrootte score: bigger = higher (0-20 points)
   const areaScore =
-    area_m2 == null ? 10
-    : area_m2 >= 1500 ? 20
-    : area_m2 >= 750 ? 15
-    : area_m2 >= 300 ? 10
-    : 5
+    area_m2 == null ? 5
+    : area_m2 >= 2000 ? 20
+    : area_m2 >= 1000 ? 15
+    : area_m2 >= 500 ? 10
+    : 3
 
   const score = bouwjaarScore + bestemmingScore + areaScore
 
@@ -299,25 +284,13 @@ export function ParcelDetailModal({
       ? Math.max(0, Math.min(100, (1 - pandOppervlaktM2 / parcel.area_m2) * 100))
       : null
 
-  // Pillar 2: Beschikbaarheid from vacancy_confidence
-  const beschikbaarheidPct: number | null =
-    parcel.vacancy_confidence != null
-      ? Math.round(parcel.vacancy_confidence * 100)
-      : null
-  const topVacancyReason: string | undefined =
-    (parcel.vacancy_reasons?.[0] ?? '').replace(/^(HARD|PROXY):\s*/i, '').trim() || undefined
-
-  // Pillar 3: Transformatiepotentie
+  // Pillar 2: Transformatiepotentie
   const transformatiePotentie = deriveTransformatiePotentie(
     parcel.bouwjaar, supportsResidentialMixed, parcel.area_m2
   )
 
-  const vacancyPillar = deriveVacancyScore(
-    null,
-    parcel.vacancy_confidence,
-    parcel.vacancy_signal
-  )
-  void vacancyPillar // kept for potential future use
+  // Status is "niet in gebruik" when it's anything other than "Pand in gebruik"
+  const isNotInUse = statusLabel !== 'Pand in gebruik' && statusLabel !== 'Onbekend'
 
   const content = (
     <div className="p-5 space-y-5">
@@ -399,11 +372,6 @@ export function ParcelDetailModal({
                   }
                 />
                 <ScorePillarRows
-                  label="Beschikbaarheid"
-                  value={beschikbaarheidPct}
-                  context={topVacancyReason}
-                />
-                <ScorePillarRows
                   label="Transformatiepotentie"
                   value={transformatiePotentie.score}
                   context={transformatiePotentie.label}
@@ -427,9 +395,13 @@ export function ParcelDetailModal({
               {parcel.bouwjaar ?? 'Onbekend'}
             </p>
           </div>
-          <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+          <div className={`rounded-md border p-4 ${
+            isNotInUse
+              ? 'border-amber-accent/40 bg-amber-accent/5'
+              : 'border-grey-800 bg-grey-850'
+          }`}>
             <p className="text-xs text-grey-400 mb-1">Status</p>
-            <p className="text-sm font-medium text-grey-100">
+            <p className={`text-sm font-medium ${isNotInUse ? 'text-amber-accent' : 'text-grey-100'}`}>
               {statusLabel}
             </p>
           </div>
@@ -439,17 +411,6 @@ export function ParcelDetailModal({
               <p className="text-sm font-medium text-grey-100">
                 {vacancyLabel}
               </p>
-            </div>
-          )}
-          {parcel.vacancy_confidence != null && (
-            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-              <p className="text-xs text-grey-400 mb-1">Leegstand confidence</p>
-              <p className="text-sm font-medium text-grey-100 tabular-nums">
-                {Math.round(parcel.vacancy_confidence * 100)}%
-              </p>
-              {parcel.vacancy_model_version && (
-                <p className="mt-1 text-[11px] text-grey-500">{parcel.vacancy_model_version}</p>
-              )}
             </div>
           )}
           {parcel.gemeente_code && (
