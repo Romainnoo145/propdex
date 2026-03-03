@@ -1,3 +1,4 @@
+import pytest
 from shapely.geometry import Polygon
 
 from app.jobs.area_scan import (
@@ -48,7 +49,7 @@ class TestDeriveBagAttributesForParcel:
             {"query": staticmethod(lambda _geom: [0, 1])},
         )()
 
-        has_pand, bouwjaar, pand_status, address_point = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_point, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
             parcel,
             bag_index,
         )
@@ -57,6 +58,8 @@ class TestDeriveBagAttributesForParcel:
         assert bouwjaar == 1999
         assert pand_status == "Pand in gebruik"
         assert address_point == bag_index.representative_points[0]
+        assert pand_oppervlakte_m2 is not None
+        assert pand_oppervlakte_m2 > 0
 
     def test_returns_none_when_no_building_intersects(self):
         parcel = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
@@ -76,7 +79,7 @@ class TestDeriveBagAttributesForParcel:
             {"query": staticmethod(lambda _geom: [0])},
         )()
 
-        has_pand, bouwjaar, pand_status, address_point = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_point, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
             parcel,
             bag_index,
         )
@@ -85,6 +88,7 @@ class TestDeriveBagAttributesForParcel:
         assert bouwjaar is None
         assert pand_status is None
         assert address_point is None
+        assert pand_oppervlakte_m2 is None
 
     def test_ignores_building_that_only_touches_boundary(self):
         parcel = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
@@ -104,7 +108,7 @@ class TestDeriveBagAttributesForParcel:
             {"query": staticmethod(lambda _geom: [0])},
         )()
 
-        has_pand, bouwjaar, pand_status, address_point = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_point, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
             parcel,
             bag_index,
         )
@@ -113,3 +117,34 @@ class TestDeriveBagAttributesForParcel:
         assert bouwjaar is None
         assert pand_status is None
         assert address_point is None
+        assert pand_oppervlakte_m2 is None
+
+    def test_accumulates_total_footprint_from_multiple_buildings(self):
+        parcel = Polygon([(0, 0), (20, 0), (20, 20), (0, 20)])
+        # building_a: 4x4 = 16 m2 inside parcel
+        building_a = Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+        # building_b: 3x5 = 15 m2 inside parcel, non-overlapping with building_a
+        building_b = Polygon([(10, 10), (13, 10), (13, 15), (10, 15)])
+        bag_index = BagSpatialIndex(
+            tree=None,
+            geometries=[building_a, building_b],
+            bouwjaren=[1985, 1990],
+            statuses=["Pand in gebruik", "Pand in gebruik"],
+            representative_points=[
+                (float(building_a.representative_point().x), float(building_a.representative_point().y)),
+                (float(building_b.representative_point().x), float(building_b.representative_point().y)),
+            ],
+        )
+        bag_index.tree = type(
+            "FakeTree",
+            (),
+            {"query": staticmethod(lambda _geom: [0, 1])},
+        )()
+
+        has_pand, bouwjaar, pand_status, address_point, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
+            parcel,
+            bag_index,
+        )
+
+        assert has_pand is True
+        assert pand_oppervlakte_m2 == pytest.approx(16 + 15, abs=1.0)
