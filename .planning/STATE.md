@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Phase: 69 of 71 (Risicobeoordeling Dossier — COMPLETE)
-Plan: 2 of 2 — COMPLETE (human-verify APPROVED)
-Status: Phase 69 complete — DOSSIER-01 DOSSIER-02 DOSSIER-03 all satisfied; next: Phase 70 (supply recruitment)
-Last activity: 2026-03-02 — Phase 69 Plan 02 complete; user approved checkpoint ("het werkt hoor"); PDF generation + download + 7 sections confirmed
+Phase: 72 of 72 (Parcel Detail Panel Redesign — IN PROGRESS)
+Plan: 1 of 2 — COMPLETE
+Status: Phase 72 Plan 01 complete — pand_oppervlakte_m2 flows from BAG scan through to ScanResult.flags.building_metrics; next: Phase 72 Plan 02 (frontend pillar bar rewrite)
+Last activity: 2026-03-03 — Phase 72 Plan 01 complete; scan pipeline captures total BAG pand footprint area
 
 Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
@@ -23,7 +23,10 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
 ## Performance Metrics
 
-**v9.0 Professional Marketplace (In Progress)**
+**v10.0 Parcel Detail Panel Redesign (In Progress)**
+- Phase 72 Plan 01: completed ~3min (5-tuple _derive_bag_attributes_for_parcel + total_footprint_area accumulator + pand_oppervlakte_m2 in ScanResult.flags.building_metrics — 6 unit tests GREEN)
+
+**v9.0 Professional Marketplace (Completed)**
 - Phase 67 Plan 01: completed ~4min (classify_wkb() + assess_asbest_risk() TDD — WkbClassification + AsbestIndicator schemas + aggregator wiring)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 - Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
@@ -135,6 +138,13 @@ Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 - Jinja2 null-safe pattern for nested dicts: 'is not none' guard + | default() filter; 'report_data.zoning.plans[0]' requires zoning not none AND plans | length > 0
 - reportId prop thread: rapport.$id.tsx (id.startsWith('r') ? null : id) -> ReportDetailPage -> ReportHeader -> handleGenerateDossier()
 
+### Phase 72 Context (In Progress)
+
+- Phase 72 Plan 01 complete: _derive_bag_attributes_for_parcel returns 5-tuple with pand_oppervlakte_m2; total_footprint_area accumulates all qualifying BAG pand overlaps (post MIN_BUILDING_OVERLAP_M2 guard); stored in ScanResult.flags["building_metrics"]["pand_oppervlakte_m2"]
+- Return None (not 0.0) for empty parcels — consumer distinguishes missing vs zero
+- Phase 4 uses final_bm dict copy-merge pattern — preserves existing building_metrics keys
+- No schema migration needed — pand_oppervlakte_m2 stored in existing JSONB flags column
+
 ### Ongoing TODOs
 
 - Production deployment: Create app_role (sql/setup_app_role.sql)
@@ -154,12 +164,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02
-**Stopped At:** Completed Phase 69 Plan 02 — Risicobeoordeling Dossier full feature shipped (DOSSIER-01 DOSSIER-02 DOSSIER-03)
-**Resume File:** .planning/phases/70-*/70-01-PLAN.md
+**Last Session:** 2026-03-03
+**Stopped At:** Completed Phase 72 Plan 01 — BAG pand footprint area capture in scan pipeline
+**Resume File:** .planning/phases/72-parcel-detail-redesign/72-02-PLAN.md
 
-**Next Action:** Phase 70 — supply recruitment / kwaliteitsborger onboarding (launch gate before Phase 71 CTA).
+**Next Action:** Phase 72 Plan 02 — frontend pillar bar rewrite (Vrije Ruimte unbuilt percentage using pand_oppervlakte_m2).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 69 Plan 02 Tasks 1+2 complete: full Jinja2 dossier template + Genereer Startdossier CTA button (DOSSIER-01 DOSSIER-02 DOSSIER-03)*
+*State updated: 2026-03-03 -- Phase 72 Plan 01 Tasks 1+2 complete: scan pipeline captures pand_oppervlakte_m2 + 6 unit tests GREEN (UX-01 backend data)*
