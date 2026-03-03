@@ -1,5 +1,4 @@
 import type { ScanResultItem } from '@/lib/types/scan'
-import { extractScoreSubscores } from '@/lib/score'
 
 // Score badge — amber-based glow system (matches ResultsTable)
 function ScoreBadge({
@@ -63,7 +62,6 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
     parcel.vacancy_reasons && parcel.vacancy_reasons.length > 0
       ? parcel.vacancy_reasons[0]
       : null
-  const subscores = extractScoreSubscores(parcel.score_breakdown)
 
   return (
     <button
@@ -111,13 +109,6 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
         </div>
       )}
 
-      {(subscores.vacancy != null || subscores.buildability != null) && (
-        <div className="flex items-center gap-2 text-[11px] text-grey-500">
-          {subscores.buildability != null && (
-            <span className="tabular-nums">Bouwruimte {Math.round(subscores.buildability)}</span>
-          )}
-        </div>
-      )}
     </button>
   )
 }
