@@ -682,7 +682,8 @@ export default function ProjectList() {
         svgData={normalizedSvgData}
         totalUnread={card.totalUnread}
         stats={{
-          scannedWijken: card.scannedWijken,
+          linkedWijken: card.linkedWijken,
+          completedWijken: card.completedWijken,
           rapporten: card.rapporten,
           meldingen: card.meldingen,
         }}
@@ -826,6 +827,9 @@ export default function ProjectList() {
                 const allWijkChildren = [...wijkChildren, ...virtualWijken].sort((a, b) =>
                   (a.wijk_naam ?? a.name).localeCompare((b.wijk_naam ?? b.name), 'nl-NL')
                 )
+                const completedWijkenCount = gemeenteCode
+                  ? (scanWijkNamesByGemeenteCode.get(gemeenteCode)?.size ?? 0)
+                  : 0
 
                 if (selectedWijkId) {
                   const wijk = allWijkChildren.find((w) => w.id === selectedWijkId)
@@ -842,7 +846,7 @@ export default function ProjectList() {
                   <>
                     <ProjectWorkspaceHeader
                       title={gemeente.name}
-                      subtitle={`${1 + allWijkChildren.length} ${1 + allWijkChildren.length === 1 ? 'project' : 'projecten'} in totaal`}
+                      subtitle={`${allWijkChildren.length} wijken totaal · ${wijkChildren.length} gekoppeld · ${completedWijkenCount} gescand`}
                       onBack={() => navigate({
                         to: '/projecten',
                         search: toProjectenRootSearch({ provincieCode: selectedProvinceCode }),
@@ -903,14 +907,14 @@ export default function ProjectList() {
                   <>
                     <ProjectWorkspaceHeader
                       title={selectedGemeenteCard.naam}
-                      subtitle="Gemeenteflow zonder gekoppeld gemeenteproject"
+                      subtitle={`${selectedGemeenteCard.linkedWijken} gekoppeld · ${selectedGemeenteCard.completedWijken} gescand`}
                       onBack={() => navigate({
                         to: '/projecten',
                         search: toProjectenRootSearch({ provincieCode: selectedProvinceCode }),
                       })}
                       backLabel="Terug naar projecten"
                       metrics={[
-                        { label: 'Wijken', value: selectedGemeenteCard.scannedWijken, icon: <WijkStatIcon /> },
+                        { label: 'Wijken', value: selectedGemeenteCard.linkedWijken, icon: <WijkStatIcon /> },
                         { label: 'Rapporten', value: selectedGemeenteCard.rapporten, icon: <ReportStatIcon /> },
                         {
                           label: 'Meldingen',
@@ -932,7 +936,7 @@ export default function ProjectList() {
                             handleSetGemeenteMonitoring(
                               selectedGemeenteCard.code,
                               selectedGemeenteCard.naam,
-                              !Boolean(selectedGemeenteCard.project?.is_monitored)
+                              !selectedGemeenteCard.project?.is_monitored
                             )
                           }
                         />
@@ -1374,11 +1378,11 @@ function UnlinkedGemeenteWorkspace({
 
   useEffect(() => {
     if (wijkItems.length === 0) {
-      if (selectedWijkNaam !== null) setSelectedWijkNaam(null)
+      if (selectedWijkNaam !== null) queueMicrotask(() => setSelectedWijkNaam(null))
       return
     }
     if (!selectedWijkNaam || !wijkItems.some((item) => item.name === selectedWijkNaam)) {
-      setSelectedWijkNaam(wijkItems[0]!.name)
+      queueMicrotask(() => setSelectedWijkNaam(wijkItems[0]!.name))
     }
   }, [wijkItems, selectedWijkNaam])
 

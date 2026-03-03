@@ -17,7 +17,8 @@ export interface GemeenteScopeCard {
   geometry: PolygonGeometry
   provinceCode: string
   project: ProjectResponse | null
-  scannedWijken: number
+  linkedWijken: number
+  completedWijken: number
   rapporten: number
   meldingen: number
   totalUnread: number
@@ -80,12 +81,13 @@ export function useMunicipalityWorkspaceStats({
         linkedWijkProjects.reduce((sum, wijk) => sum + (unreadByProjectId.get(wijk.id) ?? 0), 0) +
         standaloneWijken.reduce((sum, wijk) => sum + (unreadByProjectId.get(wijk.id) ?? 0), 0)
 
-      const wijkNames = new Set(scanWijkNamesByGemeenteCode.get(code) ?? [])
+      const linkedWijkNames = new Set<string>()
       for (const wijk of [...linkedWijkProjects, ...standaloneWijken]) {
         const wijkName = normalizeAreaName(wijk.wijk_naam ?? wijk.name)
         if (!wijkName) continue
-        wijkNames.add(wijkName)
+        linkedWijkNames.add(wijkName)
       }
+      const completedWijkNames = new Set(scanWijkNamesByGemeenteCode.get(code) ?? [])
 
       cards.push({
         code,
@@ -93,7 +95,8 @@ export function useMunicipalityWorkspaceStats({
         geometry,
         provinceCode: province.code,
         project,
-        scannedWijken: wijkNames.size,
+        linkedWijken: linkedWijkNames.size,
+        completedWijken: completedWijkNames.size,
         rapporten,
         meldingen,
         totalUnread: meldingen,

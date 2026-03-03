@@ -11,7 +11,8 @@ interface GemeenteCardProps {
   totalUnread: number
   /** Optional municipality-level counters shown inside the card */
   stats?: {
-    scannedWijken: number
+    linkedWijken: number
+    completedWijken: number
     rapporten: number
     meldingen: number
   }
@@ -118,9 +119,9 @@ export function GemeenteCard({
           {stats && (
             <div className="flex items-center gap-1.5">
               <MetricChip
-                value={stats.scannedWijken}
+                value={stats.linkedWijken}
                 tone="amber"
-                ariaLabel="Gescande wijken"
+                ariaLabel="Gekoppelde wijken"
                 icon={<WijkIcon />}
               />
               <MetricChip

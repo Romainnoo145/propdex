@@ -58,16 +58,7 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
     rawBestemming.length > 25
       ? `${rawBestemming.substring(0, 25)}...`
       : rawBestemming
-  const vacancyLabel =
-    parcel.vacancy_signal === 'leeg_perceel' ? 'Leeg perceel'
-      : parcel.vacancy_signal === 'leegstaand_pand' ? 'Leegstaand'
-      : parcel.vacancy_signal === 'in_gebruik' ? 'In gebruik'
-      : parcel.vacancy_signal === 'onbekend' ? 'Onbekend'
-      : null
-  const vacancyConfidenceLabel =
-    parcel.vacancy_confidence != null
-      ? `${Math.round(parcel.vacancy_confidence * 100)}% leegstand`
-      : null
+  const isLeeg = !parcel.has_pand
   const topVacancyReason =
     parcel.vacancy_reasons && parcel.vacancy_reasons.length > 0
       ? parcel.vacancy_reasons[0]
@@ -102,12 +93,10 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
             <span className="truncate text-grey-400">{bestemming}</span>
           </>
         )}
-        {vacancyLabel && (
-          <>
-            <span className="text-grey-700">·</span>
-            <span className="truncate text-grey-300">{vacancyLabel}</span>
-          </>
-        )}
+        <span className="text-grey-700">·</span>
+        <span className={`text-xs font-medium ${isLeeg ? 'text-amber-accent' : 'text-grey-600'}`}>
+          {isLeeg ? 'Leeg' : 'Bebouwd'}
+        </span>
         {parcel.bouwjaar && (
           <>
             <span className="text-grey-700">·</span>
@@ -116,28 +105,14 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
         )}
       </div>
 
-      {(vacancyConfidenceLabel || topVacancyReason) && (
+      {topVacancyReason && (
         <div className="flex items-center gap-2 text-[11px] text-grey-500">
-          {vacancyConfidenceLabel && (
-            <span className="tabular-nums text-amber-accent">{vacancyConfidenceLabel}</span>
-          )}
-          {vacancyConfidenceLabel && topVacancyReason && (
-            <span className="text-grey-700">·</span>
-          )}
-          {topVacancyReason && (
-            <span className="truncate">{topVacancyReason}</span>
-          )}
+          <span className="truncate">{topVacancyReason}</span>
         </div>
       )}
 
       {(subscores.vacancy != null || subscores.buildability != null) && (
         <div className="flex items-center gap-2 text-[11px] text-grey-500">
-          {subscores.vacancy != null && (
-            <span className="tabular-nums">Leegstand {Math.round(subscores.vacancy)}</span>
-          )}
-          {subscores.vacancy != null && subscores.buildability != null && (
-            <span className="text-grey-700">·</span>
-          )}
           {subscores.buildability != null && (
             <span className="tabular-nums">Bouwruimte {Math.round(subscores.buildability)}</span>
           )}
