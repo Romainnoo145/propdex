@@ -38,7 +38,7 @@
 **Milestone Goal:** Replace abstract scoring pillars with real data bars and clean up the parcel detail panel for demo readiness.
 
 - [x] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie) (completed 2026-03-03)
-- [ ] **Phase 74: 3D BAG Building Data** — Enrich scan pipeline with actual building height/floors from 3D BAG for headroom-based transformatiepotentie
+- [x] **Phase 74: 3D BAG Building Data** — Enrich scan pipeline with actual building height/floors from 3D BAG for headroom-based transformatiepotentie (completed 2026-03-03)
 
 ## Phase Details
 
@@ -202,7 +202,7 @@ Plans:
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
 | 72. Parcel Detail Panel Redesign | 2/2 | Complete    | 2026-03-03 |
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete    | 2026-03-03 |
-| 74. 3D BAG Building Data | 2/3 | In Progress|  |
+| 74. 3D BAG Building Data | 3/3 | Complete   | 2026-03-03 |
 
 ---
 
@@ -400,7 +400,7 @@ Plans:
 
 **Goal:** Transformatiepotentie pillar bar uses real bouwregel data (max_bouwhoogte, max_bouwlagen) extracted from PLU WMS maatvoering layer + DSO maatvoeringen, with graceful heuristic fallback when data is absent
 **Depends on:** Phase 72
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 73-01-PLAN.md — Backend: max_bouwlagen schema + zoning aggregator + PLU WMS parser + scan job persistence (DSO-01, DSO-02)
