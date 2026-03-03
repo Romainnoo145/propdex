@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.government_apis.bag_3d import bag_3d_client
 from app.government_apis.bag_wfs import bag_wfs_client
 from app.government_apis.pdok_cadastral import PDOKCadastralClient
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
@@ -63,6 +64,7 @@ class BagSpatialIndex:
     bouwjaren: list[int | None]
     statuses: list[str | None]
     representative_points: list[tuple[float, float]]
+    identificaties: list[str | None]
 
 
 def _extract_first_coordinate_pair(geometry: dict | None) -> tuple[float, float] | None:
@@ -132,6 +134,7 @@ def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
     geometries: list[BaseGeometry] = []
     bouwjaren: list[int | None] = []
     statuses: list[str | None] = []
+    identificaties: list[str | None] = []
 
     for feature in features:
         if not isinstance(feature, dict):
@@ -154,6 +157,8 @@ def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
         bouwjaren.append(_parse_int(props.get("bouwjaar")))
         status_raw = props.get("status")
         statuses.append(status_raw.strip() if isinstance(status_raw, str) and status_raw.strip() else None)
+        id_raw = props.get("identificatie")
+        identificaties.append(id_raw if isinstance(id_raw, str) and id_raw.strip() else None)
 
     if not geometries:
         return None
@@ -167,24 +172,26 @@ def _build_bag_spatial_index(features: list[dict]) -> BagSpatialIndex | None:
             (float(geom.representative_point().x), float(geom.representative_point().y))
             for geom in geometries
         ],
+        identificaties=identificaties,
     )
 
 
 def _derive_bag_attributes_for_parcel(
     parcel_geometry: BaseGeometry,
     bag_index: BagSpatialIndex | None,
-) -> tuple[bool, int | None, str | None, tuple[float, float] | None, float | None]:
+) -> tuple[bool, int | None, str | None, tuple[float, float] | None, float | None, list[str]]:
     """Derive parcel-level BAG attributes from intersecting building footprints."""
     if bag_index is None:
-        return False, None, None, None, None
+        return False, None, None, None, None, []
 
     candidate_indices = bag_index.tree.query(parcel_geometry)
     if len(candidate_indices) == 0:
-        return False, None, None, None, None
+        return False, None, None, None, None, []
 
     intersect_count = 0
     matched_bouwjaren: list[int] = []
     matched_statuses: list[str] = []
+    bag_identificaties: list[str] = []
     best_address_point: tuple[float, float] | None = None
     best_overlap_area = -1.0
     total_footprint_area = 0.0
@@ -216,8 +223,12 @@ def _derive_bag_attributes_for_parcel(
         if isinstance(status, str) and status:
             matched_statuses.append(status)
 
+        pand_id = bag_index.identificaties[idx]
+        if pand_id is not None:
+            bag_identificaties.append(pand_id)
+
     if intersect_count == 0:
-        return False, None, None, None, None
+        return False, None, None, None, None, []
 
     bouwjaar_value = min(matched_bouwjaren) if matched_bouwjaren else None
     pand_status_value = None
@@ -225,7 +236,7 @@ def _derive_bag_attributes_for_parcel(
         pand_status_value = Counter(matched_statuses).most_common(1)[0][0]
 
     pand_oppervlakte_m2: float | None = total_footprint_area if total_footprint_area > 0 else None
-    return True, bouwjaar_value, pand_status_value, best_address_point, pand_oppervlakte_m2
+    return True, bouwjaar_value, pand_status_value, best_address_point, pand_oppervlakte_m2, bag_identificaties
 
 
 async def area_scan_job(
@@ -368,6 +379,22 @@ async def area_scan_job(
                 return {"scan_id": scan_id, "status": "failed", "error": f"BAG WFS: {e}"}
 
             bag_index = _build_bag_spatial_index(bag_features)
+
+            # Phase 2b: Fetch 3D BAG actual building dimensions for scan bbox
+            bag_3d_data: dict[str, dict] = {}
+            try:
+                bag_3d_data = await bag_3d_client.get_panden_in_bbox(
+                    scan.bbox_minx,
+                    scan.bbox_miny,
+                    scan.bbox_maxx,
+                    scan.bbox_maxy,
+                    http_client,
+                )
+                logger.info(f"Scan {scan_id}: 3D BAG data for {len(bag_3d_data)} panden")
+            except Exception as e:
+                # Non-fatal: scan continues without actual dimensions
+                logger.warning(f"Scan {scan_id}: 3D BAG fetch failed (non-fatal): {e}")
+
             bestemmingen_list = await _batch_fetch_bestemmingen(features, http_client)
 
             enriched_count = sum(1 for b in bestemmingen_list if b is not None)
@@ -403,6 +430,7 @@ async def area_scan_job(
                     dict[str, float | None],
                     tuple[float, float] | None,
                     float | None,
+                    list[str],
                 ]
             ] = []
 
@@ -410,7 +438,7 @@ async def area_scan_job(
                 zip(features, bestemmingen_list, strict=True)
             ):
                 try:
-                    parcel, centroid_xy, pand_oppervlakte_m2 = await _upsert_parcel_cache(
+                    parcel, centroid_xy, pand_oppervlakte_m2, bag_identificaties = await _upsert_parcel_cache(
                         feature, org_id, scan.gemeente_code, session,
                         bestemmingen=bestemmingen,
                         bag_index=bag_index,
@@ -432,6 +460,7 @@ async def area_scan_job(
                         insights.building_metrics,
                         centroid_xy,
                         pand_oppervlakte_m2,
+                        bag_identificaties,
                     ))
 
                     # Update progress every 10 parcels
@@ -503,6 +532,7 @@ async def area_scan_job(
                     building_metrics,
                     _centroid,
                     pand_oppervlakte_m2,
+                    bag_identificaties,
                 ) in all_ranked:
                     listing_signal = listing_signal_by_parcel.get(parcel.id)
                     vacancy_assessment = compute_vacancy_confidence(
@@ -512,6 +542,24 @@ async def area_scan_job(
                     final_bm: dict = dict(building_metrics) if isinstance(building_metrics, dict) else {}
                     if pand_oppervlakte_m2 is not None:
                         final_bm["pand_oppervlakte_m2"] = pand_oppervlakte_m2
+
+                    # 3D BAG actual dimensions — join by pand identificatie
+                    actual_hoogte: float | None = None
+                    actual_lagen: int | None = None
+                    for pand_id in (bag_identificaties or []):
+                        full_id = f"NL.IMBAG.Pand.{pand_id}" if not pand_id.startswith("NL.") else pand_id
+                        bag_3d_entry = bag_3d_data.get(full_id)
+                        if bag_3d_entry:
+                            h = bag_3d_entry.get("actual_bouwhoogte")
+                            bl = bag_3d_entry.get("actual_bouwlagen")
+                            if h is not None:
+                                actual_hoogte = h if actual_hoogte is None else max(actual_hoogte, h)
+                            if bl is not None:
+                                actual_lagen = bl if actual_lagen is None else max(actual_lagen, bl)
+                    if actual_hoogte is not None:
+                        final_bm["actual_bouwhoogte"] = actual_hoogte
+                    if actual_lagen is not None:
+                        final_bm["actual_bouwlagen"] = actual_lagen
                     ranked_values.append(
                         {
                             "organization_id": org_id,
@@ -566,7 +614,7 @@ async def area_scan_job(
             await _batch_resolve_addresses(
                 [
                     (p, c)
-                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c, _pom in address_targets
+                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c, _pom, _bag_ids in address_targets
                 ],
                 http_client,
                 session,
@@ -768,7 +816,7 @@ async def _upsert_parcel_cache(
     session: AsyncSession,
     bestemmingen: list[dict] | None = None,
     bag_index: BagSpatialIndex | None = None,
-) -> tuple[ParcelCache, tuple[float, float] | None, float | None]:
+) -> tuple[ParcelCache, tuple[float, float] | None, float | None, list[str]]:
     """
     Upsert cadastral parcel feature into ParcelCache.
 
@@ -782,7 +830,8 @@ async def _upsert_parcel_cache(
 
     Returns:
         Tuple of (ParcelCache entry, BAG-based address lookup point in RD coords or None,
-                  total BAG pand footprint area in m2 or None)
+                  total BAG pand footprint area in m2 or None,
+                  list of BAG pand identificaties (numeric strings) for 3D BAG join)
     """
     properties = feature.get("properties", {})
     if not isinstance(properties, dict):
@@ -841,8 +890,9 @@ async def _upsert_parcel_cache(
     bouwjaar = None
     pand_status = None
     pand_oppervlakte_m2: float | None = None
+    bag_identificaties: list[str] = []
     if parcel_geom_shape is not None:
-        has_pand, bouwjaar, pand_status, address_lookup_xy, pand_oppervlakte_m2 = _derive_bag_attributes_for_parcel(
+        has_pand, bouwjaar, pand_status, address_lookup_xy, pand_oppervlakte_m2, bag_identificaties = _derive_bag_attributes_for_parcel(
             parcel_geom_shape,
             bag_index,
         )
@@ -891,7 +941,7 @@ async def _upsert_parcel_cache(
         session.add(parcel)
 
     await session.flush()
-    return parcel, address_lookup_xy, pand_oppervlakte_m2
+    return parcel, address_lookup_xy, pand_oppervlakte_m2, bag_identificaties
 
 
 async def _batch_resolve_addresses(
