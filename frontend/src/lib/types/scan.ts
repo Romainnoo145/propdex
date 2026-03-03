@@ -89,6 +89,24 @@ export interface MarketSignals {
   days_since_last_seen: number
 }
 
+/**
+ * Typed building metrics from scan pipeline
+ * Populated from PLU WMS maatvoering layer and Phase 72 BAG pand footprint
+ * Backend: ScanResult.flags["building_metrics"]
+ */
+export interface BuildingMetrics {
+  /** Footprint area of all BAG panden on this parcel (m2) — Phase 72 */
+  pand_oppervlakte_m2?: number | null
+  /** Maximum site coverage percentage from PLU WMS / DSO maatvoeringen */
+  max_bebouwingspercentage?: number | null
+  /** Maximum floor area ratio (FSI) from PLU WMS / DSO maatvoeringen */
+  max_floor_area_ratio?: number | null
+  /** Maximum building height in meters from PLU WMS maatvoering — Phase 73 */
+  max_bouwhoogte?: number | null
+  /** Maximum number of building floors from PLU WMS maatvoering — Phase 73 */
+  max_bouwlagen?: number | null
+}
+
 export interface ScanResultItem {
   /** ParcelCache UUID (serialized as string) */
   parcel_id: string
@@ -127,7 +145,7 @@ export interface ScanResultItem {
   /** Human-readable development opportunity signals */
   opportunity_signals: string[] | null
   /** Zoning build metrics (if available in source data) */
-  building_metrics: Record<string, unknown> | null
+  building_metrics: BuildingMetrics | null
   /** Whether this parcel already has a saved report */
   has_report: boolean
 }

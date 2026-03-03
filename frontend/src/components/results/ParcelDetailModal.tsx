@@ -10,7 +10,7 @@ import { useParcelChanges } from '@/hooks/useNotifications'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { toast } from 'sonner'
 import { FileText, MapPin } from 'lucide-react'
-import type { ScanResultItem } from '@/lib/types/scan'
+import type { ScanResultItem, BuildingMetrics } from '@/lib/types/scan'
 
 const VACANCY_LABELS: Record<string, string> = {
   leeg_perceel: 'Leeg perceel',
@@ -80,11 +80,59 @@ function formatPillarLevel(value: number | null): string {
 }
 
 function deriveTransformatiePotentie(
+  metrics: BuildingMetrics | null,
   bouwjaar: number | null,
   supportsResidentialMixed: boolean,
   area_m2: number | null,
 ): { score: number; label: string } {
-  // Bouwjaar score: older = higher potential (0-30 points)
+  const bouwhoogte = metrics?.max_bouwhoogte ?? null
+  const bouwlagen = metrics?.max_bouwlagen ?? null
+  const hasDSOData = bouwhoogte != null || bouwlagen != null
+
+  if (hasDSOData) {
+    // DSO/PLU WMS data-driven path
+    const hoogtePts =
+      bouwhoogte == null ? 0
+      : bouwhoogte >= 15 ? 35
+      : bouwhoogte >= 10 ? 25
+      : bouwhoogte >= 7 ? 18
+      : bouwhoogte >= 4 ? 10
+      : 5
+
+    const lagenPts =
+      bouwlagen == null ? 0
+      : bouwlagen >= 5 ? 30
+      : bouwlagen >= 4 ? 25
+      : bouwlagen >= 3 ? 18
+      : bouwlagen >= 2 ? 10
+      : 5
+
+    // Use stronger signal when both present; sum when only one is non-zero
+    const buildingPts =
+      bouwhoogte != null && bouwlagen != null
+        ? Math.max(hoogtePts, lagenPts)
+        : hoogtePts + lagenPts
+
+    const bestemmingPts = supportsResidentialMixed ? 20 : 5
+    const areaScore =
+      area_m2 == null ? 3
+      : area_m2 >= 2000 ? 15
+      : area_m2 >= 1000 ? 10
+      : area_m2 >= 500 ? 6
+      : 3
+
+    const score = Math.min(100, buildingPts + bestemmingPts + areaScore)
+
+    const parts: string[] = []
+    if (bouwlagen != null) parts.push(`${bouwlagen} lagen`)
+    if (bouwhoogte != null) parts.push(`${bouwhoogte}m`)
+    parts.push(supportsResidentialMixed ? 'wonen ok' : 'geen wonen')
+    const label = parts.join(' \u00b7 ')
+
+    return { score, label }
+  }
+
+  // Heuristic fallback — no PLU WMS dimension data available
   const bouwjaarScore =
     bouwjaar == null ? 10
     : bouwjaar < 1960 ? 30
@@ -92,26 +140,19 @@ function deriveTransformatiePotentie(
     : bouwjaar < 2000 ? 14
     : bouwjaar < 2010 ? 8
     : 3
-
-  // Bestemming score: wonen/gemengd = higher (10-30 points)
   const bestemmingScore = supportsResidentialMixed ? 30 : 10
-
-  // Perceelgrootte score: bigger = higher (0-20 points)
   const areaScore =
     area_m2 == null ? 5
     : area_m2 >= 2000 ? 20
     : area_m2 >= 1000 ? 15
     : area_m2 >= 500 ? 10
     : 3
-
   const score = bouwjaarScore + bestemmingScore + areaScore
 
   const parts: string[] = []
   if (bouwjaar != null) parts.push(`Bouwjaar ${bouwjaar}`)
   parts.push(supportsResidentialMixed ? 'wonen ok' : 'niet-wonen')
-  const label = parts.join(' \u00b7 ')
-
-  return { score, label }
+  return { score, label: parts.join(' \u00b7 ') }
 }
 
 function ScoreDonut({
@@ -276,17 +317,19 @@ export function ParcelDetailModal({
   })
 
   // Pillar 1: Vrije ruimte from pand_oppervlakte_m2
-  const pandOppervlaktM2 = (parcel.building_metrics as {
-    pand_oppervlakte_m2?: number | null
-  } | null)?.pand_oppervlakte_m2 ?? null
+  const pandOppervlaktM2 = parcel.building_metrics?.pand_oppervlakte_m2 ?? null
   const vrijeRuimtePct: number | null =
     pandOppervlaktM2 != null && parcel.area_m2 != null && parcel.area_m2 > 0
       ? Math.max(0, Math.min(100, (1 - pandOppervlaktM2 / parcel.area_m2) * 100))
       : null
 
   // Pillar 2: Transformatiepotentie
+  const buildingMetrics = parcel.building_metrics
   const transformatiePotentie = deriveTransformatiePotentie(
-    parcel.bouwjaar, supportsResidentialMixed, parcel.area_m2
+    buildingMetrics,
+    parcel.bouwjaar,
+    supportsResidentialMixed,
+    parcel.area_m2,
   )
 
   // Status is "niet in gebruik" when it's anything other than "Pand in gebruik"
