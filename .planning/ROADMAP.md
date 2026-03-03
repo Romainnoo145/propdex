@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v10.0 UX Polish** -- Phase 72 (in progress)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
 - ✅ **v8.0 Client Demo Readiness** -- Phases 62-66 (shipped 2026-03-02)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
@@ -31,6 +32,30 @@
 - [x] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements (completed 2026-03-02)
 - [x] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section (completed 2026-03-02)
 - [x] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels (completed 2026-03-02)
+
+### v10.0 UX Polish (Phase 72)
+
+**Milestone Goal:** Replace abstract scoring pillars with real data bars and clean up the parcel detail panel for demo readiness.
+
+- [ ] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie)
+
+## Phase Details
+
+### Phase 72: Parcel Detail Panel Redesign
+**Goal**: Parcel detail panel shows three real data bars instead of abstract scores with "onbekend" placeholders
+**Depends on**: Nothing
+**Requirements**: UX-01
+**Success Criteria** (what must be TRUE):
+  1. "Bebouwbaarheid" pillar replaced by "Vrije ruimte" showing real unbuilt percentage from pand_oppervlakte_m2
+  2. "Leegstandsrisico" renamed to "Beschikbaarheid" showing vacancy_confidence with top reason as context
+  3. "Transformatiepotentie" shows weighted mix of bouwjaar + bestemming + perceelgrootte with contextual label
+  4. All FAR/TAR references removed from ParcelDetailModal and InspectorPanel
+  5. No "onbekend" placeholders for FAR/TAR — section removed entirely
+**Plans**: TBD
+
+Plans:
+- [ ] 72-01: Backend — store pand_oppervlakte_m2 in ScanResult + Alembic migration + backfill existing scans
+- [ ] 72-02: Frontend — rewrite three pillar bars with real data, remove FAR/TAR, cleanup dead code
 
 ### v9.0 Risk Intelligence (Phases 67-69)
 
