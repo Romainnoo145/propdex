@@ -481,19 +481,25 @@ def _is_residential_or_mixed(bestemmingen: list | None) -> bool:
     return False
 
 
-def extract_building_metrics(bestemmingen: list | None) -> dict[str, float | None]:
+def extract_building_metrics(bestemmingen: list | None) -> dict[str, float | int | None]:
     """
     Extract zoning build metrics (if present) from bestemmingen payload.
 
     Returns max values discovered across overlapping bestemmingen.
+    Always returns all four keys: max_bebouwingspercentage, max_floor_area_ratio,
+    max_bouwhoogte, max_bouwlagen (values may be None).
     """
     max_bebouwingspercentage: float | None = None
     max_far: float | None = None
+    max_bouwhoogte: float | None = None
+    max_bouwlagen: int | None = None
 
     if not bestemmingen:
         return {
             "max_bebouwingspercentage": None,
             "max_floor_area_ratio": None,
+            "max_bouwhoogte": None,
+            "max_bouwlagen": None,
         }
 
     for bestemming in bestemmingen:
@@ -537,9 +543,24 @@ def extract_building_metrics(bestemmingen: list | None) -> dict[str, float | Non
                 candidate = max(values_in_text)
                 max_far = candidate if max_far is None else max(max_far, candidate)
 
+        # Pass through PLU WMS-extracted bouwhoogte if present
+        bh = bestemming.get("max_bouwhoogte")
+        if isinstance(bh, (int, float)) and 2.0 <= bh <= 100.0:
+            max_bouwhoogte = float(bh) if max_bouwhoogte is None else max(max_bouwhoogte, float(bh))
+
+        # Pass through PLU WMS-extracted bouwlagen if present
+        bl = bestemming.get("max_bouwlagen")
+        if isinstance(bl, int) and 1 < bl <= 50:
+            max_bouwlagen = bl if max_bouwlagen is None else max(max_bouwlagen, bl)
+        elif isinstance(bl, float) and 1 < bl <= 50:
+            bl_int = int(round(bl))
+            max_bouwlagen = bl_int if max_bouwlagen is None else max(max_bouwlagen, bl_int)
+
     return {
         "max_bebouwingspercentage": max_bebouwingspercentage,
         "max_floor_area_ratio": max_far,
+        "max_bouwhoogte": max_bouwhoogte,
+        "max_bouwlagen": max_bouwlagen,
     }
 
 

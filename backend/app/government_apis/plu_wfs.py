@@ -105,11 +105,15 @@ class PLUWMSClient:
                 key = f"{btype}:{naam}"
                 if key not in seen:
                     seen.add(key)
-                    entry: dict[str, str | float] = {"type": btype, "naam": naam}
+                    entry: dict[str, str | float | int] = {"type": btype, "naam": naam}
                     if metrics["max_bebouwingspercentage"] is not None:
                         entry["max_bebouwingspercentage"] = metrics["max_bebouwingspercentage"]
                     if metrics["max_floor_area_ratio"] is not None:
                         entry["max_floor_area_ratio"] = metrics["max_floor_area_ratio"]
+                    if metrics["max_bouwhoogte"] is not None:
+                        entry["max_bouwhoogte"] = metrics["max_bouwhoogte"]
+                    if metrics["max_bouwlagen"] is not None:
+                        entry["max_bouwlagen"] = metrics["max_bouwlagen"]
                     bestemmingen.append(entry)
 
             return bestemmingen if bestemmingen else None
@@ -120,10 +124,12 @@ class PLUWMSClient:
     def _extract_metrics_from_features(
         self,
         features: list[dict],
-    ) -> dict[str, float | None]:
+    ) -> dict[str, float | int | None]:
         """Extract build intensity metrics from maatvoering features."""
         max_bebouwingspercentage: float | None = None
         max_floor_area_ratio: float | None = None
+        max_bouwhoogte: float | None = None
+        max_bouwlagen: int | None = None
 
         for feature in features:
             props = feature.get("properties", {})
@@ -158,9 +164,25 @@ class PLUWMSClient:
                     else max(max_floor_area_ratio, candidate)
                 )
 
+            # Parse bouwhoogte from maatvoering text (excluding goothoogte)
+            if any(kw in text for kw in ("bouwhoogte", "bouwhogte")) and "goot" not in text:
+                candidates = [v for v in values if 2.0 <= v <= 100.0]
+                if candidates:
+                    candidate = max(candidates)
+                    max_bouwhoogte = candidate if max_bouwhoogte is None else max(max_bouwhoogte, candidate)
+
+            # Parse bouwlagen from maatvoering text
+            if any(kw in text for kw in ("bouwlagen", "bouwlaag", "verdieping", "woonlagen")) and values:
+                bl_candidates = [int(round(v)) for v in values if 1 < v <= 50]
+                if bl_candidates:
+                    candidate_bl = max(bl_candidates)
+                    max_bouwlagen = candidate_bl if max_bouwlagen is None else max(max_bouwlagen, candidate_bl)
+
         return {
             "max_bebouwingspercentage": max_bebouwingspercentage,
             "max_floor_area_ratio": max_floor_area_ratio,
+            "max_bouwhoogte": max_bouwhoogte,
+            "max_bouwlagen": max_bouwlagen,
         }
 
     @staticmethod
