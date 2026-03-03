@@ -8,6 +8,8 @@ from shapely.geometry import Point, Polygon
 from app.schemas.zoning import BuildingDimensions
 from app.services.zoning_aggregator import (
     _extract_building_dimensions,
+    _extract_dimensions_from_plan_texts,
+    _extract_dimensions_from_plu,
     _filter_and_sort_plans,
     _find_containing_features,
 )
@@ -167,7 +169,7 @@ class TestExtractBuildingDimensions:
             ("bebouwingspercentage", "45%", "max_bebouwingspercentage", 45.0),
             ("hoogte", "15", "max_hoogte", 15.0),
             ("fsi", "2.5", "max_floor_area_ratio", 2.5),
-            ("vloeroppervlakte", "500", "max_floor_area_ratio", 500.0),
+            ("vloerfactor", "1.8", "max_floor_area_ratio", 1.8),
         ],
     )
     def test_dimension_field_mapping(self, naam, waarde, expected_field, expected_value):
@@ -244,8 +246,8 @@ class TestExtractBuildingDimensions:
         assert result.max_bouwhoogte is None  # Skipped
         assert result.max_goothoogte == 8.0  # Extracted
 
-    def test_first_matching_value_wins(self):
-        """First matching value should win, subsequent ignored per is None guard."""
+    def test_highest_matching_value_wins(self):
+        """Highest matching value should be kept across overlapping maatvoeringen."""
         property_point = Point(50, 50)
         maatvoeringen = [
             {
@@ -267,7 +269,64 @@ class TestExtractBuildingDimensions:
         ]
 
         result = _extract_building_dimensions(maatvoeringen, property_point)
-        assert result.max_bouwhoogte == 10.0  # First value
+        assert result.max_bouwhoogte == 15.0
+
+    def test_extracts_tar_far_from_maatvoering_text_payload(self):
+        """Tar/Far may be encoded in free-text maatvoering payload fields."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "maatvoering",
+                "maatvoering": '"maximum bebouwingspercentage terrein (%)"="70"',
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            },
+            {
+                "naam": "maatvoering",
+                "maatvoering": '"maximum FSI"="2,4"',
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            },
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bebouwingspercentage == 70.0
+        assert result.max_floor_area_ratio == 2.4
+
+    def test_extracts_tar_far_from_plan_texts(self):
+        """Plan articles can provide TAR/FAR when maatvoeringen are absent."""
+        teksten_raw = [
+            {
+                "titel": "Artikel 3.2.1",
+                "tekst": "Het bebouwingspercentage bedraagt maximaal 60%.",
+            },
+            {
+                "titel": "Artikel 3.2.2",
+                "tekst": "De FAR is maximaal 1,6 voor dit bouwvlak.",
+            },
+        ]
+
+        result = _extract_dimensions_from_plan_texts(teksten_raw)
+        assert result.max_bebouwingspercentage == 60.0
+        assert result.max_floor_area_ratio == 1.6
+
+    def test_extracts_tar_far_from_plu_fallback(self):
+        """PLU fallback should map explicit TAR/FAR fields into dimensions."""
+        bestemmingen = [
+            {
+                "type": "Wonen",
+                "naam": "Wonen",
+                "max_bebouwingspercentage": 55,
+                "max_floor_area_ratio": 1.4,
+            }
+        ]
+        result = _extract_dimensions_from_plu(bestemmingen)
+        assert result.max_bebouwingspercentage == 55.0
+        assert result.max_floor_area_ratio == 1.4
 
     def test_numeric_waarde_not_parsed(self):
         """Numeric waarde (not string) should work directly."""
@@ -358,12 +417,14 @@ class TestFilterAndSortPlans:
         assert result[0]["planStatus"] == "VASTGESTELD"
         assert result[1]["planStatus"] == "Vastgesteld"
 
-    def test_no_matching_status_returns_empty(self):
-        """If no plans match vastgesteld or ontwerp, return empty."""
+    def test_no_matching_status_falls_back_to_all_plans(self):
+        """If no plans match vastgesteld/ontwerp, keep all plans as fallback."""
         plans = [
             {"identificatie": "plan1", "planStatus": "ingetrokken", "datum": "2023-01-01"},
             {"identificatie": "plan2", "planStatus": "vervallen", "datum": "2023-06-01"},
         ]
 
         result = _filter_and_sort_plans(plans)
-        assert result == []
+        assert len(result) == 2
+        assert result[0]["identificatie"] == "plan2"
+        assert result[1]["identificatie"] == "plan1"

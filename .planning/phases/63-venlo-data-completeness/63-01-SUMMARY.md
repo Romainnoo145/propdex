@@ -133,3 +133,14 @@ None - no external service configuration required.
 ---
 *Phase: 63-venlo-data-completeness*
 *Completed: 2026-03-01*
+
+## Self-Check: PASSED
+
+- backend/app/tools/validate_scan_data.py: FOUND
+- backend/app/services/parcel_addressing.py: FOUND
+- backend/app/tools/backfill_parcel_addresses.py: FOUND
+- backend/tests/unit/test_validate_scan_data.py: FOUND
+- .planning/phases/63-venlo-data-completeness/63-01-SUMMARY.md: FOUND
+- Commit dd6beba: FOUND (feat: validate_scan_data CLI + parcel_addressing)
+- Commit 5aeb7aa: FOUND (test: WijkValidation unit tests)
+- Commit 547f411: FOUND (docs: plan metadata)

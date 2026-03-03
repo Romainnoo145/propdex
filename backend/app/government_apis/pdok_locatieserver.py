@@ -6,6 +6,8 @@ import re
 import httpx
 
 from app.government_apis.base import handle_api_response
+from app.government_apis.base import retry_with_backoff
+from app.government_apis.rate_limiter import pdok_locatieserver_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -119,22 +121,35 @@ class PDOKLocatieserver:
             Display address string (e.g., "Kerkstraat 42, 5911AA Venlo") or None
         """
         url = f"{self.BASE_URL}/reverse"
-        params = {
-            "X": rd_x,
-            "Y": rd_y,
-            "type": "adres",
-            "rows": 1,
-            "distance": 100,
-        }
+        for distance in (100, 250, 500):
+            params = {
+                "X": rd_x,
+                "Y": rd_y,
+                "type": "adres",
+                "rows": 1,
+                "distance": distance,
+            }
 
-        try:
-            response = await client.get(url, params=params)
-            data = handle_api_response(response, source="pdok")
-            docs = data.get("response", {}).get("docs", [])
-            if docs:
-                return docs[0].get("weergavenaam")
-        except Exception as e:
-            logger.debug(f"PDOK reverse geocode failed for ({rd_x}, {rd_y}): {e}")
+            try:
+                async with pdok_locatieserver_limiter:
+                    response = await retry_with_backoff(
+                        lambda: client.get(url, params=params),
+                        source="pdok",
+                    )
+                data = handle_api_response(response, source="pdok")
+                docs = data.get("response", {}).get("docs", [])
+                if docs:
+                    weergavenaam = docs[0].get("weergavenaam")
+                    if isinstance(weergavenaam, str) and weergavenaam.strip():
+                        return weergavenaam.strip()
+            except Exception as e:
+                logger.debug(
+                    "PDOK reverse geocode failed for (%s, %s) distance=%s: %s",
+                    rd_x,
+                    rd_y,
+                    distance,
+                    e,
+                )
 
         return None
 

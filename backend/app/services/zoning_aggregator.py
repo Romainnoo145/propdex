@@ -4,12 +4,14 @@ import html
 import logging
 import re
 import uuid
+from typing import Any
 
 import httpx
 from shapely.geometry import Point, shape
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.government_apis.dso_spatial_plans import get_dso_client
+from app.government_apis.plu_wfs import plu_wms_client
 from app.schemas.zoning import (
     BuildingDimensions,
     FunctieAanduiding,
@@ -30,6 +32,165 @@ def _strip_html(text: str) -> str:
     clean = html.unescape(clean)
     clean = re.sub(r"\s+", " ", clean).strip()
     return clean
+
+
+def _to_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str):
+        return None
+    matches = re.findall(r"-?\d+(?:[.,]\d+)?", value)
+    if not matches:
+        return None
+    try:
+        return float(matches[0].replace(",", "."))
+    except ValueError:
+        return None
+
+
+def _extract_numeric_values(text: str) -> list[float]:
+    values: list[float] = []
+    for match in re.findall(r"-?\d+(?:[.,]\d+)?", text):
+        try:
+            values.append(float(match.replace(",", ".")))
+        except ValueError:
+            continue
+    return values
+
+
+def _max_existing(current: float | None, candidate: float | None) -> float | None:
+    if candidate is None:
+        return current
+    if current is None:
+        return candidate
+    return max(current, candidate)
+
+
+def _extract_tar_far_from_text(text: str) -> tuple[float | None, float | None]:
+    """
+    Extract TAR/FAR-style metrics from free text (maatvoering/planregels).
+
+    Heuristic parsing only; values are filtered to realistic ranges.
+    """
+    lower = text.lower()
+    max_bebouwingspercentage: float | None = None
+    max_far: float | None = None
+
+    tar_patterns = [
+        r"bebouwingspercentage[^0-9]{0,24}(\d{1,3}(?:[.,]\d+)?)\s*%?",
+        r"(\d{1,3}(?:[.,]\d+)?)\s*%?[^.\n]{0,40}bebouwingspercentage",
+    ]
+    for pattern in tar_patterns:
+        for raw_value in re.findall(pattern, lower):
+            try:
+                value = float(raw_value.replace(",", "."))
+            except ValueError:
+                continue
+            if 0 < value <= 100:
+                max_bebouwingspercentage = _max_existing(max_bebouwingspercentage, value)
+
+    far_patterns = [
+        r"(?:\bfsi\b|\bfar\b|vloer(?:index|factor|oppervlakteverhouding)|floor area ratio)[^0-9]{0,24}(\d{1,2}(?:[.,]\d+)?)",
+        r"(\d{1,2}(?:[.,]\d+)?)[^.\n]{0,24}(?:\bfsi\b|\bfar\b|vloer(?:index|factor|oppervlakteverhouding)|floor area ratio)",
+    ]
+    for pattern in far_patterns:
+        for raw_value in re.findall(pattern, lower):
+            try:
+                value = float(raw_value.replace(",", "."))
+            except ValueError:
+                continue
+            if 0 < value <= 12:
+                max_far = _max_existing(max_far, value)
+
+    return max_bebouwingspercentage, max_far
+
+
+def _merge_building_dimensions(
+    base: BuildingDimensions | None,
+    supplement: BuildingDimensions | None,
+) -> BuildingDimensions | None:
+    if supplement is None or not supplement.has_any_data:
+        return base
+    if base is None or not base.has_any_data:
+        return supplement.model_copy(deep=True)
+
+    merged = base.model_copy(deep=True)
+    merged.max_hoogte = _max_existing(merged.max_hoogte, supplement.max_hoogte)
+    merged.max_bouwhoogte = _max_existing(merged.max_bouwhoogte, supplement.max_bouwhoogte)
+    merged.max_goothoogte = _max_existing(merged.max_goothoogte, supplement.max_goothoogte)
+    merged.max_bebouwingspercentage = _max_existing(
+        merged.max_bebouwingspercentage,
+        supplement.max_bebouwingspercentage,
+    )
+    merged.max_floor_area_ratio = _max_existing(
+        merged.max_floor_area_ratio,
+        supplement.max_floor_area_ratio,
+    )
+    return merged
+
+
+def _extract_dimensions_from_plan_texts(teksten_raw: list[dict]) -> BuildingDimensions:
+    """Extract TAR/FAR hints from article texts when DSO maatvoeringen are incomplete."""
+    dimensions = BuildingDimensions()
+
+    for tekst in teksten_raw[:40]:
+        raw_text = str(tekst.get("tekst") or tekst.get("inhoud") or "")
+        if not raw_text:
+            continue
+        cleaned_text = _strip_html(raw_text)
+        tar, far = _extract_tar_far_from_text(cleaned_text)
+        dimensions.max_bebouwingspercentage = _max_existing(
+            dimensions.max_bebouwingspercentage,
+            tar,
+        )
+        dimensions.max_floor_area_ratio = _max_existing(
+            dimensions.max_floor_area_ratio,
+            far,
+        )
+
+    return dimensions
+
+
+def _extract_dimensions_from_plu(bestemmingen: list[dict] | None) -> BuildingDimensions:
+    """Extract TAR/FAR from PLU WMS fallback payload."""
+    dimensions = BuildingDimensions()
+    if not bestemmingen:
+        return dimensions
+
+    for bestemming in bestemmingen:
+        if not isinstance(bestemming, dict):
+            continue
+        tar = _to_float(bestemming.get("max_bebouwingspercentage"))
+        far = _to_float(bestemming.get("max_floor_area_ratio"))
+
+        if tar is not None and 0 < tar <= 100:
+            dimensions.max_bebouwingspercentage = _max_existing(
+                dimensions.max_bebouwingspercentage,
+                tar,
+            )
+        if far is not None and 0 < far <= 12:
+            dimensions.max_floor_area_ratio = _max_existing(
+                dimensions.max_floor_area_ratio,
+                far,
+            )
+
+        text_blob = " ".join(
+            str(bestemming.get(field, ""))
+            for field in ("naam", "type", "maatvoering", "aanduiding", "omschrijving")
+        )
+        tar_from_text, far_from_text = _extract_tar_far_from_text(text_blob)
+        dimensions.max_bebouwingspercentage = _max_existing(
+            dimensions.max_bebouwingspercentage,
+            tar_from_text,
+        )
+        dimensions.max_floor_area_ratio = _max_existing(
+            dimensions.max_floor_area_ratio,
+            far_from_text,
+        )
+
+    return dimensions
 
 
 def _find_containing_features(
@@ -86,40 +247,44 @@ def _extract_building_dimensions(
     """
     # Filter to maatvoeringen containing the property point
     relevant = _find_containing_features(property_point, maatvoeringen)
-
     dimensions = BuildingDimensions()
 
     for maatvoering in relevant:
-        # Extract maatvoering type and value
-        # DSO API structure varies, look for common Dutch dimension fields
-        naam = maatvoering.get("naam", "").lower()
-        waarde = maatvoering.get("waarde")
+        naam = str(maatvoering.get("naam", "")).lower()
+        waarde = _to_float(maatvoering.get("waarde"))
 
-        # Parse numeric value from string if needed
-        if isinstance(waarde, str):
-            # Extract first numeric value from string (e.g., "12.5 meter" -> 12.5)
-            match = re.search(r"(\d+\.?\d*)", waarde)
-            if match:
-                try:
-                    waarde = float(match.group(1))
-                except ValueError:
-                    continue
-            else:
-                continue
+        text_blob = " ".join(
+            str(maatvoering.get(field, ""))
+            for field in ("naam", "waarde", "maatvoering", "aanduiding", "omschrijving")
+        )
+        tar_from_text, far_from_text = _extract_tar_far_from_text(text_blob)
+        dimensions.max_bebouwingspercentage = _max_existing(
+            dimensions.max_bebouwingspercentage,
+            tar_from_text,
+        )
+        dimensions.max_floor_area_ratio = _max_existing(
+            dimensions.max_floor_area_ratio,
+            far_from_text,
+        )
 
-        # Map Dutch dimension terms to schema fields
-        if "bouwhoogte" in naam and dimensions.max_bouwhoogte is None:
-            dimensions.max_bouwhoogte = waarde
-        elif "goothoogte" in naam and dimensions.max_goothoogte is None:
-            dimensions.max_goothoogte = waarde
-        elif "hoogte" in naam and dimensions.max_hoogte is None:
-            # Generic hoogte if no specific bouwhoogte/goothoogte
-            dimensions.max_hoogte = waarde
-        elif "bebouwingspercentage" in naam and dimensions.max_bebouwingspercentage is None:
-            dimensions.max_bebouwingspercentage = waarde
-        elif "fsi" in naam or "vloeroppervlakte" in naam:
-            if dimensions.max_floor_area_ratio is None:
-                dimensions.max_floor_area_ratio = waarde
+        # Height-like measures are still extracted from direct value fields.
+        if waarde is not None:
+            if "bouwhoogte" in naam:
+                dimensions.max_bouwhoogte = _max_existing(dimensions.max_bouwhoogte, waarde)
+            elif "goothoogte" in naam:
+                dimensions.max_goothoogte = _max_existing(dimensions.max_goothoogte, waarde)
+            elif "hoogte" in naam:
+                dimensions.max_hoogte = _max_existing(dimensions.max_hoogte, waarde)
+            elif "bebouwingspercentage" in naam and 0 < waarde <= 100:
+                dimensions.max_bebouwingspercentage = _max_existing(
+                    dimensions.max_bebouwingspercentage,
+                    waarde,
+                )
+            elif ("fsi" in naam or "far" in naam or "vloerindex" in naam or "vloerfactor" in naam) and 0 < waarde <= 12:
+                dimensions.max_floor_area_ratio = _max_existing(
+                    dimensions.max_floor_area_ratio,
+                    waarde,
+                )
 
     return dimensions
 
@@ -237,7 +402,7 @@ async def fetch_zoning_data(
     """
     # Versioned cache key so improved plan-prioritization logic is applied
     # immediately instead of reusing legacy cached selections.
-    cache_key = f"dso:zoning:v2:{x}:{y}"
+    cache_key = f"dso:zoning:v3:{x}:{y}"
     property_point = Point(x, y)
 
     async def _fetch() -> dict:
@@ -259,6 +424,7 @@ async def fetch_zoning_data(
         # "policy-only top-3" cases.
         max_plans_to_process = 8
         zoning_plans = []
+        dimension_candidates: list[BuildingDimensions] = []
         all_data_gaps = []
 
         for plan in filtered_plans[:max_plans_to_process]:
@@ -319,11 +485,21 @@ async def fetch_zoning_data(
                     gebiedsaanduidingen_raw,
                 )
 
-                # Extract building dimensions from maatvoeringen
-                building_dimensions = _extract_building_dimensions(
+                # Extract building dimensions from DSO maatvoering geometries.
+                dso_dimensions = _extract_building_dimensions(
                     maatvoeringen,
                     property_point,
                 )
+                text_dimensions = _extract_dimensions_from_plan_texts(teksten_raw)
+                merged_dimensions = _merge_building_dimensions(
+                    dso_dimensions,
+                    text_dimensions,
+                )
+                if merged_dimensions is None:
+                    building_dimensions = BuildingDimensions()
+                else:
+                    building_dimensions = merged_dimensions
+                    dimension_candidates.append(building_dimensions)
 
                 # Build zoning rules from bestemmingsvlakken
                 rules = []
@@ -368,8 +544,19 @@ async def fetch_zoning_data(
                 gaps = []
                 if not relevant_bestemmingen:
                     gaps.append("Geen bestemmingsvlakken op deze locatie")
-                if not building_dimensions.has_any_data:
-                    gaps.append("Geen maatvoeringen gevonden")
+                if not dso_dimensions.has_any_data:
+                    if text_dimensions.has_any_data:
+                        gaps.append("Maatvoeringen ontbreken; TAR/FAR afgeleid uit planregels")
+                    else:
+                        gaps.append("Geen maatvoeringen gevonden")
+                elif (
+                    text_dimensions.has_any_data
+                    and (
+                        dso_dimensions.max_bebouwingspercentage is None
+                        or dso_dimensions.max_floor_area_ratio is None
+                    )
+                ):
+                    gaps.append("TAR/FAR deels aangevuld uit planregels")
                 if not relevant_bouwvlakken:
                     gaps.append("Geen bouwvlakken gevonden")
 
@@ -409,15 +596,41 @@ async def fetch_zoning_data(
         else:
             primary_bestemming = None
 
-        # Aggregate building dimensions (take first available)
-        consolidated_dimensions = None
-        for plan in zoning_plans:
-            for rule in plan.rules:
-                if rule.building_dimensions and rule.building_dimensions.has_any_data:
-                    consolidated_dimensions = rule.building_dimensions
-                    break
-            if consolidated_dimensions:
-                break
+        # Aggregate building dimensions across processed plans.
+        # This avoids losing valid maatvoering info when a plan has no intersecting
+        # bestemmingsvlak rows but does contain relevant dimension features.
+        consolidated_dimensions: BuildingDimensions | None = None
+        for candidate in dimension_candidates:
+            consolidated_dimensions = _merge_building_dimensions(
+                consolidated_dimensions,
+                candidate,
+            )
+
+        # PLU fallback (single point query) when DSO did not yield TAR/FAR.
+        needs_plu_fallback = (
+            consolidated_dimensions is None
+            or consolidated_dimensions.max_bebouwingspercentage is None
+            or consolidated_dimensions.max_floor_area_ratio is None
+        )
+        if needs_plu_fallback:
+            try:
+                plu_bestemmingen = await plu_wms_client.get_bestemming_at_point(x, y, client)
+                plu_dimensions = _extract_dimensions_from_plu(plu_bestemmingen)
+                before_tar = consolidated_dimensions.max_bebouwingspercentage if consolidated_dimensions else None
+                before_far = consolidated_dimensions.max_floor_area_ratio if consolidated_dimensions else None
+                consolidated_dimensions = _merge_building_dimensions(
+                    consolidated_dimensions,
+                    plu_dimensions,
+                )
+                after_tar = consolidated_dimensions.max_bebouwingspercentage if consolidated_dimensions else None
+                after_far = consolidated_dimensions.max_floor_area_ratio if consolidated_dimensions else None
+                if before_tar != after_tar or before_far != after_far:
+                    all_data_gaps.append("TAR/FAR deels aangevuld via PLU maatvoering")
+            except Exception as e:
+                logger.warning(f"PLU fallback failed at ({x}, {y}): {e}")
+
+        if consolidated_dimensions is not None and not consolidated_dimensions.has_any_data:
+            consolidated_dimensions = None
 
         return {
             "plans": [plan.model_dump() for plan in zoning_plans],

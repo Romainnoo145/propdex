@@ -35,6 +35,9 @@ def mock_dso_client():
     client.get_bestemmingsvlakken = AsyncMock()
     client.get_maatvoeringen = AsyncMock()
     client.get_bouwvlakken = AsyncMock()
+    client.get_functieaanduidingen = AsyncMock(return_value=[])
+    client.get_gebiedsaanduidingen = AsyncMock(return_value=[])
+    client.get_teksten = AsyncMock(return_value=[])
 
     return client
 
@@ -309,7 +312,7 @@ class TestZoningFullFlow:
         # Cache entry should still be created
         stmt = select(CachedAPIResponse).where(
             CachedAPIResponse.organization_id == org_id,
-            CachedAPIResponse.cache_key.startswith("dso:zoning:121800.0:487600.0"),
+            CachedAPIResponse.cache_key.startswith("dso:zoning:v3:121800.0:487600.0"),
         )
         cache_entry = (await test_db.execute(stmt)).scalar_one()
         assert cache_entry is not None
@@ -352,3 +355,68 @@ class TestZoningFullFlow:
         assert "Geen bestemmingsvlakken op deze locatie" in result.data_gaps
         assert "Geen maatvoeringen gevonden" in result.data_gaps
         assert "Geen bouwvlakken gevonden" in result.data_gaps
+
+    async def test_plu_fallback_fills_tar_far(self, test_db, org_id, mock_dso_client):
+        """If DSO maatvoeringen miss TAR/FAR, PLU fallback should populate them."""
+        plans = [
+            {
+                "identificatie": "NL.IMRO.0363.BP2024-PLU",
+                "naam": "Plan met fallback",
+                "planType": "bestemmingsplan",
+                "planStatus": "vastgesteld",
+                "datum": "2024-01-20",
+            }
+        ]
+        mock_dso_client.find_plans_at_location.return_value = plans
+        mock_dso_client.get_bestemmingsvlakken.return_value = [
+            {
+                "naam": "Wonen",
+                "omschrijving": "Woondoeleinden",
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [121600, 487400],
+                            [121800, 487400],
+                            [121800, 487600],
+                            [121600, 487600],
+                            [121600, 487400],
+                        ]
+                    ],
+                },
+            }
+        ]
+        mock_dso_client.get_maatvoeringen.return_value = []
+        mock_dso_client.get_bouwvlakken.return_value = []
+
+        with (
+            patch("app.services.zoning_aggregator.get_dso_client", return_value=mock_dso_client),
+            patch(
+                "app.services.zoning_aggregator.plu_wms_client.get_bestemming_at_point",
+                new=AsyncMock(
+                    return_value=[
+                        {
+                            "type": "Wonen",
+                            "naam": "Wonen",
+                            "max_bebouwingspercentage": 70,
+                            "max_floor_area_ratio": 2.1,
+                        }
+                    ]
+                ),
+            ),
+        ):
+            client = AsyncMock(spec=httpx.AsyncClient)
+            result = await fetch_zoning_data(
+                x=121700.0,
+                y=487500.0,
+                client=client,
+                organization_id=org_id,
+                session=test_db,
+                force_refresh=True,
+            )
+
+        assert result is not None
+        assert result.building_dimensions is not None
+        assert result.building_dimensions.max_bebouwingspercentage == 70.0
+        assert result.building_dimensions.max_floor_area_ratio == 2.1
+        assert any("PLU" in gap for gap in result.data_gaps)

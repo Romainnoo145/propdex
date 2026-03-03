@@ -20,6 +20,10 @@ class BuildingDimensionsAI(BaseModel):
         default=None,
         description="Maximum coverage percentage (0-100)",
     )
+    max_floor_area_ratio: float | None = Field(
+        default=None,
+        description="Maximum floor area ratio / FSI (FAR)",
+    )
     max_oppervlakte: float | None = Field(
         default=None,
         description="Maximum floor area in m2",

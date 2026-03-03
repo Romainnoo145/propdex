@@ -9,7 +9,7 @@ Analyseer dit bestemmingsplan-PDF en extraheer alle relevante regels.
 2. Bestemming (bijv. "Woongebied", "Gemengd gebied", "Centrum")
 3. Toegestane gebruiken (lijst, bijv. ["wonen", "kantoor aan huis", "bed & breakfast"])
 4. Verboden gebruiken (lijst, bijv. ["bedrijfsmatige activiteiten", "horeca", "detailhandel"])
-5. Bouwregels: maximale bouwhoogte (m), goothoogte (m), bebouwingspercentage (%), oppervlakte (m2), inhoud (m3)
+5. Bouwregels: maximale bouwhoogte (m), goothoogte (m), bebouwingspercentage (%), vloerfactor/FSI/FAR, oppervlakte (m2), inhoud (m3)
 6. Parkeereis (bijv. "2 parkeerplaatsen per woning" of "conform CROW-normen")
 7. Milieurestrictions (bijv. geluidszones, geurcontouren, bodemkwaliteitseisen)
 8. Bijzondere voorwaarden (wijzigingsbevoegdheden, afwijkingsregels, uitzonderingen, overgangsrecht)
