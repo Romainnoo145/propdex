@@ -43,6 +43,9 @@ _HEIGHT_MAX = 200.0
 _BOUWLAGEN_MIN = 1
 _BOUWLAGEN_MAX = 100
 
+# Single-item endpoint for per-pand lookup
+_ITEM_URL = "https://api.3dbag.nl/collections/pand/items/{pand_id}"
+
 
 class BAG3DClient:
     """OGC API Features client for TU Delft 3D BAG building data.
@@ -163,6 +166,49 @@ class BAG3DClient:
 
         logger.info("3D BAG bbox query complete: %d panden found", len(results))
         return results
+
+    async def get_pand_by_id(
+        self,
+        pand_id: str,
+        client: httpx.AsyncClient,
+    ) -> dict[str, Any] | None:
+        """Fetch 3D BAG data for a single pand by identificatie.
+
+        Returns:
+            {"actual_bouwhoogte": float | None, "actual_bouwlagen": int | None}
+            or None if pand not found (404).
+        """
+        url = _ITEM_URL.format(pand_id=pand_id)
+
+        async with bag_3d_limiter:
+            try:
+                response = await retry_with_backoff(
+                    lambda: client.get(url, timeout=15.0),
+                    source="bag-3d",
+                    retry_on_errors=True,
+                )
+            except Exception:
+                return None
+
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200:
+            return None
+
+        data = response.json()
+        feature = data.get("feature", data)
+        city_objects: dict[str, Any] = feature.get("CityObjects", {})
+
+        for obj_id, obj in city_objects.items():
+            if "-" in obj_id.split(".")[-1]:
+                continue
+            attrs = obj.get("attributes", {})
+            return {
+                "actual_bouwhoogte": _derive_height(attrs),
+                "actual_bouwlagen": _derive_bouwlagen(attrs),
+            }
+
+        return None
 
 
 def _derive_height(props: dict[str, Any]) -> float | None:
