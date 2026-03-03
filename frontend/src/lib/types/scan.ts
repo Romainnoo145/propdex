@@ -105,6 +105,10 @@ export interface BuildingMetrics {
   max_bouwhoogte?: number | null
   /** Maximum number of building floors from PLU WMS maatvoering — Phase 73 */
   max_bouwlagen?: number | null
+  /** Actual building height in meters from 3D BAG (b3_h_dak_50p - b3_h_maaiveld) — Phase 74 */
+  actual_bouwhoogte?: number | null
+  /** Actual floor count from 3D BAG (b3_bouwlagen) — Phase 74 */
+  actual_bouwlagen?: number | null
 }
 
 export interface ScanResultItem {

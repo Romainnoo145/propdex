@@ -90,8 +90,59 @@ function deriveTransformatiePotentie(
   const bouwlagen = metrics?.max_bouwlagen ?? null
   const hasDSOData = bouwhoogte != null || bouwlagen != null
 
+  // Extract actual dimensions from 3D BAG
+  const actualHoogte = metrics?.actual_bouwhoogte ?? null
+  const actualLagen = metrics?.actual_bouwlagen ?? null
+  const has3DData = actualHoogte != null || actualLagen != null
+
+  // Priority 1: Headroom path — actual vs permitted comparison
+  if (has3DData && hasDSOData) {
+    // Headroom = fraction of permitted envelope still unused
+    // 0 = fully built out, 1 = empty (full headroom)
+    const hoogteHeadroom =
+      actualHoogte != null && bouwhoogte != null && bouwhoogte > 0
+        ? Math.max(0, 1 - actualHoogte / bouwhoogte)
+        : null
+    const lagenHeadroom =
+      actualLagen != null && bouwlagen != null && bouwlagen > 0
+        ? Math.max(0, 1 - actualLagen / bouwlagen)
+        : null
+
+    // Use best available headroom signal (avoid double-counting — same envelope)
+    const headroom =
+      hoogteHeadroom != null && lagenHeadroom != null
+        ? Math.max(hoogteHeadroom, lagenHeadroom)
+        : (hoogteHeadroom ?? lagenHeadroom ?? 0)
+
+    // Score from headroom — higher headroom = higher transformation potential
+    const headroomPts =
+      headroom >= 0.6 ? 50
+      : headroom >= 0.4 ? 35
+      : headroom >= 0.2 ? 20
+      : 10
+
+    const bestemmingPts = supportsResidentialMixed ? 20 : 5
+
+    // Area score (same bands as existing heuristic)
+    const areaScore =
+      area_m2 == null ? 8
+      : area_m2 > 5000 ? 15
+      : area_m2 > 1000 ? 12
+      : area_m2 > 200 ? 8
+      : 3
+
+    const score = Math.min(100, headroomPts + bestemmingPts + areaScore)
+
+    // Label: "3/5 lagen · 8.5/15m · wonen ok"
+    const parts: string[] = []
+    if (actualLagen != null) parts.push(`${actualLagen}/${bouwlagen ?? '?'} lagen`)
+    if (actualHoogte != null) parts.push(`${actualHoogte}/${bouwhoogte ?? '?'}m`)
+    parts.push(supportsResidentialMixed ? 'wonen ok' : 'geen wonen')
+    return { score, label: parts.join(' \u00b7 ') }
+  }
+
+  // Priority 2: DSO/PLU WMS data-driven path
   if (hasDSOData) {
-    // DSO/PLU WMS data-driven path
     const hoogtePts =
       bouwhoogte == null ? 0
       : bouwhoogte >= 15 ? 35
