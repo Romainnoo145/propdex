@@ -318,7 +318,9 @@ export function ParcelDetailModal({
   })
 
   // Pillar 1: Vrije ruimte from pand_oppervlakte_m2
-  const pandOppervlaktM2 = parcel.building_metrics?.pand_oppervlakte_m2 ?? null
+  // Treat 0 as null when parcel has a building — 0 means BAG footprint data missing, not truly empty
+  const rawPandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? null
+  const pandOppervlaktM2 = rawPandOpp === 0 && parcel.has_pand ? null : rawPandOpp
   const vrijeRuimtePct: number | null =
     pandOppervlaktM2 != null && parcel.area_m2 != null && parcel.area_m2 > 0
       ? Math.max(0, Math.min(100, (1 - pandOppervlaktM2 / parcel.area_m2) * 100))
