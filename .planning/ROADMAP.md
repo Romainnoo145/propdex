@@ -2,8 +2,8 @@
 
 ## Milestones
 
-- 📋 **v9.0 Professional Marketplace** -- Phases 67-71 (planned)
-- 🚧 **v8.0 Client Demo Readiness** -- Phases 62-66 (in progress)
+- ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
+- ✅ **v8.0 Client Demo Readiness** -- Phases 62-66 (shipped 2026-03-02)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
 - ✅ **v7.1 Workspace Productization** -- Phase 58 (shipped 2026-02-27)
 - ✅ **v7.05 Codebase Globalization** -- Phase 57 (shipped 2026-02-26)
@@ -32,15 +32,13 @@
 - [x] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section (completed 2026-03-02)
 - [x] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels (completed 2026-03-02)
 
-### v9.0 Professional Marketplace (Phases 67-71)
+### v9.0 Risk Intelligence (Phases 67-69)
 
-**Milestone Goal:** Transform Propdex from data analysis tool into a lead generation platform by connecting property intelligence to professional services — starting with kwaliteitsborgers (Wkb) as the first vertical.
+**Milestone Goal:** Add comprehensive risk assessment capabilities — Wkb classification, soil contamination data, and automated risicobeoordeling dossier generation for kwaliteitsborger intake.
 
 - [x] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions (completed 2026-03-02)
 - [x] **Phase 68: Bodemloket Integration** — Soil contamination data at parcel level with spike-first API discovery (completed 2026-03-02)
 - [x] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document (completed 2026-03-02)
-- [ ] **Phase 70: Professional Directory** — Platform-wide kwaliteitsborger profiles with NULL org_id RLS pattern
-- [ ] **Phase 71: Lead Capture + AVG Consent** — "Vraag kwaliteitsborger aan" CTA, lead form, email routing, consent logging
 
 ## Phase Details
 
@@ -162,40 +160,6 @@ Plans:
 - [ ] 69-01-PLAN.md — GeneratedDossier model + Alembic migration + dossier_export.py + POST/GET dossier endpoints (DOSSIER-01)
 - [ ] 69-02-PLAN.md — wkb_kwaliteitsborger.html Jinja2 template (7 sections + disclaimer) + frontend CTA button + download flow (DOSSIER-01, DOSSIER-02, DOSSIER-03)
 
-### Phase 70: Professional Directory
-**Goal**: Admins can manage a platform-wide directory of kwaliteitsborgers that is visible to all tenants and filterable by gemeente and gevolgklasse
-**Depends on**: Phase 67 (gevolgklasse filter requires GK values to exist)
-**Requirements**: DIR-01, DIR-02, DIR-03, DIR-04
-**Success Criteria** (what must be TRUE):
-  1. An admin can add a kwaliteitsborger profile with naam, bedrijf, werkgebied (lijst van gemeenten), gevolgklassen, and contact details via the admin API
-  2. A tenant user querying professionals for a specific gemeente sees only kwaliteitsborgers whose werkgebied includes that gemeente
-  3. Professional profiles are visible across all tenants — a kwaliteitsborger added by admin is visible to organization A and organization B without duplication
-  4. Each professional listing card links to their TloKB public register entry for verification by the user
-  5. A cross-tenant integration test confirms that professionals with NULL organization_id are returned correctly for any authenticated tenant
-**Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
-
-Plans:
-- [ ] 70-01-PLAN.md — Professional model (NULL org_id, GIN indexes) + Alembic migration + RLS policy + ADMIN_API_KEY config + cross-tenant integration test (DIR-01, DIR-03)
-- [ ] 70-02-PLAN.md — Pydantic schemas + FastAPI router with gemeente/gevolgklasse filters + admin CRUD endpoints (DIR-01, DIR-02, DIR-04)
-- [ ] 70-03-PLAN.md — ProfessionalCard + ProfessionalDirectory frontend + TanStack Router route with search param filters (DIR-02, DIR-04)
-
-### Phase 71: Lead Capture + AVG Consent
-**Goal**: A user can request a kwaliteitsborger for a Wkb-plichtige property, with explicit consent logging and email notification, completing the lead generation loop
-**Depends on**: Phase 69 (dossier attached to lead), Phase 70 (professional matching requires directory)
-**Requirements**: LEAD-01, LEAD-02, LEAD-03, LEAD-04, AVG-01, AVG-02, AVG-03
-**Success Criteria** (what must be TRUE):
-  1. A "Vraag kwaliteitsborger aan" CTA is visible in the report only when wkb_applicable is true AND at least one kwaliteitsborger serves the parcel's gemeente — it is absent otherwise
-  2. Clicking the CTA shows a two-step consent screen explaining exactly what data will be shared before the user can submit
-  3. After submitting a lead request, the user sees a confirmation and the matched kwaliteitsborger(s) receive an email notification with the generated risicobeoordeling dossier as attachment
-  4. The LeadRequest record in the database stores consent_timestamp, consent_text_hash, and consent_given = true before any professional contact data is transmitted
-  5. The privacy policy section visible from the lead form explains the data sharing arrangement with professionals
-**Plans**: TBD
-
-Plans:
-- [ ] 71-01: LeadRequest model (consent fields, org-scoped) + Alembic migration + POST/GET lead endpoints with AVG validation
-- [ ] 71-02: Lead notification email (fastapi-mail, dossier attachment) + developer confirmation email
-- [ ] 71-03: LeadCaptureForm frontend (auto-fill, two-step consent screen) + WkbSection CTA wiring + privacy policy section
-
 ---
 
 ## Progress
@@ -210,8 +174,6 @@ Plans:
 | 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
 | 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
 | 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 70. Professional Directory | 2/3 | In Progress|  |
-| 71. Lead Capture + AVG Consent | 0/3 | Not started | - |
 
 ---
 
@@ -391,4 +353,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-02 -- Phase 70 plans finalized (3 plans, Wave 1 → Wave 2 → Wave 3 sequential)*
+*Last updated: 2026-03-03 -- Phases 70-71 dropped (B2B pivot: professional directory/lead capture not needed for developer users). v9.0 shipped as Risk Intelligence (Phases 67-69).*

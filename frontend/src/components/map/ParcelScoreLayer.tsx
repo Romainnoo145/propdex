@@ -10,8 +10,6 @@ export const PARCEL_REPORT_STATUS_FILL_LAYER_ID = 'parcel-report-status-fill';
 export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
 export const PARCEL_BUILD_CAPACITY_FILL_LAYER_ID = 'parcel-build-capacity-fill';
 
-const PARCEL_SCORE_LABEL_LAYER_ID = 'parcel-score-label';
-const PARCEL_ADDRESS_LABEL_LAYER_ID = 'parcel-address-label';
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
@@ -316,57 +314,6 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
-  // Score number label — visible at medium zoom (15.5-17)
-  // Only labels parcels >= 200 m2 to avoid text blobs on tiny parcels
-  map.addLayer({
-    id: PARCEL_SCORE_LABEL_LAYER_ID,
-    type: 'symbol',
-    source: SOURCE_ID,
-    'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40], ['>=', ['coalesce', ['get', 'area_m2'], 0], 200]],
-    minzoom: 15.5,
-    maxzoom: 17,
-    layout: {
-      'text-field': ['to-string', ['round', ['get', 'score']]],
-      'text-size': ['interpolate', ['linear'], ['zoom'], 15.5, 9, 17, 13],
-      'text-allow-overlap': false,
-      'text-ignore-placement': false,
-      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
-    },
-    paint: {
-      'text-color': '#ffffff',
-      'text-halo-color': '#000000',
-      'text-halo-width': 1,
-    },
-  });
-
-  // Address + score label — visible at street zoom (17+)
-  map.addLayer({
-    id: PARCEL_ADDRESS_LABEL_LAYER_ID,
-    type: 'symbol',
-    source: SOURCE_ID,
-    'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
-    minzoom: 17,
-    layout: {
-      'text-field': [
-        'case',
-        ['has', 'address'],
-        ['concat', ['get', 'address'], '\n', ['to-string', ['round', ['get', 'score']]]],
-        ['to-string', ['round', ['get', 'score']]],
-      ],
-      'text-size': 11,
-      'text-allow-overlap': false,
-      'text-ignore-placement': false,
-      'text-anchor': 'center',
-      'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
-    },
-    paint: {
-      'text-color': '#ffffff',
-      'text-halo-color': '#000000',
-      'text-halo-width': 1.5,
-    },
-  });
 
   const handleMouseMove = (e: maplibregl.MapLayerMouseEvent) => {
     if (e.features && e.features.length > 0) {
@@ -497,15 +444,6 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
     canvas.style.cursor = '';
   }
 
-  // Remove label layers first (top of stack)
-  if (map.getLayer(PARCEL_ADDRESS_LABEL_LAYER_ID)) {
-    map.removeLayer(PARCEL_ADDRESS_LABEL_LAYER_ID);
-  }
-
-  if (map.getLayer(PARCEL_SCORE_LABEL_LAYER_ID)) {
-    map.removeLayer(PARCEL_SCORE_LABEL_LAYER_ID);
-  }
-
   // Remove layers (this also removes layer-specific event handlers)
   if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
     map.removeLayer(SELECTED_OUTLINE_LAYER_ID);
@@ -575,13 +513,6 @@ export function setParcelScoreVisibility(
     map.setLayoutProperty(SELECTED_OUTLINE_LAYER_ID, 'visibility', visibility);
   }
 
-  if (map.getLayer(PARCEL_SCORE_LABEL_LAYER_ID)) {
-    map.setLayoutProperty(PARCEL_SCORE_LABEL_LAYER_ID, 'visibility', visibility);
-  }
-
-  if (map.getLayer(PARCEL_ADDRESS_LABEL_LAYER_ID)) {
-    map.setLayoutProperty(PARCEL_ADDRESS_LABEL_LAYER_ID, 'visibility', visibility);
-  }
 }
 
 /**

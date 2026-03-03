@@ -43,17 +43,12 @@ import type {
   MonitoringSubscriptionResponse,
   UnreadDetailResponse,
 } from './types/monitoring'
-import type {
-  ProfessionalFilters,
-  ProfessionalListResponse,
-} from './types/professional'
 
 const API_BASE = '/api/properties'
 const REPORTS_BASE = '/api/reports'
 const PROJECTS_BASE = '/api/projects'
 const SCANS_BASE = '/api/scans'
 const MONITORING_BASE = '/api/monitoring'
-const PROFESSIONALS_BASE = '/api/professionals'
 const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
 
 /**
@@ -1210,31 +1205,5 @@ export async function setGemeenteMonitoringSubscription(
     accessToken,
     method: 'POST',
     body: JSON.stringify(input),
-  })
-}
-
-/**
- * Fetch list of professionals (kwaliteitsborgers) with optional filters
- *
- * GET /api/professionals
- *
- * @param filters - Optional gemeente and gevolgklasse filters
- * @param accessToken - JWT access token from useAuth()
- * @returns Paginated list of active professionals
- */
-export async function fetchProfessionals(
-  filters: ProfessionalFilters,
-  accessToken: string | null
-): Promise<ProfessionalListResponse> {
-  const params = new URLSearchParams()
-
-  if (filters.gemeente) params.set('gemeente', filters.gemeente)
-  if (filters.gevolgklasse) params.set('gevolgklasse', filters.gevolgklasse)
-
-  const url = `${PROFESSIONALS_BASE}${params.toString() ? `?${params}` : ''}`
-
-  return apiFetch<ProfessionalListResponse>(url, {
-    method: 'GET',
-    accessToken,
   })
 }

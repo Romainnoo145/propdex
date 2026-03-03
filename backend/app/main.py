@@ -16,7 +16,6 @@ from app.jobs.worker import get_redis_settings
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
 from app.monitoring.router import router as monitoring_router
-from app.professionals.router import router as professionals_router
 from app.projects.router import router as projects_router
 from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
@@ -92,7 +91,6 @@ app.include_router(projects_router)
 app.include_router(scans_router)
 app.include_router(monitoring_router)
 app.include_router(users_router)
-app.include_router(professionals_router)
 
 
 @app.get("/")

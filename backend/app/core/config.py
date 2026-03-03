@@ -150,12 +150,6 @@ class Settings(BaseSettings):
         description="Redis URL for ARQ task queue",
     )
 
-    # Admin API Configuration
-    ADMIN_API_KEY: str = Field(
-        default="",
-        description="Shared admin API key for platform management endpoints (professionals CRUD, etc.)",
-    )
-
     # Tile Server Configuration
     MARTIN_TILE_URL: str = Field(
         default="http://localhost:3000",

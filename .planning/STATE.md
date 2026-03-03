@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 70 Plan 02 COMPLETE (Professionals API router + admin CRUD + 11 unit tests); next: Phase 70 Plan 03
+**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier COMPLETE (both plans shipped); next: Phase 70
 **Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
 
 ---
 
 ## Current Position
 
-Phase: 70 of 71 (Professional Directory — IN PROGRESS)
-Plan: 2 of 3 — COMPLETE
-Status: Phase 70 Plan 02 complete — DIR-01 DIR-02 DIR-04 satisfied; API router + admin CRUD + 11 unit tests GREEN
-Last activity: 2026-03-02 — Phase 70 Plan 02 complete; FastAPI professionals router (GET/POST/PUT/DELETE) + require_admin_key dependency + 11 unit tests passing
+Phase: 69 of 71 (Risicobeoordeling Dossier — COMPLETE)
+Plan: 2 of 2 — COMPLETE (human-verify APPROVED)
+Status: Phase 69 complete — DOSSIER-01 DOSSIER-02 DOSSIER-03 all satisfied; next: Phase 70 (supply recruitment)
+Last activity: 2026-03-02 — Phase 69 Plan 02 complete; user approved checkpoint ("het werkt hoor"); PDF generation + download + 7 sections confirmed
 
-Progress (v9.0): [██████████] 100% (10/10 plans complete)
+Progress (v9.0): [████████░░] 80% (8/10 plans complete)
 
 ---
 
@@ -28,8 +28,6 @@ Progress (v9.0): [██████████] 100% (10/10 plans complete)
 - Phase 67 Plan 02: completed ~2min (WkbClassificatieSection + AsbestSection frontend components — WkbClassification + AsbestIndicator TypeScript interfaces)
 - Phase 68 Plan 01: completed ~3min (Bodemloket ArcGIS REST spike — BUFFER_M=10 decided, field names confirmed, SPIKE.md created)
 - Phase 68 Plan 02: completed ~18min (Bodemloket backend TDD — BodemloketClient + WBBDossierRef + BodemData + fetch_bodem_data() 30-day cache + PropertyReportResponse.bodem_data wiring — 11 tests GREEN)
-- Phase 70 Plan 01: completed ~8min (Professional model NULL org_id + Alembic migration b166d55eeb91 + RLS FOR SELECT USING TRUE + ADMIN_API_KEY config + 9 cross-tenant tests GREEN — DIR-01 DIR-03)
-- Phase 70 Plan 02: completed ~3min (Professionals FastAPI router + require_admin_key + gemeente/gevolgklasse ARRAY filters + 11 unit tests GREEN — DIR-01 DIR-02 DIR-04)
 - Phase 69 Plan 01: completed ~3min (GeneratedDossier model + Alembic migration + generate_dossier_pdf() + POST/GET dossier router endpoints — DOSSIER-01)
 - Phase 69 Plan 02: completed ~5min (Full wkb_kwaliteitsborger.html Jinja2 template 7 sections + per-page INDICATIEF footer + Genereer Startdossier CTA button — DOSSIER-01 DOSSIER-02 DOSSIER-03)
 
@@ -127,19 +125,13 @@ Progress (v9.0): [██████████] 100% (10/10 plans complete)
 - Phase 68 Plan 03 COMPLETE: BodemSection 3-state component (null/empty/populated), WBBDossierRef + BodemData TypeScript types, bodem_data on PropertyReportResponse, inserted after AsbestSection — human-verify APPROVED (BODEM-02 + BODEM-03)
 - BodemSection import pattern: only import WBBDossierRef (not BodemData) — BodemData accessed via data.bodem_data typing, direct import unused
 - AsyncMock passthrough pattern: use named `async def _passthrough_retry(fn, **kwargs): return await fn()` — lambdas cannot await coroutines in side_effect
-- Professional model: NULL org_id with RLS FOR SELECT USING (TRUE) — platform-wide resource pattern (v9.0 DIR-03)
-- ARRAY GIN indexes pattern: postgresql_using='gin' for werkgebied + gevolgklassen @> containment queries
-- ARRAY SQL cast pattern: ARRAY['value']::varchar[] required for raw SQL @> with character varying[] columns
+- Professional model: NULL org_id with separate RLS policy (NOT TenantMixin)
 - AVG consent must be designed before lead routing code (LeadRequest needs consent fields from day 1)
 - Supply recruitment (2-3 TloKB-verified kwaliteitsborgers) is Phase 70 launch gate
 - Phase 69 Plan 01 complete: GeneratedDossier model (TenantMixin, FK saved_reports + users), Alembic migration 3d97e34821f2, generate_dossier_pdf() WeasyPrint sync fn, POST /{report_id}/dossier (5/min) + GET /{report_id}/dossiers (30/min) endpoints, GeneratedDossierResponse schema
 - Alembic autogenerate PostGIS noise pattern: autogenerate detects tiger/postgis tables — manually clean migration to only include new tables
 - generate_dossier_pdf(): file_size_bytes saved AFTER pdf_bytes in memory (ensures accurate size in audit record)
 - Phase 69 Plan 02 COMPLETE: wkb_kwaliteitsborger.html full 7-section template with running footer disclaimer (position: running(footer) + @page @bottom-center) + generateStartdossier() API (POST /dossier, returns Blob) + Genereer Startdossier CTA button (amber/accent, disabled state, loading spinner) — human-verify APPROVED; user noted visual quality is mediocre (polish deferred to future phase)
-- Phase 70 Plan 02 COMPLETE: GET /api/professionals (authenticated, gemeente ANY + gevolgklasse @> filters, 30/min) + POST/PUT/DELETE (require_admin_key, 10/min) + 11 unit tests GREEN — DIR-01 DIR-02 DIR-04
-- ARRAY varchar cast: gevolgklassen @> ARRAY[:gk]::varchar[] (not ::text[]) — same pattern as Plan 01 cross-tenant tests
-- require_admin_key: Header(alias="X-Admin-Key"), empty ADMIN_API_KEY rejects all (fail-secure)
-- gemeente filter: (:gemeente) = ANY(werkgebied) bindparams pattern; gevolgklasse filter: @> ARRAY[:gk]::varchar[]
 - Jinja2 null-safe pattern for nested dicts: 'is not none' guard + | default() filter; 'report_data.zoning.plans[0]' requires zoning not none AND plans | length > 0
 - reportId prop thread: rapport.$id.tsx (id.startsWith('r') ? null : id) -> ReportDetailPage -> ReportHeader -> handleGenerateDossier()
 
@@ -162,12 +154,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-02T16:48:27Z
-**Stopped At:** Phase 70 Plan 02 complete (Professionals API router + admin CRUD + 11 unit tests)
-**Resume File:** .planning/phases/70-professional-directory/70-02-SUMMARY.md
+**Last Session:** 2026-03-02
+**Stopped At:** Completed Phase 69 Plan 02 — Risicobeoordeling Dossier full feature shipped (DOSSIER-01 DOSSIER-02 DOSSIER-03)
+**Resume File:** .planning/phases/70-*/70-01-PLAN.md
 
-**Next Action:** Phase 70 Plan 03 — ProfessionalCard + ProfessionalDirectory frontend + TanStack Router route with search param filters.
+**Next Action:** Phase 70 — supply recruitment / kwaliteitsborger onboarding (launch gate before Phase 71 CTA).
 
 ---
 
-*State updated: 2026-03-02 -- Phase 70 Plan 02 complete: FastAPI professionals router + require_admin_key + 11 unit tests GREEN (DIR-01 DIR-02 DIR-04)*
+*State updated: 2026-03-02 -- Phase 69 Plan 02 Tasks 1+2 complete: full Jinja2 dossier template + Genereer Startdossier CTA button (DOSSIER-01 DOSSIER-02 DOSSIER-03)*
