@@ -28,6 +28,10 @@ class BuildingDimensions(BaseModel):
         default=None,
         description="Maximum construction height in meters",
     )
+    max_bouwlagen: int | None = Field(
+        default=None,
+        description="Maximum allowed number of building floors (bouwlagen)",
+    )
 
     @property
     def has_any_data(self) -> bool:
@@ -39,6 +43,7 @@ class BuildingDimensions(BaseModel):
                 self.max_floor_area_ratio is not None,
                 self.max_goothoogte is not None,
                 self.max_bouwhoogte is not None,
+                self.max_bouwlagen is not None,
             ]
         )
 

@@ -128,6 +128,11 @@ def _merge_building_dimensions(
         merged.max_floor_area_ratio,
         supplement.max_floor_area_ratio,
     )
+    if supplement.max_bouwlagen is not None:
+        if merged.max_bouwlagen is None:
+            merged.max_bouwlagen = supplement.max_bouwlagen
+        else:
+            merged.max_bouwlagen = max(merged.max_bouwlagen, supplement.max_bouwlagen)
     return merged
 
 
@@ -269,7 +274,13 @@ def _extract_building_dimensions(
 
         # Height-like measures are still extracted from direct value fields.
         if waarde is not None:
-            if "bouwhoogte" in naam:
+            if any(kw in naam for kw in ("bouwlagen", "bouwlaag", "verdieping", "woonlagen")) and 1 < waarde <= 50:
+                bouwlagen_int = max(int(round(waarde)), 1)
+                if dimensions.max_bouwlagen is None:
+                    dimensions.max_bouwlagen = bouwlagen_int
+                else:
+                    dimensions.max_bouwlagen = max(dimensions.max_bouwlagen, bouwlagen_int)
+            elif "bouwhoogte" in naam:
                 dimensions.max_bouwhoogte = _max_existing(dimensions.max_bouwhoogte, waarde)
             elif "goothoogte" in naam:
                 dimensions.max_goothoogte = _max_existing(dimensions.max_goothoogte, waarde)
@@ -402,7 +413,8 @@ async def fetch_zoning_data(
     """
     # Versioned cache key so improved plan-prioritization logic is applied
     # immediately instead of reusing legacy cached selections.
-    cache_key = f"dso:zoning:v3:{x}:{y}"
+    # v4: bumped to force re-fetch and populate max_bouwlagen field
+    cache_key = f"dso:zoning:v4:{x}:{y}"
     property_point = Point(x, y)
 
     async def _fetch() -> dict:

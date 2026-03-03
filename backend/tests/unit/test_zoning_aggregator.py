@@ -12,6 +12,7 @@ from app.services.zoning_aggregator import (
     _extract_dimensions_from_plu,
     _filter_and_sort_plans,
     _find_containing_features,
+    _merge_building_dimensions,
 )
 
 
@@ -344,6 +345,112 @@ class TestExtractBuildingDimensions:
 
         result = _extract_building_dimensions(maatvoeringen, property_point)
         assert result.max_bouwhoogte == 12.5
+
+    def test_bouwlagen_extracted_from_maatvoeringen(self):
+        """Maatvoering with 'maximum bouwlagen' naam and waarde=4 extracts max_bouwlagen=4."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "maximum bouwlagen",
+                "waarde": 4,
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            }
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bouwlagen == 4
+
+    def test_bouwlaag_synonym_extracted(self):
+        """Maatvoering with 'max. bouwlaag' naam and waarde=3 extracts max_bouwlagen=3."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "max. bouwlaag",
+                "waarde": 3,
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            }
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bouwlagen == 3
+
+    def test_verdieping_synonym_extracted(self):
+        """Maatvoering with 'aantal verdiepingen' naam and waarde=2 extracts max_bouwlagen=2."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "aantal verdiepingen",
+                "waarde": 2,
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            }
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bouwlagen == 2
+
+    def test_bouwlagen_float_rounded(self):
+        """Maatvoering with waarde=3.7 rounds to max_bouwlagen=4."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "maximum bouwlagen",
+                "waarde": 3.7,
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            }
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bouwlagen == 4
+
+    def test_bouwlagen_out_of_range_ignored(self):
+        """Maatvoering with waarde=100 (>50) is ignored, max_bouwlagen remains None."""
+        property_point = Point(50, 50)
+        maatvoeringen = [
+            {
+                "naam": "maximum bouwlagen",
+                "waarde": 100,
+                "geometrie": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]],
+                },
+            }
+        ]
+
+        result = _extract_building_dimensions(maatvoeringen, property_point)
+        assert result.max_bouwlagen is None
+
+
+class TestMergeBuildingDimensions:
+    """Test merging of BuildingDimensions including bouwlagen."""
+
+    def test_merge_building_dimensions_bouwlagen(self):
+        """Merging two BuildingDimensions with bouwlagen 3 and 5 yields max_bouwlagen=5."""
+        dim_a = BuildingDimensions(max_bouwlagen=3)
+        dim_b = BuildingDimensions(max_bouwlagen=5)
+        merged = _merge_building_dimensions(dim_a, dim_b)
+        assert merged is not None
+        assert merged.max_bouwlagen == 5
+
+    def test_merge_bouwlagen_none_plus_value(self):
+        """Merging None bouwlagen with a value yields that value."""
+        dim_a = BuildingDimensions(max_bouwhoogte=10.0)
+        dim_b = BuildingDimensions(max_bouwlagen=4)
+        merged = _merge_building_dimensions(dim_a, dim_b)
+        assert merged is not None
+        assert merged.max_bouwlagen == 4
+        assert merged.max_bouwhoogte == 10.0
 
 
 class TestFilterAndSortPlans:
