@@ -401,6 +401,20 @@ export default function ResultsTable({
           <h3 className="text-grey-100 font-semibold text-base">
             {areaTitle}
           </h3>
+          {data.neighborhood_metrics?.data && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5 pt-1 border-t border-overlay/5">
+              {data.neighborhood_metrics.data.gemiddelde_woz_waarde != null && (
+                <span className="bg-amber-accent/10 text-amber-accent px-1.5 py-0.5 rounded-sm border border-amber-accent/20 text-[10px]">
+                  WOZ &euro;{Math.round(data.neighborhood_metrics.data.gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}
+                </span>
+              )}
+              {data.neighborhood_metrics.data.stedelijkheid.klasse != null && (
+                <span className="bg-grey-800 text-grey-300 px-1.5 py-0.5 rounded-sm border border-overlay/10 text-[10px]">
+                  {data.neighborhood_metrics.data.stedelijkheid.omschrijving}
+                </span>
+              )}
+            </div>
+          )}
           <p className="text-grey-600 text-xs mt-0.5">
             <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
             <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
@@ -453,8 +467,22 @@ export default function ResultsTable({
     <div className="h-full w-full flex flex-col">
       {/* Header with summary */}
       <div className="px-6 py-4 border-b border-overlay/5">
-        <h3 className="text-grey-100 font-semibold text-lg">
+        <h3 className="text-grey-100 font-semibold text-lg flex items-center gap-3">
           {areaTitle}
+          {data.neighborhood_metrics?.data && (
+            <span className="flex items-center gap-2 text-xs font-normal">
+              {data.neighborhood_metrics.data.gemiddelde_woz_waarde != null && (
+                <span className="bg-amber-accent/10 text-amber-accent px-2 py-0.5 rounded-full border border-amber-accent/20">
+                  WOZ: &euro;{Math.round(data.neighborhood_metrics.data.gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}
+                </span>
+              )}
+              {data.neighborhood_metrics.data.stedelijkheid.klasse != null && (
+                <span className="bg-grey-800 text-grey-300 px-2 py-0.5 rounded-full border border-overlay/10">
+                  {data.neighborhood_metrics.data.stedelijkheid.omschrijving}
+                </span>
+              )}
+            </span>
+          )}
         </h3>
         <p className="text-grey-600 text-sm mt-1">
           <span className="text-grey-300 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
@@ -471,9 +499,8 @@ export default function ResultsTable({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`px-5 py-3 text-left text-xs font-medium text-grey-600 uppercase tracking-wider ${
-                      header.column.getCanSort() ? 'cursor-pointer select-none hover:text-grey-300 transition-colors' : ''
-                    }`}
+                    className={`px-5 py-3 text-left text-xs font-medium text-grey-600 uppercase tracking-wider ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-grey-300 transition-colors' : ''
+                      }`}
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <div className="flex items-center gap-1.5">
@@ -513,11 +540,10 @@ export default function ResultsTable({
                 ref={(el) => {
                   if (el) rowRefs.current.set(row.original.parcel_id, el)
                 }}
-                className={`transition-colors cursor-pointer ${
-                  row.original.parcel_id === selectedParcelId
-                    ? 'bg-amber-accent/[0.06] ring-1 ring-inset ring-amber-accent/20'
-                    : 'hover:bg-overlay/[0.02]'
-                }`}
+                className={`transition-colors cursor-pointer ${row.original.parcel_id === selectedParcelId
+                  ? 'bg-amber-accent/[0.06] ring-1 ring-inset ring-amber-accent/20'
+                  : 'hover:bg-overlay/[0.02]'
+                  }`}
                 onClick={() => onRowClick?.(row.original)}
                 onMouseEnter={() => onRowHover?.(row.original.parcel_id)}
                 onMouseLeave={() => onRowHover?.(null)}

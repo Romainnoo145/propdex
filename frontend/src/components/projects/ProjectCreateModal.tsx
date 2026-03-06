@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import FocusLock from 'react-focus-lock'
+import { X } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useCreateProject } from '@/hooks/useProjects'
 import { toast } from 'sonner'
@@ -75,11 +76,11 @@ export default function ProjectCreateModal({
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Nieuw project</h2>
             <button
-              onClick={handleCancel}
-              className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              onClick={onClose}
+              className="rounded-lg p-1 text-grey-400 transition-colors hover:bg-grey-800 hover:text-white"
               aria-label="Sluit"
             >
-              <XIcon />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
@@ -128,17 +129,17 @@ export default function ProjectCreateModal({
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={handleCancel}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-grey-400 transition-colors hover:bg-grey-800 hover:text-white"
               >
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={createMutation.isPending || !name.trim()}
-                className="rounded-lg border border-gray-200 bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-grey-700 bg-amber-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {createMutation.isPending ? 'Aanmaken...' : 'Aanmaken'}
+                {createMutation.isPending ? 'Opslaan...' : 'Project Aanmaken'}
               </button>
             </div>
           </form>
@@ -148,21 +149,3 @@ export default function ProjectCreateModal({
   )
 }
 
-// X icon for close button
-function XIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
