@@ -23,6 +23,7 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 ## Performance Metrics
 
 **v11.0 Open Data Intelligence (In Progress)**
+- Phase 75 Plan 01: ~5min
 - Phase 75 Plan 02: ~5min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
@@ -71,6 +72,7 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 - CBS v4: gemeente_code required for safe wijk lookup -- national name-only search too ambiguous (2026-03-06)
 - CBS v4: GovernmentAPIError on observations fetch failure (fatal); region lookup non-fatal (returns None) (2026-03-06)
 - CBS_DATASET_ID as Settings field, not class constant -- allows env-var override per deployment (2026-03-06)
+- [Phase 75-cbs-wijkstatistieken]: CbsNeighborhoodMetrics uses nested data structure matching CBS v4 client output (not flat v3 shape)
 
 ### Pending Todos
 
@@ -89,12 +91,12 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-06
-**Stopped At:** Completed 75-02-PLAN.md -- CBS OData v4 client rewrite
+**Last Session:** 2026-03-06T16:28:18.800Z
+**Stopped At:** Completed 75-01-PLAN.md
 **Resume File:** None
 
 **Next Action:** `/gsd:execute-phase 75` (plan 03 — CBS frontend display)
 
 ---
 
-*State updated: 2026-03-06 -- Phase 75 Plan 02 complete*
+*State updated: 2026-03-06 -- Phase 75 Plans 01 and 02 complete*

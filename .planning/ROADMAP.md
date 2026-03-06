@@ -28,7 +28,7 @@
 
 **Milestone Goal:** Enrich property intelligence with CBS neighborhood statistics, Rechtspraak court ruling precedents, and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
 
-- [ ] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data
+- [x] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data (completed 2026-03-06)
 - [ ] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter
 - [ ] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage
 
@@ -44,7 +44,7 @@
   3. The card always shows "Bron: CBS StatLine, peiljaar [year]" so users know the data age
   4. The CBS OData client uses the v4 endpoint (datasets.cbs.nl) with gemeente code-prefixed wijk lookup, eliminating the ambiguous name matching bug
   5. CBS and Rechtspraak clients have registered APIRateLimiter singletons and explicit HTTP timeouts — no bare asyncio.Semaphore
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 75-01-PLAN.md — Frontend: CbsNeighborhoodCard component + TypeScript interface + data path wiring (CBS-01)
@@ -99,7 +99,7 @@ Plans:
 | 72. Parcel Detail Panel Redesign | 2/2 | Complete | 2026-03-03 |
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
-| 75. CBS Wijkstatistieken | 1/2 | In Progress|  |
+| 75. CBS Wijkstatistieken | 2/2 | Complete   | 2026-03-06 |
 | 76. Rechtspraak Jurisprudentie | 0/2 | Not started | - |
 | 77. AI Juridisch Klimaat | 0/2 | Not started | - |
 
