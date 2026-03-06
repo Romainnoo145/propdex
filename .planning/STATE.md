@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v11.0 Open Data Intelligence — Phase 76 (Rechtspraak Jurisprudentie)
+**Current focus:** v11.0 Open Data Intelligence — Phase 76.1 (Map Toggle State Machine)
 
 ---
 
 ## Current Position
 
-Phase: 76 of 77 (Rechtspraak Jurisprudentie)
-Plan: 02 of N complete
+Phase: 76.1 of 77 (Map Toggle State Machine)
+Plan: 01 of 2 complete
 Status: In progress
-Last activity: 2026-03-07 — Phase 76 Plan 02 complete (Rechtspraak frontend polish)
+Last activity: 2026-03-07 — Phase 76.1 Plan 01 complete (useMapLayerState hook + controlled LayerToggle)
 
 Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
@@ -27,6 +27,7 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 - Phase 75 Plan 02: ~5min
 - Phase 76 Plan 01: ~2min
 - Phase 76 Plan 02: ~3min
+- Phase 76.1 Plan 01: ~5min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -67,8 +68,16 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 - exceptions.py created as re-export shim from base.py -- startup blocker resolved (76-01)
 - AI: never ask Claude to generate citations -- only summarize provided ECLI texts
 
+### Roadmap Evolution
+
+- Phase 76.1 inserted after Phase 76: Map Toggle State Machine (URGENT)
+- Phase 76.1 Plan 01 complete: useMapLayerState hook created, LayerToggle converted to zero-useState controlled component
+
 ### Decisions Made
 
+- [Phase 76.1-plan-01]: MapLayerState as type alias (not interface) to satisfy ESLint no-empty-object-type (2026-03-07)
+- [Phase 76.1-plan-01]: LayerToggle overlay callbacks retained in Plan 01 — setParcelOverlayMode still dispatches them; Plan 02 lifts overlay state to hook (2026-03-07)
+- [Phase 76.1-plan-01]: App.tsx vestigial LayerToggle removed — had no handlers, was never functional (2026-03-07)
 - CBS v4: bouwjaar_distributie fields set to None -- M008209/M008210 are rolling 10-year window, not pre/post-2000 boundary (2026-03-06)
 - CBS v4: gemeente_code required for safe wijk lookup -- national name-only search too ambiguous (2026-03-06)
 - CBS v4: GovernmentAPIError on observations fetch failure (fatal); region lookup non-fatal (returns None) (2026-03-06)
@@ -96,11 +105,11 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T17:00:37Z
-**Stopped At:** Completed 76-02-PLAN.md
+**Last Session:** 2026-03-07T23:30:00Z
+**Stopped At:** Completed 76.1-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 76` (plan 03 — Rechtspraak AI analysis, if planned)
+**Next Action:** `/gsd:execute-phase 76.1` (plan 02 — wire useMapLayerState into map.tsx, fix stale closure)
 
 ---
 
