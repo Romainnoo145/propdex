@@ -337,7 +337,7 @@ async def area_scan_job(
 
             logger.info(f"Scan {scan_id}: fetched {len(features)} cadastral parcels")
 
-            # ── Phase 2: BAG cross-reference + bestemmingen (20-40%) ──
+            # ── Phase 2: BAG cross-reference, bestemmingen + CBS ──
             scan.current_phase = "fetching_bestemmingen"
             scan.progress_pct = 20
             session.add(scan)
@@ -345,9 +345,24 @@ async def area_scan_job(
             await session.commit()
 
             logger.info(
-                f"Scan {scan_id}: fetching BAG cross-reference + bestemmingen "
+                f"Scan {scan_id}: fetching BAG cross-reference, bestemmingen, and CBS data "
                 f"({len(features)} parcels, WMS concurrency={WMS_CONCURRENCY})"
             )
+
+            # Fetch CBS Neighborhood metrics
+            try:
+                from app.government_apis.cbs_odata import cbs_client
+                cbs_data = await cbs_client.get_neighborhood_data(
+                    client=http_client,
+                    gemeente_naam=scan.gemeente_naam,
+                    wijk_naam=scan.wijk_naam,
+                    gemeente_code=scan.gemeente_code,
+                )
+                scan.neighborhood_metrics = cbs_data
+                if cbs_data:
+                    logger.info(f"Scan {scan_id}: successfully fetched CBS metrics")
+            except Exception as e:
+                logger.warning(f"Scan {scan_id}: CBS fetch failed (non-fatal): {e}")
 
             try:
                 bag_features = await bag_wfs_client.get_panden_in_bbox(
