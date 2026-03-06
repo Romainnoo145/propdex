@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- 🚧 **v10.0 UX Polish** -- Phases 72-74 (in progress)
+- 🚧 **v11.0 Open Data Intelligence** -- Phases 75-77 (in progress)
+- ✅ **v10.0 UX Polish** -- Phases 72-74 (shipped 2026-03-03)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
 - ✅ **v8.0 Client Demo Readiness** -- Phases 62-66 (shipped 2026-03-02)
 - ✅ **v7.2 Developer Dossier Intelligence** -- Phases 59-61 (shipped 2026-02-27)
@@ -23,168 +24,63 @@
 
 ## Phases
 
-### v8.0 Client Demo Readiness (Phases 62-66)
+### 🚧 v11.0 Open Data Intelligence (In Progress)
 
-**Milestone Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
+**Milestone Goal:** Enrich property intelligence with CBS neighborhood statistics, Rechtspraak court ruling precedents, and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
 
-- [x] **Phase 62: Scan Pipeline Reliability** — Fix silent BAG WFS failure, add coverage validation, enable --force-all backfill (completed 2026-02-28)
-- [x] **Phase 63: Venlo Data Completeness** — Re-run all 21 Venlo wijken, validate bouwjaar + address + pand_status coverage (completed 2026-03-02)
-- [x] **Phase 64: Map Visualization** — BAG building footprints layer, accurate score colors, map clarity improvements (completed 2026-03-02)
-- [x] **Phase 65: Report Polish** — Layout refinement, v7.x section rendering, PDF export audit, Actie vereist section (completed 2026-03-02)
-- [x] **Phase 66: Results Table Noise Reduction** — Filter noise from results, default sort to high-value parcels (completed 2026-03-02)
-
-### v10.0 UX Polish (Phase 72)
-
-**Milestone Goal:** Replace abstract scoring pillars with real data bars and clean up the parcel detail panel for demo readiness.
-
-- [x] **Phase 72: Parcel Detail Panel Redesign** — Replace FAR/TAR pillars with real data bars (Vrije ruimte, Beschikbaarheid, Transformatiepotentie) (completed 2026-03-03)
-- [x] **Phase 74: 3D BAG Building Data** — Enrich scan pipeline with actual building height/floors from 3D BAG for headroom-based transformatiepotentie (completed 2026-03-03)
+- [ ] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data
+- [ ] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter
+- [ ] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage
 
 ## Phase Details
 
-### Phase 72: Parcel Detail Panel Redesign
-**Goal**: Parcel detail panel shows three real data bars instead of abstract scores with "onbekend" placeholders
-**Depends on**: Nothing
-**Requirements**: UX-01
+### Phase 75: CBS Wijkstatistieken
+**Goal**: Users can see CBS neighborhood metrics (WOZ, stedelijkheid, demographics) in the wijk detail view, backed by a reliable OData v4 client
+**Depends on**: Nothing (CBS data already in neighborhood_metrics JSONB; this phase displays it and upgrades the fetch pipeline)
+**Requirements**: CBS-01, CBS-02, CBS-03
 **Success Criteria** (what must be TRUE):
-  1. "Bebouwbaarheid" pillar replaced by "Vrije ruimte" showing real unbuilt percentage from pand_oppervlakte_m2
-  2. "Leegstandsrisico" renamed to "Beschikbaarheid" showing vacancy_confidence with top reason as context
-  3. "Transformatiepotentie" shows weighted mix of bouwjaar + bestemming + perceelgrootte with contextual label
-  4. All FAR/TAR references removed from ParcelDetailModal and InspectorPanel
-  5. No "onbekend" placeholders for FAR/TAR — section removed entirely
-**Plans**: 2 plans (Wave 1 parallel)
+  1. Opening a wijk detail view shows a CBS Wijkstatistieken card with WOZ gemiddelde, stedelijkheidsklasse badge (1-5), and peiljaar freshness indicator
+  2. Wijken where CBS returned no data show a graceful empty state ("Geen CBS-data beschikbaar voor deze wijk") instead of a broken card
+  3. The card always shows "Bron: CBS StatLine, peiljaar [year]" so users know the data age
+  4. The CBS OData client uses the v4 endpoint (datasets.cbs.nl) with gemeente code-prefixed wijk lookup, eliminating the ambiguous name matching bug
+  5. CBS and Rechtspraak clients have registered APIRateLimiter singletons and explicit HTTP timeouts — no bare asyncio.Semaphore
+**Plans**: TBD
 
 Plans:
-- [ ] 72-01-PLAN.md — Backend: capture pand_oppervlakte_m2 in scan pipeline + store in flags JSONB + update unit tests (UX-01)
-- [ ] 72-02-PLAN.md — Frontend: rewrite three pillar bars with real data + remove FAR/TAR dead code from modal/panel/card (UX-01)
+- [ ] 75-01-PLAN.md — Frontend: CbsNeighborhoodCard component + TypeScript interface narrowing neighborhood_metrics JSONB (CBS-01)
+- [ ] 75-02-PLAN.md — Backend: CBS OData v4 client rewrite + rate limiter + gemeente code-prefixed wijk lookup + lxml migration in rechtspraak.py (CBS-02, CBS-03)
 
-### v9.0 Risk Intelligence (Phases 67-69)
-
-**Milestone Goal:** Add comprehensive risk assessment capabilities — Wkb classification, soil contamination data, and automated risicobeoordeling dossier generation for kwaliteitsborger intake.
-
-- [x] **Phase 67: Wkb Classification Engine** — Gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions (completed 2026-03-02)
-- [x] **Phase 68: Bodemloket Integration** — Soil contamination data at parcel level with spike-first API discovery (completed 2026-03-02)
-- [x] **Phase 69: Risicobeoordeling Dossier** — PDF generator aggregating all risk data into kwaliteitsborger intake document (completed 2026-03-02)
-
-## Phase Details
-
-### Phase 62: Scan Pipeline Reliability
-**Goal**: Users can trust that area scans produce complete, correct data with no silent data loss
-**Depends on**: Nothing (prerequisite for all other v8.0 phases)
-**Requirements**: SCAN-01, SCAN-02, SCAN-03
+### Phase 76: Rechtspraak Jurisprudentie
+**Goal**: Users can search court rulings relevant to their gemeente/wijk and read full documents inline, with the backend infrastructure rebuilt to project standards
+**Depends on**: Phase 75 (infrastructure hardening in 75-02 fixes the exceptions.py startup blocker that also affects rechtspraak.py)
+**Requirements**: RECHT-01, RECHT-02, RECHT-03, RECHT-04
 **Success Criteria** (what must be TRUE):
-  1. Running a wijk scan where BAG WFS fails causes a retried fetch with backoff, not silent continuation with empty building data
-  2. After a scan completes, a warning is visible in logs/scan output when more than 90% of parcels have has_pand=false (suspiciously low coverage)
-  3. Re-running a wijk scan with --force-all overwrites existing ScanResult rows and repopulates bouwjaar, address, and pand_status fields correctly
-**Plans**: 2 plans (Wave 1 parallel)
+  1. User can type a search term in the jurisprudentie panel and see results filtered to omgevingsrecht/bestuursrecht domain automatically
+  2. When viewing a project or wijk, search defaults to the gemeente name as the initial query context
+  3. Each search result shows court name, ruling date, and an ECLI identifier — user can click to open the full ruling inline
+  4. The full ruling document renders inline without navigating away from the wijk detail view
+  5. The Rechtspraak backend client starts without ImportError, uses lxml with XXE protection, validates ECLI format, and registers a rate limiter singleton
+**Plans**: TBD
 
 Plans:
-- [x] 62-01-PLAN.md — BAG WFS per-page retry + coverage ratio validation + Alembic migration (SCAN-01, SCAN-02)
-- [x] 62-02-PLAN.md — --force-all clean-slate backfill + end-of-run summary table (SCAN-03)
+- [ ] 76-01-PLAN.md — Backend: Rebuild rechtspraak.py to project standards (correct imports, lxml, ECLI validation, rate limiter, GovernmentAPIError) (RECHT-04)
+- [ ] 76-02-PLAN.md — Frontend: Fix JurisprudenceSection (omgevingsrecht filter, gemeente default context, inline document viewer) (RECHT-01, RECHT-02, RECHT-03)
 
-### Phase 63: Venlo Data Completeness
-**Goal**: Venlo gemeente has complete, validated scan data across all 21 wijken ready for demo
-**Depends on**: Phase 62 (pipeline must produce correct data before re-running)
-**Requirements**: DATA-01, DATA-02, DATA-03
+### Phase 77: AI Juridisch Klimaat
+**Goal**: Users get AI-generated legal risk context per ruling and an aggregated juridisch klimaat score with vergunnings-succeskans for their gemeente/wijk
+**Depends on**: Phase 76 (Rechtspraak must be functional before AI can summarize its output)
+**Requirements**: AI-01, AI-02, AI-03, AI-04
 **Success Criteria** (what must be TRUE):
-  1. All 21 Venlo wijken appear in the scan history with parcel counts matching expected Venlo density
-  2. Parcels that contain BAG buildings show bouwjaar populated (not null) for all scanned Venlo wijken
-  3. Parcels with buildings show a resolved Dutch address via PDOK reverse geocoding, not just perceel ID
-  4. Parcel opportunity scores reflect actual BAG pand_status (in_gebruik parcels score lower, leeg/buiten_gebruik score higher)
-**Plans**: 2 plans (Wave 1 + Wave 2 sequential)
+  1. Each court ruling in the jurisprudentie panel shows an AI-generated summary (bezwaargrond, uitkomst, relevantie voor vastgoed) as a collapsible badge
+  2. The wijk detail view shows an aggregated "Juridisch klimaat" score card with a vergunnings-succeskans percentage (0-100%) derived from recent ruling outcomes in the area
+  3. Clicking "Analyseer juridisch klimaat" runs the AI analysis and shows a prose risk summary with top risk factors — the UI shows a loading state while analysis runs
+  4. AI analysis never blocks the HTTP response — it runs as an ARQ background job with polling when latency requires it
+  5. Every AI analysis result displays a mandatory disclaimer: "Indicatief — gebaseerd op historische uitspraken, geen juridisch advies"
+**Plans**: TBD
 
 Plans:
-- [ ] 63-01-PLAN.md — Formalize parcel_addressing.py + create validate_scan_data.py CLI tool + unit tests (DATA-01, DATA-02, DATA-03)
-- [ ] 63-02-PLAN.md — Execute Venlo 21-wijk re-scan + address backfill + validation + UI verification (DATA-01, DATA-02, DATA-03)
-
-### Phase 64: Map Visualization
-**Goal**: The map gives users a clear, accurate spatial picture of Venlo's development opportunities
-**Depends on**: Phase 63 (score colors must reflect corrected data)
-**Requirements**: MAP-01, MAP-02, MAP-03
-**Success Criteria** (what must be TRUE):
-  1. A "BAG Panden" toggle appears in the map layer catalog and, when enabled, draws building footprint outlines over parcels
-  2. Parcel score colors on the map accurately reflect opportunity level using the corrected post-backfill data (vacant land is green/amber, occupied buildings are grey)
-  3. Map labels are readable at default zoom for Venlo wijken with no overlapping text or element clutter
-**Plans**: 2 plans (Wave 1 parallel)
-
-Plans:
-- [ ] 64-01-PLAN.md — BAG building footprints WMS layer + layer catalog extension + gradient legend (MAP-01)
-- [ ] 64-02-PLAN.md — Grey-to-green score gradient + empty parcel hatch pattern + progressive labels + dashed wijk outline (MAP-02, MAP-03)
-
-### Phase 65: Report Polish
-**Goal**: Reports are presentable for client demonstration with clean layout and working PDF export
-**Depends on**: Phase 63 (report data must be correct before polishing presentation)
-**Requirements**: RPT-01, RPT-02, RPT-03, RPT-04
-**Success Criteria** (what must be TRUE):
-  1. Opening a property report shows all sections in a consistent, visually clean layout with no rendering artifacts or layout breaks in the v7.x sections (WOZ, energielabel, BRK, buildability, Wkb, permit precedents)
-  2. Clicking "Download PDF" generates a PDF that contains all report sections in readable format with correct Dutch typography
-  3. Reports for Wkb-plichtige properties show an "Actie vereist" section listing concrete warnings (e.g., Wkb-plichtig, asbestrisico bij bouwjaar <1994, vergunningsstatus)
-  4. The "Actie vereist" section is absent (or empty) for parcels with no actionable warnings, keeping clean reports clean
-**Plans**: 3 plans (Wave 1 + Wave 2)
-
-Plans:
-- [ ] 65-01-PLAN.md — Section reorder + empty state standardization + ReportHeader extraction with satellite thumbnail (RPT-01)
-- [ ] 65-02-PLAN.md — CSS @media print rules + window.print() PDF export + white-label header/footer (RPT-02)
-- [ ] 65-03-PLAN.md — ActieVereistSection component with derived warnings from existing data (RPT-03, RPT-04)
-
-### Phase 66: Results Table Noise Reduction
-**Goal**: The results table surfaces genuine development opportunities, not the full undifferentiated parcel list
-**Depends on**: Phase 63 (results must reflect corrected data)
-**Requirements**: RES-01, RES-02
-**Success Criteria** (what must be TRUE):
-  1. The default results view shows parcels pre-filtered to likely development opportunities (residential zoning, no recent permits, has vacant land or old buildings), not all parcels from the scan
-  2. Results are sorted by opportunity score descending by default, so the highest-value parcels appear at the top without user interaction
-**Plans**: 1 plan (Wave 1)
-
-Plans:
-- [ ] 66-01-PLAN.md — Server-side score threshold filter + nulls_last sort + toggle switch with count display (RES-01, RES-02)
-
-### Phase 67: Wkb Classification Engine
-**Goal**: Users can see trustworthy, clearly-labelled Wkb gevolgklasse and asbest risk in every property report, with correct exclusions for monuments and verbouwingen
-**Depends on**: Phase 66 (v8.0 must ship before v9.0 begins)
-**Requirements**: WKB-01, WKB-02, WKB-03, WKB-04
-**Success Criteria** (what must be TRUE):
-  1. Opening a property report shows a "Wkb Classificatie" section with gevolgklasse (GK1 or "Niet van toepassing") labeled as "Indicatief"
-  2. A property with bouwjaar between 1963 and 1993 shows asbest risk "Hoog" with NEN 2991 reference; post-1993 shows "Geen asbest risico"
-  3. A property flagged as verbouwing (December 2024 ruling) shows "Wkb niet van toepassing — verbouwingen zijn uitgesloten" instead of a gevolgklasse
-  4. A rijksmonument property shows "Wkb niet van toepassing — rijksmonumenten zijn vrijgesteld" and the CTA is absent
-  5. The wkb_applicable boolean in the report schema is false whenever an exclusion applies, so downstream CTA logic has a single source of truth
-**Plans**: 2 plans
-
-Plans:
-- [ ] 67-01-PLAN.md — TDD: wkb_classifier.py + asbest_indicator.py services + schema extension + aggregator wiring + unit tests (WKB-01, WKB-02, WKB-03, WKB-04)
-- [ ] 67-02-PLAN.md — Frontend: WkbClassificatieSection + AsbestSection components in ReportDetailPage.tsx (WKB-01, WKB-02, WKB-03, WKB-04)
-
-### Phase 68: Bodemloket Integration
-**Goal**: Users can see soil contamination status at parcel level, with honest coverage framing when Bodemloket data is absent
-**Depends on**: Phase 67 (can run in parallel, but shares dossier dependency with Phase 69)
-**Requirements**: BODEM-01, BODEM-02, BODEM-03
-**Success Criteria** (what must be TRUE):
-  1. A property report includes a "Bodemkwaliteit" section showing either WBB dossier references (if Bodemloket has records) or "Geen geregistreerde verontreiniging gevonden" (if no records)
-  2. The "Geen geregistreerde verontreiniging gevonden" message is always accompanied by a disclaimer that Bodemloket data is incomplete and absence is not a soil clearance certificate
-  3. Bodemloket data is cached for 30 days per parcel — opening the same report twice within 30 days does not trigger a second API call
-  4. The Bodemloket spike at phase start documents the actual viable query method (WMS GetFeatureInfo vs ArcGIS REST) and live response field names before integration code is written
-**Plans**: 3 plans (Wave 1 -> Wave 2 -> Wave 3 sequential)
-
-Plans:
-- [ ] 68-01-PLAN.md — Bodemloket spike: run live ArcGIS REST query against real address, confirm buffer size, write SPIKE.md (BODEM-01)
-- [ ] 68-02-PLAN.md — TDD: BodemloketClient + BodemData schema + bodem_aggregator + 30-day JSONB cache + aggregator wiring (BODEM-01, BODEM-02, BODEM-03)
-- [ ] 68-03-PLAN.md — Frontend: WBBDossierRef + BodemData TypeScript types + BodemSection 3-state component in ReportDetailPage (BODEM-02, BODEM-03)
-
-### Phase 69: Risicobeoordeling Dossier
-**Goal**: Users can generate a "Risicobeoordeling Startdossier" PDF that gives kwaliteitsborgers the intake information they need, saving them 1-3 hours per project
-**Depends on**: Phase 67 (Wkb classification required), Phase 68 (bodem data required — renders "niet beschikbaar" if absent)
-**Requirements**: DOSSIER-01, DOSSIER-02, DOSSIER-03
-**Success Criteria** (what must be TRUE):
-  1. Clicking "Genereer Startdossier" on a property report triggers PDF generation and the user can download it within seconds
-  2. The generated PDF contains all required sections: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, and Wkb classificatie
-  3. Every page of the PDF carries a mandatory disclaimer: data is indicatief, assembled from public sources, and does not constitute a formal Wkb compliance document
-  4. A property without Bodemloket data renders "Bodemkwaliteit: geen gegevens beschikbaar" in the dossier rather than "schone grond" or an empty section
-**Plans**: 2 plans (Wave 1 + Wave 2 sequential)
-
-Plans:
-- [ ] 69-01-PLAN.md — GeneratedDossier model + Alembic migration + dossier_export.py + POST/GET dossier endpoints (DOSSIER-01)
-- [ ] 69-02-PLAN.md — wkb_kwaliteitsborger.html Jinja2 template (7 sections + disclaimer) + frontend CTA button + download flow (DOSSIER-01, DOSSIER-02, DOSSIER-03)
+- [ ] 77-01-PLAN.md — Backend: JurisprudenceAnalysis Pydantic schema + ClaudeClient.analyze_jurisprudence() + POST /api/jurisprudence/analyze endpoint + ARQ job pattern (AI-01, AI-02, AI-03, AI-04)
+- [ ] 77-02-PLAN.md — Frontend: AiRiskPanel in JurisprudenceSection + useJurisprudenceAnalysis hook + per-ruling summary badges + juridisch klimaat score card (AI-01, AI-02, AI-03)
 
 ---
 
@@ -194,17 +90,57 @@ Plans:
 |-------|----------------|--------|-----------|
 | 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
 | 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
-| 64. Map Visualization | 2/2 | Complete   | 2026-03-02 |
-| 65. Report Polish | 3/3 | Complete    | 2026-03-02 |
-| 66. Results Table Noise Reduction | 1/1 | Complete    | 2026-03-02 |
-| 67. Wkb Classification Engine | 2/2 | Complete    | 2026-03-02 |
-| 68. Bodemloket Integration | 3/3 | Complete   | 2026-03-02 |
-| 69. Risicobeoordeling Dossier | 2/2 | Complete    | 2026-03-02 |
-| 72. Parcel Detail Panel Redesign | 2/2 | Complete    | 2026-03-03 |
-| 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete    | 2026-03-03 |
-| 74. 3D BAG Building Data | 3/3 | Complete    | 2026-03-03 |
+| 64. Map Visualization | 2/2 | Complete | 2026-03-02 |
+| 65. Report Polish | 3/3 | Complete | 2026-03-02 |
+| 66. Results Table Noise Reduction | 1/1 | Complete | 2026-03-02 |
+| 67. Wkb Classification Engine | 2/2 | Complete | 2026-03-02 |
+| 68. Bodemloket Integration | 3/3 | Complete | 2026-03-02 |
+| 69. Risicobeoordeling Dossier | 2/2 | Complete | 2026-03-02 |
+| 72. Parcel Detail Panel Redesign | 2/2 | Complete | 2026-03-03 |
+| 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
+| 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
+| 75. CBS Wijkstatistieken | 0/2 | Not started | - |
+| 76. Rechtspraak Jurisprudentie | 0/2 | Not started | - |
+| 77. AI Juridisch Klimaat | 0/2 | Not started | - |
 
 ---
+
+<details>
+<summary>✅ v10.0 UX Polish (Phases 72-74) -- SHIPPED 2026-03-03</summary>
+
+- [x] Phase 72: Parcel Detail Panel Redesign (2/2 plans) -- replaced FAR/TAR pillars with Vrije ruimte, Beschikbaarheid, Transformatiepotentie
+- [x] Phase 73: DSO Omgevingsplan Bouwregels (2/2 plans) -- max_bouwhoogte + max_bouwlagen from PLU WMS, DSO-path in deriveTransformatiePotentie
+- [x] Phase 74: 3D BAG Building Data (3/3 plans) -- actual building height + floors from 3D BAG, headroom-based transformatiepotentie scoring
+
+**7 plans**
+**Archive:** `.planning/milestones/v10.0-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v9.0 Risk Intelligence (Phases 67-69) -- SHIPPED 2026-03-02</summary>
+
+- [x] Phase 67: Wkb Classification Engine (2/2 plans) -- gevolgklasse determination, asbest risk indicator, verbouwing/monument exclusions
+- [x] Phase 68: Bodemloket Integration (3/3 plans) -- soil contamination data at parcel level with spike-first discovery
+- [x] Phase 69: Risicobeoordeling Dossier (2/2 plans) -- PDF generator aggregating all risk data into kwaliteitsborger intake document
+
+**7 plans, 10 requirements**
+**Archive:** `.planning/milestones/v9.0-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v8.0 Client Demo Readiness (Phases 62-66) -- SHIPPED 2026-03-02</summary>
+
+- [x] Phase 62: Scan Pipeline Reliability (2/2 plans) -- BAG WFS retry + coverage validation + force-all backfill
+- [x] Phase 63: Venlo Data Completeness (2/2 plans) -- 21-wijk re-scan, 108,789 parcels, 100% coverage
+- [x] Phase 64: Map Visualization (2/2 plans) -- BAG footprints layer, grey-to-green gradient, progressive labels
+- [x] Phase 65: Report Polish (3/3 plans) -- section reorder, empty states, @media print PDF, ActieVereistSection
+- [x] Phase 66: Results Table Noise Reduction (1/1 plan) -- score threshold filter, nulls_last sort, top-kansen toggle
+
+**10 plans, 8 requirements**
+
+</details>
 
 <details>
 <summary>✅ v7.2 Developer Dossier Intelligence (Phases 59-61) -- SHIPPED 2026-02-27</summary>
@@ -380,32 +316,6 @@ Plans:
 
 </details>
 
-### Phase 74: 3D BAG Building Data
-**Goal**: Area scan parcels show actual building height and floor count from 3D BAG, enabling transformatiepotentie scoring based on real building dimensions vs permitted envelope
-**Depends on**: Phase 73 (uses existing BuildingMetrics pipeline)
-**Requirements**: 3DBAG-01
-**Success Criteria** (what must be TRUE):
-  1. After an area scan, parcels with BAG buildings have actual_bouwhoogte and actual_bouwlagen stored in building_metrics JSONB
-  2. deriveTransformatiePotentie uses actual building dimensions (from 3D BAG) compared to permitted dimensions (from PLU WMS) when both are available
-  3. Parcels without 3D BAG data gracefully fall back to the existing heuristic scoring
-  4. The 3D BAG client handles rate limiting and caches responses to avoid redundant API calls during scans
-**Plans**: 3 plans (Wave 1 + Wave 2)
-
-Plans:
-- [ ] 74-01-PLAN.md — BAG3DClient API client + rate limiter + config + unit tests (3DBAG-01)
-- [ ] 74-02-PLAN.md — Scan pipeline integration: BagSpatialIndex extension + 3D BAG fetch + actual dimension merge (3DBAG-01)
-- [ ] 74-03-PLAN.md — Frontend: BuildingMetrics extension + headroom-based deriveTransformatiePotentie (3DBAG-01)
-
-### Phase 73: DSO Omgevingsplan Bouwregels — COMPLETE
-
-**Goal:** Transformatiepotentie pillar bar uses real bouwregel data (max_bouwhoogte, max_bouwlagen) extracted from PLU WMS maatvoering layer + DSO maatvoeringen, with graceful heuristic fallback when data is absent
-**Depends on:** Phase 72
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 73-01-PLAN.md — Backend: max_bouwlagen schema + zoning aggregator + PLU WMS parser + scan job persistence (DSO-01, DSO-02)
-- [x] 73-02-PLAN.md — Frontend: BuildingMetrics typed interface + deriveTransformatiePotentie DSO-path + heuristic fallback (DSO-03)
-
 ---
 
-*Last updated: 2026-03-03 -- Phase 74 planned (3 plans in 2 waves).*
+*Last updated: 2026-03-06 -- v11.0 Open Data Intelligence roadmap created (Phases 75-77)*

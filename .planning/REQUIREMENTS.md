@@ -66,23 +66,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CBS-01 | — | Pending |
-| CBS-02 | — | Pending |
-| CBS-03 | — | Pending |
-| RECHT-01 | — | Pending |
-| RECHT-02 | — | Pending |
-| RECHT-03 | — | Pending |
-| RECHT-04 | — | Pending |
-| AI-01 | — | Pending |
-| AI-02 | — | Pending |
-| AI-03 | — | Pending |
-| AI-04 | — | Pending |
+| CBS-01 | Phase 75 | Pending |
+| CBS-02 | Phase 75 | Pending |
+| CBS-03 | Phase 75 | Pending |
+| RECHT-01 | Phase 76 | Pending |
+| RECHT-02 | Phase 76 | Pending |
+| RECHT-03 | Phase 76 | Pending |
+| RECHT-04 | Phase 76 | Pending |
+| AI-01 | Phase 77 | Pending |
+| AI-02 | Phase 77 | Pending |
+| AI-03 | Phase 77 | Pending |
+| AI-04 | Phase 77 | Pending |
 
 **Coverage:**
 - v11.0 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 — traceability complete after roadmap creation*
