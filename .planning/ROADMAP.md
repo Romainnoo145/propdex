@@ -66,6 +66,17 @@ Plans:
 - [ ] 76-01-PLAN.md — Backend: exceptions.py shim, rechtspraak.py rebuild (lxml, APIRateLimiter, ECLI validation, omgevingsrecht filter), jurisprudence endpoint fix (RECHT-04)
 - [ ] 76-02-PLAN.md — Frontend: omgevingsrecht filter badge, court name parsing, gemeente default context polish (RECHT-01, RECHT-02, RECHT-03)
 
+### Phase 76.1: Map Toggle State Machine (INSERTED)
+
+**Goal:** Single source of truth for map toggle state — extract useMapLayerState hook, convert LayerToggle to controlled component, fix stale closure bug in parcel click handlers
+**Depends on:** Phase 76
+**Requirements:** MAP-01, MAP-02, MAP-03, MAP-04
+**Plans:** 2 plans
+
+Plans:
+- [ ] 76.1-01-PLAN.md — Create useMapLayerState hook + convert LayerToggle to controlled component (MAP-01, MAP-02, MAP-04)
+- [ ] 76.1-02-PLAN.md — Wire hook into map.tsx, add layer effects, fix stale closure, remove dead code (MAP-01, MAP-03)
+
 ### Phase 77: AI Juridisch Klimaat
 **Goal**: Users get AI-generated legal risk context per ruling and an aggregated juridisch klimaat score with vergunnings-succeskans for their gemeente/wijk
 **Depends on**: Phase 76 (Rechtspraak must be functional before AI can summarize its output)
