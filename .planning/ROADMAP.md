@@ -60,7 +60,7 @@ Plans:
   3. Each search result shows court name, ruling date, and an ECLI identifier — user can click to open the full ruling inline
   4. The full ruling document renders inline without navigating away from the wijk detail view
   5. The Rechtspraak backend client starts without ImportError, uses lxml with XXE protection, validates ECLI format, and registers a rate limiter singleton
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 76-01-PLAN.md — Backend: exceptions.py shim, rechtspraak.py rebuild (lxml, APIRateLimiter, ECLI validation, omgevingsrecht filter), jurisprudence endpoint fix (RECHT-04)
@@ -100,7 +100,7 @@ Plans:
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
 | 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
-| 76. Rechtspraak Jurisprudentie | 0/2 | Not started | - |
+| 76. Rechtspraak Jurisprudentie | 1/2 | In Progress|  |
 | 77. AI Juridisch Klimaat | 0/2 | Not started | - |
 
 ---

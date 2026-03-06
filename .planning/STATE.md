@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v11.0 Open Data Intelligence — Phase 75 (CBS Wijkstatistieken)
+**Current focus:** v11.0 Open Data Intelligence — Phase 76 (Rechtspraak Jurisprudentie)
 
 ---
 
 ## Current Position
 
-Phase: 75 of 77 (CBS Wijkstatistieken)
-Plan: 02 of N complete
+Phase: 76 of 77 (Rechtspraak Jurisprudentie)
+Plan: 01 of N complete
 Status: In progress
-Last activity: 2026-03-06 — Phase 75 Plan 02 complete (CBS OData v4 client rewrite)
+Last activity: 2026-03-06 — Phase 76 Plan 01 complete (Rechtspraak backend rebuild)
 
-Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
+Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
 ---
 
@@ -25,6 +25,7 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 **v11.0 Open Data Intelligence (In Progress)**
 - Phase 75 Plan 01: ~5min
 - Phase 75 Plan 02: ~5min
+- Phase 76 Plan 01: ~2min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -61,10 +62,9 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 - CBS wijk lookup uses startswith(Identifier, 'WK{gemeente_code}') -- safe against 80+ national Centrum matches
 - CBS_DATASET_ID configurable via env var (default 86165NED = 2025 dataset)
 - bouwjaar_distributie fields are None in v4 -- M008209/M008210 are rolling 10yr window, not pre/post-2000
-- `app/government_apis/exceptions.py` does not exist but is imported by rechtspraak.py + jurisprudence.py -- startup blocker; must be created as re-export from base.py at start of Phase 76
-- lxml must replace stdlib xml.etree.ElementTree in rechtspraak.py for XXE protection
+- Rechtspraak client rebuilt (76-01): lxml XXE-safe, APIRateLimiter, correct error signatures, ECLI validation, omgevingsrecht filter
+- exceptions.py created as re-export shim from base.py -- startup blocker resolved (76-01)
 - AI: never ask Claude to generate citations -- only summarize provided ECLI texts
-- Rechtspraak scoring 2-3/10 from prior agent -- full rebuild, not patching
 
 ### Decisions Made
 
@@ -73,6 +73,8 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 - CBS v4: GovernmentAPIError on observations fetch failure (fatal); region lookup non-fatal (returns None) (2026-03-06)
 - CBS_DATASET_ID as Settings field, not class constant -- allows env-var override per deployment (2026-03-06)
 - [Phase 75-cbs-wijkstatistieken]: CbsNeighborhoodMetrics uses nested data structure matching CBS v4 client output (not flat v3 shape)
+- [Phase 76-rechtspraak]: Full rewrite (not patching) — exceptions.py shim, lxml, APIRateLimiter, ECLI validation, omgevingsrecht hardcoded (2026-03-06)
+- [Phase 76-rechtspraak]: return=DOC parameter prevents wasted lookups on entries without available documents (2026-03-06)
 
 ### Pending Todos
 
@@ -91,12 +93,12 @@ Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-06T16:28:18.800Z
-**Stopped At:** Completed 75-01-PLAN.md
+**Last Session:** 2026-03-06T16:57:45Z
+**Stopped At:** Completed 76-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 75` (plan 03 — CBS frontend display)
+**Next Action:** `/gsd:execute-phase 76` (plan 02 — Rechtspraak frontend UI)
 
 ---
 
-*State updated: 2026-03-06 -- Phase 75 Plans 01 and 02 complete*
+*State updated: 2026-03-06 -- Phase 76 Plan 01 complete*
