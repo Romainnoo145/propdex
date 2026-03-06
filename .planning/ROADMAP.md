@@ -43,7 +43,7 @@
   2. Wijken where CBS returned no data show no CBS card at all (null-render) — no broken or empty card cluttering the view
   3. The card always shows "Bron: CBS StatLine, peiljaar [year]" so users know the data age
   4. The CBS OData client uses the v4 endpoint (datasets.cbs.nl) with gemeente code-prefixed wijk lookup, eliminating the ambiguous name matching bug
-  5. CBS and Rechtspraak clients have registered APIRateLimiter singletons and explicit HTTP timeouts — no bare asyncio.Semaphore
+  5. CBS client has a registered APIRateLimiter singleton and explicit HTTP timeouts — no bare asyncio.Semaphore (Rechtspraak hardening deferred to Phase 76)
 **Plans:** 2/2 plans complete
 
 Plans:
@@ -99,7 +99,7 @@ Plans:
 | 72. Parcel Detail Panel Redesign | 2/2 | Complete | 2026-03-03 |
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
-| 75. CBS Wijkstatistieken | 2/2 | Complete   | 2026-03-06 |
+| 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
 | 76. Rechtspraak Jurisprudentie | 0/2 | Not started | - |
 | 77. AI Juridisch Klimaat | 0/2 | Not started | - |
 
