@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Phase: 76.1 of 77 (Map Toggle State Machine)
-Plan: 01 of 2 complete
-Status: In progress
-Last activity: 2026-03-07 — Phase 76.1 Plan 01 complete (useMapLayerState hook + controlled LayerToggle)
+Plan: 02 of 2 complete — PHASE COMPLETE
+Status: Moving to Phase 77
+Last activity: 2026-03-07 — Phase 76.1 Plan 02 complete (wire useMapLayerState into map.tsx, fix stale closure)
 
-Progress: [███░░░░░░░] ~30% (v11.0 milestone)
+Progress: [████░░░░░░] ~40% (v11.0 milestone)
 
 ---
 
@@ -71,13 +71,16 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 ### Roadmap Evolution
 
 - Phase 76.1 inserted after Phase 76: Map Toggle State Machine (URGENT)
-- Phase 76.1 Plan 01 complete: useMapLayerState hook created, LayerToggle converted to zero-useState controlled component
+- Phase 76.1 COMPLETE: useMapLayerState hook wired into map.tsx, all mirror state removed, stale closure fixed via isParcelsVisibleRef
 
 ### Decisions Made
 
 - [Phase 76.1-plan-01]: MapLayerState as type alias (not interface) to satisfy ESLint no-empty-object-type (2026-03-07)
 - [Phase 76.1-plan-01]: LayerToggle overlay callbacks retained in Plan 01 — setParcelOverlayMode still dispatches them; Plan 02 lifts overlay state to hook (2026-03-07)
 - [Phase 76.1-plan-01]: App.tsx vestigial LayerToggle removed — had no handlers, was never functional (2026-03-07)
+- [Phase 76.1-plan-02]: isParcelsVisibleRef pattern (ref synced every render) for stale-closure-safe parcel click/cursor handlers — avoids re-registering map event handlers on toggle (2026-03-07)
+- [Phase 76.1-plan-02]: autoEnableParcelsKey effect moved from LayerToggle to map.tsx — map.tsx is sole authority for setting showParcels:true (2026-03-07)
+- [Phase 76.1-plan-02]: handleGemeentenToggle toggle-off now calls setActivePanel(null) + flyTo NL_CENTER for UX consistency (2026-03-07)
 - CBS v4: bouwjaar_distributie fields set to None -- M008209/M008210 are rolling 10-year window, not pre/post-2000 boundary (2026-03-06)
 - CBS v4: gemeente_code required for safe wijk lookup -- national name-only search too ambiguous (2026-03-06)
 - CBS v4: GovernmentAPIError on observations fetch failure (fatal); region lookup non-fatal (returns None) (2026-03-06)
@@ -105,11 +108,11 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T23:30:00Z
-**Stopped At:** Completed 76.1-01-PLAN.md
+**Last Session:** 2026-03-07T23:37:00Z
+**Stopped At:** Completed 76.1-02-PLAN.md (Phase 76.1 complete)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 76.1` (plan 02 — wire useMapLayerState into map.tsx, fix stale closure)
+**Next Action:** `/gsd:plan-phase 77` (Phase 77 — AI Juridisch Klimaat, directory already created)
 
 ---
 

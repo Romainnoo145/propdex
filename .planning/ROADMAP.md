@@ -71,11 +71,11 @@ Plans:
 **Goal:** Single source of truth for map toggle state — extract useMapLayerState hook, convert LayerToggle to controlled component, fix stale closure bug in parcel click handlers
 **Depends on:** Phase 76
 **Requirements:** MAP-01, MAP-02, MAP-03, MAP-04
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed — COMPLETE
 
 Plans:
-- [ ] 76.1-01-PLAN.md — Create useMapLayerState hook + convert LayerToggle to controlled component (MAP-01, MAP-02, MAP-04)
-- [ ] 76.1-02-PLAN.md — Wire hook into map.tsx, add layer effects, fix stale closure, remove dead code (MAP-01, MAP-03)
+- [x] 76.1-01-PLAN.md — Create useMapLayerState hook + convert LayerToggle to controlled component (MAP-01, MAP-02, MAP-04)
+- [x] 76.1-02-PLAN.md — Wire hook into map.tsx, add layer effects, fix stale closure, remove dead code (MAP-01, MAP-03)
 
 ### Phase 77: AI Juridisch Klimaat
 **Goal**: Users get AI-generated legal risk context per ruling and an aggregated juridisch klimaat score with vergunnings-succeskans for their gemeente/wijk
