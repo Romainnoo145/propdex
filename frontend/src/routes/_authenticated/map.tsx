@@ -10,6 +10,8 @@ import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
 import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
+import { GemeenteMapPanel } from '@/components/map/panels/GemeenteMapPanel'
+import { WijkMapPanel } from '@/components/map/panels/WijkMapPanel'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { useRecentViewed } from '@/hooks/useRecentViewed'
 import { useReport } from '@/hooks/useReports'
@@ -60,7 +62,7 @@ import {
   addScannedWijkHighlight,
   removeScannedWijkHighlight,
 } from '@/components/map/ScannedWijkHighlightLayer'
-import { useTriggerScan, useScanPolling, useCancelScan, useScanHistory } from '@/hooks/useScans'
+import { useTriggerScan, useScanPolling, useScanHistory } from '@/hooks/useScans'
 import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
 // ScanProgressOverlay — replaced by inline progress in gemeente header bar
@@ -76,12 +78,18 @@ import {
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
 import { readPersistedMapLayerState } from '@/lib/map/layers'
+import type { BaseMapLayerId } from '@/lib/map/layers'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
-import type { ScanResultItem } from '@/lib/types/scan'
+import type { ScanResultItem, ScanListItem } from '@/lib/types/scan'
 import { calculateBboxFromGeometry } from '@/lib/geo-utils'
 import { normalizeAreaName, normalizeGemeenteCode } from '@/lib/geo/normalizers'
+
+type ActivePanel =
+  | { kind: 'gemeente'; code: string; naam: string; bbox: [number, number, number, number] }
+  | { kind: 'wijk'; code: string; naam: string; gemeenteCode: string; gemeenteNaam: string; latestScan: ScanListItem | null }
+  | { kind: 'parcel'; parcel: ScanResultItem }
 
 interface MapSearchParams {
   postcode?: string
@@ -187,6 +195,7 @@ function MapPage() {
   const [tier, setTier] = useState<ViewTier>('none')
   // demo data removed — all property data comes from lookup API
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
+  const [basemap, setBasemap] = useState<BaseMapLayerId>(() => readPersistedMapLayerState().basemap)
   const [showGemeentenLayer, setShowGemeentenLayer] = useState(false)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const navigatedRef = useRef(false)
@@ -208,8 +217,8 @@ function MapPage() {
   } | null>(null)
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  const [wijkLoading, setWijkLoading] = useState(false)
-  const [inspectorParcel, setInspectorParcel] = useState<ScanResultItem | null>(null)
+  const [activePanel, setActivePanel] = useState<ActivePanel | null>(null)
+  const inspectorParcel = activePanel?.kind === 'parcel' ? activePanel.parcel : null
   const [autoEnableParcelsKey, setAutoEnableParcelsKey] = useState<string | null>(null)
   const [isParcelsVisible, setIsParcelsVisible] = useState(false)
   const parcelClickRequestSeqRef = useRef(0)
@@ -228,9 +237,6 @@ function MapPage() {
     areaM2: number | null
     geometry: GeoJSON.Geometry
   } | null>(null)
-
-  // Track wijk name for inline progress display
-  const [activeScanWijk, setActiveScanWijk] = useState<string | null>(null)
 
   // Pending scan confirmation state
   const [pendingScan, setPendingScan] = useState<{
@@ -263,7 +269,6 @@ function MapPage() {
   const queryClient = useQueryClient()
   const triggerScan = useTriggerScan()
   const scanStatus = useScanPolling(activeScanId)
-  const cancelScan = useCancelScan()
   const isScanRunning =
     triggerScan.isPending ||
     scanStatus.data?.status === 'running' ||
@@ -424,7 +429,6 @@ function MapPage() {
       if (!preferredCompletedScan) return false
       if (activeScanId === preferredCompletedScan.scan_id) return true
       setActiveScanId(preferredCompletedScan.scan_id)
-      setActiveScanWijk(preferredCompletedScan.wijk_naam ?? null)
       return true
     },
     [activeScanId, preferredCompletedScan]
@@ -657,7 +661,7 @@ function MapPage() {
     )
     setPropertyLngLat([input.lng, input.lat])
     setAutoEnableParcelsKey(input.autoEnableKey)
-    setInspectorParcel(
+    setActivePanel({ kind: 'parcel', parcel:
       makeInspectorParcel({
         parcelId: input.parcelId,
         address: input.address,
@@ -672,7 +676,7 @@ function MapPage() {
           typeof input.hasPand === 'boolean' ? input.hasPand : true
         ),
       })
-    )
+    })
   }, [makeInspectorParcel])
 
   // For URL-driven postcode/huisnummer navigation and address search:
@@ -709,7 +713,7 @@ function MapPage() {
             accessToken,
             { scanId: activeScanIdRef.current },
           )
-          setInspectorParcel(
+          setActivePanel({ kind: 'parcel', parcel:
             makeInspectorParcel({
               parcelId: full.parcel_id,
               address: full.address ?? resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
@@ -731,7 +735,7 @@ function MapPage() {
               buildingMetrics: full.building_metrics ?? null,
               hasReport: full.has_report,
             })
-          )
+          })
           if (full.geometry) {
             setParcelGeometryHighlight({
               lng: full.lng,
@@ -747,7 +751,7 @@ function MapPage() {
           const firstParcel = data.cadastral_parcels?.[0]
           const primaryBestemming = data.zoning?.primary_bestemming
           const hasPand = Boolean(data.building?.pand_id)
-          setInspectorParcel(
+          setActivePanel({ kind: 'parcel', parcel:
             makeInspectorParcel({
               parcelId: resolved.parcel_id,
               address: resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
@@ -760,7 +764,7 @@ function MapPage() {
               maxBebouwingspercentage: data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
               maxFloorAreaRatio: data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
             })
-          )
+          })
           void fetchParcelCentroid(resolved.parcel_id, accessToken)
             .then((centroid) => {
               if (centroid.geometry) {
@@ -806,7 +810,7 @@ function MapPage() {
 
       const firstParcel = data.cadastral_parcels?.[0]
       const primaryBestemming = data.zoning?.primary_bestemming
-      setInspectorParcel(
+      setActivePanel({ kind: 'parcel', parcel:
         makeInspectorParcel({
           parcelId: resolved.parcel_id,
           address: resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
@@ -825,7 +829,7 @@ function MapPage() {
           maxBebouwingspercentage: data.zoning?.building_dimensions?.max_bebouwingspercentage ?? null,
           maxFloorAreaRatio: data.zoning?.building_dimensions?.max_floor_area_ratio ?? null,
         })
-      )
+      })
       void fetchParcelCentroid(resolved.parcel_id, accessToken)
         .then((centroid) => {
           if (centroid.geometry) {
@@ -864,7 +868,7 @@ function MapPage() {
 
     setTier('none')
     setParcelGeometryHighlight(null)
-    setInspectorParcel(null)
+    setActivePanel(null)
     pendingLookupInspectorRef.current = null
 
     // Set coordinates — flyTo handled by dedicated effect
@@ -915,7 +919,7 @@ function MapPage() {
       // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
       setTier('none')
       setParcelGeometryHighlight(null)
-      setInspectorParcel(null)
+      setActivePanel(null)
       pendingLookupInspectorRef.current = null
       if (mapRef.current) {
         clearPropertyGeometry(mapRef.current)
@@ -962,7 +966,7 @@ function MapPage() {
     // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
     setTier('none')
     setParcelGeometryHighlight(null)
-    setInspectorParcel(null)
+    setActivePanel(null)
     pendingLookupInspectorRef.current = null
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
@@ -1012,7 +1016,7 @@ function MapPage() {
     // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
     setTier('none')
     setParcelGeometryHighlight(null)
-    setInspectorParcel(null)
+    setActivePanel(null)
     pendingLookupInspectorRef.current = null
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
@@ -1195,16 +1199,18 @@ function MapPage() {
         const parcel = buildParcelFromFeatureProps(feature.properties)
         if (parcel) {
           setTier('none')
-          setInspectorParcel(parcel)
+          setActivePanel({ kind: 'parcel', parcel })
 
           // Fetch full geometry for reliable full-parcel yellow highlight.
           if (accessToken) {
             void fetchParcelCentroid(parcel.parcel_id, accessToken)
               .then((centroid) => {
                 if (requestSeq !== parcelClickRequestSeqRef.current) return
-                setInspectorParcel((current) => {
-                  if (!current || current.parcel_id !== parcel.parcel_id) return current
-                  return {
+                setActivePanel((prev) => {
+                  if (!prev || prev.kind !== 'parcel') return prev
+                  const current = prev.parcel
+                  if (current.parcel_id !== parcel.parcel_id) return prev
+                  return { kind: 'parcel', parcel: {
                     ...current,
                     address: current.address ?? centroid.address ?? current.address,
                     parcel_code: centroid.parcel_code ?? current.parcel_code,
@@ -1216,7 +1222,7 @@ function MapPage() {
                         : current.has_pand,
                     bouwjaar: current.bouwjaar ?? centroid.bouwjaar ?? current.bouwjaar,
                     pand_status: current.pand_status ?? centroid.pand_status ?? current.pand_status,
-                  }
+                  }}
                 })
                 if (centroid.geometry) {
                   setParcelGeometryHighlight({
@@ -1239,7 +1245,7 @@ function MapPage() {
 
       // Fallback path: no scored feature under cursor.
       // Try spatial point lookup so "Percelen" mode remains clickable.
-      if (!accessToken) return
+      if (!parcelModeActive || !accessToken) return
       void fetchParcelAtPoint(e.lngLat.lng, e.lngLat.lat, accessToken, {
         scanId: activeScanIdRef.current,
       })
@@ -1247,7 +1253,7 @@ function MapPage() {
           if (requestSeq !== parcelClickRequestSeqRef.current) return
 
           setTier('none')
-          setInspectorParcel(
+          setActivePanel({ kind: 'parcel', parcel:
             makeInspectorParcel({
               parcelId: resolved.parcel_id,
               address: resolved.address ?? null,
@@ -1271,7 +1277,7 @@ function MapPage() {
               buildingMetrics: resolved.building_metrics ?? null,
               hasReport: resolved.has_report,
             })
-          )
+          })
           if (resolved.geometry) {
             setParcelGeometryHighlight({
               lng: resolved.lng,
@@ -1375,7 +1381,7 @@ function MapPage() {
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
     setParcelGeometryHighlight(null)
-    setInspectorParcel(null)
+    setActivePanel(null)
     pendingLookupInspectorRef.current = null
     if (mapRef.current) {
       clearPropertyGeometry(mapRef.current)
@@ -1442,7 +1448,7 @@ function MapPage() {
     }
   }, [])
 
-  // Wijk click handler
+  // Wijk click handler — opens wijk detail panel instead of scan confirmation
   const handleWijkClick = useCallback(
     (
       wijkCode: string,
@@ -1453,25 +1459,34 @@ function MapPage() {
       const currentGemeente = activeGemeenteRef.current
       if (!currentGemeente || !mapRef.current) return
 
-      // Guard: prevent during active scan
-      if (isScanRunning) {
-        toast.info('Scan al bezig, wacht even...')
-        return
-      }
-
       // Highlight selected wijk
       removeScanAreaHighlight(mapRef.current)
       addScanAreaHighlight(mapRef.current, geometry)
 
-      // Show confirmation dialog before scanning
-      setPendingScan({
-        wijkNaam,
-        gemeente_code: currentGemeente.code,
-        gemeente_naam: currentGemeente.naam,
-        bbox_wgs84: bbox,
+      // Zoom to wijk
+      mapRef.current.fitBounds(
+        [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
+        { padding: 50, duration: 600, maxZoom: 16 }
+      )
+
+      // Find latest scan for this wijk
+      const latestScan = scanHistory?.scans?.find(
+        (s) =>
+          s.gemeente_code === currentGemeente.code &&
+          s.wijk_naam === wijkNaam &&
+          s.status === 'completed'
+      ) ?? null
+
+      setActivePanel({
+        kind: 'wijk',
+        code: wijkCode,
+        naam: wijkNaam,
+        gemeenteCode: currentGemeente.code,
+        gemeenteNaam: currentGemeente.naam,
+        latestScan,
       })
     },
-    [isScanRunning]
+    [scanHistory?.scans]
   )
 
   // Ref for wijk click handler to avoid stale closure
@@ -1490,7 +1505,6 @@ function MapPage() {
       {
         onSuccess: (data) => {
           setActiveScanId(data.scan_id)
-          setActiveScanWijk(wijkNaam)
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
@@ -1506,7 +1520,6 @@ function MapPage() {
           toast.error(`Scan starten mislukt: ${err.message}`)
           if (mapRef.current) removeScanAreaHighlight(mapRef.current)
           setSelectedArea(null)
-          setActiveScanWijk(null)
         },
       }
     )
@@ -1518,71 +1531,6 @@ function MapPage() {
     if (mapRef.current) removeScanAreaHighlight(mapRef.current)
     setSelectedArea(null)
   }, [])
-
-  // Viewport scan handler
-  const handleScanViewport = useCallback(() => {
-    const currentGemeente = activeGemeenteRef.current
-    if (!mapRef.current || !currentGemeente) {
-      toast.info('Selecteer eerst een gemeente')
-      return
-    }
-
-    if (isScanRunning) {
-      toast.info('Scan al bezig, wacht even...')
-      return
-    }
-
-    const bounds = mapRef.current.getBounds()
-    const bbox: [number, number, number, number] = [
-      bounds.getWest(),
-      bounds.getSouth(),
-      bounds.getEast(),
-      bounds.getNorth(),
-    ]
-
-    // Create bbox polygon for highlight
-    const bboxPolygon: GeoJSON.Polygon = {
-      type: 'Polygon',
-      coordinates: [[
-        [bbox[0], bbox[1]], [bbox[2], bbox[1]],
-        [bbox[2], bbox[3]], [bbox[0], bbox[3]],
-        [bbox[0], bbox[1]],
-      ]],
-    }
-
-    removeScanAreaHighlight(mapRef.current)
-    addScanAreaHighlight(mapRef.current, bboxPolygon)
-
-    triggerScan.mutate(
-      {
-        gemeente_code: currentGemeente.code,
-        gemeente_naam: currentGemeente.naam,
-        bbox_wgs84: bbox,
-      },
-      {
-        onSuccess: (data) => {
-          setActiveScanId(data.scan_id)
-          setActiveScanWijk('Viewport')
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-          setSelectedArea(null)
-          if (data.status === 'existing' && !data.needs_rescan) {
-            shouldAutoFollowScanRef.current = false
-            navigate({ to: '/resultaten', search: { scan_id: data.scan_id } })
-            toast.info(`Bestaande scan gevonden — resultaten laden`)
-          } else {
-            shouldAutoFollowScanRef.current = true
-            toast.success(`Scan gestart voor ${currentGemeente.naam}`)
-          }
-        },
-        onError: (err) => {
-          toast.error(`Scan starten mislukt: ${err.message}`)
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
-          setSelectedArea(null)
-          setActiveScanWijk(null)
-        },
-      }
-    )
-  }, [triggerScan, isScanRunning])
 
   const activateGemeenteContext = useCallback(
     async (
@@ -1614,15 +1562,15 @@ function MapPage() {
       removeScanAreaHighlight(mapRef.current)
       setSelectedArea(null)
 
-      // Set active gemeente context and zoom
+      // Set active gemeente context, zoom, and open panel
       setActiveGemeente({ code: gemeenteCode, naam: gemeenteNaam, bbox })
+      setActivePanel({ kind: 'gemeente', code: gemeenteCode, naam: gemeenteNaam, bbox })
       mapRef.current.fitBounds(
         [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
         { padding: 50, duration: 800, maxZoom: 15 }
       )
 
       // Fetch wijken from backend
-      setWijkLoading(true)
       try {
         const geojson = await fetchWijken(gemeenteCode, accessToken)
         setWijkGeojson(geojson)
@@ -1648,8 +1596,6 @@ function MapPage() {
         toast.error('Kon wijken niet laden')
         setActiveGemeente(null) // Clear context on error
         return null
-      } finally {
-        setWijkLoading(false)
       }
     },
     [accessToken, isScanRunning]
@@ -1829,15 +1775,6 @@ function MapPage() {
     []
   )
 
-  // Wijken layer toggle handler
-  const handleWijkenToggle = useCallback(
-    (visible: boolean) => {
-      if (!mapRef.current) return
-      setWijkBoundariesVisibility(mapRef.current, visible)
-    },
-    []
-  )
-
   // Score layer visibility toggle handler
   const handleScoreToggle = useCallback(
     (visible: boolean) => {
@@ -1951,99 +1888,106 @@ function MapPage() {
     )
   }, [zoneInfo, triggerScan, isScanRunning])
 
+  // Panel navigation: select wijk from gemeente panel
+  const handleGemeentePanelSelectWijk = useCallback(
+    (wijkCode: string, wijkNaam: string) => {
+      const currentGemeente = activeGemeenteRef.current
+      if (!currentGemeente) return
+
+      // Find feature to get bbox and geometry for highlighting
+      const feature = wijkGeojson?.features.find(
+        (f) => (f.properties?.statcode as string) === wijkCode
+      )
+      if (feature && mapRef.current) {
+        const geom = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+        const bbox = calculateBboxFromGeometry(geom) as [number, number, number, number]
+        removeScanAreaHighlight(mapRef.current)
+        addScanAreaHighlight(mapRef.current, geom)
+        mapRef.current.fitBounds(bbox, { padding: 50, duration: 600, maxZoom: 16 })
+      }
+
+      const latestScan = scanHistory?.scans?.find(
+        (s) =>
+          s.gemeente_code === currentGemeente.code &&
+          s.wijk_naam === wijkNaam &&
+          s.status === 'completed'
+      ) ?? null
+
+      setActivePanel({
+        kind: 'wijk',
+        code: wijkCode,
+        naam: wijkNaam,
+        gemeenteCode: currentGemeente.code,
+        gemeenteNaam: currentGemeente.naam,
+        latestScan,
+      })
+    },
+    [wijkGeojson, scanHistory?.scans]
+  )
+
+  // Panel navigation: go back to gemeente panel from wijk panel
+  const handleWijkPanelBack = useCallback(() => {
+    const currentGemeente = activeGemeenteRef.current
+    if (!currentGemeente) {
+      setActivePanel(null)
+      return
+    }
+    setActivePanel({
+      kind: 'gemeente',
+      code: currentGemeente.code,
+      naam: currentGemeente.naam,
+      bbox: currentGemeente.bbox,
+    })
+    if (mapRef.current) {
+      removeScanAreaHighlight(mapRef.current)
+    }
+  }, [])
+
+  // Panel: start scan from wijk panel
+  const handleWijkPanelStartScan = useCallback(() => {
+    if (!activePanel || activePanel.kind !== 'wijk') return
+    const currentGemeente = activeGemeenteRef.current
+    if (!currentGemeente) return
+
+    // Find wijk feature for bbox
+    const feature = wijkGeojson?.features.find(
+      (f) => (f.properties?.statcode as string) === activePanel.code
+    )
+    if (!feature) return
+
+    const bbox = calculateBboxFromGeometry(
+      feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
+    ) as [number, number, number, number]
+
+    setPendingScan({
+      wijkNaam: activePanel.naam,
+      gemeente_code: currentGemeente.code,
+      gemeente_naam: currentGemeente.naam,
+      bbox_wgs84: bbox,
+    })
+  }, [activePanel, wijkGeojson])
+
+  // LayerToggle adapter callbacks — no-arg wrappers around existing handlers.
+  // Plan 02 will replace these with useMapLayerState hook actions.
+  const handleBasemapChange = useCallback((v: BaseMapLayerId) => {
+    setBasemap(v)
+  }, [])
+
+  const handleParcelsToggleNoArg = useCallback(() => {
+    handleParcelsLayerToggle(!isParcelsVisible)
+  }, [handleParcelsLayerToggle, isParcelsVisible])
+
+  const handleGemeentenToggleNoArg = useCallback(() => {
+    handleGemeentenToggle(!showGemeentenLayer)
+  }, [handleGemeentenToggle, showGemeentenLayer])
+
+  const handleBestemmingsplanToggleNoArg = useCallback(() => {
+    handleBestemmingsplanToggle(!showBestemmingsplan)
+  }, [handleBestemmingsplanToggle, showBestemmingsplan])
+
   return (
     <MapShell>
       <AddressSearch onSelect={handleAddressSelect} />
-
-      {/* Active gemeente context header */}
-      {activeGemeente && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md border border-grey-800 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-accent"></div>
-            <span className="text-sm font-medium text-grey-100">
-              {activeGemeente.naam}
-            </span>
-            {/* Read-only label — mobile only, since scan buttons are hidden */}
-            <span className="text-xs text-grey-400 md:hidden">(alleen lezen)</span>
-          </div>
-          {wijkLoading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-accent"></div>
-          )}
-
-          {/* Inline scan progress — replaces buttons when scan is running */}
-          {activeScanId && scanStatus.data && scanStatus.data.status === 'running' ? (
-            <div className="hidden md:flex items-center gap-3">
-              <div className="border-l border-grey-700 h-5" />
-              <span className="text-xs font-medium text-grey-100">
-                {scanStatus.data.current_phase === null
-                  ? 'Starten...'
-                  : activeScanWijk ?? 'Scannen'}
-              </span>
-              <div className="bg-grey-800 rounded-full h-1.5 w-24 overflow-hidden">
-                <div
-                  className="bg-amber-accent h-full transition-all duration-500 ease-out"
-                  style={{ width: `${scanStatus.data.progress_pct}%` }}
-                />
-              </div>
-              <span className="text-xs font-semibold text-amber-accent tabular-nums">
-                {Math.round(scanStatus.data.progress_pct)}%
-              </span>
-              <button
-                onClick={() => cancelScan.mutate(activeScanId)}
-                disabled={cancelScan.isPending}
-                className="text-xs text-grey-400 hover:text-grey-100 disabled:opacity-50 font-medium transition-colors"
-              >
-                {cancelScan.isPending ? 'Annuleren...' : 'Annuleren'}
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Viewport scan button — desktop only (scanning is not supported on mobile) */}
-              <span className="hidden md:inline-flex">
-                <button
-                  onClick={handleScanViewport}
-                  disabled={!!activeScanId || triggerScan.isPending}
-                  className="px-3 py-1 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-                >
-                  {triggerScan.isPending ? 'Scannen...' : 'Scan zichtbaar gebied'}
-                </button>
-              </span>
-              {/* Toon Lijst button — desktop only, visible when a scan is active */}
-              {activeScanId && (
-                <span className="hidden md:inline-flex">
-                  <button
-                    onClick={() => navigate({ to: '/resultaten', search: { scan_id: activeScanId } })}
-                    className="px-3 py-1 text-xs font-medium text-amber-accent border border-amber-accent/50 hover:bg-amber-accent/10 rounded transition-colors"
-                  >
-                    Toon Lijst
-                  </button>
-                </span>
-              )}
-            </>
-          )}
-
-          <button
-            onClick={() => {
-              setActiveGemeente(null)
-              if (wijkGeojsonRef.current && mapRef.current) {
-                removeWijkBoundariesLayer(mapRef.current)
-                setWijkGeojson(null)
-              }
-              if (mapRef.current) {
-                mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
-              }
-            }}
-            className="text-grey-400 hover:text-grey-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Gemeente deselecteren"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Scan progress is now inline in the gemeente header bar above */}
 
       {/* Bestemmingsplan legend */}
       <BestemmingsplanLegend visible={showBestemmingsplan} />
@@ -2128,37 +2072,65 @@ function MapPage() {
       <LayerToggle
         mapRef={mapRef}
         mapReady={mapReady}
-        autoEnableParcelsKey={autoEnableParcelsKey}
-        onParcelsToggle={handleParcelsLayerToggle}
-        onGemeentenToggle={handleGemeentenToggle}
-        onBestemmingsplanToggle={handleBestemmingsplanToggle}
+        basemap={basemap}
+        showParcels={isParcelsVisible}
+        showGemeenten={showGemeentenLayer}
+        showBestemmingsplan={showBestemmingsplan}
+        onBasemapChange={handleBasemapChange}
+        onParcelsToggle={handleParcelsToggleNoArg}
+        onGemeentenToggle={handleGemeentenToggleNoArg}
+        onBestemmingsplanToggle={handleBestemmingsplanToggleNoArg}
         onBAGPandenToggle={handleBAGPandenToggle}
-        showBAGPandenToggle={true}
-        onWijkenToggle={handleWijkenToggle}
-        showWijkenToggle={!!activeGemeente}
         onScannedScopeToggle={handleScannedScopeToggle}
-        showScannedScopeToggle={!!activeGemeente}
         onScoreToggle={handleScoreToggle}
-        showScoreToggle={false}
         onBuiltStatusToggle={handleBuiltStatusToggle}
-        showBuiltStatusToggle={false}
         onReportStatusToggle={handleReportStatusToggle}
-        showReportStatusToggle={false}
         onVacancySignalToggle={handleVacancySignalToggle}
-        showVacancySignalToggle={false}
         onBuildCapacityToggle={handleBuildCapacityToggle}
-        showBuildCapacityToggle={false}
+        autoEnableParcelsKey={autoEnableParcelsKey}
         hasScoreData={!!activeScanId}
       />
 
-      {/* Parcel details modal — same component as scan results row click */}
-      <ParcelDetailModal
-        parcel={inspectorParcel}
-        isOpen={!!inspectorParcel}
-        onClose={() => setInspectorParcel(null)}
-        onViewOnMap={undefined}
-        presentation="map-panel"
-      />
+      {/* Map detail panels — only one visible at a time */}
+      {activePanel?.kind === 'gemeente' && (
+        <GemeenteMapPanel
+          naam={activePanel.naam}
+          wijkGeojson={wijkGeojson}
+          scannedWijkNames={scannedWijkNames}
+          onClose={() => {
+            setActivePanel(null)
+            setActiveGemeente(null)
+            if (wijkGeojsonRef.current && mapRef.current) {
+              removeWijkBoundariesLayer(mapRef.current)
+              setWijkGeojson(null)
+            }
+            if (mapRef.current) {
+              mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+            }
+          }}
+          onSelectWijk={handleGemeentePanelSelectWijk}
+        />
+      )}
+      {activePanel?.kind === 'wijk' && (
+        <WijkMapPanel
+          naam={activePanel.naam}
+          gemeenteNaam={activePanel.gemeenteNaam}
+          latestScan={activePanel.latestScan}
+          onClose={() => setActivePanel(null)}
+          onBack={handleWijkPanelBack}
+          onStartScan={handleWijkPanelStartScan}
+          onViewResults={(scanId) => navigate({ to: '/resultaten', search: { scan_id: scanId } })}
+        />
+      )}
+      {activePanel?.kind === 'parcel' && (
+        <ParcelDetailModal
+          parcel={inspectorParcel}
+          isOpen={!!inspectorParcel}
+          onClose={() => setActivePanel(null)}
+          onViewOnMap={undefined}
+          presentation="map-panel"
+        />
+      )}
 
       {/* Wijk scan confirmation dialog */}
       <Modal isOpen={!!pendingScan} onClose={handleCancelScan} size="sm">

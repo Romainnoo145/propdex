@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
 import type maplibregl from 'maplibre-gl'
 import {
   addParcelBoundariesLayer,
@@ -6,90 +6,73 @@ import {
 } from './ParcelBoundariesLayer'
 import {
   MAP_LAYER_CATALOG,
-  readPersistedMapLayerState,
-  writePersistedMapLayerState,
 } from '@/lib/map/layers'
+import type { BaseMapLayerId, ParcelOverlayLayerId } from '@/lib/map/layers'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 
-type LayerType = 'aerial' | 'kaart'
-
 interface LayerToggleProps {
+  // Map readiness
   mapRef: React.RefObject<maplibregl.Map | null>
   mapReady?: boolean
-  onParcelsToggle?: (visible: boolean) => void
-  onGemeentenToggle?: (visible: boolean) => void
-  onBestemmingsplanToggle?: (visible: boolean) => void
-  onBAGPandenToggle?: (visible: boolean) => void
-  onWijkenToggle?: (visible: boolean) => void
-  showWijkenToggle?: boolean
+
+  // State from useMapLayerState (or map.tsx until Plan 02 wires the hook)
+  basemap: BaseMapLayerId
+  showParcels: boolean
+  showGemeenten: boolean
+  showBestemmingsplan: boolean
+  activeParcelOverlay?: ParcelOverlayLayerId | null
+
+  // Handlers
+  onBasemapChange: (v: BaseMapLayerId) => void
+  onParcelsToggle: () => void
+  onGemeentenToggle: () => void
+  onBestemmingsplanToggle: () => void
+
+  // Score overlay handlers (still called internally via setParcelOverlayMode)
   onScoreToggle?: (visible: boolean) => void
-  showScoreToggle?: boolean
   onBuiltStatusToggle?: (visible: boolean) => void
-  showBuiltStatusToggle?: boolean
   onReportStatusToggle?: (visible: boolean) => void
-  showReportStatusToggle?: boolean
   onVacancySignalToggle?: (visible: boolean) => void
-  showVacancySignalToggle?: boolean
   onBuildCapacityToggle?: (visible: boolean) => void
-  showBuildCapacityToggle?: boolean
+  onBAGPandenToggle?: (visible: boolean) => void
   onScannedScopeToggle?: (visible: boolean) => void
-  showScannedScopeToggle?: boolean
-  showBAGPandenToggle?: boolean
+
+  // Auto-enable parcels trigger (will be moved to map.tsx in Plan 02)
   autoEnableParcelsKey?: string | null
+
+  // Score data availability (for legend)
   hasScoreData?: boolean
 }
 
 function LayerToggle({
   mapRef,
   mapReady = false,
+  basemap,
+  showParcels,
+  showGemeenten,
+  showBestemmingsplan,
+  activeParcelOverlay = null,
+  onBasemapChange,
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
-  onBAGPandenToggle,
-  onWijkenToggle: _onWijkenToggle,
   onScoreToggle,
   onBuiltStatusToggle,
   onReportStatusToggle,
   onVacancySignalToggle,
   onBuildCapacityToggle,
+  onBAGPandenToggle,
   onScannedScopeToggle,
   autoEnableParcelsKey,
   hasScoreData,
 }: LayerToggleProps) {
-  const persisted = useMemo(() => readPersistedMapLayerState(), [])
-
-  const [activeLayer, setActiveLayer] = useState<LayerType>(persisted.basemap)
-  const [showParcels, setShowParcels] = useState(persisted.showParcels)
-  const [showGemeenten] = useState(persisted.showGemeenten)
-  const [showBestemmingsplan, setShowBestemmingsplan] = useState(
-    persisted.showBestemmingsplan
-  )
-  const [showBAGPanden] = useState(persisted.showBAGPanden)
-  const [showWijken] = useState(persisted.showWijken)
-  const [showScannedScope] = useState(persisted.showScannedScope)
-  const [showScore, setShowScore] = useState(
-    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
-  )
-  const [showBuiltStatus, setShowBuiltStatus] = useState(
-    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[1].id
-  )
-  const [showReportStatus, setShowReportStatus] = useState(
-    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
-  )
-  const [showVacancySignal, setShowVacancySignal] = useState(
-    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
-  )
-  const [showBuildCapacity, setShowBuildCapacity] = useState(
-    persisted.activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
-  )
-
   const isStyleReady = useCallback(() => {
     const map = mapRef.current
     return Boolean(map && mapReady && map.isStyleLoaded())
   }, [mapReady, mapRef])
 
   const applyBaseLayer = useCallback(
-    (layer: LayerType) => {
+    (layer: BaseMapLayerId) => {
       if (!isStyleReady()) return
       if (!mapRef.current) return
       const map = mapRef.current
@@ -127,11 +110,6 @@ function LayerToggle({
       const isReport = mode === 'report'
       const isVacancy = mode === 'vacancy'
       const isCapacity = mode === 'capacity'
-      setShowScore(isScore)
-      setShowBuiltStatus(isBuilt)
-      setShowReportStatus(isReport)
-      setShowVacancySignal(isVacancy)
-      setShowBuildCapacity(isCapacity)
       onScoreToggle?.(isScore)
       onBuiltStatusToggle?.(isBuilt)
       onReportStatusToggle?.(isReport)
@@ -151,133 +129,32 @@ function LayerToggle({
     ]
   )
 
+  // Apply basemap when prop changes
   useEffect(() => {
-    applyBaseLayer(activeLayer)
-  }, [activeLayer, applyBaseLayer])
+    applyBaseLayer(basemap)
+  }, [basemap, applyBaseLayer])
 
+  // One-time init: add parcel source + set initial layer visibility when map is ready
   const didInitSyncRef = useRef(false)
   useEffect(() => {
-    if (!isStyleReady()) return
+    if (!mapReady) return
+    if (!mapRef.current || !mapRef.current.isStyleLoaded()) return
     if (didInitSyncRef.current) return
     didInitSyncRef.current = true
     const map = mapRef.current
-    if (map) {
-      if (!map.getSource('pdok-parcels')) {
-        addParcelBoundariesLayer(map)
-      }
-      setParcelBoundariesVisibility(map, showParcels)
+    if (!map.getSource('pdok-parcels')) {
+      addParcelBoundariesLayer(map)
     }
-    onParcelsToggle?.(showParcels)
-    onGemeentenToggle?.(false)
-    onBestemmingsplanToggle?.(showBestemmingsplan)
+    setParcelBoundariesVisibility(map, showParcels)
     onBAGPandenToggle?.(false)
     onScannedScopeToggle?.(false)
     if (showParcels) {
       queueMicrotask(() => setParcelOverlayMode('score'))
     }
-  }, [
-    isStyleReady,
-    mapRef,
-    setParcelOverlayMode,
-    onParcelsToggle,
-    onGemeentenToggle,
-    onBestemmingsplanToggle,
-    onBAGPandenToggle,
-    onScannedScopeToggle,
-    onScoreToggle,
-    onBuiltStatusToggle,
-    onReportStatusToggle,
-    onVacancySignalToggle,
-    onBuildCapacityToggle,
-    showParcels,
-    showGemeenten,
-    showBestemmingsplan,
-    showBAGPanden,
-    showScannedScope,
-    showScore,
-    showBuiltStatus,
-    showReportStatus,
-    showVacancySignal,
-    showBuildCapacity,
-  ])
+  }, [mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  // ^ Intentionally only [mapReady] — this is a one-time init effect guarded by didInitSyncRef
 
-  useEffect(() => {
-    const activeParcelOverlay = showScore
-      ? MAP_LAYER_CATALOG.parcelOverlays[0].id
-      : showBuiltStatus
-        ? MAP_LAYER_CATALOG.parcelOverlays[1].id
-        : showReportStatus
-          ? MAP_LAYER_CATALOG.parcelOverlays[2].id
-          : showVacancySignal
-            ? MAP_LAYER_CATALOG.parcelOverlays[3].id
-            : showBuildCapacity
-              ? MAP_LAYER_CATALOG.parcelOverlays[4].id
-          : null
-    writePersistedMapLayerState({
-      basemap: activeLayer,
-      showParcels,
-      showGemeenten,
-      showBestemmingsplan,
-      showBAGPanden,
-      showWijken,
-      showScannedScope,
-      activeParcelOverlay,
-    })
-  }, [
-    activeLayer,
-    showParcels,
-    showGemeenten,
-    showBestemmingsplan,
-    showBAGPanden,
-    showWijken,
-    showScannedScope,
-    showScore,
-    showBuiltStatus,
-    showReportStatus,
-    showVacancySignal,
-    showBuildCapacity,
-  ])
-
-  const handleLayerChange = (layer: LayerType) => {
-    if (layer === activeLayer) return
-    setActiveLayer(layer)
-  }
-
-  const handleParcelsToggle = () => {
-    if (!mapRef.current || !isStyleReady()) return
-    const map = mapRef.current
-    const nextShowParcels = !showParcels
-    if (!map.getSource('pdok-parcels')) {
-      addParcelBoundariesLayer(map)
-    }
-    setParcelBoundariesVisibility(map, nextShowParcels)
-    setShowParcels(nextShowParcels)
-    onParcelsToggle?.(nextShowParcels)
-    if (nextShowParcels) {
-      ensureParcelInteractionZoom()
-      // Default parcel mode: always show the standard potential colors.
-      setParcelOverlayMode('score')
-    }
-    if (!nextShowParcels) {
-      // Hide active overlays while preserving selected mode in UI/localStorage.
-      onScoreToggle?.(false)
-      onBuiltStatusToggle?.(false)
-      onReportStatusToggle?.(false)
-      onVacancySignalToggle?.(false)
-      onBuildCapacityToggle?.(false)
-    }
-  }
-
-  const handleBestemmingsplanToggle = () => {
-    const next = !showBestemmingsplan
-    setShowBestemmingsplan(next)
-    onBestemmingsplanToggle?.(next)
-  }
-
-  // Removed toggle handlers for BAG Panden, Wijken, Scangebied, Score overlays —
-  // these buttons are no longer in the toggle bar. Underlying layer callbacks
-  // (onScoreToggle, etc.) are still called via setParcelOverlayMode.
-
+  // Auto-enable parcels trigger (external, e.g. address search activating parcel mode)
   const lastAutoEnableRef = useRef<string | null>(null)
   useEffect(() => {
     if (!autoEnableParcelsKey || !mapRef.current || !isStyleReady()) return
@@ -289,10 +166,11 @@ function LayerToggle({
       addParcelBoundariesLayer(map)
     }
     setParcelBoundariesVisibility(map, true)
-    queueMicrotask(() => setShowParcels(true))
-    onParcelsToggle?.(true)
+    // Notify parent to set showParcels: true
+    if (!showParcels) {
+      onParcelsToggle()
+    }
     ensureParcelInteractionZoom()
-    // Keep auto-enabled parcel mode consistent with default UX.
     queueMicrotask(() => setParcelOverlayMode('score'))
   }, [
     autoEnableParcelsKey,
@@ -301,24 +179,57 @@ function LayerToggle({
     mapRef,
     onParcelsToggle,
     setParcelOverlayMode,
+    showParcels,
   ])
 
+  // Ensure score overlay is active when parcels are on but no overlay is selected
+  const showScore = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
+  const showBuiltStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[1].id
+  const showReportStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
+  const showVacancySignal = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
+  const showBuildCapacity = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
+
+  const hasActiveOverlay =
+    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity
+
+  // Derived: ensures parcels always have an overlay when visible
+  const needsDefaultOverlay = useMemo(
+    () => showParcels && !hasActiveOverlay,
+    [showParcels, hasActiveOverlay]
+  )
+
   useEffect(() => {
-    if (!showParcels || !isStyleReady()) return
-    if (showScore) return
-    if (showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity) return
-    // Persisted "none" state should not disable clickability in parcel mode.
+    if (!needsDefaultOverlay || !isStyleReady()) return
     queueMicrotask(() => setParcelOverlayMode('score'))
-  }, [
-    isStyleReady,
-    setParcelOverlayMode,
-    showBuildCapacity,
-    showBuiltStatus,
-    showParcels,
-    showReportStatus,
-    showScore,
-    showVacancySignal,
-  ])
+  }, [needsDefaultOverlay, isStyleReady, setParcelOverlayMode])
+
+  // Handlers — call parent toggle props (state lives in parent/hook)
+  const handleLayerSwitch = (layerId: BaseMapLayerId) => {
+    if (layerId === basemap) return
+    onBasemapChange(layerId)
+  }
+
+  const handleParcelsToggle = () => {
+    if (!mapRef.current || !isStyleReady()) return
+    const map = mapRef.current
+    const nextShowParcels = !showParcels
+    if (!map.getSource('pdok-parcels')) {
+      addParcelBoundariesLayer(map)
+    }
+    setParcelBoundariesVisibility(map, nextShowParcels)
+    onParcelsToggle()
+    if (nextShowParcels) {
+      ensureParcelInteractionZoom()
+      setParcelOverlayMode('score')
+    }
+    if (!nextShowParcels) {
+      onScoreToggle?.(false)
+      onBuiltStatusToggle?.(false)
+      onReportStatusToggle?.(false)
+      onVacancySignalToggle?.(false)
+      onBuildCapacityToggle?.(false)
+    }
+  }
 
   const active = 'bg-amber-accent text-on-accent shadow-sm'
   const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
@@ -342,23 +253,34 @@ function LayerToggle({
 
       <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
         <button
-          onClick={() => handleLayerChange('kaart')}
+          onClick={() => handleLayerSwitch('kaart')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            activeLayer === 'kaart' ? active : inactive
+            basemap === 'kaart' ? active : inactive
           }`}
         >
           Kaart
         </button>
         <button
-          onClick={() => handleLayerChange('aerial')}
+          onClick={() => handleLayerSwitch('aerial')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            activeLayer === 'aerial' ? active : inactive
+            basemap === 'aerial' ? active : inactive
           }`}
         >
           Satellite
         </button>
 
         <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
+
+        <button
+          onClick={onGemeentenToggle}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            showGemeenten ? overlayActive : overlayInactive
+          }`}
+        >
+          Gemeenten
+        </button>
+
+        <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
 
         <button
           onClick={handleParcelsToggle}
@@ -369,16 +291,16 @@ function LayerToggle({
           Percelen
         </button>
 
-        <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
-
-        <button
-          onClick={handleBestemmingsplanToggle}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            showBestemmingsplan ? overlayActive : overlayInactive
-          }`}
-        >
-          Bestemmingsplan
-        </button>
+        {showParcels && (
+          <button
+            onClick={onBestemmingsplanToggle}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+              showBestemmingsplan ? overlayActive : overlayInactive
+            }`}
+          >
+            Bestemmingsplan
+          </button>
+        )}
       </div>
     </>
   )
