@@ -9,8 +9,8 @@
 ### CBS Buurtstatistieken
 
 - [ ] **CBS-01**: Area scan results display neighborhood metrics (WOZ, stedelijkheid, demographics) in a dedicated card on the project/wijk detail view
-- [ ] **CBS-02**: CBS OData client uses v4 API with correct endpoint (`datasets.cbs.nl/odata/v1/CBS`), filter syntax (`startswith()` for region lookup), and year-aware dataset selection via `CBS_DATASET_ID` setting
-- [ ] **CBS-03**: CBS client follows established government API patterns (rate limiter, retry_with_backoff, timeout, proper error handling via GovernmentAPIError)
+- [x] **CBS-02**: CBS OData client uses v4 API with correct endpoint (`datasets.cbs.nl/odata/v1/CBS`), filter syntax (`startswith()` for region lookup), and year-aware dataset selection via `CBS_DATASET_ID` setting
+- [x] **CBS-03**: CBS client follows established government API patterns (rate limiter, retry_with_backoff, timeout, proper error handling via GovernmentAPIError)
 
 ### Rechtspraak Jurisprudentie
 
@@ -67,8 +67,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CBS-01 | Phase 75 | Pending |
-| CBS-02 | Phase 75 | Pending |
-| CBS-03 | Phase 75 | Pending |
+| CBS-02 | Phase 75 | Complete |
+| CBS-03 | Phase 75 | Complete |
 | RECHT-01 | Phase 76 | Pending |
 | RECHT-02 | Phase 76 | Pending |
 | RECHT-03 | Phase 76 | Pending |

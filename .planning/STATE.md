@@ -12,15 +12,18 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Phase: 75 of 77 (CBS Wijkstatistieken)
-Plan: — (ready to plan)
-Status: Ready to plan
-Last activity: 2026-03-06 — v11.0 roadmap created (3 phases: 75-77)
+Plan: 02 of N complete
+Status: In progress
+Last activity: 2026-03-06 — Phase 75 Plan 02 complete (CBS OData v4 client rewrite)
 
-Progress: [░░░░░░░░░░] 0% (v11.0 milestone)
+Progress: [██░░░░░░░░] ~20% (v11.0 milestone)
 
 ---
 
 ## Performance Metrics
+
+**v11.0 Open Data Intelligence (In Progress)**
+- Phase 75 Plan 02: ~5min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -53,12 +56,21 @@ Progress: [░░░░░░░░░░] 0% (v11.0 milestone)
 ### v11.0 Critical Notes
 
 - CBS data already in `neighborhood_metrics` JSONB on AreaScan -- CBS-01 is frontend-only
+- CBS OData v4 client complete (75-02): datasets.cbs.nl/odata/v1/CBS, Observations + WijkenEnBuurtenCodes
+- CBS wijk lookup uses startswith(Identifier, 'WK{gemeente_code}') -- safe against 80+ national Centrum matches
+- CBS_DATASET_ID configurable via env var (default 86165NED = 2025 dataset)
+- bouwjaar_distributie fields are None in v4 -- M008209/M008210 are rolling 10yr window, not pre/post-2000
 - `app/government_apis/exceptions.py` does not exist but is imported by rechtspraak.py + jurisprudence.py -- startup blocker; must be created as re-export from base.py at start of Phase 76
-- CBS OData v3 URL (`opendata.cbs.nl`) is deprecated -- must migrate to `datasets.cbs.nl/odata/v1/CBS/`
-- CBS wijk lookup must prefix gemeente code: `startswith(Identifier, 'WK{gemeente_code}')` -- "Centrum" matches 80+ records nationally without prefix
 - lxml must replace stdlib xml.etree.ElementTree in rechtspraak.py for XXE protection
 - AI: never ask Claude to generate citations -- only summarize provided ECLI texts
 - Rechtspraak scoring 2-3/10 from prior agent -- full rebuild, not patching
+
+### Decisions Made
+
+- CBS v4: bouwjaar_distributie fields set to None -- M008209/M008210 are rolling 10-year window, not pre/post-2000 boundary (2026-03-06)
+- CBS v4: gemeente_code required for safe wijk lookup -- national name-only search too ambiguous (2026-03-06)
+- CBS v4: GovernmentAPIError on observations fetch failure (fatal); region lookup non-fatal (returns None) (2026-03-06)
+- CBS_DATASET_ID as Settings field, not class constant -- allows env-var override per deployment (2026-03-06)
 
 ### Pending Todos
 
@@ -70,7 +82,7 @@ Progress: [░░░░░░░░░░] 0% (v11.0 milestone)
 
 ### Blockers/Concerns
 
-- CBS 2025 dataset measure codes for `86165NED` must be verified live before Phase 75 client rewrite -- codes verified against 2024 dataset only
+- CBS 2025 dataset measure codes for `86165NED` should be verified live -- codes cross-referenced against 2024 dataset only
 - AI analysis latency unknown until tested with real Raad van State rulings (can be 80K+ tokens)
 
 ---
@@ -78,11 +90,11 @@ Progress: [░░░░░░░░░░] 0% (v11.0 milestone)
 ## Session Continuity
 
 **Last Session:** 2026-03-06
-**Stopped At:** v11.0 roadmap created -- ready to plan Phase 75
+**Stopped At:** Completed 75-02-PLAN.md -- CBS OData v4 client rewrite
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 75`
+**Next Action:** `/gsd:execute-phase 75` (plan 03 — CBS frontend display)
 
 ---
 
-*State updated: 2026-03-06 -- v11.0 roadmap created, Phase 75 ready to plan*
+*State updated: 2026-03-06 -- Phase 75 Plan 02 complete*
