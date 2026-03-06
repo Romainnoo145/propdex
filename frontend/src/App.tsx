@@ -1,17 +1,32 @@
-import { useRef } from 'react';
+import React, { Suspense, useRef } from 'react';
 import type maplibregl from 'maplibre-gl';
+import { Toaster } from 'sonner';
 import MapShell from '@/components/layout/MapShell';
-import MapView from '@/components/map/MapView';
-import LayerToggle from '@/components/map/LayerToggle';
+
+// Lazy load MapLibre components to reduce initial bundle size
+const MapView = React.lazy(() => import('@/components/map/MapView'));
+
+// A simple fallback skeleton for the map
+function MapSkeleton() {
+  return (
+    <div className="absolute inset-0 bg-grey-900 animate-pulse flex items-center justify-center">
+      <span className="text-grey-400 text-sm">Kaart laden...</span>
+    </div>
+  );
+}
 
 function App() {
   const mapRef = useRef<maplibregl.Map | null>(null);
 
   return (
-    <MapShell>
-      <MapView mapRef={mapRef} />
-      <LayerToggle mapRef={mapRef} />
-    </MapShell>
+    <>
+      <MapShell>
+        <Suspense fallback={<MapSkeleton />}>
+          <MapView mapRef={mapRef} />
+        </Suspense>
+      </MapShell>
+      <Toaster position="top-right" richColors />
+    </>
   );
 }
 

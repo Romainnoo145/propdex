@@ -2,10 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import type { PersistedMapLayerState, BaseMapLayerId, ParcelOverlayLayerId } from './layers'
 import { readPersistedMapLayerState, writePersistedMapLayerState } from './layers'
 
-export interface MapLayerState extends PersistedMapLayerState {
-  // PersistedMapLayerState already has:
-  // basemap, showParcels, showGemeenten, showBestemmingsplan, showBAGPanden, showScannedScope, activeParcelOverlay
-}
+// MapLayerState is the full runtime state shape for the hook.
+// It currently matches PersistedMapLayerState exactly, but non-persisted fields
+// (e.g. mapReady) can be added here later without changing the persisted type.
+export type MapLayerState = PersistedMapLayerState
 
 export interface MapLayerActions {
   setBasemap: (v: BaseMapLayerId) => void
