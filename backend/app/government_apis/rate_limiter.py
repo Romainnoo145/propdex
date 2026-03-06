@@ -110,3 +110,6 @@ bodemloket_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
 
 # 3D BAG (TU Delft) — authenticated, conservative limits
 bag_3d_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=200)
+
+# CBS OData (open data) — polite limits for public endpoint
+cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)

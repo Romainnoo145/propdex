@@ -16,6 +16,7 @@ CACHE_TTL = {
     "woz": 31536000,        # 365 days (WOZ values set once per year on Jan 1)
     "bodemloket": 2592000,  # 30 days (soil contamination status changes rarely)
     "bag_3d": 604800,       # 7 days (3D BAG updated quarterly)
+    "cbs": 2592000,         # 30 days (CBS data updates annually)
     # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 
@@ -165,6 +166,16 @@ class Settings(BaseSettings):
     MARTIN_TILE_URL: str = Field(
         default="http://localhost:3000",
         description="Martin tile server URL (optional, PostGIS ST_AsMVT is primary tile path)",
+    )
+
+    # CBS Configuration
+    cbs_dataset_id: str = Field(
+        default="86165NED",
+        description=(
+            "CBS Kerncijfers wijken en buurten dataset ID. "
+            "Annual series: 2022=85318NED, 2023=85618NED, 2024=85984NED, 2025=86165NED. "
+            "Update when CBS publishes new annual dataset (typically Q2 each year)."
+        ),
     )
 
     @property
