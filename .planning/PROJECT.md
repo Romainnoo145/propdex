@@ -158,28 +158,20 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-## Current Milestone: v8.0 Client Demo Readiness (In Progress)
+## Current Milestone: v11.0 Open Data Intelligence (In Progress)
 
-**Goal:** Make Venlo the showcase gemeente with complete, correct scan data and polished presentation across map, reports, and results — ready for client PVP demonstration.
+**Goal:** Enrich property intelligence with neighborhood statistics (CBS), court ruling precedents (Rechtspraak), and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
 
 **Target features:**
-- Scan pipeline reliability (fix silent BAG failure, retry logic)
-- Venlo full re-scan (all 21 wijken with correct BAG data extraction)
-- BAG building footprints map layer
-- Report layout and formatting polish
-- PDF export audit and fix
-- Results table noise reduction
+- CBS OData 4 neighborhood scorer (wijkstatistieken integrated into area scans)
+- Rechtspraak API jurisprudence search and display at project/wijk level
+- AI-powered precedent benchmark (Claude parses court rulings for risk scoring and permit success probability)
 
-- [ ] Scan pipeline produces complete data (bouwjaar, address, pand_status) reliably
-- [ ] Venlo gemeente has complete, validated scan data across all 21 wijken
-- [ ] BAG building footprints visible as toggleable map layer
-- [ ] Report layout polished and v7.x sections render cleanly
-- [ ] PDF export functional and presentable
-- [ ] Results table surfaces real opportunities with minimal noise
-
-## Next Milestone: v9.0 Professional Marketplace (Planned)
-
-**Goal:** Transform Propdex from a data analysis tool into a lead generation platform by connecting property intelligence to professional services — starting with kwaliteitsborgers (Wkb) as the first vertical.
+- [ ] Area scans enriched with CBS neighborhood metrics (WOZ, income, urbanity, demographics)
+- [ ] Users can search and browse court rulings relevant to their gemeente/wijk
+- [ ] Users can read full court ruling documents inline
+- [ ] AI generates risk summaries from court ruling precedents
+- [ ] Vergunnings-succeskans score based on historical legal precedents
 
 **Target features:**
 - Bodemloket API integration (soil contamination data at parcel level)
@@ -279,4 +271,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-01 after v9.0 Professional Marketplace milestone planned*
+*Last updated: 2026-03-06 after v11.0 Open Data Intelligence milestone started*

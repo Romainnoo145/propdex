@@ -5,19 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v9.0 Professional Marketplace — Phase 69 Risicobeoordeling Dossier COMPLETE (both plans shipped); next: Phase 70
-**Next milestone:** v9.0 Professional Marketplace (planned — Phases 68-71)
+**Current focus:** v11.0 Open Data Intelligence — defining requirements
+**Next milestone:** v11.0 Open Data Intelligence (CBS + Rechtspraak + AI precedent analysis)
 
 ---
 
 ## Current Position
 
-Phase: 74 of 74 (3D BAG Building Data — COMPLETE)
-Plan: 3 of 3 — Plan 01 COMPLETE; Plan 02 COMPLETE; Plan 03 COMPLETE
-Status: Phase 74 complete — three-tier deriveTransformatiePotentie (headroom > DSO > heuristic) with actual_bouwhoogte + actual_bouwlagen from 3D BAG; 3DBAG-01 requirement fulfilled
-Last activity: 2026-03-03 — Phase 74 Plan 03 complete; BuildingMetrics extended + headroom path added to deriveTransformatiePotentie
-
-Progress (Phase 74): [██████████] 100% (3/3 plans complete)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v11.0 Open Data Intelligence
+Last activity: 2026-03-06 — Milestone v11.0 started
 
 ---
 
@@ -199,11 +197,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-03T11:23:32.432Z
-**Stopped At:** Completed 74-02-PLAN.md — BagSpatialIndex.identificaties + 3D BAG Phase 2b fetch + actual_bouwhoogte/actual_bouwlagen merge into building_metrics; 9 unit tests GREEN
+**Last Session:** 2026-03-06
+**Stopped At:** Starting v11.0 milestone — existing code from other agent audited (score 2-3/10), needs rebuild
 **Resume File:** None
 
-**Next Action:** Phase 74 complete. All 3 plans shipped. v10.0 milestone (Phases 72+73+74) now complete — all three tiers of transformatiepotentie scoring shipped.
+**Next Action:** Define requirements and create roadmap for v11.0
 
 ---
 
