@@ -1,51 +1,64 @@
-# Requirements: Propdex v9.0 — Risk Intelligence
+# Requirements: Propdex v11.0 — Open Data Intelligence
 
-**Defined:** 2026-03-01
+**Defined:** 2026-03-06
 **Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
-**Milestone Goal:** Add comprehensive risk assessment capabilities — Wkb classification, soil contamination data, and automated risicobeoordeling dossier generation.
+**Milestone Goal:** Enrich property intelligence with CBS neighborhood statistics, Rechtspraak court ruling precedents, and AI-powered legal risk analysis for quantified go/no-go context.
 
-## v9.0 Requirements
+## v11.0 Requirements
 
-Requirements for risk intelligence — Wkb classification, bodem data, and dossier generation for kwaliteitsborger intake.
+### CBS Buurtstatistieken
 
-### Wkb Intelligence
+- [ ] **CBS-01**: Area scan results display neighborhood metrics (WOZ, stedelijkheid, demographics) in a dedicated card on the project/wijk detail view
+- [ ] **CBS-02**: CBS OData client uses v4 API with correct endpoint (`odata4.cbs.nl`), filter syntax (`contains()`), and year-aware dataset selection
+- [ ] **CBS-03**: CBS client follows established government API patterns (rate limiter, retry_with_backoff, timeout, proper error handling via GovernmentAPIError)
 
-- [x] **WKB-01**: User can see gevolgklasse classification (1/2/3) for any property in the report, labeled as "indicatief"
-- [x] **WKB-02**: User can see asbest risk indicator based on bouwjaar (hoog: 1963-1993, middel: pre-1963, geen: post-1993) in the report
-- [x] **WKB-03**: Verbouwing projects are flagged with "Wkb niet van toepassing" notice (Dec 2024 ministerial ruling)
-- [x] **WKB-04**: Wkb classification excludes rijksmonumenten (monument status from existing RCE data)
+### Rechtspraak Jurisprudentie
 
-### Bodemkwaliteit
+- [ ] **RECHT-01**: User can search court rulings by keyword with omgevingsrecht domain filter
+- [ ] **RECHT-02**: User can read full court ruling documents inline with court name and date
+- [ ] **RECHT-03**: Search defaults to gemeente context when viewing a project/wijk
+- [ ] **RECHT-04**: Rechtspraak client follows established patterns (correct base.py imports, ECLI format validation, rate limiter registration, lxml XML parsing with XXE protection)
 
-- [x] **BODEM-01**: System queries Bodemloket for soil contamination data at parcel coordinates
-- [x] **BODEM-02**: Property report includes "Bodemkwaliteit" section showing contamination status and WBB dossier references
-- [x] **BODEM-03**: Absent Bodemloket data displayed as "geen gegevens beschikbaar" (never "schone grond")
+### AI Juridisch Klimaat
 
-### Risicobeoordeling Dossier
+- [ ] **AI-01**: Each court ruling displays an AI-generated summary with risk indication (bezwaargrond, uitkomst, relevantie voor vastgoed)
+- [ ] **AI-02**: Gemeente/wijk shows aggregated juridisch klimaat score based on recent court rulings
+- [ ] **AI-03**: Vergunnings-succeskans percentage displayed based on historical precedent outcomes in the area
+- [ ] **AI-04**: AI analysis runs as ARQ background job with polling pattern (existing parsing_job model, no blocking HTTP)
 
-- [x] **DOSSIER-01**: User can generate a "Risicobeoordeling Startdossier" PDF for any property
-- [x] **DOSSIER-02**: Dossier includes: perceelgegevens, bouwjaar, bodemkwaliteit, bestemmingsplan, monumentstatus, energielabel, Wkb classificatie
-- [x] **DOSSIER-03**: Dossier includes legal disclaimer (data is indicatief, assembled from public sources)
+## v9.0 Requirements (Complete)
 
-## v8.0 Requirements (Complete)
+Previous milestone — Risk Intelligence. All 10 requirements complete.
 
-Previous milestone — Client Demo Readiness. Tracked in `.planning/ROADMAP.md` phases 62-66.
-
-- [x] **SCAN-01**: BAG WFS retry on failure
-- [x] **SCAN-02**: BAG coverage ratio validation
-- [x] **SCAN-03**: Force-all backfill mode
-- [ ] **DATA-01-03**: Venlo data completeness (Phase 63)
-- [x] **MAP-01-03**: Map visualization polish (Phase 64)
-- [ ] **RPT-01-04**: Report polish (Phase 65)
-- [ ] **RES-01-02**: Results table noise reduction (Phase 66)
+- [x] **WKB-01**: Gevolgklasse classification — Phase 67
+- [x] **WKB-02**: Asbest risk indicator — Phase 67
+- [x] **WKB-03**: Verbouwing exclusion — Phase 67
+- [x] **WKB-04**: Rijksmonument exclusion — Phase 67
+- [x] **BODEM-01**: Bodemloket query — Phase 68
+- [x] **BODEM-02**: Bodemkwaliteit report section — Phase 68
+- [x] **BODEM-03**: Absent data handling — Phase 68
+- [x] **DOSSIER-01**: Startdossier PDF generation — Phase 69
+- [x] **DOSSIER-02**: Dossier content sections — Phase 69
+- [x] **DOSSIER-03**: Legal disclaimer — Phase 69
 
 ## Future Requirements
 
-Deferred to v10.0+ — potential future directions.
+Deferred to v12.0+ — potential future directions.
 
 - **PIPE-01**: Lead pipeline stages: Nieuw → Onderzoek → Contact → Onderhandeling → Afgewezen/Gekocht
 - **API-01**: B2B API for large borgingspartijen (Woningborg, Kiwa)
 - **DASH-01**: Professional dashboard with lead tracking and conversion metrics
+- **ARCH-01**: Historisch funderings- & asbestrisico profiel via Archieven.nl OAI-PMH
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Archieven.nl historical building dossiers | Complex OAI-PMH protocol, uncertain data coverage, defer to v12.0 |
+| Tweede Kamer wetgevingsdata | Too indirect for property-level intelligence |
+| Open Archieven genealogie | Not relevant for B2B PropTech |
+| Full-text search of court rulings | Rechtspraak API only supports metadata/title search, not full-text |
+| Automated vergunningaanvraag | Omgevingsloket monopoly (Art. 16.1) — never build |
 
 ## Traceability
 
@@ -53,22 +66,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WKB-01 | Phase 67 | Complete |
-| WKB-02 | Phase 67 | Complete |
-| WKB-03 | Phase 67 | Complete |
-| WKB-04 | Phase 67 | Complete |
-| BODEM-01 | Phase 68 | Complete |
-| BODEM-02 | Phase 68 | Complete |
-| BODEM-03 | Phase 68 | Complete |
-| DOSSIER-01 | Phase 69 | Complete |
-| DOSSIER-02 | Phase 69 | Complete |
-| DOSSIER-03 | Phase 69 | Complete |
+| CBS-01 | — | Pending |
+| CBS-02 | — | Pending |
+| CBS-03 | — | Pending |
+| RECHT-01 | — | Pending |
+| RECHT-02 | — | Pending |
+| RECHT-03 | — | Pending |
+| RECHT-04 | — | Pending |
+| AI-01 | — | Pending |
+| AI-02 | — | Pending |
+| AI-03 | — | Pending |
+| AI-04 | — | Pending |
 
 **Coverage:**
-- v9.0 requirements: 10 total
-- Mapped to phases: 10
-- Unmapped: 0
+- v11.0 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11 ⚠️
 
 ---
-*Requirements defined: 2026-03-01*
-*Last updated: 2026-03-03 — Phases 70-71 dropped (professional directory/lead capture not needed for B2B users). v9.0 scoped to Phases 67-69.*
+*Requirements defined: 2026-03-06*
+*Last updated: 2026-03-06 after initial definition*
