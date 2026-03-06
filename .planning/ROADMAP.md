@@ -40,7 +40,7 @@
 **Requirements**: CBS-01, CBS-02, CBS-03
 **Success Criteria** (what must be TRUE):
   1. Opening a wijk detail view shows a CBS Wijkstatistieken card with WOZ gemiddelde, stedelijkheidsklasse badge (1-5), and peiljaar freshness indicator
-  2. Wijken where CBS returned no data show a graceful empty state ("Geen CBS-data beschikbaar voor deze wijk") instead of a broken card
+  2. Wijken where CBS returned no data show no CBS card at all (null-render) — no broken or empty card cluttering the view
   3. The card always shows "Bron: CBS StatLine, peiljaar [year]" so users know the data age
   4. The CBS OData client uses the v4 endpoint (datasets.cbs.nl) with gemeente code-prefixed wijk lookup, eliminating the ambiguous name matching bug
   5. CBS and Rechtspraak clients have registered APIRateLimiter singletons and explicit HTTP timeouts — no bare asyncio.Semaphore
