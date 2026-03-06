@@ -1,197 +1,196 @@
 # Project Research Summary
 
-**Project:** Propdex v9.0 Professional Marketplace
-**Domain:** Dutch PropTech — Wkb kwaliteitsborger lead generation on existing property intelligence platform
-**Researched:** 2026-03-01
-**Confidence:** HIGH (stack, architecture, Wkb rules, asbest rules) / MEDIUM (Bodemloket API access method, marketplace patterns)
+**Project:** Propdex v11.0 — Open Data Intelligence
+**Domain:** Dutch PropTech — CBS Neighborhood Stats, Rechtspraak Jurisprudence, AI Legal Analysis
+**Researched:** 2026-03-06
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Propdex v9.0 extends a mature Dutch property intelligence platform (v1.0–v8.x, 8 shipped versions) into a B2B lead generation marketplace for Wkb kwaliteitsborgers. The pivot is well-timed: the Wet kwaliteitsborging voor het bouwen became mandatory for gevolgklasse 1 (GK1) new construction in January 2024, and renovation projects were explicitly excluded in December 2024, creating a focused, validated market need. The platform already has all the data infrastructure required (BAG, bestemmingsplan, RCE monuments, WeasyPrint PDF, fastapi-mail, TanStack Table) — v9.0 adds six new features with zero new npm or pip dependencies, which is an unusually low-risk milestone from a dependency perspective.
+Propdex v11.0 adds three open data intelligence tracks to the existing production platform: CBS neighborhood metrics display, Rechtspraak court ruling search + document viewer, and AI-powered legal precedent analysis via Claude. Critically, substantial scaffolding for all three tracks is already in the codebase — CBS data is already fetched and stored during scans, Rechtspraak search and document endpoints are already live, and the JurisprudenceSection frontend component is already rendered in WijkDetailView. The fastest-to-ship track (CBS display) requires zero backend changes — only a `CbsNeighborhoodCard` frontend component wiring up data already present in the API response.
 
-The core differentiator over generic marketplaces (Werkspot, Bark.com) is the pre-assembled risicobeoordeling dossier: Propdex auto-generates the kwaliteitsborger intake document from government API data, saving 1–3 hours per project and making leads significantly higher quality than self-reported competitor leads. This context-first approach — developer first sees property intelligence, then sees a CTA — is the product's competitive moat and must be protected in every phase ordering decision. The two new data sources (Bodemloket soil contamination, Wkb gevolgklasse classifier) feed directly into the dossier's required content per official IPLO.nl and Bbl requirements.
+The recommended implementation order is: (1) CBS display first as a pure frontend win, (2) AI legal analysis backend extension using the existing ClaudeClient pattern, (3) AI legal analysis frontend, followed by (4) CBS OData v4 migration to future-proof the data source. The most valuable differentiator in the milestone is the AI juridisch klimaat summary — no NL PropTech competitor combines CBS context with Rechtspraak legal precedent analysis in a single developer workflow. This is a first-mover position worth protecting.
 
-The primary technical risk is the Bodemloket API access method: the ArcGIS REST endpoint documented in community sources returned 404 during direct architecture testing; the WMS GetCapabilities did confirm three layers. The integration must start with a spike to establish the actual viable query method before committing to scope. The primary regulatory risks are (1) presenting gevolgklasse classification as authoritative rather than indicative — monuments and verbouwingen are explicitly excluded from Wkb scope, (2) treating Bodemloket empty results as soil clearance when Bodemloket itself disclaims data completeness, and (3) routing developer contact data to professionals without explicit AVG consent logging. All three require disclaimer and consent design before UI implementation begins.
+The primary risks are technical, not domain-related. CBS OData has a v3-to-v4 migration trap where the existing client uses the deprecated v3 URL and entity structure (`TypedDataSet` instead of `Observations`). Rechtspraak XML is notoriously inconsistent with missing document bodies, invalid RDF, and a search API that is far less capable than the web interface suggests. AI legal analysis carries the hallucination risk if Claude is asked to generate citations rather than summarize provided text. All three risks have clear mitigations already documented in PITFALLS.md and must be addressed phase-by-phase.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v9.0 stack is entirely the existing stack. All six new features — Bodemloket API client, Wkb gevolgklasse classifier, asbest risk indicator, risicobeoordeling dossier PDF, lead capture flow, and professional directory — are implemented using already-installed packages. No changes to `pyproject.toml` or `package.json`.
+No new dependencies are needed for any v11.0 feature. The full existing stack handles all three tracks: `httpx` for CBS OData v4 queries (manual params — no CBS library), `lxml.etree` for secure XML parsing (already installed, needs migration from stdlib `xml.etree.ElementTree` in `rechtspraak.py`), and `anthropic` SDK's native `messages.parse()` with Pydantic for structured AI output (GA as of early 2026, no beta header needed). One infrastructure fix is required: `app/government_apis/exceptions.py` does not exist but is imported in multiple files — it needs to be created as a re-export from `base.py`.
 
-**Core technologies (all existing):**
-- httpx + pyproj: Bodemloket WMS client — existing government API pattern, WGS84 to RD New coordinate conversion already in use for RCE monuments
-- WeasyPrint + Jinja2: Dossier PDF — existing `asyncio.to_thread()` pipeline from `reports/pdf_export.py`, new Jinja2 template file only
-- fastapi-mail: Lead notification emails — existing pattern from `auth/email.py`
-- SQLAlchemy ARRAY(Integer) + ARRAY(String): Professional directory gevolgklassen/regio filtering — already supported via PostGIS Docker image
-- TanStack Table: Professional directory frontend — already installed in `package.json`
-- react-hook-form + zod + sonner: Lead capture form and toast feedback — all already installed
-
-Two new database migrations are required (professionals table, lead_requests table). One new config field is needed (BODEMLOKET_BASE_URL). All existing patterns must be preserved: direct `db.add()/db.flush()/db.commit()` (never `async with db.begin()`), `datetime.utcnow()` (not timezone-aware), `Mapped[type]` + `mapped_column()` SQLAlchemy 2.x syntax throughout.
+**Core technologies:**
+- `httpx.AsyncClient`: CBS OData v4 queries — manual params dict, no library abstraction needed
+- `lxml.etree` (v5.3.0+): Rechtspraak XML parsing — must replace stdlib to get XXE protection and reliable namespace handling
+- `anthropic` SDK `messages.parse()`: Structured AI output — native GA, no `instructor` wrapper needed
+- `aiolimiter` / `APIRateLimiter`: Rate limiting — CBS and Rechtspraak clients must use the project singleton pattern, not bare `asyncio.Semaphore`
+- `arq` + Redis: Background jobs — AI analysis (10-30s) must not block HTTP responses if latency requires escalation
 
 ### Expected Features
 
-**Must have (table stakes) — v9.0 launch:**
-- Gevolgklasse determination (GK1) prominently displayed in property report — entry point for every kwaliteitsborger workflow
-- Asbest risk indicator (bouwjaar < 1994 flag) — zero API cost, derived from BAG data already present
-- Bodemloket soil contamination indicator — required for legally complete risicobeoordeling under Bbl
-- "Vraag kwaliteitsborger aan" CTA in report — contextual, appears only when `wkb_applicable === true`
-- Lead capture form with auto-fill from report data — address, bouwjaar, GK, oppervlakte pre-populated
-- Risicobeoordeling dossier PDF export — core value proposition for kwaliteitsborgers (saves 1–3 hours of intake work)
-- Professional directory (minimum 3–5 manually seeded TloKB-verified listings) — supply side required before CTA goes live
-- Email notification to kwaliteitsborger (manual routing in MVP) + confirmation to developer
+**Must have (table stakes — data already collected but not shown):**
+- CBS metrics visible in WijkDetailView — data is in `neighborhood_metrics` JSONB, not rendering it is a broken experience
+- Average WOZ value per wijk — already fetched, needs `CbsNeighborhoodCard` component
+- Urbanization class (stedelijkheidsklasse) — already fetched, needs display with 1-5 scale badge
+- CBS data freshness indicator (peiljaar) — users need to know if stats are 2023 or 2025
 
-**Should have (differentiators) — v9.x post-validation:**
-- Lead quality scoring (dossier completeness %, GK match to professional's werkgebied, start date specificity)
-- TloKB register verification badge on professional listings
-- Dynamic professional directory populated from TloKB public register (replaces manual seed)
-- Lead status tracking by professional (Nieuw/In behandeling/Offerte verstuurd)
-- Pre-filled structured risk matrix in lead notification email (asbest Y/N, bodem Y/N, GK, oppervlakte)
+**Must have (Rechtspraak — backend + frontend already live, polish needed):**
+- Omgevingsrecht / bestuursrecht filter in search UI — Rechtspraak `subject` parameter already supported
+- Ruling outcome classification badge — use Claude on `inhoudsindicatie` (100-300 chars, low cost)
 
-**Defer to v10.0+:**
-- Payment infrastructure (per-lead credits, subscription billing, escrow, VAT invoicing)
-- Additional professional verticals: constructeurs, asbestbedrijven, bodemonderzoekers
-- B2B API for borgingspartijen (Woningborg, Kiwa, SWK)
-- Automated conflict-of-interest checking between professional and project parties
+**Should have (competitive differentiators):**
+- AI juridisch klimaat summary — synthesizes multiple rulings into "X% succeskans, top risk factors" — first-mover in NL PropTech
+- Vergunnings-succeskans score (0-100%) — per-ruling outcome classification feeds statistical aggregation
+- CBS market context card visual (WOZ, huurwoningen%, bevolkingsdichtheid, inkomen)
+
+**Defer (v2+):**
+- CBS multi-year WOZ trend analysis — requires fetching and joining multiple annual datasets
+- Weekly AI ruling digest notifications — complex notification infrastructure, alert fatigue risk
+- Cross-gemeente legal risk benchmarking
+- CBS scoring contribution to parcel opportunity score — validate CBS improves lead quality first
 
 **Anti-features to explicitly avoid:**
-- Open bidding/price comparison — commoditizes a professional trust relationship that Wkb requires to be ongoing
-- Public star ratings — legally contentious in a small professional market with independence requirements
-- GK2/GK3 lead generation — Wkb does not yet require kwaliteitsborging for GK2/GK3
-- Multi-vertical marketplace launch — scope explosion; prove kwaliteitsborger model first
+- Automated permit success predictions with confidence scores — frame as "historical precedent context" not legal prediction
+- Full-text search within ruling documents — the public Rechtspraak API does not support this
+- CBS data at parcel level — CBS statistics are wijk/buurt level only; parcel WOZ comes from Waardeloket (already built)
 
 ### Architecture Approach
 
-v9.0 extends a stable three-tier architecture (React frontend, FastAPI backend, PostgreSQL/PostGIS) without restructuring it. The central data contract is `PropertyReportResponse` — all new data sources (bodem_data, wkb_classification, asbest_risk) add optional Pydantic fields to this schema, flowing through the existing aggregator, DB save, and PDF export pipeline. Two entirely new subsystems are added alongside the extended report pipeline: the dossier generator (POST/GET dossier endpoints, Jinja2 template, WeasyPrint) and the marketplace layer (professionals table, lead_requests table, email routing). The professional directory uses NULL organization_id (platform-level resource) rather than the tenant-scoped pattern used by all other models — this is a deliberate and critical exception requiring its own RLS policy and cross-tenant integration tests.
+The integration is additive to a well-structured ~46,220 LOC system. All data flows are mostly wired — the missing pieces are a frontend rendering component (CBS display), a Claude method extension plus endpoint (AI analysis), and an OData v4 client rewrite (CBS migration). The existing patterns to follow: government API client singletons, fire-and-forget non-fatal enrichment for supplementary data sources, JSONB columns for evolving API payloads, Pydantic structured outputs from Claude, and TanStack Query stale times calibrated to data volatility.
 
 **Major components:**
-1. Bodemloket WMS client (`government_apis/bodemloket_wms.py`) — queries WBB_locaties layer via GetFeatureInfo with 50m bbox buffer, 30-day JSONB cache, 2 concurrent / 100 per hour rate limit
-2. Wkb classifier service (`services/wkb_classifier.py`) — pure Python rule engine, called from property_aggregator, returns WkbClassification with gevolgklasse + wkb_applicable + confidence + classification_basis list
-3. Asbest indicator service (`services/asbest_indicator.py`) — pure Python, bouwjaar threshold (< 1994), high/medium/none/unknown risk levels with NEN 2991 reference
-4. Dossier generator (`dossier/router.py`, `dossier/generator.py`, `dossier/templates/wkb_kwaliteitsborger.html`) — aggregates report sections, asyncio.to_thread WeasyPrint, POST generate + GET download pattern, GeneratedDossier model
-5. Lead capture (`leads/router.py`, `models/lead_request.py`) — org-scoped leads with consent logging fields, email notification via fastapi-mail, direct-commit pattern
-6. Professional directory (`professionals/router.py`, `models/professional.py`) — platform-scoped (NULL org_id), ARRAY GIN indexes for gevolgklassen and regio_gemeenten filtering, admin-managed in MVP
+1. `CbsNeighborhoodCard` (new frontend component) — renders `neighborhood_metrics` JSONB already present in API response; null-guarded for partial CBS coverage
+2. `ClaudeClient.analyze_jurisprudence()` (extend existing) — batch ECLI texts + context → `JurisprudenceAnalysis` Pydantic structured output
+3. `POST /api/jurisprudence/analyze` (extend existing router) — max 3-5 ECLIs, synchronous initially with ARQ escalation path if latency demands
+4. AI results panel in `JurisprudenceSection` (extend existing component) — "Analyseer juridisch klimaat" button + risk score + succeskans bar + prose + disclaimer
+5. `CBSODataClient` rewrite (existing file) — migrate from OData v3 (`opendata.cbs.nl`) to v4 (`datasets.cbs.nl`), switch to `Observations` entity, gemeente code-prefixed wijk lookup
 
 ### Critical Pitfalls
 
-1. **Wkb classification presented as authoritative** — The schema must include `wkb_applicable: bool` and `uncertainty_flags` from the start. Label as "Indicatief" in all UI copy. Monument exclusion (`is_rijksmonument`) and verbouw exclusion (December 2024 ministerial decision) must be built into the classifier before any CTA is built. The CTA component must check `wkb_applicable`, not just `gevolgklasse`. Gemeentelijke monumenten are not visible to RCE data — flag this uncertainty explicitly.
+1. **Wrong CBS API URL (v3 vs v4)** — The existing `cbs_odata.py` uses `opendata.cbs.nl/ODataApi/OData` (deprecated v3). Must switch to `datasets.cbs.nl/odata/v1/CBS/` and query `Observations` + `WijkenEnBuurtenCodes` — not `TypedDataSet` which does not exist in v4.
 
-2. **Bodemloket empty result treated as soil clearance** — Bodemloket's own FAQ states its data is incomplete. Display must always read "Geen geregistreerde verontreiniging gevonden" not "Geen bodemverontreiniging." The ArcGIS REST endpoint returned 404 during testing; WMS is the verified fallback. A spike to confirm the viable access method is mandatory before integration work begins.
+2. **Ambiguous CBS wijk name lookup** — "Centrum" matches 80+ records nationally. Must filter by gemeente code prefix (`startswith(Identifier, 'WK{gemeente_code}')`) before matching by name. AreaScan already has `gemeente_code` — pass it directly.
 
-3. **AVG consent not logged for lead routing** — Sharing developer contact details with a professional requires explicit, specific, timestamped consent under Dutch AVG (GDPR). The LeadRequest model must store `consent_timestamp`, `consent_text_hash`, and `consent_given` before any lead data is transmitted. A verwerkersovereenkomst template for professionals must be drafted before the directory goes live.
+3. **Non-existent module imports** — `app.government_apis.exceptions` and `app.api.deps` do not exist in this codebase. Exception classes live in `app.government_apis.base`. All new imports must be verified against actual file paths before writing.
 
-4. **Professional directory multi-tenant isolation break** — Professional profiles are platform-level data visible to all tenants. Using `organization_id NOT NULL` on the Professional model would make all listings invisible across tenants. Use `organization_id = NULL` with a separate RLS policy. Cross-tenant read integration test is required before the directory API ships.
+4. **AI hallucinated citations** — Never ask Claude to find or generate case references. Only feed Claude actual ECLI texts retrieved from Rechtspraak and ask it to summarize. Store source ECLIs alongside every AI result for audit trail.
 
-5. **Cold start: lead CTA enabled before supply is recruited** — The CTA must be gated by gemeente-based availability check. Supply-side recruitment (2–3 verified kwaliteitsborgers with TloKB confirmation) must happen before the CTA is enabled in production. Seeding the directory is a launch blocker, not an optional post-launch task.
+5. **Rechtspraak XML inconsistency** — Many rulings have no `<uitspraak>` body, invalid RDF, and malformed namespaces. All XML parsing must use `lxml.etree` with XXE protection (`resolve_entities=False, no_network=True`), guard every `elem.text` with `or ""`, and raise `GovernmentAPIError` — never return error dicts that produce HTTP 200 responses with embedded error payloads.
+
+6. **Missing rate limiters** — CBS and Rechtspraak clients must register `APIRateLimiter` singletons in `rate_limiter.py`. CBS also needs explicit `timeout=10.0` on all requests — hung CBS calls block ARQ worker slots during area scans.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure (5 phases):
+Based on the research, three phases are recommended. The ordering follows the dependency graph: CBS display is data-only (no backend work), AI analysis requires Rechtspraak search (already live), and CBS v4 migration is independent but needed before relying on CBS data quality in production.
 
-### Phase 1: Wkb Classification Engine + Asbest Risk Indicator
+### Phase 1: CBS Neighborhood Metrics Display
 
-**Rationale:** The gevolgklasse determination is the entry point for the entire user journey. The CTA, the dossier, and the lead form all depend on a trustworthy GK classification being present in the report. Asbest indicator ships in the same phase — it is zero-cost (pure computation from existing bouwjaar) and feeds the same dossier. Both pitfalls around Wkb misclassification (monument exclusion, verbouw exclusion) must be addressed here before anything downstream is built.
-**Delivers:** `wkb_classification` field in PropertyReportResponse (gevolgklasse + wkb_applicable + uncertainty_flags + classification_basis); `asbest_risk` field (risk_level + bouwjaar + NEN 2991 reference); extended WkbSection and new AsbstSection in ReportDetailPage; `wkb_classifier.py` and `asbest_indicator.py` service files.
-**Features from FEATURES.md:** GK determination (P1), asbest risk indicator (P1)
-**Avoids:** Pitfalls 1, 3, 6, 12 (classification as authoritative; asbest as binary result; monument CTA; verbouw exclusion missing)
-**Research flag:** Skip research-phase. Pure Python rule engines with well-documented rules from IPLO.nl and TloKB (HIGH confidence). Follow existing `wkb_precheck.py` as structural template.
+**Rationale:** Fastest user-visible win in the milestone. Zero backend changes. CBS data is already fetched during scans and stored in `neighborhood_metrics` JSONB — not displaying it is a broken product experience. Ships in a single frontend-only plan.
 
-### Phase 2: Bodemloket Integration
+**Delivers:** `CbsNeighborhoodMetrics` TypeScript interface narrowing `Record<string, any>`, `CbsNeighborhoodCard.tsx` component in WijkDetailView showing WOZ avg, stedelijkheidsklasse badge (1-5), huur/koop verhouding, bouwjaar distributie, peiljaar. Null guard for wijken where CBS returned no data.
 
-**Rationale:** Bodemloket is required for a legally complete risicobeoordeling under Bbl, but its API access method is unconfirmed (MEDIUM confidence). Phase 2 starts with a mandatory spike to verify whether WMS GetFeatureInfo or ArcGIS REST is the viable query path. Only after the spike resolves does integration proceed. Keeping Bodemloket as a separate phase prevents the spike uncertainty from blocking Phase 1 delivery.
-**Delivers:** `bodem_data` field in PropertyReportResponse; BodemSection in ReportDetailPage with "Geen geregistreerde verontreiniging" framing plus coverage disclaimer; `bodemloket_wms.py` API client; 30-day JSONB cache; BodemData schema.
-**Features from FEATURES.md:** Bodemloket soil contamination indicator (P1)
-**Avoids:** Pitfalls 2 and 11 (absence treated as clearance; no REST JSON API assumed)
-**Research flag:** Mandatory spike at phase start. Verify actual viable Bodemloket query method (WMS GetFeatureInfo vs ArcGIS REST) before scoping integration. Document live response format for WBB_locaties layer with a known contaminated parcel before writing the parser.
+**Addresses features:** CBS metrics visible in scan results (P1), WOZ display, urbanization class, peiljaar freshness indicator
 
-### Phase 3: Risicobeoordeling Dossier PDF Generator
+**Avoids pitfalls:** Must type the `neighborhood_metrics` JSONB to the specific interface — cannot use `Record<string, any>` in the component. Must handle null gracefully — CBS coverage is ~80% for wijken, lower for buurten. Must show "Bron: CBS StatLine, peiljaar [year]" always.
 
-**Rationale:** The dossier aggregates outputs from Phases 1 and 2 and is the core differentiator. It is the prerequisite for the lead capture CTA — without the dossier, the CTA is just another contact form with no competitive moat. Building Phase 3 after Phases 1 and 2 ensures real data flows through the template. The WeasyPrint pattern is already established; this phase is primarily a template authoring task with careful copy and disclaimer design.
-**Delivers:** POST /api/dossier/{report_id}/generate + GET /api/dossier/{dossier_id}/download; `wkb_kwaliteitsborger.html` Jinja2 template with mandatory "Propdex Datasamenvatting" title and disclaimer on every page; GeneratedDossier model; asyncio.to_thread generation flow; "Genereer dossier" CTA in ReportDetailPage.
-**Features from FEATURES.md:** Risicobeoordeling dossier PDF (P1)
-**Uses from STACK.md:** WeasyPrint + Jinja2 (existing), asyncio.to_thread pattern (established in pdf_export.py)
-**Avoids:** Pitfall 9 (PDF presented as formal Wkb compliance document — disclaimer and naming are hardcoded, non-configurable from first iteration)
-**Research flag:** Skip research-phase. Existing WeasyPrint pipeline is proven in production. Follow `reports/pdf_export.py` and `reports/templates/report.html` as structural templates.
+**Research flag:** No research-phase needed. Patterns are well-established (existing card components, TanStack Query already serving the data). Prerequisite: run `alembic upgrade head` and verify `neighborhood_metrics` column exists and contains data.
 
-### Phase 4: Professional Directory + Supply Recruitment
+---
 
-**Rationale:** The directory must be live and seeded with verified professionals before the lead CTA is enabled. This phase has the most nuanced technical requirement (NULL org_id RLS pattern, cross-tenant visibility tests) and a non-technical prerequisite (manual recruitment of 2–3 kwaliteitsborgers with TloKB link verification). Both must be complete and tested before Phase 5 ships. The database schema decision about NULL org_id must be made and tested before any API endpoint is built.
-**Delivers:** Professional model (NULL org_id, GIN indexes on gevolgklassen and regio_gemeenten arrays, TimestampMixin); GET /api/professionals with gemeente and gevolgklasse filters + pagination; ProfessionalDirectory frontend component (TanStack Table); TloKB link on each professional listing card; disclaimer copy about certification verification responsibility; admin CRUD for managing listings; seeded with 3–5 verified professionals with TloKB confirmation.
-**Features from FEATURES.md:** Professional directory listing (P1), TloKB verification link (P2 partial)
-**Avoids:** Pitfalls 5, 8, 10 (unverified professionals receiving leads; cold start CTA with empty directory; multi-tenant isolation break on Professional model)
-**Research flag:** Skip research-phase for technical implementation. Standard PostgreSQL ARRAY + CRUD. Operational dependency (supply recruitment and verwerkersovereenkomst draft) must be tracked as a parallel non-code task and must complete before Phase 5 launches.
+### Phase 2: AI Juridisch Klimaat Analysis
 
-### Phase 5: Lead Capture Flow + Email Routing
+**Rationale:** The core milestone differentiator. Rechtspraak search is already live. This phase extends it with Claude-powered synthesis — per-ruling outcome classification badges (low cost, high efficiency using `inhoudsindicatie`) and a full juridisch klimaat summary with succeskans score.
 
-**Rationale:** Lead capture is the final step in the user journey and depends on the dossier (Phase 3), the directory (Phase 4), and the GK determination (Phase 1). It carries the highest regulatory risk (AVG consent) and must be designed carefully before any frontend work begins. The consent screen design and consent logging model fields must be specified before the CTA button is built — retrofitting consent is structurally harder than designing it in from the start.
-**Delivers:** LeadRequest model with consent_timestamp, consent_text_hash, consent_given, and org-scoped isolation; POST /api/leads with AVG consent validation; admin GET /api/leads; lead notification email to admin (manual routing in MVP); developer confirmation email; "Vraag kwaliteitsborger aan" CTA in WkbSection (gated by `wkb_applicable === true` and gemeente availability); LeadCaptureForm with auto-fill (address, bouwjaar, GK, oppervlakte from report data); CTA not rendered when no professional serves the parcel's gemeente.
-**Features from FEATURES.md:** "Vraag kwaliteitsborger aan" CTA (P1), lead capture form with auto-fill (P1), lead notification to professional (P1), lead confirmation to developer (P1)
-**Avoids:** Pitfalls 4, 7, 8 (AVG consent violation in lead routing; direct-commit pattern broken by new B2B routers; cold start CTA before supply is live)
-**Research flag:** Skip research-phase. AVG consent flow is well-documented (Dutch AP guidelines). Direct-commit pattern is project-established in MEMORY.md. Verwerkersovereenkomst is a legal/operational deliverable, not a coding research question — must be complete before launch.
+**Delivers:** `JurisprudenceAnalysis` Pydantic schema (`risk_score`, `vergunnings_succeskans`, `risk_summary`, `precedent_insights`, `disclaimer`), `JURISPRUDENCE_ANALYSIS_PROMPT` in `prompts.py`, `ClaudeClient.analyze_jurisprudence()` method, `POST /api/jurisprudence/analyze` endpoint (max 5 ECLIs), `useJurisprudenceAnalysis` TanStack hook, "Analyseer juridisch klimaat" button + AiRiskPanel in `JurisprudenceSection`. Also creates the missing `app/government_apis/exceptions.py` re-export module (startup blocker fix).
+
+**Addresses features:** AI juridisch klimaat summary (P1), ruling outcome classification badge (P1), vergunnings-succeskans score (P2)
+
+**Avoids pitfalls:** Prompt must only ask Claude to summarize provided texts, never generate citations. Store source ECLIs and `analyzed_at` alongside results. Truncate document text to ~50K chars. Start synchronous (max 3-5 ECLIs) — escalate to ARQ `parsing_job` pattern only if latency proves problematic.
+
+**Research flag:** Prompt engineering for Dutch legal analysis may need iteration. Run a test against 5 real Raad van State `bestuursrecht` rulings before treating the `JurisprudenceAnalysis` schema as final. The `vergunnings_succeskans` (0-100) field needs clear prompt calibration so Claude produces defensible estimates, not arbitrary numbers.
+
+---
+
+### Phase 3: CBS OData v4 Migration + Infrastructure Hardening
+
+**Rationale:** The existing CBS client uses the deprecated OData v3 URL and `TypedDataSet` entity. CBS is actively migrating away from v3. This phase migrates to `datasets.cbs.nl/odata/v1/CBS/`, updates to `Observations` + `WijkenEnBuurtenCodes`, adds `CBS_DATASET_ID` config setting pointing to the 2025 dataset (`86165NED`), and hardens both CBS and Rechtspraak clients with proper `APIRateLimiter` singletons and explicit HTTP timeouts.
+
+**Delivers:** CBS client rewritten for OData v4, dataset updated to `86165NED` (2025), gemeente code-prefixed wijk lookup (fixes ambiguous name matching), `cbs_odata_limiter` and `rechtspraak_limiter` in `rate_limiter.py`, `xml.etree.ElementTree` replaced by `lxml.etree` with XXE protection in `rechtspraak.py`, ECLI format validation regex in jurisprudence endpoint, cache TTL constants added to config.
+
+**Addresses pitfalls:** CBS v3/v4 cluster (Pitfalls 1-2, 5-7), infrastructure gap cluster (Pitfalls 3-4, 9, 14-15), Rechtspraak XML security (Pitfall 8, 11)
+
+**Research flag:** Before implementing, verify measure codes for dataset `86165NED` at `https://datasets.cbs.nl/odata/v1/CBS/86165NED/MeasureCodes` — CBS occasionally renames measures between annual releases. The 12 codes documented in FEATURES.md were verified against `85984NED` (2024), not `86165NED` (2025).
+
+---
 
 ### Phase Ordering Rationale
 
-- Phases 1 and 2 must precede Phase 3 because the dossier template aggregates their output fields. Bodemloket can render "Niet beschikbaar" in the dossier if Phase 2 encounters delays, but GK classification cannot be absent from the dossier.
-- Phase 2 is isolated from Phase 1 specifically because the Bodemloket spike carries uncertain scope — it must not block Phase 1 delivery.
-- Phase 4 must precede Phase 5 because lead routing requires at least one verified professional in the directory and the consent model requires the professional_id foreign key.
-- Phase 5 is last because it is the public-facing revenue-generating feature and requires all preceding infrastructure to be complete, tested, and have supply seeded.
-- Supply recruitment (Phase 4 operational track) and verwerkersovereenkomst drafting must run in parallel to coding and complete before Phase 5 CTA is enabled in production.
+- Phase 1 first: completely independent of backend changes, delivers immediate visible value, zero risk surface
+- Phase 2 before Phase 3: AI analysis builds on Rechtspraak search (already live). CBS display in Phase 1 can serve data from the v3 client — Phase 3 upgrades the underlying data source without blocking Phase 1 or Phase 2
+- Phase 3 last: de-risks the CBS client rewrite (touching the area scan job) by letting Phase 1 validate that CBS data is being fetched and displayed correctly first, then Phase 3 migrates the fetch mechanism
+- `exceptions.py` re-export module must be created at the start of Phase 2 since `jurisprudence.py` already imports from it and will cause `ImportError` on startup otherwise
 
 ### Research Flags
 
-Phases needing deeper research or validation:
-- **Phase 2 (Bodemloket):** Mandatory spike before any integration code is written. Verify WMS GetFeatureInfo vs ArcGIS REST for structured JSON data. Document live response format for WBB_locaties with a known contaminated parcel (e.g., a known WBB dossier location). If WMS-only returns HTML text/xml rather than structured JSON, the display capability changes from "status code + dossier ID" to "contamination indicator only" — this changes the frontend component scope.
+**Needs validation before/during implementation:**
+- Phase 2 (AI analysis): Dutch legal prompt engineering needs live testing with real Raad van State rulings before finalizing the `JurisprudenceAnalysis` schema. The `vergunnings_succeskans` integer field needs calibration guidance in the prompt.
+- Phase 3 (CBS v4 migration): OData v4 measure codes for dataset `86165NED` must be verified live at `https://datasets.cbs.nl/odata/v1/CBS/86165NED/MeasureCodes` before writing the client rewrite.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Wkb/Asbest):** Official IPLO.nl and TloKB rules are clear, authoritative, and HIGH confidence. Follow existing `wkb_precheck.py` pattern.
-- **Phase 3 (Dossier PDF):** WeasyPrint + Jinja2 pattern is proven in production. Template authoring task.
-- **Phase 4 (Directory):** Standard PostgreSQL ARRAY + CRUD. The NULL org_id pattern is a design decision, not research.
-- **Phase 5 (Lead Capture):** Established patterns throughout. AVG consent requirements are documented by Dutch AP.
+**Standard patterns — skip research-phase:**
+- Phase 1 (CBS display): Pure frontend rendering task. Existing card component patterns, TypeScript interfaces, and TanStack Query data flow are completely established.
+- Phase 3 infrastructure hardening (rate limiters, ECLI validation, lxml migration): All follow established patterns documented in `rate_limiter.py`, `sru_bekendmakingen.py`, and `base.py`.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies confirmed by direct audit of pyproject.toml and package.json. All six features use existing packages. Version compatibility matrix verified. |
-| Features | HIGH | Wkb rules, asbest threshold, and dossier required content sourced from IPLO.nl, TloKB, Nederlandse Arbeidsinspectie (all official Dutch government). Marketplace patterns from Werkspot/Bark comparables. |
-| Architecture | HIGH | Based on direct codebase analysis of existing v7.2 pipeline. Integration points, component boundaries, and NULL org_id decision are explicit. One MEDIUM gap: Bodemloket API response format. |
-| Pitfalls | HIGH | Critical pitfalls sourced from official regulatory sources (VNG December 2024 decision, Bodemloket FAQ, Stichting IBK monument exclusion, Dutch AP AVG guidance). MEMORY.md constraints verified against codebase. |
+| Stack | HIGH | Direct codebase inspection — no new packages needed; all integration patterns verified against live codebase and official SDK docs |
+| Features | HIGH | CBS API verified live, Rechtspraak corpus verified live (3.57M rulings as of 2026-03-06), existing codebase components confirmed by direct file reads |
+| Architecture | HIGH | All component boundaries confirmed by direct file reads, not inferred. Data flow traced from ARQ job through DB through API response to frontend type definitions |
+| Pitfalls | HIGH | Most pitfalls sourced from actual failed first attempt in the codebase + official CBS v3-to-v4 migration guide + confirmed Rechtspraak XML quirks from wetsuite documentation |
 
-**Overall confidence:** HIGH, with one MEDIUM-confidence gap (Bodemloket API access method and response format).
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Bodemloket REST API availability:** The ArcGIS REST endpoint returned 404 during architecture research testing. WMS GetCapabilities confirmed three layers. Phase 2 must begin with a live spike to determine whether structured JSON data is available via ArcGIS REST or whether the integration is WMS GetFeatureInfo only. If WMS GetFeatureInfo returns text/xml, field extraction via lxml (already installed) is the path; if it returns only a raster tile, the integration becomes a map overlay only with a link to Bodemloket.nl for detailed data.
+- **CBS 2025 dataset measure code verification:** The 12 measure codes in FEATURES.md were verified against `85984NED` (2024). Phase 3 targets `86165NED` (2025). Verify codes before the client rewrite — CBS has a history of renaming measures between annual releases.
 
-- **Bodemloket municipality coverage data:** Bodemloket FAQ explicitly states data is incomplete and not all municipalities have delivered their data. No published list of contributing municipalities exists. The coverage disclaimer must be prominent in all display and PDF output, but a per-gemeente coverage indicator is not achievable without additional data sourcing.
+- **AI analysis latency under real conditions:** Architecture research recommends starting synchronous (max 3-5 ECLIs). Actual latency for multi-ECLI analysis with real Raad van State documents (which can be 80,000+ tokens) is unknown until tested. Have the ARQ escalation path ready if needed.
 
-- **Kwaliteitsborger supply recruitment:** Seeding the professional directory with 2–3 TloKB-verified professionals before Phase 5 launches is an operational prerequisite that is external to the codebase. This must be tracked as a launch blocker alongside Phase 4 delivery. TloKB's public register at `register.tlokb.nl` provides the authoritative source for verification.
+- **Alembic migration status:** `1a67b08d7c1b_add_neighborhood_metrics_to_area_scan.py` exists but may not be applied. Phase 1 prerequisite: run `alembic upgrade head` and confirm `neighborhood_metrics` column exists and contains populated data for existing scans.
 
-- **Verwerkersovereenkomst template:** A data processing agreement for professionals receiving lead data is a legal/compliance prerequisite for Phase 5. Must be drafted and reviewed before lead routing is enabled in production. Not a coding task, but a Phase 5 launch gate.
+- **`exceptions.py` re-export is a startup blocker:** `app/government_apis/exceptions.py` does not exist but is imported by `rechtspraak.py` and `jurisprudence.py`. Will cause `ImportError` on startup. Must be created at the start of Phase 2 before any endpoint testing.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [IPLO.nl — Bouwwerken in gevolgklasse](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — GK1 classification criteria, monument exclusion
-- [TloKB — Gevolgklassen overview](https://www.tlokb.nl/wet-kwaliteitsborging/gevolgklassen) — Three-class risk rationale, TloKB certification requirements
-- [IPLO.nl — Kwaliteitsborger dossier requirements](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/kwaliteitsborger/) — Borgingsplan and dossier required content per Bbl
-- [VNG — Verbouwingen voorlopig niet onder de Wkb](https://vng.nl/nieuws/verbouwingen-voorlopig-niet-onder-de-wkb) — December 2024 ministerial decision excluding renovations from Wkb scope
-- [Stichting IBK — Vallen monumenten ook onder de Wkb?](https://www.stichtingibk.nl/2024/01/24/vallen-monumenten-ook-onder-de-wkb/) — Monument exclusion from Wkb quality assurance requirement
-- [Nederlandse Arbeidsinspectie — Asbestinventarisatie](https://www.nlarbeidsinspectie.nl/onderwerpen/asbest/asbestinventarisatie) — Pre-1994 asbestos mandatory inventory rule (NEN 2991)
-- [Bodemloket — FAQ](https://bodemloket.nl/faq-page) — Explicit data completeness limitations disclaimer
-- [Bodemloket WMS GetCapabilities](https://gis.gdngeoservices.nl/standalone/services/blk_gdn/lks_blk_rd_v1/MapServer/WMSServer) — Three layers confirmed live: WBB_locaties, Bevoegd_gezag, Beschikbaarheid_gegevens; EPSG:28992 supported
-- MEMORY.md — Direct-commit pattern, datetime constraints, PyJWT/pwdlib patterns, multi-tenant isolation
-- Codebase audit: `backend/app/reports/pdf_export.py`, `backend/app/auth/email.py`, `backend/app/services/wkb_precheck.py`, `backend/pyproject.toml`, `frontend/package.json` — existing patterns confirmed, zero new dependencies verified
+- `backend/pyproject.toml` — verified full dependency set; no new packages needed
+- `backend/app/government_apis/cbs_odata.py` — existing CBS OData client scaffold, v3 URL and `TypedDataSet` usage confirmed
+- `backend/app/government_apis/rechtspraak.py` — stdlib XML usage, inline semaphore, confirmed missing `exceptions` module import
+- `backend/app/jobs/area_scan.py` (lines 340-394) — CBS fetch integration in Phase 2 of scan job confirmed
+- `backend/app/models/area_scan.py` — `neighborhood_metrics` JSONB column confirmed
+- `backend/app/scans/schemas.py:227` — `neighborhood_metrics: dict | None` in ScanResultsResponse confirmed
+- `backend/app/ai/claude_client.py` + `prompts.py` + `schemas.py` — established AI integration pattern verified
+- `backend/app/api/endpoints/jurisprudence.py` — search + doc endpoints confirmed live
+- `backend/app/main.py` — jurisprudence router registration at `/api/jurisprudence` confirmed
+- `frontend/src/components/projects/JurisprudenceSection.tsx` — full component confirmed live
+- `frontend/src/components/projects/WijkDetailView.tsx` — JurisprudenceSection mount confirmed
+- `frontend/src/hooks/useJurisprudence.ts` — `useJurisprudenceSearch` + `useJurisprudenceDoc` hooks confirmed
+- `frontend/src/lib/types/scan.ts:169` — `neighborhood_metrics?: Record<string, any> | null` confirmed
+- `https://opendata.cbs.nl/ODataApi/OData/85618NED` — live API verification, v3 entity structure (`TypedDataSet`, `WijkenEnBuurten`) confirmed
+- `https://datasets.cbs.nl/odata/v1/CBS/85984NED/MeasureCodes` — 12 PropTech-relevant measure codes verified live
+- `https://platform.claude.com/docs/en/build-with-claude/structured-outputs` — `messages.parse()` GA confirmed, no beta header required
+- CBS v3-to-v4 migration guide — `Handleiding overstap OData v3 naar v4` (official CBS PDF)
+- CBS dataset annual series confirmed: 2022=`85318NED`, 2023=`85618NED`, 2024=`85984NED`, 2025=`86165NED`
 
 ### Secondary (MEDIUM confidence)
-- [Bodemloket ArcGIS REST endpoint](https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer) — Documented in 2019 community blog; REST query returned 404 in architecture research; WMS is the confirmed fallback
-- [Friesewoudloper blog — Bodemloket layer structure](http://www.friesewoudloper.nl/2019/05/30/Hergebruik-van-bodemkwaliteitsgegevens.html) — WBB field names (2019, needs live verification in Phase 2 spike)
-- [Borgingcompany.nl — Wkb kosten](https://borgingcompany.nl/wet-kwaliteitsborging-kosten/) — Kwaliteitsborger fee approximately 1–1.5% of bouwsom
-- [DPO Centre NL — Leadgeneratie en de AVG](https://www.dpocentre.nl/en/2024/08/12/leadgeneratie-en-de-avg-is-uw-compliance-op-orde/) — AVG consent requirements for B2B lead routing
+- `https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf` — official Rechtspraak API technical documentation, namespace declarations (referenced from official source, not directly fetched)
+- `https://wetsuite.knobs-dials.com/apidocs/wetsuite.datacollect.rechtspraaknl.html` — Rechtspraak API quirks: invalid XML, missing bodies, search limitations
+- CBS Quick Start Guide: `https://www.cbs.nl/en-gb/our-services/open-data/statline-as-open-data/quick-start-guide`
 
-### Tertiary (LOW confidence — needs live validation in Phase 2 spike)
-- Bodemloket field names `WBB_DOSSIER_DBK`, `STATUS_OORD`, `LOCATIECODE_BEVOEGD_GEZAG`, `NEN3610_ID_SOIL_LOCATION` — inferred from 2019 blog and architecture research docs; must be verified against live WMS GetFeatureInfo response before writing the parser
+### Tertiary (LOW confidence — apply mitigations regardless)
+- AI hallucination risk in legal context — multiple sources cite LLM citation fabrication; referenced Anthropic's own legal team case via Terms.Law (2025-03). Mitigation is clear: only feed Claude retrieved documents, never ask it to find cases.
 
 ---
-*Research completed: 2026-03-01*
+*Research completed: 2026-03-06*
 *Ready for roadmap: yes*

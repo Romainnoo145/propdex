@@ -1,305 +1,20 @@
-# Stack Research — v9.0 Professional Marketplace
+# Stack Research — v11.0 Open Data Intelligence
 
-**Domain:** Dutch PropTech — Soil Intelligence, Wkb Classification, Lead Marketplace
-**Researched:** 2026-03-01
-**Confidence:** HIGH (Wkb rules, asbest rule, PDF reuse, lead/directory patterns), MEDIUM (Bodemloket API — community-documented endpoint, no official API docs published)
+**Domain:** Dutch PropTech — CBS Neighborhood Stats, Rechtspraak Jurisprudence, AI Legal Analysis
+**Researched:** 2026-03-06
+**Confidence:** HIGH (existing stack verified in codebase; new additions verified via live API inspection and official docs)
 
 ---
 
 ## Context: Subsequent Milestone
 
-This covers ONLY new stack requirements for v9.0. The existing validated stack must not be changed. All base stack (FastAPI, SQLAlchemy 2.x, httpx, pyproj, WeasyPrint, fastapi-mail, Jinja2, TanStack, react-hook-form, zod, etc.) is already installed and proven across v1.0-v7.2.
+This covers ONLY new stack requirements for v11.0. The full existing validated stack is NOT re-documented here.
 
----
+**Existing base stack (already in `backend/pyproject.toml`):**
+FastAPI[standard]>=0.115.0, SQLAlchemy[asyncio]>=2.0.25, asyncpg>=0.29.0, httpx[http2]>=0.27.0, lxml>=5.3.0, anthropic>=0.40.0, aiolimiter>=1.2.0, arq>=0.27.0, redis>=5.0.0, pydantic-settings>=2.1.0, pyproj>=3.7.0, shapely>=2.0.0, GeoAlchemy2>=0.15.0, WeasyPrint>=68.0, jinja2>=3.1.0, fastapi-mail>=1.4.1, PyJWT[crypto]>=2.9.0, pwdlib[argon2]>=0.2.0, openpyxl>=3.1.0
 
-## Existing Stack — Already Installed, Not Re-researched
-
-**Backend (`pyproject.toml`):** FastAPI[standard]>=0.115.0, SQLAlchemy[asyncio]>=2.0.25, asyncpg>=0.29.0, httpx[http2]>=0.27.0, pyproj>=3.7.0, shapely>=2.0.0, GeoAlchemy2>=0.15.0, WeasyPrint>=68.0, jinja2>=3.1.0, fastapi-mail>=1.4.1, anthropic>=0.40.0, arq>=0.27.0, aiolimiter>=1.2.0, pydantic-settings>=2.1.0, PyJWT[crypto]>=2.9.0, pwdlib[argon2]>=0.2.0, lxml>=5.3.0, openpyxl>=3.1.0
-
-**Frontend (`package.json`):** React 19, Vite 7, TypeScript strict, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, react-hook-form ^7.71.1, zod ^4.3.6, sonner, lucide-react, clsx, class-variance-authority
-
----
-
-## New Stack Requirements by Feature
-
-### Feature 1: Bodemloket API Integration
-
-**What:** Query Dutch national soil contamination register (Wet bodembescherming dossiers) at parcel level.
-
-**API endpoint (MEDIUM confidence — community-documented via Friesewoudloper blog 2019; official API docs not published; ArcGIS server confirmed active):**
-
-```
-# WMS for map overlay visualization only:
-https://gis.gdngeoservices.nl/standalone/services/blk_gdn/lks_blk_rd_v1/MapServer/WMSServer
-  ?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities
-
-# ArcGIS REST MapServer for data queries:
-Base: https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer
-  Layer 0: WBB_punten (point features — investigation point locations)
-  Layer 1: WBB_locaties (polygon features — contamination zone polygons)
-
-# Spatial intersection query (GET or POST, GeoJSON output):
-https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer/1/query
-  ?geometryType=esriGeometryPoint
-  &geometry=<x>,<y>               # EPSG:28992 (RD New) coordinates
-  &inSR=28992
-  &spatialRel=esriSpatialRelIntersects
-  &distance=50                    # 50m buffer around parcel centroid
-  &units=esriSRUnit_Meter
-  &outFields=*
-  &f=geojson
-  &returnGeometry=false           # data only, no polygon output needed
-
-# Known response fields (LOW confidence — inferred from blog, verify on live call):
-WBB_DOSSIER_DBK, NEN3610_ID_SOIL_MANAGEMENT, LOCATIECODE_BEVOEGD_GEZAG
-```
-
-**No new Python library required.** Integration uses existing stack:
-- `httpx.AsyncClient` — existing HTTP client
-- `pyproj.Transformer` — WGS84 → RD New coordinate conversion (EPSG:28992), already used in `rce_monuments.py`
-- JSONB cache via `get_cached_or_fetch()` from `services/cache_manager.py`
-- `GovernmentAPIError` / `handle_api_response()` from `government_apis/base.py`
-
-**Cache TTL:** 90 days — WBB dossier status changes rarely (contamination investigations are historical).
-
-**New config needed:**
-
-```python
-# Add to backend/app/core/config.py CACHE_TTL dict:
-"bodemloket": 7776000,  # 90 days
-
-# Add to Settings class:
-BODEMLOKET_BASE_URL: str = Field(
-    default="https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer",
-    description="Bodemloket ArcGIS REST MapServer URL (no auth required — public service)",
-)
-```
-
-**New file:** `backend/app/government_apis/bodemloket.py`
-
-**Rate limiter:** Add conservative limiter — 5 concurrent, 200/hour. No published limits; treat as polite public service.
-
-**Validation gate before Phase 1:** Verify `https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer/1/query?where=1=1&outFields=*&f=json&resultRecordCount=1` returns valid JSON before building the client. If endpoint is down, fall back to WMS GetFeatureInfo (lxml already available to parse HTML response).
-
----
-
-### Feature 2: Wkb Gevolgklasse Classification Engine
-
-**What:** Determine gevolgklasse (GK1/GK2/GK3) for a building under the Wet kwaliteitsborging voor het bouwen (Wkb), mandatory for new construction since 1 January 2024, renovation GK1 since 1 January 2025.
-
-**Rules (HIGH confidence — sourced from IPLO.nl and TLO-KB, both official government sources):**
-
-```
-GK1 — Beperkte persoonlijke gevolgen (limited consequences):
-  INCLUDES:
-    - Grondgebonden woningen: vrijstaand, twee-onder-één-kap, rij
-      (gebruiksdoel="woonfunctie", NOT apartment/woongebouw)
-    - Vakantiewoningen (single-unit, grondgebonden, not in lodging complex)
-    - Industriegebouwen ≤ 2 bouwlagen
-    - Voetgangers-/fietsbrug met overspanning ≤ 20m
-      (not over state/provincial roads)
-    - Overig bouwwerk (non-building) ≤ 20m hoog, no water-retention function
-
-  EXCLUDES:
-    - Rijksmonumenten (monument_status=True → NOT GK1)
-    - Zorgwoningen (care housing)
-    - Woongebouwen (apartment buildings — stacked, multi-tenant)
-    - Any building requiring usage notification (meldingsplichtige inrichting)
-
-GK2 — Reële kans op gevolgen (realistic chance of consequences):
-  - Libraries, schools, municipality buildings
-  - Woongebouwen up to 70m height
-  NOTE: GK2 full rule set under ministerial evaluation as of 2026-03;
-        GK2 implementation not yet mandatory — future milestone
-
-GK3 — Kans op aanzienlijke gevolgen (substantial consequences):
-  - Stadiums, hospitals, metro stations
-  - Buildings > 70m height
-  NOTE: GK3 implementation: future — no action required in v9.0
-```
-
-**Data inputs from existing stack:**
-
-| Input | Source | Available in BAG data |
-|-------|--------|----------------------|
-| `gebruiksdoel` | BAG verblijfsobject | YES — in `BuildingData` |
-| `monument_status` | RCE | YES — in `MonumentStatus` |
-| `bouwjaar` | BAG pand | YES — in `BuildingData` |
-| `bag_status` | BAG pand | YES — in `BuildingData` |
-| `pand_hoogte_m` | NOT in BAG | NO — derive or leave uncertain |
-| `bouwlagen_count` | NOT in BAG standard | PARTIAL — from DSO bestemmingsplan |
-
-**Height gap resolution:** For GK1 determination, `pand_hoogte_m` is only critical for "overige bouwwerken" category. For `woonfunctie` grondgebonden, height rule is implicitly satisfied (ground-connected by definition). Use `max_bouwlagen` from DSO bestemmingsplan when available as proxy. Output `GK2_mogelijk` when height is unknown and gebruiksdoel is ambiguous.
-
-**Output values:** `"GK1" | "GK2_mogelijk" | "GK1_of_GK2" | "onbekend"` with confidence level (same `high/medium/low` pattern as existing `WkbPrecheck`).
-
-**No new library required.** Pure Python rule engine, extends existing `wkb_precheck.py`.
-
-**Integration:** Add `gevolgklasse: str` and `gevolgklasse_confidence: str` fields to `WkbPrecheck` Pydantic schema in `schemas/property.py`. The classification runs inside `evaluate_wkb_precheck()` using already-fetched inputs.
-
----
-
-### Feature 3: Asbest Risk Indicator
-
-**What:** Flag buildings built before 1994 as having potential asbestos risk, per Dutch law. Mandatory asbestos inventory (NEN 2991) required before demolition/renovation of pre-1994 buildings.
-
-**Rule (HIGH confidence — Nederlandse Arbeidsinspectie official, multiple sources confirm 1993 production ban, 1994 construction ban):**
-
-```python
-# Pure Python — no library needed
-CUT_OFF_YEAR = 1994  # Asbestos use in construction banned from 1994
-
-def asbest_risico(bouwjaar: int | None) -> dict:
-    if bouwjaar is None:
-        return {
-            "heeft_risico": None,   # unknown, not False
-            "label": "Onbekend — bouwjaar niet beschikbaar",
-            "inventarisatie_vereist": None,
-        }
-    if bouwjaar < CUT_OFF_YEAR:
-        return {
-            "heeft_risico": True,
-            "label": f"Mogelijk aanwezig (bouwjaar {bouwjaar}, voor 1994)",
-            "inventarisatie_vereist": True,  # NEN 2991 inventory mandatory before renovation
-        }
-    return {
-        "heeft_risico": False,
-        "label": f"Niet verwacht (bouwjaar {bouwjaar}, na 1993)",
-        "inventarisatie_vereist": False,
-    }
-```
-
-**No new library required.** Add to the property enrichment pipeline alongside bouwjaar retrieval from BAG. `bouwjaar` is already in `BuildingData.bouwjaar`.
-
-**Add `asbest_indicator` field** to `PropertyReportResponse` schema — simple JSONB column on the Report model or inline in `report_data` JSONB.
-
----
-
-### Feature 4: Risicobeoordeling Dossier PDF Generator
-
-**What:** Aggregated PDF dossier for kwaliteitsborgers — combines all property intelligence into a single structured document required for Wkb borgingsplan preparation.
-
-**Decision: Reuse WeasyPrint + Jinja2 (already installed).** Do not add a new PDF library.
-
-**Rationale:**
-- `WeasyPrint >= 68.0` is already in `pyproject.toml`, already used in `backend/app/reports/pdf_export.py`
-- Pattern `asyncio.to_thread(generate_report_pdf, ...)` already established (WeasyPrint is CPU-bound/synchronous)
-- Jinja2 templating already used — add one new template file
-- The dossier is a static multi-section document — WeasyPrint CSS print layout handles this well
-
-**Dossier content sections (per IPLO.nl dossier requirements — HIGH confidence):**
-
-```
-1. Project identification: adres, kadastrale aanduiding, BAG-ID, peildatum
-2. Bouwdata: bouwjaar, gebruiksdoel, bag_status, oppervlakte
-3. Gevolgklasse: GK1/GK2/GK3 classification + rationale
-4. Wkb precheck: status, triggered rules, required documents checklist
-5. Asbest indicator: heeft_risico, inventarisatie_vereist, bouwjaar
-6. Bodem status: Bodemloket result (WBB features or "geen bekende verontreiniging")
-7. Monument status: is_monument, type, beschrijving (if applicable)
-8. Zoning: bestemming, max_bouwlagen, permitted functions
-9. Data freshness: per-section cache timestamps
-10. Disclaimer: "Indicatief — nader onderzoek vereist per Wkb borgingsplan"
-```
-
-**New files:**
-- `backend/app/reports/templates/dossier.html` — Jinja2 template (separate from existing `report.html`)
-- New function `generate_dossier_pdf(report_data: dict, report_name: str) -> bytes` in `pdf_export.py` or new `dossier_export.py`
-
-**New endpoint:** `POST /reports/{report_id}/dossier/pdf`
-- Parallel to existing `GET /reports/{report_id}/pdf`
-- Same `asyncio.to_thread()` pattern
-- Returns `StreamingResponse(pdf_bytes, media_type="application/pdf")`
-
-**No new libraries required.**
-
----
-
-### Feature 5: Lead Capture Flow
-
-**What:** User journey CTA ("Vraag kwaliteitsborger aan") — capture contact intent from the property report, route notification to admin and/or matched professional.
-
-**Architecture:** Form submission → PostgreSQL record → email notification. No payment infrastructure in v9.0.
-
-**Backend pattern (uses existing stack entirely):**
-
-```python
-# New SQLAlchemy model: LeadRequest
-class LeadRequest(Base):
-    __tablename__ = "lead_requests"
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
-    report_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("reports.id"), nullable=True)
-    professional_type: Mapped[str]  # "kwaliteitsborger", "constructeur", etc.
-    contact_name: Mapped[str]
-    contact_email: Mapped[str]
-    contact_phone: Mapped[str | None]
-    bericht: Mapped[str | None]
-    status: Mapped[str] = mapped_column(default="nieuw")  # nieuw|in_behandeling|afgerond
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-```
-
-**Email routing:** Use existing `fastapi-mail` (already installed) — same pattern as `auth/email.py`. Send notification to configured admin email + matched professional's email when auto-matched from directory.
-
-**No new library required.** fastapi-mail (already in stack) handles both lead notification emails and professional response emails.
-
-**Frontend:** Use existing `react-hook-form` + `zod` + `sonner` (toast notifications) — all already installed.
-
-**New files needed:**
-- `backend/app/models/lead_request.py`
-- `backend/app/leads/router.py` + `schemas.py`
-- Alembic migration: `add_lead_requests_table`
-- Frontend: `src/components/leads/LeadCaptureForm.tsx` + `src/hooks/useLeadCapture.ts`
-
----
-
-### Feature 6: Professional Directory
-
-**What:** Searchable listing of certified kwaliteitsborgers with geographic coverage and specialization. First vertical in a planned multi-vertical marketplace.
-
-**Architecture:** Standard PostgreSQL table with JSONB `attributes` column for flexible professional metadata. No external search engine needed at this scale (expected < 500 professionals initially).
-
-**New SQLAlchemy model:**
-
-```python
-class Professional(Base):
-    __tablename__ = "professionals"
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    # NULL org_id = platform-wide listing (not org-scoped)
-    organization_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
-    type: Mapped[str]  # "kwaliteitsborger" | "constructeur" | "asbest_inspecteur"
-    bedrijfsnaam: Mapped[str]
-    naam: Mapped[str]
-    email: Mapped[str]
-    telefoon: Mapped[str | None]
-    website: Mapped[str | None]
-    kvk_nummer: Mapped[str | None]
-    instrument_naam: Mapped[str | None]  # TLO-KB certified instrument name
-    gevolgklassen: Mapped[list[int]] = mapped_column(ARRAY(Integer))  # [1], [1,2], [1,2,3]
-    regio_gemeenten: Mapped[list[str]] = mapped_column(ARRAY(String))  # CBS gemeentecodes
-    is_active: Mapped[bool] = mapped_column(default=True)
-    is_verified: Mapped[bool] = mapped_column(default=False)
-    attributes: Mapped[dict] = mapped_column(JSONB, default=dict)  # flexible extras
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
-```
-
-**Index strategy:**
-- GIN index on `gevolgklassen` array — filter by gevolgklasse coverage
-- GIN index on `regio_gemeenten` array — filter by municipality
-- Standard B-tree on `type`, `is_active`, `is_verified`
-
-**Why JSONB for `attributes`:** Professional certifications vary by type (kwaliteitsborger has different extras than constructeur). Avoids schema churn when adding professional types in future milestones.
-
-**No new library required.** SQLAlchemy 2.x `ARRAY` and `JSONB` types are already in the stack (GeoAlchemy2 dependency ensures PostGIS/JSONB support).
-
-**Frontend:** TanStack Table (already installed) for directory listing with filtering. No new library needed.
-
-**New files:**
-- `backend/app/models/professional.py`
-- `backend/app/professionals/router.py` + `schemas.py`
-- Alembic migration: `add_professionals_table`
-- Frontend: `src/components/directory/ProfessionalDirectory.tsx` + filter components
+**Existing base stack (already in `frontend/package.json`):**
+React 19, Vite 7, TypeScript strict, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router v1, TanStack Table v8, Tailwind v4, react-hook-form ^7.71.1, zod ^4.3.6, sonner ^2.0.7, lucide-react, clsx, class-variance-authority
 
 ---
 
@@ -307,16 +22,15 @@ class Professional(Base):
 
 ### Backend — Zero New pip Packages
 
-All six v9.0 features use exclusively the existing stack.
+All three v11.0 features are fully implementable with the existing dependency set.
 
 | Feature | New pip package? | Uses instead |
 |---------|-----------------|-------------|
-| Bodemloket API | None | httpx + pyproj + JSONB cache |
-| Wkb gevolgklasse | None | Pure Python rule module |
-| Asbest indicator | None | Pure Python, BAG bouwjaar |
-| Dossier PDF | None | WeasyPrint + Jinja2 (existing) |
-| Lead capture | None | fastapi-mail + SQLAlchemy |
-| Professional directory | None | SQLAlchemy + PostgreSQL ARRAY/JSONB |
+| CBS OData v4 neighborhood scorer | None | httpx + manual OData params |
+| Rechtspraak Atom/XML parsing | None | lxml (already >=5.3.0) |
+| AI legal analysis structured output | None | anthropic SDK (already >=0.40.0) |
+| Rate limiting new APIs | None | aiolimiter (already >=1.2.0) |
+| Background AI analysis jobs | None | arq + redis (already installed) |
 
 **`pyproject.toml` changes: none required.**
 
@@ -324,12 +38,196 @@ All six v9.0 features use exclusively the existing stack.
 
 | Feature | New npm package? | Uses instead |
 |---------|-----------------|-------------|
-| Dossier PDF download | None | Blob download (existing pattern from report PDF) |
-| Lead capture form | None | react-hook-form + zod + sonner (existing) |
-| Professional directory table | None | TanStack Table (existing) |
-| Bodem data display | None | Existing card/section components |
+| Jurisprudence search UI | None | TanStack Query useQuery (existing) |
+| Search input + form | None | react-hook-form + zod (existing) |
+| AI analysis status polling | None | useQuery + refetchInterval (existing pattern) |
+| Results display components | None | Existing card/section component pattern |
 
 **`package.json` changes: none required.**
+
+---
+
+## Integration Points: How Each Feature Fits the Existing Pattern
+
+### 1. CBS OData v4 Client (`app/government_apis/cbs_odata.py`)
+
+The client already exists as a scaffold (confirmed in codebase). The integration pattern is direct:
+
+**API structure (verified against live endpoint `opendata.cbs.nl/ODataApi/OData/85618NED`):**
+
+| Collection | Purpose |
+|-----------|---------|
+| `WijkenEnBuurten` | Dimension table — resolve gemeente/wijk name to CBS region key |
+| `TypedDataSet` | Main data — fetch metrics by region key |
+| `DataProperties` | Field metadata — discover column names and descriptions |
+
+**OData v4 query pattern — no library needed:**
+
+```python
+# All CBS queries use standard OData $filter, $select, $top params.
+# httpx handles URL encoding automatically when passed as dict.
+params = {
+    "$filter": f"WijkenEnBuurten eq '{region_key}'",
+    "$select": "GemiddeldeWOZWaarde_35,MateVanStedelijkheid_112,Omgevingsadressendichtheid_113,AantalInwoners_5",
+    "$top": "1",
+}
+response = await client.get(
+    f"{self.dataset_url}/TypedDataSet",
+    headers={"Accept": "application/json"},
+    params=params,
+)
+data = response.json()  # CBS returns application/json — standard dict parsing
+```
+
+**Why not `cbsodata4` Python library (PyPI: github.com/dennis8/cbsodata4, v0.1.3, released 2025-06-06)?**
+It uses synchronous HTTP internally (built on `requests`). Our entire stack is `async`. Using it would require `asyncio.to_thread()` wrapping and break the non-blocking event loop guarantee. The CBS query surface for this feature is 2-3 URL parameters — no library abstraction needed.
+
+**Rate limiter:** Add `cbs_odata_limiter` singleton to `app/government_apis/rate_limiter.py`:
+
+```python
+# CBS StatLine OData v4 — public API, no published rate limit
+# Use conservative limits matching sru_limiter pattern
+cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
+```
+
+**Cache TTL:** CBS dataset 85618NED updates annually. Use 30-day TTL (`2592000` seconds). Store in PostgreSQL JSONB using the existing `get_cached_or_fetch()` pattern.
+
+---
+
+### 2. Rechtspraak XML Parsing (`app/government_apis/rechtspraak.py`)
+
+The client scaffold already exists. One critical fix is needed: migrate XML parsing from stdlib `xml.etree.ElementTree` to `lxml.etree` (which is already in `pyproject.toml` as `lxml>=5.3.0`).
+
+**Why migrate from stdlib to lxml:**
+
+| Concern | stdlib ElementTree | lxml.etree |
+|---------|-------------------|-----------|
+| XXE protection | None — vulnerable to XML External Entity injection from external court XML | `XMLParser(resolve_entities=False, no_network=True)` — blocks entity resolution |
+| Namespace handling | Generates `ns0`/`ns1` prefix artifacts | Preserves declared namespace prefixes |
+| XPath support | None — requires `.iter()` + local name string stripping | Full XPath 1.0 — `root.xpath("//psi:procedure", namespaces=ns)` |
+| Existing pattern | Not used elsewhere | Matches `sru_bekendmakingen.py` exactly |
+
+The migration is a 2-line change (drop-in compatible):
+
+```python
+# Remove:
+import xml.etree.ElementTree as ET
+root = ET.fromstring(response.text)
+
+# Add:
+from lxml import etree
+_parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_comments=True)
+root = etree.fromstring(response.text.encode("utf-8"), parser=_parser)
+```
+
+**Rechtspraak namespace dictionaries (from official technical documentation):**
+
+```python
+# For Atom search feed (search endpoint response):
+ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
+
+# For full document content (content endpoint response):
+RECHTSPRAAK_CONTENT_NS = {
+    "rdf":     "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "dcterms": "http://purl.org/dc/terms/",
+    "psi":     "http://psi.rechtspraak.nl/",
+    "rdfs":    "http://www.w3.org/2000/01/rdf-schema#",
+}
+```
+
+**Rate limiter:** Migrate from the `asyncio.Semaphore(5)` currently inline in `rechtspraak.py` to the `APIRateLimiter` pattern. Add to `rate_limiter.py`:
+
+```python
+# Rechtspraak Open Data — documented max 10 req/sec; use conservative 5 concurrent
+rechtspraak_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=3600)
+```
+
+**Cache TTL:** Court rulings are immutable once published. Use 7-day TTL (`604800` seconds) — sufficient freshness without re-fetching stable documents.
+
+---
+
+### 3. AI Legal Analysis (`app/ai/`)
+
+Use the existing `anthropic.AsyncAnthropic` client and `ClaudeClient` class pattern. The feature requires a new method (or a new `LegalAnalysisClient` class if it grows large) plus a new Pydantic schema in the existing `app/ai/schemas.py`.
+
+**Structured outputs — use `messages.parse()` (GA as of early 2026):**
+
+```python
+# No beta header needed — structured outputs are now GA for claude-sonnet-4-5-20250929
+response = await self.client.messages.parse(
+    model=self.MODEL,  # reuse "claude-sonnet-4-5-20250929"
+    max_tokens=4096,
+    system=[{
+        "type": "text",
+        "text": LEGAL_ANALYSIS_PROMPT,
+        "cache_control": {"type": "ephemeral"},  # cache prompt — same pattern as PDF parsing
+    }],
+    messages=[{
+        "role": "user",
+        "content": f"Analyseer deze uitspraak (ECLI: {ecli}):\n\n{ruling_text[:50000]}",
+        # Truncate to ~50K chars — dense legal text, stay well within context window
+    }],
+    output_format=JurisprudenceAnalysis,  # Pydantic model from app/ai/schemas.py
+)
+result: JurisprudenceAnalysis = response.parsed_output
+```
+
+**New Pydantic schema (add to `app/ai/schemas.py`):**
+
+```python
+class JurisprudenceAnalysis(BaseModel):
+    """AI-extracted analysis of a Dutch court ruling relevant to real estate development."""
+    ecli: str = Field(description="ECLI identifier of the analyzed ruling")
+    samenvatting: str = Field(description="Dutch summary of the ruling (2-3 sentences)")
+    relevantie: Literal["HOOG", "MIDDEL", "LAAG"] = Field(
+        description="Relevance to permit applications (HOOG/MIDDEL/LAAG)"
+    )
+    uitkomst: Literal["VERGUND", "GEWEIGERD", "VERNIETIGD", "ONBEKEND"] = Field(
+        description="Outcome: was the permit granted, refused, or annulled?"
+    )
+    risicofactoren: list[str] = Field(
+        default_factory=list,
+        description="Risk factors identified (Dutch, max 5 items)",
+    )
+    vergunningskans_indicatie: Literal["GUNSTIG", "ONZEKER", "ONGUNSTIG"] = Field(
+        description="Indicative permit success probability based on this precedent"
+    )
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
+        description="Confidence in this analysis"
+    )
+    disclaimer: str = Field(
+        default="AI-geanalyseerd — Geen juridisch advies. Raadpleeg een jurist.",
+        description="Mandatory disclaimer",
+    )
+```
+
+**Background job pattern:** AI analysis takes 10-30s — must not block the HTTP response. Use the existing ARQ pattern (`app/jobs/`) — same approach as `pdf_parsing.py`. Queue the analysis job, return a job ID, poll for completion.
+
+---
+
+### 4. Missing `exceptions.py` Module (`app/government_apis/exceptions.py`)
+
+The `rechtspraak.py` client and `app/api/endpoints/jurisprudence.py` both import from `app.government_apis.exceptions` — but this file does not exist in the codebase. The exceptions live in `base.py`. This needs to be created:
+
+```python
+# app/government_apis/exceptions.py
+"""Re-exports of government API exceptions for consistent import paths."""
+from app.government_apis.base import (
+    GovernmentAPIError,
+    APINotFoundError,
+    APIRateLimitError,
+    APITimeoutError,
+)
+
+__all__ = [
+    "GovernmentAPIError",
+    "APINotFoundError",
+    "APIRateLimitError",
+    "APITimeoutError",
+]
+```
+
+This is infrastructure cleanup — not a new library, just a missing file that will cause `ImportError` at runtime.
 
 ---
 
@@ -337,43 +235,29 @@ All six v9.0 features use exclusively the existing stack.
 
 ```python
 # backend/app/core/config.py — add to CACHE_TTL dict:
-"bodemloket": 7776000,  # 90 days (WBB dossiers are historical — rarely change)
-
-# backend/app/core/config.py — add to Settings class:
-BODEMLOKET_BASE_URL: str = Field(
-    default="https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer",
-    description="Bodemloket ArcGIS REST MapServer URL (public, no auth required)",
-)
+"cbs_odata": 2592000,        # 30 days — CBS dataset updates annually
+"rechtspraak_doc": 604800,   # 7 days — court rulings are immutable once published
+"rechtspraak_search": 3600,  # 1 hour — search results may include new rulings
 ```
 
----
-
-## New Alembic Migrations Required
-
-| Migration name | What it adds |
-|---------------|-------------|
-| `add_professionals_table` | Professional model with ARRAY indexes |
-| `add_lead_requests_table` | LeadRequest model |
-| `add_asbest_bodem_to_report` | Add `asbest_indicator` + `bodem_status` to report_data JSONB schema (if separate column needed; may be implicit in existing JSONB) |
+No new `Settings` class fields required — CBS and Rechtspraak are public APIs with no auth tokens.
 
 ---
 
 ## New API Endpoints
 
 ```
-# Professional directory:
-GET  /professionals              List directory (public, filter: type, gevolgklasse, gemeente)
-GET  /professionals/{id}         Professional detail card
+# CBS neighborhood data:
+GET  /area-scans/{scan_id}/neighborhoods   CBS metrics for all wijken in scan (cached)
+GET  /neighborhoods/{wijk_id}/cbs          CBS metrics for a specific wijk
 
-# Lead capture:
-POST /leads                      Submit lead request (authenticated, org-scoped)
-GET  /leads                      List own leads (authenticated, org-scoped)
+# Jurisprudence:
+GET  /jurisprudence/search?q=...           Search court rulings (Rechtspraak API)
+GET  /jurisprudence/doc/{ecli}             Full court ruling document
 
-# Dossier PDF:
-GET  /reports/{report_id}/dossier/pdf   Generate kwaliteitsborger dossier PDF
-
-# Bodem data (per-parcel):
-GET  /reports/{report_id}/bodem         Fetch Bodemloket result for parcel (cached)
+# AI analysis (already scaffolded at app/api/endpoints/jurisprudence.py):
+POST /jurisprudence/{ecli}/analyze         Queue AI analysis job (returns job_id)
+GET  /jurisprudence/{ecli}/analysis        Get AI analysis result (polls job status)
 ```
 
 ---
@@ -382,17 +266,12 @@ GET  /reports/{report_id}/bodem         Fetch Bodemloket result for parcel (cach
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| pdfkit / wkhtmltopdf | Abandoned project; requires system binary; worse CSS support | WeasyPrint (already installed) |
-| reportlab | Lower-level, requires programmatic layout instead of CSS | WeasyPrint + Jinja2 (existing) |
-| Elasticsearch / OpenSearch | 50-500 professionals does not justify dedicated search infra | PostgreSQL full-text + ARRAY GIN indexes |
-| Celery / RQ | ARQ already handles job queue | ARQ (already installed) |
-| Stripe / Mollie / payment SDK | v9.0 is pre-payment; billing handled manually per PROJECT.md | Add in future milestone when revenue model validated |
-| OGC API Features client library | Bodemloket uses ArcGIS REST, not OGC API Features | Plain httpx GET/POST |
-| requests (sync) | Blocking — breaks async FastAPI event loop | httpx.AsyncClient (already installed) |
-| aiosmtplib (direct) | fastapi-mail already wraps aiosmtplib; consistent with existing email.py | fastapi-mail (already installed) |
-| Scrapling | Already in stack for scraping needs; not required for Bodemloket | Not needed |
-| Dedicated PDF microservice | Unnecessary at current report volume | asyncio.to_thread() + WeasyPrint (existing) |
-| PostGIS extension changes | PostGIS already installed via postgis/postgis Docker image | No change |
+| `cbsodata` / `cbsodata4` Python packages | Synchronous HTTP — blocks async event loop | Direct `httpx.AsyncClient` with manual OData v4 params |
+| `xml.etree.ElementTree` for Rechtspraak XML | No XXE protection against malicious XML from external APIs | `lxml.etree` with `XMLParser(resolve_entities=False, no_network=True)` |
+| `instructor` library for Claude structured output | Extra abstraction; `anthropic` SDK now has native `.parse()` with Pydantic | `anthropic` SDK `messages.parse()` directly |
+| `odata-query` / `PyOData` / `python-odata` packages | Heavy SAP-oriented OData clients; overkill for 3-param CBS read-only queries | Manual httpx params dict |
+| New frontend data-fetching library | Stack has TanStack Query v5 with all needed patterns | Existing `useQuery` / `useInfiniteQuery` |
+| Synchronous AI analysis endpoint | 10-30s Claude calls would block uvicorn worker | ARQ background job + polling (established pattern) |
 
 ---
 
@@ -400,29 +279,22 @@ GET  /reports/{report_id}/bodem         Fetch Bodemloket result for parcel (cach
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Bodemloket data | ArcGIS REST spatial query | WMS GetFeatureInfo | Less structured output (HTML text), harder to parse reliably |
-| Bodemloket data | ArcGIS REST spatial query | Manual scrape of bodemloket.nl/kaart | Terms of service violation risk; fragile |
-| Dossier PDF | WeasyPrint (existing) | New reportlab integration | New dependency, more complex layout code, no CSS support |
-| Professional directory search | PostgreSQL ARRAY + GIN indexes | Elasticsearch | Disproportionate infrastructure for < 500 records |
-| Lead routing | fastapi-mail (existing) | External CRM webhook (HubSpot, Pipedrive) | No CRM in v9.0; overkill for manual lead handling |
-| Gevolgklasse data | IPLO.nl rule table + pure Python | External classification service | No such service exists; IPLO rules are clear enough for Python encoding |
+| CBS OData queries | Manual httpx params | `cbsodata4` v0.1.3 | Synchronous only — incompatible with async stack |
+| Rechtspraak XML parsing | `lxml.etree` (already installed) | Keep stdlib `xml.etree.ElementTree` | No XXE protection; stdlib already imported — low-hanging security fix |
+| AI structured output | `anthropic` SDK `messages.parse()` (native GA) | `instructor` library | Extra dependency; `instructor` wraps `anthropic` which we already use directly |
+| AI result schema | Pydantic in `app/ai/schemas.py` | Separate JSONB field with no schema | Type safety lost; harder to validate AI output |
+| Rechtspraak search cache | Per-query JSONB cache (1 hr TTL) | No caching | Rechtspraak imposes 10 req/sec limit; repeated searches for same municipality would hit limits |
 
 ---
 
-## Version Compatibility Matrix
+## Version Compatibility
 
-| Package | Installed Version | v9.0 Impact | Notes |
-|---------|-----------------|-------------|-------|
-| WeasyPrint | >=68.0 | None | New dossier template only |
-| Jinja2 | >=3.1.0 | None | New `dossier.html` template |
-| fastapi-mail | >=1.4.1 | None | New lead notification email templates |
-| httpx | >=0.27.0 | None | New Bodemloket client |
-| pyproj | >=3.7.0 | None | WGS84→RD New for Bodemloket |
-| SQLAlchemy | >=2.0.25 | None | New models (Professional, LeadRequest) |
-| react-hook-form | ^7.71.1 | None | Lead capture form |
-| zod | ^4.3.6 | None | Form validation schema |
-| TanStack Table | ^8.21.3 | None | Professional directory listing |
-| sonner | ^2.0.7 | None | Lead submission toast feedback |
+| Package | Installed | Notes |
+|---------|-----------|-------|
+| `anthropic` | >=0.40.0 | `messages.parse()` requires >=0.40.0. Structured outputs now GA — no `anthropic-beta` header needed |
+| `lxml` | >=5.3.0 | `etree.XMLParser(resolve_entities=False, no_network=True)` API stable since lxml 3.x |
+| `aiolimiter` | >=1.2.0 | `AsyncLimiter(max_rate, time_period)` API stable — no version issues |
+| `arq` | >=0.27.0 | ARQ 0.27 CLI broken on Python 3.14 (documented in project MEMORY) — use `python -m app.jobs.worker` |
 
 No version upgrades required for any existing package.
 
@@ -430,24 +302,20 @@ No version upgrades required for any existing package.
 
 ## Sources
 
-- [Bodemloket GIS integration page](https://www.bodemloket.nl/content/kan-ik-bodemloket-ook-mijn-gis-inladen) — WMS URLs confirmed; ArcGIS REST base URL confirmed (MEDIUM confidence — no official query API docs published)
-- [Friesewoudloper blog — Bodemloket API layer structure](http://www.friesewoudloper.nl/2019/05/30/Hergebruik-van-bodemkwaliteitsgegevens.html) — Layer names, field names `WBB_DOSSIER_DBK`, query approach (LOW-MEDIUM confidence — community blog, 2019)
-- [IPLO.nl — Bouwwerken in gevolgklasse](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — GK1 classification criteria including building type list (HIGH confidence — official Dutch government portal)
-- [TLO-KB — Gevolgklassen overview](https://www.tlokb.nl/wet-kwaliteitsborging/gevolgklassen) — Three-class overview and societal risk rationale (HIGH confidence — official Toelatingsorganisatie Kwaliteitsborging Bouw)
-- [IPLO.nl — Kwaliteitsborger dossier requirements](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/kwaliteitsborger/) — Borgingsplan and dossier content requirements (HIGH confidence — official)
-- [Prostream — Wkb gevolgklasse 1 breakdown](https://www.prostream.app/blog/kwaliteit-borgen/gevolgklassen-voor-de-wkb-wat-valt-er-onder-gevolgklasse-1/) — GK1 building type sub-classification A-G (MEDIUM confidence — industry source)
-- [Wkb 2025 update — kwaliteitsborger.nl](https://www.kwaliteitsborger.nl/kwaliteitsborger/wkb-2025-5-dingen-die-je-nu-moet-weten/) — GK1 renovation scope from Jan 2025 confirmed (MEDIUM confidence — professional association)
-- [Nederlandse Arbeidsinspectie — Asbest inventarisatie](https://www.nlarbeidsinspectie.nl/onderwerpen/asbest/asbestinventarisatie) — Pre-1994 asbestos mandatory inventory rule (HIGH confidence — official government labor inspectorate)
-- [WeasyPrint official site](https://weasyprint.org/) — Current library, Jinja2 + FastAPI integration pattern (HIGH confidence)
-- [fastapi-mail PyPI](https://pypi.org/project/fastapi-mail/) — v1.4.1 confirmed, aiosmtplib-based (HIGH confidence)
-- [aiosmtplib PyPI](https://pypi.org/project/aiosmtplib/) — v5.1.0, Python 3.10+ (referenced by fastapi-mail) (HIGH confidence)
-- Codebase audit: `backend/app/reports/pdf_export.py` — WeasyPrint + Jinja2 pattern confirmed (HIGH confidence)
-- Codebase audit: `backend/app/auth/email.py` — fastapi-mail pattern confirmed (HIGH confidence)
-- Codebase audit: `backend/app/services/wkb_precheck.py` — existing Wkb rule engine pattern confirmed (HIGH confidence)
-- Codebase audit: `backend/pyproject.toml` — confirmed no new dependencies required (HIGH confidence)
-- Codebase audit: `frontend/package.json` — confirmed react-hook-form, zod, TanStack Table already installed (HIGH confidence)
+- `backend/pyproject.toml` — verified all existing dependencies (HIGH confidence — direct file read)
+- `backend/app/government_apis/sru_bekendmakingen.py` — lxml XXE-safe parser pattern, established in project (HIGH confidence — direct file read)
+- `backend/app/government_apis/cbs_odata.py` — existing CBS OData client scaffold, OData v4 query pattern (HIGH confidence — direct file read)
+- `backend/app/government_apis/rechtspraak.py` — stdlib XML usage needing migration; semaphore pattern needing migration (HIGH confidence — direct file read)
+- `backend/app/ai/claude_client.py` — established Claude integration pattern with prompt caching (HIGH confidence — direct file read)
+- `backend/app/government_apis/rate_limiter.py` — existing `APIRateLimiter` pattern, all existing API limiters (HIGH confidence — direct file read)
+- Live endpoint `https://opendata.cbs.nl/ODataApi/OData/85618NED` — verified 6 collections: TableInfos, UntypedDataSet, TypedDataSet, DataProperties, CategoryGroups, WijkenEnBuurten (HIGH confidence — live API verification)
+- `https://platform.claude.com/docs/en/build-with-claude/structured-outputs` — `messages.parse()` GA, no beta header, Pydantic integration, supported models (HIGH confidence — official Anthropic docs)
+- `https://github.com/dennis8/cbsodata4` — v0.1.3 released 2025-06-06, Python package, synchronous internally (HIGH confidence — verified async incompatibility)
+- `https://lxml.de/performance.html` — lxml vs ElementTree performance and security comparison (HIGH confidence — official lxml docs)
+- `https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf` — official Rechtspraak API technical documentation, namespace declarations, Atom feed structure (MEDIUM confidence — referenced from official source, not directly fetched)
+- WebSearch: "Rechtspraak Open Data API Atom XML feed ECLI 2025" — confirmed API endpoints, XML format, official docs URL (MEDIUM confidence — search result verification)
 
 ---
 
-*Stack research for: Propdex v9.0 Professional Marketplace (Bodemloket, Wkb classification, Asbest, Dossier PDF, Lead capture, Professional directory)*
-*Researched: 2026-03-01*
+*Stack research for: Propdex v11.0 Open Data Intelligence (CBS OData v4, Rechtspraak XML, AI Legal Analysis)*
+*Researched: 2026-03-06*

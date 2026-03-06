@@ -1,199 +1,164 @@
-# Feature Landscape: v9.0 Professional Marketplace — Kwaliteitsborger Lead Generation
+# Feature Research
 
-**Domain:** Dutch Construction Professional Marketplace — Wkb kwaliteitsborger lead generation on existing property intelligence platform
-**Researched:** 2026-03-01
-**Confidence:** HIGH (Wkb law, TloKB register, Bbl requirements via official Dutch government sources) / MEDIUM (marketplace patterns via web research and comparable platforms)
-
----
-
-## Context: What Already Exists (Do Not Re-Build)
-
-This milestone transforms the existing property intelligence platform into a lead generation platform. The following infrastructure is already shipped and must be extended, not replaced.
-
-**Existing platform capabilities that feed this milestone:**
-- `PropertyReportResponse` pipeline — BAG, DSO, WOZ, EP-online, BRK, RCE data per address
-- `buildability_delta` — hoeveel kan hier nog gebouwd worden (m², units, height delta)
-- `wkb_precheck` — Layer A: gevolgklasse determination + Layer B: optional refinement (already built in v7.2)
-- `permit_precedent_benchmark` — comparable permits by gemeente and building type
-- `bouwjaar` from BAG — critical for asbest risk flagging (pre-1994 threshold)
-- `energielabel` from EP-online — registered label data
-- `bodemloket` — Bodemloket WMS available (WFS limited, ArcGIS REST documented at gdngeoservices.nl)
-- Area scan results — parcels with opportunity scores, bestemmingen, zoning data
-- Meldingen intelligence — bekendmakingen matched to parcels
-- PDF export pipeline via WeasyPrint — already generates structured reports
-
-**Wkb context (mandatory for feature decisions):**
-- Wet kwaliteitsborging voor het bouwen (Wkb) mandatory from January 1, 2024 for gevolgklasse 1
-- Gevolgklasse 1 = grondgebonden woningen, vakantiewoningen, industriegebouwen max 2 verdiepingen
-- Gevolgklassen 2 and 3 are NOT yet mandatory — current scope is exclusively GK1
-- TloKB (Toelatingsorganisatie) maintains the public register at register.tlokb.nl
-- VKBN is the professional association for kwaliteitsborgers
-- Kwaliteitsborger fee: approximately 1–1.5% of bouwsom (€3,750 for €250K bouwsom)
-- 33 projects were fully gereedgemeld by end of 2024 — market is early-stage, opportunity is real
+**Domain:** Dutch PropTech — Open Data Intelligence (CBS + Rechtspraak + AI Legal Analysis)
+**Researched:** 2026-03-06
+**Confidence:** HIGH — APIs verified live, existing codebase inspected, XML/OData responses confirmed
 
 ---
 
-## Table Stakes
+## Context: What's Already Built
 
-Features that a property developer or kwaliteitsborger expects from a professional lead generation platform in this domain. Missing these makes the product feel unfinished or untrustworthy.
+Before categorizing features, note what's already partially implemented in the codebase:
+
+**CBS OData client** (`backend/app/government_apis/cbs_odata.py`):
+- `CBSODataClient` exists, targets dataset `85618NED` (2023 Kerncijfers wijken en buurten)
+- Uses OData v3-style URL (`opendata.cbs.nl/ODataApi/OData`) — needs migration to OData v4 (`datasets.cbs.nl/odata/v1/CBS/`)
+- Resolves gemeente/wijk name → CBS region key → fetches neighborhood data
+- Returns: `gemiddelde_woz_waarde`, `stedelijkheid` (klasse + omschrijving + OAD), demographics, bouwjaar distribution
+- Called in `area_scan.py` ARQ job — result stored as `neighborhood_metrics` JSONB on `AreaScan` model
+- Schema field `neighborhood_metrics: dict | None` exposed in `ScanStatusResponse`
+- Frontend type `neighborhood_metrics?: Record<string, any> | null` in scan.ts
+
+**Rechtspraak client** (`backend/app/government_apis/rechtspraak.py`):
+- `RechtspraakClient` exists with `search_jurisprudence()` and `get_jurisprudence_document()`
+- Search via Atom feed at `data.rechtspraak.nl/uitspraken/zoeken?searchterms=...`
+- Document fetch via `data.rechtspraak.nl/uitspraken/content?id=ECLI:...`
+- Rate limit semaphore (5 concurrent max out of 10/sec API limit)
+- Returns: ecli, title, summary, date (search); ecli, text, instantie, datum_uitspraak (document)
+
+**Backend endpoint** (`backend/app/api/endpoints/jurisprudence.py`):
+- `GET /api/jurisprudence/search?q=...&max_results=10&sort=DESC` — live
+- `GET /api/jurisprudence/doc/{ecli}` — live
+
+**Frontend** (`JurisprudenceSection.tsx`, `useJurisprudence.ts`):
+- Full search UI with debounced input, results list, split-pane document viewer — live
+- Rendered inside `WijkDetailView.tsx` with default query `"omgevingsvergunning {gemeenteNaam}"`
+
+**NOT yet built:**
+- CBS neighborhood metrics display in UI (data is fetched, stored, but not rendered)
+- AI-powered legal precedent analysis (no Claude integration for Rechtspraak documents)
+- Vergunnings-succeskans score from court rulings
+- OData v4 migration (client uses v3 endpoint)
+
+---
+
+## Feature Landscape
+
+### Table Stakes (Users Expect These)
+
+Features developers and users will expect once told "we have CBS neighborhood data and court rulings."
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Gevolgklasse determination (GK1/2/3) | Every Wkb workflow starts here — the kwaliteitsborger cannot quote without knowing the class | LOW | Already partially built in v7.2 `wkb_precheck`. Extend with explicit GK label and rationale display. Rules: grondgebonden woning = GK1; functie + verdiepingen + span determine class |
-| Asbest risk indicator (bouwjaar-based) | Pre-1994 buildings have presumptive asbest risk — legally mandated inventory before sloop/verbouw. Kwaliteitsborger needs to know this upfront | LOW | Derived from existing BAG `bouwjaar`. Simple threshold: bouwjaar < 1994 → flag. Display as a prominent risk badge on the report. No new API needed |
-| Bodemloket soil contamination indicator | Kwaliteitsborger risicobeoordeling must address "bijzondere lokale omstandigheden" including bodemverontreiniging — missing this means incomplete dossier | MEDIUM | Bodemloket ArcGIS REST at `gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer`. Query by parcel geometry (ST_Contains or bbox). Returns WBB_punten (point contaminations) and WBB_locaties (polygon areas). Display as "Bodemverontreiniging aanwezig/niet aanwezig/onbekend" |
-| Risicobeoordeling dossier (structured PDF) | Kwaliteitsborger saves 1–3 hours per project if the initial dossier is pre-assembled. The risicobeoordeling must cover: constructieve veiligheid, brandveiligheid, energieprestatie, specifieke lokale omstandigheden | HIGH | Aggregate from existing report sections + new Bodemloket data + asbest indicator + GK classification into a structured PDF export. Uses existing WeasyPrint pipeline. New template only |
-| "Vraag kwaliteitsborger aan" CTA in report | Users expect an actionable next step after reading a property intelligence report — without a CTA, the lead generation journey breaks | LOW | A button/card in the report UI. Triggers a lead capture form. No payment required — manual matching in MVP. Must appear contextually after GK determination is shown |
-| Lead capture form (project brief) | Kwaliteitsborger needs: type bouwwerk, locatie, bouwjaar, GK, oppervlakte, geschatte bouwsom, contactgegevens. Without this, a professional cannot respond | MEDIUM | Form collects: address (auto-filled from report), bouwjaar (auto-filled), gevolgklasse (auto-filled), bouwtype, geschatte bouwsom, gewenste startdatum, opmerkingen, naam, email, telefoon. Pre-fill from existing report data where possible |
-| Professional directory listing (kwaliteitsborger profiles) | Users expect to see who they are contacting — anonymous lead routing is distrusted. TloKB register is public, VKBN lists members | MEDIUM | Display per listing: naam/organisatie, erkend instrument, werkgebied (provincie/gemeente), contactgegevens, TloKB register link. MVP: static or manually maintained. Phase 2: dynamic from TloKB public register |
-| Lead notification to professional | Kwaliteitsborger must be notified when a matching lead arrives — without this the marketplace is just a form | MEDIUM | Email notification to matched kwaliteitsborger with project brief summary. MVP: manual routing by Propdex team. Phase 2: automated matching by werkgebied/type |
-| Lead confirmation to developer | Developer must receive confirmation their request was received — no confirmation = no trust | LOW | Email confirmation to developer with: submitted project brief summary, expected response time (48 hours), contact for support. Transactional email via existing infra |
+| CBS metrics visible in scan results | Data is fetched during scan — not showing it is a broken experience | LOW | Data already in `neighborhood_metrics` JSONB, only needs frontend `NeighborhoodMetricsCard` in `WijkDetailView` |
+| Average WOZ value per wijk | Core market context for transformation potential — "is this a rising or depressed market?" | LOW | Already fetched: `gemiddelde_woz_waarde` from CBS measure code `M001642` |
+| Urbanization class display | Determines project type viability (dense urban = apartments, rural = different rules) | LOW | Already fetched: `stedelijkheid.klasse` (1-5 scale) + `omgevingsadressendichtheid` |
+| Search court rulings by gemeente/type | Primary utility of Rechtspraak integration — "what happened in Rotterdam with church conversions?" | LOW | Backend + frontend already live; verify `searchterms` parameter reliability |
+| Read full court ruling inline | Developers need to read actual ruling text to assess precedent before calling their lawyer | LOW | Already in `JurisprudenceViewer` component with split-pane layout |
+| Court ruling metadata (court, date, ECLI) | Minimal context to evaluate relevance before clicking through | LOW | Already in `JurisprudenceSection.tsx` — ecli, title, date shown |
+| Recent rulings as default view | Show latest relevant rulings without requiring manual search query input | LOW | Default query already set to `"omgevingsvergunning {gemeenteNaam}"` |
+| CBS dataset freshness indication | Users need to know if statistics are 2023 or 2024 to calibrate trust | LOW | `peiljaar` already in CBS client response, needs display in UI |
 
----
+### Differentiators (Competitive Advantage)
 
-## Differentiators
-
-Features that make Propdex meaningfully better than a generic marketplace (Werkspot, Bark.com) for this specific domain. These leverage the existing property intelligence platform in ways a general marketplace cannot.
+Features that turn raw data into actionable intelligence — the core Propdex value proposition.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Pre-filled dossier from property data | Kwaliteitsborger typically asks developer for 5–10 documents before quoting. Propdex auto-assembles: gevolgklasse, bouwjaar, bestemmingsplan, bodemkwaliteit, asbest indicator, energielabel, BRK eigendomsdata, oppervlakte | HIGH | Depends on all existing data pipeline sections. The dossier replaces the "intake questionnaire" phase, saving 1–3 hours per project. Core differentiator vs any generic marketplace |
-| Gevolgklasse pre-determination with rationale | Generic platforms ask the user to select a category manually. Propdex determines GK1/2/3 automatically from BAG + bestemmingsplan data and explains why | MEDIUM | Leverages existing `wkb_precheck` Layer A. Display: GK badge + "Waarom GK1: grondgebonden woning, 2 verdiepingen, geen bijzondere functies" rationale card. Kwaliteitsborger trusts pre-screened leads |
-| Bodemloket risk flag in lead brief | Generic marketplaces send project descriptions. Propdex sends structured risk signals — kwaliteitsborger can immediately see: asbest Y/N, bodem Y/N, GK, oppervlakte. Faster decision on which leads to pursue | MEDIUM | Requires Bodemloket integration. Display as structured risk matrix in the lead notification email and professional dashboard |
-| Permit precedent in lead context | Showing comparable vergunningen for the gemeente and building type helps the kwaliteitsborger understand project complexity before accepting | LOW | Leverages existing `permit_precedent_benchmark` (v7.2). Include 2–3 comparable cases in the dossier PDF and lead notification |
-| Buildability delta context | For new construction leads, showing hoeveel er nog gebouwd kan worden gives the kwaliteitsborger immediate scope sizing | LOW | Leverages existing `buildability_delta` (v7.2). Include in dossier for nieuwbouw projects |
-| Meldingen context (active vergunningaanvragen) | Active bekendmakingen matched to the parcel (vergunningaanvraag, sloopmelding) tell the kwaliteitsborger the project timeline is real | LOW | Leverages existing meldingen intelligence pipeline. Include matched meldingen count and categories in the lead brief |
-| Lead quality scoring for professionals | Instead of receiving all leads, kwaliteitsborger sees a "lead score" based on: completeness of dossier, GK match to werkgebied, days to planned start. Prevents wasted time on low-quality leads | MEDIUM | Computed from: dossier completeness %, GK1 confirmed (vs estimated), start date specificity, developer contact verified. Display as 1–5 star or traffic light signal |
-| TloKB register verification badge | Display that the kwaliteitsborger is confirmed active in the TloKB register — reduces fraud risk for developers. Generic platforms cannot do this without domain knowledge | MEDIUM | Link to public TloKB register entry. Manual verification in MVP; can automate with register.tlokb.nl scrape or API in Phase 2 |
+| AI-generated juridisch klimaat summary | Developer cannot read 50 court rulings — Claude synthesizes "In Rotterdam, courts consistently reject height deviations above 3 floors in residential areas" | HIGH | Requires Claude integration, Dutch legal prompt engineering, cost management via inhoudsindicatie batching |
+| Vergunnings-succeskans score | Single number (e.g., "67% success rate for woningbouw in this gemeente based on last 3 years") gives direct go/no-go signal | HIGH | Requires ruling outcome classification (granted/rejected/modified) per case, then statistical aggregation |
+| Ruling outcome classification badge | Each ruling tagged as "Verleend / Geweigerd / Deels toegewezen" without reading full text | MEDIUM | Use Claude on inhoudsindicatie (100-300 chars per ruling) — low cost, high efficiency |
+| CBS market context card | Visual card in WijkDetailView: WOZ avg, huurwoningen%, bevolkingsdichtheid, inkomen — contextualizes opportunity score | MEDIUM | Data already fetched, needs `NeighborhoodMetricsCard` component |
+| Omgevingsrecht search filter | Pre-filter search to bestuursrecht/omgevingsrecht to eliminate irrelevant rulings | MEDIUM | Rechtspraak API supports `subject=http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht` — needs UI filter |
+| CBS scoring contribution to opportunity score | Integrate stedelijkheid + WOZ level into parcel opportunity score (high-WOZ wijk = better demand signal) | MEDIUM | Requires changes to scoring algorithm in `area_scan.py` — currently uses only BAG/bestemmingsplan data |
+| Risk flag: frequent appellants | "This gemeente has 3 active appeal organizations blocking 40% of residential projects" — extracted from recurring plaintiff names | HIGH | Requires named entity extraction across rulings, clustering by appellant identity across cases |
+| CBS trends over time | "This wijk's WOZ rose 18% in 3 years" — market momentum indicator for investment thesis | HIGH | Requires fetching multiple dataset years (85618NED=2023, 85984NED=2024, 86165NED=2025), joining by wijk code |
 
----
-
-## Anti-Features
-
-Features that seem natural for a marketplace but create specific problems in this domain.
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Open bidding / price comparison (aanbesteding) | Developers want to compare prices from multiple kwaliteitsborgers | Commoditizes a professional service that requires trust and ongoing collaboration. Kwaliteitsborgers are reluctant to participate in race-to-bottom bidding. Wkb requires an *ongoing relationship*, not a one-time transaction | Show market rate context (1–1.5% of bouwsom) as an informational reference. Route to 1–2 matched professionals instead of open bidding |
-| Star ratings and public reviews for kwaliteitsborgers | Every marketplace has reviews | Kwaliteitsborger-developer relationships are long-term and legally constrained (independence requirement). Bad reviews from a contractor they had to fail could be legally contentious. Market is too small (few hundred active kwaliteitsborgers NL) to get statistically meaningful reviews | Show TloKB registration status, instrument provider, years active, werkgebied coverage as trust signals. Reviews can be added post-market-fit |
-| Instant booking / automatic matching without human check | Faster is better | Kwaliteitsborger must be independent from all project parties (architect, aannemer, developer). Matching without checking for conflicts of interest creates legal liability | Lead routing with a manual conflict-of-interest step in MVP. Flag if same kwaliteitsborger already working for the aannemer on this project |
-| Payment processing in MVP | Monetize from day one | Payment infrastructure is complex (escrow, VAT, invoicing), legally constrained, and premature — v9.0 goal is to prove lead generation value first. Premature payment adds friction that kills lead volume | Manual invoicing to kwaliteitsborgers for a monthly subscription or per-lead fee. Payment infrastructure deferred to v10.0+ |
-| GK2 and GK3 lead generation | More scope = more leads | Wkb does not yet require kwaliteitsborging for GK2/GK3. Taking on GK2/GK3 leads before the law applies creates confusion and professional liability risk | Clearly scope to GK1 only. Show a "GK2/3: kwaliteitsborging nog niet verplicht" notice for higher-class buildings |
-| Gevolgklasse determination by user input only | Simpler form, user knows their building | Self-classification leads to systematic errors. A developer may underclassify to save cost. Kwaliteitsborger who acts on wrong GK faces liability | Use automated GK determination from BAG + bestemmingsplan as the primary source. Allow manual override with explicit warning |
-| Multi-vertical marketplace launch (kwaliteitsborger + constructeur + asbestbedrijf simultaneously) | One platform for all professionals | Scope explosion for first launch. Each vertical has different compliance requirements, different user journey, different trust signals | Prove the model with kwaliteitsborger vertical first. Leave database schema flexible for future verticals, but build only kwaliteitsborger UX in v9.0 |
-| Full CRM pipeline for professionals | Kwaliteitsborgers want to track leads through their sales process | This is a full CRM product (Salesforce/Hubspot), not a marketplace feature. Building it adds months of scope and zero benefit to the developer side | Show lead status (Nieuw / In behandeling / Offerte verstuurd / Afgewezen) updated by the professional via a simple status change. Nothing more |
+| Real-time court ruling alerts | "Notify me when a new ruling appears for my gemeente" | Rechtspraak is daily-updated not real-time; alert fatigue (80% rulings are irrelevant); complex webhook/polling infrastructure | Weekly AI digest: summarize new relevant rulings for monitored gemeenten, not per-ruling push |
+| Full-text search within ruling documents | "Find all cases mentioning stikstof in Amsterdam" | The `data.rechtspraak.nl/zoeken` endpoint does NOT support full-text search within documents — only title/metadata. The hidden `uitspraken.rechtspraak.nl/api/zoek` is undocumented and unstable | Use searchterms in public API + AI extraction on fetched documents; surface via AI-generated topical summaries |
+| CBS data at parcel level | "Show me the WOZ per individual parcel from CBS" | CBS statistics are at buurt/wijk level only, not parcel level. Individual parcel WOZ comes from Waardeloket (already built in v7.0) | Show CBS wijk-level averages as market context; per-parcel WOZ from Waardeloket |
+| Automated permit success prediction with confidence scores | "Tell me if my permit will be approved with 92% confidence" | AI cannot make legal predictions without liability risk; courts are unpredictable; "92% success" claim invites complaints when rejected | Frame as "historical precedent context" not prediction: "In 18 of 24 similar cases in this gemeente, vergunning was granted" |
+| Complete CBS dataset sync | "Pull all 100+ CBS fields into the database" | 100+ measure fields x 12,000+ wijken = massive payload; most fields irrelevant to PropTech (jeugdzorg, WMO, brandstoftype auto's); slows scan job | Curated 10-field selection: WOZ, stedelijkheid, woningvoorraad, huurwoningen%, inkomen, bevolkingsdichtheid — already in existing CBS client |
+| Vergunning processing time benchmark | "How long does Amsterdam take to process permits?" | Not extractable from court rulings (rulings cover appeals, not first-instance timelines); Omgevingsloket wettelijk monopolie Art. 16.1 | Use bekendmakingen (already built) as proxy for permit activity volume per gemeente |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[GK Determination (wkb_precheck v7.2)]
-    └── already built ──> [GK display in report UI]
-                              └── feeds ──> [Gevolgklasse badge in risicobeoordeling dossier]
-                                                └── required by ──> [Lead capture form (auto-fill)]
+CBS OData v4 migration
+    └──enables──> Reliable CBS data fetch (v3 endpoint may be deprecated)
+                      └──enables──> CBS metrics visible in scan results (UI)
+                                        └──enables──> CBS scoring contribution to opportunity score
 
-[Asbest risk indicator]
-    └── depends on ──> [BAG bouwjaar] (already in report)
-    └── feeds into ──> [Risicobeoordeling dossier]
+JurisprudenceSection (LIVE)
+    └──enables──> Search + read court rulings (already works)
+                      └──enables──> Omgevingsrecht filter
+                      └──enables──> Ruling outcome classification (AI on inhoudsindicatie)
+                                        └──enables──> Vergunnings-succeskans score
+                                                          └──enables──> AI juridisch klimaat summary
+                                        └──enables──> Frequent appellant detection
 
-[Bodemloket integration]
-    └── new API ──> [Bodemverontreiniging indicator]
-                       └── feeds into ──> [Risicobeoordeling dossier]
-                       └── feeds into ──> [Lead brief to kwaliteitsborger]
-
-[Risicobeoordeling dossier PDF]
-    └── requires ──> [Existing WeasyPrint pipeline]
-    └── requires ──> [GK determination]
-    └── requires ──> [Asbest indicator]
-    └── requires ──> [Bodemloket indicator]
-    └── enhanced by ──> [Permit precedent benchmark (v7.2)]
-    └── enhanced by ──> [Buildability delta (v7.2)]
-    └── enhanced by ──> [Meldingen matched to parcel (v6.0)]
-
-["Vraag kwaliteitsborger aan" CTA]
-    └── depends on ──> [GK determination displayed in report]
-    └── triggers ──> [Lead capture form]
-
-[Lead capture form]
-    └── auto-fills from ──> [Report data (address, bouwjaar, GK, oppervlakte)]
-    └── on submit ──> [Lead record created in DB]
-                         └── triggers ──> [Email to developer (confirmation)]
-                         └── triggers ──> [Email to kwaliteitsborger (notification)]
-
-[Professional directory]
-    └── provides ──> [Routing target for lead notifications]
-    └── displays ──> [TloKB registration badge]
-
-[Lead notification to professional]
-    └── requires ──> [Professional directory listing]
-    └── includes ──> [Risicobeoordeling dossier summary]
-    └── includes ──> [Lead quality score]
+AI juridisch klimaat summary
+    └──requires──> Ruling outcome classification (need structured data before aggregating)
+    └──requires──> Sufficient ruling corpus (5+ rulings per gemeente for meaningful stats)
+    └──requires──> Claude API integration (already exists in app for bestemmingsplan parsing)
 ```
 
 ### Dependency Notes
 
-- **Risicobeoordeling dossier requires GK determination:** Without a confirmed gevolgklasse, the dossier is legally incomplete. This means GK display in the report must ship before the dossier feature.
-- **Lead capture form requires dossier:** The value proposition of the lead form is "your dossier is pre-assembled." Without the dossier, the form is just another contact form (commodity, low conversion).
-- **Bodemloket enhances but does not block dossier:** Dossier can ship without Bodemloket data — show "Bodemkwaliteit: niet opgevraagd" as a placeholder. Add Bodemloket in the same phase if API integration is straightforward, or defer to v9.1.
-- **Professional directory is pre-condition for lead routing:** Without at least one listed kwaliteitsborger, leads cannot be routed. Seed with 3–5 known TloKB-registered professionals before launch.
-
----
-
-## Risicobeoordeling Dossier: Required Content
-
-Based on official Bbl requirements and TloKB guidelines, a compliant risicobeoordeling must cover:
-
-| Content Area | Source in Propdex | Notes |
-|-------------|-------------------|-------|
-| Gevolgklasse determination | wkb_precheck (v7.2) | GK1 classification + rationale |
-| Bouwwerk identificatie (adres, perceel, BAG-ID) | BAG + kadastrale aanduiding | Already in report |
-| Bouwjaar | BAG bouwjaar | Already in report |
-| Gebruiksfunctie (woonfunctie, industriefunctie) | BAG gebruiksdoel | Already in report |
-| Constructieve veiligheid risico's | Derived from bouwjaar + type + GK | Show risk level: low/medium/high based on age and type |
-| Brandveiligheid risico's | Derived from GK + function | GK1 residential has standard profile |
-| Energieprestatie (energielabel) | EP-online (v7.0) | Label klasse + geldigheid |
-| Bijzondere lokale omstandigheden: bodem | Bodemloket | NEW: bodemverontreiniging aanwezig/niet/onbekend |
-| Bijzondere lokale omstandigheden: asbest | BAG bouwjaar < 1994 | NEW: asbest risico indicator |
-| Gelijkwaardige oplossingen | User-supplied | Text field in lead capture form: "zijn er gelijkwaardige oplossingen gepland?" |
-| Vergunningenstatus (actieve aanvragen) | Meldingen intelligence (v6.0) | Matched bekendmakingen count + categories |
-| Referentieprojecten gemeente | Permit precedent benchmark (v7.2) | 2–3 comparable cases |
-| Bebouwingsmogelijkheden | Buildability delta (v7.2) | For nieuwbouw projects |
+- **CBS UI requires no backend work.** Data already fetched and stored in `neighborhood_metrics` JSONB. Only frontend rendering needed — a `NeighborhoodMetricsCard` component. Fastest win in the milestone.
+- **AI analysis builds on existing Rechtspraak search.** Search is live so AI analysis can start immediately once Claude integration is added to a new ARQ-based analysis job.
+- **Vergunnings-succeskans requires ruling outcome classification first.** Cannot compute success rate without classifying each ruling as granted/rejected. Classification should happen lazily (on-fetch) using Claude on the inhoudsindicatie text (efficient: ~200 tokens per ruling).
+- **OData v4 migration is non-blocking but urgent.** CBS client uses OData v3 URL which CBS is actively migrating away from. Migration to `datasets.cbs.nl/odata/v1/CBS/` also requires updating field name lookups to use measure codes (e.g. `M001642` for WOZ) instead of column names.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v9.0)
+This is a subsequent milestone on an existing production platform. "MVP" means minimum work to deliver meaningful user value on each of the three feature tracks.
 
-Minimum viable product — what's needed to validate kwaliteitsborger lead generation.
+### Track 1: CBS Neighborhood Scoring — Launch With
 
-- [ ] GK determination prominently displayed in property report — the entry point for every kwaliteitsborger
-- [ ] Asbest risk indicator (bouwjaar < 1994 flag) — zero API cost, derived from existing BAG data
-- [ ] Bodemloket soil contamination query (at least WMS-based indicator) — required for risicobeoordeling completeness
-- [ ] "Vraag kwaliteitsborger aan" CTA in report, visible after GK is determined
-- [ ] Lead capture form with auto-fill from report data — reduces developer effort, increases conversion
-- [ ] Risicobeoordeling dossier PDF export — the core value proposition for kwaliteitsborgers
-- [ ] Professional directory: minimum 3–5 manually seeded kwaliteitsborger listings
-- [ ] Email notification to kwaliteitsborger with dossier summary
-- [ ] Email confirmation to developer with submitted brief
+- [x] CBS OData client exists and fetches during scan (DONE)
+- [x] `neighborhood_metrics` stored in AreaScan JSONB (DONE)
+- [ ] Migrate CBS client to OData v4 endpoint + updated measure code field names
+- [ ] Update to latest dataset (85984NED = 2024 or 86165NED = 2025)
+- [ ] `NeighborhoodMetricsCard` component in `WijkDetailView` — display WOZ avg, stedelijkheid, demografie, woningtypen
+- [ ] Handle `None` gracefully with "Geen CBS data beschikbaar" fallback
 
-### Add After Validation (v9.x)
+### Track 2: Rechtspraak Jurisprudence — Launch With
 
-Features to add once first leads are flowing and kwaliteitsborgers provide feedback.
+- [x] Backend search endpoint live (DONE)
+- [x] Backend document fetch endpoint live (DONE)
+- [x] `JurisprudenceSection` frontend component live (DONE)
+- [ ] Verify `searchterms` parameter works reliably end-to-end (test with gemeente filter)
+- [ ] Add bestuursrecht/omgevingsrecht filter to search UI (use `subject` parameter)
+- [ ] Ruling outcome classification badge via AI on inhoudsindicatie
 
-- [ ] Lead quality scoring — add after seeing what information kwaliteitsborgers actually use to accept/reject leads
-- [ ] TloKB register verification badge — adds trust, implement once directory is being used
-- [ ] Dynamic professional directory from TloKB register (scrape or API) — replace manual seed data
-- [ ] Lead status updates by professional (Nieuw/In behandeling/Offerte) — add once professionals are logging in
+### Track 3: AI Legal Analysis — Launch With
 
-### Future Consideration (v10.0+)
+- [ ] Batch fetch function: given gemeente + rechtsgebied, retrieve N most recent bestuursrecht rulings
+- [ ] Claude integration: classify ruling outcome + extract project type + key blocker from inhoudsindicatie
+- [ ] Store analysis results in JSONB cache (on AreaScan or a dedicated `JurisprudenceAnalysis` table)
+- [ ] "Juridisch klimaat" summary card with succeskans score + key risk factors in `WijkDetailView`
+- [ ] Confidence indicator: "Gebaseerd op 12 uitspraken (2022-2025)" for transparency
 
-- [ ] Payment infrastructure — credit system, per-lead or subscription billing
-- [ ] Additional verticals: constructeurs, asbestbedrijven, bodemonderzoekers
-- [ ] B2B API for borgingspartijen (Woningborg, Kiwa, SWK)
-- [ ] Automated conflict-of-interest checking between professional and project parties
-- [ ] Full lead pipeline visualization on map (color-coded by pipeline stage)
+### Add After Validation (v1.x)
+
+- [ ] CBS scoring contribution to opportunity score — trigger: confirm CBS data improves lead quality
+- [ ] Trend analysis: ruling outcomes year-over-year per gemeente — trigger: user asks "is Rotterdam getting stricter?"
+- [ ] Frequent appellant detection — trigger: user reports missing "who objects" context
+
+### Future Consideration (v2+)
+
+- [ ] Weekly AI ruling digest for monitored gemeenten — complex notification infrastructure
+- [ ] CBS multi-year WOZ trend comparison — multi-dataset fetch and join
+- [ ] Cross-gemeente legal risk benchmarking — "Amsterdam vs Rotterdam vs Utrecht juridisch klimaat"
 
 ---
 
@@ -201,90 +166,132 @@ Features to add once first leads are flowing and kwaliteitsborgers provide feedb
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| GK display in report | HIGH | LOW (extends v7.2 wkb_precheck) | P1 |
-| Asbest risk indicator | HIGH | LOW (BAG bouwjaar already present) | P1 |
-| "Vraag kwaliteitsborger aan" CTA | HIGH | LOW (button + form trigger) | P1 |
-| Lead capture form (auto-fill) | HIGH | MEDIUM (form + DB model + email) | P1 |
-| Risicobeoordeling dossier PDF | HIGH | HIGH (new PDF template, multi-source aggregation) | P1 |
-| Bodemloket integration | MEDIUM | MEDIUM (new API client, WMS/REST query) | P1 |
-| Professional directory (seeded) | HIGH | LOW (static data, admin CRUD) | P1 |
-| Lead notification emails | HIGH | LOW (transactional email, existing infra) | P1 |
-| Lead quality scoring | MEDIUM | MEDIUM (scoring logic + display) | P2 |
-| TloKB verification badge | MEDIUM | LOW (static link, manual check) | P2 |
-| Dynamic TloKB directory | MEDIUM | MEDIUM (register.tlokb.nl scrape) | P2 |
-| Lead status tracking | MEDIUM | MEDIUM (status model + professional UI) | P2 |
+| CBS metrics display card (UI only) | HIGH | LOW | P1 |
+| CBS OData v4 migration + dataset update | HIGH | LOW | P1 |
+| Omgevingsrecht search filter in UI | MEDIUM | LOW | P1 |
+| Ruling outcome classification badge | HIGH | MEDIUM | P1 |
+| AI juridisch klimaat summary | HIGH | HIGH | P1 |
+| Vergunnings-succeskans score | HIGH | HIGH | P2 |
+| CBS dataset freshness indicator | LOW | LOW | P2 |
+| CBS scoring contribution to opportunity score | MEDIUM | MEDIUM | P2 |
+| Frequent appellant detection | MEDIUM | HIGH | P3 |
+| CBS multi-year trends | MEDIUM | HIGH | P3 |
+| Weekly ruling digest notifications | LOW | HIGH | P3 |
 
-**Priority key:**
-- P1: Must have for v9.0 launch
-- P2: Add in v9.x after first leads validated
-- P3: Nice to have, future consideration
+---
+
+## API Characteristics (Verified Live 2026-03-06)
+
+### CBS OData v4
+
+- **Current v3 URL in codebase:** `https://opendata.cbs.nl/ODataApi/OData/{dataset_id}/TypedDataSet`
+- **Target v4 URL:** `https://datasets.cbs.nl/odata/v1/CBS/{dataset_id}/Observations`
+- **Latest 2024 dataset:** `85984NED`; Latest 2025 dataset: `86165NED`
+- **Region filter:** OData `$filter=WijkenEnBuurten eq 'WK036300'` (wijk) or `'GM0363    '` (gemeente — note trailing spaces in CBS keys)
+- **Key measure codes verified (dataset 85984NED):**
+  - `M001642` — Gemiddelde WOZ-waarde van woningen
+  - `ST0001` — Mate van stedelijkheid (1=zeer sterk stedelijk, 5=niet stedelijk)
+  - `ST0003` — Omgevingsadressendichtheid (addresses/km²)
+  - `T001036` — Aantal inwoners
+  - `M000297` — Woningvoorraad
+  - `1014800` — Koopwoningen
+  - `1014850_2` — Huurwoningen totaal
+  - `M000100` — Bevolkingsdichtheid
+  - `M000223` — Gemiddeld inkomen per inkomensontvanger
+  - `ZW10290` — Percentage eengezinswoning
+  - `ZW10340` — Percentage meergezinswoning
+  - `M000114` — Gemiddelde huishoudensgrootte
+- **Rate limits:** None documented; public open data API
+- **Coverage:** ~100% for wijken, ~60-80% for buurten (sub-wijk level)
+
+### Rechtspraak Open Data
+
+- **Search endpoint:** `https://data.rechtspraak.nl/uitspraken/zoeken`
+- **Parameters verified:** `searchterms`, `max`, `sort` (ASC/DESC), `type` (Uitspraak/Conclusie), `date`, `subject` (rechtsgebied URI), `creator` (court filter)
+- **Bestuursrecht subject URI:** `http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht`
+- **Content endpoint:** `https://data.rechtspraak.nl/uitspraken/content?id=ECLI:NL:RVS:...`
+- **Response format:** Atom XML (search), Open Rechtspraak XML (document)
+- **Key XML fields confirmed in ECLI:NL:RVS:2024:2049:**
+  - `dcterms:identifier` — ECLI identifier
+  - `dcterms:creator` — Court name (e.g., "Raad van State")
+  - `dcterms:date` — Ruling date
+  - `psi:procedure` — Procedure type (e.g., "Hoger beroep")
+  - `dcterms:subject` — Rechtsgebied URI
+  - `dcterms:relation` — Formal relations to other cases
+  - `inhoudsindicatie` — 2-4 sentence summary (AI analysis input)
+  - `uitspraak` — Full ruling text
+- **Rate limit:** 10 requests/second; semaphore (value=5) already implemented in codebase
+- **Corpus size verified live:** 3,573,904 rulings total as of 2026-03-06
+- **Key limitation:** `searchterms` searches title metadata only, NOT full document text
+
+### AI Legal Analysis (Claude)
+
+- **Pattern:** Claude already integrated in app for bestemmingsplan PDF parsing via ARQ worker
+- **Cost-efficient approach:** Use `inhoudsindicatie` (100-300 chars) for classification, NOT full `uitspraak` (too long, expensive)
+- **Recommended models:** `claude-haiku-3-5` for per-ruling classification; `claude-sonnet-4-5` for synthesis
+- **Input per ruling:** ~500 tokens (inhoudsindicatie + classification prompt)
+- **Synthesis input:** 10-20 classified rulings → juridisch klimaat summary
+- **Output structure per ruling:** `{outcome: "verleend|geweigerd|deels|overig", project_type: str, key_factor: str}`
+- **Synthesis output:** succeskans score + top 2-3 risk factors + verdeling van uitspraken
+
+---
+
+## User Journey
+
+### Journey 1: CBS Neighborhood Screening (Discovery)
+
+1. User opens `WijkDetailView` for "Spoorzone Tilburg"
+2. Sees `NeighborhoodMetricsCard`: WOZ €285k gemiddeld, Sterk stedelijk (klasse 2), 68% koopwoningen, inkomen €42k
+3. Compares against a neighboring wijk — "Centrum Tilburg is more urban but WOZ €310k, better demand signal"
+4. Combines with opportunity score to prioritize scan results in the most promising market context
+
+### Journey 2: Jurisprudence Research (Due Diligence)
+
+1. User has a church in Breda they are evaluating for residential conversion
+2. Opens WijkDetailView → JurisprudenceSection → default query "omgevingsvergunning Breda"
+3. Applies bestuursrecht filter, sets to DESC (newest first)
+4. Reads 3 rulings from last 2 years — two approved church conversions, one rejected for monument reasons
+5. Clicks on a ruling to open it — reads the inhoudsindicatie and key consideration: "Raad van State confirms monument status alone does not prevent residential reuse if heritage value is preserved"
+6. Saves insight before consulting their lawyer — due diligence reduced from days to minutes
+
+### Journey 3: AI Risk Assessment (Go/No-Go Support)
+
+1. User is at final feasibility stage for a large residential project in Rotterdam
+2. Clicks "Analyseer juridisch klimaat" on the WijkDetailView
+3. Platform fetches last 2 years of bestuursrecht rulings for Rotterdam, sends inhoudsindicatoren to Claude
+4. Returns card: "Juridisch klimaat: Matig gunstig (67% succeskans). Gebaseerd op 14 uitspraken 2023-2025. Aandachtspunt: 4 zaken geblokkeerd door VvE-bezwaar bij kantoor-naar-wonen transformaties."
+5. User sees a risk factor they were not aware of — adjusts project design to avoid VvE complications before starting the permit process
 
 ---
 
 ## Competitor Feature Analysis
 
-| Feature | Werkspot (NL generic) | Bark.com (INT generic) | Propdex v9.0 Approach |
-|---------|----------------------|------------------------|----------------------|
-| Professional discovery | Browse by category + location | Browse by category + location | TloKB-verified directory filtered by GK and werkgebied |
-| Lead qualification | Consumer fills free-text form | Consumer fills category-specific form | Auto-filled from existing property intelligence data |
-| Project dossier | None | None | Structured risicobeoordeling PDF with government API data |
-| GK determination | Manual (user selects) | Not applicable | Automatic from BAG + bestemmingsplan |
-| Asbest/bodem risk | Not shown | Not applicable | Flagged from bouwjaar + Bodemloket |
-| Professional verification | Reviews only | Reviews + some manual checks | TloKB register link (legally authoritative) |
-| Conflict of interest check | None | None | Manual in MVP, automated in future |
-| Lead response time | Marketplace competition (fast) | Marketplace competition (fast) | Curated routing (slower but higher quality) |
-| Payment model | Per-lead credits | Per-lead credits | Manual billing in MVP (no payment infra) |
+| Feature | Spartner NL | Transect US | Propdex Approach |
+|---------|-------------|-------------|-----------------|
+| Neighborhood stats | WOZ from Waardeloket only | US market data (not NL) | CBS OData with 10 curated PropTech-relevant fields |
+| Court rulings / legal precedent | Not present | US-focused legal data | Rechtspraak full integration — unique in NL PropTech |
+| AI legal analysis | Not present | Basic zoning summaries | Claude-powered Dutch legal precedent synthesis — first-mover |
+| Jurisprudence search UI | Not present | Not applicable | Live search with split-pane document viewer |
+| Risk scoring from legal data | Not present | Not applicable | Vergunnings-succeskans from ruling outcome corpus |
 
----
-
-## User Journey: Property Check to Lead Capture
-
-This journey maps how a Propdex user (developer) naturally arrives at a kwaliteitsborger request.
-
-```
-1. Developer enters address → generates property report [existing]
-        ↓
-2. Report displays GK determination: "Gevolgklasse 1 — kwaliteitsborging verplicht" [NEW]
-        ↓
-3. Report shows asbest indicator (if bouwjaar < 1994) [NEW]
-        ↓
-4. Report shows bodem risk (if WBB contamination nearby) [NEW]
-        ↓
-5. Risicobeoordeling dossier generated (PDF export) [NEW]
-        ↓
-6. Developer sees CTA: "Vraag een kwaliteitsborger aan" [NEW]
-        ↓
-7. Lead capture form opens — auto-filled with address, bouwjaar, GK, oppervlakte [NEW]
-        ↓
-8. Developer adds: bouwtype, geschatte bouwsom, startdatum, contactgegevens
-        ↓
-9. Lead submitted → email confirmation to developer [NEW]
-        ↓
-10. Lead routed to matched kwaliteitsborger(s) with dossier summary [NEW]
-        ↓
-11. Kwaliteitsborger responds directly (email/phone) within 48 hours [MANUAL MVP]
-```
-
-**Key insight:** Steps 1–5 are the unique Propdex value — no other marketplace gives the kwaliteitsborger a pre-assembled dossier. The CTA (step 6) appears *after* the developer has already seen the intelligence, not before. This context-first approach is why Propdex leads will be higher quality than Werkspot/Bark leads.
+Propdex is first-mover in NL PropTech for court ruling intelligence. No NL competitor combines CBS neighborhood context with Rechtspraak legal precedent analysis in a single workflow.
 
 ---
 
 ## Sources
 
-- [Wet kwaliteitsborging voor het bouwen — Rijksoverheid](https://www.rijksoverheid.nl/onderwerpen/bouwregelgeving/meer-toezicht-in-de-bouw-via-de-wet-kwaliteitsborging-voor-het-bouwen-wkb) — HIGH confidence, official
-- [Kwaliteitsborger — Informatiepunt Leefomgeving (IPLO)](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/kwaliteitsborger/) — HIGH confidence, official
-- [Bouwwerken in gevolgklasse 1 — IPLO](https://iplo.nl/regelgeving/regels-voor-activiteiten/technische-bouwactiviteit/kwaliteitsborging/bouwwerken-gevolgklasse/) — HIGH confidence, official
-- [Gevolgklassen — TloKB](https://www.tlokb.nl/wet-kwaliteitsborging/gevolgklassen) — HIGH confidence, official regulatory body
-- [TloKB Register (kwaliteitsborgers)](https://register.tlokb.nl/kb/kwaliteitsborger) — HIGH confidence, public official register
-- [VKBN — Vereniging Kwaliteitsborgers Nederland](https://www.vkbn.nl/) — HIGH confidence, professional association
-- [Dossier bevoegd gezag inhoud — BWTinfo](https://www.bwtinfo.nl/nieuws/2025/11/het-dossier-bevoegd-gezag-wat-moet-daarin) — HIGH confidence, November 2025 industry guidance
-- [Asbestinventarisatieplicht Bbl — IPLO](https://iplo.nl/regelgeving/regels-voor-activiteiten/sloopactiviteit/asbestinventarisatieplicht/) — HIGH confidence, official
-- [Bodemloket](https://www.bodemloket.nl/) — HIGH confidence, official national soil contamination portal
-- [Bodemloket ArcGIS REST endpoint](https://www.gdngeoservices.nl/arcgis/rest/services/blk/lks_blk_rd/MapServer) — MEDIUM confidence (2019 blog source, endpoint may have changed; needs verification)
-- [Kwaliteitsborger kosten — Borgingcompany.nl](https://borgingcompany.nl/wet-kwaliteitsborging-kosten/) — MEDIUM confidence, industry pricing data
-- [Services Marketplace Features — Rigby](https://www.rigbyjs.com/blog/services-marketplace-features) — MEDIUM confidence, web research
-- [Werkspot — Instapro Group](https://www.werkspot.nl/) — MEDIUM confidence, comparable NL platform
+- CBS OData v4 API base URL: `https://datasets.cbs.nl/odata/v1/CBS/` — [CBS Quick Start Guide](https://www.cbs.nl/en-gb/our-services/open-data/statline-as-open-data/quick-start-guide)
+- CBS measure codes verified live via API call to `https://datasets.cbs.nl/odata/v1/CBS/85984NED/MeasureCodes`
+- CBS dataset 85984NED (2024): [CBS Kerncijfers wijken en buurten 2024](https://www.cbs.nl/nl-nl/cijfers/detail/85984NED)
+- CBS 2025 dataset 86165NED: [CBS Kerncijfers wijken en buurten 2025](https://www.cbs.nl/nl-nl/cijfers/detail/86165NED)
+- CBS variable documentation (PDF): [Toelichting variabelen KWB 2024](https://www.cbs.nl/-/media/_pdf/2024/35/toelichting-variabelen-kwb-2024.pdf)
+- Rechtspraak search endpoint verified live: `https://data.rechtspraak.nl/uitspraken/zoeken` (3,573,904 rulings as of 2026-03-06)
+- Rechtspraak document XML structure verified: ECLI:NL:RVS:2024:2049 fetched and parsed
+- Rechtspraak open data: [Open Data van de Rechtspraak](https://www.rechtspraak.nl/Uitspraken/Paginas/Open-Data.aspx)
+- Wetsuite API documentation (search parameters): [wetsuite.datacollect.rechtspraaknl](https://wetsuite.knobs-dials.com/apidocs/wetsuite.datacollect.rechtspraaknl.html)
+- Codebase verified: `backend/app/government_apis/cbs_odata.py`, `backend/app/government_apis/rechtspraak.py`, `backend/app/api/endpoints/jurisprudence.py`, `frontend/src/components/projects/JurisprudenceSection.tsx`, `frontend/src/hooks/useJurisprudence.ts`
 
 ---
-*Feature research for: v9.0 Professional Marketplace — Kwaliteitsborger Lead Generation*
-*Researched: 2026-03-01*
+
+*Feature research for: Propdex v11.0 Open Data Intelligence*
+*Researched: 2026-03-06*
