@@ -291,6 +291,7 @@ async def list_project_scans(
             gemeente_naam=scan.gemeente_naam,
             gemeente_code=scan.gemeente_code,
             wijk_naam=scan.wijk_naam,
+            neighborhood_metrics=scan.neighborhood_metrics,
             scan_date=scan.created_at,
             status=scan.status,
             parcel_count=parcel_count or 0,

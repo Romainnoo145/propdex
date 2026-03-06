@@ -224,6 +224,10 @@ class ScanResultsResponse(BaseModel):
         default=None,
         description="CBS wijk name (if scan was wijk-scoped)",
     )
+    neighborhood_metrics: dict | None = Field(
+        default=None,
+        description="CBS neighborhood metrics fetched during scan",
+    )
     scan_date: datetime = Field(
         description="Scan creation timestamp",
     )
@@ -361,6 +365,9 @@ class ScanListItem(BaseModel):
     gemeente_naam: str = Field(description="Gemeente display name")
     gemeente_code: str = Field(description="CBS gemeentecode")
     wijk_naam: str | None = Field(default=None, description="CBS wijk name")
+    neighborhood_metrics: dict | None = Field(
+        default=None, description="CBS neighborhood metrics fetched during scan"
+    )
     bbox_wgs84: tuple[float, float, float, float] | None = Field(
         default=None,
         description="Scan bounding box in WGS84 (min_lon, min_lat, max_lon, max_lat)",

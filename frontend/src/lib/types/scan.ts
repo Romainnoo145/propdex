@@ -75,6 +75,39 @@ export interface ScanStatusResponse {
 }
 
 /**
+ * CBS stedelijkheid (urbanity) classification
+ * Klasse 1 = Zeer sterk stedelijk, 5 = Niet stedelijk
+ */
+export interface CbsStedelijkheid {
+  klasse: number | null
+  omschrijving: string
+  omgevingsadressendichtheid: number | null
+}
+
+/**
+ * CBS neighborhood metrics stored in AreaScan.neighborhood_metrics JSONB
+ * Fetched from CBS StatLine during scan job
+ */
+export interface CbsNeighborhoodMetrics {
+  bron: string
+  dataset: string
+  peiljaar: number
+  data: {
+    gemiddelde_woz_waarde: number | null
+    stedelijkheid: CbsStedelijkheid
+    demografie: {
+      aantal_inwoners: number | null
+      percentage_huurwoningen: number | null
+      percentage_koopwoningen: number | null
+    }
+    bouwjaar_distributie: {
+      percentage_bouwjaar_voor_2000: number | null
+      percentage_bouwjaar_vanaf_2000: number | null
+    }
+  }
+}
+
+/**
  * Schema for a single parcel result in scan list
  * Backend: ScanResultItem
  */
@@ -165,6 +198,8 @@ export interface ScanResultsResponse {
   gemeente_naam: string
   /** Wijk name when the scan is scoped to a wijk */
   wijk_naam?: string | null
+  /** CBS neighborhood metrics for the scanned wijk */
+  neighborhood_metrics?: CbsNeighborhoodMetrics | null
   /** Scan creation timestamp (ISO 8601 string) */
   scan_date: string
   /** Total parcels scanned (before qualification) */
@@ -262,6 +297,7 @@ export interface ScanListItem {
   gemeente_naam: string
   gemeente_code: string
   wijk_naam: string | null
+  neighborhood_metrics?: CbsNeighborhoodMetrics | null
   bbox_wgs84?: [number, number, number, number] | null
   scan_date: string
   status: string
