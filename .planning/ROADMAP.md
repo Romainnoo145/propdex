@@ -60,11 +60,11 @@ Plans:
   3. Each search result shows court name, ruling date, and an ECLI identifier — user can click to open the full ruling inline
   4. The full ruling document renders inline without navigating away from the wijk detail view
   5. The Rechtspraak backend client starts without ImportError, uses lxml with XXE protection, validates ECLI format, and registers a rate limiter singleton
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 76-01-PLAN.md — Backend: Rebuild rechtspraak.py to project standards (correct imports, lxml, ECLI validation, rate limiter, GovernmentAPIError) (RECHT-04)
-- [ ] 76-02-PLAN.md — Frontend: Fix JurisprudenceSection (omgevingsrecht filter, gemeente default context, inline document viewer) (RECHT-01, RECHT-02, RECHT-03)
+- [ ] 76-01-PLAN.md — Backend: exceptions.py shim, rechtspraak.py rebuild (lxml, APIRateLimiter, ECLI validation, omgevingsrecht filter), jurisprudence endpoint fix (RECHT-04)
+- [ ] 76-02-PLAN.md — Frontend: omgevingsrecht filter badge, court name parsing, gemeente default context polish (RECHT-01, RECHT-02, RECHT-03)
 
 ### Phase 77: AI Juridisch Klimaat
 **Goal**: Users get AI-generated legal risk context per ruling and an aggregated juridisch klimaat score with vergunnings-succeskans for their gemeente/wijk
