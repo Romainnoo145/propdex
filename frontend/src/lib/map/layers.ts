@@ -13,7 +13,6 @@ export interface PersistedMapLayerState {
   showGemeenten: boolean
   showBestemmingsplan: boolean
   showBAGPanden: boolean
-  showWijken: boolean
   showScannedScope: boolean
   activeParcelOverlay: ParcelOverlayLayerId | null
 }
@@ -61,7 +60,6 @@ export const DEFAULT_MAP_LAYER_STATE: PersistedMapLayerState = {
   showGemeenten: false,
   showBestemmingsplan: false,
   showBAGPanden: false,
-  showWijken: false,
   showScannedScope: false,
   activeParcelOverlay: null,
 }
