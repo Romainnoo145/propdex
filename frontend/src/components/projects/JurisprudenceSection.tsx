@@ -12,6 +12,19 @@ interface JurisprudenceSectionProps {
     wijkNaam: string | null
 }
 
+/**
+ * Extract the court name from a Rechtspraak title string.
+ *
+ * Title format: "ECLI:NL:RVS:2023:1234, Raad van State, 15-03-2023, 202301234/1/R4"
+ * Returns the court name (e.g. "Raad van State") by stripping the ECLI prefix
+ * and taking the first comma-delimited segment.
+ */
+function parseCourtFromTitle(ecli: string, title: string): string {
+    const withoutEcli = title.replace(ecli, '').replace(/^,\s*/, '')
+    const parts = withoutEcli.split(', ')
+    return parts[0] ?? ''
+}
+
 export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: JurisprudenceSectionProps) {
     const defaultSearch = `omgevingsvergunning ${gemeenteNaam}`
     const [searchTerm, setSearchTerm] = useState(defaultSearch)
@@ -55,6 +68,11 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                         Doorzoek de Raad van State en Rechtbanken op bezwaarschriften, vergunningstrajecten en locatieprecedenten.
                     </p>
 
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-accent/10 px-2 py-0.5 text-[10px] font-medium text-amber-accent/80 w-fit">
+                        <Scale className="w-2.5 h-2.5" />
+                        Omgevingsrecht filter actief
+                    </span>
+
                     <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto scrollbar-hidden">
                         {isLoading ? (
                             Array.from({ length: 3 }).map((_, i) => (
@@ -78,9 +96,10 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                         }`}
                                 >
                                     <div className="flex items-center justify-between text-[11px] text-grey-500">
-                                        <span className="font-mono">{res.ecli.split(':').slice(2).join(':')}</span>
+                                        <span className="font-medium text-grey-400">{parseCourtFromTitle(res.ecli, res.title)}</span>
                                         <span>{res.date.split('T')[0]}</span>
                                     </div>
+                                    <span className="font-mono text-[10px] text-grey-600">{res.ecli.split(':').slice(2).join(':')}</span>
                                     <h4 className="text-sm font-medium leading-snug text-grey-100 group-hover:text-amber-accent/90 transition-colors">
                                         {res.title.replace(res.ecli, '').replace(/^,\s*/, '')}
                                     </h4>
