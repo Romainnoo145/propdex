@@ -77,8 +77,7 @@ import {
 } from '@/lib/api'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useMapContext } from '@/lib/MapContext'
-import { readPersistedMapLayerState } from '@/lib/map/layers'
-import type { BaseMapLayerId } from '@/lib/map/layers'
+import { useMapLayerState } from '@/lib/map/useMapLayerState'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
@@ -192,14 +191,14 @@ function MapPage() {
     _t: navTs,
   } = Route.useSearch()
   const { accessToken } = useAuth()
+  // Single source of truth for all layer toggle state
+  const { state: layerState, actions: layerActions } = useMapLayerState()
+
   const [tier, setTier] = useState<ViewTier>('none')
   // demo data removed — all property data comes from lookup API
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
-  const [basemap, setBasemap] = useState<BaseMapLayerId>(() => readPersistedMapLayerState().basemap)
-  const [showGemeentenLayer, setShowGemeentenLayer] = useState(false)
   const [activeScanId, setActiveScanId] = useState<string | null>(null)
   const navigatedRef = useRef(false)
-  const [showBestemmingsplan, setShowBestemmingsplan] = useState(false)
   const [zoneInfo, setZoneInfo] = useState<{ info: ZoneFeatureInfo; lngLat: [number, number] } | null>(null)
   const [zoneLoading, setZoneLoading] = useState(false)
   // Track selected area for confirmation flow (used for state management, not rendering)
@@ -220,11 +219,12 @@ function MapPage() {
   const [activePanel, setActivePanel] = useState<ActivePanel | null>(null)
   const inspectorParcel = activePanel?.kind === 'parcel' ? activePanel.parcel : null
   const [autoEnableParcelsKey, setAutoEnableParcelsKey] = useState<string | null>(null)
-  const [isParcelsVisible, setIsParcelsVisible] = useState(false)
   const parcelClickRequestSeqRef = useRef(0)
-  const [showScannedWijkBoundaries, setShowScannedWijkBoundaries] = useState(
-    () => readPersistedMapLayerState().showScannedScope
-  )
+
+  // Ref for fresh parcel visibility inside map event handlers (avoids stale closure)
+  const isParcelsVisibleRef = useRef(layerState.showParcels)
+  isParcelsVisibleRef.current = layerState.showParcels
+  const [showScannedWijkBoundaries, setShowScannedWijkBoundaries] = useState(false)
   const initialRequestedWijkNameRef = useRef<string | null>(
     typeof urlWijkNaam === 'string' && urlWijkNaam.trim()
       ? normalizeAreaName(urlWijkNaam)
@@ -247,7 +247,7 @@ function MapPage() {
   } | null>(null)
 
   const shouldLoadGemeenteGeojson =
-    showGemeentenLayer ||
+    layerState.showGemeenten ||
     Boolean(urlGemeenteCode && !urlParcelId && !urlScanId && !reportId)
   const {
     data: gemeenteGeojson,
@@ -435,7 +435,7 @@ function MapPage() {
   )
 
   const handleParcelsLayerToggle = useCallback((visible: boolean) => {
-    setIsParcelsVisible(visible)
+    layerActions.setParcels(visible)
     const map = mapRef.current
     currentMapCenterRef.current = map
       ? [map.getCenter().lng, map.getCenter().lat]
@@ -450,7 +450,7 @@ function MapPage() {
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, mapRef, readCenteredWijkName])
+  }, [activeScanId, activatePreferredScan, layerActions, mapRef, readCenteredWijkName])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -1089,7 +1089,7 @@ function MapPage() {
   useEffect(() => {
     if (!mapReady || !mapRef.current || !activeScanId) return
     ensureParcelScoreLayer(activeScanId)
-  }, [activeScanId, mapReady, ensureParcelScoreLayer, isParcelsVisible])
+  }, [activeScanId, mapReady, ensureParcelScoreLayer, layerState.showParcels])
 
   // Handle scan completion and failure
   useEffect(() => {
@@ -1192,7 +1192,7 @@ function MapPage() {
     }
 
     const handleParcelClick = (e: maplibregl.MapMouseEvent) => {
-      const parcelModeActive = isParcelsVisible || !!activeScanIdRef.current
+      const parcelModeActive = isParcelsVisibleRef.current || !!activeScanIdRef.current
       const requestSeq = ++parcelClickRequestSeqRef.current
       const feature = parcelModeActive ? queryTopParcelFeature(e.point) : null
       if (feature?.properties) {
@@ -1295,7 +1295,7 @@ function MapPage() {
     }
 
     const handleCursorMove = (e: maplibregl.MapMouseEvent) => {
-      const parcelModeActive = isParcelsVisible || !!activeScanIdRef.current
+      const parcelModeActive = isParcelsVisibleRef.current || !!activeScanIdRef.current
       if (!parcelModeActive || map.getZoom() < PARCEL_INTERACTION_MIN_ZOOM) {
         map.getCanvas().style.cursor = ''
         return
@@ -1316,7 +1316,7 @@ function MapPage() {
       map.off('mousemove', handleCursorMove)
       map.off('mouseout', resetCursor)
     }
-  }, [accessToken, isParcelsVisible, makeInspectorParcel, mapReady, mapRef])
+  }, [accessToken, makeInspectorParcel, mapReady, mapRef])
 
   // Cleanup highlight and BAG layer on unmount
   useEffect(() => {
@@ -1603,7 +1603,7 @@ function MapPage() {
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return
-    if (!showGemeentenLayer || !gemeenteGeojson) return
+    if (!layerState.showGemeenten || !gemeenteGeojson) return
 
     const map = mapRef.current
     if (!map.getSource('cbs-gemeenten')) {
@@ -1614,20 +1614,17 @@ function MapPage() {
     }
 
     setGemeenteBoundariesVisibility(map, true)
-  }, [mapReady, mapRef, showGemeentenLayer, gemeenteGeojson, activateGemeenteContext])
+  }, [mapReady, mapRef, layerState.showGemeenten, gemeenteGeojson, activateGemeenteContext])
 
-  // Gemeenten layer toggle handler
+  // Gemeenten layer toggle handler — no-arg, uses hook action
   const handleGemeentenToggle = useCallback(
-    (visible: boolean) => {
-      if (!mapRef.current) return
+    () => {
+      const next = !layerState.showGemeenten
+      layerActions.setGemeenten(next)
+
+      if (next || !mapRef.current) return
 
       const map = mapRef.current
-      setShowGemeentenLayer(visible)
-
-      if (visible) {
-        return
-      }
-
       setGemeenteBoundariesVisibility(map, false)
       // Also clear gemeente context and wijk layer
       if (wijkGeojsonRef.current) {
@@ -1635,8 +1632,10 @@ function MapPage() {
         setWijkGeojson(null)
       }
       setActiveGemeente(null)
+      setActivePanel(null)
+      map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
     },
-    [mapRef]
+    [layerState.showGemeenten, layerActions, mapRef]
   )
 
   // Handle direct gemeente/wijk navigation from projects flow.
@@ -1647,7 +1646,7 @@ function MapPage() {
 
     const navKey = `${normalizeGemeenteCode(urlGemeenteCode)}:${normalizeAreaName(urlWijkNaam ?? '')}:${navTs ?? 0}`
     if (handledGemeenteWijkRef.current === navKey) return
-    setShowGemeentenLayer(true)
+    layerActions.setGemeenten(true)
     if (!gemeenteGeojson) return
 
     let cancelled = false
@@ -1730,31 +1729,33 @@ function MapPage() {
     gemeenteGeojson,
     activateGemeenteContext,
     navigate,
+    layerActions,
   ])
 
-  // Bestemmingsplan layer toggle handler
+  // Bestemmingsplan layer toggle handler — no-arg, uses hook action
   const handleBestemmingsplanToggle = useCallback(
-    (visible: boolean) => {
+    () => {
       if (!mapRef.current) return
 
       const map = mapRef.current
+      const next = !layerState.showBestemmingsplan
 
-      if (visible) {
+      if (next) {
         // Add source if it doesn't exist
         if (!map.getSource('pdok-bestemmingsplan')) {
           addBestemmingsplanLayer(map)
         }
         // Show layer
         setBestemmingsplanVisibility(map, true)
-        setShowBestemmingsplan(true)
+        layerActions.setBestemmingsplan(true)
       } else {
         // Hide layer
         setBestemmingsplanVisibility(map, false)
-        setShowBestemmingsplan(false)
+        layerActions.setBestemmingsplan(false)
         setZoneInfo(null)
       }
     },
-    []
+    [layerState.showBestemmingsplan, layerActions, mapRef]
   )
 
   // BAG Panden layer toggle handler
@@ -1967,30 +1968,27 @@ function MapPage() {
     })
   }, [activePanel, wijkGeojson])
 
-  // LayerToggle adapter callbacks — no-arg wrappers around existing handlers.
-  // Plan 02 will replace these with useMapLayerState hook actions.
-  const handleBasemapChange = useCallback((v: BaseMapLayerId) => {
-    setBasemap(v)
-  }, [])
+  // No-arg parcel toggle — wraps side-effect handler with current state
+  const handleParcelsToggle = useCallback(() => {
+    handleParcelsLayerToggle(!layerState.showParcels)
+  }, [handleParcelsLayerToggle, layerState.showParcels])
 
-  const handleParcelsToggleNoArg = useCallback(() => {
-    handleParcelsLayerToggle(!isParcelsVisible)
-  }, [handleParcelsLayerToggle, isParcelsVisible])
-
-  const handleGemeentenToggleNoArg = useCallback(() => {
-    handleGemeentenToggle(!showGemeentenLayer)
-  }, [handleGemeentenToggle, showGemeentenLayer])
-
-  const handleBestemmingsplanToggleNoArg = useCallback(() => {
-    handleBestemmingsplanToggle(!showBestemmingsplan)
-  }, [handleBestemmingsplanToggle, showBestemmingsplan])
+  // Auto-enable parcels when external triggers set autoEnableParcelsKey
+  // (address search, URL navigation, report focus flows).
+  // Logic moved here from LayerToggle so map.tsx is the sole authority.
+  useEffect(() => {
+    if (autoEnableParcelsKey && !layerState.showParcels) {
+      handleParcelsLayerToggle(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEnableParcelsKey])
 
   return (
     <MapShell>
       <AddressSearch onSelect={handleAddressSelect} />
 
       {/* Bestemmingsplan legend */}
-      <BestemmingsplanLegend visible={showBestemmingsplan} />
+      <BestemmingsplanLegend visible={layerState.showBestemmingsplan} />
 
       {/* Zone info card */}
       {zoneLoading && (
@@ -2072,14 +2070,15 @@ function MapPage() {
       <LayerToggle
         mapRef={mapRef}
         mapReady={mapReady}
-        basemap={basemap}
-        showParcels={isParcelsVisible}
-        showGemeenten={showGemeentenLayer}
-        showBestemmingsplan={showBestemmingsplan}
-        onBasemapChange={handleBasemapChange}
-        onParcelsToggle={handleParcelsToggleNoArg}
-        onGemeentenToggle={handleGemeentenToggleNoArg}
-        onBestemmingsplanToggle={handleBestemmingsplanToggleNoArg}
+        basemap={layerState.basemap}
+        showParcels={layerState.showParcels}
+        showGemeenten={layerState.showGemeenten}
+        showBestemmingsplan={layerState.showBestemmingsplan}
+        activeParcelOverlay={layerState.activeParcelOverlay}
+        onBasemapChange={layerActions.setBasemap}
+        onParcelsToggle={handleParcelsToggle}
+        onGemeentenToggle={handleGemeentenToggle}
+        onBestemmingsplanToggle={handleBestemmingsplanToggle}
         onBAGPandenToggle={handleBAGPandenToggle}
         onScannedScopeToggle={handleScannedScopeToggle}
         onScoreToggle={handleScoreToggle}
@@ -2087,7 +2086,6 @@ function MapPage() {
         onReportStatusToggle={handleReportStatusToggle}
         onVacancySignalToggle={handleVacancySignalToggle}
         onBuildCapacityToggle={handleBuildCapacityToggle}
-        autoEnableParcelsKey={autoEnableParcelsKey}
         hasScoreData={!!activeScanId}
       />
 
