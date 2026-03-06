@@ -29,7 +29,7 @@
 **Milestone Goal:** Enrich property intelligence with CBS neighborhood statistics, Rechtspraak court ruling precedents, and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
 
 - [x] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data (completed 2026-03-06)
-- [ ] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter
+- [x] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter (completed 2026-03-06)
 - [ ] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage
 
 ## Phase Details
@@ -60,7 +60,7 @@ Plans:
   3. Each search result shows court name, ruling date, and an ECLI identifier — user can click to open the full ruling inline
   4. The full ruling document renders inline without navigating away from the wijk detail view
   5. The Rechtspraak backend client starts without ImportError, uses lxml with XXE protection, validates ECLI format, and registers a rate limiter singleton
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 76-01-PLAN.md — Backend: exceptions.py shim, rechtspraak.py rebuild (lxml, APIRateLimiter, ECLI validation, omgevingsrecht filter), jurisprudence endpoint fix (RECHT-04)
@@ -100,7 +100,7 @@ Plans:
 | 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
 | 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
-| 76. Rechtspraak Jurisprudentie | 1/2 | In Progress|  |
+| 76. Rechtspraak Jurisprudentie | 2/2 | Complete   | 2026-03-06 |
 | 77. AI Juridisch Klimaat | 0/2 | Not started | - |
 
 ---

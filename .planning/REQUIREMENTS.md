@@ -14,9 +14,9 @@
 
 ### Rechtspraak Jurisprudentie
 
-- [ ] **RECHT-01**: User can search court rulings by keyword with omgevingsrecht domain filter
-- [ ] **RECHT-02**: User can read full court ruling documents inline with court name and date
-- [ ] **RECHT-03**: Search defaults to gemeente context when viewing a project/wijk
+- [x] **RECHT-01**: User can search court rulings by keyword with omgevingsrecht domain filter
+- [x] **RECHT-02**: User can read full court ruling documents inline with court name and date
+- [x] **RECHT-03**: Search defaults to gemeente context when viewing a project/wijk
 - [x] **RECHT-04**: Rechtspraak client follows established patterns (correct base.py imports, ECLI format validation, rate limiter registration, lxml XML parsing with XXE protection)
 
 ### AI Juridisch Klimaat
@@ -69,9 +69,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CBS-01 | Phase 75 | Complete |
 | CBS-02 | Phase 75 | Complete |
 | CBS-03 | Phase 75 | Complete |
-| RECHT-01 | Phase 76 | Pending |
-| RECHT-02 | Phase 76 | Pending |
-| RECHT-03 | Phase 76 | Pending |
+| RECHT-01 | Phase 76 | Complete |
+| RECHT-02 | Phase 76 | Complete |
+| RECHT-03 | Phase 76 | Complete |
 | RECHT-04 | Phase 76 | Complete |
 | AI-01 | Phase 77 | Pending |
 | AI-02 | Phase 77 | Pending |

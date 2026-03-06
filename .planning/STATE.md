@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Phase: 76 of 77 (Rechtspraak Jurisprudentie)
-Plan: 01 of N complete
+Plan: 02 of N complete
 Status: In progress
-Last activity: 2026-03-06 — Phase 76 Plan 01 complete (Rechtspraak backend rebuild)
+Last activity: 2026-03-07 — Phase 76 Plan 02 complete (Rechtspraak frontend polish)
 
 Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
@@ -26,6 +26,7 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 - Phase 75 Plan 01: ~5min
 - Phase 75 Plan 02: ~5min
 - Phase 76 Plan 01: ~2min
+- Phase 76 Plan 02: ~3min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -75,6 +76,8 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 - [Phase 75-cbs-wijkstatistieken]: CbsNeighborhoodMetrics uses nested data structure matching CBS v4 client output (not flat v3 shape)
 - [Phase 76-rechtspraak]: Full rewrite (not patching) — exceptions.py shim, lxml, APIRateLimiter, ECLI validation, omgevingsrecht hardcoded (2026-03-06)
 - [Phase 76-rechtspraak]: return=DOC parameter prevents wasted lookups on entries without available documents (2026-03-06)
+- [Phase 76-rechtspraak-02]: parseCourtFromTitle as file-level helper — court name replaces ECLI short form as primary meta in result cards (2026-03-07)
+- [Phase 76-rechtspraak-02]: Badge "Omgevingsrecht filter actief" always visible — UX transparency for backend-side domain filter (2026-03-07)
 
 ### Pending Todos
 
@@ -93,12 +96,12 @@ Progress: [███░░░░░░░] ~30% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-06T16:57:45Z
-**Stopped At:** Completed 76-01-PLAN.md
+**Last Session:** 2026-03-07T17:00:37Z
+**Stopped At:** Completed 76-02-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 76` (plan 02 — Rechtspraak frontend UI)
+**Next Action:** `/gsd:execute-phase 76` (plan 03 — Rechtspraak AI analysis, if planned)
 
 ---
 
-*State updated: 2026-03-06 -- Phase 76 Plan 01 complete*
+*State updated: 2026-03-07 -- Phase 76 Plan 02 complete*
