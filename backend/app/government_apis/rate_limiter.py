@@ -113,3 +113,6 @@ bag_3d_limiter = APIRateLimiter(max_concurrent=2, max_per_hour=200)
 
 # CBS OData (open data) — polite limits for public endpoint
 cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
+
+# Rechtspraak Open Data — public, polite limits
+rechtspraak_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
