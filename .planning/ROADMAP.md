@@ -2,8 +2,8 @@
 
 ## Milestones
 
-- 📋 **v13.0 Historisch Risicoprofiel** -- Phases TBD (planned)
-- 🚧 **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-84 (in progress)
+- 🚧 **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (in progress)
+- ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
 - ✅ **v11.0 Open Data Intelligence** -- Phases 75-77 (shipped 2026-03-07)
 - ✅ **v10.0 UX Polish** -- Phases 72-74 (shipped 2026-03-03)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
@@ -26,160 +26,123 @@
 
 ## Phases
 
-### 🚧 v12.0 Omgevings- & Leefbaarheids-Scorer (In Progress)
+### 🚧 v13.0 Juridisch Klimaat Intelligence (In Progress)
 
-**Milestone Goal:** Transform Propdex from property-level "stenen en regels" intelligence into a platform that quantifies location-level commercial potential -- answering "Is het slim om hier te bouwen?" with data-driven context.
+**Milestone Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars -- from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
 
 **Phase Numbering:**
-- Integer phases (78, 79, 80, 81, 82, 83, 84): Planned milestone work
-- Decimal phases (e.g., 77.1): Structural prerequisites (marked with INSERTED)
+- Integer phases (82-86): Planned milestone work
+- Decimal phases (e.g., 82.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 77.1: UX Architectuur & Component Refactor** *(INSERTED)* - Tabbed section containers, scorecard shell, ReportDetailPage decomposition (<300 LOC per file), progressive disclosure infrastructure
-- [x] **Phase 78: Extended CBS Demographics & Income** - Extend existing CBS client with 14 new measure codes for age, household, income display and derived doelgroep classification (completed 2026-03-07)
-- [x] **Phase 79: Voorzieningen Nabijheid** - CBS Nabijheid dataset (86134NED) integration for facility proximity distances per wijk (completed 2026-03-07)
-- [x] **Phase 80: Criminaliteitsdata** - OData v3 client for dataderden.cbs.nl crime statistics per wijk (completed 2026-03-07)
-- [ ] **Phase 81: Locatie-Score & Investeringsprofiel** - Weighted composite location score aggregating all prior data dimensions
-- [ ] **Phase 82: SRU-Rechtspraak Correlatie** - Auto-link permit announcements to court cases by address/postcode for "was this permit challenged?" intelligence
-- [ ] **Phase 83: Parcel-Level Juridisch Klimaat** - Surface jurisprudence scores in ParcelDetailModal and enrich permit_precedent_benchmark with court outcome data
-- [ ] **Phase 84: Jurisprudentie Test Coverage** - Unit + integration tests for rechtspraak client, AI analysis, endpoints, and background jobs
+- [ ] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline
+- [ ] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente
+- [ ] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation
+- [ ] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering
+- [ ] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization
 
 ## Phase Details
 
-### Phase 77.1: UX Architectuur & Component Refactor *(INSERTED)*
-**Goal**: Establish the hybrid scorecard + tabs UI structure and decompose oversized components so all subsequent v12.0/v13.0 data phases slot into a scalable, navigable layout instead of endless scrolling
-**Depends on**: Nothing (structural prerequisite for all data phases)
-**Requirements**: UX-01, UX-02, UX-03, UX-04
+### Phase 82: Ruling Cache + ECLI Court Mapping
+**Goal**: Court rulings are persistently cached with correct geographic scoping so all downstream features operate on relevant, local data instead of garbage national results
+**Depends on**: Nothing (foundation for all v13.0 work)
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06
 **Success Criteria** (what must be TRUE):
-  1. WijkDetailView uses a tabbed layout with tabs: Overzicht | Demografie & Inkomen | Leefbaarheid | Juridisch | Rapporten
-  2. WijkDetailView Overzicht tab contains a LocationScoreCard shell (empty/placeholder scores) with per-dimension traffic-light indicators that expand on click
-  3. ParcelDetailModal uses collapsible sections grouped as: Overzicht | Bouwpotentie | Risico's (with Juridisch ready as future tab)
-  4. WijkMapPanel uses the same tab structure as WijkDetailView (compact variant for side panel)
-  5. All new containers accept child components via composition (slot pattern) so v12.0 data phases just drop in new cards
-**Plans**: 2 plans
+  1. Opening a gemeente detail view triggers background ingestion of 50+ court rulings for the relevant arrondissement, visible as cached results on subsequent page loads
+  2. Cached rulings persist across sessions in a dedicated ruling_cache table with ECLI as primary key (not in generic cached_api_responses)
+  3. Repeated views of the same gemeente load rulings from cache instantly (no Rechtspraak API calls) within the 7-day TTL window
+  4. RechtspraakClient scopes search results to the correct court region using ECLI court-code prefix filtering, not national free-text search
+  5. Date range filtering works -- user can restrict results to last 2, 5, or 10 years
+**Plans**: TBD
 
 Plans:
-- [ ] 77.1-01-PLAN.md — Primitives + ParcelDetailModal decomposition� Primitives + ParcelDetailModal decomposition
-- [ ] 77.1-02-PLAN.md — WijkDetailView tabs + LocationScoreCard + WijkMapPanel� WijkDetailView tabs + LocationScoreCard + WijkMapPanel
+- [ ] 82-01: EcliRegistry + RulingCache model + Alembic migration
+- [ ] 82-02: RechtspraakClient refactor + ARQ ingestion job
 
-### Phase 78: Extended CBS Demographics & Income
-**Goal**: Users can assess neighborhood demographic profile and income dynamics to validate target audience fit for residential development
-**Depends on**: Phase 77.1 (data cards slot into tabbed layout)
-**Requirements**: DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05, DEMO-06, DEMO-07
+### Phase 83: Geo-Contextualization + Gemeente Feed
+**Goal**: Users see an auto-populated chronological feed of court rulings relevant to their gemeente, with rulings sorted by geographic relevance (gemeente-matched first, then arrondissement-level)
+**Depends on**: Phase 82 (requires cached rulings to extract location from)
+**Requirements**: GEO-01, GEO-02, GEO-03, GEO-04, FEED-01, FEED-02, FEED-03
 **Success Criteria** (what must be TRUE):
-  1. Wijk detail view shows age distribution breakdown (0-14, 15-24, 25-44, 45-64, 65+) with visual bars or chart
-  2. Wijk detail view shows household composition (eenpersoons, zonder kinderen, met kinderen) and average household size
-  3. Wijk detail view shows income metrics (gemiddeld inkomen, inkomensverdeling percentages) and a WOZ/inkomen ratio indicator
-  4. Wijk detail view shows a directional vergrijzing/verjonging indicator derived from age group proportions
-  5. Wijk detail view shows a doelgroep classification label ("studentenwijk" / "gezinswijk" / "vergrijzend" / "gemengd") derived from demographic data
-**Plans**: 2 plans
+  1. Gemeente detail view shows a chronological list of court rulings without requiring manual search -- the feed auto-populates based on the selected gemeente
+  2. Rulings mentioning the specific gemeente (extracted from ruling text) appear above arrondissement-level rulings
+  3. RVS (Raad van State) rulings are geo-tagged via text extraction and appear in relevant gemeente feeds despite having no geographic ECLI indicator
+  4. Win/loss ratio is displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk) at the top of the feed
+**Plans**: TBD
 
 Plans:
-- [ ] 78-01-PLAN.md — Extend CBS client with 14 measure codes + update TypeScript types
-- [ ] 78-02-PLAN.md — Demographic card components + derived indicators in WijkDetailView
+- [ ] 83-01: GeoContextualizer service + gemeente validation
+- [ ] 83-02: Feed endpoint + frontend integration
 
-### Phase 79: Voorzieningen Nabijheid
-**Goal**: Users can evaluate facility accessibility of a neighborhood to assess livability and attractiveness for residents
-**Depends on**: Phase 78 (shared CBS client refactoring)
-**Requirements**: VOORZ-01, VOORZ-02, VOORZ-03
+### Phase 84: AI Analysis Upgrade + Doorlooptijd
+**Goal**: AI analysis produces meaningful juridisch klimaat scores because it operates on filtered, location-relevant rulings with vergunningstype classification, and users can see average procedure durations per gemeente
+**Depends on**: Phase 83 (requires geo-contextualized, location-relevant rulings as AI input)
+**Requirements**: AI-01, AI-02, AI-03, AI-04, DOOR-01, DOOR-02, DOOR-03
 **Success Criteria** (what must be TRUE):
-  1. CBS Nabijheid client fetches proximity data from dataset 86134NED using the same OData v4 patterns as the existing CBS client
-  2. Wijk detail view shows distances to supermarkt, huisarts, school, kinderdagverblijf, treinstation, and OV-halte
-  3. Nabijheid data is persisted in the neighborhood_metrics JSONB column under the "nabijheid" key and survives page refreshes
-**Plans**: 2 plans
+  1. AI analysis runs only on rulings that are geo-matched to the selected gemeente or arrondissement -- never on unfiltered national results
+  2. Each ruling gets a vergunningstype classification (dakopbouw, nieuwbouw, bestemmingswijziging, etc.) visible as a label
+  3. Changing filters does not trigger re-analysis of previously analyzed rulings (per-ruling caching, not per-batch)
+  4. Average doorlooptijd per gemeente per vergunningstype is displayed as a statistic, with "onvoldoende data" shown when filing dates are unavailable
+**Plans**: TBD
 
 Plans:
-- [ ] 79-01-PLAN.md — CBS Nabijheid client (86134NED) + scan job integration
-- [ ] 79-02-PLAN.md — NabijheidCard frontend component + WijkDetailView integration
+- [ ] 84-01: Enhanced AI analysis with per-ruling caching + vergunningstype extraction
+- [ ] 84-02: DoorlooptijdService + doorlooptijd display
 
-### Phase 80: Criminaliteitsdata
-**Goal**: Users can assess neighborhood safety levels to factor crime risk into investment decisions
-**Depends on**: Nothing (independent track, can run parallel to Phase 79)
-**Requirements**: CRIME-01, CRIME-02, CRIME-03
+### Phase 85: Explorer UI
+**Goal**: Users can filter and explore court rulings across multiple dimensions (scope, vergunningstype, uitkomst, tijdsperiode) with a responsive interface that prevents empty-result frustration
+**Depends on**: Phase 84 (needs vergunningstype classification and doorlooptijd data for filter dimensions)
+**Requirements**: EXPL-01, EXPL-02, EXPL-03, EXPL-04, EXPL-05
 **Success Criteria** (what must be TRUE):
-  1. OData v3 client successfully fetches crime data from dataderden.cbs.nl (47018NED) with rate limiting and retry handling
-  2. Wijk detail view shows total misdrijven per 1000 inwoners plus category breakdown (vermogensdelicten, vernieling, geweld)
-  3. Crime data is persisted in the neighborhood_metrics JSONB column under the "criminaliteit" key and survives page refreshes
-**Plans**: 2 plans
+  1. Jurisprudentie section has two tabs: Overzicht (chronological feed from Phase 83) and Explorer (multi-filter search)
+  2. Explorer shows a filter sidebar with scope, vergunningstype, uitkomst, and tijdsperiode filters, each showing result counts before applying
+  3. Large result sets paginate smoothly via infinite scroll (useInfiniteQuery pattern)
+  4. When results are fewer than 3, the UI suggests broadening the search ("Verbreed uw zoekopdracht" with actionable suggestions)
+**Plans**: TBD
 
 Plans:
-- [ ] 80-01-PLAN.md — OData v3 CbsCrimeClient + scan job integration
-- [ ] 80-02-PLAN.md — CriminaliteitCard frontend + WijkDetailView integration
+- [ ] 85-01: Two-tab layout + filter sidebar with counts
+- [ ] 85-02: Pagination + empty state suggestions
 
-### Phase 81: Locatie-Score & Investeringsprofiel
-**Goal**: Users can instantly evaluate investment attractiveness of a neighborhood via a single composite score with transparent sub-dimension breakdown
-**Depends on**: Phase 78, Phase 79, Phase 80 (aggregates all data sources)
-**Requirements**: SCORE-01, SCORE-02, SCORE-03, SCORE-04
+### Phase 86: Trend & Statistics
+**Goal**: Users can assess how the juridisch klimaat in a gemeente has evolved over time and see aggregated key statistics at a glance
+**Depends on**: Phase 85 (UI structure for displaying trends alongside feed/explorer)
+**Requirements**: TREND-01, TREND-02, TREND-03
 **Success Criteria** (what must be TRUE):
-  1. LocationScoreService computes a 0-10 investeerbaarheid score per wijk using percentile-rank normalization across all scanned wijken
-  2. Score includes per-dimension breakdown (demografie, inkomen, voorzieningen, veiligheid) each with a confidence indicator reflecting data completeness
-  3. Wijk detail view shows an investeringsprofiel card with traffic-light indicators (groen/oranje/rood) per dimension and composite score
-  4. Location score is stored in a separate location_score JSONB column (via Alembic migration), independent from source data
-**Plans**: 2 plans
+  1. A rolling 12-month klimaat score trend is visible per gemeente showing whether conditions are improving or deteriorating
+  2. An aggregated statistics bar shows totaal uitspraken, gemiddelde doorlooptijd, and succespercentage
+  3. Trend visualization renders as CSS-only timeline (no chart library dependency) and degrades gracefully with fewer than 3 data points
+**Plans**: TBD
 
 Plans:
-- [ ] 81-01: TBD
-- [ ] 81-02: TBD
-
-### Phase 82: SRU-Rechtspraak Correlatie
-**Goal**: Automatically correlate permit announcements (SRU bekendmakingen) with court cases (Rechtspraak) so users see which nearby permits were legally challenged without manual searching
-**Depends on**: Nothing (builds on existing SRU + Rechtspraak clients from v11.0)
-**Requirements**: JURIS-01, JURIS-02, JURIS-03
-**Success Criteria** (what must be TRUE):
-  1. When a permit is found via SRU, the system automatically searches Rechtspraak for related court cases using address/postcode/zaaknummer correlation
-  2. Correlated court cases are stored alongside permit data (in ChangeRecord or linked table) and survive page refreshes
-  3. Wijk detail view shows a "Aangevochten vergunningen" indicator on permits that have associated court rulings
-**Plans**: 2 plans
-
-Plans:
-- [ ] 82-01: TBD
-- [ ] 82-02: TBD
-
-### Phase 83: Parcel-Level Juridisch Klimaat
-**Goal**: Surface legal climate intelligence at the parcel level (ParcelDetailModal) and enrich the permit precedent benchmark with court outcome data, enabling strategic acquisition decisions
-**Depends on**: Phase 82 (needs correlation data)
-**Requirements**: JURIS-04, JURIS-05, JURIS-06
-**Success Criteria** (what must be TRUE):
-  1. ParcelDetailModal shows a juridisch klimaat summary card with the wijk-level score + any parcel-specific court case references
-  2. permit_precedent_benchmark incorporates court ruling outcomes to compute a "juridisch risico" indicator per building type per gemeente
-  3. Per-building-type risk flags appear when court data shows consistent rejection patterns (e.g., "dakopbouwen in deze wijk: hoog bezwaarrisico")
-**Plans**: 2 plans
-
-Plans:
-- [ ] 83-01: TBD
-- [ ] 83-02: TBD
-
-### Phase 84: Jurisprudentie Test Coverage
-**Goal**: Achieve production-grade test coverage for the entire jurisprudence pipeline (currently 0 tests)
-**Depends on**: Phase 83 (tests cover all jurisprudence features including new ones)
-**Requirements**: JURIS-07
-**Success Criteria** (what must be TRUE):
-  1. Unit tests cover RechtspraakClient (search, document fetch, ECLI validation, XML parsing edge cases)
-  2. Integration tests cover all 4 jurisprudence API endpoints (search, doc, analyze trigger, analyze poll) with tenant isolation verification
-  3. Job tests cover jurisprudence_analysis_job (happy path, partial failures, cache hit/miss, error handling)
-  4. AI analysis tests cover Claude prompt construction, response parsing, and score computation
-**Plans**: 2 plans
-
-Plans:
-- [ ] 84-01: TBD
-- [ ] 84-02: TBD
+- [ ] 86-01: Trend calculation + statistics aggregation endpoint
+- [ ] 86-02: CSS-only timeline + statistics bar frontend
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
+Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 77.1 UX Architectuur & Component Refactor | 0/? | Not started | - |
-| 78. Extended CBS Demographics & Income | 2/2 | Complete    | 2026-03-07 |
-| 79. Voorzieningen Nabijheid | 2/2 | Complete    | 2026-03-07 |
-| 80. Criminaliteitsdata | 2/2 | Complete    | 2026-03-07 |
-| 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
-| 82. SRU-Rechtspraak Correlatie | 0/? | Not started | - |
-| 83. Parcel-Level Juridisch Klimaat | 0/? | Not started | - |
-| 84. Jurisprudentie Test Coverage | 0/? | Not started | - |
+| 82. Ruling Cache + ECLI Court Mapping | 0/2 | Not started | - |
+| 83. Geo-Contextualization + Gemeente Feed | 0/2 | Not started | - |
+| 84. AI Analysis Upgrade + Doorlooptijd | 0/2 | Not started | - |
+| 85. Explorer UI | 0/2 | Not started | - |
+| 86. Trend & Statistics | 0/2 | Not started | - |
 
 ---
+
+<details>
+<summary>✅ v12.0 Omgevings- & Leefbaarheids-Scorer (Phases 78-80) -- SHIPPED 2026-03-07</summary>
+
+- [x] Phase 78: Extended CBS Demographics & Income (2/2 plans) -- age, household, income via OData v4
+- [x] Phase 79: Voorzieningen Nabijheid (2/2 plans) -- facility proximity distances from CBS 86134NED
+- [x] Phase 80: Criminaliteitsdata (2/2 plans) -- OData v3 crime statistics with color-coded indicators
+
+**6 plans, 3 phases**
+Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sources being correct first.
+
+</details>
 
 <details>
 <summary>✅ v11.0 Open Data Intelligence (Phases 75-77) -- SHIPPED 2026-03-07</summary>
@@ -407,24 +370,4 @@ Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
 
 ---
 
-### 📋 v13.0 Historisch Risicoprofiel (Planned)
-
-**Milestone Goal:** Ontsluiten van historische bouw-, funderings- en asbestdata zodat gebruikers "door de muren en onder de grond" kunnen kijken — verborgen kostenposten zichtbaar maken vóór aankoop.
-
-**Key Capabilities:**
-1. **Funderingsrisico** — Archieven.nl / Nationaal Archief koppeling voor historisch funderingstype (houten palen vs beton), KCAF funderingsrisicokaarten
-2. **Verfijnde asbestdetectie** — Historische verbouwingsvergunningen scannen (jaren '60-'70 renovaties), AI-analyse van vergunningteksten voor asbest-indicatoren voorbij puur bouwjaar
-3. **Historische bouwtekeningen** — OAI-PMH metadata harvesting, directe links naar hi-res scans (JPG/PDF) uit stadsarchieven als bewijslast
-4. **Monumentale deelprotectie** — RCE redengevende omschrijving AI-parsing om te bepalen welke specifieke delen beschermd zijn (schouw, balken, gevel)
-
-**Research Flags:**
-- API-dekking per gemeente valideren (Amsterdam Stadsarchief vs kleinere gemeenten)
-- KCAF data beschikbaarheid en licentie checken
-- OCR-kwaliteit van historische handschriften testen
-- OAI-PMH protocol compatibiliteit per archiefinstelling
-
-**Phases:** TBD — defined during `/gsd:new-milestone` after v12.0 ships
-
----
-
-*Last updated: 2026-03-07 -- Phase 77.1 UX architecture inserted, v13.0 planned, v12.0 extended with jurisprudentie phases 82-84*
+*Last updated: 2026-03-07 -- v13.0 Juridisch Klimaat Intelligence roadmap created, phases 82-86*

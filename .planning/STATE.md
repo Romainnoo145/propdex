@@ -5,16 +5,35 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence
+**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 82
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: --
-Status: Defining requirements
-Last activity: 2026-03-07 -- Milestone v13.0 started
+Phase: 82 of 86 (Ruling Cache + ECLI Court Mapping)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-03-07 -- Roadmap created for v13.0
+
+Progress: [░░░░░░░░░░] 0%
+
+---
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0
+- Average duration: --
+- Total execution time: --
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+*Updated after each plan completion*
 
 ---
 
@@ -22,27 +41,24 @@ Last activity: 2026-03-07 -- Milestone v13.0 started
 
 ### Key Patterns (carry forward)
 
-- CBS OData v4 client complete: datasets.cbs.nl/odata/v1/CBS, Observations + WijkenEnBuurtenCodes
-- CBS OData v3 client: dataderden.cbs.nl, space-padded keys, TypedDataSet entity
-- neighborhood_metrics JSONB on AreaScan -- extend with new data keys
+- Rechtspraak API: XML-based, ECLI identifiers, 10 req/s rate limit, `creator` param unreliable
+- ECLI structure: `ECLI:NL:{COURT}:{YEAR}:{ID}` -- court code is the geographic key
+- Existing jurisprudence: useJurisprudence hook, JurisprudenceSection (302 lines), backend search endpoint
+- ARQ job pattern: session factory in context, background ingestion with polling
 - Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()`)
-- Three-state contract: return model | None | raise GovernmentAPIError
-- Rate limiter: register APIRateLimiter singletons in rate_limiter.py
-- Rechtspraak API: XML-based, ECLI identifiers, 10 req/s rate limit
-- Existing jurisprudence: useJurisprudence hook, JurisprudenceSection component, backend search endpoint
+- Per-ruling AI caching (not per-batch) to survive filter changes
 
 ### Decisions Made
 
-(from v12.0 -- carry forward)
-- CBS extended sub-objects as siblings of demografie, not nested
-- Frontend interfaces optional for backward compatibility
-- Separate CbsCrimeClient for OData v3 (different protocol from v4)
+- ECLI prefix filtering (client-side) over `creator` API param (returned 0 results in testing)
+- ruling_cache table is org-agnostic (court rulings are public data, no organization_id)
+- Regex + known gemeente list for geo-extraction (not spaCy -- training data is news, not legal text)
+- Bekendmakingen cross-reference deferred (no shared identifier between Rechtspraak and SRU)
 
 ### Pending Todos
 
-- Production deployment: Create app_role (sql/setup_app_role.sql)
-- BAG API key aanvragen (gratis)
 - Phase 81 (Locatie Score Investeringsprofiel) deferred from v12.0
+- Production deployment: Create app_role (sql/setup_app_role.sql)
 
 ### Blockers/Concerns
 
@@ -53,11 +69,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-07
-**Stopped At:** Milestone v13.0 initialized
+**Stopped At:** Roadmap created for v13.0
 **Resume File:** None
 
-**Next Action:** Research or define requirements
+**Next Action:** `/gsd:plan-phase 82`
 
 ---
 
-*State updated: 2026-03-07 -- v13.0 milestone started*
+*State updated: 2026-03-07 -- v13.0 roadmap created*

@@ -86,13 +86,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| PIPE-01 | Phase 82 | Pending |
+| PIPE-02 | Phase 82 | Pending |
+| PIPE-03 | Phase 82 | Pending |
+| PIPE-04 | Phase 82 | Pending |
+| PIPE-05 | Phase 82 | Pending |
+| PIPE-06 | Phase 82 | Pending |
+| GEO-01 | Phase 83 | Pending |
+| GEO-02 | Phase 83 | Pending |
+| GEO-03 | Phase 83 | Pending |
+| GEO-04 | Phase 83 | Pending |
+| FEED-01 | Phase 83 | Pending |
+| FEED-02 | Phase 83 | Pending |
+| FEED-03 | Phase 83 | Pending |
+| AI-01 | Phase 84 | Pending |
+| AI-02 | Phase 84 | Pending |
+| AI-03 | Phase 84 | Pending |
+| AI-04 | Phase 84 | Pending |
+| DOOR-01 | Phase 84 | Pending |
+| DOOR-02 | Phase 84 | Pending |
+| DOOR-03 | Phase 84 | Pending |
+| EXPL-01 | Phase 85 | Pending |
+| EXPL-02 | Phase 85 | Pending |
+| EXPL-03 | Phase 85 | Pending |
+| EXPL-04 | Phase 85 | Pending |
+| EXPL-05 | Phase 85 | Pending |
+| TREND-01 | Phase 86 | Pending |
+| TREND-02 | Phase 86 | Pending |
+| TREND-03 | Phase 86 | Pending |
 
 **Coverage:**
-- v13.0 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- v13.0 requirements: 28 total
+- Mapped to phases: 28
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation (phases 82-86)*
