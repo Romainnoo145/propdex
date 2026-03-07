@@ -112,7 +112,7 @@ Plans:
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
 | 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
 | 76. Rechtspraak Jurisprudentie | 2/2 | Complete    | 2026-03-06 |
-| 77. AI Juridisch Klimaat | 2/2 | Complete   | 2026-03-07 |
+| 77. AI Juridisch Klimaat | 2/2 | Complete    | 2026-03-07 |
 
 ---
 
