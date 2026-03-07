@@ -16,6 +16,7 @@ import { AgeDistributionCard } from './AgeDistributionCard'
 import { HouseholdCard } from './HouseholdCard'
 import { IncomeCard } from './IncomeCard'
 import { NabijheidCard } from './NabijheidCard'
+import { CriminaliteitCard } from './CriminaliteitCard'
 import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkDetailViewProps {
@@ -190,6 +191,11 @@ function ScanSummarySection({
         {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.nabijheid && (
           <NabijheidCard
             nabijheid={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).nabijheid!}
+          />
+        )}
+        {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.criminaliteit && (
+          <CriminaliteitCard
+            criminaliteit={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).criminaliteit!}
           />
         )}
       </>
