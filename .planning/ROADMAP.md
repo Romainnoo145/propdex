@@ -87,11 +87,11 @@ Plans:
   3. Clicking "Analyseer juridisch klimaat" runs the AI analysis and shows a prose risk summary with top risk factors — the UI shows a loading state while analysis runs
   4. AI analysis never blocks the HTTP response — it runs as an ARQ background job with polling when latency requires it
   5. Every AI analysis result displays a mandatory disclaimer: "Indicatief — gebaseerd op historische uitspraken, geen juridisch advies"
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 77-01-PLAN.md — Backend: JurisprudenceAnalysis Pydantic schema + ClaudeClient.analyze_jurisprudence() + POST /api/jurisprudence/analyze endpoint + ARQ job pattern (AI-01, AI-02, AI-03, AI-04)
-- [ ] 77-02-PLAN.md — Frontend: AiRiskPanel in JurisprudenceSection + useJurisprudenceAnalysis hook + per-ruling summary badges + juridisch klimaat score card (AI-01, AI-02, AI-03)
+- [ ] 77-01-PLAN.md — Backend: JuridischAnalyseJob model, AI schemas + prompt, ClaudeClient.analyze_jurisprudence(), ARQ job, POST/GET analyze endpoints (AI-01, AI-02, AI-03, AI-04)
+- [ ] 77-02-PLAN.md — Frontend: API bindings + useJurisprudenceAnalysis poll hook, RulingAiSummaryBadge per ruling, JuridischKlimaatCard score + succeskans (AI-01, AI-02, AI-03)
 
 ---
 
