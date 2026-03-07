@@ -12,6 +12,9 @@ import { toast } from 'sonner'
 
 import { JurisprudenceSection } from './JurisprudenceSection'
 import { CbsNeighborhoodCard } from './CbsNeighborhoodCard'
+import { AgeDistributionCard } from './AgeDistributionCard'
+import { HouseholdCard } from './HouseholdCard'
+import { IncomeCard } from './IncomeCard'
 import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkDetailViewProps {
@@ -165,6 +168,23 @@ function ScanSummarySection({
         </section>
         {latestScan.neighborhood_metrics && (
           <CbsNeighborhoodCard metrics={latestScan.neighborhood_metrics as CbsNeighborhoodMetrics} />
+        )}
+        {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.data?.leeftijdsverdeling && (
+          <AgeDistributionCard
+            leeftijdsverdeling={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.leeftijdsverdeling!}
+          />
+        )}
+        {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.data?.huishoudens && (
+          <HouseholdCard
+            huishoudens={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.huishoudens!}
+            leeftijdsverdeling={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.leeftijdsverdeling}
+          />
+        )}
+        {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.data?.inkomen && (
+          <IncomeCard
+            inkomen={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.inkomen!}
+            wozWaarde={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.gemiddelde_woz_waarde ?? null}
+          />
         )}
       </>
     )
