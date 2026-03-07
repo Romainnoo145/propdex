@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v12.0 Phase 78 -- Extended CBS Demographics & Income
+**Current focus:** v13.0 Phase 79 -- Voorzieningen Nabijheid
 
 ---
 
 ## Current Position
 
-Phase: 78 of 81 (Extended CBS Demographics & Income)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-07 -- Completed 78-02-PLAN.md
+Phase: 79 of 81 (Voorzieningen Nabijheid)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-07 -- Completed 79-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (v12.0)
+- Total plans completed: 3 (v13.0)
 - Average duration: 2min
-- Total execution time: 0.07 hours
+- Total execution time: 0.12 hours
 
 **By Phase:**
 
@@ -33,6 +33,7 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | Phase 78 P01 | 2min | 2 tasks | 2 files |
 | Phase 78 P02 | 2min | 2 tasks | 5 files |
+| Phase 79 P01 | 3min | 2 tasks | 2 files |
 
 *Updated after each plan completion*
 
@@ -63,6 +64,8 @@ Progress: [██████████] 100%
 - [Phase 78]: Frontend interfaces optional for backward compatibility
 - [Phase 78]: Derived indicators (vergrijzing, doelgroep, WOZ/inkomen) computed client-side
 - [Phase 78]: Cards rendered sequentially -- Phase 77.1 will restructure into tabs
+- [Phase 79]: Resolver methods accept optional dataset_id for multi-dataset CBS queries
+- [Phase 79]: Nabijheid output keys mapped afstand_X to X_km for frontend consumption
 
 ### Pending Todos
 
@@ -79,11 +82,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T10:39:39Z
-**Stopped At:** Completed 78-02-PLAN.md (Phase 78 complete)
+**Last Session:** 2026-03-07T11:11:30Z
+**Stopped At:** Completed 79-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:research-phase 79`
+**Next Action:** `/gsd:execute-phase 79` (Plan 02)
 
 ---
 
