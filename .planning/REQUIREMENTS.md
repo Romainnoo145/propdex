@@ -68,29 +68,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEMO-01 | — | Pending |
-| DEMO-02 | — | Pending |
-| DEMO-03 | — | Pending |
-| DEMO-04 | — | Pending |
-| DEMO-05 | — | Pending |
-| DEMO-06 | — | Pending |
-| DEMO-07 | — | Pending |
-| VOORZ-01 | — | Pending |
-| VOORZ-02 | — | Pending |
-| VOORZ-03 | — | Pending |
-| CRIME-01 | — | Pending |
-| CRIME-02 | — | Pending |
-| CRIME-03 | — | Pending |
-| SCORE-01 | — | Pending |
-| SCORE-02 | — | Pending |
-| SCORE-03 | — | Pending |
-| SCORE-04 | — | Pending |
+| DEMO-01 | Phase 78 | Pending |
+| DEMO-02 | Phase 78 | Pending |
+| DEMO-03 | Phase 78 | Pending |
+| DEMO-04 | Phase 78 | Pending |
+| DEMO-05 | Phase 78 | Pending |
+| DEMO-06 | Phase 78 | Pending |
+| DEMO-07 | Phase 78 | Pending |
+| VOORZ-01 | Phase 79 | Pending |
+| VOORZ-02 | Phase 79 | Pending |
+| VOORZ-03 | Phase 79 | Pending |
+| CRIME-01 | Phase 80 | Pending |
+| CRIME-02 | Phase 80 | Pending |
+| CRIME-03 | Phase 80 | Pending |
+| SCORE-01 | Phase 81 | Pending |
+| SCORE-02 | Phase 81 | Pending |
+| SCORE-03 | Phase 81 | Pending |
+| SCORE-04 | Phase 81 | Pending |
 
 **Coverage:**
-- v12.0 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16
+- v12.0 requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation*

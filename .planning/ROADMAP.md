@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-81 (in progress)
 - ✅ **v11.0 Open Data Intelligence** -- Phases 75-77 (shipped 2026-03-07)
 - ✅ **v10.0 UX Polish** -- Phases 72-74 (shipped 2026-03-03)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
@@ -24,6 +25,94 @@
 
 ## Phases
 
+### 🚧 v12.0 Omgevings- & Leefbaarheids-Scorer (In Progress)
+
+**Milestone Goal:** Transform Propdex from property-level "stenen en regels" intelligence into a platform that quantifies location-level commercial potential -- answering "Is het slim om hier te bouwen?" with data-driven context.
+
+**Phase Numbering:**
+- Integer phases (78, 79, 80, 81): Planned milestone work
+- Decimal phases (e.g., 79.1): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 78: Extended CBS Demographics & Income** - Extend existing CBS client with 14 new measure codes for age, household, income display and derived doelgroep classification
+- [ ] **Phase 79: Voorzieningen Nabijheid** - CBS Nabijheid dataset (86134NED) integration for facility proximity distances per wijk
+- [ ] **Phase 80: Criminaliteitsdata** - OData v3 client for dataderden.cbs.nl crime statistics per wijk
+- [ ] **Phase 81: Locatie-Score & Investeringsprofiel** - Weighted composite location score aggregating all prior data dimensions
+
+## Phase Details
+
+### Phase 78: Extended CBS Demographics & Income
+**Goal**: Users can assess neighborhood demographic profile and income dynamics to validate target audience fit for residential development
+**Depends on**: Nothing (extends existing CBS infrastructure)
+**Requirements**: DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05, DEMO-06, DEMO-07
+**Success Criteria** (what must be TRUE):
+  1. Wijk detail view shows age distribution breakdown (0-14, 15-24, 25-44, 45-64, 65+) with visual bars or chart
+  2. Wijk detail view shows household composition (eenpersoons, zonder kinderen, met kinderen) and average household size
+  3. Wijk detail view shows income metrics (gemiddeld inkomen, inkomensverdeling percentages) and a WOZ/inkomen ratio indicator
+  4. Wijk detail view shows a directional vergrijzing/verjonging indicator derived from age group proportions
+  5. Wijk detail view shows a doelgroep classification label ("studentenwijk" / "gezinswijk" / "vergrijzend" / "gemengd") derived from demographic data
+**Plans**: TBD
+
+Plans:
+- [ ] 78-01: TBD
+- [ ] 78-02: TBD
+
+### Phase 79: Voorzieningen Nabijheid
+**Goal**: Users can evaluate facility accessibility of a neighborhood to assess livability and attractiveness for residents
+**Depends on**: Phase 78 (shared CBS client refactoring)
+**Requirements**: VOORZ-01, VOORZ-02, VOORZ-03
+**Success Criteria** (what must be TRUE):
+  1. CBS Nabijheid client fetches proximity data from dataset 86134NED using the same OData v4 patterns as the existing CBS client
+  2. Wijk detail view shows distances to supermarkt, huisarts, school, kinderdagverblijf, treinstation, and OV-halte
+  3. Nabijheid data is persisted in the neighborhood_metrics JSONB column under the "nabijheid" key and survives page refreshes
+**Plans**: TBD
+
+Plans:
+- [ ] 79-01: TBD
+- [ ] 79-02: TBD
+
+### Phase 80: Criminaliteitsdata
+**Goal**: Users can assess neighborhood safety levels to factor crime risk into investment decisions
+**Depends on**: Nothing (independent track, can run parallel to Phase 79)
+**Requirements**: CRIME-01, CRIME-02, CRIME-03
+**Success Criteria** (what must be TRUE):
+  1. OData v3 client successfully fetches crime data from dataderden.cbs.nl (47018NED) with rate limiting and retry handling
+  2. Wijk detail view shows total misdrijven per 1000 inwoners plus category breakdown (vermogensdelicten, vernieling, geweld)
+  3. Crime data is persisted in the neighborhood_metrics JSONB column under the "criminaliteit" key and survives page refreshes
+**Plans**: TBD
+
+Plans:
+- [ ] 80-01: TBD
+- [ ] 80-02: TBD
+
+### Phase 81: Locatie-Score & Investeringsprofiel
+**Goal**: Users can instantly evaluate investment attractiveness of a neighborhood via a single composite score with transparent sub-dimension breakdown
+**Depends on**: Phase 78, Phase 79, Phase 80 (aggregates all data sources)
+**Requirements**: SCORE-01, SCORE-02, SCORE-03, SCORE-04
+**Success Criteria** (what must be TRUE):
+  1. LocationScoreService computes a 0-10 investeerbaarheid score per wijk using percentile-rank normalization across all scanned wijken
+  2. Score includes per-dimension breakdown (demografie, inkomen, voorzieningen, veiligheid) each with a confidence indicator reflecting data completeness
+  3. Wijk detail view shows an investeringsprofiel card with traffic-light indicators (groen/oranje/rood) per dimension and composite score
+  4. Location score is stored in a separate location_score JSONB column (via Alembic migration), independent from source data
+**Plans**: TBD
+
+Plans:
+- [ ] 81-01: TBD
+- [ ] 81-02: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 78 -> 79 -> 80 -> 81
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 78. Extended CBS Demographics & Income | 0/? | Not started | - |
+| 79. Voorzieningen Nabijheid | 0/? | Not started | - |
+| 80. Criminaliteitsdata | 0/? | Not started | - |
+| 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
+
+---
+
 <details>
 <summary>✅ v11.0 Open Data Intelligence (Phases 75-77) -- SHIPPED 2026-03-07</summary>
 
@@ -36,29 +125,6 @@
 **Archive:** `.planning/milestones/v11.0-ROADMAP.md`
 
 </details>
-
----
-
-## Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 62. Scan Pipeline Reliability | 2/2 | Complete | 2026-02-28 |
-| 63. Venlo Data Completeness | 2/2 | Complete | 2026-03-02 |
-| 64. Map Visualization | 2/2 | Complete | 2026-03-02 |
-| 65. Report Polish | 3/3 | Complete | 2026-03-02 |
-| 66. Results Table Noise Reduction | 1/1 | Complete | 2026-03-02 |
-| 67. Wkb Classification Engine | 2/2 | Complete | 2026-03-02 |
-| 68. Bodemloket Integration | 3/3 | Complete | 2026-03-02 |
-| 69. Risicobeoordeling Dossier | 2/2 | Complete | 2026-03-02 |
-| 72. Parcel Detail Panel Redesign | 2/2 | Complete | 2026-03-03 |
-| 73. DSO Omgevingsplan Bouwregels | 2/2 | Complete | 2026-03-03 |
-| 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
-| 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
-| 76. Rechtspraak Jurisprudentie | 2/2 | Complete    | 2026-03-06 |
-| 77. AI Juridisch Klimaat | 2/2 | Complete    | 2026-03-07 |
-
----
 
 <details>
 <summary>✅ v10.0 UX Polish (Phases 72-74) -- SHIPPED 2026-03-03</summary>
@@ -273,4 +339,4 @@
 
 ---
 
-*Last updated: 2026-03-07 -- v11.0 Open Data Intelligence shipped*
+*Last updated: 2026-03-07 -- v12.0 Omgevings- & Leefbaarheids-Scorer roadmap created*
