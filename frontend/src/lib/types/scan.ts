@@ -85,6 +85,42 @@ export interface CbsStedelijkheid {
 }
 
 /**
+ * CBS age distribution percentages per wijk
+ * Phase 78: Extended demographics
+ */
+export interface CbsLeeftijdsVerdeling {
+  perc_0_14: number | null
+  perc_15_24: number | null
+  perc_25_44: number | null
+  perc_45_64: number | null
+  perc_65_plus: number | null
+}
+
+/**
+ * CBS household composition per wijk
+ * Phase 78: Extended demographics
+ */
+export interface CbsHuishoudens {
+  totaal: number | null
+  eenpersoons: number | null
+  zonder_kinderen: number | null
+  met_kinderen: number | null
+  gemiddelde_grootte: number | null
+}
+
+/**
+ * CBS income metrics per wijk
+ * Phase 78: Extended demographics & income
+ */
+export interface CbsInkomen {
+  gem_per_ontvanger: number | null
+  gem_per_inwoner: number | null
+  gem_gestandaardiseerd: number | null
+  perc_laagste_40: number | null
+  perc_hoogste_20: number | null
+}
+
+/**
  * CBS neighborhood metrics stored in AreaScan.neighborhood_metrics JSONB
  * Fetched from CBS StatLine during scan job
  */
@@ -104,6 +140,10 @@ export interface CbsNeighborhoodMetrics {
       percentage_bouwjaar_voor_2000: number | null
       percentage_bouwjaar_vanaf_2000: number | null
     }
+    // Phase 78: Extended demographics & income
+    leeftijdsverdeling?: CbsLeeftijdsVerdeling
+    huishoudens?: CbsHuishoudens
+    inkomen?: CbsInkomen
   }
 }
 
