@@ -364,6 +364,26 @@ async def area_scan_job(
             except Exception as e:
                 logger.warning(f"Scan {scan_id}: CBS fetch failed (non-fatal): {e}")
 
+            # Fetch CBS Nabijheid proximity data
+            try:
+                nabijheid_data = await cbs_client.get_nabijheid_data(
+                    client=http_client,
+                    gemeente_naam=scan.gemeente_naam,
+                    wijk_naam=scan.wijk_naam,
+                    gemeente_code=scan.gemeente_code,
+                )
+                if nabijheid_data:
+                    if scan.neighborhood_metrics:
+                        scan.neighborhood_metrics = {
+                            **scan.neighborhood_metrics,
+                            "nabijheid": nabijheid_data,
+                        }
+                    else:
+                        scan.neighborhood_metrics = {"nabijheid": nabijheid_data}
+                    logger.info(f"Scan {scan_id}: successfully fetched CBS nabijheid data")
+            except Exception as e:
+                logger.warning(f"Scan {scan_id}: CBS nabijheid fetch failed (non-fatal): {e}")
+
             try:
                 bag_features = await bag_wfs_client.get_panden_in_bbox(
                     scan.bbox_minx,
