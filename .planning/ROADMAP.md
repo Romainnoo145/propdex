@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🚧 **v11.0 Open Data Intelligence** -- Phases 75-77 (in progress)
+- ✅ **v11.0 Open Data Intelligence** -- Phases 75-77 (shipped 2026-03-07)
 - ✅ **v10.0 UX Polish** -- Phases 72-74 (shipped 2026-03-03)
 - ✅ **v9.0 Risk Intelligence** -- Phases 67-69 (shipped 2026-03-02)
 - ✅ **v8.0 Client Demo Readiness** -- Phases 62-66 (shipped 2026-03-02)
@@ -24,74 +24,18 @@
 
 ## Phases
 
-### 🚧 v11.0 Open Data Intelligence (In Progress)
+<details>
+<summary>✅ v11.0 Open Data Intelligence (Phases 75-77) -- SHIPPED 2026-03-07</summary>
 
-**Milestone Goal:** Enrich property intelligence with CBS neighborhood statistics, Rechtspraak court ruling precedents, and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
+- [x] Phase 75: CBS Wijkstatistieken (2/2 plans) -- WOZ, stedelijkheid, demographics via OData v4 client
+- [x] Phase 76: Rechtspraak Jurisprudentie (2/2 plans) -- court ruling search + inline viewing with omgevingsrecht filter
+- [x] Phase 76.1: Map Toggle State Machine (2/2 plans) -- useMapLayerState hook, controlled LayerToggle, stale closure fix
+- [x] Phase 77: AI Juridisch Klimaat (2/2 plans) -- Claude per-ruling summaries, klimaat score, vergunnings-succeskans
 
-- [x] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data (completed 2026-03-06)
-- [x] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter (completed 2026-03-06)
-- [x] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage (completed 2026-03-07)
+**8 plans, 11 requirements, 23 commits, 55 files (+6,889/-613)**
+**Archive:** `.planning/milestones/v11.0-ROADMAP.md`
 
-## Phase Details
-
-### Phase 75: CBS Wijkstatistieken
-**Goal**: Users can see CBS neighborhood metrics (WOZ, stedelijkheid, demographics) in the wijk detail view, backed by a reliable OData v4 client
-**Depends on**: Nothing (CBS data already in neighborhood_metrics JSONB; this phase displays it and upgrades the fetch pipeline)
-**Requirements**: CBS-01, CBS-02, CBS-03
-**Success Criteria** (what must be TRUE):
-  1. Opening a wijk detail view shows a CBS Wijkstatistieken card with WOZ gemiddelde, stedelijkheidsklasse badge (1-5), and peiljaar freshness indicator
-  2. Wijken where CBS returned no data show no CBS card at all (null-render) — no broken or empty card cluttering the view
-  3. The card always shows "Bron: CBS StatLine, peiljaar [year]" so users know the data age
-  4. The CBS OData client uses the v4 endpoint (datasets.cbs.nl) with gemeente code-prefixed wijk lookup, eliminating the ambiguous name matching bug
-  5. CBS client has a registered APIRateLimiter singleton and explicit HTTP timeouts — no bare asyncio.Semaphore (Rechtspraak hardening deferred to Phase 76)
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 75-01-PLAN.md — Frontend: CbsNeighborhoodCard component + TypeScript interface + data path wiring (CBS-01)
-- [ ] 75-02-PLAN.md — Backend: CBS OData v4 client rewrite + rate limiter + gemeente code-prefixed wijk lookup (CBS-02, CBS-03)
-
-### Phase 76: Rechtspraak Jurisprudentie
-**Goal**: Users can search court rulings relevant to their gemeente/wijk and read full documents inline, with the backend infrastructure rebuilt to project standards
-**Depends on**: Phase 75 (infrastructure hardening in 75-02 fixes the exceptions.py startup blocker that also affects rechtspraak.py)
-**Requirements**: RECHT-01, RECHT-02, RECHT-03, RECHT-04
-**Success Criteria** (what must be TRUE):
-  1. User can type a search term in the jurisprudentie panel and see results filtered to omgevingsrecht/bestuursrecht domain automatically
-  2. When viewing a project or wijk, search defaults to the gemeente name as the initial query context
-  3. Each search result shows court name, ruling date, and an ECLI identifier — user can click to open the full ruling inline
-  4. The full ruling document renders inline without navigating away from the wijk detail view
-  5. The Rechtspraak backend client starts without ImportError, uses lxml with XXE protection, validates ECLI format, and registers a rate limiter singleton
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 76-01-PLAN.md — Backend: exceptions.py shim, rechtspraak.py rebuild (lxml, APIRateLimiter, ECLI validation, omgevingsrecht filter), jurisprudence endpoint fix (RECHT-04)
-- [ ] 76-02-PLAN.md — Frontend: omgevingsrecht filter badge, court name parsing, gemeente default context polish (RECHT-01, RECHT-02, RECHT-03)
-
-### Phase 76.1: Map Toggle State Machine (INSERTED)
-
-**Goal:** Single source of truth for map toggle state — extract useMapLayerState hook, convert LayerToggle to controlled component, fix stale closure bug in parcel click handlers
-**Depends on:** Phase 76
-**Requirements:** MAP-01, MAP-02, MAP-03, MAP-04
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 76.1-01-PLAN.md — Create useMapLayerState hook + convert LayerToggle to controlled component (MAP-01, MAP-02, MAP-04)
-- [x] 76.1-02-PLAN.md — Wire hook into map.tsx, add layer effects, fix stale closure, remove dead code (MAP-01, MAP-03)
-
-### Phase 77: AI Juridisch Klimaat
-**Goal**: Users get AI-generated legal risk context per ruling and an aggregated juridisch klimaat score with vergunnings-succeskans for their gemeente/wijk
-**Depends on**: Phase 76 (Rechtspraak must be functional before AI can summarize its output)
-**Requirements**: AI-01, AI-02, AI-03, AI-04
-**Success Criteria** (what must be TRUE):
-  1. Each court ruling in the jurisprudentie panel shows an AI-generated summary (bezwaargrond, uitkomst, relevantie voor vastgoed) as a collapsible badge
-  2. The wijk detail view shows an aggregated "Juridisch klimaat" score card with a vergunnings-succeskans percentage (0-100%) derived from recent ruling outcomes in the area
-  3. Clicking "Analyseer juridisch klimaat" runs the AI analysis and shows a prose risk summary with top risk factors — the UI shows a loading state while analysis runs
-  4. AI analysis never blocks the HTTP response — it runs as an ARQ background job with polling when latency requires it
-  5. Every AI analysis result displays a mandatory disclaimer: "Indicatief — gebaseerd op historische uitspraken, geen juridisch advies"
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 77-01-PLAN.md — Backend: JuridischAnalyseJob model, AI schemas + prompt, ClaudeClient.analyze_jurisprudence(), ARQ job, POST/GET analyze endpoints (AI-01, AI-02, AI-03, AI-04)
-- [ ] 77-02-PLAN.md — Frontend: API bindings + useJurisprudenceAnalysis poll hook, RulingAiSummaryBadge per ruling, JuridischKlimaatCard score + succeskans (AI-01, AI-02, AI-03)
+</details>
 
 ---
 
@@ -329,4 +273,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-06 -- v11.0 Open Data Intelligence roadmap created (Phases 75-77)*
+*Last updated: 2026-03-07 -- v11.0 Open Data Intelligence shipped*

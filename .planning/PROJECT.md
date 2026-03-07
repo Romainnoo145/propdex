@@ -22,8 +22,8 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v7.2 Developer Dossier Intelligence (2026-02-27)
-**Codebase:** ~26,294 lines Python + ~19,926 lines TypeScript/React (~46,220 LOC total)
+**Shipped:** v11.0 Open Data Intelligence (2026-03-07)
+**Codebase:** ~27,000 lines Python + ~21,000 lines TypeScript/React (~48,000 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
 **Tests:** 275 backend (104 unit + 171 integration) + 46 new tests in v6.0, 74% coverage, 80%+ core modules
@@ -50,6 +50,10 @@ This is the ONE thing that must work. Everything else is secondary.
 - Deep property data: WOZ-waarde, energielabel, BRK eigendomsdata, RCE monument detail enrichment
 - Workspace productization: role context switching, URL-state hardening, scope-aware controls, canonical map parcel flow
 - Developer dossier intelligence: buildability delta, Wkb precheck (Layer A + optional Layer B), permit precedent benchmark
+- CBS wijkstatistieken: WOZ gemiddelde, stedelijkheidsklasse, demographics displayed per wijk via OData v4 client
+- Rechtspraak jurisprudentie: court ruling search with omgevingsrecht filter, inline document viewing, rebuilt backend infrastructure
+- AI juridisch klimaat: Claude-powered per-ruling summaries (bezwaargrond, uitkomst, relevantie) + aggregated klimaat score + vergunnings-succeskans
+- Map toggle state machine: centralized useMapLayerState hook, controlled LayerToggle, eliminated stale closure bugs
 - All previous v1.0-v6.0 functionality preserved
 
 ## Business Model
@@ -155,36 +159,15 @@ This is the ONE thing that must work. Everything else is secondary.
 - Buildability delta contract (hoeveel kan hier nog?) with confidence scoring — v7.2
 - Wkb precheck (Layer A auto-check + optional Layer B refinement) — v7.2
 - Permit precedent benchmark by municipality and comparable type — v7.2
+- CBS wijkstatistieken (WOZ, stedelijkheid, demographics) in wijk detail view via OData v4 — v11.0
+- Rechtspraak jurisprudentie search with omgevingsrecht filter and inline document viewing — v11.0
+- AI-powered per-ruling summaries (bezwaargrond, uitkomst, relevantie) as collapsible badges — v11.0
+- Aggregated juridisch klimaat score + vergunnings-succeskans percentage — v11.0
+- AI analysis via ARQ background job with polling (non-blocking) — v11.0
 
 ### Active
 
-## Current Milestone: v11.0 Open Data Intelligence (In Progress)
-
-**Goal:** Enrich property intelligence with neighborhood statistics (CBS), court ruling precedents (Rechtspraak), and AI-powered legal risk analysis — giving developers quantified context for go/no-go decisions.
-
-**Target features:**
-- CBS OData 4 neighborhood scorer (wijkstatistieken integrated into area scans)
-- Rechtspraak API jurisprudence search and display at project/wijk level
-- AI-powered precedent benchmark (Claude parses court rulings for risk scoring and permit success probability)
-
-- [ ] Area scans enriched with CBS neighborhood metrics (WOZ, income, urbanity, demographics)
-- [ ] Users can search and browse court rulings relevant to their gemeente/wijk
-- [ ] Users can read full court ruling documents inline
-- [ ] AI generates risk summaries from court ruling precedents
-- [ ] Vergunnings-succeskans score based on historical legal precedents
-
-**Target features:**
-- Bodemloket API integration (soil contamination data at parcel level)
-- Wkb classification engine (gevolgklasse 1/2/3 determination based on building type and zoning)
-- Asbest risk indicator (bouwjaar-based flagging for pre-1994 properties)
-- Risicobeoordeling dossier generator (aggregated PDF export for kwaliteitsborgers)
-- Lead capture flow (user journey that naturally leads to "vraag kwaliteitsborger aan" CTA)
-- Professional directory (kwaliteitsborger listings for lead routing)
-
-**Business model validation:**
-- No payment infrastructure yet — handle billing manually
-- Prove lead generation value with one vertical before expanding
-- Target: kwaliteitsborger saves 1-3 hours per project via instant dossier
+(Next milestone — to be defined via `/gsd:new-milestone`)
 
 ### Future
 
@@ -271,4 +254,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-06 after v11.0 Open Data Intelligence milestone started*
+*Last updated: 2026-03-07 after v11.0 Open Data Intelligence milestone*
