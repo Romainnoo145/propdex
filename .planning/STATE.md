@@ -12,27 +12,27 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 83 of 86 (Geo Contextualization Feed)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-03-07 -- Completed 83-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-03-07 -- Completed 83-02-PLAN.md
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 3.3min
-- Total execution time: 10min
+- Total execution time: 13min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 82 | 2 | 7min | 3.5min |
-| 83 | 1 | 3min | 3min |
+| 83 | 2 | 6min | 3min |
 
 *Updated after each plan completion*
 
@@ -62,6 +62,9 @@ Progress: [█████░░░░░] 50%
 - [Phase 83]: Progressive word-prefix matching for gemeente extraction from legal text
 - [Phase 83]: RVS rulings stored with gemeente_query=None, geo-tagged via text extraction
 - [Phase 83]: Shared Semaphore(5) for combined rechtbank + RVS document fetching
+- [Phase 83]: Geo-relevance computed at query time via SQLAlchemy case(), not stored on model
+- [Phase 83]: Win/loss aggregation in Python after fetch (small result sets)
+- [Phase 83]: Feed replaces search in JurisprudenceSection -- search moves to Phase 85 Explorer
 
 ### Pending Todos
 
@@ -76,12 +79,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T15:22:53Z
-**Stopped At:** Completed 83-01-PLAN.md
+**Last Session:** 2026-03-07T15:28:14Z
+**Stopped At:** Completed 83-02-PLAN.md (Phase 83 complete)
 **Resume File:** None
 
-**Next Action:** Execute 83-02-PLAN.md (Geo Contextualization Feed plan 2)
+**Next Action:** Execute Phase 84 (AI Analysis Doorlooptijd)
 
 ---
 
-*State updated: 2026-03-07 -- Completed 83-01-PLAN.md*
+*State updated: 2026-03-07 -- Completed 83-02-PLAN.md*

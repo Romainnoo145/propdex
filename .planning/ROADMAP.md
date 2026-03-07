@@ -35,7 +35,7 @@
 - Decimal phases (e.g., 82.1): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline (completed 2026-03-07)
-- [ ] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente
+- [x] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente (completed 2026-03-07)
 - [ ] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation
 - [ ] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering
 - [ ] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization
@@ -67,7 +67,7 @@ Plans:
   2. Rulings mentioning the specific gemeente (extracted from ruling text) appear above arrondissement-level rulings
   3. RVS (Raad van State) rulings are geo-tagged via text extraction and appear in relevant gemeente feeds despite having no geographic ECLI indicator
   4. Win/loss ratio is displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk) at the top of the feed
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 83-01-PLAN.md -- GeoContextualizer service + RulingCache migration + ingestion integration
@@ -125,7 +125,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
-| 83. Geo-Contextualization + Gemeente Feed | 1/2 | In Progress|  |
+| 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete   | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 0/2 | Not started | - |
 | 85. Explorer UI | 0/2 | Not started | - |
 | 86. Trend & Statistics | 0/2 | Not started | - |

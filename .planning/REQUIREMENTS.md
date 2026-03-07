@@ -24,9 +24,9 @@
 
 ### Gemeente Feed
 
-- [ ] **FEED-01**: Auto-populated chronological jurisprudentie feed per gemeente (no manual search required)
-- [ ] **FEED-02**: Rulings sorted by relevance: gemeente-matched first, then arrondissement-level
-- [ ] **FEED-03**: Win/loss ratio displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk)
+- [x] **FEED-01**: Auto-populated chronological jurisprudentie feed per gemeente (no manual search required)
+- [x] **FEED-02**: Rulings sorted by relevance: gemeente-matched first, then arrondissement-level
+- [x] **FEED-03**: Win/loss ratio displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk)
 
 ### AI Analysis
 
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEO-02 | Phase 83 | Complete |
 | GEO-03 | Phase 83 | Complete |
 | GEO-04 | Phase 83 | Complete |
-| FEED-01 | Phase 83 | Pending |
-| FEED-02 | Phase 83 | Pending |
-| FEED-03 | Phase 83 | Pending |
+| FEED-01 | Phase 83 | Complete |
+| FEED-02 | Phase 83 | Complete |
+| FEED-03 | Phase 83 | Complete |
 | AI-01 | Phase 84 | Pending |
 | AI-02 | Phase 84 | Pending |
 | AI-03 | Phase 84 | Pending |
