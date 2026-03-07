@@ -139,6 +139,23 @@ export interface CbsNabijheid {
 }
 
 /**
+ * CBS crime statistics per wijk
+ * Phase 80: Criminaliteitsdata (dataset 47018NED on dataderden.cbs.nl)
+ */
+export interface CbsCriminaliteit {
+  bron: string
+  dataset: string
+  peiljaar: number
+  totaal_misdrijven: number | null
+  per_1000_inwoners: number | null
+  categorien: {
+    vermogensdelicten: { aantal: number | null; per_1000: number | null }
+    vernieling: { aantal: number | null; per_1000: number | null }
+    geweld: { aantal: number | null; per_1000: number | null }
+  }
+}
+
+/**
  * CBS neighborhood metrics stored in AreaScan.neighborhood_metrics JSONB
  * Fetched from CBS StatLine during scan job
  */
@@ -147,6 +164,7 @@ export interface CbsNeighborhoodMetrics {
   dataset: string
   peiljaar: number
   nabijheid?: CbsNabijheid
+  criminaliteit?: CbsCriminaliteit
   data: {
     gemiddelde_woz_waarde: number | null
     stedelijkheid: CbsStedelijkheid
