@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
     searchJurisprudence,
     getJurisprudenceDoc,
+    triggerJurisprudenceAnalysis,
+    pollJurisprudenceAnalysis,
     type JurisprudenceResult,
     type JurisprudenceDocument,
+    type JurisprudenceAnalysisResponse,
 } from '@/lib/api'
 
 export function useJurisprudenceSearch(query: string, enabled = true) {
@@ -34,5 +37,46 @@ export function useJurisprudenceDoc(ecli: string | null) {
         enabled: !!accessToken && !!ecli,
         staleTime: 60 * 60 * 1000, // 1 hour cache, documents don't change
         retry: 1,
+    })
+}
+
+/**
+ * Poll an AI jurisprudence analysis job for completion.
+ *
+ * Polls every 3s while status is queued/in_progress.
+ * Stops polling on complete/failed or when jobId is null.
+ */
+export function useJurisprudenceAnalysis(jobId: string | null) {
+    const { accessToken } = useAuth()
+
+    return useQuery<JurisprudenceAnalysisResponse, Error>({
+        queryKey: ['jurisprudence-analysis', jobId],
+        queryFn: () => pollJurisprudenceAnalysis(jobId!, accessToken),
+        enabled: !!jobId && !!accessToken,
+        refetchInterval: (query) => {
+            if (query.state.error) return false
+            const status = query.state.data?.status
+            if (status === 'complete' || status === 'failed') return false
+            return 3000
+        },
+        refetchIntervalInBackground: true,
+    })
+}
+
+/**
+ * Mutation to trigger AI jurisprudence analysis.
+ *
+ * Returns a standard TanStack mutation for the component to call `.mutateAsync()`.
+ */
+export function useTriggerAnalysis() {
+    const { accessToken } = useAuth()
+
+    return useMutation<
+        JurisprudenceAnalysisResponse,
+        Error,
+        { ecliList: string[]; gemeenteNaam: string }
+    >({
+        mutationFn: ({ ecliList, gemeenteNaam }) =>
+            triggerJurisprudenceAnalysis(ecliList, gemeenteNaam, accessToken),
     })
 }

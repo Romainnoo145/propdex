@@ -1210,3 +1210,116 @@ export async function setGemeenteMonitoringSubscription(
     body: JSON.stringify(input),
   })
 }
+
+// ==========================================
+// Jurisprudence (Rechtspraak) API bindings
+// ==========================================
+
+export interface JurisprudenceResult {
+  ecli: string
+  title: string
+  summary: string
+  date: string
+}
+
+export interface JurisprudenceDocument {
+  ecli: string
+  text: string
+  instantie: string
+  datum_uitspraak: string
+}
+
+export async function searchJurisprudence(
+  query: string,
+  accessToken: string | null,
+  maxResults = 10
+): Promise<{ status: string; results: JurisprudenceResult[] }> {
+  return apiFetch<{ status: string; results: JurisprudenceResult[] }>(
+    `/api/jurisprudence/search?q=${encodeURIComponent(query)}&max_results=${maxResults}`,
+    { method: 'GET', accessToken }
+  )
+}
+
+export async function getJurisprudenceDoc(
+  ecli: string,
+  accessToken: string | null
+): Promise<{ status: string; document: JurisprudenceDocument }> {
+  return apiFetch<{ status: string; document: JurisprudenceDocument }>(
+    `/api/jurisprudence/doc/${encodeURIComponent(ecli)}`,
+    { method: 'GET', accessToken }
+  )
+}
+
+// ==========================================
+// Jurisprudence AI Analysis types + bindings
+// ==========================================
+
+export interface RulingAnalysis {
+  ecli: string
+  bezwaargrond: string
+  uitkomst: 'toegewezen' | 'afgewezen' | 'gedeeltelijk' | 'onbekend'
+  relevantie: string
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+export interface JuridischAnalysisResult {
+  gemeente_naam: string
+  juridisch_klimaat_score: number
+  vergunnings_succeskans: number
+  risico_samenvatting: string
+  top_risico_factoren: string[]
+  ruling_analyses: RulingAnalysis[]
+  disclaimer: string
+  analyzed_at: string
+}
+
+export interface JurisprudenceAnalysisResponse {
+  status: 'queued' | 'in_progress' | 'complete' | 'failed'
+  job_id?: string | null
+  result?: JuridischAnalysisResult
+  error?: string
+}
+
+/**
+ * Trigger AI analysis of court rulings for a municipality.
+ *
+ * POST /api/jurisprudence/analyze
+ *
+ * @param ecliList - List of ECLI identifiers to analyze
+ * @param gemeenteNaam - Municipality name for context
+ * @param accessToken - JWT access token
+ * @returns Analysis response with job_id for polling or cached result
+ */
+export async function triggerJurisprudenceAnalysis(
+  ecliList: string[],
+  gemeenteNaam: string,
+  accessToken: string | null
+): Promise<JurisprudenceAnalysisResponse> {
+  return apiFetch<JurisprudenceAnalysisResponse>(
+    '/api/jurisprudence/analyze',
+    {
+      method: 'POST',
+      accessToken,
+      body: JSON.stringify({ ecli_list: ecliList, gemeente_naam: gemeenteNaam }),
+    }
+  )
+}
+
+/**
+ * Poll status of a jurisprudence analysis job.
+ *
+ * GET /api/jurisprudence/analyze/{jobId}
+ *
+ * @param jobId - Job UUID from triggerJurisprudenceAnalysis
+ * @param accessToken - JWT access token
+ * @returns Analysis response with status and result when complete
+ */
+export async function pollJurisprudenceAnalysis(
+  jobId: string,
+  accessToken: string | null
+): Promise<JurisprudenceAnalysisResponse> {
+  return apiFetch<JurisprudenceAnalysisResponse>(
+    `/api/jurisprudence/analyze/${jobId}`,
+    { method: 'GET', accessToken }
+  )
+}
