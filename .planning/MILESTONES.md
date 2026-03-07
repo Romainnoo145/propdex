@@ -218,12 +218,37 @@
 ---
 
 
+## v12.0 Omgevings- & Leefbaarheids-Scorer (Shipped: 2026-03-07)
+
+**Delivered:** Location-level intelligence with CBS neighborhood metrics (demographics, income, household composition), crime statistics (OData v3), facility proximity data, and map toggle state machine — answering "Is het slim om hier te bouwen?" with data-driven context.
+
+**Phases completed:** 78-80 (6 plans total). Phase 81 (Locatie Score Investeringsprofiel) deferred — depends on all data sources being correct first.
+
+**Key accomplishments:**
+- Extended CBS demographics: age distribution, household composition, income metrics via OData v4
+- CBS criminaliteitsdata: OData v3 client for crime statistics with color-coded severity indicators
+- CBS voorzieningennabijheid: facility proximity distances (schools, supermarkets, OV)
+- Map toggle state machine: centralized useMapLayerState hook, exitGemeenteMode utility
+- Gemeente/wijk detail view UX fixes (max-height, overflow control)
+
+**Stats:**
+- 3 phases, 6 plans
+- 1 day (2026-03-07)
+
+**What's next:** v13.0 Juridisch Klimaat Intelligence
+
+---
+
 ## v11.0 Open Data Intelligence (Shipped: 2026-03-07)
 
 **Phases completed:** 75 phases, 213 plans, 34 tasks
 
 **Key accomplishments:**
-- (none recorded)
+- CBS wijkstatistieken (WOZ, stedelijkheid, demographics) via OData v4 client
+- Rechtspraak jurisprudentie search with omgevingsrecht filter and inline document viewing
+- AI-powered per-ruling summaries (bezwaargrond, uitkomst, relevantie)
+- Aggregated juridisch klimaat score + vergunnings-succeskans
+- Map toggle state machine with centralized layer state
 
 ---
 

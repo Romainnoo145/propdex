@@ -5,83 +5,44 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Phase 80 -- Criminaliteitsdata
+**Current focus:** v13.0 Juridisch Klimaat Intelligence
 
 ---
 
 ## Current Position
 
-Phase: 80 of 81 (Criminaliteitsdata) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-03-07 -- Completed 80-02-PLAN.md
-
-Progress: [██████████] 95%
+Phase: Not started (defining requirements)
+Plan: --
+Status: Defining requirements
+Last activity: 2026-03-07 -- Milestone v13.0 started
 
 ---
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 6 (v13.0)
-- Average duration: 2min
-- Total execution time: 0.22 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| Phase 78 P01 | 2min | 2 tasks | 2 files |
-| Phase 78 P02 | 2min | 2 tasks | 5 files |
-| Phase 79 P01 | 3min | 2 tasks | 2 files |
-| Phase 79 P02 | 2min | 2 tasks | 3 files |
-| Phase 80 P01 | 3min | 2 tasks | 3 files |
-| Phase 80 P02 | 1min | 2 tasks | 3 files |
-
-*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Key Patterns (carry forward)
 
 - CBS OData v4 client complete: datasets.cbs.nl/odata/v1/CBS, Observations + WijkenEnBuurtenCodes
-- CBS wijk lookup uses startswith(Identifier, 'WK{gemeente_code}')
-- CBS_DATASET_ID configurable via env var (default 86165NED = 2025 dataset)
-- neighborhood_metrics JSONB on AreaScan -- extend with "nabijheid" and "criminaliteit" keys
+- CBS OData v3 client: dataderden.cbs.nl, space-padded keys, TypedDataSet entity
+- neighborhood_metrics JSONB on AreaScan -- extend with new data keys
 - Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()`)
 - Three-state contract: return model | None | raise GovernmentAPIError
 - Rate limiter: register APIRateLimiter singletons in rate_limiter.py
-
-### v12.0 Research Notes
-
-- Phase 78: Same API, 14 more measure codes -- zero new infrastructure
-- Phase 79: CBS 86134NED for nabijheid -- same OData v4, verify protocol live
-- Phase 80: OData v3 on dataderden.cbs.nl (47018NED) -- space-padded keys, TypedDataSet entity
-- Phase 81: Percentile-rank normalization (NOT min-max), confidence tracking, 60% minimum completeness
-- Zero new pip/npm dependencies across all phases
+- Rechtspraak API: XML-based, ECLI identifiers, 10 req/s rate limit
+- Existing jurisprudence: useJurisprudence hook, JurisprudenceSection component, backend search endpoint
 
 ### Decisions Made
 
-(for v12.0)
-- [Phase 78]: CBS extended sub-objects as siblings of demografie, not nested
-- [Phase 78]: Frontend interfaces optional for backward compatibility
-- [Phase 78]: Derived indicators (vergrijzing, doelgroep, WOZ/inkomen) computed client-side
-- [Phase 78]: Cards rendered sequentially -- Phase 77.1 will restructure into tabs
-- [Phase 79]: Resolver methods accept optional dataset_id for multi-dataset CBS queries
-- [Phase 79]: Nabijheid output keys mapped afstand_X to X_km for frontend consumption
-- [Phase 79]: CbsNabijheid at root level of CbsNeighborhoodMetrics (not inside data), matching backend storage
-- [Phase 79]: Distance thresholds: daily 1/3km, transport 3/10km for green/amber/red coloring
-- [Phase 80]: Separate CbsCrimeClient for OData v3 on dataderden.cbs.nl (different protocol from v4)
-- [Phase 80]: Crime subcategories aggregated server-side into vermogensdelicten/vernieling/geweld
-- [Phase 80]: LATEST_PERIOD=2024JJ00 hardcoded (most recent Definitief data)
-- [Phase 80]: Crime color thresholds: <30 green, 30-60 amber, >60 red per 1000 inwoners
+(from v12.0 -- carry forward)
+- CBS extended sub-objects as siblings of demografie, not nested
+- Frontend interfaces optional for backward compatibility
+- Separate CbsCrimeClient for OData v3 (different protocol from v4)
 
 ### Pending Todos
 
 - Production deployment: Create app_role (sql/setup_app_role.sql)
 - BAG API key aanvragen (gratis)
-- CBS Nabijheid dataset protocol version: verify v4 on datasets.cbs.nl before Phase 79
-- Politie crime data recency: confirm 2022+ data availability before Phase 80
+- Phase 81 (Locatie Score Investeringsprofiel) deferred from v12.0
 
 ### Blockers/Concerns
 
@@ -91,12 +52,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T11:40:14.162Z
-**Stopped At:** Completed 80-02-PLAN.md
+**Last Session:** 2026-03-07
+**Stopped At:** Milestone v13.0 initialized
 **Resume File:** None
 
-**Next Action:** Execute Phase 81 (Locatie Score Investeringsprofiel)
+**Next Action:** Research or define requirements
 
 ---
 
-*State updated: 2026-03-07 -- v12.0 roadmap created*
+*State updated: 2026-03-07 -- v13.0 milestone started*

@@ -22,7 +22,7 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v11.0 Open Data Intelligence (2026-03-07)
+**Shipped:** v12.0 Omgevings- & Leefbaarheids-Scorer (2026-03-07)
 **Codebase:** ~27,000 lines Python + ~21,000 lines TypeScript/React (~48,000 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
@@ -164,19 +164,25 @@ This is the ONE thing that must work. Everything else is secondary.
 - AI-powered per-ruling summaries (bezwaargrond, uitkomst, relevantie) as collapsible badges — v11.0
 - Aggregated juridisch klimaat score + vergunnings-succeskans percentage — v11.0
 - AI analysis via ARQ background job with polling (non-blocking) — v11.0
+- Extended CBS neighborhood metrics (inkomen, huishoudenssamenstelling, leeftijdsverdeling) — v12.0
+- CBS criminaliteitsdata integration (OData v3, misdrijfcijfers per gemeente) — v12.0
+- CBS voorzieningennabijheid (afstand tot scholen, supermarkten, OV-knooppunten) — v12.0
 
 ### Active
 
-## Current Milestone: v12.0 Omgevings- & Leefbaarheids-Scorer
+## Current Milestone: v13.0 Juridisch Klimaat Intelligence
 
-**Goal:** Transform Propdex from property-level "stenen en regels" intelligence into a platform that quantifies location-level commercial potential — answering "Is het slim om hier te bouwen?" with data-driven context.
+**Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars — from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
 
 **Target features:**
-- Extended CBS neighborhood metrics (inkomen, huishoudenssamenstelling, leeftijdsverdeling)
-- Criminaliteitsdata integration (politie open data / CBS veiligheidscijfers)
-- Voorzieningennabijheid (afstand tot scholen, supermarkten, OV-knooppunten)
-- Multi-year CBS trendanalyse (gentrification/achteruitgang trajectorie)
-- Geaggregeerde locatie-score als commercieel investeringsprofiel
+- Deep Rechtspraak API research (endpoints, parameters, ECLI-structuur, XML-formaat)
+- Backend redesign: ECLI-filtering, XML-parsing, caching, rate limiting
+- Gemeente jurisprudentie feed (chronologische relevante beslissingen per gemeente)
+- Juridisch Klimaat Explorer (filters: scope, vergunningstype, uitkomst, tijdsperiode)
+- AI analyse upgrade (Claude op gefilterde, relevante resultaten)
+- Geo-contextualisatie (uitspraaktekst scannen op locatienamen/postcodes -> gemeente-koppeling)
+- Doorlooptijd-analyse (gemiddelde procedureduur per gemeente per vergunningstype)
+- Bekendmakingen-koppeling (uitspraken linken aan SRU bekendmakingen -> "bekijk op kaart")
 
 ### Future
 
@@ -263,4 +269,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-07 after v12.0 Omgevings- & Leefbaarheids-Scorer milestone start*
+*Last updated: 2026-03-07 after v13.0 Juridisch Klimaat Intelligence milestone start*
