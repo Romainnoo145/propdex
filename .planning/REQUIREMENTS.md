@@ -18,9 +18,9 @@
 - [x] **DEMO-02**: Wijk detail toont huishoudenssamenstelling (eenpersoons, zonder kinderen, met kinderen, gemiddelde grootte)
 - [x] **DEMO-03**: Wijk detail toont inkomenscijfers (gemiddeld inkomen per ontvanger, per inwoner, gestandaardiseerd huishoudinkomen)
 - [x] **DEMO-04**: Wijk detail toont inkomensverdeling (% laagste 40%, % hoogste 20%)
-- [ ] **DEMO-05**: Wijk detail toont WOZ/inkomen ratio als marktconformiteits-indicator
-- [ ] **DEMO-06**: Wijk detail toont vergrijzing/verjonging indicator (richting-pijl gebaseerd op leeftijdsgroepen)
-- [ ] **DEMO-07**: Wijk detail toont doelgroep-validatie profiel ("studentenwijk" / "gezinswijk" / "vergrijzend" / "gemengd")
+- [x] **DEMO-05**: Wijk detail toont WOZ/inkomen ratio als marktconformiteits-indicator
+- [x] **DEMO-06**: Wijk detail toont vergrijzing/verjonging indicator (richting-pijl gebaseerd op leeftijdsgroepen)
+- [x] **DEMO-07**: Wijk detail toont doelgroep-validatie profiel ("studentenwijk" / "gezinswijk" / "vergrijzend" / "gemengd")
 
 ### Voorzieningen Nabijheid
 
@@ -91,9 +91,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEMO-02 | Phase 78 | Complete |
 | DEMO-03 | Phase 78 | Complete |
 | DEMO-04 | Phase 78 | Complete |
-| DEMO-05 | Phase 78 | Pending |
-| DEMO-06 | Phase 78 | Pending |
-| DEMO-07 | Phase 78 | Pending |
+| DEMO-05 | Phase 78 | Complete |
+| DEMO-06 | Phase 78 | Complete |
+| DEMO-07 | Phase 78 | Complete |
 | VOORZ-01 | Phase 79 | Pending |
 | VOORZ-02 | Phase 79 | Pending |
 | VOORZ-03 | Phase 79 | Pending |
