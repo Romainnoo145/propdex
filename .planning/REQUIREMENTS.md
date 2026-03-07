@@ -21,10 +21,10 @@
 
 ### AI Juridisch Klimaat
 
-- [ ] **AI-01**: Each court ruling displays an AI-generated summary with risk indication (bezwaargrond, uitkomst, relevantie voor vastgoed)
-- [ ] **AI-02**: Gemeente/wijk shows aggregated juridisch klimaat score based on recent court rulings
-- [ ] **AI-03**: Vergunnings-succeskans percentage displayed based on historical precedent outcomes in the area
-- [ ] **AI-04**: AI analysis runs as ARQ background job with polling pattern (existing parsing_job model, no blocking HTTP)
+- [x] **AI-01**: Each court ruling displays an AI-generated summary with risk indication (bezwaargrond, uitkomst, relevantie voor vastgoed)
+- [x] **AI-02**: Gemeente/wijk shows aggregated juridisch klimaat score based on recent court rulings
+- [x] **AI-03**: Vergunnings-succeskans percentage displayed based on historical precedent outcomes in the area
+- [x] **AI-04**: AI analysis runs as ARQ background job with polling pattern (existing parsing_job model, no blocking HTTP)
 
 ## v9.0 Requirements (Complete)
 
@@ -73,10 +73,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RECHT-02 | Phase 76 | Complete |
 | RECHT-03 | Phase 76 | Complete |
 | RECHT-04 | Phase 76 | Complete |
-| AI-01 | Phase 77 | Pending |
-| AI-02 | Phase 77 | Pending |
-| AI-03 | Phase 77 | Pending |
-| AI-04 | Phase 77 | Pending |
+| AI-01 | Phase 77 | Complete |
+| AI-02 | Phase 77 | Complete |
+| AI-03 | Phase 77 | Complete |
+| AI-04 | Phase 77 | Complete |
 
 **Coverage:**
 - v11.0 requirements: 11 total

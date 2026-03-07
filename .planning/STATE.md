@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v11.0 Open Data Intelligence — Phase 76.1 (Map Toggle State Machine)
+**Current focus:** v11.0 Open Data Intelligence — Phase 77 (AI Juridisch Klimaat)
 
 ---
 
 ## Current Position
 
-Phase: 76.1 of 77 (Map Toggle State Machine)
-Plan: 02 of 2 complete — PHASE COMPLETE
-Status: Moving to Phase 77
-Last activity: 2026-03-07 — Phase 76.1 Plan 02 complete (wire useMapLayerState into map.tsx, fix stale closure)
+Phase: 77 of 77 (AI Juridisch Klimaat)
+Plan: 01 of 2 complete
+Status: In Progress
+Last activity: 2026-03-07 — Phase 77 Plan 01 complete (AI jurisprudence analysis backend pipeline)
 
-Progress: [████░░░░░░] ~40% (v11.0 milestone)
+Progress: [█████░░░░░] ~50% (v11.0 milestone)
 
 ---
 
@@ -28,6 +28,7 @@ Progress: [████░░░░░░] ~40% (v11.0 milestone)
 - Phase 76 Plan 01: ~2min
 - Phase 76 Plan 02: ~3min
 - Phase 76.1 Plan 01: ~5min
+- Phase 77 Plan 01: ~5min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -67,6 +68,8 @@ Progress: [████░░░░░░] ~40% (v11.0 milestone)
 - Rechtspraak client rebuilt (76-01): lxml XXE-safe, APIRateLimiter, correct error signatures, ECLI validation, omgevingsrecht filter
 - exceptions.py created as re-export shim from base.py -- startup blocker resolved (76-01)
 - AI: never ask Claude to generate citations -- only summarize provided ECLI texts
+- AI juridisch pipeline (77-01): POST /analyze enqueues ARQ job, fetches rulings via RechtspraakClient, calls Claude, caches in CachedAPIResponse with ai_juridisch key
+- AI scoring: vergunnings_succeskans = % toegewezen, juridisch_klimaat_score = 100 - % afgewezen (computed in Python, not by LLM)
 
 ### Roadmap Evolution
 
@@ -90,6 +93,8 @@ Progress: [████░░░░░░] ~40% (v11.0 milestone)
 - [Phase 76-rechtspraak]: return=DOC parameter prevents wasted lookups on entries without available documents (2026-03-06)
 - [Phase 76-rechtspraak-02]: parseCourtFromTitle as file-level helper — court name replaces ECLI short form as primary meta in result cards (2026-03-07)
 - [Phase 76-rechtspraak-02]: Badge "Omgevingsrecht filter actief" always visible — UX transparency for backend-side domain filter (2026-03-07)
+- [Phase 77-plan-01]: Python-computed vergunnings_succeskans and juridisch_klimaat_score (not LLM-generated) for deterministic scoring (2026-03-07)
+- [Phase 77-plan-01]: ECLI list SHA256 hash in cache key for deterministic cache lookups across identical analysis sets (2026-03-07)
 
 ### Pending Todos
 
@@ -108,12 +113,12 @@ Progress: [████░░░░░░] ~40% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T23:37:00Z
-**Stopped At:** Completed 76.1-02-PLAN.md (Phase 76.1 complete)
+**Last Session:** 2026-03-07T05:57:00Z
+**Stopped At:** Completed 77-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 77` (Phase 77 — AI Juridisch Klimaat, directory already created)
+**Next Action:** Execute 77-02-PLAN.md (Phase 77 Plan 02 — AI Juridisch Klimaat frontend)
 
 ---
 
-*State updated: 2026-03-07 -- Phase 76 Plan 02 complete*
+*State updated: 2026-03-07 -- Phase 77 Plan 01 complete*
