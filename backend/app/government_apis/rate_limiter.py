@@ -116,3 +116,6 @@ cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 
 # Rechtspraak Open Data — public, polite limits
 rechtspraak_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
+
+# CBS Crime (dataderden.cbs.nl OData v3) — public, polite limits
+cbs_crime_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
