@@ -88,8 +88,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 79-01: TBD
-- [ ] 79-02: TBD
+- [ ] 79-01-PLAN.md — CBS Nabijheid client (86134NED) + scan job integration
+- [ ] 79-02-PLAN.md — NabijheidCard frontend component + WijkDetailView integration
 
 ### Phase 80: Criminaliteitsdata
 **Goal**: Users can assess neighborhood safety levels to factor crime risk into investment decisions
