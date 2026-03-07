@@ -14,6 +14,7 @@ BASE_URL = "https://datasets.cbs.nl/odata/v1/CBS"
 
 # Measure codes for the 'Kerncijfers wijken en buurten' Observations entity
 MEASURE_CODES: dict[str, str] = {
+    # --- Core (v11.0) ---
     "woz": "M001642",            # Gemiddelde WOZ-waarde van woningen
     "stedelijkheid": "ST0001",   # Mate van stedelijkheid (1-5)
     "oad": "ST0003",             # Omgevingsadressendichtheid
@@ -23,6 +24,24 @@ MEASURE_CODES: dict[str, str] = {
     "huurwoningen": "1014850_2", # Huurwoningen totaal
     "dichtheid": "M000100",      # Bevolkingsdichtheid
     "inkomen": "M000223",        # Gemiddeld inkomen per inkomensontvanger
+    # --- Age distribution (Phase 78) ---
+    "leeftijd_0_14": "10680",    # % 0-14 jaar
+    "leeftijd_15_24": "53050",   # % 15-24 jaar
+    "leeftijd_25_44": "53310",   # % 25-44 jaar
+    "leeftijd_45_64": "53715",   # % 45-64 jaar
+    "leeftijd_65_plus": "80200", # % 65+ jaar
+    # --- Households (Phase 78) ---
+    "huishoudens_totaal": "1050010_2",       # Totaal aantal huishoudens
+    "huishoudens_eenpersoons": "1050015",    # Eenpersoons huishoudens
+    "huishoudens_zonder_kinderen": "1016040",  # Meerpersoonshuishoudens zonder kinderen
+    "huishoudens_met_kinderen": "1016030",   # Huishoudens met kinderen
+    "gem_huishoudensgrootte": "M000114",     # Gemiddelde huishoudensgrootte
+    # --- Income extended (Phase 78) ---
+    "inkomen_per_inwoner": "M000224",        # Gemiddeld inkomen per inwoner
+    "inkomen_gestandaardiseerd": "M000222",  # Gemiddeld gestandaardiseerd huishoudinkomen
+    # --- Income distribution (Phase 78) ---
+    "inkomen_laagste_40_personen": "D000187",  # % personen in laagste 40% inkomens
+    "inkomen_hoogste_20_personen": "D000185",  # % personen in hoogste 20% inkomens
 }
 
 # Reverse lookup: CBS code -> human key
@@ -307,6 +326,28 @@ class CBSODataClient:
                     # misleading users with mislabelled data.
                     "percentage_bouwjaar_voor_2000": None,
                     "percentage_bouwjaar_vanaf_2000": None,
+                },
+                # Phase 78: Extended demographics & income
+                "leeftijdsverdeling": {
+                    "perc_0_14": data.get("leeftijd_0_14"),
+                    "perc_15_24": data.get("leeftijd_15_24"),
+                    "perc_25_44": data.get("leeftijd_25_44"),
+                    "perc_45_64": data.get("leeftijd_45_64"),
+                    "perc_65_plus": data.get("leeftijd_65_plus"),
+                },
+                "huishoudens": {
+                    "totaal": data.get("huishoudens_totaal"),
+                    "eenpersoons": data.get("huishoudens_eenpersoons"),
+                    "zonder_kinderen": data.get("huishoudens_zonder_kinderen"),
+                    "met_kinderen": data.get("huishoudens_met_kinderen"),
+                    "gemiddelde_grootte": data.get("gem_huishoudensgrootte"),
+                },
+                "inkomen": {
+                    "gem_per_ontvanger": data.get("inkomen"),
+                    "gem_per_inwoner": data.get("inkomen_per_inwoner"),
+                    "gem_gestandaardiseerd": data.get("inkomen_gestandaardiseerd"),
+                    "perc_laagste_40": data.get("inkomen_laagste_40_personen"),
+                    "perc_hoogste_20": data.get("inkomen_hoogste_20_personen"),
                 },
             },
         }
