@@ -121,6 +121,24 @@ export interface CbsInkomen {
 }
 
 /**
+ * CBS facility proximity distances per wijk (km)
+ * Phase 79: Voorzieningen Nabijheid (dataset 86134NED)
+ */
+export interface CbsNabijheid {
+  bron: string
+  dataset: string
+  peiljaar: number
+  afstanden: {
+    supermarkt_km: number | null
+    huisarts_km: number | null
+    basisschool_km: number | null
+    kinderdagverblijf_km: number | null
+    treinstation_km: number | null
+    overstapstation_km: number | null
+  }
+}
+
+/**
  * CBS neighborhood metrics stored in AreaScan.neighborhood_metrics JSONB
  * Fetched from CBS StatLine during scan job
  */
@@ -128,6 +146,7 @@ export interface CbsNeighborhoodMetrics {
   bron: string
   dataset: string
   peiljaar: number
+  nabijheid?: CbsNabijheid
   data: {
     gemiddelde_woz_waarde: number | null
     stedelijkheid: CbsStedelijkheid
