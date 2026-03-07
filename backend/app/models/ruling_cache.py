@@ -29,4 +29,6 @@ class RulingCache(Base, TimestampMixin):
     summary: Mapped[str | None] = mapped_column(Text)
     full_text: Mapped[str | None] = mapped_column(Text)
     gemeente_query: Mapped[str | None] = mapped_column(String(200), index=True)
+    extracted_gemeente: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    uitkomst: Mapped[str | None] = mapped_column(String(30), nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(nullable=False)
