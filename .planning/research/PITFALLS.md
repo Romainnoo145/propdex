@@ -1,244 +1,268 @@
-# Domain Pitfalls: v12.0 Omgevings- & Leefbaarheids-Scorer
+# Domain Pitfalls: v13.0 Juridisch Klimaat Intelligence
 
-**Domain:** Location intelligence scoring for Dutch PropTech platform
+**Domain:** Legal intelligence for Dutch PropTech platform (court ruling analysis, geo-contextualization, procedure duration)
 **Researched:** 2026-03-07
-**Context:** Adding multi-year CBS trends, crime data, proximity metrics, and composite location scoring to existing Propdex platform (v11.0)
-**Overall confidence:** HIGH -- most pitfalls verified against CBS documentation and existing codebase
+**Context:** Adding deep Rechtspraak API integration, geo-contextualization of court rulings, doorlooptijd-analyse, bekendmakingen cross-reference, and Explorer UI to existing Propdex platform (v11.0 has basic search + AI analysis)
+**Overall confidence:** HIGH -- most pitfalls verified against existing codebase, Rechtspraak API documentation, and known issues from current implementation
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data corruption, or fundamentally wrong scoring output.
+Mistakes that cause rewrites, garbage data, or fundamentally broken legal intelligence.
 
-### Pitfall 1: CBS Measure Code Drift Between Dataset Years
+### Pitfall 1: Rechtspraak Search API Has No Location Filter -- ECLI Prefix is the Only Viable Approach
 
-**What goes wrong:** CBS changes, adds, or removes measure codes between annual Kerncijfers wijken en buurten releases. The existing `MEASURE_CODES` dict in `cbs_odata.py` is hardcoded for a single dataset ID. When querying historical datasets (85318NED/2022, 85618NED/2023, 85984NED/2024, 86165NED/2025), the same human concept (e.g., "inkomen") may have different measure codes, or the measure may not exist at all in older years.
+**What goes wrong:** Developers assume the Rechtspraak search API (`data.rechtspraak.nl/uitspraken/zoeken`) supports a location or gemeente filter. It does not. The `searchterms` parameter is full-text only. Searching for "omgevingsvergunning Venlo" returns results that mention Venlo anywhere in the text, but also returns thousands of unrelated results. The current implementation already suffers from this: `defaultSearch = "omgevingsvergunning ${gemeenteNaam}"` produces irrelevant results because the gemeente name is often absent from the title, summary, and sometimes even the ruling text.
 
-**Why it happens:** CBS restructures themes periodically. Confirmed changes:
-- **2024**: Income theme redefined with new poverty definition (Nibud/SCP cooperation). New measure codes for armoede.
-- **2024**: Energy theme restructured -- removed electricity/gas consumption by housing type, added housing type variables (gasvrij, zonnepanelen, laadpalen). Entirely new measure codes.
-- **2023**: Labor theme expanded with working population figures and employee breakdown by contract type.
-- **2025 (June)**: Housing stock figures corrected -- "unknown" replaced with "0" where no (non-)residential properties exist.
+**Why it happens:** The API is designed for legal researchers searching by legal concept, not by geographic area. The `spatial` metadata field exists in some responses but is not a queryable search parameter. There is no `gemeente` or `location` filter parameter in the API.
 
-**Consequences:** Multi-year trend queries silently return `None` for measures that existed under a different code in prior years. Trend lines show artificial gaps or drops to zero that look like real neighborhood decline. Investment scores based on "declining income" could be completely wrong -- the data just moved to a different code.
+**Consequences:** AI analysis runs on garbage input (irrelevant rulings) and produces garbage output (wrong klimaat score). Users see rulings from other parts of the country mixed in with local ones. The entire juridisch klimaat feature loses credibility.
 
 **Prevention:**
-- Build a `MEASURE_CODES_BY_DATASET` mapping: `dict[str, dict[str, str]]` keyed by dataset ID, not a single flat dict.
-- Before querying a historical dataset, verify the measure code exists in that year's `MeasureCodes` metadata endpoint.
-- When a code is missing for a year, store `null` (not zero) and surface "Geen data voor dit jaar" in the UI trend chart.
-- Write an integration test that queries the `MeasureCodes` entity for each dataset in `DATASET_PEILJAAR` and asserts expected codes exist.
+- **Use ECLI court code prefix filtering as the primary geo-scoping strategy.** Dutch ECLI format: `ECLI:NL:{COURT_CODE}:{YEAR}:{ID}`. Court codes map to arrondissementen (judicial districts):
+  - RBLIM = Rechtbank Limburg (covers Venlo, Maastricht, Roermond)
+  - RBAMS = Rechtbank Amsterdam
+  - RBGEL = Rechtbank Gelderland (covers Arnhem, Nijmegen, Zutphen)
+  - RBROT = Rechtbank Rotterdam
+  - RBNHO = Rechtbank Noord-Holland (covers Haarlem, Alkmaar)
+  - RBMNE = Rechtbank Midden-Nederland (covers Utrecht, Amersfoort, Lelystad)
+  - RBOVE = Rechtbank Overijssel (covers Almelo, Zwolle)
+  - RBNNE = Rechtbank Noord-Nederland (covers Groningen, Leeuwarden, Assen)
+  - RBOBR = Rechtbank Oost-Brabant (covers 's-Hertogenbosch, Eindhoven)
+  - RBZWB = Rechtbank Zeeland-West-Brabant (covers Breda, Middelburg)
+  - RBDHA = Rechtbank Den Haag
+  - RVS = Raad van State (national, handles omgevingsrecht appeals)
+- Build a `gemeente_to_court_code` mapping table (342 gemeenten -> 11 rechtbanken). This is a static dataset that changes only on judicial reorganization (last one: 2013).
+- Filter search results by ECLI prefix **after** the API call, or use the `instantie` API parameter if available.
+- Always include RVS (Raad van State) results for omgevingsrecht -- these are the definitive appeal rulings regardless of location.
 
-**Detection:** Trend charts showing sudden drops to zero for a single year while adjacent years have normal values. Unit tests should include at least one year with a missing/renamed code.
+**Detection:** Count what percentage of returned rulings actually mention the target gemeente in their text. If < 30%, the search is too broad.
 
-**Confidence:** HIGH -- CBS documentation explicitly confirms theme restructuring between 2023-2025.
+**Confidence:** HIGH -- verified against current implementation behavior and Rechtspraak API documentation. The MEMORY note confirms "Rechtspraak API levert landelijke resultaten, geen locatie-filter" and "ECLI prefix filtering (bijv. RBLIM = Limburg) is de beste optie."
 
-### Pitfall 2: Composite Score Normalization Destroying Signal
+### Pitfall 2: Geo-Contextualization NLP on Dutch Legal Text is Harder Than It Looks
 
-**What goes wrong:** Naively normalizing heterogeneous metrics (WOZ values in euros, crime counts, distances in km, population counts) into 0-1 ranges using min-max normalization across all Dutch wijken creates scores where the normalization range is dominated by outliers. Amsterdam-Centrum WOZ of 800k+ and a rural buurt WOZ of 120k cause everything in between to compress into a narrow band, destroying meaningful differentiation.
+**What goes wrong:** Extracting location (gemeente, address, postcode) from Dutch court ruling text appears straightforward but fails in practice because:
+1. **Anonymization:** Rechtspraak anonymizes rulings. Street addresses are replaced with `[adres]` or `[locatie]`. Personal names become `[appellant]`.
+2. **Legal naming conventions:** Rulings refer to "het college van burgemeester en wethouders van Venlo" (the board of mayor and aldermen of Venlo), not just "Venlo". Simple substring matching misses these.
+3. **Multi-gemeente rulings:** A single ruling may mention multiple gemeenten (e.g., comparing policy between gemeenten, or an appeal about a location near a border).
+4. **Historical names:** Older rulings use pre-herindeling gemeente names (e.g., "Horst aan de Maas" was "Horst" before 2001).
+5. **Naming ambiguity:** "Bergen" is both a gemeente in Noord-Holland and one in Limburg. "Haarlem" appears in addresses outside Haarlem.
 
-**Why it happens:** Min-max normalization is the obvious first choice but assumes uniform distribution. Dutch neighborhood data is heavily skewed -- a few urban cores dominate most metrics.
+**Why it happens:** Legal text is not like news articles. The anonymization policy (since ~2014) specifically removes the geographic identifiers that would make extraction easy. The "gemeente" that matters is often the respondent party ("verweerder: het college van B&W van [gemeente]"), not a location mentioned in passing.
 
-**Consequences:** 90% of wijken get scores between 0.4-0.6, making the score useless for decision-making. Users lose trust in the platform when neighborhoods they know are very different get similar scores.
-
-**Prevention:**
-- Use **percentile-rank normalization** (rank / N) instead of min-max. This preserves ordinal relationships regardless of distribution shape.
-- Apply domain-specific inversion: for crime, lower is better; for proximity to OV, lower distance is better. Define a `higher_is_better: bool` flag per metric.
-- Consider z-score normalization **within the same stedelijkheidsklasse** (urban density class 1-5) -- comparing a rural village to Amsterdam is meaningless for investment decisions.
-- Never combine more than 5-7 sub-scores into one composite. Group into themed sub-indices (Veiligheid, Bereikbaarheid, Demografie, Economie) and show those alongside the composite.
-- Store raw values AND normalized scores. Allow users to see what drove the score.
-
-**Detection:** If the standard deviation of your composite score across all wijken in a scan is less than 0.15 on a 0-1 scale, your normalization is broken.
-
-**Confidence:** HIGH -- well-documented problem in location analytics literature.
-
-### Pitfall 3: CBS Nabijheid Dataset is Separate from Kerncijfers (Three-Dataset Problem)
-
-**What goes wrong:** Developers assume all wijk statistics come from one CBS dataset. In reality, the v12.0 scorer needs data from **three separate CBS-hosted datasets**, each with different OData hosts, entity structures, and measure code namespaces:
-
-| Dataset | ID | Host | Content |
-|---------|-----|------|---------|
-| Kerncijfers wijken en buurten | 86165NED (2025) | `datasets.cbs.nl/odata/v1/CBS` | WOZ, demografie, inkomen, woningvoorraad |
-| Nabijheid voorzieningen | 86134NED (2024) | `opendata.cbs.nl/ODataApi/OData` (possibly v3!) | Afstand huisarts, supermarkt, school, OV |
-| Geregistreerde misdrijven | 47018NED | `dataderden.cbs.nl/ODataApi/OData` (OData v3!) | Criminaliteit per wijk/buurt |
-
-The existing `CBSODataClient` is hardcoded to `datasets.cbs.nl/odata/v1/CBS` with v4 query syntax. It cannot query the other two datasets without modification.
-
-**Consequences:** Trying to query proximity measures from the kerncijfers dataset returns nothing. Trying to query crime data from `datasets.cbs.nl` returns 404. Building one "mega query" is impossible.
+**Consequences:** False positives (ruling tagged to wrong gemeente), false negatives (relevant ruling missed because location was anonymized), and confusing results where the same ruling appears under multiple gemeenten.
 
 **Prevention:**
-- Refactor `CBSODataClient` into a base class with host/version as constructor parameters, then create three specialized clients: `CBSKerncijfersClient`, `CBSNabijheidClient`, `PolitieCrimeClient`.
-- The nabijheid and politie datasets may use OData v3 (`/ODataApi/OData/{id}/TypedDataSet` pattern). The existing v4 query syntax (`Observations`, `WijkenEnBuurtenCodes`) will NOT work. You need to handle both v3 and v4 entity structures.
-- Test each dataset endpoint independently before integrating.
+- **Two-pass extraction strategy:**
+  1. **Metadata pass (fast, reliable):** Extract court code from ECLI (maps to arrondissement). Extract "instantie" (creator) field. Extract "spatial" metadata field if present (not always populated). This gives you the judicial district reliably.
+  2. **Text pass (slower, supplementary):** Regex patterns for "college van burgemeester en wethouders van {gemeente}", "gemeente {naam}", "omgevingsvergunning {adres}", postcode patterns (4 digits + 2 letters). Use Claude for ambiguous cases only.
+- **Do NOT use spaCy NER for gemeente extraction.** Dutch spaCy models (nl_core_news_lg) recognize GPE entities but perform poorly on municipality names in legal context. The training data is news articles, not court rulings. Claude with a targeted prompt will outperform spaCy for this specific task.
+- **Accept arrondissement-level precision as the baseline.** ECLI prefix gives you the court district (covers 20-50 gemeenten). Full-text extraction narrows it further but will never be 100% accurate due to anonymization. This is still massively better than the current "everything nationwide" approach.
+- **Build a known-gemeente lookup set** (342 current + ~100 historical names) and match against it, not open-ended NER.
+- **Handle multi-gemeente rulings** by tagging with primary gemeente (respondent/verweerder party) and secondary mentions.
 
-**Detection:** HTTP 404 or empty results when querying nabijheid/politie measure codes against the kerncijfers endpoint.
+**Detection:** Manually review 50 rulings from a single gemeente. If fewer than 70% are correctly geo-tagged, the extraction logic needs tuning.
 
-**Confidence:** HIGH -- dataset IDs and hosts verified via CBS and data.overheid.nl documentation.
+**Confidence:** HIGH -- anonymization policy is well-documented by Rechtspraak. The pattern "college van B&W van {gemeente}" as the primary extraction target is verified against sample rulings.
 
-### Pitfall 4: Bouwjaar Distributie Rolling Window (Semantic Drift)
+### Pitfall 3: AI Analysis on Irrelevant Input Produces Confidently Wrong Output
 
-**What goes wrong:** Already documented in the codebase: `bouwjaar_distributie` returns `None` because CBS v4 measure codes M008209/M008210 use a rolling 10-year window ("gebouwd in de afgelopen 10 jaar") instead of the fixed "voor 2000 / vanaf 2000" split. This pattern will repeat for other measures when doing multi-year comparisons.
+**What goes wrong:** The current implementation sends ALL search results (up to 25 ECLIs) to Claude for analysis. Because the search returns irrelevant results (Pitfall 1), Claude confidently analyzes rulings that have nothing to do with the target gemeente. The resulting `juridisch_klimaat_score` and `vergunnings_succeskans` are meaningless numbers based on random national rulings presented as local intelligence.
 
-**Why it happens:** CBS modernizes measure definitions without maintaining backward compatibility. The measure code exists but its semantic meaning changed between dataset years.
+**Why it happens:** Claude does not know whether a ruling is geographically relevant to the target gemeente. It analyzes whatever it receives and produces a plausible-sounding analysis. The prompt says "analyseer rechtspraak voor een gemeente" but the input contains rulings from unrelated locations.
 
-**Consequences:** A "10-year rolling window" percentage from 2022 covers 2012-2022, while from 2025 it covers 2015-2025. These are NOT comparable in a trend chart. Users see a "change" that is purely an artifact of the sliding window.
+**Consequences:** Users make investment decisions based on a "juridisch klimaat" score that reflects national trends, not local reality. A gemeente with a hostile planning department gets a favorable score because unrelated favorable rulings from other regions dilute the signal. This is worse than having no feature at all -- it creates false confidence.
 
 **Prevention:**
-- For every measure used in trend analysis, verify not just code existence but **semantic stability** across the year range.
-- Document the measure definition (not just the code) in a constants file with `semantic_stable: bool` flag.
-- Flag measures with known semantic drift as "not suitable for multi-year comparison" and exclude them from trend calculations.
-- Only include measures in trend analysis where the definition has been stable across the full comparison window.
+- **Fix the input pipeline before fixing the AI analysis.** Pitfall 1 (ECLI filtering) and Pitfall 2 (geo-contextualization) MUST be resolved in earlier phases before the AI analysis phase runs.
+- **Add a relevance pre-filter:** After geo-filtering, verify each ruling mentions the target gemeente or is from the correct arrondissement before including it in the AI batch.
+- **Reduce the batch size for AI analysis.** Analyzing 5-8 highly relevant rulings produces better intelligence than analyzing 25 weakly relevant ones. Quality over quantity.
+- **Add input quality metrics to the AI response:** Include `"input_relevance": "HIGH/MEDIUM/LOW"` based on how many rulings actually mention the target gemeente. Surface this to the user.
+- **Never show klimaat score without stating the sample:** "Gebaseerd op 7 uitspraken Rechtbank Limburg (2022-2025)" is honest. "Juridisch klimaat score: 72" without context is misleading.
 
-**Detection:** Already detected for bouwjaar. Apply the same diligence to new measures (inkomen, huishoudens, leeftijd).
+**Detection:** Compare AI analysis results for the same gemeente with 25 unfiltered results vs. 8 ECLI-filtered results. If the scores differ significantly, the unfiltered version was analyzing noise.
 
-**Confidence:** HIGH -- confirmed in existing codebase comment.
+**Confidence:** HIGH -- directly observed in current implementation. MEMORY confirms "Current AI analysis runs on garbage input -> garbage output."
+
+### Pitfall 4: Full-Text Court Ruling Caching Costs Explode Without Size Guards
+
+**What goes wrong:** Court rulings are long documents -- typically 5,000-50,000 characters, some exceeding 100,000 characters. Caching full text in JSONB (current `CachedAPIResponse` pattern) for even 100 rulings per gemeente creates multi-megabyte JSONB columns. With 342 gemeenten and multi-tenant isolation, the `cached_api_responses` table grows to gigabytes rapidly.
+
+**Why it happens:** The existing JSONB cache pattern works well for structured API responses (CBS data = small JSON). Court ruling full text is fundamentally different -- it is unstructured prose, not structured data. Storing it in the same table/pattern is a category error.
+
+**Consequences:** Slow queries on `cached_api_responses` as JSONB columns grow. Expensive `pg_dump` backups. PostgreSQL TOAST compression helps but does not solve the fundamental problem. Eventually, database performance degrades across ALL cached data (not just rulings).
+
+**Prevention:**
+- **Separate the ruling text cache from the general JSONB cache.** Create a dedicated `rechtspraak_rulings` table with:
+  - `ecli` (TEXT PRIMARY KEY) -- NOT organization-scoped (rulings are public data, shared across tenants)
+  - `full_text` (TEXT) -- not JSONB
+  - `metadata_json` (JSONB) -- instantie, datum_uitspraak, rechtsgebied
+  - `text_length` (INTEGER) -- for monitoring
+  - `fetched_at` (TIMESTAMP)
+- **Tenant isolation is NOT needed for ruling text.** Court rulings are public documents. Every organization sees the same ruling. Duplicating them per tenant wastes storage.
+- **Set a maximum text length for Claude analysis.** Truncate to first 15,000 characters for AI analysis -- the relevant legal reasoning is always in the first section. Store full text for the viewer but send truncated text to Claude.
+- **Implement LRU eviction:** Keep the most recently accessed 5,000 rulings. Older rulings can be re-fetched on demand. 5,000 rulings x 30KB average = ~150MB, manageable.
+
+**Detection:** Monitor `cached_api_responses` table size monthly. If it exceeds 500MB, investigate JSONB column sizes.
+
+**Confidence:** HIGH -- based on existing caching architecture and typical ruling text sizes verified from sample Rechtspraak API responses.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 5: Politie Crime Data Privacy Suppression at Wijk Level
+### Pitfall 5: Rechtspraak API Rate Limit is Per-Second, Not Per-Hour
 
-**What goes wrong:** Sexual crimes (kinderporno, kinderprostitutie, zedendelicten) are completely excluded from wijk/buurt-level data (47018NED) for disclosure risk prevention. They only appear in gemeente-level aggregates. Other crime types may show suppressed values in small wijken where counts are low enough to identify individuals.
+**What goes wrong:** The current `rechtspraak_limiter` is configured as `max_concurrent=3, max_per_hour=300`. But the actual Rechtspraak API limit is **10 requests per second**, not a per-hour quota. The existing limiter is more conservative than necessary for normal use, but during a batch fetch of 25 ruling documents (the analysis job), all 25 sequential fetches go through the same limiter. At 3 concurrent, this takes ~9 seconds minimum for the HTTP requests alone.
 
-**Prevention:**
-- Accept the suppression -- do not try to estimate missing categories.
-- When displaying crime data, note exclusions: "Exclusief zedendelicten (privacy)"
-- For composite scoring, use the "Totaal misdrijven" aggregate as the primary metric (includes everything except suppressed categories). Do NOT sum subcategories -- you will undercount.
-- Normalize per 1,000 inhabitants using population data from kerncijfers to make crime counts comparable across differently-sized wijken.
-
-**Confidence:** HIGH -- explicitly documented by politie/CBS.
-
-### Pitfall 6: Score Weighting Bias Toward Available Data
-
-**What goes wrong:** When building a composite location score, the real bias is data availability: wijken with more CBS data points get more stable, confident scores. Wijken with suppressed crime data, missing nabijheid values, or no WOZ data get extreme scores (all weight shifts to the few available metrics).
-
-**Why it happens:** Missing data treated as zero distorts the composite downward. Excluding missing data from the denominator distorts it upward. Both approaches systematically bias rural/small wijken.
-
-**Consequences:** Rural wijken with sparse data get artificially extreme scores. Urban wijken with complete data get moderate, averaged scores. Developers avoid good rural opportunities or over-value ones with incomplete data.
+More critically, the per-second limit means that parallel processing (e.g., fetching rulings for multiple gemeenten simultaneously across different users/tenants) can exceed 10 req/s if the hourly limiter has budget remaining.
 
 **Prevention:**
-- Track data completeness per wijk as a separate `data_completeness_ratio = available_measures / total_measures`.
-- Display confidence alongside the score: "Locatiescore: 7.2 (betrouwbaarheid: hoog)" vs "Locatiescore: 8.1 (betrouwbaarheid: laag -- 40% data ontbreekt)".
-- Set a minimum threshold: if fewer than 60% of sub-scores are available, show "Onvoldoende data voor score" instead of computing a misleading number.
-- When a sub-score is missing, do NOT redistribute its weight. Use a fixed denominator.
+- **Replace the hourly limiter with a per-second token bucket** for Rechtspraak specifically. Use `AsyncLimiter(max_rate=8, time_period=1)` (leaving 2 req/s headroom below the 10/s limit).
+- **Batch document fetches with concurrency control:** For the analysis job, fetch up to 5 documents concurrently (asyncio.gather with semaphore) instead of sequentially. This reduces a 25-document fetch from ~25 seconds to ~5 seconds.
+- **Keep the concurrent request limit at the semaphore level** to prevent bursts exceeding the per-second limit.
 
-**Detection:** Compare score distributions between urban (stedelijkheid 1-2) and rural (stedelijkheid 4-5) wijken. If rural scores cluster at extremes, data availability bias is present.
+**Detection:** 429 Too Many Requests responses from the Rechtspraak API. Log these prominently.
 
-**Confidence:** MEDIUM -- standard scoring pitfall, specific thresholds need empirical tuning.
+**Confidence:** HIGH -- "10 requests/calls per second" is explicitly documented on the Rechtspraak Open Data page.
 
-### Pitfall 7: Overpass API is the Wrong Tool for Dutch Voorzieningennabijheid
+### Pitfall 6: Doorlooptijd-Analyse Requires Dates That Are Often Missing
 
-**What goes wrong:** Developers default to Overpass API for "find nearest school/supermarket" queries. For a Dutch platform, this means: unreliable rate limits (429 errors, slot-based throttling), incomplete Dutch POI coverage (varies wildly by category), no guaranteed update frequency, complex query syntax, and coordinate system issues (OSM uses EPSG:4326, ParcelCache uses EPSG:28992).
+**What goes wrong:** Calculating procedure duration ("doorlooptijd") requires at least two dates: filing date and ruling date. The Rechtspraak API provides `datum_uitspraak` (ruling date) reliably, but `datum_indiening` (filing date) is NOT in the standard metadata. The "date" field in the Atom feed (`<updated>`) is the publication date, not the case start date.
 
-**Why it happens:** Overpass is the standard answer in the GIS community. CBS nabijheid data is less well-known internationally.
+To calculate doorlooptijd, you need dates from the ruling TEXT itself (e.g., "het beroep is ingediend op 15 maart 2023") or from the linked bekendmaking (vergunning aanvraag datum). This requires text extraction, which is unreliable.
 
-**Consequences:** Wasted development time building Overpass queries, rate limiters, retry logic, and CRS transformation -- only to get lower quality data than CBS provides for free.
-
-**Prevention:**
-- **Use CBS nabijheid dataset (86134NED for 2024) as the primary source.** It covers: huisarts, apotheek, supermarkt, kinderdagverblijf, buitenschoolse opvang, basisschool, middelbare school, treinstation, lokaal OV-station, museum, restaurant.
-- Distances are pre-computed over the **road network** (not Euclidean), which is exactly what real estate developers care about.
-- Data is per wijk/buurt level, matching the existing scan granularity perfectly.
-- Only fall back to OSM for niche facility types not covered by CBS (e.g., sportscholen, EV charging).
-
-**Detection:** N/A -- design-time decision, not a runtime bug.
-
-**Confidence:** HIGH -- CBS nabijheid dataset verified to exist and cover all relevant facility types.
-
-### Pitfall 8: CRS Mismatch in Any Custom Proximity Calculations
-
-**What goes wrong:** ParcelCache geometry is EPSG:28992 (RD New). If custom proximity is ever attempted, mixing EPSG:4326 coordinates from external sources with EPSG:28992 produces wildly wrong distances. `ST_Distance` on mixed-CRS geometries computes Cartesian distance on raw coordinate numbers.
+**Consequences:** Doorlooptijd calculations based on incomplete date pairs (e.g., using publication date as a proxy for filing date) produce inaccurate results. Publication can happen weeks to months after the ruling, and filing can happen months before.
 
 **Prevention:**
-- Use CBS nabijheid data (eliminates the problem entirely).
-- If custom proximity is ever needed: ALWAYS `ST_Transform(geometry, 28992)` before `ST_Distance`. EPSG:28992 returns meters directly; EPSG:4326 returns degrees.
-- This is already a known issue in the project (MEMORY: "parcel_cache.geometry is EPSG:28992; always ST_Transform before GeoJSON").
+- **Start with what is reliable:** Calculate `days_from_ruling_to_publication = datum_publicatie - datum_uitspraak`. This is available from metadata and gives users a sense of court processing speed.
+- **For actual procedure duration:** Extract dates from ruling text using targeted regex: `"het beroep is ingediend op {date}"`, `"het bezwaar is gemaakt op {date}"`, `"het verzoek is ontvangen op {date}"`. These patterns are formulaic in Dutch administrative law rulings.
+- **Never show doorlooptijd as a single number without confidence:** If both dates are extracted from text, show "~14 maanden (geschat uit tekst)". If only ruling date is available, show "Doorlooptijd onbekend" rather than a wrong number.
+- **Aggregate cautiously:** For the gemeente-level "gemiddelde doorlooptijd", only include rulings where both dates were extracted with high confidence. Show the sample size: "Gemiddelde doorlooptijd: 11 maanden (n=12 zaken)".
 
-**Confidence:** HIGH -- well-known GIS pitfall, already documented in project memory.
+**Detection:** If more than 50% of rulings lack a filing date, the doorlooptijd feature should degrade gracefully to "onvoldoende data" rather than showing averages based on tiny samples.
 
-### Pitfall 9: Multi-Year Trend Analysis With Provisional Data
+**Confidence:** MEDIUM -- `datum_uitspraak` availability verified in API responses. Filing date extraction from text needs empirical validation on a sample of 50+ rulings.
 
-**What goes wrong:** CBS datasets have staggered publication. Some measures are provisional (voorlopig) when first published, updated to definitive (definitief) months later. Politie 2025 data was "last updated February 2026, updated again March 2026." Comparing 2024 (definitive) with 2025 (provisional) shows artificial dips/spikes that disappear when data finalizes.
+### Pitfall 7: Bekendmakingen Cross-Reference Has No Shared Identifier
 
-**Prevention:**
-- Store the `ValueAttribute` flag from CBS observations (existing code already checks for empty string = valid data). Extend to track provisional status.
-- In multi-year comparisons, only compare like with like: definitive-to-definitive, or label "2025: voorlopige cijfers" in the UI.
-- Cache provisional data with shorter TTL (re-fetch after 3 months). Definitive data can be cached for 1 year.
-- Default trend window: current year minus 3 through minus 1 (all definitive).
+**What goes wrong:** Developers assume there is a foreign key or shared identifier between a Rechtspraak ruling and the corresponding SRU bekendmaking (vergunning publication). There is none. A court ruling about a vergunning in Venlo and the original vergunning bekendmaking in the SRU feed are in completely separate systems with no linking mechanism.
 
-**Detection:** Suspicious deviations only in the most recent year often indicate provisional data artifacts.
+**Why it happens:** The Rechtspraak system and the SRU Bekendmakingen system are maintained by different government organizations (Raad voor de Rechtspraak vs. KOOP/Overheid.nl). They do not share databases or identifiers.
 
-**Confidence:** MEDIUM -- CBS publication schedule documented, but provisional/definitive distinction not always clearly exposed via OData.
-
-### Pitfall 10: Gemeente Herindeling Breaking Historical Wijk Codes
-
-**What goes wrong:** When municipalities merge (herindeling), CBS assigns new gemeente codes and restructures wijk/buurt boundaries. Historical data under old codes is unreachable under the new code.
-
-**Why it happens:** CBS publishes each year's data against that year's geographic classification. After herindeling, codes change completely.
-
-**Current risk assessment:**
-- No herindelingen in 2024 or 2025 (342 gemeenten stable since January 2023).
-- The only recent merger: Voorne aan Zee (2023, from Brielle/Hellevoetsluis/Westvoorne).
-- For the 2022-2025 trend window, this affects only Voorne aan Zee.
+**Consequences:** Building a "click ruling -> see original vergunning on map" feature requires fuzzy matching (address, date range, project description). This matching is unreliable and expensive to compute. Users expect precision but get probabilistic matches.
 
 **Prevention:**
-- For the near term: low risk, but handle gracefully. If a historical query returns no data, log a warning rather than crashing.
-- **Key advantage of politie data**: "Data per neighborhood are presented for ALL years according to the 2025 neighborhood classification." This means politie data is already re-mapped retroactively. CBS kerncijfers is NOT.
-- Build a `gemeente_herindeling` lookup table for known mergers: `{"0501": "1992", "0502": "1992", "0559": "1992"}` (old codes -> new code). Apply when querying pre-merger datasets.
-- When querying historical CBS data, use the year-appropriate gemeente code, not the current one.
+- **Downscope the cross-reference feature to "best effort" with explicit uncertainty.** Show "Mogelijk gerelateerde bekendmaking" (possibly related publication), not "Bijbehorende vergunning" (corresponding permit).
+- **Match on three signals combined:**
+  1. Same gemeente (from geo-contextualization)
+  2. Overlapping date range (bekendmaking date within 2 years before ruling date)
+  3. Text similarity (address or project description extracted from ruling matched against bekendmaking title/content)
+- **Make this a Phase 2 feature, not Phase 1.** The core juridisch klimaat intelligence (ECLI filtering, geo-contextualization, AI analysis) delivers value without bekendmakingen cross-reference. Adding fuzzy matching increases scope significantly.
+- **Consider ARQ background job for matching** -- do not attempt this at request time.
 
-**Detection:** Multi-year query returning data for some years but not others for the same gemeente_code -- check herindeling before assuming missing data.
+**Detection:** Measure match rate and precision on a sample of 50 rulings where you manually identify the corresponding bekendmaking. If precision < 60%, the feature should not ship.
 
-**Confidence:** HIGH -- CBS documents herindelingen explicitly. Risk is LOW for the 2022-2025 window.
+**Confidence:** MEDIUM -- no shared identifier confirmed via investigation of both API systems. The feasibility of fuzzy matching needs empirical validation.
 
-### Pitfall 11: Rate Limiter Exhaustion With Multi-Dataset Queries
+### Pitfall 8: Explorer UI Filter Combinatorics Cause Empty Results
 
-**What goes wrong:** The current `cbs_odata_limiter` is configured at 3 concurrent / 500 per hour. With the scorer querying 3 CBS datasets per wijk, a gemeente scan touching 20 wijken makes 60+ CBS API calls. Combined with existing CBS calls from area scans, the hourly limit gets exhausted in high-usage periods.
+**What goes wrong:** Building a filter UI with scope (gemeente/arrondissement/landelijk), case type (omgevingsvergunning, bestemmingsplan, milieu), outcome (toegewezen/afgewezen/gedeeltelijk), and time period creates a combinatorial space where most filter combinations return zero results. A small gemeente might have only 3 omgevingsrecht rulings in the last 5 years. Filtering further by outcome and type leaves nothing.
+
+**Consequences:** Users think the feature is broken when they see "Geen resultaten" after applying reasonable filters. They lose trust in the data completeness.
 
 **Prevention:**
-- Create separate rate limiters per host: `datasets.cbs.nl` and `dataderden.cbs.nl` are different servers with independent limits.
-- Batch wijk queries: fetch ALL wijken for a gemeente in one OData call using `startswith(Identifier, 'WK{gemeente_code}')` instead of per-wijk lookups.
-- Cache aggressively: CBS data is annual. Cache for 30 days minimum. Score data never needs real-time freshness.
-- Pre-compute scores during area scan (ARQ job) rather than on-demand per wijk click.
+- **Show result counts on filter options BEFORE applying them.** Display "Omgevingsvergunning (12)" vs "Bestemmingsplan (3)" so users see what is available.
+- **Use progressive filtering, not simultaneous.** Apply filters one at a time and update counts. Do not let users set 4 filters at once and get zero results.
+- **Default to arrondissement scope, not gemeente.** A rechtbank arrondissement covers 20-50 gemeenten, providing a much larger pool of relevant rulings.
+- **Show a "broaden your search" suggestion** when results drop below 3: "Verbreed naar arrondissement Limburg (47 resultaten)" or "Verwijder het uitkomst-filter (12 resultaten)".
+- **Pre-compute filter counts** for common combinations and cache them. This avoids expensive real-time queries for count badges.
 
-**Confidence:** HIGH -- arithmetic from existing rate limiter config confirms this will be hit.
+**Detection:** If > 30% of filter interactions result in zero results, the default scope is too narrow.
+
+**Confidence:** HIGH -- this is a general search UI pitfall, amplified by the small number of omgevingsrecht rulings per gemeente.
+
+### Pitfall 9: ARQ Job Creates New DB Engine Per Invocation
+
+**What goes wrong:** The current `jurisprudence_analysis_job` creates a new `create_async_engine()` and `async_sessionmaker()` on every invocation. For a background job that runs infrequently, this is acceptable. But with the v13.0 expansion (batch ECLI fetching, geo-contextualization processing, doorlooptijd extraction), jobs will run more frequently and take longer. Creating and disposing engine+pool per invocation adds overhead and can hit PostgreSQL `max_connections` under concurrent load.
+
+**Prevention:**
+- **Pass the session factory through the ARQ context** (set up in `startup()` / `shutdown()` hooks of the worker). The ARQ worker already supports a `ctx` dict -- store `session_factory` there instead of creating it per job.
+- This pattern is already used by some other ARQ jobs in the codebase. Align the jurisprudence job with the established pattern.
+- Ensure the ARQ worker's engine is configured with appropriate pool size for the expected concurrency.
+
+**Detection:** PostgreSQL `pg_stat_activity` showing many short-lived connections from the worker process.
+
+**Confidence:** HIGH -- verified in current `jurisprudence_analysis.py` code (lines 46-58).
+
+### Pitfall 10: Claude Token Budget Explosion With Full Ruling Texts
+
+**What goes wrong:** The current analysis job sends full ruling texts to Claude. A single ruling can be 30,000-100,000 characters (~7,500-25,000 tokens). Sending 10 rulings = 75,000-250,000 input tokens per analysis request. At Claude Sonnet pricing, this is $0.22-$0.75 per analysis. With multiple gemeenten per user session and multiple users, costs scale rapidly.
+
+**Consequences:** High API costs per analysis. Slow response times (large context = slower inference). Risk of hitting Claude's context window limit (200K tokens) with just a few large rulings.
+
+**Prevention:**
+- **Truncate ruling texts before sending to Claude.** The legally relevant sections (OVERWEGINGEN / BEOORDELING) are typically in the first 5,000-10,000 characters. The procedural history and party listing at the start can be stripped.
+- **Extract sections using structural markers.** Dutch rulings follow a consistent structure: PROCESVERLOOP (procedure history) -> OVERWEGINGEN (considerations) -> BESLISSING (decision). Extract only OVERWEGINGEN and BESLISSING.
+- **Set a hard maximum of 60,000 input tokens per analysis request.** If the combined texts exceed this, reduce the batch size or truncate more aggressively.
+- **Use a two-stage approach:** First pass: Claude analyzes each ruling individually with truncated text (cheaper, parallel). Second pass: Claude synthesizes per-ruling analyses into a gemeente-level klimaat score (small input, fast).
+- **Track token usage per analysis in the job record** for cost monitoring.
+
+**Detection:** Monitor Claude API costs per job. If average cost per analysis exceeds $0.30, investigate input sizes.
+
+**Confidence:** HIGH -- based on typical ruling lengths observed in Rechtspraak API responses and Claude pricing.
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 12: Stedelijkheidsklasse is a Classifier, Not a Score Input
+### Pitfall 11: ECLI Court Code Covers Multiple Gemeenten -- Users Expect Precision
 
-**What goes wrong:** Stedelijkheid (1-5 scale, 1 = most urban) gets treated as a scoring dimension. It is an inverted scale and a categorical classifier, not a quality metric. Including it in the composite score penalizes either urban or rural areas depending on the direction.
-
-**Prevention:** Use stedelijkheid as a **grouping/context variable** for normalization (compare wijken within the same class), NOT as a sub-score input. Define explicit `ScoreDirection` enums per metric.
-
-**Confidence:** HIGH -- verified in existing `STEDELIJKHEID_MAP`.
-
-### Pitfall 13: Frontend Score Without Context is Misleading
-
-**What goes wrong:** Displaying "Locatiescore: 7.2/10" without breakdown leads users to over-trust or dismiss it. Developers need to understand WHY a location scores well or poorly.
+**What goes wrong:** Filtering by ECLI court code (e.g., RBLIM) returns rulings from the entire arrondissement (Limburg = ~30 gemeenten). Users searching for "Venlo" see rulings about Maastricht, Roermond, Heerlen, etc. This is a significant improvement over national results but still broader than expected.
 
 **Prevention:**
-- Always show composite alongside sub-indices (Veiligheid, Bereikbaarheid, Voorzieningen, Demografie, Economie).
-- Show trend direction (arrow up/down/stable) for each sub-index.
-- Include gemeente-relative context: a wijk scoring 6/10 nationally might be 8/10 within its gemeente.
-- Use the existing ParcelDetailModal pattern for progressive disclosure.
+- **Set expectations in the UI:** "Uitspraken Rechtbank Limburg (arrondissement Venlo)" not "Uitspraken Venlo".
+- **Apply geo-contextualization (Pitfall 2) as a secondary filter** to narrow from arrondissement to gemeente where possible.
+- **Sort by relevance:** Rulings that mention the specific gemeente first, then other rulings from the same arrondissement.
 
-**Confidence:** MEDIUM -- UX best practice.
+**Confidence:** HIGH -- inherent limitation of the ECLI structure.
 
-### Pitfall 14: OData v3 vs v4 Syntax for Politie and Nabijheid Datasets
+### Pitfall 12: Raad van State Rulings Are National But Locally Relevant
 
-**What goes wrong:** The existing CBS client uses OData v4 syntax (`/Observations`, `WijkenEnBuurtenCodes`, `eq` filters). The politie dataset (47018NED on `dataderden.cbs.nl`) and possibly the nabijheid dataset likely use OData v3 (`/TypedDataSet`, dimension tables, different filter syntax). Using v4 queries against v3 endpoints returns 404 or garbled results.
+**What goes wrong:** Raad van State (RVS) handles ALL omgevingsrecht appeals nationally. These rulings have ECLI prefix `RVS`, not a regional court code. Filtering only by regional court codes (RBLIM, RBAMS, etc.) misses all appeal rulings, which are often the most important for understanding legal precedent.
 
 **Prevention:**
-- Test each endpoint independently before building the client. Fetch the root entity of each dataset to determine the available entities (`TypedDataSet` = v3, `Observations` = v4).
-- Build the client to handle both v3 and v4 response formats, or create separate client classes.
-- The v3 entity for crime data is likely `https://dataderden.cbs.nl/ODataApi/OData/47018NED/TypedDataSet` with different filter syntax.
+- **Always include RVS rulings in addition to regional court rulings.**
+- **For RVS rulings, geo-contextualization (text extraction) is the only way to determine relevance** to a specific gemeente.
+- **Prioritize RVS rulings in the UI** -- appeal court decisions carry more legal weight than first-instance rulings.
 
-**Detection:** HTTP 404 when querying `Observations` on a v3-hosted dataset.
+**Confidence:** HIGH -- structural feature of the Dutch judicial system.
 
-**Confidence:** MEDIUM -- politie host confirmed as `dataderden.cbs.nl`, but exact OData version needs live verification.
+### Pitfall 13: Search Cache Key Based on ECLI List Hash Breaks With New Filters
+
+**What goes wrong:** The current cache key for AI analysis is `ai_juridisch:{org_id}:{sha256(sorted_ecli_list)}`. When the v13.0 Explorer adds filters (date range, case type, outcome), the ECLI list changes per filter combination. This means every filter change triggers a new (expensive) AI analysis, even if 90% of the ECLIs overlap with a previous analysis.
+
+**Prevention:**
+- **Cache AI analysis per-ruling, not per-batch.** Store individual `RulingAnalysis` objects keyed by ECLI. The aggregation (klimaat score, succeskans) is a cheap re-computation over cached per-ruling analyses.
+- **This also enables incremental analysis:** When new rulings appear, only analyze the new ones and re-aggregate.
+- **The per-ruling cache is tenant-agnostic** (rulings are public; analysis results are deterministic given the same prompt version).
+
+**Detection:** High cache miss rate in production. If > 50% of analyze requests trigger new Claude calls, the caching strategy needs revision.
+
+**Confidence:** HIGH -- directly observed from the current cache key design in the codebase.
+
+### Pitfall 14: Dutch Legal Date Formats are Inconsistent
+
+**What goes wrong:** Ruling texts use multiple date formats: "15 maart 2023", "15-03-2023", "15/03/2023", "2023-03-15". Metadata uses ISO 8601. Bekendmakingen use yet another format. Naive date parsing with a single regex misses variants.
+
+**Prevention:**
+- Build a `parse_dutch_date()` utility that handles all variants: full month name (Dutch), DD-MM-YYYY, DD/MM/YYYY, ISO 8601.
+- Use `dateutil.parser` as a fallback but be aware it assumes MM-DD-YYYY for ambiguous dates -- force `dayfirst=True` for Dutch dates.
+- Always store parsed dates as `date` objects, never as strings.
+
+**Confidence:** HIGH -- standard Dutch text processing issue.
 
 ---
 
@@ -246,74 +270,90 @@ The existing `CBSODataClient` is hardcoded to `datasets.cbs.nl/odata/v1/CBS` wit
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| Extended CBS metrics (inkomen, huishoudens, leeftijd) | Measure code drift between years (#1), semantic drift (#4) | Build year-aware measure code mapping; verify codes AND definitions against MeasureCodes entity per dataset |
-| Criminaliteitsdata integration | Different OData host + v3 syntax (#3, #14), privacy suppression (#5) | Separate client class for `dataderden.cbs.nl`; accept suppression; use totals not subcategories |
-| Voorzieningennabijheid | Wrong tool choice (#7), CRS mismatch (#8) | Use CBS 86134NED nabijheid dataset; avoid Overpass API entirely |
-| Multi-year CBS trendanalyse | Code drift (#1), semantic drift (#4), herindeling (#10), provisional data (#9) | Year-aware codes; semantic stability checks; herindeling mapping; provisional labeling |
-| Geaggregeerde locatie-score | Normalization destroying signal (#2), weighting bias (#6), no context (#13) | Percentile-rank normalization; confidence tracking; sub-index breakdown in UI |
-| Integration with existing area scan | Rate limiter exhaustion (#11), three-dataset problem (#3) | Batch queries; aggressive caching; pre-compute in ARQ job; separate limiters per host |
+| Rechtspraak API deep research | API has no location filter (#1), rate limit is per-second not hourly (#5) | ECLI prefix filtering + per-second token bucket limiter |
+| Backend ECLI-filtering redesign | Court code covers 20-50 gemeenten (#11), RVS rulings are national (#12) | Gemeente-to-court mapping + always include RVS + text-based narrowing |
+| Geo-contextualization | Anonymized text defeats NLP (#2), multi-gemeente rulings (#2) | Two-pass extraction (metadata + text), known-gemeente lookup set, accept arrondissement as baseline |
+| AI analyse upgrade | Garbage in = garbage out (#3), token budget explosion (#10) | Fix input pipeline FIRST, truncate ruling texts, two-stage analysis |
+| Doorlooptijd-analyse | Filing date often missing from metadata (#6), date format inconsistency (#14) | Regex extraction from text with confidence, graceful degradation, parse_dutch_date utility |
+| Bekendmakingen-koppeling | No shared identifier (#7), fuzzy matching is unreliable | "Mogelijk gerelateerd" framing, three-signal matching, defer to Phase 2 |
+| Explorer UI with filters | Combinatorial empty results (#8), cache key breaks with filters (#13) | Progressive filter counts, per-ruling cache, default to arrondissement scope |
+| Full-text caching | JSONB column size explosion (#4), same table as structured data | Dedicated `rechtspraak_rulings` table, shared across tenants, LRU eviction |
+| ARQ job infrastructure | Engine-per-invocation overhead (#9), concurrent job handling | Session factory in ARQ context, align with established worker pattern |
 
 ---
 
-## Key Architectural Recommendations
+## Integration Pitfalls (Specific to Adding This to Existing Propdex)
 
-### 1. Use CBS Nabijheid Dataset for Proximity (NOT Overpass/OSM)
+### Integration 1: Existing JurisprudenceSection Component State Reset
 
-CBS dataset 86134NED (2024) provides pre-computed road-network distances to: huisarts, apotheek, supermarkt, kinderdagverblijf, buitenschoolse opvang, basisschool, middelbare school, treinstation, OV-halte, museum, restaurant -- per wijk/buurt.
+**What goes wrong:** The current `JurisprudenceSection` manages `analysisJobId`, `searchTerm`, and `selectedEcli` as local state. Adding Explorer filters, doorlooptijd display, and bekendmakingen links will balloon this component beyond 300 lines (already at 302) and create tangled state dependencies.
 
-This eliminates pitfalls #7 (wrong tool) and #8 (CRS mismatch) entirely, provides higher quality data (road-network distances, not Euclidean), and requires zero additional infrastructure.
+**Prevention:**
+- **Refactor to a `useJuridischKlimaatState` custom hook** that encapsulates all state (search term, filters, selected ruling, analysis job, view mode).
+- **Split the component:** `JuridischKlimaatExplorer` (filter bar + feed), `RulingDetailPanel` (document viewer + AI summary), `KlimaatSummaryCard` (aggregated score + trend).
+- **Use URL state for filter persistence** via TanStack Router search params (existing pattern in `/resultaten` route).
 
-### 2. Use Politie CBS Portal for Crime (NOT raw politie APIs)
+**Confidence:** HIGH -- component already at line limit, verified in codebase.
 
-Dataset 47018NED at `dataderden.cbs.nl` provides crime counts per wijk/buurt with **2025 classification applied retroactively to all years**. This means historical crime comparisons are already geography-normalized -- eliminating pitfall #10 (herindeling) for crime data specifically.
+### Integration 2: CachedAPIResponse Table Mixing Structured and Unstructured Data
 
-### 3. Three-Client Architecture
+**What goes wrong:** The `cached_api_responses` table currently stores CBS data (small JSONB), DSO data (medium JSONB), and AI analysis results (medium JSONB). Adding full ruling texts (large TEXT) to the same table creates performance issues for queries that only need structured data.
 
-Build three OData clients, not one:
-- `CBSKerncijfersClient` -- v4, `datasets.cbs.nl`, for WOZ/demografie/inkomen
-- `CBSNabijheidClient` -- v3 or v4 (verify), `opendata.cbs.nl`, for proximity data
-- `PolitieCrimeClient` -- v3 (verify), `dataderden.cbs.nl`, for crime data
+**Prevention:** Already addressed in Pitfall 4. Create a dedicated `rechtspraak_rulings` table. Keep AI analysis results in `cached_api_responses` but move ruling text out.
 
-All three follow the same caching and rate-limiting patterns but with host-specific configurations.
+**Confidence:** HIGH -- table design verified in codebase.
+
+### Integration 3: Three-State Contract Mismatch Between Search and Document APIs
+
+**What goes wrong:** The existing three-state contract (return model | None | raise GovernmentAPIError) works for individual document fetches. But the search endpoint returns a list, not a single item. Mixing the two patterns in the geo-contextualization pipeline (search -> filter -> fetch documents -> extract locations) creates ambiguity about what "None" means at each stage.
+
+**Prevention:**
+- **Define clear return types for each pipeline stage:**
+  - Search: `list[SearchResult]` (empty list = no results, never None)
+  - Fetch document: `RulingDocument | None` (None = 404, not found)
+  - Geo-extract: `GeoContext | None` (None = could not determine location)
+  - AI analyze: `RulingAnalysis` (always returns, confidence may be LOW)
+- **Never use `| None` for list-returning operations.** Return empty list instead.
+
+**Confidence:** MEDIUM -- pattern recommendation based on existing codebase conventions.
 
 ---
 
-## "Looks Done But Isn't" Checklist for v12.0
+## "Looks Done But Isn't" Checklist for v13.0
 
-- [ ] **Multi-year measure codes**: `MEASURE_CODES` is per-dataset-ID, not a single flat dict
-- [ ] **Semantic stability**: Each trend-eligible measure has a `semantic_stable` flag verified across the full year range
-- [ ] **Three datasets**: Kerncijfers, Nabijheid, and Politie all have separate client code with correct host URLs
-- [ ] **OData version**: Each client uses the correct entity structure (v3 TypedDataSet vs v4 Observations) for its host
-- [ ] **Normalization method**: Percentile-rank (not min-max) used for composite scoring
-- [ ] **Score direction**: Each metric has an explicit `higher_is_better` flag; stedelijkheid excluded from composite
-- [ ] **Data completeness**: Confidence/completeness ratio tracked per wijk; minimum threshold enforced
-- [ ] **Missing data**: `null` stored and displayed as "Geen data", never treated as zero
-- [ ] **Provisional labeling**: Most recent year's data flagged as "voorlopig" where applicable
-- [ ] **Crime normalization**: Per-1000-inhabitants, using kerncijfers population data
-- [ ] **Crime suppression**: "Totaal misdrijven" used as primary metric; subcategory suppression documented in UI
-- [ ] **Proximity source**: CBS nabijheid dataset used, NOT Overpass/OSM
-- [ ] **Rate limiters**: Separate limiters per host; batch queries per gemeente
-- [ ] **Cache TTL**: Annual data cached 30+ days; provisional data cached with shorter TTL
-- [ ] **Score breakdown**: UI shows sub-indices alongside composite; trend arrows per dimension
-- [ ] **Peiljaar visible**: Every data point shows its reference year in the UI
+- [ ] **ECLI court mapping**: Static `gemeente_to_court_code` dict covers all 342 gemeenten
+- [ ] **RVS inclusion**: Every search includes Raad van State results alongside regional court results
+- [ ] **Geo-contextualization**: Two-pass extraction (ECLI prefix + text patterns) with known-gemeente lookup
+- [ ] **Input quality gate**: AI analysis rejects batches where < 50% of rulings are geo-relevant
+- [ ] **Ruling text cache**: Separate table, not CachedAPIResponse JSONB, shared across tenants
+- [ ] **Text truncation**: Ruling text truncated to OVERWEGINGEN + BESLISSING before Claude analysis
+- [ ] **Token budget**: Hard limit of 60K input tokens per Claude analysis call
+- [ ] **Per-ruling cache**: AI analysis cached per-ECLI, aggregation computed from cache
+- [ ] **Rate limiter**: Per-second bucket (8/s) replacing per-hour bucket for Rechtspraak
+- [ ] **Filter counts**: Explorer shows result count per filter option before applying
+- [ ] **Empty result handling**: Graceful "verbreed uw zoekopdracht" when filters return < 3 results
+- [ ] **Doorlooptijd confidence**: Only shown when both dates extracted, with sample size
+- [ ] **Bekendmakingen link**: "Mogelijk gerelateerd" framing, not "bijbehorend"
+- [ ] **Component split**: JurisprudenceSection refactored to < 300 lines with custom hook
+- [ ] **ARQ session**: Factory passed through context, not created per job
+- [ ] **Date parsing**: `parse_dutch_date()` utility handles all Dutch date variants
 
 ---
 
 ## Sources
 
-- [CBS Kerncijfers wijken en buurten 2025 (86165NED)](https://www.cbs.nl/nl-nl/cijfers/detail/86165NED)
-- [CBS Toelichting Wijk- en Buurtkaart 2023-2025 -- theme/measure changes](https://www.cbs.nl/nl-nl/longread/diversen/2025/toelichting-wijk-en-buurtkaart-2023-2024-en-2025?onepage=true)
-- [CBS Nabijheid voorzieningen 2024 (86134NED)](https://www.cbs.nl/nl-nl/cijfers/detail/86134NED)
-- [CBS Nabijheidsstatistieken per wijk/buurt](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/wijk-en-buurtstatistieken/nabijheidsstatistieken-per-wijk-buurt)
-- [Politie misdrijven wijk/buurt jaarcijfers (47018NED)](https://data.overheid.nl/dataset/5252-geregistreerde-misdrijven--soort-misdrijf--wijk--buurt--jaarcijfers)
-- [CBS Herindelingen en grenswijzigingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/informatie-voor-gemeenten/herindelingen-en-grenswijzigingen)
-- [CBS Gemeentelijke indeling 2025 -- 342 gemeenten, geen herindeling](https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/overig/gemeentelijke-indelingen-per-jaar/indeling-per-jaar/gemeentelijke-indeling-op-1-januari-2025)
-- [Targomo: Meaningful Location Scoring for Real Estate](https://www.targomo.com/meaningful-location-scoring-for-real-estate-search/)
-- [Overpass API rate limits and usage policy (OSM Wiki)](https://wiki.openstreetmap.org/wiki/Overpass_API)
-- [Politie Open Data portal](https://data.politie.nl/)
-- Existing codebase: `backend/app/government_apis/cbs_odata.py`, `backend/app/government_apis/rate_limiter.py`, `backend/app/models/parcel_cache.py`
+- [Rechtspraak Open Data](https://www.rechtspraak.nl/Uitspraken/Paginas/Open-Data.aspx) -- rate limit documentation (10 req/s)
+- [Rechtspraak ECLI page](https://www.rechtspraak.nl/Uitspraken/Paginas/ECLI.aspx) -- ECLI structure and court codes
+- [Dutch court codes complete list](https://www.rechtspraak.nl/Uitspraken/Paginas/Volledige-lijst-Nederlandse-gerechtscodes.aspx) -- all court code to arrondissement mappings
+- [Open Rechtspraak API docs](https://openrechtspraak.nl/api_docs) -- third-party API documentation including spatial field
+- [Rechtspraak Technical Documentation v1.15 PDF](https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf) -- official API specification
+- [European e-Justice ECLI](https://e-justice.europa.eu/topics/legislation-and-case-law/european-case-law-identifier-ecli/nl_en) -- ECLI format specification
+- [wetsuite rechtspraaknl module](https://wetsuite.knobs-dials.com/apidocs/wetsuite.datacollect.rechtspraaknl.html) -- community library documenting API behavior
+- [spaCy Dutch models](https://spacy.io/models/nl) -- NER capabilities for Dutch text
+- Existing codebase: `backend/app/government_apis/rechtspraak.py`, `backend/app/api/endpoints/jurisprudence.py`, `backend/app/jobs/jurisprudence_analysis.py`, `frontend/src/components/projects/JurisprudenceSection.tsx`
+- Project MEMORY notes on juridisch-klimaat-redesign (2026-03-07)
 
 ---
 
-*Pitfalls research for: v12.0 Omgevings- & Leefbaarheids-Scorer -- location scoring, multi-year trends, proximity, crime data*
+*Pitfalls research for: v13.0 Juridisch Klimaat Intelligence -- Rechtspraak API deep integration, geo-contextualization, court ruling analysis, explorer UI*
 *Researched: 2026-03-07*

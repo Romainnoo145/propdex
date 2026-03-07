@@ -1,463 +1,410 @@
 # Architecture Patterns
 
-**Domain:** Omgevings- & Leefbaarheids-Scorer -- Location intelligence scoring for PropTech
+**Domain:** Juridisch Klimaat Intelligence for Propdex
 **Researched:** 2026-03-07
-**Confidence:** HIGH (verified against live CBS OData endpoints + existing codebase)
+**Confidence:** HIGH (based on full codebase analysis of existing jurisprudence stack)
 
 ---
 
-## Key Architectural Insight: CBS Has Pre-Computed Proximity Data
+## Current State Assessment
 
-The biggest finding is that CBS provides **"Nabijheid voorzieningen"** as a separate OData v4 dataset (86134NED for 2024) with pre-calculated road-distance metrics at wijk/buurt level. This eliminates the need for PostGIS ST_Distance calculations, OSM data imports, or external routing APIs for voorzieningen proximity.
+The existing jurisprudence stack has three layers that all need modification:
 
-**Verified distance measures (live API query against 86134NED/MeasureCodes):**
+1. **API Client** (`backend/app/government_apis/rechtspraak.py`) -- Searches Rechtspraak.nl via Atom/XML feed. Returns search results and full documents. No ECLI-prefix filtering, no court-region scoping, no gemeente-level targeting. Rate limited at 3 concurrent / 300 per hour.
 
-| CBS Code | Facility | Unit | Real Estate Relevance |
-|----------|----------|------|----------------------|
-| D000025 | Grote supermarkt | km | Table-stakes for residential |
-| D000045_1 | Basisonderwijs (primary school) | km | Family appeal |
-| D000045_2 | Voortgezet onderwijs totaal | km | Family appeal |
-| D000052 | Treinstations totaal | km | Commuter attractiveness |
-| D000014 | Belangrijk overstapstation | km | Transit connectivity |
-| D000028 | Huisartsenpraktijk | km | Livability baseline |
-| D000037 | Oprit hoofdverkeersweg | km | Car accessibility |
-| D000029 | Kinderdagverblijf | km | Young family appeal |
-| D000039 | Park of plantsoen | km | Green premium |
-| D000036 | Openbaar groen totaal | km | Green premium |
-| D000010 | Apotheek | km | Healthcare access |
-| D000043 | Restaurant | km | Lifestyle indicator |
+2. **Backend API + Job** (`backend/app/api/endpoints/jurisprudence.py` + `backend/app/jobs/jurisprudence_analysis.py`) -- Endpoint proxies search to client. Analysis endpoint enqueues ARQ job which fetches documents sequentially from Rechtspraak API, sends to Claude, caches result in `CachedAPIResponse`. Job model: `JuridischAnalyseJob` with status tracking.
 
-Each distance measure also has "count within X km" variants (e.g., A045790_1 = huisartsen within 1km). Useful for density indicators.
+3. **Frontend** (`JurisprudenceSection.tsx` + `useJurisprudence.ts`) -- Search input with 500ms debounce, ruling list with collapsible AI summary badges, split-pane document viewer. Hardcoded `omgevingsvergunning ${gemeenteNaam}` default query. `useTriggerAnalysis` mutation + `useJurisprudenceAnalysis` polling (3s interval).
+
+**Core problem:** The current system does a text search for "omgevingsvergunning [gemeente]" and returns whatever Rechtspraak gives back. There is no court-region filtering (ECLI prefix), no document caching for re-analysis, no geo-extraction from ruling text, no doorlooptijd calculation, and no bekendmakingen cross-referencing.
 
 ---
 
-## Data Source Architecture
+## Recommended Architecture
 
-### CBS OData v4 -- KWB Multi-Year (Existing Pattern, New Scale)
+### Component Map (New vs Modified)
 
-CBS publishes one dataset ID per year. Multi-year queries require querying N separate dataset IDs in parallel.
+```
+MODIFY  backend/app/government_apis/rechtspraak.py
+          + ECLI prefix filtering (court-region search)
+          + Extended metadata extraction from XML (procedure dates)
+          + Batch document fetch with concurrency control
 
-**KWB (Kerncijfers wijken en buurten) -- existing metrics, extended for trends:**
+NEW     backend/app/government_apis/ecli_registry.py
+          + Court code -> region/gemeente mapping table
+          + ECLI prefix lookup for gemeente-scoped queries
 
-| Year | Dataset ID | Status |
-|------|-----------|--------|
-| 2020 | 84799NED | Available |
-| 2021 | 85039NED | Available |
-| 2022 | 85318NED | Configured in cbs_odata.py |
-| 2023 | 85618NED | Configured in cbs_odata.py |
-| 2024 | 85984NED | Configured in cbs_odata.py |
-| 2025 | 86165NED | Configured in cbs_odata.py (current) |
+NEW     backend/app/services/geo_contextualizer.py
+          + Regex extraction of postcodes + gemeente names from ruling text
+          + PDOK geocoding fallback for ambiguous addresses
+          + Confidence scoring for location matches
 
-**Nabijheid voorzieningen -- NEW dataset series:**
+NEW     backend/app/services/doorlooptijd.py
+          + Calculate procedure duration from ruling metadata
+          + Aggregate stats per gemeente per vergunningstype
 
-| Year | Dataset ID | Status |
-|------|-----------|--------|
-| 2020 | 84953NED | Available |
-| 2021 | 85231NED | Available |
-| 2022 | 85560NED | Available |
-| 2023 | 85830NED | Available |
-| 2024 | 86134NED | Latest (use this) |
+NEW     backend/app/services/ruling_bekendmaking_linker.py
+          + Cross-reference rulings with SRU ChangeRecords
+          + Match by address, postcode, date range
 
-**Measure codes already verified in cbs_odata.py `MEASURE_CODES` dict -- extends with:**
-- `inkomen` (`M000223`) -- already defined but may not be fetched depending on dataset
+NEW     backend/app/models/ruling_cache.py
+          + Persistent ruling document storage (full text + metadata)
+          + Organization-agnostic (public data, ECLI is globally unique)
 
-### Politie Crime Data -- OData v3 (New Protocol)
+MODIFY  backend/app/api/endpoints/jurisprudence.py
+          + New endpoints: /feed, /explore, /stats
+          + Pagination support (offset/limit)
+          + Multi-filter query params (type, uitkomst, period)
 
-Crime data lives on `dataderden.cbs.nl` using OData v3 (NOT v4). This is a separate API protocol.
+MODIFY  backend/app/jobs/jurisprudence_analysis.py
+          + Read from RulingCache instead of fetching per-job
+          + Enhanced prompt with geo context + doorlooptijd
 
-**Endpoint:** `https://dataderden.cbs.nl/ODataApi/OData/47018NED`
+NEW     backend/app/jobs/ruling_ingestion.py
+          + Background job: batch fetch + cache rulings for a court region
+          + Trigger on first gemeente detail open
 
-**Verified entities:**
-- `TypedDataSet` -- actual data rows
-- `WijkenEnBuurten` -- region codes (same WK/BU format as CBS KWB)
-- `SoortMisdrijf` -- crime type dimension
-- `Perioden` -- year/month dimension
+NEW     frontend/src/hooks/useJurisprudenceExplorer.ts
+          + Multi-filter state management
+          + Pagination with useInfiniteQuery
 
-**Key field:** `GeregistreerdeMisdrijven_1` (count of registered crimes)
+MODIFY  frontend/src/components/projects/JurisprudenceSection.tsx
+          + Decompose into feed + explorer tabs
+          + Extract JurisprudenceViewer into own file
 
-**OData v3 vs v4 differences:**
-- Response wrapper: `{"odata.metadata": ..., "value": [...]}` (v3) vs `{"@odata.context": ..., "value": [...]}` (v4)
-- No `$count` in v3 by default
-- Entity names use PascalCase differently
-- Single dataset with time dimension (unlike KWB which has separate datasets per year)
+NEW     frontend/src/components/projects/JurisprudenceExplorer.tsx
+          + Filter sidebar (scope, type, uitkomst, period)
+          + Results grid with sorting + pagination
 
----
+NEW     frontend/src/components/projects/JurisprudenceFeed.tsx
+          + Chronological gemeente-matched ruling feed
+          + Location confidence badges
+```
 
-## Component Boundaries
+### Component Boundaries
 
-### New Components
-
-| Component | Location | Responsibility |
-|-----------|----------|---------------|
-| `CbsNabijheidClient` | `backend/app/government_apis/cbs_nabijheid.py` | Fetch proximity data from CBS OData v4 (86134NED). Reuse wijk resolution pattern from CBSODataClient |
-| `PolitieCrimeClient` | `backend/app/government_apis/politie_crime.py` | Fetch crime stats from dataderden OData v3 (47018NED). New protocol, cannot inherit from CBS v4 base |
-| `CbsMultiYearService` | `backend/app/services/cbs_multiyear.py` | Orchestrate parallel queries across multiple KWB dataset IDs for historical trends |
-| `LocationScoreService` | `backend/app/services/location_scoring.py` | Pure function: aggregate all metrics into weighted location score |
-| `VoorzieningenCard` | `frontend/src/components/projects/VoorzieningenCard.tsx` | Display proximity distances with visual distance bars |
-| `CrimeCard` | `frontend/src/components/projects/CrimeCard.tsx` | Display crime statistics with per-1000-inwoners metric |
-| `TrendChart` | `frontend/src/components/projects/TrendChart.tsx` | Lightweight sparkline for multi-year metric trends |
-| `LocationScoreCard` | `frontend/src/components/projects/LocationScoreCard.tsx` | Aggregated score with categorical breakdown |
-
-### Modified Components
-
-| Component | Change | Rationale |
-|-----------|--------|-----------|
-| `backend/app/government_apis/cbs_odata.py` | Extract shared `_resolve_wijk_identifier` into a reusable function or base class. Add multi-dataset-ID querying method | Nabijheid client needs identical wijk resolution; multi-year needs same pattern across dataset IDs |
-| `backend/app/models/area_scan.py` | Add `location_score: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)` | Store computed location score separate from source data (different lifecycle) |
-| `backend/app/jobs/area_scan.py` | Add Phase 2c after existing CBS fetch: nabijheid + crime + trends + score computation | Non-fatal enrichment, same try/except pattern as existing CBS |
-| `backend/app/scans/schemas.py` | Add `location_score: dict | None` to `ScanListItem`, `ScanResultsResponse` | Expose score to frontend |
-| `backend/app/government_apis/rate_limiter.py` | Add `politie_crime_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)` | New API needs its own rate limiter |
-| `frontend/src/lib/types/scan.ts` | Add `LocationScore`, `NabijheidData`, `CriminaliteitData`, `TrendData` interfaces. Extend `CbsNeighborhoodMetrics` with optional `nabijheid`, `criminaliteit`, `trends` keys | Type new data flowing through existing `neighborhood_metrics` |
-| `frontend/src/components/map/panels/WijkMapPanel.tsx` | Add VoorzieningenCard, CrimeCard, LocationScoreCard, TrendChart sections below existing CbsNeighborhoodCard | Display new data in wijk context |
-| `frontend/src/components/projects/CbsNeighborhoodCard.tsx` | Add income row (data already in MEASURE_CODES). Add optional trend indicators (arrow up/down) when trends data available | Extended display |
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `RechtspraakClient` (modified) | HTTP calls to data.rechtspraak.nl, XML parsing, ECLI validation | `ecli_registry`, `rate_limiter` |
+| `EcliRegistry` (new) | Maps court codes to regions/gemeenten, provides ECLI prefix lookups | `RechtspraakClient` |
+| `RulingCache` model (new) | Persists full ruling text + extracted metadata in PostgreSQL | `RechtspraakClient`, `GeoContextualizer`, `DoorlooptijdService` |
+| `GeoContextualizer` (new) | Extracts gemeente/location from ruling body text via regex + PDOK | `RulingCache`, `PDOKLocatieserver` |
+| `DoorlooptijdService` (new) | Computes procedure duration from ruling metadata dates | `RulingCache` |
+| `RulingBekendmakingLinker` (new) | Cross-references rulings with SRU ChangeRecords by postcode | `RulingCache`, `ChangeRecord` |
+| `JurisprudenceEndpoints` (modified) | REST API for feed, explorer, stats, documents | All backend services |
+| `JurisprudenceExplorer` (new FE) | Multi-filter explorer UI with pagination | API endpoints |
+| `JurisprudenceFeed` (new FE) | Chronological gemeente feed with geo-matched rulings | API endpoints |
 
 ---
 
 ## Data Flow
 
-### Scan-Time Data Acquisition (Extended Phase 2)
+### Gemeente Feed Flow (Primary Use Case)
 
 ```
-area_scan_job
-  |
-  +-- Phase 2 (existing): BAG + bestemmingen + CBS KWB
-  |     +-- cbs_client.get_neighborhood_data() -> neighborhood_metrics JSONB
-  |
-  +-- Phase 2c (NEW): Location intelligence enrichment
-  |     |
-  |     +-- [parallel] cbs_nabijheid_client.get_proximity_data(gemeente_code, wijk_naam)
-  |     |     -> {supermarkt_km: 0.8, basisonderwijs_km: 1.2, treinstation_km: 3.4, ...}
-  |     |
-  |     +-- [parallel] politie_crime_client.get_crime_data(wijk_code, year=current)
-  |     |     -> {totaal_misdrijven: 245, per_1000_inwoners: 42.1}
-  |     |
-  |     +-- [parallel] cbs_multiyear.get_trends(gemeente_code, wijk_naam, years=5)
-  |     |     -> {jaren: [2020..2024], woz: [...], inkomen: [...], inwoners: [...]}
-  |     |
-  |     +-- [sequential] location_scoring.compute_score(all_collected_data)
-  |           -> {total: 7.2, voorzieningen: 8.1, veiligheid: 6.5, demografie: 7.0, trend: 7.8}
-  |
-  +-- scan.neighborhood_metrics = {**existing, nabijheid: {...}, criminaliteit: {...}, trends: {...}}
-  +-- scan.location_score = computed_score_dict
+User opens gemeente detail
+  -> Frontend calls GET /api/jurisprudence/feed?gemeente=Venlo&page=1
+  -> Backend:
+       1. Look up ECLI court prefix(es) for Venlo via EcliRegistry
+          (e.g., Venlo -> RBLIM = Rechtbank Limburg, + RVS always included)
+       2. Query RulingCache for cached rulings matching these prefixes
+          - If cache cold: enqueue ruling_ingestion_job, return partial results
+          - If cache warm: query directly
+       3. Filter to rulings with extracted_gemeente matching Venlo
+          (or high-confidence geo_match)
+       4. Return paginated, chronological feed with metadata
+  -> Frontend renders JurisprudenceFeed with AI badges
 ```
 
-### Storage Strategy: Extend neighborhood_metrics JSONB + Separate Score Column
-
-**Source data** goes into `neighborhood_metrics` JSONB (new top-level keys):
-
-```python
-scan.neighborhood_metrics = {
-    # EXISTING (unchanged)
-    "bron": "CBS StatLine OData v4",
-    "dataset": "86165NED - Kerncijfers wijken en buurten",
-    "peiljaar": 2025,
-    "data": {
-        "gemiddelde_woz_waarde": 275.0,
-        "stedelijkheid": {"klasse": 2, "omschrijving": "Sterk stedelijk", "omgevingsadressendichtheid": 2450.0},
-        "demografie": {"aantal_inwoners": 4820, "percentage_huurwoningen": 55.0, "percentage_koopwoningen": 45.0},
-        "bouwjaar_distributie": {"percentage_bouwjaar_voor_2000": None, "percentage_bouwjaar_vanaf_2000": None},
-    },
-
-    # NEW: proximity data
-    "nabijheid": {
-        "bron": "CBS Nabijheid voorzieningen",
-        "dataset": "86134NED",
-        "peiljaar": 2024,
-        "data": {
-            "afstand_supermarkt_km": 0.8,
-            "afstand_basisonderwijs_km": 1.2,
-            "afstand_voortgezet_onderwijs_km": 2.1,
-            "afstand_treinstation_km": 3.4,
-            "afstand_overstapstation_km": 8.2,
-            "afstand_huisarts_km": 0.6,
-            "afstand_kinderdagverblijf_km": 0.9,
-            "afstand_park_km": 0.3,
-            "afstand_hoofdverkeersweg_km": 1.5,
-        },
-    },
-
-    # NEW: crime data
-    "criminaliteit": {
-        "bron": "Politie Open Data (CBS)",
-        "dataset": "47018NED",
-        "peiljaar": 2024,
-        "data": {
-            "totaal_misdrijven": 245,
-            "per_1000_inwoners": 42.1,
-        },
-    },
-
-    # NEW: historical trends (5-year)
-    "trends": {
-        "jaren": [2020, 2021, 2022, 2023, 2024],
-        "woz": [210.0, 225.0, 248.0, 260.0, 275.0],
-        "inkomen": [29.5, 30.1, 30.8, 31.2, 32.0],
-        "inwoners": [4520, 4610, 4680, 4750, 4820],
-    },
-}
-```
-
-**Computed score** goes into separate `location_score` JSONB column:
-
-```python
-scan.location_score = {
-    "total": 7.2,
-    "breakdown": {
-        "voorzieningen": 8.1,
-        "veiligheid": 6.5,
-        "demografie": 7.0,
-        "marktdynamiek": 7.8,
-        "trend": 6.9,
-    },
-    "model_version": "location-v1",
-    "computed_at": "2026-03-07T14:30:00Z",
-}
-```
-
-**Rationale for separation:**
-- Source data in `neighborhood_metrics` is immutable after fetch (no reason to change it)
-- Computed score in `location_score` may need recomputation when we tune weights
-- Management command can recompute scores across all scans without re-fetching APIs
-- Backward compatible: scans without new data simply have null keys
-
-### Frontend Data Flow
+### Explorer Flow
 
 ```
-WijkMapPanel
-  |
-  +-- latestScan.neighborhood_metrics.data (existing)
-  |     +-- CbsNeighborhoodCard (existing, reads .data -- unchanged)
-  |
-  +-- latestScan.neighborhood_metrics.nabijheid (NEW key)
-  |     +-- VoorzieningenCard (NEW component)
-  |
-  +-- latestScan.neighborhood_metrics.criminaliteit (NEW key)
-  |     +-- CrimeCard (NEW component)
-  |
-  +-- latestScan.neighborhood_metrics.trends (NEW key)
-  |     +-- TrendChart (NEW component, sparklines per metric)
-  |
-  +-- latestScan.location_score (NEW field on ScanListItem)
-        +-- LocationScoreCard (NEW component, prominent placement)
+User opens Explorer tab, sets filters
+  -> Frontend calls GET /api/jurisprudence/explore?gemeente=Venlo
+       &type=bouw&uitkomst=afgewezen&period=2024&page=1
+  -> Backend:
+       1. Query RulingCache with combined SQL filters
+       2. Join with geo_context for location matching
+       3. Include doorlooptijd stats per result
+       4. Return paginated results with facet counts
+  -> Frontend renders JurisprudenceExplorer with filter sidebar
+```
+
+### Ruling Ingestion Flow (Background)
+
+```
+ruling_ingestion_job(gemeente_naam="Venlo")
+  -> EcliRegistry: get court codes [RBLIM, RVS]
+  -> For each court code:
+       Search Rechtspraak API (subject=omgevingsrecht, max=50)
+       For each result not in RulingCache:
+         Fetch full document
+         Store in RulingCache (text + metadata)
+         Run GeoContextualizer (extract postcodes, gemeente names)
+         Run DoorlooptijdService (compute procedure duration)
+  -> Mark ingestion complete for this gemeente
+```
+
+### Bekendmakingen Cross-Reference Flow
+
+```
+RulingBekendmakingLinker (on-demand or post-ingestion)
+  -> For each ruling in RulingCache with extracted postcodes:
+       Query ChangeRecord table for matching postcodes
+       If match found: store link in ruling_cache.linked_change_ids
+  -> Frontend shows "Bekijk bekendmaking" link on matched rulings
+  -> Click -> navigate to existing bekendmaking/map view
 ```
 
 ---
 
 ## Patterns to Follow
 
-### Pattern 1: Refactored CBS Base for Client Reuse
+### Pattern 1: RulingCache as Central Store (Organization-Agnostic)
 
-The `CbsNabijheidClient` shares 80% of `CBSODataClient` logic (headers, retry, limiter, wijk resolution). Extract shared functionality:
+**What:** Store fetched ruling documents permanently instead of re-fetching per analysis job. This is the critical architectural change.
+
+**When:** Every time a ruling is fetched from Rechtspraak API, cache it. Analysis jobs, feeds, and explorer all read from cache.
+
+**Why:** Current system fetches the same documents repeatedly (once per analysis trigger). Caching enables geo-extraction, doorlooptijd calculation, and cross-referencing without additional API calls.
+
+**Critical design decision:** `RulingCache` has NO `organization_id`. ECLI identifiers are globally unique public data. All organizations share the same ruling cache. Only AI analysis results remain tenant-scoped (via existing `CachedAPIResponse` + `JuridischAnalyseJob`).
 
 ```python
-# Option A: Constructor-parameterized client (RECOMMENDED)
-class CBSODataClient:
-    def __init__(self, dataset_id: str | None = None, measure_codes: dict[str, str] | None = None):
-        self.dataset_id = dataset_id or settings.cbs_dataset_id
-        self.measure_codes = measure_codes or DEFAULT_KWB_MEASURE_CODES
-        self.peiljaar = DATASET_PEILJAAR.get(self.dataset_id, 2025)
+class RulingCache(Base, TimestampMixin):
+    """Cached court ruling -- org-agnostic, ECLI is globally unique."""
+    __tablename__ = "ruling_cache"
 
-# Usage:
-kwb_client = CBSODataClient()  # existing behavior
-nabijheid_client = CBSODataClient(
-    dataset_id="86134NED",
-    measure_codes=NABIJHEID_MEASURE_CODES,
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    ecli: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    instantie: Mapped[str | None] = mapped_column(String(200))
+    datum_uitspraak: Mapped[str | None] = mapped_column(String(20))
+    full_text: Mapped[str | None] = mapped_column(Text)
+
+    # Extracted by GeoContextualizer
+    extracted_gemeente: Mapped[str | None] = mapped_column(String(200), index=True)
+    extracted_postcodes: Mapped[dict | None] = mapped_column(JSONB)
+    geo_confidence: Mapped[float | None] = mapped_column(Float)
+
+    # Extracted by DoorlooptijdService
+    procedure_type: Mapped[str | None] = mapped_column(String(100))
+    doorlooptijd_days: Mapped[int | None] = mapped_column(Integer)
+    uitkomst: Mapped[str | None] = mapped_column(String(50))
+
+    # Cross-reference with bekendmakingen
+    linked_change_ids: Mapped[dict | None] = mapped_column(JSONB)
+
+    # Court code extracted from ECLI (e.g., "RBLIM", "RVS")
+    court_code: Mapped[str | None] = mapped_column(String(20), index=True)
+```
+
+### Pattern 2: ECLI Court-Region Mapping
+
+**What:** Static mapping of ECLI court codes to geographic regions for gemeente-scoped search.
+
+**When:** Building the gemeente feed. Rechtspraak API has no gemeente filter, but ECLI codes encode the court (e.g., `ECLI:NL:RBLIM:2024:xxx` = Rechtbank Limburg).
+
+**Why:** There are only 11 rechtbanken + 4 gerechtshoven + ABRvS. The mapping is stable (courts do not change jurisdiction often). This is far more reliable than text search.
+
+```python
+# ecli_registry.py -- Static mapping, Dutch courts are institutionally stable
+RECHTBANK_GEMEENTE_MAP: dict[str, list[str]] = {
+    "RBLIM": ["Venlo", "Maastricht", "Roermond", "Heerlen", "Sittard-Geleen", ...],
+    "RBGEL": ["Arnhem", "Nijmegen", "Zutphen", "Apeldoorn", ...],
+    "RBAMS": ["Amsterdam", "Haarlem", "Zaanstad", ...],
+    "RBDHA": ["Den Haag", "Leiden", "Delft", "Gouda", ...],
+    "RBMNE": ["Utrecht", "Amersfoort", "Lelystad", ...],
+    "RBNHO": ["Alkmaar", "Hoorn", ...],
+    "RBOBR": ["Eindhoven", "Tilburg", "Breda", "'s-Hertogenbosch", ...],
+    "RBOVE": ["Zwolle", "Almelo", "Enschede", ...],
+    "RBROT": ["Rotterdam", "Dordrecht", ...],
+    "RBZWB": ["Middelburg", "Bergen op Zoom", "Breda", ...],
+    "RBNNE": ["Groningen", "Leeuwarden", "Assen", ...],
+}
+
+# Always include these -- they handle appeals nationwide
+NATIONAL_COURTS = ["RVS", "HR"]
+
+def get_court_codes_for_gemeente(gemeente_naam: str) -> list[str]:
+    """Return ECLI court codes whose jurisdiction covers this gemeente."""
+    codes = [
+        code for code, gemeenten in RECHTBANK_GEMEENTE_MAP.items()
+        if gemeente_naam in gemeenten
+    ]
+    return codes + NATIONAL_COURTS
+```
+
+### Pattern 3: Two-Pass Geo-Contextualization
+
+**What:** First pass uses cheap regex extraction (postcodes, gemeente names from ruling text). Second pass uses PDOK geocoding only when regex extraction is ambiguous. Never use an LLM for geo-extraction.
+
+**Why:** Ruling texts frequently mention locations explicitly ("de gemeente Venlo", "perceel aan de Hoofdstraat 42 te Venlo", "postcode 5911"). Regex catches 70-80% of cases. LLM would be too slow and expensive for batch processing.
+
+```python
+import re
+
+_POSTCODE_RE = re.compile(r'\b(\d{4}\s?[A-Z]{2})\b')
+_GEMEENTE_RE = re.compile(
+    r'(?:gemeente|burgemeester en wethouders van|college van|te)\s+'
+    r'([A-Z][a-z]+(?:[\s-][A-Za-z]+)*)',
+    re.IGNORECASE,
 )
+
+def extract_locations_from_text(text: str) -> dict:
+    """Extract location references from ruling body text."""
+    postcodes = list(set(_POSTCODE_RE.findall(text)))
+    gemeenten = list(set(_GEMEENTE_RE.findall(text)))
+    # Filter out common false positives
+    gemeenten = [g for g in gemeenten if g not in LEGAL_TERM_EXCLUSIONS]
+    confidence = 0.9 if gemeenten else (0.6 if postcodes else 0.1)
+    return {
+        "postcodes": postcodes,
+        "gemeenten": gemeenten,
+        "confidence": confidence,
+    }
 ```
 
-This avoids creating a separate class and duplicating the wijk resolution + observation fetch logic.
+### Pattern 4: Reuse Existing Job Infrastructure
 
-### Pattern 2: OData v3 Client for Politie (New Pattern)
+**What:** Keep using ARQ + `JuridischAnalyseJob` for AI analysis. Add a separate ARQ job for ruling ingestion.
 
-The politie data uses OData v3 on `dataderden.cbs.nl`. Requires a distinct client class:
+**Why:** The existing pattern works well -- create job record, enqueue ARQ task, poll for completion. The `jurisprudence_analysis_job` is modified to read from `RulingCache` instead of fetching from API, making it faster and more reliable.
 
-```python
-class PolitieCrimeClient:
-    """Politie misdrijfcijfers via CBS dataderden OData v3."""
+### Pattern 5: Frontend Tab Architecture
 
-    BASE_URL = "https://dataderden.cbs.nl/ODataApi/OData/47018NED"
+**What:** Use two tabs in the Juridisch Klimaat section: "Feed" (gemeente chronological) and "Explorer" (multi-filter search).
 
-    async def get_crime_data(
-        self, client: httpx.AsyncClient, wijk_code: str, year: int
-    ) -> dict | None:
-        """Fetch total registered crimes for a wijk in a given year."""
-        # 1. Query WijkenEnBuurten to resolve wijk identifier
-        # 2. Query TypedDataSet filtered by WijkenEnBuurten key + Perioden
-        # 3. Sum GeregistreerdeMisdrijven_1 across crime types
+**Why:** Memory note from 2026-03-07 explicitly states this is the desired UX. Feed is the default view (passive consumption), Explorer is for active investigation.
+
 ```
-
-### Pattern 3: Multi-Year Parallel Fetch
-
-```python
-async def get_historical_kwb(
-    self, client: httpx.AsyncClient,
-    gemeente_code: str, wijk_naam: str | None,
-    gemeente_naam: str, years: int = 5,
-) -> list[dict]:
-    """Fetch KWB metrics for last N years from separate CBS dataset IDs."""
-    dataset_ids = list(KWB_DATASET_PEILJAAR.items())[-years:]
-
-    async def fetch_year(dataset_id: str, year: int) -> dict | None:
-        year_client = CBSODataClient(dataset_id=dataset_id)
-        return await year_client.get_neighborhood_data(
-            client, gemeente_naam, wijk_naam, gemeente_code
-        )
-
-    results = await asyncio.gather(
-        *[fetch_year(did, yr) for did, yr in dataset_ids],
-        return_exceptions=True,
-    )
-    return [r for r in results if isinstance(r, dict)]
-```
-
-### Pattern 4: Non-Fatal Scan Enrichment
-
-All new data fetches MUST be wrapped in the existing non-fatal pattern:
-
-```python
-# In area_scan_job, Phase 2c:
-try:
-    proximity_data = await nabijheid_client.get_neighborhood_data(
-        client=http_client, gemeente_naam=scan.gemeente_naam,
-        wijk_naam=scan.wijk_naam, gemeente_code=scan.gemeente_code,
-    )
-    if proximity_data:
-        scan.neighborhood_metrics["nabijheid"] = proximity_data
-        logger.info(f"Scan {scan_id}: nabijheid data fetched")
-except Exception as e:
-    logger.warning(f"Scan {scan_id}: nabijheid fetch failed (non-fatal): {e}")
-```
-
-### Pattern 5: Pure Location Score Function
-
-Score computation is a pure function (no I/O). Easy to test, easy to recompute:
-
-```python
-@dataclass(frozen=True)
-class LocationScore:
-    total: float              # 0-10 overall
-    voorzieningen: float      # 0-10 proximity sub-score
-    veiligheid: float         # 0-10 safety sub-score
-    demografie: float         # 0-10 demographics sub-score
-    marktdynamiek: float      # 0-10 market dynamics sub-score
-    trend: float              # 0-10 improving/declining trajectory
-    model_version: str = "location-v1"
-
-def compute_location_score(
-    neighborhood: dict | None,     # KWB data
-    proximity: dict | None,        # nabijheid data
-    crime: dict | None,            # criminaliteit data
-    trends: list[dict] | None,     # historical series
-) -> LocationScore:
-    """Pure scoring. All inputs optional -- partial data yields partial score."""
+JurisprudenceSection (container)
+  |-- Tab: "Overzicht" (default) -> JurisprudenceFeed
+  |     |-- JuridischKlimaatCard (existing, top)
+  |     |-- Chronological ruling list (geo-matched to gemeente)
+  |     |-- RulingAiSummaryBadge (existing, per ruling)
+  |
+  |-- Tab: "Explorer" -> JurisprudenceExplorer
+        |-- Filter sidebar: scope, vergunningstype, uitkomst, tijdsperiode
+        |-- Results grid with sorting + pagination
+        |-- Document viewer (shared component)
 ```
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: PostGIS Distance for Voorzieningen
-**What:** Using ST_Distance to calculate proximity to schools/supermarkets from parcel coordinates
-**Why bad:** Requires maintaining POI database, geocoding, road-network routing. CBS already computes this per wijk using actual road distances (more accurate).
-**Instead:** Use CBS Nabijheid voorzieningen dataset. Pre-computed, authoritative, updated annually.
+### Anti-Pattern 1: Re-fetching Documents Per Analysis
 
-### Anti-Pattern 2: Storing Computed Score Inside Source Data
-**What:** Putting location score inside `neighborhood_metrics` JSONB alongside source data
-**Why bad:** When scoring weights change, you cannot recompute without re-fetching all APIs. Source data and derived scores have different lifecycles.
-**Instead:** Separate `location_score` column. Source data immutable, score recomputable.
+**What:** Current system fetches ruling texts from Rechtspraak API inside `jurisprudence_analysis_job`, every time analysis is triggered.
 
-### Anti-Pattern 3: Sequential Multi-Year Fetches
-**What:** Querying 5 years of CBS data one-by-one, awaiting each
-**Why bad:** 5 years x 2 datasets (KWB + Nabijheid) = 10 sequential API calls at 1-2s each = 10-20s added to scan
-**Instead:** `asyncio.gather` for parallel fetch. All 10 calls fire simultaneously, total time = slowest single call.
+**Why bad:** Wastes API calls, hits rate limits (300/hour), adds latency (10-25 rulings x 1-2s each = 10-50s just for fetches). Same documents fetched repeatedly across sessions.
 
-### Anti-Pattern 4: Duplicating CBSODataClient for Nabijheid
-**What:** Copy-pasting the entire CBS client class with different measure codes
-**Why bad:** 80% identical code (headers, retry, limiter, wijk resolution, observation fetch). Bug fixes must be applied twice.
-**Instead:** Parameterize CBSODataClient to accept dataset_id + measure_codes, or extract shared base.
+**Instead:** Store in `RulingCache` on first access. Analysis job reads from DB.
 
-### Anti-Pattern 5: Using v4 Protocol for Politie Data
-**What:** Calling `dataderden.cbs.nl` with OData v4 query syntax
-**Why bad:** Politie data uses OData v3. Response format, entity names, and filter syntax differ. Will get 404s or malformed responses.
-**Instead:** Build a separate `PolitieCrimeClient` that handles OData v3 specifics.
+### Anti-Pattern 2: Text Search as Gemeente Filter
+
+**What:** Current approach uses `omgevingsvergunning ${gemeenteNaam}` as search query, hoping Rechtspraak returns relevant results.
+
+**Why bad:** Returns rulings that *mention* the gemeente name anywhere, not rulings *from* that gemeente. A ruling about Amsterdam policy might mention "unlike in Venlo" and appear in Venlo results. False positive rate is high.
+
+**Instead:** Use ECLI court-code prefix filtering + geo-contextualization of ruling text for accurate gemeente matching.
+
+### Anti-Pattern 3: Monolithic JurisprudenceSection
+
+**What:** Current `JurisprudenceSection.tsx` (350 lines) handles search, results list, document viewer, and AI analysis in one component.
+
+**Why bad:** Adding feed view + explorer view + stats + bekendmakingen links would push this past 800+ lines. Violates the 300-line file limit.
+
+**Instead:** Split into:
+- `JurisprudenceFeed.tsx` -- Chronological gemeente feed
+- `JurisprudenceExplorer.tsx` -- Multi-filter explorer with grid
+- `JurisprudenceViewer.tsx` -- Document viewer (already a sub-component, extract)
+- `JuridischKlimaatCard.tsx` -- Already extracted, keep as-is
+
+### Anti-Pattern 4: Organization-Scoped Public Data
+
+**What:** Making `RulingCache` multi-tenant with `organization_id`.
+
+**Why bad:** Court rulings are public data. Every organization would cache the same ECLI documents, wasting storage and causing redundant API calls.
+
+**Instead:** `RulingCache` is org-agnostic (no `organization_id`). Only AI analysis results remain tenant-scoped (via existing `CachedAPIResponse`).
+
+### Anti-Pattern 5: LLM for Geo-Extraction
+
+**What:** Sending ruling text to Claude to extract location information.
+
+**Why bad:** Too slow for batch processing (50+ rulings per gemeente), expensive, and unreliable for structured extraction. Postcodes and gemeente names are machine-readable.
+
+**Instead:** Regex extraction (fast, deterministic) + PDOK geocoding fallback (authoritative).
 
 ---
 
 ## Scalability Considerations
 
-| Concern | Current (per scan) | At 1K scans | Mitigation |
-|---------|-------------------|-------------|------------|
-| CBS API calls | +3 new (nabijheid + multi-year) | 3K extra calls/day | Rate limiter already handles this. CBS has no documented limit but 500/hr is polite |
-| Multi-year historical | 10 parallel calls (5yr x 2 datasets) | Could be cached | Use CachedAPIResponse with 90-day TTL (data changes annually at most) |
-| neighborhood_metrics size | ~2KB -> ~5KB per scan | 5MB total in DB | JSONB handles fine. No content indexing needed |
-| Score recomputation | Pure function, <1ms | Batch across all scans | Management command: `python -m app.tools.recompute_scores` |
-| Politie data freshness | Monthly updates | Same for all orgs | Cache at organization-agnostic level (same wijk = same crime data) |
+| Concern | At 1 gemeente | At 50 gemeenten | At 352 gemeenten |
+|---------|--------------|-----------------|------------------|
+| RulingCache size | ~200 rulings, ~2MB text | ~5,000 rulings, ~50MB | ~20,000 rulings, ~200MB |
+| API calls on first load | 50-100 (search + doc fetches) | Amortized (court regions overlap) | Ceiling ~5,000 unique (11 courts covered) |
+| Geo-extraction | Inline, < 1s per ruling | Background job per gemeente | Batch ARQ job, total minutes |
+| AI analysis | Per-request, cached per org | Cached, invalidated monthly | Cached, no scaling concern |
+| Bekendmakingen cross-ref | Scan ChangeRecord by postcode | Indexed query, fast | Index on postcode handles it |
+
+Key insight: Dutch courts are finite (11 rechtbanken). After approximately 100 gemeenten, most court regions are fully cached. The system converges to a steady state where new gemeente lookups are predominantly cache hits.
+
+---
+
+## Integration Points Summary
+
+| Integration | Type | Existing Component | Change |
+|-------------|------|-------------------|--------|
+| Rechtspraak API | MODIFY | `rechtspraak.py` | Add court-code filtered search, batch document fetch |
+| Rate limiter | NONE | `rate_limiter.py` | Existing `rechtspraak_limiter` (3 concurrent, 300/hr) sufficient |
+| XML parser | NONE | `_parser` in `rechtspraak.py` | Reuse existing XXE-safe lxml parser |
+| ARQ worker | MODIFY | `worker.py` | Register new `ruling_ingestion_job` function |
+| CachedAPIResponse | NONE | Model exists | AI results still cached here (tenant-scoped) |
+| JuridischAnalyseJob | MODIFY | Model + job exist | Read from RulingCache instead of fetching from API |
+| SRU Bekendmakingen | READ | `sru_bekendmakingen.py` | Cross-reference via ChangeRecord, no client modification |
+| ChangeRecord | READ | Model exists | Link rulings to changes by postcode match |
+| PDOK Locatieserver | READ | `pdok_locatieserver.py` | Geocode extracted addresses (fallback only) |
+| Frontend API bindings | MODIFY | `api.ts` | Add feed/explore/stats endpoint functions |
+| TanStack Query hooks | ADD + MODIFY | `useJurisprudence.ts` | New explorer hook, modify existing search hook |
+| JurisprudenceSection | DECOMPOSE | `JurisprudenceSection.tsx` | Split into Feed + Explorer + Viewer components |
+| JuridischKlimaatCard | NONE | Component exists | No changes needed, already self-contained |
 
 ---
 
 ## Suggested Build Order
 
-Build order follows dependency graph and risk profile:
+Based on dependency analysis:
 
-### Phase 1: CBS Nabijheid Client + VoorzieningenCard
-**Risk:** LOW (same OData v4 pattern as existing CBS client)
-**Dependencies:** None
-- Refactor `CBSODataClient` to accept parameterized dataset_id + measure_codes
-- Create nabijheid instance with 86134NED + proximity measure codes
-- Add nabijheid fetch to `area_scan.py` Phase 2c (non-fatal)
-- Merge into `neighborhood_metrics["nabijheid"]`
-- New `VoorzieningenCard.tsx` component
-- Mount in `WijkMapPanel.tsx`
+1. **RulingCache model + Alembic migration** -- Everything depends on persistent storage. No organization_id.
+2. **ECLI Registry + RechtspraakClient court-code search** -- Enables gemeente-scoped queries. Modify `search_jurisprudence()` to accept optional `court_code` param.
+3. **Ruling ingestion job** -- Background job that populates RulingCache for a gemeente's court regions. Uses existing ARQ pattern.
+4. **GeoContextualizer service** -- Extracts locations from cached ruling text. Runs post-ingestion.
+5. **DoorlooptijdService** -- Computes procedure duration from cached metadata. Can parallelize with step 4.
+6. **Backend feed + explore endpoints** -- Expose cached/enriched data via REST. Depends on steps 1-4.
+7. **RulingBekendmakingLinker** -- Cross-reference rulings with SRU data. Can run in background after step 4.
+8. **Frontend decomposition** -- Split JurisprudenceSection into Feed + Explorer + Viewer. Depends on step 6 for new endpoints.
+9. **AI analysis upgrade** -- Enhanced prompt using geo-context + doorlooptijd data. Depends on steps 4-5.
+10. **Tests** -- Cover entire pipeline end-to-end. Depends on all above.
 
-### Phase 2: Politie Crime Client + CrimeCard
-**Risk:** MEDIUM (new OData v3 protocol, different from all existing clients)
-**Dependencies:** None (parallel with Phase 1)
-- New `PolitieCrimeClient` in `politie_crime.py`
-- New `politie_crime_limiter` in `rate_limiter.py`
-- Add crime fetch to `area_scan.py` Phase 2c
-- Merge into `neighborhood_metrics["criminaliteit"]`
-- New `CrimeCard.tsx`
-
-### Phase 3: Multi-Year CBS Trends + TrendChart
-**Risk:** LOW (same API, just multiple calls)
-**Dependencies:** Phase 1 (uses refactored CBSODataClient)
-- New `CbsMultiYearService` orchestrating parallel year queries
-- Add trends fetch to `area_scan.py` Phase 2c
-- Merge into `neighborhood_metrics["trends"]`
-- New `TrendChart.tsx` sparkline component
-- Add trend indicators to `CbsNeighborhoodCard.tsx`
-
-### Phase 4: Location Score Aggregation + LocationScoreCard
-**Risk:** LOW (pure computation, no external dependencies)
-**Dependencies:** Phases 1-3 (needs all data sources)
-- Alembic migration: `location_score JSONB` on `area_scans`
-- New `LocationScoreService` with weighted scoring algorithm
-- Compute + store during scan Phase 2c
-- Extend `ScanListItem` schema with `location_score`
-- New `LocationScoreCard.tsx` (prominent placement in WijkMapPanel)
-- Add `compute_location_score` management command for recomputation
-
-### Phase 5: Extended CBS Metrics + Polish
-**Risk:** LOW (incremental improvements)
-**Dependencies:** Phases 1-4
-- Add income data display to `CbsNeighborhoodCard` (measure already in MEASURE_CODES)
-- Extend `CbsNeighborhoodMetrics` TypeScript type
-- Polish trend arrows, color scales, responsive layout
+**Hard dependencies:** 1 -> 2 -> 3 -> 4 -> 6 -> 8
+**Parallelizable:** 4 + 5 (both read from RulingCache), 7 (independent background task)
+**Phase 9** depends on 4 + 5 but not on 8 (frontend-independent)
 
 ---
 
 ## Sources
 
-- CBS Kerncijfers wijken en buurten series: https://www.cbs.nl/nl-nl/reeksen/publicatie/kerncijfers-wijken-en-buurten
-- CBS Nabijheid voorzieningen 2024 (86134NED): https://www.cbs.nl/nl-nl/cijfers/detail/86134NED
-- Politie Open Data portal: https://politieopendata.cbs.nl/portal.html?_la=nl&_catalog=Politie
-- CBS OData v4 metadata: https://www.cbs.nl/nl-nl/onze-diensten/open-data/statline-als-open-data/metadata-odata-v4
-- Live verification: `datasets.cbs.nl/odata/v1/CBS/86134NED/MeasureCodes` -- 46 distance measures confirmed
-- Live verification: `dataderden.cbs.nl/ODataApi/OData/47018NED` -- OData v3 structure with WijkenEnBuurten + Perioden + SoortMisdrijf entities
-- Live verification: All KWB dataset IDs (84799NED through 86165NED) confirmed via Datasets endpoint
-- Live verification: All Nabijheid dataset IDs (84953NED through 86134NED) confirmed via Datasets endpoint
+- Existing codebase analysis: `rechtspraak.py`, `jurisprudence.py` endpoint, `jurisprudence_analysis.py` job, `JurisprudenceSection.tsx`, `useJurisprudence.ts` (HIGH confidence)
+- ECLI format: `ECLI:CC:COURT:YEAR:LOCALID` per EU Council conclusions 2011/C 127/01 (HIGH confidence)
+- Dutch court system: 11 rechtbanken, 4 gerechtshoven, ABRvS, CRvB, CBb, Hoge Raad (HIGH confidence -- stable institutional structure)
+- Rechtspraak.nl Open Data API: Atom feed search with `subject` filter, content endpoint by ECLI (HIGH confidence -- verified in existing client code)
+- Memory note (2026-03-07): "ECLI prefix filtering (e.g., RBLIM = Limburg) is the best option for court-region filtering" and "Two tabs desired: gemeente overview + explorer with filters" (HIGH confidence -- direct user requirement)
 
 ---
 
-*Architecture research for: Propdex v12.0 Omgevings- & Leefbaarheids-Scorer*
+*Architecture research for: Propdex v13.0 Juridisch Klimaat Intelligence*
 *Researched: 2026-03-07*
