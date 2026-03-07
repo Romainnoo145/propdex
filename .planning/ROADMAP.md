@@ -70,8 +70,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 83-01-PLAN.md -- GeoContextualizer service + RulingCache migration + ingestion integration
-- [ ] 83-02-PLAN.md -- Feed endpoint with geo-relevance sorting + frontend feed rewrite
+- [x] 83-01-PLAN.md -- GeoContextualizer service + RulingCache migration + ingestion integration
+- [x] 83-02-PLAN.md -- Feed endpoint with geo-relevance sorting + frontend feed rewrite
 
 ### Phase 84: AI Analysis Upgrade + Doorlooptijd
 **Goal**: AI analysis produces meaningful juridisch klimaat scores because it operates on filtered, location-relevant rulings with vergunningstype classification, and users can see average procedure durations per gemeente
@@ -82,11 +82,11 @@ Plans:
   2. Each ruling gets a vergunningstype classification (dakopbouw, nieuwbouw, bestemmingswijziging, etc.) visible as a label
   3. Changing filters does not trigger re-analysis of previously analyzed rulings (per-ruling caching, not per-batch)
   4. Average doorlooptijd per gemeente per vergunningstype is displayed as a statistic, with "onvoldoende data" shown when filing dates are unavailable
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 84-01: Enhanced AI analysis with per-ruling caching + vergunningstype extraction
-- [ ] 84-02: DoorlooptijdService + doorlooptijd display
+- [ ] 84-01-PLAN.md -- Per-ruling AI analysis + vergunningstype taxonomy + DoorlooptijdService + schema migration
+- [ ] 84-02-PLAN.md -- Frontend auto-analysis trigger + vergunningstype badges + doorlooptijd statistics display
 
 ### Phase 85: Explorer UI
 **Goal**: Users can filter and explore court rulings across multiple dimensions (scope, vergunningstype, uitkomst, tijdsperiode) with a responsive interface that prevents empty-result frustration
@@ -370,4 +370,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-07 -- Phase 83 plans created*
+*Last updated: 2026-03-07 -- Phase 84 plans created*
