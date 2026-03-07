@@ -384,6 +384,33 @@ async def area_scan_job(
             except Exception as e:
                 logger.warning(f"Scan {scan_id}: CBS nabijheid fetch failed (non-fatal): {e}")
 
+            # Fetch CBS Crime data (dataderden.cbs.nl OData v3)
+            try:
+                from app.government_apis.cbs_crime import cbs_crime_client
+
+                aantal_inwoners = (
+                    scan.neighborhood_metrics.get("data", {}).get("demografie", {}).get("aantal_inwoners")
+                    if scan.neighborhood_metrics
+                    else None
+                )
+                crime_data = await cbs_crime_client.get_crime_data(
+                    client=http_client,
+                    gemeente_code=scan.gemeente_code,
+                    wijk_naam=scan.wijk_naam,
+                    inwoners=aantal_inwoners,
+                )
+                if crime_data:
+                    if scan.neighborhood_metrics:
+                        scan.neighborhood_metrics = {
+                            **scan.neighborhood_metrics,
+                            "criminaliteit": crime_data,
+                        }
+                    else:
+                        scan.neighborhood_metrics = {"criminaliteit": crime_data}
+                    logger.info(f"Scan {scan_id}: successfully fetched CBS crime data")
+            except Exception as e:
+                logger.warning(f"Scan {scan_id}: CBS crime fetch failed (non-fatal): {e}")
+
             try:
                 bag_features = await bag_wfs_client.get_panden_in_bbox(
                     scan.bbox_minx,
