@@ -58,8 +58,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 77.1-01-PLAN.md — Primitives + ParcelDetailModal decomposition� Primitives + ParcelDetailModal decomposition
-- [ ] 77.1-02-PLAN.md — WijkDetailView tabs + LocationScoreCard + WijkMapPanel� WijkDetailView tabs + LocationScoreCard + WijkMapPanel
+- [ ] 77.1-01-PLAN.md — Primitives + ParcelDetailModal decomposition� Primitives + ParcelDetailModal decomposition
+- [ ] 77.1-02-PLAN.md — WijkDetailView tabs + LocationScoreCard + WijkMapPanel� WijkDetailView tabs + LocationScoreCard + WijkMapPanel
 
 ### Phase 78: Extended CBS Demographics & Income
 **Goal**: Users can assess neighborhood demographic profile and income dynamics to validate target audience fit for residential development
@@ -171,7 +171,7 @@ Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 77.1 UX Architectuur & Component Refactor | 0/? | Not started | - |
-| 78. Extended CBS Demographics & Income | 0/2 | Planned | - |
+| 78. Extended CBS Demographics & Income | 1/2 | In Progress|  |
 | 79. Voorzieningen Nabijheid | 0/? | Not started | - |
 | 80. Criminaliteitsdata | 0/? | Not started | - |
 | 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
