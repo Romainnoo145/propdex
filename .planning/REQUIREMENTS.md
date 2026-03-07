@@ -10,10 +10,10 @@
 
 - [x] **PIPE-01**: Dedicated `ruling_cache` PostgreSQL table (org-agnostic, ECLI as primary key) stores court ruling metadata and text
 - [x] **PIPE-02**: EcliRegistry module maps 342 gemeenten to 11 rechtbanken + translates 16 pre-2013 court codes
-- [ ] **PIPE-03**: RechtspraakClient uses ECLI court-code prefix filtering to scope results to correct arrondissement
-- [ ] **PIPE-04**: RechtspraakClient supports date range filtering via API `date` parameter (from/to)
-- [ ] **PIPE-05**: Ruling ingestion ARQ background job fetches 50+ results per court region with batch document retrieval
-- [ ] **PIPE-06**: Per-gemeente caching with 7-day TTL — repeated views load from cache instantly
+- [x] **PIPE-03**: RechtspraakClient uses ECLI court-code prefix filtering to scope results to correct arrondissement
+- [x] **PIPE-04**: RechtspraakClient supports date range filtering via API `date` parameter (from/to)
+- [x] **PIPE-05**: Ruling ingestion ARQ background job fetches 50+ results per court region with batch document retrieval
+- [x] **PIPE-06**: Per-gemeente caching with 7-day TTL — repeated views load from cache instantly
 
 ### Geo-Contextualization
 
@@ -88,10 +88,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PIPE-01 | Phase 82 | Complete |
 | PIPE-02 | Phase 82 | Complete |
-| PIPE-03 | Phase 82 | Pending |
-| PIPE-04 | Phase 82 | Pending |
-| PIPE-05 | Phase 82 | Pending |
-| PIPE-06 | Phase 82 | Pending |
+| PIPE-03 | Phase 82 | Complete |
+| PIPE-04 | Phase 82 | Complete |
+| PIPE-05 | Phase 82 | Complete |
+| PIPE-06 | Phase 82 | Complete |
 | GEO-01 | Phase 83 | Pending |
 | GEO-02 | Phase 83 | Pending |
 | GEO-03 | Phase 83 | Pending |

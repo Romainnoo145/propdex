@@ -12,26 +12,26 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 82 of 86 (Ruling Cache + ECLI Court Mapping)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-07 -- Completed 82-01-PLAN.md
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-03-07 -- Completed 82-02-PLAN.md
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 4min
-- Total execution time: 4min
+- Total plans completed: 2
+- Average duration: 3.5min
+- Total execution time: 7min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 82 | 1 | 4min | 4min |
+| 82 | 2 | 7min | 3.5min |
 
 *Updated after each plan completion*
 
@@ -54,6 +54,10 @@ Progress: [█████░░░░░] 50%
 - Bekendmakingen cross-reference deferred (no shared identifier between Rechtspraak and SRU)
 - [Phase 82]: 346 gemeenten mapped (includes historical/merged names for older ruling compatibility)
 - [Phase 82]: RulingCache uses TimestampMixin but NOT TenantMixin (court rulings are public data)
+- [Phase 82]: Client-side ECLI filtering via search_by_court() + extract_court_code()
+- [Phase 82]: Semaphore(5) concurrency for batch document fetching
+- [Phase 82]: ARQ job dedup via _job_id to prevent duplicate ingestion
+- [Phase 82]: Stale-while-revalidate pattern for ruling cache endpoint
 
 ### Pending Todos
 
@@ -68,12 +72,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T14:11:23.146Z
-**Stopped At:** Completed 82-01-PLAN.md
+**Last Session:** 2026-03-07T14:15:36Z
+**Stopped At:** Completed 82-02-PLAN.md (Phase 82 complete)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 82` (plan 02)
+**Next Action:** `/gsd:execute-phase 83` (Geo Contextualization Feed)
 
 ---
 
-*State updated: 2026-03-07 -- Completed 82-01-PLAN.md*
+*State updated: 2026-03-07 -- Completed 82-02-PLAN.md*

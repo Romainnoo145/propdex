@@ -34,7 +34,7 @@
 - Integer phases (82-86): Planned milestone work
 - Decimal phases (e.g., 82.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline
+- [x] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline (completed 2026-03-07)
 - [ ] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente
 - [ ] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation
 - [ ] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering
@@ -52,7 +52,7 @@
   3. Repeated views of the same gemeente load rulings from cache instantly (no Rechtspraak API calls) within the 7-day TTL window
   4. RechtspraakClient scopes search results to the correct court region using ECLI court-code prefix filtering, not national free-text search
   5. Date range filtering works -- user can restrict results to last 2, 5, or 10 years
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 82-01: EcliRegistry + RulingCache model + Alembic migration
@@ -124,7 +124,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. Ruling Cache + ECLI Court Mapping | 1/2 | In Progress|  |
+| 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete   | 2026-03-07 |
 | 83. Geo-Contextualization + Gemeente Feed | 0/2 | Not started | - |
 | 84. AI Analysis Upgrade + Doorlooptijd | 0/2 | Not started | - |
 | 85. Explorer UI | 0/2 | Not started | - |
