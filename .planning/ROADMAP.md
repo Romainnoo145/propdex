@@ -172,7 +172,7 @@ Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
 |-------|----------------|--------|-----------|
 | 77.1 UX Architectuur & Component Refactor | 0/? | Not started | - |
 | 78. Extended CBS Demographics & Income | 2/2 | Complete    | 2026-03-07 |
-| 79. Voorzieningen Nabijheid | 2/2 | Complete   | 2026-03-07 |
+| 79. Voorzieningen Nabijheid | 2/2 | Complete    | 2026-03-07 |
 | 80. Criminaliteitsdata | 0/? | Not started | - |
 | 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
 | 82. SRU-Rechtspraak Correlatie | 0/? | Not started | - |
