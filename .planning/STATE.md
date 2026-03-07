@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 82
+**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 83
 
 ---
 
 ## Current Position
 
-Phase: 82 of 86 (Ruling Cache + ECLI Court Mapping)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-03-07 -- Completed 82-02-PLAN.md
+Phase: 83 of 86 (Geo Contextualization Feed)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-07 -- Completed 83-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 3.5min
-- Total execution time: 7min
+- Total plans completed: 3
+- Average duration: 3.3min
+- Total execution time: 10min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 82 | 2 | 7min | 3.5min |
+| 83 | 1 | 3min | 3min |
 
 *Updated after each plan completion*
 
@@ -58,6 +59,9 @@ Progress: [██████████] 100%
 - [Phase 82]: Semaphore(5) concurrency for batch document fetching
 - [Phase 82]: ARQ job dedup via _job_id to prevent duplicate ingestion
 - [Phase 82]: Stale-while-revalidate pattern for ruling cache endpoint
+- [Phase 83]: Progressive word-prefix matching for gemeente extraction from legal text
+- [Phase 83]: RVS rulings stored with gemeente_query=None, geo-tagged via text extraction
+- [Phase 83]: Shared Semaphore(5) for combined rechtbank + RVS document fetching
 
 ### Pending Todos
 
@@ -72,12 +76,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T14:15:36Z
-**Stopped At:** Completed 82-02-PLAN.md (Phase 82 complete)
+**Last Session:** 2026-03-07T15:22:53Z
+**Stopped At:** Completed 83-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 83` (Geo Contextualization Feed)
+**Next Action:** Execute 83-02-PLAN.md (Geo Contextualization Feed plan 2)
 
 ---
 
-*State updated: 2026-03-07 -- Completed 82-02-PLAN.md*
+*State updated: 2026-03-07 -- Completed 83-01-PLAN.md*

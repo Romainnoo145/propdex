@@ -17,10 +17,10 @@
 
 ### Geo-Contextualization
 
-- [ ] **GEO-01**: GeoContextualizer extracts gemeente names from ruling text using regex patterns ("college van B&W van {gemeente}", "te {gemeente}", etc.)
-- [ ] **GEO-02**: Extracted gemeente names validated against known CBS gemeente list
-- [ ] **GEO-03**: Two-pass geo-scoping: ECLI prefix for arrondissement (reliable), text extraction for gemeente (supplementary)
-- [ ] **GEO-04**: RVS (Raad van State) rulings geo-tagged via text extraction (no geographic ECLI indicator)
+- [x] **GEO-01**: GeoContextualizer extracts gemeente names from ruling text using regex patterns ("college van B&W van {gemeente}", "te {gemeente}", etc.)
+- [x] **GEO-02**: Extracted gemeente names validated against known CBS gemeente list
+- [x] **GEO-03**: Two-pass geo-scoping: ECLI prefix for arrondissement (reliable), text extraction for gemeente (supplementary)
+- [x] **GEO-04**: RVS (Raad van State) rulings geo-tagged via text extraction (no geographic ECLI indicator)
 
 ### Gemeente Feed
 
@@ -92,10 +92,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-04 | Phase 82 | Complete |
 | PIPE-05 | Phase 82 | Complete |
 | PIPE-06 | Phase 82 | Complete |
-| GEO-01 | Phase 83 | Pending |
-| GEO-02 | Phase 83 | Pending |
-| GEO-03 | Phase 83 | Pending |
-| GEO-04 | Phase 83 | Pending |
+| GEO-01 | Phase 83 | Complete |
+| GEO-02 | Phase 83 | Complete |
+| GEO-03 | Phase 83 | Complete |
+| GEO-04 | Phase 83 | Complete |
 | FEED-01 | Phase 83 | Pending |
 | FEED-02 | Phase 83 | Pending |
 | FEED-03 | Phase 83 | Pending |
