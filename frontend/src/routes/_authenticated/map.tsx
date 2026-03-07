@@ -41,6 +41,9 @@ import {
   setBAGPandVisibility,
 } from '@/components/map/BAGPandLayer'
 import {
+  setParcelBoundariesVisibility,
+} from '@/components/map/ParcelBoundariesLayer'
+import {
   addParcelScoreLayer,
   updateParcelScoreSource,
   PARCEL_SCORE_FILL_LAYER_ID,
@@ -442,15 +445,30 @@ function MapPage() {
       : null
     if (visible) {
       currentCenteredWijkNameRef.current = readCenteredWijkName()
+
+      // Percelen ON → turn off gemeenten (exclusive modes)
+      if (layerState.showGemeenten && map) {
+        layerActions.setGemeenten(false)
+        setGemeenteBoundariesVisibility(map, false)
+        if (wijkGeojsonRef.current) {
+          removeWijkBoundariesLayer(map)
+          setWijkGeojson(null)
+        }
+        removeScanAreaHighlight(map)
+        setSelectedArea(null)
+        setActiveGemeente(null)
+        setActivePanel(null)
+      }
     } else {
       currentCenteredWijkNameRef.current = null
+      layerActions.setActiveParcelOverlay(null)
     }
 
     if (!visible) return
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, layerActions, mapRef, readCenteredWijkName])
+  }, [activeScanId, activatePreferredScan, layerActions, layerState.showGemeenten, mapRef, readCenteredWijkName])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -1192,7 +1210,8 @@ function MapPage() {
     }
 
     const handleParcelClick = (e: maplibregl.MapMouseEvent) => {
-      const parcelModeActive = isParcelsVisibleRef.current || !!activeScanIdRef.current
+      // Only respond to clicks when the Percelen toggle is ON
+      const parcelModeActive = isParcelsVisibleRef.current
       const requestSeq = ++parcelClickRequestSeqRef.current
       const feature = parcelModeActive ? queryTopParcelFeature(e.point) : null
       if (feature?.properties) {
@@ -1295,7 +1314,7 @@ function MapPage() {
     }
 
     const handleCursorMove = (e: maplibregl.MapMouseEvent) => {
-      const parcelModeActive = isParcelsVisibleRef.current || !!activeScanIdRef.current
+      const parcelModeActive = isParcelsVisibleRef.current
       if (!parcelModeActive || map.getZoom() < PARCEL_INTERACTION_MIN_ZOOM) {
         map.getCanvas().style.cursor = ''
         return
@@ -1622,20 +1641,31 @@ function MapPage() {
       const next = !layerState.showGemeenten
       layerActions.setGemeenten(next)
 
-      if (next || !mapRef.current) return
-
+      if (!mapRef.current) return
       const map = mapRef.current
+
+      if (next) {
+        // Gemeenten ON → turn off parcels (exclusive modes)
+        if (layerState.showParcels) {
+          handleParcelsLayerToggle(false)
+          setParcelBoundariesVisibility(map, false)
+        }
+        return
+      }
+
+      // Gemeenten OFF → hide boundaries, clear all gemeente/wijk context
       setGemeenteBoundariesVisibility(map, false)
-      // Also clear gemeente context and wijk layer
       if (wijkGeojsonRef.current) {
         removeWijkBoundariesLayer(map)
         setWijkGeojson(null)
       }
+      removeScanAreaHighlight(map)
+      setSelectedArea(null)
       setActiveGemeente(null)
       setActivePanel(null)
       map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
     },
-    [layerState.showGemeenten, layerActions, mapRef]
+    [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle]
   )
 
   // Handle direct gemeente/wijk navigation from projects flow.
@@ -1781,40 +1811,45 @@ function MapPage() {
     (visible: boolean) => {
       if (!mapRef.current) return
       setParcelScoreVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('potential')
     },
-    []
+    [layerActions]
   )
 
   const handleBuiltStatusToggle = useCallback(
     (visible: boolean) => {
       if (!mapRef.current) return
       setParcelBuiltStatusVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('built_status')
     },
-    []
+    [layerActions]
   )
 
   const handleReportStatusToggle = useCallback(
     (visible: boolean) => {
       if (!mapRef.current) return
       setParcelReportStatusVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('report_coverage')
     },
-    []
+    [layerActions]
   )
 
   const handleVacancySignalToggle = useCallback(
     (visible: boolean) => {
       if (!mapRef.current) return
       setParcelVacancySignalVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('vacancy_signal')
     },
-    []
+    [layerActions]
   )
 
   const handleBuildCapacityToggle = useCallback(
     (visible: boolean) => {
       if (!mapRef.current) return
       setParcelBuildCapacityVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('build_capacity')
     },
-    []
+    [layerActions]
   )
 
   const handleScannedScopeToggle = useCallback((visible: boolean) => {
@@ -1977,8 +2012,24 @@ function MapPage() {
   // (address search, URL navigation, report focus flows).
   // Logic moved here from LayerToggle so map.tsx is the sole authority.
   useEffect(() => {
-    if (autoEnableParcelsKey && !layerState.showParcels) {
+    if (!autoEnableParcelsKey) return
+    if (!layerState.showParcels) {
       handleParcelsLayerToggle(true)
+    } else if (layerState.showGemeenten) {
+      // Parcels already on but gemeenten still showing (e.g. navigating
+      // from gemeente results to a parcel) — turn off gemeenten mode.
+      const map = mapRef.current
+      if (map) {
+        layerActions.setGemeenten(false)
+        setGemeenteBoundariesVisibility(map, false)
+        if (wijkGeojsonRef.current) {
+          removeWijkBoundariesLayer(map)
+          setWijkGeojson(null)
+        }
+        removeScanAreaHighlight(map)
+        setSelectedArea(null)
+        setActiveGemeente(null)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEnableParcelsKey])
