@@ -1,12 +1,14 @@
-"""Anthropic Claude API client for PDF bestemmingsplan parsing."""
+"""Anthropic Claude API client for PDF bestemmingsplan parsing and jurisprudence analysis."""
 
 import base64
+import json
 import logging
+from datetime import datetime
 
 import anthropic
 
-from app.ai.prompts import BESTEMMINGSPLAN_PARSING_PROMPT
-from app.ai.schemas import BestemmingsplanParsed
+from app.ai.prompts import BESTEMMINGSPLAN_PARSING_PROMPT, JURIDISCH_ANALYSE_PROMPT
+from app.ai.schemas import BestemmingsplanParsed, JuridischAnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -167,4 +169,147 @@ class ClaudeClient:
             logger.exception(f"Unexpected error parsing PDF with Claude: {e}")
             raise AIParsingError(
                 f"Unexpected parsing error: {e}", retriable=False
+            ) from e
+
+    async def analyze_jurisprudence(
+        self,
+        rulings: list[dict],
+        gemeente_naam: str,
+        max_chars_per_ruling: int = 5000,
+    ) -> JuridischAnalysisResult:
+        """
+        Analyze Dutch court rulings for property development risk assessment.
+
+        Truncates ruling texts, sends to Claude for analysis, computes
+        vergunnings_succeskans and juridisch_klimaat_score in Python.
+
+        Args:
+            rulings: List of dicts with keys: ecli, text, instantie, datum_uitspraak
+            gemeente_naam: Municipality name for context
+            max_chars_per_ruling: Max characters per ruling text (default 5000)
+
+        Returns:
+            JuridischAnalysisResult with per-ruling analysis and aggregated scores
+
+        Raises:
+            AIParsingError: If API call fails or response cannot be parsed
+        """
+        try:
+            # Truncate ruling texts
+            truncated_rulings = []
+            for r in rulings:
+                truncated_rulings.append({
+                    "ecli": r["ecli"],
+                    "instantie": r.get("instantie", ""),
+                    "datum_uitspraak": r.get("datum_uitspraak", ""),
+                    "text": r.get("text", "")[:max_chars_per_ruling],
+                })
+
+            # Build user message
+            user_message = (
+                f"Gemeente: {gemeente_naam}\n\n"
+                f"Uitspraken:\n{json.dumps(truncated_rulings, ensure_ascii=False, indent=2)}"
+            )
+
+            logger.info(
+                "Analyzing %d rulings for %s with Claude",
+                len(rulings),
+                gemeente_naam,
+            )
+
+            response = await self.client.messages.create(
+                model=self.MODEL,
+                max_tokens=self.MAX_TOKENS,
+                system=JURIDISCH_ANALYSE_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_message},
+                ],
+            )
+
+            # Extract text from response
+            if not response.content:
+                raise AIParsingError("Claude returned empty response", retriable=True)
+
+            text_content = None
+            for block in response.content:
+                if block.type == "text":
+                    text_content = block.text
+                    break
+
+            if not text_content:
+                raise AIParsingError(
+                    "No text content in Claude response", retriable=True
+                )
+
+            # Strip markdown code fences
+            json_text = text_content.strip()
+            if json_text.startswith("```json"):
+                json_text = json_text[7:]
+            if json_text.startswith("```"):
+                json_text = json_text[3:]
+            if json_text.endswith("```"):
+                json_text = json_text[:-3]
+            json_text = json_text.strip()
+
+            # Parse partial response (Claude returns without computed fields)
+            try:
+                # Parse with placeholder scores — we compute them below
+                partial = json.loads(json_text)
+
+                # Compute vergunnings_succeskans in Python
+                ruling_analyses = partial.get("ruling_analyses", [])
+                total = max(len(ruling_analyses), 1)
+                toegewezen = sum(
+                    1 for r in ruling_analyses if r.get("uitkomst") == "toegewezen"
+                )
+                afgewezen = sum(
+                    1 for r in ruling_analyses if r.get("uitkomst") == "afgewezen"
+                )
+
+                partial["vergunnings_succeskans"] = round(100 * toegewezen / total)
+                partial["juridisch_klimaat_score"] = round(100 - (100 * afgewezen / total))
+                partial["analyzed_at"] = datetime.utcnow().isoformat()
+
+                result = JuridischAnalysisResult.model_validate(partial)
+                logger.info(
+                    "Successfully analyzed %d rulings for %s: klimaat=%d, succeskans=%d",
+                    len(result.ruling_analyses),
+                    gemeente_naam,
+                    result.juridisch_klimaat_score,
+                    result.vergunnings_succeskans,
+                )
+                return result
+
+            except Exception as e:
+                logger.error(f"Failed to validate Claude response JSON: {e}")
+                logger.debug(f"Response text: {json_text[:500]}...")
+                raise AIParsingError(
+                    f"Invalid JSON structure from Claude: {e}", retriable=False
+                ) from e
+
+        except anthropic.RateLimitError as e:
+            logger.warning(f"Claude rate limit hit: {e}")
+            raise AIParsingError(
+                "AI service rate limit exceeded - try again later", retriable=True
+            ) from e
+
+        except anthropic.APIConnectionError as e:
+            logger.error(f"Claude connection error: {e}")
+            raise AIParsingError(
+                "Could not connect to AI service", retriable=True
+            ) from e
+
+        except anthropic.APIError as e:
+            logger.error(f"Claude API error: {e}")
+            raise AIParsingError(
+                f"AI service error: {e}", retriable=False
+            ) from e
+
+        except AIParsingError:
+            raise
+
+        except Exception as e:
+            logger.exception(f"Unexpected error in jurisprudence analysis: {e}")
+            raise AIParsingError(
+                f"Unexpected analysis error: {e}", retriable=False
             ) from e
