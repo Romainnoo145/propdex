@@ -74,8 +74,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 78-01: TBD
-- [ ] 78-02: TBD
+- [ ] 78-01-PLAN.md — Extend CBS client with 14 measure codes + update TypeScript types
+- [ ] 78-02-PLAN.md — Demographic card components + derived indicators in WijkDetailView
 
 ### Phase 79: Voorzieningen Nabijheid
 **Goal**: Users can evaluate facility accessibility of a neighborhood to assess livability and attractiveness for residents
@@ -171,7 +171,7 @@ Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 77.1 UX Architectuur & Component Refactor | 0/? | Not started | - |
-| 78. Extended CBS Demographics & Income | 0/? | Not started | - |
+| 78. Extended CBS Demographics & Income | 0/2 | Planned | - |
 | 79. Voorzieningen Nabijheid | 0/? | Not started | - |
 | 80. Criminaliteitsdata | 0/? | Not started | - |
 | 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
