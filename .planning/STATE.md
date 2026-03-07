@@ -11,21 +11,21 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 79 of 81 (Voorzieningen Nabijheid)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-03-07 -- Completed 79-01-PLAN.md
+Phase: 79 of 81 (Voorzieningen Nabijheid) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-03-07 -- Completed 79-02-PLAN.md
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v13.0)
+- Total plans completed: 4 (v13.0)
 - Average duration: 2min
-- Total execution time: 0.12 hours
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
@@ -34,6 +34,7 @@ Progress: [█████░░░░░] 50%
 | Phase 78 P01 | 2min | 2 tasks | 2 files |
 | Phase 78 P02 | 2min | 2 tasks | 5 files |
 | Phase 79 P01 | 3min | 2 tasks | 2 files |
+| Phase 79 P02 | 2min | 2 tasks | 3 files |
 
 *Updated after each plan completion*
 
@@ -66,6 +67,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 78]: Cards rendered sequentially -- Phase 77.1 will restructure into tabs
 - [Phase 79]: Resolver methods accept optional dataset_id for multi-dataset CBS queries
 - [Phase 79]: Nabijheid output keys mapped afstand_X to X_km for frontend consumption
+- [Phase 79]: CbsNabijheid at root level of CbsNeighborhoodMetrics (not inside data), matching backend storage
+- [Phase 79]: Distance thresholds: daily 1/3km, transport 3/10km for green/amber/red coloring
 
 ### Pending Todos
 
@@ -82,11 +85,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T11:11:30Z
-**Stopped At:** Completed 79-01-PLAN.md
+**Last Session:** 2026-03-07T11:14:49Z
+**Stopped At:** Completed 79-02-PLAN.md (Phase 79 complete)
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 79` (Plan 02)
+**Next Action:** `/gsd:plan-phase 80` (Criminaliteitsdata)
 
 ---
 

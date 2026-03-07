@@ -36,7 +36,7 @@
 
 - [ ] **Phase 77.1: UX Architectuur & Component Refactor** *(INSERTED)* - Tabbed section containers, scorecard shell, ReportDetailPage decomposition (<300 LOC per file), progressive disclosure infrastructure
 - [x] **Phase 78: Extended CBS Demographics & Income** - Extend existing CBS client with 14 new measure codes for age, household, income display and derived doelgroep classification (completed 2026-03-07)
-- [ ] **Phase 79: Voorzieningen Nabijheid** - CBS Nabijheid dataset (86134NED) integration for facility proximity distances per wijk
+- [x] **Phase 79: Voorzieningen Nabijheid** - CBS Nabijheid dataset (86134NED) integration for facility proximity distances per wijk (completed 2026-03-07)
 - [ ] **Phase 80: Criminaliteitsdata** - OData v3 client for dataderden.cbs.nl crime statistics per wijk
 - [ ] **Phase 81: Locatie-Score & Investeringsprofiel** - Weighted composite location score aggregating all prior data dimensions
 - [ ] **Phase 82: SRU-Rechtspraak Correlatie** - Auto-link permit announcements to court cases by address/postcode for "was this permit challenged?" intelligence
@@ -172,7 +172,7 @@ Phases execute in numeric order: 77.1 -> 78 -> 79 -> 80 -> 81 -> 82 -> 83 -> 84
 |-------|----------------|--------|-----------|
 | 77.1 UX Architectuur & Component Refactor | 0/? | Not started | - |
 | 78. Extended CBS Demographics & Income | 2/2 | Complete    | 2026-03-07 |
-| 79. Voorzieningen Nabijheid | 1/2 | In Progress|  |
+| 79. Voorzieningen Nabijheid | 2/2 | Complete   | 2026-03-07 |
 | 80. Criminaliteitsdata | 0/? | Not started | - |
 | 81. Locatie-Score & Investeringsprofiel | 0/? | Not started | - |
 | 82. SRU-Rechtspraak Correlatie | 0/? | Not started | - |

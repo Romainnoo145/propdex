@@ -25,7 +25,7 @@
 ### Voorzieningen Nabijheid
 
 - [x] **VOORZ-01**: CBS Nabijheid client (86134NED) haalt afstanden op via OData v4 met dezelfde patronen als bestaande CBS client
-- [ ] **VOORZ-02**: Wijk detail toont afstand tot supermarkt, huisarts, school, kinderdagverblijf, treinstation en OV-halte
+- [x] **VOORZ-02**: Wijk detail toont afstand tot supermarkt, huisarts, school, kinderdagverblijf, treinstation en OV-halte
 - [x] **VOORZ-03**: Nabijheidsdata opgeslagen in neighborhood_metrics JSONB onder "nabijheid" key
 
 ### Criminaliteitsdata
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEMO-06 | Phase 78 | Complete |
 | DEMO-07 | Phase 78 | Complete |
 | VOORZ-01 | Phase 79 | Complete |
-| VOORZ-02 | Phase 79 | Pending |
+| VOORZ-02 | Phase 79 | Complete |
 | VOORZ-03 | Phase 79 | Complete |
 | CRIME-01 | Phase 80 | Pending |
 | CRIME-02 | Phase 80 | Pending |
