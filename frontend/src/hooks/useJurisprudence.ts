@@ -3,11 +3,13 @@ import { useAuth } from '@/lib/auth/useAuth'
 import {
     searchJurisprudence,
     getJurisprudenceDoc,
+    getGemeenteRulingsFeed,
     triggerJurisprudenceAnalysis,
     pollJurisprudenceAnalysis,
     type JurisprudenceResult,
     type JurisprudenceDocument,
     type JurisprudenceAnalysisResponse,
+    type GemeenteRulingsFeedResponse,
 } from '@/lib/api'
 
 export function useJurisprudenceSearch(query: string, enabled = true) {
@@ -17,11 +19,23 @@ export function useJurisprudenceSearch(query: string, enabled = true) {
         queryKey: ['jurisprudence', 'search', query],
         queryFn: async () => {
             if (!query.trim()) return { status: 'empty', results: [] }
-            return searchJurisprudence(query, accessToken!)
+            return searchJurisprudence(query, accessToken!, 25)
         },
         enabled: !!accessToken && enabled && query.trim().length > 3,
         staleTime: 5 * 60 * 1000, // 5 min cache
         retry: 1, // Only retry once since rate limits are tight
+    })
+}
+
+export function useGemeenteRulingsFeed(gemeenteNaam: string) {
+    const { accessToken } = useAuth()
+
+    return useQuery<GemeenteRulingsFeedResponse, Error>({
+        queryKey: ['jurisprudence', 'feed', gemeenteNaam],
+        queryFn: () => getGemeenteRulingsFeed(gemeenteNaam, accessToken),
+        enabled: !!accessToken && gemeenteNaam.length > 0,
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: true,
     })
 }
 

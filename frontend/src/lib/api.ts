@@ -1251,6 +1251,58 @@ export async function getJurisprudenceDoc(
 }
 
 // ==========================================
+// Gemeente Rulings Feed types + bindings
+// ==========================================
+
+export interface GemeenteRulingsFeedItem {
+  ecli: string
+  court_code: string
+  instantie: string
+  datum_uitspraak: string
+  title: string
+  summary: string
+  extracted_gemeente: string | null
+  geo_relevance: 'gemeente' | 'arrondissement'
+  uitkomst: string | null
+  fetched_at: string | null
+}
+
+export interface WinLossRatio {
+  toegewezen: number
+  afgewezen: number
+  gedeeltelijk: number
+  onbekend: number
+  total: number
+}
+
+export interface GemeenteRulingsFeedResponse {
+  status: string
+  rulings: GemeenteRulingsFeedItem[]
+  win_loss: WinLossRatio
+  ingestion_status: 'fresh' | 'refreshing' | 'pending'
+  count: number
+}
+
+/**
+ * Fetch auto-populated ruling feed for a gemeente from cached rulings.
+ *
+ * GET /api/jurisprudence/rulings/{gemeenteNaam}
+ *
+ * @param gemeenteNaam - Municipality name
+ * @param accessToken - JWT access token
+ * @returns Feed response with rulings, win_loss ratio, and ingestion status
+ */
+export async function getGemeenteRulingsFeed(
+  gemeenteNaam: string,
+  accessToken: string | null
+): Promise<GemeenteRulingsFeedResponse> {
+  return apiFetch<GemeenteRulingsFeedResponse>(
+    `/api/jurisprudence/rulings/${encodeURIComponent(gemeenteNaam)}`,
+    { method: 'GET', accessToken }
+  )
+}
+
+// ==========================================
 // Jurisprudence AI Analysis types + bindings
 // ==========================================
 

@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react'
-import { SearchInput } from '@/components/primitives'
+import { useState } from 'react'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import {
-    useJurisprudenceSearch,
+    useGemeenteRulingsFeed,
     useJurisprudenceDoc,
     useJurisprudenceAnalysis,
     useTriggerAnalysis,
 } from '@/hooks/useJurisprudence'
 import { JuridischKlimaatCard } from './JuridischKlimaatCard'
 import { X, Scale, FileText, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import type { JuridischAnalysisResult } from '@/lib/api'
+import type { JuridischAnalysisResult, WinLossRatio } from '@/lib/api'
 
 interface JurisprudenceSectionProps {
     gemeenteNaam: string
@@ -29,7 +28,71 @@ function parseCourtFromTitle(ecli: string, title: string): string {
     return parts[0] ?? ''
 }
 
-const DISCLAIMER_TEXT = 'Indicatief — gebaseerd op historische uitspraken, geen juridisch advies'
+const DISCLAIMER_TEXT = 'Indicatief -- gebaseerd op historische uitspraken, geen juridisch advies'
+
+/**
+ * Win/loss ratio bar rendered as compact pill badges.
+ */
+function WinLossBar({ winLoss }: { winLoss: WinLossRatio }) {
+    if (winLoss.total === 0) {
+        return (
+            <p className="text-[10px] text-grey-500 italic">
+                Nog geen uitkomstdata
+            </p>
+        )
+    }
+
+    const items = [
+        { key: 'toegewezen', label: 'Toegewezen', color: 'bg-emerald-500/20 text-emerald-400', count: winLoss.toegewezen },
+        { key: 'afgewezen', label: 'Afgewezen', color: 'bg-red-500/20 text-red-400', count: winLoss.afgewezen },
+        { key: 'gedeeltelijk', label: 'Gedeeltelijk', color: 'bg-amber-accent/20 text-amber-accent', count: winLoss.gedeeltelijk },
+        { key: 'onbekend', label: 'Onbekend', color: 'bg-grey-700 text-grey-400', count: winLoss.onbekend },
+    ] as const
+
+    return (
+        <div className="flex flex-wrap gap-1.5">
+            {items.map((item) => {
+                if (item.count === 0) return null
+                const pct = Math.round((item.count / winLoss.total) * 100)
+                return (
+                    <span
+                        key={item.key}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${item.color}`}
+                    >
+                        {item.label}: {pct}%
+                    </span>
+                )
+            })}
+        </div>
+    )
+}
+
+/**
+ * Geo-relevance badge shown next to court name.
+ */
+function GeoRelevanceBadge({ relevance }: { relevance: 'gemeente' | 'arrondissement' }) {
+    if (relevance === 'gemeente') {
+        return (
+            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Gemeente
+            </span>
+        )
+    }
+    return (
+        <span className="inline-flex items-center gap-1 text-[10px] text-grey-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-grey-500" />
+            Arrondissement
+        </span>
+    )
+}
+
+const uitkomstColors: Record<string, string> = {
+    toegewezen: 'bg-emerald-500/20 text-emerald-400',
+    afgewezen: 'bg-red-500/20 text-red-400',
+    gedeeltelijk: 'bg-amber-accent/20 text-amber-accent',
+    onbekend: 'bg-grey-700 text-grey-400',
+}
 
 /**
  * Collapsible AI summary badge rendered inside each ruling card.
@@ -47,13 +110,6 @@ function RulingAiSummaryBadge({
 
     const ruling = analysis.ruling_analyses.find((r) => r.ecli === ecli)
     if (!ruling) return null
-
-    const uitkomstColors: Record<string, string> = {
-        toegewezen: 'bg-emerald-500/20 text-emerald-400',
-        afgewezen: 'bg-red-500/20 text-red-400',
-        gedeeltelijk: 'bg-amber-accent/20 text-amber-accent',
-        onbekend: 'bg-grey-700 text-grey-400',
-    }
 
     return (
         <div className="mt-2 rounded-md border border-overlay/5 bg-grey-900/50">
@@ -118,29 +174,20 @@ function RulingAiSummaryBadge({
 }
 
 export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: JurisprudenceSectionProps) {
-    const defaultSearch = `omgevingsvergunning ${gemeenteNaam}`
-    const [searchTerm, setSearchTerm] = useState(defaultSearch)
-    const [debouncedSearch, setDebouncedSearch] = useState(defaultSearch)
     const [selectedEcli, setSelectedEcli] = useState<string | null>(null)
     const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
-    const [analysisGemeente, setAnalysisGemeente] = useState(gemeenteNaam)
+    const [prevGemeente, setPrevGemeente] = useState(gemeenteNaam)
 
-    // Track gemeente changes: when gemeenteNaam prop changes, reset analysis state
-    // Using derived state pattern to avoid set-state-in-effect lint error
-    if (analysisGemeente !== gemeenteNaam) {
-        setAnalysisGemeente(gemeenteNaam)
+    // Track gemeente changes: reset selection and analysis when switching gemeente
+    if (prevGemeente !== gemeenteNaam) {
+        setPrevGemeente(gemeenteNaam)
+        setSelectedEcli(null)
         if (analysisJobId !== null) {
             setAnalysisJobId(null)
         }
     }
 
-    // Debounce the search input
-    useEffect(() => {
-        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500)
-        return () => clearTimeout(timer)
-    }, [searchTerm])
-
-    const { data, isLoading, isError, error } = useJurisprudenceSearch(debouncedSearch)
+    const { data: feedData, isLoading, isError, error } = useGemeenteRulingsFeed(gemeenteNaam)
     const analysisQuery = useJurisprudenceAnalysis(analysisJobId)
     const triggerMutation = useTriggerAnalysis()
 
@@ -154,15 +201,14 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
             analysisQuery.data?.status !== 'failed')
 
     async function handleAnalyze() {
-        if (!data?.results?.length) return
+        if (!feedData?.rulings?.length) return
         try {
             const response = await triggerMutation.mutateAsync({
-                ecliList: data.results.map((r) => r.ecli),
+                ecliList: feedData.rulings.map((r) => r.ecli),
                 gemeenteNaam,
             })
             if (response.status === 'complete') {
-                // Cached result returned immediately — no polling needed
-                // Still set jobId so the query picks it up (it won't poll since status=complete)
+                // Cached result returned immediately -- no polling needed
             } else if (response.job_id) {
                 setAnalysisJobId(response.job_id)
             }
@@ -171,6 +217,9 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
         }
     }
 
+    const isPending = feedData?.ingestion_status === 'pending'
+    const isRefreshing = feedData?.ingestion_status === 'refreshing'
+
     return (
         <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
             <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
@@ -178,17 +227,17 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                 <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
                     Juridisch Klimaat
                 </span>
-                {data?.results && (
+                {feedData?.rulings && (
                     <span className="ml-auto flex items-center gap-1.5 rounded-full bg-grey-800/60 px-2 py-0.5 text-[10px] font-medium text-grey-400">
-                        {data.results.length} resultaten
+                        {feedData.count} uitspraken
                     </span>
                 )}
             </div>
 
             <div className="p-4 flex flex-col md:flex-row gap-4">
-                {/* Left Side: Search & Feed */}
+                {/* Left Side: Feed */}
                 <div className={`flex flex-col gap-3 transition-all duration-300 ${selectedEcli ? 'md:w-1/3' : 'w-full'}`}>
-                    {/* Klimaat card above search when analysis is complete or loading */}
+                    {/* Klimaat card above feed when analysis is complete or loading */}
                     {(analysisResult || isAnalyzing) && (
                         <JuridischKlimaatCard
                             analysis={analysisResult}
@@ -196,17 +245,29 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                         />
                     )}
 
-                    <SearchInput
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Zoek eerdere uitspraken..."
-                        className="w-full h-auto rounded-md border-grey-700 bg-grey-850 py-2.5 text-sm placeholder:text-grey-500 focus:border-amber-accent/50"
-                        name="q_juris"
-                    />
+                    {/* Win/loss ratio bar */}
+                    {feedData?.win_loss && (
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium uppercase text-grey-500">
+                                Uitkomstverdeling
+                            </span>
+                            <WinLossBar winLoss={feedData.win_loss} />
+                        </div>
+                    )}
 
-                    <p className="text-xs text-grey-500 mb-1">
-                        Doorzoek de Raad van State en Rechtbanken op bezwaarschriften, vergunningstrajecten en locatieprecedenten.
-                    </p>
+                    {/* Ingestion status indicators */}
+                    {isPending && (
+                        <div className="flex items-center gap-2 rounded-md bg-amber-accent/5 border border-amber-accent/10 px-3 py-2 text-xs text-amber-accent/80">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Uitspraken worden opgehaald...
+                        </div>
+                    )}
+                    {isRefreshing && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-grey-500">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Verversing actief
+                        </div>
+                    )}
 
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-accent/10 px-2 py-0.5 text-[10px] font-medium text-amber-accent/80 w-fit">
                         <Scale className="w-2.5 h-2.5" />
@@ -225,8 +286,8 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                             <div className="p-4 bg-red-900/20 text-red-400 border border-red-900/40 rounded-lg text-sm">
                                 Fout bij het laden van jurisprudentie: {error.message}
                             </div>
-                        ) : data?.results && data.results.length > 0 ? (
-                            data.results.map((res) => (
+                        ) : feedData?.rulings && feedData.rulings.length > 0 ? (
+                            feedData.rulings.map((res) => (
                                 <button
                                     key={res.ecli}
                                     onClick={() => setSelectedEcli(res.ecli)}
@@ -236,8 +297,11 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                         }`}
                                 >
                                     <div className="flex items-center justify-between text-[11px] text-grey-500">
-                                        <span className="font-medium text-grey-400">{parseCourtFromTitle(res.ecli, res.title)}</span>
-                                        <span>{res.date.split('T')[0]}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-grey-400">{parseCourtFromTitle(res.ecli, res.title)}</span>
+                                            <GeoRelevanceBadge relevance={res.geo_relevance} />
+                                        </div>
+                                        <span>{res.datum_uitspraak?.split('T')[0]}</span>
                                     </div>
                                     <span className="font-mono text-[10px] text-grey-600">{res.ecli.split(':').slice(2).join(':')}</span>
                                     <h4 className="text-sm font-medium leading-snug text-grey-100 group-hover:text-amber-accent/90 transition-colors">
@@ -247,19 +311,30 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                         {res.summary && res.summary !== '-' ? res.summary : 'Geen korte samenvatting beschikbaar in archief.'}
                                     </p>
 
+                                    {/* Uitkomst badge */}
+                                    {res.uitkomst && (
+                                        <span
+                                            className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${uitkomstColors[res.uitkomst] ?? uitkomstColors.onbekend}`}
+                                        >
+                                            {res.uitkomst}
+                                        </span>
+                                    )}
+
                                     {/* AI Summary Badge */}
                                     <RulingAiSummaryBadge ecli={res.ecli} analysis={analysisResult} />
                                 </button>
                             ))
                         ) : (
                             <div className="text-center py-6 text-sm text-grey-500">
-                                Geen uitspraken gevonden voor deze zoekopdracht.
+                                {isPending
+                                    ? 'Uitspraken worden opgehaald. Even geduld...'
+                                    : 'Geen uitspraken gevonden voor deze gemeente.'}
                             </div>
                         )}
                     </div>
 
-                    {/* Analyse button — only show when results exist */}
-                    {data?.results && data.results.length > 0 && (
+                    {/* Analyse button -- only show when rulings exist */}
+                    {feedData?.rulings && feedData.rulings.length > 0 && (
                         <button
                             onClick={handleAnalyze}
                             disabled={isAnalyzing}
