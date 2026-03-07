@@ -15,6 +15,7 @@ from app.models.pdf_document import PDFDocument  # noqa: F401
 from app.models.project import Project  # noqa: F401
 from app.models.refresh_token import RefreshToken
 from app.models.report import SavedReport  # noqa: F401
+from app.models.ruling_cache import RulingCache  # noqa: F401
 from app.models.scan_result import ScanResult  # noqa: F401
 from app.models.user import User
 from app.models.user_notification_state import UserNotificationState  # noqa: F401
@@ -38,4 +39,5 @@ __all__ = [
     "FundaListingSnapshot",
     "GeneratedDossier",
     "JuridischAnalyseJob",
+    "RulingCache",
 ]
