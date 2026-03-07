@@ -4,8 +4,12 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import {
     useJurisprudenceSearch,
     useJurisprudenceDoc,
+    useJurisprudenceAnalysis,
+    useTriggerAnalysis,
 } from '@/hooks/useJurisprudence'
-import { X, Scale, FileText } from 'lucide-react'
+import { JuridischKlimaatCard } from './JuridischKlimaatCard'
+import { X, Scale, FileText, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import type { JuridischAnalysisResult } from '@/lib/api'
 
 interface JurisprudenceSectionProps {
     gemeenteNaam: string
@@ -25,19 +29,147 @@ function parseCourtFromTitle(ecli: string, title: string): string {
     return parts[0] ?? ''
 }
 
+const DISCLAIMER_TEXT = 'Indicatief — gebaseerd op historische uitspraken, geen juridisch advies'
+
+/**
+ * Collapsible AI summary badge rendered inside each ruling card.
+ */
+function RulingAiSummaryBadge({
+    ecli,
+    analysis,
+}: {
+    ecli: string
+    analysis: JuridischAnalysisResult | null
+}) {
+    const [isOpen, setIsOpen] = useState(false)
+
+    if (!analysis) return null
+
+    const ruling = analysis.ruling_analyses.find((r) => r.ecli === ecli)
+    if (!ruling) return null
+
+    const uitkomstColors: Record<string, string> = {
+        toegewezen: 'bg-emerald-500/20 text-emerald-400',
+        afgewezen: 'bg-red-500/20 text-red-400',
+        gedeeltelijk: 'bg-amber-accent/20 text-amber-accent',
+        onbekend: 'bg-grey-700 text-grey-400',
+    }
+
+    return (
+        <div className="mt-2 rounded-md border border-overlay/5 bg-grey-900/50">
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation()
+                    setIsOpen(!isOpen)
+                }}
+                className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-amber-accent/80 hover:text-amber-accent transition-colors"
+            >
+                <Sparkles className="w-3 h-3" />
+                <span className="font-medium">AI samenvatting</span>
+                {isOpen ? (
+                    <ChevronUp className="w-3 h-3 ml-auto" />
+                ) : (
+                    <ChevronDown className="w-3 h-3 ml-auto" />
+                )}
+            </button>
+
+            {isOpen && (
+                <div
+                    className="px-2.5 pb-2.5 space-y-2"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Bezwaargrond */}
+                    <div>
+                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                            Bezwaargrond
+                        </span>
+                        <p className="text-xs text-grey-300">{ruling.bezwaargrond}</p>
+                    </div>
+
+                    {/* Uitkomst badge */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                            Uitkomst
+                        </span>
+                        <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${uitkomstColors[ruling.uitkomst] ?? uitkomstColors.onbekend}`}
+                        >
+                            {ruling.uitkomst}
+                        </span>
+                    </div>
+
+                    {/* Relevantie */}
+                    <div>
+                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                            Relevantie
+                        </span>
+                        <p className="text-xs text-grey-300">{ruling.relevantie}</p>
+                    </div>
+
+                    {/* Disclaimer */}
+                    <p className="text-[10px] italic text-grey-600 pt-1 border-t border-overlay/5">
+                        {DISCLAIMER_TEXT}
+                    </p>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: JurisprudenceSectionProps) {
     const defaultSearch = `omgevingsvergunning ${gemeenteNaam}`
     const [searchTerm, setSearchTerm] = useState(defaultSearch)
     const [debouncedSearch, setDebouncedSearch] = useState(defaultSearch)
     const [selectedEcli, setSelectedEcli] = useState<string | null>(null)
+    const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
+    const [analysisGemeente, setAnalysisGemeente] = useState(gemeenteNaam)
 
-    // Debounce the search input 
+    // Track gemeente changes: when gemeenteNaam prop changes, reset analysis state
+    // Using derived state pattern to avoid set-state-in-effect lint error
+    if (analysisGemeente !== gemeenteNaam) {
+        setAnalysisGemeente(gemeenteNaam)
+        if (analysisJobId !== null) {
+            setAnalysisJobId(null)
+        }
+    }
+
+    // Debounce the search input
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500)
         return () => clearTimeout(timer)
     }, [searchTerm])
 
     const { data, isLoading, isError, error } = useJurisprudenceSearch(debouncedSearch)
+    const analysisQuery = useJurisprudenceAnalysis(analysisJobId)
+    const triggerMutation = useTriggerAnalysis()
+
+    const analysisResult: JuridischAnalysisResult | null =
+        analysisQuery.data?.status === 'complete' ? (analysisQuery.data.result ?? null) : null
+
+    const isAnalyzing =
+        triggerMutation.isPending ||
+        (!!analysisJobId &&
+            analysisQuery.data?.status !== 'complete' &&
+            analysisQuery.data?.status !== 'failed')
+
+    async function handleAnalyze() {
+        if (!data?.results?.length) return
+        try {
+            const response = await triggerMutation.mutateAsync({
+                ecliList: data.results.map((r) => r.ecli),
+                gemeenteNaam,
+            })
+            if (response.status === 'complete') {
+                // Cached result returned immediately — no polling needed
+                // Still set jobId so the query picks it up (it won't poll since status=complete)
+            } else if (response.job_id) {
+                setAnalysisJobId(response.job_id)
+            }
+        } catch {
+            // Error handled by mutation state
+        }
+    }
 
     return (
         <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
@@ -56,6 +188,14 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
             <div className="p-4 flex flex-col md:flex-row gap-4">
                 {/* Left Side: Search & Feed */}
                 <div className={`flex flex-col gap-3 transition-all duration-300 ${selectedEcli ? 'md:w-1/3' : 'w-full'}`}>
+                    {/* Klimaat card above search when analysis is complete or loading */}
+                    {(analysisResult || isAnalyzing) && (
+                        <JuridischKlimaatCard
+                            analysis={analysisResult}
+                            isLoading={isAnalyzing}
+                        />
+                    )}
+
                     <SearchInput
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -106,6 +246,9 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                     <p className="text-xs text-grey-400 line-clamp-2">
                                         {res.summary && res.summary !== '-' ? res.summary : 'Geen korte samenvatting beschikbaar in archief.'}
                                     </p>
+
+                                    {/* AI Summary Badge */}
+                                    <RulingAiSummaryBadge ecli={res.ecli} analysis={analysisResult} />
                                 </button>
                             ))
                         ) : (
@@ -114,6 +257,34 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                             </div>
                         )}
                     </div>
+
+                    {/* Analyse button — only show when results exist */}
+                    {data?.results && data.results.length > 0 && (
+                        <button
+                            onClick={handleAnalyze}
+                            disabled={isAnalyzing}
+                            className="w-full mt-1 py-2.5 px-4 text-sm font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            {isAnalyzing ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Analyseren...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="w-4 h-4" />
+                                    Analyseer juridisch klimaat
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {/* Analysis error */}
+                    {analysisQuery.data?.status === 'failed' && (
+                        <div className="p-3 bg-red-900/20 text-red-400 border border-red-900/40 rounded-lg text-xs">
+                            Analyse mislukt: {analysisQuery.data.error ?? 'Onbekende fout'}
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Side: Document Viewer */}
