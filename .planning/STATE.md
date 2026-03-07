@@ -5,18 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Planning next milestone (v11.0 shipped 2026-03-07)
+**Current focus:** v12.0 Omgevings- & Leefbaarheids-Scorer (defining requirements)
 
 ---
 
 ## Current Position
 
-Phase: 77 of 77 (AI Juridisch Klimaat)
-Plan: 02 of 2 complete
-Status: Complete
-Last activity: 2026-03-07 — Phase 77 Plan 02 complete (AI jurisprudence frontend UI)
-
-Progress: [██████████] 100% (v11.0 milestone)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-07 — Milestone v12.0 started
 
 ---
 

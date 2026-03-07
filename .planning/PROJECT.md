@@ -167,7 +167,16 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-(Next milestone — to be defined via `/gsd:new-milestone`)
+## Current Milestone: v12.0 Omgevings- & Leefbaarheids-Scorer
+
+**Goal:** Transform Propdex from property-level "stenen en regels" intelligence into a platform that quantifies location-level commercial potential — answering "Is het slim om hier te bouwen?" with data-driven context.
+
+**Target features:**
+- Extended CBS neighborhood metrics (inkomen, huishoudenssamenstelling, leeftijdsverdeling)
+- Criminaliteitsdata integration (politie open data / CBS veiligheidscijfers)
+- Voorzieningennabijheid (afstand tot scholen, supermarkten, OV-knooppunten)
+- Multi-year CBS trendanalyse (gentrification/achteruitgang trajectorie)
+- Geaggregeerde locatie-score als commercieel investeringsprofiel
 
 ### Future
 
@@ -254,4 +263,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-07 after v11.0 Open Data Intelligence milestone*
+*Last updated: 2026-03-07 after v12.0 Omgevings- & Leefbaarheids-Scorer milestone start*
