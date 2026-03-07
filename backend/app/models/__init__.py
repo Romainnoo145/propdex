@@ -7,6 +7,7 @@ from app.models.change_read_state import ChangeReadState  # noqa: F401
 from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
 from app.models.generated_dossier import GeneratedDossier  # noqa: F401
+from app.models.jurisprudence_job import JuridischAnalyseJob  # noqa: F401
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache  # noqa: F401
 from app.models.parsing_job import ParsingJob  # noqa: F401
@@ -36,4 +37,5 @@ __all__ = [
     "UserNotificationState",
     "FundaListingSnapshot",
     "GeneratedDossier",
+    "JuridischAnalyseJob",
 ]

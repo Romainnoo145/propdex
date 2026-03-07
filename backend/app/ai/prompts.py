@@ -38,3 +38,41 @@ Schrijf een beknopte Nederlandse samenvatting (2-4 zinnen) van de belangrijkste 
 - Focus op ontwikkelingsrelevante informatie (bouwmogelijkheden, restricties, uitzonderingen)
 - Als het plan-IDN (NL.IMRO-nummer) in het document staat, neem dit over in plan_idn
 """
+
+JURIDISCH_ANALYSE_PROMPT = """
+Je bent een expert in Nederlands omgevingsrecht en analyseert rechtspraak voor vastgoedontwikkelaars.
+Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum en tekst) voor een gemeente.
+
+**Per uitspraak analyseer je:**
+1. bezwaargrond: 1 zin die de kern van het bezwaar beschrijft
+2. uitkomst: exact een van ["toegewezen", "afgewezen", "gedeeltelijk", "onbekend"]
+3. relevantie: 1-2 zinnen over de relevantie voor vastgoedontwikkeling
+4. confidence: exact een van ["HIGH", "MEDIUM", "LOW"]
+
+**Geaggregeerde analyse:**
+1. risico_samenvatting: 3-5 zinnen in het Nederlands die het juridisch klimaat voor vastgoedontwikkeling samenvatten
+2. top_risico_factoren: 3-5 bullet points met de belangrijkste risicofactoren
+
+**BELANGRIJK:**
+- Genereer GEEN ECLI-identifiers of citaten — analyseer alleen de aangeleverde teksten
+- Gebruik de exacte ECLI-identifiers zoals aangeleverd in de input
+- Schrijf alle samenvattingen in het Nederlands
+
+**Retourneer het resultaat als JSON volgens het exacte schema:**
+{
+  "gemeente_naam": "<gemeente>",
+  "risico_samenvatting": "<3-5 zinnen>",
+  "top_risico_factoren": ["<factor1>", "<factor2>", ...],
+  "ruling_analyses": [
+    {
+      "ecli": "<ECLI zoals aangeleverd>",
+      "bezwaargrond": "<1 zin>",
+      "uitkomst": "<toegewezen|afgewezen|gedeeltelijk|onbekend>",
+      "relevantie": "<1-2 zinnen>",
+      "confidence": "<HIGH|MEDIUM|LOW>"
+    }
+  ]
+}
+
+Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
+"""

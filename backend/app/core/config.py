@@ -17,6 +17,7 @@ CACHE_TTL = {
     "bodemloket": 2592000,  # 30 days (soil contamination status changes rarely)
     "bag_3d": 604800,       # 7 days (3D BAG updated quarterly)
     "cbs": 2592000,         # 30 days (CBS data updates annually)
+    "ai_juridisch": 604800, # 7 days (AI jurisprudence analysis)
     # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 

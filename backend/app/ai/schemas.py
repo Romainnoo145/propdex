@@ -157,3 +157,49 @@ class JobStatusResponse(BaseModel):
         default=None,
         description="Error message when failed",
     )
+
+
+class RulingAnalysis(BaseModel):
+    """AI analysis of a single court ruling for property development risk."""
+
+    ecli: str = Field(description="ECLI identifier of the analyzed ruling")
+    bezwaargrond: str = Field(
+        description="1-sentence description of the objection ground"
+    )
+    uitkomst: Literal["toegewezen", "afgewezen", "gedeeltelijk", "onbekend"] = Field(
+        description="Ruling outcome"
+    )
+    relevantie: str = Field(
+        description="1-2 sentence explanation of relevance for property development"
+    )
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
+        description="Confidence in this analysis"
+    )
+
+
+class JuridischAnalysisResult(BaseModel):
+    """Aggregated AI analysis of court rulings for a municipality."""
+
+    gemeente_naam: str = Field(description="Municipality name")
+    juridisch_klimaat_score: int = Field(
+        ge=0, le=100, description="Legal climate score (0=hostile, 100=favorable)"
+    )
+    vergunnings_succeskans: int = Field(
+        ge=0, le=100, description="Permit success probability percentage"
+    )
+    risico_samenvatting: str = Field(
+        description="3-5 sentence Dutch summary of legal risks"
+    )
+    top_risico_factoren: list[str] = Field(
+        description="Top 3-5 risk factors for property development"
+    )
+    ruling_analyses: list[RulingAnalysis] = Field(
+        description="Per-ruling analysis results"
+    )
+    disclaimer: str = Field(
+        default="Indicatief \u2014 gebaseerd op historische uitspraken, geen juridisch advies",
+        description="Legal disclaimer",
+    )
+    analyzed_at: str = Field(
+        default="", description="ISO datetime of analysis completion"
+    )
