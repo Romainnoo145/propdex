@@ -55,8 +55,8 @@
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 82-01: EcliRegistry + RulingCache model + Alembic migration
-- [ ] 82-02: RechtspraakClient refactor + ARQ ingestion job
+- [x] 82-01: EcliRegistry + RulingCache model + Alembic migration
+- [x] 82-02: RechtspraakClient refactor + ARQ ingestion job
 
 ### Phase 83: Geo-Contextualization + Gemeente Feed
 **Goal**: Users see an auto-populated chronological feed of court rulings relevant to their gemeente, with rulings sorted by geographic relevance (gemeente-matched first, then arrondissement-level)
@@ -67,11 +67,11 @@ Plans:
   2. Rulings mentioning the specific gemeente (extracted from ruling text) appear above arrondissement-level rulings
   3. RVS (Raad van State) rulings are geo-tagged via text extraction and appear in relevant gemeente feeds despite having no geographic ECLI indicator
   4. Win/loss ratio is displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk) at the top of the feed
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 83-01: GeoContextualizer service + gemeente validation
-- [ ] 83-02: Feed endpoint + frontend integration
+- [ ] 83-01-PLAN.md -- GeoContextualizer service + RulingCache migration + ingestion integration
+- [ ] 83-02-PLAN.md -- Feed endpoint with geo-relevance sorting + frontend feed rewrite
 
 ### Phase 84: AI Analysis Upgrade + Doorlooptijd
 **Goal**: AI analysis produces meaningful juridisch klimaat scores because it operates on filtered, location-relevant rulings with vergunningstype classification, and users can see average procedure durations per gemeente
@@ -370,4 +370,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-07 -- v13.0 Juridisch Klimaat Intelligence roadmap created, phases 82-86*
+*Last updated: 2026-03-07 -- Phase 83 plans created*
