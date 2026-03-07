@@ -30,7 +30,7 @@
 
 - [x] **Phase 75: CBS Wijkstatistieken** — Display neighborhood metrics stored in area scan + migrate CBS client to OData v4 for reliable future data (completed 2026-03-06)
 - [x] **Phase 76: Rechtspraak Jurisprudentie** — Fix and harden Rechtspraak infrastructure, deliver court ruling search and document viewing with omgevingsrecht filter (completed 2026-03-06)
-- [ ] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage
+- [x] **Phase 77: AI Juridisch Klimaat** — Claude-powered per-ruling summaries, aggregated juridisch klimaat score, and vergunnings-succeskans percentage (completed 2026-03-07)
 
 ## Phase Details
 
@@ -87,7 +87,7 @@ Plans:
   3. Clicking "Analyseer juridisch klimaat" runs the AI analysis and shows a prose risk summary with top risk factors — the UI shows a loading state while analysis runs
   4. AI analysis never blocks the HTTP response — it runs as an ARQ background job with polling when latency requires it
   5. Every AI analysis result displays a mandatory disclaimer: "Indicatief — gebaseerd op historische uitspraken, geen juridisch advies"
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 77-01-PLAN.md — Backend: JuridischAnalyseJob model, AI schemas + prompt, ClaudeClient.analyze_jurisprudence(), ARQ job, POST/GET analyze endpoints (AI-01, AI-02, AI-03, AI-04)
@@ -112,7 +112,7 @@ Plans:
 | 74. 3D BAG Building Data | 3/3 | Complete | 2026-03-03 |
 | 75. CBS Wijkstatistieken | 2/2 | Complete    | 2026-03-06 |
 | 76. Rechtspraak Jurisprudentie | 2/2 | Complete    | 2026-03-06 |
-| 77. AI Juridisch Klimaat | 1/2 | In Progress|  |
+| 77. AI Juridisch Klimaat | 2/2 | Complete   | 2026-03-07 |
 
 ---
 

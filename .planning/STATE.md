@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Phase: 77 of 77 (AI Juridisch Klimaat)
-Plan: 01 of 2 complete
-Status: In Progress
-Last activity: 2026-03-07 — Phase 77 Plan 01 complete (AI jurisprudence analysis backend pipeline)
+Plan: 02 of 2 complete
+Status: Complete
+Last activity: 2026-03-07 — Phase 77 Plan 02 complete (AI jurisprudence frontend UI)
 
-Progress: [█████░░░░░] ~50% (v11.0 milestone)
+Progress: [██████████] 100% (v11.0 milestone)
 
 ---
 
@@ -29,6 +29,7 @@ Progress: [█████░░░░░] ~50% (v11.0 milestone)
 - Phase 76 Plan 02: ~3min
 - Phase 76.1 Plan 01: ~5min
 - Phase 77 Plan 01: ~5min
+- Phase 77 Plan 02: ~4min
 
 **v10.0 Parcel Detail Panel Redesign + DSO Bouwregels + 3D BAG (Completed)**
 - Phase 72 Plan 01: ~3min
@@ -95,6 +96,9 @@ Progress: [█████░░░░░] ~50% (v11.0 milestone)
 - [Phase 76-rechtspraak-02]: Badge "Omgevingsrecht filter actief" always visible — UX transparency for backend-side domain filter (2026-03-07)
 - [Phase 77-plan-01]: Python-computed vergunnings_succeskans and juridisch_klimaat_score (not LLM-generated) for deterministic scoring (2026-03-07)
 - [Phase 77-plan-01]: ECLI list SHA256 hash in cache key for deterministic cache lookups across identical analysis sets (2026-03-07)
+- [Phase 77-plan-02]: JuridischKlimaatCard rendered inside JurisprudenceSection (co-located state) rather than lifted to WijkMapPanel (2026-03-07)
+- [Phase 77-plan-02]: Derived state pattern for gemeente change detection — avoids react-hooks/set-state-in-effect lint error (2026-03-07)
+- [Phase 77-plan-02]: 3-second polling interval for analysis status, stops on complete/failed (2026-03-07)
 
 ### Pending Todos
 
@@ -113,12 +117,12 @@ Progress: [█████░░░░░] ~50% (v11.0 milestone)
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T05:57:00Z
-**Stopped At:** Completed 77-01-PLAN.md
+**Last Session:** 2026-03-07T06:05:00Z
+**Stopped At:** Completed 77-02-PLAN.md
 **Resume File:** None
 
-**Next Action:** Execute 77-02-PLAN.md (Phase 77 Plan 02 — AI Juridisch Klimaat frontend)
+**Next Action:** Phase 77 complete — v11.0 milestone complete
 
 ---
 
-*State updated: 2026-03-07 -- Phase 77 Plan 01 complete*
+*State updated: 2026-03-07 -- Phase 77 Plan 02 complete (v11.0 milestone complete)*
