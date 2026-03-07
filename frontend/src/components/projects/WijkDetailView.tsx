@@ -15,6 +15,7 @@ import { CbsNeighborhoodCard } from './CbsNeighborhoodCard'
 import { AgeDistributionCard } from './AgeDistributionCard'
 import { HouseholdCard } from './HouseholdCard'
 import { IncomeCard } from './IncomeCard'
+import { NabijheidCard } from './NabijheidCard'
 import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkDetailViewProps {
@@ -184,6 +185,11 @@ function ScanSummarySection({
           <IncomeCard
             inkomen={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.inkomen!}
             wozWaarde={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).data.gemiddelde_woz_waarde ?? null}
+          />
+        )}
+        {(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics | undefined)?.nabijheid && (
+          <NabijheidCard
+            nabijheid={(latestScan.neighborhood_metrics as CbsNeighborhoodMetrics).nabijheid!}
           />
         )}
       </>
