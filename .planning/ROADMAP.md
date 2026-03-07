@@ -102,8 +102,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 80-01: TBD
-- [ ] 80-02: TBD
+- [ ] 80-01-PLAN.md — OData v3 CbsCrimeClient + scan job integration
+- [ ] 80-02-PLAN.md — CriminaliteitCard frontend + WijkDetailView integration
 
 ### Phase 81: Locatie-Score & Investeringsprofiel
 **Goal**: Users can instantly evaluate investment attractiveness of a neighborhood via a single composite score with transparent sub-dimension breakdown
