@@ -1,82 +1,84 @@
-# Requirements: Propdex v12.0 — Omgevings- & Leefbaarheids-Scorer
+# Requirements: Propdex v13.0 — Juridisch Klimaat Intelligence
 
 **Defined:** 2026-03-07
 **Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
-**Milestone Goal:** Transform Propdex from property-level "stenen en regels" intelligence into a platform that quantifies location-level commercial potential with data-driven context.
+**Milestone Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars — from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
 
-## v12.0 Requirements
+## v13.0 Requirements
 
-### UX Architectuur
+### Data Pipeline & Cache
 
-- [ ] **UX-01**: WijkDetailView en WijkMapPanel gebruiken tabbed layout (Overzicht | Demografie & Inkomen | Leefbaarheid | Juridisch | Rapporten)
-- [ ] **UX-02**: LocationScoreCard shell met per-dimensie traffic-light indicators en expand-on-click progressive disclosure
-- [ ] **UX-04**: ParcelDetailModal gebruikt collapsible sections gegroepeerd als Overzicht | Bouwpotentie | Risico's
+- [ ] **PIPE-01**: Dedicated `ruling_cache` PostgreSQL table (org-agnostic, ECLI as primary key) stores court ruling metadata and text
+- [ ] **PIPE-02**: EcliRegistry module maps 342 gemeenten to 11 rechtbanken + translates 16 pre-2013 court codes
+- [ ] **PIPE-03**: RechtspraakClient uses ECLI court-code prefix filtering to scope results to correct arrondissement
+- [ ] **PIPE-04**: RechtspraakClient supports date range filtering via API `date` parameter (from/to)
+- [ ] **PIPE-05**: Ruling ingestion ARQ background job fetches 50+ results per court region with batch document retrieval
+- [ ] **PIPE-06**: Per-gemeente caching with 7-day TTL — repeated views load from cache instantly
 
-### CBS Demografie & Inkomen
+### Geo-Contextualization
 
-- [x] **DEMO-01**: Wijk detail toont leeftijdsverdeling (0-14, 15-24, 25-44, 45-64, 65+) in een visueel overzicht
-- [x] **DEMO-02**: Wijk detail toont huishoudenssamenstelling (eenpersoons, zonder kinderen, met kinderen, gemiddelde grootte)
-- [x] **DEMO-03**: Wijk detail toont inkomenscijfers (gemiddeld inkomen per ontvanger, per inwoner, gestandaardiseerd huishoudinkomen)
-- [x] **DEMO-04**: Wijk detail toont inkomensverdeling (% laagste 40%, % hoogste 20%)
-- [x] **DEMO-05**: Wijk detail toont WOZ/inkomen ratio als marktconformiteits-indicator
-- [x] **DEMO-06**: Wijk detail toont vergrijzing/verjonging indicator (richting-pijl gebaseerd op leeftijdsgroepen)
-- [x] **DEMO-07**: Wijk detail toont doelgroep-validatie profiel ("studentenwijk" / "gezinswijk" / "vergrijzend" / "gemengd")
+- [ ] **GEO-01**: GeoContextualizer extracts gemeente names from ruling text using regex patterns ("college van B&W van {gemeente}", "te {gemeente}", etc.)
+- [ ] **GEO-02**: Extracted gemeente names validated against known CBS gemeente list
+- [ ] **GEO-03**: Two-pass geo-scoping: ECLI prefix for arrondissement (reliable), text extraction for gemeente (supplementary)
+- [ ] **GEO-04**: RVS (Raad van State) rulings geo-tagged via text extraction (no geographic ECLI indicator)
 
-### Voorzieningen Nabijheid
+### Gemeente Feed
 
-- [x] **VOORZ-01**: CBS Nabijheid client (86134NED) haalt afstanden op via OData v4 met dezelfde patronen als bestaande CBS client
-- [x] **VOORZ-02**: Wijk detail toont afstand tot supermarkt, huisarts, school, kinderdagverblijf, treinstation en OV-halte
-- [x] **VOORZ-03**: Nabijheidsdata opgeslagen in neighborhood_metrics JSONB onder "nabijheid" key
+- [ ] **FEED-01**: Auto-populated chronological jurisprudentie feed per gemeente (no manual search required)
+- [ ] **FEED-02**: Rulings sorted by relevance: gemeente-matched first, then arrondissement-level
+- [ ] **FEED-03**: Win/loss ratio displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk)
 
-### Criminaliteitsdata
+### AI Analysis
 
-- [x] **CRIME-01**: OData v3 client voor dataderden.cbs.nl (47018NED) met rate limiter en retry patronen
-- [x] **CRIME-02**: Wijk detail toont totale misdrijven per 1000 inwoners + uitsplitsing (vermogensdelicten, vernieling, geweld)
-- [x] **CRIME-03**: Criminaliteitsdata opgeslagen in neighborhood_metrics JSONB onder "criminaliteit" key
+- [ ] **AI-01**: AI analysis runs only on filtered, location-relevant rulings (not garbage national results)
+- [ ] **AI-02**: Per-ruling AI analysis caching (not per-batch) — filter changes don't trigger re-analysis
+- [ ] **AI-03**: Vergunningstype classification per ruling (dakopbouw, nieuwbouw, bestemmingswijziging, etc.)
+- [ ] **AI-04**: Token budget controls: truncate to OVERWEGINGEN + BESLISSING sections (max 60K input tokens)
 
-### Locatie-Score & Investeringsprofiel
+### Doorlooptijd
 
-- [ ] **SCORE-01**: LocationScoreService berekent 0-10 investeerbaarheid per wijk met percentiel-rank normalisatie
-- [ ] **SCORE-02**: Score bevat per-dimensie breakdown (demografie, inkomen, voorzieningen, veiligheid) met confidence indicator
-- [ ] **SCORE-03**: Wijk detail toont investeringsprofiel card met traffic-light indicatoren per dimensie
-- [ ] **SCORE-04**: Location score opgeslagen in aparte location_score JSONB kolom (Alembic migratie)
+- [ ] **DOOR-01**: Procedure duration calculated from ruling metadata dates (datum uitspraak, filing date)
+- [ ] **DOOR-02**: Average doorlooptijd per gemeente per vergunningstype displayed as statistic
+- [ ] **DOOR-03**: Graceful degradation when filing dates unavailable ("onvoldoende data")
 
-### Jurisprudentie Verdieping
+### Explorer UI
 
-- [ ] **JURIS-01**: SRU bekendmakingen worden automatisch gecorreleerd met Rechtspraak uitspraken op basis van adres/postcode/zaaknummer
-- [ ] **JURIS-02**: Gecorreleerde rechtszaken worden opgeslagen bij de vergunningdata en overleven page refreshes
-- [ ] **JURIS-03**: Wijk detail toont "Aangevochten vergunningen" indicator op vergunningen met gekoppelde rechtszaken
-- [ ] **JURIS-04**: ParcelDetailModal toont juridisch klimaat summary card met wijk-score en perceel-specifieke rechtszaakreferenties
-- [ ] **JURIS-05**: permit_precedent_benchmark integreert rechtspraak uitkomsten voor "juridisch risico" indicator per bouwtype per gemeente
-- [ ] **JURIS-06**: Per-bouwtype risicovlaggen verschijnen bij consistent afwijzingspatroon in rechtspraak (bijv. "dakopbouwen: hoog bezwaarrisico")
-- [ ] **JURIS-07**: Volledige testdekking voor jurisprudentie pipeline (rechtspraak client, AI analyse, endpoints, jobs)
+- [ ] **EXPL-01**: Two-tab layout: Overzicht (chronological feed) and Explorer (multi-filter search)
+- [ ] **EXPL-02**: Filter sidebar with scope (landelijk/provincie/gemeente), vergunningstype, uitkomst, tijdsperiode
+- [ ] **EXPL-03**: Filter counts shown before applying — prevents empty result frustration
+- [ ] **EXPL-04**: Pagination via useInfiniteQuery for large result sets
+- [ ] **EXPL-05**: "Verbreed uw zoekopdracht" suggestions when results < 3
+
+### Trend & Statistics
+
+- [ ] **TREND-01**: Rolling 12-month juridisch klimaat score trend per gemeente
+- [ ] **TREND-02**: Aggregated statistics bar (totaal uitspraken, gemiddelde doorlooptijd, succespercentage)
+- [ ] **TREND-03**: CSS-only timeline visualization (no chart library needed for 10-20 data points)
 
 ## Future Requirements
 
-### Multi-Year Trendanalyse (v12.1+)
+### Deferred from v12.0
 
-- **TREND-01**: Multi-year CBS data ophalen over 3-5 peiljaren met measure code mapping per dataset
-- **TREND-02**: WOZ en inkomen trend-richting indicator per wijk
-- **TREND-03**: Sparkline trend charts voor kernmetrieken
-- **TREND-04**: Gentrification early warning (WOZ-groei vs inkomen-stagnatie divergentie)
+- **SCORE-01**: LocationScoreService berekent 0-10 investeerbaarheid per wijk met percentiel-rank normalisatie
+- **SCORE-02**: Score bevat per-dimensie breakdown met confidence indicator
+- **SCORE-03**: Wijk detail toont investeringsprofiel card met traffic-light indicatoren
+- **SCORE-04**: Location score opgeslagen in aparte location_score JSONB kolom
 
-### Score Verfijning (v12.1+)
+### Advanced Legal Intelligence (v14.0+)
 
-- **SCORE-05**: Per-organisatie weight override via config (niet UI)
-- **SCORE-06**: Score customization met weight sliders (pas na user feedback)
+- **ADV-01**: Bekendmakingen-koppeling (linking rulings to SRU bekendmakingen) — no shared identifier, fuzzy matching unreliable
+- **ADV-02**: Vergelijkende gemeente analyse (cross-gemeente juridisch klimaat comparison)
+- **ADV-03**: Hoger beroep chain following (ECLI cross-referencing unreliable)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Real-time crime feed / incident map | Noisy, misleading; CBS annual aggregates are methodologically sound |
-| Custom isochrone / travel-time calculations | CBS nabijheid pre-computes road distances — eliminates need |
-| Satellite imagery gentrification detection | Research-grade (74% accuracy), not production-ready |
-| Bevolkingsprognose at wijk level | CBS only publishes regional prognoses; speculative at wijk level |
-| Full CBS dataset sync (100+ variables) | Curated ~25 PropTech-relevant fields — fast, focused, maintainable |
-| Veiligheidsmonitor leefbaarheidsperceptie | Survey-based, regional only (not wijk), biannual — objective metrics preferred |
-| OV-score / PTAL calculation | CBS afstand tot treinstation + OV-halte covers this simpler |
-| Score customization UI with weight sliders | Premature; ship opinionated defaults, iterate on weights |
+| Bekendmakingen cross-reference | No shared identifier between Rechtspraak and SRU — confirmed by research |
+| Full Rechtspraak replica / Elasticsearch | Massive infra overhead, API with caching suffices |
+| Juridisch advies generation | Professional liability risk (Advocatenwet) |
+| spaCy/NLP for location extraction | Training data is news, not legal text; regex + known gemeente list is more reliable |
+| Vergelijkende gemeente analyse | Requires core flow working first |
 
 ## Traceability
 
@@ -84,39 +86,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UX-01 | Phase 77.1 | Pending |
-| UX-02 | Phase 77.1 | Pending |
-| UX-04 | Phase 77.1 | Pending |
-| DEMO-01 | Phase 78 | Complete |
-| DEMO-02 | Phase 78 | Complete |
-| DEMO-03 | Phase 78 | Complete |
-| DEMO-04 | Phase 78 | Complete |
-| DEMO-05 | Phase 78 | Complete |
-| DEMO-06 | Phase 78 | Complete |
-| DEMO-07 | Phase 78 | Complete |
-| VOORZ-01 | Phase 79 | Complete |
-| VOORZ-02 | Phase 79 | Complete |
-| VOORZ-03 | Phase 79 | Complete |
-| CRIME-01 | Phase 80 | Complete |
-| CRIME-02 | Phase 80 | Complete |
-| CRIME-03 | Phase 80 | Complete |
-| SCORE-01 | Phase 81 | Pending |
-| SCORE-02 | Phase 81 | Pending |
-| SCORE-03 | Phase 81 | Pending |
-| SCORE-04 | Phase 81 | Pending |
-| JURIS-01 | Phase 82 | Pending |
-| JURIS-02 | Phase 82 | Pending |
-| JURIS-03 | Phase 82 | Pending |
-| JURIS-04 | Phase 83 | Pending |
-| JURIS-05 | Phase 83 | Pending |
-| JURIS-06 | Phase 83 | Pending |
-| JURIS-07 | Phase 84 | Pending |
+| (populated by roadmapper) | | |
 
 **Coverage:**
-- v12.0 requirements: 27 total
-- Mapped to phases: 27
-- Unmapped: 0
+- v13.0 requirements: 25 total
+- Mapped to phases: 0
+- Unmapped: 25
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after jurisprudentie phases added*
+*Last updated: 2026-03-07 after initial definition*
