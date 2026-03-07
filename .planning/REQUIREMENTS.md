@@ -31,7 +31,7 @@
 ### Criminaliteitsdata
 
 - [x] **CRIME-01**: OData v3 client voor dataderden.cbs.nl (47018NED) met rate limiter en retry patronen
-- [ ] **CRIME-02**: Wijk detail toont totale misdrijven per 1000 inwoners + uitsplitsing (vermogensdelicten, vernieling, geweld)
+- [x] **CRIME-02**: Wijk detail toont totale misdrijven per 1000 inwoners + uitsplitsing (vermogensdelicten, vernieling, geweld)
 - [x] **CRIME-03**: Criminaliteitsdata opgeslagen in neighborhood_metrics JSONB onder "criminaliteit" key
 
 ### Locatie-Score & Investeringsprofiel
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VOORZ-02 | Phase 79 | Complete |
 | VOORZ-03 | Phase 79 | Complete |
 | CRIME-01 | Phase 80 | Complete |
-| CRIME-02 | Phase 80 | Pending |
+| CRIME-02 | Phase 80 | Complete |
 | CRIME-03 | Phase 80 | Complete |
 | SCORE-01 | Phase 81 | Pending |
 | SCORE-02 | Phase 81 | Pending |
