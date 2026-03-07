@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Phase 79 -- Voorzieningen Nabijheid
+**Current focus:** v13.0 Phase 80 -- Criminaliteitsdata
 
 ---
 
 ## Current Position
 
-Phase: 79 of 81 (Voorzieningen Nabijheid) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-07 -- Completed 79-02-PLAN.md
+Phase: 80 of 81 (Criminaliteitsdata) -- IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-07 -- Completed 80-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v13.0)
+- Total plans completed: 5 (v13.0)
 - Average duration: 2min
-- Total execution time: 0.15 hours
+- Total execution time: 0.20 hours
 
 **By Phase:**
 
@@ -35,6 +35,7 @@ Progress: [██████████] 100%
 | Phase 78 P02 | 2min | 2 tasks | 5 files |
 | Phase 79 P01 | 3min | 2 tasks | 2 files |
 | Phase 79 P02 | 2min | 2 tasks | 3 files |
+| Phase 80 P01 | 3min | 2 tasks | 3 files |
 
 *Updated after each plan completion*
 
@@ -69,6 +70,9 @@ Progress: [██████████] 100%
 - [Phase 79]: Nabijheid output keys mapped afstand_X to X_km for frontend consumption
 - [Phase 79]: CbsNabijheid at root level of CbsNeighborhoodMetrics (not inside data), matching backend storage
 - [Phase 79]: Distance thresholds: daily 1/3km, transport 3/10km for green/amber/red coloring
+- [Phase 80]: Separate CbsCrimeClient for OData v3 on dataderden.cbs.nl (different protocol from v4)
+- [Phase 80]: Crime subcategories aggregated server-side into vermogensdelicten/vernieling/geweld
+- [Phase 80]: LATEST_PERIOD=2024JJ00 hardcoded (most recent Definitief data)
 
 ### Pending Todos
 
@@ -85,11 +89,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T11:14:49Z
-**Stopped At:** Completed 79-02-PLAN.md (Phase 79 complete)
+**Last Session:** 2026-03-07T11:37:00Z
+**Stopped At:** Completed 80-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 80` (Criminaliteitsdata)
+**Next Action:** Execute 80-02-PLAN.md (Criminaliteit frontend card)
 
 ---
 
