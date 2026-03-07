@@ -12,7 +12,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -106,19 +106,34 @@ async def get_gemeente_rulings(
     if not court_codes:
         raise HTTPException(status_code=404, detail=f"Unknown gemeente: {gemeente_naam}")
 
-    # Query cached rulings
+    # Compute geo-relevance: gemeente-matched rulings rank higher
+    geo_relevance_expr = case(
+        (RulingCache.extracted_gemeente == gemeente_naam, "gemeente"),
+        else_="arrondissement",
+    )
+
+    # Query cached rulings -- include RVS rulings geo-tagged to this gemeente
     stmt = (
-        select(RulingCache)
-        .where(RulingCache.gemeente_query == gemeente_naam)
+        select(RulingCache, geo_relevance_expr.label("geo_relevance"))
+        .where(
+            (RulingCache.gemeente_query == gemeente_naam)
+            | (RulingCache.extracted_gemeente == gemeente_naam)
+        )
     )
     if date_from:
         stmt = stmt.where(RulingCache.datum_uitspraak >= date_from)
     if date_to:
         stmt = stmt.where(RulingCache.datum_uitspraak <= date_to)
-    stmt = stmt.order_by(RulingCache.datum_uitspraak.desc())
+    # Sort: gemeente-matched first, then by date descending
+    stmt = stmt.order_by(
+        case((RulingCache.extracted_gemeente == gemeente_naam, 0), else_=1),
+        RulingCache.datum_uitspraak.desc(),
+    )
 
     result = await db.execute(stmt)
-    rulings = result.scalars().all()
+    rows = result.all()
+    rulings = [row[0] for row in rows]
+    geo_relevance_map = {row[0].ecli: row[1] for row in rows}
 
     # Determine cache freshness and ingestion status
     ingestion_status = "fresh"
@@ -152,7 +167,20 @@ async def get_gemeente_rulings(
                 exc,
             )
 
-    # Serialize rulings
+    # Win/loss ratio aggregation from uitkomst column
+    win_loss: dict[str, int] = {
+        "toegewezen": 0,
+        "afgewezen": 0,
+        "gedeeltelijk": 0,
+        "onbekend": 0,
+        "total": 0,
+    }
+    for r in rulings:
+        uitkomst = r.uitkomst or "onbekend"
+        win_loss[uitkomst] = win_loss.get(uitkomst, 0) + 1
+        win_loss["total"] += 1
+
+    # Serialize rulings with geo-relevance and uitkomst
     ruling_list = [
         {
             "ecli": r.ecli,
@@ -161,6 +189,9 @@ async def get_gemeente_rulings(
             "datum_uitspraak": r.datum_uitspraak,
             "title": r.title,
             "summary": r.summary,
+            "extracted_gemeente": r.extracted_gemeente,
+            "geo_relevance": geo_relevance_map.get(r.ecli, "arrondissement"),
+            "uitkomst": r.uitkomst,
             "fetched_at": r.fetched_at.isoformat() if r.fetched_at else None,
         }
         for r in rulings
@@ -169,6 +200,7 @@ async def get_gemeente_rulings(
     return {
         "status": "success",
         "rulings": ruling_list,
+        "win_loss": win_loss,
         "ingestion_status": ingestion_status,
         "count": len(ruling_list),
     }
