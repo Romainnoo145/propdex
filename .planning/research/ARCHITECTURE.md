@@ -1,534 +1,463 @@
-# Architecture Research
+# Architecture Patterns
 
-**Domain:** PropTech — Open Data Intelligence integration into existing FastAPI/React platform
-**Researched:** 2026-03-06
-**Confidence:** HIGH — based on direct codebase inspection, not inference
-
----
-
-## Context: What Already Exists
-
-This is a SUBSEQUENT MILESTONE for an existing, production-hardened system (~46,220 LOC). The integration
-components are substantially already built. This document maps what exists, what is missing, and how
-the pieces connect.
-
-### Components Already Implemented
-
-| Component | File | Status |
-|-----------|------|--------|
-| CBSODataClient | `backend/app/government_apis/cbs_odata.py` | Complete — fetches Kerncijfers wijken en buurten dataset 85618NED |
-| CBS area_scan integration | `backend/app/jobs/area_scan.py:354-364` | Complete — fetched during scan Phase 2, stored in `AreaScan.neighborhood_metrics` JSONB |
-| CBS DB column | `backend/app/models/area_scan.py:76` | Complete — `neighborhood_metrics` JSONB nullable |
-| CBS API schema | `backend/app/scans/schemas.py:227` | Complete — `neighborhood_metrics: dict | None` in ScanResultsResponse |
-| CBS frontend type | `frontend/src/lib/types/scan.ts:169` | Complete — `neighborhood_metrics?: Record<string, any> | null` |
-| Alembic migration | `backend/alembic/versions/1a67b08d7c1b_add_neighborhood_metrics_to_area_scan.py` | EXISTS but may not be applied — run `alembic upgrade head` |
-| RechtspraakClient | `backend/app/government_apis/rechtspraak.py` | Complete — Atom feed search + ECLI content fetch |
-| Jurisprudence API router | `backend/app/api/endpoints/jurisprudence.py` | Complete — GET /search + GET /doc/{ecli} |
-| Jurisprudence router registration | `backend/app/main.py:24` | Complete — imported as `jurisprudence_router` |
-| JurisprudenceSection component | `frontend/src/components/projects/JurisprudenceSection.tsx` | Complete — search feed + inline document viewer |
-| useJurisprudence hooks | `frontend/src/hooks/useJurisprudence.ts` | Complete — `useJurisprudenceSearch` + `useJurisprudenceDoc` |
-| WijkDetailView integration | `frontend/src/components/projects/WijkDetailView.tsx:44-48` | Complete — JurisprudenceSection mounted at wijk level |
-| ClaudeClient (existing) | `backend/app/ai/claude_client.py` | Complete — for bestemmingsplan PDF parsing (extend for AI legal analysis) |
-
-### What Is NOT Yet Built
-
-| Component | Purpose | Priority |
-|-----------|---------|---------|
-| CBS neighborhood metrics display | Show `neighborhood_metrics` data in WijkDetailView | High — data is captured but never rendered |
-| `CbsNeighborhoodMetrics` TypeScript type | Narrow `Record<string,any>` to typed interface | High — needed before building display |
-| AI legal analysis backend | Extend ClaudeClient + add POST /analyze endpoint | High — core milestone feature |
-| AI legal analysis prompts | `JURISPRUDENCE_ANALYSIS_PROMPT` in `prompts.py` | High |
-| `JurisprudenceAnalysis` schema | Pydantic structured output for AI analysis | High |
-| `useJurisprudenceAnalysis` hook | TanStack Query hook for POST /analyze | Medium |
-| AI analysis UI in JurisprudenceSection | "Analyseer selectie" button + results panel | Medium |
+**Domain:** Omgevings- & Leefbaarheids-Scorer -- Location intelligence scoring for PropTech
+**Researched:** 2026-03-07
+**Confidence:** HIGH (verified against live CBS OData endpoints + existing codebase)
 
 ---
 
-## System Architecture: Data Flow for v11.0 Features
+## Key Architectural Insight: CBS Has Pre-Computed Proximity Data
 
-```
-+------------------------------------------------------------------+
-|                      FRONTEND (React 19)                         |
-|                                                                  |
-|  WijkDetailView                                                  |
-|  +-- ScanSummarySection                                          |
-|  |   +-- [TODO] CbsNeighborhoodCard (renders neighborhood_metrics)|
-|  +-- JurisprudenceSection  <- BUILT                             |
-|  |   +-- search feed (useJurisprudenceSearch)                   |
-|  |   +-- document viewer (useJurisprudenceDoc)                  |
-|  |   +-- [TODO] AiRiskPanel (useJurisprudenceAnalysis)          |
-|  +-- ReportListSection                                           |
-+---------------------------+--------------------------------------+
-                            | HTTP (Bearer token, credentials:include)
-+---------------------------v--------------------------------------+
-|                       BACKEND (FastAPI)                          |
-|                                                                  |
-|  Routers:                                                        |
-|  +-- /api/scans         -> ScanResultsResponse + neighborhood_metrics
-|  +-- /api/jurisprudence <- BUILT                                |
-|      +-- GET /search    -> RechtspraakClient.search_jurisprudence|
-|      +-- GET /doc/{ecli}-> RechtspraakClient.get_jurisprudence_doc
-|      +-- [TODO] POST /analyze -> ClaudeClient.analyze_jurisprudence
-|                                                                  |
-|  ARQ Background Jobs:                                            |
-|  +-- area_scan                                                   |
-|      +-- Phase 2: BAG + CBS + 3DBAG + bestemmingen              |
-|          +-- CBSODataClient.get_neighborhood_data()             |
-|              -> AreaScan.neighborhood_metrics (JSONB) [BUILT]   |
-+---------------------------+--------------------------------------+
-                            |
-+---------------------------v--------------------------------------+
-|                GOVERNMENT APIs + ANTHROPIC AI                    |
-|                                                                  |
-|  CBS StatLine OData v4    opendata.cbs.nl/ODataApi/OData        |
-|  +-- /85618NED/WijkenEnBuurten  (region key lookup)             |
-|  +-- /85618NED/TypedDataSet     (metrics for region key)        |
-|                                                                  |
-|  Rechtspraak Open Data    data.rechtspraak.nl/uitspraken/       |
-|  +-- /zoeken?searchterms=...    (Atom XML feed)                 |
-|  +-- /content?id={ecli}        (Open Rechtspraak XML)           |
-|                                                                  |
-|  Anthropic Claude API     (existing SDK)                         |
-|  +-- analyze_jurisprudence(texts[]) -> risk_summary + score     |
-+------------------------------------------------------------------+
-```
+The biggest finding is that CBS provides **"Nabijheid voorzieningen"** as a separate OData v4 dataset (86134NED for 2024) with pre-calculated road-distance metrics at wijk/buurt level. This eliminates the need for PostGIS ST_Distance calculations, OSM data imports, or external routing APIs for voorzieningen proximity.
+
+**Verified distance measures (live API query against 86134NED/MeasureCodes):**
+
+| CBS Code | Facility | Unit | Real Estate Relevance |
+|----------|----------|------|----------------------|
+| D000025 | Grote supermarkt | km | Table-stakes for residential |
+| D000045_1 | Basisonderwijs (primary school) | km | Family appeal |
+| D000045_2 | Voortgezet onderwijs totaal | km | Family appeal |
+| D000052 | Treinstations totaal | km | Commuter attractiveness |
+| D000014 | Belangrijk overstapstation | km | Transit connectivity |
+| D000028 | Huisartsenpraktijk | km | Livability baseline |
+| D000037 | Oprit hoofdverkeersweg | km | Car accessibility |
+| D000029 | Kinderdagverblijf | km | Young family appeal |
+| D000039 | Park of plantsoen | km | Green premium |
+| D000036 | Openbaar groen totaal | km | Green premium |
+| D000010 | Apotheek | km | Healthcare access |
+| D000043 | Restaurant | km | Lifestyle indicator |
+
+Each distance measure also has "count within X km" variants (e.g., A045790_1 = huisartsen within 1km). Useful for density indicators.
+
+---
+
+## Data Source Architecture
+
+### CBS OData v4 -- KWB Multi-Year (Existing Pattern, New Scale)
+
+CBS publishes one dataset ID per year. Multi-year queries require querying N separate dataset IDs in parallel.
+
+**KWB (Kerncijfers wijken en buurten) -- existing metrics, extended for trends:**
+
+| Year | Dataset ID | Status |
+|------|-----------|--------|
+| 2020 | 84799NED | Available |
+| 2021 | 85039NED | Available |
+| 2022 | 85318NED | Configured in cbs_odata.py |
+| 2023 | 85618NED | Configured in cbs_odata.py |
+| 2024 | 85984NED | Configured in cbs_odata.py |
+| 2025 | 86165NED | Configured in cbs_odata.py (current) |
+
+**Nabijheid voorzieningen -- NEW dataset series:**
+
+| Year | Dataset ID | Status |
+|------|-----------|--------|
+| 2020 | 84953NED | Available |
+| 2021 | 85231NED | Available |
+| 2022 | 85560NED | Available |
+| 2023 | 85830NED | Available |
+| 2024 | 86134NED | Latest (use this) |
+
+**Measure codes already verified in cbs_odata.py `MEASURE_CODES` dict -- extends with:**
+- `inkomen` (`M000223`) -- already defined but may not be fetched depending on dataset
+
+### Politie Crime Data -- OData v3 (New Protocol)
+
+Crime data lives on `dataderden.cbs.nl` using OData v3 (NOT v4). This is a separate API protocol.
+
+**Endpoint:** `https://dataderden.cbs.nl/ODataApi/OData/47018NED`
+
+**Verified entities:**
+- `TypedDataSet` -- actual data rows
+- `WijkenEnBuurten` -- region codes (same WK/BU format as CBS KWB)
+- `SoortMisdrijf` -- crime type dimension
+- `Perioden` -- year/month dimension
+
+**Key field:** `GeregistreerdeMisdrijven_1` (count of registered crimes)
+
+**OData v3 vs v4 differences:**
+- Response wrapper: `{"odata.metadata": ..., "value": [...]}` (v3) vs `{"@odata.context": ..., "value": [...]}` (v4)
+- No `$count` in v3 by default
+- Entity names use PascalCase differently
+- Single dataset with time dimension (unlike KWB which has separate datasets per year)
 
 ---
 
 ## Component Boundaries
 
-### Existing Components — No Changes Required
+### New Components
 
-| Component | Responsibility | Where |
-|-----------|----------------|-------|
-| `CBSODataClient` | Resolves gemeente/wijk name to CBS region key, fetches Kerncijfers metrics | `government_apis/cbs_odata.py` |
-| `area_scan` job | Orchestrates CBS fetch alongside BAG/bestemmingen, writes `neighborhood_metrics` | `jobs/area_scan.py:354-364` |
-| `RechtspraakClient` | Atom feed search + ECLI XML document fetching | `government_apis/rechtspraak.py` |
-| `jurisprudence.py` router | HTTP endpoints for search and doc fetch | `api/endpoints/jurisprudence.py` |
-| `JurisprudenceSection` | React component with search feed + inline viewer | `components/projects/JurisprudenceSection.tsx` |
-| `useJurisprudenceSearch` | TanStack Query hook for Rechtspraak search | `hooks/useJurisprudence.ts` |
-| `useJurisprudenceDoc` | TanStack Query hook for ECLI document fetch | `hooks/useJurisprudence.ts` |
+| Component | Location | Responsibility |
+|-----------|----------|---------------|
+| `CbsNabijheidClient` | `backend/app/government_apis/cbs_nabijheid.py` | Fetch proximity data from CBS OData v4 (86134NED). Reuse wijk resolution pattern from CBSODataClient |
+| `PolitieCrimeClient` | `backend/app/government_apis/politie_crime.py` | Fetch crime stats from dataderden OData v3 (47018NED). New protocol, cannot inherit from CBS v4 base |
+| `CbsMultiYearService` | `backend/app/services/cbs_multiyear.py` | Orchestrate parallel queries across multiple KWB dataset IDs for historical trends |
+| `LocationScoreService` | `backend/app/services/location_scoring.py` | Pure function: aggregate all metrics into weighted location score |
+| `VoorzieningenCard` | `frontend/src/components/projects/VoorzieningenCard.tsx` | Display proximity distances with visual distance bars |
+| `CrimeCard` | `frontend/src/components/projects/CrimeCard.tsx` | Display crime statistics with per-1000-inwoners metric |
+| `TrendChart` | `frontend/src/components/projects/TrendChart.tsx` | Lightweight sparkline for multi-year metric trends |
+| `LocationScoreCard` | `frontend/src/components/projects/LocationScoreCard.tsx` | Aggregated score with categorical breakdown |
 
-### Components to Build — New
+### Modified Components
 
-#### Backend: AI Legal Analysis
-
-**1. `backend/app/ai/schemas.py` — add these types:**
-
-```python
-from typing import Literal
-from pydantic import BaseModel, Field
-
-class PrecedentInsight(BaseModel):
-    ecli: str
-    relevantie: str           # Why this ruling matters for the context
-    uitkomst: Literal["gunstig", "ongunstig", "neutraal"]
-
-class JurisprudenceAnalysis(BaseModel):
-    risk_summary: str         # Dutch prose, 3-5 sentences
-    risk_score: int           # 0-10 (0=low risk, 10=high risk)
-    vergunnings_succeskans: int  # 0-100 percent
-    precedent_insights: list[PrecedentInsight]
-    confidence: Literal["HIGH", "MEDIUM", "LOW"]
-    disclaimer: str           # Dutch disclaimer: "Dit is geen juridisch advies"
-```
-
-**2. `backend/app/ai/prompts.py` — add `JURISPRUDENCE_ANALYSIS_PROMPT`:**
-
-The prompt should instruct Claude to:
-- Analyze Dutch court rulings in the context of omgevingsvergunning / property development
-- Produce a structured JSON output matching `JurisprudenceAnalysis`
-- Rate overall legal risk for a developer pursuing a similar project in this gemeente
-- Estimate vergunnings-succeskans based on historical outcomes in the provided rulings
-- Write in Dutch
-
-**3. `backend/app/ai/claude_client.py` — add method:**
-
-```python
-async def analyze_jurisprudence(
-    self,
-    ecli_texts: list[dict],  # [{ecli, text, instantie, datum_uitspraak}]
-    context: str,            # e.g. "omgevingsvergunning Amsterdam Centrum"
-) -> JurisprudenceAnalysis:
-    """Analyze court rulings for development risk and permit success probability."""
-```
-
-Uses same pattern as `parse_bestemmingsplan()`: structured output from Claude,
-validated by Pydantic, raises `AIParsingError` on failure.
-
-**4. `backend/app/api/endpoints/jurisprudence.py` — add endpoint:**
-
-```python
-class JurisprudenceAnalyzeRequest(BaseModel):
-    eclis: list[str] = Field(min_length=1, max_length=5)
-    context: str = Field(description="gemeente + type project context")
-
-@router.post("/analyze")
-async def analyze_jurisprudence(
-    body: JurisprudenceAnalyzeRequest,
-    current_user=Depends(deps.get_current_active_user),
-    client: AsyncClient = Depends(deps.get_httpx_client),
-):
-    # 1. Fetch document text for each ECLI in parallel (asyncio.gather)
-    # 2. Filter out ECLIs that returned None (not found)
-    # 3. Call ClaudeClient.analyze_jurisprudence(texts, body.context)
-    # 4. Return analysis
-```
-
-#### Frontend: CBS Display
-
-**`frontend/src/lib/types/scan.ts` — add typed interface:**
-
-```typescript
-export interface CbsStedelijkheid {
-  klasse: number | null
-  omschrijving: string
-  omgevingsadressendichtheid: number | null
-}
-
-export interface CbsNeighborhoodMetrics {
-  bron: string
-  dataset: string
-  peiljaar: number
-  data: {
-    gemiddelde_woz_waarde: number | null
-    stedelijkheid: CbsStedelijkheid
-    demografie: {
-      aantal_inwoners: number | null
-      percentage_huurwoningen: number | null
-      percentage_koopwoningen: number | null
-    }
-    bouwjaar_distributie: {
-      percentage_bouwjaar_voor_2000: number | null
-      percentage_bouwjaar_vanaf_2000: number | null
-    }
-  }
-}
-```
-
-Update `ScanResultsResponse.neighborhood_metrics` from `Record<string, any> | null`
-to `CbsNeighborhoodMetrics | null`.
-
-**`frontend/src/components/projects/CbsNeighborhoodCard.tsx` — new component:**
-
-Props: `{ metrics: CbsNeighborhoodMetrics }`. Renders a card with:
-- Stedelijkheidsklasse badge (color-coded 1-5)
-- Gemiddelde WOZ waarde
-- Bevolkingsdichtheid (OAD/km2)
-- Huur/koop verhouding as progress bar
-- Bouwjaar distributie (voor/na 2000) as two-bar chart
-
-Mount in `WijkDetailView.tsx` between `ScanSummarySection` and `JurisprudenceSection`
-when `neighborhood_metrics` is non-null. Wrap with null guard — CBS fetch is non-fatal
-and many small wijken return no data.
-
-#### Frontend: AI Analysis UI
-
-**`frontend/src/lib/api.ts` — add function:**
-
-```typescript
-export async function analyzeJurisprudence(
-  eclis: string[],
-  context: string,
-  accessToken: string,
-): Promise<JurisprudenceAnalysisResponse>
-```
-
-**`frontend/src/hooks/useJurisprudence.ts` — add hook:**
-
-```typescript
-export function useJurisprudenceAnalysis(
-  eclis: string[],
-  context: string,
-  enabled: boolean = false,
-) {
-  // staleTime: 30 * 60 * 1000 (30 min — AI calls are expensive)
-  // enabled: enabled && eclis.length >= 1 (caller controls trigger)
-}
-```
-
-**`frontend/src/components/projects/JurisprudenceSection.tsx` — extend:**
-
-Add "Analyseer juridisch klimaat" button that appears when search results are loaded.
-On click, sets `analyzeEnabled = true` and passes all result ECLIs + gemeente context
-to `useJurisprudenceAnalysis`. Renders analysis results below the search feed:
-- Risk score badge (amber/red scale)
-- Vergunnings-succeskans progress bar (0-100%)
-- Risk summary prose
-- Disclaimer in muted text
+| Component | Change | Rationale |
+|-----------|--------|-----------|
+| `backend/app/government_apis/cbs_odata.py` | Extract shared `_resolve_wijk_identifier` into a reusable function or base class. Add multi-dataset-ID querying method | Nabijheid client needs identical wijk resolution; multi-year needs same pattern across dataset IDs |
+| `backend/app/models/area_scan.py` | Add `location_score: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)` | Store computed location score separate from source data (different lifecycle) |
+| `backend/app/jobs/area_scan.py` | Add Phase 2c after existing CBS fetch: nabijheid + crime + trends + score computation | Non-fatal enrichment, same try/except pattern as existing CBS |
+| `backend/app/scans/schemas.py` | Add `location_score: dict | None` to `ScanListItem`, `ScanResultsResponse` | Expose score to frontend |
+| `backend/app/government_apis/rate_limiter.py` | Add `politie_crime_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)` | New API needs its own rate limiter |
+| `frontend/src/lib/types/scan.ts` | Add `LocationScore`, `NabijheidData`, `CriminaliteitData`, `TrendData` interfaces. Extend `CbsNeighborhoodMetrics` with optional `nabijheid`, `criminaliteit`, `trends` keys | Type new data flowing through existing `neighborhood_metrics` |
+| `frontend/src/components/map/panels/WijkMapPanel.tsx` | Add VoorzieningenCard, CrimeCard, LocationScoreCard, TrendChart sections below existing CbsNeighborhoodCard | Display new data in wijk context |
+| `frontend/src/components/projects/CbsNeighborhoodCard.tsx` | Add income row (data already in MEASURE_CODES). Add optional trend indicators (arrow up/down) when trends data available | Extended display |
 
 ---
 
-## Data Flow Details
+## Data Flow
 
-### Flow 1: CBS Integration (Already Wired — Display Only Missing)
-
-```
-User triggers wijk scan
-  -> ARQ: area_scan job Phase 2
-  -> CBSODataClient.get_neighborhood_data(gemeente_naam, wijk_naam)
-     -> CBS OData: WijkenEnBuurten lookup (2 calls)
-     -> CBS OData: TypedDataSet fetch (1 call)
-  -> scan.neighborhood_metrics = {bron, dataset, peiljaar, data: {...}}
-  -> Committed to DB (AreaScan.neighborhood_metrics JSONB)
-
-User navigates to wijk
-  -> GET /api/scans/{scan_id}/results
-  -> ScanResultsResponse.neighborhood_metrics populated from AreaScan row
-  -> [TODO] CbsNeighborhoodCard renders if metrics non-null
-```
-
-**Missing link:** Data flows from DB to frontend type but no component renders it.
-
-### Flow 2: Rechtspraak Search + Display (Fully Wired)
+### Scan-Time Data Acquisition (Extended Phase 2)
 
 ```
-WijkDetailView mounts JurisprudenceSection(gemeenteNaam, wijkNaam)
-  -> Default query: "omgevingsvergunning {gemeenteNaam}"
-  -> useJurisprudenceSearch -> GET /api/jurisprudence/search?q=...
-  -> RechtspraakClient.search_jurisprudence() -> Atom XML parsed
-  -> JurisprudenceSection renders result cards
-
-User clicks result
-  -> useJurisprudenceDoc(ecli) -> GET /api/jurisprudence/doc/{ecli}
-  -> RechtspraakClient.get_jurisprudence_document() -> Open Rechtspraak XML
-  -> JurisprudenceViewer renders inline document text
+area_scan_job
+  |
+  +-- Phase 2 (existing): BAG + bestemmingen + CBS KWB
+  |     +-- cbs_client.get_neighborhood_data() -> neighborhood_metrics JSONB
+  |
+  +-- Phase 2c (NEW): Location intelligence enrichment
+  |     |
+  |     +-- [parallel] cbs_nabijheid_client.get_proximity_data(gemeente_code, wijk_naam)
+  |     |     -> {supermarkt_km: 0.8, basisonderwijs_km: 1.2, treinstation_km: 3.4, ...}
+  |     |
+  |     +-- [parallel] politie_crime_client.get_crime_data(wijk_code, year=current)
+  |     |     -> {totaal_misdrijven: 245, per_1000_inwoners: 42.1}
+  |     |
+  |     +-- [parallel] cbs_multiyear.get_trends(gemeente_code, wijk_naam, years=5)
+  |     |     -> {jaren: [2020..2024], woz: [...], inkomen: [...], inwoners: [...]}
+  |     |
+  |     +-- [sequential] location_scoring.compute_score(all_collected_data)
+  |           -> {total: 7.2, voorzieningen: 8.1, veiligheid: 6.5, demografie: 7.0, trend: 7.8}
+  |
+  +-- scan.neighborhood_metrics = {**existing, nabijheid: {...}, criminaliteit: {...}, trends: {...}}
+  +-- scan.location_score = computed_score_dict
 ```
 
-### Flow 3: AI Legal Analysis (To Build)
+### Storage Strategy: Extend neighborhood_metrics JSONB + Separate Score Column
+
+**Source data** goes into `neighborhood_metrics` JSONB (new top-level keys):
+
+```python
+scan.neighborhood_metrics = {
+    # EXISTING (unchanged)
+    "bron": "CBS StatLine OData v4",
+    "dataset": "86165NED - Kerncijfers wijken en buurten",
+    "peiljaar": 2025,
+    "data": {
+        "gemiddelde_woz_waarde": 275.0,
+        "stedelijkheid": {"klasse": 2, "omschrijving": "Sterk stedelijk", "omgevingsadressendichtheid": 2450.0},
+        "demografie": {"aantal_inwoners": 4820, "percentage_huurwoningen": 55.0, "percentage_koopwoningen": 45.0},
+        "bouwjaar_distributie": {"percentage_bouwjaar_voor_2000": None, "percentage_bouwjaar_vanaf_2000": None},
+    },
+
+    # NEW: proximity data
+    "nabijheid": {
+        "bron": "CBS Nabijheid voorzieningen",
+        "dataset": "86134NED",
+        "peiljaar": 2024,
+        "data": {
+            "afstand_supermarkt_km": 0.8,
+            "afstand_basisonderwijs_km": 1.2,
+            "afstand_voortgezet_onderwijs_km": 2.1,
+            "afstand_treinstation_km": 3.4,
+            "afstand_overstapstation_km": 8.2,
+            "afstand_huisarts_km": 0.6,
+            "afstand_kinderdagverblijf_km": 0.9,
+            "afstand_park_km": 0.3,
+            "afstand_hoofdverkeersweg_km": 1.5,
+        },
+    },
+
+    # NEW: crime data
+    "criminaliteit": {
+        "bron": "Politie Open Data (CBS)",
+        "dataset": "47018NED",
+        "peiljaar": 2024,
+        "data": {
+            "totaal_misdrijven": 245,
+            "per_1000_inwoners": 42.1,
+        },
+    },
+
+    # NEW: historical trends (5-year)
+    "trends": {
+        "jaren": [2020, 2021, 2022, 2023, 2024],
+        "woz": [210.0, 225.0, 248.0, 260.0, 275.0],
+        "inkomen": [29.5, 30.1, 30.8, 31.2, 32.0],
+        "inwoners": [4520, 4610, 4680, 4750, 4820],
+    },
+}
+```
+
+**Computed score** goes into separate `location_score` JSONB column:
+
+```python
+scan.location_score = {
+    "total": 7.2,
+    "breakdown": {
+        "voorzieningen": 8.1,
+        "veiligheid": 6.5,
+        "demografie": 7.0,
+        "marktdynamiek": 7.8,
+        "trend": 6.9,
+    },
+    "model_version": "location-v1",
+    "computed_at": "2026-03-07T14:30:00Z",
+}
+```
+
+**Rationale for separation:**
+- Source data in `neighborhood_metrics` is immutable after fetch (no reason to change it)
+- Computed score in `location_score` may need recomputation when we tune weights
+- Management command can recompute scores across all scans without re-fetching APIs
+- Backward compatible: scans without new data simply have null keys
+
+### Frontend Data Flow
 
 ```
-JurisprudenceSection has loaded results
-  -> User clicks "Analyseer juridisch klimaat"
-  -> analyzeEnabled = true
-  -> useJurisprudenceAnalysis(eclis, context) fires
-  -> POST /api/jurisprudence/analyze {eclis, context}
-
-Backend endpoint:
-  -> asyncio.gather: fetch document text for each ECLI
-  -> ClaudeClient.analyze_jurisprudence(ecli_texts, context)
-  -> Anthropic API: structured output -> JurisprudenceAnalysis
-
-Response:
-  -> {risk_score, vergunnings_succeskans, risk_summary, precedent_insights}
-  -> Frontend renders risk badge + success probability + prose
-  -> Cached 30 min in TanStack Query
+WijkMapPanel
+  |
+  +-- latestScan.neighborhood_metrics.data (existing)
+  |     +-- CbsNeighborhoodCard (existing, reads .data -- unchanged)
+  |
+  +-- latestScan.neighborhood_metrics.nabijheid (NEW key)
+  |     +-- VoorzieningenCard (NEW component)
+  |
+  +-- latestScan.neighborhood_metrics.criminaliteit (NEW key)
+  |     +-- CrimeCard (NEW component)
+  |
+  +-- latestScan.neighborhood_metrics.trends (NEW key)
+  |     +-- TrendChart (NEW component, sparklines per metric)
+  |
+  +-- latestScan.location_score (NEW field on ScanListItem)
+        +-- LocationScoreCard (NEW component, prominent placement)
 ```
 
 ---
 
-## Recommended Build Order
+## Patterns to Follow
 
-Dependencies flow from data layer to API to UI. Each step is independently shippable.
+### Pattern 1: Refactored CBS Base for Client Reuse
 
-### Step 1: CBS Display (Frontend Only — No Backend Changes)
-
-CBS data is already collected and served. This is purely a frontend rendering task.
-
-1. Add `CbsNeighborhoodMetrics` TypeScript interface to `frontend/src/lib/types/scan.ts`
-2. Create `frontend/src/components/projects/CbsNeighborhoodCard.tsx`
-3. Mount `CbsNeighborhoodCard` in `frontend/src/components/projects/WijkDetailView.tsx`
-4. Optionally: add CBS context banner to `frontend/src/components/results/ResultsTable.tsx`
-
-**Prerequisite check before building:**
-Run `alembic upgrade head` in backend. The migration `1a67b08d7c1b` adds `neighborhood_metrics`
-column. Inspect actual CBS API response for a real gemeente to verify field names before typing.
-The `CBSODataClient` uses dataset `85618NED` — confirm field names match `MateVanStedelijkheid_112`,
-`GemiddeldeWOZWaarde_35`, etc.
-
-**Risk (LOW):** CBS returns null for many metrics on small wijken. The component must render
-gracefully with partial data. Do not show the card if all key metrics are null.
-
-### Step 2: AI Legal Analysis Backend
-
-Extends existing `ClaudeClient`. No new infrastructure required.
-
-1. Add `PrecedentInsight` + `JurisprudenceAnalysis` to `backend/app/ai/schemas.py`
-2. Add `JURISPRUDENCE_ANALYSIS_PROMPT` to `backend/app/ai/prompts.py`
-3. Add `analyze_jurisprudence()` method to `backend/app/ai/claude_client.py`
-4. Add `POST /analyze` endpoint to `backend/app/api/endpoints/jurisprudence.py`
-5. Verify jurisprudence router is mounted at `/api/jurisprudence` in `backend/app/main.py`
-
-**Risk (MEDIUM):** Claude API latency is 10-30s for multi-ECLI analysis. Start with synchronous
-endpoint limited to 3 ECLIs. If user feedback shows timeout friction, port to ARQ async job
-using the existing `parsing_job` pattern as template.
-
-### Step 3: AI Legal Analysis Frontend
-
-Depends on Step 2.
-
-1. Add `analyzeJurisprudence()` API function to `frontend/src/lib/api.ts`
-2. Add `useJurisprudenceAnalysis` hook to `frontend/src/hooks/useJurisprudence.ts`
-3. Add analysis trigger + results panel to `frontend/src/components/projects/JurisprudenceSection.tsx`
-
----
-
-## Architecture Patterns in Use
-
-### Pattern 1: Government API Client Singleton
-
-All government API clients are module-level singletons:
+The `CbsNabijheidClient` shares 80% of `CBSODataClient` logic (headers, retry, limiter, wijk resolution). Extract shared functionality:
 
 ```python
-# End of each client module
-cbs_client = CBSODataClient()
-rechtspraak_client = RechtspraakClient()
+# Option A: Constructor-parameterized client (RECOMMENDED)
+class CBSODataClient:
+    def __init__(self, dataset_id: str | None = None, measure_codes: dict[str, str] | None = None):
+        self.dataset_id = dataset_id or settings.cbs_dataset_id
+        self.measure_codes = measure_codes or DEFAULT_KWB_MEASURE_CODES
+        self.peiljaar = DATASET_PEILJAAR.get(self.dataset_id, 2025)
+
+# Usage:
+kwb_client = CBSODataClient()  # existing behavior
+nabijheid_client = CBSODataClient(
+    dataset_id="86134NED",
+    measure_codes=NABIJHEID_MEASURE_CODES,
+)
 ```
 
-The shared `httpx.AsyncClient` is passed in at call time — never stored in the instance.
-This keeps clients stateless and testable. Both new clients follow this pattern correctly.
+This avoids creating a separate class and duplicating the wijk resolution + observation fetch logic.
 
-### Pattern 2: Fire-and-Forget Non-Fatal Enrichment
+### Pattern 2: OData v3 Client for Politie (New Pattern)
 
-CBS fetch in `area_scan.py` uses `try/except Exception` that logs a warning but never aborts the scan.
-The pattern for any supplementary enrichment step:
+The politie data uses OData v3 on `dataderden.cbs.nl`. Requires a distinct client class:
 
 ```python
+class PolitieCrimeClient:
+    """Politie misdrijfcijfers via CBS dataderden OData v3."""
+
+    BASE_URL = "https://dataderden.cbs.nl/ODataApi/OData/47018NED"
+
+    async def get_crime_data(
+        self, client: httpx.AsyncClient, wijk_code: str, year: int
+    ) -> dict | None:
+        """Fetch total registered crimes for a wijk in a given year."""
+        # 1. Query WijkenEnBuurten to resolve wijk identifier
+        # 2. Query TypedDataSet filtered by WijkenEnBuurten key + Perioden
+        # 3. Sum GeregistreerdeMisdrijven_1 across crime types
+```
+
+### Pattern 3: Multi-Year Parallel Fetch
+
+```python
+async def get_historical_kwb(
+    self, client: httpx.AsyncClient,
+    gemeente_code: str, wijk_naam: str | None,
+    gemeente_naam: str, years: int = 5,
+) -> list[dict]:
+    """Fetch KWB metrics for last N years from separate CBS dataset IDs."""
+    dataset_ids = list(KWB_DATASET_PEILJAAR.items())[-years:]
+
+    async def fetch_year(dataset_id: str, year: int) -> dict | None:
+        year_client = CBSODataClient(dataset_id=dataset_id)
+        return await year_client.get_neighborhood_data(
+            client, gemeente_naam, wijk_naam, gemeente_code
+        )
+
+    results = await asyncio.gather(
+        *[fetch_year(did, yr) for did, yr in dataset_ids],
+        return_exceptions=True,
+    )
+    return [r for r in results if isinstance(r, dict)]
+```
+
+### Pattern 4: Non-Fatal Scan Enrichment
+
+All new data fetches MUST be wrapped in the existing non-fatal pattern:
+
+```python
+# In area_scan_job, Phase 2c:
 try:
-    data = await some_client.fetch(...)
-    scan.some_field = data
-    if data:
-        logger.info(f"Scan {scan_id}: successfully fetched [source]")
+    proximity_data = await nabijheid_client.get_neighborhood_data(
+        client=http_client, gemeente_naam=scan.gemeente_naam,
+        wijk_naam=scan.wijk_naam, gemeente_code=scan.gemeente_code,
+    )
+    if proximity_data:
+        scan.neighborhood_metrics["nabijheid"] = proximity_data
+        logger.info(f"Scan {scan_id}: nabijheid data fetched")
 except Exception as e:
-    logger.warning(f"Scan {scan_id}: [source] fetch failed (non-fatal): {e}")
+    logger.warning(f"Scan {scan_id}: nabijheid fetch failed (non-fatal): {e}")
 ```
 
-Do NOT apply to BAG WFS (core, abort on failure). DO apply to CBS (already in use),
-and any future supplementary enrichment that doesn't change core scan correctness.
+### Pattern 5: Pure Location Score Function
 
-### Pattern 3: JSONB for API Payloads with Evolving Schemas
-
-Unstructured or potentially evolving API payloads go into JSONB columns. The frontend narrows
-to typed interfaces independently. CBS field names may change between annual dataset releases —
-JSONB storage avoids migration requirements when they do.
-
-### Pattern 4: TanStack Query Stale Times by Data Volatility
-
-| Data type | Stale time | Rationale |
-|-----------|------------|-----------|
-| Search results (Rechtspraak) | 5 min | User may be researching actively |
-| Court documents | 60 min | Published rulings never change |
-| AI analysis | 30 min | Expensive; new rulings unlikely within session |
-| CBS neighborhood metrics | N/A (DB-cached at scan time) | Stored in AreaScan row, not re-fetched |
-
-### Pattern 5: Pydantic Structured Outputs from Claude
-
-The existing `parse_bestemmingsplan()` flow validates Claude JSON response against a Pydantic model.
-Apply the same pattern for jurisprudence analysis — no ad-hoc JSON parsing, no try/except for
-missing keys. The schema IS the contract.
+Score computation is a pure function (no I/O). Easy to test, easy to recompute:
 
 ```python
-# In claude_client.py
-response_text = message.content[0].text
-try:
-    parsed = JurisprudenceAnalysis.model_validate_json(response_text)
-except ValidationError as e:
-    raise AIParsingError(f"Claude response did not match schema: {e}")
-return parsed
+@dataclass(frozen=True)
+class LocationScore:
+    total: float              # 0-10 overall
+    voorzieningen: float      # 0-10 proximity sub-score
+    veiligheid: float         # 0-10 safety sub-score
+    demografie: float         # 0-10 demographics sub-score
+    marktdynamiek: float      # 0-10 market dynamics sub-score
+    trend: float              # 0-10 improving/declining trajectory
+    model_version: str = "location-v1"
+
+def compute_location_score(
+    neighborhood: dict | None,     # KWB data
+    proximity: dict | None,        # nabijheid data
+    crime: dict | None,            # criminaliteit data
+    trends: list[dict] | None,     # historical series
+) -> LocationScore:
+    """Pure scoring. All inputs optional -- partial data yields partial score."""
 ```
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Calling Rechtspraak API per-parcel during area scan
+### Anti-Pattern 1: PostGIS Distance for Voorzieningen
+**What:** Using ST_Distance to calculate proximity to schools/supermarkets from parcel coordinates
+**Why bad:** Requires maintaining POI database, geocoding, road-network routing. CBS already computes this per wijk using actual road distances (more accurate).
+**Instead:** Use CBS Nabijheid voorzieningen dataset. Pre-computed, authoritative, updated annually.
 
-**What people do:** Add jurisprudence fetch inside the parcel processing loop.
-**Why it's wrong:** Rechtspraak has a 5-concurrent-request semaphore; scanning 500 parcels
-would queue for minutes and likely hit the 10 req/s rate limit. Court rulings are
-gemeente/wijk-level data, not parcel-level data.
-**Do this instead:** Jurisprudence is on-demand at the wijk level only (current architecture is correct).
+### Anti-Pattern 2: Storing Computed Score Inside Source Data
+**What:** Putting location score inside `neighborhood_metrics` JSONB alongside source data
+**Why bad:** When scoring weights change, you cannot recompute without re-fetching all APIs. Source data and derived scores have different lifecycles.
+**Instead:** Separate `location_score` column. Source data immutable, score recomputable.
 
-### Anti-Pattern 2: Blocking HTTP response for multi-ECLI AI analysis
+### Anti-Pattern 3: Sequential Multi-Year Fetches
+**What:** Querying 5 years of CBS data one-by-one, awaiting each
+**Why bad:** 5 years x 2 datasets (KWB + Nabijheid) = 10 sequential API calls at 1-2s each = 10-20s added to scan
+**Instead:** `asyncio.gather` for parallel fetch. All 10 calls fire simultaneously, total time = slowest single call.
 
-**What people do:** Call `analyze_jurisprudence()` synchronously for 5+ ECLIs.
-**Why it's wrong:** 5 ECLI fetches (5 x 15s timeout potential) + Claude API (10-30s) can exceed
-HTTP request timeouts. Rechtspraak content endpoint is not always fast.
-**Do this instead:** Limit synchronous path to max 3 ECLIs with conservative timeouts. If demand
-exceeds this, add ARQ async job with polling — the existing `parsing_job` model is the template.
+### Anti-Pattern 4: Duplicating CBSODataClient for Nabijheid
+**What:** Copy-pasting the entire CBS client class with different measure codes
+**Why bad:** 80% identical code (headers, retry, limiter, wijk resolution, observation fetch). Bug fixes must be applied twice.
+**Instead:** Parameterize CBSODataClient to accept dataset_id + measure_codes, or extract shared base.
 
-### Anti-Pattern 3: Storing AI analysis without provenance
-
-**What people do:** Cache analysis result without recording which ECLIs were analyzed and when.
-**Why it's wrong:** New court rulings may reverse the risk picture. Without knowing what was analyzed,
-users cannot tell if results are current.
-**Do this instead:** Include `analyzed_at`, `ecli_count`, and `source_eclis` in the analysis response
-even if not persisted to DB. Frontend can display "Gebaseerd op X uitspraken, geanalyseerd op [datum]".
-
-### Anti-Pattern 4: Hardcoding CBS dataset ID without documentation
-
-**What people do:** Hardcode `DATASET_ID = "85618NED"` without noting it is the 2023 dataset.
-**Why it's wrong:** CBS publishes new annual Kerncijfers datasets. The 2024 dataset will have a
-different ID. Silent failures occur when the old ID returns empty results.
-**Do this instead:** Document the ID-to-year mapping in the client's docstring. The current
-implementation already logs `peiljaar: 2023` in the response, which is the right signal.
-Add a comment noting when this ID should be updated (each new CBS annual release, typically Q2).
+### Anti-Pattern 5: Using v4 Protocol for Politie Data
+**What:** Calling `dataderden.cbs.nl` with OData v4 query syntax
+**Why bad:** Politie data uses OData v3. Response format, entity names, and filter syntax differ. Will get 404s or malformed responses.
+**Instead:** Build a separate `PolitieCrimeClient` that handles OData v3 specifics.
 
 ---
 
-## Scaling Considerations
+## Scalability Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-50 organizations | No changes needed; current monolith handles this trivially |
-| 50-500 organizations | CBS returns the same data for any organization scanning the same gemeente — consider a shared organization-agnostic CBS cache to avoid redundant API calls (CBS API has no documented rate limit but redundancy is wasteful) |
-| 500+ organizations | AI analysis per-request cost becomes significant. Add request deduplication at the TanStack Query level (same eclis + context = same queryKey = one network call) |
-
-### First Bottleneck: AI Analysis Latency
-
-Claude API is the slowest operation in the new stack (~10-30s for jurisprudence analysis).
-The existing ARQ + polling pattern from bestemmingsplan parsing is the proven solution when
-synchronous latency becomes a UX problem. Start synchronous, migrate to async if needed.
+| Concern | Current (per scan) | At 1K scans | Mitigation |
+|---------|-------------------|-------------|------------|
+| CBS API calls | +3 new (nabijheid + multi-year) | 3K extra calls/day | Rate limiter already handles this. CBS has no documented limit but 500/hr is polite |
+| Multi-year historical | 10 parallel calls (5yr x 2 datasets) | Could be cached | Use CachedAPIResponse with 90-day TTL (data changes annually at most) |
+| neighborhood_metrics size | ~2KB -> ~5KB per scan | 5MB total in DB | JSONB handles fine. No content indexing needed |
+| Score recomputation | Pure function, <1ms | Batch across all scans | Management command: `python -m app.tools.recompute_scores` |
+| Politie data freshness | Monthly updates | Same for all orgs | Cache at organization-agnostic level (same wijk = same crime data) |
 
 ---
 
-## Integration Test Checklist
+## Suggested Build Order
 
-**Step 1 — CBS Display:**
-- [ ] Run alembic upgrade head; confirm `neighborhood_metrics` column exists
-- [ ] Run wijk scan; confirm `neighborhood_metrics` is non-null in AreaScan row via DB query
-- [ ] GET /api/scans/{scan_id}/results returns `neighborhood_metrics` in JSON
-- [ ] `CbsNeighborhoodCard` renders correctly with full data
-- [ ] `CbsNeighborhoodCard` renders gracefully when individual fields are null
-- [ ] Card does not render when `neighborhood_metrics` is null (e.g., CBS returned no data)
-- [ ] WijkDetailView does not break if scan has no CBS data (rural area, small wijk)
+Build order follows dependency graph and risk profile:
 
-**Step 2 — AI Backend:**
-- [ ] POST /api/jurisprudence/analyze returns 200 with valid `JurisprudenceAnalysis` shape
-- [ ] `risk_score` is integer 0-10, `vergunnings_succeskans` is integer 0-100
-- [ ] Non-existent ECLI in the list is skipped, not crashing the request
-- [ ] Empty `eclis` list returns 422 validation error
-- [ ] More than 5 ECLIs returns 422 validation error
-- [ ] Claude API key missing or invalid returns 500 with clear message
-- [ ] Dutch disclaimer text is present in response
+### Phase 1: CBS Nabijheid Client + VoorzieningenCard
+**Risk:** LOW (same OData v4 pattern as existing CBS client)
+**Dependencies:** None
+- Refactor `CBSODataClient` to accept parameterized dataset_id + measure_codes
+- Create nabijheid instance with 86134NED + proximity measure codes
+- Add nabijheid fetch to `area_scan.py` Phase 2c (non-fatal)
+- Merge into `neighborhood_metrics["nabijheid"]`
+- New `VoorzieningenCard.tsx` component
+- Mount in `WijkMapPanel.tsx`
 
-**Step 3 — AI Frontend:**
-- [ ] "Analyseer juridisch klimaat" button only appears when search results exist
-- [ ] Loading state (skeleton) renders during API call
-- [ ] Error state renders fallback text, not blank panel
-- [ ] Successful response renders risk badge + succeskans bar + summary text
-- [ ] Re-clicking button within 30 min does not trigger second API call (TanStack cache)
-- [ ] Disclaimer text visible below analysis panel
+### Phase 2: Politie Crime Client + CrimeCard
+**Risk:** MEDIUM (new OData v3 protocol, different from all existing clients)
+**Dependencies:** None (parallel with Phase 1)
+- New `PolitieCrimeClient` in `politie_crime.py`
+- New `politie_crime_limiter` in `rate_limiter.py`
+- Add crime fetch to `area_scan.py` Phase 2c
+- Merge into `neighborhood_metrics["criminaliteit"]`
+- New `CrimeCard.tsx`
+
+### Phase 3: Multi-Year CBS Trends + TrendChart
+**Risk:** LOW (same API, just multiple calls)
+**Dependencies:** Phase 1 (uses refactored CBSODataClient)
+- New `CbsMultiYearService` orchestrating parallel year queries
+- Add trends fetch to `area_scan.py` Phase 2c
+- Merge into `neighborhood_metrics["trends"]`
+- New `TrendChart.tsx` sparkline component
+- Add trend indicators to `CbsNeighborhoodCard.tsx`
+
+### Phase 4: Location Score Aggregation + LocationScoreCard
+**Risk:** LOW (pure computation, no external dependencies)
+**Dependencies:** Phases 1-3 (needs all data sources)
+- Alembic migration: `location_score JSONB` on `area_scans`
+- New `LocationScoreService` with weighted scoring algorithm
+- Compute + store during scan Phase 2c
+- Extend `ScanListItem` schema with `location_score`
+- New `LocationScoreCard.tsx` (prominent placement in WijkMapPanel)
+- Add `compute_location_score` management command for recomputation
+
+### Phase 5: Extended CBS Metrics + Polish
+**Risk:** LOW (incremental improvements)
+**Dependencies:** Phases 1-4
+- Add income data display to `CbsNeighborhoodCard` (measure already in MEASURE_CODES)
+- Extend `CbsNeighborhoodMetrics` TypeScript type
+- Polish trend arrows, color scales, responsive layout
 
 ---
 
 ## Sources
 
-- Direct codebase inspection: `backend/app/government_apis/cbs_odata.py`
-- Direct codebase inspection: `backend/app/government_apis/rechtspraak.py`
-- Direct codebase inspection: `backend/app/jobs/area_scan.py:340-394` (CBS integration)
-- Direct codebase inspection: `backend/app/models/area_scan.py` (neighborhood_metrics column)
-- Direct codebase inspection: `backend/app/scans/schemas.py:227` (schema field)
-- Direct codebase inspection: `backend/app/ai/claude_client.py`, `prompts.py`, `schemas.py`
-- Direct codebase inspection: `backend/app/api/endpoints/jurisprudence.py`
-- Direct codebase inspection: `backend/app/main.py` (router registration)
-- Direct codebase inspection: `frontend/src/components/projects/JurisprudenceSection.tsx`
-- Direct codebase inspection: `frontend/src/components/projects/WijkDetailView.tsx`
-- Direct codebase inspection: `frontend/src/hooks/useJurisprudence.ts`
-- Direct codebase inspection: `frontend/src/lib/types/scan.ts:169`
-- Direct codebase inspection: `backend/alembic/versions/1a67b08d7c1b_add_neighborhood_metrics_to_area_scan.py`
+- CBS Kerncijfers wijken en buurten series: https://www.cbs.nl/nl-nl/reeksen/publicatie/kerncijfers-wijken-en-buurten
+- CBS Nabijheid voorzieningen 2024 (86134NED): https://www.cbs.nl/nl-nl/cijfers/detail/86134NED
+- Politie Open Data portal: https://politieopendata.cbs.nl/portal.html?_la=nl&_catalog=Politie
+- CBS OData v4 metadata: https://www.cbs.nl/nl-nl/onze-diensten/open-data/statline-als-open-data/metadata-odata-v4
+- Live verification: `datasets.cbs.nl/odata/v1/CBS/86134NED/MeasureCodes` -- 46 distance measures confirmed
+- Live verification: `dataderden.cbs.nl/ODataApi/OData/47018NED` -- OData v3 structure with WijkenEnBuurten + Perioden + SoortMisdrijf entities
+- Live verification: All KWB dataset IDs (84799NED through 86165NED) confirmed via Datasets endpoint
+- Live verification: All Nabijheid dataset IDs (84953NED through 86134NED) confirmed via Datasets endpoint
 
 ---
 
-*Architecture research for: Propdex v11.0 Open Data Intelligence*
-*Researched: 2026-03-06*
+*Architecture research for: Propdex v12.0 Omgevings- & Leefbaarheids-Scorer*
+*Researched: 2026-03-07*

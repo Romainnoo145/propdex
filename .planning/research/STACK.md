@@ -1,277 +1,244 @@
-# Stack Research — v11.0 Open Data Intelligence
+# Technology Stack
 
-**Domain:** Dutch PropTech — CBS Neighborhood Stats, Rechtspraak Jurisprudence, AI Legal Analysis
-**Researched:** 2026-03-06
-**Confidence:** HIGH (existing stack verified in codebase; new additions verified via live API inspection and official docs)
+**Project:** Propdex v12.0 Omgevings- & Leefbaarheids-Scorer
+**Researched:** 2026-03-07
+**Confidence:** HIGH (all data sources verified via live API calls)
 
 ---
 
 ## Context: Subsequent Milestone
 
-This covers ONLY new stack requirements for v11.0. The full existing validated stack is NOT re-documented here.
+This covers ONLY new stack requirements for v12.0. Existing validated capabilities are NOT re-documented.
 
-**Existing base stack (already in `backend/pyproject.toml`):**
-FastAPI[standard]>=0.115.0, SQLAlchemy[asyncio]>=2.0.25, asyncpg>=0.29.0, httpx[http2]>=0.27.0, lxml>=5.3.0, anthropic>=0.40.0, aiolimiter>=1.2.0, arq>=0.27.0, redis>=5.0.0, pydantic-settings>=2.1.0, pyproj>=3.7.0, shapely>=2.0.0, GeoAlchemy2>=0.15.0, WeasyPrint>=68.0, jinja2>=3.1.0, fastapi-mail>=1.4.1, PyJWT[crypto]>=2.9.0, pwdlib[argon2]>=0.2.0, openpyxl>=3.1.0
-
-**Existing base stack (already in `frontend/package.json`):**
-React 19, Vite 7, TypeScript strict, MapLibre GL JS 5.x, TanStack Query v5, TanStack Router v1, TanStack Table v8, Tailwind v4, react-hook-form ^7.71.1, zod ^4.3.6, sonner ^2.0.7, lucide-react, clsx, class-variance-authority
+**Existing infrastructure reused without changes:**
+- `httpx[http2]>=0.27.0` -- HTTP client for all external APIs
+- `aiolimiter>=1.2.0` -- rate limiting via `APIRateLimiter`
+- `government_apis/base.py` -- `GovernmentAPIError`, `retry_with_backoff`
+- `government_apis/cbs_odata.py` -- CBS OData v4 client (WijkenEnBuurtenCodes + Observations pattern)
+- `government_apis/rate_limiter.py` -- per-API rate limiter singletons
+- PostgreSQL JSONB cache with source-specific TTLs
 
 ---
 
-## Final Answer: New Dependencies Required
+## Final Answer: Zero New Dependencies Required
 
-### Backend — Zero New pip Packages
-
-All three v11.0 features are fully implementable with the existing dependency set.
+All four data domains build on the existing stack. No new pip packages, no new npm packages.
 
 | Feature | New pip package? | Uses instead |
 |---------|-----------------|-------------|
-| CBS OData v4 neighborhood scorer | None | httpx + manual OData params |
-| Rechtspraak Atom/XML parsing | None | lxml (already >=5.3.0) |
-| AI legal analysis structured output | None | anthropic SDK (already >=0.40.0) |
-| Rate limiting new APIs | None | aiolimiter (already >=1.2.0) |
-| Background AI analysis jobs | None | arq + redis (already installed) |
+| CBS multi-year trends | None | Extend existing `CBSODataClient` -- loop over dataset IDs |
+| Crime data (Politie) | None | New OData v3 client using httpx (same pattern as v4) |
+| Voorzieningen proximity | None | Same CBS OData v4 client -- just different dataset IDs and measure codes |
+| Score aggregation | None | Pure Python arithmetic + `statistics.linear_regression()` (stdlib) |
 
 **`pyproject.toml` changes: none required.**
-
-### Frontend — Zero New npm Packages
-
-| Feature | New npm package? | Uses instead |
-|---------|-----------------|-------------|
-| Jurisprudence search UI | None | TanStack Query useQuery (existing) |
-| Search input + form | None | react-hook-form + zod (existing) |
-| AI analysis status polling | None | useQuery + refetchInterval (existing pattern) |
-| Results display components | None | Existing card/section component pattern |
-
 **`package.json` changes: none required.**
 
 ---
 
-## Integration Points: How Each Feature Fits the Existing Pattern
+## Data Sources & Integration Points
 
-### 1. CBS OData v4 Client (`app/government_apis/cbs_odata.py`)
+### 1. CBS Multi-Year Trend Data (Kerncijfers wijken en buurten)
 
-The client already exists as a scaffold (confirmed in codebase). The integration pattern is direct:
+| Aspect | Detail |
+|--------|--------|
+| **API** | CBS OData v4 (`datasets.cbs.nl/odata/v1/CBS/{dataset_id}/Observations`) |
+| **Protocol** | OData v4 (identical to existing `cbs_odata.py`) |
+| **Auth** | None (public) |
+| **Integration** | Extend existing `CBSODataClient` with multi-dataset iteration |
 
-**API structure (verified against live endpoint `opendata.cbs.nl/ODataApi/OData/85618NED`):**
+**Verified dataset IDs for 5-year trend window (all confirmed in CBS v4 catalog):**
 
-| Collection | Purpose |
-|-----------|---------|
-| `WijkenEnBuurten` | Dimension table — resolve gemeente/wijk name to CBS region key |
-| `TypedDataSet` | Main data — fetch metrics by region key |
-| `DataProperties` | Field metadata — discover column names and descriptions |
+| Dataset ID | Year | Status |
+|------------|------|--------|
+| `86165NED` | 2025 | Verified in v4 catalog |
+| `85984NED` | 2024 | Verified, already in `DATASET_PEILJAAR` |
+| `85618NED` | 2023 | Verified, already in `DATASET_PEILJAAR` |
+| `85318NED` | 2022 | Verified, already in `DATASET_PEILJAAR` |
+| `85039NED` | 2021 | Verified in v4 catalog |
 
-**OData v4 query pattern — no library needed:**
+Full historical range available: `84799NED` (2020), `84583NED` (2019), `84286NED` (2018), `83765NED` (2017) etc.
+
+**New measure codes to add to `MEASURE_CODES` dict (verified stable across all yearly datasets):**
 
 ```python
-# All CBS queries use standard OData $filter, $select, $top params.
-# httpx handles URL encoding automatically when passed as dict.
-params = {
-    "$filter": f"WijkenEnBuurten eq '{region_key}'",
-    "$select": "GemiddeldeWOZWaarde_35,MateVanStedelijkheid_112,Omgevingsadressendichtheid_113,AantalInwoners_5",
-    "$top": "1",
+# Leeftijdsverdeling (age distribution)
+"leeftijd_0_15": "10680",           # 0 tot 15 jaar
+"leeftijd_15_25": "53050",          # 15 tot 25 jaar
+"leeftijd_25_45": "53310",          # 25 tot 45 jaar
+"leeftijd_45_65": "53715",          # 45 tot 65 jaar
+"leeftijd_65_plus": "80200",        # 65 jaar of ouder
+
+# Huishoudenssamenstelling (household composition)
+"huishoudens_totaal": "1050010_2",           # Huishoudens totaal
+"eenpersoonshuishoudens": "1050015",         # Eenpersoonshuishoudens
+"huishoudens_zonder_kinderen": "1016040",    # Huishoudens zonder kinderen
+"huishoudens_met_kinderen": "1016030",       # Huishoudens met kinderen
+"gem_huishoudensgrootte": "M000114",         # Gemiddelde huishoudensgrootte
+
+# Inkomensverdeling (income distribution) -- M000223 already exists
+"gem_inkomen_per_inwoner": "M000224",        # Gemiddeld inkomen per inwoner
+"laagste_inkomen_40pct": "D000187",          # 40% personen met laagste inkomen
+"hoogste_inkomen_20pct": "D000185",          # 20% personen met hoogste inkomen
+
+# Nabijheid voorzieningen (proximity -- already in Kerncijfers dataset!)
+"afstand_supermarkt": "D000025",             # Afstand tot grote supermarkt (km)
+"afstand_huisarts": "D000028",               # Afstand tot huisartsenpraktijk (km)
+"afstand_kinderdagverblijf": "D000029",      # Afstand tot kinderdagverblijf (km)
+"afstand_school": "D000045",                 # Afstand tot school (km)
+```
+
+**Key insight:** The Kerncijfers dataset already includes 4 proximity measures (supermarkt, huisarts, kinderdagverblijf, school) in the same Observations entity as demographics. This means **zero extra API calls** for basic proximity data -- just expand the `MEASURE_CODES` dict.
+
+---
+
+### 2. Crime Data (Politie Open Data via OData v3)
+
+| Aspect | Detail |
+|--------|--------|
+| **API** | OData v3 at `dataderden.cbs.nl/ODataApi/OData/47018NED` |
+| **Protocol** | OData v3 (**NOT v4** -- different entity structure) |
+| **Auth** | None (public) |
+| **Granularity** | Wijk + buurt level, annual figures, 2012-2021 |
+| **Transport** | httpx (already installed) |
+
+**Why OData v3?** The wijk-level crime dataset (47018NED) is NOT in the CBS v4 catalog (`datasets.cbs.nl`). Verified by querying `datasets.cbs.nl/odata/v1/Datasets?$filter=Identifier eq '47018NED'` -- returns empty. It is only available on the separate `dataderden.cbs.nl` portal which uses OData v3.
+
+**OData v3 vs v4 differences:**
+
+| Aspect | OData v4 (existing CBS) | OData v3 (crime data) |
+|--------|------------------------|-----------------------|
+| Base URL | `datasets.cbs.nl/odata/v1/CBS` | `dataderden.cbs.nl/ODataApi/OData` |
+| Data entity | `Observations` | `TypedDataSet` |
+| Region entity | `WijkenEnBuurtenCodes` | `WijkenEnBuurten` |
+| Region key format | Clean (e.g. `WK098311`) | Padded with spaces (e.g. `WK098311  `) |
+| Value field | `Value` + `ValueAttribute` validity flag | Direct column name (e.g. `GeregistreerdeMisdrijven_1`) |
+| Period format | N/A (separate datasets per year) | `2021JJ00` format in same dataset |
+
+**Verified crime categories (from `SoortMisdrijf` dimension):**
+
+| Key | Description | Use in scoring |
+|-----|-------------|----------------|
+| `0.0.0` | Totaal misdrijven | Overall safety index |
+| `1.1.1` | Diefstal/inbraak woning | Direct property risk |
+| `1.4.3` | Openlijk geweld (persoon) | Neighborhood safety |
+| `1.4.4` | Bedreiging | Neighborhood safety |
+| `1.4.5` | Mishandeling | Neighborhood safety |
+| `1.6.1` | Brand/ontploffing | Property risk |
+
+**Sample response structure (verified from live API):**
+
+```json
+{
+  "ID": 28,
+  "SoortMisdrijf": "0.0.0 ",
+  "WijkenEnBuurten": "WK168000  ",
+  "Perioden": "2012JJ00",
+  "GeregistreerdeMisdrijven_1": 116,
+  "Gemeentenaam_2": "                              ",
+  "SoortRegio_3": "        "
 }
-response = await client.get(
-    f"{self.dataset_url}/TypedDataSet",
-    headers={"Accept": "application/json"},
-    params=params,
-)
-data = response.json()  # CBS returns application/json — standard dict parsing
 ```
 
-**Why not `cbsodata4` Python library (PyPI: github.com/dennis8/cbsodata4, v0.1.3, released 2025-06-06)?**
-It uses synchronous HTTP internally (built on `requests`). Our entire stack is `async`. Using it would require `asyncio.to_thread()` wrapping and break the non-blocking event loop guarantee. The CBS query surface for this feature is 2-3 URL parameters — no library abstraction needed.
-
-**Rate limiter:** Add `cbs_odata_limiter` singleton to `app/government_apis/rate_limiter.py`:
-
-```python
-# CBS StatLine OData v4 — public API, no published rate limit
-# Use conservative limits matching sru_limiter pattern
-cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
-```
-
-**Cache TTL:** CBS dataset 85618NED updates annually. Use 30-day TTL (`2592000` seconds). Store in PostgreSQL JSONB using the existing `get_cached_or_fetch()` pattern.
+**Note:** String values are padded with spaces -- `.strip()` required on all dimension keys.
 
 ---
 
-### 2. Rechtspraak XML Parsing (`app/government_apis/rechtspraak.py`)
+### 3. Voorzieningen Proximity (CBS Nabijheid Dataset)
 
-The client scaffold already exists. One critical fix is needed: migrate XML parsing from stdlib `xml.etree.ElementTree` to `lxml.etree` (which is already in `pyproject.toml` as `lxml>=5.3.0`).
+| Aspect | Detail |
+|--------|--------|
+| **API** | CBS OData v4 (`datasets.cbs.nl/odata/v1/CBS/{dataset_id}/Observations`) |
+| **Protocol** | OData v4 (identical to existing CBS client) |
+| **Auth** | None (public) |
+| **Entity structure** | Same: `WijkenEnBuurtenCodes` + `Observations` |
 
-**Why migrate from stdlib to lxml:**
+**Two-tier approach:**
 
-| Concern | stdlib ElementTree | lxml.etree |
-|---------|-------------------|-----------|
-| XXE protection | None — vulnerable to XML External Entity injection from external court XML | `XMLParser(resolve_entities=False, no_network=True)` — blocks entity resolution |
-| Namespace handling | Generates `ns0`/`ns1` prefix artifacts | Preserves declared namespace prefixes |
-| XPath support | None — requires `.iter()` + local name string stripping | Full XPath 1.0 — `root.xpath("//psi:procedure", namespaces=ns)` |
-| Existing pattern | Not used elsewhere | Matches `sru_bekendmakingen.py` exactly |
+| Tier | Source | What it provides | When to use |
+|------|--------|------------------|-------------|
+| **Basic** (Kerncijfers) | `85984NED` etc. | Supermarkt, huisarts, kinderdagverblijf, school | Default -- included in same API call as demographics |
+| **Extended** (Nabijheid) | `86134NED` etc. | 30+ facility types incl. OV, sport, cultuur, groen | When OV/transport proximity data needed |
 
-The migration is a 2-line change (drop-in compatible):
-
-```python
-# Remove:
-import xml.etree.ElementTree as ET
-root = ET.fromstring(response.text)
-
-# Add:
-from lxml import etree
-_parser = etree.XMLParser(resolve_entities=False, no_network=True, remove_comments=True)
-root = etree.fromstring(response.text.encode("utf-8"), parser=_parser)
-```
-
-**Rechtspraak namespace dictionaries (from official technical documentation):**
+**Extended Nabijheid measure codes for OV/transport (not in Kerncijfers):**
 
 ```python
-# For Atom search feed (search endpoint response):
-ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
-
-# For full document content (content endpoint response):
-RECHTSPRAAK_CONTENT_NS = {
-    "rdf":     "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "dcterms": "http://purl.org/dc/terms/",
-    "psi":     "http://psi.rechtspraak.nl/",
-    "rdfs":    "http://www.w3.org/2000/01/rdf-schema#",
-}
+# OV/transport proximity -- only in Nabijheid dataset
+"afstand_oprit_snelweg": "D000037",         # Afstand tot oprit hoofdverkeersweg (km)
+"afstand_treinstation": "D000052",           # Afstand tot treinstations totaal (km)
+"afstand_overstapstation": "D000014",        # Afstand tot belangrijk overstapstation (km)
 ```
 
-**Rate limiter:** Migrate from the `asyncio.Semaphore(5)` currently inline in `rechtspraak.py` to the `APIRateLimiter` pattern. Add to `rate_limiter.py`:
+**Verified Nabijheid dataset IDs per year:**
 
-```python
-# Rechtspraak Open Data — documented max 10 req/sec; use conservative 5 concurrent
-rechtspraak_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=3600)
-```
+| Dataset ID | Year |
+|------------|------|
+| `86134NED` | 2024 |
+| `85830NED` | 2023 |
+| `85560NED` | 2022 |
+| `85231NED` | 2021 |
+| `84953NED` | 2020 |
 
-**Cache TTL:** Court rulings are immutable once published. Use 7-day TTL (`604800` seconds) — sufficient freshness without re-fetching stable documents.
+The `CBSODataClient._fetch_observations()` method works unmodified against these datasets -- same entity names, same region coding, same value format. The only change needed is passing a different `dataset_id`.
 
 ---
 
-### 3. AI Legal Analysis (`app/ai/`)
+### 4. Scoring Aggregation
 
-Use the existing `anthropic.AsyncAnthropic` client and `ClaudeClient` class pattern. The feature requires a new method (or a new `LegalAnalysisClient` class if it grows large) plus a new Pydantic schema in the existing `app/ai/schemas.py`.
+| Aspect | Detail |
+|--------|--------|
+| **Computation** | Server-side Python (pure arithmetic) |
+| **Trend calculation** | `statistics.linear_regression()` (stdlib, Python 3.10+) |
+| **Storage** | PostgreSQL JSONB (existing cache pattern) |
 
-**Structured outputs — use `messages.parse()` (GA as of early 2026):**
+**Why no ML/statistical library:**
 
-```python
-# No beta header needed — structured outputs are now GA for claude-sonnet-4-5-20250929
-response = await self.client.messages.parse(
-    model=self.MODEL,  # reuse "claude-sonnet-4-5-20250929"
-    max_tokens=4096,
-    system=[{
-        "type": "text",
-        "text": LEGAL_ANALYSIS_PROMPT,
-        "cache_control": {"type": "ephemeral"},  # cache prompt — same pattern as PDF parsing
-    }],
-    messages=[{
-        "role": "user",
-        "content": f"Analyseer deze uitspraak (ECLI: {ecli}):\n\n{ruling_text[:50000]}",
-        # Truncate to ~50K chars — dense legal text, stay well within context window
-    }],
-    output_format=JurisprudenceAnalysis,  # Pydantic model from app/ai/schemas.py
-)
-result: JurisprudenceAnalysis = response.parsed_output
-```
+| Operation | How | Library needed? |
+|-----------|-----|-----------------|
+| Min-max normalization | `(x - min) / (max - min)` | No |
+| Weighted average | `sum(w * v) / sum(w)` | No |
+| Linear trend (slope) | `statistics.linear_regression(years, values)` | No (stdlib) |
+| Score classification | `if slope > threshold` | No |
 
-**New Pydantic schema (add to `app/ai/schemas.py`):**
+**Scoring dimensions and weights (configurable):**
 
-```python
-class JurisprudenceAnalysis(BaseModel):
-    """AI-extracted analysis of a Dutch court ruling relevant to real estate development."""
-    ecli: str = Field(description="ECLI identifier of the analyzed ruling")
-    samenvatting: str = Field(description="Dutch summary of the ruling (2-3 sentences)")
-    relevantie: Literal["HOOG", "MIDDEL", "LAAG"] = Field(
-        description="Relevance to permit applications (HOOG/MIDDEL/LAAG)"
-    )
-    uitkomst: Literal["VERGUND", "GEWEIGERD", "VERNIETIGD", "ONBEKEND"] = Field(
-        description="Outcome: was the permit granted, refused, or annulled?"
-    )
-    risicofactoren: list[str] = Field(
-        default_factory=list,
-        description="Risk factors identified (Dutch, max 5 items)",
-    )
-    vergunningskans_indicatie: Literal["GUNSTIG", "ONZEKER", "ONGUNSTIG"] = Field(
-        description="Indicative permit success probability based on this precedent"
-    )
-    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
-        description="Confidence in this analysis"
-    )
-    disclaimer: str = Field(
-        default="AI-geanalyseerd — Geen juridisch advies. Raadpleeg een jurist.",
-        description="Mandatory disclaimer",
-    )
-```
-
-**Background job pattern:** AI analysis takes 10-30s — must not block the HTTP response. Use the existing ARQ pattern (`app/jobs/`) — same approach as `pdf_parsing.py`. Queue the analysis job, return a job ID, poll for completion.
+| Dimension | Data source | Default weight | Direction |
+|-----------|-------------|---------------|-----------|
+| Demographics | CBS Kerncijfers (age, income, households) | 0.20 | Context |
+| Crime safety | Politie OData v3 (totaal + categories) | 0.25 | Lower = better |
+| Proximity | CBS Kerncijfers + Nabijheid (facilities) | 0.25 | Lower distance = better |
+| Trend trajectory | CBS multi-year delta | 0.15 | Positive slope = better |
+| Housing market | CBS Kerncijfers (WOZ, voorraad) | 0.15 | Context |
 
 ---
 
-### 4. Missing `exceptions.py` Module (`app/government_apis/exceptions.py`)
+## New Code Modules Required
 
-The `rechtspraak.py` client and `app/api/endpoints/jurisprudence.py` both import from `app.government_apis.exceptions` — but this file does not exist in the codebase. The exceptions live in `base.py`. This needs to be created:
+| Module | Purpose | Based on |
+|--------|---------|----------|
+| `government_apis/politie_crime.py` | OData v3 client for wijk/buurt crime data at `dataderden.cbs.nl` | `cbs_odata.py` patterns, `base.py` infra |
+| `services/location_scorer.py` | Score aggregation: demographics + crime + proximity -> 0-10 composite | New module, pure Python |
 
-```python
-# app/government_apis/exceptions.py
-"""Re-exports of government API exceptions for consistent import paths."""
-from app.government_apis.base import (
-    GovernmentAPIError,
-    APINotFoundError,
-    APIRateLimitError,
-    APITimeoutError,
-)
+**NOT a separate module** (fold into existing):
+- CBS nabijheid proximity -- extend `CBSODataClient` with a `dataset_id` parameter or add `get_nabijheid_data()` method
+- CBS multi-year trends -- add `get_multi_year_data()` and `get_trend_data()` methods to `CBSODataClient`
 
-__all__ = [
-    "GovernmentAPIError",
-    "APINotFoundError",
-    "APIRateLimitError",
-    "APITimeoutError",
-]
-```
-
-This is infrastructure cleanup — not a new library, just a missing file that will cause `ImportError` at runtime.
-
----
-
-## New Configuration Required
+### New Rate Limiters (add to `rate_limiter.py`)
 
 ```python
-# backend/app/core/config.py — add to CACHE_TTL dict:
-"cbs_odata": 2592000,        # 30 days — CBS dataset updates annually
-"rechtspraak_doc": 604800,   # 7 days — court rulings are immutable once published
-"rechtspraak_search": 3600,  # 1 hour — search results may include new rulings
+# Politie Open Data (dataderden.cbs.nl) -- public, same infra as CBS
+politie_crime_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
 ```
 
-No new `Settings` class fields required — CBS and Rechtspraak are public APIs with no auth tokens.
+The existing `cbs_odata_limiter` covers Nabijheid queries (same CBS infra).
 
----
+### New Configuration (add to `Settings`)
 
-## New API Endpoints
-
+```python
+cbs_trend_years: int = 5                    # Number of years for trend analysis
+crime_dataset_id: str = "47018NED"          # Politie crime data OData v3 dataset
+cbs_nabijheid_dataset_id: str = "86134NED"  # CBS nabijheid voorzieningen dataset
 ```
-# CBS neighborhood data:
-GET  /area-scans/{scan_id}/neighborhoods   CBS metrics for all wijken in scan (cached)
-GET  /neighborhoods/{wijk_id}/cbs          CBS metrics for a specific wijk
-
-# Jurisprudence:
-GET  /jurisprudence/search?q=...           Search court rulings (Rechtspraak API)
-GET  /jurisprudence/doc/{ecli}             Full court ruling document
-
-# AI analysis (already scaffolded at app/api/endpoints/jurisprudence.py):
-POST /jurisprudence/{ecli}/analyze         Queue AI analysis job (returns job_id)
-GET  /jurisprudence/{ecli}/analysis        Get AI analysis result (polls job status)
-```
-
----
-
-## What NOT to Add
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `cbsodata` / `cbsodata4` Python packages | Synchronous HTTP — blocks async event loop | Direct `httpx.AsyncClient` with manual OData v4 params |
-| `xml.etree.ElementTree` for Rechtspraak XML | No XXE protection against malicious XML from external APIs | `lxml.etree` with `XMLParser(resolve_entities=False, no_network=True)` |
-| `instructor` library for Claude structured output | Extra abstraction; `anthropic` SDK now has native `.parse()` with Pydantic | `anthropic` SDK `messages.parse()` directly |
-| `odata-query` / `PyOData` / `python-odata` packages | Heavy SAP-oriented OData clients; overkill for 3-param CBS read-only queries | Manual httpx params dict |
-| New frontend data-fetching library | Stack has TanStack Query v5 with all needed patterns | Existing `useQuery` / `useInfiniteQuery` |
-| Synchronous AI analysis endpoint | 10-30s Claude calls would block uvicorn worker | ARQ background job + polling (established pattern) |
 
 ---
 
@@ -279,43 +246,83 @@ GET  /jurisprudence/{ecli}/analysis        Get AI analysis result (polls job sta
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| CBS OData queries | Manual httpx params | `cbsodata4` v0.1.3 | Synchronous only — incompatible with async stack |
-| Rechtspraak XML parsing | `lxml.etree` (already installed) | Keep stdlib `xml.etree.ElementTree` | No XXE protection; stdlib already imported — low-hanging security fix |
-| AI structured output | `anthropic` SDK `messages.parse()` (native GA) | `instructor` library | Extra dependency; `instructor` wraps `anthropic` which we already use directly |
-| AI result schema | Pydantic in `app/ai/schemas.py` | Separate JSONB field with no schema | Type safety lost; harder to validate AI output |
-| Rechtspraak search cache | Per-query JSONB cache (1 hr TTL) | No caching | Rechtspraak imposes 10 req/sec limit; repeated searches for same municipality would hit limits |
+| Crime data source | Politie OData v3 (47018NED) | data.politie.nl REST API | No wijk/buurt granularity; OData has structured dimensional data with wijk codes matching CBS pattern |
+| Crime data source | Politie OData v3 (47018NED) | CBS v4 83648NED (regio) | Only province-level granularity -- too coarse for wijk-level scoring |
+| Proximity data | CBS Kerncijfers + Nabijheid | PDOK WFS + PostGIS spatial queries against OSM/BAG POI data | CBS pre-computes proximity for all wijken nationally. Building from POI data duplicates CBS's work with lower accuracy |
+| Proximity data | CBS Kerncijfers + Nabijheid | Overpass API (OSM) | Rate-limited, complex query language, NL data quality varies. CBS is authoritative |
+| Scoring library | Pure Python + `statistics` | numpy, scipy, scikit-learn | Weighted averages don't need ML libraries |
+| Trend calculation | `statistics.linear_regression()` | numpy `polyfit` | stdlib function available since Python 3.10, project requires 3.11+ |
+| OData v3 client | Custom httpx client | `cbsodata` PyPI package | Sync-only (uses `requests`), depends on `pandas`. httpx handles OData v3 REST trivially |
 
 ---
 
-## Version Compatibility
+## What NOT to Add
 
-| Package | Installed | Notes |
-|---------|-----------|-------|
-| `anthropic` | >=0.40.0 | `messages.parse()` requires >=0.40.0. Structured outputs now GA — no `anthropic-beta` header needed |
-| `lxml` | >=5.3.0 | `etree.XMLParser(resolve_entities=False, no_network=True)` API stable since lxml 3.x |
-| `aiolimiter` | >=1.2.0 | `AsyncLimiter(max_rate, time_period)` API stable — no version issues |
-| `arq` | >=0.27.0 | ARQ 0.27 CLI broken on Python 3.14 (documented in project MEMORY) — use `python -m app.jobs.worker` |
+| Technology | Why Not |
+|------------|---------|
+| `cbsodata` (PyPI) | Synchronous HTTP (blocks async event loop), depends on pandas |
+| `pandas` / `numpy` | Heavy dependencies for simple arithmetic |
+| PDOK WFS for POI queries | CBS already provides pre-computed proximity stats at wijk/buurt level |
+| Overpass/OSM queries | Unreliable rate limits, variable NL data quality |
+| PostGIS proximity calculations | Not needed -- CBS provides distance-to-nearest-facility |
+| `scipy` | No statistical modeling needed |
+| Redis caching for scores | Annual data with long TTL -- PostgreSQL JSONB cache is ideal |
+| `python-odata` / `PyOData` / `odata-query` | SAP-oriented OData libraries; overkill for simple read-only CBS queries |
 
-No version upgrades required for any existing package.
+---
+
+## Integration Architecture
+
+```
+Existing CBSODataClient (cbs_odata.py)
+  |-- Extend MEASURE_CODES dict (+17 codes for demographics, income, proximity)
+  |-- Add DATASET_IDS: dict[int, str] mapping (year -> dataset ID, 2017-2025)
+  |-- Add NABIJHEID_DATASET_IDS: dict[int, str] for OV proximity datasets
+  |-- Add get_multi_year_data(client, gemeente_code, wijk_naam, years) method
+  |-- Add get_nabijheid_data(client, gemeente_code, wijk_naam) method
+
+New PolitieCrimeClient (politie_crime.py)
+  |-- OData v3 at dataderden.cbs.nl/ODataApi/OData/47018NED
+  |-- Uses retry_with_backoff, GovernmentAPIError from base.py
+  |-- Uses politie_crime_limiter from rate_limiter.py
+  |-- get_wijk_crime_stats(client, wijk_code, years=[]) -> crime data dict
+  |-- get_crime_trend(client, wijk_code) -> trend direction + magnitude
+
+LocationScorer (services/location_scorer.py)
+  |-- normalize(value, min, max) -> 0.0 to 1.0
+  |-- compute_trend(yearly_values) -> slope via statistics.linear_regression()
+  |-- score_location(demographics, crime, proximity, trends) -> LocationScore
+  |-- LocationScore: composite 0-10 + per-dimension breakdown + confidence
+```
+
+---
+
+## Cache Strategy
+
+| Data source | TTL | Rationale |
+|-------------|-----|-----------|
+| CBS Kerncijfers (current year) | 30 days | Annual dataset, rarely changes mid-year |
+| CBS Kerncijfers (historical years) | 90 days | Finalized data, never changes |
+| CBS Nabijheid | 30 days | Same as Kerncijfers |
+| Politie crime data | 30 days | Annual figures, stable once published |
+| Computed location scores | 7 days | Derived from cached inputs; recompute weekly |
 
 ---
 
 ## Sources
 
-- `backend/pyproject.toml` — verified all existing dependencies (HIGH confidence — direct file read)
-- `backend/app/government_apis/sru_bekendmakingen.py` — lxml XXE-safe parser pattern, established in project (HIGH confidence — direct file read)
-- `backend/app/government_apis/cbs_odata.py` — existing CBS OData client scaffold, OData v4 query pattern (HIGH confidence — direct file read)
-- `backend/app/government_apis/rechtspraak.py` — stdlib XML usage needing migration; semaphore pattern needing migration (HIGH confidence — direct file read)
-- `backend/app/ai/claude_client.py` — established Claude integration pattern with prompt caching (HIGH confidence — direct file read)
-- `backend/app/government_apis/rate_limiter.py` — existing `APIRateLimiter` pattern, all existing API limiters (HIGH confidence — direct file read)
-- Live endpoint `https://opendata.cbs.nl/ODataApi/OData/85618NED` — verified 6 collections: TableInfos, UntypedDataSet, TypedDataSet, DataProperties, CategoryGroups, WijkenEnBuurten (HIGH confidence — live API verification)
-- `https://platform.claude.com/docs/en/build-with-claude/structured-outputs` — `messages.parse()` GA, no beta header, Pydantic integration, supported models (HIGH confidence — official Anthropic docs)
-- `https://github.com/dennis8/cbsodata4` — v0.1.3 released 2025-06-06, Python package, synchronous internally (HIGH confidence — verified async incompatibility)
-- `https://lxml.de/performance.html` — lxml vs ElementTree performance and security comparison (HIGH confidence — official lxml docs)
-- `https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf` — official Rechtspraak API technical documentation, namespace declarations, Atom feed structure (MEDIUM confidence — referenced from official source, not directly fetched)
-- WebSearch: "Rechtspraak Open Data API Atom XML feed ECLI 2025" — confirmed API endpoints, XML format, official docs URL (MEDIUM confidence — search result verification)
+- CBS OData v4 Kerncijfers datasets: verified via `datasets.cbs.nl/odata/v1/CBS/{id}/MeasureCodes` for 85318NED, 85984NED, 86165NED (HIGH confidence)
+- CBS Nabijheid voorzieningen 86134NED: verified entity structure + all measure codes via OData v4 (HIGH confidence)
+- Politie crime data 47018NED: verified via `dataderden.cbs.nl/ODataApi/OData/47018NED` -- entities, dimensions, sample data (HIGH confidence)
+- CBS v4 catalog completeness: verified 47018NED NOT present via `datasets.cbs.nl/odata/v1/Datasets?$filter=Identifier eq '47018NED'` (HIGH confidence)
+- Measure code stability: verified D000025, D000045, M000223 etc. identical across 85318NED (2022), 85984NED (2024), 86165NED (2025) (HIGH confidence)
+- `statistics.linear_regression()`: Python stdlib since 3.10, project requires 3.11+ (HIGH confidence)
+- CBS Nabijheidsstatistieken: https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/wijk-en-buurtstatistieken/nabijheidsstatistieken-per-wijk-buurt
+- Politie Open Data portal: https://data.politie.nl/
+- CBS OData v4 quickstart: https://www.cbs.nl/nl-nl/onze-diensten/open-data/statline-als-open-data/snelstartgids-odata-v4
+- cbsodata PyPI package (alternative, rejected): https://github.com/J535D165/cbsodata
 
 ---
 
-*Stack research for: Propdex v11.0 Open Data Intelligence (CBS OData v4, Rechtspraak XML, AI Legal Analysis)*
-*Researched: 2026-03-06*
+*Stack research for: Propdex v12.0 Omgevings- & Leefbaarheids-Scorer*
+*Researched: 2026-03-07*

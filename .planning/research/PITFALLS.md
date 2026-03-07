@@ -1,524 +1,319 @@
-# Pitfalls Research
+# Domain Pitfalls: v12.0 Omgevings- & Leefbaarheids-Scorer
 
-**Domain:** Dutch PropTech — adding CBS OData v4, Rechtspraak REST API, and AI legal analysis to existing platform
-**Researched:** 2026-03-06
-**Confidence:** HIGH (confirmed by actual failed first attempt + official API docs)
+**Domain:** Location intelligence scoring for Dutch PropTech platform
+**Researched:** 2026-03-07
+**Context:** Adding multi-year CBS trends, crime data, proximity metrics, and composite location scoring to existing Propdex platform (v11.0)
+**Overall confidence:** HIGH -- most pitfalls verified against CBS documentation and existing codebase
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Wrong CBS API Base URL (OData v3 vs v4)
+Mistakes that cause rewrites, data corruption, or fundamentally wrong scoring output.
 
-**What goes wrong:**
-Code uses `https://opendata.cbs.nl/ODataApi/OData` (OData v3) instead of `https://datasets.cbs.nl/odata/v1/CBS/` (OData v4). Requests may return data for a time but the v3 endpoint is deprecated and uses a fundamentally different data model. The v3 endpoint returns `TypedDataSet` and `UntypedDataSet` entities; v4 uses `Observations` and `WijkenEnBuurtenCodes`.
+### Pitfall 1: CBS Measure Code Drift Between Dataset Years
 
-**Why it happens:**
-Old blog posts and StackOverflow answers reference the v3 URL. The v3 endpoint still responds for legacy datasets, so you don't get an immediate 404 — you get silently wrong data. The existing `cbs_odata.py` in the codebase uses the v3 URL (`opendata.cbs.nl/ODataApi/OData`) with a v4-adjacent field layout, creating a hybrid that fails at runtime.
+**What goes wrong:** CBS changes, adds, or removes measure codes between annual Kerncijfers wijken en buurten releases. The existing `MEASURE_CODES` dict in `cbs_odata.py` is hardcoded for a single dataset ID. When querying historical datasets (85318NED/2022, 85618NED/2023, 85984NED/2024, 86165NED/2025), the same human concept (e.g., "inkomen") may have different measure codes, or the measure may not exist at all in older years.
 
-**How to avoid:**
-Always use `https://datasets.cbs.nl/odata/v1/CBS/{DATASET_ID}` as base. Confirm by fetching the root endpoint and checking that `Observations` and `WijkenEnBuurtenCodes` entity sets are present. Never use `TypedDataSet` — that entity does not exist in v4.
+**Why it happens:** CBS restructures themes periodically. Confirmed changes:
+- **2024**: Income theme redefined with new poverty definition (Nibud/SCP cooperation). New measure codes for armoede.
+- **2024**: Energy theme restructured -- removed electricity/gas consumption by housing type, added housing type variables (gasvrij, zonnepanelen, laadpalen). Entirely new measure codes.
+- **2023**: Labor theme expanded with working population figures and employee breakdown by contract type.
+- **2025 (June)**: Housing stock figures corrected -- "unknown" replaced with "0" where no (non-)residential properties exist.
 
-**Warning signs:**
-- `TypedDataSet` in any URL path
-- `opendata.cbs.nl` as the base URL
-- `substringof()` in any filter query (v3-only function)
-- HTTP 200 with an empty `value` array on what should be populated regions
+**Consequences:** Multi-year trend queries silently return `None` for measures that existed under a different code in prior years. Trend lines show artificial gaps or drops to zero that look like real neighborhood decline. Investment scores based on "declining income" could be completely wrong -- the data just moved to a different code.
 
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
+**Prevention:**
+- Build a `MEASURE_CODES_BY_DATASET` mapping: `dict[str, dict[str, str]]` keyed by dataset ID, not a single flat dict.
+- Before querying a historical dataset, verify the measure code exists in that year's `MeasureCodes` metadata endpoint.
+- When a code is missing for a year, store `null` (not zero) and surface "Geen data voor dit jaar" in the UI trend chart.
+- Write an integration test that queries the `MeasureCodes` entity for each dataset in `DATASET_PEILJAAR` and asserts expected codes exist.
 
----
+**Detection:** Trend charts showing sudden drops to zero for a single year while adjacent years have normal values. Unit tests should include at least one year with a missing/renamed code.
 
-### Pitfall 2: OData v3 Filter Syntax in v4 Queries (substringof vs contains)
+**Confidence:** HIGH -- CBS documentation explicitly confirms theme restructuring between 2023-2025.
 
-**What goes wrong:**
-`substringof('Centrum', Title)` is OData v3 syntax. The OData v4 spec uses `contains(Title, 'Centrum')`. Using `substringof` against a v4 endpoint returns HTTP 400 or silently returns empty results depending on the CBS server implementation.
+### Pitfall 2: Composite Score Normalization Destroying Signal
 
-**Why it happens:**
-The function name difference is non-obvious. Developers reading old CBS examples or generic OData tutorials find `substringof` and copy it without checking the version.
+**What goes wrong:** Naively normalizing heterogeneous metrics (WOZ values in euros, crime counts, distances in km, population counts) into 0-1 ranges using min-max normalization across all Dutch wijken creates scores where the normalization range is dominated by outliers. Amsterdam-Centrum WOZ of 800k+ and a rural buurt WOZ of 120k cause everything in between to compress into a narrow band, destroying meaningful differentiation.
 
-**How to avoid:**
-For OData v4 filter queries against CBS, use:
-- Equality: `$filter=WijkenEnBuurten eq 'GM0363'`
-- String contains: `$filter=contains(Title, 'Centrum')` (not `substringof`)
-- Logical: `$filter=WijkenEnBuurten eq 'GM0363' and Measure eq 'T001036'`
+**Why it happens:** Min-max normalization is the obvious first choice but assumes uniform distribution. Dutch neighborhood data is heavily skewed -- a few urban cores dominate most metrics.
 
-CBS v4 documentation only demonstrates `eq` and `and` as the primary patterns. String searching on the CBS dimension tables is better done by fetching the full `WijkenEnBuurtenCodes` list and filtering in Python, because the CBS API does not guarantee full OData 4.0 string function support.
+**Consequences:** 90% of wijken get scores between 0.4-0.6, making the score useless for decision-making. Users lose trust in the platform when neighborhoods they know are very different get similar scores.
 
-**Warning signs:**
-- `substringof(` in any filter string
-- HTTP 400 responses from CBS on filter queries
-- Empty results when querying by name
+**Prevention:**
+- Use **percentile-rank normalization** (rank / N) instead of min-max. This preserves ordinal relationships regardless of distribution shape.
+- Apply domain-specific inversion: for crime, lower is better; for proximity to OV, lower distance is better. Define a `higher_is_better: bool` flag per metric.
+- Consider z-score normalization **within the same stedelijkheidsklasse** (urban density class 1-5) -- comparing a rural village to Amsterdam is meaningless for investment decisions.
+- Never combine more than 5-7 sub-scores into one composite. Group into themed sub-indices (Veiligheid, Bereikbaarheid, Demografie, Economie) and show those alongside the composite.
+- Store raw values AND normalized scores. Allow users to see what drove the score.
 
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
+**Detection:** If the standard deviation of your composite score across all wijken in a scan is less than 0.15 on a 0-1 scale, your normalization is broken.
 
----
+**Confidence:** HIGH -- well-documented problem in location analytics literature.
 
-### Pitfall 3: Importing from Non-Existent Modules
+### Pitfall 3: CBS Nabijheid Dataset is Separate from Kerncijfers (Three-Dataset Problem)
 
-**What goes wrong:**
-The failed first attempt imported from `app.government_apis.exceptions` (does not exist — exceptions live in `app.government_apis.base`) and `app.api.deps` (does not exist — the project has no `deps.py` module). Code that imports from non-existent modules fails immediately on startup with `ImportError`.
+**What goes wrong:** Developers assume all wijk statistics come from one CBS dataset. In reality, the v12.0 scorer needs data from **three separate CBS-hosted datasets**, each with different OData hosts, entity structures, and measure code namespaces:
 
-**Why it happens:**
-Coding agents pattern-match to common FastAPI conventions (`app.api.deps` is standard in FastAPI boilerplate) and invent module paths that don't exist in this specific codebase. The codebase uses `app.government_apis.base` for all exception classes and has no `deps.py` dependency injection file.
+| Dataset | ID | Host | Content |
+|---------|-----|------|---------|
+| Kerncijfers wijken en buurten | 86165NED (2025) | `datasets.cbs.nl/odata/v1/CBS` | WOZ, demografie, inkomen, woningvoorraad |
+| Nabijheid voorzieningen | 86134NED (2024) | `opendata.cbs.nl/ODataApi/OData` (possibly v3!) | Afstand huisarts, supermarkt, school, OV |
+| Geregistreerde misdrijven | 47018NED | `dataderden.cbs.nl/ODataApi/OData` (OData v3!) | Criminaliteit per wijk/buurt |
 
-**How to avoid:**
-Before writing any import, verify the module exists. In this codebase:
-- All API exception classes: `from app.government_apis.base import GovernmentAPIError, APINotFoundError, APIRateLimitError, APITimeoutError`
-- Auth dependencies: check `app/api/` directory for the actual auth middleware pattern used
-- Never assume FastAPI boilerplate conventions match this codebase structure
+The existing `CBSODataClient` is hardcoded to `datasets.cbs.nl/odata/v1/CBS` with v4 query syntax. It cannot query the other two datasets without modification.
 
-**Warning signs:**
-- `from app.government_apis.exceptions import` — wrong module
-- `from app.api.deps import` — module does not exist
-- `from app.api import deps` — module does not exist (as seen in `jurisprudence.py` endpoint)
+**Consequences:** Trying to query proximity measures from the kerncijfers dataset returns nothing. Trying to query crime data from `datasets.cbs.nl` returns 404. Building one "mega query" is impossible.
 
-**Phase to address:** All phases — verify imports on every new file
+**Prevention:**
+- Refactor `CBSODataClient` into a base class with host/version as constructor parameters, then create three specialized clients: `CBSKerncijfersClient`, `CBSNabijheidClient`, `PolitieCrimeClient`.
+- The nabijheid and politie datasets may use OData v3 (`/ODataApi/OData/{id}/TypedDataSet` pattern). The existing v4 query syntax (`Observations`, `WijkenEnBuurtenCodes`) will NOT work. You need to handle both v3 and v4 entity structures.
+- Test each dataset endpoint independently before integrating.
 
----
+**Detection:** HTTP 404 or empty results when querying nabijheid/politie measure codes against the kerncijfers endpoint.
 
-### Pitfall 4: Wrong APITimeoutError Constructor Signature
+**Confidence:** HIGH -- dataset IDs and hosts verified via CBS and data.overheid.nl documentation.
 
-**What goes wrong:**
-`APITimeoutError` takes two required positional arguments: `source` (str) and optionally `message` (str). Calling `raise APITimeoutError(f"message string")` with only one argument raises `TypeError: __init__() missing 1 required positional argument: 'message'` — a different error than the original error, obscuring the real failure.
+### Pitfall 4: Bouwjaar Distributie Rolling Window (Semantic Drift)
 
-**Why it happens:**
-`GovernmentAPIError.__init__(self, source: str, message: str, ...)` requires both `source` and `message`. Subclasses inherit this. The `rechtspraak.py` first attempt called `APITimeoutError(f"Rechtspraak connection error: {e}")`, passing a formatted message as `source` with no `message` argument. This means even the error handling path is broken.
+**What goes wrong:** Already documented in the codebase: `bouwjaar_distributie` returns `None` because CBS v4 measure codes M008209/M008210 use a rolling 10-year window ("gebouwd in de afgelopen 10 jaar") instead of the fixed "voor 2000 / vanaf 2000" split. This pattern will repeat for other measures when doing multi-year comparisons.
 
-**How to avoid:**
-Always call exception classes with the correct signature:
-```python
-raise APITimeoutError("rechtspraak", f"Connection error: {e}") from e
-raise GovernmentAPIError("cbs", f"HTTP {status}: {url}", status_code=status) from e
-```
+**Why it happens:** CBS modernizes measure definitions without maintaining backward compatibility. The measure code exists but its semantic meaning changed between dataset years.
 
-**Warning signs:**
-- `APITimeoutError(f"...")` with a single f-string argument
-- `GovernmentAPIError(f"...")` with a single f-string argument
-- Any exception instantiation that doesn't pass a `source` string as first arg
+**Consequences:** A "10-year rolling window" percentage from 2022 covers 2012-2022, while from 2025 it covers 2015-2025. These are NOT comparable in a trend chart. Users see a "change" that is purely an artifact of the sliding window.
 
-**Phase to address:** All phases — verify all raise statements
+**Prevention:**
+- For every measure used in trend analysis, verify not just code existence but **semantic stability** across the year range.
+- Document the measure definition (not just the code) in a constants file with `semantic_stable: bool` flag.
+- Flag measures with known semantic drift as "not suitable for multi-year comparison" and exclude them from trend calculations.
+- Only include measures in trend analysis where the definition has been stable across the full comparison window.
+
+**Detection:** Already detected for bouwjaar. Apply the same diligence to new measures (inkomen, huishoudens, leeftijd).
+
+**Confidence:** HIGH -- confirmed in existing codebase comment.
 
 ---
 
-### Pitfall 5: CBS Wijk Lookup Ignores Gemeente (Ambiguous Name Matching)
+## Moderate Pitfalls
 
-**What goes wrong:**
-The CBS `WijkenEnBuurtenCodes` entity contains wijk names from all ~342 Dutch gemeenten. Common names like "Centrum", "Noord", "Zuid", "Oost", "West" appear in dozens of municipalities. Querying by wijk name alone returns the first match — which could be from a completely different gemeente than the one being scanned.
+### Pitfall 5: Politie Crime Data Privacy Suppression at Wijk Level
 
-**Why it happens:**
-The failed implementation filtered only by `Type == "Wijk"` without checking that the wijk belongs to the target gemeente. "Centrum" matches ~80+ records nationally. The first result is returned silently — neighborhood metrics from Amsterdam Centrum get applied to a Centrum wijk in Venlo, poisoning the scan data.
+**What goes wrong:** Sexual crimes (kinderporno, kinderprostitutie, zedendelicten) are completely excluded from wijk/buurt-level data (47018NED) for disclosure risk prevention. They only appear in gemeente-level aggregates. Other crime types may show suppressed values in small wijken where counts are low enough to identify individuals.
 
-**How to avoid:**
-CBS wijk codes are structured: wijk code `WK036300` where `0363` is the gemeente code. The lookup must:
-1. First resolve the gemeente code from `gemeente_naam` (or pass `gemeente_code` directly — it's already available in `AreaScan.gemeente_code`)
-2. Filter `WijkenEnBuurtenCodes` where `Identifier` starts with `WK{gemeente_code}` using `$filter=startswith(Identifier, 'WK0363')`
-3. Then find the wijk by name within that constrained set
+**Prevention:**
+- Accept the suppression -- do not try to estimate missing categories.
+- When displaying crime data, note exclusions: "Exclusief zedendelicten (privacy)"
+- For composite scoring, use the "Totaal misdrijven" aggregate as the primary metric (includes everything except suppressed categories). Do NOT sum subcategories -- you will undercount.
+- Normalize per 1,000 inhabitants using population data from kerncijfers to make crime counts comparable across differently-sized wijken.
 
-Better: since `AreaScan` already has `gemeente_code`, pass it directly to the CBS client and construct the wijk code filter: `startswith(Identifier, 'WK{gemeente_code}')`.
+**Confidence:** HIGH -- explicitly documented by politie/CBS.
 
-**Warning signs:**
-- CBS lookup function only accepts `gemeente_naam` and `wijk_naam` without `gemeente_code`
-- No prefix filter on CBS region code lookup
-- `wijk_candidates[0]` without any gemeente filtering
+### Pitfall 6: Score Weighting Bias Toward Available Data
 
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
+**What goes wrong:** When building a composite location score, the real bias is data availability: wijken with more CBS data points get more stable, confident scores. Wijken with suppressed crime data, missing nabijheid values, or no WOZ data get extreme scores (all weight shifts to the few available metrics).
 
----
+**Why it happens:** Missing data treated as zero distorts the composite downward. Excluding missing data from the denominator distorts it upward. Both approaches systematically bias rural/small wijken.
 
-### Pitfall 6: Hardcoded Dataset ID and Peiljaar Without Version Management
+**Consequences:** Rural wijken with sparse data get artificially extreme scores. Urban wijken with complete data get moderate, averaged scores. Developers avoid good rural opportunities or over-value ones with incomplete data.
 
-**What goes wrong:**
-Hardcoding `DATASET_ID = "85618NED"` (2023 data) means the system silently serves stale neighborhood statistics as CBS publishes new annual datasets. As of 2026-03-06, the 2025 dataset `86165NED` already exists. In two years, the hardcoded 2023 ID will be three versions stale, with no indication to users that the data is old.
+**Prevention:**
+- Track data completeness per wijk as a separate `data_completeness_ratio = available_measures / total_measures`.
+- Display confidence alongside the score: "Locatiescore: 7.2 (betrouwbaarheid: hoog)" vs "Locatiescore: 8.1 (betrouwbaarheid: laag -- 40% data ontbreekt)".
+- Set a minimum threshold: if fewer than 60% of sub-scores are available, show "Onvoldoende data voor score" instead of computing a misleading number.
+- When a sub-score is missing, do NOT redistribute its weight. Use a fixed denominator.
 
-**Why it happens:**
-Developers test against the latest dataset at the time of writing and hardcode it for simplicity. CBS releases new `Kerncijfers wijken en buurten` datasets annually with new IDs — there is no "latest" alias. Annual series IDs so far: 2022=`85318NED`, 2023=`85618NED`, 2024=`85984NED`, 2025=`86165NED`.
+**Detection:** Compare score distributions between urban (stedelijkheid 1-2) and rural (stedelijkheid 4-5) wijken. If rural scores cluster at extremes, data availability bias is present.
 
-**How to avoid:**
-Two strategies, in order of preference:
-1. Store the dataset ID in app config (`settings.CBS_DATASET_ID`) defaulting to current latest, allowing override without code deployment.
-2. Implement a catalog lookup that queries `https://datasets.cbs.nl/odata/v1/CBS` to find datasets matching "Kerncijfers wijken en buurten" and select the most recent by publication date.
+**Confidence:** MEDIUM -- standard scoring pitfall, specific thresholds need empirical tuning.
 
-Always store and surface the `peiljaar` (reference year) in the response schema and in the database, so users know how fresh the data is. The `neighborhood_metrics` JSONB already exists on `AreaScan` — include `peiljaar` in the stored payload.
+### Pitfall 7: Overpass API is the Wrong Tool for Dutch Voorzieningennabijheid
 
-**Warning signs:**
-- `DATASET_ID = "85618NED"` or any hardcoded dataset ID as a class constant
-- `"peiljaar": 2023` hardcoded in the response builder rather than derived from dataset metadata
-- No config entry for the CBS dataset ID
+**What goes wrong:** Developers default to Overpass API for "find nearest school/supermarket" queries. For a Dutch platform, this means: unreliable rate limits (429 errors, slot-based throttling), incomplete Dutch POI coverage (varies wildly by category), no guaranteed update frequency, complex query syntax, and coordinate system issues (OSM uses EPSG:4326, ParcelCache uses EPSG:28992).
 
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
+**Why it happens:** Overpass is the standard answer in the GIS community. CBS nabijheid data is less well-known internationally.
 
----
+**Consequences:** Wasted development time building Overpass queries, rate limiters, retry logic, and CRS transformation -- only to get lower quality data than CBS provides for free.
 
-### Pitfall 7: CBS OData v4 Entity Structure — Observations vs WijkenEnBuurtenCodes
+**Prevention:**
+- **Use CBS nabijheid dataset (86134NED for 2024) as the primary source.** It covers: huisarts, apotheek, supermarkt, kinderdagverblijf, buitenschoolse opvang, basisschool, middelbare school, treinstation, lokaal OV-station, museum, restaurant.
+- Distances are pre-computed over the **road network** (not Euclidean), which is exactly what real estate developers care about.
+- Data is per wijk/buurt level, matching the existing scan granularity perfectly.
+- Only fall back to OSM for niche facility types not covered by CBS (e.g., sportscholen, EV charging).
 
-**What goes wrong:**
-The v3 API had a `WijkenEnBuurten` dimension table directly. The v4 API replaced this with two distinct entities: `WijkenEnBuurtenCodes` (the lookup table for region identifiers) and `Observations` (the long-format cell data). Querying `WijkenEnBuurten` directly in v4 returns 404. Querying `TypedDataSet` in v4 returns 404.
+**Detection:** N/A -- design-time decision, not a runtime bug.
 
-**Why it happens:**
-The v4 architecture is fundamentally different: data is in "cell form" (long format), with one row per measure-region combination in `Observations`. To get neighborhood stats for a region, you must:
-1. Fetch `WijkenEnBuurtenCodes` to map region name to code
-2. Fetch `Observations` filtered by `WijkenEnBuurten eq 'WK036300'` and the measure codes you want
-3. Join with `MeasureCodes` to get human-readable measure names
+**Confidence:** HIGH -- CBS nabijheid dataset verified to exist and cover all relevant facility types.
 
-The existing codebase queries `TypedDataSet` (v3 entity) which will silently 404.
+### Pitfall 8: CRS Mismatch in Any Custom Proximity Calculations
 
-**How to avoid:**
-For v4, the correct query pattern is:
-```
-GET /Observations?$filter=WijkenEnBuurten eq 'WK036300'&$select=Measure,Value,ValueAttribute
-```
-Then map `Measure` codes to field names using `MeasureCodes`. Use `$filter=ValueAttribute eq ''` to exclude missing/unreliable values (where `ValueAttribute` being empty means the value is reliable). Responses are paginated at 100,000 cells — for single-region queries this is not an issue.
+**What goes wrong:** ParcelCache geometry is EPSG:28992 (RD New). If custom proximity is ever attempted, mixing EPSG:4326 coordinates from external sources with EPSG:28992 produces wildly wrong distances. `ST_Distance` on mixed-CRS geometries computes Cartesian distance on raw coordinate numbers.
 
-**Warning signs:**
-- Any URL containing `/TypedDataSet`
-- Any URL containing `/WijkenEnBuurten` as a direct entity (not as a filter field)
-- Not handling `@odata.nextLink` pagination
+**Prevention:**
+- Use CBS nabijheid data (eliminates the problem entirely).
+- If custom proximity is ever needed: ALWAYS `ST_Transform(geometry, 28992)` before `ST_Distance`. EPSG:28992 returns meters directly; EPSG:4326 returns degrees.
+- This is already a known issue in the project (MEMORY: "parcel_cache.geometry is EPSG:28992; always ST_Transform before GeoJSON").
 
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
+**Confidence:** HIGH -- well-known GIS pitfall, already documented in project memory.
 
----
+### Pitfall 9: Multi-Year Trend Analysis With Provisional Data
 
-### Pitfall 8: Rechtspraak XML Returns Error Dict Instead of Raising
+**What goes wrong:** CBS datasets have staggered publication. Some measures are provisional (voorlopig) when first published, updated to definitive (definitief) months later. Politie 2025 data was "last updated February 2026, updated again March 2026." Comparing 2024 (definitive) with 2025 (provisional) shows artificial dips/spikes that disappear when data finalizes.
 
-**What goes wrong:**
-In `get_jurisprudence_document()`, when XML parsing fails the `ParseError` except block returns `{"ecli": ecli, "text": "XML Parsing Failed.", "error": str(e)}` instead of raising an exception. This leaks internal error details (exception string) to the API caller and causes the endpoint to return HTTP 200 with an error payload that the frontend cannot reliably detect as an error.
+**Prevention:**
+- Store the `ValueAttribute` flag from CBS observations (existing code already checks for empty string = valid data). Extend to track provisional status.
+- In multi-year comparisons, only compare like with like: definitive-to-definitive, or label "2025: voorlopige cijfers" in the UI.
+- Cache provisional data with shorter TTL (re-fetch after 3 months). Definitive data can be cached for 1 year.
+- Default trend window: current year minus 3 through minus 1 (all definitive).
 
-**Why it happens:**
-Defensive coding that conflates "return gracefully" with "return error data as if it were success data." The endpoint checks `if not doc: raise 404` but a dict with an `error` key is truthy — so the 404 never fires and the frontend gets an HTTP 200 with `{"status": "success", "document": {"error": "..."}}`.
+**Detection:** Suspicious deviations only in the most recent year often indicate provisional data artifacts.
 
-**How to avoid:**
-Parsing failures should raise, not return:
-```python
-except ParseError as e:
-    logger.error("Rechtspraak XML parse error for %s: %s", ecli, e)
-    raise GovernmentAPIError("rechtspraak", f"XML parse error: {e}") from e
-```
-The endpoint's `except GovernmentAPIError` handler then returns HTTP 502 with a clean error message, and the frontend sees a non-200 response it can handle uniformly.
+**Confidence:** MEDIUM -- CBS publication schedule documented, but provisional/definitive distinction not always clearly exposed via OData.
 
-**Warning signs:**
-- `return {"ecli": ..., "error": str(e)}` in an exception handler
-- `except ParseError as e: return None` or returning sentinel values from exception handlers
-- Endpoint returning HTTP 200 when underlying API call failed
+### Pitfall 10: Gemeente Herindeling Breaking Historical Wijk Codes
 
-**Phase to address:** Rechtspraak integration phase
+**What goes wrong:** When municipalities merge (herindeling), CBS assigns new gemeente codes and restructures wijk/buurt boundaries. Historical data under old codes is unreachable under the new code.
 
----
+**Why it happens:** CBS publishes each year's data against that year's geographic classification. After herindeling, codes change completely.
 
-### Pitfall 9: No ECLI Format Validation (URL Injection Risk)
+**Current risk assessment:**
+- No herindelingen in 2024 or 2025 (342 gemeenten stable since January 2023).
+- The only recent merger: Voorne aan Zee (2023, from Brielle/Hellevoetsluis/Westvoorne).
+- For the 2022-2025 trend window, this affects only Voorne aan Zee.
 
-**What goes wrong:**
-The `get_jurisprudence_doc` endpoint receives `ecli` as a path parameter and passes it directly to `f"{RECHTSPRAAK_CONTENT_URL}?id={ecli}"` without validation. A valid ECLI has the form `ECLI:NL:RVS:2023:1234`. An attacker can inject arbitrary query parameters by passing `ECLI:NL:RVS:2023:1234&other=value` or path traversal patterns.
+**Prevention:**
+- For the near term: low risk, but handle gracefully. If a historical query returns no data, log a warning rather than crashing.
+- **Key advantage of politie data**: "Data per neighborhood are presented for ALL years according to the 2025 neighborhood classification." This means politie data is already re-mapped retroactively. CBS kerncijfers is NOT.
+- Build a `gemeente_herindeling` lookup table for known mergers: `{"0501": "1992", "0502": "1992", "0559": "1992"}` (old codes -> new code). Apply when querying pre-merger datasets.
+- When querying historical CBS data, use the year-appropriate gemeente code, not the current one.
 
-**Why it happens:**
-FastAPI path parameters accept any string value. Without explicit ECLI format validation, any string reaches the downstream URL construction.
+**Detection:** Multi-year query returning data for some years but not others for the same gemeente_code -- check herindeling before assuming missing data.
 
-**How to avoid:**
-Validate the ECLI format before use:
-```python
-import re
-ECLI_PATTERN = re.compile(r'^ECLI:[A-Z]{2}:[A-Z0-9]+:\d{4}:\d+$')
+**Confidence:** HIGH -- CBS documents herindelingen explicitly. Risk is LOW for the 2022-2025 window.
 
-def validate_ecli(ecli: str) -> str:
-    if not ECLI_PATTERN.match(ecli):
-        raise HTTPException(status_code=400, detail="Invalid ECLI format")
-    return ecli
-```
-Use `urllib.parse.urlencode` or `httpx` params dict (not f-string URL construction) to pass ECLI as a query parameter, which handles encoding automatically.
+### Pitfall 11: Rate Limiter Exhaustion With Multi-Dataset Queries
 
-**Warning signs:**
-- `f"{URL}?id={ecli}"` without prior validation
-- No regex or format check before using user-supplied identifiers in URLs
-- Path parameter accepted as raw string without Pydantic constraint
+**What goes wrong:** The current `cbs_odata_limiter` is configured at 3 concurrent / 500 per hour. With the scorer querying 3 CBS datasets per wijk, a gemeente scan touching 20 wijken makes 60+ CBS API calls. Combined with existing CBS calls from area scans, the hourly limit gets exhausted in high-usage periods.
 
-**Phase to address:** Rechtspraak integration phase
+**Prevention:**
+- Create separate rate limiters per host: `datasets.cbs.nl` and `dataderden.cbs.nl` are different servers with independent limits.
+- Batch wijk queries: fetch ALL wijken for a gemeente in one OData call using `startswith(Identifier, 'WK{gemeente_code}')` instead of per-wijk lookups.
+- Cache aggressively: CBS data is annual. Cache for 30 days minimum. Score data never needs real-time freshness.
+- Pre-compute scores during area scan (ARQ job) rather than on-demand per wijk click.
+
+**Confidence:** HIGH -- arithmetic from existing rate limiter config confirms this will be hit.
 
 ---
 
-### Pitfall 10: Rechtspraak Search API is NOT Full-Text Search
+## Minor Pitfalls
 
-**What goes wrong:**
-The Rechtspraak `data.rechtspraak.nl/uitspraken/zoeken` API is described as a "search API" but is actually primarily designed for range/filter queries (date ranges, court filters, legal domains). Free-text search via `searchterms=` parameter is extremely limited compared to what the web interface at rechtspraak.nl offers. Queries like "omgevingsvergunning Amsterdam" may return zero or near-zero results even though the web interface returns hundreds.
+### Pitfall 12: Stedelijkheidsklasse is a Classifier, Not a Score Input
 
-**Why it happens:**
-The official API documentation describes the search endpoint as supporting `searchterms` parameter without clearly communicating that full-text indexing is sparse. Developers assume API parity with the website.
+**What goes wrong:** Stedelijkheid (1-5 scale, 1 = most urban) gets treated as a scoring dimension. It is an inverted scale and a categorical classifier, not a quality metric. Including it in the composite score penalizes either urban or rural areas depending on the direction.
 
-**How to avoid:**
-Use structured filter parameters instead of free text: `type=Uitspraak`, `rechtsgebied=Bestuursrecht` (administrative law), `date` range parameters. Combine with gemeente name as a searchterm. Accept that coverage will be incomplete and design the UI to show "X results found, may not be exhaustive." The undocumented API at `uitspraken.rechtspraak.nl/api/zoek` offers better text search but has no official support guarantees — do not rely on it for production.
+**Prevention:** Use stedelijkheid as a **grouping/context variable** for normalization (compare wijken within the same class), NOT as a sub-score input. Define explicit `ScoreDirection` enums per metric.
 
-**Warning signs:**
-- Expecting rich full-text search results comparable to the rechtspraak.nl website
-- No fallback for zero-result searches
-- Not using `rechtsgebied` or `type` parameters to narrow results to relevant domain (Bestuursrecht for omgevingsrecht)
+**Confidence:** HIGH -- verified in existing `STEDELIJKHEID_MAP`.
 
-**Phase to address:** Rechtspraak integration phase
+### Pitfall 13: Frontend Score Without Context is Misleading
 
----
+**What goes wrong:** Displaying "Locatiescore: 7.2/10" without breakdown leads users to over-trust or dismiss it. Developers need to understand WHY a location scores well or poorly.
 
-### Pitfall 11: Rechtspraak XML Parsing — Invalid Data and Missing Bodies
+**Prevention:**
+- Always show composite alongside sub-indices (Veiligheid, Bereikbaarheid, Voorzieningen, Demografie, Economie).
+- Show trend direction (arrow up/down/stable) for each sub-index.
+- Include gemeente-relative context: a wijk scoring 6/10 nationally might be 8/10 within its gemeente.
+- Use the existing ParcelDetailModal pattern for progressive disclosure.
 
-**What goes wrong:**
-The Rechtspraak data is described by its own documentation as having "no schema other than an incomplete PDF in natural language" with "many RDF fields being invalid." Specific issues: (1) some ECLIs appear in search results but their documents have no body (`<uitspraak>` element absent); (2) some URIs contain spaces and line feeds violating URI spec; (3) RDF namespace declarations are sometimes malformed; (4) nonsensical parameters like `date=2022-02-30` return non-XML instead of an error, causing XML parse exceptions.
+**Confidence:** MEDIUM -- UX best practice.
 
-**Why it happens:**
-The dataset is generated from a legacy judicial system with inconsistent document formatting across different courts, years, and case types. No automated quality enforcement exists at the source.
+### Pitfall 14: OData v3 vs v4 Syntax for Politie and Nabijheid Datasets
 
-**How to avoid:**
-- Always check for the absence of `<uitspraak>` or `<conclusie>` nodes and return a structured "document not available" response rather than crashing
-- Wrap all `ET.fromstring()` calls in try/except for both `ParseError` and `UnicodeDecodeError`
-- Use `.itertext()` defensively — some nodes may have `None` text
-- Normalize empty strings: `(elem.text or "").strip()`
-- Log the ECLI identifier for any parsing failure to enable debugging
-- Validate date parameters before sending to avoid malformed-parameter responses
+**What goes wrong:** The existing CBS client uses OData v4 syntax (`/Observations`, `WijkenEnBuurtenCodes`, `eq` filters). The politie dataset (47018NED on `dataderden.cbs.nl`) and possibly the nabijheid dataset likely use OData v3 (`/TypedDataSet`, dimension tables, different filter syntax). Using v4 queries against v3 endpoints returns 404 or garbled results.
 
-**Warning signs:**
-- `uitspraak_node.itertext()` without None guard on text elements
-- Using `elem.text` directly without `or ""` fallback
-- No check for empty `content_text` after itertext extraction
-- "Content format not recognized or document empty" fallback returning this as a success response
+**Prevention:**
+- Test each endpoint independently before building the client. Fetch the root entity of each dataset to determine the available entities (`TypedDataSet` = v3, `Observations` = v4).
+- Build the client to handle both v3 and v4 response formats, or create separate client classes.
+- The v3 entity for crime data is likely `https://dataderden.cbs.nl/ODataApi/OData/47018NED/TypedDataSet` with different filter syntax.
 
-**Phase to address:** Rechtspraak integration phase
+**Detection:** HTTP 404 when querying `Observations` on a v3-hosted dataset.
+
+**Confidence:** MEDIUM -- politie host confirmed as `dataderden.cbs.nl`, but exact OData version needs live verification.
 
 ---
 
-### Pitfall 12: AI Legal Analysis — Hallucinated Case Citations
+## Phase-Specific Warnings
 
-**What goes wrong:**
-Claude (and all LLMs) can fabricate court ruling citations that do not exist. In a PropTech context, presenting a developer with a hallucinated precedent like "ECLI:NL:RVS:2022:4521 ruled that..." when that ECLI either does not exist or says something different is a serious trust and liability issue. Anthropic's own legal team discovered this problem in May 2025.
-
-**Why it happens:**
-LLMs cannot distinguish between "I know this ECLI exists" and "this ECLI pattern looks plausible." When asked to summarize legal precedents, the model may invent specific case references to make the analysis appear more authoritative.
-
-**How to avoid:**
-- Never ask Claude to generate ECLI identifiers or specific case references — only feed it actual ECLIs retrieved from Rechtspraak and ask it to summarize the content of those specific documents
-- Prompt must explicitly state: "Do not invent or extrapolate case references not present in the documents provided"
-- Store the Claude analysis result alongside the ECLIs used as input — this creates an audit trail
-- Display the source ECLIs in the UI adjacent to the AI summary, enabling users to verify the underlying rulings
-- Use temperature=0 or near-0 for legal analysis to minimize creative extrapolation
-
-**Warning signs:**
-- Prompting Claude to "find relevant precedents" without providing actual document text
-- No ECLI source attribution alongside AI-generated summaries
-- Not storing which documents were used as input for a given AI analysis
-
-**Phase to address:** AI legal analysis phase
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Extended CBS metrics (inkomen, huishoudens, leeftijd) | Measure code drift between years (#1), semantic drift (#4) | Build year-aware measure code mapping; verify codes AND definitions against MeasureCodes entity per dataset |
+| Criminaliteitsdata integration | Different OData host + v3 syntax (#3, #14), privacy suppression (#5) | Separate client class for `dataderden.cbs.nl`; accept suppression; use totals not subcategories |
+| Voorzieningennabijheid | Wrong tool choice (#7), CRS mismatch (#8) | Use CBS 86134NED nabijheid dataset; avoid Overpass API entirely |
+| Multi-year CBS trendanalyse | Code drift (#1), semantic drift (#4), herindeling (#10), provisional data (#9) | Year-aware codes; semantic stability checks; herindeling mapping; provisional labeling |
+| Geaggregeerde locatie-score | Normalization destroying signal (#2), weighting bias (#6), no context (#13) | Percentile-rank normalization; confidence tracking; sub-index breakdown in UI |
+| Integration with existing area scan | Rate limiter exhaustion (#11), three-dataset problem (#3) | Batch queries; aggressive caching; pre-compute in ARQ job; separate limiters per host |
 
 ---
 
-### Pitfall 13: AI Analysis on Oversized Rechtspraak Documents
+## Key Architectural Recommendations
 
-**What goes wrong:**
-Dutch court rulings in Bestuursrecht cases (administrative law, omgevingsrecht) can be extremely long — Raad van State rulings on complex omgevingsvergunning cases routinely exceed 20,000-50,000 words. Sending a full ruling to Claude without chunking or truncation can exceed context limits, cause extremely high latency (10-60+ seconds), and generate very high API costs per analysis.
+### 1. Use CBS Nabijheid Dataset for Proximity (NOT Overpass/OSM)
 
-**Why it happens:**
-`"".join(uitspraak_node.itertext())` extracts the full text of the ruling with no length limit. A Raad van State ruling on a major development project could be 80,000+ tokens.
+CBS dataset 86134NED (2024) provides pre-computed road-network distances to: huisarts, apotheek, supermarkt, kinderdagverblijf, buitenschoolse opvang, basisschool, middelbare school, treinstation, OV-halte, museum, restaurant -- per wijk/buurt.
 
-**How to avoid:**
-- Implement a token budget: extract first N characters of ruling text (e.g., targeting 8,000-12,000 tokens for analysis)
-- For very long rulings, extract: the header/parties section, the decisive considerations (`Overwegingen`), and the operative part (`Uitspraak`) — the middle sections are often procedural boilerplate
-- Always run analysis as an ARQ background job, never as a synchronous HTTP response
-- Store the AI analysis result in the database (JSONB on the project or in a new table) and cache it — never re-analyze the same ECLI twice
-- Show "Gebaseerd op de eerste X woorden van de uitspraak" if truncation is applied
+This eliminates pitfalls #7 (wrong tool) and #8 (CRS mismatch) entirely, provides higher quality data (road-network distances, not Euclidean), and requires zero additional infrastructure.
 
-**Warning signs:**
-- No length/token limit on extracted document text before sending to Claude
-- Rechtspraak document fetch + Claude API call in a single synchronous request handler
-- No caching of AI analysis results
+### 2. Use Politie CBS Portal for Crime (NOT raw politie APIs)
 
-**Phase to address:** AI legal analysis phase
+Dataset 47018NED at `dataderden.cbs.nl` provides crime counts per wijk/buurt with **2025 classification applied retroactively to all years**. This means historical crime comparisons are already geography-normalized -- eliminating pitfall #10 (herindeling) for crime data specifically.
 
----
+### 3. Three-Client Architecture
 
-### Pitfall 14: Missing Rate Limiting on CBS and Rechtspraak Clients
+Build three OData clients, not one:
+- `CBSKerncijfersClient` -- v4, `datasets.cbs.nl`, for WOZ/demografie/inkomen
+- `CBSNabijheidClient` -- v3 or v4 (verify), `opendata.cbs.nl`, for proximity data
+- `PolitieCrimeClient` -- v3 (verify), `dataderden.cbs.nl`, for crime data
 
-**What goes wrong:**
-The existing codebase has a production-quality `APIRateLimiter` in `app.government_apis.rate_limiter` with semaphore + token bucket pattern. The new `CBSODataClient` and `RechtspraakClient` do not use it — they use a bare `asyncio.Semaphore(5)` in Rechtspraak and nothing at all in CBS. This means concurrent area scans (common in production) can hammer both APIs simultaneously without throttling.
-
-Rechtspraak explicitly states: "maximum 10 requests/second." CBS is a government API shared by all Dutch developers — aggressive scraping is antisocial and will get the IP blocked.
-
-**Why it happens:**
-The `rate_limiter.py` module-level singletons (`bag_wfs_limiter`, `sru_limiter`, etc.) are the established pattern. New API clients need a corresponding entry added. It's easy to forget this step or use an ad-hoc semaphore instead.
-
-**How to avoid:**
-Add rate limiter singletons to `rate_limiter.py`:
-```python
-# CBS OData (public, polite limits)
-cbs_odata_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
-# Rechtspraak (10 req/s hard limit)
-rechtspraak_limiter = APIRateLimiter(max_concurrent=8, max_per_hour=3000)
-```
-Replace the bare `asyncio.Semaphore` in `RechtspraakClient` with the proper `APIRateLimiter`. Remove the module-level `api_semaphore = asyncio.Semaphore(5)` from `rechtspraak.py`.
-
-**Warning signs:**
-- `asyncio.Semaphore` directly in an API client module (not using `APIRateLimiter`)
-- No entry in `rate_limiter.py` for a new API
-- No `async with limiter:` wrapper in API client methods
-- No timeout on httpx requests (both CBS and Rechtspraak need explicit timeouts)
-
-**Phase to address:** Both CBS and Rechtspraak integration phases
+All three follow the same caching and rate-limiting patterns but with host-specific configurations.
 
 ---
 
-### Pitfall 15: No HTTP Timeouts on CBS Client
+## "Looks Done But Isn't" Checklist for v12.0
 
-**What goes wrong:**
-The `CBSODataClient` makes HTTP requests with no timeout set. CBS StatLine is a Dutch government API that can be slow under load (government servers, not CDN-backed). A single hung request blocks the ARQ worker slot indefinitely, preventing other jobs from running. The CBS lookup is called during area scan jobs, so a hung CBS request freezes the entire scan.
-
-**Why it happens:**
-httpx requests without explicit timeout have no timeout by default when using a bare `client.get()` call. The existing pattern in other API clients uses explicit timeouts (e.g., Rechtspraak uses `timeout=15.0`). CBS client was written without following this pattern.
-
-**How to avoid:**
-Add timeouts to all CBS requests: `await client.get(url, headers=self._headers, params=params, timeout=10.0)`. Use `retry_with_backoff()` from `app.government_apis.base` with `retry_on_errors=True` for network resilience. CBS failure should be non-fatal for the area scan — log the warning and continue with `neighborhood_metrics=None`.
-
-**Warning signs:**
-- `await client.get(url, headers=..., params=...)` without `timeout=` argument
-- No error handling that allows the area scan to continue when CBS fails
-- CBS fetch not wrapped in try/except
-
-**Phase to address:** CBS integration phase (Phase 1 of milestone)
-
----
-
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Hardcode CBS dataset ID as class constant | No config management needed | Serves stale data annually, requires code deploy to update | Never — put in settings with documented update procedure |
-| Return error dict from XML parse failures | Avoids exception handling in caller | Frontend gets HTTP 200 with error payload, trust violation | Never in production |
-| Use bare `asyncio.Semaphore` instead of `APIRateLimiter` | Faster to write | No time-based throttling, inconsistent with codebase pattern | Never — takes 5 minutes to add a proper limiter |
-| Sync HTTP call in area scan job for CBS | Simpler control flow | Hung request blocks entire ARQ worker slot | Never — use timeout + non-fatal error handling |
-| No ECLI validation in path parameter | Less code | URL injection vector, leaks internal URL structure | Never |
-| Send full ruling text to Claude without chunking | Simpler prompt | Unpredictable latency, high cost, potential context overflow | MVP only with explicit length guard and user-facing disclaimer |
-| Cache AI analysis in memory only | Simpler state | Re-runs cost money on every page load | Never — persist in DB from day one |
-
----
-
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| CBS OData v4 | Use v3 URL (`opendata.cbs.nl`) | Use `datasets.cbs.nl/odata/v1/CBS/` |
-| CBS OData v4 | Query `TypedDataSet` entity | Query `Observations` entity with `WijkenEnBuurtenCodes` lookup |
-| CBS OData v4 | Use `substringof()` filter | Use `eq` with known codes, or `contains()` for v4 text search |
-| CBS OData v4 | Look up wijk by name only | Filter by gemeentecode prefix: `startswith(Identifier, 'WK{code}')` |
-| CBS OData v4 | Hardcode dataset ID | Store in config, note new annual release cycle |
-| Rechtspraak | Pass ECLI directly in URL f-string | Use httpx `params={"id": ecli}` with ECLI validation |
-| Rechtspraak | Expect full-text search | Use structured filters (rechtsgebied, type, date range) |
-| Rechtspraak | Parse XML without namespace handling | Use `elem.tag.split('}', 1)[-1]` for local name extraction |
-| Rechtspraak | Trust all search result ECLIs have document bodies | Check for `<uitspraak>` presence before extraction |
-| Claude legal analysis | Ask Claude to find or invent cases | Only feed Claude actual retrieved Rechtspraak document text |
-| Claude legal analysis | Run synchronously in request handler | Always run as ARQ background job, poll for results |
-| All new APIs | Skip adding to `rate_limiter.py` | Every new API client needs a registered `APIRateLimiter` singleton |
-
----
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| CBS fetch inside ARQ area scan job with no timeout | Worker hangs on CBS call, scan never completes | Explicit timeout=10s, CBS failure is non-fatal | First slow CBS response (~day 1 of production use) |
-| Rechtspraak document fetch + Claude analysis per ruling, synchronously | HTTP requests time out in UI (> 30s) | ARQ background job for analysis; frontend polls | Immediately on first real-world ruling (often 20+ KB text) |
-| No CBS `WijkenEnBuurtenCodes` caching | CBS API called on every area scan | Cache the codes list in Redis/DB; rarely changes (annual) | At scale with multiple concurrent scans |
-| `@odata.nextLink` pagination ignored | Partial data silently returned as complete | Implement nextLink follow-through for large dimension fetches | Larger gemeenten with many wijken |
-| Fetching full `Observations` without measure filter | Returns all ~140 measures per region unnecessarily | Always `$select=Measure,Value` with `$filter` on specific measures | With many concurrent area scans |
-
----
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| No ECLI format validation | URL parameter injection; malicious redirect to attacker-controlled URL via crafted ECLI | Validate against `^ECLI:[A-Z]{2}:[A-Z0-9]+:\d{4}:\d+$` before any URL construction |
-| Returning exception detail strings in API responses | Leaks internal architecture (module names, stack traces) | All exception handlers must return generic messages; log details server-side only |
-| AI analysis stored without organization_id scoping | Cross-tenant AI result access | Any new table storing AI analysis must follow TenantMixin pattern (organization_id NOT NULL, indexed) |
-| Caching Rechtspraak documents at app level without expiry | Old/updated/withdrawn rulings served forever | Set TTL on cached documents; Rechtspraak can update pseudonymization |
-| Unvalidated `query` parameter passed to Rechtspraak search | Potential for search query injection (low risk but non-zero) | Sanitize/limit query string length; Rechtspraak URL-encodes server-side |
-
----
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| AI legal summary with no source attribution | Developer cannot verify claims; trust erodes on first wrong summary | Always show the ECLIs used as input alongside the AI summary |
-| Showing "0 results" from Rechtspraak without explanation | User thinks there are no relevant cases when the search API is just limited | Show "Beperkte zoekresultaten — de API ondersteunt geen volledige tekstzoekfunctie. Probeer rechtspraak.nl voor uitgebreidere resultaten." |
-| CBS metrics shown without peiljaar | User does not know if they are seeing 2020 or 2024 data | Always display "Bron: CBS StatLine, peiljaar [year]" |
-| Long-running AI analysis with no progress indication | User thinks the button is broken; clicks it again | ARQ job + polling with "Analyse wordt gegenereerd..." skeleton |
-| Displaying raw CBS measure codes like "GemiddeldeWOZWaarde_35" | Confusing to non-technical users | Map to human-readable NL labels in a display mapping constant |
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **CBS client URL**: Uses `datasets.cbs.nl/odata/v1/CBS/` (not `opendata.cbs.nl`) — verify by checking `CBSODataClient.BASE_URL`
-- [ ] **CBS entity path**: Queries `Observations` and `WijkenEnBuurtenCodes` (not `TypedDataSet`, not `WijkenEnBuurten` as entity) — grep for these strings
-- [ ] **CBS filter syntax**: Uses `eq` and `contains()` (not `substringof`) — grep for `substringof` (should return zero results)
-- [ ] **CBS wijk lookup**: Filters candidates by gemeentecode prefix `startswith(Identifier, 'WK{gemeente_code}')` — not just by name
-- [ ] **CBS dataset ID**: In settings/config, not hardcoded as class constant — check `settings.CBS_DATASET_ID` exists
-- [ ] **Rate limiters registered**: `cbs_odata_limiter` and `rechtspraak_limiter` present in `rate_limiter.py`
-- [ ] **Rate limiters used**: Both clients use `async with limiter:` (not bare `asyncio.Semaphore`) — grep for `api_semaphore` in client files
-- [ ] **HTTP timeouts**: All CBS and Rechtspraak requests have `timeout=` argument
-- [ ] **ECLI validation**: `validate_ecli()` called before any URL construction in endpoint
-- [ ] **Exception class signatures**: All `raise` statements pass `source` as first arg (`APITimeoutError("rechtspraak", ...)`)
-- [ ] **Import paths**: No imports from `app.government_apis.exceptions` or `app.api.deps` — these do not exist
-- [ ] **AI input only from retrieved docs**: Claude prompt does not ask it to find or invent cases; only summarize provided text
-- [ ] **AI analysis cached**: Result stored in DB (JSONB field or new table) with organization_id and source ECLI list
-- [ ] **Peiljaar surfaced**: `neighborhood_metrics` JSONB contains `peiljaar` field; displayed in frontend
-- [ ] **XML parse errors raise**: No `return {"error": ...}` pattern in exception handlers — all errors raise
-
----
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Wrong CBS URL/entity (v3 vs v4) | MEDIUM | Rewrite CBSODataClient: update BASE_URL, switch TypedDataSet to Observations, update response mapper; 2-4 hours |
-| Stale hardcoded dataset ID | LOW | Add CBS_DATASET_ID to settings; update default value; no DB migration needed |
-| Wrong exception constructor signatures | LOW | Grep for `APITimeoutError(f"` and `GovernmentAPIError(f"` patterns; fix signatures; 30 minutes |
-| Missing rate limiters | LOW | Add two entries to rate_limiter.py; update both client classes to use them; 1 hour |
-| ECLI validation missing | LOW | Add regex validator; update endpoint signature; write test; 1 hour |
-| AI hallucinated citations in stored data | HIGH | Delete cached AI analyses; re-generate with corrected prompts; communicate to users; 1-2 days |
-| XML error dict leaking | LOW | Change except blocks to raise; update endpoint error handling; 1 hour |
-| Ambiguous wijk lookup poisoning scan data | MEDIUM | Fix lookup to use gemeentecode prefix; backfill neighborhood_metrics for existing scans; 4-8 hours |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Wrong CBS API URL (v3 vs v4) | CBS OData integration | Integration test: fetch `WijkenEnBuurtenCodes` for GM0363, verify returns data |
-| OData v3 filter syntax (substringof) | CBS OData integration | `grep -r substringof backend/` must return zero results |
-| Non-existent module imports | All phases | `python -c "from app.government_apis.cbs_odata import cbs_client"` must succeed |
-| Wrong exception constructor signature | All phases | mypy strict type check must pass |
-| Ambiguous wijk name lookup | CBS OData integration | Unit test: lookup "Centrum" for GM0363 returns WK036300, not another gemeente's Centrum |
-| Hardcoded dataset ID | CBS OData integration | Assert no `DATASET_ID = "8...NED"` class constant; setting in `settings.py` |
-| CBS entity structure (Observations vs TypedDataSet) | CBS OData integration | Integration test: verify `Observations` endpoint returns `Value` column |
-| XML error dict leaking | Rechtspraak integration | Unit test: `ParseError` in `get_jurisprudence_document` raises `GovernmentAPIError`, does not return dict |
-| ECLI validation missing | Rechtspraak integration | Test: `GET /jurisprudence/doc/INVALID` returns 400, not 502 |
-| Rechtspraak not full-text search | Rechtspraak integration | Manual test: search "omgevingsvergunning Venlo" — handle zero results gracefully |
-| Rechtspraak XML quirks | Rechtspraak integration | Test with real ECLIs that have no body; test with ECLIs from different courts |
-| AI hallucinated citations | AI analysis phase | Prompt audit: verify prompt only asks Claude to summarize provided text, not find cases |
-| AI analysis without ARQ | AI analysis phase | Verify analysis endpoint returns 202 Accepted + job_id, not 200 with content |
-| Missing rate limiters | CBS + Rechtspraak phases | Assert `rate_limiter.py` contains `cbs_odata_limiter` and `rechtspraak_limiter` entries |
-| No HTTP timeouts | CBS + Rechtspraak phases | Code review: no `client.get()` call without `timeout=` argument |
+- [ ] **Multi-year measure codes**: `MEASURE_CODES` is per-dataset-ID, not a single flat dict
+- [ ] **Semantic stability**: Each trend-eligible measure has a `semantic_stable` flag verified across the full year range
+- [ ] **Three datasets**: Kerncijfers, Nabijheid, and Politie all have separate client code with correct host URLs
+- [ ] **OData version**: Each client uses the correct entity structure (v3 TypedDataSet vs v4 Observations) for its host
+- [ ] **Normalization method**: Percentile-rank (not min-max) used for composite scoring
+- [ ] **Score direction**: Each metric has an explicit `higher_is_better` flag; stedelijkheid excluded from composite
+- [ ] **Data completeness**: Confidence/completeness ratio tracked per wijk; minimum threshold enforced
+- [ ] **Missing data**: `null` stored and displayed as "Geen data", never treated as zero
+- [ ] **Provisional labeling**: Most recent year's data flagged as "voorlopig" where applicable
+- [ ] **Crime normalization**: Per-1000-inhabitants, using kerncijfers population data
+- [ ] **Crime suppression**: "Totaal misdrijven" used as primary metric; subcategory suppression documented in UI
+- [ ] **Proximity source**: CBS nabijheid dataset used, NOT Overpass/OSM
+- [ ] **Rate limiters**: Separate limiters per host; batch queries per gemeente
+- [ ] **Cache TTL**: Annual data cached 30+ days; provisional data cached with shorter TTL
+- [ ] **Score breakdown**: UI shows sub-indices alongside composite; trend arrows per dimension
+- [ ] **Peiljaar visible**: Every data point shows its reference year in the UI
 
 ---
 
 ## Sources
 
-- Failed first attempt code in `backend/app/government_apis/cbs_odata.py` and `backend/app/government_apis/rechtspraak.py` — direct analysis of what went wrong
-- CBS OData v4 official documentation: [Snelstartgids OData v4](https://www.cbs.nl/nl-nl/onze-diensten/open-data/statline-als-open-data/snelstartgids-odata-v4)
-- CBS OData v4 filters: [Filters OData v4](https://www.cbs.nl/nl-nl/onze-diensten/open-data/statline-als-open-data/filters-odata-v4)
-- CBS v3 to v4 migration guide: [Handleiding overstap OData v3 naar v4](https://www.cbs.nl/-/media/statline/documenten/odata4-overstappen-odata3.pdf)
-- CBS dataset series: [Kerncijfers wijken en buurten 2004-2025](https://www.cbs.nl/nl-nl/reeksen/publicatie/kerncijfers-wijken-en-buurten) — confirms annual new dataset IDs (2022=85318NED, 2023=85618NED, 2024=85984NED, 2025=86165NED)
-- CBS OData v4 dataset endpoint: `https://datasets.cbs.nl/odata/v1/CBS/85984NED` — entity sets confirmed via direct fetch
-- Rechtspraak Open Data: [Open Data van de Rechtspraak](https://www.rechtspraak.nl/Uitspraken/Paginas/Open-Data.aspx) — rate limit 10 req/s confirmed
-- Rechtspraak API quirks: [wetsuite.datacollect.rechtspraaknl](https://wetsuite.knobs-dials.com/apidocs/wetsuite.datacollect.rechtspraaknl.html) — invalid XML, missing bodies, search limitations
-- AI legal hallucination: multiple sources confirm LLM citation hallucination is a real risk; Anthropic's own legal team cited hallucinated citations in May 2025 per [Terms.Law analysis](https://terms.law/2025/03/02/why-lawyers-havent-embraced-ai-yet-evidence-from-four-million-claude-conversations/)
-- Existing codebase patterns: `app/government_apis/base.py`, `app/government_apis/rate_limiter.py`
+- [CBS Kerncijfers wijken en buurten 2025 (86165NED)](https://www.cbs.nl/nl-nl/cijfers/detail/86165NED)
+- [CBS Toelichting Wijk- en Buurtkaart 2023-2025 -- theme/measure changes](https://www.cbs.nl/nl-nl/longread/diversen/2025/toelichting-wijk-en-buurtkaart-2023-2024-en-2025?onepage=true)
+- [CBS Nabijheid voorzieningen 2024 (86134NED)](https://www.cbs.nl/nl-nl/cijfers/detail/86134NED)
+- [CBS Nabijheidsstatistieken per wijk/buurt](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/wijk-en-buurtstatistieken/nabijheidsstatistieken-per-wijk-buurt)
+- [Politie misdrijven wijk/buurt jaarcijfers (47018NED)](https://data.overheid.nl/dataset/5252-geregistreerde-misdrijven--soort-misdrijf--wijk--buurt--jaarcijfers)
+- [CBS Herindelingen en grenswijzigingen](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/informatie-voor-gemeenten/herindelingen-en-grenswijzigingen)
+- [CBS Gemeentelijke indeling 2025 -- 342 gemeenten, geen herindeling](https://www.cbs.nl/nl-nl/onze-diensten/methoden/classificaties/overig/gemeentelijke-indelingen-per-jaar/indeling-per-jaar/gemeentelijke-indeling-op-1-januari-2025)
+- [Targomo: Meaningful Location Scoring for Real Estate](https://www.targomo.com/meaningful-location-scoring-for-real-estate-search/)
+- [Overpass API rate limits and usage policy (OSM Wiki)](https://wiki.openstreetmap.org/wiki/Overpass_API)
+- [Politie Open Data portal](https://data.politie.nl/)
+- Existing codebase: `backend/app/government_apis/cbs_odata.py`, `backend/app/government_apis/rate_limiter.py`, `backend/app/models/parcel_cache.py`
 
 ---
 
-*Pitfalls research for: CBS OData v4 + Rechtspraak API + AI legal analysis integration into Propdex*
-*Researched: 2026-03-06*
+*Pitfalls research for: v12.0 Omgevings- & Leefbaarheids-Scorer -- location scoring, multi-year trends, proximity, crime data*
+*Researched: 2026-03-07*
