@@ -55,6 +55,20 @@ DATASET_PEILJAAR: dict[str, int] = {
     "86165NED": 2025,
 }
 
+# CBS Nabijheid voorzieningen dataset (proximity to amenities)
+NABIJHEID_DATASET_ID = "86134NED"
+
+NABIJHEID_MEASURE_CODES: dict[str, str] = {
+    "afstand_supermarkt": "D000025",        # Afstand tot grote supermarkt (km)
+    "afstand_huisarts": "D000028",          # Afstand tot huisartsenpraktijk (km)
+    "afstand_basisschool": "D000045_1",     # Afstand tot basisonderwijs (km)
+    "afstand_kinderdagverblijf": "D000029", # Afstand tot kinderdagverblijf (km)
+    "afstand_treinstation": "D000052",      # Afstand tot treinstation (km)
+    "afstand_overstapstation": "D000014",   # Afstand tot belangrijk overstapstation (km)
+}
+
+_NABIJHEID_CODE_TO_KEY: dict[str, str] = {v: k for k, v in NABIJHEID_MEASURE_CODES.items()}
+
 # Stedelijkheid class -> description
 STEDELIJKHEID_MAP: dict[int, str] = {
     1: "Zeer sterk stedelijk",
@@ -94,6 +108,7 @@ class CBSODataClient:
         client: httpx.AsyncClient,
         gemeente_code: str,
         wijk_naam: str,
+        dataset_id: str | None = None,
     ) -> str | None:
         """
         Resolve a wijk name within a gemeente to a CBS WijkenEnBuurtenCodes Identifier.
@@ -105,11 +120,13 @@ class CBSODataClient:
             client: Async httpx client
             gemeente_code: CBS municipality code (e.g. '0363' for Amsterdam)
             wijk_naam: Name of the district/wijk (case-insensitive match)
+            dataset_id: Override dataset ID (default: self.dataset_id)
 
         Returns:
             CBS Identifier string (e.g. 'WK036300') or None if not found
         """
-        url = f"{BASE_URL}/{self.dataset_id}/WijkenEnBuurtenCodes"
+        ds = dataset_id or self.dataset_id
+        url = f"{BASE_URL}/{ds}/WijkenEnBuurtenCodes"
         params = {
             "$filter": f"startswith(Identifier, 'WK{gemeente_code}')",
             "$top": 50,
@@ -139,6 +156,7 @@ class CBSODataClient:
         self,
         client: httpx.AsyncClient,
         gemeente_code: str,
+        dataset_id: str | None = None,
     ) -> str | None:
         """
         Resolve a gemeente code to its CBS WijkenEnBuurtenCodes Identifier.
@@ -146,11 +164,13 @@ class CBSODataClient:
         Args:
             client: Async httpx client
             gemeente_code: CBS municipality code (e.g. '0363' for Amsterdam)
+            dataset_id: Override dataset ID (default: self.dataset_id)
 
         Returns:
             CBS Identifier string (e.g. 'GM0363') or None if not found
         """
-        url = f"{BASE_URL}/{self.dataset_id}/WijkenEnBuurtenCodes"
+        ds = dataset_id or self.dataset_id
+        url = f"{BASE_URL}/{ds}/WijkenEnBuurtenCodes"
         params = {
             "$filter": f"startswith(Identifier, 'GM{gemeente_code}')",
             "$top": 1,
@@ -350,6 +370,122 @@ class CBSODataClient:
                     "perc_hoogste_20": data.get("inkomen_hoogste_20_personen"),
                 },
             },
+        }
+
+
+    async def _fetch_nabijheid_observations(
+        self,
+        client: httpx.AsyncClient,
+        region_identifier: str,
+    ) -> dict[str, float | None]:
+        """Fetch Nabijheid Observations for a region, returning proximity distances."""
+        url = f"{BASE_URL}/{NABIJHEID_DATASET_ID}/Observations"
+        measure_filter = " or ".join(
+            f"Measure eq '{code}'" for code in NABIJHEID_MEASURE_CODES.values()
+        )
+        params = {
+            "$filter": (
+                f"WijkenEnBuurten eq '{region_identifier}' and ({measure_filter})"
+            ),
+            "$select": "Measure,Value,ValueAttribute",
+        }
+        try:
+            async with cbs_odata_limiter:
+                response = await retry_with_backoff(
+                    lambda: client.get(url, headers=self._headers, params=params, timeout=10.0),
+                    source="cbs",
+                )
+        except Exception as exc:
+            raise GovernmentAPIError(
+                "cbs", f"Failed to fetch nabijheid observations: {exc}"
+            ) from exc
+
+        if response.status_code != 200:
+            raise GovernmentAPIError(
+                "cbs",
+                f"Failed to fetch nabijheid observations: HTTP {response.status_code}",
+                status_code=response.status_code,
+            )
+
+        observations = response.json().get("value", [])
+        result: dict[str, float | None] = {}
+        for obs in observations:
+            measure_code = obs.get("Measure", "")
+            human_key = _NABIJHEID_CODE_TO_KEY.get(measure_code)
+            if human_key is None:
+                continue
+            value_attr = obs.get("ValueAttribute", "")
+            if value_attr == "":
+                raw = obs.get("Value")
+                result[human_key] = float(raw) if raw is not None else None
+            else:
+                result[human_key] = None
+        return result
+
+    async def get_nabijheid_data(
+        self,
+        client: httpx.AsyncClient,
+        gemeente_naam: str,
+        wijk_naam: str | None = None,
+        gemeente_code: str | None = None,
+    ) -> dict | None:
+        """
+        Fetch proximity distances to amenities from CBS Nabijheid (86134NED).
+
+        Same lookup strategy as get_neighborhood_data: wijk-level first, gemeente fallback.
+
+        Returns:
+            dict with proximity distances, or None if no data found
+        """
+        if not gemeente_code:
+            logger.warning(
+                "CBS nabijheid lookup skipped: gemeente_code required (gemeente_naam='%s')",
+                gemeente_naam,
+            )
+            return None
+
+        identifier: str | None = None
+
+        if wijk_naam:
+            identifier = await self._resolve_wijk_identifier(
+                client, gemeente_code, wijk_naam, dataset_id=NABIJHEID_DATASET_ID
+            )
+            if identifier:
+                logger.info(
+                    "CBS nabijheid resolved wijk '%s' (gemeente_code=%s) -> %s",
+                    wijk_naam, gemeente_code, identifier,
+                )
+
+        if not identifier:
+            identifier = await self._resolve_gemeente_identifier(
+                client, gemeente_code, dataset_id=NABIJHEID_DATASET_ID
+            )
+            if identifier:
+                logger.info(
+                    "CBS nabijheid resolved gemeente (gemeente_code=%s) -> %s",
+                    gemeente_code, identifier,
+                )
+
+        if not identifier:
+            logger.warning(
+                "CBS nabijheid could not resolve identifier for gemeente_code=%s wijk_naam='%s'",
+                gemeente_code, wijk_naam,
+            )
+            return None
+
+        data = await self._fetch_nabijheid_observations(client, identifier)
+
+        # Map afstand_X -> X_km for cleaner frontend consumption
+        afstanden: dict[str, float | None] = {}
+        for key, value in data.items():
+            short_key = key.replace("afstand_", "") + "_km"
+            afstanden[short_key] = value
+
+        return {
+            "bron": "CBS Nabijheid voorzieningen OData v4",
+            "dataset": "86134NED",
+            "peiljaar": 2024,
+            "afstanden": afstanden,
         }
 
 
