@@ -52,7 +52,7 @@
   3. Repeated views of the same gemeente load rulings from cache instantly (no Rechtspraak API calls) within the 7-day TTL window
   4. RechtspraakClient scopes search results to the correct court region using ECLI court-code prefix filtering, not national free-text search
   5. Date range filtering works -- user can restrict results to last 2, 5, or 10 years
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 82-01: EcliRegistry + RulingCache model + Alembic migration
@@ -124,7 +124,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. Ruling Cache + ECLI Court Mapping | 0/2 | Not started | - |
+| 82. Ruling Cache + ECLI Court Mapping | 1/2 | In Progress|  |
 | 83. Geo-Contextualization + Gemeente Feed | 0/2 | Not started | - |
 | 84. AI Analysis Upgrade + Doorlooptijd | 0/2 | Not started | - |
 | 85. Explorer UI | 0/2 | Not started | - |

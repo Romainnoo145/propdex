@@ -12,30 +12,28 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 82 of 86 (Ruling Cache + ECLI Court Mapping)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-07 -- Roadmap created for v13.0
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-07 -- Completed 82-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: --
-- Total execution time: --
+- Total plans completed: 1
+- Average duration: 4min
+- Total execution time: 4min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 82 | 1 | 4min | 4min |
 
 *Updated after each plan completion*
-
----
 
 ## Accumulated Context
 
@@ -54,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 - ruling_cache table is org-agnostic (court rulings are public data, no organization_id)
 - Regex + known gemeente list for geo-extraction (not spaCy -- training data is news, not legal text)
 - Bekendmakingen cross-reference deferred (no shared identifier between Rechtspraak and SRU)
+- [Phase 82]: 346 gemeenten mapped (includes historical/merged names for older ruling compatibility)
+- [Phase 82]: RulingCache uses TimestampMixin but NOT TenantMixin (court rulings are public data)
 
 ### Pending Todos
 
@@ -68,12 +68,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07
-**Stopped At:** Roadmap created for v13.0
+**Last Session:** 2026-03-07T14:11:23.146Z
+**Stopped At:** Completed 82-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 82`
+**Next Action:** `/gsd:execute-phase 82` (plan 02)
 
 ---
 
-*State updated: 2026-03-07 -- v13.0 roadmap created*
+*State updated: 2026-03-07 -- Completed 82-01-PLAN.md*
