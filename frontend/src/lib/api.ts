@@ -1264,6 +1264,7 @@ export interface GemeenteRulingsFeedItem {
   extracted_gemeente: string | null
   geo_relevance: 'gemeente' | 'arrondissement'
   uitkomst: string | null
+  vergunningstype: string | null
   fetched_at: string | null
 }
 
@@ -1279,6 +1280,7 @@ export interface GemeenteRulingsFeedResponse {
   status: string
   rulings: GemeenteRulingsFeedItem[]
   win_loss: WinLossRatio
+  doorlooptijd?: Record<string, DoorlooptijdStats>
   ingestion_status: 'fresh' | 'refreshing' | 'pending'
   count: number
 }
@@ -1312,6 +1314,16 @@ export interface RulingAnalysis {
   uitkomst: 'toegewezen' | 'afgewezen' | 'gedeeltelijk' | 'onbekend'
   relevantie: string
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  vergunningstype: string
+}
+
+export interface DoorlooptijdStats {
+  vergunningstype: string
+  count: number
+  avg_dagen: number | null
+  min_dagen: number | null
+  max_dagen: number | null
+  insufficient_data?: boolean
 }
 
 export interface JuridischAnalysisResult {
@@ -1321,26 +1333,22 @@ export interface JuridischAnalysisResult {
   risico_samenvatting: string
   top_risico_factoren: string[]
   ruling_analyses: RulingAnalysis[]
+  doorlooptijd: Record<string, DoorlooptijdStats> | null
   disclaimer: string
   analyzed_at: string
 }
 
 export interface JurisprudenceAnalysisResponse {
-  status: 'queued' | 'in_progress' | 'complete' | 'failed'
+  status: 'queued' | 'in_progress' | 'complete' | 'failed' | 'partial'
   job_id?: string | null
   result?: JuridischAnalysisResult
   error?: string
+  analyzed_count?: number
+  pending_count?: number
 }
 
 /**
- * Trigger AI analysis of court rulings for a municipality.
- *
- * POST /api/jurisprudence/analyze
- *
- * @param ecliList - List of ECLI identifiers to analyze
- * @param gemeenteNaam - Municipality name for context
- * @param accessToken - JWT access token
- * @returns Analysis response with job_id for polling or cached result
+ * @deprecated Use analyzeGemeenteRulings instead. Kept for backward compat.
  */
 export async function triggerJurisprudenceAnalysis(
   ecliList: string[],
@@ -1358,13 +1366,7 @@ export async function triggerJurisprudenceAnalysis(
 }
 
 /**
- * Poll status of a jurisprudence analysis job.
- *
- * GET /api/jurisprudence/analyze/{jobId}
- *
- * @param jobId - Job UUID from triggerJurisprudenceAnalysis
- * @param accessToken - JWT access token
- * @returns Analysis response with status and result when complete
+ * @deprecated Use analyzeGemeenteRulings + pollRulingAnalysis instead. Kept for backward compat.
  */
 export async function pollJurisprudenceAnalysis(
   jobId: string,
@@ -1374,4 +1376,93 @@ export async function pollJurisprudenceAnalysis(
     `/api/jurisprudence/analyze/${jobId}`,
     { method: 'GET', accessToken }
   )
+}
+
+/** Response from the per-ruling analysis endpoint */
+export interface AnalyzeGemeenteResponse {
+  status: 'complete' | 'partial'
+  gemeente_naam: string
+  juridisch_klimaat_score: number
+  vergunnings_succeskans: number
+  ruling_analyses: RulingAnalysis[]
+  analyzed_count: number
+  pending_count: number
+  total_count: number
+  job_id: string | null
+  analyzed_at: string
+}
+
+/**
+ * Trigger per-ruling AI analysis for a gemeente.
+ *
+ * POST /api/jurisprudence/analyze/{gemeenteNaam}
+ *
+ * Returns partial result immediately with scores from already-analyzed rulings.
+ * Enqueues ARQ job for un-analyzed rulings if any remain.
+ */
+export async function analyzeGemeenteRulings(
+  gemeenteNaam: string,
+  accessToken: string | null
+): Promise<AnalyzeGemeenteResponse> {
+  return apiFetch<AnalyzeGemeenteResponse>(
+    `/api/jurisprudence/analyze/${encodeURIComponent(gemeenteNaam)}`,
+    { method: 'POST', accessToken }
+  )
+}
+
+/** Response from the per-ruling analysis poll endpoint */
+export interface PollRulingAnalysisResponse {
+  status: 'complete' | 'in_progress' | 'not_found'
+  gemeente_naam: string
+  juridisch_klimaat_score: number
+  vergunnings_succeskans: number
+  ruling_analyses: RulingAnalysis[]
+  analyzed_count: number
+  pending_count: number
+  total_count: number
+}
+
+/**
+ * Poll status of per-ruling AI analysis for a gemeente.
+ *
+ * GET /api/jurisprudence/analyze/status/{gemeenteNaam}
+ */
+export async function pollRulingAnalysis(
+  gemeenteNaam: string,
+  accessToken: string | null
+): Promise<PollRulingAnalysisResponse> {
+  return apiFetch<PollRulingAnalysisResponse>(
+    `/api/jurisprudence/analyze/status/${encodeURIComponent(gemeenteNaam)}`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/** Response from doorlooptijd stats endpoint */
+export interface DoorlooptijdResponse {
+  status: string
+  [vergunningstype: string]: DoorlooptijdStats | string
+}
+
+/**
+ * Get aggregated doorlooptijd statistics per vergunningstype for a gemeente.
+ *
+ * GET /api/jurisprudence/doorlooptijd/{gemeenteNaam}
+ */
+export async function getDoorlooptijdStats(
+  gemeenteNaam: string,
+  accessToken: string | null
+): Promise<Record<string, DoorlooptijdStats>> {
+  const raw = await apiFetch<Record<string, unknown>>(
+    `/api/jurisprudence/doorlooptijd/${encodeURIComponent(gemeenteNaam)}`,
+    { method: 'GET', accessToken }
+  )
+  // The endpoint returns { status: "success", ...stats }
+  // Strip status and overall_avg to return only vergunningstype entries
+  const result: Record<string, DoorlooptijdStats> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (key !== 'status' && key !== 'overall_avg' && typeof value === 'object' && value !== null) {
+      result[key] = value as DoorlooptijdStats
+    }
+  }
+  return result
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
@@ -6,10 +7,16 @@ import {
     getGemeenteRulingsFeed,
     triggerJurisprudenceAnalysis,
     pollJurisprudenceAnalysis,
+    analyzeGemeenteRulings,
+    pollRulingAnalysis,
+    getDoorlooptijdStats,
     type JurisprudenceResult,
     type JurisprudenceDocument,
     type JurisprudenceAnalysisResponse,
     type GemeenteRulingsFeedResponse,
+    type AnalyzeGemeenteResponse,
+    type PollRulingAnalysisResponse,
+    type DoorlooptijdStats,
 } from '@/lib/api'
 
 export function useJurisprudenceSearch(query: string, enabled = true) {
@@ -59,6 +66,8 @@ export function useJurisprudenceDoc(ecli: string | null) {
  *
  * Polls every 3s while status is queued/in_progress.
  * Stops polling on complete/failed or when jobId is null.
+ *
+ * @deprecated Use useGemeenteAnalysis instead.
  */
 export function useJurisprudenceAnalysis(jobId: string | null) {
     const { accessToken } = useAuth()
@@ -80,7 +89,7 @@ export function useJurisprudenceAnalysis(jobId: string | null) {
 /**
  * Mutation to trigger AI jurisprudence analysis.
  *
- * Returns a standard TanStack mutation for the component to call `.mutateAsync()`.
+ * @deprecated Use useGemeenteAnalysis instead.
  */
 export function useTriggerAnalysis() {
     const { accessToken } = useAuth()
@@ -92,5 +101,83 @@ export function useTriggerAnalysis() {
     >({
         mutationFn: ({ ecliList, gemeenteNaam }) =>
             triggerJurisprudenceAnalysis(ecliList, gemeenteNaam, accessToken),
+    })
+}
+
+/**
+ * Auto-triggering gemeente analysis hook.
+ *
+ * Calls POST /analyze/{gemeente} when hasFeedData becomes true.
+ * If response has pending rulings, polls GET /analyze/status/{gemeente}
+ * until all rulings are analyzed.
+ *
+ * Returns aggregated analysis result and loading state.
+ */
+export function useGemeenteAnalysis(gemeenteNaam: string, hasFeedData: boolean) {
+    const { accessToken } = useAuth()
+    const hasTriggeredRef = useRef<string | null>(null)
+
+    const mutation = useMutation<AnalyzeGemeenteResponse, Error, string>({
+        mutationFn: (gemeente) => analyzeGemeenteRulings(gemeente, accessToken),
+    })
+
+    // Auto-trigger when feed data becomes available
+    useEffect(() => {
+        if (
+            hasFeedData &&
+            !!accessToken &&
+            gemeenteNaam.length > 0 &&
+            hasTriggeredRef.current !== gemeenteNaam
+        ) {
+            hasTriggeredRef.current = gemeenteNaam
+            mutation.mutate(gemeenteNaam)
+        }
+    }, [hasFeedData, accessToken, gemeenteNaam]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Reset trigger ref when gemeente changes
+    useEffect(() => {
+        hasTriggeredRef.current = null
+    }, [gemeenteNaam])
+
+    const hasPending = mutation.data?.status === 'partial' && (mutation.data.pending_count ?? 0) > 0
+
+    // Poll for completion when there are pending rulings
+    const pollQuery = useQuery<PollRulingAnalysisResponse, Error>({
+        queryKey: ['jurisprudence', 'analysis-poll', gemeenteNaam],
+        queryFn: () => pollRulingAnalysis(gemeenteNaam, accessToken),
+        enabled: hasPending && !!accessToken,
+        refetchInterval: (query) => {
+            if (query.state.error) return false
+            const status = query.state.data?.status
+            if (status === 'complete') return false
+            return 4000
+        },
+        refetchIntervalInBackground: true,
+    })
+
+    // Build the analysis result from the best available data
+    const sourceData = (pollQuery.data?.status === 'complete' ? pollQuery.data : null) ?? mutation.data
+    const analysis: AnalyzeGemeenteResponse | null = sourceData ?? null
+
+    const isAnalyzing =
+        mutation.isPending ||
+        (hasPending && pollQuery.data?.status !== 'complete')
+
+    return { analysis, isAnalyzing, error: mutation.error }
+}
+
+/**
+ * Fetch aggregated doorlooptijd statistics per vergunningstype.
+ *
+ * Uses 10-minute stale time since doorlooptijd data is slow-changing.
+ */
+export function useDoorlooptijdStats(gemeenteNaam: string) {
+    const { accessToken } = useAuth()
+
+    return useQuery<Record<string, DoorlooptijdStats>, Error>({
+        queryKey: ['jurisprudence', 'doorlooptijd', gemeenteNaam],
+        queryFn: () => getDoorlooptijdStats(gemeenteNaam, accessToken),
+        enabled: !!accessToken && !!gemeenteNaam,
+        staleTime: 10 * 60 * 1000, // 10 min cache
     })
 }
