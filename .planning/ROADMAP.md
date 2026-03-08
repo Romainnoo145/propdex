@@ -36,7 +36,7 @@
 
 - [x] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline (completed 2026-03-07)
 - [x] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente (completed 2026-03-07)
-- [ ] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation
+- [x] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation (completed 2026-03-08)
 - [ ] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering
 - [ ] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization
 
@@ -82,7 +82,7 @@ Plans:
   2. Each ruling gets a vergunningstype classification (dakopbouw, nieuwbouw, bestemmingswijziging, etc.) visible as a label
   3. Changing filters does not trigger re-analysis of previously analyzed rulings (per-ruling caching, not per-batch)
   4. Average doorlooptijd per gemeente per vergunningstype is displayed as a statistic, with "onvoldoende data" shown when filing dates are unavailable
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 84-01-PLAN.md -- Per-ruling AI analysis + vergunningstype taxonomy + DoorlooptijdService + schema migration
@@ -126,7 +126,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 |-------|----------------|--------|-----------|
 | 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
-| 84. AI Analysis Upgrade + Doorlooptijd | 1/2 | In Progress|  |
+| 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete   | 2026-03-08 |
 | 85. Explorer UI | 0/2 | Not started | - |
 | 86. Trend & Statistics | 0/2 | Not started | - |
 
