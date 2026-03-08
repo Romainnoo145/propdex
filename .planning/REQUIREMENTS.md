@@ -30,16 +30,16 @@
 
 ### AI Analysis
 
-- [ ] **AI-01**: AI analysis runs only on filtered, location-relevant rulings (not garbage national results)
-- [ ] **AI-02**: Per-ruling AI analysis caching (not per-batch) — filter changes don't trigger re-analysis
-- [ ] **AI-03**: Vergunningstype classification per ruling (dakopbouw, nieuwbouw, bestemmingswijziging, etc.)
-- [ ] **AI-04**: Token budget controls: truncate to OVERWEGINGEN + BESLISSING sections (max 60K input tokens)
+- [x] **AI-01**: AI analysis runs only on filtered, location-relevant rulings (not garbage national results)
+- [x] **AI-02**: Per-ruling AI analysis caching (not per-batch) — filter changes don't trigger re-analysis
+- [x] **AI-03**: Vergunningstype classification per ruling (dakopbouw, nieuwbouw, bestemmingswijziging, etc.)
+- [x] **AI-04**: Token budget controls: truncate to OVERWEGINGEN + BESLISSING sections (max 60K input tokens)
 
 ### Doorlooptijd
 
-- [ ] **DOOR-01**: Procedure duration calculated from ruling metadata dates (datum uitspraak, filing date)
-- [ ] **DOOR-02**: Average doorlooptijd per gemeente per vergunningstype displayed as statistic
-- [ ] **DOOR-03**: Graceful degradation when filing dates unavailable ("onvoldoende data")
+- [x] **DOOR-01**: Procedure duration calculated from ruling metadata dates (datum uitspraak, filing date)
+- [x] **DOOR-02**: Average doorlooptijd per gemeente per vergunningstype displayed as statistic
+- [x] **DOOR-03**: Graceful degradation when filing dates unavailable ("onvoldoende data")
 
 ### Explorer UI
 
@@ -99,13 +99,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FEED-01 | Phase 83 | Complete |
 | FEED-02 | Phase 83 | Complete |
 | FEED-03 | Phase 83 | Complete |
-| AI-01 | Phase 84 | Pending |
-| AI-02 | Phase 84 | Pending |
-| AI-03 | Phase 84 | Pending |
-| AI-04 | Phase 84 | Pending |
-| DOOR-01 | Phase 84 | Pending |
-| DOOR-02 | Phase 84 | Pending |
-| DOOR-03 | Phase 84 | Pending |
+| AI-01 | Phase 84 | Complete |
+| AI-02 | Phase 84 | Complete |
+| AI-03 | Phase 84 | Complete |
+| AI-04 | Phase 84 | Complete |
+| DOOR-01 | Phase 84 | Complete |
+| DOOR-02 | Phase 84 | Complete |
+| DOOR-03 | Phase 84 | Complete |
 | EXPL-01 | Phase 85 | Pending |
 | EXPL-02 | Phase 85 | Pending |
 | EXPL-03 | Phase 85 | Pending |

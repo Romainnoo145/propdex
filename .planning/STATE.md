@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 83
+**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 84
 
 ---
 
 ## Current Position
 
-Phase: 83 of 86 (Geo Contextualization Feed)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-07 -- Completed 83-02-PLAN.md
+Phase: 84 of 86 (AI Analysis Doorlooptijd)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-08 -- Completed 84-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████████░] 50%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3.3min
-- Total execution time: 13min
+- Total plans completed: 5
+- Average duration: 3.6min
+- Total execution time: 18min
 
 **By Phase:**
 
@@ -33,6 +33,7 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 82 | 2 | 7min | 3.5min |
 | 83 | 2 | 6min | 3min |
+| 84 | 1 | 5min | 5min |
 
 *Updated after each plan completion*
 
@@ -65,6 +66,10 @@ Progress: [██████████] 100%
 - [Phase 83]: Geo-relevance computed at query time via SQLAlchemy case(), not stored on model
 - [Phase 83]: Win/loss aggregation in Python after fetch (small result sets)
 - [Phase 83]: Feed replaces search in JurisprudenceSection -- search moves to Phase 85 Explorer
+- [Phase 84]: Per-ruling AI cache on RulingCache.ai_analysis JSONB replaces batch-keyed CachedAPIResponse
+- [Phase 84]: Section extraction via OVERWEGINGEN/BEOORDELING markers replaces naive truncation
+- [Phase 84]: Batch size of 5 rulings per Claude API call for token budget control
+- [Phase 84]: Min sample size of 3 for doorlooptijd stats to avoid misleading averages
 
 ### Pending Todos
 
@@ -79,12 +84,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-07T15:28:14Z
-**Stopped At:** Completed 83-02-PLAN.md (Phase 83 complete)
+**Last Session:** 2026-03-08T04:04:25Z
+**Stopped At:** Completed 84-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** Execute Phase 84 (AI Analysis Doorlooptijd)
+**Next Action:** Execute 84-02-PLAN.md (Frontend AI Analysis + Doorlooptijd UI)
 
 ---
 
-*State updated: 2026-03-07 -- Completed 83-02-PLAN.md*
+*State updated: 2026-03-08 -- Completed 84-01-PLAN.md*

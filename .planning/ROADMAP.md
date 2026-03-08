@@ -82,7 +82,7 @@ Plans:
   2. Each ruling gets a vergunningstype classification (dakopbouw, nieuwbouw, bestemmingswijziging, etc.) visible as a label
   3. Changing filters does not trigger re-analysis of previously analyzed rulings (per-ruling caching, not per-batch)
   4. Average doorlooptijd per gemeente per vergunningstype is displayed as a statistic, with "onvoldoende data" shown when filing dates are unavailable
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 84-01-PLAN.md -- Per-ruling AI analysis + vergunningstype taxonomy + DoorlooptijdService + schema migration
@@ -126,7 +126,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 |-------|----------------|--------|-----------|
 | 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
-| 84. AI Analysis Upgrade + Doorlooptijd | 0/2 | Not started | - |
+| 84. AI Analysis Upgrade + Doorlooptijd | 1/2 | In Progress|  |
 | 85. Explorer UI | 0/2 | Not started | - |
 | 86. Trend & Statistics | 0/2 | Not started | - |
 
