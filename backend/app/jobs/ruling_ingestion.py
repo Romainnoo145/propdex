@@ -76,7 +76,6 @@ async def ruling_ingestion_job(
             search_results = await rechtspraak_client.search_by_court(
                 court_codes=court_codes,
                 client=http_client,
-                max_results=100,
             )
 
             logger.info(
@@ -89,7 +88,6 @@ async def ruling_ingestion_job(
             rvs_results = await rechtspraak_client.search_by_court(
                 court_codes=["RVS"],
                 client=http_client,
-                max_results=50,
             )
 
             logger.info(

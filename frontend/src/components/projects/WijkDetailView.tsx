@@ -10,7 +10,6 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import { SearchInput } from '@/components/primitives'
 import { toast } from 'sonner'
 
-import { JurisprudenceSection } from './JurisprudenceSection'
 import { CbsNeighborhoodCard } from './CbsNeighborhoodCard'
 import { AgeDistributionCard } from './AgeDistributionCard'
 import { HouseholdCard } from './HouseholdCard'
@@ -29,11 +28,10 @@ interface WijkDetailViewProps {
  *
  * Shows:
  * 1. Scan summary with quick actions
- * 2. Jurisprudence search for legal precedent
+ * 2. CBS neighborhood metrics cards
  * 3. Reports assigned to the wijk
  *
- * Note: Meldingen are only available at gemeente level (change monitor
- * stores identical records for all projects in a gemeente).
+ * Note: Meldingen and Juridisch Klimaat are gemeente-level (shown in GemeenteDetailView).
  */
 export function WijkDetailView({ gemeente, wijk }: WijkDetailViewProps) {
   const isVirtualWijk = wijk.id.startsWith('virtual-wijk:')
@@ -44,12 +42,6 @@ export function WijkDetailView({ gemeente, wijk }: WijkDetailViewProps) {
       <ScanSummarySection
         wijkId={isVirtualWijk ? null : wijk.id}
         gemeenteCode={gemeente.gemeente_code}
-        gemeenteNaam={gemeente.name}
-        wijkNaam={wijk.wijk_naam}
-      />
-
-      {/* Jurisprudence Search */}
-      <JurisprudenceSection
         gemeenteNaam={gemeente.name}
         wijkNaam={wijk.wijk_naam}
       />
@@ -346,7 +338,7 @@ function ReportListSection({ wijkId }: { wijkId: string }) {
             name="q_wijk_reports"
             className="mb-3 h-auto w-full rounded-md border-grey-700 bg-grey-850 py-2 text-xs placeholder:text-grey-500 focus:border-amber-accent/50"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto scrollbar-hidden">
             {filteredReports.map((report) => (
               <ReportCard
                 key={report.id}

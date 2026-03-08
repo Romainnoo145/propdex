@@ -12,7 +12,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.ai.claude_client import AIParsingError, ClaudeClient
+from app.ai.claude_client import AIParsingError, create_claude_client
 from app.core.config import settings
 from app.models.ruling_cache import RulingCache
 from app.services.doorlooptijd import (
@@ -96,7 +96,7 @@ async def ruling_analysis_job(
                 })
 
             # Process in batches of BATCH_SIZE
-            claude_client = ClaudeClient(api_key=settings.ANTHROPIC_API_KEY)
+            claude_client = create_claude_client()
             analyzed_count = 0
 
             for i in range(0, len(ruling_dicts), BATCH_SIZE):

@@ -8,6 +8,7 @@ import ChangeTimeline from '@/components/notifications/ChangeTimeline'
 import { WijkCard } from './WijkCard'
 import { WijkCardGrid } from './WijkCardGrid'
 import { WijkDetailView } from './WijkDetailView'
+import { JurisprudenceSection } from './JurisprudenceSection'
 import { normalizeAreaName } from '@/lib/geo/normalizers'
 
 interface GemeenteDetailViewProps {
@@ -114,9 +115,9 @@ export function GemeenteDetailView({
           <span className="ml-auto text-xs text-grey-600">{wijkenCount}</span>
         </div>
         <div className="p-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-            <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-              <div className="max-h-[660px] overflow-y-auto p-3">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)] items-start">
+            <div className="sticky top-4 overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+              <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <WijkCardGrid
                   gemeente={gemeente}
                   wijkProjects={wijkProjects}
@@ -203,6 +204,12 @@ export function GemeenteDetailView({
           variant="inbox"
         />
       </section>
+
+      {/* Juridisch Klimaat — gemeente-level legal climate */}
+      <JurisprudenceSection
+        gemeenteNaam={gemeente.name}
+        wijkNaam={null}
+      />
     </div>
   )
 }

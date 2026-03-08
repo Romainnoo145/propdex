@@ -156,7 +156,15 @@ class Settings(BaseSettings):
     # AI Configuration
     ANTHROPIC_API_KEY: str = Field(
         default="",
-        description="Anthropic API key for Claude AI parsing",
+        description="Anthropic API key for Claude AI parsing (direct Anthropic)",
+    )
+    OPENROUTER_API_KEY: str = Field(
+        default="",
+        description="OpenRouter API key (alternative to direct Anthropic)",
+    )
+    AI_MODEL: str = Field(
+        default="claude-sonnet-4-5-20250929",
+        description="Model ID for AI analysis (Anthropic or OpenRouter model ID)",
     )
     REDIS_URL: str = Field(
         default="redis://localhost:6379/0",

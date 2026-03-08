@@ -27,21 +27,35 @@ class ClaudeClient:
     """
     Async wrapper around Anthropic SDK for PDF bestemmingsplan parsing.
 
+    Supports direct Anthropic API or OpenRouter as proxy.
     Uses Claude Sonnet 4.5 with structured outputs to extract zoning rules
     from Dutch bestemmingsplan PDFs with confidence scoring.
     """
 
-    MODEL = "claude-sonnet-4-5-20250929"
+    DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
     MAX_TOKENS = 16000
+    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-    def __init__(self, api_key: str):
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        base_url: str | None = None,
+        model: str | None = None,
+    ):
         """
         Initialize Claude client.
 
         Args:
-            api_key: Anthropic API key
+            api_key: API key (Anthropic or OpenRouter)
+            base_url: Override base URL (e.g. OpenRouter)
+            model: Override model ID
         """
-        self.client = anthropic.AsyncAnthropic(api_key=api_key)
+        kwargs: dict = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        self.client = anthropic.AsyncAnthropic(**kwargs)
+        self.model = model or self.DEFAULT_MODEL
 
     async def parse_bestemmingsplan(
         self, pdf_data: bytes, plan_idn: str
@@ -72,7 +86,7 @@ class ClaudeClient:
 
             # Call Claude API with PDF document
             response = await self.client.messages.create(
-                model=self.MODEL,
+                model=self.model,
                 max_tokens=self.MAX_TOKENS,
                 system=[
                     {
@@ -222,7 +236,7 @@ class ClaudeClient:
             )
 
             response = await self.client.messages.create(
-                model=self.MODEL,
+                model=self.model,
                 max_tokens=self.MAX_TOKENS,
                 system=JURIDISCH_ANALYSE_PROMPT_V2,
                 messages=[
@@ -317,3 +331,19 @@ class ClaudeClient:
             raise AIParsingError(
                 f"Unexpected analysis error: {e}", retriable=False
             ) from e
+
+
+def create_claude_client() -> ClaudeClient:
+    """Create ClaudeClient from application settings.
+
+    Uses OpenRouter when OPENROUTER_API_KEY is set, otherwise direct Anthropic.
+    """
+    from app.core.config import settings
+
+    if settings.OPENROUTER_API_KEY:
+        return ClaudeClient(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=ClaudeClient.OPENROUTER_BASE_URL,
+            model=settings.AI_MODEL,
+        )
+    return ClaudeClient(api_key=settings.ANTHROPIC_API_KEY, model=settings.AI_MODEL)

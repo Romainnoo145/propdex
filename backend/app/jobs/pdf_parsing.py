@@ -8,7 +8,7 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.ai.claude_client import AIParsingError, ClaudeClient
+from app.ai.claude_client import AIParsingError, create_claude_client
 from app.core.config import CACHE_TTL, settings
 from app.models.cached_response import CachedAPIResponse
 from app.models.parsing_job import ParsingJob
@@ -108,7 +108,7 @@ async def pdf_parsing_job(
 
             # Parse with Claude
             try:
-                claude_client = ClaudeClient(api_key=settings.ANTHROPIC_API_KEY)
+                claude_client = create_claude_client()
                 parsed_result = await claude_client.parse_bestemmingsplan(
                     pdf_doc.file_data, plan_idn
                 )
