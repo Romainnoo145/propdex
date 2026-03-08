@@ -424,6 +424,49 @@ GERECHTSHOVEN: list[str] = ["GHAMS", "GHARN", "GHDHA", "GHSHE"]
 # Raad van State court code, for future use in Phase 83
 RVS: str = "RVS"
 
+# OWMS creator URIs for Rechtspraak API server-side filtering
+# Pattern: http://standaarden.overheid.nl/owms/terms/{CourtName}
+COURT_CODE_TO_OWMS: dict[str, str] = {
+    # Current rechtbanken (post-2013)
+    "RBAMS": "Rechtbank_Amsterdam",
+    "RBDHA": "Rechtbank_Den_Haag",
+    "RBGEL": "Rechtbank_Gelderland",
+    "RBLIM": "Rechtbank_Limburg",
+    "RBMNE": "Rechtbank_Midden-Nederland",
+    "RBNHO": "Rechtbank_Noord-Holland",
+    "RBNNE": "Rechtbank_Noord-Nederland",
+    "RBOBR": "Rechtbank_Oost-Brabant",
+    "RBOVE": "Rechtbank_Overijssel",
+    "RBROT": "Rechtbank_Rotterdam",
+    "RBZWB": "Rechtbank_Zeeland-West-Brabant",
+    # Pre-2013 courts
+    "RBMAA": "Rechtbank_Maastricht",
+    "RBROE": "Rechtbank_Roermond",
+    "RBUTR": "Rechtbank_Utrecht",
+    "RBARN": "Rechtbank_Arnhem",
+    "RBZUT": "Rechtbank_Zutphen",
+    "RBHAA": "Rechtbank_Haarlem",
+    "RBALK": "Rechtbank_Alkmaar",
+    "RBBRE": "Rechtbank_Breda",
+    "RBMID": "Rechtbank_Middelburg",
+    "RBASS": "Rechtbank_Assen",
+    "RBGRO": "Rechtbank_Groningen",
+    "RBLEE": "Rechtbank_Leeuwarden",
+    "RBSGR": "Rechtbank_s-Gravenhage",
+    "RBSHE": "Rechtbank_'s-Hertogenbosch",
+    "RBZLY": "Rechtbank_Zwolle-Lelystad",
+    "RBDOR": "Rechtbank_Dordrecht",
+    # Higher courts
+    "RVS": "Raad_van_State",
+}
+OWMS_BASE = "http://standaarden.overheid.nl/owms/terms/"
+
+
+def get_owms_uri(court_code: str) -> str | None:
+    """Get OWMS creator URI for a court code."""
+    name = COURT_CODE_TO_OWMS.get(court_code)
+    return f"{OWMS_BASE}{name}" if name else None
+
 # Build reverse lookup: current code -> list of old codes that merged into it
 _CURRENT_TO_OLD: dict[str, list[str]] = {}
 for _old, _current in OLD_COURT_CODES.items():

@@ -18,7 +18,7 @@ from app.government_apis.base import (
     GovernmentAPIError,
     retry_with_backoff,
 )
-from app.government_apis.ecli_registry import extract_court_code
+from app.government_apis.ecli_registry import get_owms_uri
 from app.government_apis.rate_limiter import rechtspraak_limiter
 
 logger = logging.getLogger(__name__)
@@ -214,21 +214,21 @@ class RechtspraakClient:
         date_to: str | None = None,
         max_pages: int = 20,
     ) -> list[dict]:
-        """Search omgevingsrecht rulings filtered by court-code prefix (client-side).
+        """Search omgevingsrecht rulings filtered by court using the creator param.
 
-        Paginates through ALL results from the Rechtspraak API using Atom next links,
-        then filters client-side by ECLI court code prefix. The API's `creator` param
-        is NOT used because it returns 0 results when combined with `subject`.
+        Makes one API call per court code using the Rechtspraak `creator` parameter
+        for server-side filtering. This returns far more results than client-side
+        ECLI prefix filtering (e.g. 100 RBLIM results vs 2 with client-side).
 
         Args:
             court_codes: List of court codes to match (e.g., ["RBLIM", "RBMAA"]).
             client: Shared httpx AsyncClient from app.state.
             date_from: Optional start date filter (YYYY-MM-DD).
             date_to: Optional end date filter (YYYY-MM-DD).
-            max_pages: Safety limit on pagination (default 20 pages of 1000).
+            max_pages: Safety limit on pagination per court (default 20).
 
         Returns:
-            list[dict]: Filtered results with keys: ecli, title, summary, date
+            list[dict]: Results with keys: ecli, title, summary, date
 
         Raises:
             APITimeoutError: If network request times out or connection fails.
@@ -236,101 +236,105 @@ class RechtspraakClient:
         """
         PAGE_SIZE = 1000
 
-        # Use list-of-tuples to support duplicate `date` keys for range filtering
-        params: list[tuple[str, str]] = [
-            ("subject", OMGEVINGSRECHT_URI),
-            ("max", str(PAGE_SIZE)),
-            ("sort", "DESC"),
-            ("return", "DOC"),
-        ]
-        if date_from:
-            params.append(("date", date_from))
-        if date_to:
-            params.append(("date", date_to))
-
         logger.info(
-            "Rechtspraak court search: codes=%s, date_from=%s, date_to=%s (paginated)",
+            "Rechtspraak court search: codes=%s, date_from=%s, date_to=%s",
             court_codes,
             date_from,
             date_to,
         )
 
-        court_code_set = set(court_codes)
-        filtered: list[dict] = []
+        all_results: list[dict] = []
         seen_eclis: set[str] = set()
-        total_fetched = 0
-        url: str | None = SEARCH_URL
-        current_params: list[tuple[str, str]] | None = params
-        page = 0
 
-        while url and page < max_pages:
-            page += 1
-            try:
-                async with rechtspraak_limiter:
-                    if current_params is not None:
-                        response = await retry_with_backoff(
-                            lambda u=url, p=current_params: client.get(u, params=p, timeout=30.0),
-                            source="rechtspraak",
-                        )
-                    else:
-                        # Follow next link (already has params in URL)
-                        response = await retry_with_backoff(
-                            lambda u=url: client.get(u, timeout=30.0),
-                            source="rechtspraak",
-                        )
-            except httpx.TimeoutException as exc:
-                raise APITimeoutError(
-                    "rechtspraak", f"Court search timed out on page {page}: {exc}"
-                ) from exc
-            except httpx.RequestError as exc:
-                raise APITimeoutError(
-                    "rechtspraak", f"Court search connection error on page {page}: {exc}"
-                ) from exc
+        for court_code in court_codes:
+            owms_uri = get_owms_uri(court_code)
+            if not owms_uri:
+                logger.warning("No OWMS URI for court code %s, skipping", court_code)
+                continue
 
-            if response.status_code != 200:
-                raise GovernmentAPIError(
-                    "rechtspraak",
-                    f"Court search returned HTTP {response.status_code} on page {page}",
-                    status_code=response.status_code,
+            params: list[tuple[str, str]] = [
+                ("subject", OMGEVINGSRECHT_URI),
+                ("creator", owms_uri),
+                ("max", str(PAGE_SIZE)),
+                ("sort", "DESC"),
+                ("return", "DOC"),
+            ]
+            if date_from:
+                params.append(("date", date_from))
+            if date_to:
+                params.append(("date", date_to))
+
+            url: str | None = SEARCH_URL
+            current_params: list[tuple[str, str]] | None = params
+            page = 0
+
+            while url and page < max_pages:
+                page += 1
+                try:
+                    async with rechtspraak_limiter:
+                        if current_params is not None:
+                            response = await retry_with_backoff(
+                                lambda u=url, p=current_params: client.get(
+                                    u, params=p, timeout=30.0
+                                ),
+                                source="rechtspraak",
+                            )
+                        else:
+                            response = await retry_with_backoff(
+                                lambda u=url: client.get(u, timeout=30.0),
+                                source="rechtspraak",
+                            )
+                except httpx.TimeoutException as exc:
+                    raise APITimeoutError(
+                        "rechtspraak",
+                        f"Court search timed out ({court_code} page {page}): {exc}",
+                    ) from exc
+                except httpx.RequestError as exc:
+                    raise APITimeoutError(
+                        "rechtspraak",
+                        f"Court search connection error ({court_code} page {page}): {exc}",
+                    ) from exc
+
+                if response.status_code != 200:
+                    raise GovernmentAPIError(
+                        "rechtspraak",
+                        f"Court search HTTP {response.status_code} ({court_code} page {page})",
+                        status_code=response.status_code,
+                    )
+
+                results = self._parse_search_results(response.content)
+
+                # Deduplicate across court codes
+                for r in results:
+                    if r["ecli"] not in seen_eclis:
+                        all_results.append(r)
+                        seen_eclis.add(r["ecli"])
+
+                logger.info(
+                    "Rechtspraak %s page %d: %d results, %d total so far",
+                    court_code,
+                    page,
+                    len(results),
+                    len(all_results),
                 )
 
-            results = self._parse_search_results(response.content)
-            total_fetched += len(results)
+                if len(results) < PAGE_SIZE:
+                    break
 
-            # Client-side ECLI prefix filtering (deduplicate)
-            for r in results:
-                ecli = r["ecli"]
-                if ecli not in seen_eclis and extract_court_code(ecli) in court_code_set:
-                    filtered.append(r)
-                    seen_eclis.add(ecli)
+                next_url = self._extract_next_link(response.content)
+                if not next_url:
+                    break
 
-            logger.info(
-                "Rechtspraak court search page %d: %d results, %d matched so far",
-                page,
-                len(results),
-                len(filtered),
-            )
-
-            # Check for next page
-            if len(results) < PAGE_SIZE:
-                break  # Last page
-
-            next_url = self._extract_next_link(response.content)
-            if not next_url:
-                break
-
-            url = next_url
-            current_params = None  # Next link has params baked in
+                url = next_url
+                current_params = None
 
         logger.info(
-            "Rechtspraak court search complete: %d pages, %d total, %d after filter (%s)",
-            page,
-            total_fetched,
-            len(filtered),
+            "Rechtspraak court search complete: %d results for %s",
+            len(all_results),
             court_codes,
         )
 
-        return filtered
+        return all_results
 
     async def get_jurisprudence_document(
         self,

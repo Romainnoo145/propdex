@@ -84,14 +84,15 @@ async def ruling_ingestion_job(
                 gemeente_naam,
             )
 
-            # Pass 2: RVS (Raad van State) rulings -- national, geo-tagged via text
+            # Pass 2: RVS (Raad van State) rulings -- national, geo-tagged via text extraction
             rvs_results = await rechtspraak_client.search_by_court(
                 court_codes=["RVS"],
                 client=http_client,
+                max_pages=1,  # API caps at 1000 anyway; covers ~3 months
             )
 
             logger.info(
-                "ruling_ingestion: found %d RVS results",
+                "ruling_ingestion: found %d RVS results (will geo-tag via text)",
                 len(rvs_results),
             )
 
@@ -114,6 +115,24 @@ async def ruling_ingestion_job(
                     "rvs_fetched": 0,
                 }
 
+            # Check which ECLIs are already cached with full text
+            async with session_factory() as check_session:
+                existing_stmt = select(RulingCache.ecli).where(
+                    RulingCache.ecli.in_([r["ecli"] for r in all_results]),
+                    RulingCache.full_text.isnot(None),
+                    RulingCache.full_text != "",
+                )
+                existing_result = await check_session.execute(existing_stmt)
+                already_cached = {row[0] for row in existing_result.fetchall()}
+
+            # Only fetch docs not yet cached
+            to_fetch = [r for r in all_results if r["ecli"] not in already_cached]
+            logger.info(
+                "ruling_ingestion: %d new ECLIs to fetch (%d already cached)",
+                len(to_fetch),
+                len(already_cached),
+            )
+
             # Batch fetch full documents with shared concurrency control
             sem = asyncio.Semaphore(5)
 
@@ -127,7 +146,7 @@ async def ruling_ingestion_job(
                         logger.warning("Failed to fetch %s: %s", ecli, e)
                         return None
 
-            tasks = [fetch_one(r["ecli"]) for r in all_results]
+            tasks = [fetch_one(r["ecli"]) for r in to_fetch]
             docs = await asyncio.gather(*tasks)
 
         # Build lookup from all search results for title/summary
@@ -156,8 +175,9 @@ async def ruling_ingestion_job(
                 extracted_gemeente = extract_gemeente_from_text(full_text)
                 uitkomst = extract_uitkomst(full_text, search_entry.get("summary", ""))
 
-                # RVS rulings have no gemeente_query (national scope)
-                ruling_gemeente_query = gemeente_naam if court_code != "RVS" else None
+                # Only tag with gemeente_query if text extraction confirms the gemeente
+                # Court district != gemeente (RBLIM covers all of Limburg, not just Venlo)
+                ruling_gemeente_query = gemeente_naam if extracted_gemeente == gemeente_naam else None
 
                 # Check if already cached
                 stmt = select(RulingCache).where(RulingCache.ecli == ecli)

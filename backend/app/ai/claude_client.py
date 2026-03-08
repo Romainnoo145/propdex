@@ -33,8 +33,9 @@ class ClaudeClient:
     """
 
     DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
-    MAX_TOKENS = 16000
-    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+    MAX_TOKENS = 16000  # PDF parsing needs large output
+    MAX_TOKENS_JURISPRUDENCE = 4000  # JSON analysis of 5 rulings fits easily
+    OPENROUTER_BASE_URL = "https://openrouter.ai/api"
 
     def __init__(
         self,
@@ -237,7 +238,7 @@ class ClaudeClient:
 
             response = await self.client.messages.create(
                 model=self.model,
-                max_tokens=self.MAX_TOKENS,
+                max_tokens=self.MAX_TOKENS_JURISPRUDENCE,
                 system=JURIDISCH_ANALYSE_PROMPT_V2,
                 messages=[
                     {"role": "user", "content": user_message},
