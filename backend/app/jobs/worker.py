@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.jobs.area_scan import area_scan_job
 from app.jobs.change_monitor import daily_change_monitor_job
 from app.jobs.funda_snapshot import funda_snapshot_job
-from app.jobs.jurisprudence_analysis import jurisprudence_analysis_job
+from app.jobs.jurisprudence_analysis import ruling_analysis_job
 from app.jobs.pdf_parsing import pdf_parsing_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
 
@@ -49,7 +49,7 @@ class WorkerSettings:
         area_scan_job,
         daily_change_monitor_job,
         funda_snapshot_job,
-        jurisprudence_analysis_job,
+        ruling_analysis_job,
         ruling_ingestion_job,
     ]
     redis_settings = get_redis_settings()

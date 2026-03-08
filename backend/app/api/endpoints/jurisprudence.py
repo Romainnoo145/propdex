@@ -1,30 +1,26 @@
-"""Jurisprudence API endpoints — Rechtspraak Open Data integration + AI analysis.
+"""Jurisprudence API endpoints -- Rechtspraak Open Data integration + AI analysis.
 
 Endpoints are scoped to omgevingsrecht (environmental/planning law) domain.
 Authentication uses the standard project auth dependency (JWT bearer token).
 HTTP client is retrieved from request.app.state.http_client (shared AsyncClient).
 """
 
-import hashlib
 import logging
-import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.government_apis.base import GovernmentAPIError
 from app.government_apis.ecli_registry import get_court_codes_for_gemeente
 from app.government_apis.rechtspraak import rechtspraak_client, validate_ecli
 from app.middleware.rate_limit import limiter
-from app.models.cached_response import CachedAPIResponse
-from app.models.jurisprudence_job import JuridischAnalyseJob
 from app.models.ruling_cache import RulingCache
+from app.services.doorlooptijd import get_doorlooptijd_stats
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +28,6 @@ router = APIRouter()
 
 # 7-day TTL for ruling cache freshness check
 RULING_CACHE_TTL_SECONDS = 7 * 24 * 3600
-
-
-class JurisprudenceAnalyzeRequest(BaseModel):
-    """Request body for triggering jurisprudence AI analysis."""
-
-    ecli_list: list[str] = Field(
-        ..., description="List of ECLI identifiers to analyze", min_length=1
-    )
-    gemeente_naam: str = Field(
-        ..., description="Municipality name for context", min_length=1
-    )
-
-
-def _build_cache_key(organization_id: uuid.UUID, ecli_list: list[str]) -> str:
-    """Build deterministic cache key from org ID and sorted ECLI list."""
-    ecli_hash = hashlib.sha256(",".join(sorted(ecli_list)).encode()).hexdigest()[:16]
-    return f"ai_juridisch:{organization_id}:{ecli_hash}"
 
 
 @router.get("/search")
@@ -192,15 +171,20 @@ async def get_gemeente_rulings(
             "extracted_gemeente": r.extracted_gemeente,
             "geo_relevance": geo_relevance_map.get(r.ecli, "arrondissement"),
             "uitkomst": r.uitkomst,
+            "vergunningstype": r.vergunningstype,
             "fetched_at": r.fetched_at.isoformat() if r.fetched_at else None,
         }
         for r in rulings
     ]
 
+    # Include doorlooptijd stats inline
+    doorlooptijd = await get_doorlooptijd_stats(db, gemeente_naam)
+
     return {
         "status": "success",
         "rulings": ruling_list,
         "win_loss": win_loss,
+        "doorlooptijd": doorlooptijd,
         "ingestion_status": ingestion_status,
         "count": len(ruling_list),
     }
@@ -240,119 +224,157 @@ async def get_jurisprudence_doc(
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
-@router.post("/analyze")
+@router.post("/analyze/{gemeente_naam}")
 @limiter.limit("10/minute")
-async def trigger_jurisprudence_analysis(
+async def trigger_ruling_analysis(
+    gemeente_naam: str,
     request: Request,
-    body: JurisprudenceAnalyzeRequest,
     db: AsyncSession = Depends(get_db),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     current_user=Depends(get_current_active_user),
 ):
-    """Trigger AI analysis of court rulings for a municipality.
+    """Trigger per-ruling AI analysis for a municipality.
 
-    Checks cache first. If cached result exists and is not expired, returns it.
-    Otherwise enqueues an ARQ job for background analysis.
+    Queries RulingCache for geo-filtered rulings. Splits into already-analyzed
+    and needs-analysis sets. Returns complete result from analyzed rulings
+    immediately, enqueues ARQ job for un-analyzed rulings if any.
     """
-    # Validate ECLI formats
-    for ecli in body.ecli_list:
-        if not validate_ecli(ecli):
-            raise HTTPException(
-                status_code=400, detail=f"Invalid ECLI format: {ecli}"
+    # Query all geo-filtered rulings for this gemeente
+    stmt = select(RulingCache).where(
+        (RulingCache.gemeente_query == gemeente_naam)
+        | (RulingCache.extracted_gemeente == gemeente_naam)
+    )
+    result = await db.execute(stmt)
+    all_rulings = result.scalars().all()
+
+    if not all_rulings:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No rulings found for gemeente: {gemeente_naam}",
+        )
+
+    # Split: analyzed vs needs-analysis
+    analyzed = [r for r in all_rulings if r.ai_analysis is not None]
+    needs_analysis = [
+        r for r in all_rulings
+        if r.ai_analysis is None and r.full_text is not None
+    ]
+
+    # Build aggregated result from already-analyzed rulings
+    ruling_analyses = []
+    for r in analyzed:
+        analysis = r.ai_analysis
+        if analysis:
+            ruling_analyses.append(analysis)
+
+    # Compute scores from analyzed rulings
+    total = max(len(ruling_analyses), 1)
+    toegewezen = sum(
+        1 for ra in ruling_analyses if ra.get("uitkomst") == "toegewezen"
+    )
+    afgewezen = sum(
+        1 for ra in ruling_analyses if ra.get("uitkomst") == "afgewezen"
+    )
+    klimaat_score = round(100 - (100 * afgewezen / total))
+    succeskans = round(100 * toegewezen / total)
+
+    job_id = None
+    if needs_analysis:
+        # Enqueue ARQ job for un-analyzed rulings
+        ecli_list = [r.ecli for r in needs_analysis]
+        try:
+            arq_pool = request.app.state.arq_pool
+            arq_job = await arq_pool.enqueue_job(
+                "ruling_analysis_job",
+                gemeente_naam,
+                ecli_list,
+                _job_id=f"ruling_analyze:{gemeente_naam}",
+            )
+            job_id = arq_job.job_id if arq_job else None
+            logger.info(
+                "Enqueued ruling analysis job for %s (%d un-analyzed)",
+                gemeente_naam,
+                len(ecli_list),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to enqueue ruling analysis for %s: %s",
+                gemeente_naam,
+                exc,
             )
 
-    # Check cache
-    cache_key = _build_cache_key(organization_id, body.ecli_list)
-    stmt = select(CachedAPIResponse).where(
-        CachedAPIResponse.organization_id == organization_id,
-        CachedAPIResponse.cache_key == cache_key,
-    )
-    result = await db.execute(stmt)
-    cached = result.scalar_one_or_none()
-
-    if cached:
-        # Check TTL
-        from datetime import datetime
-
-        age_seconds = (datetime.utcnow() - cached.fetched_at).total_seconds()
-        if age_seconds < cached.ttl_seconds:
-            return {
-                "status": "complete",
-                "result": cached.response_data,
-                "job_id": None,
-            }
-
-    # Create job record
-    job_record = JuridischAnalyseJob(
-        organization_id=organization_id,
-        gemeente_naam=body.gemeente_naam,
-        ecli_list=body.ecli_list,
-        status="queued",
-    )
-    db.add(job_record)
-    await db.flush()
-
-    # Enqueue ARQ job
-    arq_job = await request.app.state.arq_pool.enqueue_job(
-        "jurisprudence_analysis_job",
-        str(job_record.id),
-        str(organization_id),
-    )
-
-    # Store ARQ job_id on record
-    job_record.job_id = arq_job.job_id
-    db.add(job_record)
-    await db.flush()
-    await db.commit()
-
-    return {"status": "queued", "job_id": str(job_record.id)}
+    return {
+        "status": "complete" if not needs_analysis else "partial",
+        "gemeente_naam": gemeente_naam,
+        "juridisch_klimaat_score": klimaat_score,
+        "vergunnings_succeskans": succeskans,
+        "ruling_analyses": ruling_analyses,
+        "analyzed_count": len(analyzed),
+        "pending_count": len(needs_analysis),
+        "total_count": len(all_rulings),
+        "job_id": job_id,
+        "analyzed_at": datetime.utcnow().isoformat(),
+    }
 
 
-@router.get("/analyze/{job_id}")
-async def poll_jurisprudence_analysis(
-    job_id: str,
+@router.get("/analyze/status/{gemeente_naam}")
+async def poll_ruling_analysis(
+    gemeente_naam: str,
     db: AsyncSession = Depends(get_db),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     current_user=Depends(get_current_active_user),
 ):
-    """Poll status of a jurisprudence analysis job.
+    """Poll status of ruling analysis for a gemeente.
 
-    Returns job status with result data when complete, error message when failed.
-    Enforces tenant isolation via organization_id.
+    Returns current analysis state by checking RulingCache directly.
+    No dependency on JuridischAnalyseJob or CachedAPIResponse.
     """
-    try:
-        record_uuid = uuid.UUID(job_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
-
-    stmt = select(JuridischAnalyseJob).where(
-        JuridischAnalyseJob.id == record_uuid,
-        JuridischAnalyseJob.organization_id == organization_id,
+    stmt = select(RulingCache).where(
+        (RulingCache.gemeente_query == gemeente_naam)
+        | (RulingCache.extracted_gemeente == gemeente_naam)
     )
     result = await db.execute(stmt)
-    job = result.scalar_one_or_none()
+    all_rulings = result.scalars().all()
 
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+    if not all_rulings:
+        return {"status": "not_found", "gemeente_naam": gemeente_naam}
 
-    if job.status == "complete":
-        # Look up cached result
-        cache_key = _build_cache_key(
-            str(organization_id), list(job.ecli_list)  # type: ignore[arg-type]
-        )
-        stmt = select(CachedAPIResponse).where(
-            CachedAPIResponse.organization_id == organization_id,
-            CachedAPIResponse.cache_key == cache_key,
-        )
-        result = await db.execute(stmt)
-        cached = result.scalar_one_or_none()
+    analyzed = [r for r in all_rulings if r.ai_analysis is not None]
+    pending = [
+        r for r in all_rulings
+        if r.ai_analysis is None and r.full_text is not None
+    ]
 
-        return {
-            "status": "complete",
-            "result": cached.response_data if cached else None,
-        }
+    ruling_analyses = [r.ai_analysis for r in analyzed if r.ai_analysis]
 
-    if job.status == "failed":
-        return {"status": "failed", "error": job.error_message}
+    total = max(len(ruling_analyses), 1)
+    toegewezen = sum(
+        1 for ra in ruling_analyses if ra.get("uitkomst") == "toegewezen"
+    )
+    afgewezen = sum(
+        1 for ra in ruling_analyses if ra.get("uitkomst") == "afgewezen"
+    )
 
-    return {"status": job.status}
+    return {
+        "status": "complete" if not pending else "in_progress",
+        "gemeente_naam": gemeente_naam,
+        "juridisch_klimaat_score": round(100 - (100 * afgewezen / total)),
+        "vergunnings_succeskans": round(100 * toegewezen / total),
+        "ruling_analyses": ruling_analyses,
+        "analyzed_count": len(analyzed),
+        "pending_count": len(pending),
+        "total_count": len(all_rulings),
+    }
+
+
+@router.get("/doorlooptijd/{gemeente_naam}")
+async def get_doorlooptijd(
+    gemeente_naam: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    """Get procedure duration statistics per vergunningstype for a gemeente.
+
+    Returns avg/min/max doorlooptijd per permit type category.
+    Uses minimum sample size of 3; below that returns insufficient_data: true.
+    """
+    stats = await get_doorlooptijd_stats(db, gemeente_naam)
+    return {"status": "success", **stats}

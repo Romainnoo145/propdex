@@ -7,8 +7,9 @@ from datetime import datetime
 
 import anthropic
 
-from app.ai.prompts import BESTEMMINGSPLAN_PARSING_PROMPT, JURIDISCH_ANALYSE_PROMPT
+from app.ai.prompts import BESTEMMINGSPLAN_PARSING_PROMPT, JURIDISCH_ANALYSE_PROMPT_V2
 from app.ai.schemas import BestemmingsplanParsed, JuridischAnalysisResult
+from app.services.doorlooptijd import extract_relevant_sections
 
 logger = logging.getLogger(__name__)
 
@@ -175,18 +176,19 @@ class ClaudeClient:
         self,
         rulings: list[dict],
         gemeente_naam: str,
-        max_chars_per_ruling: int = 5000,
+        max_chars_per_ruling: int = 15000,
     ) -> JuridischAnalysisResult:
         """
         Analyze Dutch court rulings for property development risk assessment.
 
-        Truncates ruling texts, sends to Claude for analysis, computes
+        Uses section extraction for intelligent text truncation, sends to Claude
+        for analysis with vergunningstype classification, computes
         vergunnings_succeskans and juridisch_klimaat_score in Python.
 
         Args:
             rulings: List of dicts with keys: ecli, text, instantie, datum_uitspraak
             gemeente_naam: Municipality name for context
-            max_chars_per_ruling: Max characters per ruling text (default 5000)
+            max_chars_per_ruling: Max characters per ruling text (default 15000)
 
         Returns:
             JuridischAnalysisResult with per-ruling analysis and aggregated scores
@@ -195,14 +197,16 @@ class ClaudeClient:
             AIParsingError: If API call fails or response cannot be parsed
         """
         try:
-            # Truncate ruling texts
+            # Extract relevant sections instead of naive truncation
             truncated_rulings = []
             for r in rulings:
+                text = r.get("text", "")
+                section_text = extract_relevant_sections(text, max_chars_per_ruling)
                 truncated_rulings.append({
                     "ecli": r["ecli"],
                     "instantie": r.get("instantie", ""),
                     "datum_uitspraak": r.get("datum_uitspraak", ""),
-                    "text": r.get("text", "")[:max_chars_per_ruling],
+                    "text": section_text,
                 })
 
             # Build user message
@@ -220,7 +224,7 @@ class ClaudeClient:
             response = await self.client.messages.create(
                 model=self.MODEL,
                 max_tokens=self.MAX_TOKENS,
-                system=JURIDISCH_ANALYSE_PROMPT,
+                system=JURIDISCH_ANALYSE_PROMPT_V2,
                 messages=[
                     {"role": "user", "content": user_message},
                 ],
