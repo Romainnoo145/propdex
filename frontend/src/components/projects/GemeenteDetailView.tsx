@@ -115,9 +115,9 @@ export function GemeenteDetailView({
           <span className="ml-auto text-xs text-grey-600">{wijkenCount}</span>
         </div>
         <div className="p-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)] items-start">
-            <div className="sticky top-4 overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-              <div className="overflow-y-auto p-3" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
+            <div className="relative overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+              <div className="absolute inset-0 overflow-y-auto p-3">
                 <WijkCardGrid
                   gemeente={gemeente}
                   wijkProjects={wijkProjects}

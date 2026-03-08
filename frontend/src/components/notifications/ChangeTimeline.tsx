@@ -123,8 +123,8 @@ export default function ChangeTimeline({
     return (
       <div className="bg-grey-900/50 px-3 pb-3 pt-4 sm:px-4 sm:pb-4 sm:pt-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-          <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-            <div className="max-h-[560px] overflow-y-auto p-3">
+          <div className="relative overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+            <div className="absolute inset-0 overflow-y-auto p-3">
               <div className="space-y-5">
                 {sortedDates.map((dateKey) => {
                   const dateChanges = groupedChanges[dateKey]!
