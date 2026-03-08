@@ -1380,7 +1380,7 @@ export async function pollJurisprudenceAnalysis(
 
 /** Response from the per-ruling analysis endpoint */
 export interface AnalyzeGemeenteResponse {
-  status: 'complete' | 'partial'
+  status: 'complete' | 'partial' | 'in_progress' | 'not_found'
   gemeente_naam: string
   juridisch_klimaat_score: number
   vergunnings_succeskans: number
@@ -1388,8 +1388,8 @@ export interface AnalyzeGemeenteResponse {
   analyzed_count: number
   pending_count: number
   total_count: number
-  job_id: string | null
-  analyzed_at: string
+  job_id?: string | null
+  analyzed_at?: string
 }
 
 /**
@@ -1410,18 +1410,6 @@ export async function analyzeGemeenteRulings(
   )
 }
 
-/** Response from the per-ruling analysis poll endpoint */
-export interface PollRulingAnalysisResponse {
-  status: 'complete' | 'in_progress' | 'not_found'
-  gemeente_naam: string
-  juridisch_klimaat_score: number
-  vergunnings_succeskans: number
-  ruling_analyses: RulingAnalysis[]
-  analyzed_count: number
-  pending_count: number
-  total_count: number
-}
-
 /**
  * Poll status of per-ruling AI analysis for a gemeente.
  *
@@ -1430,8 +1418,8 @@ export interface PollRulingAnalysisResponse {
 export async function pollRulingAnalysis(
   gemeenteNaam: string,
   accessToken: string | null
-): Promise<PollRulingAnalysisResponse> {
-  return apiFetch<PollRulingAnalysisResponse>(
+): Promise<AnalyzeGemeenteResponse> {
+  return apiFetch<AnalyzeGemeenteResponse>(
     `/api/jurisprudence/analyze/status/${encodeURIComponent(gemeenteNaam)}`,
     { method: 'GET', accessToken }
   )

@@ -3,12 +3,12 @@ import { Skeleton } from '@/components/feedback/Skeleton'
 import {
     useGemeenteRulingsFeed,
     useJurisprudenceDoc,
-    useJurisprudenceAnalysis,
-    useTriggerAnalysis,
+    useGemeenteAnalysis,
+    useDoorlooptijdStats,
 } from '@/hooks/useJurisprudence'
 import { JuridischKlimaatCard } from './JuridischKlimaatCard'
 import { X, Scale, FileText, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import type { JuridischAnalysisResult, WinLossRatio } from '@/lib/api'
+import type { WinLossRatio, AnalyzeGemeenteResponse, RulingAnalysis } from '@/lib/api'
 
 interface JurisprudenceSectionProps {
     gemeenteNaam: string
@@ -102,13 +102,13 @@ function RulingAiSummaryBadge({
     analysis,
 }: {
     ecli: string
-    analysis: JuridischAnalysisResult | null
+    analysis: AnalyzeGemeenteResponse | null
 }) {
     const [isOpen, setIsOpen] = useState(false)
 
     if (!analysis) return null
 
-    const ruling = analysis.ruling_analyses.find((r) => r.ecli === ecli)
+    const ruling: RulingAnalysis | undefined = analysis.ruling_analyses.find((r) => r.ecli === ecli)
     if (!ruling) return null
 
     return (
@@ -123,6 +123,11 @@ function RulingAiSummaryBadge({
             >
                 <Sparkles className="w-3 h-3" />
                 <span className="font-medium">AI samenvatting</span>
+                {ruling.vergunningstype && ruling.vergunningstype !== 'overig' && (
+                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400">
+                        {ruling.vergunningstype}
+                    </span>
+                )}
                 {isOpen ? (
                     <ChevronUp className="w-3 h-3 ml-auto" />
                 ) : (
@@ -175,47 +180,24 @@ function RulingAiSummaryBadge({
 
 export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: JurisprudenceSectionProps) {
     const [selectedEcli, setSelectedEcli] = useState<string | null>(null)
-    const [analysisJobId, setAnalysisJobId] = useState<string | null>(null)
     const [prevGemeente, setPrevGemeente] = useState(gemeenteNaam)
 
-    // Track gemeente changes: reset selection and analysis when switching gemeente
+    // Track gemeente changes: reset selection when switching gemeente
     if (prevGemeente !== gemeenteNaam) {
         setPrevGemeente(gemeenteNaam)
         setSelectedEcli(null)
-        if (analysisJobId !== null) {
-            setAnalysisJobId(null)
-        }
     }
 
     const { data: feedData, isLoading, isError, error } = useGemeenteRulingsFeed(gemeenteNaam)
-    const analysisQuery = useJurisprudenceAnalysis(analysisJobId)
-    const triggerMutation = useTriggerAnalysis()
 
-    const analysisResult: JuridischAnalysisResult | null =
-        analysisQuery.data?.status === 'complete' ? (analysisQuery.data.result ?? null) : null
+    // Auto-triggering analysis -- no manual button needed
+    const { analysis: analysisResult, isAnalyzing } = useGemeenteAnalysis(
+        gemeenteNaam,
+        !!(feedData?.rulings?.length)
+    )
 
-    const isAnalyzing =
-        triggerMutation.isPending ||
-        (!!analysisJobId &&
-            analysisQuery.data?.status !== 'complete' &&
-            analysisQuery.data?.status !== 'failed')
-
-    async function handleAnalyze() {
-        if (!feedData?.rulings?.length) return
-        try {
-            const response = await triggerMutation.mutateAsync({
-                ecliList: feedData.rulings.map((r) => r.ecli),
-                gemeenteNaam,
-            })
-            if (response.status === 'complete') {
-                // Cached result returned immediately -- no polling needed
-            } else if (response.job_id) {
-                setAnalysisJobId(response.job_id)
-            }
-        } catch {
-            // Error handled by mutation state
-        }
-    }
+    // Doorlooptijd stats from dedicated endpoint
+    const doorlooptijdQuery = useDoorlooptijdStats(gemeenteNaam)
 
     const isPending = feedData?.ingestion_status === 'pending'
     const isRefreshing = feedData?.ingestion_status === 'refreshing'
@@ -237,11 +219,12 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
             <div className="p-4 flex flex-col md:flex-row gap-4">
                 {/* Left Side: Feed */}
                 <div className={`flex flex-col gap-3 transition-all duration-300 ${selectedEcli ? 'md:w-1/3' : 'w-full'}`}>
-                    {/* Klimaat card above feed when analysis is complete or loading */}
+                    {/* Klimaat card above feed -- shows when analysis is complete or loading */}
                     {(analysisResult || isAnalyzing) && (
                         <JuridischKlimaatCard
                             analysis={analysisResult}
                             isLoading={isAnalyzing}
+                            doorlooptijd={doorlooptijdQuery.data ?? null}
                         />
                     )}
 
@@ -311,14 +294,21 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                         {res.summary && res.summary !== '-' ? res.summary : 'Geen korte samenvatting beschikbaar in archief.'}
                                     </p>
 
-                                    {/* Uitkomst badge */}
-                                    {res.uitkomst && (
-                                        <span
-                                            className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${uitkomstColors[res.uitkomst] ?? uitkomstColors.onbekend}`}
-                                        >
-                                            {res.uitkomst}
-                                        </span>
-                                    )}
+                                    {/* Uitkomst + Vergunningstype badges */}
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {res.uitkomst && (
+                                            <span
+                                                className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${uitkomstColors[res.uitkomst] ?? uitkomstColors.onbekend}`}
+                                            >
+                                                {res.uitkomst}
+                                            </span>
+                                        )}
+                                        {res.vergunningstype && (
+                                            <span className="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium bg-blue-500/20 text-blue-400">
+                                                {res.vergunningstype}
+                                            </span>
+                                        )}
+                                    </div>
 
                                     {/* AI Summary Badge */}
                                     <RulingAiSummaryBadge ecli={res.ecli} analysis={analysisResult} />
@@ -333,31 +323,11 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                         )}
                     </div>
 
-                    {/* Analyse button -- only show when rulings exist */}
-                    {feedData?.rulings && feedData.rulings.length > 0 && (
-                        <button
-                            onClick={handleAnalyze}
-                            disabled={isAnalyzing}
-                            className="w-full mt-1 py-2.5 px-4 text-sm font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                            {isAnalyzing ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Analyseren...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="w-4 h-4" />
-                                    Analyseer juridisch klimaat
-                                </>
-                            )}
-                        </button>
-                    )}
-
-                    {/* Analysis error */}
-                    {analysisQuery.data?.status === 'failed' && (
-                        <div className="p-3 bg-red-900/20 text-red-400 border border-red-900/40 rounded-lg text-xs">
-                            Analyse mislukt: {analysisQuery.data.error ?? 'Onbekende fout'}
+                    {/* Analysis status indicator (replaces manual button) */}
+                    {isAnalyzing && (
+                        <div className="flex items-center justify-center gap-2 py-2 text-xs text-amber-accent/70">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            AI-analyse wordt uitgevoerd...
                         </div>
                     )}
                 </div>

@@ -15,7 +15,6 @@ import {
     type JurisprudenceAnalysisResponse,
     type GemeenteRulingsFeedResponse,
     type AnalyzeGemeenteResponse,
-    type PollRulingAnalysisResponse,
     type DoorlooptijdStats,
 } from '@/lib/api'
 
@@ -142,7 +141,7 @@ export function useGemeenteAnalysis(gemeenteNaam: string, hasFeedData: boolean) 
     const hasPending = mutation.data?.status === 'partial' && (mutation.data.pending_count ?? 0) > 0
 
     // Poll for completion when there are pending rulings
-    const pollQuery = useQuery<PollRulingAnalysisResponse, Error>({
+    const pollQuery = useQuery<AnalyzeGemeenteResponse, Error>({
         queryKey: ['jurisprudence', 'analysis-poll', gemeenteNaam],
         queryFn: () => pollRulingAnalysis(gemeenteNaam, accessToken),
         enabled: hasPending && !!accessToken,
