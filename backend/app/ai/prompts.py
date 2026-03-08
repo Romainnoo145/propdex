@@ -39,7 +39,10 @@ Schrijf een beknopte Nederlandse samenvatting (2-4 zinnen) van de belangrijkste 
 - Als het plan-IDN (NL.IMRO-nummer) in het document staat, neem dit over in plan_idn
 """
 
-JURIDISCH_ANALYSE_PROMPT = """
+# V1 prompt preserved for reference (replaced by V2 below)
+# JURIDISCH_ANALYSE_PROMPT_V1 = """..."""  # See git history for full text
+
+JURIDISCH_ANALYSE_PROMPT_V2 = """
 Je bent een expert in Nederlands omgevingsrecht en analyseert rechtspraak voor vastgoedontwikkelaars.
 Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum en tekst) voor een gemeente.
 
@@ -48,6 +51,16 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
 2. uitkomst: exact een van ["toegewezen", "afgewezen", "gedeeltelijk", "onbekend"]
 3. relevantie: 1-2 zinnen over de relevantie voor vastgoedontwikkeling
 4. confidence: exact een van ["HIGH", "MEDIUM", "LOW"]
+5. vergunningstype: classificeer de uitspraak in exact een van de volgende categorieen:
+   - "nieuwbouw": Bouw van nieuwe woningen, appartementen of gebouwen op onbebouwde grond
+   - "verbouw": Renovatie, herontwikkeling of functiewijziging van bestaande gebouwen
+   - "dakopbouw": Toevoeging van extra verdieping(en) bovenop bestaand gebouw
+   - "uitbreiding": Fysieke uitbreiding van bestaand gebouw (aanbouw, bijgebouw)
+   - "sloop": Sloopvergunning, sloopmelding, asbestverwijdering
+   - "bestemmingswijziging": Wijziging bestemmingsplan, omgevingsplanactiviteit, afwijking
+   - "milieu": Milieuvergunning, geluidsoverlast, bodemverontreiniging, stikstof
+   - "monumenten": Monumentenvergunning, beschermd stadsgezicht, cultuurhistorische waarde
+   - "overig": Uitspraken die niet in bovenstaande categorieen passen
 
 **Geaggregeerde analyse:**
 1. risico_samenvatting: 3-5 zinnen in het Nederlands die het juridisch klimaat voor vastgoedontwikkeling samenvatten
@@ -57,6 +70,7 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
 - Genereer GEEN ECLI-identifiers of citaten — analyseer alleen de aangeleverde teksten
 - Gebruik de exacte ECLI-identifiers zoals aangeleverd in de input
 - Schrijf alle samenvattingen in het Nederlands
+- Kies bij twijfel over vergunningstype de best passende categorie, gebruik "overig" alleen als laatste optie
 
 **Retourneer het resultaat als JSON volgens het exacte schema:**
 {
@@ -69,7 +83,8 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
       "bezwaargrond": "<1 zin>",
       "uitkomst": "<toegewezen|afgewezen|gedeeltelijk|onbekend>",
       "relevantie": "<1-2 zinnen>",
-      "confidence": "<HIGH|MEDIUM|LOW>"
+      "confidence": "<HIGH|MEDIUM|LOW>",
+      "vergunningstype": "<nieuwbouw|verbouw|dakopbouw|uitbreiding|sloop|bestemmingswijziging|milieu|monumenten|overig>"
     }
   ]
 }

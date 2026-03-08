@@ -175,6 +175,30 @@ class RulingAnalysis(BaseModel):
     confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
         description="Confidence in this analysis"
     )
+    vergunningstype: str = Field(
+        default="overig",
+        description="Permit type classification from 9-category taxonomy",
+    )
+
+
+class DoorlooptijdStats(BaseModel):
+    """Per-vergunningstype procedure duration statistics."""
+
+    vergunningstype: str = Field(description="Permit type category")
+    count: int = Field(description="Number of rulings with duration data")
+    avg_dagen: int | None = Field(
+        default=None, description="Average duration in days"
+    )
+    min_dagen: int | None = Field(
+        default=None, description="Minimum duration in days"
+    )
+    max_dagen: int | None = Field(
+        default=None, description="Maximum duration in days"
+    )
+    insufficient_data: bool = Field(
+        default=False,
+        description="True when sample size < 3",
+    )
 
 
 class JuridischAnalysisResult(BaseModel):
@@ -195,6 +219,10 @@ class JuridischAnalysisResult(BaseModel):
     )
     ruling_analyses: list[RulingAnalysis] = Field(
         description="Per-ruling analysis results"
+    )
+    doorlooptijd: dict[str, DoorlooptijdStats] | None = Field(
+        default=None,
+        description="Per-vergunningstype procedure duration stats",
     )
     disclaimer: str = Field(
         default="Indicatief \u2014 gebaseerd op historische uitspraken, geen juridisch advies",
