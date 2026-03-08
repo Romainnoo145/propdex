@@ -69,8 +69,10 @@ class CbsCrimeClient:
             Space-padded Key (10 chars, e.g. 'WK098311  ') or None
         """
         url = f"{CRIME_BASE_URL}/WijkenEnBuurten"
+        # Strip GM prefix: gemeente_code is stored as "GM0983", CBS expects "WK0983"
+        code = gemeente_code.removeprefix("GM")
         params = {
-            "$filter": f"startswith(Key, 'WK{gemeente_code}')",
+            "$filter": f"startswith(Key, 'WK{code}')",
             "$format": "json",
         }
         try:

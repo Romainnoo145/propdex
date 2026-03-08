@@ -127,8 +127,10 @@ class CBSODataClient:
         """
         ds = dataset_id or self.dataset_id
         url = f"{BASE_URL}/{ds}/WijkenEnBuurtenCodes"
+        # Strip GM prefix: gemeente_code is stored as "GM0983", CBS expects "WK0983"
+        code = gemeente_code.removeprefix("GM")
         params = {
-            "$filter": f"startswith(Identifier, 'WK{gemeente_code}')",
+            "$filter": f"startswith(Identifier, 'WK{code}')",
             "$top": 50,
         }
         try:
@@ -171,8 +173,10 @@ class CBSODataClient:
         """
         ds = dataset_id or self.dataset_id
         url = f"{BASE_URL}/{ds}/WijkenEnBuurtenCodes"
+        # Strip GM prefix: gemeente_code is stored as "GM0983", CBS expects "GM0983"
+        code = gemeente_code.removeprefix("GM")
         params = {
-            "$filter": f"startswith(Identifier, 'GM{gemeente_code}')",
+            "$filter": f"startswith(Identifier, 'GM{code}')",
             "$top": 1,
         }
         try:
@@ -250,9 +254,10 @@ class CBSODataClient:
             human_key = _MEASURE_CODE_TO_KEY.get(measure_code)
             if human_key is None:
                 continue
-            # Only use the value if ValueAttribute is empty string (valid data point)
+            # CBS v4 uses "None" (string) for valid data, other values like
+            # "Impossible" or "Confidential" indicate suppressed data.
             value_attr = obs.get("ValueAttribute", "")
-            if value_attr == "":
+            if value_attr in ("None", ""):
                 raw = obs.get("Value")
                 result[human_key] = float(raw) if raw is not None else None
             else:
@@ -415,7 +420,7 @@ class CBSODataClient:
             if human_key is None:
                 continue
             value_attr = obs.get("ValueAttribute", "")
-            if value_attr == "":
+            if value_attr in ("None", ""):
                 raw = obs.get("Value")
                 result[human_key] = float(raw) if raw is not None else None
             else:
