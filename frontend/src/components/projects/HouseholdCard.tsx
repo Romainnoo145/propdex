@@ -46,10 +46,10 @@ export function HouseholdCard({ huishoudens, leeftijdsverdeling }: HouseholdCard
 
       {/* Body */}
       <div className="p-4 space-y-2.5">
-        {/* Total households */}
+        {/* Total households — hero pill */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-grey-400">Totaal huishoudens</span>
-          <span className="text-xs font-medium text-grey-100">
+          <span className="inline-flex items-center rounded-full bg-amber-accent/15 border border-amber-accent/25 px-2.5 py-0.5 text-xs font-semibold text-amber-accent">
             {totaal.toLocaleString('nl-NL')}
           </span>
         </div>

@@ -328,6 +328,7 @@ class CBSODataClient:
         # Build stedelijkheid value safely
         mvs_raw = data.get("stedelijkheid")
         mvs = int(mvs_raw) if mvs_raw is not None else None
+        inwoners_raw = data.get("inwoners")
 
         return {
             "bron": "CBS StatLine OData v4",
@@ -353,13 +354,14 @@ class CBSODataClient:
                     "percentage_bouwjaar_vanaf_2000": None,
                 },
                 # Phase 78: Extended demographics & income
-                "leeftijdsverdeling": {
-                    "perc_0_14": data.get("leeftijd_0_14"),
-                    "perc_15_24": data.get("leeftijd_15_24"),
-                    "perc_25_44": data.get("leeftijd_25_44"),
-                    "perc_45_64": data.get("leeftijd_45_64"),
-                    "perc_65_plus": data.get("leeftijd_65_plus"),
-                },
+                # CBS age values are absolute counts — convert to percentages
+                "leeftijdsverdeling": self._to_percentages(
+                    data, inwoners_raw,
+                    ["leeftijd_0_14", "leeftijd_15_24", "leeftijd_25_44",
+                     "leeftijd_45_64", "leeftijd_65_plus"],
+                    ["perc_0_14", "perc_15_24", "perc_25_44",
+                     "perc_45_64", "perc_65_plus"],
+                ),
                 "huishoudens": {
                     "totaal": data.get("huishoudens_totaal"),
                     "eenpersoons": data.get("huishoudens_eenpersoons"),
@@ -377,6 +379,23 @@ class CBSODataClient:
             },
         }
 
+
+    @staticmethod
+    def _to_percentages(
+        data: dict[str, float | None],
+        total: float | None,
+        source_keys: list[str],
+        target_keys: list[str],
+    ) -> dict[str, float | None]:
+        """Convert absolute counts to percentages using a total."""
+        result: dict[str, float | None] = {}
+        for src, tgt in zip(source_keys, target_keys, strict=True):
+            val = data.get(src)
+            if val is not None and total is not None and total > 0:
+                result[tgt] = round(val / total * 100, 1)
+            else:
+                result[tgt] = None
+        return result
 
     async def _fetch_nabijheid_observations(
         self,

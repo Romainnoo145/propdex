@@ -12,30 +12,34 @@ const CATEGORIES: {
   {
     key: 'vermogensdelicten',
     label: 'Vermogensdelicten',
+    // Wallet/money bag — property crime (diefstal, inbraak, fraude)
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+        <path d="M18 12a2 2 0 1 0 0 4h4v-4z" />
       </svg>
     ),
   },
   {
     key: 'vernieling',
     label: 'Vernieling',
+    // Flame — destruction/vandalism
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
       </svg>
     ),
   },
   {
     key: 'geweld',
     label: 'Geweld',
+    // Circle-alert — violence
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-        <line x1="12" y1="9" x2="12" y2="13" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
     ),
   },
@@ -57,20 +61,15 @@ function severity(per1000: number | null): {
   return { color: 'text-red-400', bg: 'bg-red-400/15', label: 'Zeer hoog' }
 }
 
-/** Max per_1000 for category bar width scaling */
+/** Bar width as percentage relative to max category rate */
 function barWidth(per1000: number | null, max: number): string {
   if (per1000 == null || max === 0) return '0%'
   return `${Math.min(100, (per1000 / max) * 100)}%`
 }
 
-/**
- * Displays CBS crime statistics per wijk with color-coded severity,
- * category breakdown with horizontal bars, and contextual labels.
- */
 export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
   const totalSev = severity(criminaliteit.per_1000_inwoners)
 
-  // Find max per_1000 across categories for bar scaling
   const maxCatRate = Math.max(
     ...CATEGORIES.map(({ key }) => criminaliteit.categorien[key].per_1000 ?? 0),
     1,
@@ -135,8 +134,9 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
           </div>
         </div>
 
-        {/* Category breakdown with bars */}
+        {/* Category breakdown — per 1.000 inwoners */}
         <div className="space-y-2.5">
+          <p className="text-[10px] text-grey-500 uppercase tracking-wide">Per 1.000 inwoners</p>
           {CATEGORIES.map(({ key, label, icon }) => {
             const cat = criminaliteit.categorien[key]
             const catSev = severity(cat.per_1000)
@@ -147,26 +147,9 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
                     <span className={`${catSev.color} opacity-60`}>{icon}</span>
                     <span className="text-xs text-grey-400">{label}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {cat.per_1000 != null && (
-                      <span className={`text-xs font-medium tabular-nums ${catSev.color}`}>
-                        {cat.per_1000.toFixed(1)}
-                      </span>
-                    )}
-                    {cat.aantal != null && (
-                      <span className="text-[10px] text-grey-600 tabular-nums">
-                        ({cat.aantal.toLocaleString('nl-NL')})
-                      </span>
-                    )}
-                    {cat.per_1000 == null && cat.aantal != null && (
-                      <span className="text-xs text-grey-500 tabular-nums">
-                        {cat.aantal.toLocaleString('nl-NL')}
-                      </span>
-                    )}
-                    {cat.per_1000 == null && cat.aantal == null && (
-                      <span className="text-xs text-grey-600">--</span>
-                    )}
-                  </div>
+                  <span className={`text-xs font-medium tabular-nums ${catSev.color}`}>
+                    {cat.per_1000 != null ? cat.per_1000.toFixed(1) : '--'}
+                  </span>
                 </div>
                 {/* Bar */}
                 <div className="h-1 rounded-full bg-grey-800 overflow-hidden">
