@@ -25,10 +25,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Parcel Detail
 
-- [ ] **PRC-01**: Floating right detail panel (glass) with satellite crop hero image, score badge overlay in corner, address header
-- [ ] **PRC-02**: Primary stats bento grid (4 pods): oppervlakte, bouwjaar, status, gemeente -- icon + value, no scroll
-- [ ] **PRC-03**: Bestemming as wide horizontal status bar with soft color fill
-- [ ] **PRC-04**: Kansen & aandachtspunten as horizontal pill/tag cloud instead of text list
+- [x] **PRC-01**: Floating right detail panel (glass) with satellite crop hero image, score badge overlay in corner, address header
+- [x] **PRC-02**: Primary stats bento grid (4 pods): oppervlakte, bouwjaar, status, gemeente -- icon + value, no scroll
+- [x] **PRC-03**: Bestemming as wide horizontal status bar with soft color fill
+- [x] **PRC-04**: Kansen & aandachtspunten as horizontal pill/tag cloud instead of text list
 - [ ] **PRC-05**: Click-through layers for deeper data: clicking a bento pod opens a detail layer replacing the current view (17+ sections accessible without scroll)
 - [ ] **PRC-06**: Vergunningen as accordion-style bento pod (shows count, expands on click)
 - [ ] **PRC-07**: "Genereer Rapport" as primary action button pinned at bottom of panel
@@ -109,10 +109,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-02 | Phase 92 | Complete |
 | NAV-03 | Phase 92 | Complete |
 | NAV-04 | Phase 92 | Complete |
-| PRC-01 | Phase 93 | Pending |
-| PRC-02 | Phase 93 | Pending |
-| PRC-03 | Phase 93 | Pending |
-| PRC-04 | Phase 93 | Pending |
+| PRC-01 | Phase 93 | Complete |
+| PRC-02 | Phase 93 | Complete |
+| PRC-03 | Phase 93 | Complete |
+| PRC-04 | Phase 93 | Complete |
 | PRC-05 | Phase 93 | Pending |
 | PRC-06 | Phase 93 | Pending |
 | PRC-07 | Phase 93 | Pending |

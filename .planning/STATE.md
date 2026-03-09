@@ -12,18 +12,18 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In Progress
-Last activity: 2026-03-10 -- 93-01 Aerial crop API + useAerialCrop hook complete
+Last activity: 2026-03-10 -- 93-02 Floating parcel detail panel with bento grid
 
-Progress: [####░░░░░░] 38% (5/13 plans)
+Progress: [#####░░░░░] 46% (6/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (v15.0)
-- Average duration: 3min
-- Total execution time: 16min
+- Total plans completed: 6 (v15.0)
+- Average duration: 4min
+- Total execution time: 24min
 
 **By Phase:**
 
@@ -31,7 +31,7 @@ Progress: [####░░░░░░] 38% (5/13 plans)
 |-------|-------|-------|----------|
 | 91 | 2 | 8min | 4min |
 | 92 | 2 | 6min | 3min |
-| 93 | 1 | 2min | 2min |
+| 93 | 2 | 10min | 5min |
 
 ## Accumulated Context
 
@@ -51,6 +51,9 @@ Progress: [####░░░░░░] 38% (5/13 plans)
 - PDOK WMS proxied through backend for auth boundary and CORS avoidance
 - fetchAerialCrop uses raw fetch (not apiFetch) since response is binary JPEG
 - 760x320 retina aerial crop with 150m x 63m BBOX for parcel hero context
+- Score badge uses inline span with shadow-lg for readability over satellite imagery
+- Map re-center uses screen-space projection shift (190px) for panel offset
+- Bestemming folded into Juridisch pod (no separate status bar)
 
 ### Key Patterns (carry forward)
 
@@ -77,11 +80,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T23:41:18Z
-**Stopped At:** Completed 93-01-PLAN.md
+**Last Session:** 2026-03-09T23:47:17Z
+**Stopped At:** Completed 93-02-PLAN.md
 
-**Next Action:** Execute 93-02-PLAN.md (Parcel Detail Panel components)
+**Next Action:** Execute 93-03-PLAN.md (Detail layers for category pods)
 
 ---
 
-*State updated: 2026-03-10 -- Phase 93 plan 01 complete (Aerial Crop API)*
+*State updated: 2026-03-10 -- Phase 93 plan 02 complete (Parcel Detail Panel)*
