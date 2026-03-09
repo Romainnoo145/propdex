@@ -252,11 +252,9 @@ function LayerToggle({
   const overlayActive = 'bg-aura-amber/25 text-aura-amber shadow-sm'
   const overlayInactive = 'bg-transparent text-neutral-600 hover:text-aura-ink hover:bg-neutral-200'
 
-  const showGradientLegend = showScore && showParcels && hasScoreData
-
   return (
-    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] flex items-center gap-2">
-      <div className="bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-neutral-200 shadow-lg">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] flex items-center gap-2">
+      <div className="bg-aura-glass-white/60 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/40 shadow-glass">
         <button
           onClick={() => handleLayerSwitch('kaart')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
@@ -307,17 +305,6 @@ function LayerToggle({
           </button>
         )}
       </div>
-
-      {showGradientLegend && (
-        <div className="bg-aura-glass-white/60/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-neutral-200 shadow-lg">
-          <span className="text-xs text-neutral-600">40</span>
-          <div
-            className="h-3 w-24 rounded-full"
-            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
-          />
-          <span className="text-xs text-neutral-600">100</span>
-        </div>
-      )}
     </div>
   )
 }

@@ -2180,6 +2180,18 @@ function MapPage() {
         hasScoreData={!!activeScanId}
       />
 
+      {/* Score gradient legend — bottom-right */}
+      {layerState.activeParcelOverlay === 'score' && layerState.showParcels && !!activeScanId && (
+        <div className="absolute bottom-4 right-4 z-[var(--z-map-controls)] bg-aura-glass-white/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-white/40 shadow-glass">
+          <span className="text-xs text-neutral-600">40</span>
+          <div
+            className="h-3 w-24 rounded-full"
+            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
+          />
+          <span className="text-xs text-neutral-600">100</span>
+        </div>
+      )}
+
       {/* Map detail panels — only one visible at a time */}
       {activePanel?.kind === 'gemeente' && (
         <GemeenteMapPanel
