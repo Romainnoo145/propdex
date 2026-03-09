@@ -8,6 +8,10 @@ import {
   ParcelBentoOverview,
   type CategoryKey,
 } from './parcel/ParcelBentoOverview'
+import { PotentieLayer } from './parcel/layers/PotentieLayer'
+import { RisicoLayer } from './parcel/layers/RisicoLayer'
+import { MarktLayer } from './parcel/layers/MarktLayer'
+import { JuridischLayer } from './parcel/layers/JuridischLayer'
 import { useParcelRiskProfile } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
@@ -19,6 +23,13 @@ type PanelView =
   | { kind: 'markt' }
   | { kind: 'juridisch' }
 
+const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
+  potentie: 'Potentie',
+  risico: 'Risico',
+  markt: 'Markt',
+  juridisch: 'Juridisch',
+}
+
 interface ParcelDetailPanelProps {
   parcel: ScanResultItem
   onClose: () => void
@@ -27,8 +38,15 @@ interface ParcelDetailPanelProps {
 export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
   const navigate = useNavigate()
   const [view, setView] = useState<PanelView>({ kind: 'overview' })
+  const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
   const riskQuery = useParcelRiskProfile(parcel.parcel_id)
   const generateReport = useGenerateReportFromParcel()
+
+  // Reset to overview when parcel changes (derived state pattern)
+  if (trackedParcelId !== parcel.parcel_id) {
+    setTrackedParcelId(parcel.parcel_id)
+    setView({ kind: 'overview' })
+  }
 
   const handleSelectCategory = useCallback((cat: CategoryKey) => {
     setView({ kind: cat })
@@ -40,7 +58,6 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
 
   const handleGenerateReport = useCallback(() => {
     if (parcel.has_report) {
-      // Navigate to report detail — parcel_id is enough to find it
       navigate({ to: '/rapporten', search: { project_id: undefined, q: undefined } })
       return
     }
@@ -75,6 +92,27 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
     </button>
   )
 
+  function renderDetailLayer() {
+    switch (view.kind) {
+      case 'potentie':
+        return <PotentieLayer parcel={parcel} />
+      case 'risico':
+        return (
+          <RisicoLayer
+            parcel={parcel}
+            riskProfile={riskProfile}
+            isLoading={riskQuery.isLoading}
+          />
+        )
+      case 'markt':
+        return <MarktLayer parcel={parcel} />
+      case 'juridisch':
+        return <JuridischLayer parcel={parcel} />
+      default:
+        return null
+    }
+  }
+
   return (
     <ParcelPanelShell
       parcelId={parcel.parcel_id}
@@ -90,18 +128,18 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
           onSelectCategory={handleSelectCategory}
         />
       ) : (
-        <div className="p-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="mb-3 flex items-center gap-1.5 text-sm text-neutral-500 hover:text-aura-ink transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Terug
-          </button>
-          <p className="text-sm text-neutral-400">
-            Detail layer komt binnenkort
-          </p>
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-2 pb-1">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-aura-ink transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {VIEW_LABELS[view.kind]}
+            </button>
+          </div>
+          {renderDetailLayer()}
         </div>
       )}
     </ParcelPanelShell>
