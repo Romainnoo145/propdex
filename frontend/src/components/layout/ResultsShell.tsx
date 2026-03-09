@@ -25,7 +25,7 @@ export default function ResultsShell({
   contentClassName,
 }: ResultsShellProps) {
   return (
-    <div className={cn('w-full h-full overflow-y-auto bg-aura-canvas pb-14 md:pb-0', className)}>
+    <div className={cn('w-full h-full overflow-y-auto bg-aura-canvas pb-14 md:pb-0 md:pl-[112px]', className)}>
       {fullWidth ? children : (
         <div className={cn('mx-auto max-w-5xl px-6 py-8', contentClassName)}>
           {children}
