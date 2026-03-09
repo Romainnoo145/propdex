@@ -5,8 +5,11 @@ import {
     useJurisprudenceDoc,
     useGemeenteAnalysis,
     useDoorlooptijdStats,
+    useTrendData,
 } from '@/hooks/useJurisprudence'
 import { JuridischKlimaatCard } from './JuridischKlimaatCard'
+import { TrendTimeline } from './TrendTimeline'
+import { StatisticsBar } from './StatisticsBar'
 import { X, Scale, FileText, Sparkles, ChevronDown, Loader2 } from 'lucide-react'
 import type { AnalyzeGemeenteResponse, RulingAnalysis } from '@/lib/api'
 
@@ -159,6 +162,9 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
     // Doorlooptijd stats from dedicated endpoint
     const doorlooptijdQuery = useDoorlooptijdStats(gemeenteNaam)
 
+    // Rolling 12-month trend data
+    const { data: trendData, isLoading: isTrendLoading } = useTrendData(gemeenteNaam)
+
     const isPending = feedData?.ingestion_status === 'pending'
     const isRefreshing = feedData?.ingestion_status === 'refreshing'
 
@@ -190,6 +196,16 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                             pendingCount={analysisResult?.pending_count}
                         />
                     )}
+
+                    {/* Trend statistics + timeline */}
+                    {isTrendLoading ? (
+                        <Skeleton className="h-16 w-full rounded-lg" />
+                    ) : trendData ? (
+                        <div className="space-y-3">
+                            <StatisticsBar summary={trendData.summary} />
+                            <TrendTimeline months={trendData.months} />
+                        </div>
+                    ) : null}
 
                     {/* Ingestion status indicators */}
                     {isPending && (
