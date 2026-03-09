@@ -145,11 +145,10 @@ body {
 }
 
 /* Make attribution compact (small (i) icon, expands on click) */
-/* Sits above toggle bar / gradient legend row */
+/* Aligned with toggle bar bottom row */
 .maplibregl-ctrl-attrib {
   font-size: 10px;
   opacity: 0.6;
-  margin-bottom: 40px !important;
 }
 
 /* Property popup — glassmorphism "te koop" sign anchored to parcel */

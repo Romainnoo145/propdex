@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { PersistedMapLayerState, BaseMapLayerId, ParcelOverlayLayerId } from './layers'
 import { readPersistedMapLayerState, writePersistedMapLayerState } from './layers'
 
@@ -65,7 +65,7 @@ export function useMapLayerState() {
     []
   )
 
-  const actions: MapLayerActions = {
+  const actions: MapLayerActions = useMemo(() => ({
     setBasemap,
     toggleParcels,
     setParcels,
@@ -74,7 +74,10 @@ export function useMapLayerState() {
     toggleBestemmingsplan,
     setBestemmingsplan,
     setActiveParcelOverlay,
-  }
+  }), [
+    setBasemap, toggleParcels, setParcels, toggleGemeenten, setGemeenten,
+    toggleBestemmingsplan, setBestemmingsplan, setActiveParcelOverlay,
+  ])
 
   return { state, actions } as const
 }

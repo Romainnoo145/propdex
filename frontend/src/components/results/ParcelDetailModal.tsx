@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/primitives'
+import { MapPanelShell } from '@/components/map/panels/MapPanelShell'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
 import { MarketSignalsCards } from './MarketSignalsCards'
 import { useParcelEnrichment } from '@/hooks/useScans'
@@ -559,16 +560,44 @@ export function ParcelDetailModal({
         {parcel.bestemmingen && parcel.bestemmingen.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-grey-100 mb-3">
-              Bestemmingen
+              Bestemmingsplan
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {parcel.bestemmingen.map((bestemming, idx) => (
-                <Badge key={idx} variant="amber">
-                  {(bestemming as { type?: string }).type ||
-                    (bestemming as { naam?: string }).naam ||
-                    'Onbekend'}
-                </Badge>
-              ))}
+            <div className="space-y-2">
+              {parcel.bestemmingen.map((bestemming, idx) => {
+                const b = bestemming as {
+                  type?: string | null
+                  naam?: string | null
+                  max_bebouwingspercentage?: number | null
+                  max_floor_area_ratio?: number | null
+                }
+                return (
+                  <div
+                    key={idx}
+                    className="rounded-md border border-grey-800 bg-grey-850 px-3 py-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-grey-100">
+                        {b.naam || b.type || 'Onbekend'}
+                      </p>
+                      {b.type && b.naam && b.type !== b.naam?.toLowerCase() && (
+                        <span className="rounded bg-grey-800 px-2 py-0.5 text-[11px] text-grey-400">
+                          {b.type}
+                        </span>
+                      )}
+                    </div>
+                    {(b.max_bebouwingspercentage != null || b.max_floor_area_ratio != null) && (
+                      <div className="mt-1.5 flex gap-4 text-xs text-grey-400">
+                        {b.max_bebouwingspercentage != null && (
+                          <span>Bebouwing max {b.max_bebouwingspercentage}%</span>
+                        )}
+                        {b.max_floor_area_ratio != null && (
+                          <span>FAR {b.max_floor_area_ratio}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -679,25 +708,9 @@ export function ParcelDetailModal({
     if (!isOpen) return null
 
     return (
-      <>
-        <div
-          className="fixed right-4 top-20 bottom-4 hidden md:block w-96"
-          style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
-        >
-          <div className="h-full overflow-y-auto rounded-lg border border-grey-800 bg-grey-900 shadow-2xl">
-            {content}
-          </div>
-        </div>
-
-        <div
-          className="fixed inset-x-0 bottom-0 md:hidden max-h-[72vh]"
-          style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
-        >
-          <div className="h-full overflow-y-auto rounded-t-lg border border-grey-800 bg-grey-900 shadow-2xl">
-            {content}
-          </div>
-        </div>
-      </>
+      <MapPanelShell onClose={onClose}>
+        {content}
+      </MapPanelShell>
     )
   }
 

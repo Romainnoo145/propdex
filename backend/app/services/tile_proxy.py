@@ -138,15 +138,13 @@ async def generate_mvt_tile(
             CROSS JOIN bounds
             WHERE pc.organization_id = :org_id
             AND ST_Intersects(pc.geometry, bounds.geom)
-            -- Hide infrastructure parcels (roads, water, rails) that have no building
-            AND NOT (
-                pc.has_pand = false
-                AND pc.bestemmingen::text ILIKE '%%"type": "verkeer"%%'
-            )
-            AND NOT (
-                pc.has_pand = false
-                AND pc.bestemmingen::text ILIKE '%%"type": "water"%%'
-            )
+            -- Hide non-developable parcels (infrastructure + protected land)
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "verkeer"%%')
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "water"%%')
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "natuur"%%')
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "bos"%%')
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "agrarisch"%%')
+            AND NOT (pc.bestemmingen::text ILIKE '%%"type": "agrarisch met waarden"%%')
         )
         SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom')
         FROM mvt_data

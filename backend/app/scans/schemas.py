@@ -351,6 +351,10 @@ class ParcelAtPointResponse(BaseModel):
         default=None,
         description="Zoning build metrics from scan flags",
     )
+    bestemmingen: list[dict] | None = Field(
+        default=None,
+        description="Bestemmingsplan designations from DSO/PLU",
+    )
     has_report: bool = Field(description="True when at least one saved report exists")
     geometry: dict | None = Field(
         default=None,

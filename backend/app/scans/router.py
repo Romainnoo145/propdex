@@ -1617,6 +1617,7 @@ async def get_parcel_at_point(
         market_signals=market_signals,
         opportunity_signals=opportunity_signals,
         building_metrics=building_metrics,
+        bestemmingen=row["bestemmingen"] if isinstance(row["bestemmingen"], list) else None,
         has_report=bool(row["has_report"]),
         geometry=geometry,
     )

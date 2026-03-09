@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import uuid
 
 import httpx
 from geoalchemy2.shape import to_shape
-from sqlalchemy import bindparam, select, text
-from sqlalchemy import update as sa_update
+from sqlalchemy import select, text
 
 from app.core.database import async_session_factory
 from app.government_apis.bag_wfs import bag_wfs_client
@@ -218,11 +218,7 @@ async def _backfill_scan(
     updated = 0
     async with async_session_factory() as session:
         await session.execute(text(f"SET app.current_tenant_id = '{org_id}'"))
-        update_stmt = (
-            sa_update(ScanResult)
-            .where(ScanResult.id == bindparam("sr_id"))
-            .values(flags=bindparam("new_flags"))
-        )
+        raw_sql = text("UPDATE scan_results SET flags = :new_flags WHERE id = :sr_id")
         batch_updates: list[dict] = []
 
         for sr_id, pand_ids in parcel_pand_map.items():
@@ -255,17 +251,19 @@ async def _backfill_scan(
 
             new_flags = dict(flags)
             new_flags["building_metrics"] = new_bm
-            batch_updates.append({"sr_id": sr_id, "new_flags": new_flags})
+            batch_updates.append({"sr_id": str(sr_id), "new_flags": json.dumps(new_flags)})
             updated += 1
 
             if len(batch_updates) >= 500:
                 if not dry_run:
-                    await session.execute(update_stmt, batch_updates)
+                    for upd in batch_updates:
+                        await session.execute(raw_sql, upd)
                     await session.commit()
                 batch_updates = []
 
         if batch_updates and not dry_run:
-            await session.execute(update_stmt, batch_updates)
+            for upd in batch_updates:
+                await session.execute(raw_sql, upd)
             await session.commit()
 
     processed = len(parcel_pand_map) + skipped

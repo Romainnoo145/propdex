@@ -21,6 +21,7 @@ from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
 from app.scans.router import router as scans_router
 from app.users.router import router as users_router
+from app.api.endpoints.jurisprudence import router as jurisprudence_router
 
 
 @asynccontextmanager
@@ -91,6 +92,7 @@ app.include_router(projects_router)
 app.include_router(scans_router)
 app.include_router(monitoring_router)
 app.include_router(users_router)
+app.include_router(jurisprudence_router, prefix="/api/jurisprudence", tags=["Jurisprudence"])
 
 
 @app.get("/")

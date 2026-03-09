@@ -72,6 +72,9 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     # error_detail: structured failure context (stage, error, error_type, bbox)
     error_detail: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)
 
+    # CBS Neighborhood metrics
+    neighborhood_metrics: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)
+
     # Error tracking
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
