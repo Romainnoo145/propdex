@@ -1,61 +1,42 @@
-# Requirements: Propdex v13.0 — Juridisch Klimaat Intelligence
+# Requirements: Propdex v14.0 Fysiek Risicoprofiel
 
-**Defined:** 2026-03-07
-**Core Value:** Area -> Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
-**Milestone Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars — from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
+**Defined:** 2026-03-09
+**Core Value:** Per-parcel physical risk assessment — foundation risk, asbestos exposure, and soil classification — so developers can see hidden structural costs before spending a cent on acquisition.
 
-## v13.0 Requirements
+## v14.0 Requirements
 
-### Data Pipeline & Cache
+Requirements for this milestone. Each maps to roadmap phases.
 
-- [x] **PIPE-01**: Dedicated `ruling_cache` PostgreSQL table (org-agnostic, ECLI as primary key) stores court ruling metadata and text
-- [x] **PIPE-02**: EcliRegistry module maps 342 gemeenten to 11 rechtbanken + translates 16 pre-2013 court codes
-- [x] **PIPE-03**: RechtspraakClient uses ECLI court-code prefix filtering to scope results to correct arrondissement
-- [x] **PIPE-04**: RechtspraakClient supports date range filtering via API `date` parameter (from/to)
-- [x] **PIPE-05**: Ruling ingestion ARQ background job fetches 50+ results per court region with batch document retrieval
-- [x] **PIPE-06**: Per-gemeente caching with 7-day TTL — repeated views load from cache instantly
+### Soil Intelligence
 
-### Geo-Contextualization
+- [ ] **BODEM-01**: User sees soil type classification (klei/veen/zand/leem) for any parcel via BRO Bodemkaart WMS
+- [ ] **BODEM-02**: User sees PDOK Funderingsrisicogebieden context (% pre-1970, soil region, risk label) for parcel's postal code area
 
-- [x] **GEO-01**: GeoContextualizer extracts gemeente names from ruling text using regex patterns ("college van B&W van {gemeente}", "te {gemeente}", etc.)
-- [x] **GEO-02**: Extracted gemeente names validated against known CBS gemeente list
-- [x] **GEO-03**: Two-pass geo-scoping: ECLI prefix for arrondissement (reliable), text extraction for gemeente (supplementary)
-- [x] **GEO-04**: RVS (Raad van State) rulings geo-tagged via text extraction (no geographic ECLI indicator)
+### Foundation Risk
 
-### Gemeente Feed
+- [ ] **FUND-01**: User sees foundation risk rating (HOOG/MIDDEL/LAAG/ONBEKEND) derived from bouwjaar × bodemtype heuristic
+- [ ] **FUND-02**: User sees combined Fysiek Risicoprofiel summary with traffic-light rating and Dutch-language explanation
+- [ ] **FUND-03**: User sees KCAF reference cost range for foundation repair based on pand footprint and risk level
 
-- [x] **FEED-01**: Auto-populated chronological jurisprudentie feed per gemeente (no manual search required)
-- [x] **FEED-02**: Rulings sorted by relevance: gemeente-matched first, then arrondissement-level
-- [x] **FEED-03**: Win/loss ratio displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk)
+### Asbestos Enhancement
 
-### AI Analysis
+- [ ] **ASBT-01**: User sees refined asbestos risk that accounts for BAG gebruiksdoel (industrial/educational = higher risk)
+- [ ] **ASBT-02**: Asbestos v2 never reduces risk below bouwjaar baseline (gebruiksdoel is additive only)
 
-- [x] **AI-01**: AI analysis runs only on filtered, location-relevant rulings (not garbage national results)
-- [x] **AI-02**: Per-ruling AI analysis caching (not per-batch) — filter changes don't trigger re-analysis
-- [x] **AI-03**: Vergunningstype classification per ruling (dakopbouw, nieuwbouw, bestemmingswijziging, etc.)
-- [x] **AI-04**: Token budget controls: truncate to OVERWEGINGEN + BESLISSING sections (max 60K input tokens)
+### Frontend Integration
 
-### Doorlooptijd
-
-- [x] **DOOR-01**: Procedure duration calculated from ruling metadata dates (datum uitspraak, filing date)
-- [x] **DOOR-02**: Average doorlooptijd per gemeente per vergunningstype displayed as statistic
-- [x] **DOOR-03**: Graceful degradation when filing dates unavailable ("onvoldoende data")
-
-### Explorer UI
-
-- [x] **EXPL-01**: Two-tab layout: Overzicht (chronological feed) and Explorer (multi-filter search)
-- [x] **EXPL-02**: Filter sidebar with scope (landelijk/provincie/gemeente), vergunningstype, uitkomst, tijdsperiode
-- [x] **EXPL-03**: Filter counts shown before applying — prevents empty result frustration
-- [x] **EXPL-04**: Pagination via useInfiniteQuery for large result sets
-- [x] **EXPL-05**: "Verbreed uw zoekopdracht" suggestions when results < 3
-
-### Trend & Statistics
-
-- [x] **TREND-01**: Rolling 12-month juridisch klimaat score trend per gemeente
-- [x] **TREND-02**: Aggregated statistics bar (totaal uitspraken, gemiddelde doorlooptijd, succespercentage)
-- [x] **TREND-03**: CSS-only timeline visualization (no chart library needed for 10-20 data points)
+- [ ] **FRNT-01**: User sees Fysiek Risicoprofiel section in ParcelDetailModal with sub-cards for bodem, fundering, asbest, and verontreiniging
+- [ ] **FRNT-02**: All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers
+- [ ] **FRNT-03**: Area scan map tiles color parcels by foundation risk level alongside existing opportunity score
 
 ## Future Requirements
+
+### Physical Risk Extensions
+
+- **KLIM-01**: User sees drought/subsidence risk context from Klimaateffectatlas
+- **ASBT-03**: User sees indicative asbestos remediation cost range
+- **BODEM-03**: User sees soil profile depth view (layer composition to 1.2m)
+- **FUND-04**: User sees foundation risk aggregated at wijk level in gemeente detail view
 
 ### Deferred from v12.0
 
@@ -64,21 +45,18 @@
 - **SCORE-03**: Wijk detail toont investeringsprofiel card met traffic-light indicatoren
 - **SCORE-04**: Location score opgeslagen in aparte location_score JSONB kolom
 
-### Advanced Legal Intelligence (v14.0+)
-
-- **ADV-01**: Bekendmakingen-koppeling (linking rulings to SRU bekendmakingen) — no shared identifier, fuzzy matching unreliable
-- **ADV-02**: Vergelijkende gemeente analyse (cross-gemeente juridisch klimaat comparison)
-- **ADV-03**: Hoger beroep chain following (ECLI cross-referencing unreliable)
-
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Bekendmakingen cross-reference | No shared identifier between Rechtspraak and SRU — confirmed by research |
-| Full Rechtspraak replica / Elasticsearch | Massive infra overhead, API with caching suffices |
-| Juridisch advies generation | Professional liability risk (Advocatenwet) |
-| spaCy/NLP for location extraction | Training data is news, not legal text; regex + known gemeente list is more reliable |
-| Vergelijkende gemeente analyse | Requires core flow working first |
+| Foundation inspection report | Legal liability — only SC530/F3O-certified firms may perform funderingsonderzoek |
+| Asbestinventarisatie | NEN 2991 requires physical inspection by certified asbestinventarisatiebedrijf |
+| FunderMaps integration | Proprietary data, commercial API, only ~35% coverage of pre-1970 buildings |
+| BRO grondwater monitoring | Only ~380 wells nationwide (~10km apart) — too sparse for per-parcel assessment |
+| Amsterdam bouwdossier archive | Only Amsterdam has digital API — not worth building for single city |
+| ML-based foundation risk model | No public training data exists — deterministic heuristic is more explainable |
+| Precise cost calculations | Too many variables — at most show KCAF reference ranges with disclaimers |
+| Sloopmelding/asbestmelding filing | Government integration, regulated process, out of scope for intelligence platform |
 
 ## Traceability
 
@@ -86,40 +64,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 82 | Complete |
-| PIPE-02 | Phase 82 | Complete |
-| PIPE-03 | Phase 82 | Complete |
-| PIPE-04 | Phase 82 | Complete |
-| PIPE-05 | Phase 82 | Complete |
-| PIPE-06 | Phase 82 | Complete |
-| GEO-01 | Phase 83 | Complete |
-| GEO-02 | Phase 83 | Complete |
-| GEO-03 | Phase 83 | Complete |
-| GEO-04 | Phase 83 | Complete |
-| FEED-01 | Phase 83 | Complete |
-| FEED-02 | Phase 83 | Complete |
-| FEED-03 | Phase 83 | Complete |
-| AI-01 | Phase 84 | Complete |
-| AI-02 | Phase 84 | Complete |
-| AI-03 | Phase 84 | Complete |
-| AI-04 | Phase 84 | Complete |
-| DOOR-01 | Phase 84 | Complete |
-| DOOR-02 | Phase 84 | Complete |
-| DOOR-03 | Phase 84 | Complete |
-| EXPL-01 | Phase 85 | Complete |
-| EXPL-02 | Phase 85 | Complete |
-| EXPL-03 | Phase 85 | Complete |
-| EXPL-04 | Phase 85 | Complete |
-| EXPL-05 | Phase 85 | Complete |
-| TREND-01 | Phase 86 | Complete |
-| TREND-02 | Phase 86 | Complete |
-| TREND-03 | Phase 86 | Complete |
+| BODEM-01 | — | Pending |
+| BODEM-02 | — | Pending |
+| FUND-01 | — | Pending |
+| FUND-02 | — | Pending |
+| FUND-03 | — | Pending |
+| ASBT-01 | — | Pending |
+| ASBT-02 | — | Pending |
+| FRNT-01 | — | Pending |
+| FRNT-02 | — | Pending |
+| FRNT-03 | — | Pending |
 
 **Coverage:**
-- v13.0 requirements: 28 total
-- Mapped to phases: 28
-- Unmapped: 0
+- v14.0 requirements: 10 total
+- Mapped to phases: 0
+- Unmapped: 10
 
 ---
-*Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after roadmap creation (phases 82-86)*
+*Requirements defined: 2026-03-09*
+*Last updated: 2026-03-09 after initial definition*
