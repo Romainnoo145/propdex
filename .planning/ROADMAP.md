@@ -100,7 +100,7 @@ Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 87. Soil Data Integration | 1/1 | Complete   | 2026-03-09 |
+| 87. Soil Data Integration | 1/1 | Complete    | 2026-03-09 |
 | 88. Foundation Risk Engine | 0/TBD | Not started | - |
 | 89. Asbestos v2 Refinement | 0/TBD | Not started | - |
 | 90. Frontend Fysiek Risicoprofiel | 0/TBD | Not started | - |
