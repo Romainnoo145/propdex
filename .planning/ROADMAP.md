@@ -128,7 +128,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
 | 85. Explorer UI | 2/2 | Complete    | 2026-03-09 |
-| 86. Trend & Statistics | 2/2 | Complete   | 2026-03-09 |
+| 86. Trend & Statistics | 2/2 | Complete    | 2026-03-09 |
 
 ---
 
