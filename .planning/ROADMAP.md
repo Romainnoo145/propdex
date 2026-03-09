@@ -149,7 +149,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 91. Aura Design System Foundation | 2/2 | Complete   | 2026-03-09 |
+| 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 0/2 | Not started | - |
 | 93. Parcel Detail Panel | 0/3 | Not started | - |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
