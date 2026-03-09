@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- [ ] **v15.0 Aura** -- Phases 91-97 (in progress)
 - ✅ **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (shipped 2026-03-10)
 - ✅ **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (shipped 2026-03-09)
 - ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
@@ -26,6 +27,137 @@
 ---
 
 ## Phases
+
+### v15.0 Aura (Phases 91-97)
+
+- [ ] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks
+- [ ] **Phase 92: Viewport Layout & Navigation** - Full-bleed map, floating SideRailNav, search pill, filter/toggle dock
+- [ ] **Phase 93: Parcel Detail Panel** - Floating right panel with satellite crop hero, bento stats, click-through layers, aerial crop API
+- [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
+- [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
+- [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
+- [ ] **Phase 97: Reports & Settings** - Report bento layout, settings Aura update
+
+## Phase Details
+
+### Phase 91: Aura Design System Foundation
+**Goal**: Every component in the app draws from Aura tokens and primitives -- the visual DNA is established before any view is rebuilt
+**Depends on**: Nothing (first phase of v15.0)
+**Requirements**: DS-01, DS-02, DS-03, DS-04, DS-05, DS-06
+**Success Criteria** (what must be TRUE):
+  1. Opening the app shows Satoshi font everywhere (no Inter/system font remnants)
+  2. All color usage traces back to Aura CSS variables (Morning Mist canvas, Deep Obsidian text, Warm Amber accents)
+  3. GlassPanel, BentoPod, and PillBadge components render correctly with the specified blur/translucency rules
+  4. Hovering interactive elements shows scale-105 + glow micro-interaction
+  5. Dark mode toggle is gone -- no dark theme code remains in the bundle
+**Plans**: TBD
+
+Plans:
+- [ ] 91-01: Aura tokens + Satoshi font + dark mode removal
+- [ ] 91-02: Glass primitives + micro-interactions + performance fallbacks
+
+### Phase 92: Viewport Layout & Navigation
+**Goal**: The map owns the entire viewport and all navigation floats on top -- users feel like they are looking at a living map with glass controls
+**Depends on**: Phase 91
+**Requirements**: NAV-01, NAV-02, NAV-03, NAV-04
+**Success Criteria** (what must be TRUE):
+  1. Map fills 100% of the browser viewport with no page-level scroll bars
+  2. SideRailNav floats on the left (80px, rounded-[40px], glass blur) with logo, functional icons, and profile/settings at bottom
+  3. Search pill sits top-left with PDOK autocomplete working as before
+  4. Filter/toggle chips dock at top-center and control gemeente/perceel/layer toggles
+**Plans**: TBD
+
+Plans:
+- [ ] 92-01: Viewport-locked map layout + floating SideRailNav
+- [ ] 92-02: Search pill + filter/toggle dock
+
+### Phase 93: Parcel Detail Panel
+**Goal**: Clicking a parcel opens a floating glass panel that tells the full property story through visual bento pods and click-through layers -- zero scroll
+**Depends on**: Phase 92
+**Requirements**: PRC-01, PRC-02, PRC-03, PRC-04, PRC-05, PRC-06, PRC-07, API-01
+**Success Criteria** (what must be TRUE):
+  1. Clicking a parcel opens a floating right panel with a satellite crop hero image and score badge overlay
+  2. Primary stats (oppervlakte, bouwjaar, status, gemeente) appear as a 4-pod bento grid without scrolling
+  3. Bestemming shows as a wide horizontal status bar with soft color fill
+  4. Clicking any bento pod opens a detail layer replacing the current view (17+ data sections accessible)
+  5. "Genereer Rapport" button is always visible pinned at the bottom of the panel
+**Plans**: TBD
+
+Plans:
+- [ ] 93-01: Backend aerial crop API endpoint
+- [ ] 93-02: Floating panel shell + hero + bento stats
+- [ ] 93-03: Click-through layers + vergunningen accordion + rapport button
+
+### Phase 94: Wijk & Gemeente Views
+**Goal**: Selecting a wijk or gemeente delivers spatial context through fly-up bento sheets and luminous map overlays -- users explore areas without leaving the map
+**Depends on**: Phase 92
+**Requirements**: WIJK-01, WIJK-02, WIJK-03, WIJK-04, GEM-01, GEM-02
+**Success Criteria** (what must be TRUE):
+  1. Clicking a wijk triggers a bottom bento sheet (30-40% height) with fly-up animation and drag handle
+  2. Wijk sheet shows 4-column bento layout (identity, bestemming bar, stats grid, kansen glow-cards)
+  3. Selected wijk has an outer glow effect on the map
+  4. Clicking a gemeente shows wijk boundaries with luminous white borders -- no bottom sheet needed
+  5. Wijk pods support click-through to deeper data without scroll
+**Plans**: TBD
+
+Plans:
+- [ ] 94-01: Bottom bento sheet + wijk 4-column layout
+- [ ] 94-02: Gemeente map view + wijk glow + click-through
+
+### Phase 95: Results Table
+**Goal**: The /resultaten route feels like part of Aura while preserving all existing data table power
+**Depends on**: Phase 91
+**Requirements**: RES-01, RES-02
+**Success Criteria** (what must be TRUE):
+  1. /resultaten route renders with glass container, bento filter bar, Satoshi font, and rounded elements
+  2. All existing TanStack Table functionality works unchanged (sorting, filtering, bulk export, pagination)
+**Plans**: TBD
+
+Plans:
+- [ ] 95-01: Results table Aura reskin
+
+### Phase 96: Jurisprudentie & Meldingen
+**Goal**: Legal intelligence and meldingen views feel native to Aura -- glass panels, bento cards, pill badges throughout
+**Depends on**: Phase 91
+**Requirements**: JUR-01, JUR-02, MELD-01, MELD-02
+**Success Criteria** (what must be TRUE):
+  1. Jurisprudentie wizard uses glass panels, bento step indicators, and Satoshi font
+  2. Explorer shows results in glass containers with bento cards and pill filters
+  3. Meldingen feed uses bento cards with pill action-state badges
+  4. Gemeente filter and infinite scroll still work in the meldingen feed
+**Plans**: TBD
+
+Plans:
+- [ ] 96-01: Jurisprudentie wizard + explorer Aura reskin
+- [ ] 96-02: Meldingen feed Aura reskin
+
+### Phase 97: Reports & Settings
+**Goal**: The last two views adopt Aura styling -- every page in the app now speaks the same visual language
+**Depends on**: Phase 91
+**Requirements**: RPT-01, SET-01
+**Success Criteria** (what must be TRUE):
+  1. Report detail page uses bento layout with click-through sections instead of a scrollable list
+  2. Settings page shows Aura glass/bento styling on all existing sections (account, password, notifications, appearance)
+**Plans**: TBD
+
+Plans:
+- [ ] 97-01: Report bento layout + settings Aura update
+
+## Progress
+
+**Execution Order:** 91 -> 92 -> 93 (depends on 92), 94 (depends on 92), 95-97 (depend on 91, can parallelize after 92)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 91. Aura Design System Foundation | 0/2 | Not started | - |
+| 92. Viewport Layout & Navigation | 0/2 | Not started | - |
+| 93. Parcel Detail Panel | 0/3 | Not started | - |
+| 94. Wijk & Gemeente Views | 0/2 | Not started | - |
+| 95. Results Table | 0/1 | Not started | - |
+| 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
+| 97. Reports & Settings | 0/1 | Not started | - |
+
+---
 
 <details>
 <summary>✅ v14.0 Fysiek Risicoprofiel (Phases 87-90) -- SHIPPED 2026-03-10</summary>
@@ -105,11 +237,11 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v8.0 Client Demo Readiness (Phases 62-66) -- SHIPPED 2026-03-02</summary>
 
-- [x] Phase 62: Scan Pipeline Reliability (2/2 plans) -- BAG WFS retry + coverage validation + force-all backfill
-- [x] Phase 63: Venlo Data Completeness (2/2 plans) -- 21-wijk re-scan, 108,789 parcels, 100% coverage
-- [x] Phase 64: Map Visualization (2/2 plans) -- BAG footprints layer, grey-to-green gradient, progressive labels
-- [x] Phase 65: Report Polish (3/3 plans) -- section reorder, empty states, @media print PDF, ActieVereistSection
-- [x] Phase 66: Results Table Noise Reduction (1/1 plan) -- score threshold filter, nulls_last sort, top-kansen toggle
+- [x] Phase 62: Scan Pipeline Reliability (2/2 plans)
+- [x] Phase 63: Venlo Data Completeness (2/2 plans)
+- [x] Phase 64: Map Visualization (2/2 plans)
+- [x] Phase 65: Report Polish (3/3 plans)
+- [x] Phase 66: Results Table Noise Reduction (1/1 plan)
 
 **10 plans, 8 requirements**
 
@@ -118,11 +250,11 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v7.2 Developer Dossier Intelligence (Phases 59-61) -- SHIPPED 2026-02-27</summary>
 
-- [x] Phase 59: Bouwruimte Delta (1/1 plan) -- buildability envelope per perceel, confidence, missing-data reasons
-- [x] Phase 60: Wkb Startdossier Precheck (1/1 plan) -- Layer A auto-precheck, Layer B optional refinement contract
-- [x] Phase 61: Vergunning Precedenten Benchmark (1/1 plan) -- municipality-level precedent outcomes and expected timelines
+- [x] Phase 59: Bouwruimte Delta (1/1 plan)
+- [x] Phase 60: Wkb Startdossier Precheck (1/1 plan)
+- [x] Phase 61: Vergunning Precedenten Benchmark (1/1 plan)
 
-**3 plans, 3 requirements, 3 commits**
+**3 plans, 3 requirements**
 **Archive:** `.planning/milestones/v7.2-ROADMAP.md`
 
 </details>
@@ -130,7 +262,7 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v7.1 Workspace Productization (Phase 58) -- SHIPPED 2026-02-27</summary>
 
-- [x] Phase 58: Workspace Productization (5/5 plans) -- role-aware shell, URL-state hardening, operational UX, canonical parcel flow, monitoring handoff
+- [x] Phase 58: Workspace Productization (5/5 plans)
 
 **5 plans**
 **Archive:** `.planning/milestones/v7.1-ROADMAP.md`
@@ -140,18 +272,18 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v7.05 Codebase Globalization (Phase 57) -- SHIPPED 2026-02-26</summary>
 
-- [x] Phase 57: Codebase Globalization (4/4 plans) -- shared geo/map helpers, metric/search primitives, GeoJSON/stats hooks, anti-regression checks
+- [x] Phase 57: Codebase Globalization (4/4 plans)
 
 </details>
 
 <details>
 <summary>✅ v7.0 Deep Property Data (Phases 52-56) -- SHIPPED 2026-02-25</summary>
 
-- [x] Phase 52: Schema & Config Foundation (2/2 plans) -- Pydantic models, PropertyReportResponse extension, cache TTL entries
-- [x] Phase 53: API Clients (3/3 plans) -- EP-Online V5, WOZ Waardeloket, RCE Linked Data, rate limiters + tests
-- [x] Phase 54: BRK Wiring & No-Cache Enforcement (2/2 plans) -- BRK aggregator wiring, never-cache constraint, integration tests
-- [x] Phase 55: Aggregator Integration (2/2 plans) -- EP-Online + WOZ + RCE in parallel gather, completeness score 6->9
-- [x] Phase 56: Frontend Sections (3/3 plans) -- EnergieLabelSection, WOZSection, EigendomSection, enhanced MonumentSection
+- [x] Phase 52: Schema & Config Foundation (2/2 plans)
+- [x] Phase 53: API Clients (3/3 plans)
+- [x] Phase 54: BRK Wiring & No-Cache Enforcement (2/2 plans)
+- [x] Phase 55: Aggregator Integration (2/2 plans)
+- [x] Phase 56: Frontend Sections (3/3 plans)
 
 **12 plans, 21 requirements**
 **Archive:** `.planning/milestones/v7.0-ROADMAP.md`
@@ -161,13 +293,13 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v6.0 Meldingen Intelligence (Phases 47-51) -- SHIPPED 2026-02-23</summary>
 
-- [x] Phase 47: Address Intelligence (2/2 plans) -- multi-strategy Dutch address extraction, category classification
-- [x] Phase 48: Parcel Matching (3/3 plans) -- PDOK geocoding, PostGIS spatial lookup, post-scan retro-matching
-- [x] Phase 49: Read Tracking (2/2 plans) -- ChangeReadState model, server-backed per-change read/unread
-- [x] Phase 50: Melding-to-Map Flow (1/1 plan) -- matched_parcel_id wired through frontend for three-click workflow
-- [x] Phase 51: Meldingen UX (2/2 plans) -- gemeente filter, action state badges, infinite scroll pagination
+- [x] Phase 47: Address Intelligence (2/2 plans)
+- [x] Phase 48: Parcel Matching (3/3 plans)
+- [x] Phase 49: Read Tracking (2/2 plans)
+- [x] Phase 50: Melding-to-Map Flow (1/1 plan)
+- [x] Phase 51: Meldingen UX (2/2 plans)
 
-**10 plans, 18 requirements, 39 commits, 56 files changed (+8,818/-292)**
+**10 plans, 18 requirements**
 **Archive:** `.planning/milestones/v6.0-ROADMAP.md`
 
 </details>
@@ -175,26 +307,15 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v5.1 Data Presentation Overhaul (Phases 42-46) -- SHIPPED 2026-02-22</summary>
 
-- [x] Phase 42: Theme Consistency (2/2 plans) -- on-accent token, FOUC prevention, semantic token sweep
-- [x] Phase 43: Gemeente Card Navigation (2/2 plans) -- SVG boundary silhouettes, GeoJSON projection, card grid
-- [x] Phase 44: Wijk Cards and Drill-Down (2/2 plans) -- WijkCard, WijkCardGrid, gemeente->wijk navigation
-- [x] Phase 45: URL State + Gemeente Detail View (2/2 plans) -- validateSearch, DrilldownBreadcrumb, GemeenteDetailView
-- [x] Phase 46: Wijk Detail View (2/2 plans) -- scan summary, ChangeTimeline, report list, 3-level breadcrumb
-
-**10 plans, 14 requirements, 5 phases**
+- [x] Phase 42-46: 10 plans, 14 requirements, 5 phases
 
 </details>
 
 <details>
 <summary>✅ v5.0 Scan Intelligence (Phases 37-41) -- SHIPPED 2026-02-20</summary>
 
-- [x] Phase 37: Scan History Backend (2/2 plans) -- Paginated scan list API, project sub-resource endpoint
-- [x] Phase 38: Scan History Frontend (2/2 plans) -- Real scan data in Projecten, navigation to results/map
-- [x] Phase 39: Map Parcel Visualization (2/2 plans) -- Scanned wijk amber overlay, score layer toggle
-- [x] Phase 40: Report Integration (2/2 plans) -- POST /from-parcel endpoint, "Genereer rapport" button
-- [x] Phase 41: Bug Fixes & Hardening (3/3 plans) -- Auth test cookie fix, ARQ idempotency, tech debt cleanup
+- [x] Phase 37-41: 11 plans, 12 requirements, 51 commits
 
-**11 plans, 12 requirements, 51 commits, 65 files changed (+9,264/-2,326)**
 **Archive:** `.planning/milestones/v5.0-ROADMAP.md`
 
 </details>
@@ -202,18 +323,8 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v4.0 UX Redesign (Phases 27-36) -- SHIPPED 2026-02-18</summary>
 
-- [x] Phase 27: Design System Foundation (3/3 plans) -- Industrial Amber tokens, UI primitives, Storybook
-- [x] Phase 28: Navigation + Persistent MapView (2/2 plans) -- SideRailNav, MapContext, InspectorPanel
-- [x] Phase 29: Silver Map Theme + Layout Shells (2/2 plans) -- Silver raster map, MapShell/ResultsShell
-- [x] Phase 30: View Separation (2/2 plans) -- /resultaten route, scan_id URL bridge
-- [x] Phase 31: Component Migration (4/4 plans) -- 40+ components from glassmorphism to Industrial Amber
-- [x] Phase 32: Feedback Systems (3/3 plans) -- Skeleton, EmptyState, ErrorState, toast, scan stepper
-- [x] Phase 33: Data Table Polish (4/4 plans) -- URL filters, multi-sort, bulk export, category groups, hover sync
-- [x] Phase 34: Mobile Responsiveness (4/4 plans) -- BottomTabNav, bottom sheet, card layout, touch targets
-- [x] Phase 35: Settings Page (3/3 plans) -- Users API, preferences JSONB, 4 settings sections
-- [x] Phase 36: Polish + Performance (4/4 plans) -- Bundle splitting, CSS cleanup, mobile blur disable, Storybook stories
+- [x] Phase 27-36: 31 plans, 31 requirements, 129 commits, ~16,234 LOC
 
-**31 plans, 31 requirements, 129 commits, ~16,234 LOC TypeScript/React**
 **Archive:** `.planning/milestones/v4.0-ROADMAP.md`
 
 </details>
@@ -221,13 +332,8 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v3.1 Smart Area Intelligence (Phases 22-26) -- SHIPPED 2026-02-15</summary>
 
-- [x] Phase 22: Bestemmingsplan Base Layer (3/3 plans) -- WMS raster tiles, SVBP2012 colors, GetFeatureInfo popup, legend
-- [x] Phase 23: Working Scan Pipeline (4/4 plans) -- BAG WFS pagination, WMS enrichment, CBS bbox, scoring fixes
-- [x] Phase 24: Wijk-Based Area Selection (4/4 plans) -- CBS wijk WFS, gemeente context, click-to-scan, viewport button
-- [x] Phase 25: Results Interface (5/5 plans) -- Split-panel, TanStack Table, filters, map-table linking, detail modal
-- [x] Phase 26: Change Monitoring (6/6 plans) -- Hierarchical projects, SRU+PLU detection, ARQ cron, notification UI
+- [x] Phase 22-26: 22 plans, 16 requirements
 
-**22 plans, 16 requirements, 97 commits, ~27,200 LOC (13,756 Python + 13,444 TypeScript)**
 **Archive:** `.planning/milestones/v3.1-ROADMAP.md`
 
 </details>
@@ -235,12 +341,8 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v3.0 Spatial Foundation (Phases 18-21) -- SHIPPED 2026-02-11</summary>
 
-- [x] Phase 18: Spatial Foundation (4/4 plans) -- PostGIS, parcel cache, spatial queries, RLS
-- [x] Phase 19: Government API Clients (5/5 plans) -- BAG WFS, SRU Bekendmakingen, BRK Bevragen, rate limiting
-- [x] Phase 20: Area Scanner + REST API (6/6 plans) -- Scan pipeline, ARQ job, scoring, Excel export
-- [x] Phase 21: Map Visualization (5/5 plans) -- CBS gemeente layer, vector tiles, MVT endpoint, scan progress overlay
+- [x] Phase 18-21: 20 plans, 14 requirements
 
-**20 plans, 14 requirements, PostGIS + government API clients + scan pipeline + map visualization**
 **Archive:** `.planning/milestones/v3.0-ROADMAP.md`
 
 </details>
@@ -248,13 +350,8 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v2.0 Frontend (Phases 13-17) -- SHIPPED 2026-02-09</summary>
 
-- [x] Phase 13: Map Foundation & Layout (3/3 plans) -- React/Vite scaffold, full-page MapLibre map, layer toggle
-- [x] Phase 14: Authentication & Security (5/5 plans) -- JWT httpOnly cookies, silent refresh, protected routes
-- [x] Phase 15: Property Data & Map Interactions (5/5 plans) -- Address search, property lookup, parcel boundaries
-- [x] Phase 16: Property Details & Reports (7/7 plans) -- Three-tier disclosure, report sidebar, PDF export
-- [x] Phase 17: Projects & Polish (4/4 plans) -- Project CRUD, responsive drawer, force refresh, report detail page
+- [x] Phase 13-17: 24 plans, 9 requirements
 
-**24 plans, 9 requirements, 8,804 LOC TypeScript/React**
 **Archive:** `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
@@ -262,15 +359,8 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v1.1 Production Hardening (Phases 6-12) -- SHIPPED 2026-02-08</summary>
 
-- [x] Phase 6: Security & Configuration (3/3 plans) -- RLS enforcement, config consolidation, per-org freshness
-- [x] Phase 7: Test Infrastructure & Auth Testing (2/2 plans) -- test framework, 51 auth tests, Phase 1 verification
-- [x] Phase 8: Data Pipeline Testing (2/2 plans) -- 55 API client + 20 cache manager tests
-- [x] Phase 9: Intelligence Testing (3/3 plans) -- 43 aggregator + 14 AI + 9 integration + 3 ARQ tests
-- [x] Phase 10: Report & Multi-Tenant Testing (3/3 plans) -- 15 report CRUD + 9 PDF + 9 multi-tenant tests
-- [x] Phase 11: Coverage Gap Closure (4/4 plans) -- 42 tests closing audit-identified gaps
-- [x] Phase 12: Phase Documentation & Verification (2/2 plans) -- retroactive VERIFICATION.md for all phases
+- [x] Phase 6-12: 19 plans, 15 requirements, 275 tests
 
-**19 plans, 15 requirements, 275 tests, 15,947 LOC Python**
 **Archive:** `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
@@ -278,17 +368,12 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 <details>
 <summary>✅ v1.0 Core Intelligence Engine (Phases 1-5) -- SHIPPED 2026-02-07</summary>
 
-- [x] Phase 1: Foundation & Authentication (3/3 plans) -- JWT auth, multi-tenant RLS, email verification, Google OAuth, rate limiting
-- [x] Phase 2: Core Data Pipeline (3/3 plans) -- httpx client, JSONB cache, BAG/PDOK APIs, property aggregator
-- [x] Phase 3: Zoning & Monument Intelligence (4/4 plans) -- DSO zoning, RCE monuments, spatial intersection, PropertyReportResponse
-- [x] Phase 4: AI Document Parsing (4/4 plans) -- Claude PDF parsing, ARQ worker, job polling, upload fallback
-- [x] Phase 5: Report Management (3/3 plans) -- Save/list/search, project folders, PDF export, freshness detection
+- [x] Phase 1-5: 17 plans, 14 requirements
 
-**17 plans, 14 requirements, 8,281 LOC Python**
 **Archive:** `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
 ---
 
-*Last updated: 2026-03-10 -- Phase 90 plans created*
+*Last updated: 2026-03-10 -- v15.0 Aura roadmap created*

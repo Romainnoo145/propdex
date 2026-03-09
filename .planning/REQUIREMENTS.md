@@ -99,43 +99,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DS-01 | TBD | Pending |
-| DS-02 | TBD | Pending |
-| DS-03 | TBD | Pending |
-| DS-04 | TBD | Pending |
-| DS-05 | TBD | Pending |
-| DS-06 | TBD | Pending |
-| NAV-01 | TBD | Pending |
-| NAV-02 | TBD | Pending |
-| NAV-03 | TBD | Pending |
-| NAV-04 | TBD | Pending |
-| PRC-01 | TBD | Pending |
-| PRC-02 | TBD | Pending |
-| PRC-03 | TBD | Pending |
-| PRC-04 | TBD | Pending |
-| PRC-05 | TBD | Pending |
-| PRC-06 | TBD | Pending |
-| PRC-07 | TBD | Pending |
-| API-01 | TBD | Pending |
-| WIJK-01 | TBD | Pending |
-| WIJK-02 | TBD | Pending |
-| WIJK-03 | TBD | Pending |
-| WIJK-04 | TBD | Pending |
-| GEM-01 | TBD | Pending |
-| GEM-02 | TBD | Pending |
-| RES-01 | TBD | Pending |
-| RES-02 | TBD | Pending |
-| JUR-01 | TBD | Pending |
-| JUR-02 | TBD | Pending |
-| MELD-01 | TBD | Pending |
-| MELD-02 | TBD | Pending |
-| RPT-01 | TBD | Pending |
-| SET-01 | TBD | Pending |
+| DS-01 | Phase 91 | Pending |
+| DS-02 | Phase 91 | Pending |
+| DS-03 | Phase 91 | Pending |
+| DS-04 | Phase 91 | Pending |
+| DS-05 | Phase 91 | Pending |
+| DS-06 | Phase 91 | Pending |
+| NAV-01 | Phase 92 | Pending |
+| NAV-02 | Phase 92 | Pending |
+| NAV-03 | Phase 92 | Pending |
+| NAV-04 | Phase 92 | Pending |
+| PRC-01 | Phase 93 | Pending |
+| PRC-02 | Phase 93 | Pending |
+| PRC-03 | Phase 93 | Pending |
+| PRC-04 | Phase 93 | Pending |
+| PRC-05 | Phase 93 | Pending |
+| PRC-06 | Phase 93 | Pending |
+| PRC-07 | Phase 93 | Pending |
+| API-01 | Phase 93 | Pending |
+| WIJK-01 | Phase 94 | Pending |
+| WIJK-02 | Phase 94 | Pending |
+| WIJK-03 | Phase 94 | Pending |
+| WIJK-04 | Phase 94 | Pending |
+| GEM-01 | Phase 94 | Pending |
+| GEM-02 | Phase 94 | Pending |
+| RES-01 | Phase 95 | Pending |
+| RES-02 | Phase 95 | Pending |
+| JUR-01 | Phase 96 | Pending |
+| JUR-02 | Phase 96 | Pending |
+| MELD-01 | Phase 96 | Pending |
+| MELD-02 | Phase 96 | Pending |
+| RPT-01 | Phase 97 | Pending |
+| SET-01 | Phase 97 | Pending |
 
 **Coverage:**
 - v15.0 requirements: 32 total
-- Mapped to phases: 0
-- Unmapped: 32
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-10*
