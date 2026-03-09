@@ -224,9 +224,11 @@ function MapPage() {
   const [autoEnableParcelsKey, setAutoEnableParcelsKey] = useState<string | null>(null)
   const parcelClickRequestSeqRef = useRef(0)
 
-  // Ref for fresh parcel visibility inside map event handlers (avoids stale closure)
+  // Refs for fresh layer visibility inside callbacks (avoids stale closure)
   const isParcelsVisibleRef = useRef(layerState.showParcels)
   isParcelsVisibleRef.current = layerState.showParcels
+  const isGemeentenVisibleRef = useRef(layerState.showGemeenten)
+  isGemeentenVisibleRef.current = layerState.showGemeenten
   const [showScannedWijkBoundaries, setShowScannedWijkBoundaries] = useState(false)
   const initialRequestedWijkNameRef = useRef<string | null>(
     typeof urlWijkNaam === 'string' && urlWijkNaam.trim()
@@ -437,6 +439,24 @@ function MapPage() {
     [activeScanId, preferredCompletedScan]
   )
 
+  // Exit gemeente mode: hide boundaries, clear gemeente/wijk state.
+  // Uses refs so it can be called from any callback without stale closure issues.
+  const exitGemeenteMode = useCallback(() => {
+    if (!isGemeentenVisibleRef.current) return
+    layerActions.setGemeenten(false)
+    const map = mapRef.current
+    if (map) {
+      setGemeenteBoundariesVisibility(map, false)
+      if (wijkGeojsonRef.current) {
+        removeWijkBoundariesLayer(map)
+        setWijkGeojson(null)
+      }
+      removeScanAreaHighlight(map)
+    }
+    setSelectedArea(null)
+    setActiveGemeente(null)
+  }, [layerActions, mapRef])
+
   const handleParcelsLayerToggle = useCallback((visible: boolean) => {
     layerActions.setParcels(visible)
     const map = mapRef.current
@@ -447,18 +467,7 @@ function MapPage() {
       currentCenteredWijkNameRef.current = readCenteredWijkName()
 
       // Percelen ON → turn off gemeenten (exclusive modes)
-      if (layerState.showGemeenten && map) {
-        layerActions.setGemeenten(false)
-        setGemeenteBoundariesVisibility(map, false)
-        if (wijkGeojsonRef.current) {
-          removeWijkBoundariesLayer(map)
-          setWijkGeojson(null)
-        }
-        removeScanAreaHighlight(map)
-        setSelectedArea(null)
-        setActiveGemeente(null)
-        setActivePanel(null)
-      }
+      exitGemeenteMode()
     } else {
       currentCenteredWijkNameRef.current = null
       layerActions.setActiveParcelOverlay(null)
@@ -468,7 +477,7 @@ function MapPage() {
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, layerActions, layerState.showGemeenten, mapRef, readCenteredWijkName])
+  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -650,53 +659,6 @@ function MapPage() {
     }
   }, [])
 
-  const focusParcelWithInspector = useCallback((input: {
-    parcelId: string
-    lng: number
-    lat: number
-    address: string | null
-    parcelCode?: string | null
-    gemeenteCode?: string | null
-    areaM2?: number | null
-    hasPand?: boolean | null
-    bouwjaar?: number | null
-    pandStatus?: string | null
-    geometry?: GeoJSON.Geometry | null
-    autoEnableKey: string
-  }) => {
-    setTier('none')
-    setParcelGeometryHighlight(null)
-    setParcelGeometryHighlight(
-      input.geometry
-        ? {
-            lng: input.lng,
-            lat: input.lat,
-            parcelCode: input.parcelCode ?? null,
-            areaM2: input.areaM2 ?? null,
-            geometry: input.geometry,
-          }
-        : null
-    )
-    setPropertyLngLat([input.lng, input.lat])
-    setAutoEnableParcelsKey(input.autoEnableKey)
-    setActivePanel({ kind: 'parcel', parcel:
-      makeInspectorParcel({
-        parcelId: input.parcelId,
-        address: input.address,
-        parcelCode: input.parcelCode ?? null,
-        gemeenteCode: input.gemeenteCode ?? null,
-        areaM2: input.areaM2 ?? null,
-        hasPand: typeof input.hasPand === 'boolean' ? input.hasPand : undefined,
-        bouwjaar: input.bouwjaar ?? null,
-        pandStatus: input.pandStatus ?? null,
-        vacancySignal: deriveVacancySignalFromPandStatus(
-          input.pandStatus ?? null,
-          typeof input.hasPand === 'boolean' ? input.hasPand : true
-        ),
-      })
-    })
-  }, [makeInspectorParcel])
-
   // For URL-driven postcode/huisnummer navigation and address search:
   // resolve parcel_id then fetch full scan data (same as map click) for rich detail panel.
   useEffect(() => {
@@ -716,6 +678,7 @@ function MapPage() {
       accessToken
     )
       .then(async (resolved) => {
+        exitGemeenteMode()
         setAutoEnableParcelsKey(
           `addr:${pending.postcode.replace(/\s/g, '').toUpperCase()}:${pending.huisnummer}`
         )
@@ -944,21 +907,51 @@ function MapPage() {
       }
 
       fetchParcelCentroid(urlParcelId, accessToken)
-        .then(({ lng, lat, address, parcel_code, gemeente_code, area_m2, has_pand, bouwjaar, pand_status, geometry }) => {
-          focusParcelWithInspector({
-            parcelId: urlParcelId,
-            lng,
-            lat,
-            address: address ?? fallbackAddress ?? null,
-            parcelCode: parcel_code ?? null,
-            gemeenteCode: gemeente_code ?? null,
-            areaM2: area_m2 ?? null,
-            hasPand: has_pand ?? undefined,
-            bouwjaar: bouwjaar ?? null,
-            pandStatus: pand_status ?? null,
-            geometry: geometry ?? null,
-            autoEnableKey: `${urlParcelId}:${urlScanId}:${navTs ?? 0}`,
+        .then(async (centroid) => {
+          // Fetch full scan data (score, building_metrics, vacancy, etc.)
+          // so the detail panel matches what map clicks show.
+          const full = await fetchParcelAtPoint(
+            centroid.lng,
+            centroid.lat,
+            accessToken,
+            { scanId: urlScanId },
+          )
+          exitGemeenteMode()
+          setAutoEnableParcelsKey(`${urlParcelId}:${urlScanId}:${navTs ?? 0}`)
+          setPropertyLngLat([full.lng ?? centroid.lng, full.lat ?? centroid.lat])
+          setTier('none')
+          setActivePanel({ kind: 'parcel', parcel:
+            makeInspectorParcel({
+              parcelId: full.parcel_id,
+              address: full.address ?? centroid.address ?? fallbackAddress ?? null,
+              parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+              gemeenteCode: full.gemeente_code ?? centroid.gemeente_code ?? null,
+              areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+              hasPand: full.has_pand,
+              bouwjaar: full.bouwjaar ?? centroid.bouwjaar ?? null,
+              pandStatus: full.pand_status ?? centroid.pand_status ?? null,
+              score: full.score ?? null,
+              scoreCategory: full.score_category ?? null,
+              scoreBreakdown: full.score_breakdown ?? null,
+              vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
+              vacancyConfidence: full.vacancy_confidence ?? null,
+              vacancyReasons: full.vacancy_reasons ?? null,
+              vacancyModelVersion: full.vacancy_model_version ?? null,
+              marketSignals: full.market_signals ?? null,
+              opportunitySignals: full.opportunity_signals ?? null,
+              buildingMetrics: full.building_metrics ?? null,
+              hasReport: full.has_report,
+            })
           })
+          if (full.geometry ?? centroid.geometry) {
+            setParcelGeometryHighlight({
+              lng: centroid.lng,
+              lat: centroid.lat,
+              parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+              areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+              geometry: (full.geometry ?? centroid.geometry)!,
+            })
+          }
         })
         .catch(() => {
           // Silently fall back — scan layer still loads
@@ -971,7 +964,7 @@ function MapPage() {
 
     // Clear from URL to prevent re-trigger on hot reload.
     navigate({ to: '/map', search: {}, replace: true })
-  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs, fallbackAddress, focusParcelWithInspector])
+  }, [urlScanId, urlParcelId, activeScanId, accessToken, navigate, navTs, fallbackAddress, makeInspectorParcel, exitGemeenteMode])
 
   // Handle direct parcel navigation (e.g. from meldingen) without scan context
   useEffect(() => {
@@ -991,21 +984,50 @@ function MapPage() {
     }
 
     fetchParcelCentroid(urlParcelId, accessToken)
-      .then(({ lng, lat, address, parcel_code, gemeente_code, area_m2, has_pand, bouwjaar, pand_status, geometry }) => {
-        focusParcelWithInspector({
-          parcelId: urlParcelId,
-          lng,
-          lat,
-          address: address ?? fallbackAddress ?? null,
-          parcelCode: parcel_code ?? null,
-          gemeenteCode: gemeente_code ?? null,
-          areaM2: area_m2 ?? null,
-          hasPand: has_pand ?? undefined,
-          bouwjaar: bouwjaar ?? null,
-          pandStatus: pand_status ?? null,
-          geometry: geometry ?? null,
-          autoEnableKey: key,
+      .then(async (centroid) => {
+        // Fetch full scan data so detail panel shows all fields
+        const full = await fetchParcelAtPoint(
+          centroid.lng,
+          centroid.lat,
+          accessToken,
+          { scanId: activeScanIdRef.current },
+        )
+        exitGemeenteMode()
+        setAutoEnableParcelsKey(key)
+        setPropertyLngLat([centroid.lng, centroid.lat])
+        setTier('none')
+        setActivePanel({ kind: 'parcel', parcel:
+          makeInspectorParcel({
+            parcelId: full.parcel_id,
+            address: full.address ?? centroid.address ?? fallbackAddress ?? null,
+            parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+            gemeenteCode: full.gemeente_code ?? centroid.gemeente_code ?? null,
+            areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+            hasPand: full.has_pand,
+            bouwjaar: full.bouwjaar ?? centroid.bouwjaar ?? null,
+            pandStatus: full.pand_status ?? centroid.pand_status ?? null,
+            score: full.score ?? null,
+            scoreCategory: full.score_category ?? null,
+            scoreBreakdown: full.score_breakdown ?? null,
+            vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
+            vacancyConfidence: full.vacancy_confidence ?? null,
+            vacancyReasons: full.vacancy_reasons ?? null,
+            vacancyModelVersion: full.vacancy_model_version ?? null,
+            marketSignals: full.market_signals ?? null,
+            opportunitySignals: full.opportunity_signals ?? null,
+            buildingMetrics: full.building_metrics ?? null,
+            hasReport: full.has_report,
+          })
         })
+        if (full.geometry ?? centroid.geometry) {
+          setParcelGeometryHighlight({
+            lng: centroid.lng,
+            lat: centroid.lat,
+            parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+            areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+            geometry: (full.geometry ?? centroid.geometry)!,
+          })
+        }
       })
       .catch(() => {
         toast.error('Kon perceel op kaart niet centreren')
@@ -1013,7 +1035,7 @@ function MapPage() {
       .finally(() => {
         navigate({ to: '/map', search: {}, replace: true })
       })
-  }, [urlParcelId, urlScanId, navTs, accessToken, navigate, fallbackAddress, focusParcelWithInspector])
+  }, [urlParcelId, urlScanId, navTs, accessToken, navigate, fallbackAddress, makeInspectorParcel, exitGemeenteMode])
 
   // Handle incoming search params (from recent viewed / report sidebar / project list)
   useEffect(() => {
@@ -1220,42 +1242,57 @@ function MapPage() {
           setTier('none')
           setActivePanel({ kind: 'parcel', parcel })
 
-          // Fetch full geometry for reliable full-parcel yellow highlight.
+          // Fetch full scan data so tile-clicked parcels get the same rich
+          // fields (opportunity_signals, vacancy_reasons, score_breakdown,
+          // bestemmingen) as the spatial-lookup fallback path.
           if (accessToken) {
-            void fetchParcelCentroid(parcel.parcel_id, accessToken)
-              .then((centroid) => {
+            void fetchParcelAtPoint(e.lngLat.lng, e.lngLat.lat, accessToken, {
+              scanId: activeScanIdRef.current,
+            })
+              .then((resolved) => {
                 if (requestSeq !== parcelClickRequestSeqRef.current) return
                 setActivePanel((prev) => {
                   if (!prev || prev.kind !== 'parcel') return prev
-                  const current = prev.parcel
-                  if (current.parcel_id !== parcel.parcel_id) return prev
-                  return { kind: 'parcel', parcel: {
-                    ...current,
-                    address: current.address ?? centroid.address ?? current.address,
-                    parcel_code: centroid.parcel_code ?? current.parcel_code,
-                    gemeente_code: current.gemeente_code ?? centroid.gemeente_code ?? current.gemeente_code,
-                    area_m2: centroid.area_m2 ?? current.area_m2,
-                    has_pand:
-                      typeof centroid.has_pand === 'boolean'
-                        ? centroid.has_pand
-                        : current.has_pand,
-                    bouwjaar: current.bouwjaar ?? centroid.bouwjaar ?? current.bouwjaar,
-                    pand_status: current.pand_status ?? centroid.pand_status ?? current.pand_status,
-                  }}
+                  if (prev.parcel.parcel_id !== parcel.parcel_id) return prev
+                  return { kind: 'parcel', parcel:
+                    makeInspectorParcel({
+                      parcelId: resolved.parcel_id,
+                      address: resolved.address ?? parcel.address,
+                      parcelCode: resolved.parcel_code ?? parcel.parcel_code,
+                      gemeenteCode: resolved.gemeente_code ?? parcel.gemeente_code,
+                      areaM2: resolved.area_m2 ?? parcel.area_m2,
+                      hasPand: resolved.has_pand ?? parcel.has_pand,
+                      bouwjaar: resolved.bouwjaar ?? parcel.bouwjaar,
+                      pandStatus: resolved.pand_status ?? parcel.pand_status,
+                      score: resolved.score ?? parcel.score,
+                      scoreCategory: resolved.score_category ?? parcel.score_category,
+                      scoreBreakdown: resolved.score_breakdown ?? parcel.score_breakdown,
+                      vacancySignal:
+                        (resolved.vacancy_signal as ScanResultItem['vacancy_signal']) ??
+                        parcel.vacancy_signal,
+                      vacancyConfidence: resolved.vacancy_confidence ?? parcel.vacancy_confidence,
+                      vacancyReasons: resolved.vacancy_reasons ?? parcel.vacancy_reasons,
+                      vacancyModelVersion: resolved.vacancy_model_version ?? parcel.vacancy_model_version,
+                      marketSignals: resolved.market_signals ?? parcel.market_signals,
+                      opportunitySignals: resolved.opportunity_signals ?? parcel.opportunity_signals,
+                      buildingMetrics: resolved.building_metrics ?? (parcel.building_metrics as Record<string, unknown> | null),
+                      hasReport: resolved.has_report ?? parcel.has_report,
+                    })
+                  }
                 })
-                if (centroid.geometry) {
+                if (resolved.geometry) {
                   setParcelGeometryHighlight({
-                    lng: centroid.lng,
-                    lat: centroid.lat,
-                    parcelCode: centroid.parcel_code ?? parcel.parcel_code ?? null,
-                    areaM2: centroid.area_m2 ?? parcel.area_m2 ?? null,
-                    geometry: centroid.geometry,
+                    lng: resolved.lng,
+                    lat: resolved.lat,
+                    parcelCode: resolved.parcel_code ?? parcel.parcel_code ?? null,
+                    areaM2: resolved.area_m2 ?? parcel.area_m2 ?? null,
+                    geometry: resolved.geometry,
                   })
                 }
-                setPropertyLngLat([centroid.lng, centroid.lat])
+                setPropertyLngLat([resolved.lng, resolved.lat])
               })
               .catch(() => {
-                // Keep modal data from tile props when centroid lookup fails.
+                // Keep modal data from tile props when full lookup fails.
               })
           }
           return
@@ -2010,26 +2047,11 @@ function MapPage() {
 
   // Auto-enable parcels when external triggers set autoEnableParcelsKey
   // (address search, URL navigation, report focus flows).
-  // Logic moved here from LayerToggle so map.tsx is the sole authority.
+  // Gemeente cleanup is handled by exitGemeenteMode at each call site.
   useEffect(() => {
     if (!autoEnableParcelsKey) return
     if (!layerState.showParcels) {
       handleParcelsLayerToggle(true)
-    } else if (layerState.showGemeenten) {
-      // Parcels already on but gemeenten still showing (e.g. navigating
-      // from gemeente results to a parcel) — turn off gemeenten mode.
-      const map = mapRef.current
-      if (map) {
-        layerActions.setGemeenten(false)
-        setGemeenteBoundariesVisibility(map, false)
-        if (wijkGeojsonRef.current) {
-          removeWijkBoundariesLayer(map)
-          setWijkGeojson(null)
-        }
-        removeScanAreaHighlight(map)
-        setSelectedArea(null)
-        setActiveGemeente(null)
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEnableParcelsKey])

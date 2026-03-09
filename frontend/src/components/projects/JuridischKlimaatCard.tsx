@@ -1,4 +1,5 @@
-import { Scale, AlertTriangle, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { Scale, AlertTriangle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import type { AnalyzeGemeenteResponse, DoorlooptijdStats } from '@/lib/api'
 
@@ -8,9 +9,6 @@ interface JuridischKlimaatCardProps {
   doorlooptijd?: Record<string, DoorlooptijdStats> | null
 }
 
-const DISCLAIMER_FALLBACK =
-  'Indicatief -- gebaseerd op historische uitspraken, geen juridisch advies'
-
 /**
  * Color class for doorlooptijd duration values.
  * Green: <= 180 days, Amber: 181-365, Red: > 365
@@ -19,6 +17,40 @@ function doorlooptijdColor(avgDagen: number): string {
   if (avgDagen <= 180) return 'text-emerald-400'
   if (avgDagen <= 365) return 'text-amber-accent'
   return 'text-red-400'
+}
+
+function RiskFactorsCollapsible({ factors }: { factors: string[] }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-1.5 text-xs text-grey-400 hover:text-grey-300 transition-colors"
+      >
+        <AlertTriangle className="w-3 h-3" />
+        <span>Risicofactoren</span>
+        <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+          {factors.length}
+        </span>
+        {open ? (
+          <ChevronUp className="w-3 h-3 ml-auto" />
+        ) : (
+          <ChevronDown className="w-3 h-3 ml-auto" />
+        )}
+      </button>
+      {open && (
+        <ul className="mt-1.5 space-y-1 pl-4">
+          {factors.map((factor, i) => (
+            <li key={i} className="text-xs text-grey-400 list-disc">
+              {factor}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -75,17 +107,6 @@ export function JuridischKlimaatCard({ analysis, isLoading, doorlooptijd }: Juri
 
   return (
     <div className="rounded-xl border border-overlay/5 bg-grey-900 p-4 space-y-3">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Scale className="w-4 h-4 text-amber-accent/70" />
-        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
-          Juridisch Klimaat
-        </span>
-        <span className="ml-auto text-[10px] text-grey-500">
-          {analysis.gemeente_naam}
-        </span>
-      </div>
-
       {/* Score */}
       <div className="flex items-baseline gap-1.5">
         <span className={`text-3xl font-bold tabular-nums ${scoreColor}`}>
@@ -117,65 +138,35 @@ export function JuridischKlimaatCard({ analysis, isLoading, doorlooptijd }: Juri
         </p>
       )}
 
-      {/* Top risk factors */}
+      {/* Top risk factors — collapsible */}
       {riskFactors.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5 text-xs text-grey-400">
-            <AlertTriangle className="w-3 h-3" />
-            <span>Risicofactoren</span>
-          </div>
-          <ul className="space-y-1 pl-4">
-            {riskFactors.map((factor, i) => (
-              <li key={i} className="text-xs text-grey-400 list-disc">
-                {factor}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <RiskFactorsCollapsible factors={riskFactors} />
       )}
 
-      {/* Doorlooptijd section */}
-      <div className="space-y-1.5 pt-1 border-t border-overlay/5">
-        <div className="flex items-center gap-1.5 text-xs text-grey-400">
-          <Clock className="w-3 h-3" />
-          <span>Gemiddelde Doorlooptijd</span>
-        </div>
-
-        {doorlooptijdEntries.length === 0 ? (
-          <p className="text-[10px] text-grey-500 italic">
-            {doorlooptijd === null || doorlooptijd === undefined
-              ? 'Doorlooptijddata wordt berekend...'
-              : 'Geen doorlooptijddata beschikbaar'}
-          </p>
-        ) : (
+      {/* Doorlooptijd section — only shown when meaningful data exists */}
+      {doorlooptijdEntries.some(s => !s.insufficient_data) && (
+        <div className="space-y-1.5 pt-1 border-t border-overlay/5">
+          <div className="flex items-center gap-1.5 text-xs text-grey-400">
+            <Clock className="w-3 h-3" />
+            <span>Gemiddelde Doorlooptijd</span>
+          </div>
           <div className="space-y-1">
-            {doorlooptijdEntries.map((stat) => (
+            {doorlooptijdEntries.filter(s => !s.insufficient_data).map((stat) => (
               <div key={stat.vergunningstype} className="flex items-center justify-between text-xs">
                 <span className="text-grey-400 truncate mr-2">
                   {stat.vergunningstype}
                 </span>
-                {stat.insufficient_data ? (
-                  <span className="text-grey-600 text-[10px] whitespace-nowrap">
-                    onvoldoende data ({stat.count} uitspraken)
+                <span className={`font-medium tabular-nums whitespace-nowrap ${doorlooptijdColor(stat.avg_dagen!)}`}>
+                  {stat.avg_dagen} dagen
+                  <span className="text-grey-600 font-normal ml-1">
+                    ({stat.min_dagen}-{stat.max_dagen})
                   </span>
-                ) : (
-                  <span className={`font-medium tabular-nums whitespace-nowrap ${doorlooptijdColor(stat.avg_dagen!)}`}>
-                    {stat.avg_dagen} dagen
-                    <span className="text-grey-600 font-normal ml-1">
-                      ({stat.min_dagen}-{stat.max_dagen})
-                    </span>
-                  </span>
-                )}
+                </span>
               </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Disclaimer (mandatory) */}
-      <p className="text-[10px] italic text-grey-600 pt-1 border-t border-overlay/5">
-        {DISCLAIMER_FALLBACK}
-      </p>
+        </div>
+      )}
     </div>
   )
 }

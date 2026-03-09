@@ -216,9 +216,9 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                 )}
             </div>
 
-            <div className="p-4 flex flex-col md:flex-row md:items-stretch gap-4">
+            <div className="p-4 flex flex-col md:flex-row md:items-stretch gap-4 max-h-[80vh]">
                 {/* Left Side: Feed */}
-                <div className={`flex flex-col gap-3 transition-all duration-300 ${selectedEcli ? 'md:w-1/3 min-h-0' : 'w-full'}`}>
+                <div className={`flex flex-col gap-3 min-h-0 transition-all duration-300 ${selectedEcli ? 'md:w-1/3' : 'w-full'}`}>
                     {/* Klimaat card above feed -- shows when analysis is complete or loading */}
                     {(analysisResult || isAnalyzing) && (
                         <JuridischKlimaatCard
@@ -257,7 +257,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                         Omgevingsrecht filter actief
                     </span>
 
-                    <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto scrollbar-hidden">
+                    <div className="flex flex-col gap-2 flex-1 overflow-y-auto scrollbar-hidden">
                         {isLoading ? (
                             Array.from({ length: 3 }).map((_, i) => (
                                 <div key={i} className="rounded-lg border border-grey-800 bg-grey-850 p-3 space-y-2">
@@ -334,7 +334,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
 
                 {/* Right Side: Document Viewer */}
                 {selectedEcli && (
-                    <div className="md:w-2/3 border border-overlay/5 rounded-lg bg-grey-850/50 flex flex-col">
+                    <div className="md:w-2/3 min-h-0 border border-overlay/5 rounded-lg bg-grey-850/50 flex flex-col">
                         <JurisprudenceViewer ecli={selectedEcli} onClose={() => setSelectedEcli(null)} />
                     </div>
                 )}

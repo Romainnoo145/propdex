@@ -11,7 +11,7 @@ from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from shapely.geometry import Point, box, shape
-from sqlalchemy import func, literal, select
+from sqlalchemy import case, func, literal, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1310,18 +1310,6 @@ async def get_parcel_at_point(
         28992,
     )
 
-    scan_scope_condition = None
-    if scan_id is not None:
-        scan_scope_condition = (
-            select(ScanResult.id)
-            .where(
-                ScanResult.organization_id == organization_id,
-                ScanResult.scan_id == scan_id,
-                ScanResult.parcel_id == ParcelCache.id,
-            )
-            .exists()
-        )
-
     has_report_subquery = (
         select(func.count(SavedReport.id) > 0)
         .where(
@@ -1331,29 +1319,50 @@ async def get_parcel_at_point(
         )
         .scalar_subquery()
     )
-    scan_score_subquery = literal(None)
-    scan_flags_subquery = literal(None)
-    if scan_id is not None:
-        scan_score_subquery = (
-            select(ScanResult.score)
-            .where(
-                ScanResult.organization_id == organization_id,
-                ScanResult.scan_id == scan_id,
-                ScanResult.parcel_id == ParcelCache.id,
-            )
-            .limit(1)
-            .scalar_subquery()
+    # Find scan data for this parcel: prefer the given scan_id, but fall back
+    # to the most recent completed scan that contains the parcel. This ensures
+    # parcels outside the currently-selected wijk scan still show full data
+    # when the gemeente has been fully scanned across multiple wijk scans.
+    from app.models.area_scan import AreaScan
+
+    best_scan_id_subquery = (
+        select(ScanResult.scan_id)
+        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        .where(
+            ScanResult.organization_id == organization_id,
+            ScanResult.parcel_id == ParcelCache.id,
+            AreaScan.status == "completed",
         )
-        scan_flags_subquery = (
-            select(ScanResult.flags)
-            .where(
-                ScanResult.organization_id == organization_id,
-                ScanResult.scan_id == scan_id,
-                ScanResult.parcel_id == ParcelCache.id,
-            )
-            .limit(1)
-            .scalar_subquery()
+        .order_by(
+            # Prefer the explicitly requested scan, then most recent
+            case((ScanResult.scan_id == scan_id, 0), else_=1) if scan_id else literal(1),
+            AreaScan.completed_at.desc(),
         )
+        .limit(1)
+        .correlate(ParcelCache)
+        .scalar_subquery()
+    )
+
+    scan_score_subquery = (
+        select(ScanResult.score)
+        .where(
+            ScanResult.organization_id == organization_id,
+            ScanResult.scan_id == best_scan_id_subquery,
+            ScanResult.parcel_id == ParcelCache.id,
+        )
+        .limit(1)
+        .scalar_subquery()
+    )
+    scan_flags_subquery = (
+        select(ScanResult.flags)
+        .where(
+            ScanResult.organization_id == organization_id,
+            ScanResult.scan_id == best_scan_id_subquery,
+            ScanResult.parcel_id == ParcelCache.id,
+        )
+        .limit(1)
+        .scalar_subquery()
+    )
 
     pdok_geometry_wgs84: dict | None = None
     pdok_parcel_code: str | None = None
@@ -1399,12 +1408,12 @@ async def get_parcel_at_point(
         *,
         order_by: list,
     ):
+        # Don't filter by scan scope — all cached parcels should be clickable.
+        # Scan-specific data (score, flags) is enriched via subqueries, not filtering.
         conditions = [
             ParcelCache.organization_id == organization_id,
             spatial_condition,
         ]
-        if scan_scope_condition is not None:
-            conditions.append(scan_scope_condition)
 
         return (
             select(

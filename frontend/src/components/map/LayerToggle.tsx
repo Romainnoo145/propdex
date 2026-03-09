@@ -95,13 +95,22 @@ function LayerToggle({
   )
 
   const ensureParcelInteractionZoom = useCallback(() => {
-    if (!isStyleReady()) return
     const map = mapRef.current
     if (!map) return
     const currentZoom = map.getZoom()
     if (currentZoom >= PARCEL_INTERACTION_MIN_ZOOM) return
+    // If style is mid-transition (e.g. gemeente layers being removed),
+    // defer the zoom until the style settles — avoids needing a second click.
+    if (!map.isStyleLoaded()) {
+      map.once('idle', () => {
+        if (map.getZoom() < PARCEL_INTERACTION_MIN_ZOOM) {
+          map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
+        }
+      })
+      return
+    }
     map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
-  }, [isStyleReady, mapRef])
+  }, [mapRef])
 
   const setParcelOverlayMode = useCallback(
     (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'none') => {
@@ -210,7 +219,7 @@ function LayerToggle({
   }
 
   const handleParcelsToggle = () => {
-    if (!mapRef.current || !isStyleReady()) return
+    if (!mapRef.current || !mapReady) return
     const map = mapRef.current
     const nextShowParcels = !showParcels
     if (!map.getSource('pdok-parcels')) {
@@ -239,19 +248,8 @@ function LayerToggle({
   const showGradientLegend = showScore && showParcels && hasScoreData
 
   return (
-    <>
-      {showGradientLegend && (
-        <div className="absolute bottom-4 right-4 z-[var(--z-map-controls)] bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
-          <span className="text-xs text-grey-400">40</span>
-          <div
-            className="h-3 w-24 rounded-full"
-            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
-          />
-          <span className="text-xs text-grey-400">100</span>
-        </div>
-      )}
-
-      <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
+    <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] flex items-center gap-2">
+      <div className="bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
         <button
           onClick={() => handleLayerSwitch('kaart')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
@@ -302,7 +300,18 @@ function LayerToggle({
           </button>
         )}
       </div>
-    </>
+
+      {showGradientLegend && (
+        <div className="bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
+          <span className="text-xs text-grey-400">40</span>
+          <div
+            className="h-3 w-24 rounded-full"
+            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
+          />
+          <span className="text-xs text-grey-400">100</span>
+        </div>
+      )}
+    </div>
   )
 }
 

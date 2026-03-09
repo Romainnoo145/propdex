@@ -140,8 +140,8 @@ function ActionCardsRow({
         disabled={!gemeenteCode || triggerScan.isPending}
         className="group rounded-xl border border-overlay/5 bg-grey-900 p-4 text-left transition-colors hover:bg-grey-850 hover:border-amber-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${hasScan ? 'bg-emerald-400/15' : isScanning ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
+        <div className="flex items-center gap-2">
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${hasScan ? 'bg-emerald-400/15' : isScanning ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
             {hasScan ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -160,17 +160,19 @@ function ActionCardsRow({
               </svg>
             )}
           </div>
+          <div>
+            <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
+              {hasScan ? 'Bekijk resultaten' : isScanning ? 'Scan bezig...' : 'Start scan'}
+            </p>
+            <p className="text-[11px] text-grey-500">
+              {hasScan
+                ? `${latestScan.parcel_count} percelen \u00b7 ${dateFmt.format(new Date(latestScan.scan_date))}`
+                : isScanning
+                  ? `Gestart ${dateFmt.format(new Date(activeScan.scan_date))}`
+                  : 'Nog niet gescand'}
+            </p>
+          </div>
         </div>
-        <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
-          {hasScan ? 'Bekijk resultaten' : isScanning ? 'Scan bezig...' : 'Start scan'}
-        </p>
-        <p className="text-[11px] text-grey-500 mt-0.5">
-          {hasScan
-            ? `${latestScan.parcel_count} percelen \u00b7 ${dateFmt.format(new Date(latestScan.scan_date))}`
-            : isScanning
-              ? `Gestart ${dateFmt.format(new Date(activeScan.scan_date))}`
-              : 'Nog niet gescand'}
-        </p>
       </button>
 
       {/* Reports card */}
@@ -186,8 +188,8 @@ function ActionCardsRow({
         disabled={!wijkId}
         className="group rounded-xl border border-overlay/5 bg-grey-900 p-4 text-left transition-colors hover:bg-grey-850 hover:border-amber-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${reportCount > 0 ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
+        <div className="flex items-center gap-2">
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${reportCount > 0 ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={reportCount > 0 ? 'text-amber-accent' : 'text-grey-500'}>
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
@@ -195,20 +197,17 @@ function ActionCardsRow({
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
           </div>
-          {reportCount > 0 && (
-            <span className="inline-flex items-center rounded-full bg-amber-accent/15 border border-amber-accent/25 px-1.5 py-0.5 text-[10px] font-semibold text-amber-accent">
-              {reportCount}
-            </span>
-          )}
+          <div>
+            <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
+              Bekijk rapporten
+            </p>
+            <p className="text-[11px] text-grey-500">
+              {reportCount > 0
+                ? `${reportCount} rapport${reportCount === 1 ? '' : 'en'}`
+                : 'Geen rapporten'}
+            </p>
+          </div>
         </div>
-        <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
-          Bekijk rapporten
-        </p>
-        <p className="text-[11px] text-grey-500 mt-0.5">
-          {reportCount > 0
-            ? `${reportCount} rapport${reportCount === 1 ? '' : 'en'}`
-            : 'Geen rapporten'}
-        </p>
       </button>
     </div>
   )

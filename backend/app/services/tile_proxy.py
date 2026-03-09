@@ -81,6 +81,21 @@ async def generate_mvt_tile(
                 28992
             ) AS geom
         ),
+        -- Pick the best scan result per parcel: prefer the given scan_id,
+        -- otherwise fall back to the most recent completed scan that has it.
+        best_sr AS (
+            SELECT DISTINCT ON (sr.parcel_id)
+                sr.parcel_id,
+                sr.score,
+                sr.flags
+            FROM scan_results sr
+            JOIN area_scans a ON a.id = sr.scan_id
+            WHERE sr.organization_id = :org_id
+            AND a.status = 'completed'
+            ORDER BY sr.parcel_id,
+                     CASE WHEN sr.scan_id = :scan_id THEN 0 ELSE 1 END,
+                     a.completed_at DESC
+        ),
         mvt_data AS (
             SELECT
                 ST_AsMVTGeom(
@@ -115,16 +130,23 @@ async def generate_mvt_tile(
                     AS max_floor_area_ratio,
                 (rep.id IS NOT NULL) AS has_report
             FROM parcel_cache pc
-            JOIN scan_results sr ON sr.parcel_id = pc.id
+            JOIN best_sr sr ON sr.parcel_id = pc.id
             LEFT JOIN saved_reports rep
               ON rep.organization_id = pc.organization_id
              AND rep.source_parcel_id = pc.id
              AND rep.deleted_at IS NULL
             CROSS JOIN bounds
             WHERE pc.organization_id = :org_id
-            AND sr.scan_id = :scan_id
-            AND sr.organization_id = :org_id
             AND ST_Intersects(pc.geometry, bounds.geom)
+            -- Hide infrastructure parcels (roads, water, rails) that have no building
+            AND NOT (
+                pc.has_pand = false
+                AND pc.bestemmingen::text ILIKE '%%"type": "verkeer"%%'
+            )
+            AND NOT (
+                pc.has_pand = false
+                AND pc.bestemmingen::text ILIKE '%%"type": "water"%%'
+            )
         )
         SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom')
         FROM mvt_data
