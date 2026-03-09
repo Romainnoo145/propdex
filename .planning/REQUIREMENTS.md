@@ -27,7 +27,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **FRNT-01**: User sees Fysiek Risicoprofiel section in ParcelDetailModal with sub-cards for bodem, fundering, asbest, and verontreiniging
 - [x] **FRNT-02**: All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers
-- [ ] **FRNT-03**: Area scan map tiles color parcels by foundation risk level alongside existing opportunity score
+- [x] **FRNT-03**: Area scan map tiles color parcels by foundation risk level alongside existing opportunity score
 
 ## Future Requirements
 
@@ -73,7 +73,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASBT-02 | Phase 89 | Complete |
 | FRNT-01 | Phase 90 | Complete |
 | FRNT-02 | Phase 90 | Complete |
-| FRNT-03 | Phase 90 | Pending |
+| FRNT-03 | Phase 90 | Complete |
 
 **Coverage:**
 - v14.0 requirements: 10 total

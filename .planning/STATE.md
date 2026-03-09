@@ -60,6 +60,8 @@ Progress: [##########] 100% (Phase 90)
 
 ### Decisions Made
 
+- Bouwjaar-only proxy for tile coloring (full bouwjaar x bodemtype via per-parcel API)
+- Amber/slate palette for foundation risk overlay (never red)
 - Extract FysiekRisicoprofielSection as separate component (sub-300-line guideline)
 - Soil type card informational only (no risk badge)
 - Use PDOK BRO Bodemkaart WMS exclusively (not bodemdata.nl or WUR soilphysics)
@@ -89,12 +91,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T18:50:11Z
-**Stopped At:** Completed 90-01-PLAN.md
+**Last Session:** 2026-03-09T18:50:26Z
+**Stopped At:** Completed 90-02-PLAN.md
 **Resume File:** None
 
-**Next Action:** Execute 90-02-PLAN.md
+**Next Action:** v14.0 complete -- tag and archive
 
 ---
 
-*State updated: 2026-03-10 -- Phase 90 Plan 01 complete*
+*State updated: 2026-03-10 -- Phase 90 Plan 02 complete*
