@@ -50,7 +50,7 @@
   3. GlassPanel, BentoPod, and PillBadge components render correctly with the specified blur/translucency rules
   4. Hovering interactive elements shows scale-105 + glow micro-interaction
   5. Dark mode toggle is gone -- no dark theme code remains in the bundle
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 91-01: Aura tokens + Satoshi font + dark mode removal
