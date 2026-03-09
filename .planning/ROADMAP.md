@@ -38,7 +38,7 @@
 - [x] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente (completed 2026-03-07)
 - [x] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation (completed 2026-03-08)
 - [x] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering (completed 2026-03-09)
-- [ ] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization
+- [x] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization (completed 2026-03-09)
 
 ## Phase Details
 
@@ -111,7 +111,7 @@ Plans:
   1. A rolling 12-month klimaat score trend is visible per gemeente showing whether conditions are improving or deteriorating
   2. An aggregated statistics bar shows totaal uitspraken, gemiddelde doorlooptijd, and succespercentage
   3. Trend visualization renders as CSS-only timeline (no chart library dependency) and degrades gracefully with fewer than 3 data points
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 86-01-PLAN.md -- Trend endpoint with monthly bucketing and summary stats
@@ -128,7 +128,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
 | 85. Explorer UI | 2/2 | Complete    | 2026-03-09 |
-| 86. Trend & Statistics | 1/2 | In Progress|  |
+| 86. Trend & Statistics | 2/2 | Complete   | 2026-03-09 |
 
 ---
 

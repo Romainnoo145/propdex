@@ -53,7 +53,7 @@
 
 - [x] **TREND-01**: Rolling 12-month juridisch klimaat score trend per gemeente
 - [x] **TREND-02**: Aggregated statistics bar (totaal uitspraken, gemiddelde doorlooptijd, succespercentage)
-- [ ] **TREND-03**: CSS-only timeline visualization (no chart library needed for 10-20 data points)
+- [x] **TREND-03**: CSS-only timeline visualization (no chart library needed for 10-20 data points)
 
 ## Future Requirements
 
@@ -113,7 +113,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPL-05 | Phase 85 | Complete |
 | TREND-01 | Phase 86 | Complete |
 | TREND-02 | Phase 86 | Complete |
-| TREND-03 | Phase 86 | Pending |
+| TREND-03 | Phase 86 | Complete |
 
 **Coverage:**
 - v13.0 requirements: 28 total
