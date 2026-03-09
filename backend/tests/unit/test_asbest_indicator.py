@@ -64,3 +64,118 @@ def test_asbest_bouwjaar_echoed():
     result = assess_asbest_risk(building=building)
 
     assert result.bouwjaar == 1980
+
+
+# --- Gebruiksdoel uplift tests (Phase 89) ---
+
+
+def test_asbest_industriefunctie_hoog_stays_hoog():
+    """1963-1993 + industriefunctie: baseline hoog, stays hoog with factor set."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=1980, gebruiksdoel=["Industriefunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "hoog"
+    assert result.gebruiksdoel_factor == "industriefunctie"
+    assert "industriefunctie" in result.reden.lower()
+
+
+def test_asbest_onderwijsfunctie_hoog_stays_hoog():
+    """1963-1993 + onderwijsfunctie: baseline hoog, stays hoog with factor set."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=1975, gebruiksdoel=["Onderwijsfunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "hoog"
+    assert result.gebruiksdoel_factor == "onderwijsfunctie"
+
+
+def test_asbest_post1993_industriefunctie_uplifts_to_middel():
+    """Post-1993 + industriefunctie: baseline geen -> uplifted to middel."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=2000, gebruiksdoel=["Industriefunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "middel"
+    assert result.gebruiksdoel_factor == "industriefunctie"
+    assert result.norm_reference is not None
+
+
+def test_asbest_post1993_woonfunctie_stays_geen():
+    """Post-1993 + woonfunctie: no uplift, stays geen."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=2000, gebruiksdoel=["Woonfunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "geen"
+    assert result.gebruiksdoel_factor is None
+
+
+def test_asbest_pre1963_industriefunctie_stays_middel():
+    """Pre-1963 + industriefunctie: baseline middel, stays middel (can't go higher from gebruiksdoel alone)."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=1950, gebruiksdoel=["Industriefunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "middel"
+    assert result.gebruiksdoel_factor == "industriefunctie"
+
+
+def test_asbest_onbekend_with_industriefunctie_stays_onbekend():
+    """Unknown bouwjaar + industriefunctie: no uplift on onbekend."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=None, gebruiksdoel=["Industriefunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "onbekend"
+    assert result.gebruiksdoel_factor is None
+
+
+def test_asbest_empty_gebruiksdoel_no_uplift():
+    """Hoog baseline + empty gebruiksdoel: no uplift, factor is None."""
+    building = BuildingData(pand_id="test", bouwjaar=1980, gebruiksdoel=[])
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "hoog"
+    assert result.gebruiksdoel_factor is None
+
+
+def test_asbest_mixed_gebruiksdoel_picks_first_elevated():
+    """Mixed gebruiksdoel picks first elevated function."""
+    building = BuildingData(
+        pand_id="test",
+        bouwjaar=2000,
+        gebruiksdoel=["Woonfunctie", "Industriefunctie"],
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "middel"
+    assert result.gebruiksdoel_factor == "industriefunctie"
+
+
+def test_asbest_case_insensitive_gebruiksdoel():
+    """Case-insensitive matching of gebruiksdoel."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=2000, gebruiksdoel=["INDUSTRIEFUNCTIE"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "middel"
+    assert result.gebruiksdoel_factor == "industriefunctie"
+
+
+def test_asbest_never_reduces_below_baseline():
+    """ASBT-02: woonfunctie on hoog baseline must never reduce risk."""
+    building = BuildingData(
+        pand_id="test", bouwjaar=1970, gebruiksdoel=["Woonfunctie"]
+    )
+    result = assess_asbest_risk(building=building)
+
+    assert result.risk == "hoog"
+    assert result.gebruiksdoel_factor is None
