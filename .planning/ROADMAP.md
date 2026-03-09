@@ -97,7 +97,7 @@ Plans:
   2. Explorer shows a filter sidebar with scope, vergunningstype, uitkomst, and tijdsperiode filters, each showing result counts before applying
   3. Large result sets paginate smoothly via infinite scroll (useInfiniteQuery pattern)
   4. When results are fewer than 3, the UI suggests broadening the search ("Verbreed uw zoekopdracht" with actionable suggestions)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 85-01-PLAN.md — Backend: rechtsgronden migration + AI classifier + explorer endpoint with faceted counts
@@ -127,7 +127,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
-| 85. Explorer UI | 0/2 | Not started | - |
+| 85. Explorer UI | 1/2 | In Progress|  |
 | 86. Trend & Statistics | 0/2 | Not started | - |
 
 ---

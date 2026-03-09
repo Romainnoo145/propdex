@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 84
+**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 85
 
 ---
 
 ## Current Position
 
-Phase: 84 of 86 (AI Analysis Doorlooptijd)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-08 -- Completed 84-02-PLAN.md
+Phase: 85 of 86 (Explorer UI)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-09 -- Completed 85-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [████████░░] 87%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 4.5min
-- Total execution time: 27min
+- Total plans completed: 7
+- Average duration: 4.4min
+- Total execution time: 31min
 
 **By Phase:**
 
@@ -34,6 +34,7 @@ Progress: [██████████] 100%
 | 82 | 2 | 7min | 3.5min |
 | 83 | 2 | 6min | 3min |
 | 84 | 2 | 14min | 7min |
+| 85 | 1 | 4min | 4min |
 
 *Updated after each plan completion*
 
@@ -73,6 +74,10 @@ Progress: [██████████] 100%
 - [Phase 84]: Unified AnalyzeGemeenteResponse type for trigger + poll endpoints
 - [Phase 84]: Auto-trigger analysis via useEffect + ref guard pattern
 - [Phase 84]: Doorlooptijd color coding: green <= 180d, amber 181-365d, red > 365d
+- [Phase 85]: Cross-faceted counts via exclude_dimension helper pattern
+- [Phase 85]: Lightweight rechtsgrond-only backfill prompt (avoids full re-analysis cost)
+- [Phase 85]: JSONB @> containment for rechtsgrond filtering, jsonb_array_elements_text for facet grouping
+- [Phase 85]: Rechtbank niveau derived via CASE/ILIKE from instantie (no new column)
 
 ### Pending Todos
 
@@ -87,12 +92,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T02:14:02.868Z
-**Stopped At:** Phase 85 context gathered
-**Resume File:** .planning/phases/85-explorer-ui/85-CONTEXT.md
+**Last Session:** 2026-03-09T02:41:26Z
+**Stopped At:** Completed 85-01-PLAN.md
+**Resume File:** .planning/phases/85-explorer-ui/85-01-SUMMARY.md
 
-**Next Action:** Execute Phase 85 (Explorer UI) or Phase 86 (Trend Statistics)
+**Next Action:** Execute 85-02-PLAN.md (Explorer Frontend)
 
 ---
 
-*State updated: 2026-03-08 -- Completed 84-02-PLAN.md (Phase 84 complete)*
+*State updated: 2026-03-09 -- Completed 85-01-PLAN.md*

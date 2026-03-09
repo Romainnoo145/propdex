@@ -44,9 +44,9 @@
 ### Explorer UI
 
 - [ ] **EXPL-01**: Two-tab layout: Overzicht (chronological feed) and Explorer (multi-filter search)
-- [ ] **EXPL-02**: Filter sidebar with scope (landelijk/provincie/gemeente), vergunningstype, uitkomst, tijdsperiode
-- [ ] **EXPL-03**: Filter counts shown before applying — prevents empty result frustration
-- [ ] **EXPL-04**: Pagination via useInfiniteQuery for large result sets
+- [x] **EXPL-02**: Filter sidebar with scope (landelijk/provincie/gemeente), vergunningstype, uitkomst, tijdsperiode
+- [x] **EXPL-03**: Filter counts shown before applying — prevents empty result frustration
+- [x] **EXPL-04**: Pagination via useInfiniteQuery for large result sets
 - [ ] **EXPL-05**: "Verbreed uw zoekopdracht" suggestions when results < 3
 
 ### Trend & Statistics
@@ -107,9 +107,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOOR-02 | Phase 84 | Complete |
 | DOOR-03 | Phase 84 | Complete |
 | EXPL-01 | Phase 85 | Pending |
-| EXPL-02 | Phase 85 | Pending |
-| EXPL-03 | Phase 85 | Pending |
-| EXPL-04 | Phase 85 | Pending |
+| EXPL-02 | Phase 85 | Complete |
+| EXPL-03 | Phase 85 | Complete |
+| EXPL-04 | Phase 85 | Complete |
 | EXPL-05 | Phase 85 | Pending |
 | TREND-01 | Phase 86 | Pending |
 | TREND-02 | Phase 86 | Pending |
