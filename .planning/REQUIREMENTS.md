@@ -9,11 +9,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Design System
 
-- [ ] **DS-01**: Aura design tokens defined as CSS variables: Morning Mist (#F2F6F3) canvas, Pure Glass (white/60 + blur) surfaces, Deep Obsidian (#0E1111) primary, Warm Amber (#F9A826) accent, Sage Mint (#D1E2D8) secondary, Vitality Green (#22C55E) status, Ink (#1A1C1E) text
-- [ ] **DS-02**: Satoshi font loaded and applied globally with sizing scale (Display 32px Bold, KPI 24px Semi-bold, Labels 11px All-caps +5% tracking)
+- [x] **DS-01**: Aura design tokens defined as CSS variables: Morning Mist (#F2F6F3) canvas, Pure Glass (white/60 + blur) surfaces, Deep Obsidian (#0E1111) primary, Warm Amber (#F9A826) accent, Sage Mint (#D1E2D8) secondary, Vitality Green (#22C55E) status, Ink (#1A1C1E) text
+- [x] **DS-02**: Satoshi font loaded and applied globally with sizing scale (Display 32px Bold, KPI 24px Semi-bold, Labels 11px All-caps +5% tracking)
 - [ ] **DS-03**: Glass component primitives: GlassPanel (backdrop-blur-xl + bg-white/60 + border-white/40), BentoPod (rounded-3xl, solid translucent bg-white/40 without blur), PillBadge (rounded-full)
 - [ ] **DS-04**: Micro-interaction system: hover scale-105 with glow, fly-up/slide-in animations, smooth transitions
-- [ ] **DS-05**: Dark mode removed entirely -- light-only Aura theme replaces Industrial Amber
+- [x] **DS-05**: Dark mode removed entirely -- light-only Aura theme replaces Industrial Amber
 - [ ] **DS-06**: Performance fallback: prefers-reduced-motion disables blur, will-change:transform on floating panels, blur only on 3 key surfaces (SideRailNav, search bar, bottom sheet containers)
 
 ### Layout & Navigation
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DS-01 | Phase 91 | Pending |
-| DS-02 | Phase 91 | Pending |
+| DS-01 | Phase 91 | Complete |
+| DS-02 | Phase 91 | Complete |
 | DS-03 | Phase 91 | Pending |
 | DS-04 | Phase 91 | Pending |
-| DS-05 | Phase 91 | Pending |
+| DS-05 | Phase 91 | Complete |
 | DS-06 | Phase 91 | Pending |
 | NAV-01 | Phase 92 | Pending |
 | NAV-02 | Phase 92 | Pending |

@@ -12,26 +12,31 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 91 (1 of 7 in v15.0) -- Aura Design System Foundation
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-10 -- v15.0 Aura roadmap created
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-03-10 -- 91-01 Aura tokens + migration complete
 
-Progress: [░░░░░░░░░░] 0% (0/13 plans)
+Progress: [#░░░░░░░░░] 7% (1/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (v15.0)
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 1 (v15.0)
+- Average duration: 6min
+- Total execution time: 6min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 91 | 1 | 6min | 6min |
 
 ## Accumulated Context
+
+### Decisions
+- Aura glass-white defined as #ffffff (pure hex) so Tailwind opacity modifiers work
+- Satoshi via Fontshare CDN, AppearanceSection kept with map style only
+- Badge teal variant uses aura-green but kept variant name for backward compat
 
 ### Key Patterns (carry forward)
 
@@ -40,7 +45,10 @@ Progress: [░░░░░░░░░░] 0% (0/13 plans)
 - Palette: Morning Mist #F2F6F3, Pure Glass white/60+blur, Deep Obsidian #0E1111, Warm Amber #F9A826, Sage Mint #D1E2D8
 - Font: Satoshi from Fontshare (replaces Inter)
 - Desktop only, light mode only -- drop dark mode entirely
-- Existing Industrial Amber design system being replaced wholesale
+- Industrial Amber tokens fully replaced with Aura tokens (91-01 complete)
+- Aura token naming: --color-aura-canvas, --color-aura-ink, --color-aura-amber, --color-aura-obsidian
+- Glass hierarchy: bg-aura-glass-white/60 (panel), /40 (pod), /25 (deep)
+- Button command variant: bg-aura-obsidian text-white for authoritative CTAs
 
 ### Pending Todos
 
@@ -55,12 +63,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T20:48:28.759Z
-**Stopped At:** Phase 91 context gathered
-**Resume File:** .planning/phases/91-aura-design-system-foundation/91-CONTEXT.md
+**Last Session:** 2026-03-09T21:50:42.908Z
+**Stopped At:** Completed 91-01-PLAN.md
+**Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 91`
+**Next Action:** `/gsd:execute-phase 91` (plan 02 - Glass primitives)
 
 ---
 
-*State updated: 2026-03-10 -- v15.0 Aura roadmap created*
+*State updated: 2026-03-10 -- 91-01 Aura tokens + Satoshi font + dark mode removal complete*
