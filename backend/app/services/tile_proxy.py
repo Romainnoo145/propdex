@@ -128,6 +128,12 @@ async def generate_mvt_tile(
                     AS max_bebouwingspercentage,
                 (sr.flags->'building_metrics'->>'max_floor_area_ratio')::float
                     AS max_floor_area_ratio,
+                CASE
+                    WHEN pc.bouwjaar IS NULL THEN 'onbekend'
+                    WHEN pc.bouwjaar < 1970 THEN 'hoog'
+                    WHEN pc.bouwjaar < 1990 THEN 'middel'
+                    ELSE 'laag'
+                END AS foundation_risk_level,
                 (rep.id IS NOT NULL) AS has_report
             FROM parcel_cache pc
             JOIN best_sr sr ON sr.parcel_id = pc.id
@@ -150,12 +156,22 @@ async def generate_mvt_tile(
                 pc.bestemmingen::text ILIKE '%%"type": "groen"%%'
                 AND COALESCE(pc.area_m2, 0) > 2000
             )
-            -- Hide road/strip parcels: empty parcels with elongated shapes
-            -- (perimeter/sqrt(area) > 10 indicates roads, not buildable land)
+            -- Hide obvious road/strip parcels (shape ratio > 10 = roads)
             AND NOT (
-                NOT pc.has_pand
-                AND pc.area_m2 > 0
+                pc.area_m2 > 0
                 AND ST_Perimeter(pc.geometry) / SQRT(pc.area_m2) > 10
+            )
+            -- Hide elongated parcels without a real building on them
+            -- (shape 8-10 is suspicious; only keep if building covers >5% of area)
+            AND NOT (
+                pc.area_m2 > 0
+                AND ST_Perimeter(pc.geometry) / SQRT(pc.area_m2) > 8
+                AND (
+                    NOT pc.has_pand
+                    OR (sr.flags->'building_metrics'->>'pand_oppervlakte_m2') IS NULL
+                    OR (sr.flags->'building_metrics'->>'pand_oppervlakte_m2')::float
+                       / pc.area_m2 < 0.05
+                )
             )
         )
         SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom')

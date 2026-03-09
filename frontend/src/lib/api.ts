@@ -784,7 +784,7 @@ export async function fetchScanResults(
  * @returns Tile URL template with {z}/{x}/{y} placeholders
  */
 export function getScanTileUrl(scanId: string): string {
-  const TILE_SCHEMA_VERSION = '11'
+  const TILE_SCHEMA_VERSION = '13'
   // Absolute URL required — MapLibre fetches vector tiles in a web worker
   // which cannot resolve relative paths.
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -1451,6 +1451,21 @@ export interface FacetItem {
   count: number
 }
 
+export interface DoorlooptijdPerType {
+  vergunningstype: string
+  count: number
+  avg_dagen: number | null
+  min_dagen: number | null
+  max_dagen: number | null
+}
+
+export interface OpponentProfile {
+  naam: string
+  zaken: number
+  gewonnen: number
+  verloren: number
+}
+
 export interface ExplorerResponse {
   results: ExplorerRuling[]
   total_count: number
@@ -1462,6 +1477,8 @@ export interface ExplorerResponse {
     rechtsgrond: FacetItem[]
     rechtbank_niveau: FacetItem[]
   }
+  doorlooptijd_per_type: DoorlooptijdPerType[]
+  opponent_profiles: OpponentProfile[]
 }
 
 export interface ExplorerFilters {
