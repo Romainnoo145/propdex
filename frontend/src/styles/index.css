@@ -190,6 +190,13 @@ body {
   transform: scale(1.05);
 }
 
+.aura-hover-glow {
+  transition: box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.aura-hover-glow:hover {
+  box-shadow: 0 0 20px rgba(249, 168, 38, 0.15);
+}
+
 /* Floating panel GPU compositing hint */
 .aura-float {
   will-change: transform;
@@ -214,7 +221,8 @@ body {
 
   /* Disable hover transforms */
   .aura-hover-pod:hover,
-  .aura-hover-nav:hover {
+  .aura-hover-nav:hover,
+  .aura-hover-glow:hover {
     transform: none !important;
     box-shadow: none !important;
   }
