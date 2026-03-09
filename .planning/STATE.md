@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v14.0 Fysiek Risicoprofiel -- Phase 88 complete, ready for Phase 89
+**Current focus:** v14.0 Fysiek Risicoprofiel -- Phase 89 complete, v14.0 complete
 
 ---
 
 ## Current Position
 
-Phase: 88 of 90 (Foundation Risk Engine)
+Phase: 89 of 90 (Asbestos V2 Refinement)
 Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 88 complete
-Last activity: 2026-03-10 -- Completed 88-01-PLAN.md
+Status: Phase 89 complete
+Last activity: 2026-03-10 -- Completed 89-01-PLAN.md
 
-Progress: [##########] 100% (Phase 88)
+Progress: [##########] 100% (Phase 89)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (v14.0)
-- Average duration: 4.5min
-- Total execution time: 9min
+- Total plans completed: 3 (v14.0)
+- Average duration: 3.7min
+- Total execution time: 11min
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [##########] 100% (Phase 88)
 |-------|-------|-------|----------|
 | 87 | 1 | 4min | 4min |
 | 88 | 1 | 5min | 5min |
+| 89 | 1 | 2min | 2min |
 
 ---
-| Phase 88 P01 | 5min | 2 tasks | 4 files |
+| Phase 89 P01 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -43,7 +44,7 @@ Progress: [##########] 100% (Phase 88)
 - BRO Bodemkaart: WMS GetFeatureInfo (NOT bodemdata.nl/WUR) -- PDOK only
 - PDOK Funderingsrisicogebieden: WFS GetFeature, PC6-level (NOT parcel-level)
 - Foundation heuristic: pure function, bouwjaar x bodemtype, amber badges only
-- Existing asbest_indicator.py: bouwjaar-based NEN 2991 risk bands
+- asbest_indicator.py: bouwjaar + gebruiksdoel-based NEN 2991 risk with additive uplift
 - ParcelCache has NO postcode field -- use coordinate-based WMS query or address data
 - asyncio.gather for parallel API calls in property_aggregator.py
 - Pure synchronous risk engine post-processing after asyncio.gather (foundation_risk_engine.py)
@@ -62,6 +63,8 @@ Progress: [##########] 100% (Phase 88)
 - TYPE_CHECKING + model_rebuild() for circular import between fysiek_risico.py and property.py
 - onbekend risks excluded from worst-of overall calculation
 - funderingsrisicogebied accepted but not yet influencing score (PC6 too coarse)
+- Case-insensitive BAG gebruiksdoel matching for risk assessment
+- onbekend asbestos baseline never uplifted by gebruiksdoel (no false precision)
 
 ### Pending Todos
 
@@ -76,12 +79,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T17:34:41.490Z
-**Stopped At:** Completed 88-01-PLAN.md
+**Last Session:** 2026-03-09T17:49:15Z
+**Stopped At:** Completed 89-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 89`
+**Next Action:** v14.0 complete -- tag and archive
 
 ---
 
-*State updated: 2026-03-10 -- Phase 88 Plan 01 complete*
+*State updated: 2026-03-10 -- Phase 89 Plan 01 complete*

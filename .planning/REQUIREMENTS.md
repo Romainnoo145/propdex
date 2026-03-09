@@ -20,8 +20,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Asbestos Enhancement
 
-- [ ] **ASBT-01**: User sees refined asbestos risk that accounts for BAG gebruiksdoel (industrial/educational = higher risk)
-- [ ] **ASBT-02**: Asbestos v2 never reduces risk below bouwjaar baseline (gebruiksdoel is additive only)
+- [x] **ASBT-01**: User sees refined asbestos risk that accounts for BAG gebruiksdoel (industrial/educational = higher risk)
+- [x] **ASBT-02**: Asbestos v2 never reduces risk below bouwjaar baseline (gebruiksdoel is additive only)
 
 ### Frontend Integration
 
@@ -69,8 +69,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FUND-01 | Phase 88 | Complete |
 | FUND-02 | Phase 88 | Complete |
 | FUND-03 | Phase 88 | Complete |
-| ASBT-01 | Phase 89 | Pending |
-| ASBT-02 | Phase 89 | Pending |
+| ASBT-01 | Phase 89 | Complete |
+| ASBT-02 | Phase 89 | Complete |
 | FRNT-01 | Phase 90 | Pending |
 | FRNT-02 | Phase 90 | Pending |
 | FRNT-03 | Phase 90 | Pending |
