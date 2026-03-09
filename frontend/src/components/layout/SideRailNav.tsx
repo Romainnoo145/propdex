@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useUnreadCounts } from '@/hooks/useNotifications'
 import { NotificationBadge } from '@/components/notifications/NotificationBadge'
 import WorkspaceSwitcher from '@/components/layout/WorkspaceSwitcher'
-import { Map, FolderOpen, Bell, FileText, Settings, LogOut } from 'lucide-react'
+import { Map, FolderOpen, Bell, FileText, Scale, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -123,6 +123,23 @@ export default function SideRailNav() {
           {/* Hover tooltip */}
           <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
             Rapporten
+          </span>
+        </Link>
+
+        {/* Jurisprudentie explorer link */}
+        <Link to="/jurisprudentie" className="group relative">
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
+              matchRoute({ to: '/jurisprudentie' })
+                ? 'bg-grey-800 text-grey-100'
+                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+            }`}
+          >
+            <Scale size={20} />
+          </div>
+          {/* Hover tooltip */}
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+            Jurisprudentie
           </span>
         </Link>
       </div>

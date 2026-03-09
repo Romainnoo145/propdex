@@ -1427,6 +1427,80 @@ export async function pollRulingAnalysis(
   )
 }
 
+// ==========================================
+// Jurisprudentie Explorer types + bindings
+// ==========================================
+
+export interface ExplorerRuling {
+  ecli: string
+  court_code: string
+  instantie: string | null
+  datum_uitspraak: string | null
+  title: string | null
+  summary: string | null
+  extracted_gemeente: string | null
+  uitkomst: string | null
+  vergunningstype: string | null
+  rechtsgronden: string[]
+  doorlooptijd_dagen: number | null
+  ai_analysis: Record<string, unknown> | null
+}
+
+export interface FacetItem {
+  value: string
+  count: number
+}
+
+export interface ExplorerResponse {
+  results: ExplorerRuling[]
+  total_count: number
+  has_more: boolean
+  facets: {
+    gemeente: FacetItem[]
+    vergunningstype: FacetItem[]
+    uitkomst: FacetItem[]
+    rechtsgrond: FacetItem[]
+    rechtbank_niveau: FacetItem[]
+  }
+}
+
+export interface ExplorerFilters {
+  gemeente?: string
+  vergunningstype?: string
+  uitkomst?: string
+  rechtsgrond?: string
+  rechtbank_niveau?: string
+  periode?: string
+}
+
+/**
+ * Fetch explorer results with faceted filtering and pagination.
+ *
+ * GET /api/jurisprudence/explorer
+ */
+export async function fetchExplorerResults(
+  accessToken: string | null,
+  filters: ExplorerFilters,
+  limit: number,
+  offset: number
+): Promise<ExplorerResponse> {
+  const params = new URLSearchParams()
+  params.set('limit', limit.toString())
+  params.set('offset', offset.toString())
+
+  if (filters.gemeente) params.set('gemeente', filters.gemeente)
+  if (filters.vergunningstype) params.set('vergunningstype', filters.vergunningstype)
+  if (filters.uitkomst) params.set('uitkomst', filters.uitkomst)
+  if (filters.rechtsgrond) params.set('rechtsgrond', filters.rechtsgrond)
+  if (filters.rechtbank_niveau) params.set('rechtbank_niveau', filters.rechtbank_niveau)
+  if (filters.periode) params.set('periode', filters.periode)
+
+  return apiFetch<ExplorerResponse>(
+    `/api/jurisprudence/explorer?${params}`,
+    { method: 'GET', accessToken }
+  )
+}
+
 /** Response from doorlooptijd stats endpoint */
 export interface DoorlooptijdResponse {
   status: string
