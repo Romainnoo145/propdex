@@ -152,14 +152,77 @@ body {
   border-top-color: rgba(255, 255, 255, 0.85);
 }
 
-/* Bottom sheet slide-up animation */
+/* Bottom sheet slide-up animation -- Aura timing */
 @keyframes slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+  animation: slide-up 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Panel fly-in animation (used by parcel detail, side panels) */
+@keyframes fly-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-fly-in-right {
+  animation: fly-in-right 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Aura micro-interactions */
+.aura-hover-pod {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.aura-hover-pod:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(249, 168, 38, 0.15);
+}
+
+.aura-hover-nav {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.aura-hover-nav:hover {
+  transform: scale(1.05);
+}
+
+/* Floating panel GPU compositing hint */
+.aura-float {
+  will-change: transform;
+}
+
+/* Performance fallback: prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+
+  /* Disable all glass blur -- solid white fallback */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: white !important;
+    border-color: #E2E8F0 !important;
+  }
+
+  /* Disable hover transforms */
+  .aura-hover-pod:hover,
+  .aura-hover-nav:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Disable will-change hints */
+  .aura-float {
+    will-change: auto;
+  }
 }
 
 /* Utility: hide native scrollbars while preserving scroll behavior */
