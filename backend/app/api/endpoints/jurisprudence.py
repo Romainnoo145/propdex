@@ -610,3 +610,111 @@ async def explore_rulings(
         "has_more": has_more,
         "facets": facets,
     }
+
+
+# --- Trend endpoint ---
+
+
+@router.get("/trend/{gemeente_naam}")
+@limiter.limit("30/minute")
+async def get_trend(
+    gemeente_naam: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    """Get rolling 12-month trend data for a gemeente's juridisch klimaat.
+
+    Returns monthly buckets with klimaat_score, outcome counts, and avg
+    doorlooptijd, plus an aggregated summary across all months.
+    Only months with actual rulings are included (no zero-filled gaps).
+    """
+    twelve_months_ago = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%d")
+
+    # Monthly aggregation query on ruling_cache
+    month_col = func.to_char(
+        func.to_date(RulingCache.datum_uitspraak, text("'YYYY-MM-DD'")),
+        text("'YYYY-MM'"),
+    ).label("month")
+
+    gemeente_filter = (
+        (RulingCache.gemeente_query == gemeente_naam)
+        | (RulingCache.extracted_gemeente == gemeente_naam)
+    )
+
+    stmt = (
+        select(
+            month_col,
+            func.count().label("total"),
+            func.sum(
+                case((RulingCache.uitkomst == "toegewezen", 1), else_=0)
+            ).label("toegewezen"),
+            func.sum(
+                case((RulingCache.uitkomst == "afgewezen", 1), else_=0)
+            ).label("afgewezen"),
+            func.sum(
+                case((RulingCache.uitkomst == "gedeeltelijk", 1), else_=0)
+            ).label("gedeeltelijk"),
+            func.avg(RulingCache.doorlooptijd_dagen).label("avg_doorlooptijd"),
+        )
+        .where(gemeente_filter)
+        .where(RulingCache.datum_uitspraak.isnot(None))
+        .where(RulingCache.datum_uitspraak >= twelve_months_ago)
+        .group_by(month_col)
+        .order_by(month_col)
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    # Build per-month response with klimaat_score
+    months = []
+    total_rulings = 0
+    total_toegewezen = 0
+    weighted_doorlooptijd_sum = 0.0
+    doorlooptijd_count = 0
+
+    for row in rows:
+        total = row.total or 0
+        toegewezen = row.toegewezen or 0
+        afgewezen = row.afgewezen or 0
+        gedeeltelijk = row.gedeeltelijk or 0
+        avg_dl = row.avg_doorlooptijd
+
+        klimaat_score = round(100 - (100 * afgewezen / max(total, 1)))
+
+        month_entry: dict[str, Any] = {
+            "month": row.month,
+            "total": total,
+            "toegewezen": toegewezen,
+            "afgewezen": afgewezen,
+            "gedeeltelijk": gedeeltelijk,
+            "klimaat_score": klimaat_score,
+            "avg_doorlooptijd": round(float(avg_dl)) if avg_dl is not None else None,
+        }
+        months.append(month_entry)
+
+        # Accumulate for summary
+        total_rulings += total
+        total_toegewezen += toegewezen
+        if avg_dl is not None:
+            weighted_doorlooptijd_sum += float(avg_dl) * total
+            doorlooptijd_count += total
+
+    # Compute summary stats
+    summary = {
+        "total_rulings": total_rulings,
+        "avg_doorlooptijd": (
+            round(weighted_doorlooptijd_sum / doorlooptijd_count)
+            if doorlooptijd_count > 0
+            else None
+        ),
+        "succes_pct": round(100 * total_toegewezen / max(total_rulings, 1)),
+        "months_with_data": len(months),
+    }
+
+    return {
+        "gemeente_naam": gemeente_naam,
+        "months": months,
+        "summary": summary,
+    }
