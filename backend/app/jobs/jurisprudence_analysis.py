@@ -6,6 +6,7 @@ sends to Claude in batches of 5, and stores per-ruling results
 back on RulingCache rows.
 """
 
+import json
 import logging
 from datetime import datetime
 
@@ -13,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.ai.claude_client import AIParsingError, create_claude_client
+from app.ai.prompts import RECHTSGROND_CLASSIFICATIE_PROMPT
 from app.core.config import settings
 from app.models.ruling_cache import RulingCache
 from app.services.doorlooptijd import (
@@ -129,6 +131,7 @@ async def ruling_analysis_job(
                     # Store AI analysis as JSONB
                     ruling.ai_analysis = ra.model_dump()
                     ruling.vergunningstype = ra.vergunningstype
+                    ruling.rechtsgronden = ra.rechtsgronden or []
                     ruling.ai_analyzed_at = datetime.utcnow()
 
                     # Extract filing date and compute doorlooptijd
@@ -173,6 +176,164 @@ async def ruling_analysis_job(
             gemeente_naam,
             e,
         )
+        return {"status": "error", "error": str(e)}
+    finally:
+        await engine.dispose()
+
+
+# Valid rechtsgrond values for filtering AI responses
+VALID_RECHTSGRONDEN = {
+    "procedurefout",
+    "motiveringsgebrek",
+    "gelijkheidsbeginsel",
+    "disproportioneel",
+    "etfal_ruimtelijke_ordening",
+}
+
+# Backfill batch size (rulings per Claude API call)
+BACKFILL_BATCH_SIZE = 5
+
+
+async def rechtsgrond_backfill_job(ctx: dict) -> dict:
+    """Background job: Classify rechtsgronden for already-analyzed rulings.
+
+    Queries rulings with ai_analysis but no rechtsgronden, sends a lightweight
+    rechtsgrond-only prompt to Claude in batches, stores results.
+
+    Args:
+        ctx: ARQ context
+
+    Returns:
+        dict with status for ARQ result storage
+    """
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        pool_size=5,
+        max_overflow=10,
+        echo=False,
+    )
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+
+    try:
+        async with session_factory() as session:
+            # Find rulings with AI analysis but no rechtsgronden
+            stmt = select(RulingCache).where(
+                RulingCache.ai_analysis.isnot(None),
+                RulingCache.rechtsgronden.is_(None),
+                RulingCache.full_text.isnot(None),
+            )
+            result = await session.execute(stmt)
+            rulings = result.scalars().all()
+
+            if not rulings:
+                logger.info("No rulings need rechtsgrond backfill")
+                return {"status": "completed", "backfilled_count": 0}
+
+            logger.info(
+                "Starting rechtsgrond backfill for %d rulings", len(rulings)
+            )
+
+            claude_client = create_claude_client()
+            backfilled_count = 0
+
+            for i in range(0, len(rulings), BACKFILL_BATCH_SIZE):
+                batch = rulings[i : i + BACKFILL_BATCH_SIZE]
+
+                # Build lightweight input: just ECLI + text excerpt
+                batch_input = []
+                ruling_map: dict[str, RulingCache] = {}
+                for r in batch:
+                    ruling_map[r.ecli] = r
+                    # Use first 10k chars -- enough for rechtsgrond classification
+                    text = (r.full_text or "")[:10000]
+                    batch_input.append({
+                        "ecli": r.ecli,
+                        "text": text,
+                    })
+
+                user_message = json.dumps(batch_input, ensure_ascii=False)
+
+                try:
+                    response = await claude_client.client.messages.create(
+                        model=claude_client.model,
+                        max_tokens=1000,
+                        system=RECHTSGROND_CLASSIFICATIE_PROMPT,
+                        messages=[
+                            {"role": "user", "content": user_message},
+                        ],
+                    )
+
+                    # Extract text
+                    text_content = None
+                    for block in response.content:
+                        if block.type == "text":
+                            text_content = block.text
+                            break
+
+                    if not text_content:
+                        logger.warning("Empty response for backfill batch %d", i)
+                        continue
+
+                    # Strip markdown fences
+                    json_text = text_content.strip()
+                    if json_text.startswith("```json"):
+                        json_text = json_text[7:]
+                    if json_text.startswith("```"):
+                        json_text = json_text[3:]
+                    if json_text.endswith("```"):
+                        json_text = json_text[:-3]
+                    json_text = json_text.strip()
+
+                    classifications = json.loads(json_text)
+
+                    for item in classifications:
+                        ecli = item.get("ecli", "")
+                        gronden = item.get("rechtsgronden", [])
+                        # Filter to valid values only
+                        valid = [g for g in gronden if g in VALID_RECHTSGRONDEN]
+
+                        ruling = ruling_map.get(ecli)
+                        if ruling and valid:
+                            ruling.rechtsgronden = valid
+                            session.add(ruling)
+                            backfilled_count += 1
+
+                    await session.flush()
+                    await session.commit()
+
+                    logger.info(
+                        "Backfill batch %d-%d: %d classified",
+                        i,
+                        i + len(batch),
+                        backfilled_count,
+                    )
+
+                except (AIParsingError, json.JSONDecodeError) as e:
+                    logger.error("Backfill batch %d failed: %s", i, e)
+                    continue
+                except Exception as e:
+                    logger.error("Unexpected error in backfill batch %d: %s", i, e)
+                    continue
+
+            logger.info(
+                "Rechtsgrond backfill complete: %d/%d classified",
+                backfilled_count,
+                len(rulings),
+            )
+            return {
+                "status": "completed",
+                "backfilled_count": backfilled_count,
+                "total": len(rulings),
+            }
+
+    except Exception as e:
+        logger.exception("Unexpected error in rechtsgrond_backfill_job: %s", e)
         return {"status": "error", "error": str(e)}
     finally:
         await engine.dispose()

@@ -61,6 +61,12 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
    - "milieu": Milieuvergunning, geluidsoverlast, bodemverontreiniging, stikstof
    - "monumenten": Monumentenvergunning, beschermd stadsgezicht, cultuurhistorische waarde
    - "overig": Uitspraken die niet in bovenstaande categorieen passen
+6. rechtsgronden: classificeer in 1 of meer van de volgende juridische gronden:
+   - "procedurefout": Gemeente heeft procedurele fouten gemaakt (termijnoverschrijding, ontbreken zienswijze, etc.)
+   - "motiveringsgebrek": Besluit onvoldoende gemotiveerd of onderbouwd
+   - "gelijkheidsbeginsel": Ongelijke behandeling t.o.v. vergelijkbare gevallen
+   - "disproportioneel": Onevenredige weigering of voorwaarden
+   - "etfal_ruimtelijke_ordening": Evenwichtige toedeling van functies aan locaties / ruimtelijke ordening
 
 **Geaggregeerde analyse:**
 1. risico_samenvatting: 3-5 zinnen in het Nederlands die het juridisch klimaat voor vastgoedontwikkeling samenvatten
@@ -84,10 +90,34 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
       "uitkomst": "<toegewezen|afgewezen|gedeeltelijk|onbekend>",
       "relevantie": "<1-2 zinnen>",
       "confidence": "<HIGH|MEDIUM|LOW>",
-      "vergunningstype": "<nieuwbouw|verbouw|dakopbouw|uitbreiding|sloop|bestemmingswijziging|milieu|monumenten|overig>"
+      "vergunningstype": "<nieuwbouw|verbouw|dakopbouw|uitbreiding|sloop|bestemmingswijziging|milieu|monumenten|overig>",
+      "rechtsgronden": ["<procedurefout|motiveringsgebrek|gelijkheidsbeginsel|disproportioneel|etfal_ruimtelijke_ordening>"]
     }
   ]
 }
 
 Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
+"""
+
+RECHTSGROND_CLASSIFICATIE_PROMPT = """
+Je bent een expert in Nederlands omgevingsrecht. Classificeer de volgende gerechtelijke uitspraken in 1 of meer juridische gronden.
+
+**Mogelijke rechtsgronden:**
+- "procedurefout": Gemeente heeft procedurele fouten gemaakt (termijnoverschrijding, ontbreken zienswijze, etc.)
+- "motiveringsgebrek": Besluit onvoldoende gemotiveerd of onderbouwd
+- "gelijkheidsbeginsel": Ongelijke behandeling t.o.v. vergelijkbare gevallen
+- "disproportioneel": Onevenredige weigering of voorwaarden
+- "etfal_ruimtelijke_ordening": Evenwichtige toedeling van functies aan locaties / ruimtelijke ordening
+
+**Per uitspraak geef je:**
+- ecli: de ECLI-identifier zoals aangeleverd
+- rechtsgronden: lijst van 1 of meer toepasselijke gronden uit bovenstaande lijst
+
+**Retourneer het resultaat als JSON array:**
+[
+  {"ecli": "<ECLI>", "rechtsgronden": ["<grond1>", "<grond2>"]},
+  ...
+]
+
+Retourneer ALLEEN de JSON array, zonder markdown code fences of andere tekst.
 """

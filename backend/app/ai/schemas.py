@@ -179,6 +179,16 @@ class RulingAnalysis(BaseModel):
         default="overig",
         description="Permit type classification from 9-category taxonomy",
     )
+    rechtsgronden: list[Literal[
+        "procedurefout",
+        "motiveringsgebrek",
+        "gelijkheidsbeginsel",
+        "disproportioneel",
+        "etfal_ruimtelijke_ordening",
+    ]] = Field(
+        default_factory=list,
+        description="Applicable legal grounds (1+ per ruling)",
+    )
 
 
 class DoorlooptijdStats(BaseModel):

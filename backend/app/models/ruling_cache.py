@@ -42,3 +42,6 @@ class RulingCache(Base, TimestampMixin):
     datum_indiening: Mapped[str | None] = mapped_column(String(20), nullable=True)
     doorlooptijd_dagen: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ai_analyzed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    # Rechtsgronden classification (Phase 85)
+    rechtsgronden: Mapped[list | None] = mapped_column(JSONB, nullable=True)
