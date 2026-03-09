@@ -111,11 +111,11 @@ Plans:
   1. A rolling 12-month klimaat score trend is visible per gemeente showing whether conditions are improving or deteriorating
   2. An aggregated statistics bar shows totaal uitspraken, gemiddelde doorlooptijd, and succespercentage
   3. Trend visualization renders as CSS-only timeline (no chart library dependency) and degrades gracefully with fewer than 3 data points
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 86-01: Trend calculation + statistics aggregation endpoint
-- [ ] 86-02: CSS-only timeline + statistics bar frontend
+- [ ] 86-01-PLAN.md -- Trend endpoint with monthly bucketing and summary stats
+- [ ] 86-02-PLAN.md -- CSS-only TrendTimeline + StatisticsBar components + JurisprudenceSection integration
 
 ## Progress
 
@@ -370,4 +370,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-07 -- Phase 84 plans created*
+*Last updated: 2026-03-09 -- Phase 86 plans created*
