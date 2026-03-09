@@ -33,6 +33,7 @@ from app.scans.schemas import (
     ParcelAtPointResponse,
     ParcelCentroidResponse,
     ParcelEnrichmentResponse,
+    ParcelRiskProfileResponse,
     ScanCreateRequest,
     ScanListItem,
     ScanListResponse,
@@ -1160,6 +1161,128 @@ async def enrich_parcel(
             enriched_at=parcel.enriched_at,
             is_cached=False,
         )
+
+
+@router.get("/parcels/{parcel_id}/risk-profile", response_model=ParcelRiskProfileResponse)
+@limiter.limit("30/minute")
+async def get_parcel_risk_profile(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> ParcelRiskProfileResponse:
+    """
+    Fetch fysiek risicoprofiel for a parcel (foundation risk, soil, asbest, contamination).
+
+    Aggregates data from BRO Bodemkaart, PDOK Funderingsrisicogebieden, Bodemloket,
+    and bouwjaar-based heuristics into a combined risk profile with amber badges.
+
+    Requires JWT authentication. Rate limited to 30 requests per minute.
+    """
+    import asyncio
+    import re as re_mod
+
+    from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+    from app.schemas.address import BuildingData
+    from app.services.asbest_indicator import assess_asbest_risk
+    from app.services.bodem_aggregator import fetch_bodem_data
+    from app.services.foundation_risk_engine import (
+        assess_foundation_risk,
+        build_fysiek_risico_profiel,
+        estimate_kcaf_cost,
+    )
+    from app.services.funderingsrisico_aggregator import fetch_funderingsrisico_data
+    from app.services.soil_aggregator import fetch_soil_profile
+
+    # Load parcel with centroid (RD coordinates for WMS queries)
+    query = select(
+        ParcelCache.id,
+        ParcelCache.address,
+        ParcelCache.bouwjaar,
+        ParcelCache.has_pand,
+        ParcelCache.area_m2,
+        ST_AsText(ST_Centroid(ParcelCache.geometry)).label("centroid_rd_wkt"),
+    ).where(
+        ParcelCache.id == parcel_id,
+        ParcelCache.organization_id == organization_id,
+    )
+    result = await db.execute(query)
+    row = result.mappings().one_or_none()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found",
+        )
+
+    # Parse RD centroid coordinates
+    centroid_wkt = row["centroid_rd_wkt"]
+    centroid_match = re_mod.match(r"POINT\(([^ ]+) ([^ ]+)\)", centroid_wkt or "")
+    if not centroid_match:
+        return ParcelRiskProfileResponse(
+            parcel_id=row["id"],
+            fysiek_risico_profiel=None,
+            is_cached=False,
+        )
+
+    x_rd = float(centroid_match.group(1))
+    y_rd = float(centroid_match.group(2))
+
+    # Extract postcode from address for funderingsrisico lookup
+    postcode = None
+    if row["address"]:
+        pc_match = re_mod.search(r"\b(\d{4}\s?[A-Z]{2})\b", row["address"], flags=re_mod.IGNORECASE)
+        if pc_match:
+            postcode = pc_match.group(1).replace(" ", "").upper()
+
+    # Fetch all data sources in parallel
+    client = request.app.state.http_client
+    soil_profile, funderingsrisico, bodem_data = await asyncio.gather(
+        fetch_soil_profile(x_rd, y_rd, client, organization_id, db),
+        fetch_funderingsrisico_data(postcode, client, organization_id, db),
+        fetch_bodem_data(x_rd, y_rd, client, organization_id, db),
+    )
+
+    # Build BuildingData for risk heuristics
+    building = BuildingData(
+        pand_id="",
+        bouwjaar=row["bouwjaar"],
+        status=None,
+        oppervlakte=int(row["area_m2"]) if row["area_m2"] else None,
+        gebruiksdoel=[],
+    ) if row["has_pand"] or row["bouwjaar"] else None
+
+    # Derive sub-risks
+    foundation_risk = assess_foundation_risk(
+        building=building,
+        soil_profile=soil_profile,
+        funderingsrisicogebied=funderingsrisico,
+    )
+
+    asbest = assess_asbest_risk(building=building)
+
+    kcaf_cost = estimate_kcaf_cost(
+        risk=foundation_risk.risk,
+        oppervlakte_m2=int(row["area_m2"]) if row["area_m2"] else None,
+    )
+
+    # Build combined profile
+    profiel = build_fysiek_risico_profiel(
+        foundation_risk=foundation_risk,
+        soil_profile=soil_profile,
+        asbest_indicator=asbest,
+        bodem_data=bodem_data,
+        funderingsrisicogebied=funderingsrisico,
+        kcaf_cost=kcaf_cost,
+    )
+
+    return ParcelRiskProfileResponse(
+        parcel_id=row["id"],
+        fysiek_risico_profiel=profiel,
+        is_cached=True,
+    )
 
 
 @router.get("/parcels/{parcel_id}/centroid", response_model=ParcelCentroidResponse)

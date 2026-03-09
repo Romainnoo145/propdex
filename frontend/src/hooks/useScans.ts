@@ -18,11 +18,13 @@ import {
   cancelScan,
   fetchScanResults,
   fetchParcelEnrichment,
+  fetchParcelRiskProfile,
   fetchScanHistory,
   fetchProjectScans,
 } from '@/lib/api'
 import type {
   ParcelEnrichmentResponse,
+  ParcelRiskProfileResponse,
   ScanCreateRequest,
   ScanResponse,
   ScanStatusResponse,
@@ -131,6 +133,29 @@ export function useScanResults(
     queryFn: () => fetchScanResults(scanId!, filters, accessToken),
     enabled: !!scanId && !!accessToken,
     staleTime: 30 * 1000, // 30 seconds - results don't change after scan completes
+  })
+}
+
+/**
+ * Fetch fysiek risicoprofiel for a parcel (foundation risk, soil, asbest, contamination)
+ *
+ * Query key: ['parcel-risk-profile', parcelId]
+ * Stale time: 5 minutes (backend caches underlying data)
+ *
+ * @param parcelId - ParcelCache UUID or null (disabled when null)
+ * @param options - Query options (enabled flag)
+ */
+export function useParcelRiskProfile(
+  parcelId: string | null,
+  options?: { enabled?: boolean }
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ParcelRiskProfileResponse, Error>({
+    queryKey: ['parcel-risk-profile', parcelId],
+    queryFn: () => fetchParcelRiskProfile(parcelId!, accessToken),
+    enabled: (options?.enabled ?? true) && !!parcelId && !!accessToken,
+    staleTime: 5 * 60 * 1000, // 5 min — backend caches underlying data
   })
 }
 

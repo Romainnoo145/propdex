@@ -419,6 +419,74 @@ export interface PermitPrecedentBenchmark {
 }
 
 /**
+ * BRO Bodemkaart soil classification at a specific coordinate
+ * Backend: app.schemas.fysiek_risico.SoilProfile
+ */
+export interface SoilProfile {
+  soilcode: string | null
+  soilname: string | null
+  dominant_type: string
+  dominant_type_label: string
+  disclaimer: string
+}
+
+/**
+ * PDOK Funderingsrisicogebieden context at postcode level
+ * Backend: app.schemas.fysiek_risico.FunderingsrisicogebiedData
+ */
+export interface FunderingsrisicogebiedData {
+  pc6: string
+  gemeente: string | null
+  fgr: string | null
+  percvoor1970: number | null
+  n_bag: number | null
+  legenda: string | null
+  disclaimer: string
+}
+
+/**
+ * Foundation risk assessment based on bouwjaar x bodemtype heuristic
+ * Backend: app.schemas.fysiek_risico.FoundationRisk
+ */
+export interface FoundationRisk {
+  risk: 'hoog' | 'middel' | 'laag' | 'onbekend'
+  bouwjaar: number | null
+  bodemtype: string | null
+  reden: string
+  recommended_action: string | null
+  disclaimer: string
+}
+
+/**
+ * KCAF reference cost range for foundation repair
+ * Backend: app.schemas.fysiek_risico.KCAFCostIndication
+ */
+export interface KCAFCostIndication {
+  low_eur: number
+  high_eur: number
+  low_per_m2: number
+  high_per_m2: number
+  oppervlakte_m2: number
+  disclaimer: string
+}
+
+/**
+ * Combined physical risk profile aggregating foundation, soil, asbest, and contamination
+ * Backend: app.schemas.fysiek_risico.FysiekRisicoProfiel
+ */
+export interface FysiekRisicoProfiel {
+  overall_risk: 'hoog' | 'middel' | 'laag' | 'onbekend'
+  overall_explanation: string
+  foundation_risk: FoundationRisk | null
+  soil_profile: SoilProfile | null
+  asbest_indicator: AsbestIndicator | null
+  bodem_data: BodemData | null
+  funderingsrisicogebied: FunderingsrisicogebiedData | null
+  kcaf_cost: KCAFCostIndication | null
+  disclaimer: string
+}
+
+/**
  * Extended property report with zoning, monuments, and map data
  *
  * Includes all data from PropertyLookupResponse plus additional
@@ -455,4 +523,5 @@ export interface PropertyReportResponse {
   bodem_data?: BodemData | null
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
+  fysiek_risico_profiel?: FysiekRisicoProfiel | null
 }

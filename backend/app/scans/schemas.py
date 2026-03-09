@@ -7,6 +7,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.fysiek_risico import FysiekRisicoProfiel
+
 
 class ScanCreateRequest(BaseModel):
     """Schema for triggering a new area scan."""
@@ -389,3 +391,15 @@ class ScanListResponse(BaseModel):
     total: int = Field(description="Total scans matching filters (before pagination)", ge=0)
     offset: int = Field(description="Current offset", ge=0)
     limit: int = Field(description="Page size", ge=0)
+
+
+class ParcelRiskProfileResponse(BaseModel):
+    """Response for per-parcel fysiek risicoprofiel."""
+
+    parcel_id: uuid.UUID = Field(description="ParcelCache UUID")
+    fysiek_risico_profiel: FysiekRisicoProfiel | None = Field(
+        default=None, description="Aggregated physical risk profile"
+    )
+    is_cached: bool = Field(
+        default=False, description="True when all sub-components came from cache"
+    )

@@ -28,6 +28,7 @@ import type {
 } from './types/project'
 import type {
   ParcelEnrichmentResponse,
+  ParcelRiskProfileResponse,
   ScanCreateRequest,
   ScanResponse,
   ScanStatusResponse,
@@ -974,6 +975,25 @@ export async function fetchParcelEnrichment(
 ): Promise<ParcelEnrichmentResponse> {
   return apiFetch<ParcelEnrichmentResponse>(
     `${SCANS_BASE}/parcels/${parcelId}/enrich`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
+ * Fetch fysiek risicoprofiel for a parcel (foundation risk, soil, asbest, contamination)
+ *
+ * GET /api/scans/parcels/{parcelId}/risk-profile
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns Fysiek risicoprofiel with sub-risk components
+ */
+export async function fetchParcelRiskProfile(
+  parcelId: string,
+  accessToken: string | null
+): Promise<ParcelRiskProfileResponse> {
+  return apiFetch<ParcelRiskProfileResponse>(
+    `${SCANS_BASE}/parcels/${parcelId}/risk-profile`,
     { method: 'GET', accessToken }
   )
 }

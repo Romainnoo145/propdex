@@ -346,6 +346,16 @@ export interface BekendmakingRecord {
 }
 
 /**
+ * Response schema for per-parcel fysiek risicoprofiel
+ * Backend: ParcelRiskProfileResponse (scans/schemas.py)
+ */
+export interface ParcelRiskProfileResponse {
+  parcel_id: string
+  fysiek_risico_profiel: import('@/lib/types/property').FysiekRisicoProfiel | null
+  is_cached: boolean
+}
+
+/**
  * Response schema for parcel enrichment
  * Backend: ParcelEnrichmentResponse
  */
