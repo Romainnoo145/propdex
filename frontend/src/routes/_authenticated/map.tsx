@@ -714,6 +714,7 @@ function MapPage() {
               marketSignals: full.market_signals ?? null,
               opportunitySignals: full.opportunity_signals ?? null,
               buildingMetrics: full.building_metrics ?? null,
+              bestemmingen: full.bestemmingen ?? null,
               hasReport: full.has_report,
             })
           })
@@ -940,6 +941,7 @@ function MapPage() {
               marketSignals: full.market_signals ?? null,
               opportunitySignals: full.opportunity_signals ?? null,
               buildingMetrics: full.building_metrics ?? null,
+              bestemmingen: full.bestemmingen ?? null,
               hasReport: full.has_report,
             })
           })
@@ -1016,6 +1018,7 @@ function MapPage() {
             marketSignals: full.market_signals ?? null,
             opportunitySignals: full.opportunity_signals ?? null,
             buildingMetrics: full.building_metrics ?? null,
+            bestemmingen: full.bestemmingen ?? null,
             hasReport: full.has_report,
           })
         })
@@ -1276,6 +1279,7 @@ function MapPage() {
                       marketSignals: resolved.market_signals ?? parcel.market_signals,
                       opportunitySignals: resolved.opportunity_signals ?? parcel.opportunity_signals,
                       buildingMetrics: resolved.building_metrics ?? (parcel.building_metrics as Record<string, unknown> | null),
+                      bestemmingen: resolved.bestemmingen ?? parcel.bestemmingen ?? null,
                       hasReport: resolved.has_report ?? parcel.has_report,
                     })
                   }
@@ -1331,6 +1335,7 @@ function MapPage() {
               marketSignals: resolved.market_signals ?? null,
               opportunitySignals: resolved.opportunity_signals ?? null,
               buildingMetrics: resolved.building_metrics ?? null,
+              bestemmingen: resolved.bestemmingen ?? null,
               hasReport: resolved.has_report,
             })
           })

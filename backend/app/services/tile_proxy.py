@@ -145,6 +145,18 @@ async def generate_mvt_tile(
             AND NOT (pc.bestemmingen::text ILIKE '%%"type": "bos"%%')
             AND NOT (pc.bestemmingen::text ILIKE '%%"type": "agrarisch"%%')
             AND NOT (pc.bestemmingen::text ILIKE '%%"type": "agrarisch met waarden"%%')
+            -- Hide large green zones (>2000m2 = parks, not development opportunities)
+            AND NOT (
+                pc.bestemmingen::text ILIKE '%%"type": "groen"%%'
+                AND COALESCE(pc.area_m2, 0) > 2000
+            )
+            -- Hide road/strip parcels: empty parcels with elongated shapes
+            -- (perimeter/sqrt(area) > 10 indicates roads, not buildable land)
+            AND NOT (
+                NOT pc.has_pand
+                AND pc.area_m2 > 0
+                AND ST_Perimeter(pc.geometry) / SQRT(pc.area_m2) > 10
+            )
         )
         SELECT ST_AsMVT(mvt_data, 'parcel_scores', 4096, 'geom')
         FROM mvt_data

@@ -31,6 +31,36 @@ function formatPandStatusLabel(status: string | null | undefined, hasPand: boole
   return status
 }
 
+/** Map bestemming type to a color scheme for visual distinction */
+function getBestemmingColor(type: string | null | undefined): {
+  border: string
+  bg: string
+  text: string
+  dot: string
+} {
+  const t = (type ?? '').toLowerCase()
+  if (t.includes('wonen') || t.includes('woongebied'))
+    return { border: 'border-amber-500/30', bg: 'bg-amber-500/8', text: 'text-amber-400', dot: 'bg-amber-400' }
+  if (t.includes('groen') || t.includes('natuur') || t.includes('bos'))
+    return { border: 'border-emerald-500/30', bg: 'bg-emerald-500/8', text: 'text-emerald-400', dot: 'bg-emerald-400' }
+  if (t.includes('bedrijf') || t.includes('bedrijventerrein'))
+    return { border: 'border-violet-500/30', bg: 'bg-violet-500/8', text: 'text-violet-400', dot: 'bg-violet-400' }
+  if (t.includes('centrum') || t.includes('gemengd') || t.includes('detailhandel'))
+    return { border: 'border-sky-500/30', bg: 'bg-sky-500/8', text: 'text-sky-400', dot: 'bg-sky-400' }
+  if (t.includes('maatschappelijk'))
+    return { border: 'border-rose-500/30', bg: 'bg-rose-500/8', text: 'text-rose-400', dot: 'bg-rose-400' }
+  if (t.includes('recreatie') || t.includes('sport'))
+    return { border: 'border-teal-500/30', bg: 'bg-teal-500/8', text: 'text-teal-400', dot: 'bg-teal-400' }
+  if (t.includes('agrarisch'))
+    return { border: 'border-lime-500/30', bg: 'bg-lime-500/8', text: 'text-lime-400', dot: 'bg-lime-400' }
+  if (t.includes('verkeer'))
+    return { border: 'border-slate-500/30', bg: 'bg-slate-500/8', text: 'text-slate-400', dot: 'bg-slate-400' }
+  if (t.includes('water'))
+    return { border: 'border-blue-500/30', bg: 'bg-blue-500/8', text: 'text-blue-400', dot: 'bg-blue-400' }
+  // Fallback
+  return { border: 'border-grey-700', bg: 'bg-grey-850', text: 'text-grey-400', dot: 'bg-grey-500' }
+}
+
 function hasResidentialMixedBestemming(
   bestemmingen: ScanResultItem['bestemmingen']
 ): boolean {
@@ -353,8 +383,14 @@ export function ParcelDetailModal({
   const vacancyLabel = parcel.vacancy_signal
     ? (VACANCY_LABELS[parcel.vacancy_signal] ?? parcel.vacancy_signal)
     : null
+  // Hide vacancy signal when it contradicts BAG status:
+  // - "Leeg perceel" makes no sense when BAG says "Pand in gebruik"
+  // - Also hide when vacancy label duplicates the status label
+  const vacancyContradictsStatus =
+    parcel.vacancy_signal === 'leeg_perceel' && statusLabel === 'Pand in gebruik'
   const showVacancySignal =
     !!vacancyLabel &&
+    !vacancyContradictsStatus &&
     statusLabel.trim().toLowerCase() !== vacancyLabel.trim().toLowerCase()
   const hasAddress = !!parcel.address?.trim()
   const titleLabel = hasAddress ? (parcel.address as string).trim() : 'Adres onbekend'
@@ -481,6 +517,56 @@ export function ParcelDetailModal({
           </div>
         </div>
 
+        {/* Bestemmingsplan Section — between potentie and property info */}
+        {parcel.bestemmingen && parcel.bestemmingen.length > 0 && (
+          <div className="rounded-md border border-amber-accent/30 bg-amber-accent/5 p-4">
+            <h3 className="text-sm font-medium text-amber-accent mb-3">
+              Bestemmingsplan
+            </h3>
+            <div className="space-y-2">
+              {parcel.bestemmingen.map((bestemming, idx) => {
+                const b = bestemming as {
+                  type?: string | null
+                  naam?: string | null
+                  max_bebouwingspercentage?: number | null
+                  max_floor_area_ratio?: number | null
+                }
+                const colors = getBestemmingColor(b.type)
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-md border ${colors.border} ${colors.bg} px-3 py-2.5`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${colors.dot}`} />
+                        <p className="text-sm font-medium text-grey-100">
+                          {b.naam || b.type || 'Onbekend'}
+                        </p>
+                      </div>
+                      {b.type && (
+                        <span className={`rounded px-2 py-0.5 text-[11px] ${colors.text} ${colors.bg}`}>
+                          {b.type}
+                        </span>
+                      )}
+                    </div>
+                    {(b.max_bebouwingspercentage != null || b.max_floor_area_ratio != null) && (
+                      <div className="mt-1.5 ml-4 flex gap-4 text-xs text-grey-400">
+                        {b.max_bebouwingspercentage != null && (
+                          <span>Bebouwing max {b.max_bebouwingspercentage}%</span>
+                        )}
+                        {b.max_floor_area_ratio != null && (
+                          <span>FAR {b.max_floor_area_ratio}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Property Info Grid */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
@@ -553,52 +639,6 @@ export function ParcelDetailModal({
               Marktsignalen
             </h3>
             <MarketSignalsCards signals={parcel.market_signals} />
-          </div>
-        )}
-
-        {/* Bestemmingen Section */}
-        {parcel.bestemmingen && parcel.bestemmingen.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium text-grey-100 mb-3">
-              Bestemmingsplan
-            </h3>
-            <div className="space-y-2">
-              {parcel.bestemmingen.map((bestemming, idx) => {
-                const b = bestemming as {
-                  type?: string | null
-                  naam?: string | null
-                  max_bebouwingspercentage?: number | null
-                  max_floor_area_ratio?: number | null
-                }
-                return (
-                  <div
-                    key={idx}
-                    className="rounded-md border border-grey-800 bg-grey-850 px-3 py-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-grey-100">
-                        {b.naam || b.type || 'Onbekend'}
-                      </p>
-                      {b.type && b.naam && b.type !== b.naam?.toLowerCase() && (
-                        <span className="rounded bg-grey-800 px-2 py-0.5 text-[11px] text-grey-400">
-                          {b.type}
-                        </span>
-                      )}
-                    </div>
-                    {(b.max_bebouwingspercentage != null || b.max_floor_area_ratio != null) && (
-                      <div className="mt-1.5 flex gap-4 text-xs text-grey-400">
-                        {b.max_bebouwingspercentage != null && (
-                          <span>Bebouwing max {b.max_bebouwingspercentage}%</span>
-                        )}
-                        {b.max_floor_area_ratio != null && (
-                          <span>FAR {b.max_floor_area_ratio}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
           </div>
         )}
 
