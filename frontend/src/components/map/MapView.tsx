@@ -144,12 +144,12 @@ export default function MapView({
 
   if (mapError) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-grey-950 px-6">
-        <div className="w-full max-w-xl rounded-2xl border border-overlay/[0.08] bg-overlay/[0.04] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-grey-500">Kaart niet beschikbaar</p>
-          <h2 className="mt-3 text-lg font-semibold text-grey-100">WebGL kon niet worden gestart</h2>
-          <p className="mt-2 text-sm leading-6 text-grey-400">{mapError}</p>
-          <p className="mt-4 text-xs leading-5 text-grey-500">
+      <div className="flex h-full w-full items-center justify-center bg-aura-canvas px-6">
+        <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Kaart niet beschikbaar</p>
+          <h2 className="mt-3 text-lg font-semibold text-aura-ink">WebGL kon niet worden gestart</h2>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">{mapError}</p>
+          <p className="mt-4 text-xs leading-5 text-neutral-500">
             Probeer Chrome volledig te herstarten, hardwareversnelling weer aan te zetten, of open Propdex opnieuw.
           </p>
         </div>

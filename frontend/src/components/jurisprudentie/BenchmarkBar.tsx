@@ -28,7 +28,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
   if (totalCount === 0) return null
 
   return (
-    <div className="mb-4 rounded-lg border border-grey-800 bg-grey-900 p-4">
+    <div className="mb-4 rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4">
       <div className="flex flex-wrap items-center gap-6">
         <Stat value={totalCount} label="uitspraken" />
 
@@ -50,7 +50,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
         {/* Distribution bar */}
         {decided > 0 && (
           <div className="ml-auto hidden w-48 sm:block">
-            <div className="flex h-2.5 overflow-hidden rounded-full bg-grey-800">
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-neutral-200">
               <div
                 className="bg-emerald-500 transition-all"
                 style={{ width: `${winPct}%` }}
@@ -64,7 +64,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
                 style={{ width: `${lossPct}%` }}
               />
             </div>
-            <div className="mt-1 flex justify-between text-[10px] text-grey-500">
+            <div className="mt-1 flex justify-between text-[10px] text-neutral-500">
               <span>{toegewezen} gewonnen</span>
               <span>{afgewezen} verloren</span>
             </div>
@@ -78,7 +78,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
 function Stat({
   value,
   label,
-  className = 'text-grey-100',
+  className = 'text-aura-ink',
 }: {
   value: number | string
   label: string
@@ -87,11 +87,11 @@ function Stat({
   return (
     <div>
       <p className={`text-xl font-bold tabular-nums ${className}`}>{value}</p>
-      <p className="text-[11px] text-grey-500">{label}</p>
+      <p className="text-[11px] text-neutral-500">{label}</p>
     </div>
   )
 }
 
 function Divider() {
-  return <div className="h-8 w-px bg-grey-800" />
+  return <div className="h-8 w-px bg-neutral-200" />
 }

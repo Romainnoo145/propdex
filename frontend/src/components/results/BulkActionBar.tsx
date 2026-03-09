@@ -14,15 +14,15 @@ export function BulkActionBar({
   if (selectedCount === 0) return null
 
   return (
-    <div className="bg-grey-850 border-t border-grey-800 px-6 py-3 flex items-center justify-between shrink-0">
+    <div className="bg-aura-glass-white/40 border-t border-neutral-200 px-6 py-3 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-grey-100">
+        <span className="text-sm font-medium text-aura-ink">
           {selectedCount} {selectedCount === 1 ? 'perceel' : 'percelen'}{' '}
           geselecteerd
         </span>
         <button
           onClick={onClearSelection}
-          className="text-xs text-grey-400 hover:text-grey-100 underline transition-colors"
+          className="text-xs text-neutral-600 hover:text-aura-ink underline transition-colors"
         >
           Deselecteren
         </button>
@@ -30,7 +30,7 @@ export function BulkActionBar({
       <div className="flex items-center gap-2">
         <button
           onClick={onExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-aura-obsidian bg-aura-amber hover:bg-aura-amber-hover rounded transition-colors"
         >
           <Download size={14} />
           Exporteer selectie
@@ -38,7 +38,7 @@ export function BulkActionBar({
         <button
           disabled
           title="Binnenkort beschikbaar"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-grey-400 bg-grey-800 rounded cursor-not-allowed opacity-60"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-200 rounded cursor-not-allowed opacity-60"
         >
           <FolderPlus size={14} />
           Toevoegen aan project

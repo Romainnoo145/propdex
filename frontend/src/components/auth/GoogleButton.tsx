@@ -45,7 +45,7 @@ export function GoogleButton() {
         type="button"
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="w-full rounded-lg border border-grey-800 bg-grey-900 px-4 py-2 text-sm font-medium text-grey-100 hover:bg-grey-950 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-lg border border-neutral-200 bg-aura-glass-white/60 px-4 py-2 text-sm font-medium text-aura-ink hover:bg-aura-canvas disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? 'Loading...' : 'Continue with Google'}
       </button>

@@ -53,9 +53,9 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 max-h-[65vh] rounded-t-xl border-t border-grey-800
+      className={`fixed inset-x-0 bottom-0 max-h-[65vh] rounded-t-xl border-t border-neutral-200
                   md:absolute md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-80 md:max-h-none md:rounded-none md:border-t-0 md:border-l
-                  bg-grey-900 border-grey-800 flex flex-col shadow-lg
+                  bg-aura-glass-white/60 border-neutral-200 flex flex-col shadow-lg
                   transition-transform duration-300 ease-out motion-reduce:transition-none
                   ${isOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
       style={{ zIndex: 'var(--z-property-panel)' }}
@@ -63,15 +63,15 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
     >
       {/* Drag handle — mobile only */}
       <div className="flex justify-center py-2 md:hidden shrink-0">
-        <div className="w-10 h-1 bg-grey-700 rounded-full" />
+        <div className="w-10 h-1 bg-neutral-300 rounded-full" />
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-grey-800 shrink-0">
-        <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0">
+        <span className="text-sm font-semibold text-aura-ink">Perceeldetails</span>
         <button
           onClick={onClose}
-          className="text-grey-400 hover:text-grey-100 transition-colors motion-reduce:transition-none p-2 -m-1 rounded hover:bg-grey-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-neutral-600 hover:text-aura-ink transition-colors motion-reduce:transition-none p-2 -m-1 rounded hover:bg-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Sluiten"
         >
           <X size={16} />
@@ -88,31 +88,31 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
           <div className="space-y-4">
             {/* Parcel ID */}
             <div>
-              <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Perceel ID</p>
-              <p className="text-sm text-grey-100 font-mono mt-0.5 break-all">{parcel.parcel_id}</p>
+              <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Perceel ID</p>
+              <p className="text-sm text-aura-ink font-mono mt-0.5 break-all">{parcel.parcel_id}</p>
             </div>
 
             {/* Parcel Code (Kadaster) */}
             {parcel.parcel_code && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Kadaster</p>
-                <p className="text-sm text-grey-100 font-mono mt-0.5">{parcel.parcel_code}</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Kadaster</p>
+                <p className="text-sm text-aura-ink font-mono mt-0.5">{parcel.parcel_code}</p>
               </div>
             )}
 
             {/* Address */}
             {parcel.address && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Adres</p>
-                <p className="text-sm text-grey-100 mt-0.5">{parcel.address}</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Adres</p>
+                <p className="text-sm text-aura-ink mt-0.5">{parcel.address}</p>
               </div>
             )}
 
             {/* Area */}
             {parcel.area_m2 != null && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Oppervlakte</p>
-                <p className="text-sm text-grey-100 mt-0.5">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Oppervlakte</p>
+                <p className="text-sm text-aura-ink mt-0.5">
                   {Math.round(parcel.area_m2).toLocaleString('nl-NL')} m&sup2;
                 </p>
               </div>
@@ -120,8 +120,8 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
 
             {/* Has building */}
             <div>
-              <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bebouwing</p>
-              <p className="text-sm text-grey-100 mt-0.5">
+              <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Bebouwing</p>
+              <p className="text-sm text-aura-ink mt-0.5">
                 {parcel.has_pand ? 'Ja — pand aanwezig' : 'Nee — onbebouwd'}
               </p>
             </div>
@@ -129,24 +129,24 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Building year */}
             {parcel.bouwjaar != null && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwjaar</p>
-                <p className="text-sm text-grey-100 mt-0.5">{parcel.bouwjaar}</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Bouwjaar</p>
+                <p className="text-sm text-aura-ink mt-0.5">{parcel.bouwjaar}</p>
               </div>
             )}
 
             {/* Building status */}
             {parcel.pand_status && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Pandstatus</p>
-                <p className="text-sm text-grey-100 mt-0.5 capitalize">{parcel.pand_status}</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Pandstatus</p>
+                <p className="text-sm text-aura-ink mt-0.5 capitalize">{parcel.pand_status}</p>
               </div>
             )}
 
             {/* Vacancy signal */}
             {parcel.vacancy_signal && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Leegstandsignaal</p>
-                <p className="text-sm text-grey-100 mt-0.5">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Leegstandsignaal</p>
+                <p className="text-sm text-aura-ink mt-0.5">
                   {{
                     leeg_perceel: 'Leeg perceel',
                     leegstaand_pand: 'Leegstaand pand',
@@ -160,22 +160,22 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Vacancy confidence */}
             {parcel.vacancy_confidence != null && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">
                   Leegstand confidence
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-grey-800">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
                     <div
-                      className="h-full rounded-full bg-amber-accent"
+                      className="h-full rounded-full bg-aura-amber"
                       style={{ width: `${Math.round(parcel.vacancy_confidence * 100)}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold tabular-nums text-grey-100">
+                  <span className="text-sm font-semibold tabular-nums text-aura-ink">
                     {Math.round(parcel.vacancy_confidence * 100)}%
                   </span>
                 </div>
                 {parcel.vacancy_model_version && (
-                  <p className="mt-1 text-[11px] text-grey-500">{parcel.vacancy_model_version}</p>
+                  <p className="mt-1 text-[11px] text-neutral-500">{parcel.vacancy_model_version}</p>
                 )}
               </div>
             )}
@@ -183,12 +183,12 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Vacancy reasons */}
             {parcel.vacancy_reasons && parcel.vacancy_reasons.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">
                   Top redenen
                 </p>
                 <div className="mt-1 space-y-1">
                   {parcel.vacancy_reasons.slice(0, 3).map((reason) => (
-                    <p key={reason} className="text-xs text-grey-300">
+                    <p key={reason} className="text-xs text-neutral-700">
                       {reason}
                     </p>
                   ))}
@@ -198,7 +198,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
 
             {parcel.market_signals && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider mb-1.5">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5">
                   Marktsignalen
                 </p>
                 <MarketSignalsCards signals={parcel.market_signals} compact />
@@ -208,15 +208,15 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Score */}
             {parcel.score != null && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Kanscore</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Kanscore</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-2 bg-grey-800 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-accent rounded-full transition-all motion-reduce:transition-none"
+                      className="h-full bg-aura-amber rounded-full transition-all motion-reduce:transition-none"
                       style={{ width: `${Math.round(parcel.score)}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold text-grey-100 tabular-nums">
+                  <span className="text-sm font-semibold text-aura-ink tabular-nums">
                     {Math.round(parcel.score)}
                   </span>
                 </div>
@@ -226,8 +226,8 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Score category */}
             {parcel.score_category && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Categorie</p>
-                <span className="inline-block mt-1 px-2 py-0.5 bg-amber-accent/20 text-amber-accent text-xs font-medium rounded">
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Categorie</p>
+                <span className="inline-block mt-1 px-2 py-0.5 bg-aura-amber/20 text-aura-amber text-xs font-medium rounded">
                   {parcel.score_category}
                 </span>
               </div>
@@ -236,10 +236,10 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
             {/* Opportunity signals */}
             {parcel.opportunity_signals && parcel.opportunity_signals.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-grey-400 uppercase tracking-wider">Bouwpotentie signalen</p>
+                <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider">Bouwpotentie signalen</p>
                 <div className="mt-1 space-y-1">
                   {parcel.opportunity_signals.map((signal) => (
-                    <p key={signal} className="text-sm text-grey-100">
+                    <p key={signal} className="text-sm text-aura-ink">
                       {signal}
                     </p>
                   ))}
@@ -249,7 +249,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
 
             {/* Vergunningen (on-demand SRU enrichment) */}
             <div>
-              <p className="text-xs font-medium text-grey-400 uppercase tracking-wider mb-1.5">
+              <p className="text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5">
                 Vergunningen
               </p>
               <ParcelEnrichmentCard
@@ -264,8 +264,8 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
               onClick={handleGenerateReport}
               disabled={generateReport.isPending}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4
-                         bg-amber-accent text-on-accent font-medium rounded text-sm
-                         hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
+                         bg-aura-amber text-aura-obsidian font-medium rounded text-sm
+                         hover:bg-aura-amber/90 disabled:opacity-50 disabled:cursor-not-allowed
                          transition-colors motion-reduce:transition-none min-h-[44px]"
             >
               <FileText size={14} />
@@ -278,7 +278,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
           </div>
         ) : (
           <div className="flex items-center justify-center h-32">
-            <p className="text-sm text-grey-400">Selecteer een perceel op de kaart</p>
+            <p className="text-sm text-neutral-600">Selecteer een perceel op de kaart</p>
           </div>
         )}
       </div>

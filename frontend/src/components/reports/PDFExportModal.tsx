@@ -66,11 +66,11 @@ export function PDFExportModal({
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="space-y-2">
-          <h2 className="text-grey-100 text-xl font-semibold">
+          <h2 className="text-aura-ink text-xl font-semibold">
             Rapport exporteren als PDF
           </h2>
           {propertyData?.address && (
-            <p className="text-grey-400 text-sm">
+            <p className="text-neutral-600 text-sm">
               {propertyData.address.straat} {propertyData.address.huisnummer}
               {propertyData.address.huisletter || ''}
               {propertyData.address.toevoeging || ''}
@@ -82,8 +82,8 @@ export function PDFExportModal({
         {/* Content */}
         {!reportId ? (
           // Not saved yet - prompt to save first
-          <div className="bg-amber-accent/10 border border-amber-accent/30 rounded-lg p-4 space-y-3">
-            <p className="text-amber-accent text-sm">
+          <div className="bg-aura-amber/10 border border-aura-amber/30 rounded-lg p-4 space-y-3">
+            <p className="text-aura-amber text-sm">
               Dit rapport moet eerst worden opgeslagen voordat het geëxporteerd kan worden.
             </p>
             <button
@@ -91,7 +91,7 @@ export function PDFExportModal({
                 onClose()
                 onSaveFirst()
               }}
-              className="w-full py-2 px-4 bg-amber-accent hover:bg-amber-accent-hover text-on-accent rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-aura-amber hover:bg-aura-amber-hover text-aura-obsidian rounded-lg transition-colors font-medium"
             >
               Eerst opslaan
             </button>
@@ -99,11 +99,11 @@ export function PDFExportModal({
         ) : (
           // Saved - show export options
           <div className="space-y-4">
-            <div className="bg-grey-850 rounded-lg p-4 border border-grey-800">
-              <p className="text-grey-300 text-sm">
+            <div className="bg-aura-glass-white/40 rounded-lg p-4 border border-neutral-200">
+              <p className="text-neutral-700 text-sm">
                 De PDF bevat alle secties van dit rapport:
               </p>
-              <ul className="mt-2 space-y-1 text-grey-400 text-sm">
+              <ul className="mt-2 space-y-1 text-neutral-600 text-sm">
                 <li>• Adresgegevens en bouwjaar</li>
                 <li>• Kadastrale informatie</li>
                 <li>• Bestemmingsplangegevens</li>
@@ -116,7 +116,7 @@ export function PDFExportModal({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-2 px-4 bg-grey-850 hover:bg-grey-700 text-grey-100 rounded-lg transition-colors"
+                className="flex-1 py-2 px-4 bg-aura-glass-white/40 hover:bg-neutral-300 text-aura-ink rounded-lg transition-colors"
               >
                 Annuleren
               </button>

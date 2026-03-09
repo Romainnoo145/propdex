@@ -30,10 +30,10 @@ function getStepState(stepId: string, currentPhase: string | null, isCompleted: 
 function StepCircle({ number, state }: { number: number; state: StepState }) {
   const base = 'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0'
   if (state === 'completed')
-    return <div className={`${base} bg-success text-on-accent`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></div>
+    return <div className={`${base} bg-success text-aura-obsidian`}><Check className="w-3.5 h-3.5" strokeWidth={2.5} /></div>
   if (state === 'active')
-    return <div className={`${base} bg-amber-accent text-on-accent`}>{number}</div>
-  return <div className={`${base} bg-grey-800 text-grey-400`}>{number}</div>
+    return <div className={`${base} bg-aura-amber text-aura-obsidian`}>{number}</div>
+  return <div className={`${base} bg-neutral-200 text-neutral-600`}>{number}</div>
 }
 
 /**
@@ -53,7 +53,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
 
   return (
     <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)]">
-      <div className="bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md border border-grey-800 shadow-lg rounded-lg p-4 min-w-[380px]">
+      <div className="bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md border border-neutral-200 shadow-lg rounded-lg p-4 min-w-[380px]">
 
         {/* Terminal states: icon + message */}
         {(isCompleted || isFailed) && (
@@ -77,7 +77,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
         {isCompleted && onViewResults && (
           <button
             onClick={onViewResults}
-            className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover rounded transition-colors"
+            className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-aura-obsidian bg-aura-amber hover:bg-aura-amber-hover rounded transition-colors"
           >
             Bekijk resultaten
           </button>
@@ -87,7 +87,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
         {isFailed && (
           <button
             onClick={onCancel}
-            className="mt-2 text-xs text-grey-400 hover:text-grey-100 underline transition-colors"
+            className="mt-2 text-xs text-neutral-600 hover:text-aura-ink underline transition-colors"
           >
             Sluiten
           </button>
@@ -105,12 +105,12 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
               return (
                 <>
                   {index > 0 && (
-                    <div key={`line-${step.id}`} className={`h-0.5 mx-2 ${prevCompleted ? 'bg-success' : 'bg-grey-800'}`} />
+                    <div key={`line-${step.id}`} className={`h-0.5 mx-2 ${prevCompleted ? 'bg-success' : 'bg-neutral-200'}`} />
                   )}
                   <div key={step.id} className="flex flex-col items-center gap-1">
                     <StepCircle number={index + 1} state={state} />
                     <span className={`text-xs whitespace-nowrap ${
-                      state === 'active' ? 'text-amber-accent' : state === 'completed' ? 'text-success' : 'text-grey-400'
+                      state === 'active' ? 'text-aura-amber' : state === 'completed' ? 'text-success' : 'text-neutral-600'
                     }`}>
                       {step.label}
                     </span>
@@ -124,12 +124,12 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
         {/* Phase label + percentage */}
         {isRunning && (
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-grey-100">
+            <span className="text-sm font-medium text-aura-ink">
               {status.current_phase === null
                 ? 'Scan starten...'
                 : SCAN_STEPS.find((s) => s.id === status.current_phase)?.label ?? 'Verwerken...'}
             </span>
-            <span className="text-sm font-semibold text-amber-accent">
+            <span className="text-sm font-semibold text-aura-amber">
               {Math.round(status.progress_pct)}%
             </span>
           </div>
@@ -137,9 +137,9 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
 
         {/* Progress bar */}
         {isRunning && (
-          <div className="bg-grey-800 rounded-full h-2 mb-2 overflow-hidden">
+          <div className="bg-neutral-200 rounded-full h-2 mb-2 overflow-hidden">
             <div
-              className="bg-amber-accent h-full transition-all duration-500 ease-out"
+              className="bg-aura-amber h-full transition-all duration-500 ease-out"
               style={{ width: `${status.progress_pct}%` }}
             />
           </div>
@@ -147,11 +147,11 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
 
         {/* Sublabel — current step context */}
         {currentStepSublabel && (
-          <p className="text-xs text-grey-400 mb-2">{currentStepSublabel}</p>
+          <p className="text-xs text-neutral-600 mb-2">{currentStepSublabel}</p>
         )}
 
         {/* Parcel counter + cancel */}
-        <div className="flex items-center justify-between text-xs text-grey-400">
+        <div className="flex items-center justify-between text-xs text-neutral-600">
           <div className="flex items-center gap-3">
             <span>{status.parcels_processed} / {status.parcels_total} percelen</span>
             {status.parcels_failed > 0 && (
@@ -162,7 +162,7 @@ export default function ScanProgressOverlay({ status, onCancel, isCancelling, on
             <button
               onClick={onCancel}
               disabled={isCancelling}
-              className="text-grey-400 hover:text-grey-100 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="text-neutral-600 hover:text-aura-ink disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {isCancelling ? 'Annuleren...' : 'Annuleren'}
             </button>

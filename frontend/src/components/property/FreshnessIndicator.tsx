@@ -51,7 +51,7 @@ export function FreshnessIndicator({
     <div className="group relative inline-flex items-center">
       {/* Amber warning icon */}
       <svg
-        className="w-4 h-4 text-amber-accent"
+        className="w-4 h-4 text-aura-amber"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -67,15 +67,15 @@ export function FreshnessIndicator({
 
       {/* Hover tooltip with refresh action */}
       <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-50 min-w-[200px]">
-        <div className="bg-grey-950 border border-grey-700 rounded-lg p-3 shadow-xl">
-          <p className="text-grey-100 text-xs mb-2">
+        <div className="bg-aura-canvas border border-neutral-300 rounded-lg p-3 shadow-xl">
+          <p className="text-aura-ink text-xs mb-2">
             Deze data is <strong>{ageDisplay}</strong> oud
           </p>
           {onRefresh && (
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs text-amber-accent hover:text-amber-accent-hover font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs text-aura-amber hover:text-aura-amber-hover font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRefreshing ? 'Bezig...' : 'Update nu'}
             </button>

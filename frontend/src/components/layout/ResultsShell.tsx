@@ -10,7 +10,7 @@ interface ResultsShellProps {
 /**
  * Scrollable data content shell for non-map authenticated routes.
  *
- * Uses solid bg-grey-950 background (NOT glassmorphism) per DS-04:
+ * Uses solid bg-aura-canvas background (NOT glassmorphism) per DS-04:
  * data content areas use solid backgrounds for readability.
  *
  * pb-14 md:pb-0 clears the fixed bottom tab bar on mobile. Added here (not on
@@ -25,7 +25,7 @@ export default function ResultsShell({
   contentClassName,
 }: ResultsShellProps) {
   return (
-    <div className={cn('w-full h-full overflow-y-auto bg-grey-950 pb-14 md:pb-0', className)}>
+    <div className={cn('w-full h-full overflow-y-auto bg-aura-canvas pb-14 md:pb-0', className)}>
       {fullWidth ? children : (
         <div className={cn('mx-auto max-w-5xl px-6 py-8', contentClassName)}>
           {children}

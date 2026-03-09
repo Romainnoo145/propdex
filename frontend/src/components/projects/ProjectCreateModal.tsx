@@ -60,7 +60,7 @@ export default function ProjectCreateModal({
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-grey-950/80"
+          className="fixed inset-0 bg-aura-canvas/80"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={handleCancel}
         />
@@ -77,7 +77,7 @@ export default function ProjectCreateModal({
             <h2 className="text-lg font-semibold text-gray-900">Nieuw project</h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-1 text-grey-400 transition-colors hover:bg-grey-800 hover:text-white"
+              className="rounded-lg p-1 text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-white"
               aria-label="Sluit"
             >
               <X className="h-5 w-5" />
@@ -130,14 +130,14 @@ export default function ProjectCreateModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-grey-400 transition-colors hover:bg-grey-800 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-white"
               >
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={createMutation.isPending || !name.trim()}
-                className="rounded-lg border border-grey-700 bg-amber-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-neutral-300 bg-aura-amber px-4 py-2 text-sm font-medium text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {createMutation.isPending ? 'Opslaan...' : 'Project Aanmaken'}
               </button>

@@ -15,13 +15,13 @@ export default function BottomTabNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 flex border-t border-grey-800 bg-grey-900 md:hidden"
+      className="fixed inset-x-0 bottom-0 flex border-t border-neutral-200 bg-aura-glass-white/60 md:hidden"
       style={{ zIndex: 'var(--z-bottom-nav)' }}
     >
       <Link
         to="/map"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-          matchRoute({ to: '/map' }) ? 'text-amber-accent' : 'text-grey-400'
+          matchRoute({ to: '/map' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
       >
         <Map size={20} />
@@ -31,7 +31,7 @@ export default function BottomTabNav() {
       <Link
         to="/projecten"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-          matchRoute({ to: '/projecten' }) ? 'text-amber-accent' : 'text-grey-400'
+          matchRoute({ to: '/projecten' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
       >
         <FolderOpen size={20} />
@@ -42,7 +42,7 @@ export default function BottomTabNav() {
         to="/rapporten"
         search={{ project_id: undefined, q: undefined }}
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-          matchRoute({ to: '/rapporten' }) ? 'text-amber-accent' : 'text-grey-400'
+          matchRoute({ to: '/rapporten' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
       >
         <FileText size={20} />

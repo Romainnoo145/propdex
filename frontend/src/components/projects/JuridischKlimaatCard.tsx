@@ -31,7 +31,7 @@ const OUTCOME_CONFIG = [
   { key: 'toegewezen' as const, label: 'Toegewezen', color: 'bg-green-400/60', dot: 'bg-green-400/60' },
   { key: 'gedeeltelijk' as const, label: 'Gedeeltelijk', color: 'bg-amber-400/60', dot: 'bg-amber-400/60' },
   { key: 'afgewezen' as const, label: 'Afgewezen', color: 'bg-red-400/60', dot: 'bg-red-400/60' },
-  { key: 'onbekend' as const, label: 'Onbekend', color: 'bg-grey-700', dot: 'bg-grey-700' },
+  { key: 'onbekend' as const, label: 'Onbekend', color: 'bg-neutral-300', dot: 'bg-neutral-300' },
 ]
 
 /**
@@ -48,9 +48,9 @@ export function JuridischKlimaatCard({
 }: JuridischKlimaatCardProps) {
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-overlay/5 bg-grey-900 p-4 space-y-3">
+      <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-amber-accent/70 animate-pulse">Analyseren...</span>
+          <span className="text-xs font-medium text-aura-amber/70 animate-pulse">Analyseren...</span>
         </div>
         <Skeleton className="h-10 w-20" />
         <Skeleton className="h-3 w-full" />
@@ -71,11 +71,11 @@ export function JuridischKlimaatCard({
   const firstDoorlooptijd = doorlooptijdEntries.find(s => !s.insufficient_data)
 
   return (
-    <div className="rounded-xl border border-overlay/5 bg-grey-900 p-4 space-y-3">
+    <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-3">
       {/* Header row: count + severity */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-grey-300">
-          <span className="text-sm font-bold text-grey-100 tabular-nums">{winLoss.total}</span>
+        <p className="text-xs text-neutral-700">
+          <span className="text-sm font-bold text-aura-ink tabular-nums">{winLoss.total}</span>
           {' '}uitspraken
         </p>
         <div className="flex items-center gap-1.5">
@@ -98,7 +98,7 @@ export function JuridischKlimaatCard({
       {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
         {segments.map((seg) => (
-          <span key={seg.key} className="flex items-center gap-1 text-[10px] text-grey-500">
+          <span key={seg.key} className="flex items-center gap-1 text-[10px] text-neutral-500">
             <span className={`w-1.5 h-1.5 rounded-full ${seg.dot}`} />
             {seg.count} {seg.label}
           </span>
@@ -107,10 +107,10 @@ export function JuridischKlimaatCard({
 
       {/* Doorlooptijd — only if data exists */}
       {hasDoorlooptijd && firstDoorlooptijd?.avg_dagen != null && (
-        <div className="flex items-center gap-1.5 text-xs text-grey-400 pt-1 border-t border-overlay/5">
+        <div className="flex items-center gap-1.5 text-xs text-neutral-600 pt-1 border-t border-neutral-200">
           <Clock className="w-3 h-3" />
           <span>Gem. doorlooptijd</span>
-          <span className="font-medium tabular-nums text-grey-300">{firstDoorlooptijd.avg_dagen} dgn</span>
+          <span className="font-medium tabular-nums text-neutral-700">{firstDoorlooptijd.avg_dagen} dgn</span>
         </div>
       )}
 
@@ -119,10 +119,10 @@ export function JuridischKlimaatCard({
         <div className="space-y-1">
           {doorlooptijdEntries.filter(s => !s.insufficient_data).map((stat) => (
             <div key={stat.vergunningstype} className="flex items-center justify-between text-xs">
-              <span className="text-grey-400 truncate mr-2">{stat.vergunningstype}</span>
-              <span className="font-medium tabular-nums whitespace-nowrap text-grey-300">
+              <span className="text-neutral-600 truncate mr-2">{stat.vergunningstype}</span>
+              <span className="font-medium tabular-nums whitespace-nowrap text-neutral-700">
                 {stat.avg_dagen} dgn
-                <span className="text-grey-600 font-normal ml-1">
+                <span className="text-neutral-500 font-normal ml-1">
                   ({stat.min_dagen}–{stat.max_dagen})
                 </span>
               </span>
@@ -133,7 +133,7 @@ export function JuridischKlimaatCard({
 
       {/* Analysis progress */}
       {(pendingCount ?? 0) > 0 && (
-        <p className="text-[10px] text-grey-500">
+        <p className="text-[10px] text-neutral-500">
           {analyzedCount} van {totalCount} uitspraken geanalyseerd
         </p>
       )}

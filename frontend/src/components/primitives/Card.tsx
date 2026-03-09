@@ -8,16 +8,16 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, elevation = 'card', ...props }, ref) => {
     const elevationClasses = {
-      base: 'bg-grey-950',
-      card: 'bg-grey-900',
-      elevated: 'bg-grey-850',
+      base: 'bg-aura-canvas',
+      card: 'bg-aura-glass-white/60',
+      elevated: 'bg-aura-glass-white/40',
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-md border border-grey-800',
+          'rounded-md border border-neutral-200',
           elevationClasses[elevation],
           className
         )}
@@ -39,7 +39,7 @@ const CardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn('text-lg font-semibold text-grey-100', className)} {...props} />
+  <h3 ref={ref} className={cn('text-lg font-semibold text-aura-ink', className)} {...props} />
 ));
 CardTitle.displayName = 'CardTitle';
 

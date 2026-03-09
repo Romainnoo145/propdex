@@ -59,7 +59,7 @@ function getBestemmingColor(type: string | null | undefined): {
   if (t.includes('water'))
     return { border: 'border-blue-500/30', bg: 'bg-blue-500/8', text: 'text-blue-400', dot: 'bg-blue-400' }
   // Fallback
-  return { border: 'border-grey-700', bg: 'bg-grey-850', text: 'text-grey-400', dot: 'bg-grey-500' }
+  return { border: 'border-neutral-300', bg: 'bg-aura-glass-white/40', text: 'text-neutral-600', dot: 'bg-neutral-400' }
 }
 
 function hasResidentialMixedBestemming(
@@ -80,15 +80,15 @@ function hasResidentialMixedBestemming(
 
 function getScoreBadgeClass(score: number | null): string {
   if (score == null) {
-    return 'bg-grey-800 text-grey-300'
+    return 'bg-neutral-200 text-neutral-700'
   }
   if (score >= 65) {
-    return 'bg-amber-accent/20 text-amber-accent'
+    return 'bg-aura-amber/20 text-aura-amber'
   }
   if (score >= 35) {
-    return 'bg-amber-accent/15 text-amber-accent'
+    return 'bg-aura-amber/15 text-aura-amber'
   }
-  return 'bg-amber-accent/10 text-amber-accent'
+  return 'bg-aura-amber/10 text-aura-amber'
 }
 
 function clampPercent(value: number | null): number {
@@ -273,10 +273,10 @@ function ScoreDonut({
         />
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-2xl font-semibold tabular-nums text-grey-100">
+        <p className="text-2xl font-semibold tabular-nums text-aura-ink">
           {score != null ? Math.round(score) : '--'}
         </p>
-        <p className="text-[10px] uppercase tracking-wide text-grey-500">Score</p>
+        <p className="text-[10px] uppercase tracking-wide text-neutral-500">Score</p>
       </div>
     </div>
   )
@@ -295,20 +295,20 @@ function ScorePillarRows({
   const opacity = value == null ? 0.35 : value >= 65 ? 1 : value >= 40 ? 0.85 : 0.65
 
   return (
-    <div className="rounded-md border border-grey-800 bg-grey-900/70 px-3 py-2.5">
+    <div className="rounded-md border border-neutral-200 bg-aura-glass-white/60/70 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-grey-300">{label}</p>
-        <p className="text-xs tabular-nums text-amber-accent">
+        <p className="text-xs text-neutral-700">{label}</p>
+        <p className="text-xs tabular-nums text-aura-amber">
           {value != null ? `${Math.round(value)}%` : '--'}
         </p>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-grey-800">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-200">
         <div
-          className="h-full bg-amber-accent"
+          className="h-full bg-aura-amber"
           style={{ width: `${widthPct}%`, opacity }}
         />
       </div>
-      <p className="mt-1.5 text-[11px] text-grey-500">
+      <p className="mt-1.5 text-[11px] text-neutral-500">
         {formatPillarLevel(value)}
         {context ? ` · ${context}` : ''}
       </p>
@@ -437,18 +437,18 @@ export function ParcelDetailModal({
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-grey-100">
+            <h2 className="text-xl font-semibold text-aura-ink">
               {titleLabel}
             </h2>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {secondaryLabel && (
-                <p className="text-sm text-grey-400">{secondaryLabel}</p>
+                <p className="text-sm text-neutral-600">{secondaryLabel}</p>
               )}
               <span
                 className={`rounded px-2 py-0.5 text-[11px] font-medium ${
                   parcel.has_report
-                    ? 'bg-amber-accent/15 text-amber-accent'
-                    : 'bg-grey-800 text-grey-300'
+                    ? 'bg-aura-amber/15 text-aura-amber'
+                    : 'bg-neutral-200 text-neutral-700'
                 }`}
               >
                 {parcel.has_report ? 'Rapport aanwezig' : 'Nog geen rapport'}
@@ -464,7 +464,7 @@ export function ParcelDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="text-grey-600 hover:text-grey-100 transition-colors"
+            className="text-neutral-500 hover:text-aura-ink transition-colors"
             aria-label="Sluiten"
           >
             <svg
@@ -484,11 +484,11 @@ export function ParcelDetailModal({
         </div>
 
         {/* Score + Pillar Section */}
-        <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
+        <div className="bg-aura-glass-white/40 rounded-md border border-neutral-200 p-4">
           {parcel.score != null && (
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-grey-100">Propdex Potentiescore</p>
-              <span className="rounded bg-grey-900 px-2 py-0.5 text-[11px] text-grey-400">
+              <p className="text-sm font-medium text-aura-ink">Propdex Potentiescore</p>
+              <span className="rounded bg-aura-glass-white/60 px-2 py-0.5 text-[11px] text-neutral-600">
                 0-100
               </span>
             </div>
@@ -497,7 +497,7 @@ export function ParcelDetailModal({
             {parcel.score != null && (
               <div>
                 <ScoreDonut score={parcel.score} />
-                <p className="mt-2 text-center text-[11px] text-grey-500">
+                <p className="mt-2 text-center text-[11px] text-neutral-500">
                   {formatScoreLabel(parcel.score)}
                 </p>
               </div>
@@ -525,8 +525,8 @@ export function ParcelDetailModal({
 
         {/* Bestemmingsplan Section — between potentie and property info */}
         {parcel.bestemmingen && parcel.bestemmingen.length > 0 && (
-          <div className="rounded-md border border-amber-accent/30 bg-amber-accent/5 p-4">
-            <h3 className="text-sm font-medium text-amber-accent mb-3">
+          <div className="rounded-md border border-aura-amber/30 bg-aura-amber/5 p-4">
+            <h3 className="text-sm font-medium text-aura-amber mb-3">
               Bestemmingsplan
             </h3>
             <div className="space-y-2">
@@ -546,7 +546,7 @@ export function ParcelDetailModal({
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${colors.dot}`} />
-                        <p className="text-sm font-medium text-grey-100">
+                        <p className="text-sm font-medium text-aura-ink">
                           {b.naam || b.type || 'Onbekend'}
                         </p>
                       </div>
@@ -557,7 +557,7 @@ export function ParcelDetailModal({
                       )}
                     </div>
                     {(b.max_bebouwingspercentage != null || b.max_floor_area_ratio != null) && (
-                      <div className="mt-1.5 ml-4 flex gap-4 text-xs text-grey-400">
+                      <div className="mt-1.5 ml-4 flex gap-4 text-xs text-neutral-600">
                         {b.max_bebouwingspercentage != null && (
                           <span>Bebouwing max {b.max_bebouwingspercentage}%</span>
                         )}
@@ -575,40 +575,40 @@ export function ParcelDetailModal({
 
         {/* Property Info Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-            <p className="text-xs text-grey-400 mb-1">Oppervlak</p>
-            <p className="text-sm font-medium text-grey-100">
+          <div className="bg-aura-glass-white/40 rounded-md border border-neutral-200 p-4">
+            <p className="text-xs text-neutral-600 mb-1">Oppervlak</p>
+            <p className="text-sm font-medium text-aura-ink">
               {parcel.area_m2 != null ? Math.round(parcel.area_m2).toLocaleString('nl-NL') : '--'} m²
             </p>
           </div>
-          <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-            <p className="text-xs text-grey-400 mb-1">Bouwjaar</p>
-            <p className="text-sm font-medium text-grey-100">
+          <div className="bg-aura-glass-white/40 rounded-md border border-neutral-200 p-4">
+            <p className="text-xs text-neutral-600 mb-1">Bouwjaar</p>
+            <p className="text-sm font-medium text-aura-ink">
               {parcel.bouwjaar ?? 'Onbekend'}
             </p>
           </div>
           <div className={`rounded-md border p-4 ${
             isNotInUse
-              ? 'border-amber-accent/40 bg-amber-accent/5'
-              : 'border-grey-800 bg-grey-850'
+              ? 'border-aura-amber/40 bg-aura-amber/5'
+              : 'border-neutral-200 bg-aura-glass-white/40'
           }`}>
-            <p className="text-xs text-grey-400 mb-1">Status</p>
-            <p className={`text-sm font-medium ${isNotInUse ? 'text-amber-accent' : 'text-grey-100'}`}>
+            <p className="text-xs text-neutral-600 mb-1">Status</p>
+            <p className={`text-sm font-medium ${isNotInUse ? 'text-aura-amber' : 'text-aura-ink'}`}>
               {statusLabel}
             </p>
           </div>
           {showVacancySignal && (
-            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-              <p className="text-xs text-grey-400 mb-1">Leegstandsignaal</p>
-              <p className="text-sm font-medium text-grey-100">
+            <div className="bg-aura-glass-white/40 rounded-md border border-neutral-200 p-4">
+              <p className="text-xs text-neutral-600 mb-1">Leegstandsignaal</p>
+              <p className="text-sm font-medium text-aura-ink">
                 {vacancyLabel}
               </p>
             </div>
           )}
           {parcel.gemeente_code && (
-            <div className="bg-grey-850 rounded-md border border-grey-800 p-4">
-              <p className="text-xs text-grey-400 mb-1">Gemeente</p>
-              <p className="text-sm font-medium text-grey-100">
+            <div className="bg-aura-glass-white/40 rounded-md border border-neutral-200 p-4">
+              <p className="text-xs text-neutral-600 mb-1">Gemeente</p>
+              <p className="text-sm font-medium text-aura-ink">
                 {parcel.gemeente_code}
               </p>
             </div>
@@ -624,12 +624,12 @@ export function ParcelDetailModal({
 
         {(parcel.vacancy_reasons?.length || actionableOpportunitySignals.length > 0) && (
           <div>
-            <h3 className="text-sm font-medium text-grey-100 mb-3">Kansen & aandachtspunten</h3>
+            <h3 className="text-sm font-medium text-aura-ink mb-3">Kansen & aandachtspunten</h3>
             <div className="flex flex-wrap gap-2">
               {actionableOpportunitySignals.slice(0, 5).map((signal) => (
                 <span
                   key={`opp-${signal}`}
-                  className="rounded-full border border-amber-accent/40 bg-amber-accent/10 px-2.5 py-1 text-xs text-amber-accent"
+                  className="rounded-full border border-aura-amber/40 bg-aura-amber/10 px-2.5 py-1 text-xs text-aura-amber"
                 >
                   {signal}
                 </span>
@@ -637,7 +637,7 @@ export function ParcelDetailModal({
               {(parcel.vacancy_reasons ?? []).slice(0, 3).map((reason) => (
                 <span
                   key={`risk-${reason}`}
-                  className="rounded-full border border-grey-700 bg-grey-850 px-2.5 py-1 text-xs text-grey-300"
+                  className="rounded-full border border-neutral-300 bg-aura-glass-white/40 px-2.5 py-1 text-xs text-neutral-700"
                 >
                   {reason}
                 </span>
@@ -648,7 +648,7 @@ export function ParcelDetailModal({
 
         {parcel.market_signals && (
           <div>
-            <h3 className="text-sm font-medium text-grey-100 mb-3">
+            <h3 className="text-sm font-medium text-aura-ink mb-3">
               Marktsignalen
             </h3>
             <MarketSignalsCards signals={parcel.market_signals} />
@@ -657,7 +657,7 @@ export function ParcelDetailModal({
 
         {/* Vergunningen Section (Tier 2 enrichment) */}
         <div>
-          <h3 className="text-sm font-medium text-grey-100 mb-3">
+          <h3 className="text-sm font-medium text-aura-ink mb-3">
             Vergunningen
           </h3>
           <ParcelEnrichmentCard
@@ -670,23 +670,23 @@ export function ParcelDetailModal({
         {/* Meldingen Section — only shown when matching bekendmakingen exist */}
         {parcelChanges.data && parcelChanges.data.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-grey-100 mb-3">
+            <h3 className="text-sm font-medium text-aura-ink mb-3">
               Meldingen
             </h3>
             <div className="space-y-2">
               {parcelChanges.data.map((change) => (
                 <div
                   key={change.id}
-                  className="flex items-start gap-2.5 rounded-md border border-grey-800 bg-grey-850 px-3 py-2.5"
+                  className="flex items-start gap-2.5 rounded-md border border-neutral-200 bg-aura-glass-white/40 px-3 py-2.5"
                 >
                   <div
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-accent"
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-aura-amber"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-grey-300 line-clamp-2">
+                    <p className="text-sm text-neutral-700 line-clamp-2">
                       {change.title}
                     </p>
-                    <p className="mt-0.5 text-xs text-grey-400">
+                    <p className="mt-0.5 text-xs text-neutral-600">
                       {new Intl.DateTimeFormat('nl-NL', {
                         day: 'numeric',
                         month: 'short',
@@ -699,7 +699,7 @@ export function ParcelDetailModal({
                       href={change.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 text-grey-400 hover:text-info transition-colors"
+                      className="shrink-0 text-neutral-600 hover:text-info transition-colors"
                       title="Bekijk publicatie"
                     >
                       <svg
@@ -730,8 +730,8 @@ export function ParcelDetailModal({
             <button
               onClick={() => { onClose(); onViewOnMap(); }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4
-                         border border-grey-800 text-grey-300 font-medium rounded text-sm
-                         hover:bg-grey-850 hover:text-grey-100
+                         border border-neutral-200 text-neutral-700 font-medium rounded text-sm
+                         hover:bg-aura-glass-white/40 hover:text-aura-ink
                          transition-colors motion-reduce:transition-none min-h-[44px]"
             >
               <MapPin size={14} />
@@ -742,8 +742,8 @@ export function ParcelDetailModal({
             onClick={handleGenerateReport}
             disabled={generateReport.isPending}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4
-                       bg-amber-accent text-on-accent font-medium rounded text-sm
-                       hover:bg-amber-accent/90 disabled:opacity-50 disabled:cursor-not-allowed
+                       bg-aura-amber text-aura-obsidian font-medium rounded text-sm
+                       hover:bg-aura-amber/90 disabled:opacity-50 disabled:cursor-not-allowed
                        transition-colors motion-reduce:transition-none min-h-[44px]"
           >
             <FileText size={14} />

@@ -17,39 +17,39 @@ function PropertySummary({ data }: PropertySummaryProps) {
     <div className="px-4 py-4 space-y-4">
       {/* Address */}
       <div className="space-y-0.5">
-        <div className="text-grey-100 text-base font-semibold">
+        <div className="text-aura-ink text-base font-semibold">
           {address.straat} {address.huisnummer}
           {address.huisletter && address.huisletter}
           {address.toevoeging && address.toevoeging}
         </div>
-        <div className="text-grey-400 text-sm">
+        <div className="text-neutral-600 text-sm">
           {address.postcode}, {address.woonplaats}
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-grey-850 rounded-lg px-3 py-2 text-center">
-          <div className="text-grey-100 font-medium text-base">
+        <div className="bg-aura-glass-white/40 rounded-lg px-3 py-2 text-center">
+          <div className="text-aura-ink font-medium text-base">
             {bouwjaar ?? 'Onbekend'}
           </div>
-          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-neutral-500 text-xs uppercase tracking-wide mt-0.5">
             Bouwjr
           </div>
         </div>
-        <div className="bg-grey-850 rounded-lg px-3 py-2 text-center">
-          <div className="text-grey-100 font-medium text-base">
+        <div className="bg-aura-glass-white/40 rounded-lg px-3 py-2 text-center">
+          <div className="text-aura-ink font-medium text-base">
             {oppervlakte ? `${oppervlakte}m²` : '–'}
           </div>
-          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-neutral-500 text-xs uppercase tracking-wide mt-0.5">
             Opp.
           </div>
         </div>
-        <div className="bg-grey-850 rounded-lg px-3 py-2 text-center">
-          <div className="text-grey-100 font-medium text-base truncate">
+        <div className="bg-aura-glass-white/40 rounded-lg px-3 py-2 text-center">
+          <div className="text-aura-ink font-medium text-base truncate">
             {bestemming ?? '–'}
           </div>
-          <div className="text-grey-600 text-xs uppercase tracking-wide mt-0.5">
+          <div className="text-neutral-500 text-xs uppercase tracking-wide mt-0.5">
             Best.
           </div>
         </div>
@@ -57,9 +57,9 @@ function PropertySummary({ data }: PropertySummaryProps) {
 
       {/* Monument Badge */}
       {isMonument && monumentStatus && (
-        <div className="bg-amber-accent/20 border border-amber-accent/40 rounded-lg px-3 py-2 flex items-center gap-2">
-          <span className="text-amber-accent text-base">🏛</span>
-          <span className="text-amber-accent text-sm font-medium">
+        <div className="bg-aura-amber/20 border border-aura-amber/40 rounded-lg px-3 py-2 flex items-center gap-2">
+          <span className="text-aura-amber text-base">🏛</span>
+          <span className="text-aura-amber text-sm font-medium">
             {monumentStatus}
           </span>
         </div>
@@ -68,14 +68,14 @@ function PropertySummary({ data }: PropertySummaryProps) {
       {/* Completeness Score */}
       <div className="space-y-1">
         <div className="flex justify-between items-center">
-          <span className="text-grey-600 text-xs uppercase tracking-wide">
+          <span className="text-neutral-500 text-xs uppercase tracking-wide">
             Compleetheid
           </span>
-          <span className="text-grey-400 text-xs font-medium">
+          <span className="text-neutral-600 text-xs font-medium">
             {Math.round(completeness_score * 100)}%
           </span>
         </div>
-        <div className="w-full bg-grey-850 rounded-full h-1 overflow-hidden">
+        <div className="w-full bg-aura-glass-white/40 rounded-full h-1 overflow-hidden">
           <div
             className="bg-success h-full transition-all duration-300"
             style={{ width: `${completeness_score * 100}%` }}

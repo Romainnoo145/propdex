@@ -138,10 +138,10 @@ function ActionCardsRow({
           }
         }}
         disabled={!gemeenteCode || triggerScan.isPending}
-        className="group rounded-xl border border-overlay/5 bg-grey-900 p-4 text-left transition-colors hover:bg-grey-850 hover:border-amber-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="group rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 text-left transition-colors hover:bg-aura-glass-white/40 hover:border-aura-amber/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <div className="flex items-center gap-2">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${hasScan ? 'bg-emerald-400/15' : isScanning ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${hasScan ? 'bg-emerald-400/15' : isScanning ? 'bg-aura-amber/15' : 'bg-neutral-200'}`}>
             {hasScan ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -149,22 +149,22 @@ function ActionCardsRow({
                 <line x1="9" y1="3" x2="9" y2="21" />
               </svg>
             ) : isScanning ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent animate-pulse">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-aura-amber animate-pulse">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-grey-500">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-500">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             )}
           </div>
           <div>
-            <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
+            <p className="text-sm font-medium text-aura-ink group-hover:text-aura-amber transition-colors">
               {hasScan ? 'Bekijk resultaten' : isScanning ? 'Scan bezig...' : 'Start scan'}
             </p>
-            <p className="text-[11px] text-grey-500">
+            <p className="text-[11px] text-neutral-500">
               {hasScan
                 ? `${latestScan.parcel_count} percelen \u00b7 ${dateFmt.format(new Date(latestScan.scan_date))}`
                 : isScanning
@@ -186,11 +186,11 @@ function ActionCardsRow({
           }
         }}
         disabled={!wijkId}
-        className="group rounded-xl border border-overlay/5 bg-grey-900 p-4 text-left transition-colors hover:bg-grey-850 hover:border-amber-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="group rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 text-left transition-colors hover:bg-aura-glass-white/40 hover:border-aura-amber/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <div className="flex items-center gap-2">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${reportCount > 0 ? 'bg-amber-accent/15' : 'bg-grey-800'}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={reportCount > 0 ? 'text-amber-accent' : 'text-grey-500'}>
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${reportCount > 0 ? 'bg-aura-amber/15' : 'bg-neutral-200'}`}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={reportCount > 0 ? 'text-aura-amber' : 'text-neutral-500'}>
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
@@ -198,10 +198,10 @@ function ActionCardsRow({
             </svg>
           </div>
           <div>
-            <p className="text-sm font-medium text-grey-100 group-hover:text-amber-accent transition-colors">
+            <p className="text-sm font-medium text-aura-ink group-hover:text-aura-amber transition-colors">
               Bekijk rapporten
             </p>
-            <p className="text-[11px] text-grey-500">
+            <p className="text-[11px] text-neutral-500">
               {reportCount > 0
                 ? `${reportCount} rapport${reportCount === 1 ? '' : 'en'}`
                 : 'Geen rapporten'}

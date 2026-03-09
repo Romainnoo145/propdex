@@ -29,8 +29,8 @@ function FilterPill({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
         active
-          ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-          : 'border-overlay/5 bg-grey-900 text-grey-400 hover:border-overlay/10 hover:text-grey-300'
+          ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
+          : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-600 hover:border-neutral-200 hover:text-neutral-700'
       }`}
     >
       {label}
@@ -55,7 +55,7 @@ function FilterSelect({
   const hasValue = value !== ''
   return (
     <div className="flex items-center gap-1.5">
-      <label htmlFor={id} className="text-xs text-grey-600 whitespace-nowrap">
+      <label htmlFor={id} className="text-xs text-neutral-500 whitespace-nowrap">
         {label}
       </label>
       <Select
@@ -64,10 +64,10 @@ function FilterSelect({
         onChange={(e) => onChange(e.target.value)}
         className={`h-8 w-auto rounded-full px-3 pr-8 text-xs font-medium border cursor-pointer ${
           hasValue
-            ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-            : 'border-overlay/5 bg-grey-900 text-grey-400 hover:border-overlay/10'
+            ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
+            : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-600 hover:border-neutral-200'
         }`}
-        iconClassName={hasValue ? 'text-amber-accent/80' : 'text-grey-500'}
+        iconClassName={hasValue ? 'text-aura-amber/80' : 'text-neutral-500'}
       >
         {children}
       </Select>
@@ -168,7 +168,7 @@ export default function ResultsFilterPanel({
   const isToggleDisabled = scanStatus !== undefined && scanStatus !== 'completed'
 
   return (
-    <div className="border-b border-overlay/5 bg-grey-900 px-5 py-3">
+    <div className="border-b border-neutral-200 bg-aura-glass-white/60 px-5 py-3">
       {/* Top kansen toggle */}
       <div className="flex items-center justify-between mb-2.5">
         <button
@@ -176,7 +176,7 @@ export default function ResultsFilterPanel({
           disabled={isToggleDisabled}
           className={`flex items-center gap-2 text-xs font-medium transition-colors ${
             isToggleDisabled
-              ? 'opacity-40 cursor-not-allowed text-grey-500'
+              ? 'opacity-40 cursor-not-allowed text-neutral-500'
               : 'cursor-pointer'
           }`}
           aria-pressed={showOnlyTop}
@@ -185,29 +185,29 @@ export default function ResultsFilterPanel({
           <span
             className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors ${
               showOnlyTop
-                ? 'bg-amber-accent/20 border-amber-accent/40'
-                : 'bg-grey-800 border-overlay/10'
+                ? 'bg-aura-amber/20 border-aura-amber/40'
+                : 'bg-neutral-200 border-neutral-200'
             }`}
           >
             <span
               className={`inline-block h-2.5 w-2.5 rounded-full transition-transform ${
                 showOnlyTop
-                  ? 'translate-x-3.5 bg-amber-accent'
-                  : 'translate-x-0.5 bg-grey-500'
+                  ? 'translate-x-3.5 bg-aura-amber'
+                  : 'translate-x-0.5 bg-neutral-400'
               }`}
             />
           </span>
           {showOnlyTop ? (
-            <span className="text-amber-accent">
+            <span className="text-aura-amber">
               Top kansen{hiddenCount > 0 ? ` (${hiddenCount} verborgen)` : ''}
             </span>
           ) : (
-            <span className="text-grey-400">Alle percelen</span>
+            <span className="text-neutral-600">Alle percelen</span>
           )}
         </button>
 
         {/* Count display */}
-        <span className="text-xs text-grey-600 tabular-nums">
+        <span className="text-xs text-neutral-500 tabular-nums">
           {showOnlyTop && totalUnfiltered > total
             ? `${total.toLocaleString('nl-NL')} van ${totalUnfiltered.toLocaleString('nl-NL')} percelen`
             : `${total.toLocaleString('nl-NL')} percelen`}
@@ -218,7 +218,7 @@ export default function ResultsFilterPanel({
       <div className="flex items-center gap-4 flex-wrap">
         {/* Score pills */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-grey-600 mr-0.5">Score</span>
+          <span className="text-xs text-neutral-500 mr-0.5">Score</span>
           <FilterPill
             label="Hoog"
             active={filters.score_category === 'High'}
@@ -237,7 +237,7 @@ export default function ResultsFilterPanel({
         </div>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-overlay/5 hidden md:block" />
+        <div className="h-5 w-px bg-neutral-100/5 hidden md:block" />
 
         {/* Bestemming dropdown */}
         <FilterSelect
@@ -276,11 +276,11 @@ export default function ResultsFilterPanel({
         </FilterSelect>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-overlay/5 hidden md:block" />
+        <div className="h-5 w-px bg-neutral-100/5 hidden md:block" />
 
         {/* Area range — compact inline inputs */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-grey-600">m²</span>
+          <span className="text-xs text-neutral-500">m²</span>
           <input
             id="area-min-filter"
             type="number"
@@ -289,11 +289,11 @@ export default function ResultsFilterPanel({
             placeholder="min"
             className={`w-16 rounded-full text-xs font-medium px-3 py-1.5 border transition-colors tabular-nums text-center ${
               localMinArea
-                ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-                : 'border-overlay/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
-            } focus:outline-none focus:border-amber-accent/50`}
+                ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
+                : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-600 placeholder:text-neutral-500'
+            } focus:outline-none focus:border-aura-amber/50`}
           />
-          <span className="text-grey-600 text-xs">–</span>
+          <span className="text-neutral-500 text-xs">–</span>
           <input
             id="area-max-filter"
             type="number"
@@ -302,9 +302,9 @@ export default function ResultsFilterPanel({
             placeholder="max"
             className={`w-16 rounded-full text-xs font-medium px-3 py-1.5 border transition-colors tabular-nums text-center ${
               localMaxArea
-                ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-                : 'border-overlay/5 bg-grey-900 text-grey-400 placeholder:text-grey-600'
-            } focus:outline-none focus:border-amber-accent/50`}
+                ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
+                : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-600 placeholder:text-neutral-500'
+            } focus:outline-none focus:border-aura-amber/50`}
           />
         </div>
 
@@ -313,7 +313,7 @@ export default function ResultsFilterPanel({
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
-              className="flex items-center gap-1 text-xs text-grey-600 hover:text-grey-300 transition-colors"
+              className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
             >
               <X size={12} />
               Wis

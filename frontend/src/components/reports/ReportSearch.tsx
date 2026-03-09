@@ -49,8 +49,8 @@ export default function ReportSearch({
   )
 
   return (
-    <Command className="rounded-lg border border-grey-800 bg-grey-850">
-      <div className="flex items-center border-b border-grey-800 px-3">
+    <Command className="rounded-lg border border-neutral-200 bg-aura-glass-white/40">
+      <div className="flex items-center border-b border-neutral-200 px-3">
         <SearchIcon />
         <Command.Input
           ref={setInputRef}
@@ -59,12 +59,12 @@ export default function ReportSearch({
           placeholder="Zoek rapporten... (⌘K)"
           {...DEFAULT_SEARCH_INPUT_PROPS}
           name="q_sidebar_reports"
-          className="w-full border-0 bg-transparent py-3 pl-2 text-sm text-grey-100 outline-none placeholder:text-grey-600"
+          className="w-full border-0 bg-transparent py-3 pl-2 text-sm text-aura-ink outline-none placeholder:text-neutral-500"
         />
       </div>
 
       <Command.List className="max-h-64 overflow-y-auto p-2">
-        <Command.Empty className="py-6 text-center text-sm text-grey-600">
+        <Command.Empty className="py-6 text-center text-sm text-neutral-500">
           Geen resultaten
         </Command.Empty>
 
@@ -74,7 +74,7 @@ export default function ReportSearch({
             heading={projectName}
             className="mb-2"
           >
-            <div className="mb-1 px-2 text-xs text-grey-600">
+            <div className="mb-1 px-2 text-xs text-neutral-500">
               {projectName}
             </div>
             {projectReports.map((report) => (
@@ -82,16 +82,16 @@ export default function ReportSearch({
                 key={report.id}
                 value={`${report.report_name} ${report.postcode} ${report.city}`}
                 onSelect={() => onSelectReport(report.id)}
-                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-grey-300 transition-colors data-[selected=true]:bg-grey-800 data-[selected=true]:text-grey-100"
+                className="cursor-pointer rounded-lg px-3 py-2 text-sm text-neutral-700 transition-colors data-[selected=true]:bg-neutral-200 data-[selected=true]:text-aura-ink"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{report.report_name}</p>
-                    <p className="text-xs text-grey-600">
+                    <p className="text-xs text-neutral-500">
                       {report.postcode}, {report.city}
                     </p>
                   </div>
-                  <span className="ml-2 text-xs text-grey-600">
+                  <span className="ml-2 text-xs text-neutral-500">
                     {Math.round(report.completeness_score * 100)}%
                   </span>
                 </div>
@@ -116,7 +116,7 @@ function SearchIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-grey-600"
+      className="text-neutral-500"
     >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.35-4.35" />

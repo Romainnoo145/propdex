@@ -18,18 +18,18 @@ function PropertySection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-grey-800">
+    <div className="border-b border-neutral-200">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left text-grey-100 hover:bg-grey-850 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left text-aura-ink hover:bg-aura-glass-white/40 transition-colors"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="mr-2 text-grey-400">{icon}</span>}
+          {icon && <span className="mr-2 text-neutral-600">{icon}</span>}
           <span className="font-medium text-sm">{title}</span>
           {badge}
         </div>
         <svg
-          className={`w-4 h-4 text-grey-400 transition-transform duration-200 ${
+          className={`w-4 h-4 text-neutral-600 transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -49,7 +49,7 @@ function PropertySection({
           isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-4 pb-4 text-grey-300 text-sm">{children}</div>
+        <div className="px-4 pb-4 text-neutral-700 text-sm">{children}</div>
       </div>
     </div>
   );

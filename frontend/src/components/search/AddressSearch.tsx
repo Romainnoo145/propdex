@@ -111,7 +111,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
       <div className={`absolute top-4 left-4 z-[var(--z-search-bar)] ${className}`}>
         <button
           onClick={handleExpand}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-grey-800 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md shadow-lg transition-colors hover:bg-grey-900"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md shadow-lg transition-colors hover:bg-aura-glass-white/60"
         >
           <SearchIcon />
         </button>
@@ -125,7 +125,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
       ref={containerRef}
       className={`absolute top-4 left-4 z-[var(--z-search-bar)] w-80 ${className}`}
     >
-      <div className="flex items-center gap-2 rounded-xl border border-grey-800 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md p-2.5 shadow-lg">
+      <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md p-2.5 shadow-lg">
         <SearchIcon />
         <input
           ref={inputRef}
@@ -141,12 +141,12 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           name="address-search"
           data-lpignore="true"
           data-1p-ignore="true"
-          className="flex-1 bg-transparent text-sm text-grey-100 placeholder:text-grey-600 outline-none"
+          className="flex-1 bg-transparent text-sm text-aura-ink placeholder:text-neutral-500 outline-none"
         />
         {isLoading && query.length >= 3 && <Spinner />}
         <button
           onClick={handleCollapse}
-          className="flex h-6 w-6 items-center justify-center rounded text-grey-600 transition-colors hover:text-grey-100"
+          className="flex h-6 w-6 items-center justify-center rounded text-neutral-500 transition-colors hover:text-aura-ink"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -156,23 +156,23 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
       </div>
 
       {isDropdownVisible && (
-        <ul className="relative z-[var(--z-dropdown)] mt-1 overflow-hidden rounded-xl border border-grey-800 bg-grey-950 shadow-lg">
+        <ul className="relative z-[var(--z-dropdown)] mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-aura-canvas shadow-lg">
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
               <li
                 key={suggestion.id}
                 onClick={() => handleSelect(suggestion)}
-                className={`cursor-pointer px-4 py-3 text-sm text-grey-100 transition-colors ${
+                className={`cursor-pointer px-4 py-3 text-sm text-aura-ink transition-colors ${
                   highlightedIndex === index
-                    ? 'bg-grey-850'
-                    : 'hover:bg-grey-850'
+                    ? 'bg-aura-glass-white/40'
+                    : 'hover:bg-aura-glass-white/40'
                 }`}
               >
                 {suggestion.weergavenaam}
               </li>
             ))
           ) : (
-            <li className="px-4 py-3 text-sm text-grey-400">
+            <li className="px-4 py-3 text-sm text-neutral-600">
               Geen resultaten
             </li>
           )}
@@ -185,7 +185,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
 function SearchIcon() {
   return (
     <svg
-      className="h-5 w-5 shrink-0 text-grey-400"
+      className="h-5 w-5 shrink-0 text-neutral-600"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -202,7 +202,7 @@ function SearchIcon() {
 
 function Spinner() {
   return (
-    <svg className="h-4 w-4 shrink-0 animate-spin text-grey-400" fill="none" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0 animate-spin text-neutral-600" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
     </svg>

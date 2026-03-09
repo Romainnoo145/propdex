@@ -74,13 +74,13 @@ function MetricCard({
   icon?: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-overlay/[0.08] bg-overlay/[0.04] px-4 py-3">
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-grey-600">{label}</p>
-        {icon && <span className="text-grey-500">{icon}</span>}
+        <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{label}</p>
+        {icon && <span className="text-neutral-500">{icon}</span>}
       </div>
-      <p className="mt-1 truncate text-2xl font-semibold leading-none text-grey-100">{value}</p>
-      {sublabel && <p className="mt-0.5 text-xs text-grey-600">{sublabel}</p>}
+      <p className="mt-1 truncate text-2xl font-semibold leading-none text-aura-ink">{value}</p>
+      {sublabel && <p className="mt-0.5 text-xs text-neutral-500">{sublabel}</p>}
     </div>
   )
 }
@@ -95,7 +95,7 @@ function CompletenessRing({ value }: { value: number }) {
         background: `conic-gradient(rgba(217, 170, 56, 0.95) ${angle}deg, rgba(255, 255, 255, 0.12) ${angle}deg 360deg)`,
       }}
     >
-      <div className="absolute inset-[3px] flex items-center justify-center rounded-full bg-grey-900 text-[9px] font-semibold text-amber-accent">
+      <div className="absolute inset-[3px] flex items-center justify-center rounded-full bg-aura-glass-white/60 text-[9px] font-semibold text-aura-amber">
         {Math.round(safeValue * 100)}
       </div>
     </div>
@@ -259,10 +259,10 @@ export default function ReportHeader({
   const severity = statusSeverity(building?.status)
   const statusBadgeClass =
     severity === 'high'
-      ? 'border-amber-accent/35 bg-amber-accent/10 text-amber-accent'
+      ? 'border-aura-amber/35 bg-aura-amber/10 text-aura-amber'
       : severity === 'medium'
-        ? 'border-overlay/15 bg-overlay/[0.06] text-grey-300'
-        : 'border-overlay/[0.08] bg-overlay/[0.04] text-grey-400'
+        ? 'border-neutral-200/15 bg-neutral-50 text-neutral-700'
+        : 'border-neutral-200 bg-neutral-50 text-neutral-600'
 
   // First parcel kadaster ID for header display
   const primaryPerceelId = cadastral_parcels[0]?.kadastrale_aanduiding ?? null
@@ -273,10 +273,10 @@ export default function ReportHeader({
   const center = data.map_data?.center_wgs84 ?? null
 
   return (
-    <div className="relative mb-6 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900 px-5 py-5 sm:px-6 sm:py-6">
+    <div className="relative mb-6 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-5 py-5 sm:px-6 sm:py-6">
       {/* Background glows */}
-      <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-amber-accent/10 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-overlay/[0.04] blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-aura-amber/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-neutral-50 blur-3xl" />
 
       <div className="relative">
         {/* Top row: address info + satellite thumbnail */}
@@ -286,7 +286,7 @@ export default function ReportHeader({
             <div className="print-hide mb-3 flex items-center gap-3">
               <button
                 onClick={onBack}
-                className="flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
+                className="flex items-center gap-1.5 text-sm text-neutral-500 transition-colors hover:text-neutral-700"
               >
                 <ArrowLeftIcon />
                 {backLabel}
@@ -295,7 +295,7 @@ export default function ReportHeader({
                 <button
                   onClick={handleGenerateDossier}
                   disabled={!reportId || isDossierGenerating}
-                  className="flex items-center gap-2 rounded-lg border border-amber-accent/25 bg-amber-accent/10 px-3 py-2 text-sm font-medium text-amber-accent transition-colors hover:bg-amber-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-aura-amber/25 bg-aura-amber/10 px-3 py-2 text-sm font-medium text-aura-amber transition-colors hover:bg-aura-amber/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isDossierGenerating ? <SpinnerIcon /> : <DocumentIcon />}
                   {isDossierGenerating ? 'Bezig...' : 'Genereer Startdossier'}
@@ -303,7 +303,7 @@ export default function ReportHeader({
                 {onPrint && (
                   <button
                     onClick={onPrint}
-                    className="flex items-center gap-2 rounded-lg border border-overlay/[0.08] bg-overlay/[0.04] px-3 py-2 text-sm text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+                    className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-aura-ink"
                   >
                     <PrinterIcon />
                     Download PDF
@@ -312,21 +312,21 @@ export default function ReportHeader({
               </div>
             </div>
 
-            <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">
+            <h1 className="text-2xl font-semibold text-aura-ink sm:text-3xl">
               {address.straat} {address.huisnummer}
               {address.huisletter ?? ''}{address.toevoeging ?? ''}
             </h1>
-            <p className="mt-1 text-grey-600">
+            <p className="mt-1 text-neutral-500">
               {address.postcode}, {address.woonplaats}
             </p>
 
             {/* Kadaster perceel ID — prominent */}
             {primaryPerceelId && (
-              <p className="mt-1.5 text-sm font-medium text-grey-400">
-                <span className="mr-1.5 text-xs font-normal text-grey-600">Perceel</span>
+              <p className="mt-1.5 text-sm font-medium text-neutral-600">
+                <span className="mr-1.5 text-xs font-normal text-neutral-500">Perceel</span>
                 {primaryPerceelId}
                 {cadastral_parcels.length > 1 && (
-                  <span className="ml-1 text-xs text-grey-600">+ {cadastral_parcels.length - 1} meer</span>
+                  <span className="ml-1 text-xs text-neutral-500">+ {cadastral_parcels.length - 1} meer</span>
                 )}
               </p>
             )}
@@ -338,15 +338,15 @@ export default function ReportHeader({
                   {building.status}
                 </span>
               )}
-              <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
+              <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-medium text-neutral-600">
                 {cadastral_parcels.length} percelen gekoppeld
               </span>
               {sourceParcelId && (
                 <>
-                  <span className="rounded-full border border-amber-accent/35 bg-amber-accent/10 px-2.5 py-1 font-medium text-amber-accent">
+                  <span className="rounded-full border border-aura-amber/35 bg-aura-amber/10 px-2.5 py-1 font-medium text-aura-amber">
                     Perceelrapport gekoppeld
                   </span>
-                  <span className="rounded-full border border-overlay/[0.08] bg-overlay/[0.04] px-2.5 py-1 font-medium text-grey-400">
+                  <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-medium text-neutral-600">
                     Duplicaatbeveiliging actief
                   </span>
                 </>
@@ -354,7 +354,7 @@ export default function ReportHeader({
             </div>
 
             {/* Report date */}
-            <p className="mt-2 text-xs text-grey-600">
+            <p className="mt-2 text-xs text-neutral-500">
               Rapport van {dateFmt.format(new Date(data.resolved_at))}
             </p>
           </div>
@@ -364,13 +364,13 @@ export default function ReportHeader({
             {center ? (
               <SatelliteThumbnail center={center} />
             ) : (
-              <div className="flex h-40 w-full items-center justify-center rounded-xl border border-overlay/[0.08] bg-overlay/[0.03]">
-                <span className="text-xs text-grey-600">Geen kaartlocatie</span>
+              <div className="flex h-40 w-full items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50">
+                <span className="text-xs text-neutral-500">Geen kaartlocatie</span>
               </div>
             )}
             <button
               onClick={onViewOnMap}
-              className="print-hide inline-flex w-full items-center justify-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-3.5 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+              className="print-hide inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200/[0.1] bg-neutral-50 px-3.5 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-aura-ink"
             >
               <MapPinIcon />
               Bekijk op kaart
@@ -417,9 +417,9 @@ export default function ReportHeader({
         {/* Completeness bar (compact) */}
         <div className="mt-3 flex items-center gap-2.5">
           <CompletenessRing value={completeness_score} />
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-grey-800/80">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-200/80">
             <div
-              className="h-full rounded-full bg-amber-accent transition-all"
+              className="h-full rounded-full bg-aura-amber transition-all"
               style={{
                 width: `${completeness_score * 100}%`,
                 opacity: completeness_score >= 0.8 ? 1 : completeness_score >= 0.5 ? 0.75 : 0.45,

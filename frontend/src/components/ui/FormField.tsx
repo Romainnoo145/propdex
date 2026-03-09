@@ -23,7 +23,7 @@ export function FormField({
     <div>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-grey-100"
+        className="block text-sm font-medium text-aura-ink"
       >
         {label}
       </label>
@@ -33,10 +33,10 @@ export function FormField({
         placeholder={placeholder}
         autoComplete={autoComplete}
         {...registration}
-        className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-grey-100 placeholder:text-grey-400 focus:outline-none focus:ring-2 focus:ring-amber-accent ${
+        className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-aura-ink placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-aura-amber ${
           error
             ? 'border-error focus:ring-error'
-            : 'border-grey-800'
+            : 'border-neutral-200'
         }`}
       />
       {error && (

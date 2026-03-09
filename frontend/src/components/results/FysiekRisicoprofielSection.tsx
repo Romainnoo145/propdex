@@ -9,10 +9,10 @@ function getRiskBadgeClasses(risk: RiskLevel): string {
     case 'middel':
       return 'bg-amber-500/15 text-amber-400/80 border border-amber-400/20'
     case 'laag':
-      return 'bg-grey-800 text-grey-400 border border-grey-700'
+      return 'bg-neutral-200 text-neutral-600 border border-neutral-300'
     case 'onbekend':
     default:
-      return 'bg-grey-800 text-grey-500 border border-grey-700'
+      return 'bg-neutral-200 text-neutral-500 border border-neutral-300'
   }
 }
 
@@ -46,7 +46,7 @@ function SkeletonGrid() {
       {[0, 1, 2, 3].map((i) => (
         <div
           key={i}
-          className="h-24 animate-pulse rounded-md bg-grey-800"
+          className="h-24 animate-pulse rounded-md bg-neutral-200"
         />
       ))}
     </div>
@@ -68,7 +68,7 @@ export function FysiekRisicoprofielSection({
     return (
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-grey-100">Fysiek Risicoprofiel</h3>
+          <h3 className="text-sm font-medium text-aura-ink">Fysiek Risicoprofiel</h3>
           <span className="rounded px-2 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-400/80 border border-amber-400/20">
             indicatief
           </span>
@@ -80,8 +80,8 @@ export function FysiekRisicoprofielSection({
 
   if (isError || !profiel) {
     return (
-      <div className="rounded-md border border-grey-800 bg-grey-850 p-4">
-        <p className="text-xs text-grey-500">Fysiek risicoprofiel niet beschikbaar</p>
+      <div className="rounded-md border border-neutral-200 bg-aura-glass-white/40 p-4">
+        <p className="text-xs text-neutral-500">Fysiek risicoprofiel niet beschikbaar</p>
       </div>
     )
   }
@@ -96,7 +96,7 @@ export function FysiekRisicoprofielSection({
   return (
     <div className={wrapperClass}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-grey-100">Fysiek Risicoprofiel</h3>
+        <h3 className="text-sm font-medium text-aura-ink">Fysiek Risicoprofiel</h3>
         <span className="rounded px-2 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-400/80 border border-amber-400/20">
           indicatief
         </span>
@@ -104,16 +104,16 @@ export function FysiekRisicoprofielSection({
 
       <div className="grid grid-cols-2 gap-3">
         {/* Card 1: Fundering */}
-        <div className="rounded-md border border-grey-800 bg-grey-850 p-3">
+        <div className="rounded-md border border-neutral-200 bg-aura-glass-white/40 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-grey-200">Fundering</p>
+            <p className="text-xs font-medium text-aura-ink">Fundering</p>
             {profiel.foundation_risk && (
               <RiskBadge risk={profiel.foundation_risk.risk} />
             )}
           </div>
           {profiel.foundation_risk && (
             <>
-              <p className="mt-1.5 text-xs text-grey-400 line-clamp-3">
+              <p className="mt-1.5 text-xs text-neutral-600 line-clamp-3">
                 {profiel.foundation_risk.reden}
               </p>
               {profiel.kcaf_cost && (
@@ -123,92 +123,92 @@ export function FysiekRisicoprofielSection({
                   {profiel.kcaf_cost.high_eur.toLocaleString('nl-NL')}
                 </p>
               )}
-              <p className="mt-2 text-[10px] text-grey-600 italic">
+              <p className="mt-2 text-[10px] text-neutral-500 italic">
                 {profiel.foundation_risk.disclaimer}
               </p>
             </>
           )}
           {!profiel.foundation_risk && (
-            <p className="mt-1.5 text-xs text-grey-500">Geen gegevens beschikbaar</p>
+            <p className="mt-1.5 text-xs text-neutral-500">Geen gegevens beschikbaar</p>
           )}
         </div>
 
         {/* Card 2: Bodemtype */}
-        <div className="rounded-md border border-grey-800 bg-grey-850 p-3">
+        <div className="rounded-md border border-neutral-200 bg-aura-glass-white/40 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-grey-200">Bodemtype</p>
+            <p className="text-xs font-medium text-aura-ink">Bodemtype</p>
           </div>
           {profiel.soil_profile ? (
             <>
-              <p className="mt-1.5 text-sm font-medium text-grey-100">
+              <p className="mt-1.5 text-sm font-medium text-aura-ink">
                 {profiel.soil_profile.dominant_type_label}
               </p>
               {profiel.soil_profile.soilname && (
-                <p className="mt-0.5 text-[10px] text-grey-500">
+                <p className="mt-0.5 text-[10px] text-neutral-500">
                   {profiel.soil_profile.soilname}
                 </p>
               )}
-              <p className="mt-2 text-[10px] text-grey-600 italic">
+              <p className="mt-2 text-[10px] text-neutral-500 italic">
                 {profiel.soil_profile.disclaimer}
               </p>
             </>
           ) : (
-            <p className="mt-1.5 text-xs text-grey-500">Geen gegevens beschikbaar</p>
+            <p className="mt-1.5 text-xs text-neutral-500">Geen gegevens beschikbaar</p>
           )}
         </div>
 
         {/* Card 3: Asbest */}
-        <div className="rounded-md border border-grey-800 bg-grey-850 p-3">
+        <div className="rounded-md border border-neutral-200 bg-aura-glass-white/40 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-grey-200">Asbest</p>
+            <p className="text-xs font-medium text-aura-ink">Asbest</p>
             {profiel.asbest_indicator && (
               <RiskBadge risk={profiel.asbest_indicator.risk as RiskLevel} />
             )}
           </div>
           {profiel.asbest_indicator ? (
             <>
-              <p className="mt-1.5 text-xs text-grey-400 line-clamp-3">
+              <p className="mt-1.5 text-xs text-neutral-600 line-clamp-3">
                 {profiel.asbest_indicator.reden}
                 {profiel.asbest_indicator.gebruiksdoel_factor &&
                   ` (factor: ${profiel.asbest_indicator.gebruiksdoel_factor})`}
               </p>
-              <p className="mt-2 text-[10px] text-grey-600 italic">
+              <p className="mt-2 text-[10px] text-neutral-500 italic">
                 Indicatieve inschatting op basis van bouwjaar. Geen vervanging voor
                 asbestinventarisatie.
               </p>
             </>
           ) : (
-            <p className="mt-1.5 text-xs text-grey-500">Geen gegevens beschikbaar</p>
+            <p className="mt-1.5 text-xs text-neutral-500">Geen gegevens beschikbaar</p>
           )}
         </div>
 
         {/* Card 4: Verontreiniging */}
-        <div className="rounded-md border border-grey-800 bg-grey-850 p-3">
+        <div className="rounded-md border border-neutral-200 bg-aura-glass-white/40 p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-grey-200">Bodemkwaliteit</p>
+            <p className="text-xs font-medium text-aura-ink">Bodemkwaliteit</p>
             {bodemDossierCount > 0 ? (
               <span className="rounded px-2 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-400/80 border border-amber-400/20">
                 Dossiers
               </span>
             ) : (
-              <span className="rounded px-2 py-0.5 text-[10px] font-medium bg-grey-800 text-grey-500 border border-grey-700">
+              <span className="rounded px-2 py-0.5 text-[10px] font-medium bg-neutral-200 text-neutral-500 border border-neutral-300">
                 Geen dossiers
               </span>
             )}
           </div>
           {profiel.bodem_data ? (
             <>
-              <p className="mt-1.5 text-xs text-grey-400">
+              <p className="mt-1.5 text-xs text-neutral-600">
                 {bodemDossierCount > 0
                   ? `${bodemDossierCount} WBB-dossier${bodemDossierCount !== 1 ? 's' : ''} in de omgeving`
                   : 'Geen bekende bodemverontreinigingsdossiers'}
               </p>
-              <p className="mt-2 text-[10px] text-grey-600 italic">
+              <p className="mt-2 text-[10px] text-neutral-500 italic">
                 {profiel.bodem_data.disclaimer}
               </p>
             </>
           ) : (
-            <p className="mt-1.5 text-xs text-grey-500">Geen gegevens beschikbaar</p>
+            <p className="mt-1.5 text-xs text-neutral-500">Geen gegevens beschikbaar</p>
           )}
         </div>
       </div>

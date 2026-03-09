@@ -62,9 +62,9 @@ const mockParcel: ScanResultItem = {
 // ---------------------------------------------------------------------------
 
 const MapWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative w-full h-screen bg-grey-800 overflow-hidden">
+  <div className="relative w-full h-screen bg-neutral-200 overflow-hidden">
     <div className="absolute inset-0 flex items-center justify-center">
-      <span className="text-grey-500 text-sm">Kaartcanvas (klik om perceel te selecteren)</span>
+      <span className="text-neutral-500 text-sm">Kaartcanvas (klik om perceel te selecteren)</span>
     </div>
     {children}
   </div>

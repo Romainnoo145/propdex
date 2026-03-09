@@ -73,10 +73,10 @@ const withProviders =
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={mockAuthValue}>
           <RouterProvider router={router} defaultComponent={() => (
-            <div className="flex h-screen bg-grey-950">
+            <div className="flex h-screen bg-aura-canvas">
               <Story />
-              <div className="flex-1 bg-grey-900 flex items-center justify-center">
-                <span className="text-grey-400 text-sm">Kaartinhoud</span>
+              <div className="flex-1 bg-aura-glass-white/60 flex items-center justify-center">
+                <span className="text-neutral-600 text-sm">Kaartinhoud</span>
               </div>
             </div>
           )} />

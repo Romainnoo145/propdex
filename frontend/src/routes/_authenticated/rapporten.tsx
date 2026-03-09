@@ -96,21 +96,21 @@ function RapportenPage() {
     <ResultsShell contentClassName="max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-grey-100">Rapporten</h1>
-          <p className="mt-1 text-sm text-grey-500">
+          <h1 className="text-2xl font-semibold text-aura-ink">Rapporten</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             {filteredReports.length}/{reports.length} {reports.length === 1 ? 'rapport' : 'rapporten'}
           </p>
         </div>
         <button
           onClick={() => navigate({ to: '/map' })}
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-accent bg-amber-accent px-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-aura-amber bg-aura-amber px-3.5 text-sm font-semibold text-aura-obsidian transition-colors hover:bg-aura-amber-hover"
         >
           <Plus size={14} />
           Nieuw rapport
         </button>
       </div>
 
-      <div className="mb-5 rounded-xl border border-overlay/[0.08] bg-grey-900 p-3 sm:p-4">
+      <div className="mb-5 rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-3 sm:p-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <SearchInput
             value={searchQuery}
@@ -124,7 +124,7 @@ function RapportenPage() {
             id="project-filter"
             value={projectFilter || ''}
             onChange={(e) => setProjectFilter(e.target.value || undefined)}
-            className="h-10 min-h-0 rounded-lg border-overlay/[0.12] bg-overlay/[0.04] text-sm"
+            className="h-10 min-h-0 rounded-lg border-neutral-200 bg-neutral-50 text-sm"
           >
             <option value="">Alle projecten</option>
             {(projectsData?.projects ?? [])
@@ -138,12 +138,12 @@ function RapportenPage() {
         </div>
         {activeProjectName && (
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center rounded-full border border-amber-accent/35 bg-amber-accent/12 px-2.5 py-1 text-amber-accent">
+            <span className="inline-flex items-center rounded-full border border-aura-amber/35 bg-aura-amber/12 px-2.5 py-1 text-aura-amber">
               Scope: {activeProjectName}
             </span>
             <button
               onClick={() => setProjectFilter(undefined)}
-              className="text-grey-400 transition-colors hover:text-grey-100"
+              className="text-neutral-600 transition-colors hover:text-aura-ink"
             >
               Wis scope
             </button>
@@ -157,7 +157,7 @@ function RapportenPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 space-y-2"
+              className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-2"
             >
               <Skeleton className="h-4 w-10" />
               <Skeleton className="h-5 w-4/5" />
@@ -230,23 +230,23 @@ function ReportTile({ report, onOpen, onOpenMap, onDelete }: ReportTileProps) {
       }}
       role="button"
       tabIndex={0}
-      className="group w-full rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 text-left transition-colors hover:bg-grey-850"
+      className="group w-full rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 text-left transition-colors hover:bg-aura-glass-white/40"
     >
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-overlay/[0.12] bg-overlay/[0.06] text-grey-300">
+        <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700">
           <FileText size={14} />
         </div>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={onOpenMap}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-overlay/[0.12] bg-overlay/[0.04] text-grey-400 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-aura-ink"
             title="Bekijk op kaart"
           >
             <ExternalLink size={14} />
           </button>
           <button
             onClick={onDelete}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-overlay/[0.12] bg-overlay/[0.04] text-grey-400 transition-colors hover:border-error/30 hover:bg-error/10 hover:text-error"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 transition-colors hover:border-error/30 hover:bg-error/10 hover:text-error"
             title="Verwijder rapport"
           >
             <Trash2 size={14} />
@@ -254,27 +254,27 @@ function ReportTile({ report, onOpen, onOpenMap, onDelete }: ReportTileProps) {
         </div>
       </div>
 
-      <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-grey-100">
+      <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-aura-ink">
         {report.report_name}
       </h3>
-      <p className="mt-1 text-xs text-grey-400">
+      <p className="mt-1 text-xs text-neutral-600">
         {report.postcode}, {report.city}
       </p>
 
       {report.notes && (
-        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-grey-500">
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-neutral-500">
           {report.notes}
         </p>
       )}
 
       <div className="mt-4">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-grey-500">{dateFmt.format(new Date(report.created_at))}</span>
-          <span className="font-medium text-amber-accent">{completeness}% compleet</span>
+          <span className="text-neutral-500">{dateFmt.format(new Date(report.created_at))}</span>
+          <span className="font-medium text-aura-amber">{completeness}% compleet</span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-overlay/[0.08]">
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-50">
           <div
-            className="h-full rounded-full bg-amber-accent transition-all duration-300"
+            className="h-full rounded-full bg-aura-amber transition-all duration-300"
             style={{ width: `${completeness}%` }}
           />
         </div>

@@ -22,11 +22,11 @@ export function AuthTabs({
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-grey-800 bg-grey-900 p-6 shadow-lg">
+    <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-6 shadow-lg">
       {/* Tab list */}
       <div
         role="tablist"
-        className="mb-6 flex border-b border-grey-800"
+        className="mb-6 flex border-b border-neutral-200"
       >
         <button
           role="tab"
@@ -35,8 +35,8 @@ export function AuthTabs({
           onClick={() => setActiveTab('login')}
           className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'login'
-              ? 'border-b-2 border-amber-accent text-amber-accent'
-              : 'text-grey-400 hover:text-grey-100'
+              ? 'border-b-2 border-aura-amber text-aura-amber'
+              : 'text-neutral-600 hover:text-aura-ink'
           }`}
         >
           Log in
@@ -48,8 +48,8 @@ export function AuthTabs({
           onClick={() => setActiveTab('register')}
           className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'register'
-              ? 'border-b-2 border-amber-accent text-amber-accent'
-              : 'text-grey-400 hover:text-grey-100'
+              ? 'border-b-2 border-aura-amber text-aura-amber'
+              : 'text-neutral-600 hover:text-aura-ink'
           }`}
         >
           Register
@@ -63,11 +63,11 @@ export function AuthTabs({
 
           {/* Or divider */}
           <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-grey-800"></div>
-            <span className="px-3 text-sm text-grey-400">
+            <div className="flex-1 border-t border-neutral-200"></div>
+            <span className="px-3 text-sm text-neutral-600">
               or
             </span>
-            <div className="flex-1 border-t border-grey-800"></div>
+            <div className="flex-1 border-t border-neutral-200"></div>
           </div>
 
           <GoogleButton />
@@ -81,11 +81,11 @@ export function AuthTabs({
 
           {/* Or divider */}
           <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-grey-800"></div>
-            <span className="px-3 text-sm text-grey-400">
+            <div className="flex-1 border-t border-neutral-200"></div>
+            <span className="px-3 text-sm text-neutral-600">
               or
             </span>
-            <div className="flex-1 border-t border-grey-800"></div>
+            <div className="flex-1 border-t border-neutral-200"></div>
           </div>
 
           <GoogleButton />

@@ -25,7 +25,7 @@ export function MapPanelShell({ children, onClose }: MapPanelShellProps) {
         className="fixed right-4 top-20 bottom-4 hidden md:block w-96"
         style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
       >
-        <div className="h-full overflow-y-auto rounded-lg border border-grey-800 bg-grey-900 shadow-2xl">
+        <div className="h-full overflow-y-auto rounded-lg border border-neutral-200 bg-aura-glass-white/60 shadow-2xl">
           {children}
         </div>
       </div>
@@ -35,7 +35,7 @@ export function MapPanelShell({ children, onClose }: MapPanelShellProps) {
         className="fixed inset-x-0 bottom-0 md:hidden max-h-[72vh]"
         style={{ zIndex: 'calc(var(--z-map-controls) + 2)' }}
       >
-        <div className="h-full overflow-y-auto rounded-t-lg border border-grey-800 bg-grey-900 shadow-2xl">
+        <div className="h-full overflow-y-auto rounded-t-lg border border-neutral-200 bg-aura-glass-white/60 shadow-2xl">
           {children}
         </div>
       </div>

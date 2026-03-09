@@ -113,7 +113,7 @@ function isMunicipalityLikeProjectName(
 
 /**
  * Project list with expandable report rows.
- * Dark theme — Industrial Amber design system (grey-* tokens).
+ * Aura design system (light theme, Aura tokens).
  * Falls back to demo data when API is unavailable.
  */
 export default function ProjectList() {
@@ -739,7 +739,7 @@ export default function ProjectList() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 space-y-2">
+          <div key={i} className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-2">
             <Skeleton className="h-5 w-1/2" />
             <Skeleton className="h-4 w-3/4" />
           </div>
@@ -751,7 +751,7 @@ export default function ProjectList() {
   return (
     <div className="space-y-4">
       {isDemo && (
-        <div className="rounded-lg border border-amber-accent/30 bg-amber-accent/10 px-4 py-3 text-sm text-amber-accent">
+        <div className="rounded-lg border border-aura-amber/30 bg-aura-amber/10 px-4 py-3 text-sm text-aura-amber">
           Voorbeelddata — start de backend om projecten te beheren
         </div>
       )}
@@ -960,15 +960,15 @@ export default function ProjectList() {
               {!gemeenteGeojson || !provincieGeojson ? (
                 <GemeenteCardGridSkeleton count={12} />
               ) : (
-                <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4">
+                <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4">
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-                    <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-                      <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
+                    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60">
+                      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
                         <ProvinceStatIcon />
-                        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+                        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
                           Provincies
                         </span>
-                        <span className="ml-auto text-xs text-grey-600">{provinceOptions.length}</span>
+                        <span className="ml-auto text-xs text-neutral-500">{provinceOptions.length}</span>
                       </div>
                       <div className="max-h-[680px] overflow-y-auto p-3">
                         <div className="space-y-2">
@@ -981,18 +981,18 @@ export default function ProjectList() {
                                 onClick={() => setSelectedProvinceCode(province.code)}
                                 className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
                                   isActive
-                                    ? 'border-amber-accent/35 bg-overlay/[0.08] shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
-                                    : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+                                    ? 'border-aura-amber/35 bg-neutral-50 shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
+                                    : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-50'
                                 }`}
                               >
-                                <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
-                                <p className="truncate pl-1 text-sm font-semibold text-grey-100">
+                                <span className={`absolute inset-y-1 left-0 w-1 rounded-r ${isActive ? 'bg-aura-amber' : 'bg-transparent'}`} />
+                                <p className="truncate pl-1 text-sm font-semibold text-aura-ink">
                                   {province.naam}
                                 </p>
-                                <div className="mt-1.5 flex items-center gap-2 pl-1 text-[11px] text-grey-500">
+                                <div className="mt-1.5 flex items-center gap-2 pl-1 text-[11px] text-neutral-500">
                                   <span>{stats.gemeenten} gemeenten</span>
-                                  <span className="text-grey-600">&middot;</span>
-                                  <span className={stats.meldingen > 0 ? 'text-amber-accent' : 'text-grey-500'}>
+                                  <span className="text-neutral-500">&middot;</span>
+                                  <span className={stats.meldingen > 0 ? 'text-aura-amber' : 'text-neutral-500'}>
                                     {stats.meldingen} meldingen
                                   </span>
                                 </div>
@@ -1003,23 +1003,23 @@ export default function ProjectList() {
                       </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-                      <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
+                    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60">
+                      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
                         <GemeenteStatIcon />
-                        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+                        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
                           Kies gemeente {selectedProvince ? `· ${selectedProvince.naam}` : ''}
                         </span>
-                        <span className="ml-auto text-xs text-grey-600">{selectedProvinceGemeenteCards.length}</span>
+                        <span className="ml-auto text-xs text-neutral-500">{selectedProvinceGemeenteCards.length}</span>
                       </div>
                       <div className="space-y-4 p-4">
                         {selectedProvince && standaloneWijkCountInSelectedProvince > 0 && (
-                          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3 text-xs text-grey-500">
+                          <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-500">
                             {standaloneWijkCountInSelectedProvince} losse wijkprojecten zijn automatisch meegeteld bij gemeenten in {selectedProvince.naam}.
                           </div>
                         )}
                         {selectedProvince && recentCards.length > 0 && (
-                          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
-                            <p className="mb-2 text-xs uppercase tracking-wide text-grey-500">Recent bekeken</p>
+                          <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+                            <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">Recent bekeken</p>
                             <div className="flex flex-wrap gap-2">
                               {recentCards.map((card) => (
                                 <button
@@ -1045,7 +1045,7 @@ export default function ProjectList() {
                                       }),
                                     })
                                   }}
-                                  className="rounded-full border border-overlay/[0.1] bg-overlay/[0.06] px-3 py-1 text-xs text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+                                  className="rounded-full border border-neutral-200/[0.1] bg-neutral-50 px-3 py-1 text-xs text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-aura-ink"
                                 >
                                   {card.naam}
                                 </button>
@@ -1060,11 +1060,11 @@ export default function ProjectList() {
                         )}
                         {favoriteSelectedProvinceCards.length > 0 && nonFavoriteSelectedProvinceCards.length > 0 && (
                           <div className="my-4 flex items-center gap-3 px-1">
-                            <div className="h-px flex-1 bg-overlay/[0.08]" />
-                            <span className="text-[11px] uppercase tracking-wide text-grey-600">
+                            <div className="h-px flex-1 bg-neutral-50" />
+                            <span className="text-[11px] uppercase tracking-wide text-neutral-500">
                               Overige gemeenten
                             </span>
-                            <div className="h-px flex-1 bg-overlay/[0.08]" />
+                            <div className="h-px flex-1 bg-neutral-50" />
                           </div>
                         )}
                         {nonFavoriteSelectedProvinceCards.length > 0 && (
@@ -1073,12 +1073,12 @@ export default function ProjectList() {
                           </GemeenteCardGrid>
                         )}
                         {selectedProvince && selectedProvinceGemeenteCards.length === 0 && (
-                          <p className="text-sm text-grey-500">
+                          <p className="text-sm text-neutral-500">
                             Geen gemeenten gevonden voor {selectedProvince.naam}.
                           </p>
                         )}
                         {!selectedProvince && (
-                          <p className="text-sm text-grey-500">
+                          <p className="text-sm text-neutral-500">
                             Selecteer links een provincie.
                           </p>
                         )}
@@ -1092,13 +1092,13 @@ export default function ProjectList() {
 
           {/* Regular projects (non-monitoring) */}
           {regularProjects.length > 0 && (
-            <section className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
-              <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
+            <section className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60">
+              <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
                 <ReportStatIcon />
-                <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+                <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
                   Overige projecten
                 </span>
-                <span className="ml-auto text-xs text-grey-600">{regularProjects.length}</span>
+                <span className="ml-auto text-xs text-neutral-500">{regularProjects.length}</span>
               </div>
               <div className="space-y-2.5 p-3">
                 {regularProjects.map((project) => {
@@ -1112,31 +1112,31 @@ export default function ProjectList() {
                   return (
                     <div
                       key={project.id}
-                      className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900"
+                      className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60"
                     >
                       {/* Project header — clickable */}
                       <button
                         onClick={() => handleToggle(project.id)}
-                        className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-overlay/[0.04]"
+                        className="flex w-full min-h-[44px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-neutral-50"
                       >
                         <ChevronIcon
-                          className={`h-4 w-4 shrink-0 text-grey-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                          className={`h-4 w-4 shrink-0 text-neutral-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-grey-100">{project.name}</h4>
-                            <span className="rounded-full border border-overlay/[0.12] bg-overlay/[0.05] px-2 py-0.5 text-xs font-medium text-grey-400">
+                            <h4 className="font-medium text-aura-ink">{project.name}</h4>
+                            <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-600">
                               {project.report_count}
                             </span>
                             {/* Unread badge */}
                             {unreadCount > 0 && (
-                              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1 text-xs font-semibold text-on-accent">
+                              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-aura-amber px-1 text-xs font-semibold text-aura-obsidian">
                                 {unreadCount > 9 ? unreadCount : ''}
                               </span>
                             )}
                           </div>
                           {project.description && (
-                            <p className="mt-0.5 truncate text-sm text-grey-400">
+                            <p className="mt-0.5 truncate text-sm text-neutral-600">
                               {project.description}
                             </p>
                           )}
@@ -1146,7 +1146,7 @@ export default function ProjectList() {
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={(e) => handleEdit(e, project)}
-                              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-500 transition-colors hover:bg-overlay/[0.08] hover:text-grey-200"
+                              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-aura-ink"
                               title="Bewerk project"
                             >
                               <PencilIcon />
@@ -1154,7 +1154,7 @@ export default function ProjectList() {
                             <button
                               onClick={(e) => handleDelete(e, project)}
                               disabled={deleteMutation.isPending}
-                              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-grey-500 transition-colors hover:bg-error/10 hover:text-error disabled:opacity-50"
+                              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-error/10 hover:text-error disabled:opacity-50"
                               title="Verwijder project"
                             >
                               <TrashIcon />
@@ -1177,7 +1177,7 @@ export default function ProjectList() {
                             />
                           )}
                           {isDemo && (
-                            <div className="border-t border-overlay/[0.08] px-5 py-4 text-center text-sm text-grey-400">
+                            <div className="border-t border-neutral-200 px-5 py-4 text-center text-sm text-neutral-600">
                               Geen scans beschikbaar (demo modus)
                             </div>
                           )}
@@ -1194,8 +1194,8 @@ export default function ProjectList() {
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 px-6 py-12 text-center">
-          <p className="text-grey-400">
+        <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 px-6 py-12 text-center">
+          <p className="text-neutral-600">
             Nog geen projecten gevonden. Projecten worden automatisch gekoppeld via scan- en rapportflows.
           </p>
         </div>
@@ -1237,24 +1237,24 @@ function ProjectWorkspaceHeader({
   extraActions?: ReactNode
 }) {
   return (
-    <div className="relative mb-5 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900 px-5 py-5 sm:px-6 sm:py-6">
-      <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-amber-accent/10 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-overlay/[0.04] blur-3xl" />
+    <div className="relative mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-5 py-5 sm:px-6 sm:py-6">
+      <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-aura-amber/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/3 top-1/2 h-36 w-36 rounded-full bg-neutral-50 blur-3xl" />
       <div className="relative">
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             {onBack && (
               <button
                 onClick={onBack}
-                className="mb-3 flex items-center gap-1.5 text-sm text-grey-600 transition-colors hover:text-grey-300"
+                className="mb-3 flex items-center gap-1.5 text-sm text-neutral-500 transition-colors hover:text-neutral-700"
               >
                 <BackArrowIcon />
                 {backLabel}
               </button>
             )}
-            <h1 className="text-2xl font-semibold text-grey-100 sm:text-3xl">{title}</h1>
+            <h1 className="text-2xl font-semibold text-aura-ink sm:text-3xl">{title}</h1>
             {subtitle && (
-              <p className="mt-1 text-sm text-grey-600">{subtitle}</p>
+              <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1262,7 +1262,7 @@ function ProjectWorkspaceHeader({
             <button
               onClick={onAction}
               disabled={!onAction}
-              className="inline-flex items-center gap-2 rounded-lg border border-overlay/[0.1] bg-overlay/[0.06] px-4 py-2 text-sm font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-200/[0.1] bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-aura-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
               <MapPinLineIcon />
               {actionLabel}
@@ -1301,8 +1301,8 @@ function MonitoringToggleAction({
       disabled={pending}
       className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         enabled
-          ? 'border-amber-accent/35 bg-amber-accent/12 text-amber-accent hover:bg-amber-accent/18'
-          : 'border-overlay/[0.1] bg-overlay/[0.04] text-grey-300 hover:bg-overlay/[0.08] hover:text-grey-100'
+          ? 'border-aura-amber/35 bg-aura-amber/12 text-aura-amber hover:bg-aura-amber/18'
+          : 'border-neutral-200/[0.1] bg-neutral-50 text-neutral-700 hover:bg-neutral-50 hover:text-aura-ink'
       }`}
     >
       <BellStatIcon />
@@ -1397,30 +1397,30 @@ function UnlinkedGemeenteWorkspace({
   }, [latestScanByWijkName, selectedWijkNaam])
 
   return (
-    <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
+    <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
         <WijkStatIcon />
-        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
           Wijken in {gemeenteName}
         </span>
-        <span className="ml-auto text-xs text-grey-600">{wijkItems.length}</span>
+        <span className="ml-auto text-xs text-neutral-500">{wijkItems.length}</span>
       </div>
       <div className="p-4">
         {isLoading ? (
           <div className="space-y-2.5">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
+              <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
                 <Skeleton className="h-4 w-2/3" />
               </div>
             ))}
           </div>
         ) : wijkItems.length === 0 ? (
-          <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-6 text-center">
-            <p className="text-sm text-grey-400">Geen wijkgrenzen gevonden voor deze gemeente.</p>
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-6 text-center">
+            <p className="text-sm text-neutral-600">Geen wijkgrenzen gevonden voor deze gemeente.</p>
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-            <div className="max-h-[620px] overflow-y-auto rounded-xl border border-overlay/[0.08] bg-grey-900 p-3">
+            <div className="max-h-[620px] overflow-y-auto rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-3">
               <div className="space-y-2.5">
                 {wijkItems.map((wijk) => {
                   const isActive = wijk.name === selectedWijkNaam
@@ -1432,12 +1432,12 @@ function UnlinkedGemeenteWorkspace({
                       onClick={() => setSelectedWijkNaam(wijk.name)}
                       className={`group relative w-full overflow-hidden rounded-xl border text-left transition-all ${
                         isActive
-                          ? 'border-amber-accent/35 bg-overlay/[0.08] shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
-                          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:border-amber-accent/30 hover:bg-overlay/[0.05]'
+                          ? 'border-aura-amber/35 bg-neutral-50 shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
+                          : 'border-neutral-200 bg-neutral-50 hover:border-aura-amber/30 hover:bg-neutral-50'
                       }`}
                     >
-                      <span className={`absolute inset-y-1 left-0 z-10 w-1 rounded-r ${isActive ? 'bg-amber-accent' : 'bg-transparent'}`} />
-                      <div className="relative aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/65">
+                      <span className={`absolute inset-y-1 left-0 z-10 w-1 rounded-r ${isActive ? 'bg-aura-amber' : 'bg-transparent'}`} />
+                      <div className="relative aspect-[16/8] border-b border-neutral-200 bg-aura-glass-white/40/65">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(217,170,56,0.11),transparent_45%),radial-gradient(circle_at_20%_82%,rgba(255,255,255,0.06),transparent_45%)]" />
                         {wijk.svgData ? (
                           <svg
@@ -1448,20 +1448,20 @@ function UnlinkedGemeenteWorkspace({
                             {wijk.svgData.backgroundD && (
                               <path
                                 d={wijk.svgData.backgroundD}
-                                className="fill-grey-700/18 stroke-overlay/[0.2]"
+                                className="fill-neutral-400/18 stroke-neutral-400/20"
                                 strokeWidth="0.5"
                               />
                             )}
                             {wijk.svgData.siblingsD && (
                               <path
                                 d={wijk.svgData.siblingsD}
-                                className="fill-transparent stroke-grey-600/25"
+                                className="fill-transparent stroke-neutral-500/25"
                                 strokeWidth="0.3"
                               />
                             )}
                             <path
                               d={wijk.svgData.primaryD}
-                              className="fill-amber-accent/24 stroke-amber-accent transition-all duration-200 group-hover:fill-amber-accent/30 group-hover:stroke-amber-accent"
+                              className="fill-aura-amber/24 stroke-aura-amber transition-all duration-200 group-hover:fill-aura-amber/30 group-hover:stroke-aura-amber"
                               strokeWidth="1"
                             />
                           </svg>
@@ -1473,7 +1473,7 @@ function UnlinkedGemeenteWorkspace({
                       </div>
                       <div className="px-3.5 py-2.5">
                         <div className="flex items-center gap-2">
-                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-grey-100">{wijk.name}</p>
+                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-aura-ink">{wijk.name}</p>
                           <div className="flex shrink-0 items-center gap-1.5">
                             <MetricChip
                               value={wijkScan ? 1 : 0}
@@ -1491,7 +1491,7 @@ function UnlinkedGemeenteWorkspace({
                             />
                           </div>
                         </div>
-                        <p className="mt-1 text-[11px] text-grey-500">
+                        <p className="mt-1 text-[11px] text-neutral-500">
                           {wijkScan
                             ? `Scan: ${dateFmt.format(new Date(wijkScan.scan_date))}`
                             : 'Nog geen scan'}
@@ -1503,29 +1503,29 @@ function UnlinkedGemeenteWorkspace({
               </div>
             </div>
 
-            <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+            <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 sm:p-5">
               {selectedWijk ? (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-xl font-semibold text-grey-100">{selectedWijk.name}</h3>
-                    <p className="mt-1 text-sm text-grey-500">
+                    <h3 className="text-xl font-semibold text-aura-ink">{selectedWijk.name}</h3>
+                    <p className="mt-1 text-sm text-neutral-500">
                       Wijk is direct beschikbaar voor scan en kaartnavigatie.
                     </p>
                   </div>
 
                   {latestWijkScan ? (
-                    <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
-                      <p className="text-xs uppercase tracking-wide text-grey-600">Laatste scan</p>
-                      <p className="mt-1 text-sm font-medium text-grey-200">
+                    <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Laatste scan</p>
+                      <p className="mt-1 text-sm font-medium text-aura-ink">
                         {dateFmt.format(new Date(latestWijkScan.scan_date))}
                       </p>
-                      <p className="text-xs text-grey-500">
+                      <p className="text-xs text-neutral-500">
                         {latestWijkScan.parcel_count} percelen gescand
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-overlay/[0.08] bg-overlay/[0.03] px-4 py-3">
-                      <p className="text-sm text-grey-400">Nog geen scan uitgevoerd voor deze wijk.</p>
+                    <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+                      <p className="text-sm text-neutral-600">Nog geen scan uitgevoerd voor deze wijk.</p>
                     </div>
                   )}
 
@@ -1540,7 +1540,7 @@ function UnlinkedGemeenteWorkspace({
                           }),
                         })
                       }
-                      className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-aura-ink"
                     >
                       <MapPinLineIcon />
                       Open op kaart
@@ -1548,7 +1548,7 @@ function UnlinkedGemeenteWorkspace({
                     {latestWijkScan && (
                       <button
                         onClick={() => navigate({ to: '/resultaten', search: { scan_id: latestWijkScan.scan_id } })}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.1] hover:text-grey-100"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-aura-ink"
                       >
                         <ScanIcon />
                         Bekijk resultaten
@@ -1579,7 +1579,7 @@ function UnlinkedGemeenteWorkspace({
                         )
                       }}
                       disabled={triggerScan.isPending}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent bg-amber-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-aura-amber bg-aura-amber px-3 py-1.5 text-xs font-semibold text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <ScanIcon />
                       {triggerScan.isPending ? 'Scan starten...' : 'Start wijkscan'}
@@ -1587,7 +1587,7 @@ function UnlinkedGemeenteWorkspace({
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-grey-500">Selecteer links een wijk.</p>
+                <p className="text-sm text-neutral-500">Selecteer links een wijk.</p>
               )}
             </div>
           </div>
@@ -1609,14 +1609,14 @@ function WorkspaceMetricCard({
   highlight?: boolean
 }) {
   return (
-    <div className="rounded-xl border border-overlay/[0.08] bg-overlay/[0.04] px-4 py-3">
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-grey-600">{label}</p>
-        <span className={highlight ? 'text-amber-accent/90' : 'text-grey-500'}>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{label}</p>
+        <span className={highlight ? 'text-aura-amber/90' : 'text-neutral-500'}>
           {icon}
         </span>
       </div>
-      <p className={`mt-1 text-2xl font-semibold leading-none ${highlight ? 'text-amber-accent' : 'text-grey-100'}`}>
+      <p className={`mt-1 text-2xl font-semibold leading-none ${highlight ? 'text-aura-amber' : 'text-aura-ink'}`}>
         {value}
       </p>
     </div>
@@ -1655,7 +1655,7 @@ function WijkScanList({
 
   if (isLoading) {
     return (
-      <div className="border-t border-overlay/[0.08] px-10 py-3 space-y-2">
+      <div className="border-t border-neutral-200 px-10 py-3 space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
       </div>
@@ -1664,10 +1664,10 @@ function WijkScanList({
 
   if (scans.length === 0) {
     return (
-      <div className="border-t border-overlay/[0.08] px-10 py-5 text-center">
-        <p className="text-sm text-grey-400">Nog geen scans voor dit project</p>
+      <div className="border-t border-neutral-200 px-10 py-5 text-center">
+        <p className="text-sm text-neutral-600">Nog geen scans voor dit project</p>
         {!gemeenteCode && (
-          <p className="mt-1 text-xs text-grey-600">
+          <p className="mt-1 text-xs text-neutral-500">
             Gemeentecode niet gevonden voor dit project. Hernoem naar een gemeentenaam of koppel gemeente_code.
           </p>
         )}
@@ -1698,7 +1698,7 @@ function WijkScanList({
             )
           }}
           disabled={!gemeenteCode || triggerScan.isPending}
-          className="mt-3 min-h-[36px] rounded-md border border-overlay/[0.12] bg-overlay/[0.06] px-3 py-1.5 text-xs font-medium text-grey-200 transition-colors hover:bg-overlay/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-3 min-h-[36px] rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-aura-ink transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {triggerScan.isPending ? 'Scan starten...' : 'Start scan'}
         </button>
@@ -1707,31 +1707,31 @@ function WijkScanList({
   }
 
   return (
-    <div className="border-t border-overlay/[0.08] bg-overlay/[0.03]">
+    <div className="border-t border-neutral-200 bg-neutral-50">
       {scans.map((scan) => {
         const isCompleted = scan.status === 'completed'
         return (
           <div
             key={scan.scan_id}
-            className="flex w-full items-center gap-3 border-b border-overlay/[0.08] px-10 py-3 last:border-b-0"
+            className="flex w-full items-center gap-3 border-b border-neutral-200 px-10 py-3 last:border-b-0"
           >
             <ScanIcon />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-grey-300">
+                <p className="text-sm font-medium text-neutral-700">
                   Scan {dateFmt.format(new Date(scan.scan_date))}
                 </p>
                 {!isCompleted && (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     scan.status === 'running' ? 'bg-info/20 text-info' :
                     scan.status === 'failed' ? 'bg-error/20 text-error' :
-                    'border border-overlay/[0.12] bg-overlay/[0.05] text-grey-400'
+                    'border border-neutral-200 bg-neutral-50 text-neutral-600'
                   }`}>
                     {scan.status}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-grey-400">
+              <p className="text-xs text-neutral-600">
                 {dateFmt.format(new Date(scan.scan_date))} &middot; {scan.parcel_count} percelen
               </p>
             </div>
@@ -1739,7 +1739,7 @@ function WijkScanList({
               <button
                 onClick={() => handleScanResultsClick(scan)}
                 disabled={!isCompleted}
-                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-[36px] rounded-md px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Toon resultaten
               </button>
@@ -1761,7 +1761,7 @@ function ChevronIcon({ className }: { className?: string }) {
 
 function ScanIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-grey-600">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-neutral-500">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>

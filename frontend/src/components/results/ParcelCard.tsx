@@ -10,16 +10,16 @@ function ScoreBadge({
 }) {
   if (score === null || category === null) {
     return (
-      <span className="inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 rounded-full text-xs font-semibold bg-grey-800/60 text-grey-600 border border-overlay/5">
+      <span className="inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-200/60 text-neutral-500 border border-neutral-200">
         --
       </span>
     )
   }
 
   const styles = {
-    High: 'bg-amber-accent/15 text-amber-accent border-amber-accent/30 shadow-[0_0_8px_rgba(217,170,56,0.15)]',
-    Medium: 'bg-amber-accent/8 text-amber-accent/70 border-amber-accent/15',
-    Low: 'bg-grey-800/60 text-grey-400 border-overlay/5',
+    High: 'bg-aura-amber/15 text-aura-amber border-aura-amber/30 shadow-[0_0_8px_rgba(217,170,56,0.15)]',
+    Medium: 'bg-aura-amber/8 text-aura-amber/70 border-aura-amber/15',
+    Low: 'bg-neutral-200/60 text-neutral-600 border-neutral-200',
   }
 
   const style = styles[category as keyof typeof styles] ?? styles.Low
@@ -68,13 +68,13 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
       onClick={onClick}
       className={`w-full text-left px-4 py-4 min-h-[72px] transition-colors flex flex-col justify-center gap-1.5 ${
         isSelected
-          ? 'bg-amber-accent/[0.06] ring-1 ring-inset ring-amber-accent/20'
-          : 'hover:bg-overlay/[0.02]'
+          ? 'bg-aura-amber/[0.06] ring-1 ring-inset ring-aura-amber/20'
+          : 'hover:bg-neutral-100/[0.02]'
       }`}
     >
       {/* Top row: address + score badge */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-grey-100 truncate min-w-0">
+        <span className="text-sm font-semibold text-aura-ink truncate min-w-0">
           {address}
         </span>
         <div className="shrink-0">
@@ -83,28 +83,28 @@ export function ParcelCard({ parcel, isSelected, onClick }: ParcelCardProps) {
       </div>
 
       {/* Bottom row: area + bestemming */}
-      <div className="flex items-center gap-2 text-xs text-grey-600">
+      <div className="flex items-center gap-2 text-xs text-neutral-500">
         <span className="tabular-nums">{area}</span>
         {bestemming && (
           <>
-            <span className="text-grey-700">·</span>
-            <span className="truncate text-grey-400">{bestemming}</span>
+            <span className="text-neutral-400">·</span>
+            <span className="truncate text-neutral-600">{bestemming}</span>
           </>
         )}
-        <span className="text-grey-700">·</span>
-        <span className={`text-xs font-medium ${isLeeg ? 'text-amber-accent' : 'text-grey-600'}`}>
+        <span className="text-neutral-400">·</span>
+        <span className={`text-xs font-medium ${isLeeg ? 'text-aura-amber' : 'text-neutral-500'}`}>
           {isLeeg ? 'Leeg' : 'Bebouwd'}
         </span>
         {parcel.bouwjaar && (
           <>
-            <span className="text-grey-700">·</span>
-            <span className="tabular-nums text-grey-600">{parcel.bouwjaar}</span>
+            <span className="text-neutral-400">·</span>
+            <span className="tabular-nums text-neutral-500">{parcel.bouwjaar}</span>
           </>
         )}
       </div>
 
       {topVacancyReason && (
-        <div className="flex items-center gap-2 text-[11px] text-grey-500">
+        <div className="flex items-center gap-2 text-[11px] text-neutral-500">
           <span className="truncate">{topVacancyReason}</span>
         </div>
       )}

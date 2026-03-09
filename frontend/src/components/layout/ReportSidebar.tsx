@@ -111,12 +111,12 @@ export default function ReportSidebar({
   if (!isOpen) return null
 
   return (
-    <aside className="h-full w-80 shrink-0 border-r border-grey-800 bg-grey-900">
+    <aside className="h-full w-80 shrink-0 border-r border-neutral-200 bg-aura-glass-white/60">
 
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-grey-800 px-4 py-4">
-            <h2 className="text-lg font-medium text-grey-100">Rapporten</h2>
+          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-4">
+            <h2 className="text-lg font-medium text-aura-ink">Rapporten</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -131,10 +131,10 @@ export default function ReportSidebar({
           <div className="flex-1 overflow-y-auto">
             {/* Project filter */}
             {hasReports && projectsData && projectsData.projects.length > 0 && (
-              <div className="border-b border-grey-800 px-4 py-3">
+              <div className="border-b border-neutral-200 px-4 py-3">
                 <label
                   htmlFor="project-filter"
-                  className="mb-1.5 block text-xs font-medium text-grey-400"
+                  className="mb-1.5 block text-xs font-medium text-neutral-600"
                 >
                   Filter op project
                 </label>
@@ -167,7 +167,7 @@ export default function ReportSidebar({
 
             {/* Recent Viewed */}
             {hasRecent && (
-              <div className="border-b border-grey-800 pb-4">
+              <div className="border-b border-neutral-200 pb-4">
                 <RecentViewed items={recent} onItemClick={onSelectRecent} />
               </div>
             )}
@@ -175,7 +175,7 @@ export default function ReportSidebar({
             {/* Saved Reports */}
             {hasReports && (
               <div className="p-4">
-                <h3 className="mb-3 px-1 text-xs uppercase tracking-wide text-grey-600">
+                <h3 className="mb-3 px-1 text-xs uppercase tracking-wide text-neutral-500">
                   Opgeslagen rapporten
                 </h3>
                 <div className="space-y-2">
@@ -186,18 +186,18 @@ export default function ReportSidebar({
                         {/* Accordion header */}
                         <button
                           onClick={() => toggleProject(projectName)}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-grey-850"
+                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-aura-glass-white/40"
                         >
-                          <span className="text-sm font-medium text-grey-400">
+                          <span className="text-sm font-medium text-neutral-600">
                             {projectName}
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-grey-600">
+                            <span className="text-xs text-neutral-500">
                               {projectReports.length}
                             </span>
                             <ChevronRight
                               size={16}
-                              className={`text-grey-600 transition-transform ${
+                              className={`text-neutral-500 transition-transform ${
                                 isExpanded ? 'rotate-90' : ''
                               }`}
                             />
@@ -256,14 +256,14 @@ export default function ReportSidebar({
 
             {/* Empty state — minimal */}
             {!hasReports && !hasRecent && !isLoading && (
-              <div className="px-4 py-8 text-center text-sm text-grey-600">
+              <div className="px-4 py-8 text-center text-sm text-neutral-500">
                 Geen opgeslagen rapporten
               </div>
             )}
 
             {/* Loading state */}
             {isLoading && (
-              <div className="py-8 text-center text-sm text-grey-400">
+              <div className="py-8 text-center text-sm text-neutral-600">
                 Laden...
               </div>
             )}

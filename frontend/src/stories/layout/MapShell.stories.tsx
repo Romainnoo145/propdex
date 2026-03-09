@@ -23,8 +23,8 @@ type Story = StoryObj<typeof MapShell>
 export const Default: Story = {
   args: {
     children: (
-      <div className="absolute inset-0 bg-grey-800 flex items-center justify-center">
-        <span className="text-grey-400 text-sm">Kaartcanvas</span>
+      <div className="absolute inset-0 bg-neutral-200 flex items-center justify-center">
+        <span className="text-neutral-600 text-sm">Kaartcanvas</span>
       </div>
     ),
   },
@@ -36,25 +36,25 @@ export const WithFloatingControls: Story = {
     children: (
       <>
         {/* Simulated map background */}
-        <div className="absolute inset-0 bg-grey-800" />
+        <div className="absolute inset-0 bg-neutral-200" />
 
         {/* Simulated floating search bar (top-left) */}
-        <div className="absolute top-4 left-4 w-72 rounded-lg bg-grey-900/90 backdrop-blur-md border border-grey-800 px-4 py-2.5">
-          <span className="text-grey-400 text-sm">Zoek adres of gemeente...</span>
+        <div className="absolute top-4 left-4 w-72 rounded-lg bg-aura-glass-white/60/90 backdrop-blur-md border border-neutral-200 px-4 py-2.5">
+          <span className="text-neutral-600 text-sm">Zoek adres of gemeente...</span>
         </div>
 
         {/* Simulated layer toggle (top-right) */}
-        <div className="absolute top-4 right-4 rounded-lg bg-grey-900/90 backdrop-blur-md border border-grey-800 px-3 py-2">
-          <span className="text-grey-400 text-xs">Lagen</span>
+        <div className="absolute top-4 right-4 rounded-lg bg-aura-glass-white/60/90 backdrop-blur-md border border-neutral-200 px-3 py-2">
+          <span className="text-neutral-600 text-xs">Lagen</span>
         </div>
 
         {/* Simulated inspector panel (right edge) */}
-        <div className="absolute right-0 top-0 bottom-0 w-80 bg-grey-900 border-l border-grey-800 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-grey-800">
-            <span className="text-sm font-semibold text-grey-100">Perceeldetails</span>
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-aura-glass-white/60 border-l border-neutral-200 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200">
+            <span className="text-sm font-semibold text-aura-ink">Perceeldetails</span>
           </div>
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-grey-400">Selecteer een perceel op de kaart</p>
+            <p className="text-sm text-neutral-600">Selecteer een perceel op de kaart</p>
           </div>
         </div>
       </>

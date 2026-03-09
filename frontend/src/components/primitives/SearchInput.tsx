@@ -28,7 +28,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
         {...DEFAULT_SEARCH_INPUT_PROPS}
         {...props}
         className={cn(
-          'w-full rounded-lg border border-overlay/[0.12] bg-overlay/[0.04] pr-3 text-sm text-grey-100 placeholder:text-grey-500 focus:border-amber-accent/40 focus:outline-none',
+          'w-full rounded-lg border border-neutral-200 bg-neutral-50 pr-3 text-sm text-aura-ink placeholder:text-neutral-500 focus:border-aura-amber/40 focus:outline-none',
           leftIcon ? 'pl-9' : 'pl-3',
           className
         )}
@@ -39,7 +39,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 
     return (
       <div className={cn('relative', containerClassName)}>
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-grey-600">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
           {leftIcon}
         </span>
         {control}

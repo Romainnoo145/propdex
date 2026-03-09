@@ -23,7 +23,7 @@ export function ErrorState({ message, actions, className }: ErrorStateProps) {
       )}
     >
       <AlertTriangle className="h-8 w-8 text-error" />
-      <p className="text-sm text-grey-400">{message ?? 'Er is iets misgegaan.'}</p>
+      <p className="text-sm text-neutral-600">{message ?? 'Er is iets misgegaan.'}</p>
       {actions && actions.length > 0 && (
         <div className="flex gap-2 mt-1">
           {actions.map((action) => (

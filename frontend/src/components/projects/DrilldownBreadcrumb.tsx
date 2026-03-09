@@ -26,12 +26,12 @@ export function DrilldownBreadcrumb({
     <nav className="flex items-center gap-2 text-sm mb-4">
       <button
         onClick={() => navigate({ to: '/projecten', search: {} })}
-        className="text-grey-400 hover:text-grey-100 hover:underline underline-offset-2 transition-colors"
+        className="text-neutral-600 hover:text-aura-ink hover:underline underline-offset-2 transition-colors"
       >
         Projecten
       </button>
 
-      <span className="text-grey-700">{'\u203a'}</span>
+      <span className="text-neutral-400">{'\u203a'}</span>
 
       {search.wijk_id && gemeenteName ? (
         <>
@@ -42,15 +42,15 @@ export function DrilldownBreadcrumb({
                 search: { gemeente_id: search.gemeente_id },
               })
             }
-            className="text-grey-400 hover:text-grey-100 hover:underline underline-offset-2 transition-colors"
+            className="text-neutral-600 hover:text-aura-ink hover:underline underline-offset-2 transition-colors"
           >
             {gemeenteName}
           </button>
-          <span className="text-grey-700">{'\u203a'}</span>
-          <span className="font-medium text-grey-100">{wijkName}</span>
+          <span className="text-neutral-400">{'\u203a'}</span>
+          <span className="font-medium text-aura-ink">{wijkName}</span>
         </>
       ) : (
-        <span className="font-medium text-grey-100">{gemeenteName}</span>
+        <span className="font-medium text-aura-ink">{gemeenteName}</span>
       )}
     </nav>
   )

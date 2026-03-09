@@ -19,7 +19,7 @@ interface NavItem {
  * Thin left-side icon-based navigation with Kaart, Resultaten, Projecten primary views
  * plus notification bell, Rapporten page link, settings, and logout at bottom.
  *
- * Design: Industrial Amber (bg-grey-900 solid), fixed position,
+ * Design: Industrial Amber (bg-aura-glass-white/60 solid), fixed position,
  * z-index --z-side-rail (250).
  */
 export default function SideRailNav() {
@@ -48,7 +48,7 @@ export default function SideRailNav() {
 
   return (
     <nav
-      className="hidden h-full w-16 shrink-0 flex-col items-center justify-between border-r border-grey-800 bg-grey-900 py-4 md:flex"
+      className="hidden h-full w-16 shrink-0 flex-col items-center justify-between border-r border-neutral-200 bg-aura-glass-white/60 py-4 md:flex"
       style={{ zIndex: 'var(--z-side-rail)' }}
     >
       {/* Top section: Main navigation */}
@@ -56,7 +56,7 @@ export default function SideRailNav() {
         <WorkspaceSwitcher />
 
         {/* Divider */}
-        <div className="my-1 h-px w-8 bg-grey-800" />
+        <div className="my-1 h-px w-8 bg-neutral-200" />
 
         {navItems.map((item) => {
           const isActive = matchRoute({ to: item.to })
@@ -70,14 +70,14 @@ export default function SideRailNav() {
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-grey-800 text-grey-100'
-                    : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+                    ? 'bg-neutral-200 text-aura-ink'
+                    : 'text-neutral-600 hover:bg-aura-glass-white/40 hover:text-aura-ink'
                 }`}
               >
                 {item.icon}
               </div>
               {/* Hover tooltip */}
-              <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
                 {item.label}
               </span>
             </Link>
@@ -85,22 +85,22 @@ export default function SideRailNav() {
         })}
 
         {/* Divider */}
-        <div className="my-2 h-px w-8 bg-grey-800" />
+        <div className="my-2 h-px w-8 bg-neutral-200" />
 
         {/* Notification bell */}
         <Link to="/meldingen" search={{ gemeente: undefined }} className="group relative">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/meldingen' })
-                ? 'bg-grey-800 text-grey-100'
-                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+                ? 'bg-neutral-200 text-aura-ink'
+                : 'text-neutral-600 hover:bg-aura-glass-white/40 hover:text-aura-ink'
             }`}
           >
             <Bell size={20} />
             <NotificationBadge count={unreadData?.total_unread ?? 0} />
           </div>
           {/* Hover tooltip */}
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
             Meldingen
           </span>
         </Link>
@@ -114,14 +114,14 @@ export default function SideRailNav() {
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/rapporten' })
-                ? 'bg-grey-800 text-grey-100'
-                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+                ? 'bg-neutral-200 text-aura-ink'
+                : 'text-neutral-600 hover:bg-aura-glass-white/40 hover:text-aura-ink'
             }`}
           >
             <FileText size={20} />
           </div>
           {/* Hover tooltip */}
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
             Rapporten
           </span>
         </Link>
@@ -131,14 +131,14 @@ export default function SideRailNav() {
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/jurisprudentie' })
-                ? 'bg-grey-800 text-grey-100'
-                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+                ? 'bg-neutral-200 text-aura-ink'
+                : 'text-neutral-600 hover:bg-aura-glass-white/40 hover:text-aura-ink'
             }`}
           >
             <Scale size={20} />
           </div>
           {/* Hover tooltip */}
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
             Jurisprudentie
           </span>
         </Link>
@@ -150,22 +150,22 @@ export default function SideRailNav() {
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/instellingen' })
-                ? 'bg-grey-800 text-grey-100'
-                : 'text-grey-400 hover:bg-grey-850 hover:text-grey-100'
+                ? 'bg-neutral-200 text-aura-ink'
+                : 'text-neutral-600 hover:bg-aura-glass-white/40 hover:text-aura-ink'
             }`}
           >
             <Settings size={20} />
           </div>
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
             Instellingen
           </span>
         </Link>
         <button
           onClick={handleLogout}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-lg text-grey-400 transition-colors hover:bg-grey-850 hover:text-grey-100"
+          className="group relative flex h-12 w-12 items-center justify-center rounded-lg text-neutral-600 transition-colors hover:bg-aura-glass-white/40 hover:text-aura-ink"
         >
           <LogOut size={20} />
-          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
             Uitloggen
           </span>
         </button>

@@ -55,7 +55,7 @@ function GoogleCallback() {
 
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <p className="text-grey-400">
+      <p className="text-neutral-600">
         Authenticating with Google...
       </p>
     </div>

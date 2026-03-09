@@ -24,19 +24,19 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
 
   // Stedelijkheid badge color mapping
   function stedelijkheidBadgeClass(klasse: number): string {
-    if (klasse === 1) return 'bg-amber-accent/20 text-amber-accent border border-amber-accent/30'
-    if (klasse === 2) return 'bg-amber-accent/10 text-amber-accent/80 border border-amber-accent/20'
-    if (klasse === 3) return 'bg-grey-700/50 text-grey-300 border border-grey-700'
-    return 'bg-grey-800/50 text-grey-400 border border-grey-750'
+    if (klasse === 1) return 'bg-aura-amber/20 text-aura-amber border border-aura-amber/30'
+    if (klasse === 2) return 'bg-aura-amber/10 text-aura-amber/80 border border-aura-amber/20'
+    if (klasse === 3) return 'bg-neutral-300/50 text-neutral-700 border border-neutral-300'
+    return 'bg-neutral-200/50 text-neutral-600 border border-neutral-300'
   }
 
   const hasKoopHuur =
     demografie.percentage_koopwoningen != null && demografie.percentage_huurwoningen != null
 
   return (
-    <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
+    <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
         {/* Bar chart icon */}
         <svg
           width="14"
@@ -47,16 +47,16 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-amber-accent/70"
+          className="text-aura-amber/70"
         >
           <line x1="18" y1="20" x2="18" y2="10" />
           <line x1="12" y1="20" x2="12" y2="4" />
           <line x1="6" y1="20" x2="6" y2="14" />
         </svg>
-        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
           CBS Wijkstatistieken
         </span>
-        <span className="ml-auto text-xs text-grey-600">
+        <span className="ml-auto text-xs text-neutral-500">
           Bron: CBS StatLine, peiljaar {peiljaar}
         </span>
       </div>
@@ -67,7 +67,7 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {/* Stedelijkheid badge */}
         {stedelijkheid.klasse != null && (
           <div className="flex items-center justify-between">
-            <span className="text-xs text-grey-400">Stedelijkheid</span>
+            <span className="text-xs text-neutral-600">Stedelijkheid</span>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${stedelijkheidBadgeClass(stedelijkheid.klasse)}`}
             >
@@ -80,8 +80,8 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {/* WOZ gemiddelde */}
         {gemiddelde_woz_waarde != null && (
           <div className="flex items-center justify-between">
-            <span className="text-xs text-grey-400">Gem. WOZ-waarde</span>
-            <span className="text-xs font-medium text-grey-100">
+            <span className="text-xs text-neutral-600">Gem. WOZ-waarde</span>
+            <span className="text-xs font-medium text-aura-ink">
               &euro;{Math.round(gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}
             </span>
           </div>
@@ -90,8 +90,8 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {/* Inwoners */}
         {demografie.aantal_inwoners != null && (
           <div className="flex items-center justify-between">
-            <span className="text-xs text-grey-400">Inwoners</span>
-            <span className="text-xs font-medium text-grey-100">
+            <span className="text-xs text-neutral-600">Inwoners</span>
+            <span className="text-xs font-medium text-aura-ink">
               {demografie.aantal_inwoners.toLocaleString('nl-NL')}
             </span>
           </div>
@@ -101,14 +101,14 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {hasKoopHuur && (
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-grey-400">Koop / Huur</span>
-              <span className="text-xs font-medium text-grey-300">
+              <span className="text-xs text-neutral-600">Koop / Huur</span>
+              <span className="text-xs font-medium text-neutral-700">
                 {demografie.percentage_koopwoningen}% / {demografie.percentage_huurwoningen}%
               </span>
             </div>
-            <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-grey-800">
+            <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
               <div
-                className="h-full rounded-full bg-amber-accent/70"
+                className="h-full rounded-full bg-aura-amber/70"
                 style={{ width: `${demografie.percentage_koopwoningen}%` }}
               />
             </div>
@@ -118,8 +118,8 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {/* Omgevingsadressendichtheid */}
         {stedelijkheid.omgevingsadressendichtheid != null && (
           <div className="flex items-center justify-between">
-            <span className="text-xs text-grey-400">Adressendichtheid</span>
-            <span className="text-xs font-medium text-grey-100">
+            <span className="text-xs text-neutral-600">Adressendichtheid</span>
+            <span className="text-xs font-medium text-aura-ink">
               {stedelijkheid.omgevingsadressendichtheid.toLocaleString('nl-NL')} adressen/km&sup2;
             </span>
           </div>
@@ -129,8 +129,8 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
         {(bouwjaar_distributie.percentage_bouwjaar_voor_2000 != null ||
           bouwjaar_distributie.percentage_bouwjaar_vanaf_2000 != null) && (
           <div className="flex items-center justify-between">
-            <span className="text-xs text-grey-400">Bouwjaar voor 2000</span>
-            <span className="text-xs font-medium text-grey-100">
+            <span className="text-xs text-neutral-600">Bouwjaar voor 2000</span>
+            <span className="text-xs font-medium text-aura-ink">
               {bouwjaar_distributie.percentage_bouwjaar_voor_2000 != null
                 ? `${bouwjaar_distributie.percentage_bouwjaar_voor_2000}%`
                 : '—'}

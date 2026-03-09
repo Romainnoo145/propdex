@@ -54,7 +54,7 @@ function severity(per1000: number | null): {
   bg: string
   label: string
 } {
-  if (per1000 == null) return { color: 'text-grey-500', bg: 'bg-grey-700', label: 'Onbekend' }
+  if (per1000 == null) return { color: 'text-neutral-500', bg: 'bg-neutral-300', label: 'Onbekend' }
   if (per1000 < 30) return { color: 'text-green-400', bg: 'bg-green-400/15', label: 'Laag' }
   if (per1000 <= 60) return { color: 'text-amber-400', bg: 'bg-amber-400/15', label: 'Gemiddeld' }
   if (per1000 <= 100) return { color: 'text-orange-400', bg: 'bg-orange-400/15', label: 'Hoog' }
@@ -76,9 +76,9 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
   )
 
   return (
-    <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
+    <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
         <svg
           width="14"
           height="14"
@@ -88,14 +88,14 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-amber-accent/70"
+          className="text-aura-amber/70"
         >
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
-        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
           Criminaliteit
         </span>
-        <span className="ml-auto rounded bg-grey-800 px-1.5 py-0.5 text-[10px] text-grey-500">
+        <span className="ml-auto rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-500">
           {criminaliteit.peiljaar}
         </span>
       </div>
@@ -114,7 +114,7 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
             </span>
           </div>
           <div>
-            <p className="text-xs text-grey-300">
+            <p className="text-xs text-neutral-700">
               misdrijven per 1.000 inwoners
             </p>
             <div className="flex items-center gap-2 mt-0.5">
@@ -125,7 +125,7 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
                 {totalSev.label}
               </span>
               {criminaliteit.totaal_misdrijven != null && (
-                <span className="text-[10px] text-grey-600">
+                <span className="text-[10px] text-neutral-500">
                   ({criminaliteit.totaal_misdrijven.toLocaleString('nl-NL')}{' '}
                   totaal)
                 </span>
@@ -136,7 +136,7 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
 
         {/* Category breakdown — per 1.000 inwoners */}
         <div className="space-y-2.5">
-          <p className="text-[10px] text-grey-500 uppercase tracking-wide">Per 1.000 inwoners</p>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-wide">Per 1.000 inwoners</p>
           {CATEGORIES.map(({ key, label, icon }) => {
             const cat = criminaliteit.categorien[key]
             const catSev = severity(cat.per_1000)
@@ -145,14 +145,14 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className={`${catSev.color} opacity-60`}>{icon}</span>
-                    <span className="text-xs text-grey-400">{label}</span>
+                    <span className="text-xs text-neutral-600">{label}</span>
                   </div>
                   <span className={`text-xs font-medium tabular-nums ${catSev.color}`}>
                     {cat.per_1000 != null ? cat.per_1000.toFixed(1) : '--'}
                   </span>
                 </div>
                 {/* Bar */}
-                <div className="h-1 rounded-full bg-grey-800 overflow-hidden">
+                <div className="h-1 rounded-full bg-neutral-200 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${catSev.color.replace('text-', 'bg-')} opacity-60`}
                     style={{ width: barWidth(cat.per_1000, maxCatRate) }}
@@ -164,14 +164,14 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
         </div>
 
         {/* Context note */}
-        <p className="text-[10px] text-grey-600 leading-relaxed">
+        <p className="text-[10px] text-neutral-500 leading-relaxed">
           Geregistreerde misdrijven (CBS/Politie). Totaal omvat ook overige
           categorie&euml;n zoals drugs, verkeer en overige.
         </p>
 
         {/* Source footer */}
-        <div className="pt-1 border-t border-overlay/5">
-          <span className="text-[10px] text-grey-600">
+        <div className="pt-1 border-t border-neutral-200">
+          <span className="text-[10px] text-neutral-500">
             Bron: {criminaliteit.bron} {criminaliteit.peiljaar}
           </span>
         </div>

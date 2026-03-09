@@ -125,7 +125,7 @@ export default function WizardFlow({
   const progressIndex = stepSequence.indexOf(step)
 
   return (
-    <div className="flex h-full flex-col bg-grey-950">
+    <div className="flex h-full flex-col bg-aura-canvas">
       {/* ── Progress dots (clickable) ──────────────────── */}
       <div className="flex justify-center pt-8">
         <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function WizardFlow({
                   ? 'w-8 bg-amber-500'
                   : i < progressIndex
                     ? 'w-2 bg-amber-500/50 hover:bg-amber-400/70'
-                    : 'w-2 bg-grey-700 hover:bg-grey-600'
+                    : 'w-2 bg-neutral-300 hover:bg-neutral-400'
               }`}
             />
           ))}
@@ -197,7 +197,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.rechtbank_niveau?.length && (
-              <p className="mt-4 text-sm text-grey-500">Gegevens laden...</p>
+              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -227,7 +227,7 @@ export default function WizardFlow({
                   />
                 ))}
                 {filteredGemeenten.length === 0 && gemeenteSearch.trim() && (
-                  <p className="col-span-full py-4 text-center text-sm text-grey-500">
+                  <p className="col-span-full py-4 text-center text-sm text-neutral-500">
                     Geen gemeenten gevonden voor &quot;{gemeenteSearch}&quot;
                   </p>
                 )}
@@ -244,7 +244,7 @@ export default function WizardFlow({
           >
             <button
               onClick={() => setStep(0)}
-              className="rounded-lg bg-grey-800 px-4 py-2 text-sm text-grey-300 transition-colors hover:bg-grey-700"
+              className="rounded-lg bg-neutral-200 px-4 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-300"
             >
               Ga naar schaalniveau
             </button>
@@ -269,7 +269,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.vergunningstype?.length && (
-              <p className="mt-4 text-sm text-grey-500">Gegevens laden...</p>
+              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -293,7 +293,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.rechtsgrond?.length && (
-              <p className="mt-4 text-sm text-grey-500">Gegevens laden...</p>
+              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -334,7 +334,7 @@ export default function WizardFlow({
         {step > 0 ? (
           <button
             onClick={goBack}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-grey-400 transition-colors hover:text-grey-100"
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-neutral-600 transition-colors hover:text-aura-ink"
           >
             <ArrowLeft size={16} />
             Vorige
@@ -347,14 +347,14 @@ export default function WizardFlow({
           {step > 0 && step < 4 && (
             <button
               onClick={goNext}
-              className="rounded-lg px-4 py-2 text-sm text-grey-500 transition-colors hover:text-grey-300"
+              className="rounded-lg px-4 py-2 text-sm text-neutral-500 transition-colors hover:text-neutral-700"
             >
               Overslaan
             </button>
           )}
           <button
             onClick={onComplete}
-            className="flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-grey-950 transition-colors hover:bg-amber-400"
+            className="flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-aura-canvas transition-colors hover:bg-amber-400"
           >
             Toon {totalCount} resultaten
             <ArrowRight size={16} />
@@ -378,8 +378,8 @@ function StepPage({
 }) {
   return (
     <div className="w-full max-w-3xl text-center">
-      <h1 className="text-2xl font-bold text-grey-100 sm:text-3xl">{title}</h1>
-      <p className="mt-2 text-sm text-grey-400 sm:text-base">{subtitle}</p>
+      <h1 className="text-2xl font-bold text-aura-ink sm:text-3xl">{title}</h1>
+      <p className="mt-2 text-sm text-neutral-600 sm:text-base">{subtitle}</p>
       <div className="mt-8">{children}</div>
     </div>
   )
@@ -406,7 +406,7 @@ function WizardCard({
       className={`relative flex flex-col overflow-hidden rounded-xl border-2 px-4 py-5 text-left transition-all sm:p-6 ${
         selected
           ? 'border-amber-500 bg-amber-500/10'
-          : 'border-grey-800 bg-grey-900 hover:border-grey-600'
+          : 'border-neutral-200 bg-aura-glass-white/60 hover:border-neutral-300'
       }`}
     >
       {selected && (
@@ -414,16 +414,16 @@ function WizardCard({
       )}
       <span
         className={`block min-h-[1.75rem] break-words text-base font-semibold leading-6 sm:text-lg sm:leading-7 ${
-          selected ? 'text-amber-300' : 'text-grey-100'
+          selected ? 'text-amber-300' : 'text-aura-ink'
         }`}
       >
         {label}
       </span>
-      <span className="mt-1 block min-h-[2.5rem] text-sm leading-5 text-grey-400">
+      <span className="mt-1 block min-h-[2.5rem] text-sm leading-5 text-neutral-600">
         {desc ?? '\u00A0'}
       </span>
       {count != null && (
-        <span className="mt-auto block pt-2 text-sm tabular-nums text-grey-500">
+        <span className="mt-auto block pt-2 text-sm tabular-nums text-neutral-500">
           {count} zaken
         </span>
       )}
@@ -448,14 +448,14 @@ function SubCard({
       className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
         selected
           ? 'border-amber-500/60 bg-amber-500/10 text-amber-300'
-          : 'border-grey-700 text-grey-300 hover:border-grey-500 hover:bg-grey-900'
+          : 'border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:bg-aura-glass-white/60'
       }`}
     >
       <span className="flex items-center gap-1.5">
         {selected && <Check size={12} className="text-amber-400" />}
         {label}
       </span>
-      <span className="ml-1.5 text-xs text-grey-500">({count})</span>
+      <span className="ml-1.5 text-xs text-neutral-500">({count})</span>
     </button>
   )
 }

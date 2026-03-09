@@ -3,17 +3,19 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-grey-950 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-aura-canvas disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         primary:
-          'bg-amber-accent text-on-accent hover:bg-amber-accent-hover focus-visible:ring-amber-accent',
+          'bg-aura-amber text-aura-obsidian hover:bg-aura-amber-hover focus-visible:ring-aura-amber',
+        command:
+          'bg-aura-obsidian text-white hover:bg-aura-obsidian/90 focus-visible:ring-aura-obsidian',
         secondary:
-          'bg-teal-accent text-white hover:bg-teal-accent-hover focus-visible:ring-teal-accent',
-        ghost: 'text-grey-100 hover:bg-grey-850 focus-visible:ring-grey-800',
+          'bg-aura-green text-white hover:bg-aura-green-hover focus-visible:ring-aura-green',
+        ghost: 'text-aura-ink hover:bg-aura-glass-white/40 focus-visible:ring-neutral-400',
         outline:
-          'border border-grey-800 bg-transparent text-grey-100 hover:bg-grey-900 focus-visible:ring-grey-800',
+          'border border-neutral-200 bg-transparent text-aura-ink hover:bg-neutral-50 focus-visible:ring-neutral-400',
         destructive: 'bg-error text-white hover:bg-error/90 focus-visible:ring-error',
       },
       size: {

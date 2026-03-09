@@ -31,7 +31,7 @@ export function Modal({ isOpen, onClose, children, size = 'md' }: ModalProps) {
       <div>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-grey-950/60 opacity-100"
+          className="fixed inset-0 bg-aura-canvas/60 opacity-100"
           style={{ zIndex: 'var(--z-modal)' }}
           onClick={onClose}
         />
@@ -44,7 +44,7 @@ export function Modal({ isOpen, onClose, children, size = 'md' }: ModalProps) {
           <div
             role="dialog"
             aria-modal="true"
-            className={`${sizeClasses[size]} w-full max-h-[85vh] bg-grey-900 rounded-lg border border-grey-800 shadow-2xl overflow-y-auto`}
+            className={`${sizeClasses[size]} w-full max-h-[85vh] bg-aura-glass-white/60 rounded-lg border border-neutral-200 shadow-2xl overflow-y-auto`}
             onClick={(e) => e.stopPropagation()}
           >
             {children}

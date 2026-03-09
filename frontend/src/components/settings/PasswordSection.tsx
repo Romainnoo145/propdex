@@ -59,24 +59,24 @@ export function PasswordSection() {
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
-        <Key className="h-5 w-5 text-grey-400" />
-        <h2 className="text-lg font-semibold text-grey-100">Wachtwoord</h2>
+        <Key className="h-5 w-5 text-neutral-600" />
+        <h2 className="text-lg font-semibold text-aura-ink">Wachtwoord</h2>
       </div>
 
       {!isEmailUser ? (
-        <p className="text-sm text-grey-400">
+        <p className="text-sm text-neutral-600">
           Wachtwoord wordt beheerd via Google
         </p>
       ) : (
         <>
-          <p className="mb-6 text-sm text-grey-400">
+          <p className="mb-6 text-sm text-neutral-600">
             Wijzig je wachtwoord
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <label
                 htmlFor="current_password"
-                className="block text-sm font-medium text-grey-100"
+                className="block text-sm font-medium text-aura-ink"
               >
                 Huidig wachtwoord
               </label>
@@ -95,7 +95,7 @@ export function PasswordSection() {
             <div className="space-y-1.5">
               <label
                 htmlFor="new_password"
-                className="block text-sm font-medium text-grey-100"
+                className="block text-sm font-medium text-aura-ink"
               >
                 Nieuw wachtwoord
               </label>
@@ -110,7 +110,7 @@ export function PasswordSection() {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-grey-400 hover:text-grey-100"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-600 hover:text-aura-ink"
                   aria-label={showNewPassword ? 'Verberg wachtwoord' : 'Toon wachtwoord'}
                 >
                   {showNewPassword ? (
@@ -129,7 +129,7 @@ export function PasswordSection() {
             <div className="space-y-1.5">
               <label
                 htmlFor="confirm_password"
-                className="block text-sm font-medium text-grey-100"
+                className="block text-sm font-medium text-aura-ink"
               >
                 Bevestig wachtwoord
               </label>

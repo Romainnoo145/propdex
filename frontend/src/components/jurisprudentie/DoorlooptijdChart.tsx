@@ -24,13 +24,13 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
   const maxDays = Math.max(...withAvg.map((d) => d.avg_dagen!))
 
   return (
-    <div className="rounded-lg border border-grey-800 bg-grey-900 p-4">
+    <div className="rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4">
       <div className="mb-3 flex items-center gap-2">
         <Clock size={16} className="text-amber-500/60" />
-        <h3 className="text-sm font-semibold text-grey-200">
+        <h3 className="text-sm font-semibold text-aura-ink">
           Doorlooptijd per type
         </h3>
-        <span className="text-xs text-grey-500">Gemiddeld aantal dagen</span>
+        <span className="text-xs text-neutral-500">Gemiddeld aantal dagen</span>
       </div>
       <div className="space-y-2">
         {withAvg
@@ -41,24 +41,24 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
             return (
               <div key={d.vergunningstype} className="space-y-0.5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-grey-300">
+                  <span className="text-xs text-neutral-700">
                     {TYPE_LABELS[d.vergunningstype] ?? d.vergunningstype}
                   </span>
-                  <span className="text-xs tabular-nums text-grey-400">
+                  <span className="text-xs tabular-nums text-neutral-600">
                     {d.avg_dagen}d ({weeks}w)
-                    <span className="ml-1 text-grey-600">
+                    <span className="ml-1 text-neutral-500">
                       n={d.count}
                     </span>
                   </span>
                 </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-grey-800">
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-neutral-200">
                   <div
                     className="rounded-full bg-amber-500/50"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
                 {d.min_dagen != null && d.max_dagen != null && (
-                  <p className="text-[10px] text-grey-600">
+                  <p className="text-[10px] text-neutral-500">
                     {d.min_dagen}d – {d.max_dagen}d
                   </p>
                 )}

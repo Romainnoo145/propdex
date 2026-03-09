@@ -13,7 +13,7 @@ function barColor(score: number): string {
 export function TrendTimeline({ months }: TrendTimelineProps) {
     if (months.length < 3) {
         return (
-            <p className="text-xs text-grey-500 py-3 text-center">
+            <p className="text-xs text-neutral-500 py-3 text-center">
                 Onvoldoende data voor trendweergave (min. 3 maanden)
             </p>
         )
@@ -37,7 +37,7 @@ export function TrendTimeline({ months }: TrendTimelineProps) {
                             style={{ height: `${heightPct}%` }}
                             title={`${m.month}: ${m.total} uitspraken, score ${m.klimaat_score}`}
                         />
-                        <span className="text-[9px] text-grey-500 mt-1 tabular-nums">
+                        <span className="text-[9px] text-neutral-500 mt-1 tabular-nums">
                             {monthLabel}
                         </span>
                     </div>

@@ -19,7 +19,7 @@ const FACILITIES: { key: keyof CbsNabijheid['afstanden']; label: string; type: '
  * Transport: green <= 3km, amber <= 10km, red > 10km
  */
 function distanceColor(value: number | null, type: 'daily' | 'transport'): string {
-  if (value == null) return 'text-grey-500'
+  if (value == null) return 'text-neutral-500'
 
   if (type === 'daily') {
     if (value <= 1) return 'text-green-400'
@@ -42,9 +42,9 @@ export function NabijheidCard({ nabijheid }: NabijheidCardProps) {
   if (!hasAnyData) return null
 
   return (
-    <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
+    <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
         <svg
           width="14"
           height="14"
@@ -54,12 +54,12 @@ export function NabijheidCard({ nabijheid }: NabijheidCardProps) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-amber-accent/70"
+          className="text-aura-amber/70"
         >
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
-        <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+        <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
           Voorzieningen Nabijheid
         </span>
       </div>
@@ -70,7 +70,7 @@ export function NabijheidCard({ nabijheid }: NabijheidCardProps) {
           const value = nabijheid.afstanden[key]
           return (
             <div key={key} className="flex items-center justify-between">
-              <span className="text-xs text-grey-400">{label}</span>
+              <span className="text-xs text-neutral-600">{label}</span>
               <div className="flex items-center gap-1.5">
                 <span className={`text-xs font-medium ${distanceColor(value, type)}`}>
                   {value != null ? `${value.toFixed(1)} km` : '--'}
@@ -78,7 +78,7 @@ export function NabijheidCard({ nabijheid }: NabijheidCardProps) {
                 <span
                   className={`inline-block h-1.5 w-1.5 rounded-full ${
                     value == null
-                      ? 'bg-grey-600'
+                      ? 'bg-neutral-400'
                       : distanceColor(value, type).replace('text-', 'bg-')
                   }`}
                 />
@@ -88,8 +88,8 @@ export function NabijheidCard({ nabijheid }: NabijheidCardProps) {
         })}
 
         {/* Source footer */}
-        <div className="pt-1.5 border-t border-overlay/5">
-          <span className="text-[10px] text-grey-600">Bron: CBS {nabijheid.peiljaar}</span>
+        <div className="pt-1.5 border-t border-neutral-200">
+          <span className="text-[10px] text-neutral-500">Bron: CBS {nabijheid.peiljaar}</span>
         </div>
       </div>
     </section>

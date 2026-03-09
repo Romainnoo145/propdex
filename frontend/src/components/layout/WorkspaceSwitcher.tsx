@@ -19,13 +19,13 @@ export default function WorkspaceSwitcher() {
   return (
     <button
       onClick={cycleRole}
-      className="group relative flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-overlay/[0.12] bg-overlay/[0.04] text-grey-300 transition-colors hover:border-amber-accent/40 hover:bg-overlay/[0.08] hover:text-grey-100"
+      className="group relative flex h-12 w-12 flex-col items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 transition-colors hover:border-aura-amber/40 hover:bg-neutral-50 hover:text-aura-ink"
       aria-label={`Werkruimte: ${roleMeta.label}. Klik om te wisselen naar ${nextRoleLabel}`}
       title={`Werkruimte: ${roleMeta.label}`}
     >
       <BriefcaseBusiness size={14} />
       <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide">{roleMeta.shortLabel}</span>
-      <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-grey-800 bg-grey-950 px-2 py-1 text-xs text-grey-100 opacity-0 transition-opacity group-hover:opacity-100">
+      <span className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-neutral-200 bg-aura-canvas px-2 py-1 text-xs text-aura-ink opacity-0 transition-opacity group-hover:opacity-100">
         {roleMeta.label} · klik om te wisselen
       </span>
     </button>

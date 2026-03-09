@@ -32,7 +32,7 @@ export const Disabled: Story = {
 export const WithLabel: Story = {
   render: () => (
     <div className="flex flex-col gap-2">
-      <label htmlFor="address" className="text-sm text-grey-300 font-medium">
+      <label htmlFor="address" className="text-sm text-neutral-700 font-medium">
         Adres
       </label>
       <Input id="address" placeholder="Vul adres in..." />

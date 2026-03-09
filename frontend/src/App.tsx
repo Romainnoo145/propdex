@@ -9,8 +9,8 @@ const MapView = React.lazy(() => import('@/components/map/MapView'));
 // A simple fallback skeleton for the map
 function MapSkeleton() {
   return (
-    <div className="absolute inset-0 bg-grey-900 animate-pulse flex items-center justify-center">
-      <span className="text-grey-400 text-sm">Kaart laden...</span>
+    <div className="absolute inset-0 bg-aura-glass-white/60 animate-pulse flex items-center justify-center">
+      <span className="text-neutral-600 text-sm">Kaart laden...</span>
     </div>
   );
 }

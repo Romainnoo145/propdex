@@ -105,18 +105,18 @@ export function GemeenteDetailView({
   return (
     <div className="space-y-6">
       {/* Wijk cards — primary content, reports live per-wijk in WijkDetailView */}
-      <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent/70">
+      <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-aura-amber/70">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
-          <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">Wijken</span>
-          <span className="ml-auto text-xs text-grey-600">{wijkenCount}</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">Wijken</span>
+          <span className="ml-auto text-xs text-neutral-500">{wijkenCount}</span>
         </div>
         <div className="p-4">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-            <div className="relative overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+            <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60">
               <div className="absolute inset-0 overflow-y-auto p-3">
                 <WijkCardGrid
                   gemeente={gemeente}
@@ -142,11 +142,11 @@ export function GemeenteDetailView({
               </div>
             </div>
 
-            <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+            <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 sm:p-5">
               {selectedWijk ? (
                 <WijkDetailView gemeente={gemeente} wijk={selectedWijk} />
               ) : (
-                <p className="text-sm text-grey-500">
+                <p className="text-sm text-neutral-500">
                   Geen wijken gevonden voor deze gemeente.
                 </p>
               )}
@@ -156,45 +156,45 @@ export function GemeenteDetailView({
       </section>
 
       {/* Meldingen — gemeente-level (not per-wijk), shown at bottom */}
-      <section className="rounded-xl border border-overlay/[0.08] bg-grey-900 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-overlay/[0.08] px-4 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-accent/70">
+      <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-aura-amber/70">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-          <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">Recente meldingen</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">Recente meldingen</span>
           <span
             className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
               monitoringEnabled
-                ? 'border-amber-accent/35 bg-amber-accent/10 text-amber-accent'
-                : 'border-overlay/[0.14] bg-overlay/[0.06] text-grey-400'
+                ? 'border-aura-amber/35 bg-aura-amber/10 text-aura-amber'
+                : 'border-neutral-200/[0.14] bg-neutral-50 text-neutral-600'
             }`}
           >
             {monitoringEnabled ? 'Monitoring aan' : 'Monitoring uit'}
           </span>
-          <span className="text-xs text-grey-600">
+          <span className="text-xs text-neutral-500">
             {monitoredWijkenCount}/{wijkenCount} wijken
           </span>
           {gemeenteUnread > 0 && (
-            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1.5 text-[11px] font-semibold text-on-accent">
+            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-aura-amber px-1.5 text-[11px] font-semibold text-aura-obsidian">
               {gemeenteUnread}
             </span>
           )}
           <button
             onClick={handleRefresh}
             disabled={isSpinning || !monitoringEnabled}
-            className="ml-auto rounded p-1 text-grey-600 transition-colors hover:bg-grey-800 hover:text-grey-300 disabled:opacity-50"
+            className="ml-auto rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-700 disabled:opacity-50"
             aria-label="Ververs meldingen"
             title={monitoringEnabled ? 'Ververs meldingen' : 'Schakel monitoring in om te verversen'}
           >
             <RefreshIcon spinning={isSpinning} />
           </button>
           {meldingenCount > 0 && (
-            <span className="text-xs text-grey-600">{meldingenCount}</span>
+            <span className="text-xs text-neutral-500">{meldingenCount}</span>
           )}
         </div>
         {!monitoringEnabled && (
-          <div className="border-b border-overlay/[0.06] bg-overlay/[0.03] px-4 py-2 text-xs text-grey-500">
+          <div className="border-b border-neutral-200/[0.06] bg-neutral-50 px-4 py-2 text-xs text-neutral-500">
             Monitoring staat uit voor deze gemeente. Zet 'Meldingen ontvangen' aan om updates te verzamelen.
           </div>
         )}

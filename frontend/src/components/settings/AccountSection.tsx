@@ -44,15 +44,15 @@ export function AccountSection() {
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
-        <User className="h-5 w-5 text-grey-400" />
-        <h2 className="text-lg font-semibold text-grey-100">Account</h2>
+        <User className="h-5 w-5 text-neutral-600" />
+        <h2 className="text-lg font-semibold text-aura-ink">Account</h2>
       </div>
-      <p className="mb-6 text-sm text-grey-400">
+      <p className="mb-6 text-sm text-neutral-600">
         Beheer je naam en e-mailadres
       </p>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <label htmlFor="full_name" className="block text-sm font-medium text-grey-100">
+          <label htmlFor="full_name" className="block text-sm font-medium text-aura-ink">
             Naam
           </label>
           <Input
@@ -66,7 +66,7 @@ export function AccountSection() {
           )}
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="account_email" className="block text-sm font-medium text-grey-100">
+          <label htmlFor="account_email" className="block text-sm font-medium text-aura-ink">
             E-mailadres
           </label>
           <Input

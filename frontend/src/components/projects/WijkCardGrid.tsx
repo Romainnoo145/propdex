@@ -76,12 +76,12 @@ export function WijkCardGrid({
         <div className="flex items-center gap-2">
           <button
             onClick={onBack}
-            className="text-sm text-grey-400 hover:text-grey-100 transition-colors"
+            className="text-sm text-neutral-600 hover:text-aura-ink transition-colors"
           >
             &larr; Gemeenten
           </button>
-          <span className="text-grey-600">/</span>
-          <span className="text-sm font-medium text-grey-100">{gemeente.name}</span>
+          <span className="text-neutral-500">/</span>
+          <span className="text-sm font-medium text-aura-ink">{gemeente.name}</span>
         </div>
       )}
 
@@ -188,10 +188,10 @@ function WijkCardGridSkeleton({
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900"
+            className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60"
           >
-            <div className="aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/60 p-3">
-              <Skeleton className="h-full w-full rounded-md bg-grey-800/70" />
+            <div className="aspect-[16/8] border-b border-neutral-200 bg-aura-glass-white/40/60 p-3">
+              <Skeleton className="h-full w-full rounded-md bg-neutral-200/70" />
             </div>
             <div className="px-3.5 py-2.5">
               <Skeleton className="h-4 w-2/3" />
@@ -207,10 +207,10 @@ function WijkCardGridSkeleton({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900"
+          className="overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60"
         >
-          <div className="aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/60 p-3">
-            <Skeleton className="h-full w-full rounded-md bg-grey-800/70" />
+          <div className="aspect-[16/8] border-b border-neutral-200 bg-aura-glass-white/40/60 p-3">
+            <Skeleton className="h-full w-full rounded-md bg-neutral-200/70" />
           </div>
           <div className="px-3.5 py-2.5">
             <Skeleton className="h-4 w-2/3" />

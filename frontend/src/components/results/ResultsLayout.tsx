@@ -141,18 +141,18 @@ export default function ResultsLayout({ scanId, collapsed, mapRef, onClose }: Re
       {/* Left overlay panel — slides in from left over the persistent map */}
       <div
         className={`absolute left-0 top-0 h-full w-[45%] max-w-2xl
-                    bg-grey-900 border-r border-grey-800
+                    bg-aura-glass-white/60 border-r border-neutral-200
                     flex flex-col overflow-hidden
                     transition-transform duration-300 ease-out
                     ${collapsed ? '-translate-x-full' : 'translate-x-0'}`}
         style={{ zIndex: 'var(--z-sidebar)' }}
       >
         {/* Sticky header with title and close button */}
-        <div className="px-6 py-4 border-b border-grey-800 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-semibold text-grey-100">Scanresultaten</h2>
+        <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-semibold text-aura-ink">Scanresultaten</h2>
           <button
             onClick={onClose}
-            className="text-grey-400 hover:text-grey-100 transition-colors"
+            className="text-neutral-600 hover:text-aura-ink transition-colors"
             aria-label="Resultaten sluiten"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

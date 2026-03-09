@@ -23,7 +23,7 @@ function uitkomstColor(uitkomst: string | null): string {
     case 'gedeeltelijk':
       return 'bg-amber-500/15 text-amber-400 border-amber-500/25'
     default:
-      return 'bg-grey-700/30 text-grey-400 border-grey-600/25'
+      return 'bg-neutral-300/30 text-neutral-600 border-neutral-300/25'
   }
 }
 
@@ -91,23 +91,23 @@ export default function RulingCard({ ruling }: RulingCardProps) {
 
   return (
     <div
-      className="rounded-lg border border-grey-800 bg-grey-900 p-4 transition-colors hover:border-grey-700"
+      className="rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4 transition-colors hover:border-neutral-300"
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-mono text-grey-400">{ruling.ecli}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-grey-400">
+          <p className="truncate text-xs font-mono text-neutral-600">{ruling.ecli}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-600">
             {ruling.instantie && <span>{ruling.instantie}</span>}
             {ruling.instantie && datumFormatted && (
-              <span className="text-grey-600">|</span>
+              <span className="text-neutral-500">|</span>
             )}
             {datumFormatted && <span>{datumFormatted}</span>}
           </div>
         </div>
         <button
           onClick={handleExpand}
-          className="shrink-0 rounded p-1 text-grey-400 transition-colors hover:bg-grey-800 hover:text-grey-100"
+          className="shrink-0 rounded p-1 text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-aura-ink"
           aria-label={expanded ? 'Inklappen' : 'Uitklappen'}
         >
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -117,7 +117,7 @@ export default function RulingCard({ ruling }: RulingCardProps) {
       {/* Badges row */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         {ruling.extracted_gemeente && (
-          <span className="inline-flex items-center rounded-full border border-grey-600/25 bg-grey-700/30 px-2 py-0.5 text-xs text-grey-300">
+          <span className="inline-flex items-center rounded-full border border-neutral-300/25 bg-neutral-300/30 px-2 py-0.5 text-xs text-neutral-700">
             {ruling.extracted_gemeente}
           </span>
         )}
@@ -132,7 +132,7 @@ export default function RulingCard({ ruling }: RulingCardProps) {
           {uitkomstLabel(ruling.uitkomst)}
         </span>
         {ruling.doorlooptijd_dagen != null && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-grey-600/25 bg-grey-700/30 px-2 py-0.5 text-xs text-grey-400">
+          <span className="inline-flex items-center gap-1 rounded-full border border-neutral-300/25 bg-neutral-300/30 px-2 py-0.5 text-xs text-neutral-600">
             <Clock size={10} />
             {ruling.doorlooptijd_dagen}d
           </span>
@@ -159,7 +159,7 @@ export default function RulingCard({ ruling }: RulingCardProps) {
           {ruling.rechtsgronden.map((rg) => (
             <span
               key={rg}
-              className="rounded border border-grey-700/50 bg-grey-800/50 px-1.5 py-0.5 text-[10px] text-grey-400"
+              className="rounded border border-neutral-300/50 bg-neutral-200/50 px-1.5 py-0.5 text-[10px] text-neutral-600"
             >
               {RECHTSGROND_LABELS[rg] ?? rg}
             </span>
@@ -169,35 +169,35 @@ export default function RulingCard({ ruling }: RulingCardProps) {
 
       {/* Summary preview (collapsed) */}
       {summaryText && !expanded && (
-        <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-grey-300">
+        <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-neutral-700">
           {summaryText}
         </p>
       )}
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-3 space-y-3 border-t border-grey-800 pt-3">
+        <div className="mt-3 space-y-3 border-t border-neutral-200 pt-3">
           {summaryText && (
             <div>
-              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-grey-400">
+              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-600">
                 Samenvatting
               </h4>
-              <p className="text-sm leading-relaxed text-grey-300">{summaryText}</p>
+              <p className="text-sm leading-relaxed text-neutral-700">{summaryText}</p>
             </div>
           )}
           {relevantieText && (
             <div>
-              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-grey-400">
+              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-600">
                 Relevantie
               </h4>
-              <p className="text-sm leading-relaxed text-grey-300">{relevantieText}</p>
+              <p className="text-sm leading-relaxed text-neutral-700">{relevantieText}</p>
             </div>
           )}
 
           {/* Full ruling text */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-grey-400">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-neutral-600">
                 Uitspraaktekst
               </h4>
               <a
@@ -210,14 +210,14 @@ export default function RulingCard({ ruling }: RulingCardProps) {
               </a>
             </div>
             {loadingText && (
-              <div className="flex items-center gap-2 py-4 text-sm text-grey-500">
+              <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
                 <Loader2 size={14} className="animate-spin" />
                 Uitspraak laden...
               </div>
             )}
             {fullText && (
-              <div className="max-h-96 overflow-y-auto rounded border border-grey-800 bg-grey-950 p-3">
-                <pre className="whitespace-pre-wrap text-xs leading-relaxed text-grey-300">
+              <div className="max-h-96 overflow-y-auto rounded border border-neutral-200 bg-aura-canvas p-3">
+                <pre className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-700">
                   {fullText}
                 </pre>
               </div>

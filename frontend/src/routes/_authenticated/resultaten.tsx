@@ -117,23 +117,23 @@ function ResultatenPage() {
     <ResultsShell fullWidth className="scrollbar-hidden">
       <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
         {/* Header bar */}
-        <div className="shrink-0 rounded-2xl border border-overlay/[0.08] bg-grey-900 px-4 py-4 sm:px-5">
+        <div className="shrink-0 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleBack}
-              className="inline-flex items-center gap-1.5 rounded-md border border-overlay/5 px-3 py-1.5 text-xs font-medium text-grey-400 transition-colors hover:border-overlay/10 hover:text-grey-200 min-h-[44px]"
+              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-200 hover:text-aura-ink min-h-[44px]"
             >
               <ArrowLeft size={14} />
               Terug
             </button>
-            <h1 className="text-lg font-semibold text-grey-100">Scanresultaten</h1>
+            <h1 className="text-lg font-semibold text-aura-ink">Scanresultaten</h1>
             {activeScan && (
-              <p className="text-xs text-grey-500">
+              <p className="text-xs text-neutral-500">
                 {dateFmt.format(new Date(activeScan.scan_date))} · {activeScan.status} · {activeScan.parcel_count} percelen
               </p>
             )}
           </div>
-          <div className="mt-3 rounded-md border border-overlay/5 bg-grey-850 p-2.5">
+          <div className="mt-3 rounded-md border border-neutral-200 bg-aura-glass-white/40 p-2.5">
             <label htmlFor="parcel-search-results" className="sr-only">
               Zoek percelen
             </label>
@@ -144,11 +144,11 @@ function ResultatenPage() {
               placeholder="Zoek percelen (adres, perceelcode, status)"
               name="q_scan_results"
               leftIcon={<Search size={14} />}
-              className="h-9 rounded-md border-grey-700 bg-grey-900 py-2 text-xs focus:border-amber-accent/50"
+              className="h-9 rounded-md border-neutral-300 bg-aura-glass-white/60 py-2 text-xs focus:border-aura-amber/50"
             />
             {recentScans.length > 0 && (
               <div className="scrollbar-hidden mt-2 max-h-36 space-y-1 overflow-auto">
-                <p className="px-1 text-[11px] uppercase tracking-wide text-grey-600">Recente scans</p>
+                <p className="px-1 text-[11px] uppercase tracking-wide text-neutral-500">Recente scans</p>
                 {recentScans.map((scan) => {
                   const isActive = scan.scan_id === scan_id
                   return (
@@ -157,14 +157,14 @@ function ResultatenPage() {
                       onClick={() => handleOpenScan(scan.scan_id)}
                       className={`flex w-full items-center justify-between rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
                         isActive
-                          ? 'border-amber-accent/40 bg-amber-accent/10 text-amber-accent'
-                          : 'border-overlay/5 bg-grey-900 text-grey-300 hover:bg-grey-800'
+                          ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
+                          : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-700 hover:bg-neutral-200'
                       }`}
                     >
                       <span className="truncate">
                         {dateFmt.format(new Date(scan.scan_date))} · {scan.status} · {(scan.wijk_naam ?? scan.gemeente_naam)}
                       </span>
-                      <span className="ml-2 shrink-0 tabular-nums text-[11px] text-grey-500">
+                      <span className="ml-2 shrink-0 tabular-nums text-[11px] text-neutral-500">
                         {scan.parcel_count}
                       </span>
                     </button>
@@ -177,7 +177,7 @@ function ResultatenPage() {
 
         {/* Mobile read-only banner — explains scan/export are desktop-only (MOB-01) */}
         {isMobile && (
-          <div className="mt-3 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-2 text-xs text-amber-accent shrink-0">
+          <div className="mt-3 rounded-md border border-aura-amber/30 bg-aura-amber/10 px-3 py-2 text-xs text-aura-amber shrink-0">
             Gebruik desktop voor scannen en exporteren
           </div>
         )}
@@ -185,7 +185,7 @@ function ResultatenPage() {
         {scan_id ? (
           <>
             {/* Results table — fills remaining height */}
-            <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-overlay/[0.08] bg-grey-900">
+            <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60">
               <ResultsTable
                 scanId={scan_id}
                 filters={filters}

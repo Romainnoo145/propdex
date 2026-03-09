@@ -22,10 +22,10 @@ export function NotificationsSection() {
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
-        <Bell className="h-5 w-5 text-grey-400" />
-        <h2 className="text-lg font-semibold text-grey-100">Meldingen</h2>
+        <Bell className="h-5 w-5 text-neutral-600" />
+        <h2 className="text-lg font-semibold text-aura-ink">Meldingen</h2>
       </div>
-      <p className="mb-6 text-sm text-grey-400">
+      <p className="mb-6 text-sm text-neutral-600">
         Ontvang e-mailmeldingen bij wijzigingen in je gemonitorde gebieden
       </p>
 
@@ -33,7 +33,7 @@ export function NotificationsSection() {
         <Skeleton className="h-6 w-40" />
       ) : (
         <div className="flex items-center justify-between">
-          <span className="text-sm text-grey-100">E-mailmeldingen</span>
+          <span className="text-sm text-aura-ink">E-mailmeldingen</span>
           <button
             type="button"
             role="switch"
@@ -42,10 +42,10 @@ export function NotificationsSection() {
             className={[
               'relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent',
               'transition-colors duration-200 ease-in-out',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-accent focus-visible:ring-offset-2 focus-visible:ring-offset-grey-950',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aura-green focus-visible:ring-offset-2 focus-visible:ring-offset-aura-canvas',
               prefs?.notification_email_alerts
-                ? 'bg-teal-accent'
-                : 'bg-grey-700',
+                ? 'bg-aura-green'
+                : 'bg-neutral-300',
             ].join(' ')}
           >
             <span

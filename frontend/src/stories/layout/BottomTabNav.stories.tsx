@@ -29,9 +29,9 @@ const withRouter =
     const router = makeRouter(path)
     return (
       <RouterProvider router={router} defaultComponent={() => (
-        <div className="relative h-screen bg-grey-950 flex flex-col">
+        <div className="relative h-screen bg-aura-canvas flex flex-col">
           <div className="flex-1 flex items-center justify-center">
-            <span className="text-grey-400 text-sm">Paginainhoud</span>
+            <span className="text-neutral-600 text-sm">Paginainhoud</span>
           </div>
           <Story />
         </div>

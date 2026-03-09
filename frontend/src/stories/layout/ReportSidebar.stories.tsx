@@ -78,16 +78,16 @@ type Story = StoryObj<typeof ReportSidebar>
 // ---------------------------------------------------------------------------
 
 const SidebarShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex h-screen bg-grey-950">
+  <div className="flex h-screen bg-aura-canvas">
     {/* Simulated side-rail */}
-    <div className="hidden md:flex w-16 shrink-0 bg-grey-900 border-r border-grey-800 items-center justify-center">
-      <span className="text-grey-600 text-xs">Nav</span>
+    <div className="hidden md:flex w-16 shrink-0 bg-aura-glass-white/60 border-r border-neutral-200 items-center justify-center">
+      <span className="text-neutral-500 text-xs">Nav</span>
     </div>
     {/* Sidebar slot */}
     {children}
     {/* Content area */}
-    <div className="flex-1 bg-grey-900 flex items-center justify-center">
-      <span className="text-grey-400 text-sm">Kaartinhoud</span>
+    <div className="flex-1 bg-aura-glass-white/60 flex items-center justify-center">
+      <span className="text-neutral-600 text-sm">Kaartinhoud</span>
     </div>
   </div>
 )

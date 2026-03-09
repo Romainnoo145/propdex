@@ -62,7 +62,7 @@ const BADGE_CONFIG: Record<Doelgroep, { bg: string; label: string }> = {
     label: 'Vergrijzend',
   },
   gemengd: {
-    bg: 'bg-grey-700/50 text-grey-300 border border-grey-700',
+    bg: 'bg-neutral-300/50 text-neutral-700 border border-neutral-300',
     label: 'Gemengd',
   },
 }

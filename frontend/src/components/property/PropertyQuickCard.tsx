@@ -68,7 +68,7 @@ export function PropertyQuickCard({
 
   // Monument badge - compact for space-constrained popup
   const monumentBadge = data?.monuments?.is_monument ? (
-    <span className="bg-amber-accent/20 text-amber-accent text-xs px-2 py-0.5 rounded-full">
+    <span className="bg-aura-amber/20 text-aura-amber text-xs px-2 py-0.5 rounded-full">
       Rijksmonument
     </span>
   ) : null;
@@ -76,19 +76,19 @@ export function PropertyQuickCard({
   return createPortal(
     <div className="flex items-center gap-2 whitespace-nowrap">
       {isLoading && (
-        <div className="flex items-center gap-2 rounded-full border border-amber-accent/30 bg-grey-900/95 px-2.5 py-1">
-          <span className="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-accent/30 border-t-amber-accent" />
-          <span className="text-xs font-medium text-amber-accent">Perceel laden...</span>
+        <div className="flex items-center gap-2 rounded-full border border-aura-amber/30 bg-aura-glass-white/60/95 px-2.5 py-1">
+          <span className="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-aura-amber/30 border-t-aura-amber" />
+          <span className="text-xs font-medium text-aura-amber">Perceel laden...</span>
         </div>
       )}
 
       {data && !isLoading && (
         <>
-          <svg className="h-4 w-4 shrink-0 text-grey-400" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="h-4 w-4 shrink-0 text-neutral-600" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
           </svg>
 
-          <span className="text-sm font-medium text-grey-100">
+          <span className="text-sm font-medium text-aura-ink">
             {addressLine}
           </span>
 
@@ -97,14 +97,14 @@ export function PropertyQuickCard({
           <button
             onClick={onOpenDetails}
             disabled={isOpeningDetails}
-            className="rounded-full border border-grey-700 bg-grey-900 px-2.5 py-0.5 text-xs font-medium text-amber-accent transition-colors hover:bg-grey-850 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full border border-neutral-300 bg-aura-glass-white/60 px-2.5 py-0.5 text-xs font-medium text-aura-amber transition-colors hover:bg-aura-glass-white/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isOpeningDetails ? 'Details laden...' : 'Details'}
           </button>
 
           <button
             onClick={onClose}
-            className="flex h-5 w-5 items-center justify-center rounded-full text-grey-600 transition-colors hover:text-grey-100"
+            className="flex h-5 w-5 items-center justify-center rounded-full text-neutral-500 transition-colors hover:text-aura-ink"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />

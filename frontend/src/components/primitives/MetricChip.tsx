@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 type MetricChipTone = 'neutral' | 'amber' | 'info' | 'error';
 
 const toneClasses: Record<MetricChipTone, string> = {
-  neutral: 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-400',
-  amber: 'border-amber-accent/30 bg-amber-accent/12 text-amber-accent',
+  neutral: 'border-neutral-200 bg-neutral-50 text-neutral-600',
+  amber: 'border-aura-amber/30 bg-aura-amber/12 text-aura-amber',
   info: 'border-info/30 bg-info/12 text-info',
   error: 'border-error/30 bg-error/12 text-error',
 };

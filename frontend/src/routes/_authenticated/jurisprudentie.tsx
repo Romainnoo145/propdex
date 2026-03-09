@@ -199,12 +199,12 @@ function JurisprudentiePage() {
 
   /* ── Results mode ─────────────────────────────────── */
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-grey-950">
+    <div className="flex h-full flex-col overflow-hidden bg-aura-canvas">
       {/* Filter chips bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-grey-800 bg-grey-900/50 px-6 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-aura-glass-white/60/50 px-6 py-3">
         <Scale size={18} className="text-amber-500/60" />
-        <span className="text-sm font-medium text-grey-200">Jurisprudentie</span>
-        <div className="mx-2 h-4 w-px bg-grey-700" />
+        <span className="text-sm font-medium text-aura-ink">Jurisprudentie</span>
+        <div className="mx-2 h-4 w-px bg-neutral-300" />
 
         {filters.gemeente && (
           <Chip label={filters.gemeente} onRemove={() => handleRemoveFilter('gemeente')} />
@@ -234,7 +234,7 @@ function JurisprudentiePage() {
           />
         )}
 
-        <span className="text-xs tabular-nums text-grey-500">
+        <span className="text-xs tabular-nums text-neutral-500">
           {totalCount} {totalCount === 1 ? 'uitspraak' : 'uitspraken'}
         </span>
 
@@ -249,7 +249,7 @@ function JurisprudentiePage() {
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="text-xs text-grey-500 transition-colors hover:text-grey-300"
+              className="text-xs text-neutral-500 transition-colors hover:text-neutral-700"
             >
               Wis alles
             </button>
@@ -298,7 +298,7 @@ function JurisprudentiePage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="space-y-2 rounded-lg border border-grey-800 bg-grey-900 p-4"
+                className="space-y-2 rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4"
               >
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />
@@ -324,14 +324,14 @@ function JurisprudentiePage() {
         {/* Empty state */}
         {!isLoading && allResults.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Scale size={40} className="mb-3 text-grey-600" />
-            <h2 className="text-lg font-semibold text-grey-300">Geen uitspraken gevonden</h2>
-            <p className="mt-1 max-w-sm text-sm text-grey-500">
+            <Scale size={40} className="mb-3 text-neutral-500" />
+            <h2 className="text-lg font-semibold text-neutral-700">Geen uitspraken gevonden</h2>
+            <p className="mt-1 max-w-sm text-sm text-neutral-500">
               Pas je filters aan om meer resultaten te vinden.
             </p>
             <button
               onClick={goToWizard}
-              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-grey-950 transition-colors hover:bg-amber-400"
+              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-aura-canvas transition-colors hover:bg-amber-400"
             >
               Filters aanpassen
             </button>
@@ -341,7 +341,7 @@ function JurisprudentiePage() {
         {/* Loading more indicator */}
         {isFetchingNextPage && (
           <div className="mt-4 flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-grey-700 border-t-amber-500" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-amber-500" />
           </div>
         )}
 

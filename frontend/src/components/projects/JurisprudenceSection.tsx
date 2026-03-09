@@ -39,15 +39,15 @@ const DISCLAIMER_TEXT = 'Indicatief -- gebaseerd op historische uitspraken, geen
 function GeoRelevanceBadge({ relevance }: { relevance: 'gemeente' | 'arrondissement' }) {
     if (relevance === 'gemeente') {
         return (
-            <span className="inline-flex items-center gap-1 text-[10px] text-grey-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-accent/60" />
+            <span className="inline-flex items-center gap-1 text-[10px] text-neutral-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-aura-amber/60" />
                 Gemeente
             </span>
         )
     }
     return (
-        <span className="inline-flex items-center gap-1 text-[10px] text-grey-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-grey-600" />
+        <span className="inline-flex items-center gap-1 text-[10px] text-neutral-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
             Arrondissement
         </span>
     )
@@ -55,10 +55,10 @@ function GeoRelevanceBadge({ relevance }: { relevance: 'gemeente' | 'arrondissem
 
 /** Muted uitkomst colors — only afgewezen gets a subtle rust tint */
 const uitkomstColors: Record<string, string> = {
-    toegewezen: 'bg-grey-800 text-grey-300',
+    toegewezen: 'bg-neutral-200 text-neutral-700',
     afgewezen: 'bg-amber-900/30 text-amber-700',
-    gedeeltelijk: 'bg-grey-800 text-grey-400',
-    onbekend: 'bg-grey-800 text-grey-500',
+    gedeeltelijk: 'bg-neutral-200 text-neutral-600',
+    onbekend: 'bg-neutral-200 text-neutral-500',
 }
 
 /**
@@ -79,41 +79,41 @@ function RulingAiSummaryBadge({
     if (!ruling) return null
 
     return (
-        <div className="mt-2 rounded-lg border border-overlay/5 bg-grey-950/60">
+        <div className="mt-2 rounded-lg border border-neutral-200 bg-aura-canvas/60">
             <button
                 type="button"
                 onClick={(e) => {
                     e.stopPropagation()
                     setIsOpen(!isOpen)
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-[11px] hover:bg-overlay/[0.02] transition-colors rounded-lg"
+                className="flex w-full items-center gap-2 px-3 py-2 text-[11px] hover:bg-neutral-100/[0.02] transition-colors rounded-lg"
             >
-                <Sparkles className="w-3 h-3 text-amber-accent shrink-0" />
-                <span className="font-medium text-grey-200">AI Samenvatting</span>
+                <Sparkles className="w-3 h-3 text-aura-amber shrink-0" />
+                <span className="font-medium text-aura-ink">AI Samenvatting</span>
                 {ruling.vergunningstype && ruling.vergunningstype !== 'overig' && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-grey-800 text-grey-400">
+                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-neutral-200 text-neutral-600">
                         {ruling.vergunningstype}
                     </span>
                 )}
-                <ChevronDown className={`w-3 h-3 ml-auto text-grey-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3 h-3 ml-auto text-neutral-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
                 <div
-                    className="px-3 pb-3 pt-1 space-y-2.5 border-t border-overlay/5"
+                    className="px-3 pb-3 pt-1 space-y-2.5 border-t border-neutral-200"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Bezwaargrond */}
                     <div>
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
                             Bezwaargrond
                         </span>
-                        <p className="text-xs text-grey-300 mt-0.5">{ruling.bezwaargrond}</p>
+                        <p className="text-xs text-neutral-700 mt-0.5">{ruling.bezwaargrond}</p>
                     </div>
 
                     {/* Uitkomst badge */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
                             Uitkomst
                         </span>
                         <span
@@ -125,14 +125,14 @@ function RulingAiSummaryBadge({
 
                     {/* Relevantie */}
                     <div>
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
                             Relevantie
                         </span>
-                        <p className="text-xs text-grey-300 mt-0.5">{ruling.relevantie}</p>
+                        <p className="text-xs text-neutral-700 mt-0.5">{ruling.relevantie}</p>
                     </div>
 
                     {/* Disclaimer */}
-                    <p className="text-[10px] italic text-grey-600 pt-1.5 border-t border-overlay/5">
+                    <p className="text-[10px] italic text-neutral-500 pt-1.5 border-t border-neutral-200">
                         {DISCLAIMER_TEXT}
                     </p>
                 </div>
@@ -169,14 +169,14 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
     const isRefreshing = feedData?.ingestion_status === 'refreshing'
 
     return (
-        <section className="rounded-xl border border-overlay/5 bg-grey-900 overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-overlay/5 px-4 py-2.5">
-                <Scale className="w-3.5 h-3.5 text-amber-accent/70" />
-                <span className="text-xs font-medium uppercase tracking-wide text-amber-accent/70">
+        <section className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
+                <Scale className="w-3.5 h-3.5 text-aura-amber/70" />
+                <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
                     Juridisch Klimaat
                 </span>
                 {feedData?.rulings && (
-                    <span className="ml-auto flex items-center gap-1.5 rounded-full bg-grey-800/60 px-2 py-0.5 text-[10px] font-medium text-grey-400">
+                    <span className="ml-auto flex items-center gap-1.5 rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
                         {feedData.count} uitspraken
                     </span>
                 )}
@@ -209,19 +209,19 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
 
                     {/* Ingestion status indicators */}
                     {isPending && (
-                        <div className="flex items-center gap-2 rounded-md bg-amber-accent/5 border border-amber-accent/10 px-3 py-2 text-xs text-amber-accent/80">
+                        <div className="flex items-center gap-2 rounded-md bg-aura-amber/5 border border-aura-amber/10 px-3 py-2 text-xs text-aura-amber/80">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             Uitspraken worden opgehaald...
                         </div>
                     )}
                     {isRefreshing && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-grey-500">
+                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
                             <Loader2 className="w-3 h-3 animate-spin" />
                             Verversing actief
                         </div>
                     )}
 
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-accent/10 px-2 py-0.5 text-[10px] font-medium text-amber-accent/80 w-fit">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-aura-amber/10 px-2 py-0.5 text-[10px] font-medium text-aura-amber/80 w-fit">
                         <Scale className="w-2.5 h-2.5" />
                         Omgevingsrecht filter actief
                     </span>
@@ -229,7 +229,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                     <div className="flex flex-col gap-2 flex-1 overflow-y-auto scrollbar-hidden">
                         {isLoading ? (
                             Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="rounded-lg border border-grey-800 bg-grey-850 p-3 space-y-2">
+                                <div key={i} className="rounded-lg border border-neutral-200 bg-aura-glass-white/40 p-3 space-y-2">
                                     <Skeleton className="h-4 w-3/4" />
                                     <Skeleton className="h-3 w-1/2" />
                                 </div>
@@ -244,22 +244,22 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                     key={res.ecli}
                                     onClick={() => setSelectedEcli(res.ecli)}
                                     className={`text-left group relative flex w-full flex-col gap-1.5 rounded-lg border p-3 transition-all ${selectedEcli === res.ecli
-                                            ? 'border-amber-accent/40 bg-amber-accent/5'
-                                            : 'border-overlay/5 bg-grey-850 hover:border-overlay/10 hover:bg-grey-800'
+                                            ? 'border-aura-amber/40 bg-aura-amber/5'
+                                            : 'border-neutral-200 bg-aura-glass-white/40 hover:border-neutral-200 hover:bg-neutral-200'
                                         }`}
                                 >
-                                    <div className="flex items-center justify-between text-[11px] text-grey-500">
+                                    <div className="flex items-center justify-between text-[11px] text-neutral-500">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium text-grey-400">{parseCourtFromTitle(res.ecli, res.title)}</span>
+                                            <span className="font-medium text-neutral-600">{parseCourtFromTitle(res.ecli, res.title)}</span>
                                             <GeoRelevanceBadge relevance={res.geo_relevance} />
                                         </div>
                                         <span>{res.datum_uitspraak?.split('T')[0]}</span>
                                     </div>
-                                    <span className="font-mono text-[10px] text-grey-600">{res.ecli.split(':').slice(2).join(':')}</span>
-                                    <h4 className="text-sm font-medium leading-snug text-grey-100 group-hover:text-amber-accent/90 transition-colors">
+                                    <span className="font-mono text-[10px] text-neutral-500">{res.ecli.split(':').slice(2).join(':')}</span>
+                                    <h4 className="text-sm font-medium leading-snug text-aura-ink group-hover:text-aura-amber/90 transition-colors">
                                         {res.title.replace(res.ecli, '').replace(/^,\s*/, '')}
                                     </h4>
-                                    <p className="text-xs text-grey-400 line-clamp-2">
+                                    <p className="text-xs text-neutral-600 line-clamp-2">
                                         {res.summary && res.summary !== '-' ? res.summary : 'Geen korte samenvatting beschikbaar in archief.'}
                                     </p>
 
@@ -273,7 +273,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                             </span>
                                         )}
                                         {res.vergunningstype && (
-                                            <span className="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium bg-grey-800 text-grey-400">
+                                            <span className="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium bg-neutral-200 text-neutral-600">
                                                 {res.vergunningstype}
                                             </span>
                                         )}
@@ -284,7 +284,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                 </button>
                             ))
                         ) : (
-                            <div className="text-center py-6 text-sm text-grey-500">
+                            <div className="text-center py-6 text-sm text-neutral-500">
                                 {isPending
                                     ? 'Uitspraken worden opgehaald. Even geduld...'
                                     : 'Geen uitspraken gevonden voor deze gemeente.'}
@@ -294,7 +294,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
 
                     {/* Analysis status indicator (replaces manual button) */}
                     {isAnalyzing && (
-                        <div className="flex items-center justify-center gap-2 py-2 text-xs text-amber-accent/70">
+                        <div className="flex items-center justify-center gap-2 py-2 text-xs text-aura-amber/70">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             AI-analyse wordt uitgevoerd...
                         </div>
@@ -303,7 +303,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
 
                 {/* Right Side: Document Viewer */}
                 {selectedEcli && (
-                    <div className="md:w-2/3 min-h-0 border border-overlay/5 rounded-lg bg-grey-850/50 flex flex-col">
+                    <div className="md:w-2/3 min-h-0 border border-neutral-200 rounded-lg bg-aura-glass-white/40/50 flex flex-col">
                         <JurisprudenceViewer ecli={selectedEcli} onClose={() => setSelectedEcli(null)} />
                     </div>
                 )}
@@ -317,17 +317,17 @@ function JurisprudenceViewer({ ecli, onClose }: { ecli: string; onClose: () => v
 
     return (
         <>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-overlay/5 bg-grey-900/50">
-                <div className="flex items-center gap-2 text-sm font-medium text-grey-200">
-                    <FileText className="w-4 h-4 text-grey-400" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-aura-glass-white/60/50">
+                <div className="flex items-center gap-2 text-sm font-medium text-aura-ink">
+                    <FileText className="w-4 h-4 text-neutral-600" />
                     {ecli}
                 </div>
-                <button onClick={onClose} className="text-grey-500 hover:text-grey-200 transition-colors">
+                <button onClick={onClose} className="text-neutral-500 hover:text-aura-ink transition-colors">
                     <X className="w-4 h-4" />
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 text-sm leading-relaxed text-grey-300">
+            <div className="flex-1 overflow-y-auto p-5 text-sm leading-relaxed text-neutral-700">
                 {isLoading ? (
                     <div className="space-y-4">
                         <Skeleton className="h-6 w-1/3 mb-6" />
@@ -342,14 +342,14 @@ function JurisprudenceViewer({ ecli, onClose }: { ecli: string; onClose: () => v
                     <div className="whitespace-pre-wrap font-sans">
                         {/* Header metadata */}
                         {data?.document && (
-                            <div className="mb-6 pb-4 border-b border-overlay/5">
-                                {data.document.instantie && <h1 className="text-lg font-bold text-grey-100">{data.document.instantie}</h1>}
-                                {data.document.datum_uitspraak && <p className="text-xs text-grey-500 mt-1">Gewezen op: {data.document.datum_uitspraak}</p>}
+                            <div className="mb-6 pb-4 border-b border-neutral-200">
+                                {data.document.instantie && <h1 className="text-lg font-bold text-aura-ink">{data.document.instantie}</h1>}
+                                {data.document.datum_uitspraak && <p className="text-xs text-neutral-500 mt-1">Gewezen op: {data.document.datum_uitspraak}</p>}
                             </div>
                         )}
 
                         {/* Text body */}
-                        <div className="text-grey-300 prose prose-invert prose-sm max-w-none">
+                        <div className="text-neutral-700 prose prose-invert prose-sm max-w-none">
                             {data?.document.text || "Document is leeg of inhoud werd afgeschermd."}
                         </div>
                     </div>

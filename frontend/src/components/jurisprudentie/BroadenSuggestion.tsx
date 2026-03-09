@@ -74,11 +74,11 @@ export default function BroadenSuggestion({
         <Lightbulb size={18} className="mt-0.5 shrink-0 text-amber-400" />
         <div>
           {resultCount === 0 ? (
-            <p className="text-sm text-grey-300">
+            <p className="text-sm text-neutral-700">
               Geen uitspraken gevonden.
             </p>
           ) : (
-            <p className="text-sm text-grey-300">
+            <p className="text-sm text-neutral-700">
               Slechts {resultCount} {resultCount === 1 ? 'uitspraak' : 'uitspraken'} gevonden.
             </p>
           )}
@@ -98,7 +98,7 @@ export default function BroadenSuggestion({
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-sm text-grey-400">
+            <p className="mt-1 text-sm text-neutral-600">
               Probeer een andere gemeente of tijdsperiode.
             </p>
           )}

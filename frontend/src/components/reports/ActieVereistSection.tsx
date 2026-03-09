@@ -148,7 +148,7 @@ function WarningRow({ warning }: { warning: ActionWarning }) {
       </div>
       <div>
         <p className={`text-sm font-semibold ${styles.titleColor}`}>{warning.title}</p>
-        <p className="mt-0.5 text-sm text-grey-400">{warning.description}</p>
+        <p className="mt-0.5 text-sm text-neutral-600">{warning.description}</p>
       </div>
     </div>
   )

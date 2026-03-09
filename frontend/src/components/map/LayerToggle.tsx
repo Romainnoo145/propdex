@@ -247,16 +247,16 @@ function LayerToggle({
     }
   }
 
-  const active = 'bg-amber-accent text-on-accent shadow-sm'
-  const inactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
-  const overlayActive = 'bg-amber-accent/25 text-amber-accent shadow-sm'
-  const overlayInactive = 'bg-transparent text-grey-400 hover:text-grey-100 hover:bg-grey-800'
+  const active = 'bg-aura-amber text-aura-obsidian shadow-sm'
+  const inactive = 'bg-transparent text-neutral-600 hover:text-aura-ink hover:bg-neutral-200'
+  const overlayActive = 'bg-aura-amber/25 text-aura-amber shadow-sm'
+  const overlayInactive = 'bg-transparent text-neutral-600 hover:text-aura-ink hover:bg-neutral-200'
 
   const showGradientLegend = showScore && showParcels && hasScoreData
 
   return (
     <div className="absolute bottom-4 left-4 z-[var(--z-map-controls)] flex items-center gap-2">
-      <div className="bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-grey-800 shadow-lg">
+      <div className="bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-neutral-200 shadow-lg">
         <button
           onClick={() => handleLayerSwitch('kaart')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
@@ -274,7 +274,7 @@ function LayerToggle({
           Satellite
         </button>
 
-        <div className="border-l-2 border-grey-600 h-6 self-center mx-0.5" />
+        <div className="border-l-2 border-neutral-300 h-6 self-center mx-0.5" />
 
         <button
           onClick={onGemeentenToggle}
@@ -285,7 +285,7 @@ function LayerToggle({
           Gemeenten
         </button>
 
-        <div className="border-l border-grey-700 h-6 self-center mx-0.5" />
+        <div className="border-l border-neutral-300 h-6 self-center mx-0.5" />
 
         <button
           onClick={handleParcelsToggle}
@@ -309,13 +309,13 @@ function LayerToggle({
       </div>
 
       {showGradientLegend && (
-        <div className="bg-grey-900/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-grey-800 shadow-lg">
-          <span className="text-xs text-grey-400">40</span>
+        <div className="bg-aura-glass-white/60/90 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-neutral-200 shadow-lg">
+          <span className="text-xs text-neutral-600">40</span>
           <div
             className="h-3 w-24 rounded-full"
             style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
           />
-          <span className="text-xs text-grey-400">100</span>
+          <span className="text-xs text-neutral-600">100</span>
         </div>
       )}
     </div>

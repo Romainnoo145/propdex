@@ -35,7 +35,7 @@ export const Disabled: Story = {
 export const WithLabel: Story = {
   render: () => (
     <div className="flex flex-col gap-2">
-      <label htmlFor="gemeente" className="text-sm text-grey-300 font-medium">
+      <label htmlFor="gemeente" className="text-sm text-neutral-700 font-medium">
         Gemeente
       </label>
       <Select id="gemeente">

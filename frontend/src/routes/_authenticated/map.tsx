@@ -2082,20 +2082,20 @@ function MapPage() {
 
       {/* Zone info card */}
       {zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md border border-grey-800 rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md border border-neutral-200 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-accent"></div>
-            <p className="text-sm text-grey-400">Zone info laden...</p>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-aura-amber"></div>
+            <p className="text-sm text-neutral-600">Zone info laden...</p>
           </div>
         </div>
       )}
       {zoneInfo && !zoneLoading && (
-        <div className="absolute bottom-20 left-4 bg-grey-900 md:bg-grey-900/90 md:backdrop-blur-md border border-grey-800 rounded-lg shadow-lg p-4 max-w-sm">
+        <div className="absolute bottom-20 left-4 bg-aura-glass-white/60 md:bg-aura-glass-white/60/90 md:backdrop-blur-md border border-neutral-200 rounded-lg shadow-lg p-4 max-w-sm">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-sm font-semibold text-grey-100">Bestemmingsplan</h3>
+            <h3 className="text-sm font-semibold text-aura-ink">Bestemmingsplan</h3>
             <button
               onClick={() => setZoneInfo(null)}
-              className="text-grey-400 hover:text-grey-100 transition-colors"
+              className="text-neutral-600 hover:text-aura-ink transition-colors"
               aria-label="Sluiten"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2104,19 +2104,19 @@ function MapPage() {
             </button>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-bold text-grey-100">{zoneInfo.info.planNaam}</p>
-            <div className="inline-block px-2 py-1 bg-amber-accent/20 text-amber-accent text-xs font-medium rounded">
+            <p className="text-sm font-bold text-aura-ink">{zoneInfo.info.planNaam}</p>
+            <div className="inline-block px-2 py-1 bg-aura-amber/20 text-aura-amber text-xs font-medium rounded">
               {zoneInfo.info.bestemmingType}
             </div>
             {zoneInfo.info.planStatus && (
-              <p className="text-xs text-grey-400">Status: {zoneInfo.info.planStatus}</p>
+              <p className="text-xs text-neutral-600">Status: {zoneInfo.info.planStatus}</p>
             )}
             {zoneInfo.info.planLink && (
               <a
                 href={zoneInfo.info.planLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-amber-accent hover:text-amber-accent-hover transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-aura-amber hover:text-aura-amber-hover transition-colors"
               >
                 Bekijk officieel document
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2129,14 +2129,14 @@ function MapPage() {
               <button
                 onClick={handleScanZone}
                 disabled={triggerScan.isPending || !!activeScanId}
-                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-on-accent bg-amber-accent hover:bg-amber-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-aura-obsidian bg-aura-amber hover:bg-aura-amber-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
               >
                 {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
               </button>
             </div>
             {/* Mobile explanation — scanning requires desktop */}
             <div className="md:hidden mt-3">
-              <div className="rounded-md bg-amber-accent/10 border border-amber-accent/30 px-3 py-2 text-xs text-amber-accent">
+              <div className="rounded-md bg-aura-amber/10 border border-aura-amber/30 px-3 py-2 text-xs text-aura-amber">
                 Gebruik desktop voor scannen
               </div>
             </div>
@@ -2224,16 +2224,16 @@ function MapPage() {
       {/* Wijk scan confirmation dialog */}
       <Modal isOpen={!!pendingScan} onClose={handleCancelScan} size="sm">
         <div className="p-6 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-accent/15">
-            <svg className="h-6 w-6 text-amber-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-aura-amber/15">
+            <svg className="h-6 w-6 text-aura-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-grey-100 mb-2">
+          <h3 className="text-lg font-semibold text-aura-ink mb-2">
             Wijk scannen?
           </h3>
-          <p className="text-sm text-grey-400 mb-6">
-            Wil je <span className="font-medium text-grey-300">{pendingScan?.wijkNaam}</span> scannen op bouwmogelijkheden?
+          <p className="text-sm text-neutral-600 mb-6">
+            Wil je <span className="font-medium text-neutral-700">{pendingScan?.wijkNaam}</span> scannen op bouwmogelijkheden?
           </p>
           <div className="flex gap-3 justify-center">
             <Button variant="ghost" size="lg" onClick={handleCancelScan}>

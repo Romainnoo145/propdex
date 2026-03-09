@@ -46,10 +46,10 @@ export function GemeenteCard({
   return (
     <div
       onClick={onClick}
-      className="group overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900 cursor-pointer transition-all hover:border-amber-accent/35 hover:bg-overlay/[0.04] hover:shadow-[0_0_0_1px_rgba(217,170,56,0.12)]"
+      className="group overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60 cursor-pointer transition-all hover:border-aura-amber/35 hover:bg-neutral-50 hover:shadow-[0_0_0_1px_rgba(217,170,56,0.12)]"
     >
       {/* SVG silhouette area */}
-      <div className="relative aspect-[4/3] border-b border-overlay/[0.08] bg-grey-850/65">
+      <div className="relative aspect-[4/3] border-b border-neutral-200 bg-aura-glass-white/40/65">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(217,170,56,0.11),transparent_45%),radial-gradient(circle_at_20%_82%,rgba(255,255,255,0.06),transparent_45%)]" />
         {onToggleFavorite && (
           <button
@@ -57,7 +57,7 @@ export function GemeenteCard({
               e.stopPropagation()
               onToggleFavorite()
             }}
-            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-overlay/[0.12] bg-grey-900/90 text-amber-accent/80 transition-colors hover:text-amber-accent"
+            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-aura-glass-white/60/90 text-aura-amber/80 transition-colors hover:text-aura-amber"
             aria-label={isFavorite ? 'Verwijder favoriet' : 'Markeer als favoriet'}
             title={isFavorite ? 'Verwijder favoriet' : 'Markeer als favoriet'}
           >
@@ -73,20 +73,20 @@ export function GemeenteCard({
             {svgData.backgroundD && (
               <path
                 d={svgData.backgroundD}
-                className="fill-grey-700/18 stroke-overlay/[0.2]"
+                className="fill-neutral-400/18 stroke-neutral-400/20"
                 strokeWidth="0.5"
               />
             )}
             {svgData.siblingsD && (
               <path
                 d={svgData.siblingsD}
-                className="fill-transparent stroke-grey-600/25"
+                className="fill-transparent stroke-neutral-500/25"
                 strokeWidth="0.3"
               />
             )}
             <path
               d={svgData.primaryD}
-              className="fill-amber-accent/24 stroke-amber-accent transition-all duration-200 group-hover:fill-amber-accent/30 group-hover:stroke-amber-accent"
+              className="fill-aura-amber/24 stroke-aura-amber transition-all duration-200 group-hover:fill-aura-amber/30 group-hover:stroke-aura-amber"
               strokeWidth="1"
             />
           </svg>
@@ -102,20 +102,20 @@ export function GemeenteCard({
       <div className="px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <h4
-            className="truncate text-base font-semibold text-grey-100"
+            className="truncate text-base font-semibold text-aura-ink"
             title={gemeenteName}
           >
             {gemeenteName}
           </h4>
           {/* Unread badge — text-white on bg-error is the established pattern (see ProjectList.tsx:177) */}
           {totalUnread > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1 text-xs font-semibold text-on-accent shrink-0">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-aura-amber px-1 text-xs font-semibold text-aura-obsidian shrink-0">
               {totalUnread}
             </span>
           )}
         </div>
         <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="shrink-0 text-xs text-grey-400">{gemeenteCode}</p>
+          <p className="shrink-0 text-xs text-neutral-600">{gemeenteCode}</p>
           {stats && (
             <div className="flex items-center gap-1.5">
               <MetricChip
@@ -155,7 +155,7 @@ function MapPinIcon() {
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-grey-700"
+      className="text-neutral-400"
     >
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
       <circle cx="12" cy="10" r="3" />
@@ -174,7 +174,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={filled ? 'text-amber-accent' : ''}
+      className={filled ? 'text-aura-amber' : ''}
     >
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
     </svg>

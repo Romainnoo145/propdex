@@ -41,16 +41,16 @@ export function WijkCard({
   return (
     <div
       onClick={onClick}
-      className={`group overflow-hidden rounded-xl border bg-grey-900 transition-all ${
+      className={`group overflow-hidden rounded-xl border bg-aura-glass-white/60 transition-all ${
         onClick ? 'cursor-pointer' : ''
       } ${
         isActive
-          ? 'border-amber-accent/35 bg-overlay/[0.05] shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
-          : 'border-overlay/[0.08] hover:border-amber-accent/35 hover:bg-overlay/[0.04] hover:shadow-[0_0_0_1px_rgba(217,170,56,0.12)]'
+          ? 'border-aura-amber/35 bg-neutral-50 shadow-[0_0_0_1px_rgba(217,170,56,0.14)]'
+          : 'border-neutral-200 hover:border-aura-amber/35 hover:bg-neutral-50 hover:shadow-[0_0_0_1px_rgba(217,170,56,0.12)]'
       }`}
     >
       {/* SVG silhouette area */}
-      <div className="relative aspect-[16/8] border-b border-overlay/[0.08] bg-grey-850/65">
+      <div className="relative aspect-[16/8] border-b border-neutral-200 bg-aura-glass-white/40/65">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(217,170,56,0.11),transparent_45%),radial-gradient(circle_at_20%_82%,rgba(255,255,255,0.06),transparent_45%)]" />
         {svgData ? (
           <svg
@@ -61,20 +61,20 @@ export function WijkCard({
             {svgData.backgroundD && (
               <path
                 d={svgData.backgroundD}
-                className="fill-grey-700/18 stroke-overlay/[0.2]"
+                className="fill-neutral-400/18 stroke-neutral-400/20"
                 strokeWidth="0.5"
               />
             )}
             {svgData.siblingsD && (
               <path
                 d={svgData.siblingsD}
-                className="fill-transparent stroke-grey-600/25"
+                className="fill-transparent stroke-neutral-500/25"
                 strokeWidth="0.3"
               />
             )}
             <path
               d={svgData.primaryD}
-              className="fill-amber-accent/24 stroke-amber-accent transition-all duration-200 group-hover:fill-amber-accent/30 group-hover:stroke-amber-accent"
+              className="fill-aura-amber/24 stroke-aura-amber transition-all duration-200 group-hover:fill-aura-amber/30 group-hover:stroke-aura-amber"
               strokeWidth="1"
             />
           </svg>
@@ -90,7 +90,7 @@ export function WijkCard({
       <div className="px-3.5 py-2.5">
         <div className="flex items-center gap-2">
           <h4
-            className="min-w-0 flex-1 truncate text-sm font-semibold text-grey-100"
+            className="min-w-0 flex-1 truncate text-sm font-semibold text-aura-ink"
             title={wijk.wijk_naam ?? wijk.name}
           >
             {wijk.wijk_naam ?? wijk.name}
@@ -112,7 +112,7 @@ export function WijkCard({
             />
             {/* Unread badge */}
             {unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-accent px-1 text-xs font-semibold text-on-accent shrink-0">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-aura-amber px-1 text-xs font-semibold text-aura-obsidian shrink-0">
                 {unreadCount}
               </span>
             )}
@@ -135,7 +135,7 @@ function AreaGridIcon() {
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-grey-700"
+      className="text-neutral-400"
     >
       {/* Grid representing an area/neighbourhood */}
       <rect x="3" y="3" width="7" height="7" />

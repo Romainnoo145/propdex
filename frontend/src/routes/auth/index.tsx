@@ -34,12 +34,12 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-grey-950">
+    <div className="flex min-h-screen items-center justify-center bg-aura-canvas">
       <div className="w-full max-w-md space-y-6">
         {/* Propdex branding */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-grey-100">Propdex</h1>
-          <p className="mt-2 text-sm text-grey-400">
+          <h1 className="text-3xl font-bold text-aura-ink">Propdex</h1>
+          <p className="mt-2 text-sm text-neutral-600">
             Property Intelligence Platform
           </p>
         </div>
@@ -56,7 +56,7 @@ function AuthPage() {
         <div className="text-center">
           <button
             onClick={handleDemo}
-            className="text-sm text-grey-400 underline hover:text-grey-100"
+            className="text-sm text-neutral-600 underline hover:text-aura-ink"
           >
             Demo login as info@klarifai.nl
           </button>

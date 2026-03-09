@@ -121,9 +121,9 @@ export default function ChangeTimeline({
 
   if (variant === 'inbox') {
     return (
-      <div className="bg-grey-900/50 px-3 pb-3 pt-4 sm:px-4 sm:pb-4 sm:pt-4">
+      <div className="bg-aura-glass-white/60/50 px-3 pb-3 pt-4 sm:px-4 sm:pb-4 sm:pt-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.65fr)]">
-          <div className="relative overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-900">
+          <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/60">
             <div className="absolute inset-0 overflow-y-auto p-3">
               <div className="space-y-5">
                 {sortedDates.map((dateKey) => {
@@ -131,11 +131,11 @@ export default function ChangeTimeline({
                   return (
                     <div key={dateKey}>
                       <div className="mb-2 flex items-center gap-2">
-                        <div className="h-px flex-1 bg-overlay/[0.08]" />
-                        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-grey-500">
+                        <div className="h-px flex-1 bg-neutral-50" />
+                        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
                           {formatTimelineDateLabel(dateKey).toUpperCase()}
                         </h2>
-                        <div className="h-px flex-1 bg-overlay/[0.08]" />
+                        <div className="h-px flex-1 bg-neutral-50" />
                       </div>
 
                       <div className="space-y-1.5">
@@ -169,14 +169,14 @@ export default function ChangeTimeline({
   }
 
   return (
-    <div className="border-t border-grey-800 bg-grey-900/50">
+    <div className="border-t border-neutral-200 bg-aura-glass-white/60/50">
       {sortedDates.map((dateKey) => {
         const dateChanges = groupedChanges[dateKey]!
         if (dateChanges.length === 0) return null
 
         return (
-          <div key={dateKey} className="border-b border-grey-800 last:border-b-0">
-            <div className="px-5 py-2 text-xs font-medium text-grey-400">
+          <div key={dateKey} className="border-b border-neutral-200 last:border-b-0">
+            <div className="px-5 py-2 text-xs font-medium text-neutral-600">
               {formatDate(dateKey)}
             </div>
 
@@ -201,32 +201,32 @@ export default function ChangeTimeline({
               return (
                 <div
                   key={change.id}
-                  className="border-t border-grey-800/50 first:border-t-0"
+                  className="border-t border-neutral-2000 first:border-t-0"
                 >
                   <button
                     onClick={() => handleToggle(change.id, expandedId, setExpandedId)}
-                    className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-grey-800/70"
+                    className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-neutral-200/70"
                   >
                     <div className="relative">
                       <Icon />
                       {!readIds.has(change.id) && (
-                        <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-grey-900 bg-amber-accent" />
+                        <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-neutral-200 bg-aura-amber" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-medium text-grey-300">
+                      <p className="line-clamp-2 text-sm font-medium text-neutral-700">
                         {change.title}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="text-[11px] text-grey-600">
+                        <span className="text-[11px] text-neutral-500">
                           {formatRelativeTime(change.change_date)}
                         </span>
                         {change.category_label && (
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                               /verleend|vastgesteld/i.test(change.category_label)
-                                ? 'bg-amber-accent/15 text-amber-accent'
-                                : 'bg-grey-800 text-grey-300'
+                                ? 'bg-aura-amber/15 text-aura-amber'
+                                : 'bg-neutral-200 text-neutral-700'
                             }`}
                           >
                             {change.category_label}
@@ -240,7 +240,7 @@ export default function ChangeTimeline({
                               </span>
                             )}
                             {rc > 0 && (
-                              <span className="inline-flex items-center rounded-full bg-amber-accent/10 px-2 py-0.5 text-[11px] font-medium text-amber-accent">
+                              <span className="inline-flex items-center rounded-full bg-aura-amber/10 px-2 py-0.5 text-[11px] font-medium text-aura-amber">
                                 {rc} {rc === 1 ? 'rapport' : 'rapporten'}
                               </span>
                             )}
@@ -249,7 +249,7 @@ export default function ChangeTimeline({
                       </div>
                     </div>
                     <ChevronIcon
-                      className={`h-4 w-4 shrink-0 text-grey-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      className={`h-4 w-4 shrink-0 text-neutral-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                     />
                   </button>
 
@@ -272,11 +272,11 @@ export default function ChangeTimeline({
                       !!primaryParcelId && generatingId === primaryParcelId
 
                     return (
-                      <div className="border-t border-grey-800/50 bg-grey-900 px-5 py-3">
+                      <div className="border-t border-neutral-2000 bg-aura-glass-white/60 px-5 py-3">
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1 space-y-2">
                             {change.address && (
-                              <p className="text-xs text-grey-400">{change.address}</p>
+                              <p className="text-xs text-neutral-600">{change.address}</p>
                             )}
 
                             {hasParcels && (
@@ -316,7 +316,7 @@ export default function ChangeTimeline({
                                         search: { from: 'projecten' },
                                       })
                                     }
-                                    className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+                                    className="flex items-center gap-1.5 text-sm text-aura-amber hover:text-aura-amber-hover hover:underline"
                                   >
                                     <ReportLinkIcon />
                                     Bekijk rapport — {m.report_name}
@@ -362,7 +362,7 @@ export default function ChangeTimeline({
                               }}
                               disabled={!canViewOnMap}
                               title={!canViewOnMap ? 'Adres/huisnummer ontbreekt' : undefined}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-grey-700 bg-grey-800/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-grey-700/50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-200/50 px-3 py-1.5 text-xs font-medium text-info hover:bg-neutral-300/50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <MapPinIcon />
                               Bekijk op kaart
@@ -387,7 +387,7 @@ export default function ChangeTimeline({
                                 isGeneratingAddress
                               }
                               title={!canGenerate ? 'Adres/huisnummer ontbreekt' : undefined}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent/30 bg-amber-accent/10 px-3 py-1.5 text-xs font-medium text-amber-accent hover:bg-amber-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-aura-amber/30 bg-aura-amber/10 px-3 py-1.5 text-xs font-medium text-aura-amber hover:bg-aura-amber/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <ReportLinkIcon />
                               {isGeneratingParcel || isGeneratingAddress
@@ -432,30 +432,30 @@ function ChangeInboxItem({
       onClick={onClick}
       className={`relative w-full overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
         isActive
-          ? 'border-overlay/[0.08] bg-overlay/[0.08]'
-          : 'border-overlay/[0.08] bg-overlay/[0.03] hover:bg-overlay/[0.05]'
+          ? 'border-neutral-200 bg-neutral-50'
+          : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-50'
       }`}
     >
       <span
         className={`absolute inset-y-1 left-0 w-1 rounded-r ${
-          isActive ? 'bg-amber-accent' : 'bg-transparent'
+          isActive ? 'bg-aura-amber' : 'bg-transparent'
         }`}
       />
       {!isRead && (
-        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-accent" />
+        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-aura-amber" />
       )}
-      <p className="pr-4 text-sm font-semibold leading-snug text-grey-100">{address}</p>
-      <p className="mt-1 line-clamp-2 text-xs leading-snug text-grey-400">{summary}</p>
-      <div className="mt-2 flex items-center gap-2 text-[11px] text-grey-500">
+      <p className="pr-4 text-sm font-semibold leading-snug text-aura-ink">{address}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-snug text-neutral-600">{summary}</p>
+      <div className="mt-2 flex items-center gap-2 text-[11px] text-neutral-500">
         <span>{typeLabel}</span>
         {change.category_label && (
           <>
-            <span className="text-grey-600">&middot;</span>
+            <span className="text-neutral-500">&middot;</span>
             <span
               className={
                 /verleend|vastgesteld/i.test(change.category_label)
-                  ? 'text-amber-accent'
-                  : 'text-grey-400'
+                  ? 'text-aura-amber'
+                  : 'text-neutral-600'
               }
             >
               {change.category_label}
@@ -488,8 +488,8 @@ function ChangeDetailPanel({
 }: ChangeDetailPanelProps) {
   if (!change) {
     return (
-      <div className="rounded-xl border border-overlay/[0.08] bg-grey-900 p-5">
-        <p className="text-sm text-grey-500">Selecteer links een melding om details te zien.</p>
+      <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-5">
+        <p className="text-sm text-neutral-500">Selecteer links een melding om details te zien.</p>
       </div>
     )
   }
@@ -523,10 +523,10 @@ function ChangeDetailPanel({
       ? 'Adres-hint beschikbaar'
       : 'Locatie onzeker'
   const locationQualityClass = primaryParcelId
-    ? 'border-amber-accent/45 bg-amber-accent/15 text-amber-accent'
+    ? 'border-aura-amber/45 bg-aura-amber/15 text-aura-amber'
     : expandedCanNavigate
-      ? 'border-overlay/[0.18] bg-overlay/[0.08] text-grey-200'
-      : 'border-overlay/[0.12] bg-overlay/[0.05] text-grey-400'
+      ? 'border-neutral-200 bg-neutral-50 text-aura-ink'
+      : 'border-neutral-200 bg-neutral-50 text-neutral-600'
 
   const openOnMap = () => {
     if (!canViewOnMap) return
@@ -550,12 +550,12 @@ function ChangeDetailPanel({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-overlay/[0.08] bg-grey-900 p-4 sm:p-5">
+    <div className="space-y-4 rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 sm:p-5">
       <button
         type="button"
         onClick={openOnMap}
         disabled={!canViewOnMap}
-        className="group relative h-36 w-full overflow-hidden rounded-xl border border-overlay/[0.08] bg-grey-850 text-left disabled:cursor-default"
+        className="group relative h-36 w-full overflow-hidden rounded-xl border border-neutral-200 bg-aura-glass-white/40 text-left disabled:cursor-default"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(217,170,56,0.14),transparent_46%),radial-gradient(circle_at_70%_75%,rgba(255,255,255,0.07),transparent_40%)]" />
         <div
@@ -569,44 +569,44 @@ function ChangeDetailPanel({
         <div className={`absolute left-3 top-3 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${locationQualityClass}`}>
           {locationQualityLabel}
         </div>
-        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-200">
+        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] text-aura-ink">
           {matchedParcels.length}p
-          <span className="text-grey-500">/</span>
+          <span className="text-neutral-500">/</span>
           {matchedReports.length}r
         </div>
-        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-amber-accent/35 bg-amber-accent/15 px-3 py-1.5 text-xs font-medium text-amber-accent">
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-aura-amber/35 bg-aura-amber/15 px-3 py-1.5 text-xs font-medium text-aura-amber">
           <MapPinIcon />
           {canViewOnMap ? 'Open op kaart' : 'Locatie melding'}
         </div>
-        <span className="absolute bottom-3 left-3 rounded-full border border-overlay/[0.12] bg-overlay/[0.06] px-2 py-0.5 text-[11px] text-grey-300">
+        <span className="absolute bottom-3 left-3 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] text-neutral-700">
           {change.gemeente_naam}
         </span>
       </button>
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-xl font-semibold text-grey-100">{detailAddress}</h3>
+          <h3 className="text-xl font-semibold text-aura-ink">{detailAddress}</h3>
           {change.category_label && (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
               /verleend|vastgesteld/i.test(change.category_label)
-                ? 'bg-amber-accent/15 text-amber-accent'
-                : 'bg-grey-800/80 text-grey-300'
+                ? 'bg-aura-amber/15 text-aura-amber'
+                : 'bg-neutral-200/80 text-neutral-700'
             }`}>
               {change.category_label}
             </span>
           )}
-          <span className="inline-flex items-center rounded-full border border-overlay/[0.1] bg-overlay/[0.05] px-2 py-0.5 text-xs text-grey-300">
+          <span className="inline-flex items-center rounded-full border border-neutral-200/[0.1] bg-neutral-50 px-2 py-0.5 text-xs text-neutral-700">
             {change.change_type === 'permit' ? 'Omgevingsvergunning' : 'Bestemmingsplan'}
           </span>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-grey-300">{change.title}</p>
+        <p className="mt-2 text-sm leading-relaxed text-neutral-700">{change.title}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {change.source_url && (
             <a
               href={change.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-overlay/[0.12] bg-overlay/[0.04] px-3 py-1.5 text-xs font-medium text-grey-300 transition-colors hover:bg-overlay/[0.08] hover:text-grey-100"
+              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-aura-ink"
             >
               Bekijk officiële publicatie
               <ExternalLinkIcon />
@@ -626,7 +626,7 @@ function ChangeDetailPanel({
               })
             }}
             disabled={!canGenerate || isGeneratingParcel || isGeneratingAddress}
-            className="inline-flex items-center gap-1.5 rounded-md border border-amber-accent bg-amber-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-amber-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-aura-amber bg-aura-amber px-3 py-1.5 text-xs font-semibold text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ReportLinkIcon />
             {isGeneratingParcel || isGeneratingAddress ? 'Bezig...' : 'Sla op in project +'}
@@ -634,7 +634,7 @@ function ChangeDetailPanel({
         </div>
       </div>
 
-      <div className="grid gap-2 rounded-xl border border-overlay/[0.06] bg-overlay/[0.02] p-3 sm:grid-cols-2">
+      <div className="grid gap-2 rounded-xl border border-neutral-200/[0.06] bg-neutral-100/[0.02] p-3 sm:grid-cols-2">
         <MetaRow label="Gemeente" value={change.gemeente_naam || '–'} />
         <MetaRow label="Project" value={change.project_name || 'Niet gekoppeld'} />
         <MetaRow label="Publicatiedatum" value={formatDate(change.change_date)} />
@@ -642,7 +642,7 @@ function ChangeDetailPanel({
       </div>
 
       {(matchedParcels.length > 0 || matchedReports.length > 0) && (
-        <div className="space-y-1.5 rounded-xl border border-overlay/[0.08] bg-overlay/[0.03] p-3">
+        <div className="space-y-1.5 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
           {matchedParcels.map((m) => (
             <button
               key={m.parcel_id}
@@ -655,7 +655,7 @@ function ChangeDetailPanel({
                   }),
                 })
               }
-              className="flex items-center gap-1.5 text-sm text-grey-300 hover:text-grey-100 hover:underline"
+              className="flex items-center gap-1.5 text-sm text-neutral-700 hover:text-aura-ink hover:underline"
             >
               <ParcelLinkIcon />
               {m.address ? `Perceel: ${m.address}` : `Perceel ${m.parcel_id}`}
@@ -671,7 +671,7 @@ function ChangeDetailPanel({
                   search: { from: 'projecten' },
                 })
               }
-              className="flex items-center gap-1.5 text-sm text-amber-accent hover:text-amber-accent-hover hover:underline"
+              className="flex items-center gap-1.5 text-sm text-aura-amber hover:text-aura-amber-hover hover:underline"
             >
               <ReportLinkIcon />
               Rapport: {m.report_name}
@@ -685,9 +685,9 @@ function ChangeDetailPanel({
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-overlay/[0.035] px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-grey-600">{label}</p>
-      <p className="mt-0.5 text-sm text-grey-200">{value}</p>
+    <div className="rounded-md bg-neutral-100/[0.035] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-neutral-500">{label}</p>
+      <p className="mt-0.5 text-sm text-aura-ink">{value}</p>
     </div>
   )
 }
@@ -736,7 +736,7 @@ function MapPinIcon() {
 
 function PermitIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-grey-700/30">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-300/30">
       <svg
         width="16"
         height="16"
@@ -746,7 +746,7 @@ function PermitIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-grey-400"
+        className="text-neutral-600"
       >
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
@@ -759,7 +759,7 @@ function PermitIcon() {
 
 function ZoningIcon() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-grey-700/30">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-300/30">
       <svg
         width="16"
         height="16"
@@ -769,7 +769,7 @@ function ZoningIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="text-grey-400"
+        className="text-neutral-600"
       >
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
         <circle cx="12" cy="10" r="3" />
