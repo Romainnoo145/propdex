@@ -1,11 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
-import { Badge } from '@/components/primitives'
+
 import { MapPanelShell } from '@/components/map/panels/MapPanelShell'
 import { ParcelEnrichmentCard } from './ParcelEnrichmentCard'
+import { FysiekRisicoprofielSection } from './FysiekRisicoprofielSection'
 import { MarketSignalsCards } from './MarketSignalsCards'
-import { useParcelEnrichment } from '@/hooks/useScans'
+import { useParcelEnrichment, useParcelRiskProfile } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { useParcelChanges } from '@/hooks/useNotifications'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
@@ -349,6 +350,11 @@ export function ParcelDetailModal({
     enabled: isOpen && !!parcel?.parcel_id,
   })
 
+  // Fetch fysiek risicoprofiel on demand when modal opens
+  const riskProfile = useParcelRiskProfile(parcel?.parcel_id ?? null, {
+    enabled: isOpen && !!parcel?.parcel_id,
+  })
+
   const generateReport = useGenerateReportFromParcel()
 
   // Fetch matching bekendmakingen for this parcel's postcode
@@ -608,6 +614,13 @@ export function ParcelDetailModal({
             </div>
           )}
         </div>
+
+        {/* Fysiek Risicoprofiel Section */}
+        <FysiekRisicoprofielSection
+          profiel={riskProfile.data?.fysiek_risico_profiel}
+          isLoading={riskProfile.isLoading}
+          isError={riskProfile.isError}
+        />
 
         {(parcel.vacancy_reasons?.length || actionableOpportunitySignals.length > 0) && (
           <div>
