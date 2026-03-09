@@ -999,6 +999,39 @@ export async function fetchParcelRiskProfile(
 }
 
 /**
+ * Fetch aerial crop image for a parcel as a blob URL
+ *
+ * GET /api/scans/parcels/{parcelId}/aerial-crop
+ *
+ * Returns a blob URL suitable for use as an <img> src, or null on error.
+ * The backend proxies PDOK WMS and returns a JPEG image.
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns Blob URL string or null on failure
+ */
+export async function fetchAerialCrop(
+  parcelId: string,
+  accessToken: string | null
+): Promise<string | null> {
+  try {
+    const headers: HeadersInit = {}
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
+    const response = await fetch(
+      `${SCANS_BASE}/parcels/${parcelId}/aerial-crop`,
+      { method: 'GET', headers, credentials: 'include' }
+    )
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch {
+    return null
+  }
+}
+
+/**
  * Fetch paginated scan history for the authenticated organization
  * GET /api/scans
  */

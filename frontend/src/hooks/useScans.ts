@@ -19,6 +19,7 @@ import {
   fetchScanResults,
   fetchParcelEnrichment,
   fetchParcelRiskProfile,
+  fetchAerialCrop,
   fetchScanHistory,
   fetchProjectScans,
 } from '@/lib/api'
@@ -217,5 +218,28 @@ export function useProjectScans(
     queryFn: () => fetchProjectScans(projectId!, accessToken, params),
     enabled: !!accessToken && !!projectId,
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * Fetch aerial crop image for a parcel as a blob URL
+ *
+ * Returns a blob URL for use as an <img> src attribute.
+ * Backed by PDOK WMS aerial imagery via backend proxy.
+ *
+ * Query key: ['aerial-crop', parcelId]
+ * Stale time: 24 hours (aerial images rarely change)
+ *
+ * @param parcelId - ParcelCache UUID or null (disabled when null)
+ */
+export function useAerialCrop(parcelId: string | null) {
+  const { accessToken } = useAuth()
+
+  return useQuery<string | null, Error>({
+    queryKey: ['aerial-crop', parcelId],
+    queryFn: () => fetchAerialCrop(parcelId!, accessToken),
+    enabled: !!parcelId && !!accessToken,
+    staleTime: 24 * 60 * 60 * 1000, // 24h — aerial images don't change often
+    retry: 1, // PDOK may be slow; one retry is enough
   })
 }
