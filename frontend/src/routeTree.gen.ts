@@ -18,6 +18,7 @@ import { Route as AuthenticatedRapportenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
+import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authenticated/jurisprudentie'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
@@ -66,6 +67,12 @@ const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   path: '/map',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedJurisprudentieRoute =
+  AuthenticatedJurisprudentieRouteImport.update({
+    id: '/jurisprudentie',
+    path: '/jurisprudentie',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInstellingenRoute =
   AuthenticatedInstellingenRouteImport.update({
     id: '/instellingen',
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
+  '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
@@ -100,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
+  '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
@@ -115,6 +124,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
+  '/_authenticated/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/instellingen'
+    | '/jurisprudentie'
     | '/map'
     | '/meldingen'
     | '/projecten'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/instellingen'
+    | '/jurisprudentie'
     | '/map'
     | '/meldingen'
     | '/projecten'
@@ -157,6 +169,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_authenticated/dashboard'
     | '/_authenticated/instellingen'
+    | '/_authenticated/jurisprudentie'
     | '/_authenticated/map'
     | '/_authenticated/meldingen'
     | '/_authenticated/projecten'
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/jurisprudentie': {
+      id: '/_authenticated/jurisprudentie'
+      path: '/jurisprudentie'
+      fullPath: '/jurisprudentie'
+      preLoaderRoute: typeof AuthenticatedJurisprudentieRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/instellingen': {
       id: '/_authenticated/instellingen'
       path: '/instellingen'
@@ -266,6 +286,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
+  AuthenticatedJurisprudentieRoute: typeof AuthenticatedJurisprudentieRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
@@ -277,6 +298,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
+  AuthenticatedJurisprudentieRoute: AuthenticatedJurisprudentieRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
