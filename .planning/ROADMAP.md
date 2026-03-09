@@ -97,11 +97,11 @@ Plans:
   2. Explorer shows a filter sidebar with scope, vergunningstype, uitkomst, and tijdsperiode filters, each showing result counts before applying
   3. Large result sets paginate smoothly via infinite scroll (useInfiniteQuery pattern)
   4. When results are fewer than 3, the UI suggests broadening the search ("Verbreed uw zoekopdracht" with actionable suggestions)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 85-01: Two-tab layout + filter sidebar with counts
-- [ ] 85-02: Pagination + empty state suggestions
+- [ ] 85-01-PLAN.md — Backend: rechtsgronden migration + AI classifier + explorer endpoint with faceted counts
+- [ ] 85-02-PLAN.md — Frontend: /jurisprudentie page with filter sidebar, ruling cards, infinite scroll, broaden suggestions
 
 ### Phase 86: Trend & Statistics
 **Goal**: Users can assess how the juridisch klimaat in a gemeente has evolved over time and see aggregated key statistics at a glance
