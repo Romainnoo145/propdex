@@ -252,3 +252,27 @@
 
 ---
 
+
+## v14.0 Fysiek Risicoprofiel (Shipped: 2026-03-10)
+
+**Delivered:** Per-parcel physical risk assessment — foundation risk, asbestos exposure, soil classification, and contamination signals — so developers can see hidden structural costs before acquisition. Amber-only confidence design communicates that these are indicative assessments, not professional inspections.
+
+**Phases completed:** 87-90 (5 plans total)
+
+**Key accomplishments:**
+- BRO Bodemkaart WMS + PDOK Funderingsrisicogebieden WFS clients for per-parcel soil type and postcode-level foundation risk context
+- Foundation risk engine with bouwjaar x bodemtype heuristic, KCAF cost indication ranges, and worst-of aggregation
+- Gebruiksdoel-aware asbestos risk assessment with additive-only NEN 2991 uplift logic (18 unit tests)
+- FysiekRisicoprofielSection in ParcelDetailModal with 4 sub-cards (bodem, fundering, asbest, verontreiniging) and amber confidence badges
+- Foundation risk overlay on area scan map tiles with bouwjaar-based color coding
+
+**Stats:**
+- 47 files changed (+5,800 / -182)
+- 4 phases, 5 plans
+- 1 day (2026-03-09 → 2026-03-10)
+- Git range: `d17e8c4` (feat(87-01)) → `fb9b010` (docs(phase-90))
+
+**What's next:** TBD — run `/gsd:new-milestone`
+
+---
+

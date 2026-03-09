@@ -22,13 +22,15 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ## Current State
 
-**Shipped:** v12.0 Omgevings- & Leefbaarheids-Scorer (2026-03-07)
-**Codebase:** ~27,000 lines Python + ~21,000 lines TypeScript/React (~48,000 LOC total)
+**Shipped:** v14.0 Fysiek Risicoprofiel (2026-03-10)
+**Codebase:** ~28,000 lines Python + ~22,000 lines TypeScript/React (~50,000 LOC total)
 **Backend:** FastAPI, SQLAlchemy 2.x (async), PostgreSQL/PostGIS, Alembic, PyJWT, pwdlib/Argon2id, httpx, shapely, pyproj, GeoAlchemy2, anthropic (Claude), arq (Redis), WeasyPrint
 **Frontend:** React 19, Vite 7 (autoCodeSplitting + manualChunks), TypeScript strict, MapLibre GL JS 4.x, TanStack Query v5, TanStack Router, TanStack Table, Tailwind v4, Industrial Amber design system, Storybook
 **Tests:** 275 backend (104 unit + 171 integration) + 46 new tests in v6.0, 74% coverage, 80%+ core modules
 
 **What's working:**
+- Physical risk profile: per-parcel foundation risk, asbestos exposure, soil classification, and contamination signals with amber indicative badges
+- Foundation risk map overlay: area scan tiles colored by bouwjaar-based foundation risk level
 - Meldingen intelligence: bekendmakingen geocoded to parcels via PDOK, matched parcel IDs persisted, post-scan retro-matching
 - Melding-to-map flow: click matched melding → fly to amber map marker → generate report from verified parcel data
 - Server-backed per-change read tracking with "Markeer alles als gelezen" action
@@ -167,19 +169,15 @@ This is the ONE thing that must work. Everything else is secondary.
 - Extended CBS neighborhood metrics (inkomen, huishoudenssamenstelling, leeftijdsverdeling) — v12.0
 - CBS criminaliteitsdata integration (OData v3, misdrijfcijfers per gemeente) — v12.0
 - CBS voorzieningennabijheid (afstand tot scholen, supermarkten, OV-knooppunten) — v12.0
+- Per-parcel soil type classification (klei/veen/zand/leem) via BRO Bodemkaart WMS — v14.0
+- PDOK Funderingsrisicogebieden context (% pre-1970, soil region, risk label) per postal code area — v14.0
+- Foundation risk rating (HOOG/MIDDEL/LAAG) from bouwjaar x bodemtype heuristic with KCAF cost ranges — v14.0
+- Combined Fysiek Risicoprofiel with worst-of aggregation across foundation, soil, asbestos, contamination — v14.0
+- Gebruiksdoel-aware asbestos risk with additive-only NEN 2991 uplift — v14.0
+- FysiekRisicoprofielSection in ParcelDetailModal with amber confidence badges and 4 sub-cards — v14.0
+- Foundation risk overlay on area scan map tiles — v14.0
 
 ### Active
-
-## Current Milestone: v14.0 Fysiek Risicoprofiel
-
-**Goal:** Per-parcel physical risk assessment — foundation risk, asbestos exposure, and soil classification — so developers can see hidden structural costs before spending a cent on acquisition.
-
-**Target features:**
-- bodemdata.nl API integration for soil type (klei/veen/zand) per parcel location
-- Foundation risk heuristic engine combining bouwjaar × bodemtype → risk classification
-- PDOK Indicatieve Aandachtsgebieden Funderingsproblematiek as context signal per postal code area
-- Asbestos indicator v2 refined with building function and soil type
-- Frontend: Fysiek Risicoprofiel section in ParcelDetailModal with combined risk assessment
 
 ### Future
 
@@ -251,6 +249,12 @@ This is the ONE thing that must work. Everything else is secondary.
 | matched_parcel_id on ChangeRecord (not computed) | Persisted FK — survives restarts, enables direct navigation | ✓ Good — single source of truth |
 | useInfiniteQuery + IntersectionObserver | 25-record pages, sentinel-based scroll loading, has_more cursor | ✓ Good — scales to large feeds |
 | Report from address endpoint (/from-address) | Bypass scan requirement for standalone report creation | ✓ Good — flexible workflow |
+| BRO WMS for soil (not bodemdata.nl) | PDOK BRO Bodemkaart is the canonical source; bodemdata.nl has sparse API docs | ✓ Good — reliable WMS integration |
+| Amber-only risk badges (never red) | Indicative assessments from public data — red implies definitive professional survey | ✓ Good — transparent communication |
+| Bouwjaar-only proxy for tile coloring | Full bouwjaar x bodemtype only via per-parcel API; tiles don't have soil data | ✓ Good — performance vs precision tradeoff |
+| Worst-of risk aggregation excluding onbekend | Unknown risks shouldn't drag overall assessment down | ✓ Good — avoids false alarms |
+| Gebruiksdoel additive-only asbestos uplift | Industrial/educational use increases risk but never below bouwjaar baseline | ✓ Good — monotonic risk increase |
+| KCAF cost ranges with disclaimers (not exact) | Too many variables for precise costs; reference ranges set expectations | ✓ Good — informative without liability |
 
 ## Context
 
@@ -266,4 +270,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-09 after v14.0 Fysiek Risicoprofiel milestone start*
+*Last updated: 2026-03-10 after v14.0 milestone*

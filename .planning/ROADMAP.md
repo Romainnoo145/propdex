@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🚧 **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (in progress)
+- ✅ **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (shipped 2026-03-10)
 - ✅ **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (shipped 2026-03-09)
 - ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
 - ✅ **v11.0 Open Data Intelligence** -- Phases 75-77 (shipped 2026-03-07)
@@ -27,86 +27,18 @@
 
 ## Phases
 
-### 🚧 v14.0 Fysiek Risicoprofiel (In Progress)
+<details>
+<summary>✅ v14.0 Fysiek Risicoprofiel (Phases 87-90) -- SHIPPED 2026-03-10</summary>
 
-**Milestone Goal:** Per-parcel physical risk assessment -- foundation risk, asbestos exposure, and soil classification -- so developers can see hidden structural costs before spending a cent on acquisition.
+- [x] Phase 87: Soil Data Integration (1/1 plan) -- BRO Bodemkaart WMS + PDOK Funderingsrisico WFS
+- [x] Phase 88: Foundation Risk Engine (1/1 plan) -- bouwjaar x bodemtype heuristic, KCAF cost ranges
+- [x] Phase 89: Asbestos v2 Refinement (1/1 plan) -- gebruiksdoel-aware additive uplift
+- [x] Phase 90: Frontend Fysiek Risicoprofiel (2/2 plans) -- risk section + map tile overlay
 
-**Phase Numbering:**
-- Integer phases (87-90): Planned milestone work
-- Decimal phases (e.g., 87.1): Urgent insertions (marked with INSERTED)
+**5 plans, 10 requirements**
+**Archive:** `.planning/milestones/v14.0-ROADMAP.md`
 
-- [x] **Phase 87: Soil Data Integration** - BRO Bodemkaart WMS client + PDOK Funderingsrisicogebieden WFS client with soil code classification and JSONB caching (completed 2026-03-09)
-- [x] **Phase 88: Foundation Risk Engine** - Bouwjaar x bodemtype heuristic, combined Fysiek Risicoprofiel schema, KCAF cost ranges, aggregator wiring (completed 2026-03-09)
-- [x] **Phase 89: Asbestos v2 Refinement** - BAG gebruiksdoel-aware asbestos risk with additive-only logic (completed 2026-03-09)
-- [x] **Phase 90: Frontend Fysiek Risicoprofiel** - ParcelDetailModal risk section, amber confidence badges, area scan tile coloring (completed 2026-03-09)
-
-## Phase Details
-
-### Phase 87: Soil Data Integration
-**Goal**: User can see soil type and foundation risk area context for any parcel location
-**Depends on**: Nothing (first phase)
-**Requirements**: BODEM-01, BODEM-02
-**Success Criteria** (what must be TRUE):
-  1. User sees soil type classification (klei/veen/zand/leem/onbekend) when viewing any parcel detail
-  2. User sees PDOK funderingsrisicogebied context (percentage pre-1970 buildings, soil region, risk label) for the parcel's postal code area
-  3. Soil data is cached in JSONB with 365-day TTL so repeat lookups are instant
-  4. Parcels in areas with no BRO coverage show "onbekend" with explanation, never an error
-**Plans**: 1 plan
-Plans:
-- [x] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
-
-### Phase 88: Foundation Risk Engine
-**Goal**: User sees a foundation risk rating with cost indication derived from building age, soil type, and area context
-**Depends on**: Phase 87
-**Requirements**: FUND-01, FUND-02, FUND-03
-**Success Criteria** (what must be TRUE):
-  1. User sees foundation risk rating (HOOG/MIDDEL/LAAG/ONBEKEND) derived from bouwjaar x bodemtype heuristic with transparent derivation text
-  2. User sees combined Fysiek Risicoprofiel summary that aggregates foundation, soil, asbestos, and contamination signals into one assessment
-  3. User sees KCAF reference cost range for foundation repair based on pand footprint and risk level, with prominent "indicatief" disclaimer
-  4. PropertyReportResponse includes FysiekRisicoProfiel field populated via asyncio.gather alongside existing API calls
-**Plans**: 1 plan
-Plans:
-- [x] 88-01-PLAN.md — Foundation risk engine pure functions, KCAF cost ranges, FysiekRisicoProfiel schema, aggregator wiring
-
-### Phase 89: Asbestos v2 Refinement
-**Goal**: Asbestos risk assessment accounts for building function so industrial/educational buildings get appropriately higher risk
-**Depends on**: Phase 87 (uses soil context as additive signal)
-**Requirements**: ASBT-01, ASBT-02
-**Success Criteria** (what must be TRUE):
-  1. User sees refined asbestos risk that is higher for buildings with industrial or educational BAG gebruiksdoel
-  2. Asbestos risk never drops below the bouwjaar-only baseline -- gebruiksdoel is additive only
-  3. Asbestos explanation text includes the gebruiksdoel factor when it contributed to the assessment
-**Plans**: 1 plan
-Plans:
-- [x] 89-01-PLAN.md — Asbestos v2 with BAG gebruiksdoel-aware risk logic
-
-### Phase 90: Frontend Fysiek Risicoprofiel
-**Goal**: User sees all physical risk data in a cohesive section in ParcelDetailModal with appropriate confidence indicators
-**Depends on**: Phase 87, Phase 88, Phase 89
-**Requirements**: FRNT-01, FRNT-02, FRNT-03
-**Success Criteria** (what must be TRUE):
-  1. User sees Fysiek Risicoprofiel section in ParcelDetailModal with sub-cards for bodem, fundering, asbest, and verontreiniging
-  2. All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers -- never red/definitive
-  3. Area scan map tiles color parcels by foundation risk level alongside the existing opportunity score
-  4. Risk derivation is transparent -- user can see why a rating was assigned (e.g., "Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering")
-**Plans**: 2 plans
-Plans:
-- [ ] 90-01-PLAN.md — Backend risk-profile endpoint, TypeScript types, FysiekRisicoProfiel section in ParcelDetailModal with amber badges
-- [ ] 90-02-PLAN.md — Foundation risk tile coloring (tile_proxy SQL + ParcelScoreLayer overlay + LayerToggle)
-
-## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 87 -> 88 -> 89 -> 90
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 87. Soil Data Integration | 1/1 | Complete    | 2026-03-09 |
-| 88. Foundation Risk Engine | 1/1 | Complete    | 2026-03-09 |
-| 89. Asbestos v2 Refinement | 1/1 | Complete    | 2026-03-09 |
-| 90. Frontend Fysiek Risicoprofiel | 2/2 | Complete    | 2026-03-09 |
-
----
+</details>
 
 <details>
 <summary>✅ v13.0 Juridisch Klimaat Intelligence (Phases 82-86) -- SHIPPED 2026-03-09</summary>
