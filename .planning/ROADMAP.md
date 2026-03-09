@@ -51,7 +51,9 @@
   2. User sees PDOK funderingsrisicogebied context (percentage pre-1970 buildings, soil region, risk label) for the parcel's postal code area
   3. Soil data is cached in JSONB with 365-day TTL so repeat lookups are instant
   4. Parcels in areas with no BRO coverage show "onbekend" with explanation, never an error
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
 
 ### Phase 88: Foundation Risk Engine
 **Goal**: User sees a foundation risk rating with cost indication derived from building age, soil type, and area context
@@ -62,7 +64,9 @@
   2. User sees combined Fysiek Risicoprofiel summary that aggregates foundation, soil, asbestos, and contamination signals into one assessment
   3. User sees KCAF reference cost range for foundation repair based on pand footprint and risk level, with prominent "indicatief" disclaimer
   4. PropertyReportResponse includes FysiekRisicoProfiel field populated via asyncio.gather alongside existing API calls
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
 
 ### Phase 89: Asbestos v2 Refinement
 **Goal**: Asbestos risk assessment accounts for building function so industrial/educational buildings get appropriately higher risk
@@ -72,7 +76,9 @@
   1. User sees refined asbestos risk that is higher for buildings with industrial or educational BAG gebruiksdoel
   2. Asbestos risk never drops below the bouwjaar-only baseline -- gebruiksdoel is additive only
   3. Asbestos explanation text includes the gebruiksdoel factor when it contributed to the assessment
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
 
 ### Phase 90: Frontend Fysiek Risicoprofiel
 **Goal**: User sees all physical risk data in a cohesive section in ParcelDetailModal with appropriate confidence indicators
@@ -83,7 +89,9 @@
   2. All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers -- never red/definitive
   3. Area scan map tiles color parcels by foundation risk level alongside the existing opportunity score
   4. Risk derivation is transparent -- user can see why a rating was assigned (e.g., "Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering")
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
 
 ## Progress
 
@@ -92,7 +100,7 @@ Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 87. Soil Data Integration | 0/TBD | Not started | - |
+| 87. Soil Data Integration | 0/1 | Not started | - |
 | 88. Foundation Risk Engine | 0/TBD | Not started | - |
 | 89. Asbestos v2 Refinement | 0/TBD | Not started | - |
 | 90. Frontend Fysiek Risicoprofiel | 0/TBD | Not started | - |
