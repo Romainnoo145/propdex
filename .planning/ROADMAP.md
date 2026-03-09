@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- 🚧 **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (in progress)
+- 🚧 **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (in progress)
+- ✅ **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (shipped 2026-03-09)
 - ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
 - ✅ **v11.0 Open Data Intelligence** -- Phases 75-77 (shipped 2026-03-07)
 - ✅ **v10.0 UX Polish** -- Phases 72-74 (shipped 2026-03-03)
@@ -26,111 +27,90 @@
 
 ## Phases
 
-### 🚧 v13.0 Juridisch Klimaat Intelligence (In Progress)
+### 🚧 v14.0 Fysiek Risicoprofiel (In Progress)
 
-**Milestone Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars -- from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
+**Milestone Goal:** Per-parcel physical risk assessment -- foundation risk, asbestos exposure, and soil classification -- so developers can see hidden structural costs before spending a cent on acquisition.
 
 **Phase Numbering:**
-- Integer phases (82-86): Planned milestone work
-- Decimal phases (e.g., 82.1): Urgent insertions (marked with INSERTED)
+- Integer phases (87-90): Planned milestone work
+- Decimal phases (e.g., 87.1): Urgent insertions (marked with INSERTED)
 
-- [x] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline (completed 2026-03-07)
-- [x] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente (completed 2026-03-07)
-- [x] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation (completed 2026-03-08)
-- [x] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering (completed 2026-03-09)
-- [x] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization (completed 2026-03-09)
+- [ ] **Phase 87: Soil Data Integration** - BRO Bodemkaart WMS client + PDOK Funderingsrisicogebieden WFS client with soil code classification and JSONB caching
+- [ ] **Phase 88: Foundation Risk Engine** - Bouwjaar x bodemtype heuristic, combined Fysiek Risicoprofiel schema, KCAF cost ranges, aggregator wiring
+- [ ] **Phase 89: Asbestos v2 Refinement** - BAG gebruiksdoel-aware asbestos risk with additive-only logic
+- [ ] **Phase 90: Frontend Fysiek Risicoprofiel** - ParcelDetailModal risk section, amber confidence badges, area scan tile coloring
 
 ## Phase Details
 
-### Phase 82: Ruling Cache + ECLI Court Mapping
-**Goal**: Court rulings are persistently cached with correct geographic scoping so all downstream features operate on relevant, local data instead of garbage national results
-**Depends on**: Nothing (foundation for all v13.0 work)
-**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06
+### Phase 87: Soil Data Integration
+**Goal**: User can see soil type and foundation risk area context for any parcel location
+**Depends on**: Nothing (first phase)
+**Requirements**: BODEM-01, BODEM-02
 **Success Criteria** (what must be TRUE):
-  1. Opening a gemeente detail view triggers background ingestion of 50+ court rulings for the relevant arrondissement, visible as cached results on subsequent page loads
-  2. Cached rulings persist across sessions in a dedicated ruling_cache table with ECLI as primary key (not in generic cached_api_responses)
-  3. Repeated views of the same gemeente load rulings from cache instantly (no Rechtspraak API calls) within the 7-day TTL window
-  4. RechtspraakClient scopes search results to the correct court region using ECLI court-code prefix filtering, not national free-text search
-  5. Date range filtering works -- user can restrict results to last 2, 5, or 10 years
-**Plans:** 2/2 plans complete
+  1. User sees soil type classification (klei/veen/zand/leem/onbekend) when viewing any parcel detail
+  2. User sees PDOK funderingsrisicogebied context (percentage pre-1970 buildings, soil region, risk label) for the parcel's postal code area
+  3. Soil data is cached in JSONB with 365-day TTL so repeat lookups are instant
+  4. Parcels in areas with no BRO coverage show "onbekend" with explanation, never an error
+**Plans**: TBD
 
-Plans:
-- [x] 82-01: EcliRegistry + RulingCache model + Alembic migration
-- [x] 82-02: RechtspraakClient refactor + ARQ ingestion job
-
-### Phase 83: Geo-Contextualization + Gemeente Feed
-**Goal**: Users see an auto-populated chronological feed of court rulings relevant to their gemeente, with rulings sorted by geographic relevance (gemeente-matched first, then arrondissement-level)
-**Depends on**: Phase 82 (requires cached rulings to extract location from)
-**Requirements**: GEO-01, GEO-02, GEO-03, GEO-04, FEED-01, FEED-02, FEED-03
+### Phase 88: Foundation Risk Engine
+**Goal**: User sees a foundation risk rating with cost indication derived from building age, soil type, and area context
+**Depends on**: Phase 87
+**Requirements**: FUND-01, FUND-02, FUND-03
 **Success Criteria** (what must be TRUE):
-  1. Gemeente detail view shows a chronological list of court rulings without requiring manual search -- the feed auto-populates based on the selected gemeente
-  2. Rulings mentioning the specific gemeente (extracted from ruling text) appear above arrondissement-level rulings
-  3. RVS (Raad van State) rulings are geo-tagged via text extraction and appear in relevant gemeente feeds despite having no geographic ECLI indicator
-  4. Win/loss ratio is displayed as aggregate outcome percentages (toegewezen/afgewezen/gedeeltelijk) at the top of the feed
-**Plans:** 2/2 plans complete
+  1. User sees foundation risk rating (HOOG/MIDDEL/LAAG/ONBEKEND) derived from bouwjaar x bodemtype heuristic with transparent derivation text
+  2. User sees combined Fysiek Risicoprofiel summary that aggregates foundation, soil, asbestos, and contamination signals into one assessment
+  3. User sees KCAF reference cost range for foundation repair based on pand footprint and risk level, with prominent "indicatief" disclaimer
+  4. PropertyReportResponse includes FysiekRisicoProfiel field populated via asyncio.gather alongside existing API calls
+**Plans**: TBD
 
-Plans:
-- [x] 83-01-PLAN.md -- GeoContextualizer service + RulingCache migration + ingestion integration
-- [x] 83-02-PLAN.md -- Feed endpoint with geo-relevance sorting + frontend feed rewrite
-
-### Phase 84: AI Analysis Upgrade + Doorlooptijd
-**Goal**: AI analysis produces meaningful juridisch klimaat scores because it operates on filtered, location-relevant rulings with vergunningstype classification, and users can see average procedure durations per gemeente
-**Depends on**: Phase 83 (requires geo-contextualized, location-relevant rulings as AI input)
-**Requirements**: AI-01, AI-02, AI-03, AI-04, DOOR-01, DOOR-02, DOOR-03
+### Phase 89: Asbestos v2 Refinement
+**Goal**: Asbestos risk assessment accounts for building function so industrial/educational buildings get appropriately higher risk
+**Depends on**: Phase 87 (uses soil context as additive signal)
+**Requirements**: ASBT-01, ASBT-02
 **Success Criteria** (what must be TRUE):
-  1. AI analysis runs only on rulings that are geo-matched to the selected gemeente or arrondissement -- never on unfiltered national results
-  2. Each ruling gets a vergunningstype classification (dakopbouw, nieuwbouw, bestemmingswijziging, etc.) visible as a label
-  3. Changing filters does not trigger re-analysis of previously analyzed rulings (per-ruling caching, not per-batch)
-  4. Average doorlooptijd per gemeente per vergunningstype is displayed as a statistic, with "onvoldoende data" shown when filing dates are unavailable
-**Plans:** 2/2 plans complete
+  1. User sees refined asbestos risk that is higher for buildings with industrial or educational BAG gebruiksdoel
+  2. Asbestos risk never drops below the bouwjaar-only baseline -- gebruiksdoel is additive only
+  3. Asbestos explanation text includes the gebruiksdoel factor when it contributed to the assessment
+**Plans**: TBD
 
-Plans:
-- [ ] 84-01-PLAN.md -- Per-ruling AI analysis + vergunningstype taxonomy + DoorlooptijdService + schema migration
-- [ ] 84-02-PLAN.md -- Frontend auto-analysis trigger + vergunningstype badges + doorlooptijd statistics display
-
-### Phase 85: Explorer UI
-**Goal**: Users can filter and explore court rulings across multiple dimensions (scope, vergunningstype, uitkomst, tijdsperiode) with a responsive interface that prevents empty-result frustration
-**Depends on**: Phase 84 (needs vergunningstype classification and doorlooptijd data for filter dimensions)
-**Requirements**: EXPL-01, EXPL-02, EXPL-03, EXPL-04, EXPL-05
+### Phase 90: Frontend Fysiek Risicoprofiel
+**Goal**: User sees all physical risk data in a cohesive section in ParcelDetailModal with appropriate confidence indicators
+**Depends on**: Phase 87, Phase 88, Phase 89
+**Requirements**: FRNT-01, FRNT-02, FRNT-03
 **Success Criteria** (what must be TRUE):
-  1. Jurisprudentie section has two tabs: Overzicht (chronological feed from Phase 83) and Explorer (multi-filter search)
-  2. Explorer shows a filter sidebar with scope, vergunningstype, uitkomst, and tijdsperiode filters, each showing result counts before applying
-  3. Large result sets paginate smoothly via infinite scroll (useInfiniteQuery pattern)
-  4. When results are fewer than 3, the UI suggests broadening the search ("Verbreed uw zoekopdracht" with actionable suggestions)
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 85-01-PLAN.md — Backend: rechtsgronden migration + AI classifier + explorer endpoint with faceted counts
-- [ ] 85-02-PLAN.md — Frontend: /jurisprudentie page with filter sidebar, ruling cards, infinite scroll, broaden suggestions
-
-### Phase 86: Trend & Statistics
-**Goal**: Users can assess how the juridisch klimaat in a gemeente has evolved over time and see aggregated key statistics at a glance
-**Depends on**: Phase 85 (UI structure for displaying trends alongside feed/explorer)
-**Requirements**: TREND-01, TREND-02, TREND-03
-**Success Criteria** (what must be TRUE):
-  1. A rolling 12-month klimaat score trend is visible per gemeente showing whether conditions are improving or deteriorating
-  2. An aggregated statistics bar shows totaal uitspraken, gemiddelde doorlooptijd, and succespercentage
-  3. Trend visualization renders as CSS-only timeline (no chart library dependency) and degrades gracefully with fewer than 3 data points
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 86-01-PLAN.md -- Trend endpoint with monthly bucketing and summary stats
-- [ ] 86-02-PLAN.md -- CSS-only TrendTimeline + StatisticsBar components + JurisprudenceSection integration
+  1. User sees Fysiek Risicoprofiel section in ParcelDetailModal with sub-cards for bodem, fundering, asbest, and verontreiniging
+  2. All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers -- never red/definitive
+  3. Area scan map tiles color parcels by foundation risk level alongside the existing opportunity score
+  4. Risk derivation is transparent -- user can see why a rating was assigned (e.g., "Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering")
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
+Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
-| 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
-| 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
-| 85. Explorer UI | 2/2 | Complete    | 2026-03-09 |
-| 86. Trend & Statistics | 2/2 | Complete    | 2026-03-09 |
+| 87. Soil Data Integration | 0/TBD | Not started | - |
+| 88. Foundation Risk Engine | 0/TBD | Not started | - |
+| 89. Asbestos v2 Refinement | 0/TBD | Not started | - |
+| 90. Frontend Fysiek Risicoprofiel | 0/TBD | Not started | - |
 
 ---
+
+<details>
+<summary>✅ v13.0 Juridisch Klimaat Intelligence (Phases 82-86) -- SHIPPED 2026-03-09</summary>
+
+- [x] Phase 82: Ruling Cache + ECLI Court Mapping (2/2 plans) -- persistent ruling storage with gemeente-to-rechtbank mapping
+- [x] Phase 83: Geo-Contextualization + Gemeente Feed (2/2 plans) -- extract gemeente from ruling text, auto-populated feed
+- [x] Phase 84: AI Analysis Upgrade + Doorlooptijd (2/2 plans) -- filtered AI analysis, vergunningstype classification, procedure duration
+- [x] Phase 85: Explorer UI (2/2 plans) -- multi-filter search, pagination, progressive filtering
+- [x] Phase 86: Trend & Statistics (2/2 plans) -- rolling klimaat score trends, CSS-only visualization
+
+**10 plans, 5 phases**
+
+</details>
 
 <details>
 <summary>✅ v12.0 Omgevings- & Leefbaarheids-Scorer (Phases 78-80) -- SHIPPED 2026-03-07</summary>
@@ -370,4 +350,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-09 -- Phase 86 plans created*
+*Last updated: 2026-03-09 -- v14.0 Fysiek Risicoprofiel roadmap created*
