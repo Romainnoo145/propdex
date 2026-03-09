@@ -20,8 +20,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **NAV-01**: Viewport-locked layout -- map fills 100% screen, all UI floats on z-50 with 16px margin from edges
 - [x] **NAV-02**: Floating SideRailNav (left, 80px wide, rounded-[40px], glass): Propdex logo top, functional icons middle (Kaart/Resultaten/Jurisprudentie), settings + notifications + profile bottom, tooltips on hover
-- [ ] **NAV-03**: Search pill (top-left, rounded-full, glass) with PDOK address autocomplete
-- [ ] **NAV-04**: Filter/Toggle dock (top-center) with chip-style dropdowns for gemeente/perceel toggle and layer controls (Kaart/Satellite, Gemeenten/Percelen/Bestemmingsplan)
+- [x] **NAV-03**: Search pill (top-left, rounded-full, glass) with PDOK address autocomplete
+- [x] **NAV-04**: Filter/Toggle dock (top-center) with chip-style dropdowns for gemeente/perceel toggle and layer controls (Kaart/Satellite, Gemeenten/Percelen/Bestemmingsplan)
 
 ### Parcel Detail
 
@@ -107,8 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DS-06 | Phase 91 | Complete |
 | NAV-01 | Phase 92 | Complete |
 | NAV-02 | Phase 92 | Complete |
-| NAV-03 | Phase 92 | Pending |
-| NAV-04 | Phase 92 | Pending |
+| NAV-03 | Phase 92 | Complete |
+| NAV-04 | Phase 92 | Complete |
 | PRC-01 | Phase 93 | Pending |
 | PRC-02 | Phase 93 | Pending |
 | PRC-03 | Phase 93 | Pending |
