@@ -9,7 +9,7 @@ import MapShell from '@/components/layout/MapShell'
 import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
-import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
+import { ParcelDetailPanel } from '@/components/map/panels/ParcelDetailPanel'
 import { GemeenteMapPanel } from '@/components/map/panels/GemeenteMapPanel'
 import { WijkMapPanel } from '@/components/map/panels/WijkMapPanel'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
@@ -290,6 +290,35 @@ function MapPage() {
       shouldAutoFollowScanRef.current = false
     }
   }, [activeScanId])
+
+  // Re-center map when parcel panel opens (shift left to keep parcel visible)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!inspectorParcel || !map || !mapReady) return
+    // Use parcel geometry centroid or bounding box center
+    const geom = (inspectorParcel as unknown as { geometry?: GeoJSON.Geometry }).geometry
+    let lng: number | undefined
+    let lat: number | undefined
+    if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+      const bbox = calculateBboxFromGeometry(geom)
+      if (bbox) {
+        lng = (bbox[0] + bbox[2]) / 2
+        lat = (bbox[1] + bbox[3]) / 2
+      }
+    }
+    // Fallback: try latitude/longitude fields from tile feature
+    if (lng == null || lat == null) {
+      const p = inspectorParcel as unknown as { longitude?: number; latitude?: number }
+      lng = p.longitude
+      lat = p.latitude
+    }
+    if (lng == null || lat == null) return
+    // Project to screen, shift left by half panel width (190px), unproject back
+    const point = map.project([lng, lat])
+    point.x -= 190
+    const adjusted = map.unproject(point)
+    map.easeTo({ center: adjusted, duration: 500 })
+  }, [inspectorParcel, mapRef, mapReady])
 
   // Shared navigation handler for CTA button and completion useEffect
   const handleViewResults = useCallback(() => {
@@ -2181,7 +2210,7 @@ function MapPage() {
       />
 
       {/* Score gradient legend — bottom-right */}
-      {layerState.activeParcelOverlay === 'score' && layerState.showParcels && !!activeScanId && (
+      {layerState.activeParcelOverlay === 'potential' && layerState.showParcels && !!activeScanId && (
         <div className="absolute bottom-4 right-4 z-[var(--z-map-controls)] bg-aura-glass-white/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-white/40 shadow-glass">
           <span className="text-xs text-neutral-600">40</span>
           <div
@@ -2223,13 +2252,10 @@ function MapPage() {
           onViewResults={(scanId) => navigate({ to: '/resultaten', search: { scan_id: scanId } })}
         />
       )}
-      {activePanel?.kind === 'parcel' && (
-        <ParcelDetailModal
+      {activePanel?.kind === 'parcel' && inspectorParcel && (
+        <ParcelDetailPanel
           parcel={inspectorParcel}
-          isOpen={!!inspectorParcel}
           onClose={() => setActivePanel(null)}
-          onViewOnMap={undefined}
-          presentation="map-panel"
         />
       )}
 
