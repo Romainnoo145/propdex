@@ -53,7 +53,7 @@
   4. Parcels in areas with no BRO coverage show "onbekend" with explanation, never an error
 **Plans**: 1 plan
 Plans:
-- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
+- [x] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
 
 ### Phase 88: Foundation Risk Engine
 **Goal**: User sees a foundation risk rating with cost indication derived from building age, soil type, and area context
@@ -66,7 +66,7 @@ Plans:
   4. PropertyReportResponse includes FysiekRisicoProfiel field populated via asyncio.gather alongside existing API calls
 **Plans**: 1 plan
 Plans:
-- [ ] 88-01-PLAN.md — Foundation risk engine pure functions, KCAF cost ranges, FysiekRisicoProfiel schema, aggregator wiring
+- [x] 88-01-PLAN.md — Foundation risk engine pure functions, KCAF cost ranges, FysiekRisicoProfiel schema, aggregator wiring
 
 ### Phase 89: Asbestos v2 Refinement
 **Goal**: Asbestos risk assessment accounts for building function so industrial/educational buildings get appropriately higher risk
@@ -78,7 +78,7 @@ Plans:
   3. Asbestos explanation text includes the gebruiksdoel factor when it contributed to the assessment
 **Plans**: 1 plan
 Plans:
-- [ ] 89-01-PLAN.md — Asbestos v2 with BAG gebruiksdoel-aware risk logic
+- [x] 89-01-PLAN.md — Asbestos v2 with BAG gebruiksdoel-aware risk logic
 
 ### Phase 90: Frontend Fysiek Risicoprofiel
 **Goal**: User sees all physical risk data in a cohesive section in ParcelDetailModal with appropriate confidence indicators
@@ -89,9 +89,10 @@ Plans:
   2. All risk indicators display amber confidence badges with source attribution and "indicatief" disclaimers -- never red/definitive
   3. Area scan map tiles color parcels by foundation risk level alongside the existing opportunity score
   4. Risk derivation is transparent -- user can see why a rating was assigned (e.g., "Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering")
-**Plans**: 1 plan
+**Plans**: 2 plans
 Plans:
-- [ ] 90-01-PLAN.md — Frontend Fysiek Risicoprofiel section, amber badges, tile coloring
+- [ ] 90-01-PLAN.md — Backend risk-profile endpoint, TypeScript types, FysiekRisicoProfiel section in ParcelDetailModal with amber badges
+- [ ] 90-02-PLAN.md — Foundation risk tile coloring (tile_proxy SQL + ParcelScoreLayer overlay + LayerToggle)
 
 ## Progress
 
@@ -103,7 +104,7 @@ Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 | 87. Soil Data Integration | 1/1 | Complete    | 2026-03-09 |
 | 88. Foundation Risk Engine | 1/1 | Complete    | 2026-03-09 |
 | 89. Asbestos v2 Refinement | 1/1 | Complete    | 2026-03-09 |
-| 90. Frontend Fysiek Risicoprofiel | 0/TBD | Not started | - |
+| 90. Frontend Fysiek Risicoprofiel | 0/2 | Not started | - |
 
 ---
 
@@ -358,4 +359,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-09 -- v14.0 Fysiek Risicoprofiel roadmap created*
+*Last updated: 2026-03-10 -- Phase 90 plans created*
