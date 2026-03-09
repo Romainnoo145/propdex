@@ -2437,3 +2437,74 @@ async def export_results(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/parcels/{parcel_id}/aerial-crop")
+@limiter.limit("60/minute")
+async def get_aerial_crop(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Return a JPEG aerial image crop centered on the parcel.
+
+    Proxies PDOK WMS Actueel_orthoHR layer, cropped around the parcel centroid.
+    Image is 760x320 (retina 2x of 380x160 display) with 24h cache.
+    """
+    from geoalchemy2.functions import ST_Centroid, ST_X, ST_Y
+
+    query = select(
+        ST_X(ST_Centroid(ParcelCache.geometry)),
+        ST_Y(ST_Centroid(ParcelCache.geometry)),
+    ).where(
+        ParcelCache.id == parcel_id,
+        ParcelCache.organization_id == organization_id,
+    )
+    result = await db.execute(query)
+    row = result.one_or_none()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parcel not found",
+        )
+
+    cx, cy = float(row[0]), float(row[1])
+
+    # BBOX: centroid +/- 75m width, height scaled to 380x160 aspect ratio
+    half_w = 75.0
+    half_h = 75.0 * 160.0 / 380.0  # ~31.6m
+    bbox = f"{cx - half_w},{cy - half_h},{cx + half_w},{cy + half_h}"
+
+    wms_url = "https://service.pdok.nl/hwh/luchtfotorgb/wms/v1_0"
+    params = {
+        "SERVICE": "WMS",
+        "VERSION": "1.3.0",
+        "REQUEST": "GetMap",
+        "LAYERS": "Actueel_orthoHR",
+        "STYLES": "",
+        "CRS": "EPSG:28992",
+        "FORMAT": "image/jpeg",
+        "BBOX": bbox,
+        "WIDTH": "760",
+        "HEIGHT": "320",
+    }
+
+    http_client: httpx.AsyncClient = request.app.state.http_client
+    try:
+        resp = await http_client.get(wms_url, params=params, timeout=10.0)
+        resp.raise_for_status()
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        logger.warning("PDOK WMS aerial crop failed for parcel %s: %s", parcel_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Aerial imagery service unavailable",
+        ) from exc
+
+    return Response(
+        content=resp.content,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
