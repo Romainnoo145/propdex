@@ -11,6 +11,7 @@ from app.schemas.address import BAGAddressResponse, BuildingData
 from app.schemas.bodem import BodemData
 from app.schemas.brk_ownership import BRKOwnership
 from app.schemas.energy_label import EnergyLabel
+from app.schemas.fysiek_risico import FunderingsrisicogebiedData, SoilProfile
 from app.schemas.monument import MonumentStatus
 from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
@@ -551,4 +552,13 @@ class PropertyReportResponse(BaseModel):
             reason="Eigendomsdata niet opgehaald",
         ),
         description="Property ownership from BRK Bevragen V2 (never stored — live only)",
+    )
+    # Phase 87 additions (v14.0 Fysiek Risicoprofiel)
+    soil_profile: SoilProfile | None = Field(
+        default=None,
+        description="BRO Bodemkaart soil classification at parcel location",
+    )
+    funderingsrisicogebied: FunderingsrisicogebiedData | None = Field(
+        default=None,
+        description="PDOK funderingsrisicogebied context for parcel postcode area",
     )

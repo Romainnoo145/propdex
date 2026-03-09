@@ -22,8 +22,10 @@ from app.government_apis.rce_monuments import rd_to_wgs84
 from app.government_apis.woz_waardeloket import woz_waardeloket_client
 from app.models.funda_listing_snapshot import FundaListingSnapshot
 from app.schemas.address import AddressInput, BuildingData
+from app.schemas.bodem import BodemData
 from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGerechtigde
 from app.schemas.energy_label import EnergyLabel
+from app.schemas.fysiek_risico import FunderingsrisicogebiedData, SoilProfile
 from app.schemas.monument import MonumentStatus
 from app.schemas.property import (
     AsbestIndicator,
@@ -39,15 +41,16 @@ from app.schemas.property import (
     WkbPrecheck,
 )
 from app.schemas.woz import WOZData
-from app.schemas.bodem import BodemData
 from app.schemas.zoning import ZoningData
 from app.services.address_resolver import resolve_address
 from app.services.asbest_indicator import assess_asbest_risk
 from app.services.bodem_aggregator import fetch_bodem_data as _fetch_bodem
 from app.services.cache_manager import get_cached_or_fetch
+from app.services.funderingsrisico_aggregator import fetch_funderingsrisico_data
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
 from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
+from app.services.soil_aggregator import fetch_soil_profile
 from app.services.wkb_classifier import classify_wkb
 from app.services.wkb_precheck import evaluate_wkb_precheck
 from app.services.zoning_aggregator import fetch_zoning_data
@@ -878,6 +881,44 @@ async def aggregate_property_data(
             errors.append(f"Bodemkwaliteit niet beschikbaar: {str(e)}")
             return None
 
+    async def fetch_soil_profile_data() -> SoilProfile | None:
+        """Fetch BRO Bodemkaart soil classification for this parcel's RD coordinates."""
+        try:
+            rd_coords = _extract_rd_coordinates(building.geometry if building else None)
+            if rd_coords is None:
+                return None
+            rd_x, rd_y = rd_coords
+            return await fetch_soil_profile(
+                x=rd_x,
+                y=rd_y,
+                client=client,
+                organization_id=organization_id,
+                session=session,
+                force_refresh=force_refresh,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch soil profile: {e}")
+            errors.append(f"Bodemtype niet beschikbaar: {str(e)}")
+            return None
+
+    async def fetch_funderingsrisico() -> FunderingsrisicogebiedData | None:
+        """Fetch PDOK funderingsrisico area context for this parcel's postcode."""
+        try:
+            postcode = address.postcode
+            if not postcode:
+                return None
+            return await fetch_funderingsrisico_data(
+                pc6=postcode,
+                client=client,
+                organization_id=organization_id,
+                session=session,
+                force_refresh=force_refresh,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch funderingsrisico data: {e}")
+            errors.append(f"Funderingsrisicogebied niet beschikbaar: {str(e)}")
+            return None
+
     # Execute ALL Step 2a fetches in parallel
     results = await asyncio.gather(
         fetch_cadastral_parcels(),
@@ -886,7 +927,9 @@ async def aggregate_property_data(
         fetch_energy_label(),
         fetch_woz_data(),
         fetch_market_data(),
-        fetch_bodem(),          # index 6
+        fetch_bodem(),              # index 6
+        fetch_soil_profile_data(),  # index 7
+        fetch_funderingsrisico(),   # index 8
         return_exceptions=True,
     )
 
@@ -942,6 +985,22 @@ async def aggregate_property_data(
         errors.append(f"Bodemkwaliteit fetch failed: {str(bodem_result)}")
     else:
         bodem_data = bodem_result
+
+    soil_profile: SoilProfile | None = None
+    soil_profile_result = results[7]
+    if isinstance(soil_profile_result, Exception):
+        logger.error(f"Soil profile fetch failed: {soil_profile_result}")
+        errors.append(f"Bodemtype fetch failed: {str(soil_profile_result)}")
+    else:
+        soil_profile = soil_profile_result
+
+    funderingsrisicogebied: FunderingsrisicogebiedData | None = None
+    funderingsrisico_result = results[8]
+    if isinstance(funderingsrisico_result, Exception):
+        logger.error(f"Funderingsrisico fetch failed: {funderingsrisico_result}")
+        errors.append(f"Funderingsrisicogebied fetch failed: {str(funderingsrisico_result)}")
+    else:
+        funderingsrisicogebied = funderingsrisico_result
 
     permit_precedents = await build_permit_precedent_benchmark(
         organization_id=organization_id,
@@ -1210,9 +1269,30 @@ async def aggregate_property_data(
             )
         )
 
+    # Soil profile section (Phase 87)
+    if soil_profile is not None:
+        data_sources.append(
+            DataSourceInfo(
+                source="BRO Bodemkaart 1:50.000 (PDOK WMS)",
+                confidence="HIGH",
+                is_cached=True,
+            )
+        )
+
+    # Funderingsrisicogebied section (Phase 87)
+    if funderingsrisicogebied is not None:
+        data_sources.append(
+            DataSourceInfo(
+                source="PDOK Indicatieve Gebieden Funderingsproblematiek (WFS)",
+                confidence="HIGH",
+                is_cached=True,
+            )
+        )
+
     # Calculate completeness score
     # Sections: address (1), building (1), parcels (1), zoning (1), monuments (1), ai_parsing (1),
-    #           energy_label (1), woz_data (1), brk_ownership (1) — total 9 — INF-05
+    #           energy_label (1), woz_data (1), brk_ownership (1), soil_profile (1),
+    #           funderingsrisicogebied (1) — total 11 — Phase 87
     sections_available = 1  # Address always available
     if building:
         sections_available += 1
@@ -1230,8 +1310,12 @@ async def aggregate_property_data(
         sections_available += 1
     if brk_ownership.status == "available":
         sections_available += 1
+    if soil_profile is not None:
+        sections_available += 1
+    if funderingsrisicogebied is not None:
+        sections_available += 1
 
-    total_sections = 9  # Updated from 6 — INF-05
+    total_sections = 11  # Updated from 9 — Phase 87
     completeness_score = sections_available / total_sections
 
     logger.info(
@@ -1262,4 +1346,6 @@ async def aggregate_property_data(
         permit_precedents=permit_precedents,
         brk_ownership=brk_ownership,
         bodem_data=bodem_data,
+        soil_profile=soil_profile,
+        funderingsrisicogebied=funderingsrisicogebied,
     )
