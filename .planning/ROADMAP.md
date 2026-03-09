@@ -72,21 +72,21 @@ Plans:
 - [ ] 92-02-PLAN.md -- Search pill glass styling + top-center filter dock + legend reposition
 
 ### Phase 93: Parcel Detail Panel
-**Goal**: Clicking a parcel opens a floating glass panel that tells the full property story through visual bento pods and click-through layers -- zero scroll
+**Goal**: Clicking a parcel opens a floating glass panel that tells the full property story through visual bento pods and click-through layers -- zero scroll on the overview
 **Depends on**: Phase 92
 **Requirements**: PRC-01, PRC-02, PRC-03, PRC-04, PRC-05, PRC-06, PRC-07, API-01
 **Success Criteria** (what must be TRUE):
   1. Clicking a parcel opens a floating right panel with a satellite crop hero image and score badge overlay
-  2. Primary stats (oppervlakte, bouwjaar, status, gemeente) appear as a 4-pod bento grid without scrolling
-  3. Bestemming shows as a wide horizontal status bar with soft color fill
+  2. 4 category pods (Potentie, Risico, Markt, Juridisch) in a 2x2 bento grid without scrolling
+  3. Bestemming integrated into Juridisch pod (no separate status bar)
   4. Clicking any bento pod opens a detail layer replacing the current view (17+ data sections accessible)
   5. "Genereer Rapport" button is always visible pinned at the bottom of the panel
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 93-01: Backend aerial crop API endpoint
-- [ ] 93-02: Floating panel shell + hero + bento stats
-- [ ] 93-03: Click-through layers + vergunningen accordion + rapport button
+- [ ] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
+- [ ] 93-02-PLAN.md -- Floating panel shell + satellite hero + bento category pods + map integration
+- [ ] 93-03-PLAN.md -- Click-through detail layers + vergunningen accordion + rapport button
 
 ### Phase 94: Wijk & Gemeente Views
 **Goal**: Selecting a wijk or gemeente delivers spatial context through fly-up bento sheets and luminous map overlays -- users explore areas without leaving the map
@@ -376,4 +376,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-10 -- v15.0 Aura roadmap created*
+*Last updated: 2026-03-10 -- Phase 93 plans finalized*
