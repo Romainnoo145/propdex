@@ -35,7 +35,7 @@
 - Integer phases (87-90): Planned milestone work
 - Decimal phases (e.g., 87.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 87: Soil Data Integration** - BRO Bodemkaart WMS client + PDOK Funderingsrisicogebieden WFS client with soil code classification and JSONB caching
+- [x] **Phase 87: Soil Data Integration** - BRO Bodemkaart WMS client + PDOK Funderingsrisicogebieden WFS client with soil code classification and JSONB caching (completed 2026-03-09)
 - [ ] **Phase 88: Foundation Risk Engine** - Bouwjaar x bodemtype heuristic, combined Fysiek Risicoprofiel schema, KCAF cost ranges, aggregator wiring
 - [ ] **Phase 89: Asbestos v2 Refinement** - BAG gebruiksdoel-aware asbestos risk with additive-only logic
 - [ ] **Phase 90: Frontend Fysiek Risicoprofiel** - ParcelDetailModal risk section, amber confidence badges, area scan tile coloring
@@ -100,7 +100,7 @@ Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 87. Soil Data Integration | 0/1 | Not started | - |
+| 87. Soil Data Integration | 1/1 | Complete   | 2026-03-09 |
 | 88. Foundation Risk Engine | 0/TBD | Not started | - |
 | 89. Asbestos v2 Refinement | 0/TBD | Not started | - |
 | 90. Frontend Fysiek Risicoprofiel | 0/TBD | Not started | - |

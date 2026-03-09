@@ -9,8 +9,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Soil Intelligence
 
-- [ ] **BODEM-01**: User sees soil type classification (klei/veen/zand/leem) for any parcel via BRO Bodemkaart WMS
-- [ ] **BODEM-02**: User sees PDOK Funderingsrisicogebieden context (% pre-1970, soil region, risk label) for parcel's postal code area
+- [x] **BODEM-01**: User sees soil type classification (klei/veen/zand/leem) for any parcel via BRO Bodemkaart WMS
+- [x] **BODEM-02**: User sees PDOK Funderingsrisicogebieden context (% pre-1970, soil region, risk label) for parcel's postal code area
 
 ### Foundation Risk
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BODEM-01 | Phase 87 | Pending |
-| BODEM-02 | Phase 87 | Pending |
+| BODEM-01 | Phase 87 | Complete |
+| BODEM-02 | Phase 87 | Complete |
 | FUND-01 | Phase 88 | Pending |
 | FUND-02 | Phase 88 | Pending |
 | FUND-03 | Phase 88 | Pending |

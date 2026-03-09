@@ -12,24 +12,24 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 ## Current Position
 
 Phase: 87 of 90 (Soil Data Integration)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-09 -- Roadmap created for v14.0
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase 87 complete
+Last activity: 2026-03-09 -- Completed 87-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100% (Phase 87)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (v14.0)
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 1 (v14.0)
+- Average duration: 4min
+- Total execution time: 4min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 87 | 1 | 4min | 4min |
 
 ---
 
@@ -52,6 +52,9 @@ Progress: [░░░░░░░░░░] 0%
 - All risk badges amber/indicative, never red/definitive
 - KCAF cost ranges with prominent disclaimers
 - Gebruiksdoel is additive only for asbestos (never reduces below bouwjaar baseline)
+- WMS GetFeatureInfo with 1km window (500m half-width) for BRO point queries
+- Empty dict cached for postcodes without funderingsrisico data
+- Completeness score denominator increased from 9 to 11
 
 ### Pending Todos
 
@@ -67,11 +70,11 @@ None.
 ## Session Continuity
 
 **Last Session:** 2026-03-09
-**Stopped At:** Roadmap created for v14.0 Fysiek Risicoprofiel
+**Stopped At:** Completed 87-01-PLAN.md (Soil Data Integration)
 **Resume File:** None
 
-**Next Action:** `/gsd:plan-phase 87`
+**Next Action:** `/gsd:plan-phase 88`
 
 ---
 
-*State updated: 2026-03-09 -- v14.0 roadmap created*
+*State updated: 2026-03-09 -- Phase 87 Plan 01 complete*
