@@ -170,19 +170,16 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-## Current Milestone: v13.0 Juridisch Klimaat Intelligence
+## Current Milestone: v14.0 Fysiek Risicoprofiel
 
-**Goal:** Make jurisprudentie actually useful for vastgoedontwikkelaars — from random search dump to a real due diligence tool that answers "wat is het juridisch klimaat voor vergunningen in deze gemeente?" with location-matched, filterable court rulings.
+**Goal:** Per-parcel physical risk assessment — foundation risk, asbestos exposure, and soil classification — so developers can see hidden structural costs before spending a cent on acquisition.
 
 **Target features:**
-- Deep Rechtspraak API research (endpoints, parameters, ECLI-structuur, XML-formaat)
-- Backend redesign: ECLI-filtering, XML-parsing, caching, rate limiting
-- Gemeente jurisprudentie feed (chronologische relevante beslissingen per gemeente)
-- Juridisch Klimaat Explorer (filters: scope, vergunningstype, uitkomst, tijdsperiode)
-- AI analyse upgrade (Claude op gefilterde, relevante resultaten)
-- Geo-contextualisatie (uitspraaktekst scannen op locatienamen/postcodes -> gemeente-koppeling)
-- Doorlooptijd-analyse (gemiddelde procedureduur per gemeente per vergunningstype)
-- Bekendmakingen-koppeling (uitspraken linken aan SRU bekendmakingen -> "bekijk op kaart")
+- bodemdata.nl API integration for soil type (klei/veen/zand) per parcel location
+- Foundation risk heuristic engine combining bouwjaar × bodemtype → risk classification
+- PDOK Indicatieve Aandachtsgebieden Funderingsproblematiek as context signal per postal code area
+- Asbestos indicator v2 refined with building function and soil type
+- Frontend: Fysiek Risicoprofiel section in ParcelDetailModal with combined risk assessment
 
 ### Future
 
@@ -269,4 +266,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-07 after v13.0 Juridisch Klimaat Intelligence milestone start*
+*Last updated: 2026-03-09 after v14.0 Fysiek Risicoprofiel milestone start*

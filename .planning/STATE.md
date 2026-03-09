@@ -2,94 +2,58 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-07)
+See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 86
+**Current focus:** v14.0 Fysiek Risicoprofiel
 
 ---
 
 ## Current Position
 
-Phase: 86 of 86 (Trend Statistics)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-03-09 -- Completed 86-02-PLAN.md
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-09 — Milestone v14.0 started
 
 ---
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 10
-- Average duration: 4.2min
-- Total execution time: 42min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 82 | 2 | 7min | 3.5min |
-| 83 | 2 | 6min | 3min |
-| 84 | 2 | 14min | 7min |
-| 85 | 2 | 8min | 4min |
-| 86 | 2 | 7min | 3.5min |
-
-*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Key Patterns (carry forward)
 
-- Rechtspraak API: XML-based, ECLI identifiers, 10 req/s rate limit, `creator` param unreliable
-- ECLI structure: `ECLI:NL:{COURT}:{YEAR}:{ID}` -- court code is the geographic key
-- Existing jurisprudence: useJurisprudence hook, JurisprudenceSection (302 lines), backend search endpoint
-- ARQ job pattern: session factory in context, background ingestion with polling
 - Direct `db.add()/db.flush()/db.commit()` pattern (NOT `async with db.begin()`)
-- Per-ruling AI caching (not per-batch) to survive filter changes
+- ARQ job pattern: session factory in context, background ingestion with polling
+- Government API client pattern: httpx.AsyncClient, rate limiting, JSONB cache
+- Existing asbest_indicator.py: bouwjaar-based NEN 2991 risk bands (hoog/middel/geen/onbekend)
+- Existing bodemloket integration: ArcGIS REST pattern for soil contamination
+- 3D BAG integration: building height, footprint, bouwlagen per pand
+- BAG data: bouwjaar, address, pand geometry already in ParcelCache/ScanResult
+- PDOK WFS/WMS pattern: used for parcels, bestemmingsplan, CBS boundaries
+
+### Research Findings (v14.0)
+
+- **bodemdata.nl**: Free API for soil profiles per coordinate — primary new data source
+- **PDOK Funderingsrisicogebieden**: WFS at PC6 level, gives percvoor1970 + fgr (soil category) + legenda (risk classification)
+- **BRO Grondwater**: ~380 wells nationwide (~10km apart) — too sparse for per-parcel use, PARKED
+- **FunderMaps/KCAF**: Open source code but proprietary data, no free API — NOT integrating
+- **Foundation heuristic**: bouwjaar < 1970 + klei/veen = "waarschijnlijk houten palen" (HOOG risico)
+- **Archieven.nl**: Only Amsterdam has bouwdossier API — NOT worth building for single city
+- **RCE monument detail**: Redengevende omschrijving available as prose, AI extraction possible but DEFERRED
 
 ### Decisions Made
 
-- ECLI prefix filtering (client-side) over `creator` API param (returned 0 results in testing)
-- ruling_cache table is org-agnostic (court rulings are public data, no organization_id)
-- Regex + known gemeente list for geo-extraction (not spaCy -- training data is news, not legal text)
-- Bekendmakingen cross-reference deferred (no shared identifier between Rechtspraak and SRU)
-- [Phase 82]: 346 gemeenten mapped (includes historical/merged names for older ruling compatibility)
-- [Phase 82]: RulingCache uses TimestampMixin but NOT TenantMixin (court rulings are public data)
-- [Phase 82]: Client-side ECLI filtering via search_by_court() + extract_court_code()
-- [Phase 82]: Semaphore(5) concurrency for batch document fetching
-- [Phase 82]: ARQ job dedup via _job_id to prevent duplicate ingestion
-- [Phase 82]: Stale-while-revalidate pattern for ruling cache endpoint
-- [Phase 83]: Progressive word-prefix matching for gemeente extraction from legal text
-- [Phase 83]: RVS rulings stored with gemeente_query=None, geo-tagged via text extraction
-- [Phase 83]: Shared Semaphore(5) for combined rechtbank + RVS document fetching
-- [Phase 83]: Geo-relevance computed at query time via SQLAlchemy case(), not stored on model
-- [Phase 83]: Win/loss aggregation in Python after fetch (small result sets)
-- [Phase 83]: Feed replaces search in JurisprudenceSection -- search moves to Phase 85 Explorer
-- [Phase 84]: Per-ruling AI cache on RulingCache.ai_analysis JSONB replaces batch-keyed CachedAPIResponse
-- [Phase 84]: Section extraction via OVERWEGINGEN/BEOORDELING markers replaces naive truncation
-- [Phase 84]: Batch size of 5 rulings per Claude API call for token budget control
-- [Phase 84]: Min sample size of 3 for doorlooptijd stats to avoid misleading averages
-- [Phase 84]: Unified AnalyzeGemeenteResponse type for trigger + poll endpoints
-- [Phase 84]: Auto-trigger analysis via useEffect + ref guard pattern
-- [Phase 84]: Doorlooptijd color coding: green <= 180d, amber 181-365d, red > 365d
-- [Phase 85]: Cross-faceted counts via exclude_dimension helper pattern
-- [Phase 85]: Lightweight rechtsgrond-only backfill prompt (avoids full re-analysis cost)
-- [Phase 85]: JSONB @> containment for rechtsgrond filtering, jsonb_array_elements_text for facet grouping
-- [Phase 85]: Rechtbank niveau derived via CASE/ILIKE from instantie (no new column)
-- [Phase 85]: URL search params for all 6 filter dimensions (bookmarkable/shareable)
-- [Phase 85]: IntersectionObserver sentinel for infinite scroll
-- [Phase 85]: Checkbox single-select per dimension matching backend query params
-- [Phase 86]: Rolling 12-month trend via VARCHAR string comparison on datum_uitspraak
-- [Phase 86]: Weighted doorlooptijd average across monthly buckets for accurate aggregation
-- [Phase 86]: Empty trend data returns zeros (not 404) -- absence is valid state
+- BRO grondwatermonitoring deferred (network too sparse for per-parcel assessment)
+- FunderMaps partnership not pursued (commercial, no free API)
+- Amsterdam-only bouwdossiers not pursued (too narrow scope)
+- Monument AI verrijking deferred (not compelling enough for this milestone)
+- Foundation risk via heuristic (bouwjaar × bodemtype) not ML model
 
 ### Pending Todos
 
 - Phase 81 (Locatie Score Investeringsprofiel) deferred from v12.0
 - Production deployment: Create app_role (sql/setup_app_role.sql)
+- 268 unanalyzed rulings need AI analysis (~$2 cost)
 
 ### Blockers/Concerns
 
@@ -99,12 +63,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T03:38:27.490Z
-**Stopped At:** Completed 86-02-PLAN.md
+**Last Session:** 2026-03-09
+**Stopped At:** Defining v14.0 requirements
 **Resume File:** None
 
-**Next Action:** v13.0 milestone complete -- tag and archive
+**Next Action:** Define requirements → create roadmap
 
 ---
 
-*State updated: 2026-03-09 -- Completed 86-02-PLAN.md*
+*State updated: 2026-03-09 — Milestone v14.0 started*
