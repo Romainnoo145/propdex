@@ -1,0 +1,141 @@
+# Requirements: Propdex v15.0 Aura
+
+**Defined:** 2026-03-10
+**Core Value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities.
+
+## v15.0 Requirements
+
+Requirements for this milestone. Each maps to roadmap phases.
+
+### Design System
+
+- [ ] **DS-01**: Aura design tokens defined as CSS variables: Morning Mist (#F2F6F3) canvas, Pure Glass (white/60 + blur) surfaces, Deep Obsidian (#0E1111) primary, Warm Amber (#F9A826) accent, Sage Mint (#D1E2D8) secondary, Vitality Green (#22C55E) status, Ink (#1A1C1E) text
+- [ ] **DS-02**: Satoshi font loaded and applied globally with sizing scale (Display 32px Bold, KPI 24px Semi-bold, Labels 11px All-caps +5% tracking)
+- [ ] **DS-03**: Glass component primitives: GlassPanel (backdrop-blur-xl + bg-white/60 + border-white/40), BentoPod (rounded-3xl, solid translucent bg-white/40 without blur), PillBadge (rounded-full)
+- [ ] **DS-04**: Micro-interaction system: hover scale-105 with glow, fly-up/slide-in animations, smooth transitions
+- [ ] **DS-05**: Dark mode removed entirely -- light-only Aura theme replaces Industrial Amber
+- [ ] **DS-06**: Performance fallback: prefers-reduced-motion disables blur, will-change:transform on floating panels, blur only on 3 key surfaces (SideRailNav, search bar, bottom sheet containers)
+
+### Layout & Navigation
+
+- [ ] **NAV-01**: Viewport-locked layout -- map fills 100% screen, all UI floats on z-50 with 16px margin from edges
+- [ ] **NAV-02**: Floating SideRailNav (left, 80px wide, rounded-[40px], glass): Propdex logo top, functional icons middle (Kaart/Resultaten/Jurisprudentie), settings + notifications + profile bottom, tooltips on hover
+- [ ] **NAV-03**: Search pill (top-left, rounded-full, glass) with PDOK address autocomplete
+- [ ] **NAV-04**: Filter/Toggle dock (top-center) with chip-style dropdowns for gemeente/perceel toggle and layer controls (Kaart/Satellite, Gemeenten/Percelen/Bestemmingsplan)
+
+### Parcel Detail
+
+- [ ] **PRC-01**: Floating right detail panel (glass) with satellite crop hero image, score badge overlay in corner, address header
+- [ ] **PRC-02**: Primary stats bento grid (4 pods): oppervlakte, bouwjaar, status, gemeente -- icon + value, no scroll
+- [ ] **PRC-03**: Bestemming as wide horizontal status bar with soft color fill
+- [ ] **PRC-04**: Kansen & aandachtspunten as horizontal pill/tag cloud instead of text list
+- [ ] **PRC-05**: Click-through layers for deeper data: clicking a bento pod opens a detail layer replacing the current view (17+ sections accessible without scroll)
+- [ ] **PRC-06**: Vergunningen as accordion-style bento pod (shows count, expands on click)
+- [ ] **PRC-07**: "Genereer Rapport" as primary action button pinned at bottom of panel
+
+### Parcel Aerial Crop API
+
+- [ ] **API-01**: Backend endpoint that returns a cropped PDOK aerial image centered on a parcel geometry for use as hero image in detail panel
+
+### Wijk View
+
+- [ ] **WIJK-01**: Bottom Bento Sheet (30-40% screen height) with fly-up animation on wijk click, drag handle, rounded-t-[48px]
+- [ ] **WIJK-02**: 4-column bento layout: Wijk Identity (name + score) | Bestemming distribution bar | Stats 2x2 grid (oppervlakte, bouwjaar avg, leegstand count, vergunningen) | Kansen glow-cards
+- [ ] **WIJK-03**: Selected wijk gets outer glow on map in active status color
+- [ ] **WIJK-04**: Click-through from wijk pods to deeper data (no scroll within sheet)
+
+### Gemeente View
+
+- [ ] **GEM-01**: Gemeente-level map shows wijk boundaries with luminous white borders on click
+- [ ] **GEM-02**: Gemeente context accessible without bottom sheet -- focus on map with wijk boundaries as entry point
+
+### Results Table
+
+- [ ] **RES-01**: /resultaten route gets Aura visual treatment: glass container, bento-styled filter bar, Satoshi font, rounded elements
+- [ ] **RES-02**: Table maintains existing functionality (TanStack Table sorting, filtering, bulk export) with new styling
+
+### Jurisprudentie
+
+- [ ] **JUR-01**: Wizard flow redesigned in Aura style: glass panels, bento step indicators, Satoshi font
+- [ ] **JUR-02**: Explorer redesigned with glass containers, bento result cards, pill filters
+
+### Meldingen
+
+- [ ] **MELD-01**: Meldingen feed redesigned with bento cards, glass container, pill action-state badges
+- [ ] **MELD-02**: Gemeente filter and infinite scroll preserved with new Aura styling
+
+### Reports
+
+- [ ] **RPT-01**: Report detail page redesigned as bento layout with click-through sections replacing scrollable list
+
+### Settings
+
+- [ ] **SET-01**: Settings page updated with Aura glass/bento styling on existing sections (account, password, notifications, appearance)
+
+## Future Requirements
+
+### Physical Risk Extensions (deferred from v14.0)
+
+- **KLIM-01**: Drought/subsidence risk from Klimaateffectatlas
+- **FUND-04**: Foundation risk aggregated at wijk level
+
+### Deferred from v12.0
+
+- **SCORE-01**: LocationScoreService 0-10 investeerbaarheid per wijk
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Mobile responsiveness | Desktop-only for this milestone -- mobile in future |
+| Dark mode | Aura is light-only by design |
+| PDF rapport redesign | PDF template is separate from frontend views |
+| New data sources | This milestone is frontend-only (except aerial crop API) |
+| Backend API changes | Only new endpoint is aerial crop -- all other APIs unchanged |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DS-01 | TBD | Pending |
+| DS-02 | TBD | Pending |
+| DS-03 | TBD | Pending |
+| DS-04 | TBD | Pending |
+| DS-05 | TBD | Pending |
+| DS-06 | TBD | Pending |
+| NAV-01 | TBD | Pending |
+| NAV-02 | TBD | Pending |
+| NAV-03 | TBD | Pending |
+| NAV-04 | TBD | Pending |
+| PRC-01 | TBD | Pending |
+| PRC-02 | TBD | Pending |
+| PRC-03 | TBD | Pending |
+| PRC-04 | TBD | Pending |
+| PRC-05 | TBD | Pending |
+| PRC-06 | TBD | Pending |
+| PRC-07 | TBD | Pending |
+| API-01 | TBD | Pending |
+| WIJK-01 | TBD | Pending |
+| WIJK-02 | TBD | Pending |
+| WIJK-03 | TBD | Pending |
+| WIJK-04 | TBD | Pending |
+| GEM-01 | TBD | Pending |
+| GEM-02 | TBD | Pending |
+| RES-01 | TBD | Pending |
+| RES-02 | TBD | Pending |
+| JUR-01 | TBD | Pending |
+| JUR-02 | TBD | Pending |
+| MELD-01 | TBD | Pending |
+| MELD-02 | TBD | Pending |
+| RPT-01 | TBD | Pending |
+| SET-01 | TBD | Pending |
+
+**Coverage:**
+- v15.0 requirements: 32 total
+- Mapped to phases: 0
+- Unmapped: 32
+
+---
+*Requirements defined: 2026-03-10*
