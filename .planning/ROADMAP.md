@@ -104,7 +104,7 @@ Phases execute in numeric order: 87 -> 88 -> 89 -> 90
 | 87. Soil Data Integration | 1/1 | Complete    | 2026-03-09 |
 | 88. Foundation Risk Engine | 1/1 | Complete    | 2026-03-09 |
 | 89. Asbestos v2 Refinement | 1/1 | Complete    | 2026-03-09 |
-| 90. Frontend Fysiek Risicoprofiel | 2/2 | Complete   | 2026-03-09 |
+| 90. Frontend Fysiek Risicoprofiel | 2/2 | Complete    | 2026-03-09 |
 
 ---
 
