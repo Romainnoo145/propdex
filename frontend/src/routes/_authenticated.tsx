@@ -67,9 +67,8 @@ function AuthenticatedLayout() {
 
   return (
     <WorkspaceProvider>
-      <div className="flex h-screen">
-        <SideRailNav />
-        <main className="flex-1 relative overflow-hidden">
+      <div className="relative h-screen w-screen overflow-hidden">
+        <main className="relative h-full">
           {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
           <div
             className="absolute inset-0"
@@ -86,6 +85,8 @@ function AuthenticatedLayout() {
             <Outlet />
           </MapContext.Provider>
         </main>
+        {/* SideRailNav floats on top of all content */}
+        <SideRailNav />
         <BottomTabNav />
       </div>
     </WorkspaceProvider>
