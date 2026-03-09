@@ -1530,3 +1530,43 @@ export async function getDoorlooptijdStats(
   }
   return result
 }
+
+// ── Trend Data ──────────────────────────────────────────────────────────
+
+export interface MonthBucket {
+  month: string            // "YYYY-MM"
+  total: number
+  toegewezen: number
+  afgewezen: number
+  gedeeltelijk: number
+  klimaat_score: number
+  avg_doorlooptijd: number | null
+}
+
+export interface TrendSummary {
+  total_rulings: number
+  avg_doorlooptijd: number | null
+  succes_pct: number
+  months_with_data: number
+}
+
+export interface TrendResponse {
+  gemeente_naam: string
+  months: MonthBucket[]
+  summary: TrendSummary
+}
+
+/**
+ * Fetch rolling 12-month trend data for a gemeente.
+ *
+ * GET /api/jurisprudence/trend/{gemeenteNaam}
+ */
+export async function fetchTrendData(
+  gemeenteNaam: string,
+  accessToken: string
+): Promise<TrendResponse> {
+  return apiFetch<TrendResponse>(
+    `/api/jurisprudence/trend/${encodeURIComponent(gemeenteNaam)}`,
+    { method: 'GET', accessToken }
+  )
+}

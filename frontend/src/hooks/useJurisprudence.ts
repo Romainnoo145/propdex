@@ -10,12 +10,14 @@ import {
     analyzeGemeenteRulings,
     pollRulingAnalysis,
     getDoorlooptijdStats,
+    fetchTrendData,
     type JurisprudenceResult,
     type JurisprudenceDocument,
     type JurisprudenceAnalysisResponse,
     type GemeenteRulingsFeedResponse,
     type AnalyzeGemeenteResponse,
     type DoorlooptijdStats,
+    type TrendResponse,
 } from '@/lib/api'
 
 export function useJurisprudenceSearch(query: string, enabled = true) {
@@ -178,5 +180,22 @@ export function useDoorlooptijdStats(gemeenteNaam: string) {
         queryFn: () => getDoorlooptijdStats(gemeenteNaam, accessToken),
         enabled: !!accessToken && !!gemeenteNaam,
         staleTime: 10 * 60 * 1000, // 10 min cache
+    })
+}
+
+/**
+ * Fetch rolling 12-month trend data for a gemeente.
+ *
+ * Returns monthly buckets with klimaat scores and an overall summary.
+ * Uses 10-minute stale time since trend data changes slowly.
+ */
+export function useTrendData(gemeenteNaam: string) {
+    const { accessToken } = useAuth()
+
+    return useQuery<TrendResponse, Error>({
+        queryKey: ['jurisprudence', 'trend', gemeenteNaam],
+        queryFn: () => fetchTrendData(gemeenteNaam, accessToken!),
+        enabled: !!accessToken && gemeenteNaam.length > 0,
+        staleTime: 10 * 60_000, // 10 min -- trend data changes slowly
     })
 }
