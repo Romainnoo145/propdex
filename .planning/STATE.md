@@ -5,41 +5,48 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 91 (Aura Design System Foundation)
+**Current focus:** v15.0 Aura -- Phase 92 complete, ready for Phase 93
 
 ---
 
 ## Current Position
 
 Phase: 92 (2 of 7 in v15.0) -- Side Rail Navigation
-Plan: 0 of 2 complete
-Status: Ready
-Last activity: 2026-03-10 -- 91-02 Glass primitives + micro-interactions complete
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-03-10 -- 92-02 Search bar + filter dock + gradient legend complete
 
-Progress: [##░░░░░░░░] 15% (2/13 plans)
+Progress: [###░░░░░░░] 31% (4/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (v15.0)
+- Total plans completed: 4 (v15.0)
 - Average duration: 4min
-- Total execution time: 8min
+- Total execution time: 14min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 91 | 2 | 8min | 4min |
+| 92 | 2 | 6min | 3min |
 
 ## Accumulated Context
 
 ### Decisions
+- SideRailNav renders after <main> in DOM so it floats on top without z-index conflicts
+- ResultsShell owns its left padding (112px) rather than _authenticated handling conditional padding
+- WorkspaceSwitcher replaced with P monogram (bg-aura-obsidian circle)
+- Active nav state uses bg-aura-amber/20 text-aura-amber for warm highlight
 - Aura glass-white defined as #ffffff (pure hex) so Tailwind opacity modifiers work
 - Satoshi via Fontshare CDN, AppearanceSection kept with map style only
 - Badge teal variant uses aura-green but kept variant name for backward compat
 - BentoPod explicitly excluded from backdrop-blur (locked design decision)
 - Reduced-motion uses [class*=backdrop-blur] selector for generic blur detection
 - Differentiated hover scales: 1.02 for pods, 1.05 for nav icons
+- Gradient legend extracted from LayerToggle to map.tsx (Option B) for cleaner separation
+- aura-hover-glow class uses box-shadow only (no transform) to avoid shadow-glass conflicts
 
 ### Key Patterns (carry forward)
 
@@ -66,12 +73,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T21:54:03Z
-**Stopped At:** Completed 91-02-PLAN.md (Phase 91 complete)
+**Last Session:** 2026-03-09T22:20:37Z
+**Stopped At:** Completed 92-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** `/gsd:execute-phase 92` (Side Rail Navigation)
+**Next Action:** Execute 92-02-PLAN.md (Search Bar + Filter Chip Dock)
 
 ---
 
-*State updated: 2026-03-10 -- Phase 91 complete (Aura Design System Foundation)*
+*State updated: 2026-03-10 -- 92-01 Viewport layout + floating SideRailNav complete*
