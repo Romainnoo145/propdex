@@ -65,11 +65,11 @@ Plans:
   2. SideRailNav floats on the left (80px, rounded-[40px], glass blur) with logo, functional icons, and profile/settings at bottom
   3. Search pill sits top-left with PDOK autocomplete working as before
   4. Filter/toggle chips dock at top-center and control gemeente/perceel/layer toggles
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 92-01: Viewport-locked map layout + floating SideRailNav
-- [ ] 92-02: Search pill + filter/toggle dock
+- [ ] 92-01-PLAN.md -- Viewport-locked layout + floating glass SideRailNav + non-map content offset
+- [ ] 92-02-PLAN.md -- Search pill glass styling + top-center filter dock + legend reposition
 
 ### Phase 93: Parcel Detail Panel
 **Goal**: Clicking a parcel opens a floating glass panel that tells the full property story through visual bento pods and click-through layers -- zero scroll
