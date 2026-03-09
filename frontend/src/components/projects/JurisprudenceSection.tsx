@@ -7,8 +7,8 @@ import {
     useDoorlooptijdStats,
 } from '@/hooks/useJurisprudence'
 import { JuridischKlimaatCard } from './JuridischKlimaatCard'
-import { X, Scale, FileText, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import type { WinLossRatio, AnalyzeGemeenteResponse, RulingAnalysis } from '@/lib/api'
+import { X, Scale, FileText, Sparkles, ChevronDown, Loader2 } from 'lucide-react'
+import type { AnalyzeGemeenteResponse, RulingAnalysis } from '@/lib/api'
 
 interface JurisprudenceSectionProps {
     gemeenteNaam: string
@@ -31,67 +31,31 @@ function parseCourtFromTitle(ecli: string, title: string): string {
 const DISCLAIMER_TEXT = 'Indicatief -- gebaseerd op historische uitspraken, geen juridisch advies'
 
 /**
- * Win/loss ratio bar rendered as compact pill badges.
- */
-function WinLossBar({ winLoss }: { winLoss: WinLossRatio }) {
-    if (winLoss.total === 0) {
-        return (
-            <p className="text-[10px] text-grey-500 italic">
-                Nog geen uitkomstdata
-            </p>
-        )
-    }
-
-    const items = [
-        { key: 'toegewezen', label: 'Toegewezen', color: 'bg-emerald-500/20 text-emerald-400', count: winLoss.toegewezen },
-        { key: 'afgewezen', label: 'Afgewezen', color: 'bg-red-500/20 text-red-400', count: winLoss.afgewezen },
-        { key: 'gedeeltelijk', label: 'Gedeeltelijk', color: 'bg-amber-accent/20 text-amber-accent', count: winLoss.gedeeltelijk },
-        { key: 'onbekend', label: 'Onbekend', color: 'bg-grey-700 text-grey-400', count: winLoss.onbekend },
-    ] as const
-
-    return (
-        <div className="flex flex-wrap gap-1.5">
-            {items.map((item) => {
-                if (item.count === 0) return null
-                const pct = Math.round((item.count / winLoss.total) * 100)
-                return (
-                    <span
-                        key={item.key}
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${item.color}`}
-                    >
-                        {item.label}: {pct}%
-                    </span>
-                )
-            })}
-        </div>
-    )
-}
-
-/**
  * Geo-relevance badge shown next to court name.
  */
 function GeoRelevanceBadge({ relevance }: { relevance: 'gemeente' | 'arrondissement' }) {
     if (relevance === 'gemeente') {
         return (
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-1 text-[10px] text-grey-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-accent/60" />
                 Gemeente
             </span>
         )
     }
     return (
         <span className="inline-flex items-center gap-1 text-[10px] text-grey-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-grey-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-grey-600" />
             Arrondissement
         </span>
     )
 }
 
+/** Muted uitkomst colors — only afgewezen gets a subtle rust tint */
 const uitkomstColors: Record<string, string> = {
-    toegewezen: 'bg-emerald-500/20 text-emerald-400',
-    afgewezen: 'bg-red-500/20 text-red-400',
-    gedeeltelijk: 'bg-amber-accent/20 text-amber-accent',
-    onbekend: 'bg-grey-700 text-grey-400',
+    toegewezen: 'bg-grey-800 text-grey-300',
+    afgewezen: 'bg-amber-900/30 text-amber-700',
+    gedeeltelijk: 'bg-grey-800 text-grey-400',
+    onbekend: 'bg-grey-800 text-grey-500',
 }
 
 /**
@@ -112,45 +76,41 @@ function RulingAiSummaryBadge({
     if (!ruling) return null
 
     return (
-        <div className="mt-2 rounded-md border border-overlay/5 bg-grey-900/50">
+        <div className="mt-2 rounded-lg border border-overlay/5 bg-grey-950/60">
             <button
                 type="button"
                 onClick={(e) => {
                     e.stopPropagation()
                     setIsOpen(!isOpen)
                 }}
-                className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-amber-accent/80 hover:text-amber-accent transition-colors"
+                className="flex w-full items-center gap-2 px-3 py-2 text-[11px] hover:bg-overlay/[0.02] transition-colors rounded-lg"
             >
-                <Sparkles className="w-3 h-3" />
-                <span className="font-medium">AI samenvatting</span>
+                <Sparkles className="w-3 h-3 text-amber-accent shrink-0" />
+                <span className="font-medium text-grey-200">AI Samenvatting</span>
                 {ruling.vergunningstype && ruling.vergunningstype !== 'overig' && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400">
+                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-grey-800 text-grey-400">
                         {ruling.vergunningstype}
                     </span>
                 )}
-                {isOpen ? (
-                    <ChevronUp className="w-3 h-3 ml-auto" />
-                ) : (
-                    <ChevronDown className="w-3 h-3 ml-auto" />
-                )}
+                <ChevronDown className={`w-3 h-3 ml-auto text-grey-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
                 <div
-                    className="px-2.5 pb-2.5 space-y-2"
+                    className="px-3 pb-3 pt-1 space-y-2.5 border-t border-overlay/5"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Bezwaargrond */}
                     <div>
-                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
                             Bezwaargrond
                         </span>
-                        <p className="text-xs text-grey-300">{ruling.bezwaargrond}</p>
+                        <p className="text-xs text-grey-300 mt-0.5">{ruling.bezwaargrond}</p>
                     </div>
 
                     {/* Uitkomst badge */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
                             Uitkomst
                         </span>
                         <span
@@ -162,14 +122,14 @@ function RulingAiSummaryBadge({
 
                     {/* Relevantie */}
                     <div>
-                        <span className="text-[10px] font-medium uppercase text-grey-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-grey-500">
                             Relevantie
                         </span>
-                        <p className="text-xs text-grey-300">{ruling.relevantie}</p>
+                        <p className="text-xs text-grey-300 mt-0.5">{ruling.relevantie}</p>
                     </div>
 
                     {/* Disclaimer */}
-                    <p className="text-[10px] italic text-grey-600 pt-1 border-t border-overlay/5">
+                    <p className="text-[10px] italic text-grey-600 pt-1.5 border-t border-overlay/5">
                         {DISCLAIMER_TEXT}
                     </p>
                 </div>
@@ -219,23 +179,16 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
             <div className="p-4 flex flex-col md:flex-row md:items-stretch gap-4 max-h-[80vh]">
                 {/* Left Side: Feed */}
                 <div className={`flex flex-col gap-3 min-h-0 transition-all duration-300 ${selectedEcli ? 'md:w-1/3' : 'w-full'}`}>
-                    {/* Klimaat card above feed -- shows when analysis is complete or loading */}
-                    {(analysisResult || isAnalyzing) && (
+                    {/* Klimaat dashboard card — afwijzingspercentage + verdeling */}
+                    {(feedData?.win_loss || isAnalyzing) && (
                         <JuridischKlimaatCard
-                            analysis={analysisResult}
-                            isLoading={isAnalyzing}
+                            isLoading={isAnalyzing && !feedData?.win_loss}
                             doorlooptijd={doorlooptijdQuery.data ?? null}
+                            winLoss={feedData?.win_loss ?? null}
+                            analyzedCount={analysisResult?.analyzed_count}
+                            totalCount={analysisResult?.total_count}
+                            pendingCount={analysisResult?.pending_count}
                         />
-                    )}
-
-                    {/* Win/loss ratio bar */}
-                    {feedData?.win_loss && (
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-medium uppercase text-grey-500">
-                                Uitkomstverdeling
-                            </span>
-                            <WinLossBar winLoss={feedData.win_loss} />
-                        </div>
                     )}
 
                     {/* Ingestion status indicators */}
@@ -304,7 +257,7 @@ export function JurisprudenceSection({ gemeenteNaam, wijkNaam: _wijkNaam }: Juri
                                             </span>
                                         )}
                                         {res.vergunningstype && (
-                                            <span className="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium bg-blue-500/20 text-blue-400">
+                                            <span className="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium bg-grey-800 text-grey-400">
                                                 {res.vergunningstype}
                                             </span>
                                         )}

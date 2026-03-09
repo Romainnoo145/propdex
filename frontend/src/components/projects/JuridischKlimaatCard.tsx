@@ -1,70 +1,56 @@
-import { useState } from 'react'
-import { Scale, AlertTriangle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import type { AnalyzeGemeenteResponse, DoorlooptijdStats } from '@/lib/api'
+import type { DoorlooptijdStats, WinLossRatio } from '@/lib/api'
 
 interface JuridischKlimaatCardProps {
-  analysis: AnalyzeGemeenteResponse | null
   isLoading: boolean
   doorlooptijd?: Record<string, DoorlooptijdStats> | null
+  winLoss?: WinLossRatio | null
+  analyzedCount?: number
+  totalCount?: number
+  pendingCount?: number
 }
 
 /**
- * Color class for doorlooptijd duration values.
- * Green: <= 180 days, Amber: 181-365, Red: > 365
+ * Severity based on rejection rate across ALL outcomes (including onbekend).
+ * This avoids the misleading "100% afgewezen" when half is unknown.
  */
-function doorlooptijdColor(avgDagen: number): string {
-  if (avgDagen <= 180) return 'text-emerald-400'
-  if (avgDagen <= 365) return 'text-amber-accent'
-  return 'text-red-400'
+function overallSeverity(winLoss: WinLossRatio): {
+  color: string
+  bg: string
+  label: string
+} {
+  const pctAfgewezen = Math.round((winLoss.afgewezen / winLoss.total) * 100)
+  if (pctAfgewezen < 15) return { color: 'text-green-400', bg: 'bg-green-400', label: 'Gunstig' }
+  if (pctAfgewezen <= 35) return { color: 'text-amber-400', bg: 'bg-amber-400', label: 'Gemiddeld' }
+  if (pctAfgewezen <= 55) return { color: 'text-orange-400', bg: 'bg-orange-400', label: 'Ongunstig' }
+  return { color: 'text-red-400', bg: 'bg-red-400', label: 'Zeer ongunstig' }
 }
 
-function RiskFactorsCollapsible({ factors }: { factors: string[] }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-1.5 text-xs text-grey-400 hover:text-grey-300 transition-colors"
-      >
-        <AlertTriangle className="w-3 h-3" />
-        <span>Risicofactoren</span>
-        <span className="rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-          {factors.length}
-        </span>
-        {open ? (
-          <ChevronUp className="w-3 h-3 ml-auto" />
-        ) : (
-          <ChevronDown className="w-3 h-3 ml-auto" />
-        )}
-      </button>
-      {open && (
-        <ul className="mt-1.5 space-y-1 pl-4">
-          {factors.map((factor, i) => (
-            <li key={i} className="text-xs text-grey-400 list-disc">
-              {factor}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
+const OUTCOME_CONFIG = [
+  { key: 'toegewezen' as const, label: 'Toegewezen', color: 'bg-green-400/60', dot: 'bg-green-400/60' },
+  { key: 'gedeeltelijk' as const, label: 'Gedeeltelijk', color: 'bg-amber-400/60', dot: 'bg-amber-400/60' },
+  { key: 'afgewezen' as const, label: 'Afgewezen', color: 'bg-red-400/60', dot: 'bg-red-400/60' },
+  { key: 'onbekend' as const, label: 'Onbekend', color: 'bg-grey-700', dot: 'bg-grey-700' },
+]
 
 /**
- * Score card showing aggregated juridisch klimaat score,
- * vergunnings-succeskans percentage, risk summary, top risk factors,
- * and doorlooptijd statistics per vergunningstype.
+ * Juridisch Klimaat dashboard card.
+ * Shows ruling outcomes as a stacked bar with severity indicator.
  */
-export function JuridischKlimaatCard({ analysis, isLoading, doorlooptijd }: JuridischKlimaatCardProps) {
+export function JuridischKlimaatCard({
+  isLoading,
+  doorlooptijd,
+  winLoss,
+  analyzedCount,
+  totalCount,
+  pendingCount,
+}: JuridischKlimaatCardProps) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-overlay/5 bg-grey-900 p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Scale className="w-4 h-4 text-amber-accent/70 animate-pulse" />
-          <span className="text-xs font-medium text-amber-accent/70">Analyseren...</span>
+          <span className="text-xs font-medium text-amber-accent/70 animate-pulse">Analyseren...</span>
         </div>
         <Skeleton className="h-10 w-20" />
         <Skeleton className="h-3 w-full" />
@@ -73,99 +59,83 @@ export function JuridischKlimaatCard({ analysis, isLoading, doorlooptijd }: Juri
     )
   }
 
-  if (!analysis) return null
+  if (!winLoss || winLoss.total === 0) return null
 
-  const scoreColor =
-    analysis.juridisch_klimaat_score >= 70
-      ? 'text-emerald-400'
-      : analysis.juridisch_klimaat_score >= 40
-        ? 'text-amber-accent'
-        : 'text-red-400'
-
-  const succesBarColor =
-    analysis.vergunnings_succeskans >= 70
-      ? 'bg-emerald-500'
-      : analysis.vergunnings_succeskans >= 40
-        ? 'bg-amber-accent'
-        : 'bg-red-500'
-
-  // Compute risk summary + factors from ruling_analyses
-  const riskFactors: string[] = []
-  const afgewezen = analysis.ruling_analyses.filter(r => r.uitkomst === 'afgewezen')
-  if (afgewezen.length > 0) {
-    // Extract unique bezwaargronden as risk factors
-    const seen = new Set<string>()
-    for (const r of afgewezen) {
-      if (!seen.has(r.bezwaargrond) && riskFactors.length < 5) {
-        seen.add(r.bezwaargrond)
-        riskFactors.push(r.bezwaargrond)
-      }
-    }
-  }
+  const sev = overallSeverity(winLoss)
+  const segments = OUTCOME_CONFIG
+    .map(cfg => ({ ...cfg, count: winLoss[cfg.key] }))
+    .filter(s => s.count > 0)
 
   const doorlooptijdEntries = doorlooptijd ? Object.values(doorlooptijd) : []
+  const hasDoorlooptijd = doorlooptijdEntries.some(s => !s.insufficient_data)
+  const firstDoorlooptijd = doorlooptijdEntries.find(s => !s.insufficient_data)
 
   return (
     <div className="rounded-xl border border-overlay/5 bg-grey-900 p-4 space-y-3">
-      {/* Score */}
-      <div className="flex items-baseline gap-1.5">
-        <span className={`text-3xl font-bold tabular-nums ${scoreColor}`}>
-          {analysis.juridisch_klimaat_score}
-        </span>
-        <span className="text-sm text-grey-500">/100</span>
+      {/* Header row: count + severity */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-grey-300">
+          <span className="text-sm font-bold text-grey-100 tabular-nums">{winLoss.total}</span>
+          {' '}uitspraken
+        </p>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${sev.bg}`} />
+          <span className={`text-[10px] font-medium ${sev.color}`}>{sev.label}</span>
+        </div>
       </div>
 
-      {/* Vergunnings-succeskans progress bar */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-grey-400">Vergunnings-succeskans</span>
-          <span className="font-medium text-grey-200">
-            {analysis.vergunnings_succeskans}%
-          </span>
-        </div>
-        <div className="h-1.5 w-full rounded-full bg-grey-800">
+      {/* Stacked bar */}
+      <div className="flex h-2 w-full overflow-hidden rounded-full">
+        {segments.map((seg) => (
           <div
-            className={`h-full rounded-full transition-all duration-500 ${succesBarColor}`}
-            style={{ width: `${analysis.vergunnings_succeskans}%` }}
+            key={seg.key}
+            className={`${seg.color} first:rounded-l-full last:rounded-r-full`}
+            style={{ width: `${(seg.count / winLoss.total) * 100}%` }}
           />
-        </div>
+        ))}
       </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {segments.map((seg) => (
+          <span key={seg.key} className="flex items-center gap-1 text-[10px] text-grey-500">
+            <span className={`w-1.5 h-1.5 rounded-full ${seg.dot}`} />
+            {seg.count} {seg.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Doorlooptijd — only if data exists */}
+      {hasDoorlooptijd && firstDoorlooptijd?.avg_dagen != null && (
+        <div className="flex items-center gap-1.5 text-xs text-grey-400 pt-1 border-t border-overlay/5">
+          <Clock className="w-3 h-3" />
+          <span>Gem. doorlooptijd</span>
+          <span className="font-medium tabular-nums text-grey-300">{firstDoorlooptijd.avg_dagen} dgn</span>
+        </div>
+      )}
+
+      {/* Multiple doorlooptijd types */}
+      {hasDoorlooptijd && doorlooptijdEntries.filter(s => !s.insufficient_data).length > 1 && (
+        <div className="space-y-1">
+          {doorlooptijdEntries.filter(s => !s.insufficient_data).map((stat) => (
+            <div key={stat.vergunningstype} className="flex items-center justify-between text-xs">
+              <span className="text-grey-400 truncate mr-2">{stat.vergunningstype}</span>
+              <span className="font-medium tabular-nums whitespace-nowrap text-grey-300">
+                {stat.avg_dagen} dgn
+                <span className="text-grey-600 font-normal ml-1">
+                  ({stat.min_dagen}–{stat.max_dagen})
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Analysis progress */}
-      {analysis.pending_count > 0 && (
+      {(pendingCount ?? 0) > 0 && (
         <p className="text-[10px] text-grey-500">
-          {analysis.analyzed_count} van {analysis.total_count} uitspraken geanalyseerd
+          {analyzedCount} van {totalCount} uitspraken geanalyseerd
         </p>
-      )}
-
-      {/* Top risk factors — collapsible */}
-      {riskFactors.length > 0 && (
-        <RiskFactorsCollapsible factors={riskFactors} />
-      )}
-
-      {/* Doorlooptijd section — only shown when meaningful data exists */}
-      {doorlooptijdEntries.some(s => !s.insufficient_data) && (
-        <div className="space-y-1.5 pt-1 border-t border-overlay/5">
-          <div className="flex items-center gap-1.5 text-xs text-grey-400">
-            <Clock className="w-3 h-3" />
-            <span>Gemiddelde Doorlooptijd</span>
-          </div>
-          <div className="space-y-1">
-            {doorlooptijdEntries.filter(s => !s.insufficient_data).map((stat) => (
-              <div key={stat.vergunningstype} className="flex items-center justify-between text-xs">
-                <span className="text-grey-400 truncate mr-2">
-                  {stat.vergunningstype}
-                </span>
-                <span className={`font-medium tabular-nums whitespace-nowrap ${doorlooptijdColor(stat.avg_dagen!)}`}>
-                  {stat.avg_dagen} dagen
-                  <span className="text-grey-600 font-normal ml-1">
-                    ({stat.min_dagen}-{stat.max_dagen})
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       )}
     </div>
   )
