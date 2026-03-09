@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Clock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Clock, ExternalLink, Loader2 } from 'lucide-react'
+import { useAuth } from '@/lib/auth/useAuth'
+import { getJurisprudenceDoc } from '@/lib/api'
 import type { ExplorerRuling } from '@/hooks/useExplorer'
 
 /** Dutch display labels for rechtsgrond keys */
@@ -11,7 +13,7 @@ const RECHTSGROND_LABELS: Record<string, string> = {
   etfal_ruimtelijke_ordening: 'ETFAL / Ruimtelijke ordening',
 }
 
-/** Color mapping for uitkomst values */
+/** Color mapping for uitkomst values — amber palette only */
 function uitkomstColor(uitkomst: string | null): string {
   switch (uitkomst) {
     case 'toegewezen':
@@ -50,19 +52,42 @@ interface RulingCardProps {
 
 export default function RulingCard({ ruling }: RulingCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [fullText, setFullText] = useState<string | null>(null)
+  const [loadingText, setLoadingText] = useState(false)
+  const { accessToken } = useAuth()
 
   const aiAnalysis = ruling.ai_analysis as {
     bezwaargrond?: string
     relevantie?: string
     uitkomst?: string
+    tegenstanders?: string[]
   } | null
 
   const summaryText = aiAnalysis?.bezwaargrond ?? ruling.summary ?? null
   const relevantieText = aiAnalysis?.relevantie ?? null
+  const tegenstanders = aiAnalysis?.tegenstanders ?? []
 
   const datumFormatted = ruling.datum_uitspraak
     ? dateFmt.format(new Date(ruling.datum_uitspraak))
     : null
+
+  const handleExpand = async () => {
+    const newExpanded = !expanded
+    setExpanded(newExpanded)
+
+    // Lazy-load full ruling text on first expand
+    if (newExpanded && fullText === null && !loadingText) {
+      setLoadingText(true)
+      try {
+        const res = await getJurisprudenceDoc(ruling.ecli, accessToken)
+        setFullText(res.document.text)
+      } catch {
+        setFullText('Kon uitspraaktekst niet laden.')
+      } finally {
+        setLoadingText(false)
+      }
+    }
+  }
 
   return (
     <div
@@ -81,7 +106,7 @@ export default function RulingCard({ ruling }: RulingCardProps) {
           </div>
         </div>
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={handleExpand}
           className="shrink-0 rounded p-1 text-grey-400 transition-colors hover:bg-grey-800 hover:text-grey-100"
           aria-label={expanded ? 'Inklappen' : 'Uitklappen'}
         >
@@ -97,7 +122,7 @@ export default function RulingCard({ ruling }: RulingCardProps) {
           </span>
         )}
         {ruling.vergunningstype && (
-          <span className="inline-flex items-center rounded-full border border-blue-500/25 bg-blue-500/15 px-2 py-0.5 text-xs text-blue-400">
+          <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">
             {ruling.vergunningstype}
           </span>
         )}
@@ -113,6 +138,20 @@ export default function RulingCard({ ruling }: RulingCardProps) {
           </span>
         )}
       </div>
+
+      {/* Tegenstanders badges */}
+      {tegenstanders.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {tegenstanders.map((t) => (
+            <span
+              key={t}
+              className="rounded border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Rechtsgrond tags */}
       {ruling.rechtsgronden.length > 0 && (
@@ -154,14 +193,36 @@ export default function RulingCard({ ruling }: RulingCardProps) {
               <p className="text-sm leading-relaxed text-grey-300">{relevantieText}</p>
             </div>
           )}
-          {ruling.title && (
-            <div>
-              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-grey-400">
-                Titel
+
+          {/* Full ruling text */}
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-grey-400">
+                Uitspraaktekst
               </h4>
-              <p className="text-sm leading-relaxed text-grey-300">{ruling.title}</p>
+              <a
+                href={`https://uitspraken.rechtspraak.nl/details?id=${ruling.ecli}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-amber-400/70 transition-colors hover:text-amber-300"
+              >
+                Rechtspraak.nl <ExternalLink size={10} />
+              </a>
             </div>
-          )}
+            {loadingText && (
+              <div className="flex items-center gap-2 py-4 text-sm text-grey-500">
+                <Loader2 size={14} className="animate-spin" />
+                Uitspraak laden...
+              </div>
+            )}
+            {fullText && (
+              <div className="max-h-96 overflow-y-auto rounded border border-grey-800 bg-grey-950 p-3">
+                <pre className="whitespace-pre-wrap text-xs leading-relaxed text-grey-300">
+                  {fullText}
+                </pre>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

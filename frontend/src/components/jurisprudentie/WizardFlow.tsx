@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ArrowLeft, ArrowRight, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Search } from 'lucide-react'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 import { SearchInput } from '@/components/primitives'
 
@@ -20,6 +20,18 @@ interface WizardFlowProps {
 }
 
 type Schaal = 'landelijk' | 'provinciaal' | 'gemeentelijk'
+
+const VERGUNNINGSTYPE_LABELS: Record<string, string> = {
+  nieuwbouw: 'Nieuwbouw',
+  verbouw: 'Verbouw',
+  dakopbouw: 'Dakopbouw',
+  uitbreiding: 'Uitbreiding',
+  sloop: 'Sloop',
+  bestemmingswijziging: 'Bestemmingswijziging',
+  milieu: 'Milieu',
+  monumenten: 'Monumenten',
+  overig: 'Overig',
+}
 
 const THEMA_MAP: Record<string, { label: string; desc: string }> = {
   etfal_ruimtelijke_ordening: {
@@ -47,7 +59,7 @@ const THEMA_MAP: Record<string, { label: string; desc: string }> = {
 /*
  * Steps:
  *   0 — Schaalniveau (landelijk / provinciaal / gemeentelijk)
- *   1 — Locatie (provincie of gemeente keuze, skipped for landelijk)
+ *   1 — Locatie (skipped for landelijk)
  *   2 — Vergunningstype
  *   3 — Thema
  *   4 — Periode
@@ -60,12 +72,13 @@ export default function WizardFlow({
   onComplete,
   totalCount,
 }: WizardFlowProps) {
-  const [step, setStep] = useState(0)
   const [schaal, setSchaal] = useState<Schaal | null>(() => {
     if (filters.gemeente) return 'gemeentelijk'
     if (filters.rechtbank_niveau) return 'provinciaal'
     return null
   })
+
+  const [step, setStep] = useState(0)
   const [gemeenteSearch, setGemeenteSearch] = useState('')
 
   const gemeenteFacets = facets?.gemeente ?? []
@@ -78,55 +91,62 @@ export default function WizardFlow({
 
   /* ── Navigation ────────────────────────────────────── */
   const goNext = () => {
-    if (step < 4) setStep(step + 1)
-    else onComplete()
+    if (step === 0 && schaal === 'landelijk') {
+      setStep(2)
+    } else if (step < 4) {
+      setStep(step + 1)
+    }
   }
 
   const goBack = () => {
+    if (step === 0) return
     if (step === 2 && schaal === 'landelijk') {
-      setStep(0) // skip back over location step
-    } else if (step > 0) {
+      setStep(0)
+    } else {
       setStep(step - 1)
     }
   }
 
   const handleSchaal = (s: Schaal) => {
+    if (s !== schaal) {
+      onFilterChange('gemeente', undefined)
+      onFilterChange('rechtbank_niveau', undefined)
+    }
     setSchaal(s)
-    onFilterChange('gemeente', undefined)
-    onFilterChange('rechtbank_niveau', undefined)
     if (s === 'landelijk') {
-      setStep(2) // skip location page
+      setStep(2)
     } else {
-      setStep(1) // go to location page
+      setStep(1)
     }
   }
 
-  /* ── Progress (skip dot 1 for landelijk) ───────────── */
+  /* ── Progress ──────────────────────────────────────── */
   const stepSequence = schaal === 'landelijk' ? [0, 2, 3, 4] : [0, 1, 2, 3, 4]
   const progressIndex = stepSequence.indexOf(step)
 
   return (
     <div className="flex h-full flex-col bg-grey-950">
-      {/* ── Progress dots ───────────────────────────────── */}
+      {/* ── Progress dots (clickable) ──────────────────── */}
       <div className="flex justify-center pt-8">
         <div className="flex items-center gap-2">
-          {stepSequence.map((_, i) => (
-            <div
+          {stepSequence.map((s, i) => (
+            <button
               key={i}
+              onClick={() => setStep(s)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 i === progressIndex
                   ? 'w-8 bg-amber-500'
                   : i < progressIndex
-                    ? 'w-2 bg-amber-500/50'
-                    : 'w-2 bg-grey-700'
+                    ? 'w-2 bg-amber-500/50 hover:bg-amber-400/70'
+                    : 'w-2 bg-grey-700 hover:bg-grey-600'
               }`}
             />
           ))}
         </div>
       </div>
 
-      {/* ── Step content (centered) ─────────────────────── */}
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
+      {/* ── Step content ─────────────────────────────────── */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
         {/* Step 0: Schaalniveau */}
         {step === 0 && (
           <StepPage
@@ -156,7 +176,7 @@ export default function WizardFlow({
           </StepPage>
         )}
 
-        {/* Step 1: Locatie (separate page) */}
+        {/* Step 1: Locatie — Provinciaal */}
         {step === 1 && schaal === 'provinciaal' && (
           <StepPage
             title="Welke regio?"
@@ -182,11 +202,9 @@ export default function WizardFlow({
           </StepPage>
         )}
 
+        {/* Step 1: Locatie — Gemeentelijk */}
         {step === 1 && schaal === 'gemeentelijk' && (
-          <StepPage
-            title="Welke gemeente?"
-            subtitle="Zoek en selecteer de gemeente"
-          >
+          <StepPage title="Welke gemeente?" subtitle="Zoek en selecteer de gemeente">
             <div className="mx-auto w-full max-w-2xl">
               <SearchInput
                 leftIcon={<Search size={16} />}
@@ -218,14 +236,29 @@ export default function WizardFlow({
           </StepPage>
         )}
 
+        {/* Step 1: Fallback — schaal not set */}
+        {step === 1 && !schaal && (
+          <StepPage
+            title="Kies eerst een schaalniveau"
+            subtitle="Ga terug om een schaalniveau te kiezen"
+          >
+            <button
+              onClick={() => setStep(0)}
+              className="rounded-lg bg-grey-800 px-4 py-2 text-sm text-grey-300 transition-colors hover:bg-grey-700"
+            >
+              Ga naar schaalniveau
+            </button>
+          </StepPage>
+        )}
+
         {/* Step 2: Vergunningstype */}
         {step === 2 && (
           <StepPage title="Wat voor project?" subtitle="Selecteer het vergunningstype">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(facets?.vergunningstype ?? []).map((f) => (
                 <WizardCard
                   key={f.value}
-                  label={f.value}
+                  label={VERGUNNINGSTYPE_LABELS[f.value] ?? f.value}
                   count={f.count}
                   selected={filters.vergunningstype === f.value}
                   onClick={() => {
@@ -287,7 +320,6 @@ export default function WizardFlow({
                     selected={isSelected}
                     onClick={() => {
                       onFilterChange('periode', opt.value === 'alles' ? undefined : opt.value)
-                      onComplete()
                     }}
                   />
                 )
@@ -298,7 +330,7 @@ export default function WizardFlow({
       </div>
 
       {/* ── Navigation bar ──────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-grey-800/50 px-6 py-5 sm:px-12">
+      <div className="flex items-center justify-between px-6 pb-6 sm:px-12">
         {step > 0 ? (
           <button
             onClick={goBack}
@@ -312,7 +344,7 @@ export default function WizardFlow({
         )}
 
         <div className="flex items-center gap-3">
-          {step < 4 && step !== 0 && (
+          {step > 0 && step < 4 && (
             <button
               onClick={goNext}
               className="rounded-lg px-4 py-2 text-sm text-grey-500 transition-colors hover:text-grey-300"
@@ -348,7 +380,7 @@ function StepPage({
     <div className="w-full max-w-3xl text-center">
       <h1 className="text-2xl font-bold text-grey-100 sm:text-3xl">{title}</h1>
       <p className="mt-2 text-sm text-grey-400 sm:text-base">{subtitle}</p>
-      <div className="mt-10">{children}</div>
+      <div className="mt-8">{children}</div>
     </div>
   )
 }
@@ -371,14 +403,17 @@ function WizardCard({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col rounded-xl border-2 p-6 text-left transition-all ${
+      className={`relative flex flex-col overflow-hidden rounded-xl border-2 px-4 py-5 text-left transition-all sm:p-6 ${
         selected
-          ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/5'
-          : 'border-grey-800 bg-grey-900 hover:border-grey-600 hover:shadow-md hover:shadow-grey-900/50'
+          ? 'border-amber-500 bg-amber-500/10'
+          : 'border-grey-800 bg-grey-900 hover:border-grey-600'
       }`}
     >
+      {selected && (
+        <Check size={16} className="absolute right-3 top-3 text-amber-400" />
+      )}
       <span
-        className={`block min-h-[1.75rem] text-lg font-semibold leading-7 ${
+        className={`block min-h-[1.75rem] break-words text-base font-semibold leading-6 sm:text-lg sm:leading-7 ${
           selected ? 'text-amber-300' : 'text-grey-100'
         }`}
       >
@@ -388,7 +423,7 @@ function WizardCard({
         {desc ?? '\u00A0'}
       </span>
       {count != null && (
-        <span className="mt-auto pt-2 block text-sm tabular-nums text-grey-500">
+        <span className="mt-auto block pt-2 text-sm tabular-nums text-grey-500">
           {count} zaken
         </span>
       )}
@@ -410,13 +445,16 @@ function SubCard({
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
+      className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
         selected
           ? 'border-amber-500/60 bg-amber-500/10 text-amber-300'
           : 'border-grey-700 text-grey-300 hover:border-grey-500 hover:bg-grey-900'
       }`}
     >
-      {label}
+      <span className="flex items-center gap-1.5">
+        {selected && <Check size={12} className="text-amber-400" />}
+        {label}
+      </span>
       <span className="ml-1.5 text-xs text-grey-500">({count})</span>
     </button>
   )

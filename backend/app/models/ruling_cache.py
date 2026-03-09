@@ -45,3 +45,6 @@ class RulingCache(Base, TimestampMixin):
 
     # Rechtsgronden classification (Phase 85)
     rechtsgronden: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # Opponent profiling — organizations acting as objectors/appellants
+    tegenstanders: Mapped[list | None] = mapped_column(JSONB, nullable=True)

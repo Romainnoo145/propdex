@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.ai.claude_client import AIParsingError, create_claude_client
-from app.ai.prompts import RECHTSGROND_CLASSIFICATIE_PROMPT
+from app.ai.prompts import RECHTSGROND_CLASSIFICATIE_PROMPT, TEGENSTANDER_EXTRACTIE_PROMPT
 from app.core.config import settings
 from app.models.ruling_cache import RulingCache
 from app.services.doorlooptijd import (
@@ -132,6 +132,7 @@ async def ruling_analysis_job(
                     ruling.ai_analysis = ra.model_dump()
                     ruling.vergunningstype = ra.vergunningstype
                     ruling.rechtsgronden = ra.rechtsgronden or []
+                    ruling.tegenstanders = ra.tegenstanders or []
                     ruling.ai_analyzed_at = datetime.utcnow()
 
                     # Extract filing date and compute doorlooptijd
@@ -334,6 +335,138 @@ async def rechtsgrond_backfill_job(ctx: dict) -> dict:
 
     except Exception as e:
         logger.exception("Unexpected error in rechtsgrond_backfill_job: %s", e)
+        return {"status": "error", "error": str(e)}
+    finally:
+        await engine.dispose()
+
+
+async def tegenstander_backfill_job(ctx: dict) -> dict:
+    """Background job: Extract opponent organizations from already-analyzed rulings.
+
+    Queries rulings with full_text but no tegenstanders, sends a lightweight
+    extraction prompt to Claude in batches, stores results.
+    """
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        pool_size=5,
+        max_overflow=10,
+        echo=False,
+    )
+    session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+
+    try:
+        async with session_factory() as session:
+            stmt = select(RulingCache).where(
+                RulingCache.tegenstanders.is_(None),
+                RulingCache.full_text.isnot(None),
+            )
+            result = await session.execute(stmt)
+            rulings = result.scalars().all()
+
+            if not rulings:
+                logger.info("No rulings need tegenstander backfill")
+                return {"status": "completed", "backfilled_count": 0}
+
+            logger.info(
+                "Starting tegenstander backfill for %d rulings", len(rulings)
+            )
+
+            claude_client = create_claude_client()
+            backfilled_count = 0
+
+            for i in range(0, len(rulings), BACKFILL_BATCH_SIZE):
+                batch = rulings[i : i + BACKFILL_BATCH_SIZE]
+
+                batch_input = []
+                ruling_map: dict[str, RulingCache] = {}
+                for r in batch:
+                    ruling_map[r.ecli] = r
+                    text_excerpt = (r.full_text or "")[:10000]
+                    batch_input.append({
+                        "ecli": r.ecli,
+                        "text": text_excerpt,
+                    })
+
+                user_message = json.dumps(batch_input, ensure_ascii=False)
+
+                try:
+                    response = await claude_client.client.messages.create(
+                        model=claude_client.model,
+                        max_tokens=1000,
+                        system=TEGENSTANDER_EXTRACTIE_PROMPT,
+                        messages=[
+                            {"role": "user", "content": user_message},
+                        ],
+                    )
+
+                    text_content = None
+                    for block in response.content:
+                        if block.type == "text":
+                            text_content = block.text
+                            break
+
+                    if not text_content:
+                        logger.warning("Empty response for tegenstander batch %d", i)
+                        continue
+
+                    json_text = text_content.strip()
+                    if json_text.startswith("```json"):
+                        json_text = json_text[7:]
+                    if json_text.startswith("```"):
+                        json_text = json_text[3:]
+                    if json_text.endswith("```"):
+                        json_text = json_text[:-3]
+                    json_text = json_text.strip()
+
+                    extractions = json.loads(json_text)
+
+                    for item in extractions:
+                        ecli = item.get("ecli", "")
+                        opponents = item.get("tegenstanders", [])
+
+                        ruling = ruling_map.get(ecli)
+                        if ruling:
+                            ruling.tegenstanders = opponents
+                            # Also update ai_analysis to include tegenstanders
+                            if ruling.ai_analysis and isinstance(ruling.ai_analysis, dict):
+                                updated = {**ruling.ai_analysis, "tegenstanders": opponents}
+                                ruling.ai_analysis = updated
+                            session.add(ruling)
+                            backfilled_count += 1
+
+                    await session.flush()
+                    await session.commit()
+
+                    logger.info(
+                        "Tegenstander batch %d-%d: %d extracted",
+                        i, i + len(batch), backfilled_count,
+                    )
+
+                except (AIParsingError, json.JSONDecodeError) as e:
+                    logger.error("Tegenstander batch %d failed: %s", i, e)
+                    continue
+                except Exception as e:
+                    logger.error("Unexpected error in tegenstander batch %d: %s", i, e)
+                    continue
+
+            logger.info(
+                "Tegenstander backfill complete: %d/%d extracted",
+                backfilled_count, len(rulings),
+            )
+            return {
+                "status": "completed",
+                "backfilled_count": backfilled_count,
+                "total": len(rulings),
+            }
+
+    except Exception as e:
+        logger.exception("Unexpected error in tegenstander_backfill_job: %s", e)
         return {"status": "error", "error": str(e)}
     finally:
         await engine.dispose()

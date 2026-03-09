@@ -127,7 +127,7 @@ export default function SideRailNav() {
         </Link>
 
         {/* Jurisprudentie explorer link */}
-        <Link to="/jurisprudentie" search={{ gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined }} className="group relative">
+        <Link to="/jurisprudentie" search={{ gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined, view: undefined }} className="group relative">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
               matchRoute({ to: '/jurisprudentie' })

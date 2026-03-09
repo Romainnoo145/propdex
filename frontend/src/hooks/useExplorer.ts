@@ -5,7 +5,7 @@
  * for the /jurisprudentie route.
  */
 
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
   fetchExplorerResults,
@@ -14,7 +14,7 @@ import {
 } from '@/lib/api'
 
 export type { ExplorerFilters, ExplorerResponse }
-export type { ExplorerRuling, FacetItem } from '@/lib/api'
+export type { ExplorerRuling, FacetItem, DoorlooptijdPerType, OpponentProfile } from '@/lib/api'
 
 const PAGE_SIZE = 20
 
@@ -42,6 +42,7 @@ export function useExplorerResults(filters: ExplorerFilters) {
       return undefined
     },
     enabled: !!accessToken,
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
   })
 }

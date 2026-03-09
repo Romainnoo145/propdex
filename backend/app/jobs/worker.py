@@ -14,7 +14,11 @@ from app.core.config import settings
 from app.jobs.area_scan import area_scan_job
 from app.jobs.change_monitor import daily_change_monitor_job
 from app.jobs.funda_snapshot import funda_snapshot_job
-from app.jobs.jurisprudence_analysis import rechtsgrond_backfill_job, ruling_analysis_job
+from app.jobs.jurisprudence_analysis import (
+    rechtsgrond_backfill_job,
+    ruling_analysis_job,
+    tegenstander_backfill_job,
+)
 from app.jobs.pdf_parsing import pdf_parsing_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
 
@@ -52,6 +56,7 @@ class WorkerSettings:
         rechtsgrond_backfill_job,
         ruling_analysis_job,
         ruling_ingestion_job,
+        tegenstander_backfill_job,
     ]
     redis_settings = get_redis_settings()
     max_jobs = 5  # Max concurrent jobs

@@ -30,7 +30,11 @@ from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
-from app.services.parcel_addressing import MIN_BUILDING_OVERLAP_M2, reverse_geocode_rd_point
+from app.services.parcel_addressing import (
+    MIN_BUILDING_OVERLAP_M2,
+    MIN_BUILDING_OVERLAP_RATIO,
+    reverse_geocode_rd_point,
+)
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
@@ -208,6 +212,9 @@ def _derive_bag_attributes_for_parcel(
             continue
         overlap_area = bag_geom.intersection(parcel_geometry).area
         if overlap_area < MIN_BUILDING_OVERLAP_M2:
+            continue
+        parcel_area = parcel_geometry.area
+        if parcel_area > 0 and overlap_area / parcel_area < MIN_BUILDING_OVERLAP_RATIO:
             continue
         total_footprint_area += overlap_area
         intersect_count += 1

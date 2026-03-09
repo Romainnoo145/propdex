@@ -16,7 +16,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
   const lossPct = decided > 0 ? Math.round((afgewezen / decided) * 100) : 0
   const partialPct = decided > 0 ? Math.round((gedeeltelijk / decided) * 100) : 0
 
-  // Average doorlooptijd from loaded results (best-effort from pages loaded so far)
+  // Average doorlooptijd from loaded results
   const doorlooptijdValues = results
     .map((r) => r.doorlooptijd_dagen)
     .filter((d): d is number => d != null)
@@ -30,19 +30,16 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
   return (
     <div className="mb-4 rounded-lg border border-grey-800 bg-grey-900 p-4">
       <div className="flex flex-wrap items-center gap-6">
-        {/* Total count */}
         <Stat value={totalCount} label="uitspraken" />
 
         <Divider />
 
-        {/* Win/loss percentages */}
         <Stat value={`${winPct}%`} label="toegewezen" className="text-emerald-400" />
         <Stat value={`${lossPct}%`} label="afgewezen" className="text-red-400" />
         {partialPct > 0 && (
           <Stat value={`${partialPct}%`} label="gedeeltelijk" className="text-amber-400" />
         )}
 
-        {/* Average doorlooptijd */}
         {avgDoorlooptijd != null && (
           <>
             <Divider />
@@ -50,7 +47,7 @@ export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: Be
           </>
         )}
 
-        {/* Visual distribution bar */}
+        {/* Distribution bar */}
         {decided > 0 && (
           <div className="ml-auto hidden w-48 sm:block">
             <div className="flex h-2.5 overflow-hidden rounded-full bg-grey-800">

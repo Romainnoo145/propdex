@@ -189,6 +189,10 @@ class RulingAnalysis(BaseModel):
         default_factory=list,
         description="Applicable legal grounds (1+ per ruling)",
     )
+    tegenstanders: list[str] = Field(
+        default_factory=list,
+        description="Organizations acting as objectors/appellants (no natural persons)",
+    )
 
 
 class DoorlooptijdStats(BaseModel):

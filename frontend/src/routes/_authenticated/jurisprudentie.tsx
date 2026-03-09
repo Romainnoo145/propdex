@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
+import { useRef, useCallback, useEffect, useMemo } from 'react'
 import { Scale, SlidersHorizontal, X } from 'lucide-react'
 import { useExplorerResults, type ExplorerFilters } from '@/hooks/useExplorer'
 import WizardFlow from '@/components/jurisprudentie/WizardFlow'
 import BenchmarkBar from '@/components/jurisprudentie/BenchmarkBar'
 import RulingCard from '@/components/jurisprudentie/RulingCard'
 import BroadenSuggestion from '@/components/jurisprudentie/BroadenSuggestion'
+import OpponentProfiles from '@/components/jurisprudentie/OpponentProfiles'
+import DoorlooptijdChart from '@/components/jurisprudentie/DoorlooptijdChart'
 import { Skeleton } from '@/components/feedback/Skeleton'
 
 const THEMA_LABELS: Record<string, string> = {
@@ -14,6 +16,18 @@ const THEMA_LABELS: Record<string, string> = {
   motiveringsgebrek: 'Onderbouwing',
   gelijkheidsbeginsel: 'Gelijke behandeling',
   disproportioneel: 'Evenredigheid',
+}
+
+const VERGUNNINGSTYPE_LABELS: Record<string, string> = {
+  nieuwbouw: 'Nieuwbouw',
+  verbouw: 'Verbouw',
+  dakopbouw: 'Dakopbouw',
+  uitbreiding: 'Uitbreiding',
+  sloop: 'Sloop',
+  bestemmingswijziging: 'Bestemmingswijziging',
+  milieu: 'Milieu',
+  monumenten: 'Monumenten',
+  overig: 'Overig',
 }
 
 const PERIODE_LABELS: Record<string, string> = {
@@ -42,6 +56,7 @@ export const Route = createFileRoute('/_authenticated/jurisprudentie')({
         : undefined,
     periode:
       typeof search.periode === 'string' && search.periode.trim() ? search.periode : undefined,
+    view: search.view === 'results' ? ('results' as const) : undefined,
   }),
   component: JurisprudentiePage,
 })
@@ -69,10 +84,7 @@ function JurisprudentiePage() {
     ]
   )
 
-  // Show wizard or results. Skip wizard if URL already has filters.
-  const [showWizard, setShowWizard] = useState(
-    () => !Object.values(filters).some(Boolean)
-  )
+  const showResults = search.view === 'results'
 
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useExplorerResults(filters)
@@ -82,10 +94,14 @@ function JurisprudentiePage() {
     [data?.pages]
   )
 
-  const facets = data?.pages[data.pages.length - 1]?.facets ?? null
+  const latestPage = data?.pages[data.pages.length - 1]
+  const facets = latestPage?.facets ?? null
   const totalCount = data?.pages[0]?.total_count ?? 0
+  const doorlooptijdPerType = latestPage?.doorlooptijd_per_type ?? []
+  const opponentProfiles = latestPage?.opponent_profiles ?? []
   const hasActiveFilters = Object.values(filters).some(Boolean)
 
+  /** Change a single filter dimension, stay in current view */
   const handleFilterChange = useCallback(
     (dimension: keyof ExplorerFilters, value: string | undefined) => {
       navigate({
@@ -98,11 +114,12 @@ function JurisprudentiePage() {
           rechtbank_niveau: filters.rechtbank_niveau,
           periode: filters.periode,
           [dimension]: value,
+          view: search.view,
         },
         replace: true,
       })
     },
-    [navigate, filters]
+    [navigate, filters, search.view]
   )
 
   const handleRemoveFilter = useCallback(
@@ -112,6 +129,25 @@ function JurisprudentiePage() {
     [handleFilterChange]
   )
 
+  /** Navigate to results view */
+  const goToResults = useCallback(() => {
+    navigate({
+      to: '/jurisprudentie',
+      search: { gemeente: filters.gemeente, vergunningstype: filters.vergunningstype, uitkomst: filters.uitkomst, rechtsgrond: filters.rechtsgrond, rechtbank_niveau: filters.rechtbank_niveau, periode: filters.periode, view: 'results' as const },
+      replace: true,
+    })
+  }, [navigate, filters])
+
+  /** Navigate back to wizard (keep filters) */
+  const goToWizard = useCallback(() => {
+    navigate({
+      to: '/jurisprudentie',
+      search: { gemeente: filters.gemeente, vergunningstype: filters.vergunningstype, uitkomst: filters.uitkomst, rechtsgrond: filters.rechtsgrond, rechtbank_niveau: filters.rechtbank_niveau, periode: filters.periode, view: undefined },
+      replace: true,
+    })
+  }, [navigate, filters])
+
+  /** Clear everything, back to wizard */
   const clearAllFilters = useCallback(() => {
     navigate({
       to: '/jurisprudentie',
@@ -122,10 +158,10 @@ function JurisprudentiePage() {
         rechtsgrond: undefined,
         rechtbank_niveau: undefined,
         periode: undefined,
+        view: undefined,
       },
       replace: true,
     })
-    setShowWizard(true)
   }, [navigate])
 
   // Infinite scroll sentinel
@@ -133,7 +169,7 @@ function JurisprudentiePage() {
 
   useEffect(() => {
     const sentinel = sentinelRef.current
-    if (!sentinel) return
+    if (!sentinel || !showResults) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -146,16 +182,16 @@ function JurisprudentiePage() {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  }, [showResults, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  /* ── Wizard mode ──────────────────────────────────── */
-  if (showWizard) {
+  /* ── Wizard mode (default landing) ──────────────── */
+  if (!showResults) {
     return (
       <WizardFlow
         filters={filters}
         facets={facets}
         onFilterChange={handleFilterChange}
-        onComplete={() => setShowWizard(false)}
+        onComplete={goToResults}
         totalCount={totalCount}
       />
     )
@@ -166,7 +202,7 @@ function JurisprudentiePage() {
     <div className="flex h-full flex-col overflow-hidden bg-grey-950">
       {/* Filter chips bar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-grey-800 bg-grey-900/50 px-6 py-3">
-        <Scale size={18} className="text-grey-400" />
+        <Scale size={18} className="text-amber-500/60" />
         <span className="text-sm font-medium text-grey-200">Jurisprudentie</span>
         <div className="mx-2 h-4 w-px bg-grey-700" />
 
@@ -181,7 +217,7 @@ function JurisprudentiePage() {
         )}
         {filters.vergunningstype && (
           <Chip
-            label={filters.vergunningstype}
+            label={VERGUNNINGSTYPE_LABELS[filters.vergunningstype] ?? filters.vergunningstype}
             onRemove={() => handleRemoveFilter('vergunningstype')}
           />
         )}
@@ -204,11 +240,11 @@ function JurisprudentiePage() {
 
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => setShowWizard(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-grey-700 px-3 py-1.5 text-xs text-grey-300 transition-colors hover:bg-grey-800"
+            onClick={goToWizard}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-500/25 px-3 py-1.5 text-xs text-amber-400 transition-colors hover:bg-amber-500/10"
           >
             <SlidersHorizontal size={13} />
-            Wizard
+            Filters aanpassen
           </button>
           {hasActiveFilters && (
             <button
@@ -232,6 +268,18 @@ function JurisprudentiePage() {
           />
         )}
 
+        {/* Doorlooptijd per type + Opponent profiles side by side */}
+        {!isLoading && (doorlooptijdPerType.length > 0 || opponentProfiles.length > 0) && (
+          <div className="mb-4 grid gap-4 lg:grid-cols-2">
+            {doorlooptijdPerType.length > 0 && (
+              <DoorlooptijdChart data={doorlooptijdPerType} />
+            )}
+            {opponentProfiles.length > 0 && (
+              <OpponentProfiles profiles={opponentProfiles} />
+            )}
+          </div>
+        )}
+
         {/* Broaden suggestion */}
         {!isLoading && totalCount < 3 && hasActiveFilters && (
           <div className="mb-4">
@@ -250,7 +298,7 @@ function JurisprudentiePage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-lg border border-grey-800 bg-grey-900 p-4 space-y-2"
+                className="space-y-2 rounded-lg border border-grey-800 bg-grey-900 p-4"
               >
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />
@@ -279,13 +327,13 @@ function JurisprudentiePage() {
             <Scale size={40} className="mb-3 text-grey-600" />
             <h2 className="text-lg font-semibold text-grey-300">Geen uitspraken gevonden</h2>
             <p className="mt-1 max-w-sm text-sm text-grey-500">
-              Pas je filters aan of gebruik de wizard om opnieuw te zoeken.
+              Pas je filters aan om meer resultaten te vinden.
             </p>
             <button
-              onClick={() => setShowWizard(true)}
+              onClick={goToWizard}
               className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-grey-950 transition-colors hover:bg-amber-400"
             >
-              Opnieuw zoeken
+              Filters aanpassen
             </button>
           </div>
         )}
@@ -293,7 +341,7 @@ function JurisprudentiePage() {
         {/* Loading more indicator */}
         {isFetchingNextPage && (
           <div className="mt-4 flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-grey-600 border-t-amber-accent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-grey-700 border-t-amber-500" />
           </div>
         )}
 
@@ -306,11 +354,11 @@ function JurisprudentiePage() {
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-grey-700 bg-grey-800 px-2.5 py-0.5 text-xs text-grey-300">
+    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-300">
       {label}
       <button
         onClick={onRemove}
-        className="ml-0.5 text-grey-500 transition-colors hover:text-grey-200"
+        className="ml-0.5 text-amber-400/50 transition-colors hover:text-amber-300"
       >
         <X size={10} />
       </button>

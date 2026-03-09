@@ -418,9 +418,12 @@ def _build_explorer_filters(
         clauses.append(RulingCache.uitkomst == uitkomst)
 
     if rechtsgrond and exclude_dimension != "rechtsgrond":
-        # JSONB array containment: rechtsgronden @> '["procedurefout"]'
+        # JSONB array containment — use CAST() not :: to avoid
+        # conflict with SQLAlchemy's :param syntax
         clauses.append(
-            RulingCache.rechtsgronden.op("@>")(f'["{rechtsgrond}"]')
+            text(
+                "ruling_cache.rechtsgronden @> CAST(:rg AS jsonb)"
+            ).bindparams(rg=f'["{rechtsgrond}"]')
         )
 
     if rechtbank_niveau and exclude_dimension != "rechtbank_niveau":
@@ -484,17 +487,50 @@ async def _compute_facet(
             .order_by(func.count().desc())
         )
     elif dimension == "rechtsgrond":
-        unnested = func.jsonb_array_elements_text(
-            RulingCache.rechtsgronden
-        ).column_valued("grond")
-        stmt = (
-            select(literal_column("grond").label("value"), func.count().label("count"))
-            .select_from(RulingCache)
-            .join(unnested, text("true"))
-            .where(RulingCache.rechtsgronden.isnot(None))
-            .group_by(literal_column("grond"))
-            .order_by(func.count().desc())
+        # Raw SQL for JSONB unnest — SQLAlchemy can't properly join
+        # set-returning functions with asyncpg.
+        where_parts = ["ruling_cache.rechtsgronden IS NOT NULL"]
+        params: dict[str, Any] = {}
+        # Apply cross-filter clauses manually (exclude_dimension=rechtsgrond
+        # means rechtsgrond filter is already excluded by _build_explorer_filters)
+        f = filters
+        if f.get("gemeente"):
+            where_parts.append(
+                "(ruling_cache.extracted_gemeente = :gemeente "
+                "OR ruling_cache.gemeente_query = :gemeente)"
+            )
+            params["gemeente"] = f["gemeente"]
+        if f.get("vergunningstype"):
+            where_parts.append("ruling_cache.vergunningstype = :vtype")
+            params["vtype"] = f["vergunningstype"]
+        if f.get("uitkomst"):
+            where_parts.append("ruling_cache.uitkomst = :uitkomst")
+            params["uitkomst"] = f["uitkomst"]
+        if f.get("rechtbank_niveau"):
+            niveau_map = {
+                "Rechtbank": "Rechtbank%",
+                "Gerechtshof": "Gerechtshof%",
+                "Raad van State": "%Raad van State%",
+            }
+            pattern = niveau_map.get(f["rechtbank_niveau"])
+            if pattern:
+                where_parts.append("ruling_cache.instantie ILIKE :niveau")
+                params["niveau"] = pattern
+        if f.get("periode"):
+            date_from = _periode_to_date(f["periode"])
+            if date_from:
+                where_parts.append("ruling_cache.datum_uitspraak >= :date_from")
+                params["date_from"] = date_from
+
+        where_sql = " AND ".join(where_parts)
+        raw = text(
+            "SELECT grond AS value, count(*) AS count "
+            "FROM ruling_cache, jsonb_array_elements_text(ruling_cache.rechtsgronden) AS grond "
+            f"WHERE {where_sql} "
+            "GROUP BY grond ORDER BY count(*) DESC"
         )
+        result = await db.execute(raw, params)
+        return [{"value": row.value, "count": row.count} for row in result.all()]
     elif dimension == "rechtbank_niveau":
         niveau = case(
             (RulingCache.instantie.ilike("Rechtbank%"), "Rechtbank"),
@@ -591,11 +627,77 @@ async def explore_rulings(
     for dim in ("gemeente", "vergunningstype", "uitkomst", "rechtsgrond", "rechtbank_niveau"):
         facets[dim] = await _compute_facet(db, dim, filter_params)
 
+    # Doorlooptijd stats per vergunningstype (using same filter set)
+    dl_stmt = (
+        select(
+            RulingCache.vergunningstype,
+            func.count(RulingCache.doorlooptijd_dagen).label("count"),
+            func.avg(RulingCache.doorlooptijd_dagen).label("avg_dagen"),
+            func.min(RulingCache.doorlooptijd_dagen).label("min_dagen"),
+            func.max(RulingCache.doorlooptijd_dagen).label("max_dagen"),
+        )
+        .where(
+            RulingCache.doorlooptijd_dagen.isnot(None),
+            RulingCache.vergunningstype.isnot(None),
+        )
+        .group_by(RulingCache.vergunningstype)
+    )
+    if all_clauses:
+        dl_stmt = dl_stmt.where(*all_clauses)
+    dl_rows = (await db.execute(dl_stmt)).all()
+
+    doorlooptijd_per_type = [
+        {
+            "vergunningstype": row.vergunningstype,
+            "count": row.count,
+            "avg_dagen": round(float(row.avg_dagen)) if row.avg_dagen else None,
+            "min_dagen": row.min_dagen,
+            "max_dagen": row.max_dagen,
+        }
+        for row in dl_rows
+        if row.count >= 2
+    ]
+
+    # Opponent profiles: aggregate tegenstanders across filtered results
+    opp_stmt = (
+        select(RulingCache.tegenstanders, RulingCache.ecli, RulingCache.uitkomst)
+        .where(RulingCache.tegenstanders.isnot(None))
+    )
+    if all_clauses:
+        opp_stmt = opp_stmt.where(*all_clauses)
+    opp_rows = (await db.execute(opp_stmt)).all()
+
+    # Normalize opponent names (case-insensitive dedup, keep first-seen casing)
+    opponent_map: dict[str, dict[str, Any]] = {}
+    name_canonical: dict[str, str] = {}  # lowered → first-seen original
+    for row in opp_rows:
+        opponents = row.tegenstanders
+        if not isinstance(opponents, list):
+            continue
+        for name in opponents:
+            key = name.lower().strip()
+            if key not in name_canonical:
+                name_canonical[key] = name
+            canonical = name_canonical[key]
+            if canonical not in opponent_map:
+                opponent_map[canonical] = {"naam": canonical, "zaken": 0, "gewonnen": 0, "verloren": 0}
+            opponent_map[canonical]["zaken"] += 1
+            if row.uitkomst == "toegewezen":
+                opponent_map[canonical]["gewonnen"] += 1
+            elif row.uitkomst == "afgewezen":
+                opponent_map[canonical]["verloren"] += 1
+
+    opponent_profiles = sorted(
+        opponent_map.values(), key=lambda x: x["zaken"], reverse=True
+    )
+
     return {
         "results": results,
         "total_count": total_count,
         "has_more": has_more,
         "facets": facets,
+        "doorlooptijd_per_type": doorlooptijd_per_type,
+        "opponent_profiles": opponent_profiles,
     }
 
 

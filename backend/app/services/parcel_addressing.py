@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Ignore pure boundary touches; require measurable overlap with the parcel.
 MIN_BUILDING_OVERLAP_M2 = 0.01
+# Building must cover at least 5% of parcel area to count as "on" the parcel.
+# Prevents tiny boundary overlaps (neighbor's wall overhang) from assigning
+# has_pand=true and a borrowed address to road/sidewalk parcels.
+MIN_BUILDING_OVERLAP_RATIO = 0.05
 
 
 async def find_bag_building_lookup_point(
@@ -74,6 +78,9 @@ async def find_bag_building_lookup_point(
             continue
         overlap_area = building_shape.intersection(parcel_shape).area
         if overlap_area < MIN_BUILDING_OVERLAP_M2:
+            continue
+        parcel_area = parcel_shape.area
+        if parcel_area > 0 and overlap_area / parcel_area < MIN_BUILDING_OVERLAP_RATIO:
             continue
         if overlap_area > best_overlap_area:
             point = building_shape.representative_point()

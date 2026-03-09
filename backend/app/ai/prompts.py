@@ -67,6 +67,11 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
    - "gelijkheidsbeginsel": Ongelijke behandeling t.o.v. vergelijkbare gevallen
    - "disproportioneel": Onevenredige weigering of voorwaarden
    - "etfal_ruimtelijke_ordening": Evenwichtige toedeling van functies aan locaties / ruimtelijke ordening
+7. tegenstanders: lijst van namen van ORGANISATIES die bezwaar/beroep aantekenen (stichtingen, verenigingen, bedrijven, overheidsinstanties).
+   - GEEN natuurlijke personen (die zijn geanonimiseerd als [eiser], [appellant] etc.)
+   - WEL: "Stichting Leefbaar Centrum", "Vereniging van Eigenaren ...", "B.V. ...", concurrerende bedrijven
+   - WEL: "burgemeester en wethouders van ..." als zij de verweerder zijn
+   - Lege lijst [] als er geen organisaties geidentificeerd kunnen worden
 
 **Geaggregeerde analyse:**
 1. risico_samenvatting: 3-5 zinnen in het Nederlands die het juridisch klimaat voor vastgoedontwikkeling samenvatten
@@ -91,7 +96,8 @@ Je ontvangt een lijst van gerechtelijke uitspraken (met ECLI, instantie, datum e
       "relevantie": "<1-2 zinnen>",
       "confidence": "<HIGH|MEDIUM|LOW>",
       "vergunningstype": "<nieuwbouw|verbouw|dakopbouw|uitbreiding|sloop|bestemmingswijziging|milieu|monumenten|overig>",
-      "rechtsgronden": ["<procedurefout|motiveringsgebrek|gelijkheidsbeginsel|disproportioneel|etfal_ruimtelijke_ordening>"]
+      "rechtsgronden": ["<procedurefout|motiveringsgebrek|gelijkheidsbeginsel|disproportioneel|etfal_ruimtelijke_ordening>"],
+      "tegenstanders": ["<organisatienaam>"]
     }
   ]
 }
@@ -116,6 +122,29 @@ Je bent een expert in Nederlands omgevingsrecht. Classificeer de volgende gerech
 **Retourneer het resultaat als JSON array:**
 [
   {"ecli": "<ECLI>", "rechtsgronden": ["<grond1>", "<grond2>"]},
+  ...
+]
+
+Retourneer ALLEEN de JSON array, zonder markdown code fences of andere tekst.
+"""
+
+TEGENSTANDER_EXTRACTIE_PROMPT = """
+Je bent een expert in Nederlands omgevingsrecht. Identificeer de ORGANISATIES die als bezwaarmaker, appellant of belanghebbende partij optreden in de volgende gerechtelijke uitspraken.
+
+**Regels:**
+- Alleen ORGANISATIES: stichtingen, verenigingen, B.V.'s, overheidsinstanties, bedrijven
+- GEEN natuurlijke personen (geanonimiseerd als [eiser], [appellant], [verzoeker], etc.)
+- WEL: "Stichting ...", "Vereniging van Eigenaren ...", "... B.V.", "... N.V."
+- WEL: "burgemeester en wethouders van ..." of "college van B&W van ..." als verweerder
+- Lege lijst als er geen organisaties geidentificeerd kunnen worden
+
+**Per uitspraak geef je:**
+- ecli: de ECLI-identifier zoals aangeleverd
+- tegenstanders: lijst van organisatienamen
+
+**Retourneer het resultaat als JSON array:**
+[
+  {"ecli": "<ECLI>", "tegenstanders": ["<organisatie1>", "<organisatie2>"]},
   ...
 ]
 
