@@ -37,7 +37,7 @@
 - [x] **Phase 82: Ruling Cache + ECLI Court Mapping** - Persistent ruling storage with gemeente-to-rechtbank mapping and ECLI-scoped ingestion pipeline (completed 2026-03-07)
 - [x] **Phase 83: Geo-Contextualization + Gemeente Feed** - Extract gemeente from ruling text and expose auto-populated chronological feed per gemeente (completed 2026-03-07)
 - [x] **Phase 84: AI Analysis Upgrade + Doorlooptijd** - Filtered AI analysis on location-relevant rulings with vergunningstype classification and procedure duration calculation (completed 2026-03-08)
-- [ ] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering
+- [x] **Phase 85: Explorer UI** - Two-tab layout with multi-filter search, pagination, and progressive filtering (completed 2026-03-09)
 - [ ] **Phase 86: Trend & Statistics** - Rolling klimaat score trends and aggregated statistics with CSS-only visualization
 
 ## Phase Details
@@ -97,7 +97,7 @@ Plans:
   2. Explorer shows a filter sidebar with scope, vergunningstype, uitkomst, and tijdsperiode filters, each showing result counts before applying
   3. Large result sets paginate smoothly via infinite scroll (useInfiniteQuery pattern)
   4. When results are fewer than 3, the UI suggests broadening the search ("Verbreed uw zoekopdracht" with actionable suggestions)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 85-01-PLAN.md — Backend: rechtsgronden migration + AI classifier + explorer endpoint with faceted counts
@@ -127,7 +127,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | 82. Ruling Cache + ECLI Court Mapping | 2/2 | Complete    | 2026-03-07 |
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
-| 85. Explorer UI | 1/2 | In Progress|  |
+| 85. Explorer UI | 2/2 | Complete   | 2026-03-09 |
 | 86. Trend & Statistics | 0/2 | Not started | - |
 
 ---

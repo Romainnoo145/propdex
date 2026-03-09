@@ -12,20 +12,20 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 85 of 86 (Explorer UI)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-03-09 -- Completed 85-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-03-09 -- Completed 85-02-PLAN.md
 
-Progress: [████████░░] 87%
+Progress: [█████████░] 93%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 4.4min
-- Total execution time: 31min
+- Total execution time: 35min
 
 **By Phase:**
 
@@ -34,7 +34,7 @@ Progress: [████████░░] 87%
 | 82 | 2 | 7min | 3.5min |
 | 83 | 2 | 6min | 3min |
 | 84 | 2 | 14min | 7min |
-| 85 | 1 | 4min | 4min |
+| 85 | 2 | 8min | 4min |
 
 *Updated after each plan completion*
 
@@ -78,6 +78,9 @@ Progress: [████████░░] 87%
 - [Phase 85]: Lightweight rechtsgrond-only backfill prompt (avoids full re-analysis cost)
 - [Phase 85]: JSONB @> containment for rechtsgrond filtering, jsonb_array_elements_text for facet grouping
 - [Phase 85]: Rechtbank niveau derived via CASE/ILIKE from instantie (no new column)
+- [Phase 85]: URL search params for all 6 filter dimensions (bookmarkable/shareable)
+- [Phase 85]: IntersectionObserver sentinel for infinite scroll
+- [Phase 85]: Checkbox single-select per dimension matching backend query params
 
 ### Pending Todos
 
@@ -92,12 +95,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T02:41:26Z
-**Stopped At:** Completed 85-01-PLAN.md
-**Resume File:** .planning/phases/85-explorer-ui/85-01-SUMMARY.md
+**Last Session:** 2026-03-09T02:49:35Z
+**Stopped At:** Completed 85-02-PLAN.md
+**Resume File:** .planning/phases/85-explorer-ui/85-02-SUMMARY.md
 
-**Next Action:** Execute 85-02-PLAN.md (Explorer Frontend)
+**Next Action:** Execute Phase 86 (Trend analysis) or finalize v13.0
 
 ---
 
-*State updated: 2026-03-09 -- Completed 85-01-PLAN.md*
+*State updated: 2026-03-09 -- Completed 85-02-PLAN.md*
