@@ -46,6 +46,11 @@ from app.services.address_resolver import resolve_address
 from app.services.asbest_indicator import assess_asbest_risk
 from app.services.bodem_aggregator import fetch_bodem_data as _fetch_bodem
 from app.services.cache_manager import get_cached_or_fetch
+from app.services.foundation_risk_engine import (
+    assess_foundation_risk,
+    build_fysiek_risico_profiel,
+    estimate_kcaf_cost,
+)
 from app.services.funderingsrisico_aggregator import fetch_funderingsrisico_data
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
@@ -1063,6 +1068,25 @@ async def aggregate_property_data(
     )
     asbest_result: AsbestIndicator = assess_asbest_risk(building=building)
 
+    # Phase 88: Foundation risk engine (synchronous, no I/O)
+    foundation_risk = assess_foundation_risk(
+        building=building,
+        soil_profile=soil_profile,
+        funderingsrisicogebied=funderingsrisicogebied,
+    )
+    kcaf_cost = estimate_kcaf_cost(
+        risk=foundation_risk.risk,
+        oppervlakte_m2=building.oppervlakte if building else None,
+    )
+    fysiek_risico_profiel = build_fysiek_risico_profiel(
+        foundation_risk=foundation_risk,
+        soil_profile=soil_profile,
+        asbest_indicator=asbest_result,
+        bodem_data=bodem_data,
+        funderingsrisicogebied=funderingsrisicogebied,
+        kcaf_cost=kcaf_cost,
+    )
+
     # Build MapData with WGS84 coordinate transformation
     map_data: MapData | None = None
     if coordinates:
@@ -1348,4 +1372,5 @@ async def aggregate_property_data(
         bodem_data=bodem_data,
         soil_profile=soil_profile,
         funderingsrisicogebied=funderingsrisicogebied,
+        fysiek_risico_profiel=fysiek_risico_profiel,
     )

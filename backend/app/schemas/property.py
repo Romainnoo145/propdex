@@ -11,7 +11,7 @@ from app.schemas.address import BAGAddressResponse, BuildingData
 from app.schemas.bodem import BodemData
 from app.schemas.brk_ownership import BRKOwnership
 from app.schemas.energy_label import EnergyLabel
-from app.schemas.fysiek_risico import FunderingsrisicogebiedData, SoilProfile
+from app.schemas.fysiek_risico import FunderingsrisicogebiedData, FysiekRisicoProfiel, SoilProfile
 from app.schemas.monument import MonumentStatus
 from app.schemas.woz import WOZData
 from app.schemas.zoning import ZoningData
@@ -561,4 +561,9 @@ class PropertyReportResponse(BaseModel):
     funderingsrisicogebied: FunderingsrisicogebiedData | None = Field(
         default=None,
         description="PDOK funderingsrisicogebied context for parcel postcode area",
+    )
+    # Phase 88 additions (v14.0 Foundation Risk Engine)
+    fysiek_risico_profiel: FysiekRisicoProfiel | None = Field(
+        default=None,
+        description="Combined physical risk profile: foundation, soil, asbest, contamination",
     )
