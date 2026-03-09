@@ -34,6 +34,7 @@ interface LayerToggleProps {
   onReportStatusToggle?: (visible: boolean) => void
   onVacancySignalToggle?: (visible: boolean) => void
   onBuildCapacityToggle?: (visible: boolean) => void
+  onFoundationRiskToggle?: (visible: boolean) => void
   onBAGPandenToggle?: (visible: boolean) => void
   onScannedScopeToggle?: (visible: boolean) => void
 
@@ -61,6 +62,7 @@ function LayerToggle({
   onReportStatusToggle,
   onVacancySignalToggle,
   onBuildCapacityToggle,
+  onFoundationRiskToggle,
   onBAGPandenToggle,
   onScannedScopeToggle,
   autoEnableParcelsKey,
@@ -113,17 +115,19 @@ function LayerToggle({
   }, [mapRef])
 
   const setParcelOverlayMode = useCallback(
-    (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'none') => {
+    (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | 'none') => {
       const isScore = mode === 'score'
       const isBuilt = mode === 'built'
       const isReport = mode === 'report'
       const isVacancy = mode === 'vacancy'
       const isCapacity = mode === 'capacity'
+      const isFoundation = mode === 'foundation'
       onScoreToggle?.(isScore)
       onBuiltStatusToggle?.(isBuilt)
       onReportStatusToggle?.(isReport)
       onVacancySignalToggle?.(isVacancy)
       onBuildCapacityToggle?.(isCapacity)
+      onFoundationRiskToggle?.(isFoundation)
       if (mode !== 'none') {
         ensureParcelInteractionZoom()
       }
@@ -132,6 +136,7 @@ function LayerToggle({
       ensureParcelInteractionZoom,
       onBuildCapacityToggle,
       onBuiltStatusToggle,
+      onFoundationRiskToggle,
       onReportStatusToggle,
       onScoreToggle,
       onVacancySignalToggle,
@@ -197,9 +202,10 @@ function LayerToggle({
   const showReportStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
   const showVacancySignal = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
   const showBuildCapacity = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
+  const showFoundationRisk = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[5].id
 
   const hasActiveOverlay =
-    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity
+    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity || showFoundationRisk
 
   // Derived: ensures parcels always have an overlay when visible
   const needsDefaultOverlay = useMemo(
@@ -237,6 +243,7 @@ function LayerToggle({
       onReportStatusToggle?.(false)
       onVacancySignalToggle?.(false)
       onBuildCapacityToggle?.(false)
+      onFoundationRiskToggle?.(false)
     }
   }
 

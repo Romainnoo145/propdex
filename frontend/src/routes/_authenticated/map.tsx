@@ -51,8 +51,10 @@ import {
   PARCEL_REPORT_STATUS_FILL_LAYER_ID,
   PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID,
   PARCEL_BUILD_CAPACITY_FILL_LAYER_ID,
+  PARCEL_FOUNDATION_RISK_FILL_LAYER_ID,
   setParcelBuiltStatusVisibility,
   setParcelBuildCapacityVisibility,
+  setParcelFoundationRiskVisibility,
   setParcelVacancySignalVisibility,
   setParcelReportStatusVisibility,
   setParcelScoreVisibility,
@@ -1175,6 +1177,7 @@ function MapPage() {
       PARCEL_REPORT_STATUS_FILL_LAYER_ID,
       PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID,
       PARCEL_BUILD_CAPACITY_FILL_LAYER_ID,
+      PARCEL_FOUNDATION_RISK_FILL_LAYER_ID,
     ]
 
     const buildParcelFromFeatureProps = (
@@ -1894,6 +1897,15 @@ function MapPage() {
     [layerActions]
   )
 
+  const handleFoundationRiskToggle = useCallback(
+    (visible: boolean) => {
+      if (!mapRef.current) return
+      setParcelFoundationRiskVisibility(mapRef.current, visible)
+      if (visible) layerActions.setActiveParcelOverlay('foundation_risk')
+    },
+    [layerActions]
+  )
+
   const handleScannedScopeToggle = useCallback((visible: boolean) => {
     setShowScannedWijkBoundaries(visible)
   }, [])
@@ -2164,6 +2176,7 @@ function MapPage() {
         onReportStatusToggle={handleReportStatusToggle}
         onVacancySignalToggle={handleVacancySignalToggle}
         onBuildCapacityToggle={handleBuildCapacityToggle}
+        onFoundationRiskToggle={handleFoundationRiskToggle}
         hasScoreData={!!activeScanId}
       />
 

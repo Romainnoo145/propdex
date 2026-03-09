@@ -6,6 +6,7 @@ export type ParcelOverlayLayerId =
   | 'report_coverage'
   | 'vacancy_signal'
   | 'build_capacity'
+  | 'foundation_risk'
 
 export interface PersistedMapLayerState {
   basemap: BaseMapLayerId
@@ -43,6 +44,11 @@ export const MAP_LAYER_CATALOG = {
       id: 'build_capacity' as const,
       label: 'Planruimte',
       description: 'Planruimte op basis van FAR/TAR-indicatoren',
+    },
+    {
+      id: 'foundation_risk' as const,
+      label: 'Funderingsrisico',
+      description: 'Indicatief risico op basis van bouwjaar (pre-1970)',
     },
   ],
   boundaryOverlays: [

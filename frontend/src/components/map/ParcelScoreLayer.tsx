@@ -8,6 +8,7 @@ export const PARCEL_BUILT_STATUS_FILL_LAYER_ID = 'parcel-built-status-fill';
 export const PARCEL_REPORT_STATUS_FILL_LAYER_ID = 'parcel-report-status-fill';
 export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
 export const PARCEL_BUILD_CAPACITY_FILL_LAYER_ID = 'parcel-build-capacity-fill';
+export const PARCEL_FOUNDATION_RISK_FILL_LAYER_ID = 'parcel-foundation-risk-fill';
 
 
 // Track hovered parcel for feature-state management
@@ -213,6 +214,41 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
+  // Optional overlay layer to show foundation risk based on bouwjaar.
+  // Hidden by default and toggled from LayerToggle.
+  map.addLayer({
+    id: PARCEL_FOUNDATION_RISK_FILL_LAYER_ID,
+    type: 'fill',
+    source: SOURCE_ID,
+    'source-layer': sourceLayer,
+    filter: ['has', 'score'],
+    layout: {
+      visibility: 'none',
+    },
+    paint: {
+      'fill-color': [
+        'match',
+        ['get', 'foundation_risk_level'],
+        'hoog',
+        '#f59e0b',   // Amber -- high risk (pre-1970)
+        'middel',
+        '#fbbf24',   // Light amber -- medium risk (1970-1990)
+        'laag',
+        '#64748b',   // Slate -- low risk (post-1990)
+        '#475569',   // Default (onbekend) -- darker slate
+      ],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.9,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.8,
+        0.58,
+      ],
+    },
+    minzoom: 14,
+  });
+
   // Add outline layer only for qualifying parcels (score >= 40)
   map.addLayer({
     id: OUTLINE_LAYER_ID,
@@ -304,11 +340,13 @@ export function addParcelScoreLayer(
   map.on('mousemove', PARCEL_REPORT_STATUS_FILL_LAYER_ID, handleMouseMove);
   map.on('mousemove', PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, handleMouseMove);
   map.on('mousemove', PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, handleMouseMove);
+  map.on('mousemove', PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, handleMouseMove);
   map.on('mouseleave', PARCEL_SCORE_FILL_LAYER_ID, handleMouseLeave);
   map.on('mouseleave', PARCEL_BUILT_STATUS_FILL_LAYER_ID, handleMouseLeave);
   map.on('mouseleave', PARCEL_REPORT_STATUS_FILL_LAYER_ID, handleMouseLeave);
   map.on('mouseleave', PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, handleMouseLeave);
   map.on('mouseleave', PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, handleMouseLeave);
+  map.on('mouseleave', PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, handleMouseLeave);
 }
 
 /**
@@ -402,6 +440,10 @@ export function removeParcelScoreLayer(map: maplibregl.Map): void {
 
   if (map.getLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID)) {
     map.removeLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID);
+  }
+
+  if (map.getLayer(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID)) {
+    map.removeLayer(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID);
   }
 
   if (map.getLayer(OUTLINE_LAYER_ID)) {
@@ -514,6 +556,24 @@ export function setParcelBuildCapacityVisibility(
 
   if (map.getLayer(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID)) {
     map.setLayoutProperty(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, 'visibility', visibility);
+  }
+}
+
+/**
+ * Toggle visibility of foundation-risk parcel overlay.
+ *
+ * @param map - MapLibre GL JS map instance
+ * @param visible - Whether layer should be visible
+ */
+export function setParcelFoundationRiskVisibility(
+  map: maplibregl.Map,
+  visible: boolean
+): void {
+  if (!map.isStyleLoaded()) return;
+  const visibility = visible ? 'visible' : 'none';
+
+  if (map.getLayer(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID)) {
+    map.setLayoutProperty(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, 'visibility', visibility);
   }
 }
 
