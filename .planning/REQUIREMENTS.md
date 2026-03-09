@@ -14,9 +14,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Foundation Risk
 
-- [ ] **FUND-01**: User sees foundation risk rating (HOOG/MIDDEL/LAAG/ONBEKEND) derived from bouwjaar x bodemtype heuristic
-- [ ] **FUND-02**: User sees combined Fysiek Risicoprofiel summary with traffic-light rating and Dutch-language explanation
-- [ ] **FUND-03**: User sees KCAF reference cost range for foundation repair based on pand footprint and risk level
+- [x] **FUND-01**: User sees foundation risk rating (HOOG/MIDDEL/LAAG/ONBEKEND) derived from bouwjaar x bodemtype heuristic
+- [x] **FUND-02**: User sees combined Fysiek Risicoprofiel summary with traffic-light rating and Dutch-language explanation
+- [x] **FUND-03**: User sees KCAF reference cost range for foundation repair based on pand footprint and risk level
 
 ### Asbestos Enhancement
 
@@ -66,9 +66,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | BODEM-01 | Phase 87 | Complete |
 | BODEM-02 | Phase 87 | Complete |
-| FUND-01 | Phase 88 | Pending |
-| FUND-02 | Phase 88 | Pending |
-| FUND-03 | Phase 88 | Pending |
+| FUND-01 | Phase 88 | Complete |
+| FUND-02 | Phase 88 | Complete |
+| FUND-03 | Phase 88 | Complete |
 | ASBT-01 | Phase 89 | Pending |
 | ASBT-02 | Phase 89 | Pending |
 | FRNT-01 | Phase 90 | Pending |
