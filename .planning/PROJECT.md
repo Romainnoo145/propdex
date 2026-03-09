@@ -179,6 +179,23 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
+## Current Milestone: v15.0 Aura
+
+**Goal:** Complete frontend overhaul — replace Industrial Amber with "Aura" design system (glassmorphism, bento grid, Satoshi font), rebuild every view as a viewport-locked floating interface over the map, eliminate all scrolling via click-through progressive disclosure.
+
+**Target features:**
+- Aura design system: Soft-Tech palette, glassmorphism on key surfaces, Satoshi font, bento grid pods
+- Viewport-locked layout: map fills 100%, floating SideRailNav left, search pill top-left, filter chips top-center
+- Parcel detail: floating right panel, satellite crop hero, score badge overlay, click-through data layers
+- Wijk bottom bento sheet: 4-column fly-up layout replacing sidebar
+- Backend parcel aerial crop API endpoint
+- Results table: Aura visual treatment on /resultaten route
+- Jurisprudentie: full wizard + explorer redesign in Aura
+- Meldingen: full redesign with bento cards
+- Reports page: bento layout with click-through sections
+- Settings: Aura visual update
+- Desktop only, light mode only (drop dark mode)
+
 ### Future
 
 - [ ] Additional professional verticals: tekenaars, constructeurs, asbest/bodem onderzoekers, aannemers
@@ -270,4 +287,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-10 after v14.0 milestone*
+*Last updated: 2026-03-10 after v15.0 Aura milestone start*

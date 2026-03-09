@@ -5,15 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** Planning next milestone
+**Current focus:** v15.0 Aura -- complete frontend overhaul
 
 ---
 
 ## Current Position
 
-Status: Between milestones
-Last milestone: v14.0 Fysiek Risicoprofiel (shipped 2026-03-10)
-Last activity: 2026-03-10 -- Milestone v14.0 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-10 -- Milestone v15.0 Aura started
 
 ## Accumulated Context
 
