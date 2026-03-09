@@ -460,52 +460,37 @@ async def _compute_facet(
     clauses = _build_explorer_filters(**filters, exclude_dimension=dimension)
 
     if dimension == "gemeente":
-        # Coalesce extracted_gemeente and gemeente_query for grouping
         gemeente_col = func.coalesce(
             RulingCache.extracted_gemeente, RulingCache.gemeente_query
         )
         stmt = (
             select(gemeente_col.label("value"), func.count().label("count"))
-            .where(*clauses)
             .where(gemeente_col.isnot(None))
             .group_by(gemeente_col)
             .order_by(func.count().desc())
         )
     elif dimension == "vergunningstype":
         stmt = (
-            select(
-                RulingCache.vergunningstype.label("value"),
-                func.count().label("count"),
-            )
-            .where(*clauses)
+            select(RulingCache.vergunningstype.label("value"), func.count().label("count"))
             .where(RulingCache.vergunningstype.isnot(None))
             .group_by(RulingCache.vergunningstype)
             .order_by(func.count().desc())
         )
     elif dimension == "uitkomst":
         stmt = (
-            select(
-                RulingCache.uitkomst.label("value"),
-                func.count().label("count"),
-            )
-            .where(*clauses)
+            select(RulingCache.uitkomst.label("value"), func.count().label("count"))
             .where(RulingCache.uitkomst.isnot(None))
             .group_by(RulingCache.uitkomst)
             .order_by(func.count().desc())
         )
     elif dimension == "rechtsgrond":
-        # Unnest JSONB array for grouping
         unnested = func.jsonb_array_elements_text(
             RulingCache.rechtsgronden
         ).column_valued("grond")
         stmt = (
-            select(
-                literal_column("grond").label("value"),
-                func.count().label("count"),
-            )
+            select(literal_column("grond").label("value"), func.count().label("count"))
             .select_from(RulingCache)
             .join(unnested, text("true"))
-            .where(*clauses)
             .where(RulingCache.rechtsgronden.isnot(None))
             .group_by(literal_column("grond"))
             .order_by(func.count().desc())
@@ -519,13 +504,15 @@ async def _compute_facet(
         )
         stmt = (
             select(niveau.label("value"), func.count().label("count"))
-            .where(*clauses)
             .where(RulingCache.instantie.isnot(None))
             .group_by(niveau)
             .order_by(func.count().desc())
         )
     else:
         return []
+
+    if clauses:
+        stmt = stmt.where(*clauses)
 
     result = await db.execute(stmt)
     return [{"value": row.value, "count": row.count} for row in result.all()]
@@ -563,13 +550,11 @@ async def explore_rulings(
     all_clauses = _build_explorer_filters(**filter_params)
 
     # Fetch limit+1 for has_more detection
-    stmt = (
-        select(RulingCache)
-        .where(*all_clauses)
-        .order_by(RulingCache.datum_uitspraak.desc().nulls_last())
-        .offset(offset)
-        .limit(limit + 1)
-    )
+    stmt = select(RulingCache).order_by(
+        RulingCache.datum_uitspraak.desc().nulls_last()
+    ).offset(offset).limit(limit + 1)
+    if all_clauses:
+        stmt = stmt.where(*all_clauses)
     result = await db.execute(stmt)
     rows = result.scalars().all()
 
@@ -577,7 +562,9 @@ async def explore_rulings(
     rulings = rows[:limit]
 
     # Total count
-    count_stmt = select(func.count()).select_from(RulingCache).where(*all_clauses)
+    count_stmt = select(func.count()).select_from(RulingCache)
+    if all_clauses:
+        count_stmt = count_stmt.where(*all_clauses)
     total_count = (await db.execute(count_stmt)).scalar() or 0
 
     # Serialize results

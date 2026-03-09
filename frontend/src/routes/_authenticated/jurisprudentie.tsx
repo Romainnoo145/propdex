@@ -1,32 +1,47 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
-import { Scale, Filter } from 'lucide-react'
+import { Scale, SlidersHorizontal, X } from 'lucide-react'
 import { useExplorerResults, type ExplorerFilters } from '@/hooks/useExplorer'
-import ExplorerFilterSidebar from '@/components/jurisprudentie/ExplorerFilterSidebar'
+import WizardFlow from '@/components/jurisprudentie/WizardFlow'
+import BenchmarkBar from '@/components/jurisprudentie/BenchmarkBar'
 import RulingCard from '@/components/jurisprudentie/RulingCard'
 import BroadenSuggestion from '@/components/jurisprudentie/BroadenSuggestion'
 import { Skeleton } from '@/components/feedback/Skeleton'
 
+const THEMA_LABELS: Record<string, string> = {
+  etfal_ruimtelijke_ordening: 'Ruimtelijke impact',
+  procedurefout: 'Procedure & proces',
+  motiveringsgebrek: 'Onderbouwing',
+  gelijkheidsbeginsel: 'Gelijke behandeling',
+  disproportioneel: 'Evenredigheid',
+}
+
+const PERIODE_LABELS: Record<string, string> = {
+  '1jaar': '1 jaar',
+  '3jaar': '3 jaar',
+  '5jaar': '5 jaar',
+}
+
 export const Route = createFileRoute('/_authenticated/jurisprudentie')({
   validateSearch: (search: Record<string, unknown>) => ({
-    gemeente: typeof search.gemeente === 'string' && search.gemeente.trim()
-      ? search.gemeente
-      : undefined,
-    vergunningstype: typeof search.vergunningstype === 'string' && search.vergunningstype.trim()
-      ? search.vergunningstype
-      : undefined,
-    uitkomst: typeof search.uitkomst === 'string' && search.uitkomst.trim()
-      ? search.uitkomst
-      : undefined,
-    rechtsgrond: typeof search.rechtsgrond === 'string' && search.rechtsgrond.trim()
-      ? search.rechtsgrond
-      : undefined,
-    rechtbank_niveau: typeof search.rechtbank_niveau === 'string' && search.rechtbank_niveau.trim()
-      ? search.rechtbank_niveau
-      : undefined,
-    periode: typeof search.periode === 'string' && search.periode.trim()
-      ? search.periode
-      : undefined,
+    gemeente:
+      typeof search.gemeente === 'string' && search.gemeente.trim() ? search.gemeente : undefined,
+    vergunningstype:
+      typeof search.vergunningstype === 'string' && search.vergunningstype.trim()
+        ? search.vergunningstype
+        : undefined,
+    uitkomst:
+      typeof search.uitkomst === 'string' && search.uitkomst.trim() ? search.uitkomst : undefined,
+    rechtsgrond:
+      typeof search.rechtsgrond === 'string' && search.rechtsgrond.trim()
+        ? search.rechtsgrond
+        : undefined,
+    rechtbank_niveau:
+      typeof search.rechtbank_niveau === 'string' && search.rechtbank_niveau.trim()
+        ? search.rechtbank_niveau
+        : undefined,
+    periode:
+      typeof search.periode === 'string' && search.periode.trim() ? search.periode : undefined,
   }),
   component: JurisprudentiePage,
 })
@@ -34,38 +49,43 @@ export const Route = createFileRoute('/_authenticated/jurisprudentie')({
 function JurisprudentiePage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const filters: ExplorerFilters = useMemo(() => ({
-    gemeente: search.gemeente,
-    vergunningstype: search.vergunningstype,
-    uitkomst: search.uitkomst,
-    rechtsgrond: search.rechtsgrond,
-    rechtbank_niveau: search.rechtbank_niveau,
-    periode: search.periode,
-  }), [search.gemeente, search.vergunningstype, search.uitkomst, search.rechtsgrond, search.rechtbank_niveau, search.periode])
+  const filters: ExplorerFilters = useMemo(
+    () => ({
+      gemeente: search.gemeente,
+      vergunningstype: search.vergunningstype,
+      uitkomst: search.uitkomst,
+      rechtsgrond: search.rechtsgrond,
+      rechtbank_niveau: search.rechtbank_niveau,
+      periode: search.periode,
+    }),
+    [
+      search.gemeente,
+      search.vergunningstype,
+      search.uitkomst,
+      search.rechtsgrond,
+      search.rechtbank_niveau,
+      search.periode,
+    ]
+  )
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useExplorerResults(filters)
+  // Show wizard or results. Skip wizard if URL already has filters.
+  const [showWizard, setShowWizard] = useState(
+    () => !Object.values(filters).some(Boolean)
+  )
 
-  // Flatten all pages into a single list
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useExplorerResults(filters)
+
   const allResults = useMemo(
     () => data?.pages.flatMap((page) => page.results) ?? [],
     [data?.pages]
   )
 
-  // Facets from the latest page
   const facets = data?.pages[data.pages.length - 1]?.facets ?? null
   const totalCount = data?.pages[0]?.total_count ?? 0
-
   const hasActiveFilters = Object.values(filters).some(Boolean)
 
-  // Handle filter changes via URL search params
   const handleFilterChange = useCallback(
     (dimension: keyof ExplorerFilters, value: string | undefined) => {
       navigate({
@@ -92,6 +112,22 @@ function JurisprudentiePage() {
     [handleFilterChange]
   )
 
+  const clearAllFilters = useCallback(() => {
+    navigate({
+      to: '/jurisprudentie',
+      search: {
+        gemeente: undefined,
+        vergunningstype: undefined,
+        uitkomst: undefined,
+        rechtsgrond: undefined,
+        rechtbank_niveau: undefined,
+        periode: undefined,
+      },
+      replace: true,
+    })
+    setShowWizard(true)
+  }, [navigate])
+
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -112,64 +148,89 @@ function JurisprudentiePage() {
     return () => observer.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  return (
-    <div className="flex h-full w-full overflow-hidden bg-grey-950">
-      {/* Desktop sidebar */}
-      <div className="hidden md:block">
-        <ExplorerFilterSidebar
-          facets={facets}
-          activeFilters={filters}
-          onFilterChange={handleFilterChange}
-        />
-      </div>
+  /* ── Wizard mode ──────────────────────────────────── */
+  if (showWizard) {
+    return (
+      <WizardFlow
+        filters={filters}
+        facets={facets}
+        onFilterChange={handleFilterChange}
+        onComplete={() => setShowWizard(false)}
+        totalCount={totalCount}
+      />
+    )
+  }
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
+  /* ── Results mode ─────────────────────────────────── */
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-grey-950">
+      {/* Filter chips bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-grey-800 bg-grey-900/50 px-6 py-3">
+        <Scale size={18} className="text-grey-400" />
+        <span className="text-sm font-medium text-grey-200">Jurisprudentie</span>
+        <div className="mx-2 h-4 w-px bg-grey-700" />
+
+        {filters.gemeente && (
+          <Chip label={filters.gemeente} onRemove={() => handleRemoveFilter('gemeente')} />
+        )}
+        {filters.rechtbank_niveau && (
+          <Chip
+            label={filters.rechtbank_niveau}
+            onRemove={() => handleRemoveFilter('rechtbank_niveau')}
           />
-          <div className="relative h-full">
-            <ExplorerFilterSidebar
-              facets={facets}
-              activeFilters={filters}
-              onFilterChange={(dim, val) => {
-                handleFilterChange(dim, val)
-                setSidebarOpen(false)
-              }}
-              className="h-full"
-            />
-          </div>
+        )}
+        {filters.vergunningstype && (
+          <Chip
+            label={filters.vergunningstype}
+            onRemove={() => handleRemoveFilter('vergunningstype')}
+          />
+        )}
+        {filters.rechtsgrond && (
+          <Chip
+            label={THEMA_LABELS[filters.rechtsgrond] ?? filters.rechtsgrond}
+            onRemove={() => handleRemoveFilter('rechtsgrond')}
+          />
+        )}
+        {filters.periode && (
+          <Chip
+            label={PERIODE_LABELS[filters.periode] ?? filters.periode}
+            onRemove={() => handleRemoveFilter('periode')}
+          />
+        )}
+
+        <span className="text-xs tabular-nums text-grey-500">
+          {totalCount} {totalCount === 1 ? 'uitspraak' : 'uitspraken'}
+        </span>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-grey-700 px-3 py-1.5 text-xs text-grey-300 transition-colors hover:bg-grey-800"
+          >
+            <SlidersHorizontal size={13} />
+            Wizard
+          </button>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-grey-500 transition-colors hover:text-grey-300"
+            >
+              Wis alles
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Results panel */}
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Scale size={22} className="text-grey-400" />
-            <div>
-              <h1 className="text-xl font-semibold text-grey-100">
-                Jurisprudentie Explorer
-              </h1>
-              {!isLoading && (
-                <p className="text-sm text-grey-400">
-                  {totalCount} {totalCount === 1 ? 'uitspraak' : 'uitspraken'} gevonden
-                </p>
-              )}
-            </div>
-          </div>
-          {/* Mobile filter toggle */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-grey-700 px-3 py-1.5 text-sm text-grey-300 transition-colors hover:bg-grey-800 md:hidden"
-          >
-            <Filter size={14} />
-            Filters
-          </button>
-        </div>
+        {/* Benchmark stats */}
+        {!isLoading && facets?.uitkomst && totalCount > 0 && (
+          <BenchmarkBar
+            uitkomstFacets={facets.uitkomst}
+            totalCount={totalCount}
+            results={allResults}
+          />
+        )}
 
         {/* Broaden suggestion */}
         {!isLoading && totalCount < 3 && hasActiveFilters && (
@@ -212,16 +273,20 @@ function JurisprudentiePage() {
           </div>
         )}
 
-        {/* Empty state (no filters active) */}
-        {!isLoading && allResults.length === 0 && !hasActiveFilters && (
+        {/* Empty state */}
+        {!isLoading && allResults.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Scale size={40} className="mb-3 text-grey-600" />
-            <h2 className="text-lg font-semibold text-grey-300">
-              Geen uitspraken beschikbaar
-            </h2>
+            <h2 className="text-lg font-semibold text-grey-300">Geen uitspraken gevonden</h2>
             <p className="mt-1 max-w-sm text-sm text-grey-500">
-              Er zijn nog geen uitspraken in de database. Voer eerst een gemeente-analyse uit via de kaart.
+              Pas je filters aan of gebruik de wizard om opnieuw te zoeken.
             </p>
+            <button
+              onClick={() => setShowWizard(true)}
+              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-grey-950 transition-colors hover:bg-amber-400"
+            >
+              Opnieuw zoeken
+            </button>
           </div>
         )}
 
@@ -236,5 +301,19 @@ function JurisprudentiePage() {
         <div ref={sentinelRef} className="h-4" />
       </div>
     </div>
+  )
+}
+
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-grey-700 bg-grey-800 px-2.5 py-0.5 text-xs text-grey-300">
+      {label}
+      <button
+        onClick={onRemove}
+        className="ml-0.5 text-grey-500 transition-colors hover:text-grey-200"
+      >
+        <X size={10} />
+      </button>
+    </span>
   )
 }
