@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v14.0 Fysiek Risicoprofiel -- Phase 89 complete, v14.0 complete
+**Current focus:** v14.0 Fysiek Risicoprofiel -- Phase 90 complete
 
 ---
 
 ## Current Position
 
-Phase: 89 of 90 (Asbestos V2 Refinement)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 89 complete
-Last activity: 2026-03-10 -- Completed 89-01-PLAN.md
+Phase: 90 of 90 (Frontend Fysiek Risicoprofiel)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 90 complete
+Last activity: 2026-03-10 -- Completed 90-02-PLAN.md
 
-Progress: [##########] 100% (Phase 89)
+Progress: [##########] 100% (Phase 90)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v14.0)
-- Average duration: 3.7min
-- Total execution time: 11min
+- Total plans completed: 5 (v14.0)
+- Average duration: 4min
+- Total execution time: 21min
 
 **By Phase:**
 
@@ -32,9 +32,11 @@ Progress: [##########] 100% (Phase 89)
 | 87 | 1 | 4min | 4min |
 | 88 | 1 | 5min | 5min |
 | 89 | 1 | 2min | 2min |
+| 90 | 2 | 10min | 5min |
 
 ---
-| Phase 89 P01 | 2min | 2 tasks | 4 files |
+| Phase 90 P01 | 5min | 2 tasks | 8 files |
+| Phase 90 P02 | 5min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -50,8 +52,16 @@ Progress: [##########] 100% (Phase 89)
 - Pure synchronous risk engine post-processing after asyncio.gather (foundation_risk_engine.py)
 - model_rebuild() pattern for Pydantic circular import resolution (fysiek_risico.py)
 
+### Key Patterns (carry forward)
+
+- FysiekRisicoprofielSection: extracted standalone component with amber-only badges
+- Risk-profile endpoint: asyncio.gather for parallel sub-component fetching
+- BuildingData constructed from ParcelCache fields (no gebruiksdoel column)
+
 ### Decisions Made
 
+- Extract FysiekRisicoprofielSection as separate component (sub-300-line guideline)
+- Soil type card informational only (no risk badge)
 - Use PDOK BRO Bodemkaart WMS exclusively (not bodemdata.nl or WUR soilphysics)
 - Funderingsgebieden is area context only (PC6), never present as parcel-specific
 - All risk badges amber/indicative, never red/definitive
@@ -79,12 +89,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T17:49:15Z
-**Stopped At:** Completed 89-01-PLAN.md
+**Last Session:** 2026-03-09T18:50:11Z
+**Stopped At:** Completed 90-01-PLAN.md
 **Resume File:** None
 
-**Next Action:** v14.0 complete -- tag and archive
+**Next Action:** Execute 90-02-PLAN.md
 
 ---
 
-*State updated: 2026-03-10 -- Phase 89 Plan 01 complete*
+*State updated: 2026-03-10 -- Phase 90 Plan 01 complete*
