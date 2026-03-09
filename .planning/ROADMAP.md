@@ -66,7 +66,7 @@ Plans:
   4. PropertyReportResponse includes FysiekRisicoProfiel field populated via asyncio.gather alongside existing API calls
 **Plans**: 1 plan
 Plans:
-- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
+- [ ] 88-01-PLAN.md — Foundation risk engine pure functions, KCAF cost ranges, FysiekRisicoProfiel schema, aggregator wiring
 
 ### Phase 89: Asbestos v2 Refinement
 **Goal**: Asbestos risk assessment accounts for building function so industrial/educational buildings get appropriately higher risk
@@ -78,7 +78,7 @@ Plans:
   3. Asbestos explanation text includes the gebruiksdoel factor when it contributed to the assessment
 **Plans**: 1 plan
 Plans:
-- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
+- [ ] 89-01-PLAN.md — Asbestos v2 with BAG gebruiksdoel-aware risk logic
 
 ### Phase 90: Frontend Fysiek Risicoprofiel
 **Goal**: User sees all physical risk data in a cohesive section in ParcelDetailModal with appropriate confidence indicators
@@ -91,7 +91,7 @@ Plans:
   4. Risk derivation is transparent -- user can see why a rating was assigned (e.g., "Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering")
 **Plans**: 1 plan
 Plans:
-- [ ] 87-01-PLAN.md — BRO Bodemkaart WMS + PDOK Funderingsrisico WFS clients, soil classifier, aggregators, PropertyReportResponse wiring
+- [ ] 90-01-PLAN.md — Frontend Fysiek Risicoprofiel section, amber badges, tile coloring
 
 ## Progress
 
