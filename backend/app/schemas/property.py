@@ -353,6 +353,10 @@ class AsbestIndicator(BaseModel):
         default=None,
         description="Applicable norm (e.g. 'NEN 2991') when risk is hoog or middel",
     )
+    gebruiksdoel_factor: str | None = Field(
+        default=None,
+        description="BAG gebruiksdoel that contributed to risk uplift (e.g., 'industriefunctie')",
+    )
     reden: str = Field(
         description="Human-readable explanation of the risk level",
     )

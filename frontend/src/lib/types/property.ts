@@ -394,6 +394,7 @@ export interface AsbestIndicator {
   risk: 'hoog' | 'middel' | 'geen' | 'onbekend'
   bouwjaar: number | null
   norm_reference: string | null
+  gebruiksdoel_factor: string | null
   reden: string
 }
 
