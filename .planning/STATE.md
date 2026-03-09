@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 
 ## Current Position
 
-Phase: 92 (2 of 7 in v15.0) -- Side Rail Navigation
-Plan: 2 of 2 complete
-Status: Complete
-Last activity: 2026-03-10 -- 92-02 Search bar + filter dock + gradient legend complete
+Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
+Plan: 1 of 3 complete
+Status: In Progress
+Last activity: 2026-03-10 -- 93-01 Aerial crop API + useAerialCrop hook complete
 
-Progress: [###░░░░░░░] 31% (4/13 plans)
+Progress: [####░░░░░░] 38% (5/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v15.0)
-- Average duration: 4min
-- Total execution time: 14min
+- Total plans completed: 5 (v15.0)
+- Average duration: 3min
+- Total execution time: 16min
 
 **By Phase:**
 
@@ -31,6 +31,7 @@ Progress: [###░░░░░░░] 31% (4/13 plans)
 |-------|-------|-------|----------|
 | 91 | 2 | 8min | 4min |
 | 92 | 2 | 6min | 3min |
+| 93 | 1 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -47,6 +48,9 @@ Progress: [###░░░░░░░] 31% (4/13 plans)
 - Differentiated hover scales: 1.02 for pods, 1.05 for nav icons
 - Gradient legend extracted from LayerToggle to map.tsx (Option B) for cleaner separation
 - aura-hover-glow class uses box-shadow only (no transform) to avoid shadow-glass conflicts
+- PDOK WMS proxied through backend for auth boundary and CORS avoidance
+- fetchAerialCrop uses raw fetch (not apiFetch) since response is binary JPEG
+- 760x320 retina aerial crop with 150m x 63m BBOX for parcel hero context
 
 ### Key Patterns (carry forward)
 
@@ -73,12 +77,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T23:21:55.655Z
-**Stopped At:** Phase 93 context gathered
-**Resume File:** .planning/phases/93-parcel-detail-panel/93-CONTEXT.md
+**Last Session:** 2026-03-09T23:41:18Z
+**Stopped At:** Completed 93-01-PLAN.md
 
-**Next Action:** `/gsd:execute-phase 93` (Parcel Detail Panel)
+**Next Action:** Execute 93-02-PLAN.md (Parcel Detail Panel components)
 
 ---
 
-*State updated: 2026-03-10 -- Phase 92 complete (Viewport Layout + Navigation)*
+*State updated: 2026-03-10 -- Phase 93 plan 01 complete (Aerial Crop API)*

@@ -35,7 +35,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Parcel Aerial Crop API
 
-- [ ] **API-01**: Backend endpoint that returns a cropped PDOK aerial image centered on a parcel geometry for use as hero image in detail panel
+- [x] **API-01**: Backend endpoint that returns a cropped PDOK aerial image centered on a parcel geometry for use as hero image in detail panel
 
 ### Wijk View
 
@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRC-05 | Phase 93 | Pending |
 | PRC-06 | Phase 93 | Pending |
 | PRC-07 | Phase 93 | Pending |
-| API-01 | Phase 93 | Pending |
+| API-01 | Phase 93 | Complete |
 | WIJK-01 | Phase 94 | Pending |
 | WIJK-02 | Phase 94 | Pending |
 | WIJK-03 | Phase 94 | Pending |
