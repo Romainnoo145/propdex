@@ -111,7 +111,7 @@ Plans:
   1. A rolling 12-month klimaat score trend is visible per gemeente showing whether conditions are improving or deteriorating
   2. An aggregated statistics bar shows totaal uitspraken, gemiddelde doorlooptijd, and succespercentage
   3. Trend visualization renders as CSS-only timeline (no chart library dependency) and degrades gracefully with fewer than 3 data points
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 86-01-PLAN.md -- Trend endpoint with monthly bucketing and summary stats
@@ -128,7 +128,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86
 | 83. Geo-Contextualization + Gemeente Feed | 2/2 | Complete    | 2026-03-07 |
 | 84. AI Analysis Upgrade + Doorlooptijd | 2/2 | Complete    | 2026-03-08 |
 | 85. Explorer UI | 2/2 | Complete    | 2026-03-09 |
-| 86. Trend & Statistics | 0/2 | Not started | - |
+| 86. Trend & Statistics | 1/2 | In Progress|  |
 
 ---
 

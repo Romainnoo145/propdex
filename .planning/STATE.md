@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 85
+**Current focus:** v13.0 Juridisch Klimaat Intelligence -- Phase 86
 
 ---
 
 ## Current Position
 
-Phase: 85 of 86 (Explorer UI)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-09 -- Completed 85-02-PLAN.md
+Phase: 86 of 86 (Trend Statistics)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-09 -- Completed 86-01-PLAN.md
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 95%
 
 ---
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 4.4min
-- Total execution time: 35min
+- Total plans completed: 9
+- Average duration: 4.1min
+- Total execution time: 37min
 
 **By Phase:**
 
@@ -35,6 +35,7 @@ Progress: [█████████░] 93%
 | 83 | 2 | 6min | 3min |
 | 84 | 2 | 14min | 7min |
 | 85 | 2 | 8min | 4min |
+| 86 | 1 | 2min | 2min |
 
 *Updated after each plan completion*
 
@@ -81,6 +82,9 @@ Progress: [█████████░] 93%
 - [Phase 85]: URL search params for all 6 filter dimensions (bookmarkable/shareable)
 - [Phase 85]: IntersectionObserver sentinel for infinite scroll
 - [Phase 85]: Checkbox single-select per dimension matching backend query params
+- [Phase 86]: Rolling 12-month trend via VARCHAR string comparison on datum_uitspraak
+- [Phase 86]: Weighted doorlooptijd average across monthly buckets for accurate aggregation
+- [Phase 86]: Empty trend data returns zeros (not 404) -- absence is valid state
 
 ### Pending Todos
 
@@ -95,12 +99,12 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T02:49:35Z
-**Stopped At:** Completed 85-02-PLAN.md
-**Resume File:** .planning/phases/85-explorer-ui/85-02-SUMMARY.md
+**Last Session:** 2026-03-09T03:28:02Z
+**Stopped At:** Completed 86-01-PLAN.md
+**Resume File:** .planning/phases/86-trend-statistics/86-01-SUMMARY.md
 
-**Next Action:** Execute Phase 86 (Trend analysis) or finalize v13.0
+**Next Action:** Execute 86-02 (Frontend trend chart)
 
 ---
 
-*State updated: 2026-03-09 -- Completed 85-02-PLAN.md*
+*State updated: 2026-03-09 -- Completed 86-01-PLAN.md*
