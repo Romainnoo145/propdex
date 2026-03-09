@@ -6,10 +6,11 @@ HTTP client is retrieved from request.app.state.http_client (shared AsyncClient)
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case, select
+from sqlalchemy import case, func, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -378,3 +379,234 @@ async def get_doorlooptijd(
     """
     stats = await get_doorlooptijd_stats(db, gemeente_naam)
     return {"status": "success", **stats}
+
+
+# --- Explorer endpoint ---
+
+# Rechtbank niveau derivation via CASE expression
+_rechtbank_niveau_expr = case(
+    (RulingCache.instantie.ilike("Rechtbank%"), "Rechtbank"),
+    (RulingCache.instantie.ilike("Gerechtshof%"), "Gerechtshof"),
+    (RulingCache.instantie.ilike("%Raad van State%"), "Raad van State"),
+    else_="Overig",
+).label("rechtbank_niveau")
+
+
+def _build_explorer_filters(
+    *,
+    gemeente: str | None,
+    vergunningstype: str | None,
+    uitkomst: str | None,
+    rechtsgrond: str | None,
+    rechtbank_niveau: str | None,
+    periode: str | None,
+    exclude_dimension: str | None = None,
+) -> list:
+    """Build WHERE clause list, optionally excluding one dimension for cross-faceting."""
+    clauses = []
+
+    if gemeente and exclude_dimension != "gemeente":
+        clauses.append(
+            (RulingCache.extracted_gemeente == gemeente)
+            | (RulingCache.gemeente_query == gemeente)
+        )
+
+    if vergunningstype and exclude_dimension != "vergunningstype":
+        clauses.append(RulingCache.vergunningstype == vergunningstype)
+
+    if uitkomst and exclude_dimension != "uitkomst":
+        clauses.append(RulingCache.uitkomst == uitkomst)
+
+    if rechtsgrond and exclude_dimension != "rechtsgrond":
+        # JSONB array containment: rechtsgronden @> '["procedurefout"]'
+        clauses.append(
+            RulingCache.rechtsgronden.op("@>")(f'["{rechtsgrond}"]')
+        )
+
+    if rechtbank_niveau and exclude_dimension != "rechtbank_niveau":
+        if rechtbank_niveau == "Rechtbank":
+            clauses.append(RulingCache.instantie.ilike("Rechtbank%"))
+        elif rechtbank_niveau == "Gerechtshof":
+            clauses.append(RulingCache.instantie.ilike("Gerechtshof%"))
+        elif rechtbank_niveau == "Raad van State":
+            clauses.append(RulingCache.instantie.ilike("%Raad van State%"))
+
+    if periode and exclude_dimension != "periode":
+        date_from = _periode_to_date(periode)
+        if date_from:
+            clauses.append(RulingCache.datum_uitspraak >= date_from)
+
+    return clauses
+
+
+def _periode_to_date(periode: str) -> str | None:
+    """Convert periode string to YYYY-MM-DD date_from string."""
+    now = datetime.utcnow()
+    if periode == "1jaar":
+        return (now - timedelta(days=365)).strftime("%Y-%m-%d")
+    if periode == "3jaar":
+        return (now - timedelta(days=3 * 365)).strftime("%Y-%m-%d")
+    if periode == "5jaar":
+        return (now - timedelta(days=5 * 365)).strftime("%Y-%m-%d")
+    return None  # "alles" or unknown
+
+
+async def _compute_facet(
+    db: AsyncSession,
+    dimension: str,
+    filters: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Compute facet counts for a single dimension with cross-filtering."""
+    clauses = _build_explorer_filters(**filters, exclude_dimension=dimension)
+
+    if dimension == "gemeente":
+        # Coalesce extracted_gemeente and gemeente_query for grouping
+        gemeente_col = func.coalesce(
+            RulingCache.extracted_gemeente, RulingCache.gemeente_query
+        )
+        stmt = (
+            select(gemeente_col.label("value"), func.count().label("count"))
+            .where(*clauses)
+            .where(gemeente_col.isnot(None))
+            .group_by(gemeente_col)
+            .order_by(func.count().desc())
+        )
+    elif dimension == "vergunningstype":
+        stmt = (
+            select(
+                RulingCache.vergunningstype.label("value"),
+                func.count().label("count"),
+            )
+            .where(*clauses)
+            .where(RulingCache.vergunningstype.isnot(None))
+            .group_by(RulingCache.vergunningstype)
+            .order_by(func.count().desc())
+        )
+    elif dimension == "uitkomst":
+        stmt = (
+            select(
+                RulingCache.uitkomst.label("value"),
+                func.count().label("count"),
+            )
+            .where(*clauses)
+            .where(RulingCache.uitkomst.isnot(None))
+            .group_by(RulingCache.uitkomst)
+            .order_by(func.count().desc())
+        )
+    elif dimension == "rechtsgrond":
+        # Unnest JSONB array for grouping
+        unnested = func.jsonb_array_elements_text(
+            RulingCache.rechtsgronden
+        ).column_valued("grond")
+        stmt = (
+            select(
+                literal_column("grond").label("value"),
+                func.count().label("count"),
+            )
+            .select_from(RulingCache)
+            .join(unnested, text("true"))
+            .where(*clauses)
+            .where(RulingCache.rechtsgronden.isnot(None))
+            .group_by(literal_column("grond"))
+            .order_by(func.count().desc())
+        )
+    elif dimension == "rechtbank_niveau":
+        niveau = case(
+            (RulingCache.instantie.ilike("Rechtbank%"), "Rechtbank"),
+            (RulingCache.instantie.ilike("Gerechtshof%"), "Gerechtshof"),
+            (RulingCache.instantie.ilike("%Raad van State%"), "Raad van State"),
+            else_="Overig",
+        )
+        stmt = (
+            select(niveau.label("value"), func.count().label("count"))
+            .where(*clauses)
+            .where(RulingCache.instantie.isnot(None))
+            .group_by(niveau)
+            .order_by(func.count().desc())
+        )
+    else:
+        return []
+
+    result = await db.execute(stmt)
+    return [{"value": row.value, "count": row.count} for row in result.all()]
+
+
+@router.get("/explorer")
+async def explore_rulings(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+    gemeente: str | None = Query(None, description="Filter by gemeente"),
+    vergunningstype: str | None = Query(None, description="Filter by vergunningstype"),
+    uitkomst: str | None = Query(None, description="Filter by uitkomst"),
+    rechtsgrond: str | None = Query(None, description="Filter by rechtsgrond"),
+    rechtbank_niveau: str | None = Query(None, description="Filter by court level"),
+    periode: str | None = Query(None, description="Time period: 1jaar, 3jaar, 5jaar, alles"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(20, ge=1, le=50, description="Page size"),
+) -> dict[str, Any]:
+    """Explore all court rulings with faceted filtering and pagination.
+
+    Returns paginated results with cross-faceted counts for each filter
+    dimension. Cross-faceted means each dimension's counts are computed
+    with all OTHER active filters applied, but not its own.
+    """
+    filter_params: dict[str, Any] = {
+        "gemeente": gemeente,
+        "vergunningstype": vergunningstype,
+        "uitkomst": uitkomst,
+        "rechtsgrond": rechtsgrond,
+        "rechtbank_niveau": rechtbank_niveau,
+        "periode": periode,
+    }
+
+    # Main query: all filters applied
+    all_clauses = _build_explorer_filters(**filter_params)
+
+    # Fetch limit+1 for has_more detection
+    stmt = (
+        select(RulingCache)
+        .where(*all_clauses)
+        .order_by(RulingCache.datum_uitspraak.desc().nulls_last())
+        .offset(offset)
+        .limit(limit + 1)
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+
+    has_more = len(rows) > limit
+    rulings = rows[:limit]
+
+    # Total count
+    count_stmt = select(func.count()).select_from(RulingCache).where(*all_clauses)
+    total_count = (await db.execute(count_stmt)).scalar() or 0
+
+    # Serialize results
+    results = [
+        {
+            "ecli": r.ecli,
+            "court_code": r.court_code,
+            "instantie": r.instantie,
+            "datum_uitspraak": r.datum_uitspraak,
+            "title": r.title,
+            "summary": r.summary,
+            "extracted_gemeente": r.extracted_gemeente,
+            "uitkomst": r.uitkomst,
+            "vergunningstype": r.vergunningstype,
+            "rechtsgronden": r.rechtsgronden or [],
+            "doorlooptijd_dagen": r.doorlooptijd_dagen,
+            "ai_analysis": r.ai_analysis,
+        }
+        for r in rulings
+    ]
+
+    # Cross-faceted counts for all 5 dimensions
+    facets: dict[str, list[dict[str, Any]]] = {}
+    for dim in ("gemeente", "vergunningstype", "uitkomst", "rechtsgrond", "rechtbank_niveau"):
+        facets[dim] = await _compute_facet(db, dim, filter_params)
+
+    return {
+        "results": results,
+        "total_count": total_count,
+        "has_more": has_more,
+        "facets": facets,
+    }
