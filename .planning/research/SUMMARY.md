@@ -1,180 +1,157 @@
 # Project Research Summary
 
-**Project:** Propdex v13.0 Juridisch Klimaat Intelligence
-**Domain:** Legal climate analysis for PropTech real estate due diligence (Netherlands)
-**Researched:** 2026-03-07
+**Project:** Propdex v14.0 Fysiek Risicoprofiel
+**Domain:** Physical risk assessment for Dutch PropTech property due diligence
+**Researched:** 2026-03-09
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Propdex v13.0 transforms the existing (broken) jurisprudence feature into a genuine legal intelligence tool for real estate developers. The current implementation searches Rechtspraak Open Data nationally using free-text queries, producing irrelevant results that feed into AI analysis -- creating confidently wrong juridisch klimaat scores. The fix is architectural: use ECLI court-code prefix filtering to scope results to the correct arrondissement, cache rulings in a dedicated PostgreSQL table (public data, shared across tenants), and layer geo-contextualization on top to narrow from arrondissement (~30 gemeenten) to individual gemeente level.
+Propdex v14.0 adds per-parcel physical risk intelligence -- foundation risk, soil type classification, and enhanced asbestos assessment -- to the existing property due diligence platform. This closes the single most expensive blind spot in Dutch property development: foundation problems that routinely cost 50,000-200,000+ EUR and are invisible at acquisition. The approach combines two new public government data sources (BRO Bodemkaart WMS for soil type, PDOK Funderingsrisicogebieden WFS for area-level context) with a deterministic heuristic engine that assesses risk from bouwjaar x bodemtype. No new dependencies are needed -- the entire milestone builds on existing httpx, asyncio.gather, JSONB cache, and rate limiter patterns.
 
-The recommended approach requires zero new dependencies. Everything builds on existing stack: httpx for Rechtspraak API, lxml for XML parsing, anthropic for AI analysis, ARQ for background jobs, and PostgreSQL for ruling cache. The key new artifacts are a static gemeente-to-rechtbank mapping (342 entries, 11 rechtbanken), a dedicated `ruling_cache` table (org-agnostic, ECLI as primary key), regex-based location extraction from ruling text, and a two-tab frontend (Feed + Explorer). The Rechtspraak API `creator` parameter proved unreliable in live testing (returned 0 results when combined with `subject`), confirming client-side ECLI prefix filtering as the only viable approach.
+The recommended approach is conservative and defensible: use only verified PDOK-hosted public APIs (no undocumented endpoints), present all results as indicative signals with prominent disclaimers, and keep the heuristic engine as a pure function that is transparent and explainable. The PDOK Funderingsrisicogebieden data is postcode-level (PC6), not parcel-level -- it must be clearly labeled as area context, never as a parcel-specific assessment. The foundation risk heuristic (bouwjaar + soil type) provides the parcel-specific signal.
 
-The primary risks are: (1) geo-contextualization accuracy due to Rechtspraak's anonymization policy replacing addresses with `[adres]`/`[locatie]`, mitigated by accepting arrondissement-level precision as baseline; (2) AI analysis token cost explosion with full ruling texts (30K-100K chars each), mitigated by truncating to OVERWEGINGEN + BESLISSING sections; (3) Explorer filter UI returning empty results for small gemeenten, mitigated by defaulting to arrondissement scope and showing filter counts before applying. The bekendmakingen cross-reference feature should be deferred -- there is no shared identifier between the Rechtspraak and SRU systems, making fuzzy matching unreliable and expensive.
+The primary risk is presenting heuristic-derived risk as definitive assessment. Professional users (developers who understand foundations) will immediately dismiss the platform if it overstates confidence. The mitigation is consistent: amber badges (never red) for heuristic data, mandatory disclaimer fields in every schema, and transparent derivation shown in the UI ("Bouwjaar 1952 + kleigrond = mogelijk houten paalfundering"). A secondary risk is the soil data source choice -- ARCHITECTURE.md proposed WUR soilphysics.wur.nl (undocumented internal endpoint), while STACK.md and PITFALLS.md both recommend PDOK BRO Bodemkaart WMS (documented, verified, stable). Use PDOK WMS exclusively.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new dependencies required. All v13.0 features build on the existing validated stack. The Rechtspraak API is already integrated; this milestone extends it with deeper filtering, caching, and analysis.
+Zero new dependencies. All features build on the existing Python backend (httpx, asyncio, pyproj, lxml) and React/Tailwind frontend. Two new government API clients follow the identical pattern as existing clients (bodemloket_arcgis.py, bag_wfs.py). The foundation risk engine and soil classifier are pure Python logic -- no libraries needed.
 
 **Core technologies (all existing):**
-- **httpx + lxml** -- Rechtspraak API HTTP calls and XML parsing (already in use)
-- **PostgreSQL dedicated table** -- Ruling cache with indexed columns for court_code, datum_uitspraak, gemeente_naam
-- **anthropic + ARQ** -- AI analysis with enhanced prompts, background job for ruling ingestion
-- **Python stdlib (re, datetime, statistics)** -- Regex geo-extraction, doorlooptijd calculation, aggregation
-
-**New code modules (not packages):**
-- `data/court_mapping.py` -- Static gemeente-to-rechtbank mapping dict (342 gemeenten to 11 rechtbanken + old court codes)
-- `services/juridisch_klimaat.py` -- Doorlooptijd aggregation, trend analysis, bekendmakingen linking logic
-- `models/ruling_cache.py` -- SQLAlchemy model for cached rulings (no organization_id -- public data)
+- **httpx** -- HTTP client for BRO WMS GetFeatureInfo and PDOK WFS GetFeature
+- **pyproj** -- CRS transformation (RD New to WGS84, already in use)
+- **JSONB cache** via `cache_manager.py` -- 365-day TTL for soil data, 180-day for funderingsgebieden
+- **asyncio.gather** -- parallel fetch alongside existing 7 API calls, zero latency increase
 
 ### Expected Features
 
 **Must have (table stakes):**
-- ECLI court-code filtering -- scope results to correct arrondissement instead of national
-- Date range filtering -- restrict to last 2/5/10 years via API `date` parameter
-- Gemeente jurisprudentie feed -- auto-populated chronological list replacing manual search
-- Increased result volume (50 vs current 10) -- statistical significance for klimaat scoring
-- Per-gemeente caching with 7-day TTL -- repeated views must be instant
-- Win/loss ratio display -- aggregate outcome percentages as summary statistic
-- Uitkomst filtering -- filter visible rulings by outcome (toegewezen/afgewezen/gedeeltelijk)
+- Soil type classification (klei/veen/zand/leem) via BRO Bodemkaart WMS -- every foundation assessment starts here
+- Foundation risk heuristic (bouwjaar x bodemtype) -- 750K+ Dutch homes on wooden piles, professionals know this rule
+- PDOK Funderingsrisicogebieden context signal -- official RVO data at PC6 level
+- Combined traffic-light risk summary with Dutch-language explanation
+- Asbestos v2 with BAG gebruiksdoel refinement (school/fabriek = higher risk)
+- Source attribution and disclaimers on every risk indicator
 
 **Should have (differentiators):**
-- Juridisch Klimaat Explorer -- multi-filter UI (scope, case type, outcome, period)
-- Vergunningstype classification -- categorize rulings by construction type (dakopbouw, nieuwbouw, etc.)
-- Doorlooptijd-analyse -- average procedure duration per gemeente per type
-- Geo-contextualisatie -- extract gemeente from ruling text for RVS rulings
-- Trendlijn per gemeente -- klimaat score over time (rolling 12-month windows)
+- Combined Fysiek Risicoprofiel section in ParcelDetailModal -- nobody else integrates soil + foundation + asbest + contamination for Dutch property
+- Confidence-tiered visual hierarchy (verified data vs heuristic indicators)
 
 **Defer (v2+):**
-- Bekendmakingen-koppeling -- no shared identifier between Rechtspraak and SRU systems, fuzzy matching unreliable
-- Vergelijkende gemeente analyse -- requires core flow working first
-- Full Rechtspraak replica / Elasticsearch -- massive infra overhead, API with caching suffices
-- Hoger beroep chain following -- unreliable ECLI cross-referencing
-- Juridisch advies generation -- professional liability risk (Advocatenwet)
+- Climate context signal (droogte/bodemdaling) -- needs Klimaateffectatlas integration
+- Foundation risk in area scan tiles -- needs per-parcel soil at scale
+- Risk-to-cost estimation (KCAF reference prices) -- needs heavy disclaimers
+- Soil profile depth view -- uncertain API availability
+- Asbest sanering cost indication -- market rates too variable
 
 ### Architecture Approach
 
-The architecture centers on a `RulingCache` table as the single source of truth -- organization-agnostic (court rulings are public data), ECLI-keyed, with indexed columns for court_code, gemeente, and date. All downstream processing (geo-extraction, doorlooptijd, AI analysis) reads from this cache. The ingestion pipeline runs as a background ARQ job triggered on first gemeente detail open, fetching rulings for the relevant court region(s). The frontend splits into two views: a Feed tab (chronological gemeente-matched rulings, default) and an Explorer tab (multi-filter search with pagination).
+The architecture follows the established aggregator pattern: two new government API clients feed into two new aggregator services (with JSONB cache), which feed into a pure-function heuristic engine, all orchestrated by the existing `property_aggregator.py` via `asyncio.gather()`. The combined `FysiekRisicoProfiel` schema composes foundation risk, soil profile, asbestos v2, and existing contamination data into one typed response field. No new database tables or migrations are needed -- all data flows through the existing cache infrastructure.
 
 **Major components:**
-1. **EcliRegistry** -- static gemeente-to-rechtbank mapping, ECLI prefix utilities, old court code translation (pre-2013 codes like RBMAA -> RBLIM)
-2. **RulingCache model** -- persistent ruling storage, no org_id, ECLI primary key, indexed for court_code + datum_uitspraak + gemeente SQL queries
-3. **RulingIngestion job** -- ARQ background job populating cache per court region, 50 results per search, batch document fetch with concurrency control
-4. **GeoContextualizer** -- two-pass extraction: ECLI prefix for arrondissement (reliable), regex for gemeente name from text (supplementary), confidence scoring
-5. **DoorlooptijdService** -- procedure duration from ruling metadata dates, graceful degradation when filing dates missing
-6. **JurisprudenceFeed + Explorer** -- frontend decomposition of monolithic JurisprudenceSection (currently 302 lines, would balloon to 800+)
+1. **BRO Bodemkaart WMS client** (`bro_bodemkaart.py`) -- GetFeatureInfo at RD coordinate, returns soilcode + Dutch name
+2. **PDOK Funderingsrisico WFS client** (`pdok_funderingsrisico.py`) -- GetFeature by postcode/BBOX, returns PC6-level context
+3. **Soil classifier** (`soil_classifier.py`) -- static dict mapping bodemcode prefix to grondsoort category
+4. **Foundation risk engine** (`foundation_risk_engine.py`) -- pure function: bouwjaar x bodemtype x area context = risk level
+5. **Fysiek risico aggregator** (`fysiek_risico_aggregator.py`) -- orchestrates fetch + cache + heuristic computation
+6. **Frontend FysiekRisicoProfiel section** -- collapsible card in ParcelDetailModal after Property Info Grid
 
 ### Critical Pitfalls
 
-1. **Rechtspraak API has no location filter** -- ECLI prefix parsing (client-side) is the only viable geo-scoping strategy. The `creator` API parameter returned 0 results when combined with `subject=omgevingsrecht` in live testing. Use two-phase approach: API search with subject+searchterms, then client-side ECLI prefix filter.
-2. **AI analysis on irrelevant input produces confidently wrong output** -- Fix the input pipeline (ECLI filtering + geo-contextualization) BEFORE upgrading AI analysis. Current garbage-in-garbage-out is worse than no feature at all. Never show klimaat score without stating the sample size and court.
-3. **Geo-contextualization is harder than it looks** -- Rechtspraak anonymizes addresses (`[adres]`, `[locatie]`). Two-pass extraction (ECLI prefix for arrondissement + regex for gemeente name from "college van B&W van {gemeente}" patterns) with known-gemeente validation. Accept arrondissement as baseline precision.
-4. **Full-text ruling caching costs explode** -- Rulings are 5K-100K characters. Dedicated table with TEXT column, not JSONB in `cached_api_responses`. Truncate to OVERWEGINGEN + BESLISSING for AI analysis (max 60K input tokens per call). LRU eviction at 5,000 rulings.
-5. **Explorer filter combinatorics cause empty results** -- Small gemeenten have few omgevingsrecht rulings. Show filter counts before applying, default to arrondissement scope, suggest broadening when results < 3.
+1. **Soil data source confusion** -- bodemdata.nl and WUR soilphysics.wur.nl are undocumented internal endpoints, not public APIs. Use PDOK BRO Bodemkaart WMS GetFeatureInfo exclusively. Verified live, returns JSON with soilcode and Dutch soil name.
+
+2. **PDOK Funderingsgebieden is postcode-level, not parcel-level** -- never present PC6 area statistics as parcel-specific risk. Always combine with per-parcel bouwjaar. UI must say "Dit pand ligt in een aandachtsgebied" not "Dit pand heeft funderingsrisico."
+
+3. **Heuristic presented as definitive assessment** -- use amber badges (never red) for heuristic-derived risk. Include disclaimer field in every schema. Show derivation transparently. Add recommended_action ("Laat een funderingsonderzoek uitvoeren").
+
+4. **ParcelCache has no postcode field** -- do not add a postcode column for PDOK lookup. Use the postcode already available in scan results address data, or use spatial BBOX query against WFS.
+
+5. **BAG gebruiksdoel reflects current function, not historical** -- a 1970s school converted to apartments shows "woonfunctie." Bouwjaar must remain the primary asbestos risk driver; gebruiksdoel is additive only.
 
 ## Implications for Roadmap
 
-Based on combined research, five phases recommended. Ordering follows the data flow: ingest -> enrich -> analyze -> display.
+Based on research, suggested phase structure (4 phases, starting at Phase 87):
 
-### Phase 1: Ruling Cache + ECLI Court Mapping
+### Phase 87: Soil Data Integration + Schemas
+**Rationale:** Foundation dependency -- soil type is required input for the foundation heuristic. Must be built first. Schemas define the contract for all subsequent phases.
+**Delivers:** BRO Bodemkaart WMS client, soil code classifier (static dict mapping), soil aggregator with JSONB cache, all Pydantic schemas (`FysiekRisicoProfiel`, `FoundationRisk`, `SoilProfile`, `FunderingsrisicogebiedData`), rate limiter entries
+**Addresses:** BODEM-01 (soil type classification), BODEM-02 (soil code mapping)
+**Avoids:** Pitfall 1 (wrong API -- uses PDOK WMS, not bodemdata.nl), Pitfall 4 (no postcode column -- uses coordinate-based WMS query)
 
-**Rationale:** Everything depends on persistent storage and gemeente-to-court mapping. This is the foundation that unblocks all subsequent work. Without it, every other feature continues to operate on garbage data.
-**Delivers:** `ruling_cache` table (Alembic migration, no organization_id), `EcliRegistry` module with 342-gemeente mapping + old court code translation, modified `RechtspraakClient` with court-code search + batch document fetch + date range params, ruling ingestion ARQ job with session factory in context.
-**Addresses:** ECLI court-code filtering, increased result volume, per-gemeente caching (table stakes)
-**Avoids:** Pitfall 1 (no location filter), Pitfall 4 (caching cost explosion), Pitfall 9 (ARQ engine-per-invocation)
+### Phase 88: Foundation Risk Heuristic + PDOK Integration
+**Rationale:** Depends on soil type from Phase 87. Core intelligence of the milestone.
+**Delivers:** PDOK Funderingsrisicogebieden WFS client + aggregator, foundation risk heuristic engine (pure function with bouwjaar x bodemtype matrix), wiring into property_aggregator.py asyncio.gather, FysiekRisicoProfiel field on PropertyReportResponse
+**Addresses:** FUND-01 (PDOK context data), FUND-02 (heuristic engine), FUND-03 (aggregator integration)
+**Avoids:** Pitfall 2 (postcode-level data labeled as area context only), Pitfall 3 (heuristic with disclaimer and confidence field, never presented as definitive)
 
-### Phase 2: Geo-Contextualization + Feed Endpoint
+### Phase 89: Asbestos v2 Refinement
+**Rationale:** Independent of Phases 87-88 technically, but logically follows. Small scope -- extends existing asbest_indicator.py with two optional parameters.
+**Delivers:** Extended `assess_asbest_risk()` accepting optional gebruiksdoel + has_bodem_dossiers, richer Dutch-language explanation text, updated tests
+**Addresses:** ASBT-01 (building function refinement), ASBT-02 (soil context signal)
+**Avoids:** Pitfall 5 (gebruiksdoel is additive only, bouwjaar remains primary driver)
 
-**Rationale:** With rulings cached, extract location data to narrow from arrondissement to gemeente. This fixes the input quality problem before AI analysis runs on the data. Feed endpoint exposes the enriched data.
-**Delivers:** `GeoContextualizer` service (regex extraction + known-gemeente validation), backend feed endpoint (`/api/jurisprudence/feed`), RVS ruling geo-tagging via text extraction, relevance sorting (gemeente mentions first, then arrondissement).
-**Addresses:** Gemeente jurisprudentie feed, geo-contextualisatie (differentiator)
-**Avoids:** Pitfall 2 (NLP harder than it looks -- use regex not spaCy), Pitfall 3 (garbage-in-garbage-out), Pitfall 11 (arrondissement covers multiple gemeenten), Pitfall 12 (RVS rulings are national)
-
-### Phase 3: AI Analysis Upgrade + Doorlooptijd
-
-**Rationale:** Now that input is filtered and geo-contextualized, the AI analysis produces meaningful results. Doorlooptijd runs in parallel on cached data. Both read from RulingCache without additional API calls.
-**Delivers:** Enhanced AI prompt with vergunningstype extraction + geo-context + doorlooptijd, per-ruling analysis caching (not per-batch hash), doorlooptijd calculation from metadata dates with `parse_dutch_date()` utility, token budget controls (60K max, truncate to OVERWEGINGEN + BESLISSING), two-stage analysis (per-ruling then aggregation).
-**Addresses:** Vergunningstype classification, doorlooptijd-analyse, win/loss ratio (differentiators + table stakes)
-**Avoids:** Pitfall 10 (token budget explosion), Pitfall 6 (missing filing dates -- graceful degradation), Pitfall 13 (cache key breaks with filters -- per-ruling cache), Pitfall 14 (date format inconsistency)
-
-### Phase 4: Explorer UI + Frontend Decomposition
-
-**Rationale:** Backend is complete; build the user-facing Explorer experience. Decompose monolithic JurisprudenceSection into Feed + Explorer + Viewer components (current 302 lines, would balloon to 800+). URL state for filter persistence.
-**Delivers:** Two-tab layout (Overzicht/Explorer), filter sidebar (scope, type, uitkomst, period) with counts before applying, progressive filtering, pagination via useInfiniteQuery, "verbreed uw zoekopdracht" suggestions, aggregated statistics bar, `useJuridischKlimaatState` custom hook.
-**Addresses:** Juridisch Klimaat Explorer, uitkomst filtering, date range selector (differentiators + table stakes)
-**Avoids:** Pitfall 8 (empty filter results -- counts + broadening suggestions), Integration Pitfall 1 (component state explosion -- custom hook extraction)
-
-### Phase 5: Trendlijn + Polish (optional)
-
-**Rationale:** Once cache accumulates data over time, temporal analysis becomes meaningful. Low-risk enhancement phase that can ship independently.
-**Delivers:** Rolling 12-month klimaat score trend, CSS-only timeline visualization (no chart library needed for 10-20 data points), rate limiter tuning (per-second bucket replacing per-hour).
-**Addresses:** Trendlijn per gemeente (differentiator)
+### Phase 90: Frontend Fysiek Risicoprofiel
+**Rationale:** Depends on all backend work (Phases 87-89). Presentation layer.
+**Delivers:** FysiekRisicoProfiel section in ParcelDetailModal with foundation risk card, soil type indicator, asbestos v2 card, disclaimers, source attribution. TypeScript types matching backend schemas. Confidence-tiered visual hierarchy (amber for heuristic, solid for verified data).
+**Addresses:** FRNT-01 (risk section), FRNT-02 (confidence-tiered badges), FRNT-03 (disclaimers and source attribution)
+**Avoids:** UX pitfalls (amber not red for heuristic, placement after Property Info Grid, plain Dutch soil names, derivation transparency)
 
 ### Phase Ordering Rationale
 
-- **Cache first, then extraction, then AI, then UI** follows the data flow: ingest -> enrich -> analyze -> display. Each phase validates the previous one's output before building on it.
-- **Geo-contextualization before AI analysis** is critical -- Pitfall 3 explicitly warns that AI on unfiltered input is worse than no feature. All four research files agree that input quality is the bottleneck, not AI prompt engineering.
-- **Frontend last** because backend API changes are the highest-risk, highest-value work. The UI adapts to whatever endpoints exist. Shipping a working backend with the old UI is better than a polished UI on garbage data.
-- **Bekendmakingen cross-reference excluded** from all phases -- Pitfall 7 confirms no shared identifier exists between Rechtspraak and SRU systems. This is high-effort, low-reliability work that should not block the core juridisch klimaat overhaul.
+- **87 before 88**: Foundation heuristic requires soil type as input. The BRO client and classifier must exist first.
+- **88 before 90**: Frontend cannot render risk data until backend produces it.
+- **89 is semi-independent**: Could run in parallel with 88, but sequential ordering is simpler for a 4-phase milestone with one developer.
+- **90 last**: Frontend integrates all backend outputs. Allows backend APIs to stabilize before UI work begins.
+- **All phases require zero new dependencies**: No pip/npm additions means zero deployment risk.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (Geo-Contextualization):** Anonymization patterns need empirical validation on 50+ sample rulings. Regex false positive rate unknown until tested on real Rechtspraak data. Recommend a spike task early in the phase.
-- **Phase 3 (Doorlooptijd):** Filing date availability from ruling metadata needs empirical measurement. If < 50% of rulings have extractable dates, the feature must degrade gracefully to "onvoldoende data" rather than showing unreliable averages.
+- **Phase 87:** BRO Bodemkaart WMS GetFeatureInfo coverage gaps need handling -- urban fill areas, water bodies, and recent land reclamation may return no data. STACK.md verified the endpoint live but edge cases need defensive coding.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Cache + Mapping):** Well-documented. ECLI structure is an EU standard. Alembic migration + ARQ job are established patterns in the codebase. Gemeente-to-rechtbank mapping is a static dataset.
-- **Phase 4 (Explorer UI):** Standard filter UI patterns. TanStack Query pagination is well-documented. Component decomposition follows existing codebase conventions (MapPanelShell pattern).
+- **Phase 88:** Foundation heuristic is well-documented by KCAF. PDOK WFS follows existing bag_wfs.py pattern exactly. Both endpoints verified live.
+- **Phase 89:** Extending existing asbest_indicator.py with optional params. Trivial scope, no unknowns.
+- **Phase 90:** Standard React component work following existing ParcelDetailModal patterns. No new frontend libraries.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies. All verified against existing codebase + live API testing. Rechtspraak API parameters confirmed via official PDF v1.15 + live calls. `creator` unreliability confirmed empirically. |
-| Features | MEDIUM-HIGH | Table stakes are clear and directly address known broken behavior. Differentiator feasibility depends on geo-extraction accuracy (anonymization impact is a known unknown). Bekendmakingen cross-ref confirmed infeasible for v13.0. |
-| Architecture | HIGH | Full codebase analysis of existing jurisprudence stack (3 layers). RulingCache as org-agnostic central store is the unambiguous architectural decision. Build order derived from hard dependency chain. |
-| Pitfalls | HIGH | 14 pitfalls identified, most verified against existing implementation behavior or live API testing. Phase-specific warnings map cleanly to suggested phases. "Looks Done But Isn't" checklist provides concrete acceptance criteria. |
+| Stack | HIGH | Zero new dependencies. Both PDOK endpoints verified via live API calls with real Venlo data. Response schemas documented. |
+| Features | MEDIUM-HIGH | Table stakes well-defined from KCAF methodology and industry practice. Differentiator value clear. Deferred features need future validation. |
+| Architecture | HIGH | Follows identical patterns to 6 existing government API integrations. Build order derived from actual code dependency analysis. Minor disagreement on soil data source resolved in favor of PDOK WMS. |
+| Pitfalls | HIGH | All critical pitfalls verified against existing codebase behavior and known data limitations. Phase-specific warnings map cleanly to suggested phases. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Gemeente-to-rechtbank mapping completeness:** Need to verify all 342 current gemeenten are mapped correctly. CBS gemeente list is available in-app but cross-reference with rechtbank jurisdiction data (from rechtspraak.nl) needs manual validation for border cases. Include old court codes (16 pre-2013 codes documented in FEATURES.md).
-
-- **Geo-extraction accuracy on anonymized text:** Need empirical testing on 50+ real rulings before committing to regex patterns. The anonymization policy may vary by court. The "college van B&W van {gemeente}" pattern is verified but other patterns need measurement.
-
-- **Doorlooptijd date availability:** What percentage of rulings contain extractable filing dates? If < 50%, the doorlooptijd feature needs a "onvoldoende data" fallback designed upfront, not retrofitted.
-
-- **`creator` API parameter format:** The exact URI format for the `creator`/`instantie` parameter is unverified (live testing returned 0 results with `creator=http://psi.rechtspraak.nl/rblim&subject=omgevingsrecht`). Client-side ECLI filtering is the confirmed fallback, but revisit if Rechtspraak publishes updated documentation or a working URI format is discovered.
-
-- **Old court code coverage:** Pre-2013 rulings use 16 discontinued court codes (RBMAA, RBUTR, RBARN, etc.). The mapping must include these for historical search completeness -- all documented in FEATURES.md with merger targets.
+- **Soil data source disagreement:** ARCHITECTURE.md proposed WUR soilphysics.wur.nl, while STACK.md and PITFALLS.md recommend PDOK BRO Bodemkaart WMS. Resolution: use PDOK WMS exclusively. The WUR endpoint is undocumented, lacks versioning and SLA, and could break without notice. However, PDOK WMS returns a soil classification code (e.g., "cY23") rather than clay/sand/silt percentages -- the soil classifier must map codes to grondsoort categories via a static lookup table (documented in STACK.md).
+- **BRO Bodemkaart coverage gaps:** 1:50,000 scale means some coordinates (urban fill, water, reclaimed land) return no data. Must return "onbekend" with explanation, never error.
+- **Area scan performance:** Per-parcel WMS GetFeatureInfo at 500+ parcels may be slow. Consider pre-loading bodemkaart into PostGIS as a future optimization if scan times exceed 60s. This is a v14.1 concern, not v14.0.
+- **Completeness score regression:** Adding FysiekRisicoProfiel to PropertyReportResponse changes the completeness score denominator. Must ensure existing reports do not drop in score.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Rechtspraak Open Data v1.15 official PDF -- API specification, parameter list, rate limits (10 req/s)
-- Rechtspraak Waardelijst endpoints (live verified) -- all 11 current Rechtbank codes + Rechtsgebieden URIs confirmed
-- Rechtspraak search endpoint (live verified) -- 20,984 omgevingsrecht rulings confirmed, `creator` parameter unreliability confirmed
-- EU e-Justice ECLI specification -- court code structure (`ECLI:NL:{COURT}:{YEAR}:{ID}`)
-- Existing Propdex codebase -- `rechtspraak.py`, `jurisprudence.py`, `jurisprudence_analysis.py`, `JurisprudenceSection.tsx`, `useJurisprudence.ts`
-- Project MEMORY notes (2026-03-07) -- user requirements for two-tab layout, ECLI filtering preference, component line limit
+- PDOK BRO Bodemkaart WMS GetCapabilities + GetFeatureInfo -- verified live 2026-03-09, returns soilcode/soilname JSON
+- PDOK Funderingsrisicogebieden WFS GetCapabilities + GetFeature -- verified live 2026-03-09, returns PC6-level GeoJSON
+- BRO Catalogus Bodemkaart (docs.geostandaarden.nl/bro/SGM/) -- soil code prefix classification system
+- KCAF (Kennis Centrum Aanpak Funderingsproblematiek) -- bouwjaar x bodemtype heuristic methodology
+- Existing codebase -- asbest_indicator.py, bodem_aggregator.py, property_aggregator.py, cache_manager.py, rate_limiter.py patterns
 
 ### Secondary (MEDIUM confidence)
-- wetsuite rechtspraaknl library docs -- API parameter documentation
-- rechtspraak-extractor PyPI -- sd/ed date parameter reference
-- Open Rechtspraak API docs (Open State Foundation) -- third-party API wrapper documentation
-- dutchcivillaw.com -- complete gemeente-to-rechtbank mapping reference
-- Wikipedia Rechterlijke indeling van Nederland -- judicial district overview
+- WUR Legenda's en indelingen op bodemkaarten -- soil code prefix meanings (documentation not always current)
+- NEN 2991:2015 -- asbestos risk assessment standard (used for existing v1, extended for v2)
+- Deltares Foundation Damage Research -- 1M+ buildings at risk nationally
 
 ### Tertiary (LOW confidence)
-- Geo-extraction accuracy estimates (70-80% regex capture rate) -- needs empirical validation on real ruling texts
-- Doorlooptijd date availability -- assumed available in metadata, needs measurement on sample of 50+ rulings
-- spaCy Dutch NER performance on legal text -- confirmed unsuitable (training data is news, not legal), but no direct testing performed
+- WUR soilphysics.wur.nl API -- verified working 2026-03-09 but undocumented, no SLA, should not be used as primary source
+- Klimaateffectatlas for climate risk context -- deferred, not investigated
 
 ---
-*Research completed: 2026-03-07*
+*Research completed: 2026-03-09*
 *Ready for roadmap: yes*
