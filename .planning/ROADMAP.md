@@ -30,7 +30,7 @@
 
 ### v15.0 Aura (Phases 91-97)
 
-- [ ] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks
+- [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [ ] **Phase 92: Viewport Layout & Navigation** - Full-bleed map, floating SideRailNav, search pill, filter/toggle dock
 - [ ] **Phase 93: Parcel Detail Panel** - Floating right panel with satellite crop hero, bento stats, click-through layers, aerial crop API
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
@@ -149,7 +149,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 91. Aura Design System Foundation | 1/2 | In Progress|  |
+| 91. Aura Design System Foundation | 2/2 | Complete   | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 0/2 | Not started | - |
 | 93. Parcel Detail Panel | 0/3 | Not started | - |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
