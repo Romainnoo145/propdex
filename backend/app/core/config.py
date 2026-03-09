@@ -18,6 +18,8 @@ CACHE_TTL = {
     "bag_3d": 604800,       # 7 days (3D BAG updated quarterly)
     "cbs": 2592000,         # 30 days (CBS data updates annually)
     "ai_juridisch": 604800, # 7 days (AI jurisprudence analysis)
+    "bro_bodemkaart": 31536000,        # 365 days (soil map updated ~every 5 years)
+    "pdok_funderingsrisico": 15552000,  # 180 days (dataset updated ~annually)
     # NOTE: "brk" intentionally absent — BRK data is never cached (Kadaster Tier 3 terms)
 }
 

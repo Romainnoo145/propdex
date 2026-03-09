@@ -119,3 +119,9 @@ rechtspraak_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=300)
 
 # CBS Crime (dataderden.cbs.nl OData v3) — public, polite limits
 cbs_crime_limiter = APIRateLimiter(max_concurrent=3, max_per_hour=500)
+
+# BRO Bodemkaart WMS (PDOK/TNO) — public, polite limits
+bro_bodemkaart_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
+# PDOK Funderingsproblematiek WFS (RVO) — public, polite limits
+pdok_funderingsrisico_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
