@@ -29,6 +29,7 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
+from app.services.scan_enrichment import batch_fetch_bodem_data
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
@@ -550,6 +551,31 @@ async def area_scan_job(
                     failed_count += 1
                     continue
 
+            # ── Phase 3b: Batch-fetch bodem enrichment data ──
+            bodem_by_parcel: dict[str, dict] = {}
+            centroids_for_bodem = [
+                (str(parcel.id), centroid_xy[0], centroid_xy[1])
+                for parcel, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, centroid_xy, _pom, _bag_ids in scored_parcels
+                if centroid_xy is not None
+            ]
+            if centroids_for_bodem:
+                try:
+                    bodem_by_parcel = await batch_fetch_bodem_data(
+                        centroids_for_bodem, http_client
+                    )
+                    logger.info(
+                        "Scan %s: bodem enrichment complete — %d/%d parcels enriched",
+                        scan_id,
+                        len(bodem_by_parcel),
+                        len(centroids_for_bodem),
+                    )
+                except Exception as bodem_exc:
+                    logger.warning(
+                        "Scan %s: bodem batch fetch failed (non-fatal): %s",
+                        scan_id,
+                        bodem_exc,
+                    )
+
             # ── Phase 4: Rank and persist scored parcels (70-80%) ──
             scan.current_phase = "qualifying"
             scan.progress_pct = 70
@@ -629,28 +655,36 @@ async def area_scan_job(
                         final_bm["actual_bouwhoogte"] = actual_hoogte
                     if actual_lagen is not None:
                         final_bm["actual_bouwlagen"] = actual_lagen
+                    # Merge bodem enrichment data from Phase 3b
+                    bodem_enrichment = bodem_by_parcel.get(str(parcel.id), {})
+                    flags_dict: dict = {
+                        "category": category,
+                        "factors": factors,
+                        "subscores": {
+                            "vacancy": vacancy_subscore,
+                            "buildability": buildability_subscore,
+                        },
+                        "score_model_version": score_model_version,
+                        "vacancy_signal": vacancy_signal,
+                        "vacancy_confidence": vacancy_assessment.confidence,
+                        "vacancy_reasons": vacancy_assessment.reasons,
+                        "vacancy_model_version": vacancy_assessment.model_version,
+                        "market_signals": listing_signal,
+                        "opportunity_signals": opportunity_signals,
+                        "building_metrics": final_bm,
+                    }
+                    if bodem_enrichment.get("bodem"):
+                        flags_dict["bodem"] = bodem_enrichment["bodem"]
+                    if bodem_enrichment.get("bodemtype"):
+                        flags_dict["bodemtype"] = bodem_enrichment["bodemtype"]
+
                     ranked_values.append(
                         {
                             "organization_id": org_id,
                             "scan_id": scan.id,
                             "parcel_id": parcel.id,
                             "score": score,
-                            "flags": {
-                                "category": category,
-                                "factors": factors,
-                                "subscores": {
-                                    "vacancy": vacancy_subscore,
-                                    "buildability": buildability_subscore,
-                                },
-                                "score_model_version": score_model_version,
-                                "vacancy_signal": vacancy_signal,
-                                "vacancy_confidence": vacancy_assessment.confidence,
-                                "vacancy_reasons": vacancy_assessment.reasons,
-                                "vacancy_model_version": vacancy_assessment.model_version,
-                                "market_signals": listing_signal,
-                                "opportunity_signals": opportunity_signals,
-                                "building_metrics": final_bm,
-                            },
+                            "flags": flags_dict,
                         }
                     )
                 for ranked_batch in _chunk_rows(
