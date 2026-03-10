@@ -29,7 +29,11 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
-from app.services.scan_enrichment import batch_fetch_bodem_data
+from app.services.scan_enrichment import (
+    batch_fetch_address_enrichment,
+    batch_fetch_bodem_data,
+    batch_fetch_postcode_enrichment,
+)
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
@@ -732,6 +736,114 @@ async def area_scan_job(
             session.add(scan)
             await session.flush()
             await session.commit()
+
+            # ── Phase 5b: Address-based enrichment (88-95%) ──
+            try:
+                scan.current_phase = "enriching_data"
+                session.add(scan)
+                await session.flush()
+                await session.commit()
+
+                # Build lookup maps from resolved_data
+                postcodes_by_parcel = {
+                    pid: res.postcode
+                    for pid, res in resolved_data
+                    if res.postcode
+                }
+                vbo_ids_by_parcel = {
+                    pid: res.vbo_id
+                    for pid, res in resolved_data
+                    if res.vbo_id
+                }
+                nummeraanduiding_ids_by_parcel = {
+                    pid: res.nummeraanduiding_id
+                    for pid, res in resolved_data
+                    if res.nummeraanduiding_id
+                }
+
+                logger.info(
+                    "Scan %s: Phase 5b enrichment — %d postcodes, %d VBO IDs, %d NA IDs",
+                    scan_id,
+                    len(postcodes_by_parcel),
+                    len(vbo_ids_by_parcel),
+                    len(nummeraanduiding_ids_by_parcel),
+                )
+
+                # Fetch all enrichment data in parallel
+                postcode_enrichment, address_enrichment = await asyncio.gather(
+                    batch_fetch_postcode_enrichment(postcodes_by_parcel, http_client),
+                    batch_fetch_address_enrichment(
+                        vbo_ids_by_parcel, nummeraanduiding_ids_by_parcel, http_client
+                    ),
+                )
+
+                # Merge enrichment data into existing scan_results.flags
+                enriched_parcel_ids = set(postcode_enrichment) | set(address_enrichment)
+                if enriched_parcel_ids:
+                    # Load existing scan_results in batches to merge flags
+                    enriched_list = list(enriched_parcel_ids)
+                    update_count = 0
+                    for batch_start in range(0, len(enriched_list), 100):
+                        batch_ids = enriched_list[batch_start:batch_start + 100]
+                        batch_uuids = []
+                        for pid in batch_ids:
+                            try:
+                                batch_uuids.append(uuid.UUID(pid))
+                            except ValueError:
+                                continue
+
+                        stmt = select(ScanResult).where(
+                            ScanResult.scan_id == scan.id,
+                            ScanResult.parcel_id.in_(batch_uuids),
+                        )
+                        result = await session.execute(stmt)
+                        scan_results_batch = result.scalars().all()
+
+                        for sr in scan_results_batch:
+                            pid_str = str(sr.parcel_id)
+                            merged_flags = dict(sr.flags) if sr.flags else {}
+
+                            pc_data = postcode_enrichment.get(pid_str, {})
+                            if pc_data.get("vergunningen"):
+                                merged_flags["vergunningen"] = pc_data["vergunningen"]
+                            if pc_data.get("funderingsrisico"):
+                                merged_flags["funderingsrisico"] = pc_data["funderingsrisico"]
+
+                            addr_data = address_enrichment.get(pid_str, {})
+                            if addr_data.get("energielabel"):
+                                merged_flags["energielabel"] = addr_data["energielabel"]
+                            if addr_data.get("woz"):
+                                merged_flags["woz"] = addr_data["woz"]
+
+                            sr.flags = merged_flags
+                            session.add(sr)
+                            update_count += 1
+
+                        await session.flush()
+
+                    await session.commit()
+                    logger.info(
+                        "Scan %s: Phase 5b complete — %d scan_results enriched",
+                        scan_id,
+                        update_count,
+                    )
+
+                scan.progress_pct = 95
+                session.add(scan)
+                await session.flush()
+                await session.commit()
+
+            except Exception as enrichment_exc:
+                # Phase 5b is non-fatal — scan completes with existing data
+                logger.warning(
+                    "Scan %s: Phase 5b enrichment failed (non-fatal): %s",
+                    scan_id,
+                    enrichment_exc,
+                )
+                scan.progress_pct = 95
+                session.add(scan)
+                await session.flush()
+                await session.commit()
 
             # ── Coverage validation ──
             parcels_with_buildings = sum(1 for p, *_ in scored_parcels if p.has_pand)
