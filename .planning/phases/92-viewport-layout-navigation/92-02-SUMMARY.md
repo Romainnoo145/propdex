@@ -2,100 +2,98 @@
 phase: 92-viewport-layout-navigation
 plan: 02
 subsystem: ui
-tags: [glass-ui, search, layer-toggle, maplibre, tailwind, aura]
+tags: [framer-motion, toggle-pill, search-pill, glass-material, layoutId, animation]
 
-# Dependency graph
 requires:
-  - phase: 91-aura-design-system
-    provides: Aura CSS tokens, glass primitives, shadow-glass, micro-interactions
+  - phase: 92-viewport-layout-navigation
+    provides: SideRailNav at left edge (80px wide), Aura design tokens
 provides:
-  - Search pill with glass styling positioned to clear SideRailNav
-  - Top-center filter dock with Aura glass styling
-  - Score gradient legend extracted to bottom-right
-  - aura-hover-glow micro-interaction class
-affects: [93-parcel-detail-panel, 94-wijk-bottom-sheet]
+  - Glass search pill at left-[112px] top-6 with pill shape and 320px width
+  - Toggle pill at top-center with 3 sections (Base Layer, View Level, Intelligence Layer)
+  - Framer Motion layoutId sliding amber indicator per section
+  - framer-motion dependency installed
+affects: [93-parcel-detail-panel, 94-bottom-sheet, 95-filter-chips]
 
-# Tech tracking
 tech-stack:
-  added: []
-  patterns: [glass-pill search bar, top-center filter dock, extracted gradient legend]
+  added: [framer-motion]
+  patterns: [ToggleButton with motion.div layoutId, section-scoped animation, spring transition]
 
 key-files:
   created: []
   modified:
     - frontend/src/components/search/AddressSearch.tsx
     - frontend/src/components/map/LayerToggle.tsx
-    - frontend/src/routes/_authenticated/map.tsx
-    - frontend/src/styles/index.css
+    - frontend/package.json
 
 key-decisions:
-  - "Gradient legend extracted from LayerToggle to map.tsx (Option B) for cleaner separation"
-  - "aura-hover-glow class added as subtle box-shadow glow (not transform-based)"
+  - "Separate layoutId per section (base/view/intel) so indicator slides within section only"
+  - "Wijk button acts as visual placeholder, triggers gemeente toggle if not already active"
+  - "Toggle pill at top-8 (not top-4) to give breathing room below search pill"
+  - "Bestemmingsplan always visible in pill (not conditionally shown when parcels active)"
 
 patterns-established:
-  - "Search pill offset: md:left-[112px] to clear 80px SideRailNav + margins"
-  - "Filter dock: top-center via left-1/2 -translate-x-1/2"
-  - "Glass tokens: border-white/40, shadow-glass, backdrop-blur-md for all floating controls"
+  - "ToggleButton pattern: relative button with motion.div layoutId behind text for sliding indicator"
+  - "Section dividers: border-r border-white/20 for subtle glass-internal separation"
+  - "Active glow: shadow-[0_0_12px_rgba(249,168,38,0.3)] for intelligence layer toggles"
 
 requirements-completed: [NAV-03, NAV-04]
 
-# Metrics
-duration: 3min
+duration: 4min
 completed: 2026-03-10
 ---
 
-# Phase 92 Plan 02: Search & Filters Summary
+# Phase 92 Plan 02: Search Pill + Toggle Pill Summary
 
-**Glass search pill offset for SideRailNav + top-center filter dock with extracted gradient legend at bottom-right**
+**Search pill at top-left and 3-section toggle pill at top-center with Framer Motion layoutId sliding amber indicators**
 
 ## Performance
 
-- **Duration:** 3 min
-- **Started:** 2026-03-09T22:18:07Z
-- **Completed:** 2026-03-09T22:21:25Z
+- **Duration:** 4 min
+- **Started:** 2026-03-10T10:11:52Z
+- **Completed:** 2026-03-10T10:16:04Z
 - **Tasks:** 2
-- **Files modified:** 4
+- **Files modified:** 3
 
 ## Accomplishments
-- Search pill repositioned with 112px desktop offset to clear floating SideRailNav
-- Search pill restyled as rounded-full glass pill (border-white/40, backdrop-blur-md, shadow-glass)
-- LayerToggle moved from bottom-left to top-center of viewport
-- Score gradient legend extracted from LayerToggle component into map.tsx at bottom-right
-- Added aura-hover-glow micro-interaction with reduced-motion fallback
+- Installed framer-motion dependency for panel/toggle animations across Aura frontend
+- Search pill repositioned to top-6 with 320px width and smooth expand transition
+- Toggle pill restructured into 3 logical sections with Framer Motion layoutId sliding amber indicator
+- All existing toggle functionality preserved unchanged
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Search pill glass styling and position shift** - `1e23963` (feat)
-2. **Task 2: Top-center filter dock + legend reposition** - `383c054` (feat)
+1. **Task 1: Install framer-motion + search pill glass styling and position** - `fa2d2c4` (feat)
+2. **Task 2: Toggle pill with 3 sections + Framer Motion layoutId + legend reposition** - `153ecb8` (feat)
 
 ## Files Created/Modified
-- `frontend/src/components/search/AddressSearch.tsx` - Glass pill search bar with SideRailNav offset
-- `frontend/src/components/map/LayerToggle.tsx` - Top-center positioned filter dock, gradient legend removed
-- `frontend/src/routes/_authenticated/map.tsx` - Score gradient legend rendered at bottom-right
-- `frontend/src/styles/index.css` - aura-hover-glow class + reduced-motion fallback
+- `frontend/package.json` - Added framer-motion dependency
+- `frontend/src/components/search/AddressSearch.tsx` - Updated position to top-6, added 320px width and transition
+- `frontend/src/components/map/LayerToggle.tsx` - Restructured into 3-section pill with ToggleButton + motion.div layoutId
 
 ## Decisions Made
-- Used Option B (extract legend to map.tsx) for cleaner component separation rather than absolute-positioning hack within LayerToggle
-- aura-hover-glow uses box-shadow only (no transform) to avoid conflicting with existing shadow-glass on the button
+- Separate layoutId per section (base/view/intel) prevents indicator from sliding across section boundaries
+- Wijk button is a visual placeholder that triggers gemeente toggle if not already active (wijk is sub-level of gemeente)
+- Bestemmingsplan always visible in the pill (removed conditional rendering tied to showParcels) for consistent layout
+- Toggle pill positioned at top-8 to create visual separation from search pill at top-6
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-**1. [Rule 2 - Missing Critical] Added aura-hover-glow CSS class**
-- **Found during:** Task 1 (Search pill glass styling)
-- **Issue:** Plan references `aura-hover-glow` class but it did not exist in the codebase
-- **Fix:** Added `.aura-hover-glow` class with hover box-shadow and reduced-motion fallback to index.css
-- **Files modified:** frontend/src/styles/index.css
-- **Verification:** TypeScript compilation passes, class applied to search button
-- **Committed in:** 1e23963 (Task 1 commit)
+**1. [Rule 1 - Bug] Fixed unused hasScoreData lint error**
+- **Found during:** Task 2
+- **Issue:** hasScoreData prop was destructured but unused after legend extraction to map.tsx
+- **Fix:** Prefixed with underscore: `hasScoreData: _hasScoreData`
+- **Files modified:** frontend/src/components/map/LayerToggle.tsx
+- **Verification:** npm run check passes with 0 errors
+- **Committed in:** 153ecb8 (Task 2 commit)
 
 ---
 
-**Total deviations:** 1 auto-fixed (1 missing critical)
-**Impact on plan:** Auto-fix necessary for the hover glow effect to work. No scope creep.
+**Total deviations:** 1 auto-fixed (1 bug)
+**Impact on plan:** Trivial lint fix. No scope creep.
 
 ## Issues Encountered
 None
@@ -104,9 +102,9 @@ None
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Search and filter controls fully repositioned with Aura glass styling
-- Ready for Phase 93 (parcel detail panel) or further Phase 92 work
-- BestemmingsplanLegend at fixed top-20 right-14 does not clash with new bottom-right gradient legend
+- framer-motion available for all subsequent phases (panel animations, bottom sheet, detail layers)
+- Toggle pill ready for intelligence layer expansion in future phases
+- Search pill and toggle pill are independent floating elements ready for responsive adjustments
 
 ---
 *Phase: 92-viewport-layout-navigation*

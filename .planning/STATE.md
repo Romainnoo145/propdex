@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 92 plan 01 complete, continuing 92-02
+**Current focus:** v15.0 Aura -- Phase 92 complete, ready for Phase 94
 
 ---
 
 ## Current Position
 
 Phase: 92 (2 of 7 in v15.0) -- Viewport Layout & Navigation
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-03-10 -- 92-01 Font swap, background mesh, floating map canvas
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-03-10 -- 92-02 Search pill + toggle pill with Framer Motion
 
-Progress: [######░░░░] 62% (8/13 plans)
+Progress: [#######░░░] 69% (9/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v15.0)
+- Total plans completed: 9 (v15.0)
 - Average duration: 4min
-- Total execution time: 32min
+- Total execution time: 36min
 
 **By Phase:**
 
@@ -43,6 +43,9 @@ Progress: [######░░░░] 62% (8/13 plans)
 - Active nav state uses bg-aura-amber/20 text-aura-amber for warm highlight
 - Aura glass-white defined as #ffffff (pure hex) so Tailwind opacity modifiers work
 - Plus Jakarta Sans via Google Fonts CDN replaces Satoshi (92-01)
+- Separate layoutId per section (base/view/intel) so toggle indicator slides within section only (92-02)
+- Bestemmingsplan always visible in toggle pill (not conditional on showParcels) (92-02)
+- Toggle pill at top-8, search pill at top-6 for visual separation (92-02)
 - Badge teal variant uses aura-green but kept variant name for backward compat
 - BentoPod explicitly excluded from backdrop-blur (locked design decision)
 - Reduced-motion uses [class*=backdrop-blur] selector for generic blur detection
@@ -84,11 +87,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T10:14:47Z
-**Stopped At:** Completed 92-01-PLAN.md (Font swap, background mesh, floating map canvas)
+**Last Session:** 2026-03-10T10:16:04Z
+**Stopped At:** Completed 92-02-PLAN.md (Search pill + toggle pill with Framer Motion)
 
-**Next Action:** Execute 92-02-PLAN.md
+**Next Action:** Execute Phase 94 plans
 
 ---
 
-*State updated: 2026-03-10 -- Phase 92 plan 01 complete (Viewport Layout & Navigation)*
+*State updated: 2026-03-10 -- Phase 92 complete (Viewport Layout & Navigation)*
