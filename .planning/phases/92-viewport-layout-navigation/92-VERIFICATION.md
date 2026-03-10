@@ -1,107 +1,130 @@
 ---
 phase: 92-viewport-layout-navigation
-verified: 2026-03-10T06:00:00Z
+verified: 2026-03-10T15:30:00Z
 status: passed
-score: 11/11 must-haves verified
-re_verification: false
+score: 10/10 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 11/11
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 92: Viewport Layout & Navigation Verification Report
 
-**Phase Goal:** The map owns the entire viewport and all navigation floats on top -- users feel like they are looking at a living map with glass controls
-**Verified:** 2026-03-10T06:00:00Z
+**Phase Goal:** The map floats on a warm ambient canvas with glass controls -- Plus Jakarta Sans font, background mesh, rounded map, SideRailNav at left-6, split command center with Framer Motion
+**Verified:** 2026-03-10T15:30:00Z
 **Status:** passed
-**Re-verification:** No -- initial verification
+**Re-verification:** Yes -- re-verification against ROADMAP success criteria (previous verification had stale evidence citing old class names and line numbers)
 
 ## Goal Achievement
 
-### Observable Truths
+### Observable Truths (from ROADMAP Success Criteria + PLAN must_haves)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Map fills 100% of the browser viewport with no page-level scroll bars | VERIFIED | `_authenticated.tsx` line 70: `relative h-screen w-screen overflow-hidden`, MapView in `absolute inset-0` |
-| 2 | SideRailNav floats on the left with glass blur, rounded-[40px], 80px wide, 16px from edges | VERIFIED | `SideRailNav.tsx` line 50: `fixed left-4 top-4 bottom-4 ... w-20 ... rounded-[40px] ... backdrop-blur-xl` |
-| 3 | SideRailNav appears on ALL authenticated routes | VERIFIED | Rendered in `_authenticated.tsx` line 89 after `<main>`, outside route-specific content |
-| 4 | Non-map routes have left padding so content is not hidden behind the floating rail | VERIFIED | `ResultsShell.tsx` line 28: `md:pl-[112px]` |
-| 5 | SideRailNav has logo/monogram at top, functional icons in middle, settings+logout at bottom | VERIFIED | P monogram (line 56), Kaart/Projecten/Meldingen/Rapporten/Jurisprudentie icons (lines 63-146), Settings+LogOut at bottom (lines 150-173) |
-| 6 | Hovering a SideRailNav icon shows tooltip and scale micro-interaction | VERIFIED | `hover:scale-105` on icon divs, tooltip spans with `group-hover:opacity-100`, `aura-hover-glow` class in index.css |
-| 7 | Search pill sits top-left, shifted right to clear the floating SideRailNav | VERIFIED | `AddressSearch.tsx` lines 111, 126: `absolute top-4 left-4 md:left-[112px]` |
-| 8 | PDOK address autocomplete works identically to before | VERIFIED | `useAddressSuggest` hook still imported and used (line 2, 18), keyboard nav and selection logic unchanged |
-| 9 | Filter/toggle chips dock at top-center of the map viewport | VERIFIED | `LayerToggle.tsx` line 256: `absolute top-4 left-1/2 -translate-x-1/2` |
-| 10 | Layer toggles (Kaart/Satellite, Gemeenten, Percelen, Bestemmingsplan) all work as before | VERIFIED | All toggle buttons present (lines 258-306), handler props wired (`onBasemapChange`, `onParcelsToggle`, `onGemeentenToggle`, `onBestemmingsplanToggle`) |
-| 11 | Score gradient legend appears at bottom-right, separate from the top-center dock | VERIFIED | `map.tsx` line 2185: `absolute bottom-4 right-4 z-[var(--z-map-controls)]` with glass styling |
+| 1 | Plus Jakarta Sans is the global font -- no Satoshi or Inter references remain | VERIFIED | Google Fonts CDN in `index.html` line 9, `--font-sans: "Plus Jakarta Sans"` in `index.css` line 34, grep for Satoshi returns 0 matches |
+| 2 | Morning Mist (#F2F6F3) background with two blurred color blobs behind map | VERIFIED | `bg-aura-canvas` on layout div (`_authenticated.tsx` line 70), Sage Mint blob top-left (lines 73-75), Amber blob bottom-right (lines 76-79) |
+| 3 | Map has 16px padding from viewport edges, rounded-[40px], soft shadow | VERIFIED | `absolute inset-4 rounded-[40px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.03)]` (`_authenticated.tsx` line 84) |
+| 4 | SideRailNav at left-6 top-6 bottom-6 (24px) with glass material | VERIFIED | `fixed left-6 top-6 bottom-6 ... w-20 ... rounded-[40px] ... bg-aura-glass-white/60 backdrop-blur-xl border border-white/40 shadow-glass` (`SideRailNav.tsx` line 50) |
+| 5 | SideRailNav has monogram, functional icons, tooltips, settings+logout | VERIFIED | P monogram (line 56), Kaart/Projecten/Meldingen/Rapporten/Jurisprudentie icons (lines 63-146), hover tooltips with `group-hover:opacity-100`, Settings+LogOut at bottom (lines 150-173) |
+| 6 | Non-map routes clear the SideRailNav | VERIFIED | `ResultsShell.tsx` line 28: `md:pl-[112px]` |
+| 7 | Search pill at left-[112px] top-6, rounded-full, glass material | VERIFIED | `AddressSearch.tsx` lines 111, 126: `top-6 left-4 md:left-[112px]`, `rounded-full`, `bg-aura-glass-white/60 backdrop-blur-md` |
+| 8 | PDOK address autocomplete works identically | VERIFIED | `useAddressSuggest` hook imported (line 2) and called (line 18), keyboard nav and selection logic intact |
+| 9 | Toggle pill at top-center with 3 sections separated by vertical dividers | VERIFIED | `LayerToggle.tsx` line 291: `top-8 left-1/2 -translate-x-1/2`, three sections with `border-r border-white/20` (lines 294, 312): Base Layer (Kaart/Satelliet), View Level (Gemeente/Wijk/Perceel), Intelligence Layer (Bestemmingsplan) |
+| 10 | Framer Motion layoutId sliding amber indicator per section | VERIFIED | `motion` imported from `framer-motion` (line 2), `ToggleButton` renders `motion.div` with `layoutId={toggle-indicator-${sectionId}}` (line 74), spring config `stiffness: 500, damping: 30` (line 50), `framer-motion: ^12.35.2` in package.json |
 
-**Score:** 11/11 truths verified
+**Score:** 10/10 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `frontend/src/routes/_authenticated.tsx` | Full-viewport layout with floating SideRailNav | VERIFIED | Contains `h-screen w-screen overflow-hidden`, SideRailNav rendered outside main flow |
-| `frontend/src/components/layout/SideRailNav.tsx` | Floating glass navigation rail | VERIFIED | Contains `fixed left-4 top-4 bottom-4 w-20 rounded-[40px]`, glass styling, all nav icons |
-| `frontend/src/components/layout/ResultsShell.tsx` | Left padding for non-map content | VERIFIED | Contains `md:pl-[112px]` |
-| `frontend/src/components/search/AddressSearch.tsx` | Search pill positioned to clear SideRailNav | VERIFIED | Contains `md:left-[112px]`, rounded-full glass styling |
-| `frontend/src/components/map/LayerToggle.tsx` | Top-center filter dock | VERIFIED | Contains `top-4 left-1/2 -translate-x-1/2`, glass styling |
+| `frontend/index.html` | Plus Jakarta Sans CDN link | VERIFIED | Line 9: Google Fonts import with full weight range (200-800) |
+| `frontend/src/styles/index.css` | Font variable + Aura tokens | VERIFIED | Line 34: `--font-sans: "Plus Jakarta Sans"`, full Aura palette, z-index scale |
+| `frontend/src/routes/_authenticated.tsx` | Background mesh + rounded map canvas | VERIFIED | Two blurred blobs (lines 73-79), map in `inset-4 rounded-[40px]` (line 84) |
+| `frontend/src/components/layout/SideRailNav.tsx` | Glass rail at left-6 | VERIFIED | 177 lines, full implementation with icons, tooltips, active states |
+| `frontend/src/components/layout/ResultsShell.tsx` | Left padding for non-map routes | VERIFIED | `md:pl-[112px]` (line 28) |
+| `frontend/src/components/search/AddressSearch.tsx` | Glass pill search at left-[112px] | VERIFIED | 210 lines, full PDOK autocomplete with keyboard nav |
+| `frontend/src/components/map/LayerToggle.tsx` | 3-section toggle with Framer Motion | VERIFIED | 355 lines, `motion.div` with `layoutId`, 3 sections, all handlers wired |
+| `frontend/package.json` | framer-motion dependency | VERIFIED | `"framer-motion": "^12.35.2"` (line 25) |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `_authenticated.tsx` | SideRailNav | Renders as floating fixed element | WIRED | `<SideRailNav />` at line 89, after `<main>` |
-| `ResultsShell.tsx` | SideRailNav | Left padding clears floating rail | WIRED | `md:pl-[112px]` at line 28 |
-| `AddressSearch.tsx` | PDOK suggest API | useAddressSuggest hook | WIRED | Hook imported line 2, called line 18 |
-| `LayerToggle.tsx` | map.tsx layer state | Props for toggles | WIRED | `onBasemapChange`, `onParcelsToggle`, `onGemeentenToggle` all in props interface and used |
+| `_authenticated.tsx` | `SideRailNav` | Component render | WIRED | `<SideRailNav />` at line 101 |
+| `_authenticated.tsx` | `MapView` | Wrapped in rounded container | WIRED | MapView inside `inset-4 rounded-[40px]` div (lines 84-94) |
+| `index.html` | Font loading | Google Fonts CDN | WIRED | `<link>` tag loads Plus Jakarta Sans (line 9) |
+| `index.css` | All components | `--font-sans` CSS variable | WIRED | Tailwind `@theme` block defines variable, used globally |
+| `LayerToggle.tsx` | `framer-motion` | `motion.div` with `layoutId` | WIRED | Import line 2, `ToggleButton` uses `motion.div` (lines 73-78) |
+| `AddressSearch.tsx` | PDOK API | `useAddressSuggest` hook | WIRED | Import line 2, called line 18, results rendered in dropdown |
+| `LayerToggle.tsx` | Map state | Props for all toggles | WIRED | `onBasemapChange`, `onParcelsToggle`, `onGemeentenToggle`, `onBestemmingsplanToggle` all in interface and used |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-----------|-------------|--------|----------|
-| NAV-01 | 92-01 | Viewport-locked layout -- map fills 100% screen, all UI floats | SATISFIED | `h-screen w-screen overflow-hidden` layout, all controls use `fixed`/`absolute` positioning |
-| NAV-02 | 92-01 | Floating SideRailNav (80px, rounded-[40px], glass) with monogram, icons, tooltips | SATISFIED | Full implementation in SideRailNav.tsx with all specified styling and icons |
-| NAV-03 | 92-02 | Search pill (top-left, rounded-full, glass) with PDOK autocomplete | SATISFIED | AddressSearch.tsx with `rounded-full`, glass tokens, `md:left-[112px]` offset, useAddressSuggest |
-| NAV-04 | 92-02 | Filter/Toggle dock (top-center) with chip-style controls | SATISFIED | LayerToggle.tsx at `top-4 left-1/2 -translate-x-1/2` with all toggle buttons |
+| NAV-01 | 92-01 | Viewport-locked layout -- map fills 100% screen, all UI floats with 16px margin | SATISFIED | `h-screen w-screen overflow-hidden` layout, map in `absolute inset-4`, all controls use `fixed`/`absolute` positioning |
+| NAV-02 | 92-01 | Floating SideRailNav (80px, rounded-[40px], glass) with monogram, icons, tooltips | SATISFIED | Full implementation at `left-6 top-6 bottom-6 w-20 rounded-[40px]` with glass material, all nav icons, hover tooltips |
+| NAV-03 | 92-02 | Search pill (top-left, rounded-full, glass) with PDOK autocomplete | SATISFIED | `AddressSearch.tsx` with `rounded-full`, glass tokens, `md:left-[112px]` offset, `useAddressSuggest` wired |
+| NAV-04 | 92-02 | Filter/Toggle dock (top-center) with chip-style controls | SATISFIED | `LayerToggle.tsx` at `top-8 left-1/2 -translate-x-1/2` with 3 sections, Framer Motion layoutId, all toggles functional |
 
-No orphaned requirements found.
+No orphaned requirements found (REQUIREMENTS.md maps exactly NAV-01 through NAV-04 to Phase 92).
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| - | - | No anti-patterns detected | - | - |
+| - | - | None detected | - | - |
 
-No TODOs, FIXMEs, placeholders, empty implementations, or stub handlers found in any modified files.
+No TODOs, FIXMEs, placeholders, empty implementations, or stub handlers found in any phase-modified files.
 
 ### Human Verification Required
 
 ### 1. Glass Blur Visual Quality
 
-**Test:** Open /map at localhost:9300 -- verify SideRailNav has visible backdrop blur against the map underneath
-**Expected:** Glass effect clearly visible with map content blurred behind the rail
+**Test:** Open /map at localhost:9300 -- verify SideRailNav and toggle pill have visible backdrop blur against the map
+**Expected:** Glass effect clearly visible with map content blurred behind panels
 **Why human:** Visual blur rendering varies by browser/GPU
 
-### 2. Search Pill Interaction Flow
+### 2. Background Mesh Ambient Effect
 
-**Test:** Click search icon, type "Venlo", select a suggestion, verify navigation
-**Expected:** Search expands to pill shape, PDOK suggestions appear, selecting one flies map to location
-**Why human:** Full interaction flow including animations and map navigation
+**Test:** Navigate to /map -- look at the 16px gap around the rounded map canvas
+**Expected:** Subtle sage green blob visible top-left, subtle amber blob bottom-right, behind the map edges
+**Why human:** Extremely subtle opacity (0.10-0.15) may not be visible on all monitors
 
-### 3. Layer Toggle Positioning
+### 3. Framer Motion Toggle Animation
 
-**Test:** Verify filter chips are visually centered at top of viewport and do not overlap with search pill
-**Expected:** No overlap between top-left search and top-center filter dock
-**Why human:** Visual overlap depends on viewport width
+**Test:** Click between Kaart and Satelliet in the toggle pill
+**Expected:** Amber indicator pill slides smoothly between options with spring physics
+**Why human:** Animation smoothness and spring feel require visual assessment
 
-### 4. Score Legend Position
+### 4. Plus Jakarta Sans Font Rendering
 
-**Test:** Enable Percelen layer with score data, verify gradient legend at bottom-right
-**Expected:** Legend appears at bottom-right, does not overlap with MapLibre attribution or BestemmingsplanLegend
-**Why human:** Position collision depends on content rendering
+**Test:** Inspect any text element -- verify computed font-family is "Plus Jakarta Sans"
+**Expected:** Font loads from Google CDN and renders correctly at all sizes
+**Why human:** Font loading depends on network, fallback rendering varies
+
+### 5. Search and Toggle No-Overlap
+
+**Test:** On various viewport widths, verify search pill (top-left) and toggle pill (top-center) do not overlap
+**Expected:** Clear separation between the two floating elements
+**Why human:** Overlap depends on viewport width, responsive behavior
 
 ### Gaps Summary
 
-No gaps found. All 11 observable truths verified against the actual codebase. All 4 requirements (NAV-01 through NAV-04) are satisfied with substantive implementations. All artifacts exist, are non-stub, and are properly wired. TypeScript compilation passes with no errors. Four commits (99be7cd, da34fc0, 1e23963, 383c054) confirmed in git history.
+No gaps found. All 10 observable truths verified against actual codebase. All 4 ROADMAP success criteria are met:
+
+1. Plus Jakarta Sans is loaded via Google Fonts CDN and set as `--font-sans`, no Satoshi remnants
+2. SideRailNav at `left-6 top-6 bottom-6` with full glass material
+3. Search pill at `left-[112px] top-6` with `rounded-full` and glass styling
+4. Toggle pill at top-center with 3 sections (Base Layer | View Level | Intelligence Layer) using Framer Motion `layoutId` for sliding amber indicator
+
+All artifacts exist, are substantive (not stubs), and are properly wired to their dependencies.
 
 ---
 
-_Verified: 2026-03-10T06:00:00Z_
+_Verified: 2026-03-10T15:30:00Z_
 _Verifier: Claude (gsd-verifier)_
