@@ -29,9 +29,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **PRC-02**: Primary stats bento grid (4 pods): oppervlakte, bouwjaar, status, gemeente -- icon + value, no scroll
 - [x] **PRC-03**: Bestemming as wide horizontal status bar with soft color fill
 - [x] **PRC-04**: Kansen & aandachtspunten as horizontal pill/tag cloud instead of text list
-- [ ] **PRC-05**: Click-through layers for deeper data: clicking a bento pod opens a detail layer replacing the current view (17+ sections accessible without scroll)
-- [ ] **PRC-06**: Vergunningen as accordion-style bento pod (shows count, expands on click)
-- [ ] **PRC-07**: "Genereer Rapport" as primary action button pinned at bottom of panel
+- [x] **PRC-05**: Click-through layers for deeper data: clicking a bento pod opens a detail layer replacing the current view (17+ sections accessible without scroll)
+- [x] **PRC-06**: Vergunningen as accordion-style bento pod (shows count, expands on click)
+- [x] **PRC-07**: "Genereer Rapport" as primary action button pinned at bottom of panel
 
 ### Parcel Aerial Crop API
 
@@ -113,9 +113,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRC-02 | Phase 93 | Complete |
 | PRC-03 | Phase 93 | Complete |
 | PRC-04 | Phase 93 | Complete |
-| PRC-05 | Phase 93 | Pending |
-| PRC-06 | Phase 93 | Pending |
-| PRC-07 | Phase 93 | Pending |
+| PRC-05 | Phase 93 | Complete |
+| PRC-06 | Phase 93 | Complete |
+| PRC-07 | Phase 93 | Complete |
 | API-01 | Phase 93 | Complete |
 | WIJK-01 | Phase 94 | Pending |
 | WIJK-02 | Phase 94 | Pending |

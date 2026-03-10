@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 92 complete, ready for Phase 93
+**Current focus:** v15.0 Aura -- Phase 93 complete, ready for Phase 94
 
 ---
 
 ## Current Position
 
 Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
-Plan: 2 of 3 complete
-Status: In Progress
-Last activity: 2026-03-10 -- 93-02 Floating parcel detail panel with bento grid
+Plan: 3 of 3 complete
+Status: Complete
+Last activity: 2026-03-10 -- 93-03 Detail layers for category pods
 
-Progress: [#####░░░░░] 46% (6/13 plans)
+Progress: [#####░░░░░] 54% (7/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v15.0)
+- Total plans completed: 7 (v15.0)
 - Average duration: 4min
-- Total execution time: 24min
+- Total execution time: 29min
 
 **By Phase:**
 
@@ -31,7 +31,8 @@ Progress: [#####░░░░░] 46% (6/13 plans)
 |-------|-------|-------|----------|
 | 91 | 2 | 8min | 4min |
 | 92 | 2 | 6min | 3min |
-| 93 | 2 | 10min | 5min |
+| 93 | 3 | 15min | 5min |
+| Phase 93 P03 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,9 @@ Progress: [#####░░░░░] 46% (6/13 plans)
 - Score badge uses inline span with shadow-lg for readability over satellite imagery
 - Map re-center uses screen-space projection shift (190px) for panel offset
 - Bestemming folded into Juridisch pod (no separate status bar)
+- [Phase 93]: Derived state pattern (tracked parcel ID) for view reset instead of useEffect
+- [Phase 93]: JuridischLayer fetches vergunningen/meldingen via hooks directly (not passed as props)
+- [Phase 93]: Accordion uses local useState toggle with BentoPod interactive for consistent Aura styling
 
 ### Key Patterns (carry forward)
 
@@ -80,8 +84,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-09T23:47:17Z
-**Stopped At:** Completed 93-02-PLAN.md
+**Last Session:** 2026-03-10T08:30:49.702Z
+**Stopped At:** Completed 93-03-PLAN.md
 
 **Next Action:** Execute 93-03-PLAN.md (Detail layers for category pods)
 

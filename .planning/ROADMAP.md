@@ -32,7 +32,7 @@
 
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [x] **Phase 92: Viewport Layout & Navigation** - Full-bleed map, floating SideRailNav, search pill, filter/toggle dock (completed 2026-03-09)
-- [ ] **Phase 93: Parcel Detail Panel** - Floating right panel with satellite crop hero, bento stats, click-through layers, aerial crop API
+- [x] **Phase 93: Parcel Detail Panel** - Floating right panel with satellite crop hero, bento stats, click-through layers, aerial crop API (completed 2026-03-10)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
@@ -84,9 +84,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
-- [ ] 93-02-PLAN.md -- Floating panel shell + satellite hero + bento category pods + map integration
-- [ ] 93-03-PLAN.md -- Click-through detail layers + vergunningen accordion + rapport button
+- [x] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
+- [x] 93-02-PLAN.md -- Floating panel shell + satellite hero + bento category pods + map integration
+- [x] 93-03-PLAN.md -- Click-through detail layers + vergunningen accordion + rapport button
 
 ### Phase 94: Wijk & Gemeente Views
 **Goal**: Selecting a wijk or gemeente delivers spatial context through fly-up bento sheets and luminous map overlays -- users explore areas without leaving the map
@@ -151,7 +151,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-09 |
-| 93. Parcel Detail Panel | 2/3 | In Progress|  |
+| 93. Parcel Detail Panel | 3/3 | Complete   | 2026-03-10 |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
