@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- [ ] **v15.0 Aura** -- Phases 91-98 (in progress)
+- [ ] **v15.0 Aura** -- Phases 91-97 (paused, resumes after v16.0)
+- [ ] **v16.0 Score Intelligence** -- Phases 99-101 (next up)
 - ✅ **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (shipped 2026-03-10)
 - ✅ **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (shipped 2026-03-09)
 - ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
@@ -28,18 +29,24 @@
 
 ## Phases
 
-### v15.0 Aura (Phases 91-97)
+### v16.0 Score Intelligence (Phases 99-101)
+
+- [ ] **Phase 99: Scan Pipeline Enrichment** - Move energielabel (EP-Online), WOZ (Waardeloket), vergunningen (SRU), bodem (Bodemloket/BRO), funderingsrisico (PDOK WFS) from on-demand to scan pipeline pre-cache
+- [ ] **Phase 100: Score v3.0 Engine** - Complete scoring overhaul: Potentie subscore (8 factoren, 80pt) + Risico subscore (9 factoren, 67pt), template-based narratieven per factor (toelichting_kort + toelichting_lang + data_bronnen), normalisatie, gewichtsherverdeling bij ontbrekende data
+- [ ] **Phase 101: Score Backfill & Migration** - Re-score all existing parcels with v3.0, migrate score_breakdown schema, update frontend types for potentie_score + risico_score + expanded breakdown
+
+### v15.0 Aura (Phases 91-97, resumes after v16.0)
 
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [x] **Phase 92: Viewport Layout & Navigation** - Background mesh, floating rounded map, Plus Jakarta Sans, SideRailNav left-6, split command center (REPLANNED) (completed 2026-03-10)
 - [x] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED) (completed 2026-03-10)
-- [ ] **Phase 93.2: Score v3.0 Refactor** - Complete scoring overhaul: split into Potentie (+ kansen) and Risico (- waarschuwingen) subscores, integrate all new data sources (3D BAG, CBS demografie, juridisch klimaat, fysiek risico, vergunningsactiviteit, Funda frictie)
-- [ ] **Phase 93.1: Potentie Dashboard** - No-scroll investor dashboard for Potentie tab showing score breakdown with all + factors; Risico tab showing all - factors. Depends on 93.2 (INSERTED)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
-- [ ] **Phase 97: Reports & Settings** - Report bento layout, settings Aura update
-- [ ] **Phase 98: Gemeente Bouwregels** - Per-gemeente standaard bouwregels (max bouwhoogte, max bouwlagen per bestemmingstype), fallback voor PLU WMS, optoppotentie scoring verbetering
+- [ ] **Phase 97: Settings** - Settings page Aura update
+- [ ] **Phase 103: Potentie & Risico Dashboard** - No-scroll investor dashboards for Potentie (+ kansen) and Risico (- waarschuwingen) tabs, score breakdown per factor with narratieven. Depends on v16.0
+- [ ] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on v16.0
+- [ ] **Phase 105: BRK Eigendom Modal** - Popup modal behind "pand in gebruik" button with on-demand BRK ownership fetch (no caching, Kadaster compliance)
 
 ## Phase Details
 
@@ -91,34 +98,49 @@ Plans:
 - [ ] 93-02-PLAN.md -- LEFT-side panel shell + Framer Motion + satellite hero + bento pods + map integration
 - [ ] 93-03-PLAN.md -- Detail layers with Framer Motion slide-up + vergunningen accordion + rapport button
 
-### Phase 93.2: Score v3.0 Refactor
-**Goal**: Overhaul `compute_opportunity_score()` from a 5-factor vacancy-heavy model (v2.1) to a dual-subscore model: Potentie Score (+ kansen) and Risico Score (- waarschuwingen), integrating all data sources accumulated since v10.0
-**Depends on**: None (backend-only)
+### Phase 99: Scan Pipeline Enrichment
+**Goal**: Move 5 on-demand data sources into the scan pipeline so all property data is pre-cached during wijk scans — no API calls needed when browsing the map or generating reports
+**Depends on**: None
 **Success Criteria** (what must be TRUE):
-  1. Score split into `potentie_score` (0-100) and `risico_score` (0-100), combined into overall `score`
-  2. Potentie factors: vrije grond/onderbenutting, optoppotentie (lagen/hoogte headroom), bestemming compatibiliteit, leegstand, Funda frictie, perceelgrootte, CBS demografie (groei/inkomen/voorzieningen), vergunningssucceskans
-  3. Risico factors: funderingsrisico, asbestrisico, bodemverontreiniging, monumentstatus, bestemmingswijziging complexiteit, constructieve staat (bouwjaar), juridisch klimaat (afwijzingspercentage), criminaliteit wijk, max hoogte bereikt
-  4. `score_breakdown` transparently exposes per-factor contributions for both subscores
-  5. Backfill tool re-scores all existing parcels with v3.0
-  6. Frontend types updated to include `potentie_score`, `risico_score`, and expanded `score_breakdown`
+  1. Energielabel (EP-Online) fetched and stored per VBO during scan
+  2. WOZ waarde (Waardeloket) fetched and stored per nummeraanduiding during scan
+  3. Vergunningen (SRU Bekendmakingen) fetched and stored per address during scan
+  4. Bodem/bodemtype (Bodemloket + BRO WMS) fetched and stored per coordinate during scan
+  5. Funderingsrisico (PDOK WFS) fetched and stored per postcode during scan
+  6. All data accessible via existing parcel endpoints without additional API calls
+  7. Scan duration remains reasonable (concurrency, batching)
 **Plans**: TBD
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 93.2 to break down)
+- [ ] TBD (run /gsd:plan-phase 99 to break down)
 
-### Phase 93.1: Potentie & Risico Dashboard
-**Goal**: No-scroll investor dashboards — Potentie tab shows all + factors (kansen, groei, headroom), Risico tab shows all - factors (funderingsrisico, asbest, juridisch klimaat). Score breakdown is transparent per factor.
-**Depends on**: Phase 93.2
+### Phase 100: Score v3.0 Engine
+**Goal**: Replace `compute_opportunity_score()` v2.1 with a dual-subscore model: Potentie (8 factoren, 80pt) + Risico (9 factoren, 67pt), each with template-based narratieven
+**Depends on**: Phase 99
 **Success Criteria** (what must be TRUE):
-  1. Potentie tab shows potentie_score + per-factor breakdown cards for all opportunity signals
-  2. Risico tab shows risico_score + per-factor breakdown cards for all warning signals
-  3. Each factor card shows contribution to subscore + narrative explanation
-  4. No scroll needed on 1080p+ for either tab
-  5. Score breakdown is transparent — user sees WHY each factor contributes what it does
+  1. `potentie_score` (0-100) computed from: vrije grond (12), bestemming (12), perceelgrootte (12), vergunningssucceskans (13), optoppotentie (10), leegstand (8), demografie (8), Funda-frictie (5)
+  2. `risico_score` (0-100) computed from: funderingsrisico (15), bestemmingswijziging (8), juridisch klimaat (8), constructieve staat (7), bodem (7), asbest (6), criminaliteit (6), monument (5), max hoogte bereikt (5)
+  3. `overall` score = potentie - risico (normalized to 0-100)
+  4. `score_breakdown` per factor includes: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort, toelichting_lang, data_bronnen
+  5. Missing data: neutral score default, light penalty for critical risk factors, weight redistribution when >20% factors missing
+  6. Template-based narratieven (no AI calls) — deterministic, instant text generation
 **Plans**: TBD
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 93.1 to break down after 93.2 ships)
+- [ ] TBD (run /gsd:plan-phase 100 to break down)
+
+### Phase 101: Score Backfill & Migration
+**Goal**: Re-score all existing parcels with v3.0 engine and update frontend types
+**Depends on**: Phase 100
+**Success Criteria** (what must be TRUE):
+  1. Backfill tool re-scores all parcels in all completed scans
+  2. Frontend TypeScript types updated: ScanResultItem includes potentie_score, risico_score, expanded score_breakdown
+  3. Existing tile endpoints serve new score data
+  4. Old v2.1 score_breakdown gracefully handled (backwards compatible during migration)
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 101 to break down)
 
 
 
@@ -165,46 +187,84 @@ Plans:
 - [ ] 96-01: Jurisprudentie wizard + explorer Aura reskin
 - [ ] 96-02: Meldingen feed Aura reskin
 
-### Phase 97: Reports & Settings
-**Goal**: The last two views adopt Aura styling -- every page in the app now speaks the same visual language
+### Phase 97: Settings
+**Goal**: Settings page adopts Aura styling
 **Depends on**: Phase 91
-**Requirements**: RPT-01, SET-01
+**Requirements**: SET-01
 **Success Criteria** (what must be TRUE):
-  1. Report detail page uses bento layout with click-through sections instead of a scrollable list
-  2. Settings page shows Aura glass/bento styling on all existing sections (account, password, notifications, appearance)
+  1. Settings page shows Aura glass/bento styling on all existing sections (account, password, notifications, appearance)
 **Plans**: TBD
 
 Plans:
-- [ ] 97-01: Report bento layout + settings Aura update
+- [ ] 97-01: Settings Aura update
 
-### Phase 98: Gemeente Bouwregels
-**Goal**: Per-gemeente standaard bouwregels opslaan (max bouwhoogte, max bouwlagen per bestemmingstype) als fallback voor ontbrekende PLU WMS maatvoering, zodat optoppotentie scoring altijd een waarde toont
-**Depends on**: Phase 93.1
+### Phase 103: Potentie & Risico Dashboard
+**Goal**: No-scroll investor dashboards — Potentie tab shows all + factors (kansen, groei, headroom), Risico tab shows all - factors (funderingsrisico, asbest, juridisch klimaat). Score breakdown is transparent per factor.
+**Depends on**: Phase 101 (v16.0)
 **Success Criteria** (what must be TRUE):
-  1. Gemeente-level bouwregels tabel met max_bouwhoogte en max_bouwlagen per bestemmingstype
-  2. Venlo bouwregels onderzocht en ingevoerd als eerste gemeente
-  3. Scoring fallback: als PLU WMS geen max_bouwhoogte/max_bouwlagen levert, gebruik gemeente bouwregels
-  4. Optoppotentie card toont altijd een waarde (met "(gemeente regel)" indicator bij fallback)
+  1. Potentie tab shows potentie_score + per-factor breakdown cards for all opportunity signals
+  2. Risico tab shows risico_score + per-factor breakdown cards for all warning signals
+  3. Each factor card shows contribution to subscore + toelichting_kort narrative
+  4. No scroll needed on 1080p+ for either tab
+  5. Score breakdown is transparent — user sees WHY each factor contributes what it does
 **Plans**: TBD
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 98 to break down)
+- [ ] TBD (run /gsd:plan-phase 103 to break down)
+
+### Phase 104: Rapport v2.0
+**Goal**: Rewrite rapport generation as pure template render on pre-cached scan data + score v3.0 narratieven — no on-demand API calls, no aggregate_property_data()
+**Depends on**: Phase 101 (v16.0)
+**Success Criteria** (what must be TRUE):
+  1. "Genereer Rapport" assembles report from pre-cached scan data (no external API calls)
+  2. Report includes all factor toelichting_lang narratieven as "Analyse" chapter
+  3. Report includes potentie_score + risico_score with per-factor breakdown
+  4. BRK ownership section fetched on-demand (Kadaster compliance) — only exception
+  5. Report bento layout with Aura styling
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 104 to break down)
+
+### Phase 105: BRK Eigendom Modal
+**Goal**: Popup modal behind "pand in gebruik" button on parcel detail panel with fresh BRK ownership fetch
+**Depends on**: Phase 93
+**Success Criteria** (what must be TRUE):
+  1. "Pand in gebruik" button on parcel detail opens modal
+  2. Modal fetches BRK ownership data on-demand (no caching, Kadaster compliance)
+  3. Modal displays eigenaar, zakelijk gerechtigden, erfpacht/eigendom type
+  4. Loading state while BRK API responds
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 105 to break down)
 
 ## Progress
 
-**Execution Order:** 91 -> 92 -> 93 (depends on 92), 94 (depends on 92), 95-97 (depend on 91, can parallelize after 92)
+**Execution Order:** v16.0 first (99 → 100 → 101), then v15.0 resumes (94-97 can parallelize, 103-105 depend on v16.0)
+
+### v16.0 Score Intelligence
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
-| 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-10 |
-| 93. Parcel Detail Panel | 3/3 | Complete    | 2026-03-10 |
-| 93.2. Score v3.0 Refactor | 0/? | Not started | - |
-| 93.1. Potentie & Risico Dashboard | 0/? | Not started | - |
+| 99. Scan Pipeline Enrichment | 0/? | Not started | - |
+| 100. Score v3.0 Engine | 0/? | Not started | - |
+| 101. Score Backfill & Migration | 0/? | Not started | - |
+
+### v15.0 Aura
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 91. Aura Design System Foundation | 2/2 | Complete | 2026-03-09 |
+| 92. Viewport Layout & Navigation | 2/2 | Complete | 2026-03-10 |
+| 93. Parcel Detail Panel | 3/3 | Complete | 2026-03-10 |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
-| 97. Reports & Settings | 0/1 | Not started | - |
+| 97. Settings | 0/1 | Not started | - |
+| 103. Potentie & Risico Dashboard | 0/? | Blocked (v16.0) | - |
+| 104. Rapport v2.0 | 0/? | Blocked (v16.0) | - |
+| 105. BRK Eigendom Modal | 0/? | Not started | - |
 | 98. Gemeente Bouwregels | 0/? | Not started | - |
 
 ---
@@ -426,4 +486,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-11 -- Phase 93.1 plans finalized*
+*Last updated: 2026-03-11 -- v16.0 Score Intelligence milestone created, v15.0 paused*
