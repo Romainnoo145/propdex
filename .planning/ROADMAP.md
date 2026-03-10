@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- [ ] **v15.0 Aura** -- Phases 91-97 (in progress)
+- [ ] **v15.0 Aura** -- Phases 91-98 (in progress)
 - ✅ **v14.0 Fysiek Risicoprofiel** -- Phases 87-90 (shipped 2026-03-10)
 - ✅ **v13.0 Juridisch Klimaat Intelligence** -- Phases 82-86 (shipped 2026-03-09)
 - ✅ **v12.0 Omgevings- & Leefbaarheids-Scorer** -- Phases 78-80 (shipped 2026-03-07)
@@ -33,11 +33,13 @@
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [x] **Phase 92: Viewport Layout & Navigation** - Background mesh, floating rounded map, Plus Jakarta Sans, SideRailNav left-6, split command center (REPLANNED) (completed 2026-03-10)
 - [x] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED) (completed 2026-03-10)
-- [ ] **Phase 93.1: Potentie Dashboard** - No-scroll investor dashboard for Potentie tab: Go/No-Go verdict, score breakdown, vacancy signals, market friction, headroom viz, bestemming compatibility (INSERTED)
+- [ ] **Phase 93.2: Score v3.0 Refactor** - Complete scoring overhaul: split into Potentie (+ kansen) and Risico (- waarschuwingen) subscores, integrate all new data sources (3D BAG, CBS demografie, juridisch klimaat, fysiek risico, vergunningsactiviteit, Funda frictie)
+- [ ] **Phase 93.1: Potentie Dashboard** - No-scroll investor dashboard for Potentie tab showing score breakdown with all + factors; Risico tab showing all - factors. Depends on 93.2 (INSERTED)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
 - [ ] **Phase 97: Reports & Settings** - Report bento layout, settings Aura update
+- [ ] **Phase 98: Gemeente Bouwregels** - Per-gemeente standaard bouwregels (max bouwhoogte, max bouwlagen per bestemmingstype), fallback voor PLU WMS, optoppotentie scoring verbetering
 
 ## Phase Details
 
@@ -89,18 +91,34 @@ Plans:
 - [ ] 93-02-PLAN.md -- LEFT-side panel shell + Framer Motion + satellite hero + bento pods + map integration
 - [ ] 93-03-PLAN.md -- Detail layers with Framer Motion slide-up + vergunningen accordion + rapport button
 
-### Phase 93.1: Potentie Dashboard (INSERTED)
-**Goal**: No-scroll investor dashboard for the Potentie tab — a vastgoedinvesteerder sees Go/No-Go verdict, score breakdown, vacancy signals, market friction, headroom visualization (lagen/hoogte), and bestemming compatibility all without scrolling
-**Depends on**: Phase 93
+### Phase 93.2: Score v3.0 Refactor
+**Goal**: Overhaul `compute_opportunity_score()` from a 5-factor vacancy-heavy model (v2.1) to a dual-subscore model: Potentie Score (+ kansen) and Risico Score (- waarschuwingen), integrating all data sources accumulated since v10.0
+**Depends on**: None (backend-only)
 **Success Criteria** (what must be TRUE):
-  1. Clicking "Potentie" tab shows a single-screen dashboard (no scroll needed on 1080p+)
-  2. Go/No-Go verdict prominent at top with score + label + color coding
-  3. Three key metrics visible: vrije ruimte %, optopmogelijkheid (lagen headroom), bestemming compatibility
-  4. Vacancy signal and market friction (Funda listing duration) shown as signal pills
-  5. Score breakdown is transparent — user sees WHY the score is what it is
-**Plans**: 1 plan
+  1. Score split into `potentie_score` (0-100) and `risico_score` (0-100), combined into overall `score`
+  2. Potentie factors: vrije grond/onderbenutting, optoppotentie (lagen/hoogte headroom), bestemming compatibiliteit, leegstand, Funda frictie, perceelgrootte, CBS demografie (groei/inkomen/voorzieningen), vergunningssucceskans
+  3. Risico factors: funderingsrisico, asbestrisico, bodemverontreiniging, monumentstatus, bestemmingswijziging complexiteit, constructieve staat (bouwjaar), juridisch klimaat (afwijzingspercentage), criminaliteit wijk, max hoogte bereikt
+  4. `score_breakdown` transparently exposes per-factor contributions for both subscores
+  5. Backfill tool re-scores all existing parcels with v3.0
+  6. Frontend types updated to include `potentie_score`, `risico_score`, and expanded `score_breakdown`
+**Plans**: TBD
 
-- [ ] 93.1-01-PLAN.md -- Verdict hero + deal-maker grid + intelligence strip (no-scroll dashboard)
+Plans:
+- [ ] TBD (run /gsd:plan-phase 93.2 to break down)
+
+### Phase 93.1: Potentie & Risico Dashboard
+**Goal**: No-scroll investor dashboards — Potentie tab shows all + factors (kansen, groei, headroom), Risico tab shows all - factors (funderingsrisico, asbest, juridisch klimaat). Score breakdown is transparent per factor.
+**Depends on**: Phase 93.2
+**Success Criteria** (what must be TRUE):
+  1. Potentie tab shows potentie_score + per-factor breakdown cards for all opportunity signals
+  2. Risico tab shows risico_score + per-factor breakdown cards for all warning signals
+  3. Each factor card shows contribution to subscore + narrative explanation
+  4. No scroll needed on 1080p+ for either tab
+  5. Score breakdown is transparent — user sees WHY each factor contributes what it does
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 93.1 to break down after 93.2 ships)
 
 
 
@@ -159,6 +177,19 @@ Plans:
 Plans:
 - [ ] 97-01: Report bento layout + settings Aura update
 
+### Phase 98: Gemeente Bouwregels
+**Goal**: Per-gemeente standaard bouwregels opslaan (max bouwhoogte, max bouwlagen per bestemmingstype) als fallback voor ontbrekende PLU WMS maatvoering, zodat optoppotentie scoring altijd een waarde toont
+**Depends on**: Phase 93.1
+**Success Criteria** (what must be TRUE):
+  1. Gemeente-level bouwregels tabel met max_bouwhoogte en max_bouwlagen per bestemmingstype
+  2. Venlo bouwregels onderzocht en ingevoerd als eerste gemeente
+  3. Scoring fallback: als PLU WMS geen max_bouwhoogte/max_bouwlagen levert, gebruik gemeente bouwregels
+  4. Optoppotentie card toont altijd een waarde (met "(gemeente regel)" indicator bij fallback)
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 98 to break down)
+
 ## Progress
 
 **Execution Order:** 91 -> 92 -> 93 (depends on 92), 94 (depends on 92), 95-97 (depend on 91, can parallelize after 92)
@@ -168,11 +199,13 @@ Plans:
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-10 |
 | 93. Parcel Detail Panel | 3/3 | Complete    | 2026-03-10 |
-| 93.1. Potentie Dashboard | 0/1 | Not started | - |
+| 93.2. Score v3.0 Refactor | 0/? | Not started | - |
+| 93.1. Potentie & Risico Dashboard | 0/? | Not started | - |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
 | 97. Reports & Settings | 0/1 | Not started | - |
+| 98. Gemeente Bouwregels | 0/? | Not started | - |
 
 ---
 
