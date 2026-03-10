@@ -40,8 +40,8 @@ export function BouwjaarTimeline({ bouwjaar }: BouwjaarTimelineProps) {
   const endPct = pct(CURRENT_YEAR)
 
   return (
-    <div className="w-full pt-10 pb-6">
-      <div className="relative w-full h-20 flex flex-col justify-end">
+    <div className="w-full pt-7 pb-4">
+      <div className="relative w-full h-14 flex flex-col justify-end">
         {/* Left pill — bouwjaar */}
         <div
           className="absolute top-0 -translate-x-1/2 z-10"

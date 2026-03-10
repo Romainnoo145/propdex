@@ -69,7 +69,7 @@ type BentoCard = 'aerial' | 'bestemming' | 'score'
 /* ── Section title ─────────────────────────────────────────── */
 
 const sectionTitle =
-  'text-[10px] uppercase text-slate-400 tracking-widest font-medium mb-3'
+  'text-[10px] uppercase text-slate-400 tracking-widest font-medium mb-1'
 
 /* ── Card Label Bar ────────────────────────────────────────── */
 
