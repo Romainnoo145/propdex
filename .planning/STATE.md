@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 93 complete, Phase 94 next
+**Current focus:** v15.0 Aura -- Phase 93 complete, Phase 93.1 (Potentie Dashboard) inserted
 
 ---
 
 ## Current Position
 
-Phase: 94 (4 of 7 in v15.0) -- Wijk Bottom Sheet
-Plan: 0 of 2 complete
-Status: Ready
-Last activity: 2026-03-10 -- 93-03 Click-through detail layers with AnimatePresence
+Phase: 93.1 (inserted after 93 in v15.0) -- Potentie Dashboard
+Plan: 0 of ? complete
+Status: Not planned
+Last activity: 2026-03-11 -- Phase 93.1 inserted for no-scroll investor Potentie dashboard
 
 Progress: [#########░] 92% (12/13 plans)
 
@@ -36,6 +36,9 @@ Progress: [#########░] 92% (12/13 plans)
 | Phase 93 P03 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+- Phase 93.1 inserted after Phase 93: Potentie Dashboard — no-scroll investor dashboard (URGENT)
 
 ### Decisions
 - SideRailNav renders after <main> in DOM so it floats on top without z-index conflicts
@@ -93,8 +96,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T13:38:35Z
-**Stopped At:** Completed 93-03-PLAN.md (Click-through detail layers with AnimatePresence)
+**Last Session:** 2026-03-10T17:58:32.997Z
+**Stopped At:** Phase 93.1 context gathered
 
 **Next Action:** Execute 94-01-PLAN.md (Wijk Bottom Sheet)
 
