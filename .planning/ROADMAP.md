@@ -33,6 +33,7 @@
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [x] **Phase 92: Viewport Layout & Navigation** - Background mesh, floating rounded map, Plus Jakarta Sans, SideRailNav left-6, split command center (REPLANNED) (completed 2026-03-10)
 - [x] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED) (completed 2026-03-10)
+- [ ] **Phase 93.1: Potentie Dashboard** - No-scroll investor dashboard for Potentie tab: Go/No-Go verdict, score breakdown, vacancy signals, market friction, headroom viz, bestemming compatibility (INSERTED)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
@@ -87,6 +88,21 @@ Plans:
 - [ ] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
 - [ ] 93-02-PLAN.md -- LEFT-side panel shell + Framer Motion + satellite hero + bento pods + map integration
 - [ ] 93-03-PLAN.md -- Detail layers with Framer Motion slide-up + vergunningen accordion + rapport button
+
+### Phase 93.1: Potentie Dashboard (INSERTED)
+**Goal**: No-scroll investor dashboard for the Potentie tab — a vastgoedinvesteerder sees Go/No-Go verdict, score breakdown, vacancy signals, market friction, headroom visualization (lagen/hoogte), and bestemming compatibility all without scrolling
+**Depends on**: Phase 93
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Potentie" tab shows a single-screen dashboard (no scroll needed on 1080p+)
+  2. Go/No-Go verdict prominent at top with score + label + color coding
+  3. Three key metrics visible: vrije ruimte %, optopmogelijkheid (lagen headroom), bestemming compatibility
+  4. Vacancy signal and market friction (Funda listing duration) shown as signal pills
+  5. Score breakdown is transparent — user sees WHY the score is what it is
+**Plans**: 1 plan
+
+- [ ] 93.1-01-PLAN.md -- Verdict hero + deal-maker grid + intelligence strip (no-scroll dashboard)
+
+
 
 ### Phase 94: Wijk & Gemeente Views
 **Goal**: Selecting a wijk or gemeente delivers spatial context through fly-up bento sheets and luminous map overlays -- users explore areas without leaving the map
@@ -152,6 +168,7 @@ Plans:
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-10 |
 | 93. Parcel Detail Panel | 3/3 | Complete    | 2026-03-10 |
+| 93.1. Potentie Dashboard | 0/1 | Not started | - |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
@@ -376,4 +393,4 @@ Phase 81 (Locatie Score Investeringsprofiel) deferred -- depends on all data sou
 
 ---
 
-*Last updated: 2026-03-10 -- Phase 93 plans finalized*
+*Last updated: 2026-03-11 -- Phase 93.1 plans finalized*
