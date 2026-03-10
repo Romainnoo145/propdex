@@ -148,7 +148,7 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 - [ ] **SCAN-03**: Vergunningen (SRU Bekendmakingen) fetched per unique postcode and stored in scan_results.flags during wijk scan
 - [x] **SCAN-04**: Bodem/bodemtype (Bodemloket + BRO Bodemkaart) fetched per coordinate and stored in scan_results.flags during wijk scan
 - [x] **SCAN-05**: Funderingsrisico (PDOK WFS) fetched per unique postcode and stored in scan_results.flags during wijk scan
-- [ ] **SCAN-06**: All enrichment data accessible via existing parcel endpoints without additional on-demand API calls (flags-first lookup with fallback)
+- [x] **SCAN-06**: All enrichment data accessible via existing parcel endpoints without additional on-demand API calls (flags-first lookup with fallback)
 - [x] **SCAN-07**: Scan duration remains reasonable with batch deduplication, concurrency control, and parallel API fetching
 
 ### v16.0 Traceability
@@ -160,7 +160,7 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 | SCAN-03 | Phase 99 | Pending |
 | SCAN-04 | Phase 99 | Complete |
 | SCAN-05 | Phase 99 | Complete |
-| SCAN-06 | Phase 99 | Pending |
+| SCAN-06 | Phase 99 | Complete |
 | SCAN-07 | Phase 99 | Complete |
 
 **v16.0 Coverage:**
