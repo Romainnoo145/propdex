@@ -24,7 +24,9 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
   const mapRef = useRef<MapLibreMap | null>(null)
+  const panelPortalRef = useRef<HTMLDivElement | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
   const { accessToken } = useAuth()
@@ -54,6 +56,21 @@ function AuthenticatedLayout() {
     return () => clearTimeout(timer)
   }, [isMapVisible, mapReady])
 
+  // Trigger map resize during panel transition (350ms CSS transition)
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+    // Resize repeatedly during the 350ms transition so the map follows the flex change
+    const interval = setInterval(() => mapRef.current?.resize(), 16)
+    const timeout = setTimeout(() => {
+      clearInterval(interval)
+      mapRef.current?.resize()
+    }, 400)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [panelOpen, mapReady])
+
   useEffect(() => {
     if (!isMapVisible && mapRef.current) {
       mapRef.current.getCanvas().style.cursor = ''
@@ -81,11 +98,23 @@ function AuthenticatedLayout() {
 
         {/* The App Container: floats on the desk with breathing room */}
         <div className="relative h-full pt-4 pr-4 pb-4">
-          {/* Content area — left margin clears the fixed 110px sidebar */}
-          <div className="relative h-full ml-[110px] min-w-0">
-            {/* Map container: rounded glass card */}
+          {/* Content area — flex row: [panel slot] + [map] */}
+          <div className="relative h-full ml-[110px] min-w-0 flex gap-4">
+            {/* Panel portal target — panel content rendered here via createPortal from map.tsx */}
             <div
-              className="absolute inset-0 rounded-[40px] overflow-hidden border border-white/20"
+              ref={panelPortalRef}
+              className="shrink-0 h-full relative"
+              style={{
+                width: panelOpen ? '620px' : '0px',
+                overflow: panelOpen ? 'visible' : 'hidden',
+                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                zIndex: 10,
+              }}
+            />
+
+            {/* Map container: rounded glass card — flex-1 shrinks when panel opens */}
+            <div
+              className="flex-1 min-w-0 rounded-[40px] overflow-hidden border border-white/20 relative"
               style={{ display: isMapVisible ? 'block' : 'none' }}
             >
               <MapView
@@ -95,9 +124,17 @@ function AuthenticatedLayout() {
               />
             </div>
 
-            {/* Non-map route content */}
-            <MapContext.Provider value={{ mapRef, mapReady }}>
-              <Outlet />
+            {/* Outlet: absolute overlay on map route, flex child on other routes */}
+            <MapContext.Provider value={{ mapRef, mapReady, panelPortalRef, panelOpen, setPanelOpen }}>
+              {isMapVisible ? (
+                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+                  <Outlet />
+                </div>
+              ) : (
+                <div className="flex-1 min-w-0 relative h-full">
+                  <Outlet />
+                </div>
+              )}
             </MapContext.Provider>
           </div>
         </div>

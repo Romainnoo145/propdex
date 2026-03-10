@@ -4,14 +4,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
-import { ParcelHero } from './parcel/ParcelHero'
 import {
   ParcelBentoOverview,
   type CategoryKey,
 } from './parcel/ParcelBentoOverview'
+import { CategoryTabs } from './parcel/CategoryTabs'
 import { PotentieLayer } from './parcel/layers/PotentieLayer'
 import { RisicoLayer } from './parcel/layers/RisicoLayer'
-import { MarktLayer } from './parcel/layers/MarktLayer'
+
 import { JuridischLayer } from './parcel/layers/JuridischLayer'
 import { useParcelRiskProfile } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
@@ -21,7 +21,6 @@ type PanelView =
   | { kind: 'overview' }
   | { kind: 'potentie' }
   | { kind: 'risico' }
-  | { kind: 'markt' }
   | { kind: 'juridisch' }
 
 const prefersReducedMotion =
@@ -31,7 +30,6 @@ const prefersReducedMotion =
 const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
   potentie: 'Potentie',
   risico: 'Risico',
-  markt: 'Markt',
   juridisch: 'Juridisch',
 }
 
@@ -83,10 +81,10 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
       type="button"
       onClick={handleGenerateReport}
       disabled={generateReport.isPending}
-      className={`w-full rounded-full py-3 font-semibold text-sm transition-colors disabled:opacity-60 ${
+      className={`w-full h-14 rounded-full font-semibold text-lg transition-all disabled:opacity-60 ${
         parcel.has_report
           ? 'bg-aura-green text-white hover:bg-aura-green/90'
-          : 'bg-aura-obsidian text-white hover:bg-aura-obsidian/90'
+          : 'bg-[#0E1111] text-white hover:bg-[#1a1d1d] shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
       }`}
     >
       {generateReport.isPending
@@ -109,8 +107,6 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
             isLoading={riskQuery.isLoading}
           />
         )
-      case 'markt':
-        return <MarktLayer parcel={parcel} />
       case 'juridisch':
         return <JuridischLayer parcel={parcel} />
       default:
@@ -126,29 +122,39 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className="flex flex-col h-full"
+        className="flex flex-col h-full overflow-y-auto"
       >
-        <ParcelHero parcelId={parcel.parcel_id} score={parcel.score} />
-
-        {/* Sticky address header — persists in both overview and detail views */}
-        <div className="px-4 py-3 flex items-center gap-2">
-          {view.kind !== 'overview' && (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex items-center justify-center h-7 w-7 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors shrink-0"
-              aria-label="Terug"
-            >
-              <ArrowLeft className="h-4 w-4 text-aura-ink" />
-            </button>
-          )}
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-aura-ink truncate">
-              {parcel.address || parcel.parcel_code || 'Onbekend adres'}
-            </h2>
+        {/* Address header */}
+        <div className="px-8 pt-8">
+          <div className="flex items-center gap-2">
             {view.kind !== 'overview' && (
-              <p className="text-xs text-neutral-500">{VIEW_LABELS[view.kind]}</p>
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center justify-center h-7 w-7 rounded-full bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-colors shrink-0"
+                aria-label="Terug"
+              >
+                <ArrowLeft className="h-4 w-4 text-aura-ink" />
+              </button>
             )}
+            <div className="min-w-0">
+              <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
+                {parcel.address || 'Onbekend adres'}
+              </h2>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
+                {view.kind !== 'overview'
+                  ? VIEW_LABELS[view.kind]
+                  : parcel.parcel_code || null}
+              </p>
+            </div>
+          </div>
+
+          {/* Category tabs */}
+          <div className="mt-8">
+            <CategoryTabs
+              activeCategory={view.kind !== 'overview' ? view.kind : null}
+              onSelect={handleSelectCategory}
+            />
           </div>
         </div>
 
@@ -159,10 +165,10 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
               initial={prefersReducedMotion ? false : { opacity: 1 }}
               exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
               transition={{ duration: 0.2 }}
+              className="mt-6"
             >
               <ParcelBentoOverview
                 parcel={parcel}
-                riskProfile={riskProfile}
                 onSelectCategory={handleSelectCategory}
               />
             </motion.div>

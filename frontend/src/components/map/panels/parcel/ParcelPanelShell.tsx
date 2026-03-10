@@ -1,6 +1,8 @@
-import { useEffect, useCallback, type ReactNode } from 'react'
+import { useEffect, useState, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import { useMapContext } from '@/lib/MapContext'
 
 interface ParcelPanelShellProps {
   children: ReactNode
@@ -17,6 +19,20 @@ export function ParcelPanelShell({
   onClose,
   footer,
 }: ParcelPanelShellProps) {
+  const { panelPortalRef, setPanelOpen } = useMapContext()
+  const [portalTarget, setPortalTarget] = useState<HTMLDivElement | null>(null)
+
+  // Capture portal target after mount (avoids ref access during render)
+  useEffect(() => {
+    setPortalTarget(panelPortalRef.current)
+  }, [panelPortalRef])
+
+  // Signal layout that panel is open
+  useEffect(() => {
+    setPanelOpen(true)
+    return () => setPanelOpen(false)
+  }, [setPanelOpen])
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -29,14 +45,13 @@ export function ParcelPanelShell({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  return (
+  const panelContent = (
     <motion.div
-      initial={prefersReducedMotion ? false : { x: '-100%', opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={prefersReducedMotion ? { opacity: 0 } : { x: '-100%', opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed left-[112px] top-6 bottom-6 w-[420px] flex flex-col overflow-hidden rounded-[32px] bg-white/60 backdrop-blur-[24px] border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
-      style={{ zIndex: 'var(--z-property-panel)' }}
+      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+      className="w-[620px] h-full flex flex-col overflow-hidden rounded-[40px] bg-white/60 backdrop-blur-[24px] border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
     >
       {/* Close button — overlays hero */}
       <button
@@ -49,16 +64,24 @@ export function ParcelPanelShell({
       </button>
 
       {/* Content area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         {children}
       </div>
 
       {/* Sticky footer */}
       {footer && (
-        <div className="shrink-0 p-4">
+        <div className="shrink-0 p-6">
           {footer}
         </div>
       )}
     </motion.div>
   )
+
+  // Render into the portal target in _authenticated layout
+  if (portalTarget) {
+    return createPortal(panelContent, portalTarget)
+  }
+
+  // Fallback: render in place (shouldn't happen after mount)
+  return panelContent
 }

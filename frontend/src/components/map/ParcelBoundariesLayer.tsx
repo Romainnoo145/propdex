@@ -30,31 +30,37 @@ const PDOK_PARCEL_WMS =
  * @param map - MapLibre GL JS map instance
  */
 export function addParcelBoundariesLayer(map: maplibregl.Map): void {
-  if (map.getSource(PARCEL_SOURCE_ID)) {
-    return;
-  }
+  const add = () => {
+    if (map.getSource(PARCEL_SOURCE_ID)) return;
 
-  map.addSource(PARCEL_SOURCE_ID, {
-    type: 'raster',
-    tiles: [PDOK_PARCEL_WMS],
-    tileSize: 256,
-    minzoom: 15,
-    maxzoom: 21,
-  });
-
-  if (!map.getLayer(PARCEL_LAYER_ID)) {
-    map.addLayer({
-      id: PARCEL_LAYER_ID,
+    map.addSource(PARCEL_SOURCE_ID, {
       type: 'raster',
-      source: PARCEL_SOURCE_ID,
+      tiles: [PDOK_PARCEL_WMS],
+      tileSize: 256,
       minzoom: 15,
-      layout: {
-        visibility: 'none',
-      },
-      paint: {
-        'raster-opacity': 0.8,
-      },
+      maxzoom: 21,
     });
+
+    if (!map.getLayer(PARCEL_LAYER_ID)) {
+      map.addLayer({
+        id: PARCEL_LAYER_ID,
+        type: 'raster',
+        source: PARCEL_SOURCE_ID,
+        minzoom: 15,
+        layout: {
+          visibility: 'none',
+        },
+        paint: {
+          'raster-opacity': 0.8,
+        },
+      });
+    }
+  };
+
+  if (map.isStyleLoaded()) {
+    add();
+  } else {
+    map.once('idle', add);
   }
 }
 
@@ -83,10 +89,17 @@ export function setParcelBoundariesVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
-  if (!map.isStyleLoaded()) return;
   const visibility = visible ? 'visible' : 'none';
 
-  if (map.getLayer(PARCEL_LAYER_ID)) {
-    map.setLayoutProperty(PARCEL_LAYER_ID, 'visibility', visibility);
+  const apply = () => {
+    if (map.getLayer(PARCEL_LAYER_ID)) {
+      map.setLayoutProperty(PARCEL_LAYER_ID, 'visibility', visibility);
+    }
+  };
+
+  if (map.isStyleLoaded()) {
+    apply();
+  } else {
+    map.once('idle', apply);
   }
 }

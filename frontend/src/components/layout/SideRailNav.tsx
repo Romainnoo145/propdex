@@ -32,20 +32,20 @@ export default function SideRailNav() {
       icon: <Bell size={22} strokeWidth={1.5} />,
       label: 'Meldingen',
       to: '/meldingen',
-      search: { gemeente: undefined } as Record<string, string>,
+      search: { gemeente: undefined } as unknown as Record<string, string>,
       badge: <NotificationBadge count={unreadData?.total_unread ?? 0} />,
     },
     {
       icon: <FileText size={22} strokeWidth={1.5} />,
       label: 'Rapporten',
       to: '/rapporten',
-      search: { project_id: undefined, q: undefined } as Record<string, string>,
+      search: { project_id: undefined, q: undefined } as unknown as Record<string, string>,
     },
     {
       icon: <Scale size={22} strokeWidth={1.5} />,
       label: 'Jurisprudentie',
       to: '/jurisprudentie',
-      search: { gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined, view: undefined } as Record<string, string>,
+      search: { gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined, view: undefined } as unknown as Record<string, string>,
     },
   ]
 

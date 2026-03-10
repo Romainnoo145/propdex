@@ -1,4 +1,5 @@
 import { BentoPod } from '@/components/primitives/BentoPod'
+import { PillBadge } from '@/components/primitives/PillBadge'
 import type { ScanResultItem, BuildingMetrics } from '@/lib/types/scan'
 
 function formatScoreLabel(score: number | null): string {
@@ -106,6 +107,12 @@ interface PotentieLayerProps {
 }
 
 export function PotentieLayer({ parcel }: PotentieLayerProps) {
+  const actionableOpportunitySignals = (parcel.opportunity_signals ?? []).filter((s) => {
+    const n = s.toLowerCase()
+    return !n.includes('pand momenteel in gebruik') && !n.includes('leegstand onbekend')
+  })
+  const vacancyReasons = parcel.vacancy_reasons ?? []
+  const hasKansen = actionableOpportunitySignals.length > 0 || vacancyReasons.length > 0
   const supportsResidentialMixed = hasResidentialMixedBestemming(parcel.bestemmingen)
   const rawPandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? null
   const pandOppervlaktM2 = rawPandOpp === 0 && parcel.has_pand ? null : rawPandOpp
@@ -206,6 +213,25 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
           </div>
         </div>
       </BentoPod>
+
+      {/* Kansen & aandachtspunten (moved from MarktLayer) */}
+      {hasKansen && (
+        <BentoPod>
+          <p className="text-xs text-neutral-500 uppercase tracking-wide mb-2">Kansen & aandachtspunten</p>
+          <div className="flex flex-wrap gap-2">
+            {actionableOpportunitySignals.slice(0, 5).map((signal) => (
+              <PillBadge key={`opp-${signal}`} variant="green">
+                {signal}
+              </PillBadge>
+            ))}
+            {vacancyReasons.slice(0, 3).map((reason) => (
+              <PillBadge key={`risk-${reason}`} variant="amber">
+                {reason}
+              </PillBadge>
+            ))}
+          </div>
+        </BentoPod>
+      )}
     </div>
   )
 }

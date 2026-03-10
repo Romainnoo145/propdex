@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
@@ -183,7 +183,7 @@ function parseFeatureInt(value: unknown): number | null {
 
 function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
-  const { mapRef, mapReady } = useMapContext()
+  const { mapRef, mapReady, panelOpen } = useMapContext()
   const navigate = useNavigate()
   const {
     postcode,
@@ -563,15 +563,18 @@ function MapPage() {
       return
     }
 
-    // Only show lookup geometry while quick card is active.
-    // Once we switch to parcel-detail mode, geometry should come from the parcel itself.
+    // Show lookup geometry while quick card is active
     if (lookup.data && tier === 'quick') {
       updatePropertyGeometry(mapRef.current, lookup.data)
       return
     }
 
+    // Don't clear geometry while a parcel panel is open — the async fetch
+    // that sets parcelGeometryHighlight may still be in-flight
+    if (activePanel?.kind === 'parcel') return
+
     clearPropertyGeometry(mapRef.current)
-  }, [lookup.data, mapReady, parcelGeometryHighlight, mapRef, tier])
+  }, [lookup.data, mapReady, parcelGeometryHighlight, mapRef, tier, activePanel])
 
   // Track whether we've already handled the current search params
   const handledSearchRef = useRef<string | null>(null)
@@ -2105,8 +2108,13 @@ function MapPage() {
 
   return (
     <MapShell>
-      {/* Command Center — unified search + layer toggles in one pill */}
-      <div className="absolute top-6 left-4 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg">
+      {/* Command Center — unified search + layer toggles, centered over visible map */}
+      <motion.div
+        className="absolute top-6 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
+        style={{ left: '50%', x: '-50%' }}
+        animate={{ marginLeft: panelOpen ? 250 : 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      >
         <AddressSearch onSelect={handleAddressSelect} />
         <LayerToggle
           mapRef={mapRef}
@@ -2130,7 +2138,7 @@ function MapPage() {
           onFoundationRiskToggle={handleFoundationRiskToggle}
           hasScoreData={!!activeScanId}
         />
-      </div>
+      </motion.div>
 
       {/* Bestemmingsplan legend */}
       <BestemmingsplanLegend visible={layerState.showBestemmingsplan} />
@@ -2260,7 +2268,10 @@ function MapPage() {
           <ParcelDetailPanel
             key="parcel-panel"
             parcel={inspectorParcel}
-            onClose={() => setActivePanel(null)}
+            onClose={() => {
+              setActivePanel(null)
+              setParcelGeometryHighlight(null)
+            }}
           />
         )}
       </AnimatePresence>
