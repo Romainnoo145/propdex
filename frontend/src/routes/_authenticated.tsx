@@ -29,14 +29,11 @@ function AuthenticatedLayout() {
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
   const { accessToken } = useAuth()
 
-  // Use ref to prevent stale closure in transformRequest (Pitfall 2)
   const accessTokenRef = useRef(accessToken)
-  // Sync ref in effect to avoid mutating ref during render
   useEffect(() => {
     accessTokenRef.current = accessToken
   }, [accessToken])
 
-  // Stable transformRequest — reads token from ref, never re-initializes MapLibre
   const transformRequest = useCallback(
     (url: string, resourceType?: string) => {
       if ((url.startsWith('/api/') || url.includes('/api/scans/')) && resourceType === 'Tile') {
@@ -48,17 +45,15 @@ function AuthenticatedLayout() {
       }
       return { url }
     },
-    [] // stable — reads from ref
+    []
   )
 
-  // Resize map after becoming visible again (Pitfall 1)
   useEffect(() => {
     if (!isMapVisible || !mapReady || !mapRef.current) return
     const timer = setTimeout(() => mapRef.current?.resize(), 50)
     return () => clearTimeout(timer)
   }, [isMapVisible, mapReady])
 
-  // Reset cursor/hover state when hiding the map (Pitfall 6)
   useEffect(() => {
     if (!isMapVisible && mapRef.current) {
       mapRef.current.getCanvas().style.cursor = ''
@@ -67,38 +62,46 @@ function AuthenticatedLayout() {
 
   return (
     <WorkspaceProvider>
-      <div className="relative h-screen w-screen overflow-hidden bg-aura-canvas">
-        {/* Background mesh: subtle blurred color blobs behind everything */}
+      {/* The Desk: Morning Mist canvas with background blobs */}
+      <div className="h-screen w-screen overflow-hidden bg-aura-canvas">
+        {/* Background mesh blobs — sidebar absorbs Sage Mint via backdrop-blur */}
         <div
-          className="fixed top-0 left-0 w-[40vw] h-[40vw] rounded-full pointer-events-none"
-          style={{ background: '#D1E2D8', opacity: 0.15, filter: 'blur(100px)' }}
+          className="fixed top-[-5%] left-[-2%] w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: '#D1E2D8', opacity: 0.40, filter: 'blur(150px)' }}
         />
         <div
-          className="fixed bottom-0 right-0 w-[35vw] h-[35vw] rounded-full pointer-events-none"
-          style={{ background: '#F9A826', opacity: 0.10, filter: 'blur(100px)' }}
+          className="fixed bottom-[-5%] right-[-2%] w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: '#F9A826', opacity: 0.12, filter: 'blur(150px)' }}
         />
 
-        <main className="relative h-full">
-          {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
-          <div
-            className="absolute inset-4 rounded-[40px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.03)]"
-            style={{ display: isMapVisible ? 'block' : 'none' }}
-          >
-            <div className="absolute inset-0">
+        {/* The App Container: floats on the desk with 16px breathing room */}
+        <div className="relative h-full p-4 flex gap-4">
+          {/* Sidebar Rail — flex sibling, not overlay */}
+          <div className="hidden md:block flex-shrink-0">
+            <SideRailNav />
+          </div>
+
+          {/* Content area — takes remaining space */}
+          <div className="relative flex-1 min-w-0">
+            {/* Map container: rounded glass card */}
+            <div
+              className="absolute inset-0 rounded-[40px] overflow-hidden border border-white/20"
+              style={{ display: isMapVisible ? 'block' : 'none' }}
+            >
               <MapView
                 mapRef={mapRef}
                 onMapReady={() => setMapReady(true)}
                 transformRequest={transformRequest}
               />
             </div>
+
+            {/* Non-map route content */}
+            <MapContext.Provider value={{ mapRef, mapReady }}>
+              <Outlet />
+            </MapContext.Provider>
           </div>
-          {/* Route content rendered on top / instead of map */}
-          <MapContext.Provider value={{ mapRef, mapReady }}>
-            <Outlet />
-          </MapContext.Provider>
-        </main>
-        {/* SideRailNav floats on top of all content */}
-        <SideRailNav />
+        </div>
+
         <BottomTabNav />
       </div>
     </WorkspaceProvider>

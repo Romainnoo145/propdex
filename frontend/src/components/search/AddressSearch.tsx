@@ -108,10 +108,10 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
   // Collapsed: just the icon button
   if (!expanded) {
     return (
-      <div className={`absolute top-6 left-4 md:left-[112px] z-[var(--z-search-bar)] ${className}`}>
+      <div className={`absolute top-2 left-4 z-[var(--z-search-bar)] ${className}`}>
         <button
           onClick={handleExpand}
-          className="aura-hover-glow flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-aura-glass-white/60 backdrop-blur-md shadow-glass transition-colors hover:bg-aura-glass-white/60"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-white/20 backdrop-blur-3xl transition-all duration-300 hover:bg-white/40 hover:scale-105"
         >
           <SearchIcon />
         </button>
@@ -123,9 +123,9 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
   return (
     <div
       ref={containerRef}
-      className={`absolute top-6 left-4 md:left-[112px] z-[var(--z-search-bar)] w-80 md:w-[320px] transition-all duration-300 ${className}`}
+      className={`absolute top-2 left-4 z-[var(--z-search-bar)] w-80 md:w-[320px] transition-all duration-300 ${className}`}
     >
-      <div className="flex items-center gap-2 rounded-full border border-white/40 bg-aura-glass-white/60 backdrop-blur-md p-2.5 shadow-glass">
+      <div className="flex items-center gap-2 rounded-full border border-white/40 bg-white/20 backdrop-blur-3xl p-2.5">
         <SearchIcon />
         <input
           ref={inputRef}
