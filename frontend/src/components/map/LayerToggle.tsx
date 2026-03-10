@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import type maplibregl from 'maplibre-gl'
 import {
   addParcelBoundariesLayer,
@@ -45,6 +46,42 @@ interface LayerToggleProps {
   hasScoreData?: boolean
 }
 
+/* ── Spring config for layoutId sliding indicator ── */
+const springTransition = { type: 'spring' as const, stiffness: 500, damping: 30 }
+
+/* ── ToggleButton with layoutId active indicator ── */
+interface ToggleButtonProps {
+  active: boolean
+  /** layoutId section scope — indicator only slides within its section */
+  sectionId: string
+  onClick: () => void
+  glow?: boolean
+  children: React.ReactNode
+}
+
+function ToggleButton({ active, sectionId, onClick, glow = false, children }: ToggleButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
+        active
+          ? 'text-white'
+          : 'text-aura-ink/70 hover:text-aura-ink hover:scale-105'
+      } ${glow && active ? 'shadow-[0_0_12px_rgba(249,168,38,0.3)]' : ''}`}
+    >
+      {active && (
+        <motion.div
+          layoutId={`toggle-indicator-${sectionId}`}
+          className="absolute inset-0 bg-aura-amber rounded-full"
+          transition={springTransition}
+          style={{ zIndex: -1 }}
+        />
+      )}
+      <span className="relative z-10">{children}</span>
+    </button>
+  )
+}
+
 function LayerToggle({
   mapRef,
   mapReady = false,
@@ -66,7 +103,7 @@ function LayerToggle({
   onBAGPandenToggle,
   onScannedScopeToggle,
   autoEnableParcelsKey,
-  hasScoreData,
+  hasScoreData: _hasScoreData,
 }: LayerToggleProps) {
   const isStyleReady = useCallback(() => {
     const map = mapRef.current
@@ -247,63 +284,69 @@ function LayerToggle({
     }
   }
 
-  const active = 'bg-aura-amber text-aura-obsidian shadow-sm'
-  const inactive = 'bg-transparent text-neutral-600 hover:text-aura-ink hover:bg-neutral-200'
-  const overlayActive = 'bg-aura-amber/25 text-aura-amber shadow-sm'
-  const overlayInactive = 'bg-transparent text-neutral-600 hover:text-aura-ink hover:bg-neutral-200'
+  /* ── Determine active view level for layoutId ── */
+  const activeViewLevel = showParcels ? 'perceel' : showGemeenten ? 'gemeente' : null
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)] flex items-center gap-2">
-      <div className="bg-aura-glass-white/60 backdrop-blur-md rounded-full p-1 flex gap-0.5 border border-white/40 shadow-glass">
-        <button
-          onClick={() => handleLayerSwitch('kaart')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            basemap === 'kaart' ? active : inactive
-          }`}
-        >
-          Kaart
-        </button>
-        <button
-          onClick={() => handleLayerSwitch('aerial')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            basemap === 'aerial' ? active : inactive
-          }`}
-        >
-          Satellite
-        </button>
+    <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)]">
+      <div className="bg-aura-glass-white/60 backdrop-blur-md rounded-full p-1 flex items-center border border-white/40 shadow-glass">
+        {/* Section 1: Base Layer */}
+        <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
+          <ToggleButton
+            active={basemap === 'kaart'}
+            sectionId="base"
+            onClick={() => handleLayerSwitch('kaart')}
+          >
+            Kaart
+          </ToggleButton>
+          <ToggleButton
+            active={basemap === 'aerial'}
+            sectionId="base"
+            onClick={() => handleLayerSwitch('aerial')}
+          >
+            Satelliet
+          </ToggleButton>
+        </div>
 
-        <div className="border-l-2 border-neutral-300 h-6 self-center mx-0.5" />
+        {/* Section 2: View Level */}
+        <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
+          <ToggleButton
+            active={activeViewLevel === 'gemeente'}
+            sectionId="view"
+            onClick={onGemeentenToggle}
+          >
+            Gemeente
+          </ToggleButton>
+          <ToggleButton
+            active={false}
+            sectionId="view"
+            onClick={() => {
+              // Wijk is a sub-level of gemeente — toggle gemeente to see wijken
+              if (!showGemeenten) onGemeentenToggle()
+            }}
+          >
+            Wijk
+          </ToggleButton>
+          <ToggleButton
+            active={activeViewLevel === 'perceel'}
+            sectionId="view"
+            onClick={handleParcelsToggle}
+          >
+            Perceel
+          </ToggleButton>
+        </div>
 
-        <button
-          onClick={onGemeentenToggle}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            showGemeenten ? overlayActive : overlayInactive
-          }`}
-        >
-          Gemeenten
-        </button>
-
-        <div className="border-l border-neutral-300 h-6 self-center mx-0.5" />
-
-        <button
-          onClick={handleParcelsToggle}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            showParcels ? overlayActive : overlayInactive
-          }`}
-        >
-          Percelen
-        </button>
-
-        {showParcels && (
-          <button
+        {/* Section 3: Intelligence Layer */}
+        <div className="flex items-center gap-0.5 px-1">
+          <ToggleButton
+            active={showBestemmingsplan}
+            sectionId="intel"
             onClick={onBestemmingsplanToggle}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-              showBestemmingsplan ? overlayActive : overlayInactive
-            }`}
+            glow
           >
             Bestemmingsplan
-          </button>
-        )}
+          </ToggleButton>
+        </div>
       </div>
     </div>
   )
