@@ -2,41 +2,39 @@
 phase: 92-viewport-layout-navigation
 plan: 01
 subsystem: ui
-tags: [tailwind, glass-morphism, navigation, layout, maplibre]
+tags: [font, plus-jakarta-sans, glassmorphism, map-canvas, background-mesh]
 
 requires:
-  - phase: 91-aura-design-system
-    provides: Aura CSS tokens, glass classes, shadow-glass, aura-float, aura-hover-glow
+  - phase: 91-design-system-foundation
+    provides: Aura CSS tokens, SideRailNav component, glass hierarchy
 provides:
-  - Full-viewport layout with map as primary canvas
-  - Floating glass SideRailNav (80px, rounded-[40px], backdrop-blur-xl)
-  - ResultsShell left padding for non-map route clearance
-affects: [92-02-search-filter-dock, 93-parcel-detail-panel, 94-wijk-bento-sheet]
+  - Plus Jakarta Sans as global font (replacing Satoshi)
+  - Background mesh with blurred color blobs (Sage Mint + Warm Amber)
+  - Floating rounded map canvas (inset-4, rounded-[40px])
+  - SideRailNav at left-6/top-6/bottom-6 (24px from edges)
+affects: [92-02, 93-parcel-detail-panel, 94-search-and-filters, 95-wijk-bottom-sheet]
 
 tech-stack:
-  added: []
-  patterns:
-    - "Floating fixed nav outside main flow (renders after <main> in DOM)"
-    - "ResultsShell handles its own left offset (md:pl-[112px]) rather than parent layout"
-    - "Propdex P monogram as logo placeholder (bg-aura-obsidian circle)"
+  added: [Plus Jakarta Sans (Google Fonts)]
+  patterns: [background-mesh-blobs, floating-map-canvas]
 
 key-files:
   created: []
   modified:
+    - frontend/index.html
+    - frontend/src/styles/index.css
     - frontend/src/routes/_authenticated.tsx
     - frontend/src/components/layout/SideRailNav.tsx
-    - frontend/src/components/layout/ResultsShell.tsx
 
 key-decisions:
-  - "SideRailNav renders after <main> in DOM order so it floats on top without z-index conflicts"
-  - "ResultsShell owns its left padding (112px) rather than _authenticated layout handling conditional padding"
-  - "WorkspaceSwitcher replaced with Propdex P monogram (40x40 obsidian circle)"
-  - "Active nav state uses bg-aura-amber/20 text-aura-amber for warm highlight"
+  - "Plus Jakarta Sans via Google Fonts CDN replaces Satoshi via Fontshare"
+  - "Background mesh uses fixed-position blurred divs (not CSS gradients) for GPU compositing"
+  - "Map canvas uses inset-4 (16px) with rounded-[40px] and soft shadow for floating effect"
+  - "ResultsShell padding kept at md:pl-[112px] for consistency with search pill positioning"
 
 patterns-established:
-  - "Floating panels: fixed positioning with 16px edge margins, pointer-events-auto"
-  - "Glass tooltips: border-white/40 bg-aura-glass-white/60 backdrop-blur-md"
-  - "Nav hover: scale-105 + aura-hover-glow for icon micro-interactions"
+  - "Background mesh: two fixed blurred blobs (Sage Mint top-left, Warm Amber bottom-right) behind all content"
+  - "Floating map: absolute inset-4 rounded-[40px] with inner absolute inset-0 for MapView fill"
 
 requirements-completed: [NAV-01, NAV-02]
 
@@ -44,56 +42,57 @@ duration: 3min
 completed: 2026-03-10
 ---
 
-# Phase 92 Plan 01: Viewport Layout + SideRailNav Summary
+# Phase 92 Plan 01: Viewport Layout Foundation Summary
 
-**Full-viewport map canvas with floating glass SideRailNav (80px rounded-[40px] blur rail) and ResultsShell left offset for non-map routes**
+**Plus Jakarta Sans global font swap, background mesh with blurred color blobs, floating rounded map canvas, and SideRailNav repositioned to 24px edges**
 
 ## Performance
 
 - **Duration:** 3 min
-- **Started:** 2026-03-09T22:18:01Z
-- **Completed:** 2026-03-09T22:20:37Z
+- **Started:** 2026-03-10T10:11:49Z
+- **Completed:** 2026-03-10T10:14:47Z
 - **Tasks:** 2
-- **Files modified:** 3
+- **Files modified:** 4
 
 ## Accomplishments
-- Map fills 100% viewport (h-screen w-screen overflow-hidden) with no flex layout constraining it
-- SideRailNav converted from in-flow sidebar to floating glass panel with Aura styling
-- P monogram replaces WorkspaceSwitcher, amber active states, scale hover micro-interactions
-- Non-map routes (projecten, instellingen, rapporten, resultaten) clear the floating rail via 112px left padding
+- Replaced Satoshi font with Plus Jakarta Sans globally (CDN, CSS variable, zero references remaining)
+- Added ambient background mesh with two blurred color blobs (Sage Mint + Warm Amber) behind all content
+- Map now floats on Morning Mist background with 16px padding, rounded-[40px] corners, and soft shadow
+- SideRailNav repositioned from 16px to 24px from viewport edges (left-6/top-6/bottom-6)
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Viewport-locked layout + floating SideRailNav** - `99be7cd` (feat)
-2. **Task 2: Non-map route content offset** - `da34fc0` (feat)
+1. **Task 1: Plus Jakarta Sans font swap + background mesh + floating map canvas** - `f2e8678` (feat)
+2. **Task 2: SideRailNav left-6 positioning + ResultsShell padding cascade** - `225f54d` (feat)
 
 ## Files Created/Modified
-- `frontend/src/routes/_authenticated.tsx` - Viewport-locked layout, SideRailNav moved outside main flow
-- `frontend/src/components/layout/SideRailNav.tsx` - Floating glass rail with monogram, amber active states, glass tooltips
-- `frontend/src/components/layout/ResultsShell.tsx` - Added md:pl-[112px] for floating rail clearance
+- `frontend/index.html` - Replaced Fontshare Satoshi CDN with Google Fonts Plus Jakarta Sans
+- `frontend/src/styles/index.css` - Updated --font-sans CSS variable to Plus Jakarta Sans
+- `frontend/src/routes/_authenticated.tsx` - Added background mesh blobs, wrapped MapView in floating rounded container
+- `frontend/src/components/layout/SideRailNav.tsx` - Updated positioning from left-4/top-4/bottom-4 to left-6/top-6/bottom-6
 
 ## Decisions Made
-- SideRailNav renders after `<main>` in DOM order so it naturally floats on top
-- ResultsShell handles its own left padding rather than conditional padding in _authenticated layout
-- WorkspaceSwitcher replaced with simple P monogram (no longer imported)
-- Active nav state uses bg-aura-amber/20 text-aura-amber instead of bg-neutral-200
+- Plus Jakarta Sans via Google Fonts CDN replaces Satoshi via Fontshare -- Google Fonts is more reliable and widely cached
+- Background mesh uses fixed-position blurred divs with inline styles for opacity/filter (truly dynamic values)
+- ResultsShell padding kept at md:pl-[112px] -- matches search pill positioning per CONTEXT.md
 
 ## Deviations from Plan
 
 None - plan executed exactly as written.
 
 ## Issues Encountered
-None
+- Pre-existing lint error in LayerToggle.tsx (unused `hasScoreData` variable) -- out of scope, not caused by this plan's changes
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Viewport layout complete, ready for 92-02 (search bar + filter chip dock)
-- SideRailNav glass surface is one of the 3 blur-budget surfaces (per Aura design spec)
-- Map fills full viewport, providing the canvas for all floating UI elements in phases 93-97
+- Viewport layout foundation complete with floating map canvas and ambient background
+- Ready for 92-02 (search bar, filter chips, or remaining layout work)
+- All existing routes and navigation functional
 
 ---
 *Phase: 92-viewport-layout-navigation*

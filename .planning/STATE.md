@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 93 complete, ready for Phase 94
+**Current focus:** v15.0 Aura -- Phase 92 plan 01 complete, continuing 92-02
 
 ---
 
 ## Current Position
 
-Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
-Plan: 3 of 3 complete
-Status: Complete
-Last activity: 2026-03-10 -- 93-03 Detail layers for category pods
+Phase: 92 (2 of 7 in v15.0) -- Viewport Layout & Navigation
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-03-10 -- 92-01 Font swap, background mesh, floating map canvas
 
-Progress: [#####░░░░░] 54% (7/13 plans)
+Progress: [######░░░░] 62% (8/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (v15.0)
+- Total plans completed: 8 (v15.0)
 - Average duration: 4min
-- Total execution time: 29min
+- Total execution time: 32min
 
 **By Phase:**
 
@@ -42,7 +42,7 @@ Progress: [#####░░░░░] 54% (7/13 plans)
 - WorkspaceSwitcher replaced with P monogram (bg-aura-obsidian circle)
 - Active nav state uses bg-aura-amber/20 text-aura-amber for warm highlight
 - Aura glass-white defined as #ffffff (pure hex) so Tailwind opacity modifiers work
-- Satoshi via Fontshare CDN, AppearanceSection kept with map style only
+- Plus Jakarta Sans via Google Fonts CDN replaces Satoshi (92-01)
 - Badge teal variant uses aura-green but kept variant name for backward compat
 - BentoPod explicitly excluded from backdrop-blur (locked design decision)
 - Reduced-motion uses [class*=backdrop-blur] selector for generic blur detection
@@ -64,7 +64,7 @@ Progress: [#####░░░░░] 54% (7/13 plans)
 - Aura design: glass blur ONLY on 3 surfaces (SideRailNav, search bar, bottom sheet containers)
 - Inner pods: solid translucent bg-white/40 WITHOUT blur
 - Palette: Morning Mist #F2F6F3, Pure Glass white/60+blur, Deep Obsidian #0E1111, Warm Amber #F9A826, Sage Mint #D1E2D8
-- Font: Satoshi from Fontshare (replaces Inter)
+- Font: Plus Jakarta Sans from Google Fonts (replaces Satoshi/Inter)
 - Desktop only, light mode only -- drop dark mode entirely
 - Industrial Amber tokens fully replaced with Aura tokens (91-01 complete)
 - Aura token naming: --color-aura-canvas, --color-aura-ink, --color-aura-amber, --color-aura-obsidian
@@ -84,11 +84,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T09:30:32.740Z
-**Stopped At:** Phase 93 context updated with deep Aura design discussion
+**Last Session:** 2026-03-10T10:14:47Z
+**Stopped At:** Completed 92-01-PLAN.md (Font swap, background mesh, floating map canvas)
 
-**Next Action:** Execute 93-03-PLAN.md (Detail layers for category pods)
+**Next Action:** Execute 92-02-PLAN.md
 
 ---
 
-*State updated: 2026-03-10 -- Phase 93 plan 02 complete (Parcel Detail Panel)*
+*State updated: 2026-03-10 -- Phase 92 plan 01 complete (Viewport Layout & Navigation)*
