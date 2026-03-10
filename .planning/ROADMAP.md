@@ -250,7 +250,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 99. Scan Pipeline Enrichment | 0/? | Not started | - |
+| 99. Scan Pipeline Enrichment | 1/3 | In Progress|  |
 | 100. Score v3.0 Engine | 0/? | Not started | - |
 | 101. Score Backfill & Migration | 0/? | Not started | - |
 

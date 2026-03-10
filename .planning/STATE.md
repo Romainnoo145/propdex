@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 93 complete, Phase 93.1 (Potentie Dashboard) inserted
+**Current focus:** v16.0 Score Intelligence -- Phase 99 (Scan Pipeline Enrichment) in progress
 
 ---
 
 ## Current Position
 
-Phase: 93.1 (inserted after 93 in v15.0) -- Potentie Dashboard
-Plan: 0 of ? complete
-Status: Not planned
-Last activity: 2026-03-11 -- Phase 93.1 inserted for no-scroll investor Potentie dashboard
+Phase: 99 -- Scan Pipeline Enrichment
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-03-11 -- Plan 99-01 complete (coordinate-based batch enrichment)
 
-Progress: [#########░] 92% (12/13 plans)
+Progress: [###░░░░░░░] 33% (1/3 plans in phase 99)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (v15.0)
+- Total plans completed: 13 (12 v15.0 + 1 v16.0)
 - Average duration: 3min
-- Total execution time: 41min
+- Total execution time: 46min
 
 **By Phase:**
 
@@ -34,6 +34,7 @@ Progress: [#########░] 92% (12/13 plans)
 | 93 | 3 | 15min | 5min |
 | Phase 93 P02 | 2min | 2 tasks | 5 files |
 | Phase 93 P03 | 2min | 2 tasks | 2 files |
+| Phase 99 P01 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Progress: [#########░] 92% (12/13 plans)
 - [Phase 93]: AnimatePresence mode=wait for overview-to-detail layer transitions
 - [Phase 93]: Green PillBadge for kansen, amber for aandachtspunten
 - [Phase 93]: Module-level prefers-reduced-motion detection with opacity-only fallback
+- [Phase 99]: Bodemloket deduplicates at 1m rounding, BRO at 50m rounding (matching API scale)
+- [Phase 99]: Funderingsrisico function prepared but NOT integrated in area_scan yet (depends on Plan 99-02)
+- [Phase 99]: Bodem data stored as flags_dict keys 'bodem' and 'bodemtype' alongside existing flags
 
 ### Key Patterns (carry forward)
 
@@ -96,11 +100,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T21:07:52.463Z
-**Stopped At:** Phase 93.2 context gathered
+**Last Session:** 2026-03-10T21:49:33Z
+**Stopped At:** Completed 99-01-PLAN.md
 
-**Next Action:** Execute 94-01-PLAN.md (Wijk Bottom Sheet)
+**Next Action:** Execute 99-02-PLAN.md (Address-based enrichment)
 
 ---
 
-*State updated: 2026-03-10 -- Phase 93 complete (Parcel Detail Panel)*
+*State updated: 2026-03-11 -- Phase 99 Plan 01 complete (Coordinate-based scan enrichment)*
