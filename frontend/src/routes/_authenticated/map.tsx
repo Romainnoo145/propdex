@@ -2104,7 +2104,32 @@ function MapPage() {
 
   return (
     <MapShell>
-      <AddressSearch onSelect={handleAddressSelect} />
+      {/* Command Center — unified search + layer toggles in one pill */}
+      <div className="absolute top-6 left-4 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg">
+        <AddressSearch onSelect={handleAddressSelect} />
+        <LayerToggle
+          mapRef={mapRef}
+          mapReady={mapReady}
+          basemap={layerState.basemap}
+          showParcels={layerState.showParcels}
+          showGemeenten={layerState.showGemeenten}
+          showBestemmingsplan={layerState.showBestemmingsplan}
+          activeParcelOverlay={layerState.activeParcelOverlay}
+          onBasemapChange={layerActions.setBasemap}
+          onParcelsToggle={handleParcelsToggle}
+          onGemeentenToggle={handleGemeentenToggle}
+          onBestemmingsplanToggle={handleBestemmingsplanToggle}
+          onBAGPandenToggle={handleBAGPandenToggle}
+          onScannedScopeToggle={handleScannedScopeToggle}
+          onScoreToggle={handleScoreToggle}
+          onBuiltStatusToggle={handleBuiltStatusToggle}
+          onReportStatusToggle={handleReportStatusToggle}
+          onVacancySignalToggle={handleVacancySignalToggle}
+          onBuildCapacityToggle={handleBuildCapacityToggle}
+          onFoundationRiskToggle={handleFoundationRiskToggle}
+          hasScoreData={!!activeScanId}
+        />
+      </div>
 
       {/* Bestemmingsplan legend */}
       <BestemmingsplanLegend visible={layerState.showBestemmingsplan} />
@@ -2185,29 +2210,6 @@ function MapPage() {
           lngLat={propertyLngLat}
         />
       )}
-
-      <LayerToggle
-        mapRef={mapRef}
-        mapReady={mapReady}
-        basemap={layerState.basemap}
-        showParcels={layerState.showParcels}
-        showGemeenten={layerState.showGemeenten}
-        showBestemmingsplan={layerState.showBestemmingsplan}
-        activeParcelOverlay={layerState.activeParcelOverlay}
-        onBasemapChange={layerActions.setBasemap}
-        onParcelsToggle={handleParcelsToggle}
-        onGemeentenToggle={handleGemeentenToggle}
-        onBestemmingsplanToggle={handleBestemmingsplanToggle}
-        onBAGPandenToggle={handleBAGPandenToggle}
-        onScannedScopeToggle={handleScannedScopeToggle}
-        onScoreToggle={handleScoreToggle}
-        onBuiltStatusToggle={handleBuiltStatusToggle}
-        onReportStatusToggle={handleReportStatusToggle}
-        onVacancySignalToggle={handleVacancySignalToggle}
-        onBuildCapacityToggle={handleBuildCapacityToggle}
-        onFoundationRiskToggle={handleFoundationRiskToggle}
-        hasScoreData={!!activeScanId}
-      />
 
       {/* Score gradient legend — bottom-right */}
       {layerState.activeParcelOverlay === 'potential' && layerState.showParcels && !!activeScanId && (

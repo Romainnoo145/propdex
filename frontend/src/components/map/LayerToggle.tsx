@@ -116,13 +116,8 @@ function LayerToggle({
       if (!mapRef.current) return
       const map = mapRef.current
       try {
-        if (layer === 'aerial') {
-          map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 1)
-          map.setPaintProperty('carto-light-layer', 'raster-opacity', 0)
-        } else {
-          map.setPaintProperty('esri-satellite-layer', 'raster-opacity', 0)
-          map.setPaintProperty('carto-light-layer', 'raster-opacity', 1)
-        }
+        // Vector basemap is always present — just toggle satellite raster overlay
+        map.setPaintProperty('esri-satellite-layer', 'raster-opacity', layer === 'aerial' ? 1 : 0)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (!message.includes('Style is not done loading')) {
@@ -288,56 +283,58 @@ function LayerToggle({
   const activeViewLevel = showParcels ? 'perceel' : showGemeenten ? 'gemeente' : null
 
   return (
-    <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[var(--z-map-controls)]">
-      <div className="bg-aura-glass-white/60 backdrop-blur-md rounded-full p-1 flex items-center border border-white/40 shadow-glass">
-        {/* Section 1: Base Layer */}
-        <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
-          <ToggleButton
-            active={basemap === 'kaart'}
-            sectionId="base"
-            onClick={() => handleLayerSwitch('kaart')}
-          >
-            Kaart
-          </ToggleButton>
-          <ToggleButton
-            active={basemap === 'aerial'}
-            sectionId="base"
-            onClick={() => handleLayerSwitch('aerial')}
-          >
-            Satelliet
-          </ToggleButton>
-        </div>
+    /* Toggle sections — rendered inline inside the Command Center pill */
+    <div className="flex items-center gap-1">
+      {/* Base layer */}
+      <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
+        <ToggleButton
+          active={basemap === 'kaart'}
+          sectionId="base"
+          onClick={() => handleLayerSwitch('kaart')}
+        >
+          Kaart
+        </ToggleButton>
+        <ToggleButton
+          active={basemap === 'aerial'}
+          sectionId="base"
+          onClick={() => handleLayerSwitch('aerial')}
+        >
+          Satelliet
+        </ToggleButton>
+      </div>
 
-        {/* Section 2: View Level */}
-        <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
-          <ToggleButton
-            active={activeViewLevel === 'gemeente'}
-            sectionId="view"
-            onClick={onGemeentenToggle}
-          >
-            Gemeente
-          </ToggleButton>
+      {/* View level */}
+      <div className="flex items-center gap-0.5 px-1">
+        <ToggleButton
+          active={activeViewLevel === 'gemeente'}
+          sectionId="view"
+          onClick={onGemeentenToggle}
+        >
+          Gemeente
+        </ToggleButton>
+        {showGemeenten && (
           <ToggleButton
             active={false}
             sectionId="view"
             onClick={() => {
-              // Wijk is a sub-level of gemeente — toggle gemeente to see wijken
               if (!showGemeenten) onGemeentenToggle()
             }}
           >
             Wijk
           </ToggleButton>
-          <ToggleButton
-            active={activeViewLevel === 'perceel'}
-            sectionId="view"
-            onClick={handleParcelsToggle}
-          >
-            Perceel
-          </ToggleButton>
-        </div>
+        )}
+        <ToggleButton
+          active={activeViewLevel === 'perceel'}
+          sectionId="view"
+          onClick={handleParcelsToggle}
+        >
+          Perceel
+        </ToggleButton>
+      </div>
 
-        {/* Section 3: Intelligence Layer */}
-        <div className="flex items-center gap-0.5 px-1">
+      {/* Intelligence layer — only when parcels active */}
+      {showParcels && (
+        <div className="flex items-center gap-0.5 px-1 border-l border-white/20">
           <ToggleButton
             active={showBestemmingsplan}
             sectionId="intel"
@@ -347,7 +344,7 @@ function LayerToggle({
             Bestemmingsplan
           </ToggleButton>
         </div>
-      </div>
+      )}
     </div>
   )
 }

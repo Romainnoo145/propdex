@@ -9,9 +9,9 @@
 export const ESRI_SATELLITE_TILES =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
-/** CartoDB Positron — modern light greyscale basemap with retina tiles */
+/** CartoDB Voyager — warm pastel basemap with retina tiles */
 export const CARTO_LIGHT_TILES =
-  'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png';
+  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
 
 /** Attribution text for tile layers */
 export const ESRI_SATELLITE_ATTRIBUTION =

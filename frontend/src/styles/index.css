@@ -103,6 +103,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Remove default browser focus outline — Aura uses its own hover/active states */
+*:focus {
+  outline: none;
+}
+
 /* Global scrollbar policy: keep scrolling behavior, hide native bars everywhere */
 * {
   -ms-overflow-style: none; /* IE and legacy Edge */

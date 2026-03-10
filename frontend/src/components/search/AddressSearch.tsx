@@ -9,7 +9,6 @@ interface AddressSearchProps {
 
 export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) {
   const [query, setQuery] = useState('');
-  const [expanded, setExpanded] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,28 +16,12 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
 
   const { data: suggestions = [], isLoading } = useAddressSuggest(query);
 
-  const handleExpand = () => {
-    setExpanded(true);
-    // Focus input after render
-    requestAnimationFrame(() => inputRef.current?.focus());
-  };
-
-  const handleCollapse = () => {
-    setExpanded(false);
-    setShowDropdown(false);
-    setHighlightedIndex(-1);
-    setQuery('');
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (showDropdown) {
-        setShowDropdown(false);
-        setHighlightedIndex(-1);
-      } else {
-        handleCollapse();
-      }
+      setShowDropdown(false);
+      setHighlightedIndex(-1);
+      inputRef.current?.blur();
       return;
     }
 
@@ -71,7 +54,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
     setQuery('');
     setShowDropdown(false);
     setHighlightedIndex(-1);
-    setExpanded(false);
+    inputRef.current?.blur();
     onSelect(suggestion);
   };
 
@@ -82,50 +65,29 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
     setHighlightedIndex(-1);
   };
 
-  // Click outside → collapse
+  // Click outside → close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        if (expanded && !query) {
-          handleCollapse();
-        } else {
-          setShowDropdown(false);
-          setHighlightedIndex(-1);
-        }
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [expanded, query]);
+  }, []);
 
   const isDropdownVisible =
     showDropdown && query.length >= 3 && (suggestions.length > 0 || !isLoading);
 
-  // Collapsed: just the icon button
-  if (!expanded) {
-    return (
-      <div className={`absolute top-2 left-4 z-[var(--z-search-bar)] ${className}`}>
-        <button
-          onClick={handleExpand}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-white/20 backdrop-blur-3xl transition-all duration-300 hover:bg-white/40 hover:scale-105"
-        >
-          <SearchIcon />
-        </button>
-      </div>
-    );
-  }
-
-  // Expanded: input with dropdown
   return (
-    <div
-      ref={containerRef}
-      className={`absolute top-2 left-4 z-[var(--z-search-bar)] w-80 md:w-[320px] transition-all duration-300 ${className}`}
-    >
-      <div className="flex items-center gap-2 rounded-full border border-white/40 bg-white/20 backdrop-blur-3xl p-2.5">
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* Search input section — lives inside the Command Center pill */}
+      <div className="flex items-center gap-2 border-r border-white/20 pr-4">
         <SearchIcon />
         <input
           ref={inputRef}
@@ -133,7 +95,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Zoek een adres..."
+          placeholder="Zoek perceel of adres..."
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="none"
@@ -141,22 +103,25 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           name="address-search"
           data-lpignore="true"
           data-1p-ignore="true"
-          className="flex-1 bg-transparent text-sm text-aura-ink placeholder:text-neutral-500 outline-none"
+          className="w-[200px] bg-transparent text-sm text-aura-ink placeholder:text-slate-400 outline-none"
         />
         {isLoading && query.length >= 3 && <Spinner />}
-        <button
-          onClick={handleCollapse}
-          className="flex h-6 w-6 items-center justify-center rounded text-neutral-500 transition-colors hover:text-aura-ink"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setShowDropdown(false); }}
+            className="flex h-5 w-5 items-center justify-center rounded text-slate-400 transition-colors hover:text-aura-ink"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* Dropdown — positioned below the entire Command Center */}
       {isDropdownVisible && (
-        <ul className="relative z-[var(--z-dropdown)] mt-1 overflow-hidden rounded-xl border border-white/40 bg-aura-glass-white/60 backdrop-blur-md shadow-glass">
+        <ul className="absolute top-full left-0 z-[var(--z-dropdown)] mt-3 w-[320px] overflow-hidden rounded-2xl border border-white/40 bg-white/70 backdrop-blur-2xl shadow-lg">
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
               <li
@@ -164,15 +129,15 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
                 onClick={() => handleSelect(suggestion)}
                 className={`cursor-pointer px-4 py-3 text-sm text-aura-ink transition-colors ${
                   highlightedIndex === index
-                    ? 'bg-aura-glass-white/40'
-                    : 'hover:bg-aura-glass-white/40'
+                    ? 'bg-white/50'
+                    : 'hover:bg-white/50'
                 }`}
               >
                 {suggestion.weergavenaam}
               </li>
             ))
           ) : (
-            <li className="px-4 py-3 text-sm text-neutral-600">
+            <li className="px-4 py-3 text-sm text-slate-500">
               Geen resultaten
             </li>
           )}
@@ -185,7 +150,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
 function SearchIcon() {
   return (
     <svg
-      className="h-5 w-5 shrink-0 text-neutral-600"
+      className="h-5 w-5 shrink-0 text-slate-400"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -202,7 +167,7 @@ function SearchIcon() {
 
 function Spinner() {
   return (
-    <svg className="h-4 w-4 shrink-0 animate-spin text-neutral-600" fill="none" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
     </svg>

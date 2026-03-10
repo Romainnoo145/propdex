@@ -66,23 +66,23 @@ function AuthenticatedLayout() {
       <div className="h-screen w-screen overflow-hidden bg-aura-canvas">
         {/* Background mesh blobs — sidebar absorbs Sage Mint via backdrop-blur */}
         <div
-          className="fixed top-[-5%] left-[-2%] w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: '#D1E2D8', opacity: 0.40, filter: 'blur(150px)' }}
+          className="fixed top-[-5%] left-0 w-[60vw] h-[60vw] rounded-full pointer-events-none"
+          style={{ background: '#D1E2D8', opacity: 0.35, filter: 'blur(120px)' }}
         />
         <div
-          className="fixed bottom-[-5%] right-[-2%] w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{ background: '#F9A826', opacity: 0.12, filter: 'blur(150px)' }}
+          className="fixed bottom-[-10%] right-[5%] w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: '#F9A826', opacity: 0.20, filter: 'blur(150px)' }}
         />
 
-        {/* The App Container: floats on the desk with 16px breathing room */}
-        <div className="relative h-full p-4 flex gap-4">
-          {/* Sidebar Rail — flex sibling, not overlay */}
-          <div className="hidden md:block flex-shrink-0">
-            <SideRailNav />
-          </div>
+        {/* Fixed sidebar — floats over the canvas, not in the flow */}
+        <div className="hidden md:block">
+          <SideRailNav />
+        </div>
 
-          {/* Content area — takes remaining space */}
-          <div className="relative flex-1 min-w-0">
+        {/* The App Container: floats on the desk with breathing room */}
+        <div className="relative h-full pt-4 pr-4 pb-4">
+          {/* Content area — left margin clears the fixed 110px sidebar */}
+          <div className="relative h-full ml-[110px] min-w-0">
             {/* Map container: rounded glass card */}
             <div
               className="absolute inset-0 rounded-[40px] overflow-hidden border border-white/20"

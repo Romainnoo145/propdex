@@ -3,12 +3,14 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   ESRI_SATELLITE_TILES,
-  CARTO_LIGHT_TILES,
   ESRI_SATELLITE_ATTRIBUTION,
-  CARTO_ATTRIBUTION,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from '@/lib/pdok';
+
+/** MapTiler Pastel — vector tile style, architectural light look */
+const MAPTILER_STYLE =
+  'https://api.maptiler.com/maps/pastel/style.json?key=CfNNTvC3j7DO1otGgxLL';
 
 interface MapViewProps {
   mapRef?: React.MutableRefObject<maplibregl.Map | null>;
@@ -54,48 +56,7 @@ export default function MapView({
       const createdMap = new maplibregl.Map({
         container: containerRef.current,
         transformRequest,
-        style: {
-          version: 8,
-          sources: {
-            'esri-satellite': {
-              type: 'raster',
-              tiles: [ESRI_SATELLITE_TILES],
-              tileSize: 256,
-              attribution: ESRI_SATELLITE_ATTRIBUTION,
-              maxzoom: 19,
-            },
-            'carto-light': {
-              type: 'raster',
-              tiles: [CARTO_LIGHT_TILES],
-              tileSize: 512,
-              attribution: CARTO_ATTRIBUTION,
-            },
-          },
-          layers: [
-            {
-              id: 'background',
-              type: 'background',
-              paint: { 'background-color': '#1a1a2e' },
-            },
-            {
-              id: 'carto-light-layer',
-              type: 'raster',
-              source: 'carto-light',
-              paint: {
-                'raster-saturation': -0.85,
-                'raster-brightness-min': 0.08,
-                'raster-brightness-max': 0.92,
-                'raster-contrast': -0.05,
-              },
-            },
-            {
-              id: 'esri-satellite-layer',
-              type: 'raster',
-              source: 'esri-satellite',
-              paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
-            },
-          ],
-        },
+        style: MAPTILER_STYLE,
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
       });
@@ -116,6 +77,21 @@ export default function MapView({
       }
 
       createdMap.on('load', () => {
+        // Add satellite raster source + layer (hidden by default)
+        createdMap.addSource('esri-satellite', {
+          type: 'raster',
+          tiles: [ESRI_SATELLITE_TILES],
+          tileSize: 256,
+          attribution: ESRI_SATELLITE_ATTRIBUTION,
+          maxzoom: 19,
+        });
+        createdMap.addLayer({
+          id: 'esri-satellite-layer',
+          type: 'raster',
+          source: 'esri-satellite',
+          paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 300 } },
+        });
+
         if (onMapReady) {
           onMapReady(createdMap);
         }
