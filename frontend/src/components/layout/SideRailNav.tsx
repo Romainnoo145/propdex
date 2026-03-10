@@ -15,7 +15,7 @@ interface NavItem {
 /**
  * Floating glass side-rail navigation component.
  *
- * Fixed-position glass panel floating 16px from all edges with rounded-[40px].
+ * Fixed-position glass panel floating 24px from all edges with rounded-[40px].
  * Contains logo monogram at top, functional icons in middle, settings+logout at bottom.
  *
  * Design: Aura glass (bg-aura-glass-white/60 + backdrop-blur-xl), fixed position,
@@ -47,7 +47,7 @@ export default function SideRailNav() {
 
   return (
     <nav
-      className="fixed left-4 top-4 bottom-4 hidden w-20 flex-col items-center justify-between rounded-[40px] border border-white/40 bg-aura-glass-white/60 py-6 shadow-glass backdrop-blur-xl pointer-events-auto md:flex aura-float"
+      className="fixed left-6 top-6 bottom-6 hidden w-20 flex-col items-center justify-between rounded-[40px] border border-white/40 bg-aura-glass-white/60 py-6 shadow-glass backdrop-blur-xl pointer-events-auto md:flex aura-float"
       style={{ zIndex: 'var(--z-side-rail)' }}
     >
       {/* Top section: Monogram + Navigation */}
