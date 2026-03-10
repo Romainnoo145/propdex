@@ -31,7 +31,7 @@
   --color-neutral-900: #111827;
 
   /* Typography */
-  --font-sans: "Satoshi", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Courier New", monospace;
 
   /* Font sizes -- Aura scale */

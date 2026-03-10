@@ -67,18 +67,30 @@ function AuthenticatedLayout() {
 
   return (
     <WorkspaceProvider>
-      <div className="relative h-screen w-screen overflow-hidden">
+      <div className="relative h-screen w-screen overflow-hidden bg-aura-canvas">
+        {/* Background mesh: subtle blurred color blobs behind everything */}
+        <div
+          className="fixed top-0 left-0 w-[40vw] h-[40vw] rounded-full pointer-events-none"
+          style={{ background: '#D1E2D8', opacity: 0.15, filter: 'blur(100px)' }}
+        />
+        <div
+          className="fixed bottom-0 right-0 w-[35vw] h-[35vw] rounded-full pointer-events-none"
+          style={{ background: '#F9A826', opacity: 0.10, filter: 'blur(100px)' }}
+        />
+
         <main className="relative h-full">
           {/* MapView: always in DOM, CSS-toggled visibility — never unmounts */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-4 rounded-[40px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.03)]"
             style={{ display: isMapVisible ? 'block' : 'none' }}
           >
-            <MapView
-              mapRef={mapRef}
-              onMapReady={() => setMapReady(true)}
-              transformRequest={transformRequest}
-            />
+            <div className="absolute inset-0">
+              <MapView
+                mapRef={mapRef}
+                onMapReady={() => setMapReady(true)}
+                transformRequest={transformRequest}
+              />
+            </div>
           </div>
           {/* Route content rendered on top / instead of map */}
           <MapContext.Provider value={{ mapRef, mapReady }}>
