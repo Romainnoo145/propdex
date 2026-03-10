@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 92 complete, ready for Phase 94
+**Current focus:** v15.0 Aura -- Phase 93 in progress
 
 ---
 
 ## Current Position
 
-Phase: 92 (2 of 7 in v15.0) -- Viewport Layout & Navigation
-Plan: 2 of 2 complete
-Status: Complete
-Last activity: 2026-03-10 -- 92-02 Search pill + toggle pill with Framer Motion
+Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
+Plan: 1 of 3 complete
+Status: In Progress
+Last activity: 2026-03-10 -- 93-01 Aerial crop API endpoint + frontend hook
 
-Progress: [#######░░░] 69% (9/13 plans)
+Progress: [########░░] 77% (10/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (v15.0)
+- Total plans completed: 10 (v15.0)
 - Average duration: 4min
-- Total execution time: 36min
+- Total execution time: 37min
 
 **By Phase:**
 
@@ -54,7 +54,7 @@ Progress: [#######░░░] 69% (9/13 plans)
 - aura-hover-glow class uses box-shadow only (no transform) to avoid shadow-glass conflicts
 - PDOK WMS proxied through backend for auth boundary and CORS avoidance
 - fetchAerialCrop uses raw fetch (not apiFetch) since response is binary JPEG
-- 760x320 retina aerial crop with 150m x 63m BBOX for parcel hero context
+- 840x360 retina aerial crop with 150m x 64m BBOX for 420px parcel hero (updated from 760x320)
 - Score badge uses inline span with shadow-lg for readability over satellite imagery
 - Map re-center uses screen-space projection shift (190px) for panel offset
 - Bestemming folded into Juridisch pod (no separate status bar)
@@ -87,11 +87,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T10:16:04Z
-**Stopped At:** Completed 92-02-PLAN.md (Search pill + toggle pill with Framer Motion)
+**Last Session:** 2026-03-10T13:30:05Z
+**Stopped At:** Completed 93-01-PLAN.md (Aerial crop API + frontend hook)
 
-**Next Action:** Execute Phase 94 plans
+**Next Action:** Execute 93-02-PLAN.md
 
 ---
 
-*State updated: 2026-03-10 -- Phase 92 complete (Viewport Layout & Navigation)*
+*State updated: 2026-03-10 -- Phase 93-01 complete (Aerial Crop API)*

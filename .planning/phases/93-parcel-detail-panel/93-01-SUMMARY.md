@@ -4,90 +4,82 @@ plan: 01
 subsystem: api
 tags: [pdok, wms, aerial-imagery, react-query, blob-url]
 
-# Dependency graph
-requires: []
+requires:
+  - phase: 92-viewport-layout
+    provides: "Aura layout with 420px panel width"
 provides:
-  - "GET /api/scans/parcels/{id}/aerial-crop endpoint returning JPEG"
+  - "GET /api/scans/parcels/{id}/aerial-crop returns 840x360 JPEG"
   - "useAerialCrop React Query hook returning blob URL"
-  - "fetchAerialCrop API helper with graceful null fallback"
-affects: [93-02-parcel-detail-panel]
+affects: [93-02, 93-03]
 
-# Tech tracking
 tech-stack:
   added: []
-  patterns: ["PDOK WMS proxy pattern for image endpoints", "Blob URL hook pattern for binary responses"]
+  patterns:
+    - "PDOK WMS proxy with retina dimensions (2x display size)"
 
 key-files:
   created: []
   modified:
     - backend/app/scans/router.py
-    - frontend/src/lib/api.ts
-    - frontend/src/hooks/useScans.ts
 
 key-decisions:
-  - "PDOK WMS proxied through backend to maintain auth boundary and avoid CORS"
-  - "760x320 retina resolution (2x of 380x160 display size) for crisp hero images"
-  - "fetchAerialCrop uses raw fetch instead of apiFetch since response is binary, not JSON"
+  - "Updated aerial crop from 760x320 to 840x360 to match new 420px panel width"
 
 patterns-established:
-  - "Binary image proxy: backend fetches external image, returns Response with Cache-Control"
-  - "Blob URL hook: useQuery returns createObjectURL(blob) for img src binding"
+  - "Aerial crop aspect ratio 7:3 (420:180) for parcel detail hero"
 
 requirements-completed: [API-01]
 
-# Metrics
-duration: 2min
+duration: 1min
 completed: 2026-03-10
 ---
 
 # Phase 93 Plan 01: Aerial Crop API Summary
 
-**PDOK WMS aerial crop proxy endpoint with React Query blob URL hook for parcel hero images**
+**PDOK WMS aerial crop endpoint updated to 840x360 retina dimensions for 420px parcel detail panel**
 
 ## Performance
 
-- **Duration:** 2 min
-- **Started:** 2026-03-09T23:38:51Z
-- **Completed:** 2026-03-09T23:41:18Z
+- **Duration:** 1 min
+- **Started:** 2026-03-10T13:28:52Z
+- **Completed:** 2026-03-10T13:30:05Z
 - **Tasks:** 2
-- **Files modified:** 3
+- **Files modified:** 1
 
 ## Accomplishments
-- Backend endpoint proxies PDOK Actueel_orthoHR WMS to return JPEG centered on parcel centroid
-- Frontend hook returns blob URL with 24h stale time matching backend Cache-Control
-- Multi-tenant security enforced via organization_id filter on parcel lookup
+- Updated backend aerial crop endpoint dimensions from 760x320 to 840x360 (retina 2x of 420x180)
+- Adjusted BBOX aspect ratio from 380:160 to 420:180 (7:3)
+- Verified frontend useAerialCrop hook and fetchAerialCrop API helper already present and working
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Backend aerial crop endpoint** - `c461473` (feat)
-2. **Task 2: Frontend useAerialCrop hook + API helper** - `4567430` (feat)
+1. **Task 1: Backend aerial crop endpoint** - `9e936e9` (feat)
+2. **Task 2: Frontend useAerialCrop hook verification** - No changes needed (hook already exists and compiles)
 
 ## Files Created/Modified
-- `backend/app/scans/router.py` - Added get_aerial_crop endpoint at /parcels/{parcel_id}/aerial-crop
-- `frontend/src/lib/api.ts` - Added fetchAerialCrop function returning blob URL or null
-- `frontend/src/hooks/useScans.ts` - Added useAerialCrop hook with 24h staleTime and retry:1
+- `backend/app/scans/router.py` - Updated aerial crop dimensions to 840x360 and BBOX ratio to 7:3
 
 ## Decisions Made
-- Proxied PDOK WMS through backend to keep auth boundary clean and avoid browser CORS issues
-- Used 760x320 (retina 2x) with BBOX of 150m x ~63m for good context around parcel
-- fetchAerialCrop uses raw fetch (not apiFetch) since response is binary JPEG, not JSON
-- Graceful null fallback on any error -- hero image is non-critical UI element
+- Updated aerial crop from 760x320 to 840x360 to match new 420px panel width (was 380px)
+- Frontend hook and API helper confirmed correct -- no modifications needed
 
 ## Deviations from Plan
 
 None - plan executed exactly as written.
 
 ## Issues Encountered
-None.
+
+Pre-existing TypeScript errors in SideRailNav.tsx (undefined values cast to Record<string, string>) -- out of scope, not related to this plan's changes.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- useAerialCrop hook ready for import in ParcelDetailPanel (Plan 02)
-- Endpoint is rate-limited at 60/min and cached for 24h
+- Aerial crop endpoint ready for use in ParcelDetailPanel hero image (93-02)
+- useAerialCrop hook importable for the panel component
 
 ---
 *Phase: 93-parcel-detail-panel*
