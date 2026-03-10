@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence } from 'framer-motion'
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
@@ -313,9 +314,9 @@ function MapPage() {
       lat = p.latitude
     }
     if (lng == null || lat == null) return
-    // Project to screen, shift left by half panel width (190px), unproject back
+    // Project to screen, shift right by half panel width (210px) since panel is on LEFT
     const point = map.project([lng, lat])
-    point.x -= 190
+    point.x += 210
     const adjusted = map.unproject(point)
     map.easeTo({ center: adjusted, duration: 500 })
   }, [inspectorParcel, mapRef, mapReady])
@@ -2254,12 +2255,15 @@ function MapPage() {
           onViewResults={(scanId) => navigate({ to: '/resultaten', search: { scan_id: scanId } })}
         />
       )}
-      {activePanel?.kind === 'parcel' && inspectorParcel && (
-        <ParcelDetailPanel
-          parcel={inspectorParcel}
-          onClose={() => setActivePanel(null)}
-        />
-      )}
+      <AnimatePresence>
+        {activePanel?.kind === 'parcel' && inspectorParcel && (
+          <ParcelDetailPanel
+            key="parcel-panel"
+            parcel={inspectorParcel}
+            onClose={() => setActivePanel(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Wijk scan confirmation dialog */}
       <Modal isOpen={!!pendingScan} onClose={handleCancelScan} size="sm">

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
@@ -78,7 +79,7 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
       type="button"
       onClick={handleGenerateReport}
       disabled={generateReport.isPending}
-      className={`w-full rounded-full py-2.5 font-semibold transition-colors disabled:opacity-60 ${
+      className={`w-full rounded-full py-3 font-semibold text-sm transition-colors disabled:opacity-60 ${
         parcel.has_report
           ? 'bg-aura-green text-white hover:bg-aura-green/90'
           : 'bg-aura-obsidian text-white hover:bg-aura-obsidian/90'
@@ -114,34 +115,51 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
   }
 
   return (
-    <ParcelPanelShell
-      parcelId={parcel.parcel_id}
-      onClose={onClose}
-      footer={footer}
-    >
-      <ParcelHero parcelId={parcel.parcel_id} score={parcel.score} />
+    <ParcelPanelShell onClose={onClose} footer={footer}>
+      {/* Cross-fade on parcel change */}
+      <motion.div
+        key={parcel.parcel_id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="flex flex-col h-full"
+      >
+        <ParcelHero parcelId={parcel.parcel_id} score={parcel.score} />
 
-      {view.kind === 'overview' ? (
-        <ParcelBentoOverview
-          parcel={parcel}
-          riskProfile={riskProfile}
-          onSelectCategory={handleSelectCategory}
-        />
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-4 pt-2 pb-1">
+        {/* Sticky address header — persists in both overview and detail views */}
+        <div className="px-4 py-3 flex items-center gap-2">
+          {view.kind !== 'overview' && (
             <button
               type="button"
               onClick={handleBack}
-              className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-aura-ink transition-colors"
+              className="flex items-center justify-center h-7 w-7 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors shrink-0"
+              aria-label="Terug"
             >
-              <ArrowLeft className="h-4 w-4" />
-              {VIEW_LABELS[view.kind]}
+              <ArrowLeft className="h-4 w-4 text-aura-ink" />
             </button>
+          )}
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-aura-ink truncate">
+              {parcel.address || parcel.parcel_code || 'Onbekend adres'}
+            </h2>
+            {view.kind !== 'overview' && (
+              <p className="text-xs text-neutral-500">{VIEW_LABELS[view.kind]}</p>
+            )}
           </div>
-          {renderDetailLayer()}
         </div>
-      )}
+
+        {view.kind === 'overview' ? (
+          <ParcelBentoOverview
+            parcel={parcel}
+            riskProfile={riskProfile}
+            onSelectCategory={handleSelectCategory}
+          />
+        ) : (
+          <div className="flex-1 overflow-y-auto">
+            {renderDetailLayer()}
+          </div>
+        )}
+      </motion.div>
     </ParcelPanelShell>
   )
 }
