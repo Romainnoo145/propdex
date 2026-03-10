@@ -101,6 +101,7 @@ Plans:
 ### Phase 99: Scan Pipeline Enrichment
 **Goal**: Move 5 on-demand data sources into the scan pipeline so all property data is pre-cached during wijk scans — no API calls needed when browsing the map or generating reports
 **Depends on**: None
+**Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04, SCAN-05, SCAN-06, SCAN-07
 **Success Criteria** (what must be TRUE):
   1. Energielabel (EP-Online) fetched and stored per VBO during scan
   2. WOZ waarde (Waardeloket) fetched and stored per nummeraanduiding during scan
@@ -109,10 +110,12 @@ Plans:
   5. Funderingsrisico (PDOK WFS) fetched and stored per postcode during scan
   6. All data accessible via existing parcel endpoints without additional API calls
   7. Scan duration remains reasonable (concurrency, batching)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 99 to break down)
+- [ ] 99-01-PLAN.md — Coordinate-based scan enrichment (bodem + BRO in Phase 3)
+- [ ] 99-02-PLAN.md — Address-based scan enrichment (EP-Online + WOZ + SRU + funderingsrisico in Phase 5b)
+- [ ] 99-03-PLAN.md — Backend flags-first endpoints + frontend types + hooks integration
 
 ### Phase 100: Score v3.0 Engine
 **Goal**: Replace `compute_opportunity_score()` v2.1 with a dual-subscore model: Potentie (8 factoren, 80pt) + Risico (9 factoren, 67pt), each with template-based narratieven
