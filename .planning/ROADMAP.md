@@ -120,6 +120,7 @@ Plans:
 ### Phase 100: Score v3.0 Engine
 **Goal**: Replace `compute_opportunity_score()` v2.1 with a dual-subscore model: Potentie (8 factoren, 80pt) + Risico (9 factoren, 67pt), each with template-based narratieven
 **Depends on**: Phase 99
+**Requirements**: SCORE-V3-01, SCORE-V3-02, SCORE-V3-03, SCORE-V3-04, SCORE-V3-05, SCORE-V3-06
 **Success Criteria** (what must be TRUE):
   1. `potentie_score` (0-100) computed from: vrije grond (12), bestemming (12), perceelgrootte (12), vergunningssucceskans (13), optoppotentie (10), leegstand (8), demografie (8), Funda-frictie (5)
   2. `risico_score` (0-100) computed from: funderingsrisico (15), bestemmingswijziging (8), juridisch klimaat (8), constructieve staat (7), bodem (7), asbest (6), criminaliteit (6), monument (5), max hoogte bereikt (5)
@@ -127,10 +128,12 @@ Plans:
   4. `score_breakdown` per factor includes: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort, toelichting_lang, data_bronnen
   5. Missing data: neutral score default, light penalty for critical risk factors, weight redistribution when >20% factors missing
   6. Template-based narratieven (no AI calls) — deterministic, instant text generation
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 100 to break down)
+- [ ] 100-01-PLAN.md — Score v3.0 engine core: 17 factor functions + normalization + missing data + narratives + tests (TDD)
+- [ ] 100-02-PLAN.md — Pipeline integration: reorder area_scan.py scoring to final phase, wire enrichment + wijk data
+- [ ] 100-03-PLAN.md — Frontend type updates: ScanResultItem dual-score types, score.ts v3.0 utilities, PotentieLayer v3.0/v2.1 compat
 
 ### Phase 101: Score Backfill & Migration
 **Goal**: Re-score all existing parcels with v3.0 engine and update frontend types

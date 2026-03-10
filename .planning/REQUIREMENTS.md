@@ -151,6 +151,15 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 - [x] **SCAN-06**: All enrichment data accessible via existing parcel endpoints without additional on-demand API calls (flags-first lookup with fallback)
 - [x] **SCAN-07**: Scan duration remains reasonable with batch deduplication, concurrency control, and parallel API fetching
 
+### Score v3.0 Engine (Phase 100)
+
+- [ ] **SCORE-V3-01**: `potentie_score` (0-100) computed from 8 weighted factors: vrije grond (12), bestemming (12), perceelgrootte (12), vergunningssucceskans (13), optoppotentie (10), leegstand (8), demografie (8), Funda-frictie (5)
+- [ ] **SCORE-V3-02**: `risico_score` (0-100) computed from 9 weighted factors: funderingsrisico (15), bestemmingswijziging (8), juridisch klimaat (8), constructieve staat (7), bodem (7), asbest (6), criminaliteit (6), monument (5), max hoogte bereikt (5)
+- [ ] **SCORE-V3-03**: `overall` score = potentie - risico, stored in scan_results.score column (0-100 clamped) for tile proxy compat
+- [ ] **SCORE-V3-04**: `score_breakdown` per factor includes: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort, toelichting_lang, data_bronnen
+- [ ] **SCORE-V3-05**: Missing data handled: neutral score default, -10% penalty for critical risk factors, weight redistribution when >20% factors missing
+- [ ] **SCORE-V3-06**: Template-based narratieven (no AI calls) — deterministic, instant text generation per factor
+
 ### v16.0 Traceability
 
 | Requirement | Phase | Status |
@@ -162,10 +171,17 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 | SCAN-05 | Phase 99 | Complete |
 | SCAN-06 | Phase 99 | Complete |
 | SCAN-07 | Phase 99 | Complete |
+| SCORE-V3-01 | Phase 100 | Pending |
+| SCORE-V3-02 | Phase 100 | Pending |
+| SCORE-V3-03 | Phase 100 | Pending |
+| SCORE-V3-04 | Phase 100 | Pending |
+| SCORE-V3-05 | Phase 100 | Pending |
+| SCORE-V3-06 | Phase 100 | Pending |
 
 **v16.0 Coverage:**
 - Phase 99 requirements: 7 total
-- Mapped to phases: 7
+- Phase 100 requirements: 6 total
+- Mapped to phases: 13
 - Unmapped: 0
 
 ---
