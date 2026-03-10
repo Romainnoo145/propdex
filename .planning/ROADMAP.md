@@ -31,8 +31,8 @@
 ### v15.0 Aura (Phases 91-97)
 
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
-- [x] **Phase 92: Viewport Layout & Navigation** - Full-bleed map, floating SideRailNav, search pill, filter/toggle dock (completed 2026-03-09)
-- [x] **Phase 93: Parcel Detail Panel** - Floating right panel with satellite crop hero, bento stats, click-through layers, aerial crop API (completed 2026-03-10)
+- [ ] **Phase 92: Viewport Layout & Navigation** - Background mesh, floating rounded map, Plus Jakarta Sans, SideRailNav left-6, split command center (REPLANNED)
+- [ ] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
@@ -57,36 +57,36 @@ Plans:
 - [ ] 91-02: Glass primitives + micro-interactions + performance fallbacks
 
 ### Phase 92: Viewport Layout & Navigation
-**Goal**: The map owns the entire viewport and all navigation floats on top -- users feel like they are looking at a living map with glass controls
+**Goal**: The map floats on a warm ambient canvas with glass controls — Plus Jakarta Sans font, background mesh, rounded map, SideRailNav at left-6, split command center with Framer Motion
 **Depends on**: Phase 91
 **Requirements**: NAV-01, NAV-02, NAV-03, NAV-04
 **Success Criteria** (what must be TRUE):
-  1. Map fills 100% of the browser viewport with no page-level scroll bars
-  2. SideRailNav floats on the left (80px, rounded-[40px], glass blur) with logo, functional icons, and profile/settings at bottom
-  3. Search pill sits top-left with PDOK autocomplete working as before
-  4. Filter/toggle chips dock at top-center and control gemeente/perceel/layer toggles
+  1. Plus Jakarta Sans is the global font, Morning Mist background with blurred color blobs behind rounded map canvas
+  2. SideRailNav floats at left-6 (24px) with glass material
+  3. Search pill sits top-left at left-[112px] with glass pill shape
+  4. Toggle pill at top-center with 3 sections (Base Layer | View Level | Intelligence Layer) and Framer Motion layoutId
 **Plans**: 2 plans
 
 Plans:
-- [ ] 92-01-PLAN.md -- Viewport-locked layout + floating glass SideRailNav + non-map content offset
-- [ ] 92-02-PLAN.md -- Search pill glass styling + top-center filter dock + legend reposition
+- [ ] 92-01-PLAN.md -- Plus Jakarta Sans font + background mesh + floating map canvas + SideRailNav left-6
+- [ ] 92-02-PLAN.md -- Install framer-motion + search pill position + toggle pill with 3 sections + layoutId
 
 ### Phase 93: Parcel Detail Panel
-**Goal**: Clicking a parcel opens a floating glass panel that tells the full property story through visual bento pods and click-through layers -- zero scroll on the overview
+**Goal**: Clicking a parcel opens a LEFT-side floating glass panel with Framer Motion animations, satellite hero, Deep Obsidian score badge, zero-scroll bento overview, and slide-up detail layers
 **Depends on**: Phase 92
 **Requirements**: PRC-01, PRC-02, PRC-03, PRC-04, PRC-05, PRC-06, PRC-07, API-01
 **Success Criteria** (what must be TRUE):
-  1. Clicking a parcel opens a floating right panel with a satellite crop hero image and score badge overlay
-  2. 4 category pods (Potentie, Risico, Markt, Juridisch) in a 2x2 bento grid without scrolling
-  3. Bestemming integrated into Juridisch pod (no separate status bar)
-  4. Clicking any bento pod opens a detail layer replacing the current view (17+ data sections accessible)
-  5. "Genereer Rapport" button is always visible pinned at the bottom of the panel
+  1. Clicking a parcel opens a LEFT-side panel (left-[112px], 420px) with Framer Motion spring slide-in
+  2. Satellite hero (180px) with Deep Obsidian score badge circle + sticky address header
+  3. 4 category pods in 2x2 bento grid without scrolling, bestemming in Juridisch pod
+  4. Clicking a pod triggers Framer Motion slide-up transition to detail layer (hero + address persist)
+  5. "Genereer Rapport" pinned at bottom in sticky footer across all views
 **Plans**: 3 plans
 
 Plans:
-- [x] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
-- [x] 93-02-PLAN.md -- Floating panel shell + satellite hero + bento category pods + map integration
-- [x] 93-03-PLAN.md -- Click-through detail layers + vergunningen accordion + rapport button
+- [ ] 93-01-PLAN.md -- Backend aerial crop API endpoint + frontend useAerialCrop hook
+- [ ] 93-02-PLAN.md -- LEFT-side panel shell + Framer Motion + satellite hero + bento pods + map integration
+- [ ] 93-03-PLAN.md -- Detail layers with Framer Motion slide-up + vergunningen accordion + rapport button
 
 ### Phase 94: Wijk & Gemeente Views
 **Goal**: Selecting a wijk or gemeente delivers spatial context through fly-up bento sheets and luminous map overlays -- users explore areas without leaving the map
@@ -150,8 +150,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
-| 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-09 |
-| 93. Parcel Detail Panel | 3/3 | Complete    | 2026-03-10 |
+| 92. Viewport Layout & Navigation | 0/2 | Replanned   | - |
+| 93. Parcel Detail Panel | 0/3 | Replanned   | - |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
