@@ -12,18 +12,18 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In Progress
-Last activity: 2026-03-10 -- 93-01 Aerial crop API endpoint + frontend hook
+Last activity: 2026-03-10 -- 93-02 LEFT-side parcel detail panel with Framer Motion
 
-Progress: [########░░] 77% (10/13 plans)
+Progress: [#########░] 85% (11/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (v15.0)
+- Total plans completed: 11 (v15.0)
 - Average duration: 4min
-- Total execution time: 37min
+- Total execution time: 39min
 
 **By Phase:**
 
@@ -32,6 +32,7 @@ Progress: [########░░] 77% (10/13 plans)
 | 91 | 2 | 8min | 4min |
 | 92 | 2 | 6min | 3min |
 | 93 | 3 | 15min | 5min |
+| Phase 93 P02 | 2min | 2 tasks | 5 files |
 | Phase 93 P03 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
@@ -55,8 +56,10 @@ Progress: [########░░] 77% (10/13 plans)
 - PDOK WMS proxied through backend for auth boundary and CORS avoidance
 - fetchAerialCrop uses raw fetch (not apiFetch) since response is binary JPEG
 - 840x360 retina aerial crop with 150m x 64m BBOX for 420px parcel hero (updated from 760x320)
-- Score badge uses inline span with shadow-lg for readability over satellite imagery
-- Map re-center uses screen-space projection shift (190px) for panel offset
+- Score badge is Deep Obsidian circle (h-12 w-12) with Amber text on satellite hero
+- Map re-center shifts rightward (+210px) since panel is on LEFT side
+- Address header lives in ParcelDetailPanel (persists across overview/detail views)
+- Glass material uses inline bg-white/60 backdrop-blur-[24px] instead of GlassPanel primitive
 - Bestemming folded into Juridisch pod (no separate status bar)
 - [Phase 93]: Derived state pattern (tracked parcel ID) for view reset instead of useEffect
 - [Phase 93]: JuridischLayer fetches vergunningen/meldingen via hooks directly (not passed as props)
@@ -87,11 +90,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T13:30:05Z
-**Stopped At:** Completed 93-01-PLAN.md (Aerial crop API + frontend hook)
+**Last Session:** 2026-03-10T13:34:36Z
+**Stopped At:** Completed 93-02-PLAN.md (LEFT-side parcel detail panel with Framer Motion)
 
-**Next Action:** Execute 93-02-PLAN.md
+**Next Action:** Execute 93-03-PLAN.md
 
 ---
 
-*State updated: 2026-03-10 -- Phase 93-01 complete (Aerial Crop API)*
+*State updated: 2026-03-10 -- Phase 93-02 complete (Parcel Detail Panel)*

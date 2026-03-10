@@ -2,119 +2,112 @@
 phase: 93-parcel-detail-panel
 plan: 02
 subsystem: ui
-tags: [react, glass-panel, bento-grid, maplibre, animation]
+tags: [framer-motion, glass-panel, bento-grid, parcel-detail, animation]
 
 requires:
-  - phase: 91-design-system-foundation
-    provides: GlassPanel, BentoPod, PillBadge primitives and Aura CSS tokens
-  - phase: 92-viewport-layout-navigation
-    provides: SideRailNav, MapShell, search bar, filter dock
+  - phase: 93-parcel-detail-panel
+    provides: "Aerial crop API endpoint + useAerialCrop hook (plan 01)"
+  - phase: 92-viewport-layout
+    provides: "Aura layout with SideRailNav, flex siblings, glass primitives"
 provides:
-  - Floating ParcelDetailPanel with satellite hero and score badge
-  - 4-category bento grid (Potentie, Risico, Markt, Juridisch)
-  - Map re-center on panel open
-  - Cross-fade animation on parcel change
-affects: [93-03 detail layers, 94-wijk-bottom-sheet]
+  - "LEFT-side floating parcel detail panel with Framer Motion spring animation"
+  - "180px satellite hero with Deep Obsidian score badge"
+  - "4-category bento overview grid (potentie/risico/markt/juridisch)"
+  - "AnimatePresence-wrapped panel in map.tsx"
+  - "Rightward map re-center when panel opens"
+affects: [93-03]
 
 tech-stack:
   added: []
-  patterns: [floating-panel-with-glass-blur, map-viewport-shift, keyed-content-crossfade]
+  patterns:
+    - "Framer Motion spring slide-in for panel enter/exit (stiffness 300, damping 30)"
+    - "AnimatePresence wrapper in map.tsx for panel lifecycle"
+    - "Derived state pattern for view reset on parcel change"
+    - "Deep Obsidian circle score badge on satellite hero"
 
 key-files:
-  created:
+  created: []
+  modified:
     - frontend/src/components/map/panels/parcel/ParcelPanelShell.tsx
     - frontend/src/components/map/panels/parcel/ParcelHero.tsx
     - frontend/src/components/map/panels/parcel/ParcelBentoOverview.tsx
     - frontend/src/components/map/panels/ParcelDetailPanel.tsx
-  modified:
     - frontend/src/routes/_authenticated/map.tsx
-    - frontend/src/styles/index.css
 
 key-decisions:
-  - "Score badge uses inline span with shadow-lg instead of PillBadge for readability over satellite imagery"
-  - "Address bar placed between hero and bento grid (not inside hero overlay)"
-  - "Map re-center uses screen-space projection shift (190px) instead of bbox calculation"
-  - "Bestemming folded into Juridisch pod per CONTEXT.md -- no separate status bar"
+  - "Panel positioned LEFT at left-[112px] (80px rail + 32px gap), slides from left"
+  - "Map re-center shifts rightward (+210px) since panel covers left side"
+  - "Address header moved from BentoOverview into ParcelDetailPanel for persistence across views"
+  - "Score badge is Deep Obsidian circle (h-12 w-12) with Amber text, not pill badge"
 
 patterns-established:
-  - "Floating panel pattern: fixed top-4 right-4 bottom-4 w-[380px] with GlassPanel blur='active'"
-  - "Cross-fade via React key on content wrapper with animate-fade-in CSS class"
-  - "Map viewport shift: project parcel center, subtract half panel width, unproject, easeTo"
+  - "Framer Motion spring animation for panel enter/exit (type spring, stiffness 300, damping 30)"
+  - "prefers-reduced-motion check at module level to skip slide animation"
+  - "Cross-fade via motion.div key={parcel_id} with opacity transition"
 
 requirements-completed: [PRC-01, PRC-02, PRC-03, PRC-04]
 
-duration: 8min
+duration: 2min
 completed: 2026-03-10
 ---
 
 # Phase 93 Plan 02: Parcel Detail Panel Summary
 
-**Floating Aura glass panel with satellite hero, score badge, address bar, and 4-category bento grid replacing old ParcelDetailModal in map context**
+**LEFT-side floating glass panel with Framer Motion spring animations, 180px satellite hero, Deep Obsidian score badge, and 4-category bento grid**
 
 ## Performance
 
-- **Duration:** 8 min
-- **Started:** 2026-03-09T23:39:02Z
-- **Completed:** 2026-03-09T23:47:17Z
+- **Duration:** 2 min
+- **Started:** 2026-03-10T13:32:28Z
+- **Completed:** 2026-03-10T13:34:36Z
 - **Tasks:** 2
-- **Files modified:** 6
+- **Files modified:** 5
 
 ## Accomplishments
-- Floating glass panel slides in from right with satellite hero image and score badge overlay
-- 4 interactive category pods (Potentie, Risico, Markt, Juridisch) in 2x2 bento grid
-- Map re-centers to keep parcel visible alongside panel (viewport shift by 190px)
-- Panel closes via X button, Escape key; cross-fades on parcel change
-- "Genereer Rapport" / "Bekijk Rapport" footer button using existing hooks
+- Rewrote ParcelPanelShell to LEFT-side position (left-[112px]) with Framer Motion spring slide-in animation
+- Updated ParcelHero to 180px height with Deep Obsidian circle score badge (bg-aura-obsidian, text-aura-amber)
+- Moved address header from BentoOverview into ParcelDetailPanel for persistence across overview/detail views
+- Wrapped panel in AnimatePresence in map.tsx for proper enter/exit lifecycle
+- Changed map re-center from leftward (-190px) to rightward (+210px) to accommodate left panel
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: ParcelPanelShell + ParcelHero + ParcelBentoOverview** - `edff438` (feat)
-2. **Task 2: ParcelDetailPanel + map.tsx integration + map re-center** - `0e0326a` (feat)
+1. **Task 1: ParcelPanelShell + ParcelHero + ParcelBentoOverview** - `d4eb364` (feat)
+2. **Task 2: ParcelDetailPanel composition + map.tsx integration** - `774822a` (feat)
 
 ## Files Created/Modified
-- `frontend/src/components/map/panels/parcel/ParcelPanelShell.tsx` - Glass panel shell with fly-in animation, escape handler, sticky footer
-- `frontend/src/components/map/panels/parcel/ParcelHero.tsx` - Satellite crop hero with score badge overlay and gradient fallback
-- `frontend/src/components/map/panels/parcel/ParcelBentoOverview.tsx` - 2x2 bento grid with Potentie/Risico/Markt/Juridisch pods
-- `frontend/src/components/map/panels/ParcelDetailPanel.tsx` - Composed panel with view state management and report generation
-- `frontend/src/routes/_authenticated/map.tsx` - Replaced ParcelDetailModal with ParcelDetailPanel, added re-center effect
-- `frontend/src/styles/index.css` - Added animate-fade-in keyframe for cross-fade animation
+- `frontend/src/components/map/panels/parcel/ParcelPanelShell.tsx` - LEFT-side glass panel with Framer Motion spring animation
+- `frontend/src/components/map/panels/parcel/ParcelHero.tsx` - 180px satellite hero with Deep Obsidian score badge
+- `frontend/src/components/map/panels/parcel/ParcelBentoOverview.tsx` - 2x2 bento grid without address bar (moved up)
+- `frontend/src/components/map/panels/ParcelDetailPanel.tsx` - Composition with cross-fade, address header, view state machine
+- `frontend/src/routes/_authenticated/map.tsx` - AnimatePresence wrapper, rightward map re-center
 
 ## Decisions Made
-- Score badge uses inline span with shadow-lg instead of PillBadge -- better readability over satellite imagery backgrounds
-- Address bar sits between hero and bento grid as a simple text div, not overlaid on hero
-- Map re-center uses screen-space projection: project parcel center to pixel coordinates, subtract 190px (half panel width), unproject back to lngLat, then easeTo with 500ms duration
-- Bestemming data folded into Juridisch pod showing primary bestemming name (per CONTEXT.md decision, no separate bar)
+- Panel at left-[112px] (80px SideRailNav + 32px gap) with 420px width and rounded-[32px]
+- Map re-center uses +210px (half of 420px panel) rightward shift
+- Address header lives in ParcelDetailPanel (not BentoOverview) so it persists in detail views
+- Score badge is Deep Obsidian circle (not colored pill) -- matches CONTEXT.md spec exactly
+- Glass material uses inline bg-white/60 backdrop-blur-[24px] instead of GlassPanel primitive for precise control
+- prefers-reduced-motion detected at module level, skips slide animation but keeps opacity
 
 ## Deviations from Plan
 
-### Auto-fixed Issues
-
-**1. [Rule 3 - Blocking] Fixed 'score' overlay layer ID to 'potential'**
-- **Found during:** Task 2 (map.tsx integration)
-- **Issue:** `layerState.activeParcelOverlay === 'score'` caused TS2367 -- ParcelOverlayLayerId type uses 'potential' not 'score'
-- **Fix:** Changed comparison to `=== 'potential'`
-- **Files modified:** frontend/src/routes/_authenticated/map.tsx
-- **Verification:** TypeScript compiles cleanly
-- **Committed in:** 0e0326a (Task 2 commit)
-
----
-
-**Total deviations:** 1 auto-fixed (1 blocking)
-**Impact on plan:** Pre-existing type mismatch in map.tsx was blocking compilation. Fix is minimal and correct.
+None - plan executed exactly as written.
 
 ## Issues Encountered
-- `git stash` during pre-existing error investigation lost unstaged map.tsx and index.css changes; re-applied cleanly
-- TanStack Router requires explicit search params for `/rapporten` route -- used `{ project_id: undefined, q: undefined }`
+
+Pre-existing TypeScript errors in SideRailNav.tsx (undefined values cast to Record<string, string>) -- out of scope, not related to this plan's changes.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Panel overview complete with clickable pods (pods set view state but detail layers show placeholder)
-- Plan 03 will implement actual detail layers (potentie, risico, markt, juridisch) replacing placeholder text
-- Pre-existing lint error in LayerToggle.tsx (`hasScoreData` unused) is out of scope -- not caused by this plan
+- Panel shell, hero, bento overview, and AnimatePresence integration all ready
+- Plan 03 builds detail layers (potentie/risico/markt/juridisch) inside the panel
+- Layer components already imported and routed via view state machine
 
 ---
 *Phase: 93-parcel-detail-panel*
