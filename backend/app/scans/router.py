@@ -2451,7 +2451,7 @@ async def get_aerial_crop(
     """Return a JPEG aerial image crop centered on the parcel.
 
     Proxies PDOK WMS Actueel_orthoHR layer, cropped around the parcel centroid.
-    Image is 760x320 (retina 2x of 380x160 display) with 24h cache.
+    Image is 840x360 (retina 2x of 420x180 display) with 24h cache.
     """
     from geoalchemy2.functions import ST_Centroid, ST_X, ST_Y
 
@@ -2473,9 +2473,9 @@ async def get_aerial_crop(
 
     cx, cy = float(row[0]), float(row[1])
 
-    # BBOX: centroid +/- 75m width, height scaled to 380x160 aspect ratio
+    # BBOX: centroid +/- 75m width, height scaled to 420x180 aspect ratio (7:3)
     half_w = 75.0
-    half_h = 75.0 * 160.0 / 380.0  # ~31.6m
+    half_h = 75.0 * 180.0 / 420.0  # ~32.1m
     bbox = f"{cx - half_w},{cy - half_h},{cx + half_w},{cy + half_h}"
 
     wms_url = "https://service.pdok.nl/hwh/luchtfotorgb/wms/v1_0"
@@ -2488,8 +2488,8 @@ async def get_aerial_crop(
         "CRS": "EPSG:28992",
         "FORMAT": "image/jpeg",
         "BBOX": bbox,
-        "WIDTH": "760",
-        "HEIGHT": "320",
+        "WIDTH": "840",
+        "HEIGHT": "360",
     }
 
     http_client: httpx.AsyncClient = request.app.state.http_client
