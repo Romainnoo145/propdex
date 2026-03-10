@@ -52,7 +52,11 @@ function deriveVerdict(score: number | null): Verdict {
   }
 }
 
-/* ── Bestemming helper ────────────────────────────────────── */
+/* ── Bestemming helpers ───────────────────────────────────── */
+
+const WONEN_KEYWORDS = ['wonen', 'gemengd', 'centrum']
+const EASY_TRANSFORM = ['gemengd', 'centrum']
+const HARD_TRANSFORM = ['maatschappelijk', 'bedrijf', 'bedrijven', 'kantoor']
 
 function hasResidentialMixedBestemming(
   bestemmingen: ScanResultItem['bestemmingen'],
@@ -62,7 +66,7 @@ function hasResidentialMixedBestemming(
     const type = (b as { type?: string | null }).type ?? ''
     const naam = (b as { naam?: string | null }).naam ?? ''
     const candidate = `${type} ${naam}`.toLowerCase()
-    return candidate.includes('wonen') || candidate.includes('gemengd') || candidate.includes('centrum')
+    return WONEN_KEYWORDS.some((kw) => candidate.includes(kw))
   })
 }
 
@@ -70,15 +74,31 @@ function getBestemmingDisplay(bestemmingen: ScanResultItem['bestemmingen']): {
   naam: string
   type: string
   compatible: boolean
+  transformLabel: string
 } {
   if (!Array.isArray(bestemmingen) || bestemmingen.length === 0) {
-    return { naam: 'Onbekend', type: '', compatible: false }
+    return { naam: 'Onbekend', type: '', compatible: false, transformLabel: 'Geen bestemmingsdata' }
   }
   const first = bestemmingen[0] as { naam?: string | null; type?: string | null }
   const naam = first.naam ?? 'Onbekend'
   const type = first.type ?? ''
   const compatible = hasResidentialMixedBestemming(bestemmingen)
-  return { naam, type, compatible }
+  const lower = `${type} ${naam}`.toLowerCase()
+
+  let transformLabel: string
+  if (WONEN_KEYWORDS.some((kw) => lower.includes(kw))) {
+    transformLabel = 'functiewijziging ok'
+  } else if (EASY_TRANSFORM.some((kw) => lower.includes(kw))) {
+    transformLabel = 'functiewijziging ok'
+  } else if (HARD_TRANSFORM.some((kw) => lower.includes(kw))) {
+    transformLabel = 'beperkt'
+  } else if (lower.includes('industrie') || lower.includes('agrarisch')) {
+    transformLabel = 'beperkt'
+  } else {
+    transformLabel = 'nader onderzoek'
+  }
+
+  return { naam, type, compatible, transformLabel }
 }
 
 /* ── Score mapping helpers ────────────────────────────────── */
@@ -144,6 +164,7 @@ function deriveOptoppotentie(metrics: BuildingMetrics | null): {
   maxHoogte: number | null
   actualLagen: number | null
   maxLagen: number | null
+  reason: string
 } {
   const actualLagen = metrics?.actual_bouwlagen ?? null
   const maxLagen = metrics?.max_bouwlagen ?? null
@@ -160,7 +181,67 @@ function deriveOptoppotentie(metrics: BuildingMetrics | null): {
       ? Math.round(maxHoogte - actualHoogte)
       : null
 
-  return { lagenHeadroom, hoogteHeadroom, actualHoogte, maxHoogte, actualLagen, maxLagen }
+  let reason = 'Geen DSO data'
+  if (lagenHeadroom != null && lagenHeadroom > 0) {
+    reason = `Max. ${maxLagen} vs. huidig ${actualLagen}`
+  } else if (hoogteHeadroom != null && hoogteHeadroom > 0) {
+    reason = `Max. ${maxHoogte}m vs. huidig ${actualHoogte}m`
+  } else if (maxLagen != null && actualLagen != null && maxLagen <= actualLagen) {
+    reason = 'Max hoogte bereikt'
+  } else if (maxHoogte != null && actualHoogte != null && maxHoogte <= actualHoogte) {
+    reason = 'Max hoogte bereikt'
+  }
+
+  return { lagenHeadroom, hoogteHeadroom, actualHoogte, maxHoogte, actualLagen, maxLagen, reason }
+}
+
+/* ── Signal helpers ───────────────────────────────────────── */
+
+interface Signal {
+  dot: string
+  text: string
+}
+
+function deriveSignals(
+  parcel: ScanResultItem,
+  score: number | null,
+): Signal[] {
+  const signals: Signal[] = []
+
+  // Market friction — only when listing exists
+  if (
+    parcel.market_signals != null &&
+    parcel.market_signals.listing_duration_days > 0
+  ) {
+    signals.push({
+      dot: 'bg-amber-400',
+      text: `${parcel.market_signals.listing_duration_days} dagen op Funda (Frictie gedetecteerd)`,
+    })
+  }
+
+  // Vacancy — only when detected
+  if (
+    parcel.vacancy_signal != null &&
+    parcel.vacancy_signal !== '' &&
+    parcel.vacancy_signal !== 'onbekend' &&
+    parcel.vacancy_signal !== 'in_gebruik'
+  ) {
+    const conf = parcel.vacancy_confidence != null ? Math.round(parcel.vacancy_confidence * 100) : null
+    signals.push({
+      dot: 'bg-amber-400',
+      text: `Mogelijk leegstaand (${conf != null ? `${conf}% zekerheid` : 'zekerheid onbekend'})`,
+    })
+  }
+
+  // Transformation candidate — only when criteria met
+  if (score != null && score >= 60 && parcel.bouwjaar != null && parcel.bouwjaar < 1980) {
+    signals.push({
+      dot: 'bg-green-500',
+      text: 'Geschikte transformatiekandidaat (Typologie match)',
+    })
+  }
+
+  return signals
 }
 
 /* ── Main component ───────────────────────────────────────── */
@@ -213,45 +294,31 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
   }, [score, springVal])
   const barWidth = useTransform(springVal, (v) => `${v}%`)
 
-  // Signals
-  const signals: { text: string; dotColor: string }[] = []
+  // Signals — conditional (strip collapses when empty)
+  const signals = deriveSignals(parcel, score)
 
-  if (
-    parcel.market_signals != null &&
-    parcel.market_signals.listing_duration_days > 0
+  // Optoppotentie display value
+  let optoValue: string
+  let optoSub: string
+  if (opto.lagenHeadroom != null && opto.lagenHeadroom > 0) {
+    optoValue = `+${opto.lagenHeadroom} LAGEN`
+    optoSub = `Max. ${opto.maxLagen} vs. huidig ${opto.actualLagen}`
+  } else if (opto.hoogteHeadroom != null && opto.hoogteHeadroom > 0) {
+    optoValue = `+${opto.hoogteHeadroom}M`
+    optoSub = `Max. ${opto.maxHoogte}m vs. huidig ${opto.actualHoogte}m`
+  } else if (
+    (opto.maxLagen != null && opto.actualLagen != null && opto.maxLagen <= opto.actualLagen) ||
+    (opto.maxHoogte != null && opto.actualHoogte != null && opto.maxHoogte <= opto.actualHoogte)
   ) {
-    signals.push({
-      text: `${parcel.market_signals.listing_duration_days} dagen op Funda (Frictie gedetecteerd)`,
-      dotColor: 'bg-amber-400',
-    })
-  }
-
-  if (
-    parcel.vacancy_signal != null &&
-    parcel.vacancy_signal !== '' &&
-    parcel.vacancy_signal !== 'onbekend' &&
-    parcel.vacancy_signal !== 'in_gebruik'
-  ) {
-    const conf =
-      parcel.vacancy_confidence != null
-        ? Math.round(parcel.vacancy_confidence * 100)
-        : null
-    const confText = conf != null ? ` (${conf}% zekerheid)` : ''
-    signals.push({
-      text: `Mogelijk leegstaand${confText}`,
-      dotColor: 'bg-amber-400',
-    })
-  }
-
-  if (score != null && score >= 60 && parcel.bouwjaar != null && parcel.bouwjaar < 1980) {
-    signals.push({
-      text: 'Geschikte transformatiekandidaat (Typologie match)',
-      dotColor: 'bg-green-500',
-    })
+    optoValue = '\u2014'
+    optoSub = 'Max hoogte bereikt'
+  } else {
+    optoValue = '\u2014'
+    optoSub = 'Geen DSO data'
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pt-4">
       {/* ── Verdict Hero ──────────────────────────────────── */}
       <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-5">
         <div className="flex items-center justify-between">
@@ -285,9 +352,9 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
         </div>
       </div>
 
-      {/* ── Deal-Maker Grid ───────────────────────────────── */}
+      {/* ── 3-Column Deal-Maker Grid ────────────────────── */}
       <div className="grid grid-cols-3 gap-3 px-6 mt-4">
-        {/* Card 1 — Vrije Grond */}
+        {/* Card 1 — VRIJE GROND */}
         <div className="bg-white border border-slate-100 rounded-[20px] p-5 h-[130px] flex flex-col justify-between relative">
           {landPts != null && (
             <span className="absolute top-2 right-3 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-400 border border-slate-100">
@@ -301,15 +368,13 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
             <p className="text-3xl font-black text-slate-900 tabular-nums leading-tight">
               {vrijePct != null ? `${Math.round(vrijePct)}%` : '\u2014'}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {vrijeM2 != null
-                ? `\u00b1 ${vrijeM2.toLocaleString('nl-NL')} m\u00b2 onbebouwd`
-                : 'Geen data'}
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {vrijeM2 != null ? `+/- ${vrijeM2.toLocaleString('nl-NL')} m\u00b2 onbebouwd` : 'Geen data'}
             </p>
           </div>
         </div>
 
-        {/* Card 2 — Optoppotentie */}
+        {/* Card 2 — OPTOPPOTENTIE */}
         <div className="bg-white border border-slate-100 rounded-[20px] p-5 h-[130px] flex flex-col justify-between relative">
           {verticalPts != null && (
             <span className="absolute top-2 right-3 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-400 border border-slate-100">
@@ -320,36 +385,14 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
             OPTOPPOTENTIE
           </p>
           <div>
-            {opto.lagenHeadroom != null ? (
-              <>
-                <p className="text-3xl font-black text-slate-900 tabular-nums leading-tight">
-                  +{opto.lagenHeadroom} LAGEN
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Max. {opto.maxLagen} vs. huidig {opto.actualLagen}
-                </p>
-              </>
-            ) : opto.hoogteHeadroom != null ? (
-              <>
-                <p className="text-3xl font-black text-slate-900 tabular-nums leading-tight">
-                  +{opto.hoogteHeadroom}M
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Max. {opto.maxHoogte}m vs. huidig {opto.actualHoogte}m
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-3xl font-black text-slate-400 tabular-nums leading-tight">
-                  {'\u2014'}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Geen DSO data</p>
-              </>
-            )}
+            <p className="text-3xl font-black text-slate-900 tabular-nums leading-tight">
+              {optoValue}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{optoSub}</p>
           </div>
         </div>
 
-        {/* Card 3 — Bestemming */}
+        {/* Card 3 — BESTEMMING */}
         <div className="bg-white border border-slate-100 rounded-[20px] p-5 h-[130px] flex flex-col justify-between relative">
           {zoningPts != null && (
             <span className="absolute top-2 right-3 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-400 border border-slate-100">
@@ -361,45 +404,34 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
           </p>
           <div>
             <p
-              className={`text-xl font-black leading-tight ${
-                bestemming.compatible ? 'text-green-600' : 'text-slate-400'
+              className={`text-xl font-black leading-tight break-all ${
+                bestemming.compatible ? 'text-green-600' : 'text-slate-900'
               }`}
             >
               {bestemming.naam.toUpperCase()}{' '}
               {bestemming.compatible ? '\u2713' : '\u2717'}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {bestemming.type
-                ? `${bestemming.type} (${bestemming.compatible ? 'functiewijziging ok' : 'beperkt'})`
-                : bestemming.compatible
-                  ? 'Functiewijziging ok'
-                  : 'Beperkt'}
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {bestemming.type ? `${bestemming.type} (${bestemming.transformLabel})` : bestemming.transformLabel}
             </p>
           </div>
         </div>
       </div>
 
       {/* ── Intelligence Strip ────────────────────────────── */}
-      <div className="px-6 mt-4 space-y-2">
-        {signals.length > 0 ? (
-          signals.map((sig, i) => (
+      {signals.length > 0 && (
+        <div className="px-6 mt-4 space-y-2">
+          {signals.map((sig, i) => (
             <div
               key={i}
               className="flex items-center gap-3 py-2 px-4 bg-slate-50/50 rounded-lg"
             >
-              <span className={`size-2 rounded-full shrink-0 ${sig.dotColor}`} />
+              <span className={`size-2 rounded-full shrink-0 ${sig.dot}`} />
               <span className="text-[11px] font-bold text-slate-700">{sig.text}</span>
             </div>
-          ))
-        ) : (
-          <div className="flex items-center gap-3 py-2 px-4 bg-slate-50/50 rounded-lg">
-            <span className="size-2 rounded-full shrink-0 bg-slate-300" />
-            <span className="text-[11px] font-bold text-slate-400">
-              Geen bijzondere signalen gedetecteerd
-            </span>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
