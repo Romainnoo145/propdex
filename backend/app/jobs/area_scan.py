@@ -29,17 +29,11 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
 from app.services.bekendmaking_matcher import retro_match_changes_for_gemeente
-from app.services.scan_enrichment import (
-    batch_fetch_address_enrichment,
-    batch_fetch_bodem_data,
-    batch_fetch_postcode_enrichment,
-)
 from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
     MIN_BUILDING_OVERLAP_RATIO,
     AddressResolution,
-    reverse_geocode_rd_point,
     reverse_geocode_rd_point_full,
 )
 from app.services.parcel_scoring import (
@@ -48,6 +42,12 @@ from app.services.parcel_scoring import (
     compute_opportunity_score,
     compute_vacancy_confidence,
     derive_opportunity_insights,
+)
+from app.services.scan_enrichment import (
+    batch_fetch_address_enrichment,
+    batch_fetch_bodem_data,
+    batch_fetch_environmental_data,
+    batch_fetch_postcode_enrichment,
 )
 from app.services.spatial_helpers import transform_point_to_rd
 
@@ -557,29 +557,42 @@ async def area_scan_job(
                     failed_count += 1
                     continue
 
-            # ── Phase 3b: Batch-fetch bodem enrichment data ──
+            # ── Phase 3b: Batch-fetch coordinate-based enrichment ──
             bodem_by_parcel: dict[str, dict] = {}
-            centroids_for_bodem = [
+            env_by_parcel: dict[str, dict] = {}
+            centroids_for_enrichment = [
                 (str(parcel.id), centroid_xy[0], centroid_xy[1])
                 for parcel, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, centroid_xy, _pom, _bag_ids in scored_parcels
                 if centroid_xy is not None
             ]
-            if centroids_for_bodem:
+            if centroids_for_enrichment:
+                # Run bodem + environmental enrichment in parallel
                 try:
-                    bodem_by_parcel = await batch_fetch_bodem_data(
-                        centroids_for_bodem, http_client
+                    bodem_result, env_result = await asyncio.gather(
+                        batch_fetch_bodem_data(centroids_for_enrichment, http_client),
+                        batch_fetch_environmental_data(centroids_for_enrichment, http_client),
+                        return_exceptions=True,
                     )
+                    if isinstance(bodem_result, dict):
+                        bodem_by_parcel = bodem_result
+                    elif isinstance(bodem_result, Exception):
+                        logger.warning("Scan %s: bodem batch failed (non-fatal): %s", scan_id, bodem_result)
+                    if isinstance(env_result, dict):
+                        env_by_parcel = env_result
+                    elif isinstance(env_result, Exception):
+                        logger.warning("Scan %s: environmental batch failed (non-fatal): %s", scan_id, env_result)
                     logger.info(
-                        "Scan %s: bodem enrichment complete — %d/%d parcels enriched",
+                        "Scan %s: enrichment complete — bodem: %d, environmental: %d / %d parcels",
                         scan_id,
                         len(bodem_by_parcel),
-                        len(centroids_for_bodem),
+                        len(env_by_parcel),
+                        len(centroids_for_enrichment),
                     )
-                except Exception as bodem_exc:
+                except Exception as enrich_exc:
                     logger.warning(
-                        "Scan %s: bodem batch fetch failed (non-fatal): %s",
+                        "Scan %s: coordinate enrichment failed (non-fatal): %s",
                         scan_id,
-                        bodem_exc,
+                        enrich_exc,
                     )
 
             # ── Phase 4: Rank and persist scored parcels (70-80%) ──
@@ -661,8 +674,10 @@ async def area_scan_job(
                         final_bm["actual_bouwhoogte"] = actual_hoogte
                     if actual_lagen is not None:
                         final_bm["actual_bouwlagen"] = actual_lagen
-                    # Merge bodem enrichment data from Phase 3b
-                    bodem_enrichment = bodem_by_parcel.get(str(parcel.id), {})
+                    # Merge coordinate-based enrichment from Phase 3b
+                    pid_str = str(parcel.id)
+                    bodem_enrichment = bodem_by_parcel.get(pid_str, {})
+                    env_enrichment = env_by_parcel.get(pid_str, {})
                     flags_dict: dict = {
                         "category": category,
                         "factors": factors,
@@ -683,6 +698,10 @@ async def area_scan_job(
                         flags_dict["bodem"] = bodem_enrichment["bodem"]
                     if bodem_enrichment.get("bodemtype"):
                         flags_dict["bodemtype"] = bodem_enrichment["bodemtype"]
+                    # Environmental risk data
+                    for env_key in ("natura2000", "overstromingsrisico", "geluid", "luchtkwaliteit"):
+                        if env_enrichment.get(env_key):
+                            flags_dict[env_key] = env_enrichment[env_key]
 
                     ranked_values.append(
                         {

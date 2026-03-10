@@ -19,6 +19,10 @@ from app.government_apis.bodemloket_arcgis import bodemloket_client
 from app.government_apis.bro_bodemkaart import bro_bodemkaart_client
 from app.government_apis.ep_online import ep_online_client
 from app.government_apis.pdok_funderingsrisico import pdok_funderingsrisico_client
+from app.government_apis.pdok_natura2000 import pdok_natura2000_client
+from app.government_apis.rivm_geluid import rivm_geluid_client
+from app.government_apis.rivm_luchtkwaliteit import rivm_luchtkwaliteit_client
+from app.government_apis.rws_overstromingen import rws_overstromingen_client
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.government_apis.woz_waardeloket import woz_waardeloket_client
 
@@ -35,6 +39,12 @@ _FUNDER_CONCURRENCY: int = 5
 _SRU_CONCURRENCY: int = 3
 _EP_ONLINE_CONCURRENCY: int = 5
 _WOZ_CONCURRENCY: int = 5
+_NATURA2000_CONCURRENCY: int = 5
+_OVERSTROMINGEN_CONCURRENCY: int = 5
+_GELUID_CONCURRENCY: int = 5
+_LUCHT_CONCURRENCY: int = 5
+# Rounding for environmental WMS queries (same resolution as BRO 1:50000)
+_ENV_ROUND_M: int = 50
 
 # Minimal fields stored in scan_results.flags to keep JSONB lean
 _BODEMLOKET_DISCLAIMER = (
@@ -157,6 +167,135 @@ async def batch_fetch_bodem_data(
         "Bodem batch complete: %d/%d parcels enriched",
         len(results),
         len(centroids),
+    )
+    return results
+
+
+async def batch_fetch_environmental_data(
+    centroids: list[tuple[str, float, float]],
+    client: httpx.AsyncClient,
+) -> dict[str, dict[str, Any]]:
+    """Batch-fetch environmental risk data for parcel centroids.
+
+    Queries 4 sources in parallel: Natura2000 proximity, overstromingsrisico,
+    geluidbelasting, and luchtkwaliteit. All are coordinate-based WMS/WFS.
+
+    Args:
+        centroids: List of (parcel_id, rd_x, rd_y) tuples in EPSG:28992.
+        client: Shared httpx AsyncClient for connection pooling.
+
+    Returns:
+        Dict mapping parcel_id -> {natura2000, overstromingsrisico, geluid, luchtkwaliteit}.
+        Missing keys indicate no data or API error (non-fatal).
+    """
+    if not centroids:
+        return {}
+
+    # Deduplicate by 50m-rounded coordinates (all 4 sources are coarse-resolution)
+    env_key_to_parcels: dict[tuple[int, int], list[str]] = {}
+    env_key_to_coord: dict[tuple[int, int], tuple[float, float]] = {}
+    for parcel_id, x, y in centroids:
+        key = (_round_coord(x, _ENV_ROUND_M), _round_coord(y, _ENV_ROUND_M))
+        env_key_to_parcels.setdefault(key, []).append(parcel_id)
+        env_key_to_coord.setdefault(key, (x, y))
+
+    unique_count = len(env_key_to_parcels)
+    logger.info(
+        "Environmental batch: %d parcels -> %d unique coordinates (4 sources each)",
+        len(centroids),
+        unique_count,
+    )
+
+    # Result stores per unique coordinate
+    natura2000_results: dict[tuple[int, int], dict[str, Any] | None] = {}
+    overstroming_results: dict[tuple[int, int], dict[str, Any] | None] = {}
+    geluid_results: dict[tuple[int, int], dict[str, Any] | None] = {}
+    lucht_results: dict[tuple[int, int], dict[str, Any] | None] = {}
+
+    nat_sem = asyncio.Semaphore(_NATURA2000_CONCURRENCY)
+    ov_sem = asyncio.Semaphore(_OVERSTROMINGEN_CONCURRENCY)
+    gel_sem = asyncio.Semaphore(_GELUID_CONCURRENCY)
+    lu_sem = asyncio.Semaphore(_LUCHT_CONCURRENCY)
+
+    async def _fetch_natura2000(key: tuple[int, int], x: float, y: float) -> None:
+        async with nat_sem:
+            try:
+                data = await pdok_natura2000_client.get_nearest(x, y, client)
+                natura2000_results[key] = data
+            except Exception as exc:
+                logger.warning("Natura2000 error at (%.0f, %.0f): %s", x, y, exc)
+                natura2000_results[key] = None
+
+    async def _fetch_overstroming(key: tuple[int, int], x: float, y: float) -> None:
+        async with ov_sem:
+            try:
+                data = await rws_overstromingen_client.get_risk_at_point(x, y, client)
+                overstroming_results[key] = data
+            except Exception as exc:
+                logger.warning("Overstromingsrisico error at (%.0f, %.0f): %s", x, y, exc)
+                overstroming_results[key] = None
+
+    async def _fetch_geluid(key: tuple[int, int], x: float, y: float) -> None:
+        async with gel_sem:
+            try:
+                data = await rivm_geluid_client.get_noise_at_point(x, y, client)
+                geluid_results[key] = data
+            except Exception as exc:
+                logger.warning("RIVM Geluid error at (%.0f, %.0f): %s", x, y, exc)
+                geluid_results[key] = None
+
+    async def _fetch_lucht(key: tuple[int, int], x: float, y: float) -> None:
+        async with lu_sem:
+            try:
+                data = await rivm_luchtkwaliteit_client.get_air_quality_at_point(x, y, client)
+                lucht_results[key] = data
+            except Exception as exc:
+                logger.warning("RIVM Luchtkwaliteit error at (%.0f, %.0f): %s", x, y, exc)
+                lucht_results[key] = None
+
+    # Run all 4 sources in parallel across all unique coordinates
+    keys_coords = [(k, *env_key_to_coord[k]) for k in env_key_to_parcels]
+    await asyncio.gather(
+        asyncio.gather(*[_fetch_natura2000(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
+        asyncio.gather(*[_fetch_overstroming(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
+        asyncio.gather(*[_fetch_geluid(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
+        asyncio.gather(*[_fetch_lucht(k, x, y) for k, x, y in keys_coords], return_exceptions=True),
+    )
+
+    # Fan out results to all parcels sharing same coordinate bucket
+    results: dict[str, dict[str, Any]] = {}
+    for parcel_id, x, y in centroids:
+        key = (_round_coord(x, _ENV_ROUND_M), _round_coord(y, _ENV_ROUND_M))
+        entry: dict[str, Any] = {}
+
+        nat_val = natura2000_results.get(key)
+        if nat_val is not None:
+            entry["natura2000"] = nat_val
+
+        ov_val = overstroming_results.get(key)
+        if ov_val is not None:
+            entry["overstromingsrisico"] = ov_val
+
+        gel_val = geluid_results.get(key)
+        if gel_val is not None:
+            entry["geluid"] = gel_val
+
+        lu_val = lucht_results.get(key)
+        if lu_val is not None:
+            entry["luchtkwaliteit"] = lu_val
+
+        if entry:
+            results[parcel_id] = entry
+
+    logger.info(
+        "Environmental batch complete: %d/%d parcels enriched "
+        "(N2K: %d, Flood: %d, Noise: %d, Air: %d)",
+        len(results),
+        len(centroids),
+        sum(1 for v in natura2000_results.values() if v is not None),
+        sum(1 for v in overstroming_results.values() if v is not None),
+        sum(1 for v in geluid_results.values() if v is not None),
+        sum(1 for v in lucht_results.values() if v is not None),
     )
     return results
 

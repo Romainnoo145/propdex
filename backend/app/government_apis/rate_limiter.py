@@ -125,3 +125,15 @@ bro_bodemkaart_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
 
 # PDOK Funderingsproblematiek WFS (RVO) — public, polite limits
 pdok_funderingsrisico_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
+# PDOK Natura2000 WFS (RVO) — public, polite limits
+pdok_natura2000_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
+# RWS Overstromingen Risicogebied WMS (PDOK) — public, polite limits
+rws_overstromingen_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
+# RIVM Geluidkaart WMS (Atlas Leefomgeving) — public, polite limits
+rivm_geluid_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
+
+# RIVM Luchtkwaliteit WMS (Atlas Leefomgeving) — public, polite limits
+rivm_luchtkwaliteit_limiter = APIRateLimiter(max_concurrent=5, max_per_hour=1000)
