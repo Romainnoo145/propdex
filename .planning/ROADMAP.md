@@ -151,7 +151,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-10 |
-| 93. Parcel Detail Panel | 3/3 | Complete   | 2026-03-10 |
+| 93. Parcel Detail Panel | 3/3 | Complete    | 2026-03-10 |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |
