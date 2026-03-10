@@ -1,16 +1,6 @@
-import { cn } from '@/lib/utils'
-
 interface ParcelHeroProps {
   parcelId: string
   score: number | null
-}
-
-function scoreColor(score: number | null): string {
-  if (score === null) return 'bg-neutral-400 text-white'
-  if (score >= 70) return 'bg-aura-green text-white'
-  if (score >= 50) return 'bg-aura-amber text-white'
-  if (score >= 30) return 'bg-amber-500 text-white'
-  return 'bg-neutral-400 text-white'
 }
 
 export function ParcelHero({ parcelId, score }: ParcelHeroProps) {
@@ -18,7 +8,7 @@ export function ParcelHero({ parcelId, score }: ParcelHeroProps) {
   const imageUrl = `/api/scans/parcels/${parcelId}/aerial-crop`
 
   return (
-    <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-t-3xl">
+    <div className="relative h-[180px] w-full shrink-0 overflow-hidden rounded-t-[32px]">
       {/* Satellite image with fallback gradient */}
       <img
         src={imageUrl}
@@ -36,15 +26,12 @@ export function ParcelHero({ parcelId, score }: ParcelHeroProps) {
       {/* Loading pulse skeleton — sits behind image */}
       <div className="absolute inset-0 -z-20 animate-pulse bg-aura-sage/30" />
 
-      {/* Score badge */}
-      <span
-        className={cn(
-          'absolute bottom-3 right-3 inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-lg',
-          scoreColor(score),
-        )}
-      >
-        {score !== null ? score : '--'}
-      </span>
+      {/* Score badge — Deep Obsidian circle with Amber score */}
+      <div className="absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-aura-obsidian shadow-lg">
+        <span className={score !== null ? 'font-bold text-lg text-aura-amber' : 'font-bold text-lg text-white/50'}>
+          {score !== null ? score : '--'}
+        </span>
+      </div>
     </div>
   )
 }

@@ -57,89 +57,79 @@ export function ParcelBentoOverview({
   const listingDays = parcel.market_signals?.listing_duration_days
 
   return (
-    <div>
-      {/* Address bar */}
-      <div className="px-4 py-2">
-        <p className="text-sm font-semibold text-aura-ink truncate">
-          {parcel.address || parcel.parcel_code || 'Onbekend adres'}
+    <div className="grid grid-cols-2 gap-3 p-4">
+      {/* Potentie */}
+      <BentoPod
+        interactive
+        size="compact"
+        onClick={() => onSelectCategory('potentie')}
+      >
+        <TrendingUp className="mb-2 h-4 w-4 text-neutral-400" />
+        <p
+          className={cn(
+            'text-2xl tabular-nums font-semibold',
+            scoreTextColor(parcel.score),
+          )}
+        >
+          {parcel.score !== null ? parcel.score : '--'}
         </p>
-      </div>
+        <p className="text-neutral-500 uppercase tracking-wide text-[11px]">
+          Potentie
+        </p>
+      </BentoPod>
 
-      {/* 2x2 bento grid */}
-      <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-        {/* Potentie */}
-        <BentoPod
-          interactive
-          size="compact"
-          onClick={() => onSelectCategory('potentie')}
-        >
-          <TrendingUp className="mb-2 h-4 w-4 text-neutral-400" />
-          <p
+      {/* Risico */}
+      <BentoPod
+        interactive
+        size="compact"
+        onClick={() => onSelectCategory('risico')}
+      >
+        <ShieldAlert className="mb-2 h-4 w-4 text-neutral-400" />
+        <div className="flex items-center gap-2">
+          <span
             className={cn(
-              'text-kpi tabular-nums font-semibold',
-              scoreTextColor(parcel.score),
+              'inline-block h-3 w-3 rounded-full',
+              riskDotColor(riskProfile?.overall_risk),
             )}
-          >
-            {parcel.score !== null ? parcel.score : '--'}
-          </p>
-          <p className="text-label text-neutral-500 uppercase tracking-wide text-[11px]">
-            Potentie
-          </p>
-        </BentoPod>
+          />
+          <span className="text-sm font-medium text-aura-ink capitalize">
+            {riskProfile?.overall_risk ?? 'Onbekend'}
+          </span>
+        </div>
+        <p className="text-neutral-500 uppercase tracking-wide text-[11px]">
+          Risico
+        </p>
+      </BentoPod>
 
-        {/* Risico */}
-        <BentoPod
-          interactive
-          size="compact"
-          onClick={() => onSelectCategory('risico')}
-        >
-          <ShieldAlert className="mb-2 h-4 w-4 text-neutral-400" />
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                'inline-block h-3 w-3 rounded-full',
-                riskDotColor(riskProfile?.overall_risk),
-              )}
-            />
-            <span className="text-sm font-medium text-aura-ink capitalize">
-              {riskProfile?.overall_risk ?? 'Onbekend'}
-            </span>
-          </div>
-          <p className="text-label text-neutral-500 uppercase tracking-wide text-[11px]">
-            Risico
-          </p>
-        </BentoPod>
+      {/* Markt */}
+      <BentoPod
+        interactive
+        size="compact"
+        onClick={() => onSelectCategory('markt')}
+      >
+        <BarChart3 className="mb-2 h-4 w-4 text-neutral-400" />
+        <p className="text-2xl tabular-nums font-semibold text-aura-ink">
+          {listingDays != null ? `${listingDays}d` : '--'}
+        </p>
+        <p className="text-neutral-500 uppercase tracking-wide text-[11px]">
+          Markt
+        </p>
+      </BentoPod>
 
-        {/* Markt */}
-        <BentoPod
-          interactive
-          size="compact"
-          onClick={() => onSelectCategory('markt')}
-        >
-          <BarChart3 className="mb-2 h-4 w-4 text-neutral-400" />
-          <p className="text-kpi tabular-nums font-semibold text-aura-ink">
-            {listingDays != null ? `${listingDays}d` : '--'}
-          </p>
-          <p className="text-label text-neutral-500 uppercase tracking-wide text-[11px]">
-            Markt
-          </p>
-        </BentoPod>
-
-        {/* Juridisch */}
-        <BentoPod
-          interactive
-          size="compact"
-          onClick={() => onSelectCategory('juridisch')}
-        >
-          <Scale className="mb-2 h-4 w-4 text-neutral-400" />
-          <p className="text-sm font-medium text-aura-ink truncate">
-            {primaryBestemming(parcel.bestemmingen)}
-          </p>
-          <p className="text-label text-neutral-500 uppercase tracking-wide text-[11px]">
-            Juridisch
-          </p>
-        </BentoPod>
-      </div>
+      {/* Juridisch */}
+      <BentoPod
+        interactive
+        size="compact"
+        onClick={() => onSelectCategory('juridisch')}
+      >
+        <Scale className="mb-2 h-4 w-4 text-neutral-400" />
+        <p className="text-sm font-medium text-aura-ink truncate">
+          {primaryBestemming(parcel.bestemmingen)}
+        </p>
+        <p className="text-neutral-500 uppercase tracking-wide text-[11px]">
+          Juridisch
+        </p>
+      </BentoPod>
     </div>
   )
 }
