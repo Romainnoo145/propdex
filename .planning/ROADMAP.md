@@ -32,7 +32,7 @@
 
 - [x] **Phase 91: Aura Design System Foundation** - Tokens, font, glass primitives, micro-interactions, remove dark mode, performance fallbacks (completed 2026-03-09)
 - [x] **Phase 92: Viewport Layout & Navigation** - Background mesh, floating rounded map, Plus Jakarta Sans, SideRailNav left-6, split command center (REPLANNED) (completed 2026-03-10)
-- [ ] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED)
+- [x] **Phase 93: Parcel Detail Panel** - LEFT-side floating panel, Framer Motion animations, satellite hero, bento pods, click-through layers (REPLANNED) (completed 2026-03-10)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Bottom bento sheet, 4-column layout, wijk glow, gemeente wijk boundaries
 - [ ] **Phase 95: Results Table** - /resultaten Aura treatment preserving TanStack Table functionality
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, and feed redesigned in Aura style
@@ -151,7 +151,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 91. Aura Design System Foundation | 2/2 | Complete    | 2026-03-09 |
 | 92. Viewport Layout & Navigation | 2/2 | Complete    | 2026-03-10 |
-| 93. Parcel Detail Panel | 2/3 | In Progress|  |
+| 93. Parcel Detail Panel | 3/3 | Complete   | 2026-03-10 |
 | 94. Wijk & Gemeente Views | 0/2 | Not started | - |
 | 95. Results Table | 0/1 | Not started | - |
 | 96. Jurisprudentie & Meldingen | 0/2 | Not started | - |

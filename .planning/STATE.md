@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v15.0 Aura -- Phase 93 in progress
+**Current focus:** v15.0 Aura -- Phase 93 complete, Phase 94 next
 
 ---
 
 ## Current Position
 
-Phase: 93 (3 of 7 in v15.0) -- Parcel Detail Panel
-Plan: 2 of 3 complete
-Status: In Progress
-Last activity: 2026-03-10 -- 93-02 LEFT-side parcel detail panel with Framer Motion
+Phase: 94 (4 of 7 in v15.0) -- Wijk Bottom Sheet
+Plan: 0 of 2 complete
+Status: Ready
+Last activity: 2026-03-10 -- 93-03 Click-through detail layers with AnimatePresence
 
-Progress: [#########░] 85% (11/13 plans)
+Progress: [#########░] 92% (12/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (v15.0)
-- Average duration: 4min
-- Total execution time: 39min
+- Total plans completed: 12 (v15.0)
+- Average duration: 3min
+- Total execution time: 41min
 
 **By Phase:**
 
@@ -33,7 +33,7 @@ Progress: [#########░] 85% (11/13 plans)
 | 92 | 2 | 6min | 3min |
 | 93 | 3 | 15min | 5min |
 | Phase 93 P02 | 2min | 2 tasks | 5 files |
-| Phase 93 P03 | 5min | 2 tasks | 5 files |
+| Phase 93 P03 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -64,6 +64,9 @@ Progress: [#########░] 85% (11/13 plans)
 - [Phase 93]: Derived state pattern (tracked parcel ID) for view reset instead of useEffect
 - [Phase 93]: JuridischLayer fetches vergunningen/meldingen via hooks directly (not passed as props)
 - [Phase 93]: Accordion uses local useState toggle with BentoPod interactive for consistent Aura styling
+- [Phase 93]: AnimatePresence mode=wait for overview-to-detail layer transitions
+- [Phase 93]: Green PillBadge for kansen, amber for aandachtspunten
+- [Phase 93]: Module-level prefers-reduced-motion detection with opacity-only fallback
 
 ### Key Patterns (carry forward)
 
@@ -90,11 +93,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T13:34:36Z
-**Stopped At:** Completed 93-02-PLAN.md (LEFT-side parcel detail panel with Framer Motion)
+**Last Session:** 2026-03-10T13:38:35Z
+**Stopped At:** Completed 93-03-PLAN.md (Click-through detail layers with AnimatePresence)
 
-**Next Action:** Execute 93-03-PLAN.md
+**Next Action:** Execute 94-01-PLAN.md (Wijk Bottom Sheet)
 
 ---
 
-*State updated: 2026-03-10 -- Phase 93-02 complete (Parcel Detail Panel)*
+*State updated: 2026-03-10 -- Phase 93 complete (Parcel Detail Panel)*
