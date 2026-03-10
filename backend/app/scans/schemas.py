@@ -276,6 +276,38 @@ class ParcelEnrichmentResponse(BaseModel):
         default=False,
         description="True if returned from cache, False if freshly fetched",
     )
+    energielabel: dict | None = Field(
+        default=None,
+        description="Pre-cached energielabel data from scan flags",
+    )
+    woz_data: dict | None = Field(
+        default=None,
+        description="Pre-cached WOZ waarde data from scan flags",
+    )
+    bodem_data: dict | None = Field(
+        default=None,
+        description="Pre-cached bodem contamination data from scan flags",
+    )
+    funderingsrisico_data: dict | None = Field(
+        default=None,
+        description="Pre-cached funderingsrisico data from scan flags",
+    )
+    natura2000_data: dict | None = Field(
+        default=None,
+        description="Pre-cached Natura 2000 proximity data from scan flags",
+    )
+    overstromingsrisico_data: dict | None = Field(
+        default=None,
+        description="Pre-cached flood risk data from scan flags",
+    )
+    geluid_data: dict | None = Field(
+        default=None,
+        description="Pre-cached noise level data from scan flags",
+    )
+    luchtkwaliteit_data: dict | None = Field(
+        default=None,
+        description="Pre-cached air quality data from scan flags",
+    )
 
 
 class ParcelCentroidResponse(BaseModel):

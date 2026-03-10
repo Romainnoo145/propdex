@@ -1026,6 +1026,58 @@ async def enrich_parcel(
             detail="Parcel not found",
         )
 
+    # --- Flags-first lookup: check scan_results.flags for pre-cached enrichment ---
+    from app.models.area_scan import AreaScan
+
+    flags_query = (
+        select(ScanResult.flags)
+        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        .where(
+            ScanResult.organization_id == organization_id,
+            ScanResult.parcel_id == parcel_id,
+            AreaScan.status == "completed",
+        )
+        .order_by(AreaScan.completed_at.desc())
+        .limit(1)
+    )
+    flags_row = (await db.execute(flags_query)).scalar_one_or_none()
+    scan_flags = flags_row if isinstance(flags_row, dict) else {}
+
+    # Extract pre-cached enrichment data from scan flags
+    flags_vergunningen = scan_flags.get("vergunningen")
+    flags_energielabel = scan_flags.get("energielabel")
+    flags_woz = scan_flags.get("woz")
+    flags_bodem = scan_flags.get("bodem")
+    flags_bodemtype = scan_flags.get("bodemtype")
+    flags_funderingsrisico = scan_flags.get("funderingsrisico")
+    flags_natura2000 = scan_flags.get("natura2000")
+    flags_overstromingsrisico = scan_flags.get("overstromingsrisico")
+    flags_geluid = scan_flags.get("geluid")
+    flags_luchtkwaliteit = scan_flags.get("luchtkwaliteit")
+
+    # If vergunningen are pre-cached in flags, return immediately without SRU API call
+    if flags_vergunningen is not None:
+        logger.info("Using pre-cached enrichment from scan flags for parcel %s", parcel_id)
+        return ParcelEnrichmentResponse(
+            parcel_id=parcel.id,
+            enrichment_data={
+                "vergunningen": flags_vergunningen.get("records", []) if isinstance(flags_vergunningen, dict) else flags_vergunningen,
+                "source_match_mode": "scan_flags",
+            },
+            enriched_at=parcel.enriched_at,
+            is_cached=True,
+            energielabel=flags_energielabel,
+            woz_data=flags_woz,
+            bodem_data=flags_bodem,
+            funderingsrisico_data=flags_funderingsrisico,
+            natura2000_data=flags_natura2000,
+            overstromingsrisico_data=flags_overstromingsrisico,
+            geluid_data=flags_geluid,
+            luchtkwaliteit_data=flags_luchtkwaliteit,
+        )
+
+    logger.debug("No pre-cached enrichment in scan flags for parcel %s, falling back to on-demand", parcel_id)
+
     # Check if enrichment is fresh (< 7 days old).
     # Since 2026-02-25 we require postcode+adres filtering for vergunningen.
     # Legacy cache entries (without source_match_mode) are treated as stale
@@ -1230,6 +1282,27 @@ async def get_parcel_risk_profile(
     x_rd = float(centroid_match.group(1))
     y_rd = float(centroid_match.group(2))
 
+    # --- Flags-first lookup: check scan_results.flags for pre-cached risk data ---
+    from app.models.area_scan import AreaScan as AreaScanModel
+
+    risk_flags_query = (
+        select(ScanResult.flags)
+        .join(AreaScanModel, AreaScanModel.id == ScanResult.scan_id)
+        .where(
+            ScanResult.organization_id == organization_id,
+            ScanResult.parcel_id == parcel_id,
+            AreaScanModel.status == "completed",
+        )
+        .order_by(AreaScanModel.completed_at.desc())
+        .limit(1)
+    )
+    risk_flags_row = (await db.execute(risk_flags_query)).scalar_one_or_none()
+    risk_flags = risk_flags_row if isinstance(risk_flags_row, dict) else {}
+
+    cached_bodemtype = risk_flags.get("bodemtype")
+    cached_bodem = risk_flags.get("bodem")
+    cached_funderingsrisico = risk_flags.get("funderingsrisico")
+
     # Extract postcode from address for funderingsrisico lookup
     postcode = None
     if row["address"]:
@@ -1237,13 +1310,29 @@ async def get_parcel_risk_profile(
         if pc_match:
             postcode = pc_match.group(1).replace(" ", "").upper()
 
-    # Fetch all data sources in parallel
+    # Fetch data sources: use pre-cached flags when available, fall back to on-demand API
     client = request.app.state.http_client
-    soil_profile, funderingsrisico, bodem_data = await asyncio.gather(
-        fetch_soil_profile(x_rd, y_rd, client, organization_id, db),
-        fetch_funderingsrisico_data(postcode, client, organization_id, db),
-        fetch_bodem_data(x_rd, y_rd, client, organization_id, db),
-    )
+
+    if cached_bodemtype:
+        logger.info("Using pre-cached bodemtype from scan flags for parcel %s", parcel_id)
+        soil_profile = cached_bodemtype
+    else:
+        logger.debug("Fetching bodemtype on-demand (old scan) for parcel %s", parcel_id)
+        soil_profile = await fetch_soil_profile(x_rd, y_rd, client, organization_id, db)
+
+    if cached_funderingsrisico:
+        logger.info("Using pre-cached funderingsrisico from scan flags for parcel %s", parcel_id)
+        funderingsrisico = cached_funderingsrisico
+    else:
+        logger.debug("Fetching funderingsrisico on-demand (old scan) for parcel %s", parcel_id)
+        funderingsrisico = await fetch_funderingsrisico_data(postcode, client, organization_id, db)
+
+    if cached_bodem:
+        logger.info("Using pre-cached bodem from scan flags for parcel %s", parcel_id)
+        bodem_data = cached_bodem
+    else:
+        logger.debug("Fetching bodem on-demand (old scan) for parcel %s", parcel_id)
+        bodem_data = await fetch_bodem_data(x_rd, y_rd, client, organization_id, db)
 
     # Build BuildingData for risk heuristics
     building = BuildingData(
