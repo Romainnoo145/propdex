@@ -56,12 +56,12 @@ export function MarktLayer({ parcel }: MarktLayerProps) {
           <p className="text-xs text-neutral-500 uppercase tracking-wide mb-2">Kansen & aandachtspunten</p>
           <div className="flex flex-wrap gap-2">
             {actionableOpportunitySignals.slice(0, 5).map((signal) => (
-              <PillBadge key={`opp-${signal}`} variant="amber">
+              <PillBadge key={`opp-${signal}`} variant="green">
                 {signal}
               </PillBadge>
             ))}
             {vacancyReasons.slice(0, 3).map((reason) => (
-              <PillBadge key={`risk-${reason}`} variant="default">
+              <PillBadge key={`risk-${reason}`} variant="amber">
                 {reason}
               </PillBadge>
             ))}
