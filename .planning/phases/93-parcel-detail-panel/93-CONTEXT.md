@@ -1,75 +1,81 @@
 # Phase 92-93: Aura Layout & Parcel Detail Panel - Context
 
-**Gathered:** 2026-03-10 (updated — deep discussion)
+**Gathered:** 2026-03-10 (updated — post-execution refinement)
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
 Two interconnected deliverables:
-1. **Global Aura Layout** (Phase 92 polish): Floating map canvas, background mesh, SideRailNav refinements, Top Command Center (search + toggles split), Plus Jakarta Sans font swap
+1. **Global Aura Layout** (Phase 92 — DONE): Flex-based layout, three-pod sidebar, background mesh, Top Command Center, Plus Jakarta Sans
 2. **Parcel Detail Panel** (Phase 93): Left-side floating panel with satellite hero, score badge, zero-scroll bento overview, click-through detail layers
-
-These are implemented together because the layout architecture directly affects panel positioning.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
+### CRITICAL: Layout Architecture (Phase 92 — Already Built)
+
+The layout is a **flex system**, NOT fixed-position overlays:
+
+```
+body (bg-aura-canvas #F2F6F3)
+  ├─ Sage Mint blob (40% opacity, blur 150px, top-left)
+  ├─ Amber blob (12% opacity, blur 150px, bottom-right)
+  └─ App Container (p-4 flex gap-4)
+       ├─ Sidebar zone (w-16, three floating glass pods)
+       │    ├─ Logo pod (rounded-full, bg-white/60, backdrop-blur-xl)
+       │    ├─ Nav pod (rounded-[32px], bg-white/60, backdrop-blur-xl)
+       │    └─ System pod (rounded-[32px], bg-white/60, backdrop-blur-xl)
+       └─ Content area (flex-1, min-w-0)
+            ├─ Map (absolute inset-0, rounded-[40px], border-white/20)
+            └─ Outlet (non-map routes)
+```
+
+**The parcel detail panel must position WITHIN the content area (flex-1), NOT relative to viewport.**
+
 ### Font
-- **Plus Jakarta Sans** (Google Fonts) replaces Satoshi/Inter everywhere
-- Apply globally via CSS @font-face or Google Fonts CDN
+- **Plus Jakarta Sans** (Google Fonts) — already applied globally via CDN
 
 ### Background Canvas ("Aura Background Mesh")
-- Body background: `#F2F6F3` (Morning Mist)
-- Two large blurred color blobs behind the map for depth:
-  - **Blob 1 (top-left):** Sage Mint `#D1E2D8`, opacity 15%, width ~40vw, `filter: blur(100px)`
-  - **Blob 2 (bottom-right):** Light Amber `#F9A826`, opacity 10%, width ~35vw, `filter: blur(100px)`
-- Purpose: Morning Mist "breathes" — avoids flat/cold feeling, enhances glass panel blur absorption
+- Body: `#F2F6F3` (Morning Mist)
+- Blob 1 (top-left): Sage Mint `#D1E2D8`, opacity 40%, 500px, `filter: blur(150px)`
+- Blob 2 (bottom-right): Amber `#F9A826`, opacity 12%, 600px, `filter: blur(150px)`
 
 ### Floating Map Canvas
-- Map container: `padding: 16px` all sides, `border-radius: 40px` (`rounded-[40px]`)
-- Map "floats" on the Morning Mist + blob background
-- Shadow: `box-shadow: 0 20px 60px rgba(0,0,0,0.03)` — very soft
-- **Map stays full-size always** — when parcel panel opens, only the viewport center shifts right to keep the selected parcel visible. Map container does NOT resize.
+- Map: `absolute inset-0 rounded-[40px] overflow-hidden border border-white/20`
+- Map is a flex-1 child — fills space next to sidebar
+- **Map stays full-size always** — when parcel panel opens, map re-centers (easeTo with x offset) to keep parcel visible. Map container does NOT resize.
 
-### SideRailNav (Refinements)
-- Position: `fixed`, `left-6` (24px), `top-6`, `bottom-6` — change from current `left-4`
-- Width: `80px`, `rounded-[40px]`
-- Glass: `rgba(255,255,255,0.6)`, `backdrop-filter: blur(20px)`, `border: 1px solid rgba(255,255,255,0.4)`
-- Shadow: `0 20px 50px rgba(0,0,0,0.05)`
-- Logo: black circle at top (P monogram) — already done
-- Active state: Warm Amber `#F9A826` glow/indicator — already done
+### SideRailNav (DONE — Three Floating Pods)
+- Three separate glass pods (logo circle + nav capsule + system capsule)
+- Glass: `bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm`
+- Active indicator: 48px amber circle with Framer Motion `layoutId` (spring stiffness 380, damping 30)
+- Icons: `size={22} strokeWidth={1.5}`
+- Container: invisible `w-16` flex column
 
-### Top Command Center (Split Architecture)
-Two separate floating pills — NOT one combined bar:
+### Top Command Center (DONE — Split Architecture)
+Two separate floating pills within the content area:
 
-**1. Search Pill (top-left, next to sidebar)**
-- Position: `left-[112px]` (80px sidebar + 32px gap), `top-6`
-- Width: `320px`, pill-shaped (`rounded-full`)
-- Glass material: same as sidebar (`white/60`, `blur`, `border-white/40`)
-- Expand animation on click (subtly wider when typing)
-- Pure address search — no toggles mixed in
+**1. Search Pill (top-left)**
+- Position: `absolute top-2 left-4` within content area
+- Glass: `bg-white/20 backdrop-blur-3xl border border-white/40`
+- Width: 320px, pill-shaped (`rounded-full`)
 
 **2. Toggle Pill (top-center)**
-- Position: `top-8`, `left-1/2`, `-translate-x-1/2`
-- Glass material: same recipe
-- Three grouped sections separated by subtle vertical lines (`border-r border-white/20`):
-  - **Base Layer:** Kaart / Satelliet (segmented control)
-  - **View Level:** Gemeente / Wijk / Perceel (zoom focus)
-  - **Intelligence Layer:** Bestemmingsplan toggle (glow when active)
-- Active toggle: **Warm Amber `#F9A826`** background with white/black text
-- Framer Motion `layoutId` for the sliding active indicator between toggles
+- Position: `absolute top-8 left-1/2 -translate-x-1/2` within content area
+- Three sections: Base Layer | View Level | Intelligence Layer
+- Framer Motion `layoutId` per section for sliding amber indicator
 
 ### Aura Color & Material Hierarchy
 Strict depth layering:
 - **Body:** `#F2F6F3` (Morning Mist) + background mesh blobs
-- **Panel Surfaces** (sidebar, detail panel):
+- **Glass Pods** (sidebar pods, detail panel):
   - `background: rgba(255,255,255,0.6)`
-  - `backdrop-filter: blur(24px)`
+  - `backdrop-filter: blur(24px)` (or `backdrop-blur-xl`)
   - `border: 1px solid rgba(255,255,255,0.4)` (edge lighting)
-  - `box-shadow: 0 20px 50px rgba(0,0,0,0.04)`
+  - `box-shadow: shadow-sm` or subtle
 - **BentoPods** (data blocks inside panels):
   - `background: rgba(255,255,255,0.4)` — NO blur (saves performance)
   - `border: 1px solid rgba(255,255,255,0.4)`
@@ -79,11 +85,13 @@ Strict depth layering:
   - **Status:** `#22C55E` (Vitality Green) — positive bestemmingen, success states
 
 ### Parcel Detail Panel — Position & Layout
-- **Position:** `fixed`, `left-[112px]` (next to sidebar), `top-6`, `bottom-6`
+- **Position:** `absolute` within the content area (flex-1 div), NOT `fixed` to viewport
+- **Positioning:** `left-0 top-0 bottom-0` within content area — sits between sidebar and map
 - **Width:** `420px`
-- **THIS IS LEFT-SIDE, NOT RIGHT-SIDE** — panel appears left, map stays visible to the right
-- Glass material: same as sidebar (white/60, blur 24px, border, shadow)
+- **THIS IS LEFT-SIDE** — panel appears left within content area, map stays visible to the right
+- Glass material: `bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm`
 - `rounded-[32px]`
+- The map container stays `absolute inset-0` — panel overlaps the left portion of the map
 
 ### Parcel Detail Panel — Content Structure (top to bottom)
 | Element | Height | Behavior |
@@ -123,11 +131,10 @@ Strict depth layering:
 - "Bekijk Rapport" navigates to report page
 
 ### Animations (Framer Motion)
-- **New dependency:** `framer-motion` added to project
+- `framer-motion` already installed
 - **Panel open:** Slide-in from left (`x: -100%` → `x: 0`), smooth spring, **400-500ms**, Apple-style ease-out with subtle overshoot
 - **Panel close:** Slide-out to left (reverse of open animation)
 - **Layer switch (overview → detail):** Slide-up — detail content slides up over bento grid. Hero + address stay fixed.
-- **Toggle active indicator:** `layoutId` for smooth sliding pill effect between toggle options
 - **Cross-fade:** When clicking different parcel while panel is open, content cross-fades (not full panel re-animation)
 - **`prefers-reduced-motion`:** All animations respect this — instant transitions as fallback
 
@@ -142,7 +149,6 @@ Strict depth layering:
 - Error states (no satellite, no data for category)
 - Detail layer sub-section layout per category (stacked vs sub-cards)
 - Property info fields (oppervlak, bouwjaar) placement in relevant category layers
-- Search pill expand animation specifics
 - Framer Motion spring config values (stiffness, damping)
 
 </decisions>
@@ -156,8 +162,7 @@ Strict depth layering:
 - Panel = property intelligence briefing — scan 4 pods, click in for depth
 - "Glanceability" — alles wat je nodig hebt in één oogopslag
 - Reference: Behance real estate bento layouts with map + floating glass panels
-- Toggle pill scalability: easy to add future toggles (e.g. "Risico-analyse") without layout shifts
-- Search + toggles separation: "Waar kijk ik naar?" (search) vs "Hoe bekijk ik het?" (toggles)
+- Sidebar = three floating glass pods, NOT one strip. Background (Aura) visible between pods.
 
 </specifics>
 
@@ -175,4 +180,4 @@ Strict depth layering:
 ---
 
 *Phase: 92/93 — Aura Layout & Parcel Detail Panel*
-*Context gathered: 2026-03-10 (deep discussion)*
+*Context updated: 2026-03-10 (post Phase 92 execution with design refinements)*
