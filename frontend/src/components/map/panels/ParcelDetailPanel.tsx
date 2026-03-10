@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
@@ -23,6 +23,10 @@ type PanelView =
   | { kind: 'risico' }
   | { kind: 'markt' }
   | { kind: 'juridisch' }
+
+const prefersReducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
   potentie: 'Potentie',
@@ -148,17 +152,37 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
           </div>
         </div>
 
-        {view.kind === 'overview' ? (
-          <ParcelBentoOverview
-            parcel={parcel}
-            riskProfile={riskProfile}
-            onSelectCategory={handleSelectCategory}
-          />
-        ) : (
-          <div className="flex-1 overflow-y-auto">
-            {renderDetailLayer()}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {view.kind === 'overview' ? (
+            <motion.div
+              key="overview"
+              initial={prefersReducedMotion ? false : { opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ParcelBentoOverview
+                parcel={parcel}
+                riskProfile={riskProfile}
+                onSelectCategory={handleSelectCategory}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key={view.kind}
+              initial={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0.15 }
+                  : { type: 'spring', stiffness: 400, damping: 30 }
+              }
+              className="flex-1 overflow-y-auto"
+            >
+              {renderDetailLayer()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </ParcelPanelShell>
   )
