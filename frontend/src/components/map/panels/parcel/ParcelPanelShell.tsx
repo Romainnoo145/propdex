@@ -70,7 +70,7 @@ export function ParcelPanelShell({
 
       {/* Sticky footer */}
       {footer && (
-        <div className="shrink-0 p-6">
+        <div className="shrink-0 px-8 pb-8 pt-4">
           {footer}
         </div>
       )}

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Maximize2, Layers, Home } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Grid3x3, Building2, LandPlot, ChevronUp, ChevronDown } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
 import { ParcelHero } from './ParcelHero'
 import { ScoreGauge } from './ScoreGauge'
@@ -11,6 +10,7 @@ export type CategoryKey = 'potentie' | 'risico' | 'juridisch'
 interface ParcelBentoOverviewProps {
   parcel: ScanResultItem
   onSelectCategory: (cat: CategoryKey) => void
+  meldingenCount: number | null
 }
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -61,22 +61,6 @@ function formatPandStatus(status: string | null): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function scoreCategory(cat: string | null): {
-  label: string
-  color: string
-} {
-  switch (cat) {
-    case 'High':
-      return { label: 'High potential', color: 'bg-aura-green/10 text-aura-green' }
-    case 'Medium':
-      return { label: 'Medium', color: 'bg-amber-100 text-amber-700' }
-    case 'Low':
-      return { label: 'Low', color: 'bg-slate-100 text-slate-600' }
-    default:
-      return { label: 'Onbekend', color: 'bg-slate-100 text-slate-400' }
-  }
-}
-
 /* ── Bento Grid card types ─────────────────────────────────── */
 
 type BentoCard = 'aerial' | 'bestemming' | 'score'
@@ -86,14 +70,6 @@ type BentoCard = 'aerial' | 'bestemming' | 'score'
 
 const sectionTitle =
   'text-[10px] uppercase text-slate-400 tracking-widest font-medium mb-3'
-
-/* ── Pod tint helpers ──────────────────────────────────────── */
-
-const POD_TINTS = [
-  'bg-[#D1E2D8]/15 border-[#D1E2D8]/30',
-  'bg-[#F9A826]/8 border-[#F9A826]/20',
-  'bg-white/50 border-slate-100',
-] as const
 
 /* ── Card Label Bar ────────────────────────────────────────── */
 
@@ -127,24 +103,20 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
 export function ParcelBentoOverview({
   parcel,
   onSelectCategory,
+  meldingenCount,
 }: ParcelBentoOverviewProps) {
   const [activeCard, setActiveCard] = useState<BentoCard>('aerial')
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
-  const actualBouwlagen = bm?.actual_bouwlagen
-  const maxBouwlagen = bm?.max_bouwlagen
-  const bouwlagenDisplay =
-    actualBouwlagen != null && maxBouwlagen != null
-      ? `${actualBouwlagen}/${maxBouwlagen}`
-      : actualBouwlagen != null
-        ? `${actualBouwlagen}`
-        : maxBouwlagen != null
-          ? `—/${maxBouwlagen}`
-          : '—'
-  const sc = scoreCategory(parcel.score_category)
+  const vrijPct =
+    parcel.area_m2 != null && parcel.area_m2 > 0 && bm?.pand_oppervlakte_m2 != null
+      ? Math.round(((parcel.area_m2 - bm.pand_oppervlakte_m2) / parcel.area_m2) * 100)
+      : parcel.area_m2 != null && !parcel.has_pand
+        ? 100
+        : null
 
   return (
-    <div className="px-8 pb-8">
+    <div className="flex-1 flex flex-col px-8 pb-8">
       {/* ── Bento Image Grid (3 cards) ───────────────── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
         {/* Card 1: Aerial View */}
@@ -209,59 +181,47 @@ export function ParcelBentoOverview({
         <BouwjaarTimeline bouwjaar={parcel.bouwjaar} />
       </div>
 
-      {/* ── Kenmerken ────────────────────────────────── */}
-      <div className="mt-8">
-        <h3 className={sectionTitle}>Kenmerken</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <KenmerkenPod
-            icon={<Maximize2 size={18} strokeWidth={1.5} />}
-            value={parcel.area_m2 != null ? `${Math.round(parcel.area_m2)}` : '—'}
-            unit={parcel.area_m2 != null ? ' m²' : ''}
-            label="Oppervlakte"
-            tint={POD_TINTS[0]}
-          />
-          <KenmerkenPod
-            icon={<Layers size={18} strokeWidth={1.5} />}
-            value={bouwlagenDisplay}
-            label="Bouwlagen"
-            tint={POD_TINTS[1]}
-          />
-          <KenmerkenPod
-            icon={<Home size={18} strokeWidth={1.5} />}
-            value={formatPandStatus(parcel.pand_status)}
-            label="Status"
-            small
-            tint={POD_TINTS[2]}
-          />
-        </div>
+      {/* ── Kenmerken (flex filler) ────────────────── */}
+      <div className="mt-6 flex-1 grid grid-cols-3 gap-1.5">
+        <KenmerkenCard
+          icon={<LandPlot size={16} strokeWidth={1.5} />}
+          label="Perceel"
+          value={parcel.area_m2 != null ? `${Math.round(parcel.area_m2)}` : '—'}
+          unit="m²"
+        />
+        <KenmerkenCard
+          icon={<Building2 size={16} strokeWidth={1.5} />}
+          label="Gebouw"
+          value={bm?.pand_oppervlakte_m2 ? `${Math.round(bm.pand_oppervlakte_m2)}` : '—'}
+          unit="m²"
+        />
+        <KenmerkenCard
+          icon={<Grid3x3 size={16} strokeWidth={1.5} />}
+          label="Beschikbaar"
+          value={vrijPct != null ? `${vrijPct}` : '—'}
+          unit="%"
+          highlight={vrijPct != null && vrijPct >= 40}
+        />
       </div>
 
-      {/* ── Quick Tags ───────────────────────────────── */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-1 text-[10px] font-medium',
-            parcel.has_pand
-              ? 'bg-aura-green/10 text-aura-green'
-              : 'bg-slate-100 text-slate-600',
-          )}
-        >
-          {parcel.has_pand ? 'Bebouwd' : 'Leeg perceel'}
-        </span>
-        {parcel.vacancy_signal && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-medium text-amber-700">
-            {parcel.vacancy_signal}
-          </span>
-        )}
-        <span
-          className={cn('rounded-full px-2.5 py-1 text-[10px] font-medium', sc.color)}
-        >
-          {sc.label}
-        </span>
+      {/* ── Secondary Fields ──────────────────────────── */}
+      <div className="mt-4 grid grid-cols-2 gap-1.5">
+        <SecondaryField
+          value={parcel.has_pand ? formatPandStatus(parcel.pand_status) : 'Leeg perceel'}
+        />
+        <SecondaryField
+          value={
+            meldingenCount === null
+              ? '...'
+              : meldingenCount === 0
+                ? 'Geen vergunningen'
+                : `${meldingenCount} vergunning${meldingenCount === 1 ? '' : 'en'}`
+          }
+        />
       </div>
 
       {/* ── Trust Metadata ───────────────────────────── */}
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between">
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
           Bron: Kadaster · BAG · DSO
         </span>
@@ -273,38 +233,78 @@ export function ParcelBentoOverview({
   )
 }
 
-/* ── KenmerkenPod ──────────────────────────────────────────── */
+/* ── KenmerkenCard ─────────────────────────────────────────── */
 
-function KenmerkenPod({
+function KenmerkenCard({
   icon,
+  label,
   value,
   unit,
-  label,
-  small,
-  tint,
+  highlight,
 }: {
   icon: React.ReactNode
+  label: string
   value: string
   unit?: string
-  label: string
-  small?: boolean
-  tint: string
+  highlight?: boolean
 }) {
   return (
-    <div className={cn('rounded-[16px] border p-4', tint)}>
-      <div className="text-slate-300">{icon}</div>
-      <p
-        className={cn(
-          'mt-3 font-bold tabular-nums text-slate-900',
-          small ? 'text-sm' : 'text-xl',
+    <div
+      className="flex flex-col justify-between h-full rounded-[24px] p-5"
+      style={{
+        background: highlight ? 'rgba(249, 168, 38, 0.08)' : '#FFFFFF',
+        border: highlight ? '1px solid rgba(249, 168, 38, 0.3)' : '1px solid #EAEFEF',
+      }}
+    >
+      {/* Top: icon + label + chevrons */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color: highlight ? '#F9A826' : '#cbd5e1' }}>{icon}</span>
+          <span
+            className="text-[11px] font-extrabold uppercase"
+            style={{
+              letterSpacing: '0.15em',
+              color: highlight ? '#F9A826' : '#94a3b8',
+            }}
+          >
+            {label}
+          </span>
+        </div>
+        <div className="flex flex-col -space-y-1 text-slate-200">
+          <ChevronUp size={14} strokeWidth={2} />
+          <ChevronDown size={14} strokeWidth={2} />
+        </div>
+      </div>
+
+      {/* Bottom: big value */}
+      <div>
+        <p
+          className="text-3xl font-black tracking-tighter tabular-nums leading-none"
+          style={{ color: highlight ? '#F9A826' : '#0E1111' }}
+        >
+          {value}
+        </p>
+        {unit && (
+          <span
+            className="text-[10px] font-bold uppercase mt-1 block"
+            style={{ color: highlight ? 'rgba(249, 168, 38, 0.6)' : '#cbd5e1' }}
+          >
+            {unit}
+          </span>
         )}
-      >
+      </div>
+    </div>
+  )
+}
+
+/* ── SecondaryField ────────────────────────────────────────── */
+
+function SecondaryField({ value }: { value: string }) {
+  return (
+    <div className="flex items-center justify-center h-[40px] rounded-[14px] bg-[#F2F6F3]">
+      <span className="text-[13px] font-semibold text-[#0E1111]">
         {value}
-        {unit && <span className="text-sm font-medium text-slate-400">{unit}</span>}
-      </p>
-      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
+      </span>
     </div>
   )
 }

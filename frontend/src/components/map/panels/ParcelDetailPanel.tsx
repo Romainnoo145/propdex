@@ -13,7 +13,7 @@ import { PotentieLayer } from './parcel/layers/PotentieLayer'
 import { RisicoLayer } from './parcel/layers/RisicoLayer'
 
 import { JuridischLayer } from './parcel/layers/JuridischLayer'
-import { useParcelRiskProfile } from '@/hooks/useScans'
+import { useParcelRiskProfile, useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -43,6 +43,7 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
   const [view, setView] = useState<PanelView>({ kind: 'overview' })
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
   const riskQuery = useParcelRiskProfile(parcel.parcel_id)
+  const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const generateReport = useGenerateReportFromParcel()
 
   // Reset to overview when parcel changes (derived state pattern)
@@ -81,10 +82,10 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
       type="button"
       onClick={handleGenerateReport}
       disabled={generateReport.isPending}
-      className={`w-full h-14 rounded-full font-semibold text-lg transition-all disabled:opacity-60 ${
+      className={`w-full h-[60px] rounded-full text-[15px] font-bold tracking-tight transition-all active:scale-[0.98] disabled:opacity-60 ${
         parcel.has_report
           ? 'bg-aura-green text-white hover:bg-aura-green/90'
-          : 'bg-[#0E1111] text-white hover:bg-[#1a1d1d] shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
+          : 'bg-[#0E1111] text-white hover:bg-slate-800'
       }`}
     >
       {generateReport.isPending
@@ -165,11 +166,12 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
               initial={prefersReducedMotion ? false : { opacity: 1 }}
               exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mt-6"
+              className="mt-6 flex-1 flex flex-col min-h-0"
             >
               <ParcelBentoOverview
                 parcel={parcel}
                 onSelectCategory={handleSelectCategory}
+                meldingenCount={enrichmentQuery.data?.enrichment_data?.vergunningen?.length ?? null}
               />
             </motion.div>
           ) : (
