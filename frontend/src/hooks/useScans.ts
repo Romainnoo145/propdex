@@ -32,6 +32,15 @@ import type {
   ScanResultsResponse,
   ScanResultsFilters,
   ScanListResponse,
+  EnergielabelData,
+  WozData,
+  BodemData,
+  FunderingsrisicoData,
+  VergunningenData,
+  Natura2000Data,
+  OverstromingsrisicoData,
+  GeluidData,
+  LuchtkwaliteitData,
 } from '@/lib/types/scan'
 
 /**
@@ -160,26 +169,76 @@ export function useParcelRiskProfile(
   })
 }
 
+/** Scan flags that may contain pre-cached enrichment data */
+export interface ScanEnrichmentFlags {
+  vergunningen?: VergunningenData
+  energielabel?: EnergielabelData
+  woz?: WozData
+  bodem?: BodemData
+  funderingsrisico?: FunderingsrisicoData
+  natura2000?: Natura2000Data
+  overstromingsrisico?: OverstromingsrisicoData
+  geluid?: GeluidData
+  luchtkwaliteit?: LuchtkwaliteitData
+}
+
 /**
  * Fetch on-demand enrichment for a parcel (vergunningen via SRU)
+ *
+ * When `flags` option contains pre-cached enrichment data (e.g., from a recent scan),
+ * the hook returns that data directly without making an API call. This eliminates
+ * unnecessary network requests for parcels in enriched scans.
  *
  * Query key: ['parcel-enrichment-v2', parcelId]
  * Stale time: 7 days (matches backend cache duration)
  *
  * @param parcelId - ParcelCache UUID or null (disabled when null)
- * @param options - Query options (enabled flag)
+ * @param options - Query options (enabled flag, optional pre-cached flags)
  */
 export function useParcelEnrichment(
   parcelId: string | null,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; flags?: ScanEnrichmentFlags }
 ) {
   const { accessToken } = useAuth()
+
+  // If flags contain pre-cached vergunningen, build a synthetic response
+  // to avoid unnecessary API calls for parcels in enriched scans
+  const flagsData = options?.flags
+  const hasCachedEnrichment = flagsData?.vergunningen !== undefined
+
+  const placeholderData: ParcelEnrichmentResponse | undefined = hasCachedEnrichment && parcelId
+    ? {
+        parcel_id: parcelId,
+        enrichment_data: {
+          vergunningen: (flagsData.vergunningen?.records ?? []).map((r) => ({
+            title: r.title,
+            identifier: '',
+            type: r.type,
+            date: r.date,
+            municipality: '',
+            url: r.url,
+          })),
+        },
+        enriched_at: null,
+        is_cached: true,
+        energielabel: flagsData.energielabel,
+        woz_data: flagsData.woz,
+        bodem_data: flagsData.bodem,
+        funderingsrisico_data: flagsData.funderingsrisico,
+        natura2000_data: flagsData.natura2000,
+        overstromingsrisico_data: flagsData.overstromingsrisico,
+        geluid_data: flagsData.geluid,
+        luchtkwaliteit_data: flagsData.luchtkwaliteit,
+      }
+    : undefined
 
   return useQuery<ParcelEnrichmentResponse, Error>({
     queryKey: ['parcel-enrichment-v2', parcelId],
     queryFn: () => fetchParcelEnrichment(parcelId!, accessToken),
-    enabled: (options?.enabled ?? true) && !!parcelId && !!accessToken,
+    // Skip API call when pre-cached flags provide enrichment data
+    enabled: (options?.enabled ?? true) && !!parcelId && !!accessToken && !hasCachedEnrichment,
     staleTime: 7 * 24 * 60 * 60 * 1000, // 7 days (matches backend cache)
+    placeholderData,
   })
 }
 

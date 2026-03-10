@@ -345,6 +345,71 @@ export interface BekendmakingRecord {
   url: string
 }
 
+// ---------------------------------------------------------------------------
+// Enrichment data interfaces — stored in scan_results.flags JSONB
+// ---------------------------------------------------------------------------
+
+export interface EnergielabelData {
+  energieklasse: string
+  is_geregistreerd: boolean
+  registratie_datum: string | null
+  geldig_tot: string | null
+}
+
+export interface WozData {
+  meest_recente_waarde: number | null
+  meest_recente_peildatum: string | null
+  low_confidence: boolean
+}
+
+export interface BodemData {
+  dossiers_count: number
+  has_known_contamination: boolean
+  disclaimer: string
+}
+
+export interface BodemtypeData {
+  dominant_type: string | null
+  dominant_type_label: string | null
+  soilcode: string | null
+}
+
+export interface FunderingsrisicoData {
+  fgr: string | null
+  legenda: string | null
+  percvoor1970: number | null
+}
+
+export interface VergunningenData {
+  records: Array<{ title: string; type: string; date: string; url: string }>
+  total_postcode_count: number
+}
+
+export interface Natura2000Data {
+  naam: string
+  nr: string
+  bescherming: string
+  binnen_5km: boolean
+}
+
+export interface OverstromingsrisicoData {
+  description: string
+  qualitative_value: string
+  in_risk_zone: boolean
+}
+
+export interface GeluidData {
+  lden_db: number
+  classification: string
+  boven_grenswaarde: boolean
+}
+
+export interface LuchtkwaliteitData {
+  no2_ugm3: number
+  pm10_ugm3: number
+  boven_grenswaarde: boolean
+}
+
 /**
  * Response schema for per-parcel fysiek risicoprofiel
  * Backend: ParcelRiskProfileResponse (scans/schemas.py)
@@ -373,6 +438,22 @@ export interface ParcelEnrichmentResponse {
   enriched_at: string | null
   /** True if returned from cache, False if freshly fetched */
   is_cached: boolean
+  /** Pre-cached energielabel data from scan flags */
+  energielabel?: EnergielabelData | null
+  /** Pre-cached WOZ waarde data from scan flags */
+  woz_data?: WozData | null
+  /** Pre-cached bodem contamination data from scan flags */
+  bodem_data?: BodemData | null
+  /** Pre-cached funderingsrisico data from scan flags */
+  funderingsrisico_data?: FunderingsrisicoData | null
+  /** Pre-cached Natura 2000 proximity data from scan flags */
+  natura2000_data?: Natura2000Data | null
+  /** Pre-cached flood risk data from scan flags */
+  overstromingsrisico_data?: OverstromingsrisicoData | null
+  /** Pre-cached noise level data from scan flags */
+  geluid_data?: GeluidData | null
+  /** Pre-cached air quality data from scan flags */
+  luchtkwaliteit_data?: LuchtkwaliteitData | null
 }
 
 /**
