@@ -8,6 +8,7 @@ to an empty parcel.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -17,6 +18,16 @@ from app.government_apis.bag_wfs import bag_wfs_client
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class AddressResolution:
+    """Result of a full reverse geocode including BAG identifiers."""
+
+    address: str | None
+    postcode: str | None
+    nummeraanduiding_id: str | None
+    vbo_id: str | None  # adresseerbaarobject_id from PDOK
 
 # Ignore pure boundary touches; require measurable overlap with the parcel.
 MIN_BUILDING_OVERLAP_M2 = 0.01
@@ -105,3 +116,54 @@ async def reverse_geocode_rd_point(
         return None
     normalized = result.strip()
     return normalized or None
+
+
+async def reverse_geocode_rd_point_full(
+    point_rd: tuple[float, float],
+    client: httpx.AsyncClient,
+) -> AddressResolution:
+    """Reverse geocode an RD point and return full address resolution with BAG IDs.
+
+    Uses PDOKLocatieserver.reverse_full() to get the complete doc dict, then
+    extracts address, postcode, nummeraanduiding_id, and adresseerbaarobject_id
+    (VBO ID).
+
+    Args:
+        point_rd: (x, y) RD coordinate tuple in EPSG:28992
+        client: Shared HTTP client
+
+    Returns:
+        AddressResolution with all available fields (None for missing ones).
+    """
+    locatieserver = PDOKLocatieserver()
+    try:
+        doc = await locatieserver.reverse_full(point_rd[0], point_rd[1], client)
+    except Exception as e:
+        logger.debug("Reverse geocode full failed for RD point %s: %s", point_rd, e)
+        return AddressResolution(address=None, postcode=None, nummeraanduiding_id=None, vbo_id=None)
+
+    if not isinstance(doc, dict):
+        return AddressResolution(address=None, postcode=None, nummeraanduiding_id=None, vbo_id=None)
+
+    weergavenaam = doc.get("weergavenaam")
+    address = weergavenaam.strip() if isinstance(weergavenaam, str) and weergavenaam.strip() else None
+
+    postcode = doc.get("postcode")
+    postcode = postcode.strip() if isinstance(postcode, str) and postcode.strip() else None
+
+    nummeraanduiding_id = doc.get("nummeraanduiding_id")
+    nummeraanduiding_id = (
+        nummeraanduiding_id.strip()
+        if isinstance(nummeraanduiding_id, str) and nummeraanduiding_id.strip()
+        else None
+    )
+
+    vbo_id = doc.get("adresseerbaarobject_id")
+    vbo_id = vbo_id.strip() if isinstance(vbo_id, str) and vbo_id.strip() else None
+
+    return AddressResolution(
+        address=address,
+        postcode=postcode,
+        nummeraanduiding_id=nummeraanduiding_id,
+        vbo_id=vbo_id,
+    )

@@ -34,7 +34,9 @@ from app.services.funda_listing_ingestion import build_funda_listing_signal_map
 from app.services.parcel_addressing import (
     MIN_BUILDING_OVERLAP_M2,
     MIN_BUILDING_OVERLAP_RATIO,
+    AddressResolution,
     reverse_geocode_rd_point,
+    reverse_geocode_rd_point_full,
 )
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
@@ -714,6 +716,7 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
+            resolved_data: list[tuple[str, AddressResolution]] = []
             await _batch_resolve_addresses(
                 [
                     (p, c)
@@ -722,9 +725,10 @@ async def area_scan_job(
                 http_client,
                 session,
                 scan=scan,
+                resolved_data=resolved_data,
             )
 
-            scan.progress_pct = 95
+            scan.progress_pct = 88
             session.add(scan)
             await session.flush()
             await session.commit()
@@ -1052,6 +1056,7 @@ async def _batch_resolve_addresses(
     client: httpx.AsyncClient,
     session: AsyncSession,
     scan: object | None = None,
+    resolved_data: list[tuple[str, AddressResolution]] | None = None,
 ) -> None:
     """
     Batch reverse geocode parcels to resolve addresses.
@@ -1068,6 +1073,8 @@ async def _batch_resolve_addresses(
         client: Shared httpx AsyncClient
         session: Database session
         scan: Optional AreaScan to update progress_pct during resolution
+        resolved_data: Optional list to populate with (parcel_id, AddressResolution)
+            tuples for downstream enrichment (Phase 5b).
     """
     semaphore = asyncio.Semaphore(REVERSE_GEOCODE_CONCURRENCY)
     total = len(parcels_with_centroids)
@@ -1079,15 +1086,16 @@ async def _batch_resolve_addresses(
             resolved_count += 1
             return
         async with semaphore:
-            address = await reverse_geocode_rd_point(centroid, client)
-            normalized = address.strip() if isinstance(address, str) else None
-            if normalized:
-                parcel.address = normalized
+            resolution = await reverse_geocode_rd_point_full(centroid, client)
+            if resolution.address:
+                parcel.address = resolution.address
                 session.add(parcel)
+            if resolved_data is not None:
+                resolved_data.append((str(parcel.id), resolution))
             resolved_count += 1
-            # Update scan progress: 80-95% maps to address resolution
+            # Update scan progress: 80-88% maps to address resolution
             if scan is not None and total > 0 and resolved_count % 50 == 0:
-                scan.progress_pct = 80 + int(15 * resolved_count / total)
+                scan.progress_pct = 80 + int(8 * resolved_count / total)
                 session.add(scan)
                 await session.flush()
                 await session.commit()

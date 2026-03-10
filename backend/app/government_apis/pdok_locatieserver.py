@@ -153,6 +153,54 @@ class PDOKLocatieserver:
 
         return None
 
+    async def reverse_full(
+        self, rd_x: float, rd_y: float, client: httpx.AsyncClient
+    ) -> dict | None:
+        """Reverse geocode RD coordinates and return the full PDOK response doc.
+
+        Same retry/distance logic as reverse(), but returns the entire first doc
+        dict instead of just weergavenaam. The doc contains fields like
+        nummeraanduiding_id, adresseerbaarobject_id, postcode, weergavenaam.
+
+        Args:
+            rd_x: X coordinate in EPSG:28992 (RD New)
+            rd_y: Y coordinate in EPSG:28992 (RD New)
+            client: Shared httpx AsyncClient
+
+        Returns:
+            Full doc dict from PDOK Locatieserver /reverse, or None
+        """
+        url = f"{self.BASE_URL}/reverse"
+        for distance in (100, 250, 500):
+            params = {
+                "X": rd_x,
+                "Y": rd_y,
+                "type": "adres",
+                "rows": 1,
+                "distance": distance,
+            }
+
+            try:
+                async with pdok_locatieserver_limiter:
+                    response = await retry_with_backoff(
+                        lambda: client.get(url, params=params),
+                        source="pdok",
+                    )
+                data = handle_api_response(response, source="pdok")
+                docs = data.get("response", {}).get("docs", [])
+                if docs and isinstance(docs[0], dict):
+                    return docs[0]
+            except Exception as e:
+                logger.debug(
+                    "PDOK reverse_full failed for (%s, %s) distance=%s: %s",
+                    rd_x,
+                    rd_y,
+                    distance,
+                    e,
+                )
+
+        return None
+
     async def geocode_address(
         self,
         street: str,
