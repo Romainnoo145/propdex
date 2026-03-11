@@ -12,16 +12,16 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 105 -- BRK Eigendom Modal
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-03-12 -- Plan 105-01 complete (BRK eigendom endpoint)
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-03-12 -- Plan 105-02 complete (Frontend eigendom modal)
 
-Progress: [#####-----] 50% (1/2 plans in phase 105)
+Progress: [##########] 100% (2/2 plans in phase 105)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20 (12 v15.0 + 8 v16.0)
+- Total plans completed: 21 (12 v15.0 + 9 v16.0)
 - Average duration: 4min
 - Total execution time: 71min
 
@@ -45,6 +45,7 @@ Progress: [#####-----] 50% (1/2 plans in phase 105)
 | Phase 106 P01 | 4min | 2 tasks | 7 files |
 | Phase 106 P02 | 7min | 2 tasks | 4 files |
 | Phase 105 P01 | 3min | 1 tasks | 1 files |
+| Phase 105 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Progress: [#####-----] 50% (1/2 plans in phase 105)
 - [Phase 106]: Download uses authenticated blob fetch with temporary anchor click pattern
 - [Phase 106]: mergeDocuments pattern overlays user docs onto static DossierCard pages by document_type key
 - [Phase 105]: Ephemeral BRK eigendom endpoint uses PDOK centroid resolution + existing fetch_brk_ownership, no new schemas needed
+- [Phase 105]: Ephemeral gcTime:0 query ensures BRK data discarded on modal close (Kadaster Tier 3)
+- [Phase 105]: SecondaryField onClick prop is optional — vergunningen field remains non-clickable
+- [Phase 105]: Portal-based EigendomModal (createPortal to document.body) renders above parcel panel z-index
 
 ### Key Patterns (carry forward)
 
@@ -135,11 +139,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T20:39:21.680Z
-**Stopped At:** Completed 105-01-PLAN.md
+**Last Session:** 2026-03-11T20:44:07Z
+**Stopped At:** Completed 105-02-PLAN.md (Phase 105 complete)
 
 **Next Action:** Begin next phase execution.
 
 ---
 
-*State updated: 2026-03-12 -- Phase 105 plan 01 complete (BRK eigendom endpoint)*
+*State updated: 2026-03-12 -- Phase 105 complete (BRK eigendom modal)*
