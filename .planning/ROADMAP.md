@@ -254,7 +254,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 99. Scan Pipeline Enrichment | 3/3 | Complete   | 2026-03-10 |
-| 100. Score v3.0 Engine | 3/3 | Complete   | 2026-03-11 |
+| 100. Score v3.0 Engine | 3/3 | Complete    | 2026-03-11 |
 | 101. Score Backfill & Migration | 0/? | Not started | - |
 
 ### v15.0 Aura
