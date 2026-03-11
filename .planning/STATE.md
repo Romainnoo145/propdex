@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 99 (Scan Pipeline Enrichment) in progress
+**Current focus:** v16.0 Score Intelligence -- Phase 100 (Score v3.0 Engine) in progress
 
 ---
 
 ## Current Position
 
-Phase: 99 -- Scan Pipeline Enrichment
-Plan: 3 of 3 complete
-Status: Complete
-Last activity: 2026-03-11 -- Plan 99-03 complete (aggregator consolidation)
+Phase: 100 -- Score v3.0 Engine
+Plan: 1 of 3 complete
+Status: In Progress
+Last activity: 2026-03-11 -- Plan 100-01 complete (Score v3.0 engine core + tests)
 
-Progress: [##########] 100% (3/3 plans in phase 99)
+Progress: [###-------] 33% (1/3 plans in phase 100)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (12 v15.0 + 1 v16.0)
-- Average duration: 3min
-- Total execution time: 46min
+- Total plans completed: 14 (12 v15.0 + 2 v16.0)
+- Average duration: 4min
+- Total execution time: 53min
 
 **By Phase:**
 
@@ -36,6 +36,7 @@ Progress: [##########] 100% (3/3 plans in phase 99)
 | Phase 93 P03 | 2min | 2 tasks | 2 files |
 | Phase 99 P01 | 5min | 2 tasks | 2 files |
 | Phase 99 P03 | 3min | 2 tasks | 4 files |
+| Phase 100 P01 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Progress: [##########] 100% (3/3 plans in phase 99)
 - [Phase 99]: Bodem data stored as flags_dict keys 'bodem' and 'bodemtype' alongside existing flags
 - [Phase 99]: Flags-first lookup: endpoints check scan_results.flags before external API calls
 - [Phase 99]: useParcelEnrichment uses placeholderData pattern for zero-fetch flags path
+- [Phase 100]: Score v3.0 split into score_v3.py (engine) + score_v3_factors.py (17 factor functions with narratives)
+- [Phase 100]: FactorResult pattern: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort/lang, data_bronnen, missing
+- [Phase 100]: Missing data: non-critical=0.5 neutral, critical risk=0.6 (+10% penalty), >20% missing triggers weight redistribution
 
 ### Key Patterns (carry forward)
 
@@ -103,11 +107,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-10T22:27:38.284Z
-**Stopped At:** Completed 99-03-PLAN.md
+**Last Session:** 2026-03-11T07:09:41Z
+**Stopped At:** Completed 100-01-PLAN.md
 
-**Next Action:** Execute 99-02-PLAN.md (Address-based enrichment)
+**Next Action:** Execute 100-02-PLAN.md (Pipeline integration)
 
 ---
 
-*State updated: 2026-03-11 -- Phase 99 Plan 01 complete (Coordinate-based scan enrichment)*
+*State updated: 2026-03-11 -- Phase 100 Plan 01 complete (Score v3.0 engine core + tests)*
