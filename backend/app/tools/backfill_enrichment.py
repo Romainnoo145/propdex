@@ -10,6 +10,7 @@ Usage:
     python -m app.tools.backfill_enrichment --gemeente Venlo --dry-run
     python -m app.tools.backfill_enrichment --scan-id <uuid>
     python -m app.tools.backfill_enrichment --gemeente Venlo --skip-coordinate --skip-rescore
+    python -m app.tools.backfill_enrichment --gemeente Venlo --turbo
 """
 
 from __future__ import annotations
@@ -62,6 +63,58 @@ _ALL_ENRICHMENT_KEYS = frozenset({
 
 # Concurrency for PDOK Locatieserver address resolution
 _ADDRESS_RESOLUTION_CONCURRENCY = 10
+
+# Turbo mode rate limits for one-time bulk backfill
+_TURBO_LIMITS: dict[str, tuple[int, int]] = {
+    # (max_concurrent, max_per_hour)
+    "bodemloket": (10, 5000),
+    "bro_bodemkaart": (10, 5000),
+    "pdok_natura2000": (10, 5000),
+    "rws_overstromingen": (10, 5000),
+    "rivm_geluid": (10, 5000),
+    "rivm_luchtkwaliteit": (10, 5000),
+    "pdok_locatieserver": (20, 100000),
+    "sru": (5, 2000),
+    "pdok_funderingsrisico": (10, 5000),
+    "ep_online": (5, 2000),
+    "woz_waardeloket": (5, 2000),
+}
+
+
+def _apply_turbo_mode() -> dict[str, tuple[int, int]]:
+    """Override rate limiters for bulk backfill. Returns original values for restore."""
+    from app.government_apis import rate_limiter
+
+    originals: dict[str, tuple[int, int]] = {}
+    for name, (conc, per_hr) in _TURBO_LIMITS.items():
+        limiter_name = f"{name}_limiter"
+        limiter = getattr(rate_limiter, limiter_name, None)
+        if limiter is None:
+            continue
+        originals[limiter_name] = (limiter.max_concurrent, limiter.max_per_hour)
+        limiter.max_concurrent = conc
+        limiter.max_per_hour = per_hr
+        limiter._semaphore = asyncio.Semaphore(conc)
+        from aiolimiter import AsyncLimiter
+        limiter._limiter = AsyncLimiter(max_rate=per_hr, time_period=3600)
+    logger.info("TURBO MODE: rate limits overridden for bulk backfill")
+    return originals
+
+
+def _restore_rate_limits(originals: dict[str, tuple[int, int]]) -> None:
+    """Restore original rate limiter settings."""
+    from app.government_apis import rate_limiter
+
+    for limiter_name, (conc, per_hr) in originals.items():
+        limiter = getattr(rate_limiter, limiter_name, None)
+        if limiter is None:
+            continue
+        limiter.max_concurrent = conc
+        limiter.max_per_hour = per_hr
+        limiter._semaphore = asyncio.Semaphore(conc)
+        from aiolimiter import AsyncLimiter
+        limiter._limiter = AsyncLimiter(max_rate=per_hr, time_period=3600)
+    logger.info("Rate limits restored to original values")
 
 
 def _parse_uuid(value: str) -> uuid.UUID:
@@ -468,8 +521,44 @@ async def _run(
     skip_address: bool,
     skip_rescore: bool,
     inter_wijk_delay: float,
+    turbo: bool = False,
 ) -> int:
     """Main backfill entry point."""
+    # Apply turbo mode if requested
+    original_limits: dict[str, tuple[int, int]] = {}
+    if turbo:
+        original_limits = _apply_turbo_mode()
+
+    try:
+        return await _run_inner(
+            gemeente=gemeente,
+            scan_id=scan_id,
+            organization_id=organization_id,
+            batch_size=batch_size,
+            dry_run=dry_run,
+            skip_coordinate=skip_coordinate,
+            skip_address=skip_address,
+            skip_rescore=skip_rescore,
+            inter_wijk_delay=inter_wijk_delay,
+        )
+    finally:
+        if original_limits:
+            _restore_rate_limits(original_limits)
+
+
+async def _run_inner(
+    *,
+    gemeente: str | None,
+    scan_id: uuid.UUID | None,
+    organization_id: uuid.UUID | None,
+    batch_size: int,
+    dry_run: bool,
+    skip_coordinate: bool,
+    skip_address: bool,
+    skip_rescore: bool,
+    inter_wijk_delay: float,
+) -> int:
+    """Inner backfill logic."""
     # EP-Online API key check
     try:
         from app.core.config import settings
@@ -674,6 +763,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=5.0,
         help="Seconds to pause between wijk batches (default: 5.0)",
     )
+    parser.add_argument(
+        "--turbo",
+        action="store_true",
+        help="Override rate limits for bulk backfill (~15x faster, use for one-time runs only)",
+    )
     return parser
 
 
@@ -700,6 +794,7 @@ def main() -> None:
             skip_address=args.skip_address,
             skip_rescore=args.skip_rescore,
             inter_wijk_delay=args.inter_wijk_delay,
+            turbo=args.turbo,
         )
     )
     raise SystemExit(exit_code)
