@@ -40,6 +40,7 @@ Progress: [##########] 100% (2/2 plans in phase 101)
 | Phase 100 P02 | 4min | 2 tasks | 2 files |
 | Phase 100 P03 | 3min | 2 tasks | 3 files |
 | Phase 101 P01 | 3min | 1 task | 1 file |
+| Phase 101 P02 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Progress: [##########] 100% (2/2 plans in phase 101)
 - [Phase 100]: v3.0 factor display grouped as POTENTIE (green) / RISICO (red) sections with bijdrage values
 - [Phase 101]: Skip-unchanged optimization checks score_model_version == "score-v3.0" AND score value match
 - [Phase 101]: Batch-load neighborhood_metrics from AreaScan for unique scan_ids per batch (avoids N+1)
+- [Phase 101]: v3.0 detection uses categorie key presence in first score_breakdown value to distinguish from v2.1
+- [Phase 101]: potentie/risico scores extracted with strict type validation (int/float, not bool)
 
 ### Key Patterns (carry forward)
 
@@ -117,11 +120,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T09:32:30Z
-**Stopped At:** Completed 101-01-PLAN.md
+**Last Session:** 2026-03-11T09:34:01Z
+**Stopped At:** Completed 101-02-PLAN.md
 
-**Next Action:** Continue with 101-02-PLAN.md (API + tile updates).
+**Next Action:** Phase 101 complete. Continue with next phase.
 
 ---
 
-*State updated: 2026-03-11 -- Phase 101 Plan 01 complete (Backfill tool)*
+*State updated: 2026-03-11 -- Phase 101 Plan 02 complete (API & tile score serving)*

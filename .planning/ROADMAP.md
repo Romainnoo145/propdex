@@ -57,8 +57,8 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 
 #### Feature Phases (in order)
 - [ ] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, S3/local file upload, download/preview, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities)
-- [ ] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on Phase 101
-- [ ] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance)
+- [x] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on Phase 101
+- [ ] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance) (completed 2026-03-11)
 
 #### Aura Reskin Batch (low priority, cosmetic only)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Aura treatment for wijk/gemeente panels
