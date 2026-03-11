@@ -494,7 +494,6 @@ def score_funderingsrisico(parcel_data: dict) -> FactorResult:
 def score_asbest(parcel_data: dict) -> FactorResult:
     """Factor R2: Asbest-risico. Gewicht=6."""
     bouwjaar = parcel_data.get("bouwjaar")
-    btype = _best_bestemming_type(parcel_data)
 
     if bouwjaar is None:
         return FactorResult(
@@ -507,7 +506,14 @@ def score_asbest(parcel_data: dict) -> FactorResult:
         )
 
     pre_1994 = bouwjaar < 1994
-    industrial = any(k in btype for k in ("bedrijf", "industri"))
+    # Check raw bestemming types for industrial function
+    industrial = False
+    for b in (parcel_data.get("bestemmingen") or []):
+        if isinstance(b, dict):
+            bt = str(b.get("type") or "").lower()
+            if any(k in bt for k in ("bedrijf", "bedrijven", "industri")):
+                industrial = True
+                break
 
     if pre_1994 and industrial:
         score = 1.0
