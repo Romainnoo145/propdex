@@ -44,6 +44,7 @@ import type {
   MonitoringSubscriptionResponse,
   UnreadDetailResponse,
 } from './types/monitoring'
+import type { ParcelDocumentMeta, ParcelDocumentListResponse } from './types/document'
 
 const API_BASE = '/api/properties'
 const REPORTS_BASE = '/api/reports'
@@ -894,6 +895,8 @@ export async function fetchParcelAtPoint(
   bouwjaar?: number | null
   pand_status?: string | null
   score?: number | null
+  potentie_score?: number | null
+  risico_score?: number | null
   score_category?: string | null
   score_breakdown?: Record<string, unknown> | null
   vacancy_signal?: string | null
@@ -931,6 +934,8 @@ export async function fetchParcelAtPoint(
     bouwjaar?: number | null
     pand_status?: string | null
     score?: number | null
+    potentie_score?: number | null
+    risico_score?: number | null
     score_category?: string | null
     score_breakdown?: Record<string, unknown> | null
     vacancy_signal?: string | null
@@ -1656,4 +1661,95 @@ export async function fetchTrendData(
     `/api/jurisprudence/trend/${encodeURIComponent(gemeenteNaam)}`,
     { method: 'GET', accessToken }
   )
+}
+
+// ==========================================
+// Document Upload API bindings
+// ==========================================
+
+const DOCUMENTS_BASE = '/api/documents'
+
+/**
+ * Fetch all documents for a parcel
+ *
+ * GET /api/documents/{parcelId}/documents
+ */
+export async function fetchParcelDocuments(
+  parcelId: string,
+  accessToken: string | null
+): Promise<ParcelDocumentListResponse> {
+  return apiFetch<ParcelDocumentListResponse>(
+    `${DOCUMENTS_BASE}/${parcelId}/documents`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
+ * Upload a document for a parcel in a specific dossier category
+ *
+ * POST /api/documents/{parcelId}/documents?document_type={type}
+ *
+ * Uses raw fetch (NOT apiFetch) because apiFetch auto-sets Content-Type
+ * to application/json which breaks multipart/form-data uploads.
+ */
+export async function uploadParcelDocument(
+  parcelId: string,
+  documentType: string,
+  file: File,
+  accessToken: string | null
+): Promise<ParcelDocumentMeta> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const headers: HeadersInit = {}
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+
+  const response = await fetch(
+    `${DOCUMENTS_BASE}/${parcelId}/documents?document_type=${encodeURIComponent(documentType)}`,
+    {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: `Upload failed with status ${response.status}` }))
+    throw new Error(error.detail || `Upload failed with status ${response.status}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Delete a document for a parcel
+ *
+ * DELETE /api/documents/{parcelId}/documents/{documentId}
+ */
+export async function deleteParcelDocument(
+  parcelId: string,
+  documentId: string,
+  accessToken: string | null
+): Promise<void> {
+  await apiFetch(`${DOCUMENTS_BASE}/${parcelId}/documents/${documentId}`, {
+    method: 'DELETE',
+    accessToken,
+  })
+}
+
+/**
+ * Build the download URL for a parcel document.
+ *
+ * Used by the download handler to fetch the file blob with auth.
+ */
+export function getDocumentDownloadUrl(
+  parcelId: string,
+  documentId: string
+): string {
+  return `${DOCUMENTS_BASE}/${parcelId}/documents/${documentId}`
 }
