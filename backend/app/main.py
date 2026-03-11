@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.auth.router import router as auth_router
+from app.documents.router import router as documents_router
 from app.core.config import settings
 from app.core.http_client import create_government_api_client
 from app.jobs.worker import get_redis_settings
@@ -86,6 +87,7 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) ->
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(documents_router)
 app.include_router(properties_router)
 app.include_router(reports_router)
 app.include_router(projects_router)
