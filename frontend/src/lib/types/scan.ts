@@ -221,6 +221,38 @@ export interface BuildingMetrics {
   actual_bouwlagen?: number | null
 }
 
+/**
+ * Score v3.0 per-factor result with full metadata
+ * Backend: FactorResult dataclass in score_v3_factors.py
+ */
+export interface ScoreFactorV3 {
+  waarde: unknown
+  genormaliseerde_score: number // 0-1
+  gewicht: number
+  bijdrage: number
+  categorie: 'potentie' | 'risico'
+  toelichting_kort: string
+  toelichting_lang: string
+  data_bronnen: string[]
+  missing: boolean
+}
+
+/**
+ * Score v3.0 breakdown: factor name -> factor result
+ */
+export interface ScoreBreakdownV3 {
+  [factorName: string]: ScoreFactorV3
+}
+
+/**
+ * Score v3.0 dual-subscore output
+ */
+export interface ScoresV3 {
+  potentie: number
+  risico: number
+  overall: number
+}
+
 export interface ScanResultItem {
   /** ParcelCache UUID (serialized as string) */
   parcel_id: string
@@ -246,6 +278,10 @@ export interface ScanResultItem {
   score_category: string | null
   /** Per-factor score contributions for transparency */
   score_breakdown: Record<string, unknown> | null
+  /** Score v3.0 potentie subscore (0-100, null for v2.1 scans) */
+  potentie_score?: number | null
+  /** Score v3.0 risico subscore (0-100, null for v2.1 scans) */
+  risico_score?: number | null
   /** Vacancy classification for development focus */
   vacancy_signal: string | null
   /** Vacancy confidence score (0-1) */
