@@ -160,6 +160,13 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 - [x] **SCORE-V3-05**: Missing data handled: neutral score default, -10% penalty for critical risk factors, weight redistribution when >20% factors missing
 - [x] **SCORE-V3-06**: Template-based narratieven (no AI calls) — deterministic, instant text generation per factor
 
+### Score Backfill & Migration (Phase 101)
+
+- [x] **BF-01**: Backfill tool re-scores all parcels in all completed scans using `compute_score_v3()`
+- [x] **BF-02**: Tile endpoints serve `potentie_score` + `risico_score` via JSONB extraction from `flags.scores`
+- [x] **BF-03**: Old v2.1 `score_breakdown` gracefully handled with v3.0-first detection and v2.1 fallback
+- [x] **BF-04**: API endpoints (`ParcelAtPointResponse`) include `potentie_score` + `risico_score` fields
+
 ### v16.0 Traceability
 
 | Requirement | Phase | Status |
@@ -177,11 +184,16 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 | SCORE-V3-04 | Phase 100 | Complete |
 | SCORE-V3-05 | Phase 100 | Complete |
 | SCORE-V3-06 | Phase 100 | Complete |
+| BF-01 | Phase 101 | Complete |
+| BF-02 | Phase 101 | Complete |
+| BF-03 | Phase 101 | Complete |
+| BF-04 | Phase 101 | Complete |
 
 **v16.0 Coverage:**
 - Phase 99 requirements: 7 total
 - Phase 100 requirements: 6 total
-- Mapped to phases: 13
+- Phase 101 requirements: 4 total
+- Mapped to phases: 17
 - Unmapped: 0
 
 ---
