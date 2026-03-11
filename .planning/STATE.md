@@ -12,18 +12,18 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 106 -- Perceel Dossier Upload
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-03-12 -- Plan 106-01 complete (backend document storage)
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-03-12 -- Plan 106-02 complete (frontend document upload UI)
 
-Progress: [#####-----] 50% (1/2 plans in phase 106)
+Progress: [##########] 100% (2/2 plans in phase 106)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18 (12 v15.0 + 6 v16.0)
+- Total plans completed: 19 (12 v15.0 + 7 v16.0)
 - Average duration: 4min
-- Total execution time: 64min
+- Total execution time: 71min
 
 **By Phase:**
 
@@ -43,6 +43,7 @@ Progress: [#####-----] 50% (1/2 plans in phase 106)
 | Phase 101 P02 | 2min | 2 tasks | 4 files |
 | Phase 101.1 P01 | 2min | 2 tasks | 1 file |
 | Phase 106 P01 | 4min | 2 tasks | 7 files |
+| Phase 106 P02 | 7min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Progress: [#####-----] 50% (1/2 plans in phase 106)
 - [Phase 106]: String(50) document_type instead of PG ENUM for easy category evolution without migrations
 - [Phase 106]: validation_alias maps created_at to uploaded_at in DocumentResponse API
 - [Phase 106]: 20 document_type keys matching BronnenLayer card categories for frontend consistency
+- [Phase 106]: Upload uses raw fetch (not apiFetch) for FormData multipart compatibility
+- [Phase 106]: Download uses authenticated blob fetch with temporary anchor click pattern
+- [Phase 106]: mergeDocuments pattern overlays user docs onto static DossierCard pages by document_type key
 
 ### Key Patterns (carry forward)
 
@@ -129,11 +133,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T17:40:28Z
-**Stopped At:** Completed 106-01-PLAN.md
+**Last Session:** 2026-03-11T17:48:36Z
+**Stopped At:** Completed 106-02-PLAN.md (Phase 106 complete)
 
-**Next Action:** Execute Plan 106-02 (frontend document upload UI).
+**Next Action:** Begin next phase execution.
 
 ---
 
-*State updated: 2026-03-12 -- Phase 106 Plan 01 complete (backend document storage)*
+*State updated: 2026-03-12 -- Phase 106 complete (perceel dossier upload, backend + frontend)*
