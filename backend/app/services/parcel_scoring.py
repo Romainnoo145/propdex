@@ -62,6 +62,11 @@ def compute_opportunity_score(parcel_data) -> ScoreBreakdown:
     """
     Compute opportunity score for a parcel with transparent per-factor breakdown.
 
+    .. deprecated:: Phase 100
+        Replaced by ``score_v3.compute_score_v3()`` which uses 17 factors
+        with dual Potentie + Risico subscores. Kept for reference and
+        backward compatibility with old scan data.
+
     Args:
         parcel_data: Object with attributes: has_pand, area_m2, bestemmingen,
                      bouwjaar, pand_status.
