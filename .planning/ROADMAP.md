@@ -30,9 +30,8 @@
 ## Execution Order
 
 ```
-NOW:   101.1 Enrichment Backfill → Phase 99 data sources voor alle 137k Venlo parcelen + re-score
-NEXT:  106 Dossier Upload       → backend file storage + upload UI in Dossiers tab
-THEN:  104 Rapport v2.0       → rapport op pre-cached data + score narratieven
+NOW:   106 Dossier Upload       → backend file storage + upload UI in Dossiers tab
+NEXT:  104 Rapport v2.0       → rapport op pre-cached data + score narratieven
 THEN:  105 BRK Eigendom       → eigendomsmodal met on-demand BRK fetch
 LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage prio)
 ```
@@ -57,7 +56,7 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 - [x] **Phase 103: Potentie & Risico Dashboard** - 3x3 card grids with verdict hero, pagination, v3.0/v2.1 compat (completed 2026-03-11)
 
 #### Feature Phases (in order)
-- [ ] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, S3/local file upload, download/preview, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities)
+- [ ] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, PostgreSQL LargeBinary, upload/download/delete endpoints, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities)
 - [x] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on Phase 101
 - [ ] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance) (completed 2026-03-11)
 
@@ -102,13 +101,18 @@ Plans:
 ### Phase 106: Perceel Dossier Upload
 **Goal**: Vastgoedontwikkelaars can upload and manage documents per parcel in the Dossiers tab
 **Depends on**: Phase 93 (Dossiers tab UI exists)
+**Requirements:** [DOC-01, DOC-02, DOC-03, DOC-04, DOC-05]
 **Success Criteria**:
-  1. `parcel_documents` table with parcel_id, org_id, document_type enum, filename, storage_key, uploaded_at
-  2. Upload endpoint (POST) with S3 or local file storage
-  3. Download/preview endpoint (GET) with presigned URLs
+  1. `parcel_documents` table with parcel_id, org_id, document_type, filename, file_data (LargeBinary), uploaded_at
+  2. Upload endpoint (POST) with PostgreSQL LargeBinary storage (matching PDFDocument pattern)
+  3. Download/preview endpoint (GET) with streaming Response
   4. Each Dossiers tab card shows upload button + uploaded document status
   5. Multi-tenant isolation: documents scoped to organization_id
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 106-01-PLAN.md — Backend model, migration, CRUD endpoints
+- [ ] 106-02-PLAN.md — Frontend types, hooks, BronnenLayer upload UI
 
 ### Phase 104: Rapport v2.0
 **Goal**: Rapport generation uses pre-cached scan data + score v3.0 narratieven — no on-demand API calls
@@ -160,14 +164,18 @@ Plans:
 | 99. Scan Pipeline Enrichment | Complete | 2026-03-10 |
 | 100. Score v3.0 Engine | Complete | 2026-03-11 |
 | 101. Score Backfill & Migration | Complete | 2026-03-11 |
-| 101.1. Enrichment Backfill Venlo | 1/1 | Complete    | 2026-03-11 | Phase | Status | Completed |
+| 101.1. Enrichment Backfill Venlo | Complete | 2026-03-11 |
+
+### v15.0 Aura
+
+| Phase | Status | Completed |
 |-------|--------|-----------|
 | 91. Design System Foundation | Complete | 2026-03-09 |
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Planned | - |
-| 104. Rapport v2.0 | Blocked (101) | - |
+| 104. Rapport v2.0 | Complete | 2026-03-11 |
 | 105. BRK Eigendom Modal | Planned | - |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
@@ -228,4 +236,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-11 -- Phase 101.1 planned: 1 plan, 1 wave*
+*Last updated: 2026-03-11 -- Phase 106 planned: 2 plans, 2 waves*
