@@ -91,10 +91,13 @@ Plans:
 **Success Criteria**:
   1. CLI backfill tool fetches coordinate-based data (Natura2000, overstromingsrisico, geluid, luchtkwaliteit) for all 137k parcel_cache rows with geometry
   2. CLI backfill tool fetches address-based data (EP-Online, WOZ, bekendmakingen, funderingsrisico) for all ~51k parcels with address
-  3. Enrichment data stored in parcel_cache.enrichment_data JSONB + enriched_at timestamp
-  4. Re-score all scan_results with v3.0 engine using enriched data → risk factors no longer blind
+  3. Enrichment data merged into scan_results.flags JSONB (not parcel_cache.enrichment_data)
+  4. Re-score all scan_results with v3.0 engine using enriched data — risk factors no longer blind
   5. Rate limiting / deduplication to avoid hammering external APIs (50m coordinate dedup, postcode dedup)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 101.1-01-PLAN.md — Enrichment backfill CLI tool + re-score
 
 ### Phase 106: Perceel Dossier Upload
 **Goal**: Vastgoedontwikkelaars can upload and manage documents per parcel in the Dossiers tab
@@ -229,4 +232,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-11 -- Phase 101 planned: 2 plans, 1 wave*
+*Last updated: 2026-03-11 -- Phase 101.1 planned: 1 plan, 1 wave*
