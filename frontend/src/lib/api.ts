@@ -60,32 +60,49 @@ const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
  * @returns Parsed JSON response
  * @throws Error with detail message on non-OK response
  */
+/**
+ * Global token refresh hook — set by AuthProvider so apiFetch can
+ * silently refresh an expired access token on 401 without importing
+ * auth modules (avoids circular deps).
+ */
+let _tokenRefreshFn: (() => Promise<string | null>) | null = null
+
+export function setTokenRefreshFn(fn: (() => Promise<string | null>) | null) {
+  _tokenRefreshFn = fn
+}
+
 export async function apiFetch<T>(
   url: string,
   options: RequestInit & { accessToken: string | null }
 ): Promise<T> {
   const { accessToken, ...fetchOptions } = options
 
-  const headers = new Headers(fetchOptions.headers)
-
-  // Add Authorization header if token exists
-  if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`)
+  const doFetch = async (token: string | null) => {
+    const headers = new Headers(fetchOptions.headers)
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    if (fetchOptions.method && fetchOptions.method !== 'GET' && fetchOptions.body) {
+      headers.set('Content-Type', 'application/json')
+    }
+    return fetch(url, {
+      ...fetchOptions,
+      headers,
+      credentials: 'include',
+    })
   }
 
-  // Set Content-Type for non-GET requests with body
-  if (fetchOptions.method && fetchOptions.method !== 'GET' && fetchOptions.body) {
-    headers.set('Content-Type', 'application/json')
-  }
+  let response = await doFetch(accessToken)
 
-  const response = await fetch(url, {
-    ...fetchOptions,
-    headers,
-    credentials: 'include', // CRITICAL: Send httpOnly cookies
-  })
+  // On 401: try silent refresh once, then retry
+  if (response.status === 401 && _tokenRefreshFn) {
+    const newToken = await _tokenRefreshFn().catch(() => null)
+    if (newToken) {
+      response = await doFetch(newToken)
+    }
+  }
 
   if (!response.ok) {
-    // Try to parse error detail from backend
     const error = await response
       .json()
       .catch(() => ({ detail: `Request failed with status ${response.status}` }))
@@ -785,7 +802,7 @@ export async function fetchScanResults(
  * @returns Tile URL template with {z}/{x}/{y} placeholders
  */
 export function getScanTileUrl(scanId: string): string {
-  const TILE_SCHEMA_VERSION = '13'
+  const TILE_SCHEMA_VERSION = '14'
   // Absolute URL required — MapLibre fetches vector tiles in a web worker
   // which cannot resolve relative paths.
   const origin = typeof window !== 'undefined' ? window.location.origin : ''

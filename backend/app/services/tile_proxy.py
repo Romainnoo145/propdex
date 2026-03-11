@@ -112,6 +112,8 @@ async def generate_mvt_tile(
                 pc.bouwjaar,
                 pc.pand_status,
                 sr.score,
+                (sr.flags->'scores'->>'potentie')::float AS potentie_score,
+                (sr.flags->'scores'->>'risico')::float AS risico_score,
                 sr.flags->>'category' AS score_category,
                 sr.flags->>'vacancy_signal' AS vacancy_signal,
                 (sr.flags->>'vacancy_confidence')::float AS vacancy_confidence,
