@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 101 (Score Backfill & Migration)
+**Current focus:** v16.0 Score Intelligence -- Phase 101.1 (Enrichment Backfill Venlo)
 
 ---
 
@@ -46,6 +46,7 @@ Progress: [##########] 100% (2/2 plans in phase 101)
 
 ### Roadmap Evolution
 - Phase 93.1 inserted after Phase 93: Potentie Dashboard — no-scroll investor dashboard (URGENT)
+- Phase 101.1 inserted after Phase 101: Enrichment Backfill Venlo — backfill all 10 Phase 99 data sources for 137k Venlo parcels, then re-score (URGENT)
 
 ### Decisions
 - SideRailNav renders after <main> in DOM so it floats on top without z-index conflicts

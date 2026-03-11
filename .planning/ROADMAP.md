@@ -30,8 +30,8 @@
 ## Execution Order
 
 ```
-NOW:   101 Score Backfill     → v3.0 scores live voor alle percelen
-NEXT:  106 Dossier Upload     → backend file storage + upload UI in Dossiers tab
+NOW:   101.1 Enrichment Backfill → Phase 99 data sources voor alle 137k Venlo parcelen + re-score
+NEXT:  106 Dossier Upload       → backend file storage + upload UI in Dossiers tab
 THEN:  104 Rapport v2.0       → rapport op pre-cached data + score narratieven
 THEN:  105 BRK Eigendom       → eigendomsmodal met on-demand BRK fetch
 LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage prio)
@@ -41,11 +41,12 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 
 ## Phases
 
-### v16.0 Score Intelligence (Phases 99-101)
+### v16.0 Score Intelligence (Phases 99-101.1)
 
 - [x] **Phase 99: Scan Pipeline Enrichment** - 10 data sources pre-cached in scan pipeline (completed 2026-03-10)
 - [x] **Phase 100: Score v3.0 Engine** - Dual-subscore model: Potentie (8 factoren) + Risico (9 factoren) + narratieven (completed 2026-03-11)
 - [x] **Phase 101: Score Backfill & Migration** - Re-score all existing parcels with v3.0, migrate score_breakdown schema (completed 2026-03-11)
+- [ ] **Phase 101.1: Enrichment Backfill Venlo** - Backfill all 10 Phase 99 data sources for 137k Venlo parcels + re-score with enriched data (INSERTED)
 
 ### v15.0 Aura
 
@@ -82,6 +83,18 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 Plans:
 - [ ] 101-01-PLAN.md — v3.0 score backfill CLI tool
 - [ ] 101-02-PLAN.md — API + tile proxy v3.0 score serving
+
+### Phase 101.1: Enrichment Backfill Venlo (INSERTED)
+
+**Goal:** Backfill all 10 Phase 99 enrichment data sources for every parcel in Venlo, then re-score with v3.0 engine so Potentie/Risico dashboards show real enriched data
+**Depends on:** Phase 101
+**Success Criteria**:
+  1. CLI backfill tool fetches coordinate-based data (Natura2000, overstromingsrisico, geluid, luchtkwaliteit) for all 137k parcel_cache rows with geometry
+  2. CLI backfill tool fetches address-based data (EP-Online, WOZ, bekendmakingen, funderingsrisico) for all ~51k parcels with address
+  3. Enrichment data stored in parcel_cache.enrichment_data JSONB + enriched_at timestamp
+  4. Re-score all scan_results with v3.0 engine using enriched data → risk factors no longer blind
+  5. Rate limiting / deduplication to avoid hammering external APIs (50m coordinate dedup, postcode dedup)
+**Plans**: TBD
 
 ### Phase 106: Perceel Dossier Upload
 **Goal**: Vastgoedontwikkelaars can upload and manage documents per parcel in the Dossiers tab
@@ -143,7 +156,12 @@ Plans:
 |-------|--------|-----------|
 | 99. Scan Pipeline Enrichment | Complete | 2026-03-10 |
 | 100. Score v3.0 Engine | Complete | 2026-03-11 |
-| 101. Score Backfill & Migration | 2/2 | Complete    | 2026-03-11 | Phase | Status | Completed |
+| 101. Score Backfill & Migration | Complete | 2026-03-11 |
+| 101.1. Enrichment Backfill Venlo | **Next up** | - |
+
+### v15.0 Aura
+
+| Phase | Status | Completed |
 |-------|--------|-----------|
 | 91. Design System Foundation | Complete | 2026-03-09 |
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |
