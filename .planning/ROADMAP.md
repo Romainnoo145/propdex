@@ -30,9 +30,7 @@
 ## Execution Order
 
 ```
-NOW:   106 Dossier Upload       → backend file storage + upload UI in Dossiers tab
-NEXT:  104 Rapport v2.0       → rapport op pre-cached data + score narratieven
-THEN:  105 BRK Eigendom       → eigendomsmodal met on-demand BRK fetch
+NOW:   105 BRK Eigendom       → eigendomsmodal met on-demand BRK fetch
 LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage prio)
 ```
 
@@ -58,7 +56,7 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 #### Feature Phases (in order)
 - [x] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, PostgreSQL LargeBinary, upload/download/delete endpoints, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities) (completed 2026-03-11)
 - [x] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on Phase 101
-- [ ] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance) (completed 2026-03-11)
+- [ ] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance)
 
 #### Aura Reskin Batch (low priority, cosmetic only)
 - [ ] **Phase 94: Wijk & Gemeente Views** - Aura treatment for wijk/gemeente panels
@@ -125,13 +123,21 @@ Plans:
 **Plans**: TBD
 
 ### Phase 105: BRK Eigendom Modal
-**Goal**: On-demand BRK ownership data in a modal on the parcel detail panel
+**Goal**: On-demand BRK ownership data in a modal on the parcel detail panel with adaptive framing and rapport conversion teasers
 **Depends on**: Phase 93
+**Requirements:** [BRK-01, BRK-02, BRK-03]
 **Success Criteria**:
-  1. Button on parcel detail opens eigendom modal
-  2. Modal fetches BRK ownership on-demand (no caching)
-  3. Displays eigenaar, zakelijk gerechtigden, erfpacht/eigendom type
-**Plans**: TBD
+  1. Clicking status indicator on parcel detail opens eigendom modal
+  2. Confirmation dialog before BRK API call ("Kost 1 credit")
+  3. Modal fetches BRK ownership on-demand (no caching, Kadaster Tier 3)
+  4. Adaptive framing: grondpositie (leeg) vs herontwikkeling (in-gebruik)
+  5. Displays eigenaar type, zakelijk gerechtigden, erfpacht/eigendom type with routing tips
+  6. Teaser sections with blurred content and "Genereer Rapport" CTA
+**Plans**: 2 plans
+
+Plans:
+- [ ] 105-01-PLAN.md — Backend eigendom endpoint (PDOK resolution + BRK fetch)
+- [ ] 105-02-PLAN.md — Frontend EigendomModal with confirmation, adaptive framing, teasers
 
 ### Phase 94: Wijk & Gemeente Views (Aura Reskin)
 **Goal**: Aura styling for wijk/gemeente panels — existing functionality preserved
@@ -174,7 +180,8 @@ Plans:
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
-| 106. Dossier Upload | 2/2 | Complete    | 2026-03-11 | 104. Rapport v2.0 | Complete | 2026-03-11 |
+| 106. Dossier Upload | Complete | 2026-03-11 |
+| 104. Rapport v2.0 | Complete | 2026-03-11 |
 | 105. BRK Eigendom Modal | Planned | - |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
@@ -235,4 +242,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-11 -- Phase 106 planned: 2 plans, 2 waves*
+*Last updated: 2026-03-12 -- Phase 105 planned: 2 plans, 2 waves*
