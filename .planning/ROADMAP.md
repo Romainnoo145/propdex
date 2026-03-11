@@ -45,7 +45,7 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 
 - [x] **Phase 99: Scan Pipeline Enrichment** - 10 data sources pre-cached in scan pipeline (completed 2026-03-10)
 - [x] **Phase 100: Score v3.0 Engine** - Dual-subscore model: Potentie (8 factoren) + Risico (9 factoren) + narratieven (completed 2026-03-11)
-- [ ] **Phase 101: Score Backfill & Migration** - Re-score all existing parcels with v3.0, migrate score_breakdown schema
+- [x] **Phase 101: Score Backfill & Migration** - Re-score all existing parcels with v3.0, migrate score_breakdown schema (completed 2026-03-11)
 
 ### v15.0 Aura
 
@@ -143,11 +143,7 @@ Plans:
 |-------|--------|-----------|
 | 99. Scan Pipeline Enrichment | Complete | 2026-03-10 |
 | 100. Score v3.0 Engine | Complete | 2026-03-11 |
-| 101. Score Backfill & Migration | **Next up** | - |
-
-### v15.0 Aura
-
-| Phase | Status | Completed |
+| 101. Score Backfill & Migration | 2/2 | Complete   | 2026-03-11 | Phase | Status | Completed |
 |-------|--------|-----------|
 | 91. Design System Foundation | Complete | 2026-03-09 |
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |

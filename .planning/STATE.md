@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 100 (Score v3.0 Engine) COMPLETE
+**Current focus:** v16.0 Score Intelligence -- Phase 101 (Score Backfill & Migration)
 
 ---
 
 ## Current Position
 
-Phase: 100 -- Score v3.0 Engine
-Plan: 3 of 3 complete
+Phase: 101 -- Score Backfill & Migration
+Plan: 2 of 2 complete
 Status: Complete
-Last activity: 2026-03-11 -- Plan 100-03 complete (Frontend types)
+Last activity: 2026-03-11 -- Plan 101-02 complete (API & tile score serving)
 
-Progress: [##########] 100% (3/3 plans in phase 100)
+Progress: [##########] 100% (2/2 plans in phase 101)
 
 ## Performance Metrics
 
@@ -39,6 +39,7 @@ Progress: [##########] 100% (3/3 plans in phase 100)
 | Phase 100 P01 | 7min | 2 tasks | 3 files |
 | Phase 100 P02 | 4min | 2 tasks | 2 files |
 | Phase 100 P03 | 3min | 2 tasks | 3 files |
+| Phase 101 P01 | 3min | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Progress: [##########] 100% (3/3 plans in phase 100)
 - [Phase 100]: extractScoreSubscores returns null for v3.0 (no vacancy/buildability in 17-factor model)
 - [Phase 100]: PotentieLayer one-liner picks highest-bijdrage toelichting_kort for v3.0, generateOneLiner for v2.1
 - [Phase 100]: v3.0 factor display grouped as POTENTIE (green) / RISICO (red) sections with bijdrage values
+- [Phase 101]: Skip-unchanged optimization checks score_model_version == "score-v3.0" AND score value match
+- [Phase 101]: Batch-load neighborhood_metrics from AreaScan for unique scan_ids per batch (avoids N+1)
 
 ### Key Patterns (carry forward)
 
@@ -114,11 +117,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T07:21:25Z
-**Stopped At:** Completed 100-03-PLAN.md
+**Last Session:** 2026-03-11T09:32:30Z
+**Stopped At:** Completed 101-01-PLAN.md
 
-**Next Action:** Phase 100 complete. Continue with next phase.
+**Next Action:** Continue with 101-02-PLAN.md (API + tile updates).
 
 ---
 
-*State updated: 2026-03-11 -- Phase 100 Plan 03 complete (Frontend types)*
+*State updated: 2026-03-11 -- Phase 101 Plan 01 complete (Backfill tool)*
