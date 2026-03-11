@@ -160,7 +160,7 @@ Plans:
 | 99. Scan Pipeline Enrichment | Complete | 2026-03-10 |
 | 100. Score v3.0 Engine | Complete | 2026-03-11 |
 | 101. Score Backfill & Migration | Complete | 2026-03-11 |
-| 101.1. Enrichment Backfill Venlo | 1/1 | Complete   | 2026-03-11 | Phase | Status | Completed |
+| 101.1. Enrichment Backfill Venlo | 1/1 | Complete    | 2026-03-11 | Phase | Status | Completed |
 |-------|--------|-----------|
 | 91. Design System Foundation | Complete | 2026-03-09 |
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |
