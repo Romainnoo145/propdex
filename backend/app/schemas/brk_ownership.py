@@ -15,7 +15,8 @@ from pydantic import BaseModel, Field
 class ZakelijkGerechtigde(BaseModel):
     """A single rights holder on the cadastral object.
 
-    Per BRK-02: show eigenaar type only, never show personal names (AVG compliance).
+    AVG: personal names of natuurlijke personen are NEVER returned.
+    Rechtspersoon names ARE shown (public KvK data).
     """
 
     eigenaar_type: Literal[
@@ -24,6 +25,18 @@ class ZakelijkGerechtigde(BaseModel):
         default="onbekend",
         description="Owner type — personal names/addresses are NEVER returned (AVG)",
     )
+    naam: str | None = Field(
+        default=None,
+        description="Entity name (rechtspersoon/overheid only, NEVER for natuurlijk_persoon — AVG)",
+    )
+    kvk_nummer: str | None = Field(
+        default=None,
+        description="KvK registration number (rechtspersoon only)",
+    )
+    statutaire_zetel: str | None = Field(
+        default=None,
+        description="Registered seat / vestigingsplaats (rechtspersoon only)",
+    )
     zakelijk_recht_type: str | None = Field(
         default=None,
         description="Right type (e.g., 'Eigendom', 'Opstal', 'Erfpacht', 'Vruchtgebruik')",
@@ -31,6 +44,14 @@ class ZakelijkGerechtigde(BaseModel):
     aandeel: str | None = Field(
         default=None,
         description="Ownership share (e.g., '1/2' for half-ownership)",
+    )
+    koopsom: int | None = Field(
+        default=None,
+        description="Purchase price in euros (from most recent koopsom)",
+    )
+    koopjaar: int | None = Field(
+        default=None,
+        description="Year of purchase (from most recent koopsom)",
     )
 
 

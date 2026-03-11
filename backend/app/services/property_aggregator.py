@@ -490,6 +490,25 @@ def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
         else:
             eigenaar_type = "onbekend"
 
+        # Detect overheid (gemeente, waterschap, provincie, staat)
+        # BRK marks government bodies as NietNatuurlijkPersoon but with specific beschikkingsbevoegdheid
+        beschikkings = item.get("beschikkingsbevoegdheid", {})
+        if beschikkings.get("code") in ("PubliekrechtelijkRechtspersoon",):
+            eigenaar_type = "overheid"
+        # Fallback: detect overheid from naam patterns
+        naam_val = persoon.get("statutaireNaam") or persoon.get("naam") or ""
+        if any(kw in naam_val.lower() for kw in ("gemeente ", "waterschap ", "provincie ", "staat der nederlanden", "rijksvastgoedbedrijf")):
+            eigenaar_type = "overheid"
+
+        # Extract naam (ONLY for rechtspersoon/overheid — NEVER for natuurlijk_persoon, AVG)
+        naam: str | None = None
+        kvk_nummer: str | None = None
+        statutaire_zetel: str | None = None
+        if eigenaar_type in ("rechtspersoon", "overheid"):
+            naam = persoon.get("statutaireNaam") or persoon.get("naam")
+            kvk_nummer = persoon.get("kvkNummer")
+            statutaire_zetel = persoon.get("statutaireZetel")
+
         # Extract right type
         zakelijk_recht_type = item.get("type")
 
@@ -502,6 +521,23 @@ def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
             if teller is not None and noemer is not None:
                 aandeel = f"{teller}/{noemer}"
 
+        # Extract koopsom (most recent transaction price)
+        koopsom: int | None = None
+        koopjaar: int | None = None
+        stukken = item.get("stukken", [])
+        for stuk in stukken:
+            ks = stuk.get("koopsom", {})
+            if ks.get("koopsom"):
+                koopsom = int(ks["koopsom"])
+                koopjaar = ks.get("koopjaar")
+                break
+        # Also check top-level koopsom on the item
+        if koopsom is None:
+            top_ks = item.get("koopsom", {})
+            if top_ks and top_ks.get("koopsom"):
+                koopsom = int(top_ks["koopsom"])
+                koopjaar = top_ks.get("koopjaar")
+
         # Check if this is a hypotheek registration
         if zakelijk_recht_type and "Hypotheek" in zakelijk_recht_type:
             heeft_hypotheek = True
@@ -509,8 +545,13 @@ def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
         gerechtigden.append(
             ZakelijkGerechtigde(
                 eigenaar_type=eigenaar_type,  # type: ignore[arg-type]
+                naam=naam,
+                kvk_nummer=kvk_nummer,
+                statutaire_zetel=statutaire_zetel,
                 zakelijk_recht_type=zakelijk_recht_type,
                 aandeel=aandeel,
+                koopsom=koopsom,
+                koopjaar=koopjaar,
             )
         )
 

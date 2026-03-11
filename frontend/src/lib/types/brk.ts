@@ -7,8 +7,13 @@
 
 export interface ZakelijkGerechtigde {
   eigenaar_type: 'natuurlijk_persoon' | 'rechtspersoon' | 'overheid' | 'onbekend'
+  naam: string | null // Entity name (rechtspersoon/overheid only, NEVER for natuurlijk_persoon — AVG)
+  kvk_nummer: string | null // KvK registration (rechtspersoon only)
+  statutaire_zetel: string | null // Registered seat (rechtspersoon only)
   zakelijk_recht_type: string | null
   aandeel: string | null
+  koopsom: number | null // Purchase price in euros
+  koopjaar: number | null // Year of purchase
 }
 
 export interface PerceelOwnership {
