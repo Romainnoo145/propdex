@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 
 ## Current Position
 
-Phase: 101 -- Score Backfill & Migration
-Plan: 2 of 2 complete
+Phase: 101.1 -- Enrichment Backfill Venlo
+Plan: 1 of 1 complete
 Status: Complete
-Last activity: 2026-03-11 -- Plan 101-02 complete (API & tile score serving)
+Last activity: 2026-03-11 -- Plan 101.1-01 complete (enrichment backfill tool)
 
-Progress: [##########] 100% (2/2 plans in phase 101)
+Progress: [##########] 100% (1/1 plans in phase 101.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (12 v15.0 + 4 v16.0)
+- Total plans completed: 17 (12 v15.0 + 5 v16.0)
 - Average duration: 4min
 - Total execution time: 60min
 
@@ -41,6 +41,7 @@ Progress: [##########] 100% (2/2 plans in phase 101)
 | Phase 100 P03 | 3min | 2 tasks | 3 files |
 | Phase 101 P01 | 3min | 1 task | 1 file |
 | Phase 101 P02 | 2min | 2 tasks | 4 files |
+| Phase 101.1 P01 | 2min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Progress: [##########] 100% (2/2 plans in phase 101)
 - [Phase 101]: Batch-load neighborhood_metrics from AreaScan for unique scan_ids per batch (avoids N+1)
 - [Phase 101]: v3.0 detection uses categorie key presence in first score_breakdown value to distinguish from v2.1
 - [Phase 101]: potentie/risico scores extracted with strict type validation (int/float, not bool)
+- [Phase 101.1]: Enrichment backfill uses centroid-based address resolution (not BAG building overlap) for bulk speed
+- [Phase 101.1]: Three-pass enrichment: coordinate -> address resolution -> address enrichment -> re-score
+- [Phase 101.1]: Skip flags (--skip-coordinate/--skip-address/--skip-rescore) for granular resume after partial runs
 
 ### Key Patterns (carry forward)
 
@@ -121,11 +125,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T09:34:01Z
-**Stopped At:** Completed 101-02-PLAN.md
+**Last Session:** 2026-03-11T10:34:53Z
+**Stopped At:** Completed 101.1-01-PLAN.md
 
-**Next Action:** Phase 101 complete. Continue with next phase.
+**Next Action:** Phase 101.1 complete. Run backfill: `python -m app.tools.backfill_enrichment --gemeente Venlo`. Continue with next phase.
 
 ---
 
-*State updated: 2026-03-11 -- Phase 101 Plan 02 complete (API & tile score serving)*
+*State updated: 2026-03-11 -- Phase 101.1 Plan 01 complete (enrichment backfill tool)*
