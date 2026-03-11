@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { motion, useSpring, useTransform, type Variants } from 'framer-motion'
-import { Grid3x3, Building2, LandPlot, ChevronUp, ChevronDown } from 'lucide-react'
+import { motion, useSpring, useTransform, AnimatePresence, type Variants } from 'framer-motion'
+import { Grid3x3, Building2, LandPlot, ChevronUp, ChevronDown, Search } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
 import { ParcelHero } from './ParcelHero'
 import { ScoreGauge } from './ScoreGauge'
 import { BouwjaarTimeline } from './BouwjaarTimeline'
+import { EigendomModal } from './EigendomModal'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
 
@@ -114,6 +115,7 @@ export function ParcelBentoOverview({
   meldingenCount,
 }: ParcelBentoOverviewProps) {
   const [activeCard, setActiveCard] = useState<BentoCard>('aerial')
+  const [showEigendom, setShowEigendom] = useState(false)
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
   const vrijPct =
@@ -234,6 +236,7 @@ export function ParcelBentoOverview({
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
         <SecondaryField
           value={parcel.has_pand ? formatPandStatus(parcel.pand_status) : 'Leeg perceel'}
+          onClick={() => setShowEigendom(true)}
         />
         <SecondaryField
           value={
@@ -245,6 +248,16 @@ export function ParcelBentoOverview({
           }
         />
       </motion.div>
+
+      {/* Eigendom modal */}
+      <AnimatePresence>
+        {showEigendom && (
+          <EigendomModal
+            parcel={parcel}
+            onClose={() => setShowEigendom(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Trust Metadata ───────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 flex items-center justify-between">
@@ -356,12 +369,26 @@ function KenmerkenCard({
 
 /* ── SecondaryField ────────────────────────────────────────── */
 
-function SecondaryField({ value }: { value: string }) {
+function SecondaryField({
+  value,
+  onClick,
+}: {
+  value: string
+  onClick?: () => void
+}) {
+  const interactive = !!onClick
   return (
-    <div className="flex items-center justify-center h-[40px] rounded-[14px] bg-[#F2F6F3]">
-      <span className="text-[13px] font-semibold text-[#0E1111]">
-        {value}
-      </span>
+    <div
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() } : undefined}
+      className={`flex items-center justify-center gap-1.5 h-[40px] rounded-[14px] bg-[#F2F6F3] ${
+        interactive ? 'cursor-pointer transition-colors hover:bg-[#E8EDEB]' : ''
+      }`}
+    >
+      <span className="text-[13px] font-semibold text-[#0E1111]">{value}</span>
+      {interactive && <Search size={12} strokeWidth={2} className="text-[#94a3b8]" />}
     </div>
   )
 }
