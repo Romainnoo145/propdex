@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
+import { useSpring } from 'framer-motion'
+
 interface BouwjaarTimelineProps {
   bouwjaar: number | null
 }
@@ -11,115 +14,150 @@ function pct(year: number): number {
   return ((year - SCALE_START) / SCALE_RANGE) * 100
 }
 
-/** Generate ruler ticks — major every 10 years, minor every 2 years */
-function buildTicks(): { pct: number; major: boolean }[] {
-  const ticks: { pct: number; major: boolean }[] = []
-  for (let y = SCALE_START; y <= SCALE_END; y += 2) {
-    ticks.push({ pct: pct(y), major: y % 10 === 0 })
+/** Etched ticks inside the track — every 10 years */
+function etchedTicks(): number[] {
+  const ticks: number[] = []
+  for (let y = SCALE_START; y <= SCALE_END; y += 10) {
+    ticks.push(pct(y))
   }
   return ticks
 }
 
-const TICKS = buildTicks()
-const LABEL_YEARS = [1850, 1900, 1950, 2000, CURRENT_YEAR]
+const TICKS = etchedTicks()
 
-export function BouwjaarTimeline({ bouwjaar }: BouwjaarTimelineProps) {
-  if (bouwjaar === null) {
-    return (
-      <div className="relative h-16 w-full flex items-center">
-        <div className="h-4 w-full rounded-sm bg-slate-50" />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-slate-100 px-3 py-1 text-[10px] font-medium text-slate-400">
-          Onbekend
-        </span>
-      </div>
-    )
-  }
+/* ── Active Track ──────────────────────────────────────────── */
 
+function ActiveTrack({ bouwjaar }: { bouwjaar: number }) {
   const age = CURRENT_YEAR - bouwjaar
   const startPct = pct(bouwjaar)
   const endPct = pct(CURRENT_YEAR)
 
+  // Animated fill
+  const fillSpring = useSpring(0, { stiffness: 100, damping: 24 })
+  const [fillW, setFillW] = useState(0)
+  const hasMounted = useRef(false)
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true
+      const t = setTimeout(() => fillSpring.set(endPct - startPct), 150)
+      return () => clearTimeout(t)
+    }
+    fillSpring.set(endPct - startPct)
+    return undefined
+  }, [startPct, endPct, fillSpring])
+
+  useEffect(() => {
+    const unsub = fillSpring.on('change', (v) => setFillW(v))
+    return unsub
+  }, [fillSpring])
+
   return (
-    <div className="w-full pt-7 pb-4">
-      <div className="relative w-full h-14 flex flex-col justify-end">
-        {/* Left pill — bouwjaar */}
-        <div
-          className="absolute top-0 -translate-x-1/2 z-10"
-          style={{ left: `${startPct}%` }}
+    <div className="w-full py-4">
+      {/* Compact header */}
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="text-[10px] font-black text-slate-400 uppercase"
+          style={{ letterSpacing: '0.2em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
-          <div className="relative bg-black text-white px-2.5 py-1 rounded-sm">
-            <span
-              className="text-[10px] font-black tracking-wider"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-            >
-              {bouwjaar}
-            </span>
-            <div className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-[10px] h-[10px] bg-black rotate-45" />
-          </div>
-        </div>
-
-        {/* Right pill — age */}
-        <div
-          className="absolute top-0 -translate-x-1/2 z-10"
-          style={{ left: `${endPct}%` }}
+          Bouwjaar
+        </span>
+        <span
+          className="bg-black text-white text-[10px] px-2.5 py-1 rounded-full font-black tabular-nums"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
-          <div className="relative bg-black text-white px-2.5 py-1 rounded-sm">
-            <span
-              className="text-[10px] font-black tracking-wider"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-            >
-              {age} jaar
-            </span>
-            <div className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-[10px] h-[10px] bg-black rotate-45" />
-          </div>
-        </div>
+          {age} jaar
+        </span>
+      </div>
 
-        {/* Ruler body — the physical track */}
-        <div className="relative w-full h-6 rounded-sm overflow-hidden">
-          {/* Tick marks — the ruler rhythm */}
-          <div className="absolute inset-0 flex items-end">
-            {TICKS.map((tick, i) => (
-              <div
-                key={i}
-                className="absolute bottom-0"
-                style={{
-                  left: `${tick.pct}%`,
-                  width: tick.major ? '1.5px' : '1px',
-                  height: tick.major ? '100%' : '50%',
-                  background: tick.major ? '#cbd5e1' : '#e2e8f0',
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Amber overlay — the life-cycle fill */}
+      {/* The etched track */}
+      <div className="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        {/* Etched ticks — subtle white rhythm inside the track */}
+        {TICKS.map((p, i) => (
           <div
+            key={i}
             className="absolute top-0 h-full"
             style={{
-              left: `${startPct}%`,
-              width: `${endPct - startPct}%`,
-              background: 'rgba(249, 168, 38, 0.85)',
-              boxShadow: '0 0 12px rgba(249,168,38,0.4)',
+              left: `${p}%`,
+              width: '1px',
+              background: 'rgba(255,255,255,0.7)',
+              zIndex: 2,
             }}
           />
+        ))}
+
+        {/* Amber inlay — the life-span fill */}
+        <div
+          className="absolute top-0 h-full rounded-full"
+          style={{
+            left: `${startPct}%`,
+            width: `${fillW}%`,
+            background: '#F9A826',
+            boxShadow: '0 0 8px rgba(249,168,38,0.3)',
+            zIndex: 1,
+          }}
+        >
+          {/* White marker — start edge */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-[2px] h-3 bg-white rounded-full" />
+          {/* White marker — end edge */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-[2px] h-3 bg-white rounded-full" />
         </div>
       </div>
 
-      {/* Year labels beneath ruler */}
-      <div className="relative w-full mt-2.5">
-        {LABEL_YEARS.map((year) => (
-          <span
-            key={year}
-            className="absolute -translate-x-1/2 text-[9px] font-black tracking-widest text-slate-300 tabular-nums"
-            style={{
-              left: `${pct(year)}%`,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-            }}
-          >
-            {year}
-          </span>
+      {/* Year labels under markers */}
+      <div className="relative w-full mt-1.5 h-3">
+        <span
+          className="absolute -translate-x-1/2 text-[10px] font-bold tabular-nums text-slate-400"
+          style={{ left: `${startPct}%`, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          {bouwjaar}
+        </span>
+        <span
+          className="absolute -translate-x-1/2 text-[10px] font-bold tabular-nums text-slate-400"
+          style={{ left: `${endPct}%`, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          {CURRENT_YEAR}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+
+function EmptyTrack() {
+  return (
+    <div className="w-full py-4">
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="text-[10px] font-black text-slate-400 uppercase"
+          style={{ letterSpacing: '0.2em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Bouwjaar
+        </span>
+        <span
+          className="bg-slate-100 text-slate-400 text-[10px] px-2.5 py-1 rounded-full font-black"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Onbekend
+        </span>
+      </div>
+      <div className="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        {TICKS.map((p, i) => (
+          <div
+            key={i}
+            className="absolute top-0 h-full"
+            style={{ left: `${p}%`, width: '1px', background: 'rgba(255,255,255,0.5)' }}
+          />
         ))}
       </div>
     </div>
   )
+}
+
+/* ── Export ─────────────────────────────────────────────────── */
+
+export function BouwjaarTimeline({ bouwjaar }: BouwjaarTimelineProps) {
+  if (bouwjaar === null) return <EmptyTrack />
+  return <ActiveTrack bouwjaar={bouwjaar} />
 }

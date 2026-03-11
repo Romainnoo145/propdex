@@ -90,7 +90,7 @@ function LayerToggle({
   showGemeenten,
   showBestemmingsplan,
   activeParcelOverlay = null,
-  onBasemapChange,
+  onBasemapChange: _onBasemapChange,
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
@@ -250,12 +250,6 @@ function LayerToggle({
     queueMicrotask(() => setParcelOverlayMode('score'))
   }, [needsDefaultOverlay, isStyleReady, setParcelOverlayMode])
 
-  // Handlers — call parent toggle props (state lives in parent/hook)
-  const handleLayerSwitch = (layerId: BaseMapLayerId) => {
-    if (layerId === basemap) return
-    onBasemapChange(layerId)
-  }
-
   const handleParcelsToggle = () => {
     if (!mapRef.current || !mapReady) return
     const map = mapRef.current
@@ -283,26 +277,7 @@ function LayerToggle({
   const activeViewLevel = showParcels ? 'perceel' : showGemeenten ? 'gemeente' : null
 
   return (
-    /* Toggle sections — rendered inline inside the Command Center pill */
     <div className="flex items-center gap-1">
-      {/* Base layer */}
-      <div className="flex items-center gap-0.5 px-1 border-r border-white/20">
-        <ToggleButton
-          active={basemap === 'kaart'}
-          sectionId="base"
-          onClick={() => handleLayerSwitch('kaart')}
-        >
-          Kaart
-        </ToggleButton>
-        <ToggleButton
-          active={basemap === 'aerial'}
-          sectionId="base"
-          onClick={() => handleLayerSwitch('aerial')}
-        >
-          Satelliet
-        </ToggleButton>
-      </div>
-
       {/* View level */}
       <div className="flex items-center gap-0.5 px-1">
         <ToggleButton
@@ -312,39 +287,31 @@ function LayerToggle({
         >
           Gemeente
         </ToggleButton>
-        {showGemeenten && (
-          <ToggleButton
-            active={false}
-            sectionId="view"
-            onClick={() => {
-              if (!showGemeenten) onGemeentenToggle()
-            }}
-          >
-            Wijk
-          </ToggleButton>
-        )}
+      </div>
+
+      <div className="h-5 w-px bg-white/30 shrink-0" />
+
+      <div className="flex items-center gap-0.5 px-1">
         <ToggleButton
           active={activeViewLevel === 'perceel'}
-          sectionId="view"
+          sectionId="parceel"
           onClick={handleParcelsToggle}
         >
           Perceel
         </ToggleButton>
-      </div>
 
-      {/* Intelligence layer — only when parcels active */}
-      {showParcels && (
-        <div className="flex items-center gap-0.5 px-1 border-l border-white/20">
+        {/* Intelligence layer — only when parcels active */}
+        {showParcels && (
           <ToggleButton
             active={showBestemmingsplan}
-            sectionId="intel"
+            sectionId="parceel"
             onClick={onBestemmingsplanToggle}
             glow
           >
             Bestemmingsplan
           </ToggleButton>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

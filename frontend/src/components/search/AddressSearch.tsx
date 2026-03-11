@@ -86,8 +86,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* Search input section — lives inside the Command Center pill */}
-      <div className="flex items-center gap-2 border-r border-white/20 pr-4">
+      <div className="flex items-center gap-2">
         <SearchIcon />
         <input
           ref={inputRef}
@@ -103,7 +102,7 @@ export function AddressSearch({ onSelect, className = '' }: AddressSearchProps) 
           name="address-search"
           data-lpignore="true"
           data-1p-ignore="true"
-          className="w-[200px] bg-transparent text-sm text-aura-ink placeholder:text-slate-400 outline-none"
+          className="w-[270px] bg-transparent text-sm text-aura-ink placeholder:text-slate-400 outline-none"
         />
         {isLoading && query.length >= 3 && <Spinner />}
         {query && (

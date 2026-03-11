@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { motion, useSpring, useTransform, type Variants } from 'framer-motion'
 import { Grid3x3, Building2, LandPlot, ChevronUp, ChevronDown } from 'lucide-react'
 import type { ScanResultItem } from '@/lib/types/scan'
 import { ParcelHero } from './ParcelHero'
 import { ScoreGauge } from './ScoreGauge'
 import { BouwjaarTimeline } from './BouwjaarTimeline'
 
-export type CategoryKey = 'potentie' | 'risico' | 'juridisch'
+export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
 
 interface ParcelBentoOverviewProps {
   parcel: ScanResultItem
@@ -66,11 +67,6 @@ function formatPandStatus(status: string | null): string {
 type BentoCard = 'aerial' | 'bestemming' | 'score'
 
 
-/* ── Section title ─────────────────────────────────────────── */
-
-const sectionTitle =
-  'text-[10px] uppercase text-slate-400 tracking-widest font-medium mb-1'
-
 /* ── Card Label Bar ────────────────────────────────────────── */
 
 function CardLabelBar({ label, isActive }: { label: string; isActive: boolean }) {
@@ -98,6 +94,18 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
   )
 }
 
+/* ── Stagger animation ─────────────────────────────────────── */
+
+const staggerContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+}
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
+}
+
 /* ── Component ─────────────────────────────────────────────── */
 
 export function ParcelBentoOverview({
@@ -116,96 +124,114 @@ export function ParcelBentoOverview({
         : null
 
   return (
-    <div className="flex-1 flex flex-col px-8 pb-8">
+    <motion.div
+      className="flex-1 flex flex-col px-8 pb-8"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
       {/* ── Bento Image Grid (3 cards) ───────────────── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
         {/* Card 1: Aerial View */}
-        <button
+        <motion.button
+          variants={fadeUp}
           type="button"
           onClick={() => setActiveCard('aerial')}
-          className="flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
+          className="group flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
           style={{
             border: activeCard === 'aerial' ? '2px solid #F9A826' : '2px solid transparent',
           }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="relative aspect-[5/6] overflow-hidden">
-            <ParcelHero parcelId={parcel.parcel_id} />
+            <div className="h-full w-full transition-transform duration-500 group-hover:scale-105">
+              <ParcelHero parcelId={parcel.parcel_id} />
+            </div>
           </div>
           <CardLabelBar label="Satelliet" isActive={activeCard === 'aerial'} />
-        </button>
+        </motion.button>
 
         {/* Card 2: Bestemming type */}
-        <button
+        <motion.button
+          variants={fadeUp}
           type="button"
           onClick={() => {
             setActiveCard('bestemming')
-            onSelectCategory('juridisch')
+            onSelectCategory('dossiers')
           }}
-          className="flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
+          className="group flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
           style={{
             border: activeCard === 'bestemming' ? '2px solid #F9A826' : '2px solid transparent',
           }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="relative aspect-[5/6] overflow-hidden">
             <img
               src={BESTEMMING_META[category].image}
               alt={BESTEMMING_META[category].label}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </div>
           <CardLabelBar label={BESTEMMING_META[category].label} isActive={activeCard === 'bestemming'} />
-        </button>
+        </motion.button>
 
         {/* Card 3: Score gauge */}
-        <button
+        <motion.button
+          variants={fadeUp}
           type="button"
           onClick={() => {
             setActiveCard('score')
             onSelectCategory('potentie')
           }}
-          className="flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
+          className="group flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
           style={{
             border: activeCard === 'score' ? '2px solid #F9A826' : '2px solid transparent',
           }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
             <ScoreGauge score={parcel.score} />
           </div>
           <CardLabelBar label="Score" isActive={activeCard === 'score'} />
-        </button>
+        </motion.button>
       </div>
 
-      {/* ── Bouwjaar ─────────────────────────────────── */}
-      <div className="mt-6">
-        <h3 className={sectionTitle}>Bouwjaar</h3>
+      {/* ── Bouwjaar divider ──────────────────────────── */}
+      <motion.div variants={fadeUp} className="mt-2">
         <BouwjaarTimeline bouwjaar={parcel.bouwjaar} />
-      </div>
+      </motion.div>
 
       {/* ── Kenmerken (flex filler) ────────────────── */}
       <div className="mt-6 flex-1 grid grid-cols-3 gap-1.5">
         <KenmerkenCard
           icon={<LandPlot size={16} strokeWidth={1.5} />}
           label="Perceel"
-          value={parcel.area_m2 != null ? `${Math.round(parcel.area_m2)}` : '—'}
+          value={parcel.area_m2 != null ? Math.round(parcel.area_m2) : null}
           unit="m²"
         />
         <KenmerkenCard
           icon={<Building2 size={16} strokeWidth={1.5} />}
           label="Gebouw"
-          value={bm?.pand_oppervlakte_m2 ? `${Math.round(bm.pand_oppervlakte_m2)}` : '—'}
+          value={bm?.pand_oppervlakte_m2 ? Math.round(bm.pand_oppervlakte_m2) : null}
           unit="m²"
         />
         <KenmerkenCard
           icon={<Grid3x3 size={16} strokeWidth={1.5} />}
           label="Beschikbaar"
-          value={vrijPct != null ? `${vrijPct}` : '—'}
+          value={vrijPct}
           unit="%"
           highlight={vrijPct != null && vrijPct >= 40}
         />
       </div>
 
       {/* ── Secondary Fields ──────────────────────────── */}
-      <div className="mt-4 grid grid-cols-2 gap-1.5">
+      <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
         <SecondaryField
           value={parcel.has_pand ? formatPandStatus(parcel.pand_status) : 'Leeg perceel'}
         />
@@ -218,18 +244,41 @@ export function ParcelBentoOverview({
                 : `${meldingenCount} vergunning${meldingenCount === 1 ? '' : 'en'}`
           }
         />
-      </div>
+      </motion.div>
 
       {/* ── Trust Metadata ───────────────────────────── */}
-      <div className="mt-4 flex items-center justify-between">
+      <motion.div variants={fadeUp} className="mt-4 flex items-center justify-between">
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
           Bron: Kadaster · BAG · DSO
         </span>
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
           {parcel.parcel_code}
         </span>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/* ── Animated Number ───────────────────────────────────────── */
+
+function AnimatedNumber({ value, color }: { value: number; color: string }) {
+  const spring = useSpring(0, { stiffness: 50, damping: 18 })
+  const display = useTransform(spring, (v) => Math.round(v).toLocaleString('nl-NL'))
+  const [text, setText] = useState('0')
+
+  useEffect(() => { spring.set(value) }, [value, spring])
+  useEffect(() => {
+    const unsub = display.on('change', (v) => setText(v))
+    return unsub
+  }, [display])
+
+  return (
+    <span
+      className="text-3xl font-black tracking-tighter tabular-nums leading-none"
+      style={{ color }}
+    >
+      {text}
+    </span>
   )
 }
 
@@ -244,13 +293,14 @@ function KenmerkenCard({
 }: {
   icon: React.ReactNode
   label: string
-  value: string
+  value: number | null
   unit?: string
   highlight?: boolean
 }) {
   return (
-    <div
-      className="flex flex-col justify-between h-full rounded-[24px] p-5"
+    <motion.div
+      variants={fadeUp}
+      className="flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm"
       style={{
         background: highlight ? 'rgba(249, 168, 38, 0.08)' : '#FFFFFF',
         border: highlight ? '1px solid rgba(249, 168, 38, 0.3)' : '1px solid #EAEFEF',
@@ -276,14 +326,21 @@ function KenmerkenCard({
         </div>
       </div>
 
-      {/* Bottom: big value */}
+      {/* Bottom: big value with count-up animation */}
       <div>
-        <p
-          className="text-3xl font-black tracking-tighter tabular-nums leading-none"
-          style={{ color: highlight ? '#F9A826' : '#0E1111' }}
-        >
-          {value}
-        </p>
+        {value !== null ? (
+          <AnimatedNumber
+            value={value}
+            color={highlight ? '#F9A826' : '#0E1111'}
+          />
+        ) : (
+          <span
+            className="text-3xl font-black tracking-tighter tabular-nums leading-none"
+            style={{ color: '#cbd5e1' }}
+          >
+            —
+          </span>
+        )}
         {unit && (
           <span
             className="text-[10px] font-bold uppercase mt-1 block"
@@ -293,7 +350,7 @@ function KenmerkenCard({
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 

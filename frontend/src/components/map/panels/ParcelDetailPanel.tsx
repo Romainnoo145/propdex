@@ -12,8 +12,8 @@ import { CategoryTabs } from './parcel/CategoryTabs'
 import { PotentieLayer } from './parcel/layers/PotentieLayer'
 import { RisicoLayer } from './parcel/layers/RisicoLayer'
 
-import { JuridischLayer } from './parcel/layers/JuridischLayer'
-import { useParcelRiskProfile, useParcelEnrichment } from '@/hooks/useScans'
+import { BronnenLayer } from './parcel/layers/BronnenLayer'
+import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -21,7 +21,7 @@ type PanelView =
   | { kind: 'overview' }
   | { kind: 'potentie' }
   | { kind: 'risico' }
-  | { kind: 'juridisch' }
+  | { kind: 'dossiers' }
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
@@ -30,7 +30,7 @@ const prefersReducedMotion =
 const VIEW_LABELS: Record<Exclude<PanelView['kind'], 'overview'>, string> = {
   potentie: 'Potentie',
   risico: 'Risico',
-  juridisch: 'Juridisch',
+  dossiers: 'Dossiers',
 }
 
 interface ParcelDetailPanelProps {
@@ -42,7 +42,6 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
   const navigate = useNavigate()
   const [view, setView] = useState<PanelView>({ kind: 'overview' })
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
-  const riskQuery = useParcelRiskProfile(parcel.parcel_id)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const generateReport = useGenerateReportFromParcel()
 
@@ -75,8 +74,6 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
     })
   }, [parcel, generateReport, navigate])
 
-  const riskProfile = riskQuery.data?.fysiek_risico_profiel ?? null
-
   const footer = (
     <button
       type="button"
@@ -101,15 +98,9 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
       case 'potentie':
         return <PotentieLayer parcel={parcel} />
       case 'risico':
-        return (
-          <RisicoLayer
-            parcel={parcel}
-            riskProfile={riskProfile}
-            isLoading={riskQuery.isLoading}
-          />
-        )
-      case 'juridisch':
-        return <JuridischLayer parcel={parcel} />
+        return <RisicoLayer parcel={parcel} />
+      case 'dossiers':
+        return <BronnenLayer parcel={parcel} hasReport={parcel.has_report} />
       default:
         return null
     }
@@ -185,7 +176,7 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
                   ? { duration: 0.15 }
                   : { type: 'spring', stiffness: 400, damping: 30 }
               }
-              className="flex-1 overflow-y-auto"
+              className="flex-1 flex flex-col overflow-y-auto"
             >
               {renderDetailLayer()}
             </motion.div>

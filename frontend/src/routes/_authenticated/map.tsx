@@ -2108,14 +2108,21 @@ function MapPage() {
 
   return (
     <MapShell>
-      {/* Command Center — unified search + layer toggles, centered over visible map */}
+      {/* Search pill — top-left */}
       <motion.div
-        className="absolute top-6 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
-        style={{ left: '50%', x: '-50%' }}
-        animate={{ marginLeft: panelOpen ? 250 : 0 }}
+        className="absolute top-6 left-6 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
+        animate={{ x: panelOpen ? 620 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <AddressSearch onSelect={handleAddressSelect} />
+      </motion.div>
+
+      {/* View toggle — bottom-left */}
+      <motion.div
+        className="absolute bottom-6 left-6 z-[var(--z-search-bar)] h-12 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-3 shadow-lg"
+        animate={{ x: panelOpen ? 620 : 0 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      >
         <LayerToggle
           mapRef={mapRef}
           mapReady={mapReady}
