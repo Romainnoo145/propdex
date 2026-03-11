@@ -1859,6 +1859,96 @@ async def get_parcel_at_point(
     )
 
 
+@router.get("/parcels/{parcel_id}/eigendom")
+@limiter.limit("30/minute")
+async def get_parcel_eigendom(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """On-demand BRK eigendom lookup for a parcel.
+
+    Resolves ParcelCache UUID to BRK identificatie via PDOK centroid,
+    then fetches live ownership data from BRK Bevragen V2.
+
+    CRITICAL: Response is ephemeral — never cached, never stored in database.
+    Only request metadata (parcel_id, status) is logged — never BRK payloads.
+    """
+    from app.schemas.brk_ownership import BRKOwnership
+    from app.schemas.property import CadastralParcel
+    from app.services.property_aggregator import fetch_brk_ownership
+
+    # 1. Look up ParcelCache, validate org ownership (multi-tenant security)
+    result = await db.execute(
+        select(ParcelCache.id).where(
+            ParcelCache.id == parcel_id,
+            ParcelCache.organization_id == current_user.organization_id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Perceel niet gevonden",
+        )
+
+    # 2. Extract centroid in EPSG:28992 using PostGIS
+    centroid_result = await db.execute(
+        select(
+            func.ST_X(func.ST_Centroid(ParcelCache.geometry)),
+            func.ST_Y(func.ST_Centroid(ParcelCache.geometry)),
+        ).where(ParcelCache.id == parcel_id)
+    )
+    row = centroid_result.one_or_none()
+    if row is None or row[0] is None or row[1] is None:
+        return BRKOwnership(
+            status="unavailable",
+            reason="Kan perceelcentroïde niet bepalen",
+        ).model_dump(mode="json")
+
+    x, y = float(row[0]), float(row[1])
+
+    # 3. Resolve BRK identificatie via PDOK cadastral point lookup
+    try:
+        async with httpx.AsyncClient() as client:
+            features = await pdok_cadastral_client.get_parcels_by_point(
+                x, y, client, distance=1.0
+            )
+    except GovernmentAPIError as e:
+        logger.warning("PDOK cadastral lookup failed for parcel %s: %s", parcel_id, e.message)
+        return BRKOwnership(
+            status="error",
+            reason="PDOK kadastraal perceel opzoeken mislukt",
+        ).model_dump(mode="json")
+
+    if not features:
+        logger.info("Eigendom lookup: no PDOK features for parcel %s", parcel_id)
+        return BRKOwnership(
+            status="unavailable",
+            reason="Kadastraal perceel niet gevonden in PDOK",
+        ).model_dump(mode="json")
+
+    # 4. Extract identificatie from first matching feature
+    identificatie = None
+    props = features[0].get("properties", {}) if isinstance(features[0], dict) else {}
+    if isinstance(props, dict):
+        identificatie = props.get("identificatie")
+
+    if not identificatie:
+        logger.info("Eigendom lookup: no identificatie in PDOK response for parcel %s", parcel_id)
+        return BRKOwnership(
+            status="unavailable",
+            reason="Kadastraal perceel identificatie ontbreekt in PDOK",
+        ).model_dump(mode="json")
+
+    # 5. Fetch BRK ownership (ephemeral, never stored)
+    logger.info("Eigendom lookup: parcel=%s, identificatie=%s", parcel_id, identificatie)
+    parcel_obj = CadastralParcel(identificatie=identificatie)
+    ownership = await fetch_brk_ownership([parcel_obj])
+
+    return ownership.model_dump(mode="json")
+
+
 @router.get("/parcels/resolve")
 @limiter.limit("60/minute")
 async def resolve_parcel_by_address(
