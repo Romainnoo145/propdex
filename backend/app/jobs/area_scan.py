@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TypeVar
 
@@ -14,7 +14,7 @@ from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.strtree import STRtree
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -39,10 +39,10 @@ from app.services.parcel_addressing import (
 from app.services.parcel_scoring import (
     MAX_QUALIFYING,
     QUALIFICATION_THRESHOLD,
-    compute_opportunity_score,
     compute_vacancy_confidence,
     derive_opportunity_insights,
 )
+from app.services.score_v3 import compute_score_v3
 from app.services.scan_enrichment import (
     batch_fetch_address_enrichment,
     batch_fetch_bodem_data,
@@ -264,10 +264,11 @@ async def area_scan_job(
     Pipeline:
         Phase 1 (0-20%):   Fetch kadastrale percelen (PDOK BRK) in bbox
         Phase 2 (20-40%):  Cross-reference BAG panden + fetch bestemmingen
-        Phase 3 (40-70%):  Upsert ALL parcels + compute scores (cache everything)
-        Phase 4 (70-80%):  Rank — persist all scored parcels into ScanResult
+        Phase 3 (40-70%):  Upsert ALL parcels + derive insights (cache everything)
+        Phase 4 (70-80%):  Persist all parcels into ScanResult (score deferred)
         Phase 5 (80-95%):  Addresses — reverse geocode ranked parcels (capped)
-        Phase 6 (95-100%): Project — auto-create wijk project, link scan, finalize
+        Phase 6 (95-97%):  Score v3.0 — compute scores with all enrichment data
+        Phase 7 (97-100%): Project — auto-create wijk project, link scan, finalize
 
     Args:
         ctx: ARQ context (contains redis connection, etc.)
@@ -484,7 +485,7 @@ async def area_scan_job(
                 f"(indexed={bag_index is not None}), bestemmingen={enriched_count}/{len(features)}"
             )
 
-            # ── Phase 3: Upsert ALL parcels + compute scores (40-70%) ──
+            # ── Phase 3: Upsert ALL parcels + derive insights (40-70%) ──
             scan.current_phase = "processing_parcels"
             session.add(scan)
             await session.flush()
@@ -520,17 +521,10 @@ async def area_scan_job(
                         bag_index=bag_index,
                     )
 
-                    score_breakdown = compute_opportunity_score(parcel)
                     insights = derive_opportunity_insights(parcel)
 
                     scored_parcels.append((
                         parcel,
-                        score_breakdown.total_score,
-                        score_breakdown.category,
-                        score_breakdown.factors,
-                        score_breakdown.vacancy_subscore,
-                        score_breakdown.buildability_subscore,
-                        score_breakdown.model_version,
                         insights.vacancy_signal,
                         insights.signals,
                         insights.building_metrics,
@@ -562,7 +556,7 @@ async def area_scan_job(
             env_by_parcel: dict[str, dict] = {}
             centroids_for_enrichment = [
                 (str(parcel.id), centroid_xy[0], centroid_xy[1])
-                for parcel, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, centroid_xy, _pom, _bag_ids in scored_parcels
+                for parcel, _vs, _os, _bm, centroid_xy, _pom, _bag_ids in scored_parcels
                 if centroid_xy is not None
             ]
             if centroids_for_enrichment:
@@ -602,15 +596,8 @@ async def area_scan_job(
             await session.flush()
             await session.commit()
 
-            # Sort all scored parcels by score desc.
-            scored_sorted = sorted(
-                scored_parcels,
-                key=lambda x: x[1],
-                reverse=True,
-            )
-
-            # Persist ALL scored parcels so users can inspect full wijk potential.
-            all_ranked = scored_sorted
+            # All parcels for persistence (scoring deferred to Phase 6).
+            all_ranked = scored_parcels
 
             # Data quality wins here: for wijk scans we resolve addresses for the
             # full ranked set. Empty parcels have no BAG-based lookup point and
@@ -635,12 +622,6 @@ async def area_scan_job(
                 ranked_values = []
                 for (
                     parcel,
-                    score,
-                    category,
-                    factors,
-                    vacancy_subscore,
-                    buildability_subscore,
-                    score_model_version,
                     vacancy_signal,
                     opportunity_signals,
                     building_metrics,
@@ -679,13 +660,6 @@ async def area_scan_job(
                     bodem_enrichment = bodem_by_parcel.get(pid_str, {})
                     env_enrichment = env_by_parcel.get(pid_str, {})
                     flags_dict: dict = {
-                        "category": category,
-                        "factors": factors,
-                        "subscores": {
-                            "vacancy": vacancy_subscore,
-                            "buildability": buildability_subscore,
-                        },
-                        "score_model_version": score_model_version,
                         "vacancy_signal": vacancy_signal,
                         "vacancy_confidence": vacancy_assessment.confidence,
                         "vacancy_reasons": vacancy_assessment.reasons,
@@ -708,7 +682,7 @@ async def area_scan_job(
                             "organization_id": org_id,
                             "scan_id": scan.id,
                             "parcel_id": parcel.id,
-                            "score": score,
+                            "score": 0,  # Placeholder — updated in Phase 6 (Score v3.0)
                             "flags": flags_dict,
                         }
                     )
@@ -743,7 +717,7 @@ async def area_scan_job(
             await _batch_resolve_addresses(
                 [
                     (p, c)
-                    for p, _s, _cat, _f, _vsub, _bsub, _ver, _vs, _os, _bm, c, _pom, _bag_ids in address_targets
+                    for p, _vs, _os, _bm, c, _pom, _bag_ids in address_targets
                 ],
                 http_client,
                 session,
@@ -908,7 +882,102 @@ async def area_scan_job(
                 parcels_with_buildings > 0 and address_resolution_ratio < 0.50
             )
 
-            # ── Phase 6: Project — auto-create wijk project (95-100%) ──
+            # ── Phase 6: Score v3.0 — all enrichment data now available ──
+            try:
+                scan.current_phase = "scoring_v3"
+                session.add(scan)
+                await session.flush()
+                await session.commit()
+
+                # Load all scan_results for this scan and compute v3.0 scores
+                sr_stmt = select(ScanResult).where(ScanResult.scan_id == scan.id)
+                sr_result = await session.execute(sr_stmt)
+                all_scan_results = sr_result.scalars().all()
+
+                logger.info(
+                    "Scan %s: Phase 6 — computing Score v3.0 for %d parcels",
+                    scan_id,
+                    len(all_scan_results),
+                )
+
+                nbhd_metrics = scan.neighborhood_metrics or {}
+                v3_batch_size = 500
+                for batch_start in range(0, len(all_scan_results), v3_batch_size):
+                    batch = all_scan_results[batch_start:batch_start + v3_batch_size]
+                    for sr in batch:
+                        flags = dict(sr.flags) if sr.flags else {}
+
+                        # Build parcel_data from accumulated flags + parcel_cache
+                        pc_stmt = select(ParcelCache).where(ParcelCache.id == sr.parcel_id)
+                        pc_result = await session.execute(pc_stmt)
+                        pc = pc_result.scalar_one_or_none()
+
+                        parcel_data: dict = {}
+                        if pc:
+                            parcel_data["area_m2"] = pc.area_m2
+                            parcel_data["has_pand"] = pc.has_pand
+                            parcel_data["bouwjaar"] = pc.bouwjaar
+                            parcel_data["pand_status"] = pc.pand_status
+                            parcel_data["bestemmingen"] = pc.bestemmingen
+
+                        # Overlay enrichment flags from scan_results
+                        parcel_data["vacancy_signal"] = flags.get("vacancy_signal")
+                        parcel_data["building_metrics"] = flags.get("building_metrics", {})
+                        parcel_data["market_signals"] = flags.get("market_signals")
+                        parcel_data["bodem"] = flags.get("bodem")
+                        parcel_data["bodemtype"] = flags.get("bodemtype")
+                        parcel_data["funderingsrisico"] = flags.get("funderingsrisico")
+                        parcel_data["energielabel"] = flags.get("energielabel")
+                        parcel_data["vergunningen"] = flags.get("vergunningen")
+                        parcel_data["natura2000"] = flags.get("natura2000")
+                        parcel_data["overstromingsrisico"] = flags.get("overstromingsrisico")
+                        parcel_data["geluid"] = flags.get("geluid")
+                        parcel_data["luchtkwaliteit"] = flags.get("luchtkwaliteit")
+                        parcel_data["woz"] = flags.get("woz")
+
+                        v3_result = compute_score_v3(parcel_data, nbhd_metrics)
+
+                        # Clamp overall to 0-100 for tile proxy compat
+                        overall_clamped = max(0.0, min(100.0, v3_result.overall))
+
+                        # Merge v3.0 score data into flags
+                        flags["scores"] = {
+                            "potentie": v3_result.potentie_score,
+                            "risico": v3_result.risico_score,
+                            "overall": v3_result.overall,
+                        }
+                        flags["score_breakdown"] = {
+                            name: asdict(factor)
+                            for name, factor in v3_result.score_breakdown.items()
+                        }
+                        flags["score_model_version"] = "score-v3.0"
+                        flags["category"] = v3_result.category
+                        # Remove old v2.1 score keys if present
+                        flags.pop("factors", None)
+                        flags.pop("subscores", None)
+
+                        sr.score = overall_clamped
+                        sr.flags = flags
+                        session.add(sr)
+
+                    await session.flush()
+
+                await session.commit()
+                logger.info(
+                    "Scan %s: Phase 6 complete — %d parcels scored with v3.0",
+                    scan_id,
+                    len(all_scan_results),
+                )
+
+            except Exception as scoring_exc:
+                # Phase 6 scoring is non-fatal — parcels persist with score=0
+                logger.warning(
+                    "Scan %s: Phase 6 scoring failed (non-fatal): %s",
+                    scan_id,
+                    scoring_exc,
+                )
+
+            # ── Phase 7: Project — auto-create wijk project (95-100%) ──
             scan.current_phase = "finalizing"
             session.add(scan)
             await session.flush()
