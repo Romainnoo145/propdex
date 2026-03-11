@@ -12,18 +12,18 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 100 -- Score v3.0 Engine
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In Progress
-Last activity: 2026-03-11 -- Plan 100-01 complete (Score v3.0 engine core + tests)
+Last activity: 2026-03-11 -- Plan 100-02 complete (Pipeline integration)
 
-Progress: [###-------] 33% (1/3 plans in phase 100)
+Progress: [######----] 67% (2/3 plans in phase 100)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (12 v15.0 + 2 v16.0)
+- Total plans completed: 15 (12 v15.0 + 3 v16.0)
 - Average duration: 4min
-- Total execution time: 53min
+- Total execution time: 57min
 
 **By Phase:**
 
@@ -37,6 +37,7 @@ Progress: [###-------] 33% (1/3 plans in phase 100)
 | Phase 99 P01 | 5min | 2 tasks | 2 files |
 | Phase 99 P03 | 3min | 2 tasks | 4 files |
 | Phase 100 P01 | 7min | 2 tasks | 3 files |
+| Phase 100 P02 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Progress: [###-------] 33% (1/3 plans in phase 100)
 - [Phase 100]: Score v3.0 split into score_v3.py (engine) + score_v3_factors.py (17 factor functions with narratives)
 - [Phase 100]: FactorResult pattern: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort/lang, data_bronnen, missing
 - [Phase 100]: Missing data: non-critical=0.5 neutral, critical risk=0.6 (+10% penalty), >20% missing triggers weight redistribution
+- [Phase 100]: Deferred scoring pattern: parcels persist with score=0 in Phase 4, v3.0 scores computed in Phase 6 after all enrichment
+- [Phase 100]: Phase 6 scoring non-fatal: failure leaves score=0, scan still completes
 
 ### Key Patterns (carry forward)
 
@@ -107,11 +110,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T07:09:41Z
-**Stopped At:** Completed 100-01-PLAN.md
+**Last Session:** 2026-03-11T07:16:29Z
+**Stopped At:** Completed 100-02-PLAN.md
 
-**Next Action:** Execute 100-02-PLAN.md (Pipeline integration)
+**Next Action:** Execute 100-03-PLAN.md (Frontend types)
 
 ---
 
-*State updated: 2026-03-11 -- Phase 100 Plan 01 complete (Score v3.0 engine core + tests)*
+*State updated: 2026-03-11 -- Phase 100 Plan 02 complete (Pipeline integration)*
