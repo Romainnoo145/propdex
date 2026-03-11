@@ -174,8 +174,7 @@ Plans:
 | 92. Viewport Layout & Nav | Complete | 2026-03-10 |
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
-| 106. Dossier Upload | Planned | - |
-| 104. Rapport v2.0 | Complete | 2026-03-11 |
+| 106. Dossier Upload | 1/2 | In Progress|  | 104. Rapport v2.0 | Complete | 2026-03-11 |
 | 105. BRK Eigendom Modal | Planned | - |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |

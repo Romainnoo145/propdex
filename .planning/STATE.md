@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 101.1 (Enrichment Backfill Venlo)
+**Current focus:** v16.0 Score Intelligence -- Phase 106 (Perceel Dossier Upload)
 
 ---
 
 ## Current Position
 
-Phase: 101.1 -- Enrichment Backfill Venlo
-Plan: 1 of 1 complete
-Status: Complete
-Last activity: 2026-03-11 -- Plan 101.1-01 complete (enrichment backfill tool)
+Phase: 106 -- Perceel Dossier Upload
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-03-12 -- Plan 106-01 complete (backend document storage)
 
-Progress: [##########] 100% (1/1 plans in phase 101.1)
+Progress: [#####-----] 50% (1/2 plans in phase 106)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17 (12 v15.0 + 5 v16.0)
+- Total plans completed: 18 (12 v15.0 + 6 v16.0)
 - Average duration: 4min
-- Total execution time: 60min
+- Total execution time: 64min
 
 **By Phase:**
 
@@ -42,6 +42,7 @@ Progress: [##########] 100% (1/1 plans in phase 101.1)
 | Phase 101 P01 | 3min | 1 task | 1 file |
 | Phase 101 P02 | 2min | 2 tasks | 4 files |
 | Phase 101.1 P01 | 2min | 2 tasks | 1 file |
+| Phase 106 P01 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Progress: [##########] 100% (1/1 plans in phase 101.1)
 - [Phase 101.1]: Enrichment backfill uses centroid-based address resolution (not BAG building overlap) for bulk speed
 - [Phase 101.1]: Three-pass enrichment: coordinate -> address resolution -> address enrichment -> re-score
 - [Phase 101.1]: Skip flags (--skip-coordinate/--skip-address/--skip-rescore) for granular resume after partial runs
+- [Phase 106]: String(50) document_type instead of PG ENUM for easy category evolution without migrations
+- [Phase 106]: validation_alias maps created_at to uploaded_at in DocumentResponse API
+- [Phase 106]: 20 document_type keys matching BronnenLayer card categories for frontend consistency
 
 ### Key Patterns (carry forward)
 
@@ -125,11 +129,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T10:34:53Z
-**Stopped At:** Completed 101.1-01-PLAN.md
+**Last Session:** 2026-03-11T17:40:28Z
+**Stopped At:** Completed 106-01-PLAN.md
 
-**Next Action:** Phase 101.1 complete. Run backfill: `python -m app.tools.backfill_enrichment --gemeente Venlo`. Continue with next phase.
+**Next Action:** Execute Plan 106-02 (frontend document upload UI).
 
 ---
 
-*State updated: 2026-03-11 -- Phase 101.1 Plan 01 complete (enrichment backfill tool)*
+*State updated: 2026-03-12 -- Phase 106 Plan 01 complete (backend document storage)*
