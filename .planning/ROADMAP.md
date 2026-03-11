@@ -182,8 +182,7 @@ Plans:
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Complete | 2026-03-11 |
 | 104. Rapport v2.0 | Complete | 2026-03-11 |
-| 105. BRK Eigendom Modal | Planned | - |
-| 94. Wijk & Gemeente Reskin | Backlog | - |
+| 105. BRK Eigendom Modal | 1/2 | In Progress|  | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
 | 97. Settings Reskin | Backlog | - |

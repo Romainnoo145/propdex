@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 106 (Perceel Dossier Upload)
+**Current focus:** v16.0 Score Intelligence -- Phase 105 (BRK Eigendom Modal)
 
 ---
 
 ## Current Position
 
-Phase: 106 -- Perceel Dossier Upload
-Plan: 2 of 2 complete
-Status: Complete
-Last activity: 2026-03-12 -- Plan 106-02 complete (frontend document upload UI)
+Phase: 105 -- BRK Eigendom Modal
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-03-12 -- Plan 105-01 complete (BRK eigendom endpoint)
 
-Progress: [##########] 100% (2/2 plans in phase 106)
+Progress: [#####-----] 50% (1/2 plans in phase 105)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (12 v15.0 + 7 v16.0)
+- Total plans completed: 20 (12 v15.0 + 8 v16.0)
 - Average duration: 4min
 - Total execution time: 71min
 
@@ -44,6 +44,7 @@ Progress: [##########] 100% (2/2 plans in phase 106)
 | Phase 101.1 P01 | 2min | 2 tasks | 1 file |
 | Phase 106 P01 | 4min | 2 tasks | 7 files |
 | Phase 106 P02 | 7min | 2 tasks | 4 files |
+| Phase 105 P01 | 3min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,7 @@ Progress: [##########] 100% (2/2 plans in phase 106)
 - [Phase 106]: Upload uses raw fetch (not apiFetch) for FormData multipart compatibility
 - [Phase 106]: Download uses authenticated blob fetch with temporary anchor click pattern
 - [Phase 106]: mergeDocuments pattern overlays user docs onto static DossierCard pages by document_type key
+- [Phase 105]: Ephemeral BRK eigendom endpoint uses PDOK centroid resolution + existing fetch_brk_ownership, no new schemas needed
 
 ### Key Patterns (carry forward)
 
@@ -133,11 +135,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T20:18:49.353Z
-**Stopped At:** Phase 105 context gathered
+**Last Session:** 2026-03-11T20:39:21.680Z
+**Stopped At:** Completed 105-01-PLAN.md
 
 **Next Action:** Begin next phase execution.
 
 ---
 
-*State updated: 2026-03-12 -- Phase 106 complete (perceel dossier upload, backend + frontend)*
+*State updated: 2026-03-12 -- Phase 105 plan 01 complete (BRK eigendom endpoint)*
