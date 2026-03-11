@@ -1715,6 +1715,8 @@ async def get_parcel_at_point(
 
     score_category = None
     score_breakdown = None
+    potentie_score = None
+    risico_score = None
     vacancy_signal = None
     vacancy_confidence = None
     vacancy_reasons = None
@@ -1756,20 +1758,40 @@ async def get_parcel_at_point(
         building_metrics = raw_metrics if isinstance(raw_metrics, dict) else None
         market_signals = _normalize_market_signals(scan_flags.get("market_signals"))
 
-        factors = scan_flags.get("factors")
-        if isinstance(factors, dict):
-            score_breakdown = {"factors": factors}
-            raw_subscores = scan_flags.get("subscores")
-            if isinstance(raw_subscores, dict):
-                score_breakdown["subscores"] = raw_subscores
-            model_version = scan_flags.get("score_model_version")
-            if isinstance(model_version, str) and model_version:
-                score_breakdown["model_version"] = model_version
+        # v3.0 score extraction: check for score_breakdown with categorie objects
+        v3_breakdown = scan_flags.get("score_breakdown")
+        if isinstance(v3_breakdown, dict):
+            first_val = next(iter(v3_breakdown.values()), None)
+            if isinstance(first_val, dict) and "categorie" in first_val:
+                # v3.0 format detected
+                score_breakdown = v3_breakdown
+                v3_scores = scan_flags.get("scores")
+                if isinstance(v3_scores, dict):
+                    raw_pot = v3_scores.get("potentie")
+                    if isinstance(raw_pot, (int, float)) and not isinstance(raw_pot, bool):
+                        potentie_score = float(raw_pot)
+                    raw_ris = v3_scores.get("risico")
+                    if isinstance(raw_ris, (int, float)) and not isinstance(raw_ris, bool):
+                        risico_score = float(raw_ris)
+            else:
+                # Non-v3.0 score_breakdown, treat as legacy
+                score_breakdown = v3_breakdown if v3_breakdown else None
         else:
-            legacy_breakdown = {
-                k: v for k, v in scan_flags.items() if k != "category"
-            }
-            score_breakdown = legacy_breakdown if legacy_breakdown else None
+            # v2.1 fallback: factors-based breakdown
+            factors = scan_flags.get("factors")
+            if isinstance(factors, dict):
+                score_breakdown = {"factors": factors}
+                raw_subscores = scan_flags.get("subscores")
+                if isinstance(raw_subscores, dict):
+                    score_breakdown["subscores"] = raw_subscores
+                model_version = scan_flags.get("score_model_version")
+                if isinstance(model_version, str) and model_version:
+                    score_breakdown["model_version"] = model_version
+            else:
+                legacy_breakdown = {
+                    k: v for k, v in scan_flags.items() if k != "category"
+                }
+                score_breakdown = legacy_breakdown if legacy_breakdown else None
 
     if building_metrics is None:
         raw_bestemmingen = row.get("bestemmingen")
@@ -1822,6 +1844,8 @@ async def get_parcel_at_point(
         score=score_value,
         score_category=score_category,
         score_breakdown=score_breakdown,
+        potentie_score=potentie_score,
+        risico_score=risico_score,
         vacancy_signal=vacancy_signal,
         vacancy_confidence=vacancy_confidence,
         vacancy_reasons=vacancy_reasons,
@@ -2205,20 +2229,30 @@ async def list_results(
             building_metrics = raw_metrics if isinstance(raw_metrics, dict) else None
             market_signals = _normalize_market_signals(raw_market_signals)
 
-            factors = result.flags.get("factors")
-            if isinstance(factors, dict):
-                score_breakdown = {"factors": factors}
-                raw_subscores = result.flags.get("subscores")
-                if isinstance(raw_subscores, dict):
-                    score_breakdown["subscores"] = raw_subscores
-                model_version = result.flags.get("score_model_version")
-                if isinstance(model_version, str) and model_version:
-                    score_breakdown["model_version"] = model_version
+            # v3.0 score extraction: check for score_breakdown with categorie objects
+            v3_breakdown = result.flags.get("score_breakdown")
+            if isinstance(v3_breakdown, dict):
+                first_val = next(iter(v3_breakdown.values()), None)
+                if isinstance(first_val, dict) and "categorie" in first_val:
+                    score_breakdown = v3_breakdown
+                else:
+                    score_breakdown = v3_breakdown if v3_breakdown else None
             else:
-                legacy_breakdown = {
-                    k: v for k, v in result.flags.items() if k != "category"
-                }
-                score_breakdown = legacy_breakdown if legacy_breakdown else None
+                # v2.1 fallback
+                factors = result.flags.get("factors")
+                if isinstance(factors, dict):
+                    score_breakdown = {"factors": factors}
+                    raw_subscores = result.flags.get("subscores")
+                    if isinstance(raw_subscores, dict):
+                        score_breakdown["subscores"] = raw_subscores
+                    model_version = result.flags.get("score_model_version")
+                    if isinstance(model_version, str) and model_version:
+                        score_breakdown["model_version"] = model_version
+                else:
+                    legacy_breakdown = {
+                        k: v for k, v in result.flags.items() if k != "category"
+                    }
+                    score_breakdown = legacy_breakdown if legacy_breakdown else None
 
         listing_signal = (
             listing_signal_by_parcel.get(parcel.id)

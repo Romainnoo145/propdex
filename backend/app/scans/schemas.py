@@ -355,6 +355,18 @@ class ParcelAtPointResponse(BaseModel):
         default=None,
         description="Per-factor score contributions from scan flags",
     )
+    potentie_score: float | None = Field(
+        default=None,
+        description="Potentie subscore (0-100) from v3.0 scoring model",
+        ge=0,
+        le=100,
+    )
+    risico_score: float | None = Field(
+        default=None,
+        description="Risico subscore (0-100) from v3.0 scoring model",
+        ge=0,
+        le=100,
+    )
     vacancy_signal: str | None = Field(
         default=None,
         description="Vacancy classification from scan flags",
