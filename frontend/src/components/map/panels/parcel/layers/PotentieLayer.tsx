@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
 import { CheckCircle2, CircleHelp, XCircle, type LucideIcon } from 'lucide-react'
-import type { ScanResultItem, BuildingMetrics } from '@/lib/types/scan'
+import type { ScanResultItem, BuildingMetrics, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
+import { isScoreV3, getPotentieFactors, getRisicoFactors } from '@/lib/score'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -14,7 +15,11 @@ interface Verdict {
   Icon: LucideIcon
 }
 
-function deriveVerdict(score: number | null): Verdict {
+function deriveVerdict(
+  score: number | null,
+  potentieScore?: number | null,
+  risicoScore?: number | null,
+): Verdict {
   if (score == null)
     return {
       label: 'ONBEKEND',
@@ -24,6 +29,38 @@ function deriveVerdict(score: number | null): Verdict {
       barColor: 'bg-slate-400',
       Icon: CircleHelp,
     }
+
+  // v3.0 dual-score logic when both subscores available
+  if (potentieScore != null && risicoScore != null) {
+    if (potentieScore > 60 && risicoScore < 30)
+      return {
+        label: 'ZEER KANSRIJK',
+        action: 'GO',
+        color: 'text-green-600',
+        badgeColor: 'bg-green-500',
+        barColor: 'bg-green-500',
+        Icon: CheckCircle2,
+      }
+    if (potentieScore > 40)
+      return {
+        label: 'MOGELIJKHEDEN',
+        action: 'ONDERZOEK',
+        color: 'text-amber-500',
+        badgeColor: 'bg-amber-500',
+        barColor: 'bg-amber-400',
+        Icon: CircleHelp,
+      }
+    return {
+      label: 'BEPERKT POTENTIEEL',
+      action: 'NO-GO',
+      color: 'text-red-500',
+      badgeColor: 'bg-red-500',
+      barColor: 'bg-red-500',
+      Icon: XCircle,
+    }
+  }
+
+  // v2.1 fallback: single score thresholds
   if (score >= 75)
     return {
       label: 'ZEER KANSRIJK',
@@ -111,10 +148,20 @@ interface ScoreFactors {
   pand_status_signal: number
 }
 
+/** v3.0 named factor with metadata for display */
+interface NamedFactorV3 extends ScoreFactorV3 {
+  name: string
+}
+
 function extractFactors(
   scoreBreakdown: Record<string, unknown> | null,
 ): ScoreFactors | null {
   if (!scoreBreakdown) return null
+
+  // v3.0: factors have full metadata — skip v2.1 extraction
+  if (isScoreV3(scoreBreakdown)) return null
+
+  // v2.1 fallback
   const factors = scoreBreakdown.factors as Record<string, number> | undefined
   if (!factors) return null
   return {
@@ -124,6 +171,26 @@ function extractFactors(
     zoning_value: factors.zoning_value ?? 0,
     pand_status_signal: factors.pand_status_signal ?? 0,
   }
+}
+
+/**
+ * Extract v3.0 factors with names, grouped by categorie.
+ * Returns null for v2.1 breakdowns.
+ */
+function extractFactorsV3(
+  scoreBreakdown: Record<string, unknown> | null,
+): { potentie: NamedFactorV3[]; risico: NamedFactorV3[] } | null {
+  if (!scoreBreakdown || !isScoreV3(scoreBreakdown)) return null
+  const breakdown = scoreBreakdown as ScoreBreakdownV3
+  const potentie = getPotentieFactors(breakdown).map((f) => ({
+    ...f,
+    name: Object.entries(breakdown).find(([, v]) => v === f)?.[0] ?? '',
+  }))
+  const risico = getRisicoFactors(breakdown).map((f) => ({
+    ...f,
+    name: Object.entries(breakdown).find(([, v]) => v === f)?.[0] ?? '',
+  }))
+  return { potentie, risico }
 }
 
 /* ── One-liner generation ─────────────────────────────────── */
@@ -252,7 +319,8 @@ interface PotentieLayerProps {
 
 export function PotentieLayer({ parcel }: PotentieLayerProps) {
   const score = parcel.score != null ? Math.round(parcel.score) : null
-  const verdict = deriveVerdict(score)
+  const isV3 = isScoreV3(parcel.score_breakdown)
+  const verdict = deriveVerdict(score, parcel.potentie_score, parcel.risico_score)
 
   // Vrije grond
   const rawPandOpp = parcel.building_metrics?.pand_oppervlakte_m2 ?? null
@@ -272,19 +340,28 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
 
   // Score factors for contribution badges
   const factors = extractFactors(parcel.score_breakdown)
+  const factorsV3 = extractFactorsV3(parcel.score_breakdown)
   const landPts = factors ? Math.round(factors.underutilization + factors.footprint_size) : null
   const verticalPts = factors ? Math.round(factors.building_age + factors.zoning_value) : null
   const zoningPts = factors ? Math.round(factors.zoning_value) : null
 
-  // One-liner
-  const oneLiner = generateOneLiner(
-    vrijePct,
-    opto.lagenHeadroom,
-    opto.hoogteHeadroom,
-    bestemming.compatible,
-    parcel.vacancy_signal,
-    parcel.bouwjaar,
-  )
+  // One-liner: v3.0 uses top factor toelichting_kort, v2.1 uses generated one-liner
+  const oneLiner = (() => {
+    if (factorsV3) {
+      // Pick the factor with highest bijdrage for the one-liner
+      const allFactors = [...factorsV3.potentie, ...factorsV3.risico]
+      const top = allFactors.sort((a, b) => Math.abs(b.bijdrage) - Math.abs(a.bijdrage))[0]
+      if (top) return top.toelichting_kort
+    }
+    return generateOneLiner(
+      vrijePct,
+      opto.lagenHeadroom,
+      opto.hoogteHeadroom,
+      bestemming.compatible,
+      parcel.vacancy_signal,
+      parcel.bouwjaar,
+    )
+  })()
 
   // Animated score bar
   const springVal = useSpring(0, { stiffness: 60, damping: 20 })
@@ -430,6 +507,58 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
               <span className="text-[11px] font-bold text-slate-700">{sig.text}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── v3.0 Factor Breakdown ──────────────────────────── */}
+      {isV3 && factorsV3 && (
+        <div className="px-6 mt-4 space-y-4">
+          {/* Potentie factors */}
+          {factorsV3.potentie.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black tracking-[0.15em] text-green-600 uppercase mb-2">
+                POTENTIE
+              </p>
+              <div className="space-y-1.5">
+                {factorsV3.potentie.map((f) => (
+                  <div
+                    key={f.name}
+                    className="flex items-center justify-between py-1.5 px-3 bg-green-50/50 rounded-lg"
+                  >
+                    <span className="text-[11px] font-bold text-slate-700 truncate flex-1">
+                      {f.toelichting_kort}
+                    </span>
+                    <span className="text-[11px] font-black text-green-600 tabular-nums ml-2 shrink-0">
+                      +{f.bijdrage.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Risico factors */}
+          {factorsV3.risico.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black tracking-[0.15em] text-red-500 uppercase mb-2">
+                RISICO
+              </p>
+              <div className="space-y-1.5">
+                {factorsV3.risico.map((f) => (
+                  <div
+                    key={f.name}
+                    className="flex items-center justify-between py-1.5 px-3 bg-red-50/50 rounded-lg"
+                  >
+                    <span className="text-[11px] font-bold text-slate-700 truncate flex-1">
+                      {f.toelichting_kort}
+                    </span>
+                    <span className="text-[11px] font-black text-red-500 tabular-nums ml-2 shrink-0">
+                      +{f.bijdrage.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
