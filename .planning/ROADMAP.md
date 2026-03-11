@@ -32,7 +32,7 @@
 ### v16.0 Score Intelligence (Phases 99-101)
 
 - [x] **Phase 99: Scan Pipeline Enrichment** - Move energielabel (EP-Online), WOZ (Waardeloket), vergunningen (SRU), bodem (Bodemloket/BRO), funderingsrisico (PDOK WFS) from on-demand to scan pipeline pre-cache (completed 2026-03-10)
-- [ ] **Phase 100: Score v3.0 Engine** - Complete scoring overhaul: Potentie subscore (8 factoren, 80pt) + Risico subscore (9 factoren, 67pt), template-based narratieven per factor (toelichting_kort + toelichting_lang + data_bronnen), normalisatie, gewichtsherverdeling bij ontbrekende data
+- [x] **Phase 100: Score v3.0 Engine** - Complete scoring overhaul: Potentie subscore (8 factoren, 80pt) + Risico subscore (9 factoren, 67pt), template-based narratieven per factor (toelichting_kort + toelichting_lang + data_bronnen), normalisatie, gewichtsherverdeling bij ontbrekende data (completed 2026-03-11)
 - [ ] **Phase 101: Score Backfill & Migration** - Re-score all existing parcels with v3.0, migrate score_breakdown schema, update frontend types for potentie_score + risico_score + expanded breakdown
 
 ### v15.0 Aura (Phases 91-97, resumes after v16.0)
@@ -254,7 +254,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 99. Scan Pipeline Enrichment | 3/3 | Complete   | 2026-03-10 |
-| 100. Score v3.0 Engine | 2/3 | In Progress|  |
+| 100. Score v3.0 Engine | 3/3 | Complete   | 2026-03-11 |
 | 101. Score Backfill & Migration | 0/? | Not started | - |
 
 ### v15.0 Aura

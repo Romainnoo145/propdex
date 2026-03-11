@@ -158,7 +158,7 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 - [x] **SCORE-V3-03**: `overall` score = potentie - risico, stored in scan_results.score column (0-100 clamped) for tile proxy compat
 - [x] **SCORE-V3-04**: `score_breakdown` per factor includes: waarde, genormaliseerde_score, gewicht, bijdrage, categorie, toelichting_kort, toelichting_lang, data_bronnen
 - [x] **SCORE-V3-05**: Missing data handled: neutral score default, -10% penalty for critical risk factors, weight redistribution when >20% factors missing
-- [ ] **SCORE-V3-06**: Template-based narratieven (no AI calls) — deterministic, instant text generation per factor
+- [x] **SCORE-V3-06**: Template-based narratieven (no AI calls) — deterministic, instant text generation per factor
 
 ### v16.0 Traceability
 
@@ -176,7 +176,7 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 | SCORE-V3-03 | Phase 100 | Complete |
 | SCORE-V3-04 | Phase 100 | Complete |
 | SCORE-V3-05 | Phase 100 | Complete |
-| SCORE-V3-06 | Phase 100 | Pending |
+| SCORE-V3-06 | Phase 100 | Complete |
 
 **v16.0 Coverage:**
 - Phase 99 requirements: 7 total

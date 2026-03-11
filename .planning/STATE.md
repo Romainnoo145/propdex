@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v16.0 Score Intelligence -- Phase 100 (Score v3.0 Engine) in progress
+**Current focus:** v16.0 Score Intelligence -- Phase 100 (Score v3.0 Engine) COMPLETE
 
 ---
 
 ## Current Position
 
 Phase: 100 -- Score v3.0 Engine
-Plan: 2 of 3 complete
-Status: In Progress
-Last activity: 2026-03-11 -- Plan 100-02 complete (Pipeline integration)
+Plan: 3 of 3 complete
+Status: Complete
+Last activity: 2026-03-11 -- Plan 100-03 complete (Frontend types)
 
-Progress: [######----] 67% (2/3 plans in phase 100)
+Progress: [##########] 100% (3/3 plans in phase 100)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (12 v15.0 + 3 v16.0)
+- Total plans completed: 16 (12 v15.0 + 4 v16.0)
 - Average duration: 4min
-- Total execution time: 57min
+- Total execution time: 60min
 
 **By Phase:**
 
@@ -38,6 +38,7 @@ Progress: [######----] 67% (2/3 plans in phase 100)
 | Phase 99 P03 | 3min | 2 tasks | 4 files |
 | Phase 100 P01 | 7min | 2 tasks | 3 files |
 | Phase 100 P02 | 4min | 2 tasks | 2 files |
+| Phase 100 P03 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Progress: [######----] 67% (2/3 plans in phase 100)
 - [Phase 100]: Missing data: non-critical=0.5 neutral, critical risk=0.6 (+10% penalty), >20% missing triggers weight redistribution
 - [Phase 100]: Deferred scoring pattern: parcels persist with score=0 in Phase 4, v3.0 scores computed in Phase 6 after all enrichment
 - [Phase 100]: Phase 6 scoring non-fatal: failure leaves score=0, scan still completes
+- [Phase 100]: extractScoreSubscores returns null for v3.0 (no vacancy/buildability in 17-factor model)
+- [Phase 100]: PotentieLayer one-liner picks highest-bijdrage toelichting_kort for v3.0, generateOneLiner for v2.1
+- [Phase 100]: v3.0 factor display grouped as POTENTIE (green) / RISICO (red) sections with bijdrage values
 
 ### Key Patterns (carry forward)
 
@@ -110,11 +114,11 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-11T07:16:29Z
-**Stopped At:** Completed 100-02-PLAN.md
+**Last Session:** 2026-03-11T07:21:25Z
+**Stopped At:** Completed 100-03-PLAN.md
 
-**Next Action:** Execute 100-03-PLAN.md (Frontend types)
+**Next Action:** Phase 100 complete. Continue with next phase.
 
 ---
 
-*State updated: 2026-03-11 -- Phase 100 Plan 02 complete (Pipeline integration)*
+*State updated: 2026-03-11 -- Phase 100 Plan 03 complete (Frontend types)*
