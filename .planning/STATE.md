@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 104 -- Locatie Due Diligence Dossier
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-03-12 -- Plan 104-01 complete (Flags-first report enrichment)
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-03-12 -- Plan 104-02 complete (Due diligence PDF template)
 
-Progress: [#####-----] 50% (1/2 plans in phase 104)
+Progress: [##########] 100% (2/2 plans in phase 104)
 
 ## Performance Metrics
 
@@ -116,6 +116,8 @@ Progress: [#####-----] 50% (1/2 plans in phase 104)
 - [Phase 105]: Portal-based EigendomModal (createPortal to document.body) renders above parcel panel z-index
 - [Phase 104]: Flags overlay applied on top of aggregator output for address/building data continuity
 - [Phase 104]: PropertyReportResponse extended with 13 optional fields — all default=None for backward compat
+- [Phase 104-02]: generate_report_pdf delegates to generate_due_diligence_pdf — same signature, zero router/frontend changes
+- [Phase 104-02]: score_breakdown_v3 pre-processed into potentie_factors/risico_factors sorted by bijdrage before template render
 
 ### Key Patterns (carry forward)
 
@@ -142,10 +144,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-12T10:26:21.700Z
-**Stopped At:** Completed 104-01-PLAN.md
+**Last Session:** 2026-03-12T10:50:00.000Z
+**Stopped At:** Completed 104-02-PLAN.md
 
-**Next Action:** Begin next phase execution.
+**Next Action:** Phase 104 complete. Begin next phase.
 
 ---
 

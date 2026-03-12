@@ -55,7 +55,7 @@ LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage 
 
 #### Feature Phases (in order)
 - [x] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, PostgreSQL LargeBinary, upload/download/delete endpoints, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities) (completed 2026-03-11)
-- [ ] **Phase 104: Locatie Due Diligence Dossier** - "Genereer Rapport" becomes a structured due diligence dossier assembled from pre-cached scan data. PDF export with all public source data organized by vergunning-relevance. Replaces API-call-based aggregation with flags-first lookup
+- [x] **Phase 104: Locatie Due Diligence Dossier** - "Genereer Rapport" becomes a structured due diligence dossier assembled from pre-cached scan data. PDF export with all public source data organized by vergunning-relevance. Replaces API-call-based aggregation with flags-first lookup (completed 2026-03-12)
 - [x] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance) (completed 2026-03-11)
 
 #### Aura Reskin Batch (low priority, cosmetic only)
@@ -188,7 +188,7 @@ Plans:
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Complete | 2026-03-11 |
-| 104. Due Diligence Dossier | 1/2 | In Progress|  | 105. BRK Eigendom Modal | Complete | 2026-03-12 |
+| 104. Due Diligence Dossier | 2/2 | Complete   | 2026-03-12 | 105. BRK Eigendom Modal | Complete | 2026-03-12 |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
