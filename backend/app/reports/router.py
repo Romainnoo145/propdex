@@ -15,14 +15,17 @@ from app.auth.dependencies import get_current_active_user, get_current_organizat
 from app.core.database import get_db
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.middleware.rate_limit import limiter
+from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
+from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.reports import service
 from app.reports.dossier_export import generate_dossier_pdf
+from app.reports.flags_assembler import assemble_enrichment_from_flags, build_flags_section_sources
 from app.reports.freshness import check_report_freshness
 from app.reports.pdf_export import generate_report_pdf
 from app.schemas.address import AddressInput
-from app.schemas.property import CadastralParcel
+from app.schemas.property import CadastralParcel, PropertyReportResponse
 from app.schemas.report import (
     GeneratedDossierResponse,
     GenerateReportFromParcelResponse,
@@ -540,7 +543,7 @@ async def generate_report_from_parcel(
         # 3. Build AddressInput
         address_input = AddressInput(postcode=postcode, huisnummer=huisnummer)
 
-        # 4. Aggregate property data
+        # 4. Aggregate property data (flags-first: overlay scan enrichment when available)
         try:
             property_data = await aggregate_property_data(
                 input_data=address_input,
@@ -557,6 +560,36 @@ async def generate_report_from_parcel(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Fout bij ophalen van perceeldata: {e}",
             ) from e
+
+        # 4b. Overlay cached scan enrichment from scan_results.flags when available (DD-01)
+        flags_query = (
+            select(ScanResult.flags, ScanResult.created_at)
+            .join(AreaScan, ScanResult.scan_id == AreaScan.id)
+            .where(
+                ScanResult.parcel_id == body.parcel_id,
+                ScanResult.organization_id == organization_id,
+                AreaScan.status == "completed",
+            )
+            .order_by(ScanResult.created_at.desc())
+            .limit(1)
+        )
+        flags_row = (await db.execute(flags_query)).one_or_none()
+        if flags_row is not None:
+            scan_flags, scan_created_at = flags_row
+            if scan_flags and isinstance(scan_flags, dict):
+                enrichment = assemble_enrichment_from_flags(scan_flags)
+                report_dict = property_data.model_dump(mode="json")
+                report_dict.update({k: v for k, v in enrichment.items() if v is not None})
+                flag_sources = build_flags_section_sources(scan_flags, scan_created_at)
+                report_dict.setdefault("section_sources", []).extend(
+                    [s.model_dump(mode="json") for s in flag_sources]
+                )
+                property_data = PropertyReportResponse.model_validate(report_dict)
+        else:
+            logger.info(
+                "No scan flags for parcel %s, using aggregator fallback",
+                body.parcel_id,
+            )
 
         # 5. Save report
         report, created = await service.save_report(
