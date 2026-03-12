@@ -16,6 +16,10 @@ import { useExportPDF } from '@/hooks/useReports'
 import { useUpdateNotes } from '@/hooks/useReports'
 import type { SectionKey } from './components/SectionNav'
 import type { SectionStatus } from './components/SectionStatusBadge'
+import { S1Locatiegegevens } from './sections/S1Locatiegegevens'
+import { S2KadasterEigendom } from './sections/S2KadasterEigendom'
+import { S3BestemmingsplanBouwmogelijkheden } from './sections/S3BestemmingsplanBouwmogelijkheden'
+import { S4Risicoprofiel } from './sections/S4Risicoprofiel'
 import {
   MapPin,
   Gavel,
@@ -135,6 +139,31 @@ const SECTION_TITLES: Record<SectionKey, string> = {
   analyse: '5. Potentie & Risico',
   vergunningen: '6. Vergunningen',
   bronnen: '7. Bronvermelding',
+}
+
+/* ─── Section content renderer ──────────────────────────────── */
+
+function renderSectionContent(
+  section: SectionKey,
+  data: PropertyReportResponse,
+  sourceParcelId: string | null | undefined,
+): React.ReactNode {
+  switch (section) {
+    case 'locatiegegevens':
+      return <S1Locatiegegevens data={data} sourceParcelId={sourceParcelId} />
+    case 'kadaster':
+      return <S2KadasterEigendom data={data} sourceParcelId={sourceParcelId} />
+    case 'bestemmingsplan':
+      return <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} />
+    case 'risicoprofiel':
+      return <S4Risicoprofiel data={data} sourceParcelId={sourceParcelId} />
+    default:
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 text-center">
+          <p className="text-[13px] font-semibold text-neutral-400">Sectie in voorbereiding</p>
+        </div>
+      )
+  }
 }
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -281,16 +310,7 @@ export default function DueDiligenceDashboard({
                 onNotesChange={handleNotesChange}
                 onExportPDF={handleExportPDF}
               >
-                {/* Section content placeholder — replaced in Plan 107-02 */}
-                <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 text-center">
-                  <SectionIcon size={32} strokeWidth={1} className="text-neutral-300" />
-                  <p className="text-[13px] font-semibold text-neutral-400">
-                    {SECTION_TITLES[activeSection]}
-                  </p>
-                  <p className="text-[12px] text-neutral-300 max-w-xs">
-                    Inhoud volgt in Plan 107-02
-                  </p>
-                </div>
+                {renderSectionContent(activeSection, data, sourceParcelId)}
               </SectionShell>
             </motion.div>
           </AnimatePresence>
