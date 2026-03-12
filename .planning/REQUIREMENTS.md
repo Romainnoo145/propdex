@@ -229,25 +229,25 @@ Requirements for feature phases (103-106).
 
 ### Due Diligence Dashboard (Phase 107)
 
-- [ ] **DD107-01**: 7-item section nav (vertical, left-side) with URL-synced active state (?section= param), Framer Motion layoutId animated selection indicator, browser back/forward support
+- [x] **DD107-01**: 7-item section nav (vertical, left-side) with URL-synced active state (?section= param), Framer Motion layoutId animated selection indicator, browser back/forward support
 - [ ] **DD107-02**: Each of 7 sections renders data from PropertyReportResponse with data completeness badge (complete/partial/empty), graceful null handling for old reports
-- [ ] **DD107-03**: Per-section notes textarea saved via PATCH /api/reports/{id}/notes as JSON string within existing notes field — zero backend changes, plain-text migration for pre-107 notes
+- [x] **DD107-03**: Per-section notes textarea saved via PATCH /api/reports/{id}/notes as JSON string within existing notes field — zero backend changes, plain-text migration for pre-107 notes
 - [ ] **DD107-04**: Per-section document upload zone using Phase 106 useUploadDocument/useParcelDocuments hooks, linked to section-specific document_type keys, disabled when sourceParcelId is null
-- [ ] **DD107-05**: PDF export button in section footer triggers full due diligence PDF download via existing useExportPDF mutation (Phase 104 template)
-- [ ] **DD107-06**: Dashboard renders at existing /rapport/$id route — ReportDetailPage replaced, route wrapper updated, back button preserved
-- [ ] **DD107-07**: 300-line file limit enforced: 7 section files + shared components in sections/ and components/ subdirectories
+- [x] **DD107-05**: PDF export button in section footer triggers full due diligence PDF download via existing useExportPDF mutation (Phase 104 template)
+- [x] **DD107-06**: Dashboard renders at existing /rapport/$id route — ReportDetailPage replaced, route wrapper updated, back button preserved
+- [x] **DD107-07**: 300-line file limit enforced: 7 section files + shared components in sections/ and components/ subdirectories
 
 ### v17.0 Phase 107 Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DD107-01 | Phase 107 | Pending |
+| DD107-01 | Phase 107 | Complete |
 | DD107-02 | Phase 107 | Pending |
-| DD107-03 | Phase 107 | Pending |
+| DD107-03 | Phase 107 | Complete |
 | DD107-04 | Phase 107 | Pending |
-| DD107-05 | Phase 107 | Pending |
-| DD107-06 | Phase 107 | Pending |
-| DD107-07 | Phase 107 | Pending |
+| DD107-05 | Phase 107 | Complete |
+| DD107-06 | Phase 107 | Complete |
+| DD107-07 | Phase 107 | Complete |
 
 **Phase 107 Coverage:**
 - Requirements: 7 total
