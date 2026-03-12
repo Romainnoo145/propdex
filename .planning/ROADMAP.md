@@ -55,7 +55,7 @@ LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage pri
 
 #### Feature Phases (in order)
 - [x] **Phase 106: Perceel Dossier Upload** - Per-parcel document storage: parcel_documents table, PostgreSQL LargeBinary, upload/download/delete endpoints, upload buttons in Dossiers tab. 5 dossier categories (Acquisitie, Technisch, Planologisch, Juridisch, Projectnotities) (completed 2026-03-11)
-- [x] **Phase 104: Rapport v2.0** - Rapport rewrite as pure template render on pre-cached scan data + score narratieven, no on-demand API calls. Depends on Phase 101
+- [ ] **Phase 104: Locatie Due Diligence Dossier** - "Genereer Rapport" becomes a structured due diligence dossier assembled from pre-cached scan data. PDF export with all public source data organized by vergunning-relevance. Replaces API-call-based aggregation with flags-first lookup
 - [x] **Phase 105: BRK Eigendom Modal** - On-demand BRK ownership fetch in modal (no caching, Kadaster compliance) (completed 2026-03-11)
 
 #### Aura Reskin Batch (low priority, cosmetic only)
@@ -112,14 +112,17 @@ Plans:
 - [ ] 106-01-PLAN.md — Backend model, migration, CRUD endpoints
 - [ ] 106-02-PLAN.md — Frontend types, hooks, BronnenLayer upload UI
 
-### Phase 104: Rapport v2.0
-**Goal**: Rapport generation uses pre-cached scan data + score v3.0 narratieven — no on-demand API calls
-**Depends on**: Phase 101
+### Phase 104: Locatie Due Diligence Dossier
+**Goal**: Transform "Genereer Rapport" from API-call aggregation into a structured Locatie Due Diligence Dossier assembled from pre-cached scan data, organized by vergunning-relevance for vastgoedontwikkelaars
+**Depends on**: Phase 101, Phase 99
+**Requirements:** [DD-01, DD-02, DD-03, DD-04, DD-05, DD-06, DD-07]
 **Success Criteria**:
-  1. "Genereer Rapport" assembles from pre-cached scan data (no external API calls)
-  2. Report includes potentie_score + risico_score with per-factor breakdown
-  3. Report includes factor toelichting_lang narratieven as "Analyse" chapter
-  4. BRK ownership on-demand (Kadaster compliance) — only exception
+  1. "Genereer Rapport" reads from scan_results.flags (pre-cached) — zero external API calls (except BRK on-demand)
+  2. PDF export contains structured dossier sections: Locatie, Kadaster, Bestemmingsplan, Bouwmogelijkheden, Risicoprofiel (bodem/fundering/asbest/geluid/lucht/natura2000/overstroming), Scores + Narratieven, Bronvermelding
+  3. Each section shows bron, datum opgehaald, betrouwbaarheid
+  4. Report includes potentie_score + risico_score with per-factor breakdown and toelichting_lang narratieven
+  5. PDF is professional A4 format suitable for forwarding to adviesbureau or municipality
+  6. Existing Rapporten tab + wijk folder organization continues to work
 **Plans**: TBD
 
 ### Phase 105: BRK Eigendom Modal

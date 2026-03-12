@@ -196,5 +196,36 @@ Requirements for the Score Intelligence milestone (Phases 99-101).
 - Mapped to phases: 17
 - Unmapped: 0
 
+## v17.0 Requirements
+
+Requirements for feature phases (103-106).
+
+### Locatie Due Diligence Dossier (Phase 104)
+
+- [ ] **DD-01**: "Genereer Rapport" reads parcel data from scan_results.flags (pre-cached enrichment) — zero external API calls except BRK on-demand
+- [ ] **DD-02**: Report data structured by vergunning-relevance sections: Locatiegegevens, Kadaster & Eigendom, Bestemmingsplan & Bouwmogelijkheden, Risicoprofiel (bodem/fundering/asbest/geluid/lucht/natura2000/overstroming), Potentie & Risico Scores met narratieven, Vergunningen & Precedenten, Bronvermelding
+- [ ] **DD-03**: Each report section includes metadata: databron naam, datum opgehaald, betrouwbaarheidsindicatie
+- [ ] **DD-04**: PDF export generates professional A4 "Locatie Due Diligence Dossier" with cover page, table of contents, numbered sections, and footer with generation date + Propdex branding
+- [ ] **DD-05**: PDF includes potentie_score + risico_score with per-factor breakdown table and toelichting_lang narratieven as "Analyse" chapter
+- [ ] **DD-06**: Existing Rapporten tab, wijk folder auto-assignment, and rapport CRUD operations continue to work unchanged
+- [ ] **DD-07**: Report data schema (PropertyReportResponse) extended with all enrichment fields so saved reports contain the full dossier
+
+### v17.0 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DD-01 | Phase 104 | Pending |
+| DD-02 | Phase 104 | Pending |
+| DD-03 | Phase 104 | Pending |
+| DD-04 | Phase 104 | Pending |
+| DD-05 | Phase 104 | Pending |
+| DD-06 | Phase 104 | Pending |
+| DD-07 | Phase 104 | Pending |
+
+**v17.0 Coverage:**
+- Phase 104 requirements: 7 total
+- Mapped to phases: 7
+- Unmapped: 0
+
 ---
-*Requirements updated: 2026-03-11*
+*Requirements updated: 2026-03-12*
