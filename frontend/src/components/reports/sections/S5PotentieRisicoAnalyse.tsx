@@ -169,6 +169,31 @@ function FactorRow({ factor, accent }: { factor: FactorResult; accent: 'green' |
   )
 }
 
+/* ─── Factors table ─────────────────────────────────────────── */
+
+function FactorsTable({ factors, accent, title }: { factors: FactorResult[]; accent: 'green' | 'red'; title: string }) {
+  const headerClass = accent === 'green' ? 'text-green-600' : 'text-red-600'
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
+      <div className="border-b border-neutral-100 px-4 py-3">
+        <p className={`text-xs font-bold uppercase tracking-wider ${headerClass}`}>{title} ({factors.length})</p>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="text-left">
+            {['Factor', 'Waarde', 'Score', 'Gewicht', 'Bijdrage'].map((h, i) => (
+              <th key={h} className={`py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 ${i === 0 ? 'pl-4 pr-2' : i === 4 ? 'px-2 pr-4 text-right' : ['Score', 'Gewicht'].includes(h) ? 'px-2 text-center' : 'px-2'}`}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {factors.map((f, i) => <FactorRow key={i} factor={f} accent={accent} />)}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 /* ─── Upload Zone ────────────────────────────────────────────── */
 
 function UploadZone({ parcelId }: { parcelId: string }) {
@@ -259,56 +284,12 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
 
       {/* Potentie factors table */}
       {potentieFactors.length > 0 && (
-        <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-          <div className="border-b border-neutral-100 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-green-600">
-              Potentiefactoren ({potentieFactors.length})
-            </p>
-          </div>
-          <table className="w-full">
-            <thead>
-              <tr className="text-left">
-                <th className="py-2 pl-4 pr-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Factor</th>
-                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Waarde</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Score</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Gewicht</th>
-                <th className="px-2 py-2 pr-4 text-right text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Bijdrage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {potentieFactors.map((f, i) => (
-                <FactorRow key={i} factor={f} accent="green" />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <FactorsTable factors={potentieFactors} accent="green" title="Potentiefactoren" />
       )}
 
       {/* Risico factors table */}
       {risicoFactors.length > 0 && (
-        <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-          <div className="border-b border-neutral-100 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-red-600">
-              Risicofactoren ({risicoFactors.length})
-            </p>
-          </div>
-          <table className="w-full">
-            <thead>
-              <tr className="text-left">
-                <th className="py-2 pl-4 pr-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Factor</th>
-                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Waarde</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Score</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Gewicht</th>
-                <th className="px-2 py-2 pr-4 text-right text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Bijdrage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {risicoFactors.map((f, i) => (
-                <FactorRow key={i} factor={f} accent="red" />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <FactorsTable factors={risicoFactors} accent="red" title="Risicofactoren" />
       )}
 
       {/* Upload zone */}
