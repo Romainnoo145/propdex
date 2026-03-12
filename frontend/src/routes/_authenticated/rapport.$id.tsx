@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useReport } from '@/hooks/useReports'
-import ReportDetailPage from '@/components/reports/ReportDetailPage'
+import DueDiligenceDashboard from '@/components/reports/DueDiligenceDashboard'
 import type { PropertyReportResponse } from '@/lib/types/property'
 
 interface RapportSearchParams {
   postcode?: string
   huisnummer?: number
   from?: 'rapporten' | 'projecten' | 'meldingen' | 'resultaten'
+  section?: string
 }
 
 export const Route = createFileRoute('/_authenticated/rapport/$id')({
@@ -23,6 +24,7 @@ export const Route = createFileRoute('/_authenticated/rapport/$id')({
       search.from === 'resultaten'
       ? search.from
       : undefined,
+    section: typeof search.section === 'string' ? search.section : undefined,
   }),
 })
 
@@ -83,12 +85,14 @@ function RapportPage() {
   }
 
   return (
-    <ReportDetailPage
+    <DueDiligenceDashboard
       data={propertyData}
       isLoading={savedReport.isLoading}
       backLabel={backLabel}
       sourceParcelId={savedReport.data?.source_parcel_id ?? null}
       reportId={id.startsWith('r') ? null : id}
+      notes={savedReport.data?.notes ?? null}
+      activeSection={search.section}
       onBack={handleBack}
       onViewOnMap={handleViewOnMap}
     />
