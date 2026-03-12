@@ -524,4 +524,19 @@ export interface PropertyReportResponse {
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
   fysiek_risico_profiel?: FysiekRisicoProfiel | null
+
+  // Phase 104 additions (Due Diligence Dossier — flags-sourced enrichment)
+  vergunningen_data?: Record<string, unknown>[] | null
+  energielabel_flags?: Record<string, unknown> | null
+  woz_flags?: Record<string, unknown> | null
+  bodem_flags?: string | null
+  bodemtype_flags?: string | null
+  funderingsrisico_flags?: Record<string, unknown> | null
+  natura2000_flags?: Record<string, unknown> | null
+  overstromingsrisico_flags?: Record<string, unknown> | null
+  geluid_flags?: Record<string, unknown> | null
+  luchtkwaliteit_flags?: Record<string, unknown> | null
+  scores_v3?: Record<string, unknown> | null
+  score_breakdown_v3?: Record<string, unknown> | null
+  score_model_version?: string | null
 }

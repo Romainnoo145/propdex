@@ -364,6 +364,28 @@ export async function refreshReport(
 }
 
 /**
+ * Update report notes (per-section JSON string)
+ *
+ * PATCH /api/reports/{reportId}/notes
+ *
+ * @param reportId - Report UUID to update
+ * @param notes - Notes JSON string or null
+ * @param accessToken - JWT access token from useAuth()
+ * @returns Updated report detail
+ */
+export async function updateReportNotes(
+  reportId: string,
+  notes: string | null,
+  accessToken: string | null,
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/${reportId}/notes`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notes }),
+    accessToken,
+  })
+}
+
+/**
  * Export report as PDF
  *
  * GET /api/reports/{reportId}/export/pdf

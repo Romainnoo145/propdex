@@ -26,6 +26,7 @@ import {
   exportReportPDF,
   fetchCities,
   generateReportFromParcel,
+  updateReportNotes,
 } from '@/lib/api'
 import type {
   GenerateReportFromParcelResponse,
@@ -157,6 +158,23 @@ export function useExportPDF() {
 
   return useMutation<Blob, Error, string>({
     mutationFn: (reportId: string) => exportReportPDF(reportId, accessToken),
+  })
+}
+
+/**
+ * Update report notes (per-section JSON string)
+ *
+ * Invalidates the specific report cache on success.
+ */
+export function useUpdateNotes() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<ReportDetailResponse, Error, { reportId: string; notes: string | null }>({
+    mutationFn: (vars) => updateReportNotes(vars.reportId, vars.notes, accessToken),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['report', vars.reportId] })
+    },
   })
 }
 
