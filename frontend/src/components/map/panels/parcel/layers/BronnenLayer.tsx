@@ -45,6 +45,7 @@ import {
   Send,
   BrainCircuit,
   Zap,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react'
 import { useParcelEnrichment } from '@/hooks/useScans'
