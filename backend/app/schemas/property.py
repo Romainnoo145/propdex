@@ -571,3 +571,57 @@ class PropertyReportResponse(BaseModel):
         default=None,
         description="Combined physical risk profile: foundation, soil, asbest, contamination",
     )
+
+    # Phase 104 additions (Due Diligence Dossier — flags-sourced enrichment)
+    vergunningen_data: list[dict] | None = Field(
+        default=None,
+        description="SRU bekendmakingen records from scan flags",
+    )
+    energielabel_flags: dict | None = Field(
+        default=None,
+        description="EP-Online enrichment from scan flags",
+    )
+    woz_flags: dict | None = Field(
+        default=None,
+        description="Waardeloket enrichment from scan flags",
+    )
+    bodem_flags: str | None = Field(
+        default=None,
+        description="Bodemkwaliteitsklasse from scan flags",
+    )
+    bodemtype_flags: str | None = Field(
+        default=None,
+        description="Soil type (klei/veen/zand/leem) from scan flags",
+    )
+    funderingsrisico_flags: dict | None = Field(
+        default=None,
+        description="PDOK WFS funderingsrisico from scan flags",
+    )
+    natura2000_flags: dict | None = Field(
+        default=None,
+        description="Natura2000 distance + zone from scan flags",
+    )
+    overstromingsrisico_flags: dict | None = Field(
+        default=None,
+        description="Overstromingsrisico from scan flags",
+    )
+    geluid_flags: dict | None = Field(
+        default=None,
+        description="Geluid Lden dB category from scan flags",
+    )
+    luchtkwaliteit_flags: dict | None = Field(
+        default=None,
+        description="NO2/PM10 indicators from scan flags",
+    )
+    scores_v3: dict | None = Field(
+        default=None,
+        description="v3.0 scores: {potentie, risico, overall}",
+    )
+    score_breakdown_v3: dict | None = Field(
+        default=None,
+        description="Per-factor FactorResult dicts from v3.0 engine",
+    )
+    score_model_version: str | None = Field(
+        default=None,
+        description="Score model version identifier (e.g. score-v3.0)",
+    )
