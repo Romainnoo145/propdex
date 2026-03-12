@@ -209,7 +209,7 @@ Plans:
 | 106. Dossier Upload | Complete | 2026-03-11 |
 | 104. Due Diligence Dossier | Complete | 2026-03-12 |
 | 105. BRK Eigendom Modal | Complete | 2026-03-12 |
-| 107. Due Diligence Dashboard | 1/3 | In Progress|  | 94. Wijk & Gemeente Reskin | Backlog | - |
+| 107. Due Diligence Dashboard | 2/3 | In Progress|  | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
 | 97. Settings Reskin | Backlog | - |
