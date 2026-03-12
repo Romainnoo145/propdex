@@ -188,8 +188,7 @@ Plans:
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Complete | 2026-03-11 |
-| 104. Due Diligence Dossier | Planned | - |
-| 105. BRK Eigendom Modal | Complete | 2026-03-12 |
+| 104. Due Diligence Dossier | 1/2 | In Progress|  | 105. BRK Eigendom Modal | Complete | 2026-03-12 |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
