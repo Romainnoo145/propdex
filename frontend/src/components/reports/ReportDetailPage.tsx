@@ -1,3 +1,7 @@
+/**
+ * @deprecated Replaced by DueDiligenceDashboard in Phase 107.
+ * Retained temporarily for reference. Safe to delete after Phase 107 verification.
+ */
 import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { uploadBestemmingsplanPDF } from '@/lib/api'

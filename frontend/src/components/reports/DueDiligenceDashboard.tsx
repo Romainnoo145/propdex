@@ -2,7 +2,7 @@
  * DueDiligenceDashboard — replaces ReportDetailPage monolith
  *
  * Layout: left sidebar (220px) with SectionNav + main content pane
- * with URL-synced active section. Section content is deferred to Plan 107-02.
+ * with URL-synced active section. All 7 sections wired as of Plan 107-03.
  */
 
 import { useCallback } from 'react'
@@ -12,14 +12,17 @@ import type { PropertyReportResponse } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
 import { SectionNav, SECTIONS } from './components/SectionNav'
 import { SectionShell } from './components/SectionShell'
+import { parseNotes, computeSectionStatuses, EMPTY_STATUSES } from './components/sectionUtils'
 import { useExportPDF } from '@/hooks/useReports'
 import { useUpdateNotes } from '@/hooks/useReports'
 import type { SectionKey } from './components/SectionNav'
-import type { SectionStatus } from './components/SectionStatusBadge'
 import { S1Locatiegegevens } from './sections/S1Locatiegegevens'
 import { S2KadasterEigendom } from './sections/S2KadasterEigendom'
 import { S3BestemmingsplanBouwmogelijkheden } from './sections/S3BestemmingsplanBouwmogelijkheden'
 import { S4Risicoprofiel } from './sections/S4Risicoprofiel'
+import { S5PotentieRisicoAnalyse } from './sections/S5PotentieRisicoAnalyse'
+import { S6VergunningenPrecedenten } from './sections/S6VergunningenPrecedenten'
+import { S7Bronvermelding } from './sections/S7Bronvermelding'
 import {
   MapPin,
   Gavel,
@@ -57,78 +60,6 @@ const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
   bronnen: Database,
 }
 
-/* ─── Notes helpers ─────────────────────────────────────────── */
-
-/**
- * Parse notes field: accepts JSON object, plain string, or null.
- * Plain text is migrated into { locatiegegevens: text }.
- */
-function parseNotes(raw: string | null | undefined): Record<string, string> {
-  if (!raw) return {}
-  try {
-    const parsed = JSON.parse(raw)
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, string>
-    }
-  } catch {
-    // plain text migration
-  }
-  return { locatiegegevens: raw }
-}
-
-/* ─── Status computation ─────────────────────────────────────── */
-
-function computeSectionStatuses(
-  data: PropertyReportResponse,
-): Record<SectionKey, SectionStatus> {
-  const riskFieldCount = [
-    data.fysiek_risico_profiel,
-    data.funderingsrisico_flags,
-    data.natura2000_flags,
-    data.overstromingsrisico_flags,
-    data.geluid_flags,
-    data.luchtkwaliteit_flags,
-    data.bodem_data ?? data.bodem_flags,
-    data.asbest_indicator,
-  ].filter(Boolean).length
-
-  return {
-    locatiegegevens: data.address ? 'complete' : 'empty',
-    kadaster:
-      data.cadastral_parcels.length > 0
-        ? 'complete'
-        : data.brk_ownership
-          ? 'partial'
-          : 'empty',
-    bestemmingsplan: data.zoning
-      ? data.zoning.plans.length > 0
-        ? 'complete'
-        : 'partial'
-      : 'empty',
-    risicoprofiel:
-      riskFieldCount >= 4 ? 'complete' : riskFieldCount > 0 ? 'partial' : 'empty',
-    analyse:
-      data.scores_v3 != null || data.score_breakdown_v3 != null ? 'complete' : 'empty',
-    vergunningen:
-      data.permit_precedents
-        ? 'complete'
-        : (data.vergunningen_data?.length ?? 0) > 0
-          ? 'partial'
-          : 'empty',
-    bronnen: data.section_sources.length > 0 ? 'complete' : 'empty',
-  }
-}
-
-const EMPTY_STATUSES: Record<SectionKey, SectionStatus> = {
-  locatiegegevens: 'empty',
-  kadaster: 'empty',
-  bestemmingsplan: 'empty',
-  risicoprofiel: 'empty',
-  analyse: 'empty',
-  vergunningen: 'empty',
-  bronnen: 'empty',
-}
-
 /* ─── Section title map ─────────────────────────────────────── */
 
 const SECTION_TITLES: Record<SectionKey, string> = {
@@ -157,12 +88,12 @@ function renderSectionContent(
       return <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} />
     case 'risicoprofiel':
       return <S4Risicoprofiel data={data} sourceParcelId={sourceParcelId} />
-    default:
-      return (
-        <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 text-center">
-          <p className="text-[13px] font-semibold text-neutral-400">Sectie in voorbereiding</p>
-        </div>
-      )
+    case 'analyse':
+      return <S5PotentieRisicoAnalyse data={data} sourceParcelId={sourceParcelId} />
+    case 'vergunningen':
+      return <S6VergunningenPrecedenten data={data} sourceParcelId={sourceParcelId} />
+    case 'bronnen':
+      return <S7Bronvermelding data={data} />
   }
 }
 
