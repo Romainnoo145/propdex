@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v17.0 Locatie Due Diligence Dossier -- Phase 104 (Report v2 Backend + Frontend)
+**Current focus:** v17.0 Due Diligence Dashboard -- Phase 107 (Interactive report workspace)
 
 ---
 
 ## Current Position
 
-Phase: 104 -- Locatie Due Diligence Dossier
-Plan: 2 of 2 complete
-Status: Complete
-Last activity: 2026-03-12 -- Plan 104-02 complete (Due diligence PDF template)
+Phase: 107 -- Due Diligence Dashboard
+Plan: 0 of 3 complete
+Status: Planned
+Last activity: 2026-03-12 -- Phase 107 planned (3 plans, 2 waves)
 
-Progress: [##########] 100% (2/2 plans in phase 104)
+Progress: [..........] 0% (0/3 plans in phase 107)
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [##########] 100% (2/2 plans in phase 104)
 ### Roadmap Evolution
 - Phase 93.1 inserted after Phase 93: Potentie Dashboard — no-scroll investor dashboard (URGENT)
 - Phase 101.1 inserted after Phase 101: Enrichment Backfill Venlo — backfill all 10 Phase 99 data sources for 137k Venlo parcels, then re-score (URGENT)
+- Phase 107 added: Due Diligence Dashboard — rebuild ReportDetailPage as interactive dossier workspace
 
 ### Decisions
 - SideRailNav renders after <main> in DOM so it floats on top without z-index conflicts
@@ -144,10 +145,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-12T10:50:00.000Z
-**Stopped At:** Completed 104-02-PLAN.md
+**Last Session:** 2026-03-12T11:00:00.000Z
+**Stopped At:** Phase 107 planned (3 plans, 2 waves)
 
-**Next Action:** Phase 104 complete. Begin next phase.
+**Next Action:** Execute Plan 107-01 (dashboard shell + section nav + notes hook + route rewire)
 
 ---
 

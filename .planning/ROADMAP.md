@@ -30,7 +30,7 @@
 ## Execution Order
 
 ```
-NOW:   104 Due Diligence Dossier → flags-first rapport + professionele PDF
+NOW:   107 Due Diligence Dashboard → interactief werkdashboard, 7 secties, notities, uploads
 LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage prio)
 ```
 
@@ -146,6 +146,25 @@ Plans:
 - [ ] 105-01-PLAN.md — Backend eigendom endpoint (PDOK resolution + BRK fetch)
 - [ ] 105-02-PLAN.md — Frontend EigendomModal with confirmation, adaptive framing, teasers
 
+### Phase 107: Due Diligence Dashboard
+**Goal**: Rebuild ReportDetailPage als interactief due diligence werkdashboard met 7 dossier-secties uit Phase 104. Primaire werkscherm voor vastgoedontwikkelaars — per sectie data bekijken, aanvullen met notities/uploads, en exporteren als PDF.
+**Depends on**: Phase 104
+**Requirements:** [DD107-01, DD107-02, DD107-03, DD107-04, DD107-05, DD107-06, DD107-07]
+**Success Criteria**:
+  1. 7-section nav dashboard replaces 2197-line ReportDetailPage monolith
+  2. Each section renders data from PropertyReportResponse with completeness badge
+  3. Per-section notes saved as JSON in report.notes field (zero backend changes)
+  4. Per-section document upload integrated via Phase 106 infrastructure
+  5. PDF export triggers due diligence dossier PDF (Phase 104 template)
+  6. URL-synced section navigation with browser back/forward support
+  7. All files under 300-line limit
+**Plans**: 3 plans (2 waves)
+
+Plans:
+- [ ] 107-01-PLAN.md — Dashboard shell + section nav + notes hook + route rewire (wave 1)
+- [ ] 107-02-PLAN.md — Sections 1-4: Locatiegegevens, Kadaster, Bestemmingsplan, Risicoprofiel (wave 2)
+- [ ] 107-03-PLAN.md — Sections 5-7: Potentie & Risico, Vergunningen, Bronvermelding + final wiring (wave 2)
+
 ### Phase 94: Wijk & Gemeente Views (Aura Reskin)
 **Goal**: Aura styling for wijk/gemeente panels — existing functionality preserved
 **Depends on**: Phase 91
@@ -188,7 +207,9 @@ Plans:
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Complete | 2026-03-11 |
-| 104. Due Diligence Dossier | 2/2 | Complete    | 2026-03-12 | 105. BRK Eigendom Modal | Complete | 2026-03-12 |
+| 104. Due Diligence Dossier | Complete | 2026-03-12 |
+| 105. BRK Eigendom Modal | Complete | 2026-03-12 |
+| 107. Due Diligence Dashboard | Planned | - |
 | 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
@@ -248,4 +269,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-12 -- Phase 104 planned: 2 plans, 2 waves*
+*Last updated: 2026-03-12 -- Phase 107 planned: 3 plans, 2 waves*
