@@ -30,8 +30,8 @@
 ## Execution Order
 
 ```
-NOW:   105 BRK Eigendom       → eigendomsmodal met on-demand BRK fetch
-LATER: 94-97 Aura Reskin      → cosmetische updates overige pagina's (lage prio)
+NOW:   104 Due Diligence Dossier → flags-first rapport + professionele PDF
+LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage prio)
 ```
 
 ---
@@ -123,7 +123,11 @@ Plans:
   4. Report includes potentie_score + risico_score with per-factor breakdown and toelichting_lang narratieven
   5. PDF is professional A4 format suitable for forwarding to adviesbureau or municipality
   6. Existing Rapporten tab + wijk folder organization continues to work
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 104-01-PLAN.md — Backend schema extension + flags assembler + from-parcel rewire
+- [ ] 104-02-PLAN.md — Due diligence PDF template + export function
 
 ### Phase 105: BRK Eigendom Modal
 **Goal**: On-demand BRK ownership data in a modal on the parcel detail panel with adaptive framing and rapport conversion teasers
@@ -184,8 +188,9 @@ Plans:
 | 93. Parcel Detail Panel + Tabs | Complete | 2026-03-11 |
 | 103. Potentie & Risico Dashboard | Complete | 2026-03-11 |
 | 106. Dossier Upload | Complete | 2026-03-11 |
-| 104. Rapport v2.0 | Complete | 2026-03-11 |
-| 105. BRK Eigendom Modal | 2/2 | Complete    | 2026-03-11 | 94. Wijk & Gemeente Reskin | Backlog | - |
+| 104. Due Diligence Dossier | Planned | - |
+| 105. BRK Eigendom Modal | Complete | 2026-03-12 |
+| 94. Wijk & Gemeente Reskin | Backlog | - |
 | 95. Results Table Reskin | Backlog | - |
 | 96. Jurisprudentie Reskin | Backlog | - |
 | 97. Settings Reskin | Backlog | - |
@@ -244,4 +249,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-12 -- Phase 105 planned: 2 plans, 2 waves*
+*Last updated: 2026-03-12 -- Phase 104 planned: 2 plans, 2 waves*
