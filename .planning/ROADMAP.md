@@ -30,7 +30,7 @@
 ## Execution Order
 
 ```
-NOW:   107 Due Diligence Dashboard → interactief werkdashboard, 7 secties, notities, uploads
+NOW:   108 Score Customization    → 4 env risicofactoren in engine + per-org gewichten settings
 LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage prio)
 ```
 
@@ -164,6 +164,22 @@ Plans:
 - [ ] 107-01-PLAN.md — Dashboard shell + section nav + notes hook + route rewire (wave 1)
 - [ ] 107-02-PLAN.md — Sections 1-4: Locatiegegevens, Kadaster, Bestemmingsplan, Risicoprofiel (wave 2)
 - [ ] 107-03-PLAN.md — Sections 5-7: Potentie & Risico, Vergunningen, Bronvermelding + final wiring (wave 2)
+
+### Phase 108: Score Customization
+**Goal**: Extend Score v3.0 engine with 4 environmental risk factors (natura2000, overstromingsrisico, geluid, luchtkwaliteit → 9→13 risicofactoren, rebalance weights) AND add per-organization score weight customization so users can toggle factors on/off and adjust weights via Settings
+**Depends on**: Phase 100, Phase 99
+**Requirements:** TBD
+**Success Criteria**:
+  1. 4 environmental factors scored in score_v3_factors.py with proper normalization and narratieven
+  2. Risico gewichten herbalanceerd (13 factoren, gewichten optellen tot nieuw maximum)
+  3. Per-organization score_weights stored in DB (organization-level, not user-level)
+  4. Settings tab in /instellingen with factor toggle + weight slider UI
+  5. Score engine uses custom weights when available, falls back to defaults
+  6. All existing scans re-scored with new factors (backfill)
+**Plans**: TBD
+
+Plans:
+- TBD
 
 ### Phase 94: Wijk & Gemeente Views (Aura Reskin)
 **Goal**: Aura styling for wijk/gemeente panels — existing functionality preserved
