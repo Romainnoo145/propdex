@@ -6,6 +6,7 @@ import { Key, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/primitives/Input'
 import { Button } from '@/components/primitives/Button'
+import { BentoPod } from '@/components/primitives/BentoPod'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useChangePassword } from '@/hooks/useSettings'
 
@@ -57,9 +58,9 @@ export function PasswordSection() {
   const isEmailUser = user?.auth_provider === 'email'
 
   return (
-    <section>
-      <div className="mb-4 flex items-center gap-2">
-        <Key className="h-5 w-5 text-neutral-600" />
+    <BentoPod size="spacious" className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Key className="h-5 w-5 text-aura-amber" />
         <h2 className="text-lg font-semibold text-aura-ink">Wachtwoord</h2>
       </div>
 
@@ -69,7 +70,7 @@ export function PasswordSection() {
         </p>
       ) : (
         <>
-          <p className="mb-6 text-sm text-neutral-600">
+          <p className="text-sm text-neutral-600">
             Wijzig je wachtwoord
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -158,6 +159,6 @@ export function PasswordSection() {
           </form>
         </>
       )}
-    </section>
+    </BentoPod>
   )
 }

@@ -1,6 +1,7 @@
 import { Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { BentoPod } from '@/components/primitives/BentoPod'
 import { useUserPreferences, useUpdatePreferences } from '@/hooks/useSettings'
 
 export function NotificationsSection() {
@@ -20,12 +21,12 @@ export function NotificationsSection() {
   }
 
   return (
-    <section>
-      <div className="mb-4 flex items-center gap-2">
-        <Bell className="h-5 w-5 text-neutral-600" />
+    <BentoPod size="spacious" className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Bell className="h-5 w-5 text-aura-amber" />
         <h2 className="text-lg font-semibold text-aura-ink">Meldingen</h2>
       </div>
-      <p className="mb-6 text-sm text-neutral-600">
+      <p className="text-sm text-neutral-600">
         Ontvang e-mailmeldingen bij wijzigingen in je gemonitorde gebieden
       </p>
 
@@ -60,6 +61,6 @@ export function NotificationsSection() {
           </button>
         </div>
       )}
-    </section>
+    </BentoPod>
   )
 }

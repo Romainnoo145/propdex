@@ -18,7 +18,7 @@ export function SettingsTabNav() {
   const isAccountActive = !isScoreActive
 
   return (
-    <nav className="flex gap-1 rounded-full bg-neutral-100 p-1 w-fit">
+    <nav className="flex gap-1 rounded-full bg-aura-glass-white/40 border border-white/40 p-1 w-fit">
       <Link
         to="/instellingen"
         className={cn(

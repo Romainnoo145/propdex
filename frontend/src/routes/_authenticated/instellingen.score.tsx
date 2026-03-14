@@ -10,7 +10,7 @@ export const Route = createFileRoute('/_authenticated/instellingen/score')({
 function InstellingenScorePage() {
   return (
     <ResultsShell>
-      <div className="mb-8">
+      <div className="mb-6 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-5 py-4">
         <h1 className="text-2xl font-semibold text-aura-ink">Instellingen</h1>
         <p className="mt-1 text-neutral-600">Beheer je account en voorkeuren</p>
       </div>

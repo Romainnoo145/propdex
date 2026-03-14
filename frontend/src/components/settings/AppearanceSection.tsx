@@ -1,6 +1,7 @@
 import { Palette, Satellite, Map } from 'lucide-react'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { BentoPod } from '@/components/primitives/BentoPod'
 import { useUserPreferences, useUpdatePreferences } from '@/hooks/useSettings'
 
 const MAP_STYLES = [
@@ -36,14 +37,14 @@ export function AppearanceSection() {
   }
 
   return (
-    <section>
-      <div className="mb-4 flex items-center gap-2">
-        <Palette className="h-5 w-5 text-neutral-600" />
+    <BentoPod size="spacious" className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Palette className="h-5 w-5 text-aura-amber" />
         <h2 className="text-lg font-semibold text-aura-ink">Weergave</h2>
       </div>
 
       {/* Map style */}
-      <p className="mb-3 text-sm text-neutral-600">
+      <p className="text-sm text-neutral-600">
         Kaartstijl
       </p>
 
@@ -66,14 +67,14 @@ export function AppearanceSection() {
                   'transition-colors duration-150',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aura-green focus-visible:ring-offset-2 focus-visible:ring-offset-aura-canvas',
                   isSelected
-                    ? 'border-aura-green ring-2 ring-aura-green'
+                    ? 'border-aura-amber ring-1 ring-aura-amber bg-aura-glass-white/40'
                     : 'border-neutral-200 hover:border-neutral-400',
                 ].join(' ')}
               >
                 <Icon
                   className={[
                     'h-8 w-8',
-                    isSelected ? 'text-aura-green' : 'text-neutral-600',
+                    isSelected ? 'text-aura-amber' : 'text-neutral-600',
                   ].join(' ')}
                 />
                 <span
@@ -90,6 +91,6 @@ export function AppearanceSection() {
           })}
         </div>
       )}
-    </section>
+    </BentoPod>
   )
 }
