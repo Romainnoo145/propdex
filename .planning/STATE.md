@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v17.0 Due Diligence Dashboard -- Phase 107 (Interactive report workspace)
+**Current focus:** v18.0 Score Customization -- Phase 108 (Per-org weight overrides and environmental scoring)
 
 ---
 
 ## Current Position
 
-Phase: 107 -- Due Diligence Dashboard
-Plan: 3 of 3 complete
-Status: Complete
-Last activity: 2026-03-12 -- Phase 107 Plan 03 complete (S5-S7 sections + full dashboard wiring — all 7 sections operational)
+Phase: 108 -- Score Customization
+Plan: 1 of 4 complete
+Status: In Progress
+Last activity: 2026-03-14 -- Phase 108 Plan 01 complete (Score v3.0 extended to 21 factors with discount formula and custom_weights)
 
-Progress: [##########] 100% (3/3 plans in phase 107)
+Progress: [###.......] 25% (1/4 plans in phase 108)
 
 ## Performance Metrics
 
@@ -129,6 +129,11 @@ Progress: [##########] 100% (3/3 plans in phase 107)
 - [Phase 107-03]: sectionUtils.ts extracted from DueDiligenceDashboard for parseNotes + computeSectionStatuses (keeps dashboard under 300 lines)
 - [Phase 107-03]: S5 FactorsTable component DRYs up identical table header markup for potentie/risico factor breakdown
 - [Phase 107-03]: S7 source deduplication uses same statusPriority merge logic as legacy BronnenSection in ReportDetailPage
+- [Phase 108-01]: Discount model replaces potentie-risico subtraction: overall = potentie × (1 - risico_discount), always 0-100
+- [Phase 108-01]: potentie_risico_balance=0.7 default — risico discounts potentie at most 30% of its score (capped at 50%)
+- [Phase 108-01]: Environmental missing defaults to 0.3 (not 0.5) — NL baseline is quiet/clean for most parcels
+- [Phase 108-01]: DEFAULT_WEIGHTS exported from score_v3.py as module-level dict — single source of truth for 21 factors
+- [Phase 108-01]: Category thresholds updated to >60=Hoog, >30=Gemiddeld (was >40/>10 for old subtraction model)
 
 ### Key Patterns (carry forward)
 
@@ -155,10 +160,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-14T04:21:38.664Z
-**Stopped At:** Phase 108 planned — 4 plans, 3 waves
+**Last Session:** 2026-03-14T05:07:19Z
+**Stopped At:** Completed 108-01-PLAN.md — Score v3.0 engine extended to 21 factors with discount formula
 
-**Next Action:** Phase 107 complete. Next phase TBD (likely 108 or backlog).
+**Next Action:** Phase 108 Plan 02 — Re-score job to recompute all existing scan_results with new 21-factor formula.
 
 ---
 
