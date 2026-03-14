@@ -200,9 +200,13 @@ Plans:
 **Plans**: TBD
 
 ### Phase 97: Settings (Aura Reskin)
-**Goal**: Settings page Aura styling
+**Goal**: Settings page Aura styling — BentoPod sections, glass header bars, Aura accent colors, FactorTable row styling
 **Depends on**: Phase 91
-**Plans**: TBD
+**Requirements:** [SET-01]
+**Plans**: 1 plan
+
+Plans:
+- [ ] 97-01-PLAN.md — BentoPod sections, glass headers, SettingsTabNav + FactorTable Aura treatment
 
 ---
 
