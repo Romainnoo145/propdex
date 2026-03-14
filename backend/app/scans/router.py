@@ -11,7 +11,7 @@ from arq.jobs import Job
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from shapely.geometry import Point, box, shape
-from sqlalchemy import case, func, literal, select
+from sqlalchemy import func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +23,7 @@ from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
 from app.models.change_record import ChangeRecord
+from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.report import SavedReport
@@ -1027,18 +1028,13 @@ async def enrich_parcel(
         )
 
     # --- Flags-first lookup: check scan_results.flags for pre-cached enrichment ---
-    from app.models.area_scan import AreaScan
-
+    # After dedup migration, each parcel has exactly one scan_result per org.
     flags_query = (
         select(ScanResult.flags)
-        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
         .where(
             ScanResult.organization_id == organization_id,
             ScanResult.parcel_id == parcel_id,
-            AreaScan.status == "completed",
         )
-        .order_by(AreaScan.completed_at.desc())
-        .limit(1)
     )
     flags_row = (await db.execute(flags_query)).scalar_one_or_none()
     scan_flags = flags_row if isinstance(flags_row, dict) else {}
@@ -1055,13 +1051,19 @@ async def enrich_parcel(
     flags_geluid = scan_flags.get("geluid")
     flags_luchtkwaliteit = scan_flags.get("luchtkwaliteit")
 
-    # If vergunningen are pre-cached in flags, return immediately without SRU API call
-    if flags_vergunningen is not None:
+    # If any enrichment data is pre-cached in flags, return it (even partial)
+    # This handles partially-enriched parcels from interrupted backfill runs
+    has_any_flags = any(v is not None for v in [
+        flags_vergunningen, flags_energielabel, flags_woz, flags_bodem,
+        flags_bodemtype, flags_funderingsrisico, flags_natura2000,
+        flags_overstromingsrisico, flags_geluid, flags_luchtkwaliteit,
+    ])
+    if has_any_flags:
         logger.info("Using pre-cached enrichment from scan flags for parcel %s", parcel_id)
         return ParcelEnrichmentResponse(
             parcel_id=parcel.id,
             enrichment_data={
-                "vergunningen": flags_vergunningen.get("records", []) if isinstance(flags_vergunningen, dict) else flags_vergunningen,
+                "vergunningen": (flags_vergunningen.get("records", []) if isinstance(flags_vergunningen, dict) else flags_vergunningen) if flags_vergunningen is not None else [],
                 "source_match_mode": "scan_flags",
             },
             enriched_at=parcel.enriched_at,
@@ -1531,48 +1533,24 @@ async def get_parcel_at_point(
         )
         .scalar_subquery()
     )
-    # Find scan data for this parcel: prefer the given scan_id, but fall back
-    # to the most recent completed scan that contains the parcel. This ensures
-    # parcels outside the currently-selected wijk scan still show full data
-    # when the gemeente has been fully scanned across multiple wijk scans.
-    from app.models.area_scan import AreaScan
-
-    best_scan_id_subquery = (
-        select(ScanResult.scan_id)
-        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
-        .where(
-            ScanResult.organization_id == organization_id,
-            ScanResult.parcel_id == ParcelCache.id,
-            AreaScan.status == "completed",
-        )
-        .order_by(
-            # Prefer the explicitly requested scan, then most recent
-            case((ScanResult.scan_id == scan_id, 0), else_=1) if scan_id else literal(1),
-            AreaScan.completed_at.desc(),
-        )
-        .limit(1)
-        .correlate(ParcelCache)
-        .scalar_subquery()
-    )
-
+    # After dedup migration, each parcel has exactly one scan_result per org.
+    # Direct lookup — no need for best-scan subquery workaround.
     scan_score_subquery = (
         select(ScanResult.score)
         .where(
             ScanResult.organization_id == organization_id,
-            ScanResult.scan_id == best_scan_id_subquery,
             ScanResult.parcel_id == ParcelCache.id,
         )
-        .limit(1)
+        .correlate(ParcelCache)
         .scalar_subquery()
     )
     scan_flags_subquery = (
         select(ScanResult.flags)
         .where(
             ScanResult.organization_id == organization_id,
-            ScanResult.scan_id == best_scan_id_subquery,
             ScanResult.parcel_id == ParcelCache.id,
         )
-        .limit(1)
+        .correlate(ParcelCache)
         .scalar_subquery()
     )
 
@@ -1830,6 +1808,13 @@ async def get_parcel_at_point(
         resolved_lng = float(pdok_centroid_wgs84[0])
         resolved_lat = float(pdok_centroid_wgs84[1])
 
+    # Derive uses_custom_weights at read time from org settings (not stored per scan_result)
+    org_score_weights_row = await db.execute(
+        select(Organization.score_weights).where(Organization.id == organization_id)
+    )
+    org_score_weights = org_score_weights_row.scalar_one_or_none()
+    uses_custom_weights = org_score_weights is not None
+
     return ParcelAtPointResponse(
         parcel_id=row["parcel_id"],
         lng=resolved_lng,
@@ -1855,6 +1840,7 @@ async def get_parcel_at_point(
         building_metrics=building_metrics,
         bestemmingen=row["bestemmingen"] if isinstance(row["bestemmingen"], list) else None,
         has_report=bool(row["has_report"]),
+        uses_custom_weights=uses_custom_weights,
         geometry=geometry,
     )
 

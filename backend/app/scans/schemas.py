@@ -402,6 +402,10 @@ class ParcelAtPointResponse(BaseModel):
         description="Bestemmingsplan designations from DSO/PLU",
     )
     has_report: bool = Field(description="True when at least one saved report exists")
+    uses_custom_weights: bool = Field(
+        default=False,
+        description="True when the org has non-default score weights (derived at read time)",
+    )
     geometry: dict | None = Field(
         default=None,
         description="Parcel geometry as GeoJSON (WGS84)",

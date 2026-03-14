@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion, useSpring, useTransform, AnimatePresence, type Variants } from 'framer-motion'
 import { Grid3x3, Building2, LandPlot, ChevronUp, ChevronDown, Search } from 'lucide-react'
-import type { ScanResultItem } from '@/lib/types/scan'
+import type { ScanResultItem, BekendmakingRecord } from '@/lib/types/scan'
 import { ParcelHero } from './ParcelHero'
 import { ScoreGauge } from './ScoreGauge'
 import { BouwjaarTimeline } from './BouwjaarTimeline'
 import { EigendomModal } from './EigendomModal'
+import { VergunningenModal } from './VergunningenModal'
+import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
 
@@ -13,6 +15,7 @@ interface ParcelBentoOverviewProps {
   parcel: ScanResultItem
   onSelectCategory: (cat: CategoryKey) => void
   meldingenCount: number | null
+  vergunningen: BekendmakingRecord[]
 }
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -113,9 +116,12 @@ export function ParcelBentoOverview({
   parcel,
   onSelectCategory,
   meldingenCount,
+  vergunningen,
 }: ParcelBentoOverviewProps) {
   const [activeCard, setActiveCard] = useState<BentoCard>('aerial')
   const [showEigendom, setShowEigendom] = useState(false)
+  const [showVergunningen, setShowVergunningen] = useState(false)
+  const { data: weightsData } = useOrgScoreWeights()
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
   const vrijPct =
@@ -204,6 +210,15 @@ export function ParcelBentoOverview({
         </motion.button>
       </div>
 
+      {/* Custom profiel badge — only when org uses non-default weights */}
+      {weightsData?.is_custom && (
+        <motion.div variants={fadeUp} className="mt-2 flex justify-center">
+          <span className="text-[10px] font-semibold tracking-wider uppercase text-neutral-500 bg-[#F2F6F3] rounded-full px-2 py-0.5">
+            Custom profiel
+          </span>
+        </motion.div>
+      )}
+
       {/* ── Bouwjaar divider ──────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-2">
         <BouwjaarTimeline bouwjaar={parcel.bouwjaar} />
@@ -246,6 +261,7 @@ export function ParcelBentoOverview({
                 ? 'Geen vergunningen'
                 : `${meldingenCount} vergunning${meldingenCount === 1 ? '' : 'en'}`
           }
+          onClick={meldingenCount != null && meldingenCount > 0 ? () => setShowVergunningen(true) : undefined}
         />
       </motion.div>
 
@@ -255,6 +271,17 @@ export function ParcelBentoOverview({
           <EigendomModal
             parcel={parcel}
             onClose={() => setShowEigendom(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Vergunningen modal */}
+      <AnimatePresence>
+        {showVergunningen && (
+          <VergunningenModal
+            records={vergunningen}
+            address={parcel.address}
+            onClose={() => setShowVergunningen(false)}
           />
         )}
       </AnimatePresence>
