@@ -1,6 +1,6 @@
 """Score v3.0 Engine — Dual-subscore model: Potentie + Risico.
 
-Replaces v2.1's 5-factor vacancy-heavy model with 17 factors integrating
+Replaces v2.1's 5-factor vacancy-heavy model with 21 factors integrating
 all data sources accumulated since v10.0. Backend scoring only — frontend
 types updated separately.
 
@@ -8,7 +8,7 @@ Usage:
     result = compute_score_v3(parcel_data, neighborhood_metrics)
     # result.potentie_score: 0-100
     # result.risico_score: 0-100
-    # result.overall: potentie - risico (can be negative)
+    # result.overall: potentie × (1 - risico_discount), 0-100
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ class ScoreV3Result:
 
     potentie_score: float  # 0-100
     risico_score: float  # 0-100
-    overall: float  # potentie - risico, can be negative
+    overall: float  # potentie × (1 - risico_discount), 0-100
     category: str  # Hoog / Gemiddeld / Laag
     score_breakdown: dict[str, FactorResult] = field(default_factory=dict)
     model_version: str = "score-v3.0"
@@ -47,15 +47,46 @@ class ScoreV3Result:
 
 # Raw max weights per category
 _POTENTIE_MAX = 80  # sum of 8 potentie gewichten
-_RISICO_MAX = 67  # sum of 9 risico gewichten
+_RISICO_MAX = 87  # sum of 13 risico gewichten (67 + 5+6+5+4 for env factors)
 
 # Critical risk factors that get -10% penalty when missing
 _CRITICAL_RISK_FACTORS = {"funderingsrisico", "bodemverontreiniging", "asbest"}
+
+# Default weights — single source of truth for presets and re-score job
+DEFAULT_WEIGHTS: dict[str, Any] = {
+    "potentie_weights": {
+        "vrije_grond": 12,
+        "optoppotentie": 10,
+        "bestemming": 12,
+        "leegstand": 8,
+        "funda_frictie": 5,
+        "perceelgrootte": 12,
+        "demografie": 8,
+        "vergunning_succeskans": 13,
+    },
+    "risico_weights": {
+        "funderingsrisico": 15,
+        "asbest": 6,
+        "bodemverontreiniging": 7,
+        "monument": 5,
+        "bestemmingswijziging": 8,
+        "constructieve_staat": 7,
+        "juridisch_klimaat": 8,
+        "criminaliteit": 6,
+        "max_hoogte_bereikt": 5,
+        "natura2000": 5,
+        "overstromingsrisico": 6,
+        "geluid": 5,
+        "luchtkwaliteit": 4,
+    },
+    "potentie_risico_balance": 0.7,
+}
 
 
 def compute_score_v3(
     parcel_data: dict[str, Any],
     neighborhood_metrics: dict[str, Any] | None = None,
+    custom_weights: dict[str, Any] | None = None,
 ) -> ScoreV3Result:
     """Compute Score v3.0 with dual Potentie + Risico subscores.
 
@@ -63,13 +94,16 @@ def compute_score_v3(
         parcel_data: flags_dict-style data from scan_results (area_m2,
             has_pand, bouwjaar, bestemmingen, building_metrics,
             vacancy_signal, market_signals, bodem, bodemtype,
-            funderingsrisico, energielabel, vergunningen).
+            funderingsrisico, energielabel, vergunningen,
+            natura2000, overstromingsrisico, geluid, luchtkwaliteit).
         neighborhood_metrics: CBS wijk data from area_scans
             (demografie, inkomen, huishoudens, criminaliteit,
             juridisch_klimaat).
+        custom_weights: Optional per-org weight overrides with keys
+            'potentie_weights', 'risico_weights', 'potentie_risico_balance'.
 
     Returns:
-        ScoreV3Result with potentie/risico scores, overall, breakdown.
+        ScoreV3Result with potentie/risico scores, overall (0-100), breakdown.
     """
     # Import here to avoid circular import (factors imports FactorResult)
     from app.services.score_v3_factors import (
@@ -82,17 +116,21 @@ def compute_score_v3(
         score_demografie,
         score_funda_frictie,
         score_funderingsrisico,
+        score_geluid,
         score_juridisch_klimaat,
         score_leegstand,
+        score_luchtkwaliteit,
         score_max_hoogte_bereikt,
         score_monument,
+        score_natura2000,
         score_optoppotentie,
+        score_overstromingsrisico,
         score_perceelgrootte,
         score_vergunning_succeskans,
         score_vrije_grond,
     )
 
-    # Compute all 17 factors
+    # Compute all 21 factors
     breakdown: dict[str, FactorResult] = {
         # Potentie (8)
         "vrije_grond": score_vrije_grond(parcel_data),
@@ -103,7 +141,7 @@ def compute_score_v3(
         "perceelgrootte": score_perceelgrootte(parcel_data),
         "demografie": score_demografie(neighborhood_metrics),
         "vergunning_succeskans": score_vergunning_succeskans(neighborhood_metrics),
-        # Risico (9)
+        # Risico (13)
         "funderingsrisico": score_funderingsrisico(parcel_data),
         "asbest": score_asbest(parcel_data),
         "bodemverontreiniging": score_bodemverontreiniging(parcel_data),
@@ -113,10 +151,18 @@ def compute_score_v3(
         "juridisch_klimaat": score_juridisch_klimaat(neighborhood_metrics),
         "criminaliteit": score_criminaliteit(neighborhood_metrics),
         "max_hoogte_bereikt": score_max_hoogte_bereikt(parcel_data),
+        "natura2000": score_natura2000(parcel_data),
+        "overstromingsrisico": score_overstromingsrisico(parcel_data),
+        "geluid": score_geluid(parcel_data),
+        "luchtkwaliteit": score_luchtkwaliteit(parcel_data),
     }
 
     # Apply missing data strategy
     _apply_missing_data_strategy(breakdown)
+
+    # Apply custom weights if provided
+    if custom_weights:
+        _apply_custom_weights(breakdown, custom_weights)
 
     # Calculate subscores
     potentie_factors = {k: v for k, v in breakdown.items() if v.categorie == "potentie"}
@@ -130,11 +176,17 @@ def compute_score_v3(
 
     potentie_score = max(0.0, min(100.0, round(potentie_score, 1)))
     risico_score = max(0.0, min(100.0, round(risico_score, 1)))
-    overall = round(potentie_score - risico_score, 1)
 
-    if overall > 40:
+    # Discount model: overall = potentie × (1 - risico_discount)
+    balance = float((custom_weights or {}).get("potentie_risico_balance", 0.7))
+    _MAX_DISCOUNT = 0.5
+    risico_discount = min(_MAX_DISCOUNT, (risico_score / 100.0) * (1.0 - balance))
+    overall = round(potentie_score * (1.0 - risico_discount), 1)
+    overall = max(0.0, min(100.0, overall))
+
+    if overall > 60:
         category = "Hoog"
-    elif overall > 10:
+    elif overall > 30:
         category = "Gemiddeld"
     else:
         category = "Laag"
@@ -150,6 +202,25 @@ def compute_score_v3(
         model_version="score-v3.0",
         missing_factor_count=missing_count,
     )
+
+
+def _apply_custom_weights(
+    breakdown: dict[str, FactorResult],
+    custom_weights: dict[str, Any],
+) -> None:
+    """Apply per-org weight overrides to factor breakdown.
+
+    Mutates FactorResult objects in-place. Only updates bijdrage —
+    genormaliseerde_score is never affected.
+    """
+    potentie_w = custom_weights.get("potentie_weights") or {}
+    risico_w = custom_weights.get("risico_weights") or {}
+    for name, factor in breakdown.items():
+        weight_map = potentie_w if factor.categorie == "potentie" else risico_w
+        if name in weight_map:
+            new_weight = float(weight_map[name])
+            factor.gewicht = new_weight
+            factor.bijdrage = round(factor.genormaliseerde_score * new_weight, 4)
 
 
 def _apply_missing_data_strategy(breakdown: dict[str, FactorResult]) -> None:
