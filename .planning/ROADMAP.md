@@ -179,10 +179,10 @@ Plans:
 **Plans**: 4 plans (3 waves)
 
 Plans:
-- [ ] 108-01-PLAN.md — Score engine: 4 env factors + formula fix + custom weights param
-- [ ] 108-02-PLAN.md — Org weight storage + API endpoints + re-score background job
-- [ ] 108-03-PLAN.md — Settings UI: /instellingen/score with presets, slider, factor tables
-- [ ] 108-04-PLAN.md — Custom profile badge + backfill tool update
+- [x] 108-01-PLAN.md — Score engine: 4 env factors + formula fix + custom weights param
+- [x] 108-02-PLAN.md — Org weight storage + API endpoints + re-score background job
+- [x] 108-03-PLAN.md — Settings UI: /instellingen/score with presets, slider, factor tables
+- [x] 108-04-PLAN.md — Custom profile badge + backfill tool update
 
 ### Phase 94: Wijk & Gemeente Views (Aura Reskin)
 **Goal**: Aura styling for wijk/gemeente panels — existing functionality preserved
