@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 108 -- Score Customization
-Plan: 1 of 4 complete
+Plan: 2 of 4 complete
 Status: In Progress
-Last activity: 2026-03-14 -- Phase 108 Plan 01 complete (Score v3.0 extended to 21 factors with discount formula and custom_weights)
+Last activity: 2026-03-14 -- Phase 108 Plan 02 complete (Org score_weights column, GET/PUT endpoints, rescore_weights ARQ job)
 
-Progress: [###.......] 25% (1/4 plans in phase 108)
+Progress: [######....] 50% (2/4 plans in phase 108)
 
 ## Performance Metrics
 
@@ -49,6 +49,8 @@ Progress: [###.......] 25% (1/4 plans in phase 108)
 | Phase 104 P01 | 3min | 2 tasks | 3 files |
 | Phase 107 P01 | 5min | 3 tasks | 8 files |
 | Phase 107 P02 | 14min | 2 tasks | 6 files |
+| Phase 108 P01 | 3min | 2 tasks | 2 files |
+| Phase 108 P02 | 3min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -134,6 +136,9 @@ Progress: [###.......] 25% (1/4 plans in phase 108)
 - [Phase 108-01]: Environmental missing defaults to 0.3 (not 0.5) — NL baseline is quiet/clean for most parcels
 - [Phase 108-01]: DEFAULT_WEIGHTS exported from score_v3.py as module-level dict — single source of truth for 21 factors
 - [Phase 108-01]: Category thresholds updated to >60=Hoog, >30=Gemiddeld (was >40/>10 for old subtraction model)
+- [Phase 108-02]: Dynamic max weight denominator in rescore job (sum of active weights, not fixed _POTENTIE_MAX=80) keeps percentages meaningful when factors disabled
+- [Phase 108-02]: Min 3 active factors per category enforced at PUT endpoint level (cross-field, can't use field_validator alone)
+- [Phase 108-02]: rescore_weights_job uses 500-row offset pagination for 137k scan_results; skips non-v3.0 rows
 
 ### Key Patterns (carry forward)
 
@@ -160,10 +165,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-14T05:07:19Z
-**Stopped At:** Completed 108-01-PLAN.md — Score v3.0 engine extended to 21 factors with discount formula
+**Last Session:** 2026-03-14T05:13:52Z
+**Stopped At:** Completed 108-02-PLAN.md — Org score_weights column, GET/PUT API endpoints, rescore_weights ARQ job
 
-**Next Action:** Phase 108 Plan 02 — Re-score job to recompute all existing scan_results with new 21-factor formula.
+**Next Action:** Phase 108 Plan 03 — Weight presets API (preset definitions, apply preset endpoint).
 
 ---
 
