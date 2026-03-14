@@ -1,6 +1,6 @@
 """Score v3.0 individual factor scoring functions.
 
-17 factors: 8 potentie + 9 risico. Each returns a FactorResult.
+21 factors: 8 potentie + 13 risico. Each returns a FactorResult.
 All narrative templates are deterministic Dutch f-strings (no AI calls).
 """
 
@@ -843,5 +843,201 @@ def score_max_hoogte_bereikt(parcel_data: dict) -> FactorResult:
         bijdrage=round(score * 5, 4), categorie="risico",
         toelichting_kort=kort, toelichting_lang=lang,
         data_bronnen=["PLU WMS", "3D BAG"],
+        missing=False,
+    )
+
+
+# ---------------------------------------------------------------------------
+# ENVIRONMENTAL RISICO FACTORS (4) — R10-R13
+# Pre-cached in scan_results.flags since Phase 99
+# ---------------------------------------------------------------------------
+
+def score_natura2000(parcel_data: dict) -> FactorResult:
+    """Factor R10: Natura2000 proximity risk. Gewicht=5."""
+    n2k = parcel_data.get("natura2000")
+    if not n2k or not isinstance(n2k, dict):
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.5, gewicht=5,
+            bijdrage=round(0.5 * 5, 4), categorie="risico",
+            toelichting_kort="Natura2000-nabijheid onbekend — geen locatiedata beschikbaar",
+            toelichting_lang="Er zijn geen gegevens beschikbaar over de nabijheid van Natura2000-gebieden. De score is op neutraal gezet.",
+            data_bronnen=["PDOK Natura2000 WFS"],
+            missing=True,
+        )
+
+    binnen_5km = bool(n2k.get("binnen_5km"))
+    naam = n2k.get("naam") or "onbekend gebied"
+    bescherming = n2k.get("bescherming") or ""
+
+    score = 1.0 if binnen_5km else 0.0
+
+    if binnen_5km:
+        kort = f"Natura2000-gebied binnen 5km — {naam} ({bescherming})"
+        lang = (
+            f"Het perceel ligt binnen 5km van Natura2000-gebied '{naam}' ({bescherming}). "
+            "Dit vereist een stikstofberekening via AERIUS voor elke bouwfase. "
+            "Overschrijding van de stikstofdepositie kan de vergunning blokkeren of vertragen. "
+            "Een ecologisch onderzoek wordt sterk aanbevolen bij de planvorming."
+        )
+    else:
+        kort = "Geen Natura2000-gebied binnen 5km — stikstofrisico laag"
+        lang = (
+            "Het perceel ligt buiten een straal van 5km van Natura2000-gebieden. "
+            "Het stikstofrisico voor de vergunningverlening is daarmee laag. "
+            "Een AERIUS-berekening is doorgaans niet vereist bij standaard bouwprojecten."
+        )
+
+    return FactorResult(
+        waarde={"binnen_5km": binnen_5km, "naam": naam, "bescherming": bescherming},
+        genormaliseerde_score=round(score, 4), gewicht=5,
+        bijdrage=round(score * 5, 4), categorie="risico",
+        toelichting_kort=kort, toelichting_lang=lang,
+        data_bronnen=["PDOK Natura2000 WFS"],
+        missing=False,
+    )
+
+
+def score_overstromingsrisico(parcel_data: dict) -> FactorResult:
+    """Factor R11: Overstromingsrisico. Gewicht=6."""
+    ostr = parcel_data.get("overstromingsrisico")
+    if not ostr or not isinstance(ostr, dict):
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.5, gewicht=6,
+            bijdrage=round(0.5 * 6, 4), categorie="risico",
+            toelichting_kort="Overstromingsrisico onbekend — geen locatiedata beschikbaar",
+            toelichting_lang="Er zijn geen gegevens beschikbaar over het overstromingsrisico op deze locatie. De score is op neutraal gezet.",
+            data_bronnen=["Rijkswaterstaat Overstromingen WMS"],
+            missing=True,
+        )
+
+    in_risk_zone = bool(ostr.get("in_risk_zone"))
+    description = ostr.get("description") or ""
+    qualitative_value = ostr.get("qualitative_value") or ""
+
+    score = 1.0 if in_risk_zone else 0.0
+
+    if in_risk_zone:
+        detail = description or qualitative_value or "risicozone"
+        kort = f"Perceel in overstromingsrisicozone — {detail}"
+        lang = (
+            f"Dit perceel ligt in een gebied met overstromingsrisico ({detail}). "
+            "Dit verhoogt de verzekeringspremies aanzienlijk en kan leiden tot beperkingen in het gemeentelijk beleid. "
+            "Bij nieuwbouw worden hogere eisen gesteld aan fundering en drempelhoogten. "
+            "Een klimaatadaptief ontwerp is sterk aan te raden."
+        )
+    else:
+        kort = "Geen overstromingsrisico gedetecteerd"
+        lang = (
+            "Het perceel ligt niet in een door Rijkswaterstaat aangemerkte overstromingsrisicozone. "
+            "De risico's voor verzekering en gemeentelijk beleid zijn daarmee beperkt."
+        )
+
+    return FactorResult(
+        waarde={"in_risk_zone": in_risk_zone, "description": description, "qualitative_value": qualitative_value},
+        genormaliseerde_score=round(score, 4), gewicht=6,
+        bijdrage=round(score * 6, 4), categorie="risico",
+        toelichting_kort=kort, toelichting_lang=lang,
+        data_bronnen=["Rijkswaterstaat Overstromingen WMS"],
+        missing=False,
+    )
+
+
+def score_geluid(parcel_data: dict) -> FactorResult:
+    """Factor R12: Geluidbelasting Lden. Gewicht=5."""
+    geluid = parcel_data.get("geluid")
+    if not geluid or not isinstance(geluid, dict):
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.3, gewicht=5,
+            bijdrage=round(0.3 * 5, 4), categorie="risico",
+            toelichting_kort="Geluidbelasting onbekend — meeste NL-locaties zijn rustig",
+            toelichting_lang="Er zijn geen geluidgegevens beschikbaar voor deze locatie. Nederland heeft grotendeels acceptabele geluidniveaus. De score is op licht neutraal gezet.",
+            data_bronnen=["RIVM Geluidbelasting Lden WMS"],
+            missing=True,
+        )
+
+    classification = str(geluid.get("classification") or "").lower()
+    lden_db = geluid.get("lden_db")
+
+    score_map = {
+        "acceptabel": 0.0,
+        "verhoogd": 0.4,
+        "hoog": 0.7,
+        "zeer_hoog": 1.0,
+    }
+    score = score_map.get(classification, 0.3)
+
+    db_str = f" ({lden_db} dB Lden)" if lden_db is not None else ""
+    risk_label = "Zeer hoog" if score >= 1.0 else "Hoog" if score >= 0.7 else "Verhoogd" if score >= 0.4 else "Acceptabel"
+    kort = f"{risk_label} geluidrisico{db_str} — {classification or 'onbekend'}"
+
+    lang = (
+        f"De geluidbelasting op dit perceel is ingeschaald als '{classification}'{db_str}. "
+        + (
+            "Een geluidbelasting boven 50 dB Lden (Wet geluidhinder) vereist een maatwerkregel of geluidwerende voorzieningen bij nieuwbouw van gevoelige functies zoals woningen. Dit kan de bouwkosten verhogen en de realisatie vertragen."
+            if score >= 0.7 else
+            "De geluidbelasting is verhoogd. Afhankelijk van de geluidsbestemming kan nader akoestisch onderzoek nodig zijn."
+            if score >= 0.4 else
+            "De geluidbelasting is acceptabel. Er zijn geen akoestische belemmeringen voor woningbouw te verwachten."
+        )
+    )
+
+    return FactorResult(
+        waarde={"lden_db": lden_db, "classification": classification},
+        genormaliseerde_score=round(score, 4), gewicht=5,
+        bijdrage=round(score * 5, 4), categorie="risico",
+        toelichting_kort=kort, toelichting_lang=lang,
+        data_bronnen=["RIVM Geluidbelasting Lden WMS"],
+        missing=False,
+    )
+
+
+def score_luchtkwaliteit(parcel_data: dict) -> FactorResult:
+    """Factor R13: Luchtkwaliteit NO2/PM10. Gewicht=4."""
+    lk = parcel_data.get("luchtkwaliteit")
+    if not lk or not isinstance(lk, dict):
+        return FactorResult(
+            waarde=None, genormaliseerde_score=0.3, gewicht=4,
+            bijdrage=round(0.3 * 4, 4), categorie="risico",
+            toelichting_kort="Luchtkwaliteit onbekend — meeste NL-locaties voldoen aan EU-normen",
+            toelichting_lang="Er zijn geen luchtkwaliteitsgegevens beschikbaar voor deze locatie. De meeste Nederlandse locaties voldoen aan de EU-grenswaarden. De score is op licht neutraal gezet.",
+            data_bronnen=["RIVM Luchtkwaliteit NSL WMS"],
+            missing=True,
+        )
+
+    no2_ugm3 = lk.get("no2_ugm3")
+    pm10_ugm3 = lk.get("pm10_ugm3")
+    boven_grenswaarde = bool(lk.get("boven_grenswaarde"))
+
+    # Normalize on NO2: 20 µg/m³ = very clean (0.0), 50 µg/m³ = EU limit (1.0)
+    if no2_ugm3 is not None:
+        score = normalize_linear(float(no2_ugm3), 20.0, 50.0)
+    elif boven_grenswaarde:
+        score = 1.0
+    else:
+        score = 0.3
+
+    risk_label = "Hoog" if score >= 0.7 else "Gemiddeld" if score >= 0.4 else "Laag"
+    no2_str = f"NO2: {no2_ugm3} µg/m³" if no2_ugm3 is not None else ""
+    pm10_str = f"PM10: {pm10_ugm3} µg/m³" if pm10_ugm3 is not None else ""
+    pollutants = ", ".join(filter(None, [no2_str, pm10_str])) or "waarden onbekend"
+    kort = f"{risk_label} luchtkwaliteitsrisico — {pollutants}"
+
+    lang = (
+        f"De luchtkwaliteit op deze locatie: {pollutants}. "
+        + (
+            "De luchtkwaliteit overschrijdt de EU-grenswaarden. Dit kan de realisatie van gevoelige bestemmingen (woningen, scholen) bemoeilijken en vereist aanvullend onderzoek in de omgevingsvergunningprocedure."
+            if boven_grenswaarde or score >= 0.7 else
+            "De luchtkwaliteit is redelijk; er zijn geen directe belemmeringen voor woningbouw, maar monitoring wordt aanbevolen in stedelijke context."
+            if score >= 0.4 else
+            "De luchtkwaliteit is goed en vormt geen belemmering voor de ontwikkeling van gevoelige functies."
+        )
+    )
+
+    return FactorResult(
+        waarde={"no2_ugm3": no2_ugm3, "pm10_ugm3": pm10_ugm3, "boven_grenswaarde": boven_grenswaarde},
+        genormaliseerde_score=round(score, 4), gewicht=4,
+        bijdrage=round(score * 4, 4), categorie="risico",
+        toelichting_kort=kort, toelichting_lang=lang,
+        data_bronnen=["RIVM Luchtkwaliteit NSL WMS"],
         missing=False,
     )
