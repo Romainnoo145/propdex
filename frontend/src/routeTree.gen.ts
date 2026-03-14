@@ -22,6 +22,7 @@ import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authe
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
+import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -89,11 +90,17 @@ const AuthenticatedRapportIdRoute = AuthenticatedRapportIdRouteImport.update({
   path: '/rapport/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedInstellingenScoreRoute =
+  AuthenticatedInstellingenScoreRouteImport.update({
+    id: '/score',
+    path: '/score',
+    getParentRoute: () => AuthenticatedInstellingenRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/instellingen': typeof AuthenticatedInstellingenRoute
+  '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
@@ -102,12 +109,13 @@ export interface FileRoutesByFullPath {
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
+  '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/instellingen': typeof AuthenticatedInstellingenRoute
+  '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
@@ -116,6 +124,7 @@ export interface FileRoutesByTo {
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
+  '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
 }
 export interface FileRoutesById {
@@ -123,7 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
+  '/_authenticated/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/_authenticated/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
@@ -132,6 +141,7 @@ export interface FileRoutesById {
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
+  '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
 }
 export interface FileRouteTypes {
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/resultaten'
     | '/auth/google-callback'
     | '/auth/'
+    | '/instellingen/score'
     | '/rapport/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/resultaten'
     | '/auth/google-callback'
     | '/auth'
+    | '/instellingen/score'
     | '/rapport/$id'
   id:
     | '__root__'
@@ -177,6 +189,7 @@ export interface FileRouteTypes {
     | '/_authenticated/resultaten'
     | '/auth/google-callback'
     | '/auth/'
+    | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
   fileRoutesById: FileRoutesById
 }
@@ -280,12 +293,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRapportIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/instellingen/score': {
+      id: '/_authenticated/instellingen/score'
+      path: '/score'
+      fullPath: '/instellingen/score'
+      preLoaderRoute: typeof AuthenticatedInstellingenScoreRouteImport
+      parentRoute: typeof AuthenticatedInstellingenRoute
+    }
   }
 }
 
+interface AuthenticatedInstellingenRouteChildren {
+  AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
+}
+
+const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChildren =
+  {
+    AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,
+  }
+
+const AuthenticatedInstellingenRouteWithChildren =
+  AuthenticatedInstellingenRoute._addFileChildren(
+    AuthenticatedInstellingenRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
+  AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRouteWithChildren
   AuthenticatedJurisprudentieRoute: typeof AuthenticatedJurisprudentieRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
@@ -297,7 +331,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
+  AuthenticatedInstellingenRoute: AuthenticatedInstellingenRouteWithChildren,
   AuthenticatedJurisprudentieRoute: AuthenticatedJurisprudentieRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
