@@ -70,7 +70,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Settings
 
-- [ ] **SET-01**: Settings page updated with Aura glass/bento styling on existing sections (account, password, notifications, appearance)
+- [x] **SET-01**: Settings page updated with Aura glass/bento styling on existing sections (account, password, notifications, appearance)
 
 ## Future Requirements
 
@@ -130,7 +130,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MELD-01 | Phase 96 | Pending |
 | MELD-02 | Phase 96 | Pending |
 | RPT-01 | Phase 107 | Complete (rebuilt as Due Diligence Dashboard) |
-| SET-01 | Phase 97 | Pending |
+| SET-01 | Phase 97 | Complete |
 
 **Coverage:**
 - v15.0 requirements: 32 total

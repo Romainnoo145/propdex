@@ -53,6 +53,7 @@ Progress: [##########] 100% (4/4 plans in phase 108)
 | Phase 108 P02 | 3min | 2 tasks | 6 files |
 | Phase 108 P03 | -- | -- | -- |
 | Phase 108 P04 | 5min | 1 task | 5 files |
+| Phase 97 P01 | 3 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,8 @@ Progress: [##########] 100% (4/4 plans in phase 108)
 - [Phase 108-03]: BalanceSlider uses inline background gradient style (CSS pseudo-elements can't be styled via Tailwind class attr)
 - [Phase 108-04]: Custom profiel badge uses client-side useOrgScoreWeights hook (not per-parcel API field) — decouples weight display from scan_result storage
 - [Phase 108-04]: uses_custom_weights derived at read time in parcel-at-point (org.score_weights IS NOT NULL) — not stored per scan_result
+- [Phase 97]: AppearanceSection selected state uses aura-amber ring+icon instead of aura-green for Aura palette consistency
+- [Phase 97]: BentoPod spacious used throughout settings — provides visual card separation without border-t dividers
 
 ### Key Patterns (carry forward)
 
@@ -172,8 +175,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-14T05:35:42Z
-**Stopped At:** Completed 108-04-PLAN.md — Custom profiel badge, useScoreWeights hooks, uses_custom_weights API field
+**Last Session:** 2026-03-14T08:32:12.171Z
+**Stopped At:** Completed 97-01-PLAN.md — Settings Aura reskin
 
 **Next Action:** Phase 108 complete. Review 108-03 (weight presets API) — may have been executed separately. Next phase TBD.
 

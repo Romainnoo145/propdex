@@ -62,7 +62,7 @@ LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage 
 - [ ] **Phase 94: Wijk & Gemeente Views** - Aura treatment for wijk/gemeente panels
 - [ ] **Phase 95: Results Table** - /resultaten Aura reskin preserving TanStack Table
 - [ ] **Phase 96: Jurisprudentie & Meldingen** - Wizard, explorer, feed in Aura style
-- [ ] **Phase 97: Settings** - Settings page Aura update
+- [x] **Phase 97: Settings** - Settings page Aura update (completed 2026-03-14)
 
 ---
 
