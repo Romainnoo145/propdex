@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JUR-02 | Phase 96 | Pending |
 | MELD-01 | Phase 96 | Pending |
 | MELD-02 | Phase 96 | Pending |
-| RPT-01 | Phase 97 | Pending |
+| RPT-01 | Phase 107 | Complete (rebuilt as Due Diligence Dashboard) |
 | SET-01 | Phase 97 | Pending |
 
 **Coverage:**
