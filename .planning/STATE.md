@@ -12,11 +12,11 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 108 -- Score Customization
-Plan: 2 of 4 complete
-Status: In Progress
-Last activity: 2026-03-14 -- Phase 108 Plan 02 complete (Org score_weights column, GET/PUT endpoints, rescore_weights ARQ job)
+Plan: 4 of 4 complete
+Status: Complete
+Last activity: 2026-03-14 -- Phase 108 Plan 04 complete (Custom profiel badge, useScoreWeights hooks, uses_custom_weights API field)
 
-Progress: [######....] 50% (2/4 plans in phase 108)
+Progress: [##########] 100% (4/4 plans in phase 108)
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ Progress: [######....] 50% (2/4 plans in phase 108)
 | Phase 107 P02 | 14min | 2 tasks | 6 files |
 | Phase 108 P01 | 3min | 2 tasks | 2 files |
 | Phase 108 P02 | 3min | 2 tasks | 6 files |
+| Phase 108 P03 | -- | -- | -- |
+| Phase 108 P04 | 5min | 1 task | 5 files |
 
 ## Accumulated Context
 
@@ -139,6 +141,8 @@ Progress: [######....] 50% (2/4 plans in phase 108)
 - [Phase 108-02]: Dynamic max weight denominator in rescore job (sum of active weights, not fixed _POTENTIE_MAX=80) keeps percentages meaningful when factors disabled
 - [Phase 108-02]: Min 3 active factors per category enforced at PUT endpoint level (cross-field, can't use field_validator alone)
 - [Phase 108-02]: rescore_weights_job uses 500-row offset pagination for 137k scan_results; skips non-v3.0 rows
+- [Phase 108-04]: Custom profiel badge uses client-side useOrgScoreWeights hook (not per-parcel API field) — decouples weight display from scan_result storage
+- [Phase 108-04]: uses_custom_weights derived at read time in parcel-at-point (org.score_weights IS NOT NULL) — not stored per scan_result
 
 ### Key Patterns (carry forward)
 
@@ -165,10 +169,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-14T05:13:52Z
-**Stopped At:** Completed 108-02-PLAN.md — Org score_weights column, GET/PUT API endpoints, rescore_weights ARQ job
+**Last Session:** 2026-03-14T05:35:42Z
+**Stopped At:** Completed 108-04-PLAN.md — Custom profiel badge, useScoreWeights hooks, uses_custom_weights API field
 
-**Next Action:** Phase 108 Plan 03 — Weight presets API (preset definitions, apply preset endpoint).
+**Next Action:** Phase 108 complete. Review 108-03 (weight presets API) — may have been executed separately. Next phase TBD.
 
 ---
 

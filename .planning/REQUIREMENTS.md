@@ -261,13 +261,13 @@ Requirements for feature phases (103-106).
 - [x] **SC-01**: 4 environmental risk factors (natura2000, overstromingsrisico, geluid, luchtkwaliteit) scored in score_v3_factors.py with FactorResult pattern, narratieven, and proper normalization
 - [x] **SC-02**: _RISICO_MAX updated to 87 (13 risico factors), DEFAULT_WEIGHTS exported as single source of truth
 - [x] **SC-03**: Overall formula changed from `potentie - risico` to `potentie × (1 - risico_discount)` with 50% max discount cap, default 70/30 balance
-- [ ] **SC-04**: Per-organization score_weights JSONB column on organizations table with Alembic migration
-- [ ] **SC-05**: GET/PUT /api/users/org/score-weights endpoints with validation (min 3 active per category, weights 0-10)
-- [ ] **SC-06**: Background ARQ re-score job (weights-only from stored genormaliseerde_score, no re-computation) with impact summary
+- [x] **SC-04**: Per-organization score_weights JSONB column on organizations table with Alembic migration
+- [x] **SC-05**: GET/PUT /api/users/org/score-weights endpoints with validation (min 3 active per category, weights 0-10)
+- [x] **SC-06**: Background ARQ re-score job (weights-only from stored genormaliseerde_score, no re-computation) with impact summary
 - [x] **SC-07**: compute_score_v3 accepts optional custom_weights parameter for per-org weight overrides on new scans
 - [ ] **SC-08**: /instellingen/score sub-route with preset cards (4 presets), potentie/risico balance slider, factor tables (toggle + weight 1-10), tab nav
 - [ ] **SC-09**: Save button triggers async re-score with progress indicator and impact preview (X up, Y down, avg delta)
-- [ ] **SC-10**: Subtle "Custom profiel" badge in ParcelDetailPanel when org uses non-default weights, derived at read time
+- [x] **SC-10**: Subtle "Custom profiel" badge in ParcelDetailPanel when org uses non-default weights, derived at read time
 
 ### v18.0 Traceability
 
@@ -276,13 +276,13 @@ Requirements for feature phases (103-106).
 | SC-01 | Phase 108 | Complete |
 | SC-02 | Phase 108 | Complete |
 | SC-03 | Phase 108 | Complete |
-| SC-04 | Phase 108 | Pending |
-| SC-05 | Phase 108 | Pending |
-| SC-06 | Phase 108 | Pending |
+| SC-04 | Phase 108 | Complete |
+| SC-05 | Phase 108 | Complete |
+| SC-06 | Phase 108 | Complete |
 | SC-07 | Phase 108 | Complete |
 | SC-08 | Phase 108 | Pending |
 | SC-09 | Phase 108 | Pending |
-| SC-10 | Phase 108 | Pending |
+| SC-10 | Phase 108 | Complete |
 
 **v18.0 Coverage:**
 - Phase 108 requirements: 10 total
