@@ -13,6 +13,7 @@ import {
   POTENTIE_FACTORS,
   RISICO_FACTORS,
 } from '@/lib/types/scoreWeights'
+import { BentoPod } from '@/components/primitives/BentoPod'
 import { PresetCards } from './PresetCards'
 import { BalanceSlider } from './BalanceSlider'
 import { FactorTable } from './FactorTable'
@@ -119,64 +120,60 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Section header */}
-      <div>
+      <BentoPod size="spacious">
         <h2 className="text-lg font-semibold text-aura-ink">Score profiel</h2>
         <p className="mt-1 text-sm text-neutral-600">
           Pas de scoremethode aan voor je organisatie
         </p>
-      </div>
+      </BentoPod>
 
       {/* Preset cards */}
-      <div>
-        <p className="mb-3 text-sm font-medium text-aura-ink">Kies een startprofiel</p>
+      <BentoPod size="spacious" className="space-y-3">
+        <p className="text-sm font-medium text-aura-ink">Kies een startprofiel</p>
         <PresetCards
           presets={PRESETS}
           activePreset={formState.preset}
           onSelect={handlePresetSelect}
         />
-      </div>
-
-      <div className="border-t border-neutral-200" />
+      </BentoPod>
 
       {/* Balance slider */}
-      <div>
-        <p className="mb-3 text-sm font-medium text-aura-ink">
+      <BentoPod size="spacious" className="space-y-3">
+        <p className="text-sm font-medium text-aura-ink">
           Potentie / Risico verhouding
         </p>
         <BalanceSlider
           value={formState.potentie_risico_balance}
           onChange={(val) => updateFormState({ potentie_risico_balance: val })}
         />
-      </div>
-
-      <div className="border-t border-neutral-200" />
+      </BentoPod>
 
       {/* Potentie factor table */}
-      <div>
-        <p className="mb-3 text-sm font-medium text-aura-ink">Potentie factoren</p>
+      <BentoPod size="spacious" className="space-y-3">
+        <p className="text-sm font-medium text-aura-ink">Potentie factoren</p>
         <FactorTable
           factors={POTENTIE_FACTORS}
           weights={formState.potentie_weights}
           onChange={handlePotentieWeightChange}
           minActive={MIN_ACTIVE}
         />
-      </div>
+      </BentoPod>
 
       {/* Risico factor table */}
-      <div>
-        <p className="mb-3 text-sm font-medium text-aura-ink">Risico factoren</p>
+      <BentoPod size="spacious" className="space-y-3">
+        <p className="text-sm font-medium text-aura-ink">Risico factoren</p>
         <FactorTable
           factors={RISICO_FACTORS}
           weights={formState.risico_weights}
           onChange={handleRisicoWeightChange}
           minActive={MIN_ACTIVE}
         />
-      </div>
+      </BentoPod>
 
       {/* Save button area */}
-      <div className="space-y-4">
+      <BentoPod size="spacious" className="space-y-4">
         <button
           type="button"
           onClick={handleSave}
@@ -195,7 +192,7 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
 
         {/* Impact preview when job completes */}
         {jobStatus?.status === 'complete' && (
-          <div className="rounded-2xl bg-[#F2F6F3] p-4 space-y-2">
+          <div className="rounded-xl bg-aura-canvas p-4 space-y-2">
             <p className="text-sm font-semibold text-aura-ink">
               Herberekening voltooid
             </p>
@@ -235,7 +232,7 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
             Herberekening mislukt — probeer opnieuw
           </p>
         )}
-      </div>
+      </BentoPod>
     </div>
   )
 }

@@ -45,9 +45,9 @@ export function FactorTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-neutral-200">
-            <th className="pb-2 text-left font-medium text-neutral-500">Factor</th>
-            <th className="pb-2 text-center font-medium text-neutral-500 w-20">Actief</th>
-            <th className="pb-2 text-center font-medium text-neutral-500 w-24">Gewicht</th>
+            <th className="pb-2 text-left text-[11px] font-semibold uppercase tracking-[0.05em] text-neutral-500">Factor</th>
+            <th className="pb-2 text-center text-[11px] font-semibold uppercase tracking-[0.05em] text-neutral-500 w-20">Actief</th>
+            <th className="pb-2 text-center text-[11px] font-semibold uppercase tracking-[0.05em] text-neutral-500 w-24">Gewicht</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -56,7 +56,7 @@ export function FactorTable({
             const isActive = weight > 0
 
             return (
-              <tr key={factor.key} className="hover:bg-neutral-50/50 transition-colors">
+              <tr key={factor.key} className="hover:bg-aura-glass-white/40 transition-colors">
                 <td className="py-2.5 pr-4">
                   <span
                     className="text-sm text-aura-ink cursor-help"
