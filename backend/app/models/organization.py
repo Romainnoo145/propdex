@@ -3,6 +3,7 @@
 import uuid
 
 from sqlalchemy import Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -33,4 +34,10 @@ class Organization(Base, TimestampMixin):
         nullable=False,
         server_default=text("24"),
         comment="Hours before cached data is considered stale. Minimum enforced in application code.",
+    )
+    score_weights: Mapped[dict | None] = mapped_column(
+        type_=JSONB,
+        nullable=True,
+        default=None,
+        comment="Per-org score weight config: {preset, potentie_risico_balance, potentie_weights, risico_weights}",
     )
