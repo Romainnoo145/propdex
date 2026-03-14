@@ -179,22 +179,20 @@ This is the ONE thing that must work. Everything else is secondary.
 
 ### Active
 
-## Current Milestone: v15.0 Aura
+## Current Milestone: v17.0 Projecten Portfolio
 
-**Goal:** Complete frontend overhaul — replace Industrial Amber with "Aura" design system (glassmorphism, bento grid, Satoshi font), rebuild every view as a viewport-locked floating interface over the map, eliminate all scrolling via click-through progressive disclosure.
+**Goal:** Rebuild the Projecten page as a geographic portfolio manager — provincie → gemeente → wijk drill-down with favorited parcels per wijk, expanded dossier workspace per parcel with action-oriented project management (status tracking, outreach templates, dossier completeness).
 
 **Target features:**
-- Aura design system: Soft-Tech palette, glassmorphism on key surfaces, Satoshi font, bento grid pods
-- Viewport-locked layout: map fills 100%, floating SideRailNav left, search pill top-left, filter chips top-center
-- Parcel detail: floating right panel, satellite crop hero, score badge overlay, click-through data layers
-- Wijk bottom bento sheet: 4-column fly-up layout replacing sidebar
-- Backend parcel aerial crop API endpoint
-- Results table: Aura visual treatment on /resultaten route
-- Jurisprudentie: full wizard + explorer redesign in Aura
-- Meldingen: full redesign with bento cards
-- Reports page: bento layout with click-through sections
-- Settings: Aura visual update
-- Desktop only, light mode only (drop dark mode)
+- Heart/favorite button on parcel detail panel → saves parcel to its wijk
+- Full-page portfolio navigation: provincie cards → gemeente cards → wijk cards → favorited parcel cards
+- Clean card-based layout (standard width, Aura styling) at every geographic level
+- Ghost button per level to open detail view
+- Per-parcel project workspace: expanded dossier with completeness tracking
+- Dossier action links: where to request missing documents (Kadaster, EP-Online, gemeente)
+- Project status pipeline: Gesignaleerd → Onderzoek → Contact → Besluit → Afgerond
+- Automated outreach templates: brief naar eigenaar, pre-overleg gemeente
+- Multi-parcel project support (group adjacent parcels into one deal)
 
 ### Future
 
@@ -287,4 +285,4 @@ This is the ONE thing that must work. Everything else is secondary.
   - PDF export status unknown — needs audit after v7.x data additions
 
 ---
-*Last updated: 2026-03-10 after v15.0 Aura milestone start*
+*Last updated: 2026-03-15 after v17.0 Projecten Portfolio milestone start*

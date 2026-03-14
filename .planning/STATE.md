@@ -5,18 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v18.0 Score Customization -- Phase 108 (Per-org weight overrides and environmental scoring)
+**Current focus:** v17.0 Projecten Portfolio -- Geographic portfolio + deal workspace
 
 ---
 
 ## Current Position
 
-Phase: 108 -- Score Customization
-Plan: 4 of 4 complete
-Status: Complete
-Last activity: 2026-03-14 -- Phase 108 Plan 04 complete (Custom profiel badge, useScoreWeights hooks, uses_custom_weights API field)
-
-Progress: [##########] 100% (4/4 plans in phase 108)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-15 — Milestone v17.0 started
 
 ## Performance Metrics
 
@@ -175,10 +173,10 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-14T08:32:12.171Z
-**Stopped At:** Completed 97-01-PLAN.md — Settings Aura reskin
+**Last Session:** 2026-03-15
+**Stopped At:** Starting v17.0 Projecten Portfolio milestone
 
-**Next Action:** Phase 108 complete. Review 108-03 (weight presets API) — may have been executed separately. Next phase TBD.
+**Next Action:** Define requirements and create roadmap for v17.0.
 
 ---
 
