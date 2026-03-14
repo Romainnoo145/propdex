@@ -230,9 +230,9 @@ Requirements for feature phases (103-106).
 ### Due Diligence Dashboard (Phase 107)
 
 - [x] **DD107-01**: 7-item section nav (vertical, left-side) with URL-synced active state (?section= param), Framer Motion layoutId animated selection indicator, browser back/forward support
-- [ ] **DD107-02**: Each of 7 sections renders data from PropertyReportResponse with data completeness badge (complete/partial/empty), graceful null handling for old reports
+- [x] **DD107-02**: Each of 7 sections renders data from PropertyReportResponse with data completeness badge (complete/partial/empty), graceful null handling for old reports
 - [x] **DD107-03**: Per-section notes textarea saved via PATCH /api/reports/{id}/notes as JSON string within existing notes field — zero backend changes, plain-text migration for pre-107 notes
-- [ ] **DD107-04**: Per-section document upload zone using Phase 106 useUploadDocument/useParcelDocuments hooks, linked to section-specific document_type keys, disabled when sourceParcelId is null
+- [x] **DD107-04**: Per-section document upload zone using Phase 106 useUploadDocument/useParcelDocuments hooks, linked to section-specific document_type keys, disabled when sourceParcelId is null
 - [x] **DD107-05**: PDF export button in section footer triggers full due diligence PDF download via existing useExportPDF mutation (Phase 104 template)
 - [x] **DD107-06**: Dashboard renders at existing /rapport/$id route — ReportDetailPage replaced, route wrapper updated, back button preserved
 - [x] **DD107-07**: 300-line file limit enforced: 7 section files + shared components in sections/ and components/ subdirectories
@@ -242,9 +242,9 @@ Requirements for feature phases (103-106).
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DD107-01 | Phase 107 | Complete |
-| DD107-02 | Phase 107 | Pending |
+| DD107-02 | Phase 107 | Complete |
 | DD107-03 | Phase 107 | Complete |
-| DD107-04 | Phase 107 | Pending |
+| DD107-04 | Phase 107 | Complete |
 | DD107-05 | Phase 107 | Complete |
 | DD107-06 | Phase 107 | Complete |
 | DD107-07 | Phase 107 | Complete |
@@ -254,5 +254,40 @@ Requirements for feature phases (103-106).
 - Mapped to plans: 7
 - Unmapped: 0
 
+## v18.0 Requirements
+
+### Score Customization (Phase 108)
+
+- [ ] **SC-01**: 4 environmental risk factors (natura2000, overstromingsrisico, geluid, luchtkwaliteit) scored in score_v3_factors.py with FactorResult pattern, narratieven, and proper normalization
+- [ ] **SC-02**: _RISICO_MAX updated to 87 (13 risico factors), DEFAULT_WEIGHTS exported as single source of truth
+- [ ] **SC-03**: Overall formula changed from `potentie - risico` to `potentie × (1 - risico_discount)` with 50% max discount cap, default 70/30 balance
+- [ ] **SC-04**: Per-organization score_weights JSONB column on organizations table with Alembic migration
+- [ ] **SC-05**: GET/PUT /api/users/org/score-weights endpoints with validation (min 3 active per category, weights 0-10)
+- [ ] **SC-06**: Background ARQ re-score job (weights-only from stored genormaliseerde_score, no re-computation) with impact summary
+- [ ] **SC-07**: compute_score_v3 accepts optional custom_weights parameter for per-org weight overrides on new scans
+- [ ] **SC-08**: /instellingen/score sub-route with preset cards (4 presets), potentie/risico balance slider, factor tables (toggle + weight 1-10), tab nav
+- [ ] **SC-09**: Save button triggers async re-score with progress indicator and impact preview (X up, Y down, avg delta)
+- [ ] **SC-10**: Subtle "Custom profiel" badge in ParcelDetailPanel when org uses non-default weights, derived at read time
+
+### v18.0 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SC-01 | Phase 108 | Pending |
+| SC-02 | Phase 108 | Pending |
+| SC-03 | Phase 108 | Pending |
+| SC-04 | Phase 108 | Pending |
+| SC-05 | Phase 108 | Pending |
+| SC-06 | Phase 108 | Pending |
+| SC-07 | Phase 108 | Pending |
+| SC-08 | Phase 108 | Pending |
+| SC-09 | Phase 108 | Pending |
+| SC-10 | Phase 108 | Pending |
+
+**v18.0 Coverage:**
+- Phase 108 requirements: 10 total
+- Mapped to phases: 10
+- Unmapped: 0
+
 ---
-*Requirements updated: 2026-03-12*
+*Requirements updated: 2026-03-14*

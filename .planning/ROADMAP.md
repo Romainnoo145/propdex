@@ -166,20 +166,23 @@ Plans:
 - [ ] 107-03-PLAN.md — Sections 5-7: Potentie & Risico, Vergunningen, Bronvermelding + final wiring (wave 2)
 
 ### Phase 108: Score Customization
-**Goal**: Extend Score v3.0 engine with 4 environmental risk factors (natura2000, overstromingsrisico, geluid, luchtkwaliteit → 9→13 risicofactoren, rebalance weights) AND add per-organization score weight customization so users can toggle factors on/off and adjust weights via Settings
+**Goal**: Extend Score v3.0 engine with 4 environmental risk factors (natura2000, overstromingsrisico, geluid, luchtkwaliteit → 9→13 risicofactoren), fix overall formula to discount model, and add per-organization score weight customization via /instellingen/score settings
 **Depends on**: Phase 100, Phase 99
-**Requirements:** TBD
+**Requirements:** [SC-01, SC-02, SC-03, SC-04, SC-05, SC-06, SC-07, SC-08, SC-09, SC-10]
 **Success Criteria**:
   1. 4 environmental factors scored in score_v3_factors.py with proper normalization and narratieven
-  2. Risico gewichten herbalanceerd (13 factoren, gewichten optellen tot nieuw maximum)
-  3. Per-organization score_weights stored in DB (organization-level, not user-level)
-  4. Settings tab in /instellingen with factor toggle + weight slider UI
+  2. Overall formula = potentie × (1 - risico_discount) with 50% max cap, 70/30 default balance
+  3. Per-organization score_weights stored as JSONB on organizations table
+  4. /instellingen/score sub-route with preset cards, balance slider, factor tables
   5. Score engine uses custom weights when available, falls back to defaults
-  6. All existing scans re-scored with new factors (backfill)
-**Plans**: TBD
+  6. Background re-score job re-applies weights without re-computing factors
+**Plans**: 4 plans (3 waves)
 
 Plans:
-- TBD
+- [ ] 108-01-PLAN.md — Score engine: 4 env factors + formula fix + custom weights param
+- [ ] 108-02-PLAN.md — Org weight storage + API endpoints + re-score background job
+- [ ] 108-03-PLAN.md — Settings UI: /instellingen/score with presets, slider, factor tables
+- [ ] 108-04-PLAN.md — Custom profile badge + backfill tool update
 
 ### Phase 94: Wijk & Gemeente Views (Aura Reskin)
 **Goal**: Aura styling for wijk/gemeente panels — existing functionality preserved
