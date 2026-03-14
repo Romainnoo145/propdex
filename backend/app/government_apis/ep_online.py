@@ -3,9 +3,7 @@
 This module provides access to the EP-Online (RVO) API for fetching registered
 energy labels (energielabels) for Dutch properties by BAG VBO ID.
 
-Authentication: Bearer token API key (EP_ONLINE_API_KEY setting).
-NOTE: Auth format is MEDIUM confidence — may need to change to X-Api-Key header
-during live validation. Use Bearer as default per research.
+Authentication: Plain API key in Authorization header (EP_ONLINE_API_KEY setting).
 
 Three-state contract:
 - Data found    -> return EnergyLabel with is_geregistreerd=True
@@ -53,12 +51,8 @@ class EPOnlineClient:
 
     @property
     def _headers(self) -> dict[str, str]:
-        """Return auth headers for EP-Online API.
-
-        NOTE: Auth format is MEDIUM confidence. Current: Bearer token.
-        May need to change to X-Api-Key header during live validation (Phase 53).
-        """
-        return {"Authorization": f"Bearer {settings.EP_ONLINE_API_KEY}"}
+        """Return auth headers for EP-Online API."""
+        return {"Authorization": settings.EP_ONLINE_API_KEY}
 
     async def get_by_vbo_id(
         self, vbo_id: str, client: httpx.AsyncClient
@@ -129,26 +123,26 @@ def _parse_energy_label(data: dict, vbo_id: str) -> EnergyLabel:
     Returns:
         EnergyLabel with is_geregistreerd=True and mapped fields
     """
-    # MEDIUM confidence field names — verify against live API response in Phase 53
-    geldig_tot = data.get("geldigTot")
+    geldig_tot = data.get("Geldig_tot")
 
     # Compute is_geldig: compare geldig_tot date string to today
     is_geldig: bool | None = None
     if geldig_tot:
         try:
-            expiry = datetime.strptime(geldig_tot, "%Y-%m-%d")
+            # EP-Online returns ISO datetime: "2026-05-25T00:00:00"
+            expiry = datetime.fromisoformat(geldig_tot)
             is_geldig = expiry > datetime.utcnow()
         except ValueError:
-            logger.warning("EP-Online: could not parse geldigTot '%s'", geldig_tot)
+            logger.warning("EP-Online: could not parse Geldig_tot '%s'", geldig_tot)
 
     return EnergyLabel(
-        energieklasse=data.get("energieKlasse"),  # MEDIUM confidence
-        registratie_datum=data.get("registratieDatum"),  # MEDIUM confidence
-        geldig_tot=geldig_tot,  # MEDIUM confidence
+        energieklasse=data.get("Energieklasse"),
+        registratie_datum=data.get("Registratiedatum"),
+        geldig_tot=geldig_tot,
         is_geldig=is_geldig,
-        berekenings_type=data.get("berekeningType"),  # MEDIUM confidence
-        soort_opname=data.get("soortOpname"),  # MEDIUM confidence
-        opname_datum=data.get("opnameDatum"),  # MEDIUM confidence
+        berekenings_type=data.get("Berekeningstype"),
+        soort_opname=data.get("Gebouwklasse"),
+        opname_datum=data.get("Opnamedatum"),
         bag_vbo_id=vbo_id,
         is_geregistreerd=True,
     )
