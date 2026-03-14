@@ -59,6 +59,7 @@ import {
   setParcelVacancySignalVisibility,
   setParcelReportStatusVisibility,
   setParcelScoreVisibility,
+  updateScoreThreshold,
 } from '@/components/map/ParcelScoreLayer'
 import {
   addMonitoredWijkOverlay,
@@ -69,6 +70,7 @@ import {
   removeScannedWijkHighlight,
 } from '@/components/map/ScannedWijkHighlightLayer'
 import { useTriggerScan, useScanPolling, useScanHistory } from '@/hooks/useScans'
+import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 import { useMonitoredProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/lib/auth/useAuth'
 // ScanProgressOverlay — replaced by inline progress in gemeente header bar
@@ -220,6 +222,11 @@ function MapPage() {
     naam: string;
     bbox: [number, number, number, number];
   } | null>(null)
+
+  // Score weights for threshold + tile cache busting after rescore
+  const { data: scoreWeightsData } = useOrgScoreWeights()
+  const scoreThreshold = scoreWeightsData?.weights.score_threshold ?? 40
+  const tileCacheBusterRef = useRef<string>(Date.now().toString())
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
   const [activePanel, setActivePanel] = useState<ActivePanel | null>(null)
@@ -649,6 +656,8 @@ function MapPage() {
     score?: number | null
     scoreCategory?: string | null
     scoreBreakdown?: Record<string, unknown> | null
+    potentieScore?: number | null
+    risicoScore?: number | null
     marketSignals?: ScanResultItem['market_signals']
     opportunitySignals?: string[] | null
     buildingMetrics?: Record<string, unknown> | null
@@ -683,6 +692,8 @@ function MapPage() {
       score: input.score ?? null,
       score_category: input.scoreCategory ?? null,
       score_breakdown: input.scoreBreakdown ?? null,
+      potentie_score: input.potentieScore ?? null,
+      risico_score: input.risicoScore ?? null,
       vacancy_signal: vacancySignal,
       vacancy_confidence: input.vacancyConfidence ?? null,
       vacancy_reasons: input.vacancyReasons ?? null,
@@ -742,6 +753,8 @@ function MapPage() {
               score: full.score ?? null,
               scoreCategory: full.score_category ?? null,
               scoreBreakdown: full.score_breakdown ?? null,
+              potentieScore: full.potentie_score ?? null,
+              risicoScore: full.risico_score ?? null,
               vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
               vacancyConfidence: full.vacancy_confidence ?? null,
               vacancyReasons: full.vacancy_reasons ?? null,
@@ -969,6 +982,8 @@ function MapPage() {
               score: full.score ?? null,
               scoreCategory: full.score_category ?? null,
               scoreBreakdown: full.score_breakdown ?? null,
+              potentieScore: full.potentie_score ?? null,
+              risicoScore: full.risico_score ?? null,
               vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
               vacancyConfidence: full.vacancy_confidence ?? null,
               vacancyReasons: full.vacancy_reasons ?? null,
@@ -1046,6 +1061,8 @@ function MapPage() {
             score: full.score ?? null,
             scoreCategory: full.score_category ?? null,
             scoreBreakdown: full.score_breakdown ?? null,
+            potentieScore: full.potentie_score ?? null,
+            risicoScore: full.risico_score ?? null,
             vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
             vacancyConfidence: full.vacancy_confidence ?? null,
             vacancyReasons: full.vacancy_reasons ?? null,
@@ -1112,12 +1129,12 @@ function MapPage() {
   const loadedScoreLayerScanIdRef = useRef<string | null>(null)
   const scoreLayerPendingRef = useRef(false)
 
-  const ensureParcelScoreLayer = useCallback((scanId: string) => {
+  const ensureParcelScoreLayer = useCallback((scanId: string, forceBust?: string) => {
     const map = mapRef.current
     if (!map) return
 
-    // Skip if this exact scan is already loaded
-    if (loadedScoreLayerScanIdRef.current === scanId && map.getSource('parcel-scores')) {
+    // Skip if this exact scan is already loaded (unless force-busting cache)
+    if (!forceBust && loadedScoreLayerScanIdRef.current === scanId && map.getSource('parcel-scores')) {
       return
     }
 
@@ -1125,7 +1142,7 @@ function MapPage() {
     if (scoreLayerPendingRef.current) return
     scoreLayerPendingRef.current = true
 
-    const tileUrl = getScanTileUrl(scanId)
+    const tileUrl = getScanTileUrl(scanId, forceBust)
 
     const addLayerSafe = () => {
       if (!map.isStyleLoaded()) {
@@ -1168,6 +1185,24 @@ function MapPage() {
     if (!mapReady || !mapRef.current || !activeScanId) return
     ensureParcelScoreLayer(activeScanId)
   }, [activeScanId, mapReady, ensureParcelScoreLayer, layerState.showParcels])
+
+  // Update score threshold filter when org setting changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    updateScoreThreshold(map, scoreThreshold)
+  }, [scoreThreshold, mapReady, mapRef])
+
+  // Reload tiles when score weights change (rescore invalidation)
+  useEffect(() => {
+    if (!scoreWeightsData || !activeScanId || !mapReady) return
+    // Use a stable key from the weights to detect actual changes
+    const key = JSON.stringify(scoreWeightsData.weights)
+    if (tileCacheBusterRef.current === key) return
+    tileCacheBusterRef.current = key
+    // Force tile reload with new cache buster
+    ensureParcelScoreLayer(activeScanId, Date.now().toString())
+  }, [scoreWeightsData, activeScanId, mapReady, ensureParcelScoreLayer])
 
   // Handle scan completion and failure
   useEffect(() => {
@@ -1306,6 +1341,8 @@ function MapPage() {
                       score: resolved.score ?? parcel.score,
                       scoreCategory: resolved.score_category ?? parcel.score_category,
                       scoreBreakdown: resolved.score_breakdown ?? parcel.score_breakdown,
+                      potentieScore: resolved.potentie_score ?? parcel.potentie_score,
+                      risicoScore: resolved.risico_score ?? parcel.risico_score,
                       vacancySignal:
                         (resolved.vacancy_signal as ScanResultItem['vacancy_signal']) ??
                         parcel.vacancy_signal,
@@ -1362,6 +1399,8 @@ function MapPage() {
               score: resolved.score ?? null,
               scoreCategory: resolved.score_category ?? null,
               scoreBreakdown: resolved.score_breakdown ?? null,
+              potentieScore: resolved.potentie_score ?? null,
+              risicoScore: resolved.risico_score ?? null,
               vacancySignal:
                 (resolved.vacancy_signal as ScanResultItem['vacancy_signal']) ??
                 null,
