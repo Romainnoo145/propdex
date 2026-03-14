@@ -4,6 +4,7 @@ import { ShieldAlert, ShieldCheck, ShieldQuestion, ChevronLeft, ChevronRight, ty
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
 import { useParcelEnrichment } from '@/hooks/useScans'
+import { TruncatedText } from '../TruncatedText'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -285,9 +286,7 @@ function RisicoCard({ card }: { card: CardDisplay }) {
     <div className="bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {/* Top: label + pts badge */}
       <div className="flex justify-between items-start gap-1">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate min-w-0">
-          {card.label}
-        </p>
+        <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
         <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
           {card.pts > 0 ? `+${card.pts}` : '—'}
         </span>
@@ -295,16 +294,12 @@ function RisicoCard({ card }: { card: CardDisplay }) {
 
       {/* Middle: value */}
       <div className="flex-1 flex items-center min-w-0">
-        <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate">
-          {card.value}
-        </p>
+        <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
       </div>
 
       {/* Bottom: insight */}
       <div className="border-t border-slate-50 pt-3 min-w-0">
-        <p className="text-[11px] font-bold text-slate-400 leading-tight truncate">
-          {card.sub}
-        </p>
+        <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
       </div>
     </div>
   )
@@ -388,7 +383,7 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
             <p className={`text-xl font-bold uppercase tracking-wide ${verdict.color}`}>
               {verdict.label}
             </p>
-            <p className="text-[13px] text-slate-500 mt-0.5 truncate">{oneLiner}</p>
+            <TruncatedText text={oneLiner} className="text-[13px] text-slate-500 mt-0.5 truncate" />
           </div>
 
           <div

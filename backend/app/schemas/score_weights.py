@@ -10,6 +10,7 @@ class ScoreWeightsConfig(BaseModel):
     potentie_risico_balance: float = 0.7  # 0.0 = full risico, 1.0 = full potentie
     potentie_weights: dict[str, int] = {}  # factor_name -> weight 1-10 (0 = disabled)
     risico_weights: dict[str, int] = {}
+    score_threshold: int = 40  # Minimum score to show on map (0-100)
 
 
 class SaveScoreWeightsRequest(BaseModel):
@@ -19,6 +20,7 @@ class SaveScoreWeightsRequest(BaseModel):
     potentie_risico_balance: float
     potentie_weights: dict[str, int]
     risico_weights: dict[str, int]
+    score_threshold: int = 40
 
     @field_validator("potentie_risico_balance")
     @classmethod
@@ -26,6 +28,13 @@ class SaveScoreWeightsRequest(BaseModel):
         if not 0.0 <= v <= 1.0:
             raise ValueError("Balance must be between 0.0 and 1.0")
         return round(v, 2)
+
+    @field_validator("score_threshold")
+    @classmethod
+    def validate_threshold(cls, v: int) -> int:
+        if not 0 <= v <= 100:
+            raise ValueError("Threshold must be between 0 and 100")
+        return v
 
     @field_validator("potentie_weights", "risico_weights")
     @classmethod

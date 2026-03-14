@@ -598,3 +598,19 @@ export function updateParcelScoreSource(
   // Re-add with new URL
   addParcelScoreLayer(map, tileUrl, sourceLayer);
 }
+
+/**
+ * Update the minimum score threshold filter on the score fill layer.
+ * Parcels below this threshold will be hidden from the map.
+ */
+export function updateScoreThreshold(
+  map: maplibregl.Map,
+  threshold: number
+): void {
+  if (!map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) return;
+  map.setFilter(PARCEL_SCORE_FILL_LAYER_ID, [
+    'all',
+    ['has', 'score'],
+    ['>=', ['get', 'score'], threshold],
+  ]);
+}

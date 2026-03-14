@@ -55,10 +55,37 @@ class ZakelijkGerechtigde(BaseModel):
     )
 
 
+class Hypotheek(BaseModel):
+    """A single mortgage registration on a cadastral object."""
+
+    hypotheekhouder_naam: str | None = Field(
+        default=None,
+        description="Mortgage holder name (bank/lender — only rechtspersoon, AVG)",
+    )
+    bedrag: int | None = Field(
+        default=None,
+        description="Mortgage amount in euros (bedragZekerheid)",
+    )
+    aard: str | None = Field(
+        default=None,
+        description="Mortgage type (e.g., 'Eerste hypotheek')",
+    )
+
+
+class Beslag(BaseModel):
+    """A single seizure/attachment on a cadastral object."""
+
+    aard: str | None = Field(
+        default=None,
+        description="Seizure type (e.g., 'Conservatoir beslag')",
+    )
+
+
 class PerceelOwnership(BaseModel):
     """Ownership data for a single cadastral perceel.
 
-    Groups all rights holders for one kadastraalOnroerendeZaak.
+    Groups all rights holders, mortgages, and seizures
+    for one kadastraalOnroerendeZaak.
     """
 
     perceel_identificatie: str = Field(
@@ -71,6 +98,14 @@ class PerceelOwnership(BaseModel):
     heeft_hypotheek: bool = Field(
         default=False,
         description="True if a mortgage (hypotheek) is registered on this perceel",
+    )
+    hypotheken: list[Hypotheek] = Field(
+        default_factory=list,
+        description="Detailed mortgage records (hypotheekhouder, bedrag, aard)",
+    )
+    beslagen: list[Beslag] = Field(
+        default_factory=list,
+        description="Seizure/attachment records (rode vlag voor acquisitie)",
     )
 
 

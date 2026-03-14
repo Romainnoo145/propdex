@@ -214,6 +214,68 @@ class BRKBevragenClient:
             response = await client.get(url, headers=headers, params=params)
             return handle_api_response(response, source="brk-bevragen")
 
+    async def get_hypotheken(
+        self, identificatie: str, client: httpx.AsyncClient
+    ) -> dict:
+        """Fetch mortgage data for cadastral object.
+
+        CRITICAL: NEVER cache or store this data (Kadaster Tier 3 never-store terms).
+
+        Args:
+            identificatie: Kadaster object identificatie
+            client: httpx AsyncClient created via create_client()
+
+        Returns:
+            dict: Mortgage data (hypotheekhouder, bedrag, aard)
+        """
+        if not self._configured:
+            raise GovernmentAPIError(
+                "brk-bevragen",
+                "BRK not configured - cannot fetch hypotheekdata",
+            )
+
+        async with brk_limiter:
+            url = f"{self.BASE_URL}/kadastraalonroerendezaken/{identificatie}/hypotheken"
+            headers = {
+                "X-Api-Key": settings.BRK_API_KEY,
+                "Accept-Crs": "epsg:28992",
+            }
+
+            logger.info(f"BRK get_hypotheken: {identificatie}")
+            response = await client.get(url, headers=headers)
+            return handle_api_response(response, source="brk-bevragen")
+
+    async def get_beslagen(
+        self, identificatie: str, client: httpx.AsyncClient
+    ) -> dict:
+        """Fetch seizure data for cadastral object.
+
+        CRITICAL: NEVER cache or store this data (Kadaster Tier 3 never-store terms).
+
+        Args:
+            identificatie: Kadaster object identificatie
+            client: httpx AsyncClient created via create_client()
+
+        Returns:
+            dict: Seizure data (aard, datum)
+        """
+        if not self._configured:
+            raise GovernmentAPIError(
+                "brk-bevragen",
+                "BRK not configured - cannot fetch beslagdata",
+            )
+
+        async with brk_limiter:
+            url = f"{self.BASE_URL}/kadastraalonroerendezaken/{identificatie}/beslagen"
+            headers = {
+                "X-Api-Key": settings.BRK_API_KEY,
+                "Accept-Crs": "epsg:28992",
+            }
+
+            logger.info(f"BRK get_beslagen: {identificatie}")
+            response = await client.get(url, headers=headers)
+            return handle_api_response(response, source="brk-bevragen")
+
 
 # Module-level singleton instance
 # Gracefully handles missing configuration (logs warning, disables queries)

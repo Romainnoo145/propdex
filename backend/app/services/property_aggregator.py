@@ -23,7 +23,13 @@ from app.government_apis.woz_waardeloket import woz_waardeloket_client
 from app.models.funda_listing_snapshot import FundaListingSnapshot
 from app.schemas.address import AddressInput, BuildingData
 from app.schemas.bodem import BodemData
-from app.schemas.brk_ownership import BRKOwnership, PerceelOwnership, ZakelijkGerechtigde
+from app.schemas.brk_ownership import (
+    BRKOwnership,
+    Beslag,
+    Hypotheek,
+    PerceelOwnership,
+    ZakelijkGerechtigde,
+)
 from app.schemas.energy_label import EnergyLabel
 from app.schemas.fysiek_risico import FunderingsrisicogebiedData, SoilProfile
 from app.schemas.monument import MonumentStatus
@@ -569,6 +575,54 @@ def _parse_perceel_ownership(raw: dict, perceel_id: str) -> PerceelOwnership:
     )
 
 
+def _parse_hypotheken(raw: dict) -> list[Hypotheek]:
+    """Parse BRK hypotheken endpoint response.
+
+    CRITICAL: Never log response payload.
+    """
+    embedded = raw.get("_embedded", {})
+    raw_items = embedded.get("hypotheken", [])
+    results: list[Hypotheek] = []
+
+    for item in raw_items:
+        # Extract hypotheekhouder naam (only rechtspersoon — AVG)
+        houder = item.get("hypotheekhouder", {})
+        houder_naam: str | None = None
+        if houder.get("type") == "NietNatuurlijkPersoon":
+            houder_naam = houder.get("statutaireNaam") or houder.get("naam")
+
+        bedrag = item.get("bedragZekerheid")
+        if bedrag is not None:
+            bedrag = int(bedrag)
+
+        results.append(
+            Hypotheek(
+                hypotheekhouder_naam=houder_naam,
+                bedrag=bedrag,
+                aard=item.get("aard"),
+            )
+        )
+
+    logger.info("BRK parse hypotheken: count=%d", len(results))
+    return results
+
+
+def _parse_beslagen(raw: dict) -> list[Beslag]:
+    """Parse BRK beslagen endpoint response.
+
+    CRITICAL: Never log response payload.
+    """
+    embedded = raw.get("_embedded", {})
+    raw_items = embedded.get("beslagen", [])
+    results: list[Beslag] = []
+
+    for item in raw_items:
+        results.append(Beslag(aard=item.get("aard")))
+
+    logger.info("BRK parse beslagen: count=%d", len(results))
+    return results
+
+
 # CRITICAL LOGGING REMINDER: Never log BRK response payloads below.
 # Only log request metadata (endpoint, perceel ID) and parse outcomes.
 # Kadaster Tier 3 terms prohibit storing or logging eigendomsdata.
@@ -623,11 +677,30 @@ async def fetch_brk_ownership(
             for perceel_id in perceel_ids:
                 # CRITICAL: log request metadata only — never log response payload
                 logger.info(
-                    "BRK fetch: endpoint=zakelijkegerechtigden, perceel=%s",
+                    "BRK fetch: perceel=%s (eigendom+hypotheken+beslagen)",
                     perceel_id,
                 )
-                raw = await brk_client.get_eigendom(perceel_id, client)
-                perceel_results.append(_parse_perceel_ownership(raw, perceel_id))
+                # Fetch all three endpoints per perceel
+                raw_eigendom = await brk_client.get_eigendom(perceel_id, client)
+                parsed = _parse_perceel_ownership(raw_eigendom, perceel_id)
+
+                # Hypotheken — graceful: empty list on failure
+                try:
+                    raw_hyp = await brk_client.get_hypotheken(perceel_id, client)
+                    parsed.hypotheken = _parse_hypotheken(raw_hyp)
+                    if parsed.hypotheken:
+                        parsed.heeft_hypotheek = True
+                except Exception:
+                    logger.info("BRK hypotheken not available for %s", perceel_id)
+
+                # Beslagen — graceful: empty list on failure
+                try:
+                    raw_bes = await brk_client.get_beslagen(perceel_id, client)
+                    parsed.beslagen = _parse_beslagen(raw_bes)
+                except Exception:
+                    logger.info("BRK beslagen not available for %s", perceel_id)
+
+                perceel_results.append(parsed)
 
         return BRKOwnership(
             status="available",

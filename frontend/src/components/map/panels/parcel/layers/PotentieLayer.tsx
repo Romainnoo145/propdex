@@ -3,6 +3,7 @@ import { motion, useSpring, useTransform } from 'framer-motion'
 import { Sparkles, TrendingUp, CircleHelp, type LucideIcon } from 'lucide-react'
 import type { ScanResultItem, ScoreBreakdownV3, ScoreFactorV3 } from '@/lib/types/scan'
 import { isScoreV3 } from '@/lib/score'
+import { TruncatedText } from '../TruncatedText'
 
 /* ── Verdict derivation ───────────────────────────────────── */
 
@@ -341,7 +342,7 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
             <p className={`text-xl font-bold uppercase tracking-wide ${verdict.color}`}>
               {verdict.label}
             </p>
-            <p className="text-[13px] text-slate-500 mt-0.5 truncate">{oneLiner}</p>
+            <TruncatedText text={oneLiner} className="text-[13px] text-slate-500 mt-0.5 truncate" />
           </div>
 
           <div
@@ -368,9 +369,7 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
           >
             {/* Top: label + pts badge */}
             <div className="flex justify-between items-start gap-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate min-w-0">
-                {card.label}
-              </p>
+              <TruncatedText text={card.label} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate" />
               <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">
                 {card.pts > 0 ? `+${card.pts}` : '\u2014'}
               </span>
@@ -378,16 +377,12 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
 
             {/* Middle: value */}
             <div className="flex-1 flex items-center min-w-0">
-              <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate">
-                {card.value}
-              </p>
+              <TruncatedText text={card.value} className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate" />
             </div>
 
             {/* Bottom: insight */}
             <div className="border-t border-slate-50 pt-3 min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 leading-tight truncate">
-                {card.sub}
-              </p>
+              <TruncatedText text={card.sub} className="text-[11px] font-bold text-slate-400 leading-tight truncate" />
             </div>
           </div>
         ))}

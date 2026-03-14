@@ -81,20 +81,13 @@ async def generate_mvt_tile(
                 28992
             ) AS geom
         ),
-        -- Pick the best scan result per parcel: prefer the given scan_id,
-        -- otherwise fall back to the most recent completed scan that has it.
+        -- One scan_result per parcel per org (dedup constraint).
         best_sr AS (
-            SELECT DISTINCT ON (sr.parcel_id)
-                sr.parcel_id,
-                sr.score,
-                sr.flags
+            SELECT sr.parcel_id,
+                   sr.score,
+                   sr.flags
             FROM scan_results sr
-            JOIN area_scans a ON a.id = sr.scan_id
             WHERE sr.organization_id = :org_id
-            AND a.status = 'completed'
-            ORDER BY sr.parcel_id,
-                     CASE WHEN sr.scan_id = :scan_id THEN 0 ELSE 1 END,
-                     a.completed_at DESC
         ),
         mvt_data AS (
             SELECT
@@ -188,7 +181,6 @@ async def generate_mvt_tile(
             "lon_max": lon_max,
             "lat_max": lat_max,
             "org_id": str(organization_id),
-            "scan_id": str(scan_id),
         },
     )
 

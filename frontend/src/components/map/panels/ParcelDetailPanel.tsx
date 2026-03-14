@@ -163,6 +163,7 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
                 parcel={parcel}
                 onSelectCategory={handleSelectCategory}
                 meldingenCount={enrichmentQuery.data?.enrichment_data?.vergunningen?.length ?? null}
+                vergunningen={enrichmentQuery.data?.enrichment_data?.vergunningen ?? []}
               />
             </motion.div>
           ) : (

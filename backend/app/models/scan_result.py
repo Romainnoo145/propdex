@@ -12,14 +12,14 @@ from app.models.base import Base, TenantMixin
 
 class ScanResult(Base, TenantMixin):
     """
-    ScanResult model - join table linking AreaScan to ParcelCache.
+    ScanResult model - one row per parcel per organization.
 
-    Each record represents one parcel discovered during a specific area scan.
-    Instead of storing bulk JSONB blobs, we maintain foreign key links to
-    individual cached parcels for referential integrity and efficient querying.
+    Each record represents the latest scan data for a specific parcel.
+    When a newer wijk scan covers the same parcel, the existing row is
+    updated (scan_id, score, flags) rather than creating a duplicate.
 
-    Stores scan-specific metadata like score and flags computed during the scan.
-    Results are immutable once created (no updated_at needed).
+    This ensures each parcel appears in exactly ONE scan_result, preventing
+    data duplication from overlapping wijk bounding boxes.
 
     Multi-tenant isolated via organization_id.
     """
@@ -44,7 +44,6 @@ class ScanResult(Base, TenantMixin):
     )
 
     # Scan-specific data (per-parcel results within this scan)
-    # Score or flags computed during scan
     score: Mapped[float | None] = mapped_column(nullable=True)
     flags: Mapped[dict | None] = mapped_column(type_=JSONB, nullable=True)
 
@@ -54,6 +53,9 @@ class ScanResult(Base, TenantMixin):
     )
 
     __table_args__ = (
-        Index("ix_scan_results_scan_parcel", "scan_id", "parcel_id"),
-        UniqueConstraint("scan_id", "parcel_id", name="uq_scan_results_scan_parcel"),
+        Index("ix_scan_results_org_parcel", "organization_id", "parcel_id"),
+        UniqueConstraint(
+            "organization_id", "parcel_id",
+            name="uq_scan_results_org_parcel",
+        ),
     )

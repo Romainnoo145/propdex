@@ -178,6 +178,7 @@ class PDOKLocatieserver:
                 "type": "adres",
                 "rows": 1,
                 "distance": distance,
+                "fl": "weergavenaam,postcode,nummeraanduiding_id,adresseerbaarobject_id",
             }
 
             try:

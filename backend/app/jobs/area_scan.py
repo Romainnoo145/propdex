@@ -690,12 +690,15 @@ async def area_scan_job(
                     ranked_values,
                     SCAN_RESULT_INSERT_BATCH_SIZE,
                 ):
-                    stmt = (
-                        pg_insert(ScanResult)
-                        .values(ranked_batch)
-                        .on_conflict_do_nothing(
-                            index_elements=["scan_id", "parcel_id"]
-                        )
+                    stmt = pg_insert(ScanResult).values(ranked_batch)
+                    stmt = stmt.on_conflict_do_update(
+                        constraint="uq_scan_results_org_parcel",
+                        set_={
+                            "scan_id": stmt.excluded.scan_id,
+                            "score": stmt.excluded.score,
+                            "flags": stmt.excluded.flags,
+                            "created_at": text("CURRENT_TIMESTAMP"),
+                        },
                     )
                     await session.execute(stmt)
 

@@ -7,19 +7,31 @@
 
 export interface ZakelijkGerechtigde {
   eigenaar_type: 'natuurlijk_persoon' | 'rechtspersoon' | 'overheid' | 'onbekend'
-  naam: string | null // Entity name (rechtspersoon/overheid only, NEVER for natuurlijk_persoon — AVG)
-  kvk_nummer: string | null // KvK registration (rechtspersoon only)
-  statutaire_zetel: string | null // Registered seat (rechtspersoon only)
+  naam: string | null
+  kvk_nummer: string | null
+  statutaire_zetel: string | null
   zakelijk_recht_type: string | null
   aandeel: string | null
-  koopsom: number | null // Purchase price in euros
-  koopjaar: number | null // Year of purchase
+  koopsom: number | null
+  koopjaar: number | null
+}
+
+export interface Hypotheek {
+  hypotheekhouder_naam: string | null
+  bedrag: number | null
+  aard: string | null
+}
+
+export interface Beslag {
+  aard: string | null
 }
 
 export interface PerceelOwnership {
   perceel_identificatie: string
   gerechtigden: ZakelijkGerechtigde[]
   heeft_hypotheek: boolean
+  hypotheken: Hypotheek[]
+  beslagen: Beslag[]
 }
 
 export interface BRKOwnershipResponse {

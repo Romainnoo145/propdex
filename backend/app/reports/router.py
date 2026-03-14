@@ -334,6 +334,7 @@ async def get_cities(
     "/from-address",
     response_model=ReportDetailResponse,
     status_code=status.HTTP_201_CREATED,
+    deprecated=True,
 )
 @limiter.limit("10/minute")
 async def generate_report_from_address(
@@ -344,11 +345,12 @@ async def generate_report_from_address(
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
-    Generate a full property intelligence report directly from address input.
+    Generate a report from address input.
 
-    Useful fallback for monitoring items that have postcode + huisnummer but no
-    matched parcel in ParcelCache yet.
+    DEPRECATED: Use from-parcel for flags-enriched due diligence dossiers.
+    Kept for meldingen fallback (items with postcode+huisnummer but no parcel_id).
     """
+    logger.warning("Deprecated from-address report generation called for %s %s", body.postcode, body.huisnummer)
     try:
         address_input = AddressInput(
             postcode=body.postcode,

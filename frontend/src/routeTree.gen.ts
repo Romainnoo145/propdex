@@ -21,6 +21,7 @@ import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/ma
 import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authenticated/jurisprudentie'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
 
@@ -85,6 +86,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedInstellingenIndexRoute =
+  AuthenticatedInstellingenIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedInstellingenRoute,
+  } as any)
 const AuthenticatedRapportIdRoute = AuthenticatedRapportIdRouteImport.update({
   id: '/rapport/$id',
   path: '/rapport/$id',
@@ -111,11 +118,11 @@ export interface FileRoutesByFullPath {
   '/auth/': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
+  '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
+  '/instellingen': typeof AuthenticatedInstellingenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
+  '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,11 +169,11 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/instellingen/score'
     | '/rapport/$id'
+    | '/instellingen/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/instellingen'
     | '/jurisprudentie'
     | '/map'
     | '/meldingen'
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/instellingen/score'
     | '/rapport/$id'
+    | '/instellingen'
   id:
     | '__root__'
     | '/'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
+    | '/_authenticated/instellingen/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -286,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/instellingen/': {
+      id: '/_authenticated/instellingen/'
+      path: '/'
+      fullPath: '/instellingen/'
+      preLoaderRoute: typeof AuthenticatedInstellingenIndexRouteImport
+      parentRoute: typeof AuthenticatedInstellingenRoute
+    }
     '/_authenticated/rapport/$id': {
       id: '/_authenticated/rapport/$id'
       path: '/rapport/$id'
@@ -305,11 +323,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedInstellingenRouteChildren {
   AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
+  AuthenticatedInstellingenIndexRoute: typeof AuthenticatedInstellingenIndexRoute
 }
 
 const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChildren =
   {
     AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,
+    AuthenticatedInstellingenIndexRoute: AuthenticatedInstellingenIndexRoute,
   }
 
 const AuthenticatedInstellingenRouteWithChildren =

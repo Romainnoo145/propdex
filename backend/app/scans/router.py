@@ -2430,7 +2430,7 @@ async def get_scan_tiles(
         content=tile_data,
         media_type="application/vnd.mapbox-vector-tile",
         headers={
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "public, max-age=60",
         },
     )
 

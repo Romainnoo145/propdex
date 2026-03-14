@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -53,6 +54,7 @@ interface ScoreFormProps {
  */
 function ScoreForm({ initialConfig }: ScoreFormProps) {
   const { mutateAsync: saveWeights, isPending: isSaving } = useSaveScoreWeights()
+  const queryClient = useQueryClient()
 
   const [formState, setFormState] = useState<ScoreWeightsConfig>(
     initialConfig ?? DEFAULT_WEIGHTS,
@@ -63,6 +65,15 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
   const { data: jobStatus } = useRescoreJobStatus(activeJobId)
 
   const jobDone = jobStatus?.status === 'complete' || jobStatus?.status === 'failed'
+
+  // When rescore job completes, invalidate score-weights so map picks up new scores
+  const prevJobDoneRef = useRef(false)
+  useEffect(() => {
+    if (jobStatus?.status === 'complete' && !prevJobDoneRef.current) {
+      queryClient.invalidateQueries({ queryKey: ['org', 'score-weights'] })
+    }
+    prevJobDoneRef.current = jobDone
+  }, [jobStatus?.status, jobDone, queryClient])
 
   // Validation: at least MIN_ACTIVE factors active per category
   const activePotentieCount = POTENTIE_FACTORS.filter(
@@ -75,6 +86,9 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
   const isJobRunning = !!activeJobId && !jobDone
 
   const canSave = isDirty && isValid && !isSaving && !isJobRunning
+
+  // Resolve current preset weights for toggle restore
+  const currentPreset = PRESETS.find((p) => p.id === formState.preset) ?? PRESETS[0]!
 
   const updateFormState = (partial: Partial<ScoreWeightsConfig>) => {
     setFormState((prev) => ({ ...prev, ...partial }))
@@ -106,6 +120,7 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         potentie_risico_balance: formState.potentie_risico_balance,
         potentie_weights: formState.potentie_weights,
         risico_weights: formState.risico_weights,
+        score_threshold: formState.score_threshold,
       })
       setIsDirty(false)
       if (result.job_id) {
@@ -150,12 +165,40 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         />
       </BentoPod>
 
+      {/* Score threshold */}
+      <BentoPod size="spacious" className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-aura-ink">
+            Minimale score op kaart
+          </p>
+          <span className="text-sm font-bold text-aura-ink tabular-nums">
+            {formState.score_threshold}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={formState.score_threshold}
+          onChange={(e) =>
+            updateFormState({ score_threshold: Number(e.target.value) })
+          }
+          className="w-full accent-aura-amber"
+        />
+        <div className="flex justify-between text-[11px] text-neutral-400">
+          <span>Alles tonen</span>
+          <span>Alleen topkansen</span>
+        </div>
+      </BentoPod>
+
       {/* Potentie factor table */}
       <BentoPod size="spacious" className="space-y-3">
         <p className="text-sm font-medium text-aura-ink">Potentie factoren</p>
         <FactorTable
           factors={POTENTIE_FACTORS}
           weights={formState.potentie_weights}
+          presetWeights={currentPreset.config.potentie_weights}
           onChange={handlePotentieWeightChange}
           minActive={MIN_ACTIVE}
         />
@@ -167,6 +210,7 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         <FactorTable
           factors={RISICO_FACTORS}
           weights={formState.risico_weights}
+          presetWeights={currentPreset.config.risico_weights}
           onChange={handleRisicoWeightChange}
           minActive={MIN_ACTIVE}
         />
