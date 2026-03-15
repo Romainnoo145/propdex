@@ -64,11 +64,11 @@ LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lag
   2. `DELETE /api/parcels/favorites/{parcel_id}` removes a favorite; subsequent GET no longer lists it
   3. `PATCH /api/parcels/favorites/{parcel_id}/pipeline` updates the pipeline stage; 400 returned for invalid stage values
   4. `GET /api/portfolio` returns all favorites grouped by provincie/gemeente/wijk with per-level counts in a single query (no N+1)
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
 
 Plans:
-- [ ] 109-01-PLAN.md -- ParcelFavorite + PipelineStage models, Alembic migration, Pydantic schemas
-- [ ] 109-02-PLAN.md -- CRUD router (/api/parcels/favorites) + bulk portfolio endpoint (/api/portfolio)
+- [ ] 109-01-PLAN.md -- ParcelFavorite model + Alembic migration with RLS + Pydantic schemas (wave 1)
+- [ ] 109-02-PLAN.md -- Favorites CRUD router + portfolio grouped endpoint + main.py registration (wave 2)
 
 ### Phase 110: ProjectList Refactor + HeartButton
 **Goal**: Users can heart a parcel from the detail panel to add it to their portfolio; the Projecten page is split into maintainable sub-components before v17 features are added
@@ -137,7 +137,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 109. Backend Foundation | 0/2 | Not started | - |
+| 109. Backend Foundation | 0/2 | Planned | - |
 | 110. ProjectList Refactor + HeartButton | 0/2 | Not started | - |
 | 111. Portfolio Navigation | 0/2 | Not started | - |
 | 112. Pipeline Stages | 0/1 | Not started | - |
