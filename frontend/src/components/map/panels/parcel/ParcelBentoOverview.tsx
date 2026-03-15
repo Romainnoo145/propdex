@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { motion, useSpring, useTransform, AnimatePresence, type Variants } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { Grid3x3, TrendingUp, ShieldAlert, ChevronUp, ChevronDown, Search } from 'lucide-react'
 import type { ScanResultItem, BekendmakingRecord } from '@/lib/types/scan'
 import { ParcelHero } from './ParcelHero'
@@ -7,6 +7,7 @@ import { ScoreGauge } from './ScoreGauge'
 import { BouwjaarTimeline } from './BouwjaarTimeline'
 import { EigendomModal } from './EigendomModal'
 import { VergunningenModal } from './VergunningenModal'
+import { BestemmingModal } from './BestemmingModal'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
@@ -98,6 +99,7 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
   )
 }
 
+
 /* ── Stagger animation ─────────────────────────────────────── */
 
 const staggerContainer: Variants = {
@@ -121,6 +123,7 @@ export function ParcelBentoOverview({
   const [activeCard, setActiveCard] = useState<BentoCard>('aerial')
   const [showEigendom, setShowEigendom] = useState(false)
   const [showVergunningen, setShowVergunningen] = useState(false)
+  const [showBestemming, setShowBestemming] = useState(false)
   const { data: weightsData } = useOrgScoreWeights()
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
@@ -129,6 +132,12 @@ export function ParcelBentoOverview({
       ? Math.round(((parcel.area_m2 - bm.pand_oppervlakte_m2) / parcel.area_m2) * 100)
       : parcel.area_m2 != null && !parcel.has_pand
         ? 100
+        : null
+  const vrijM2 =
+    parcel.area_m2 != null && parcel.area_m2 > 0 && bm?.pand_oppervlakte_m2 != null
+      ? Math.round(parcel.area_m2 - bm.pand_oppervlakte_m2)
+      : parcel.area_m2 != null && !parcel.has_pand
+        ? Math.round(parcel.area_m2)
         : null
 
   return (
@@ -167,7 +176,7 @@ export function ParcelBentoOverview({
           type="button"
           onClick={() => {
             setActiveCard('bestemming')
-            onSelectCategory('dossiers')
+            setShowBestemming(true)
           }}
           className="group flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
           style={{
@@ -240,11 +249,9 @@ export function ParcelBentoOverview({
           color="#EF4444"
           type="risico"
         />
-        <KenmerkenCard
-          icon={<Grid3x3 size={16} strokeWidth={1.5} />}
-          label="Beschikbaar"
-          value={vrijPct}
-          unit="%"
+        <BeschikbaarCard
+          percentage={vrijPct}
+          m2={vrijM2}
           highlight={vrijPct != null && vrijPct >= 40}
         />
       </div>
@@ -277,6 +284,17 @@ export function ParcelBentoOverview({
         )}
       </AnimatePresence>
 
+      {/* Bestemming modal */}
+      <AnimatePresence>
+        {showBestemming && (
+          <BestemmingModal
+            bestemmingen={parcel.bestemmingen}
+            address={parcel.address}
+            onClose={() => setShowBestemming(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Vergunningen modal */}
       <AnimatePresence>
         {showVergunningen && (
@@ -301,43 +319,8 @@ export function ParcelBentoOverview({
   )
 }
 
-/* ── Animated Number ───────────────────────────────────────── */
-
-function AnimatedNumber({ value, color }: { value: number; color: string }) {
-  const spring = useSpring(0, { stiffness: 50, damping: 18 })
-  const display = useTransform(spring, (v) => Math.round(v).toLocaleString('nl-NL'))
-  const [text, setText] = useState('0')
-
-  useEffect(() => { spring.set(value) }, [value, spring])
-  useEffect(() => {
-    const unsub = display.on('change', (v) => setText(v))
-    return unsub
-  }, [display])
-
-  return (
-    <span
-      className="text-3xl font-black tracking-tighter tabular-nums leading-none"
-      style={{ color }}
-    >
-      {text}
-    </span>
-  )
-}
 
 /* ── ScoreCircleCard ───────────────────────────────────────── */
-
-function deriveScoreVerdict(score: number | null, type: 'potentie' | 'risico'): string {
-  if (score == null) return 'Onbekend'
-  if (type === 'potentie') {
-    if (score >= 60) return 'Zeer kansrijk'
-    if (score >= 35) return 'Mogelijkheden'
-    return 'Beperkt'
-  }
-  // risico: higher = worse
-  if (score >= 60) return 'Hoog risico'
-  if (score >= 35) return 'Matig risico'
-  return 'Laag risico'
-}
 
 function ScoreCircleCard({
   icon,
@@ -354,7 +337,6 @@ function ScoreCircleCard({
   const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
   const r = 48
   const circumference = 2 * Math.PI * r
-  const glow = `${color}66`
 
   return (
     <motion.div
@@ -413,9 +395,87 @@ function ScoreCircleCard({
   )
 }
 
+
+/* ── BeschikbaarCard ───────────────────────────────────────── */
+
+function BeschikbaarCard({
+  percentage,
+  m2,
+  highlight,
+}: {
+  percentage: number | null
+  m2: number | null
+  highlight?: boolean
+}) {
+  const accentColor = highlight ? '#F9A826' : '#94a3b8'
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      className="flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm"
+      style={{
+        background: highlight ? 'rgba(249, 168, 38, 0.08)' : '#FFFFFF',
+        border: highlight ? '1px solid rgba(249, 168, 38, 0.3)' : '1px solid #EAEFEF',
+      }}
+    >
+      {/* Top: icon + label + chevrons */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color: accentColor }}>
+            <Grid3x3 size={16} strokeWidth={1.5} />
+          </span>
+          <span
+            className="text-[11px] font-extrabold uppercase"
+            style={{ letterSpacing: '0.15em', color: accentColor }}
+          >
+            Onbebouwd
+          </span>
+        </div>
+        <div className="flex flex-col -space-y-1 text-slate-200">
+          <ChevronUp size={14} strokeWidth={2} />
+          <ChevronDown size={14} strokeWidth={2} />
+        </div>
+      </div>
+
+      {/* Middle: percentage + m² */}
+      <div className="flex flex-col items-center gap-1">
+        {percentage !== null ? (
+          <span
+            className="text-5xl font-black tracking-tighter tabular-nums leading-none"
+            style={{ color: highlight ? '#F9A826' : '#0E1111' }}
+          >
+            {percentage}
+            <span className="text-3xl">%</span>
+          </span>
+        ) : (
+          <span className="text-5xl font-black tracking-tighter tabular-nums leading-none text-slate-300">
+            —
+          </span>
+        )}
+        {m2 !== null ? (
+          <span
+            className="text-sm font-bold tabular-nums"
+            style={{ color: highlight ? 'rgba(249, 168, 38, 0.6)' : '#94a3b8' }}
+          >
+            {m2.toLocaleString('nl-NL')} m²
+          </span>
+        ) : (
+          <span className="text-sm text-slate-300">— m²</span>
+        )}
+      </div>
+
+      {/* Bottom spacer */}
+      <div />
+    </motion.div>
+  )
+}
+
+
+
+
 /* ── KenmerkenCard ─────────────────────────────────────────── */
 
-function KenmerkenCard({
+export function KenmerkenCard({
   icon,
   label,
   value,
@@ -437,7 +497,6 @@ function KenmerkenCard({
         border: highlight ? '1px solid rgba(249, 168, 38, 0.3)' : '1px solid #EAEFEF',
       }}
     >
-      {/* Top: icon + label + chevrons */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-1.5">
           <span style={{ color: highlight ? '#F9A826' : '#cbd5e1' }}>{icon}</span>
@@ -457,16 +516,17 @@ function KenmerkenCard({
         </div>
       </div>
 
-      {/* Bottom: big value with count-up animation */}
       <div>
         {value !== null ? (
-          <AnimatedNumber
-            value={value}
-            color={highlight ? '#F9A826' : '#0E1111'}
-          />
+          <span
+            className="text-5xl font-black tracking-tighter tabular-nums leading-none"
+            style={{ color: highlight ? '#F9A826' : '#0E1111' }}
+          >
+            {value.toLocaleString('nl-NL')}
+          </span>
         ) : (
           <span
-            className="text-3xl font-black tracking-tighter tabular-nums leading-none"
+            className="text-5xl font-black tracking-tighter tabular-nums leading-none"
             style={{ color: '#cbd5e1' }}
           >
             —

@@ -5,25 +5,14 @@ interface ScoreGaugeProps {
   score: number | null
 }
 
-/** Score → color: red (0) → amber (50) → green (100) */
-function scoreColor(score: number): string {
-  if (score >= 70) return '#22C55E'   // vitality green
-  if (score >= 40) return '#F9A826'   // warm amber
-  return '#EF4444'                     // red
-}
-
-function scoreGlow(score: number): string {
-  if (score >= 70) return 'rgba(34,197,94,0.4)'
-  if (score >= 40) return 'rgba(249,168,38,0.4)'
-  return 'rgba(239,68,68,0.3)'
-}
+/** Total score ring is always amber */
+const AMBER = '#F9A826'
 
 export function ScoreGauge({ score }: ScoreGaugeProps) {
   const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
   const r = 48
   const circumference = 2 * Math.PI * r
-  const color = score !== null ? scoreColor(normalised) : '#F9A826'
-  const glow = score !== null ? scoreGlow(normalised) : 'rgba(249,168,38,0.4)'
+  const color = AMBER
 
   // Animated number via spring
   const spring = useSpring(0, { stiffness: 60, damping: 20 })
