@@ -1,531 +1,657 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Fysiek Risicoprofiel (Physical Risk Assessment) for Propdex
-**Researched:** 2026-03-09
-**Confidence:** HIGH (based on full codebase analysis + live API verification)
+**Domain:** Propdex v17.0 — Projecten Portfolio + Pipeline
+**Researched:** 2026-03-15
+**Confidence:** HIGH (full codebase analysis — models, routers, hooks, components all inspected)
 
 ---
 
 ## Current State Assessment
 
-The existing codebase already has two of the three physical risk domains partially implemented:
+The existing codebase provides the following relevant infrastructure:
 
-1. **Asbestos (v9.0):** `asbest_indicator.py` service does bouwjaar-based NEN 2991 risk classification. Returns `AsbestIndicator` schema with risk/bouwjaar/reden. Already wired into `property_aggregator.py` (line 1005) and `PropertyReportResponse.asbest_indicator` field.
+**Backend models (live):**
+- `Project` — self-referential hierarchy with `parent_id`, `gemeente_code`, `wijk_naam`, `is_monitored`. Currently used as "report folder" only. No pipeline state, no parcel association.
+- `ParcelDocument` — per-parcel document storage keyed by `parcel_id` (Kadaster string) + `document_type`. 20 valid types. LargeBinary in PostgreSQL.
+- `ScanResult` — one row per parcel per organization, linked to `parcel_cache.id` (UUID) via FK. Has `score` + `flags` JSONB. UNIQUE on `(organization_id, parcel_id)`.
+- `ParcelCache` — geometry + BAG data. `parcel_id` is Kadaster string (e.g., "HTT02-A-1234"). `id` is UUID.
+- `AreaScan` — scan job with `gemeente_code`, `wijk_naam`, `project_id` FK to Project.
 
-2. **Soil contamination (v9.0):** `bodemloket_arcgis.py` client queries WBB dossiers via ArcGIS REST. `bodem_aggregator.py` wraps it with 30-day JSONB cache. Already in `asyncio.gather()` parallel fetch (index 6). Returns `BodemData` with dossier references. This is contamination data, NOT soil type (klei/veen/zand).
+**Frontend (live):**
+- `/projecten` route → `ProjectList.tsx` (1867 lines) — the existing geographic drill-down: provincie → gemeente → wijk.
+- Gemeente favorites are **localStorage only** (`propdex:favorite-gemeenten` key, array of gemeente codes). Single-user, not synced, lost on new browser.
+- `GemeenteCard`, `WijkCard`, `GemeenteDetailView`, `WijkDetailView` exist. No parcel-level cards in Projecten.
+- `ParcelDetailPanel` is the map-side panel. It has Potentie / Risico / Dossiers tabs. No favorite/pipeline controls exist.
+- `useDocuments` hook exists for `ParcelDocument` CRUD.
 
-3. **Foundation risk:** Does not exist yet. No foundation-related service, schema, client, or API integration.
-
-**The gap:** No soil TYPE data (klei/veen/zand/leem), no foundation risk heuristic, no PDOK funderingsrisicogebieden, no combined physical risk assessment. The existing asbest indicator uses only bouwjaar -- it does not consider building function or soil type.
+**Key gaps for v17.0:**
+1. No parcel favorites model (only gemeente-level localStorage)
+2. No pipeline stage tracking (on Project or elsewhere)
+3. No outreach template storage
+4. No multi-parcel "deal" grouping
+5. `ParcelDocument` has no FK to `ScanResult` or `ParcelCache` UUID — it uses the raw Kadaster parcel_id string, which is fine as a natural key but limits JOIN capabilities
 
 ---
 
 ## Recommended Architecture
 
-### Component Map (New vs Modified)
+### System Overview
 
 ```
-NEW     backend/app/government_apis/pdok_funderingsrisico.py
-          + WFS client for PDOK Indicatieve Aandachtsgebieden Funderingsproblematiek
-          + GetFeature by BBOX (EPSG:28992), GeoJSON output
-          + Returns PC6-level: percvoor1970, fgr (soil region), legenda (risk class)
-
-NEW     backend/app/government_apis/wur_bodemdata.py
-          + REST client for WUR soilphysics.wur.nl/soil.php
-          + Returns soil horizon profile (clay%, sand%, silt%, som%, density)
-          + WGS84 coordinate input (lat/lon)
-
-NEW     backend/app/schemas/fysiek_risico.py
-          + SoilProfile (horizons with clay/sand/silt/peat composition)
-          + FoundationRisk (risk level + heuristic inputs + reasoning)
-          + FunderingsrisicogebiedData (PDOK PC6-level context data)
-          + FysiekRisicoProfiel (combined: foundation + soil + asbest v2)
-
-NEW     backend/app/services/soil_aggregator.py
-          + Fetch soil profile from WUR with 90-day JSONB cache
-          + Classify dominant soil type: klei/veen/zand/leem
-          + Cache key: rounded lat/lon (3 decimal places = ~100m)
-
-NEW     backend/app/services/funderingsrisico_aggregator.py
-          + Fetch PDOK WFS data by point (BBOX around RD coordinate)
-          + Cache by PC6 (postcode 6-digit) with 30-day TTL
-          + Return context signal (not per-parcel assessment)
-
-NEW     backend/app/services/foundation_risk_engine.py
-          + Heuristic: bouwjaar x bodemtype -> risk classification
-          + Combines: BAG bouwjaar + WUR soil type + PDOK area context
-          + Returns explainable risk with triggered rules
-
-MODIFY  backend/app/services/asbest_indicator.py
-          + Accept optional gebruiksdoel (building function) + bodemtype
-          + School/fabriek = higher risk multiplier (more asbestos materials)
-          + Soil type as secondary signal (klei = trapped fibers)
-
-MODIFY  backend/app/services/property_aggregator.py
-          + Add soil + funderingsrisico to asyncio.gather (parallel fetch)
-          + Post-gather: run foundation_risk_engine + asbest v2
-          + Add fysiek_risico_profiel to PropertyReportResponse
-
-MODIFY  backend/app/schemas/property.py
-          + Add FysiekRisicoProfiel field to PropertyReportResponse
-          + Extend AsbestIndicator with optional building function fields
-
-MODIFY  backend/app/core/config.py
-          + Add CACHE_TTL entries: "wur_bodemdata", "pdok_funderingsrisico"
-
-MODIFY  backend/app/government_apis/rate_limiter.py
-          + Add wur_bodemdata_limiter + pdok_funderingsrisico_limiter
-
-NEW     frontend: FysiekRisicoProfiel section in ParcelDetailModal
-          + Combined risk assessment card
-          + Foundation risk with heuristic explanation
-          + Soil type indicator with horizon visualization
-          + Asbest v2 with building function context
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Frontend: /projecten                           │
+├──────────────────────────────────────────────────────────────────────┤
+│  ProvinceCards → GemeenteCards → WijkCards → FavoritedParcelCards    │
+│                                                 ↓                    │
+│                                    ParcelWorkspaceDrawer             │
+│                                 (pipeline + dossier + templates)     │
+├──────────────────────────────────────────────────────────────────────┤
+│                        Frontend: /map                                 │
+│  ParcelDetailPanel → HeartButton (favorite toggle)                   │
+│                    → Pipeline badge (shows current stage)            │
+└──────────────────────────────────────────────────────────────────────┘
+                         ↕ API calls
+┌──────────────────────────────────────────────────────────────────────┐
+│                        FastAPI Backend                                │
+├────────────────┬───────────────────┬─────────────────────────────────┤
+│  /api/parcels/ │ /api/documents/   │  /api/projects/                 │
+│  favorites     │ (existing CRUD)   │  (existing CRUD)                │
+│  {parcel_id}/  │                   │                                 │
+│  pipeline      │                   │                                 │
+└────────────────┴───────────────────┴─────────────────────────────────┘
+                         ↕ SQLAlchemy async
+┌──────────────────────────────────────────────────────────────────────┐
+│                     PostgreSQL / PostGIS                              │
+├──────────────┬───────────────────────┬──────────────────────────────┤
+│ parcel_       │  parcel_pipeline_     │  outreach_templates          │
+│ favorites     │  stages (new)         │  (new)                       │
+├──────────────┴───────────────────────┴──────────────────────────────┤
+│  scan_results    parcel_cache    area_scans    projects    parcel_    │
+│  (existing)      (existing)      (existing)    (existing)  documents  │
+│                                                             (existing) │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Boundaries
+### Decision: Extend Project model OR create new models?
+
+**Create new models. Do not extend Project.**
+
+Rationale:
+- The `Project` model is a "report folder" concept tied to `AreaScan` via `project_id` FK. Repurposing it to track parcel pipeline stages would violate single responsibility and break the existing scan → project linkage.
+- Parcel favorites are orthogonal to scan folders. A user wants to favorite a parcel discovered via any scan, not just parcels in a specific project folder.
+- Pipeline stages are per-parcel, not per-scan or per-folder. They track the user's deal-making progress, which can span multiple scans.
+- The existing `Project` model already fulfills its intended purpose (grouping reports / scans by geography). Adding pipeline state to it would make it two different things at once.
+
+**New models required:**
+1. `ParcelFavorite` — server-backed parcel bookmarks with geographic denormalization
+2. `ParcelPipelineStage` — deal pipeline state per favorited parcel
+3. `OutreachTemplate` — org-level reusable outreach text templates
+
+---
+
+## New Data Models
+
+### Model 1: `ParcelFavorite`
+
+```python
+class ParcelFavorite(Base, TenantMixin, TimestampMixin):
+    """
+    Server-backed parcel favorite (bookmark).
+
+    Replaces localStorage gemeente favorites at the parcel level.
+    Links ParcelCache geometry to the user's portfolio view.
+
+    parcel_id is the Kadaster string identifier (matches ParcelDocument.parcel_id).
+    parcel_cache_id is the UUID FK for JOIN efficiency with scan_results.
+    Both are stored to avoid requiring a lookup when creating a favorite.
+    """
+    __tablename__ = "parcel_favorites"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
+
+    # Natural key (Kadaster string, e.g., "HTT02-A-1234") — matches ParcelDocument
+    parcel_id: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # FK to parcel_cache for geometry JOINs — nullable for parcels not yet in cache
+    parcel_cache_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("parcel_cache.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Denormalized geographic context for portfolio drill-down display
+    # (avoids JOIN to parcel_cache for list queries)
+    gemeente_code: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)
+    gemeente_naam: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    wijk_naam: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # User-provided label for this parcel in their portfolio
+    label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Denormalized score at time of favoriting (for display without scan JOIN)
+    score_at_favorite: Mapped[float | None] = mapped_column(nullable=True)
+
+    # Optional: group adjacent parcels into one deal
+    deal_group_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "parcel_id", name="uq_parcel_favorites_org_parcel"),
+        Index("ix_parcel_favorites_org_gemeente", "organization_id", "gemeente_code"),
+        Index("ix_parcel_favorites_org_wijk", "organization_id", "wijk_naam"),
+    )
+```
+
+**Why two IDs (`parcel_id` + `parcel_cache_id`):**
+- `parcel_id` (Kadaster string) matches `ParcelDocument.parcel_id` — enables document count join without UUID lookup.
+- `parcel_cache_id` (UUID FK) enables efficient geometry JOINs for map rendering.
+- If a favorite is created before a scan covers that parcel, `parcel_cache_id` can be NULL and backfilled later.
+
+### Model 2: `ParcelPipelineStage`
+
+```python
+PIPELINE_STAGES = Literal[
+    "gesignaleerd",   # Spotted — on the radar
+    "onderzoek",      # Under investigation — data gathering
+    "contact",        # Owner contact phase
+    "besluit",        # Go/no-go decision
+    "afgerond",       # Completed (bought/passed)
+]
+
+class ParcelPipelineStage(Base, TenantMixin, TimestampMixin):
+    """
+    Deal pipeline stage for a favorited parcel.
+
+    One row per favorited parcel. Created when a parcel is first favorited
+    (default: gesignaleerd). Updated as the deal progresses.
+
+    Separate from ParcelFavorite to keep concerns clean:
+    - ParcelFavorite = "I care about this parcel"
+    - ParcelPipelineStage = "where am I in the deal process"
+    """
+    __tablename__ = "parcel_pipeline_stages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
+
+    # FK to ParcelFavorite (1:1 relationship)
+    favorite_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("parcel_favorites.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,  # One pipeline row per favorite
+    )
+
+    # Natural key for direct lookup without favorite JOIN
+    parcel_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+
+    stage: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="gesignaleerd"
+    )
+
+    # Rich text note for current stage
+    stage_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Date when stage was last changed
+    stage_changed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    # Assigned team member (future: role-based access)
+    assigned_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (
+        Index("ix_parcel_pipeline_org_stage", "organization_id", "stage"),
+        Index("ix_parcel_pipeline_org_parcel", "organization_id", "parcel_id"),
+    )
+```
+
+**Why separate table, not a column on `ParcelFavorite`:**
+- Keeps `ParcelFavorite` as a stable bookmark record. Pipeline state is mutable and audit-worthy.
+- Enables future: pipeline history table (multiple rows showing stage transitions with timestamps).
+- Single-responsibility: bookmarking ≠ deal tracking.
+
+**Why NOT on `Project`:**
+- Stages track per-parcel deal progress. A `Project` groups many parcels across many scans. Adding `pipeline_stage` to `Project` would mean every wijk-level auto-created project gets a stage, which is semantically wrong.
+
+### Model 3: `OutreachTemplate`
+
+```python
+TEMPLATE_TYPES = Literal[
+    "brief_eigenaar",          # Letter to property owner
+    "pre_overleg_gemeente",    # Pre-consultation request to gemeente
+    "aanvraag_informatie",     # Information request
+]
+
+class OutreachTemplate(Base, TenantMixin, TimestampMixin):
+    """
+    Reusable outreach text template at organization level.
+
+    Templates are org-wide, not parcel-specific. They contain
+    Jinja2-style placeholders ({{ adres }}, {{ naam_eigenaar }}, etc.)
+    that are filled at render time with parcel data.
+
+    Built-in system templates are seeded per organization on first use.
+    Users can customize or create additional templates.
+    """
+    __tablename__ = "outreach_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
+
+    template_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    subject: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body_markdown: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # True = system default (seeded), False = user-created/customized
+    is_system: Mapped[bool] = mapped_column(nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+
+    __table_args__ = (
+        Index("ix_outreach_templates_org_type", "organization_id", "template_type"),
+    )
+```
+
+**Template render approach:** Backend renders templates server-side using a safe variable substitution (no eval — simple `str.replace` or `string.Template`). Variables populated from `ParcelFavorite` + latest `ScanResult.flags` + optional BRK data if already fetched.
+
+---
+
+## Component Boundaries
 
 | Component | Responsibility | Communicates With |
 |-----------|---------------|-------------------|
-| `WURBodemdataClient` (new) | HTTP GET to soilphysics.wur.nl, JSON parsing, soil horizon extraction | `rate_limiter`, `cache_manager` |
-| `PDOKFunderingsrisicoClient` (new) | WFS GetFeature to PDOK, GML/GeoJSON parsing, PC6-level data | `rate_limiter`, `cache_manager` |
-| `SoilAggregator` (new) | Fetch + cache soil profile, classify dominant type | `WURBodemdataClient`, `cache_manager` |
-| `FunderingsrisicoAggregator` (new) | Fetch + cache PDOK area risk, extract per-PC6 attributes | `PDOKFunderingsrisicoClient`, `cache_manager` |
-| `FoundationRiskEngine` (new) | Heuristic combining bouwjaar + soil type + area context | `SoilAggregator`, `FunderingsrisicoAggregator` (via results) |
-| `AsbestIndicator` (modified) | Bouwjaar + building function + soil type -> risk level | Pure function (no I/O) |
-| `PropertyAggregator` (modified) | Orchestrates parallel fetch, assembles report | All aggregators + engines |
-| Frontend `FysiekRisicoProfiel` (new) | Renders combined risk card in ParcelDetailModal | API response data only |
+| `ParcelFavorite` (new model) | Server-backed parcel bookmarks with geo denormalization | `parcel_cache`, `parcel_documents` (via parcel_id) |
+| `ParcelPipelineStage` (new model) | Deal stage per favorite | `parcel_favorites`, `users` |
+| `OutreachTemplate` (new model) | Org-level reusable outreach text | None (org-scoped) |
+| `/api/parcels/favorites` router (new) | CRUD favorites + pipeline stage updates | `parcel_favorites`, `parcel_pipeline_stages`, `scan_results` |
+| `/api/outreach` router (new) | Template CRUD + render endpoint | `outreach_templates`, `parcel_favorites`, `scan_results` |
+| `HeartButton` component (new) | Favorite toggle in `ParcelDetailPanel` | `useFavorites` hook → `/api/parcels/favorites` |
+| `FavoritedParcelCard` component (new) | Parcel card in Projecten drill-down | `ParcelFavorite` data + pipeline stage |
+| `ParcelWorkspaceDrawer` component (new) | Full-page per-parcel workspace | All parcel data, documents, pipeline, templates |
+| `useFavorites` hook (new) | TanStack Query wrapper for favorites CRUD | `/api/parcels/favorites` |
+| `usePipeline` hook (new) | TanStack Query wrapper for pipeline stage updates | `/api/parcels/favorites/{id}/pipeline` |
+| `useOutreachTemplates` hook (new) | Template list + render | `/api/outreach` |
+| `ProjectList.tsx` (modify) | Add parcel-level drill-down tier after WijkDetailView | `useFavorites`, `useOutreachTemplates` |
 
 ---
 
 ## Data Flow
 
-### Per-Parcel Physical Risk Assessment (Primary Use Case)
+### Favorite Parcel Flow (Map → Projecten)
 
 ```
-User opens ParcelDetailModal (or generates report)
-  -> property_aggregator.aggregate_property_data() called
-  -> STEP 1: Resolve address (BAG) -> get bouwjaar, gebruiksdoel, geometry
-  -> STEP 2a: asyncio.gather() parallel fetch (EXISTING + NEW):
-       [0] cadastral_parcels
-       [1] zoning
-       [2] monuments
-       [3] energy_label
-       [4] woz_data
-       [5] market_data
-       [6] bodem (existing bodemloket contamination)
-       [7] soil_profile (NEW - WUR soilphysics)          <-- ADD
-       [8] funderingsrisico_context (NEW - PDOK WFS)     <-- ADD
-  -> STEP 2b: Sequential BRK ownership
-  -> STEP 3: AI parsing trigger
-  -> STEP 4: Derive computed fields (EXISTING + NEW):
-       - buildability_delta
-       - wkb_precheck
-       - wkb_classification
-       - asbest_indicator (MODIFIED: now with gebruiksdoel + soil type)
-       - foundation_risk (NEW: bouwjaar x soil type x area context)   <-- ADD
-       - fysiek_risico_profiel (NEW: combined assessment)              <-- ADD
-  -> Return PropertyReportResponse with fysiek_risico_profiel field
+User clicks HeartButton in ParcelDetailPanel
+  -> useFavorites.toggleFavorite(parcel)
+  -> POST /api/parcels/favorites
+       body: { parcel_id, parcel_cache_id, gemeente_code, gemeente_naam, wijk_naam,
+               address, score_at_favorite }
+  -> Backend: INSERT parcel_favorites + INSERT parcel_pipeline_stages (stage='gesignaleerd')
+  -> Invalidate query key: ['favorites', 'gemeente', gemeente_code]
+  -> Heart button updates to filled state (optimistic update pattern)
+
+User navigates to /projecten
+  -> Gemeente drill-down → Wijk drill-down
+  -> WijkDetailView: shows favorited parcel count badge
+  -> Click "Percelen" → FavoritedParcelGrid
+       -> GET /api/parcels/favorites?gemeente_code=...&wijk_naam=...
+       -> Renders FavoritedParcelCard per result
 ```
 
-### Soil Profile Fetch Flow
+### Pipeline Stage Update Flow
 
 ```
-soil_aggregator.fetch_soil_profile(lat, lon, client, org_id, session)
-  -> Cache key: "wur_bodem:{lat_3dp}:{lon_3dp}" (90-day TTL)
-  -> Cache miss:
-       GET https://www.soilphysics.wur.nl/soil.php?latitude={lat}&longitude={lon}
-       -> JSON: { id, smu, horizon: [{code, top, bottom, som, clay, silt, sand, density, spu}] }
-       -> Parse into SoilProfile schema
-       -> Classify dominant type from weighted average of horizons (0-120cm)
-       -> Cache in CachedAPIResponse
-  -> Return SoilProfile with dominant_type: "klei"|"veen"|"zand"|"leem"|"gemengd"
+User opens FavoritedParcelCard → ParcelWorkspaceDrawer
+  -> Displays current stage pill (Gesignaleerd | Onderzoek | Contact | Besluit | Afgerond)
+  -> User clicks stage pill → PATCH /api/parcels/favorites/{favorite_id}/pipeline
+       body: { stage: 'onderzoek', stage_note: 'Belafspraak gepland' }
+  -> Backend: UPDATE parcel_pipeline_stages SET stage=..., stage_changed_at=NOW()
+  -> Invalidate query: ['favorites', parcel_id]
+  -> Stage pill updates (optimistic update)
 ```
 
-### PDOK Foundation Risk Context Fetch Flow
+### Outreach Template Render Flow
 
 ```
-funderingsrisico_aggregator.fetch_context(x_rd, y_rd, postcode, client, org_id, session)
-  -> Cache key: "pdok_funderingsrisico:pc6:{postcode6}" (30-day TTL)
-  -> Cache miss:
-       WFS GetFeature with CQL_FILTER: pc6='{postcode6}'
-       OR BBOX around RD coordinate (10m buffer)
-       -> GeoJSON: { features: [{ properties: {
-            pc6, gemeente, percvoor1970, fgr, legenda, n_bag, nvoor1970
-          }}]}
-       -> Parse into FunderingsrisicogebiedData
-       -> Cache in CachedAPIResponse
-  -> Return FunderingsrisicogebiedData with legenda (risk classification)
+User opens ParcelWorkspaceDrawer → "Opstellen brief" button
+  -> GET /api/outreach/templates?type=brief_eigenaar
+  -> Select template → POST /api/outreach/render
+       body: { template_id, parcel_id }
+  -> Backend:
+       1. Fetch template body
+       2. Fetch ParcelFavorite (address, gemeente, wijk)
+       3. Fetch latest ScanResult.flags (score, bouwjaar, bestemming)
+       4. [Optional] if BRK data already fetched, inject naam eigenaar
+       5. str.Template substitution → rendered markdown
+  -> Frontend: renders in modal with copy-to-clipboard + download .docx
 ```
 
-### Foundation Risk Heuristic Flow
+### Multi-Parcel Deal Group Flow
 
 ```
-foundation_risk_engine.assess(bouwjaar, soil_type, pdok_context)
-  -> Rule 1: bouwjaar < 1970 + klei/veen = HOOG
-       "Waarschijnlijk houten palen — kwetsbaar bij dalende grondwaterstand"
-  -> Rule 2: bouwjaar < 1970 + zand = LAAG
-       "Zanderige bodem geeft goede draagkracht, ook voor oudere funderingen"
-  -> Rule 3: bouwjaar >= 1970 + any soil = LAAG
-       "Na 1970 zijn betonnen palen standaard — minder kwetsbaar"
-  -> Rule 4: bouwjaar unknown = ONBEKEND
-  -> Context enrichment: PDOK legenda overrides if more specific
-       e.g., "Kwetsbaar gebied - >60%" from PDOK escalates to HOOG
-  -> Return FoundationRisk with triggered_rules + confidence
+User selects multiple FavoritedParcelCards
+  -> "Groepeer als deal" action
+  -> PATCH /api/parcels/favorites/bulk-group
+       body: { favorite_ids: [...], deal_group_id: <new UUID or existing> }
+  -> Backend: UPDATE parcel_favorites SET deal_group_id=... WHERE id IN (...)
+  -> Deal group shown as combined card in portfolio
 ```
 
 ---
 
-## New Schemas
+## API Router Structure
 
-### `fysiek_risico.py`
+### New: `/api/parcels` router
 
-```python
-class SoilHorizon(BaseModel):
-    """Single soil layer from WUR soil profile."""
-    code: str
-    top_cm: int
-    bottom_cm: int
-    clay_pct: float
-    silt_pct: float
-    sand_pct: float
-    organic_matter_pct: float
-    bulk_density: float | None = None
+```
+POST   /api/parcels/favorites                      Create favorite
+GET    /api/parcels/favorites                      List all favorites (org-wide)
+GET    /api/parcels/favorites?gemeente_code=&wijk_naam=  List by geography
+GET    /api/parcels/favorites/{favorite_id}        Get single favorite
+DELETE /api/parcels/favorites/{favorite_id}        Remove favorite
+PATCH  /api/parcels/favorites/{favorite_id}        Update label/notes
+PATCH  /api/parcels/favorites/{favorite_id}/pipeline  Update pipeline stage
+PATCH  /api/parcels/favorites/bulk-group           Group multiple into deal
+```
 
-class SoilProfile(BaseModel):
-    """Soil profile from WUR soilphysics.wur.nl."""
-    soil_map_unit: str | None = None         # WUR 'smu' code
-    horizons: list[SoilHorizon] = []
-    dominant_type: Literal["klei", "veen", "zand", "leem", "gemengd", "onbekend"]
-    dominant_type_reden: str                  # Dutch explanation
-    disclaimer: str = "Indicatief bodemprofiel op basis van de Bodemkaart 1:50.000."
+### New: `/api/outreach` router
 
-class FunderingsrisicogebiedData(BaseModel):
-    """PDOK Funderingsrisicogebieden at PC6 level."""
-    pc6: str
-    gemeente: str | None = None
-    fgr: str | None = None                   # Soil region (Rivierengebied, Veengebied, etc.)
-    percvoor1970: float | None = None        # % buildings pre-1970
-    n_bag: int | None = None                 # Total BAG buildings in PC6
-    nvoor1970: int | None = None             # Count pre-1970 buildings
-    legenda: str | None = None               # Risk classification text
-    disclaimer: str = (
-        "Indicatieve kaart op postcodeniveau — "
-        "doet geen uitspraken over specifieke funderingen."
-    )
-
-class FoundationRiskRule(BaseModel):
-    """Single explainable rule in foundation risk assessment."""
-    code: str
-    title: str
-    impact: Literal["verhoogd", "verlaagd", "neutraal"]
-    reason: str
-
-class FoundationRisk(BaseModel):
-    """Foundation risk assessment from heuristic engine."""
-    risk: Literal["hoog", "middel", "laag", "onbekend"]
-    bouwjaar: int | None = None
-    bodemtype: str | None = None
-    triggered_rules: list[FoundationRiskRule] = []
-    pdok_context: FunderingsrisicogebiedData | None = None
-    confidence: Literal["high", "medium", "low"] = "low"
-    reden: str                                # Dutch summary
-    disclaimer: str = (
-        "Indicatieve inschatting op basis van bouwjaar en bodemtype. "
-        "Geen vervanging voor funderingsonderzoek."
-    )
-
-class FysiekRisicoProfiel(BaseModel):
-    """Combined physical risk profile for a property."""
-    foundation_risk: FoundationRisk | None = None
-    soil_profile: SoilProfile | None = None
-    asbest_indicator: AsbestIndicator | None = None   # v2 with function
-    bodem_data: BodemData | None = None               # existing contamination
+```
+GET    /api/outreach/templates                     List templates (seeded + custom)
+POST   /api/outreach/templates                     Create custom template
+PATCH  /api/outreach/templates/{id}                Update template
+DELETE /api/outreach/templates/{id}                Delete (custom only)
+POST   /api/outreach/render                        Render template with parcel data
 ```
 
 ---
 
-## Patterns to Follow
+## Frontend File Structure (New + Modified)
 
-### Pattern 1: Parallel Fetch with Graceful Degradation
-
-**What:** Add soil + funderingsrisico to the existing `asyncio.gather()` in `property_aggregator.py`. Each new fetch follows the identical pattern: inner async function, try/except, append to errors list on failure, return None.
-
-**Why:** This is how ALL existing fetches work (cadastral, zoning, monuments, energy, woz, market, bodem). Adding to the gather keeps latency flat -- the new calls run concurrently with existing ones.
-
-**Critical constraint:** The gather result indices shift. Current bodem is at index 6. Adding two new fetches makes it index 7 and 8 (or reorganize). Use named results to avoid fragile index counting.
-
-```python
-# Better pattern: use dict-based result collection
-fetch_tasks = {
-    "cadastral": fetch_cadastral_parcels(),
-    "zoning": fetch_zoning(),
-    "monuments": fetch_monuments(),
-    "energy": fetch_energy_label(),
-    "woz": fetch_woz_data(),
-    "market": fetch_market_data(),
-    "bodem": fetch_bodem(),
-    "soil": fetch_soil_profile(),           # NEW
-    "funderingsrisico": fetch_funderingsrisico(),  # NEW
-}
-# asyncio.gather preserves order, but named keys are clearer
-results = dict(zip(
-    fetch_tasks.keys(),
-    await asyncio.gather(*fetch_tasks.values(), return_exceptions=True),
-))
+```
+frontend/src/
+├── components/
+│   ├── projects/
+│   │   ├── FavoritedParcelGrid.tsx    # NEW — parcel card grid in wijk drill-down
+│   │   ├── FavoritedParcelCard.tsx    # NEW — card per favorited parcel
+│   │   ├── PipelineStagePill.tsx      # NEW — stage indicator + click-to-change
+│   │   ├── DealGroupBadge.tsx         # NEW — visual indicator for grouped parcels
+│   │   ├── ParcelWorkspaceDrawer.tsx  # NEW — full-page parcel workspace (dossier + pipeline + outreach)
+│   │   ├── OutreachTemplateModal.tsx  # NEW — template select + render + copy
+│   │   ├── WijkDetailView.tsx         # MODIFY — add favorited parcel count + FavoritedParcelGrid
+│   │   └── ProjectList.tsx            # MODIFY — wire favorite counts into wijk cards
+│   └── map/
+│       └── panels/
+│           └── parcel/
+│               ├── HeartButton.tsx    # NEW — favorite toggle in ParcelDetailPanel
+│               └── ParcelDetailPanel.tsx  # MODIFY — add HeartButton + pipeline stage badge
+├── hooks/
+│   ├── useFavorites.ts    # NEW — TanStack Query: list/create/delete/update favorites
+│   ├── usePipeline.ts     # NEW — TanStack Query: pipeline stage mutations
+│   └── useOutreach.ts     # NEW — TanStack Query: template list + render
+├── lib/
+│   └── types/
+│       └── portfolio.ts   # NEW — ParcelFavorite, PipelineStage, OutreachTemplate types
 ```
 
-### Pattern 2: Government API Client Pattern (Identical to Existing)
+---
 
-**What:** Each new API client follows the established pattern:
-- Module in `backend/app/government_apis/`
-- Class with async methods accepting `httpx.AsyncClient`
-- Rate limiter from `rate_limiter.py`
-- Uses `retry_with_backoff()` from `base.py`
-- Module-level singleton instance
+## Relation to Existing `scan_results`
 
-**Example for WUR:**
+The `ParcelFavorite.parcel_cache_id` FK enables this JOIN for live score display:
 
-```python
-# backend/app/government_apis/wur_bodemdata.py
-class WURBodemdataClient:
-    BASE_URL = "https://www.soilphysics.wur.nl/soil.php"
-
-    async def get_soil_profile(
-        self, lat: float, lon: float, client: httpx.AsyncClient
-    ) -> SoilProfile | None:
-        async with wur_bodemdata_limiter:
-            response = await retry_with_backoff(
-                lambda: client.get(
-                    self.BASE_URL,
-                    params={"latitude": lat, "longitude": lon},
-                    timeout=15.0,
-                ),
-                source="wur_bodemdata",
-            )
-        if response.status_code != 200:
-            raise GovernmentAPIError("wur_bodemdata", f"HTTP {response.status_code}")
-        data = response.json()
-        if isinstance(data, str):  # "No soil information available"
-            return None
-        return self._parse_profile(data)
-
-wur_bodemdata_client = WURBodemdataClient()
+```sql
+SELECT pf.*, sr.score, sr.flags
+FROM parcel_favorites pf
+LEFT JOIN scan_results sr
+  ON sr.parcel_id = pf.parcel_cache_id
+  AND sr.organization_id = pf.organization_id
+WHERE pf.organization_id = $1
+  AND pf.gemeente_code = $2
 ```
 
-### Pattern 3: Aggregator Service with JSONB Cache
+The `parcel_cache_id` nullable FK means no scan is required to favorite a parcel (e.g., from a direct address lookup). When a scan later covers the parcel, a background task or the next page load can backfill `parcel_cache_id`.
 
-**What:** Each new aggregator wraps the API client with `get_cached_or_fetch()` from `cache_manager.py`. Identical to existing `bodem_aggregator.py` pattern.
+**Score display strategy:** Show `score_at_favorite` (stored at bookmark time) as primary display. Show live `scan_results.score` when available, with a visual "updated since favorited" indicator if scores diverge significantly.
 
-**When:** Every fetch that hits an external API goes through an aggregator.
+---
 
-```python
-# backend/app/services/soil_aggregator.py
-async def fetch_soil_profile(
-    lat: float, lon: float, client: httpx.AsyncClient,
-    organization_id: uuid.UUID, session: AsyncSession,
-    force_refresh: bool = False,
-) -> SoilProfile | None:
-    # Round to 3 decimal places (~100m precision) for cache stability
-    cache_key = f"wur_bodem:{round(lat, 3)}:{round(lon, 3)}"
+## Relation to Existing `ParcelDocument`
 
-    async def fetch_fn() -> dict:
-        result = await wur_bodemdata_client.get_soil_profile(lat, lon, client)
-        return result.model_dump() if result else {}
+`ParcelDocument` already uses `parcel_id` (Kadaster string) as its key. No schema change needed. The workspace drawer simply fetches documents via the existing `GET /api/documents/{parcel_id}/documents` endpoint. The document categories (bestemmingscheck, bodem, fundering, etc.) are already well-defined.
 
-    cached = await get_cached_or_fetch(
-        cache_key=cache_key, source="wur_bodemdata",
-        organization_id=organization_id, fetch_fn=fetch_fn,
-        session=session, force_refresh=force_refresh,
-    )
-    return SoilProfile.model_validate(cached.data) if cached.data else None
+**Dossier completeness tracking:** Compute document coverage client-side: `VALID_DOCUMENT_TYPES.filter(type => docsByType.has(type)).length / VALID_DOCUMENT_TYPES.length`. No backend model needed — it's a derived display metric.
+
+---
+
+## Architectural Patterns
+
+### Pattern 1: Optimistic Updates for Heart Button
+
+**What:** Toggle favorite state instantly in UI before API round-trip confirms.
+
+**When to use:** Any mutation the user expects to be instant (favorites, pipeline stage).
+
+**How:** TanStack Query `onMutate` callback updates the cache, `onError` rolls back.
+
+```typescript
+// useFavorites.ts
+useMutation({
+  mutationFn: createFavorite,
+  onMutate: async (newFavorite) => {
+    await queryClient.cancelQueries({ queryKey: ['favorites'] })
+    const previous = queryClient.getQueryData(['favorites'])
+    queryClient.setQueryData(['favorites'], (old) => [...old, newFavorite])
+    return { previous }
+  },
+  onError: (_err, _vars, context) => {
+    queryClient.setQueryData(['favorites'], context?.previous)
+  },
+  onSettled: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+})
 ```
 
-### Pattern 4: Pure-Function Heuristic Engine
+### Pattern 2: Geographic Denormalization in Favorites
 
-**What:** The foundation risk engine is a pure function (no I/O, no database), identical to `asbest_indicator.py`. Takes pre-fetched data, returns risk assessment.
+**What:** Store `gemeente_code`, `gemeente_naam`, `wijk_naam`, `address` on `ParcelFavorite` at creation time.
 
-**Why:** Testable without mocking. Deterministic. Fast. The heuristic logic is the core domain intelligence -- it should be isolated from data fetching concerns.
+**When:** Always for favorites. Avoids multi-table JOIN on every portfolio list render.
 
+**Trade-off:** Address data can get stale if BAG corrects an address. Acceptable — denormalized copy is display-only, and the source data (ParcelCache) remains authoritative.
+
+### Pattern 3: System Template Seeding
+
+**What:** Backend seeds default outreach templates per organization on first `GET /api/outreach/templates` call (lazy seeding).
+
+**When:** First user in an organization opens the templates list.
+
+**How:**
 ```python
-# backend/app/services/foundation_risk_engine.py
-def assess_foundation_risk(
-    *,
-    bouwjaar: int | None,
-    dominant_soil_type: str | None,
-    pdok_context: FunderingsrisicogebiedData | None,
-) -> FoundationRisk:
-    rules: list[FoundationRiskRule] = []
-    # ... heuristic logic ...
-    return FoundationRisk(risk=risk, triggered_rules=rules, reden=reden)
+# In GET /api/outreach/templates handler:
+count = await db.scalar(select(func.count()).where(...))
+if count == 0:
+    await seed_default_templates(organization_id, db)
 ```
 
-### Pattern 5: Coordinate Transformation for WUR API
+Avoids migration-time seeding (which requires knowing all org IDs), avoids background jobs for a simple UI feature.
 
-**What:** WUR soilphysics API uses WGS84 (lat/lon). The codebase works with RD New (EPSG:28992). The `rd_to_wgs84()` function already exists in `rce_monuments.py`.
+### Pattern 4: Pipeline Stage as Enumerated String (Not Enum Type)
 
-**When:** Before calling WUR API, transform RD coordinates to WGS84.
+**What:** Store pipeline stage as `String(20)` column, validate in Pydantic schema.
 
-**Why:** Reuse existing utility, no new dependency.
+**When:** All pipeline states.
+
+**Why not PostgreSQL ENUM:** Adding a new stage value to a PostgreSQL ENUM requires `ALTER TYPE`, which locks the table. String columns with application-level validation (Pydantic `Literal`) allow stage evolution without migrations.
+
+---
+
+## Scaling Considerations
+
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| 0-100 favorites | In-memory list rendering, no pagination needed |
+| 100-1000 favorites | Add pagination to `GET /api/parcels/favorites` (limit/offset) |
+| 1000+ favorites | Add `sort_by` + filter params; consider cursor-based pagination |
+
+The app is single-tenant initially (one client, small team). Favorites volume will be low (tens to hundreds of parcels). No premature optimization needed.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Separate API Call for Each Risk Component
+### Anti-Pattern 1: Reusing `Project` model for Pipeline Stages
 
-**What:** Calling soil API, then funderingsrisico API, then running heuristic sequentially.
+**What people do:** Add `pipeline_stage` field to the existing `Project` model.
 
-**Why bad:** Adds 2-4 seconds latency on top of existing 3-5 second aggregate time.
+**Why wrong:** `Project` is linked to `AreaScan` (via `project_id` FK on `area_scans`). An auto-created wijk-project would get a pipeline stage. The pipeline concept applies to individual parcels, not to scan folders.
 
-**Instead:** Add both API calls to the existing `asyncio.gather()`. They run in parallel with all other fetches. Total latency increase: near zero (limited by slowest existing call).
+**Do this instead:** `ParcelPipelineStage` with FK to `ParcelFavorite`. Keep scan folders (Project) and deal pipeline (PipelineStage) separate.
 
-### Anti-Pattern 2: Over-Engineering Soil Classification
+### Anti-Pattern 2: Keeping Favorites in localStorage
 
-**What:** Building a complex ML model or multi-layer analysis for soil type classification.
+**What people do:** Keep gemeente-level favorites in localStorage and add parcel-level favorites the same way.
 
-**Why bad:** The WUR API returns clay/silt/sand/organic matter percentages per horizon. A simple weighted average + threshold is sufficient. The data itself is at 1:50,000 scale -- adding precision beyond "klei/veen/zand" is false accuracy.
+**Why wrong:** localStorage is per-browser, not per-user. Team of 2-5 users (per PROJECT.md) cannot share portfolio view. Data lost on browser clear. Cannot show parcel favorites on map layer.
 
-**Instead:** Weighted average of top 120cm horizons:
-- clay > 25% -> klei
-- organic_matter > 15% -> veen
-- sand > 70% -> zand
-- silt > 50% -> leem
-- else -> gemengd
+**Do this instead:** Migrate to server-backed `parcel_favorites` table. The gemeente-level localStorage favorites can stay as-is for now (they are a display preference, not a data asset) — replace them when redesigning the portfolio view.
 
-### Anti-Pattern 3: Storing FysiekRisicoProfiel in Database
+### Anti-Pattern 3: Storing Rendered Templates
 
-**What:** Creating a new database model to persist the combined physical risk profile.
+**What people do:** Save rendered outreach letters as documents in `ParcelDocument`.
 
-**Why bad:** All inputs are already cached (bouwjaar in BAG cache, soil in WUR cache, PDOK in funderingsrisico cache). The heuristic is a pure function -- recomputing it takes microseconds. Storing derived data creates staleness risk.
+**Why wrong:** Rendered letters contain snapshot data. If the user edits the template, old rendered versions become confusing. Mixing template instances with original documents pollutes the dossier.
 
-**Instead:** Compute on every report generation from cached inputs. The caches have appropriate TTLs (BAG 24h, soil 90d, PDOK 30d).
+**Do this instead:** Render on demand (POST /api/outreach/render). User copies to clipboard or downloads. No persistence of rendered output. The template itself is persisted in `OutreachTemplate`.
 
-### Anti-Pattern 4: Using PDOK Funderingsrisico as Per-Parcel Assessment
+### Anti-Pattern 4: Requiring Scan Before Favoriting
 
-**What:** Treating PDOK `legenda` field as a definitive per-parcel foundation risk.
+**What people do:** Only allow favoriting parcels that exist in `scan_results`.
 
-**Why bad:** PDOK data is at PC6 (6-digit postcode) level, covering multiple buildings. The `percvoor1970` is a percentage across ALL buildings in the postcode area. A new building in a "kwetsbaar" postcode area is not at risk itself.
+**Why wrong:** Users may want to favorite a parcel found via address search (direct lookup without area scan). The favorite model must support this.
 
-**Instead:** Use PDOK as context signal that informs but does not override the per-parcel heuristic. The heuristic uses the actual bouwjaar of THIS building, with PDOK providing regional soil classification context.
+**Do this instead:** `parcel_cache_id` is nullable on `ParcelFavorite`. The Kadaster `parcel_id` string is always available from any parcel lookup path (scan result, direct address lookup, map click). Use that as the stable key.
 
-### Anti-Pattern 5: New Schema File Per Risk Type
+### Anti-Pattern 5: Blocking Heart Button on BRK Eigendom Data
 
-**What:** Creating `schemas/foundation_risk.py`, `schemas/soil_profile.py`, `schemas/funderingsrisico.py` as separate files.
+**What people do:** Require BRK ownership data before allowing a favorite (to pre-populate outreach template).
 
-**Why bad:** These are closely related schemas that form one conceptual unit. Spreading across files makes the dependency graph complex.
+**Why wrong:** BRK is Tier 3 (paid, on-demand). Blocking a free action (favoriting) on a paid call creates friction and cost.
 
-**Instead:** One file: `schemas/fysiek_risico.py` with all risk-related schemas. The top-level `FysiekRisicoProfiel` composes them. Only the existing `AsbestIndicator` stays in `property.py` (it is already there and used elsewhere).
+**Do this instead:** Favorite immediately. Outreach template render fetches BRK only when user explicitly opens the template composer. BRK data is fetched then, not at favorite time.
+
+---
+
+## Build Order (considering dependencies)
+
+### Phase 1: Backend Foundation — New Models + Migrations
+
+**Components:** `ParcelFavorite`, `ParcelPipelineStage`, `OutreachTemplate` models + Alembic migration + Pydantic schemas.
+
+**Why first:** All subsequent phases depend on these table definitions. No external dependencies.
+
+**Files:**
+- `backend/app/models/parcel_favorite.py` (NEW)
+- `backend/app/models/parcel_pipeline_stage.py` (NEW)
+- `backend/app/models/outreach_template.py` (NEW)
+- `backend/app/schemas/portfolio.py` (NEW — ParcelFavoriteCreate/Response, PipelineStageUpdate, TemplateCreate/Response)
+- `backend/alembic/versions/xxx_add_portfolio_models.py` (NEW migration)
+
+### Phase 2: Favorites API Router
+
+**Components:** `POST/GET/DELETE /api/parcels/favorites` + pipeline stage update endpoint.
+
+**Depends on:** Phase 1 models.
+
+**Files:**
+- `backend/app/parcels/router.py` (NEW router)
+- `backend/app/parcels/__init__.py` (NEW)
+- Register router in `backend/app/main.py`
+
+**Test coverage:** Integration tests for create/list/delete favorites + pipeline update. Follow pattern of `test_reports_router.py`.
+
+### Phase 3: Outreach Templates API
+
+**Components:** Template CRUD + render endpoint with system template seeding.
+
+**Depends on:** Phase 1 models. Independent of Phase 2 (can be built in parallel).
+
+**Files:**
+- `backend/app/outreach/router.py` (NEW)
+- `backend/app/outreach/templates_seed.py` (NEW — default Dutch templates)
+- `backend/app/outreach/renderer.py` (NEW — safe string.Template substitution)
+
+### Phase 4: Frontend Types + HeartButton
+
+**Components:** TypeScript types for all new API shapes + `HeartButton` in `ParcelDetailPanel`.
+
+**Depends on:** Phase 2 API shapes (for TypeScript type parity).
+
+**Files:**
+- `frontend/src/lib/types/portfolio.ts` (NEW)
+- `frontend/src/hooks/useFavorites.ts` (NEW)
+- `frontend/src/hooks/usePipeline.ts` (NEW)
+- `frontend/src/components/map/panels/parcel/HeartButton.tsx` (NEW)
+- Modify `ParcelDetailPanel.tsx` — add HeartButton + pipeline stage badge
+
+### Phase 5: Portfolio Drill-Down in Projecten
+
+**Components:** FavoritedParcelGrid + FavoritedParcelCard + PipelineStagePill + wiring into WijkDetailView.
+
+**Depends on:** Phase 4 (hooks + types). Phase 2 API must be live.
+
+**Files:**
+- `frontend/src/components/projects/FavoritedParcelGrid.tsx` (NEW)
+- `frontend/src/components/projects/FavoritedParcelCard.tsx` (NEW)
+- `frontend/src/components/projects/PipelineStagePill.tsx` (NEW)
+- Modify `WijkDetailView.tsx` — add favorited parcel section
+- Modify `ProjectList.tsx` — add favorite counts to wijk cards
+
+### Phase 6: ParcelWorkspaceDrawer + Outreach Templates UI
+
+**Components:** Full parcel workspace with dossier completeness, pipeline management, template composer.
+
+**Depends on:** Phases 4 + 5 (favorites infrastructure) + Phase 3 (outreach API).
+
+**Files:**
+- `frontend/src/components/projects/ParcelWorkspaceDrawer.tsx` (NEW)
+- `frontend/src/components/projects/OutreachTemplateModal.tsx` (NEW)
+- `frontend/src/hooks/useOutreach.ts` (NEW)
+
+### Phase 7 (deferred): Multi-Parcel Deal Groups
+
+**Components:** Bulk-group mutation + DealGroupBadge + combined deal card.
+
+**Depends on:** All prior phases. Deferred because it adds UI complexity without core value.
+
+**Why deferred:** The deal_group_id column on `ParcelFavorite` is already in Phase 1 migration. Implementation can happen later without schema changes.
 
 ---
 
 ## Integration Points Summary
 
-| Integration | Type | Existing Component | Change |
-|-------------|------|-------------------|--------|
-| WUR soilphysics API | NEW CLIENT | None | `wur_bodemdata.py` in `government_apis/` |
-| PDOK Funderingsrisico WFS | NEW CLIENT | None | `pdok_funderingsrisico.py` in `government_apis/` |
-| Rate limiter | ADD | `rate_limiter.py` | Add `wur_bodemdata_limiter` + `pdok_funderingsrisico_limiter` |
-| Cache TTL config | ADD | `config.py` CACHE_TTL dict | Add `"wur_bodemdata": 7776000` (90d) + `"pdok_funderingsrisico": 2592000` (30d) |
-| Cache manager | NONE | `cache_manager.py` | Reuse as-is via aggregator pattern |
-| Soil aggregator | NEW | None | `soil_aggregator.py` in `services/` |
-| Funderingsrisico aggregator | NEW | None | `funderingsrisico_aggregator.py` in `services/` |
-| Foundation risk engine | NEW | None | `foundation_risk_engine.py` in `services/` |
-| Asbest indicator | MODIFY | `asbest_indicator.py` | Accept optional gebruiksdoel + bodemtype params |
-| Property aggregator | MODIFY | `property_aggregator.py` | Add 2 fetches to gather, wire up heuristics post-gather |
-| PropertyReportResponse | MODIFY | `property.py` schema | Add `fysiek_risico_profiel: FysiekRisicoProfiel \| None` field |
-| Coordinate transform | REUSE | `rce_monuments.py` `rd_to_wgs84()` | Import for WUR API coordinate conversion |
-| ParcelDetailModal | MODIFY | Frontend component | Add FysiekRisicoProfiel section after Property Info Grid |
-| Frontend types | MODIFY | `types/scan.ts` or new `types/risk.ts` | Add TypeScript types matching backend schemas |
-
----
-
-## Suggested Build Order
-
-Based on dependency analysis:
-
-1. **Schemas** (`fysiek_risico.py`) -- All components depend on shared types. No external dependencies.
-
-2. **WUR Bodemdata client** (`wur_bodemdata.py`) + **soil aggregator** (`soil_aggregator.py`) -- First external API integration. Needs rate limiter entry + CACHE_TTL entry. Testable independently via unit test with mocked HTTP.
-
-3. **PDOK Funderingsrisico client** (`pdok_funderingsrisico.py`) + **funderingsrisico aggregator** (`funderingsrisico_aggregator.py`) -- Second external API integration. Same pattern as step 2. Can be built in parallel with step 2.
-
-4. **Foundation risk engine** (`foundation_risk_engine.py`) -- Pure function, depends on schemas from step 1. Write with comprehensive test coverage (bouwjaar x soil type matrix). Can be built in parallel with steps 2-3.
-
-5. **Asbest indicator v2** (modify `asbest_indicator.py`) -- Extend existing function signature. Backward compatible (new params are optional). Update tests.
-
-6. **Property aggregator wiring** (modify `property_aggregator.py` + `property.py`) -- Wire soil + funderingsrisico into `asyncio.gather()`, call heuristic engines post-gather, add `fysiek_risico_profiel` to response schema. Depends on steps 1-5.
-
-7. **Frontend FysiekRisicoProfiel section** -- Render combined risk card in ParcelDetailModal. Depends on step 6 for API response shape.
-
-**Hard dependencies:** 1 -> {2, 3, 4} -> 6 -> 7
-**Parallelizable:** Steps 2, 3, and 4 are independent of each other
-**Step 5** can happen at any point after step 1
-
----
-
-## Verified API Details
-
-### WUR Soilphysics API (VERIFIED via live request)
-
-- **Endpoint:** `https://www.soilphysics.wur.nl/soil.php?latitude={lat}&longitude={lon}`
-- **Auth:** None required (public)
-- **CRS:** WGS84 (decimal degrees)
-- **Response format:** JSON
-- **Sample response (lat=52.1, lon=5.2):**
-  ```json
-  {
-    "id": 8010,
-    "smu": "EZg21",
-    "horizon": [
-      {"code": "1Aap", "top": 0, "bottom": 15, "som": 5, "clay": 4, "silt": 9, "sand": 87, "density": 1.3718, "spu": "B2"},
-      {"code": "1Cu", "top": 70, "bottom": 120, "som": 0, "clay": 3, "silt": 5, "sand": 92, "density": 1.6735, "spu": "O1"}
-    ]
-  }
-  ```
-- **No data response:** `"No soil information available for this location."` (string, not JSON object)
-- **Coverage:** Netherlands only, based on Bodemkaart 1:50.000
-- **Rate limiting:** Unknown (public WUR endpoint), use conservative limiter (3 concurrent, 300/hr)
-
-### PDOK Funderingsrisicogebieden WFS (VERIFIED via live request)
-
-- **Endpoint:** `https://service.pdok.nl/rvo/indicatieve-aandachtsgebieden-funderingsproblematiek/wfs/v1_0`
-- **NOTE:** URL in GetCapabilities redirects to `/rvo/indicatieve-aandachtsgebieden-funderingsproblematiek/` (different from the `/rvo/indgebfunderingsproblematiek/` alias in STATE.md)
-- **Auth:** None required (CC0 license)
-- **CRS:** EPSG:28992 (RD New)
-- **Output formats:** GeoJSON (`application/json`), GML
-- **Feature type:** `indgebfunderingsproblematiek:indgebfunderingsproblematiek`
-- **Properties (from DescribeFeatureType):**
-  - `pc6` (string) -- 6-digit postcode
-  - `woonplaats` (string)
-  - `gemeente` (string)
-  - `provincie` (string)
-  - `perc_fgr` (string) -- percentage of PC6 area covered by this soil region
-  - `afk` (string) -- abbreviation (e.g., "ri" = rivierengebied)
-  - `fgr` (string) -- soil region full name (Rivierengebied, Veengebied, etc.)
-  - `percvoor1970` (string) -- percentage of buildings pre-1970 (as float string)
-  - `n_bag` (string) -- total BAG buildings count in PC6
-  - `nvoor1970` (string) -- count of pre-1970 buildings
-  - `legenda` (string) -- risk classification text (e.g., "Kwetsbaar gebied - 40-60 %")
-  - `popuptext` (string) -- human-readable HTML description
-  - `website` (string) -- always "http://www.kcaf.nl"
-- **Query options:** CQL_FILTER (e.g., `pc6='7251RG'`), BBOX, propertyName
-- **Gotcha:** All properties are STRING type (including percvoor1970, n_bag, nvoor1970) -- must parse to float/int in client
+| Integration Point | Type | Existing Component | Change |
+|-------------------|------|--------------------|--------|
+| `ParcelFavorite` model | NEW | None | New model + migration |
+| `ParcelPipelineStage` model | NEW | None | New model + migration |
+| `OutreachTemplate` model | NEW | None | New model + migration |
+| `/api/parcels/favorites` router | NEW | `/api/projects` (pattern source) | New router, same auth pattern |
+| `/api/outreach` router | NEW | None | New router |
+| `HeartButton` in ParcelDetailPanel | NEW | `ParcelDetailPanel.tsx` | Add component, modify panel |
+| `FavoritedParcelGrid` in WijkDetailView | NEW | `WijkDetailView.tsx` | Modify detail view |
+| Gemeente favorites localStorage | REPLACE (parcel level) | `ProjectList.tsx` line 93 | Keep gemeente localStorage, add server-backed parcel favorites |
+| `ParcelDocument` | UNCHANGED | `documents/router.py` | No change — parcel_id string key already works |
+| `scan_results` JOIN | ADDITIVE | `ScanResult` model | Query in favorites list endpoint only |
+| TanStack Query cache | ADDITIVE | Existing query keys | New keys: `['favorites']`, `['pipeline', parcel_id]`, `['templates']` |
 
 ---
 
 ## Sources
 
-- Existing codebase: `asbest_indicator.py`, `bodem_aggregator.py`, `bodemloket_arcgis.py`, `property_aggregator.py`, `property.py` schemas, `cache_manager.py`, `rate_limiter.py`, `base.py` (HIGH confidence)
-- WUR soilphysics API: Live test `curl https://www.soilphysics.wur.nl/soil.php?latitude=52.1&longitude=5.2` verified 2026-03-09 (HIGH confidence)
-- PDOK Funderingsrisicogebieden WFS: Live GetCapabilities + DescribeFeatureType + GetFeature verified 2026-03-09 (HIGH confidence)
-- PDOK WFS schema: All 17 properties confirmed from DescribeFeatureType XSD (HIGH confidence)
-- Memory notes: v14.0 milestone context, foundation heuristic design, deferred items (HIGH confidence)
-- [Bodemdata.nl](https://bodemdata.nl) - WUR soil information system
-- [PDOK WFS documentation](https://www.pdok.nl/wfs) - General WFS patterns
-- [Grondsoortenkaart data.overheid.nl](https://data.overheid.nl/dataset/67735-grondsoortenkaart) - Source dataset reference
+- Codebase: `backend/app/models/project.py`, `parcel_document.py`, `scan_result.py`, `parcel_cache.py`, `area_scan.py` (HIGH confidence — direct inspection)
+- Codebase: `backend/app/projects/router.py`, `backend/app/documents/router.py` (HIGH confidence — direct inspection)
+- Codebase: `frontend/src/components/projects/ProjectList.tsx` lines 93-211 (HIGH confidence — localStorage favorites pattern confirmed)
+- Codebase: `frontend/src/lib/types/project.ts`, `scan.ts` (HIGH confidence — type shapes confirmed)
+- Codebase: `frontend/src/hooks/useProjects.ts` (HIGH confidence — TanStack Query mutation patterns confirmed)
+- Project context: `.planning/PROJECT.md` v17.0 milestone spec (HIGH confidence)
+- Memory: `MEMORY.md` — Phase 105, Phase 106, Map Panel Architecture, TanStack Query patterns (HIGH confidence)
 
 ---
 
-*Architecture research for: Propdex v14.0 Fysiek Risicoprofiel*
-*Researched: 2026-03-09*
+*Architecture research for: Propdex v17.0 Projecten Portfolio + Pipeline*
+*Researched: 2026-03-15*

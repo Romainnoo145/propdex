@@ -1,120 +1,227 @@
-# Feature Landscape: Fysiek Risicoprofiel (Physical Risk Assessment)
+# Feature Research: Projecten Portfolio — Deal Pipeline & Portfolio Management
 
-**Domain:** Physical building risk assessment for PropTech real estate due diligence (Netherlands)
-**Researched:** 2026-03-09
-**Confidence:** MEDIUM-HIGH -- PDOK/BRO endpoints verified via PDOK service pages; KCAF heuristics confirmed via multiple sources; soil data access path (WMS GetFeatureInfo) verified but not yet live-tested.
+**Domain:** Property portfolio management + deal pipeline for Dutch vastgoedontwikkelaars (PropTech)
+**Researched:** 2026-03-15
+**Milestone:** v17.0 Projecten Portfolio
+**Confidence:** MEDIUM — Pipeline stage naming from general PropTech + Dutch domain knowledge; Dutch-specific acquisition workflow from government/industry sources; dossier completeness patterns from international PropTech (no Dutch-specific tools found)
 
 ---
 
-## Context: Current State and Problem
+## Context: What This Milestone Adds
 
-Propdex already has basic physical risk signals scattered across the report:
-- **asbest_indicator.py**: Bouwjaar-only NEN 2991 risk bands (hoog/middel/geen/onbekend)
-- **bodemloket_arcgis.py**: WBB soil contamination dossiers (Bodemloket ArcGIS REST)
-- **3D BAG**: Building height, footprint, bouwlagen per pand
-- **BAG data**: Bouwjaar, gebruiksdoel, pand geometry already in BuildingData schema
+Propdex already has: map scanning, per-parcel scoring, due diligence reports, document uploads, BRK eigendom modal, and a basic heart/favorite for gemeenten. The gap is **no place for a developer to manage their actual acquisition pipeline** after they find an opportunity.
 
-The gap: **no integrated physical risk view**. A developer looking at a pre-1970 building on clay soil near a contaminated site must mentally combine three separate report sections. Worse, foundation risk (the single most expensive hidden cost in Dutch property development) has zero coverage -- no data source, no heuristic, nothing.
-
-Dutch property developers routinely face 50,000-200,000+ EUR foundation repair costs that were invisible at acquisition. This milestone closes that gap.
+Today a developer uses Propdex to find/score parcels, then manages the acquisition in Excel/email/their head. This milestone adds the pipeline layer that closes the loop: favorite a parcel → assign a stage → track the dossier → prepare outreach → make a go/no-go call.
 
 ---
 
 ## Table Stakes
 
-Features users expect when a platform claims "physical risk assessment" for property due diligence. Missing = product feels incomplete or untrustworthy.
+Features users expect in any property pipeline tool. Missing = product feels like a prototype.
 
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|--------------|------------|--------------|-------|
-| **Soil type classification** (klei/veen/zand/leem) | Every foundation assessment starts with "what soil is this built on?" KCAF, Deltares, and all TDD firms use soil type as primary input | Med | BRO Bodemkaart WMS via PDOK | WMS GetFeatureInfo at coordinate -- no WFS available. Returns grondsoort per 1:50k polygon. Not parcel-precise but good enough for risk indication |
-| **Foundation risk heuristic** (bouwjaar x bodemtype) | 750K+ homes on wooden piles in NL. Pre-1970 + klei/veen = "waarschijnlijk houten palen" per KCAF. Every property professional knows this rule | Low | Soil type + existing bouwjaar from BAG | Pure logic: bouwjaar < 1970 AND soil in (klei, veen) = HOOG; bouwjaar < 1970 AND zand = LAAG; post-1970 = betonpalen (LAAG) |
-| **PDOK Funderingsrisicogebieden** context signal | RVO publishes official "indicatieve aandachtsgebieden" at PC6 level. Every municipality uses this for policy. Not showing it when available = negligent | Low-Med | PDOK WFS endpoint already known | `service.pdok.nl/rvo/indgebfunderingsproblematiek/wfs/v1_0`, returns GeoJSON. Fields: percvoor1970, fgr (soil category), legenda (risk label). Query by bbox or filter on postcode |
-| **Combined risk summary** with traffic-light rating | Professionals expect a single "is this a concern?" signal, not raw data dumps. Red/orange/green with explanation | Low | All three above feeding into one view | Heuristic engine combining signals into HOOG/MIDDEL/LAAG/ONBEKEND with Dutch-language explanation |
-| **Asbestos v2** with building function refinement | Bouwjaar-only is table stakes (already have it). Adding BAG gebruiksdoel makes it credible: industrial/educational buildings from 1963-1993 have materially higher asbestos probability than residential | Low | Existing asbest_indicator.py + BAG gebruiksdoel already in BuildingData | industriefunctie, bijeenkomstfunctie, onderwijsfunctie = risk_boost. Purely additive to existing logic |
-| **Source attribution and disclaimers** | Government data = indicative only. Legal liability if users treat it as definitive. Must show "dit is een indicatie, geen funderingsonderzoek" | Low | All features | Same pattern as existing Bodemloket disclaimer. Per KCAF: "De gegevens zijn indicatief en vervangen geen funderingsonderzoek" |
+| Feature | Why Expected | Complexity | Dependencies on Existing | Notes |
+|---------|--------------|------------|--------------------------|-------|
+| **Parcel favoriting** (heart button) | Cannot manage a pipeline without first saving a lead. The most basic primitive — "I care about this parcel" | LOW | ParcelDetailPanel (exists), localStorage heart for gemeenten (exists as pattern) | Needs server-side persistence (not localStorage) — must be org-scoped. DB model: `FavoritedParcel(org_id, parcel_id, wijk_id, created_at)` |
+| **Geographic portfolio navigation** (provincie → gemeente → wijk → parcel) | Developers organize their pipeline geographically. "Show me everything I'm tracking in Noord-Holland" is natural to them | MEDIUM | Gemeente/wijk card nav (exists), SVG silhouettes (exists) | New /projecten route with drill-down. Provincie layer is new (currently skip to gemeente). Re-use existing WijkMapPanel patterns for cards |
+| **Pipeline status per parcel** | Every CRM for real estate has stages. Without stages, there's no pipeline — just a list | MEDIUM | Per-parcel document storage (exists) | 5 stages (see Pipeline Stages section). Status stored in `FavoritedParcel` or separate `ParcelProject` model |
+| **Parcel project workspace** (expanded dossier view) | After favoriting, users need a dedicated workspace per parcel: notes, documents, status, contacts | HIGH | Per-parcel document storage (exists), 5 dossier categories (exists), notes system (exists) | Full-screen or route-based workspace. Shows dossier completeness + action links per missing doc |
+| **Dossier completeness indicator** | Users need to know "what am I still missing?" before a go/no-go meeting. Percentage + missing items list | MEDIUM | 20 document types already defined in upload system | Weighted checklist: which docs are critical vs nice-to-have for each pipeline stage. Progress bar per category |
+| **Multi-parcel project grouping** | Adjacent parcels often form one deal (e.g., three lots for apartment block). Must group them | MEDIUM | Parcel selection (exists in /resultaten), FavoritedParcel model | `Project` model with many-to-many parcels. Display as "project" card in portfolio, not individual parcel cards |
+
+---
+
+## Dutch Pipeline Stages
+
+Based on research into Dutch vastgoedontwikkeling acquisition workflow and general real estate CRM patterns.
+
+### Standard Dutch Developer Pipeline (5 Stages)
+
+| Stage | Dutch Label | Description | Trigger | Exit Criterion |
+|-------|-------------|-------------|---------|----------------|
+| 1 | **Gesignaleerd** | Parcel identified as interesting from scan. Initial signal. | Heart/favorite parcel | Decide to investigate further |
+| 2 | **Onderzoek** | Active due diligence: ownership research, zoning analysis, feasibility check. Pre-contact phase | Promote from Gesignaleerd | Sufficient info to decide: contact owner or drop |
+| 3 | **Contact** | Owner contacted (brief/email/phone). May include principeverzoek at gemeente. Negotiation begins | Promote from Onderzoek | LOI signed, OR dropped |
+| 4 | **Besluit** | Internal go/no-go decision. Board/partner approval. Term sheet / koopovereenkomst negotiation | Owner responded positively | Go → purchase agreement, No-go → Afgerond/Afgewezen |
+| 5 | **Afgerond** | Closed: Gekocht (purchased) OR Afgewezen (rejected) with reason | Decision made | — |
+
+**Rationale for these 5 stages:**
+- Maps to the Nederlandse acquisitieproces: signalering → analyse → contactfase → principebesluit → afsluiting
+- Aligns with the formal Dutch real estate transaction flow: LOI → due diligence → SPA → notarispassering
+- "Principeverzoek" (vooroverleg gemeente) happens in the Contact stage, after initial owner outreach
+- Avoids over-engineering: CRM tools that define 10+ stages see poor adoption
+
+---
 
 ## Differentiators
 
-Features that set Propdex apart. Not universally expected, but valued by sophisticated developers.
+Features that set Propdex apart from generic CRM tools and competing PropTech.
 
 | Feature | Value Proposition | Complexity | Dependencies | Notes |
 |---------|-------------------|------------|--------------|-------|
-| **Combined Fysiek Risicoprofiel section** in ParcelDetailModal | Nobody else combines soil + foundation + asbest + contamination in one panel for Dutch property. Matrixian/Calcasa focus on valuation, FunderMaps is foundation-only, Bodemloket is contamination-only. Integration IS the value | Med | All table stakes features | Single collapsible section with sub-cards: Bodemtype, Funderingsrisico, Asbest, Bodemverontreiniging |
-| **Climate context signal** (droogte + bodemdaling) | Since 2025, organizations legally required to map physical climate risks. Drought causes wooden pile rot; bodemdaling exacerbates foundation damage. Showing this connects physical risk to climate adaptation -- very current topic | High | External data sources (Klimaateffectatlas, KNMI) | DEFERRED for this milestone. Worth noting for roadmap: would need Klimaateffectatlas WMS integration |
-| **Foundation risk per area scan** (not just per-parcel) | Coloring entire wijk by foundation risk during area scan would instantly show which neighborhoods have highest physical risk exposure | Med-High | Foundation heuristic at scale, tile coloring logic | Requires soil type per parcel centroid at scan time. Could pre-compute via BRO WMS for entire wijk bbox. Consider for future phase |
-| **Risk-to-cost estimation** | "Funderingsherstel voor dit type pand kost indicatief 40.000-80.000 EUR" based on KCAF reference prices per m2 footprint | Med | Foundation risk + pand_oppervlakte from 3D BAG/BAG | KCAF publishes reference ranges. Would need careful disclaimers. HIGH value for go/no-go decisions |
-| **Asbest sanering cost indication** | "Asbestverwijdering voor industriefunctie 80m2 kost indicatief 5.000-15.000 EUR" | Med | Asbest v2 + oppervlakte | Market rates vary wildly. Could provide order-of-magnitude indication only. DEFERRED |
-| **Soil profile depth view** | bodemdata.nl has soil profiles to 1.2m depth -- showing layer composition (e.g., 0-30cm klei, 30-80cm veen, 80-120cm zand) would be unique | High | bodemdata.nl profielbeschrijvingen API (if available) | WMS GetFeatureInfo may return profile data. Needs live testing. DEFERRED for this milestone |
+| **Outreach template generator** (brief naar eigenaar) | Generic CRM tools have no idea who owns a Dutch parcel or how to approach them. Propdex already has BRK eigendom data (naam, type, adres). A pre-filled letter template leverages that uniquely | MEDIUM | BRK eigendom modal (exists), parcel data (exists) | Two templates: (1) Brief particuliere eigenaar, (2) Brief rechtspersoon/BV. Pre-fill: naam eigenaar, adres perceel, bestemming, developer org name. Word/PDF export. Claude AI personalization is P2 |
+| **Pre-overleg gemeente template** (principeverzoek) | Before investing in a formal permit application, developers always do vooroverleg. Propdex knows the bestemming, bouwregels, max_bouwlagen — enough to draft a principeverzoek request | MEDIUM | Bestemming data (exists), DSO bouwregels (exists), parcel geometry (exists) | Template auto-populates: adres perceel, kadastrale aanduiding, huidige bestemming, gewenste functiewijziging, oppervlakte. Links to gemeente's vooroverleg portal |
+| **Dossier completeness with action links** | Other tools show you what's missing. Propdex knows WHERE to get it — Kadaster, EP-Online, gemeenteloket. That's unique. | MEDIUM | 20 document types (exists), BRK/EP-Online/WOZ integrations (exist) | Per-missing-document: show "Ophalen via [source]" with direct link or trigger button. e.g., missing energielabel → "Ophalen via EP-Online" button that fetches it |
+| **Map-integrated pipeline view** | Color-code parcels on the main map by pipeline stage. No other NL tool shows "my pipeline" on a map | HIGH | MapLibre tiles (exists), score tile system (exists), FavoritedParcel model | Overlay: Gesignaleerd=blue, Onderzoek=amber, Contact=orange, Besluit=purple, Gekocht=green, Afgewezen=grey. Must be a separate tile layer or client-side GeoJSON overlay |
+| **Go/no-go dashboard** | At "Besluit" stage, auto-generate a go/no-go summary: score, risico, eigendom, dossier completeness, aanbeveling | HIGH | Score v3.0 (exists), risico data (exists), dossier model (exists) | Single-page printable summary. Could be a variant of the existing PDF rapport. HIGH value for investor presentations |
+| **Stage-based dossier requirements** | Different stages need different documents. In "Onderzoek" you need kadaster extract + bestemmingsplan. In "Besluit" you need bodemonderzoek + taxatierapport | MEDIUM | Document type system (exists), pipeline stages (new) | Show required docs per stage. Incomplete required docs = warning badge. This replaces a flat completeness %, gives context |
+
+---
 
 ## Anti-Features
 
-Features to explicitly NOT build. These are scope traps or domain boundaries.
+Scope traps or domain violations to explicitly avoid.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Actual foundation inspection report** | Legal liability. Only SC530/F3O-certified firms may perform funderingsonderzoek. Producing anything that looks like an inspection report creates liability | Label everything "indicatief risicoprofiel" and recommend certified inspection |
-| **Asbestinventarisatie** | NEN 2991 requires physical inspection by certified asbestinventarisatiebedrijf. Cannot be done remotely | Show risk indicator + "Inventarisatie verplicht voor sloop/verbouwing" recommendation |
-| **FunderMaps integration** | Proprietary data, commercial API, municipality-dependent coverage (only ~35% of pre-1970 buildings). Dependency on external party for core feature | Use freely available PDOK + BRO + KCAF heuristics instead |
-| **BRO grondwater monitoring** | Only ~380 wells nationwide, ~10km apart. Far too sparse for per-parcel assessment | Skip entirely. Soil type from BRO Bodemkaart is sufficient proxy |
-| **Amsterdam bouwdossier archive** | Only Amsterdam has digital bouwdossier API. Building for one city is not worth the effort | Skip. Historical building plans are not needed for risk indication |
-| **ML-based foundation risk model** | Training data doesn't exist in public domain (KCAF/FunderMaps data is proprietary). Would be garbage-in-garbage-out | Use deterministic heuristic (bouwjaar x bodemtype). Well-understood, explainable, defensible |
-| **Precise cost calculations** | Too many variables (pand type, foundation type, soil condition, contractor availability). False precision is worse than no number | At most show KCAF reference ranges with heavy disclaimers. DEFERRED |
-| **Sloopmelding/asbestmelding filing** | Government integration, regulated process, liability. Out of scope for intelligence platform | Show that it's needed, link to Omgevingsloket |
+| Anti-Feature | Why Requested | Why Problematic | Alternative |
+|--------------|---------------|-----------------|-------------|
+| **Full CRM with contact management** | "We need to track who we talked to at which gemeente" | Turns Propdex into Salesforce. Huge scope, generic problem. Not a differentiator. | Store a single "contactpersoon" field per project (naam + email). Deep CRM is out of scope |
+| **Automated email sending** (send brief to eigenaar) | Developers want one-click outreach | Legal risk (spam/GDPR), deliverability infrastructure, reply management. This is not a mail tool. | Generate template → copy/export. User sends via their own email. Never auto-send |
+| **Financial feasibility modeling** | "Can we add a grondexploitatie berekening?" | Separate product domain. Requires market price data, construction cost APIs, tax modeling. Already in PROJECT.md out-of-scope | Link to external tools (CBRE, JLL, Excel). Later milestone |
+| **Notificaties when owner changes** (Kadaster monitoring) | Triggered by BRK eigendom feature | Requires daily Kadaster polling per parcel. Expensive, rate-limited, legal unclear. | Existing ChangeRecord meldingen feed handles municipality-level changes. Kadaster monitoring is a separate paid tier feature |
+| **Drag-and-drop Kanban board** | Visual pipeline management like Trello | Complex UI, poor fit for geographic data. Developers think spatially, not in Kanban boards. | Status dropdown per parcel card + map-based color coding is more natural for this domain |
+| **Deal value / ROI tracking** | "Show me IRR on my portfolio" | Requires financial data Propdex doesn't have (purchase price, development costs, expected sales). No reliable source. | Defer to financial modeling milestone. For now: show WOZ value as proxy |
+| **Buyer/investor pipeline** (sell finished units) | Confused request from PROJECT.md "out of scope" list | This is selling built units to end buyers — a completely different CRM type for a different persona. Propdex is acquisition-side only | Explicitly NOT building. State clearly in UI: "Dit is de acquisitiezijde" |
+| **Automated Kadaster BRK batch fetch** for portfolio | "Show eigendom for all my favorited parcels at once" | BRK is Tier 3 (paid per call). Batch fetching for 50 parcels = expensive, no user trigger. | Keep BRK as on-demand (existing confirm dialog pattern). Show "eigendom onbekend" in portfolio view until user individually requests it |
+
+---
 
 ## Feature Dependencies
 
 ```
-BAG bouwjaar (EXISTING) ─────────────────────┐
-BAG gebruiksdoel (EXISTING) ──────────────────┤
-                                              ├──→ Asbest v2 (enhanced risk bands)
-                                              │
-BRO Bodemkaart WMS GetFeatureInfo ────────────┼──→ Soil Type Classification
-                                              │       │
-                                              │       ├──→ Foundation Risk Heuristic
-                                              │       │       │
-PDOK Funderingsrisicogebieden WFS ────────────┼───────┼───────┤
-                                              │       │       │
-                                              │       │       └──→ Combined Fysiek Risicoprofiel
-Bodemloket WBB dossiers (EXISTING) ───────────┘       │               │
-                                                      │               └──→ Frontend Section
-3D BAG footprint/height (EXISTING) ───────────────────┘                      in ParcelDetailModal
+Parcel Favoriting (new DB model)
+    └──enables──> Geographic Portfolio Navigation
+    └──enables──> Pipeline Status Assignment
+    └──enables──> Multi-Parcel Project Grouping
+                      └──enables──> Project Workspace
+                                        └──enables──> Dossier Completeness Indicator
+                                        └──enables──> Stage-based Document Requirements
+                                        └──enables──> Outreach Template Generator
+                                                          └──requires──> BRK eigendom data (EXISTS)
+                                        └──enables──> Pre-overleg Gemeente Template
+                                                          └──requires──> Bestemming data (EXISTS)
+                                        └──enables──> Go/No-go Dashboard
+                                                          └──requires──> Score v3.0 (EXISTS)
+                                                          └──requires──> Risico data (EXISTS)
+
+Map-integrated pipeline view
+    └──requires──> Parcel Favoriting + Pipeline Status
+    └──requires──> MapLibre tile/overlay system (EXISTS)
+
+BRK eigendom data (EXISTS)
+    └──enhances──> Outreach Template Generator
+
+Score v3.0 (EXISTS) ──enhances──> Go/No-go Dashboard
 ```
 
-**Critical path:** BRO Bodemkaart WMS integration is the single new external dependency. Everything else builds on existing data or uses PDOK WFS (proven pattern). If BRO WMS GetFeatureInfo fails or returns insufficient data, the foundation heuristic falls back to PDOK Funderingsrisicogebieden (PC6-level soil category) as a less precise but still useful proxy.
+### Dependency Notes
 
-## MVP Recommendation
+- **Parcel Favoriting must come first:** Everything in this milestone depends on a server-side model linking parcel_id to org_id with metadata (stage, notes). Cannot build the portfolio UI without this.
+- **Multi-parcel grouping vs single-parcel view:** Both should exist. Most parcels will be managed individually; grouping is for complex multi-lot acquisitions. The Project model should be optional: a parcel can be in the pipeline without being in a named Project.
+- **Outreach templates require BRK data but BRK is on-demand:** Template generator should work even without BRK — fall back to "eigenaar onbekend, vul in" fields. BRK data pre-fills it when available.
+- **Map pipeline overlay conflicts with scan tile layer:** These cannot be active simultaneously cleanly. Map pipeline view likely needs to be a separate toggle mode or only visible on /projecten map view.
 
-**Must have (this milestone):**
-1. **Soil type via BRO Bodemkaart WMS** -- new government API client, JSONB cache, returns grondsoort
-2. **Foundation risk heuristic** -- pure Python logic combining bouwjaar + bodemtype + PDOK funderingsgebied
-3. **PDOK Funderingsrisicogebieden WFS** -- new government API client, queries by coordinate bbox
-4. **Asbest v2** -- extend existing asbest_indicator.py with gebruiksdoel-based risk modifiers
-5. **Fysiek Risicoprofiel frontend section** -- new collapsible section in ParcelDetailModal combining all four risk signals
+---
 
-**Defer:**
-- Climate context signal (droogte/bodemdaling): Needs Klimaateffectatlas integration, separate milestone
-- Foundation risk in area scan tiles: Needs per-parcel soil type at scale, performance concern
-- Risk-to-cost estimation: Needs KCAF reference data, heavy disclaimers, separate milestone
-- Soil profile depth view: Uncertain API availability, not needed for risk indication
-- Asbest sanering cost: Market rate data unreliable, separate milestone
+## Dutch Due Diligence Dossier Categories
 
-## Data Source Summary
+Based on Dutch property development practice and the existing Propdex document type system.
 
-| Source | Endpoint | Access | Data Returned | Cache TTL |
-|--------|----------|--------|---------------|-----------|
-| BRO Bodemkaart | `service.pdok.nl/bzk/bro-bodemkaart/wms/v1_0` (WMS GetFeatureInfo) | Free, public, no auth | Grondsoort (soil type), bodemcode, bodemtype description | 90 days (geological data, extremely stable) |
-| PDOK Funderingsgebieden | `service.pdok.nl/rvo/indgebfunderingsproblematiek/wfs/v1_0` (WFS GetFeature) | Free, public, no auth | percvoor1970, fgr (soil category), legenda (risk label), geometry | 90 days (updated infrequently) |
-| BAG (existing) | Various BAG API endpoints | Already integrated | bouwjaar, gebruiksdoel | Already cached |
-| Bodemloket (existing) | `gis.gdngeoservices.nl/.../MapServer/0/query` | Already integrated | WBB dossiers | 30 days |
-| 3D BAG (existing) | CityJSON API | Already integrated | pand_oppervlakte_m2, height | Already cached |
+### Stage-Required Documents
+
+| Stage | Required Documents | Nice-to-Have |
+|-------|-------------------|--------------|
+| **Onderzoek** | Kadaster uittreksel, bestemmingsplankaart + regels, BAG basisregistratie | Eigendomshistorie, WOZ-beschikking |
+| **Contact** | Eigendomsbewijs (BRK), energie-index (EP), taxatierapport globaal | Principeverzoek gemeente response, erfdienstbaarheden |
+| **Besluit** | Bodemonderzoek fase 1, bouwkundige schouw, asbestinventarisatie (indien vóór 1993) | Constructierapport, omgevingsvergunning onderzoek |
+| **Afgerond/Gekocht** | Koopovereenkomst, notariële akte, hypotheekakte | Bewijs overdrachtsbelasting |
+
+### Action Links per Missing Document Type
+
+| Document Type | Source | Action |
+|--------------|--------|--------|
+| Kadaster uittreksel | Kadaster.nl | Link: `https://www.kadaster.nl/producten/perceel/kadastrale-informatie` |
+| BRK eigendomsdata | BRK Bevragen API | Trigger: Open eigendom modal (existing feature) |
+| Energielabel | EP-Online | Trigger: Fetch via existing EP-Online integration |
+| WOZ-waarde | Waardeloket | Trigger: Fetch via existing WOZ integration |
+| Bodemonderzoek | Bodemloket / gecertificeerde bureaus | Link: `https://www.bodemloket.nl` |
+| Bestemmingsplan | PDOK / DSO | Trigger: Open scan / show in map |
+| Principeverzoek response | Gemeente loket | Info: "Dien in via gemeenteloket, upload response hier" |
+
+---
+
+## MVP Definition
+
+### Phase 1 — Core Portfolio (must have)
+
+- [x] `FavoritedParcel` DB model (org_id, parcel_id, gemeente_code, wijk_code, stage, created_at)
+- [x] Heart/favorite button in ParcelDetailPanel → saves to DB, not localStorage
+- [x] /projecten route: provincie → gemeente → wijk → favorited parcel cards
+- [x] Pipeline stage selector per parcel card (Gesignaleerd → Onderzoek → Contact → Besluit → Afgerond)
+- [x] Parcel project workspace: dedicated full-page or slide-over per parcel with dossier + status + notes
+
+### Phase 2 — Dossier Intelligence (high value, more complex)
+
+- [x] Dossier completeness indicator (% complete + missing items list with action links)
+- [x] Stage-based document requirements (show which docs are required at current stage)
+- [x] Multi-parcel project grouping (optional named `Project` linking multiple parcels)
+- [x] Outreach templates: brief naar eigenaar + pre-overleg gemeente template
+
+### Phase 3 — Advanced Pipeline (differentiators, can defer)
+
+- [ ] Map-integrated pipeline overlay (pipeline stage colors on main map) — HIGH complexity
+- [ ] Go/no-go dashboard (auto-generated summary at Besluit stage) — HIGH complexity
+- [ ] Claude AI-personalized outreach letter — P2, needs testing
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Parcel favoriting (server-side) | HIGH | LOW | P1 |
+| Geographic portfolio navigation | HIGH | MEDIUM | P1 |
+| Pipeline status per parcel | HIGH | LOW | P1 |
+| Parcel project workspace | HIGH | HIGH | P1 |
+| Dossier completeness indicator | HIGH | MEDIUM | P1 |
+| Multi-parcel project grouping | MEDIUM | MEDIUM | P2 |
+| Outreach template: brief eigenaar | HIGH | MEDIUM | P2 |
+| Outreach template: principeverzoek | MEDIUM | MEDIUM | P2 |
+| Stage-based document requirements | MEDIUM | LOW | P2 |
+| Map pipeline overlay | MEDIUM | HIGH | P3 |
+| Go/no-go dashboard | HIGH | HIGH | P3 |
+| AI-personalized outreach | MEDIUM | HIGH | P3 |
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | Transect (US) | Spartner (NL) | Dealpath (US) | Our Approach |
+|---------|---------------|---------------|---------------|--------------|
+| Pipeline stages | Yes, generic | Unknown | Yes, CRE-focused | 5 NL-specific stages matching Dutch acquisition flow |
+| Geographic portfolio view | Yes (map-first) | Unknown | No (table-first) | Map-first + card drill-down matching existing Propdex nav |
+| Dossier completeness | No | Unknown | Yes | Yes + action links to Dutch gov sources (unique) |
+| Outreach templates | No | Unknown | No | Yes, pre-filled with BRK eigenaar data (unique) |
+| Document management | Basic | Unknown | Advanced VDR | Already have 20 document types — extend, not replace |
+| Multi-parcel grouping | No | Unknown | Yes | Yes — project model for adjacent lots |
+| Go/no-go decision support | Partial (zoning) | Unknown | No | Yes — leverages score v3.0 + risico data |
+
+**Confidence note:** Spartner.nl information not publicly detailed — LOW confidence on their features. Transect/Dealpath are US-focused CRE platforms with publicly documented features — MEDIUM confidence on comparison.
+
+---
 
 ## Sources
 
-- [PDOK Indicatieve Aandachtsgebieden Funderingsproblematiek](https://www.pdok.nl/introductie/-/article/indicatieve-aandachtsgebieden-funderingsproblematiek) -- dataset description and service endpoints
-- [PDOK BRO Bodemkaart (SGM)](https://www.pdok.nl/ogc-webservices/-/article/bro-bodemkaart-sgm-) -- WMS-only service, no WFS available
-- [KCAF - Kennis Centrum Aanpak Funderingsproblematiek](https://www.kcaf.nl/) -- foundation risk methodology, 750K homes on wooden piles
-- [RVO Nationale Aanpak Funderingsproblematiek](https://www.rvo.nl/onderwerpen/funderingsproblematiek/nationale-aanpak) -- national policy context
-- [Deltares Foundation Damage Research](https://www.deltares.nl/en/news/foundation-damage-the-netherlands-mapped-out-for-national-approach-to-foundation-problems) -- 1M+ buildings at risk
-- [NEN 2991:2015](https://www.nen.nl/nen-2991-2015-nl-207667) -- asbestos risk assessment standard
-- [BAG Gebruiksdoel](https://catalogus.kadaster.nl/bag/nl/page/Gebruiksdoel) -- 11 building function classifications
-- [BlueLabel Funderingsrisico](https://www.bluelabel.net/paalrot/) -- 2025 legal requirements for climate risk mapping
+- [CMS.law: Acquisition of Real Estate in the Netherlands](https://cms.law/en/nld/publication/how-to-invest-in-commercial-real-estate-in-the-netherlands/acquisition-of-real-estate) — Dutch acquisition pipeline (LOI → due diligence → SPA → notarispassering)
+- [Adventures in CRE: Development Due Diligence Checklist](https://www.adventuresincre.com/real-estate-development-due-diligence-checklist/) — 105 due diligence tasks, 10 categories, status tracking
+- [Vastgoedjournaal: Acquisitieplanning](https://vastgoedjournaal.nl/news/53347/acquisitieplanning-de-start-van-vastgoedmanagement) — Dutch 4-phase pipeline: Lead → Soft Pipeline → Committed → Under Construction
+- [Infonu.nl: Fasen van de Vastgoedontwikkeling](https://financieel.infonu.nl/diversen/74895-fasen-van-de-vastgoedontwikkeling.html) — 6 development phases (initiatief → haalbaarheid → planontwikkeling → realisatie → beheer)
+- [IPLO: Procedure omgevingsvergunning](https://iplo.nl/regelgeving/overzicht-procedures/procedure-aanvraag-omgevingsvergunning-regulier/) — formal permit procedure
+- [Planruimte: Vooroverleg gemeente / principeverzoek](https://www.planruimte.nl/vooroverleg/) — pre-consultation with municipality: informal step before permit application
+- [De Omgevingsadviseurs: Principeverzoek of vooroverleg indienen?](https://www.deomgevingsadviseurs.nl/diensten/omgevingsadvies/principeverzoek) — principeverzoek process and content
+- [Lawyersnetherlands.com: Real estate due diligence in the Netherlands](https://lawyersnetherlands.com/real-estate-due-diligence-in-the-netherlands/) — Netherlands-specific due diligence: legal, tax, environmental, technical, commercial
+- [REsimpli: Best Pipeline Stages for Real Estate Investors](https://resimpli.com/blog/the-best-pipeline-stages-for-real-estate-investors-using-a-crm/) — generic pipeline stage patterns for property investors
+- [PropFolio](https://propfolio.tech) — AI operating system for CRE investment management (competitor reference)
+
+---
+
+*Feature research for: v17.0 Projecten Portfolio — property portfolio management + deal pipeline for Dutch vastgoedontwikkelaars*
+*Researched: 2026-03-15*
