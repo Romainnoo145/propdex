@@ -8,6 +8,8 @@ interface ParcelPanelShellProps {
   children: ReactNode
   onClose: () => void
   footer?: ReactNode
+  /** Optional action buttons rendered to the left of the close button */
+  headerActions?: ReactNode
 }
 
 const prefersReducedMotion =
@@ -18,6 +20,7 @@ export function ParcelPanelShell({
   children,
   onClose,
   footer,
+  headerActions,
 }: ParcelPanelShellProps) {
   const { panelPortalRef, setPanelOpen } = useMapContext()
   const [portalTarget, setPortalTarget] = useState<HTMLDivElement | null>(null)
@@ -53,15 +56,18 @@ export function ParcelPanelShell({
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className="w-[620px] h-full flex flex-col overflow-hidden rounded-[40px] bg-white/60 backdrop-blur-[24px] border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
     >
-      {/* Close button — overlays hero */}
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50"
-        aria-label="Sluiten"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Header action buttons — overlays hero, right-aligned */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+        {headerActions}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50"
+          aria-label="Sluiten"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
+import { HeartButton } from './parcel/HeartButton'
 import {
   ParcelBentoOverview,
   type CategoryKey,
@@ -107,7 +108,7 @@ export function ParcelDetailPanel({ parcel, onClose }: ParcelDetailPanelProps) {
   }
 
   return (
-    <ParcelPanelShell onClose={onClose} footer={footer}>
+    <ParcelPanelShell onClose={onClose} footer={footer} headerActions={<HeartButton parcel={parcel} />}>
       {/* Cross-fade on parcel change */}
       <motion.div
         key={parcel.parcel_id}
