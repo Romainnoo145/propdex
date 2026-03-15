@@ -138,7 +138,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 109. Backend Foundation | 2/2 | Complete    | 2026-03-15 |
-| 110. ProjectList Refactor + HeartButton | 2/2 | Complete   | 2026-03-15 |
+| 110. ProjectList Refactor + HeartButton | 2/2 | Complete    | 2026-03-15 |
 | 111. Portfolio Navigation | 0/2 | Not started | - |
 | 112. Pipeline Stages | 0/1 | Not started | - |
 | 113. Map Markers | 0/1 | Not started | - |
