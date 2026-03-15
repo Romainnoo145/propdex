@@ -39,6 +39,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 | 97 | 1 | 3min | 3min |
 | 109 P01 | 1 | 8min | 8min |
 | 109 P02 | 1 | 2min | 2min |
+| Phase 110 P02 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [Phase 109-01]: PipelineStage Literal type produces 422 for invalid values — semantically correct per Pydantic v2 conventions
 - [Phase 109-02]: Idempotent POST uses JSONResponse(status_code=200) for existing favorites — JSONResponse overrides FastAPI decorator default cleanly
 - [Phase 109-02]: Two-router module pattern — favorites/router.py exports both `router` and `portfolio_router`, registered separately in main.py
+- [Phase 110-02]: Uses parcel.parcel_code (Kadaster string) for favorites API calls — FavoriteResponse.parcel_id stores Kadaster string, so parcel_code is the correct comparison key throughout
+- [Phase 110-02]: ParcelPanelShell headerActions prop slot: optional ReactNode renders left of close button in flex container — backward compatible, clean separation of concerns
 
 ### Key Patterns (carry forward)
 
@@ -80,8 +83,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-15T16:51:27Z
-**Stopped At:** Completed 109-02-PLAN.md — Favorites CRUD router + portfolio endpoint
+**Last Session:** 2026-03-15T17:21:10.041Z
+**Stopped At:** Completed 110-02-PLAN.md — Heart button + useFavorites hook
 **Next Action:** Phase 109 complete — run `/gsd:plan-phase 110` for frontend heart button
 
 ---

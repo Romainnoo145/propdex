@@ -9,8 +9,8 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 
 ### Favorites
 
-- [ ] **FAV-01**: User can click heart button on parcel detail panel to favorite/unfavorite a parcel (server-side, org-scoped)
-- [ ] **FAV-02**: Heart button positioned next to close button, close button aligned with panel title
+- [x] **FAV-01**: User can click heart button on parcel detail panel to favorite/unfavorite a parcel (server-side, org-scoped)
+- [x] **FAV-02**: Heart button positioned next to close button, close button aligned with panel title
 - [ ] **FAV-03**: Favorited parcels show a distinct marker/color on map tiles
 - [ ] **FAV-04**: Wijk and gemeente cards show favorite count badge ("3 parcelen opgeslagen")
 
@@ -103,8 +103,8 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 | BACK-03 | Phase 109 | Complete |
 | BACK-04 | Phase 109 | Complete |
 | BACK-05 | Phase 110 | Pending |
-| FAV-01 | Phase 110 | Pending |
-| FAV-02 | Phase 110 | Pending |
+| FAV-01 | Phase 110 | Complete |
+| FAV-02 | Phase 110 | Complete |
 | FAV-03 | Phase 113 | Pending |
 | FAV-04 | Phase 111 | Pending |
 | PORT-01 | Phase 111 | Pending |
