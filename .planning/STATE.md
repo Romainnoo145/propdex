@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 109 of 113 (Backend Foundation)
-Plan: 1/2 in current phase
-Status: In Progress
-Last activity: 2026-03-15 -- 109-01 complete (ParcelFavorite model + migration + schemas)
+Plan: 2/2 in current phase
+Status: Phase Complete
+Last activity: 2026-03-15 -- 109-02 complete (Favorites CRUD router + portfolio endpoint)
 
 Progress: [░░░░░░░░░░] 0% (v17.0)
 
@@ -38,6 +38,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 | 108 | 4 | 14min | 3.5min |
 | 97 | 1 | 3min | 3min |
 | 109 P01 | 1 | 8min | 8min |
+| 109 P02 | 1 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -54,6 +55,8 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [v17.0]: BRK data never stored in outreach templates -- placeholders only (AVG compliance)
 - [Phase 109-01]: wijk_naam stored instead of wijk_code — no wijk_code exists in codebase (BACK-01 substitution per RESEARCH.md)
 - [Phase 109-01]: PipelineStage Literal type produces 422 for invalid values — semantically correct per Pydantic v2 conventions
+- [Phase 109-02]: Idempotent POST uses JSONResponse(status_code=200) for existing favorites — JSONResponse overrides FastAPI decorator default cleanly
+- [Phase 109-02]: Two-router module pattern — favorites/router.py exports both `router` and `portfolio_router`, registered separately in main.py
 
 ### Key Patterns (carry forward)
 
@@ -77,9 +80,9 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-15T16:48:17.374Z
-**Stopped At:** Completed 109-01-PLAN.md — ParcelFavorite model + migration + schemas
-**Next Action:** Run `/gsd:plan-phase 109`
+**Last Session:** 2026-03-15T16:51:27Z
+**Stopped At:** Completed 109-02-PLAN.md — Favorites CRUD router + portfolio endpoint
+**Next Action:** Phase 109 complete — run `/gsd:plan-phase 110` for frontend heart button
 
 ---
 

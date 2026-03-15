@@ -45,7 +45,7 @@ LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lag
 
 ### v17.0 Projecten Portfolio
 
-- [ ] **Phase 109: Backend Foundation** - ParcelFavorite + PipelineStage models, CRUD API, bulk portfolio endpoint
+- [x] **Phase 109: Backend Foundation** - ParcelFavorite + PipelineStage models, CRUD API, bulk portfolio endpoint (completed 2026-03-15)
 - [ ] **Phase 110: ProjectList Refactor + HeartButton** - Extract ProjectList.tsx sub-components, add heart button to parcel detail panel
 - [ ] **Phase 111: Portfolio Navigation** - Full provincie → gemeente → wijk → parcel drill-down with Aura cards
 - [ ] **Phase 112: Pipeline Stages** - Per-parcel pipeline stage tracking, stage selector, cross-wijk filtering
@@ -137,7 +137,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 109. Backend Foundation | 1/2 | In Progress|  |
+| 109. Backend Foundation | 2/2 | Complete   | 2026-03-15 |
 | 110. ProjectList Refactor + HeartButton | 0/2 | Not started | - |
 | 111. Portfolio Navigation | 0/2 | Not started | - |
 | 112. Pipeline Stages | 0/1 | Not started | - |
