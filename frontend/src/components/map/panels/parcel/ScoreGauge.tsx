@@ -90,9 +90,6 @@ export function ScoreGauge({ score }: ScoreGaugeProps) {
         >
           {score !== null ? displayValue : '--'}
         </span>
-        <span className="text-[10px] font-bold uppercase text-slate-400 mt-1" style={{ letterSpacing: '0.2em' }}>
-          Score
-        </span>
       </div>
     </div>
   )

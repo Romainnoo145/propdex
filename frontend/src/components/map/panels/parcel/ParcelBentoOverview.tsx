@@ -407,13 +407,8 @@ function ScoreCircleCard({
         </span>
       </div>
 
-      {/* Bottom: score label */}
-      <span
-        className="text-[10px] font-bold uppercase block"
-        style={{ color: `${color}99` }}
-      >
-        score
-      </span>
+      {/* Bottom spacer */}
+      <div />
     </motion.div>
   )
 }
