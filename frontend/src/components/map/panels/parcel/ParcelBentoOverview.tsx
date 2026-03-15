@@ -395,7 +395,7 @@ function ScoreCircleCard({
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: circumference - (normalised / 100) * circumference }}
               transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
-              style={{ filter: `drop-shadow(0 0 16px ${glow})` }}
+              style={{}}
             />
           )}
         </svg>
