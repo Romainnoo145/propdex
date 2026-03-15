@@ -1,7 +1,7 @@
 # Requirements: Propdex v17.0 Projecten Portfolio
 
 **Defined:** 2026-03-15
-**Core Value:** Area → Opportunity Intelligence — scan any Dutch municipality and instantly find development opportunities
+**Core Value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
 
 ## v17.0 Requirements
 
@@ -41,6 +41,29 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 - [ ] **BACK-04**: Bulk portfolio endpoint: list all favorites grouped by gemeente/wijk with counts
 - [ ] **BACK-05**: ProjectList.tsx refactored from 1867 lines into sub-components before new features
 
+## Pending from Previous Milestones
+
+### Scan Pipeline Enrichment (v16.0, Phase 99) — Incomplete
+
+- [ ] **SCAN-01**: Energielabel (EP-Online) fetched per VBO ID and stored in scan_results.flags during wijk scan
+- [ ] **SCAN-02**: WOZ waarde (Waardeloket) fetched per nummeraanduiding ID and stored in scan_results.flags during wijk scan
+- [ ] **SCAN-03**: Vergunningen (SRU Bekendmakingen) fetched per unique postcode and stored in scan_results.flags during wijk scan
+
+### Aura Reskin Batch (v15.0, Phases 94-96) — Backlog
+
+- [ ] **WIJK-01**: Bottom Bento Sheet (30-40% screen height) with fly-up animation on wijk click
+- [ ] **WIJK-02**: 4-column bento layout: Wijk Identity | Bestemming bar | Stats grid | Kansen glow-cards
+- [ ] **WIJK-03**: Selected wijk gets outer glow on map
+- [ ] **WIJK-04**: Click-through from wijk pods to deeper data
+- [ ] **GEM-01**: Gemeente-level map shows wijk boundaries with luminous white borders
+- [ ] **GEM-02**: Gemeente context accessible without bottom sheet
+- [ ] **RES-01**: /resultaten route gets Aura visual treatment
+- [ ] **RES-02**: Table maintains existing functionality with new styling
+- [ ] **JUR-01**: Wizard flow redesigned in Aura style
+- [ ] **JUR-02**: Explorer redesigned with glass containers
+- [ ] **MELD-01**: Meldingen feed redesigned with bento cards
+- [ ] **MELD-02**: Gemeente filter and infinite scroll preserved with new Aura styling
+
 ## v18.0 Requirements (Deferred)
 
 ### Workspace
@@ -66,43 +89,43 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 |---------|--------|
 | Kanban drag-and-drop board | Over-engineering for this persona; pill selector is sufficient |
 | Custom pipeline stages per org | 5 universal stages cover Dutch acquisition workflow; custom is v19+ |
-| CRM contact management | Different product domain — Propdex is intelligence, not CRM |
-| Automated email sending | AVG/GDPR risks, deliverability complexity — defer to dedicated milestone |
-| BRK owner data in templates | AVG violation + Kadaster ToS breach — templates use placeholders only |
-| Real-time collaboration | Shared favorites, live co-editing — future multi-user feature |
+| CRM contact management | Different product domain -- Propdex is intelligence, not CRM |
+| Automated email sending | AVG/GDPR risks, deliverability complexity -- defer to dedicated milestone |
+| BRK owner data in templates | AVG violation + Kadaster ToS breach -- templates use placeholders only |
+| Real-time collaboration | Shared favorites, live co-editing -- future multi-user feature |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FAV-01 | — | Pending |
-| FAV-02 | — | Pending |
-| FAV-03 | — | Pending |
-| FAV-04 | — | Pending |
-| PORT-01 | — | Pending |
-| PORT-02 | — | Pending |
-| PORT-03 | — | Pending |
-| PORT-04 | — | Pending |
-| PORT-05 | — | Pending |
-| PORT-06 | — | Pending |
-| PORT-07 | — | Pending |
-| PORT-08 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| BACK-01 | — | Pending |
-| BACK-02 | — | Pending |
-| BACK-03 | — | Pending |
-| BACK-04 | — | Pending |
-| BACK-05 | — | Pending |
+| BACK-01 | Phase 109 | Pending |
+| BACK-02 | Phase 109 | Pending |
+| BACK-03 | Phase 109 | Pending |
+| BACK-04 | Phase 109 | Pending |
+| BACK-05 | Phase 110 | Pending |
+| FAV-01 | Phase 110 | Pending |
+| FAV-02 | Phase 110 | Pending |
+| FAV-03 | Phase 113 | Pending |
+| FAV-04 | Phase 111 | Pending |
+| PORT-01 | Phase 111 | Pending |
+| PORT-02 | Phase 111 | Pending |
+| PORT-03 | Phase 111 | Pending |
+| PORT-04 | Phase 111 | Pending |
+| PORT-05 | Phase 111 | Pending |
+| PORT-06 | Phase 111 | Pending |
+| PORT-07 | Phase 111 | Pending |
+| PORT-08 | Phase 111 | Pending |
+| PIPE-01 | Phase 112 | Pending |
+| PIPE-02 | Phase 112 | Pending |
+| PIPE-03 | Phase 112 | Pending |
+| PIPE-04 | Phase 112 | Pending |
+| PIPE-05 | Phase 112 | Pending |
 
 **Coverage:**
 - v17.0 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 -- traceability filled (all 22 requirements mapped to phases 109-113)*
