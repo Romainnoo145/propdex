@@ -33,7 +33,7 @@ export function HeartButton({ parcel }: HeartButtonProps) {
       type="button"
       onClick={() => toggleFavorite.mutate({ parcel, isFavorited })}
       disabled={toggleFavorite.isPending}
-      className="flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50 disabled:opacity-60"
+      className="flex h-8 w-8 items-center justify-center text-aura-obsidian transition-colors hover:text-aura-amber disabled:opacity-60"
       aria-label={isFavorited ? 'Verwijder uit portfolio' : 'Toevoegen aan portfolio'}
     >
       <Heart

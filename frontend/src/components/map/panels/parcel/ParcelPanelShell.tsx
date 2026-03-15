@@ -57,12 +57,12 @@ export function ParcelPanelShell({
       className="w-[620px] h-full flex flex-col overflow-hidden rounded-[40px] bg-white/60 backdrop-blur-[24px] border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
     >
       {/* Header action buttons — overlays hero, right-aligned */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+      <div className="absolute top-8 right-8 z-10 flex items-center gap-2">
         {headerActions}
         <button
           type="button"
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50"
+          className="flex h-8 w-8 items-center justify-center text-aura-obsidian transition-colors hover:text-aura-obsidian/60"
           aria-label="Sluiten"
         >
           <X className="h-4 w-4" />
