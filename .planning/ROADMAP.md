@@ -93,7 +93,7 @@ Plans:
   1. Projecten page shows full-page Aura card layout (not bento) — 12 provincie cards, only those with favorites are highlighted/navigable
   2. Clicking a provincie shows gemeente cards for that provincie; only gemeenten with favorited parcels are shown
   3. Clicking a gemeente shows wijk cards for that gemeente; only wijken with favorites shown; each wijk card displays "N parcelen opgeslagen" badge
-  4. Clicking a wijk shows individual favorited parcel cards with address, score, and pipeline stage
+  4. Clicking a wijk shows individual favorited parcel cards with Kadaster ID, gemeente, wijk, and pipeline stage
   5. Breadcrumb (Projecten → Limburg → Venlo → Wijk 01) is visible at every level and each segment is clickable
   6. Ghost button at each level opens the corresponding detail view (map / scan / parcel panel)
 **Plans**: TBD
