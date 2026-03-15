@@ -9,10 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router
-from app.documents.router import router as documents_router
 from app.core.config import settings
 from app.core.http_client import create_government_api_client
+from app.documents.router import router as documents_router
+from app.favorites.router import portfolio_router
+from app.favorites.router import router as favorites_router
 from app.jobs.worker import get_redis_settings
 from app.middleware.rate_limit import limiter
 from app.middleware.tenant import TenantContextMiddleware
@@ -22,7 +25,6 @@ from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
 from app.scans.router import router as scans_router
 from app.users.router import router as users_router
-from app.api.endpoints.jurisprudence import router as jurisprudence_router
 
 
 @asynccontextmanager
@@ -88,6 +90,8 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) ->
 # Include routers
 app.include_router(auth_router)
 app.include_router(documents_router)
+app.include_router(favorites_router)
+app.include_router(portfolio_router)
 app.include_router(properties_router)
 app.include_router(reports_router)
 app.include_router(projects_router)
