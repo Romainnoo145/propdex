@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 109 of 113 (Backend Foundation)
-Plan: 0/2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 -- v17.0 roadmap created (5 phases, 22 requirements mapped)
+Plan: 1/2 in current phase
+Status: In Progress
+Last activity: 2026-03-15 -- 109-01 complete (ParcelFavorite model + migration + schemas)
 
 Progress: [░░░░░░░░░░] 0% (v17.0)
 
@@ -37,8 +37,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 | 107 | 3 | 24min | 8min |
 | 108 | 4 | 14min | 3.5min |
 | 97 | 1 | 3min | 3min |
-
----
+| 109 P01 | 1 | 8min | 8min |
 
 ## Accumulated Context
 
@@ -53,6 +52,8 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [v17.0]: Store both Kadaster string parcel_id (stable) and nullable parcel_cache_id UUID FK (geometry joins)
 - [v17.0]: PipelineStage as VARCHAR Enum (native_enum=False) -- no ALTER TYPE on stage additions
 - [v17.0]: BRK data never stored in outreach templates -- placeholders only (AVG compliance)
+- [Phase 109-01]: wijk_naam stored instead of wijk_code — no wijk_code exists in codebase (BACK-01 substitution per RESEARCH.md)
+- [Phase 109-01]: PipelineStage Literal type produces 422 for invalid values — semantically correct per Pydantic v2 conventions
 
 ### Key Patterns (carry forward)
 
@@ -76,8 +77,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-15
-**Stopped At:** Roadmap created for v17.0 -- ready to plan Phase 109
+**Last Session:** 2026-03-15T16:48:17.374Z
+**Stopped At:** Completed 109-01-PLAN.md — ParcelFavorite model + migration + schemas
 **Next Action:** Run `/gsd:plan-phase 109`
 
 ---

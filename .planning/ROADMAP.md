@@ -137,7 +137,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 109. Backend Foundation | 0/2 | Planned | - |
+| 109. Backend Foundation | 1/2 | In Progress|  |
 | 110. ProjectList Refactor + HeartButton | 0/2 | Not started | - |
 | 111. Portfolio Navigation | 0/2 | Not started | - |
 | 112. Pipeline Stages | 0/1 | Not started | - |

@@ -35,7 +35,7 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 
 ### Backend Infrastructure
 
-- [ ] **BACK-01**: ParcelFavorite model (org_id, user_id, parcel_id as Kadaster string, wijk_code, gemeente_code, pipeline_stage, created_at)
+- [x] **BACK-01**: ParcelFavorite model (org_id, user_id, parcel_id as Kadaster string, wijk_code, gemeente_code, pipeline_stage, created_at)
 - [ ] **BACK-02**: Favorites CRUD API endpoints (POST/GET/DELETE) with multi-tenant isolation
 - [ ] **BACK-03**: Pipeline stage update endpoint (PATCH)
 - [ ] **BACK-04**: Bulk portfolio endpoint: list all favorites grouped by gemeente/wijk with counts
@@ -98,7 +98,7 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BACK-01 | Phase 109 | Pending |
+| BACK-01 | Phase 109 | Complete |
 | BACK-02 | Phase 109 | Pending |
 | BACK-03 | Phase 109 | Pending |
 | BACK-04 | Phase 109 | Pending |
