@@ -40,6 +40,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 | 109 P01 | 1 | 8min | 8min |
 | 109 P02 | 1 | 2min | 2min |
 | Phase 110 P02 | 4 | 2 tasks | 5 files |
+| Phase 110 P01 | 45 | 1 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [Phase 109-02]: Two-router module pattern — favorites/router.py exports both `router` and `portfolio_router`, registered separately in main.py
 - [Phase 110-02]: Uses parcel.parcel_code (Kadaster string) for favorites API calls — FavoriteResponse.parcel_id stores Kadaster string, so parcel_code is the correct comparison key throughout
 - [Phase 110-02]: ParcelPanelShell headerActions prop slot: optional ReactNode renders left of close button in flex container — backward compatible, clean separation of concerns
+- [Phase 110-01]: Extracted 3 extra files (WijkScanList, WorkspaceHeader, useMunicipalityResolver) beyond plan to keep all files under 300 lines — props-down pattern, no Context introduced
 
 ### Key Patterns (carry forward)
 
@@ -83,8 +85,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-15T17:21:10.041Z
-**Stopped At:** Completed 110-02-PLAN.md — Heart button + useFavorites hook
+**Last Session:** 2026-03-15T17:31:46.496Z
+**Stopped At:** Completed 110-01-PLAN.md — ProjectList refactor into sub-components
 **Next Action:** Phase 109 complete — run `/gsd:plan-phase 110` for frontend heart button
 
 ---
