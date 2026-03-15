@@ -63,7 +63,7 @@ LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lag
   1. `POST /api/parcels/favorites` saves a parcel favorite scoped to org + user, returns the created favorite
   2. `DELETE /api/parcels/favorites/{parcel_id}` removes a favorite; subsequent GET no longer lists it
   3. `PATCH /api/parcels/favorites/{parcel_id}/pipeline` updates the pipeline stage; 400 returned for invalid stage values
-  4. `GET /api/portfolio` returns all favorites grouped by provincie/gemeente/wijk with per-level counts in a single query (no N+1)
+  4. `GET /api/portfolio` returns all favorites grouped by gemeente/wijk with per-level counts in a single query (no N+1); provincie grouping is derived by the frontend from gemeente_code using CBS GeoJSON
 **Plans**: 2 plans (2 waves)
 
 Plans:
