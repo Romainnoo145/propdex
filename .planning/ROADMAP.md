@@ -79,11 +79,11 @@ Plans:
   2. Heart button appears next to the close button on the parcel detail panel with correct alignment
   3. Clicking the heart button toggles favorite state immediately (optimistic update) and persists server-side
   4. Heart button reflects correct filled/unfilled state when the same parcel is reopened in a new session
-**Plans**: TBD
+**Plans**: 2 plans (1 wave)
 
 Plans:
-- [ ] 110-01-PLAN.md -- ProjectList.tsx extraction into sub-components
-- [ ] 110-02-PLAN.md -- HeartButton component + useFavorites hook + portfolio type definitions
+- [ ] 110-01-PLAN.md -- ProjectList.tsx extraction into sub-components (wave 1)
+- [ ] 110-02-PLAN.md -- HeartButton component + useFavorites hook + portfolio type definitions (wave 1)
 
 ### Phase 111: Portfolio Navigation
 **Goal**: Users can navigate their saved parcels geographically — from a provincie overview down to individual favorited parcel cards — without leaving the Projecten page
