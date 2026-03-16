@@ -30,8 +30,8 @@
 ## Execution Order
 
 ```
-NOW:   112 Pipeline Stages        → interactive pipeline stage selector + cross-wijk filter
-LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage prio)
+NOW:   113 Map Markers              → favorited parcels as red circle markers on map
+LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lage prio)
 ```
 
 ---
@@ -67,6 +67,20 @@ LATER: 94-97 Aura Reskin         → cosmetische updates overige pagina's (lage 
 ---
 
 ## Phase Details
+
+### Phase 113: Map Markers
+**Goal**: Favorited parcels render as distinct red circle markers on the map tile layer, updating live when the user toggles the heart button
+**Depends on**: Phase 109 (favorites + portfolio)
+**Requirements:** [FAV-03]
+**Success Criteria**:
+  1. Favorited parcels show red circle markers at their centroid on the map
+  2. Toggling a favorite adds/removes the marker without page reload
+  3. Markers visible regardless of Percelen toggle state
+  4. Multi-tenant isolation: centroids filtered by organization_id
+**Plans**: 1 plan
+
+Plans:
+- [ ] 113-01-PLAN.md -- Backend centroids endpoint + frontend GeoJSON overlay layer with reactive updates
 
 ### Phase 112: Pipeline Stages
 **Goal**: Interactive pipeline stage selector and cross-wijk stage filter on portfolio page -- users can progress parcels through Gesignaleerd > Onderzoek > Contact > Besluit > Afgerond and filter their portfolio by stage
@@ -216,6 +230,7 @@ Plans:
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | 112. Pipeline Stages | Planning | - |
+| 113. Map Markers | Planning | - |
 
 ---
 
@@ -280,4 +295,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-16 -- Phase 112 planned: 2 plans, 2 waves*
+*Last updated: 2026-03-16 -- Phase 113 planned: 1 plan, 1 wave*
