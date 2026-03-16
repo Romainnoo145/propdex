@@ -18,6 +18,18 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
+/** Strip gemeente name from address: "Straat 1, 1234AB Venlo" → "Straat 1, 1234AB" */
+function stripGemeente(address: string | null): string {
+  if (!address) return 'Onbekend adres'
+  // Match ", <postcode> <gemeente>" at the end — keep street + postcode, drop gemeente
+  const m = address.match(/^(.+,\s*\d{4}\s?[A-Z]{2})\s+\S+$/)
+  if (m) return m[1]
+  // Match trailing " <gemeente>" after postcode without comma
+  const m2 = address.match(/^(.+\d{4}\s?[A-Z]{2})\s+\S+$/)
+  if (m2) return m2[1]
+  return address
+}
+
 type PanelView =
   | { kind: 'overview' }
   | { kind: 'potentie' }
@@ -132,9 +144,9 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
                 <ArrowLeft className="h-4 w-4 text-aura-ink" />
               </button>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 max-w-full">
               <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
-                {parcel.address || 'Onbekend adres'}
+                {stripGemeente(parcel.address)}
               </h2>
               <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
                 {view.kind !== 'overview'
