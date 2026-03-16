@@ -49,6 +49,38 @@ function formatDate(iso: string): string {
   }
 }
 
+/* ── Address matching ─────────────────────────────────────────── */
+
+/** Extract "Straelseweg 134" from "Straelseweg 134, 5914AS Venlo" */
+function extractStreetAndNumber(address: string | null): string | null {
+  if (!address) return null
+  // Take everything before the first comma (street + housenumber)
+  const beforeComma = address.split(',')[0].trim()
+  // Must contain at least one digit (house number)
+  if (!/\d/.test(beforeComma)) return null
+  return beforeComma.toLowerCase()
+}
+
+function splitByAddress(
+  records: BekendmakingRecord[],
+  address: string | null,
+): { direct: BekendmakingRecord[]; nearby: BekendmakingRecord[] } {
+  const streetNum = extractStreetAndNumber(address)
+  if (!streetNum) return { direct: records, nearby: [] }
+
+  const direct: BekendmakingRecord[] = []
+  const nearby: BekendmakingRecord[] = []
+  for (const r of records) {
+    const titleLower = r.title.toLowerCase()
+    if (titleLower.includes(streetNum)) {
+      direct.push(r)
+    } else {
+      nearby.push(r)
+    }
+  }
+  return { direct, nearby }
+}
+
 /* ── Props ────────────────────────────────────────────────────── */
 
 interface VergunningenModalProps {
@@ -68,6 +100,7 @@ const prefersReducedMotion =
 export function VergunningenModal({ records, address, onClose }: VergunningenModalProps) {
   // Sort newest first
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date))
+  const { direct, nearby } = splitByAddress(sorted, address)
 
   return createPortal(
     <AnimatePresence>
@@ -97,7 +130,8 @@ export function VergunningenModal({ records, address, onClose }: VergunningenMod
                 </h2>
                 <div className="flex items-center gap-1.5 rounded-full bg-[#F2F6F3] px-2.5 py-1">
                   <span className="text-[10px] font-semibold text-[#6B7280]">
-                    {sorted.length} gevonden
+                    {direct.length > 0 ? `${direct.length} dit adres` : `${sorted.length} gevonden`}
+                    {nearby.length > 0 && ` · ${nearby.length} omgeving`}
                   </span>
                 </div>
               </div>
@@ -125,10 +159,36 @@ export function VergunningenModal({ records, address, onClose }: VergunningenMod
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {sorted.map((record) => (
-                  <VergunningCard key={record.identifier ?? record.url} record={record} />
-                ))}
+              <div className="space-y-4">
+                {/* Direct matches for this address */}
+                {direct.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#0E1111]">
+                        Dit adres
+                      </h3>
+                      <span className="text-[10px] text-[#94a3b8]">{direct.length}</span>
+                    </div>
+                    {direct.map((record) => (
+                      <VergunningCard key={record.identifier ?? record.url ?? record.title} record={record} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Nearby records from same postcode */}
+                {nearby.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8]">
+                        Omgeving
+                      </h3>
+                      <span className="text-[10px] text-[#94a3b8]">{nearby.length}</span>
+                    </div>
+                    {nearby.map((record) => (
+                      <VergunningCard key={record.identifier ?? record.url ?? record.title} record={record} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
