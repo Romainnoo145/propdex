@@ -4,6 +4,7 @@
  * Provides:
  * - useParcelFavorites: list all favorites for the current user
  * - useToggleFavorite: add or remove a parcel favorite with optimistic update
+ * - useUpdatePipelineStage: PATCH pipeline stage with optimistic cache update
  *
  * Uses parcel.parcel_code (Kadaster string) for all API calls — NOT parcel_id (UUID).
  * See Phase 109 RESEARCH.md Pitfall 1 for context.
@@ -13,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth/useAuth'
 import { apiFetch } from '@/lib/api'
-import type { FavoriteResponse, PortfolioResponse } from '@/lib/types/portfolio'
+import type { FavoriteResponse, PipelineStage, PortfolioResponse } from '@/lib/types/portfolio'
 import type { ScanResultItem } from '@/lib/types/scan'
 
 const FAVORITES_BASE = '/api/parcels/favorites'
@@ -153,6 +154,80 @@ export function useToggleFavorite() {
       // Always refetch to ensure server state is reflected
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    },
+  })
+}
+
+/**
+ * Update the pipeline stage for a favorited parcel
+ *
+ * Performs an optimistic update: the favorites cache is updated immediately
+ * before the server responds. On error the cache is rolled back to the
+ * previous snapshot and a toast notification is shown.
+ *
+ * Variables:
+ *   parcelId      — Kadaster string (e.g. "HTT02-A-1234"), NOT UUID
+ *   stage         — new pipeline stage
+ *   afgerondReden — reason for completion (only for 'Afgerond')
+ *   notitie       — optional free-text note
+ *
+ * Note: Does NOT invalidate ['portfolio'] — portfolio has no pipeline data.
+ */
+export function useUpdatePipelineStage() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    FavoriteResponse,
+    Error,
+    { parcelId: string; stage: PipelineStage; afgerondReden?: string | null; notitie?: string | null },
+    { previousFavorites: FavoriteResponse[] | undefined }
+  >({
+    mutationFn: ({ parcelId, stage, afgerondReden, notitie }) =>
+      apiFetch<FavoriteResponse>(
+        `${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/pipeline`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ stage, afgerond_reden: afgerondReden ?? null, notitie: notitie ?? null }),
+          accessToken,
+        },
+      ),
+
+    onMutate: async ({ parcelId, stage, afgerondReden, notitie }) => {
+      // Cancel any in-flight refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['favorites'] })
+
+      // Snapshot the current favorites list for rollback
+      const previousFavorites = queryClient.getQueryData<FavoriteResponse[]>(['favorites'])
+
+      // Optimistically update the cache
+      queryClient.setQueryData<FavoriteResponse[]>(['favorites'], (old) =>
+        (old ?? []).map((f) => {
+          if (f.parcel_id !== parcelId) return f
+          return {
+            ...f,
+            pipeline_stage: stage,
+            afgerond_reden: stage === 'Afgerond' ? (afgerondReden ?? null) : null,
+            notitie: stage === 'Afgerond' ? (notitie ?? null) : null,
+            updated_at: new Date().toISOString(),
+          }
+        }),
+      )
+
+      return { previousFavorites }
+    },
+
+    onError: (_error, _variables, context) => {
+      // Roll back to previous state
+      if (context?.previousFavorites !== undefined) {
+        queryClient.setQueryData(['favorites'], context.previousFavorites)
+      }
+      toast.error('Kan fase niet bijwerken')
+    },
+
+    onSettled: () => {
+      // Refetch favorites only — portfolio has no pipeline data
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
     },
   })
 }
