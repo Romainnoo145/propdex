@@ -59,3 +59,9 @@ class PortfolioGemeenteGroup(BaseModel):
 class PortfolioResponse(BaseModel):
     gemeenten: list[PortfolioGemeenteGroup]
     total_favorites: int
+
+
+class FavoriteCentroidResponse(BaseModel):
+    parcel_code: str
+    lon: float
+    lat: float

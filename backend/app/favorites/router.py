@@ -4,12 +4,13 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.favorites.schemas import (
+    FavoriteCentroidResponse,
     FavoriteCreate,
     FavoriteResponse,
     PipelineUpdateRequest,
@@ -154,6 +155,45 @@ async def delete_favorite(
         current_user.id,
         organization_id,
     )
+
+
+@router.get(
+    "/favorites/centroids",
+    response_model=list[FavoriteCentroidResponse],
+)
+@limiter.limit("30/minute")
+async def list_favorite_centroids(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    organization_id: uuid.UUID = Depends(get_current_organization_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[FavoriteCentroidResponse]:
+    """Return centroid lon/lat for all favorited parcels in the current organisation."""
+    result = await db.execute(
+        text(
+            """
+            SELECT
+                pf.parcel_id AS parcel_code,
+                ST_X(ST_Transform(ST_Centroid(pc.geometry), 4326)) AS lon,
+                ST_Y(ST_Transform(ST_Centroid(pc.geometry), 4326)) AS lat
+            FROM parcel_favorites pf
+            JOIN parcel_cache pc
+              ON pc.parcel_id = pf.parcel_id
+             AND pc.organization_id = :org_id
+            WHERE pf.user_id = :user_id
+              AND pf.organization_id = :org_id
+            """
+        ),
+        {"org_id": str(organization_id), "user_id": str(current_user.id)},
+    )
+    return [
+        FavoriteCentroidResponse(
+            parcel_code=row._mapping["parcel_code"],
+            lon=float(row._mapping["lon"]),
+            lat=float(row._mapping["lat"]),
+        )
+        for row in result
+    ]
 
 
 @router.patch(
