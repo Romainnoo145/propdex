@@ -12,6 +12,9 @@ const projectenSearchSchema = z.object({
   portfolio_provincie: z.string().optional(),
   portfolio_gemeente: z.string().optional(),
   portfolio_wijk: z.string().optional(),
+  portfolio_stage: z
+    .enum(['Gesignaleerd', 'Onderzoek', 'Contact', 'Besluit', 'Afgerond'])
+    .optional(),
 })
 
 export const Route = createFileRoute('/_authenticated/projecten')({
