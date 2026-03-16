@@ -96,7 +96,7 @@ import { normalizeAreaName, normalizeGemeenteCode } from '@/lib/geo/normalizers'
 type ActivePanel =
   | { kind: 'gemeente'; code: string; naam: string; bbox: [number, number, number, number] }
   | { kind: 'wijk'; code: string; naam: string; gemeenteCode: string; gemeenteNaam: string; latestScan: ScanListItem | null }
-  | { kind: 'parcel'; parcel: ScanResultItem }
+  | { kind: 'parcel'; parcel: ScanResultItem; gemeenteNaam?: string | null; wijkNaam?: string | null }
 
 interface MapSearchParams {
   postcode?: string
@@ -2314,6 +2314,8 @@ function MapPage() {
           <ParcelDetailPanel
             key="parcel-panel"
             parcel={inspectorParcel}
+            gemeenteNaam={activeGemeente?.naam}
+            wijkNaam={urlWijkNaam}
             onClose={() => {
               setActivePanel(null)
               setParcelGeometryHighlight(null)

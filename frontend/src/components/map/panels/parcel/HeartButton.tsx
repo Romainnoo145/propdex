@@ -5,6 +5,10 @@ import type { ScanResultItem } from '@/lib/types/scan'
 
 interface HeartButtonProps {
   parcel: ScanResultItem
+  /** Gemeente display name from scan context (not available on ScanResultItem) */
+  gemeenteNaam?: string | null
+  /** Wijk name from scan context (not available on ScanResultItem) */
+  wijkNaam?: string | null
 }
 
 /**
@@ -16,7 +20,7 @@ interface HeartButtonProps {
  *
  * IMPORTANT: Uses parcel.parcel_code (Kadaster string), NOT parcel.parcel_id (UUID)
  */
-export function HeartButton({ parcel }: HeartButtonProps) {
+export function HeartButton({ parcel, gemeenteNaam, wijkNaam }: HeartButtonProps) {
   const favoritesQuery = useParcelFavorites()
   const toggleFavorite = useToggleFavorite()
 
@@ -31,7 +35,7 @@ export function HeartButton({ parcel }: HeartButtonProps) {
   return (
     <button
       type="button"
-      onClick={() => toggleFavorite.mutate({ parcel, isFavorited })}
+      onClick={() => toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })}
       disabled={toggleFavorite.isPending}
       className="flex h-8 w-8 items-center justify-center text-aura-obsidian transition-colors hover:text-aura-amber disabled:opacity-60"
       aria-label={isFavorited ? 'Verwijder uit portfolio' : 'Toevoegen aan portfolio'}

@@ -78,10 +78,10 @@ export function useToggleFavorite() {
   return useMutation<
     FavoriteResponse | null,
     Error,
-    { parcel: ScanResultItem; isFavorited: boolean },
+    { parcel: ScanResultItem; isFavorited: boolean; gemeenteNaam?: string | null; wijkNaam?: string | null },
     { previousFavorites: FavoriteResponse[] | undefined }
   >({
-    mutationFn: async ({ parcel, isFavorited }) => {
+    mutationFn: async ({ parcel, isFavorited, gemeenteNaam, wijkNaam }) => {
       if (isFavorited) {
         // DELETE — returns 204 No Content (apiFetch returns null for 204)
         await apiFetch<null>(`${FAVORITES_BASE}/${encodeURIComponent(parcel.parcel_code)}`, {
@@ -96,15 +96,15 @@ export function useToggleFavorite() {
           body: JSON.stringify({
             parcel_id: parcel.parcel_code,
             gemeente_code: parcel.gemeente_code ?? null,
-            gemeente_naam: parcel.gemeente_naam ?? null,
-            wijk_naam: parcel.wijk_naam ?? null,
+            gemeente_naam: gemeenteNaam ?? null,
+            wijk_naam: wijkNaam ?? null,
           }),
           accessToken,
         })
       }
     },
 
-    onMutate: async ({ parcel, isFavorited }) => {
+    onMutate: async ({ parcel, isFavorited, gemeenteNaam, wijkNaam }) => {
       // Cancel any in-flight refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ['favorites'] })
 
@@ -124,8 +124,8 @@ export function useToggleFavorite() {
             parcel_id: parcel.parcel_code,
             user_id: '',
             gemeente_code: parcel.gemeente_code ?? null,
-            gemeente_naam: parcel.gemeente_naam ?? null,
-            wijk_naam: parcel.wijk_naam ?? null,
+            gemeente_naam: gemeenteNaam ?? null,
+            wijk_naam: wijkNaam ?? null,
             pipeline_stage: 'Gesignaleerd',
             afgerond_reden: null,
             notitie: null,
