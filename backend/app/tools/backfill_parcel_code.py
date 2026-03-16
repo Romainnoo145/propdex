@@ -23,7 +23,8 @@ import re
 import uuid
 from dataclasses import dataclass, field
 
-from sqlalchemy import select, text, update as sa_update
+from sqlalchemy import select, text
+from sqlalchemy import update as sa_update
 
 from app.core.database import async_session_factory
 from app.core.http_client import create_government_api_client
@@ -38,6 +39,12 @@ PDOK_OGC_URL = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collect
 # 16-digit numeric IDs (e.g. "0983100000006658") are BAG pand identificaties stored as
 # fallback — they do NOT match PDOK Kadaster identifiers and will not return results.
 _KADASTER_ID_RE = re.compile(r"^\d{14}$")
+
+# 16-digit BAG pand IDs that need centroid-based cadastral lookup
+_BAG_PAND_ID_RE = re.compile(r"^\d{16}$")
+
+# PDOK cadastral WFS for coordinate-based lookup (returns perceel at a point)
+PDOK_CADASTRAL_WFS_URL = "https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0"
 
 # Max concurrent PDOK requests — polite to PDOK infrastructure
 _SEMAPHORE_LIMIT = 10
@@ -95,6 +102,149 @@ async def _fetch_parcel_display_code(
             return f"{gemeente} {sectie} {perceelnummer}"
         except Exception:  # noqa: BLE001
             return None
+
+
+async def _fetch_parcel_code_by_centroid(
+    lng: float,
+    lat: float,
+    client,
+    semaphore: asyncio.Semaphore,
+) -> str | None:
+    """Fetch parcel display code via PDOK WFS using a WGS84 coordinate point."""
+    async with semaphore:
+        try:
+            response = await client.get(
+                PDOK_CADASTRAL_WFS_URL,
+                params={
+                    "service": "WFS",
+                    "version": "2.0.0",
+                    "request": "GetFeature",
+                    "typeName": "kadastralekaartv5:perceel",
+                    "outputFormat": "json",
+                    "count": "1",
+                    "CQL_FILTER": f"INTERSECTS(geometry, POINT({lng} {lat}))",
+                    "srsName": "EPSG:4326",
+                },
+                timeout=15.0,
+            )
+            if response.status_code >= 400:
+                return None
+            data = response.json()
+            features = data.get("features") or []
+            if not features:
+                return None
+            props = features[0].get("properties") or {}
+            gemeente = (props.get("kadastrale_gemeente_waarde") or "").strip()
+            sectie = (props.get("sectie") or "").strip()
+            nummer = props.get("perceelnummer")
+            if not gemeente or not sectie or nummer is None:
+                return None
+            return f"{gemeente} {sectie} {nummer}"
+        except Exception:  # noqa: BLE001
+            return None
+
+
+async def _backfill_phase3_centroid(
+    *,
+    gemeente_code: str | None,
+    batch_size: int,
+    dry_run: bool,
+    stats: BackfillStats,
+) -> None:
+    """Phase 3: Resolve 16-digit BAG pand IDs via PostGIS centroid → PDOK WFS coordinate lookup."""
+    from geoalchemy2.functions import ST_X, ST_Y, ST_Centroid, ST_Transform
+    from sqlalchemy import func as sa_func
+
+    semaphore = asyncio.Semaphore(_SEMAPHORE_LIMIT)
+    client = create_government_api_client()
+
+    try:
+        last_id: uuid.UUID | None = None
+        batch_num = 0
+
+        while True:
+            async with async_session_factory() as session:
+                # Select BAG pand IDs with no parcel_code, compute WGS84 centroid
+                centroid_wgs = ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)
+                stmt = (
+                    select(
+                        ParcelCache.id,
+                        ParcelCache.parcel_id,
+                        ST_X(centroid_wgs).label("lng"),
+                        ST_Y(centroid_wgs).label("lat"),
+                    )
+                    .where(
+                        ParcelCache.parcel_code.is_(None),
+                        sa_func.length(ParcelCache.parcel_id) == 16,
+                        ParcelCache.parcel_id.op("~")(r"^\d+$"),
+                    )
+                    .order_by(ParcelCache.id)
+                    .limit(batch_size)
+                )
+                if gemeente_code is not None:
+                    stmt = stmt.where(ParcelCache.gemeente_code == gemeente_code)
+                if last_id is not None:
+                    stmt = stmt.where(ParcelCache.id > last_id)
+
+                rows = (await session.execute(stmt)).all()
+
+            if not rows:
+                break
+
+            batch_num += 1
+            batch_resolved = 0
+            batch_failed = 0
+
+            async def _resolve_centroid(
+                row_id: uuid.UUID,
+                parcel_id: str,
+                lng: float,
+                lat: float,
+            ) -> tuple[uuid.UUID, str | None]:
+                code = await _fetch_parcel_code_by_centroid(lng, lat, client, semaphore)
+                return (row_id, code)
+
+            tasks = [_resolve_centroid(r[0], r[1], r[2], r[3]) for r in rows]
+            results = await asyncio.gather(*tasks)
+
+            updates: list[dict] = []
+            for row_id, code in results:
+                stats.total_inspected += 1
+                if code is not None:
+                    batch_resolved += 1
+                    stats.code_resolved += 1
+                    updates.append({"row_id": row_id, "code": code})
+                else:
+                    batch_failed += 1
+                    stats.code_failed_pdok += 1
+
+            if updates and not dry_run:
+                try:
+                    async with async_session_factory() as session:
+                        for item in updates:
+                            await session.execute(
+                                sa_update(ParcelCache)
+                                .where(ParcelCache.id == item["row_id"])
+                                .values(parcel_code=item["code"])
+                            )
+                        await session.commit()
+                except Exception as exc:  # noqa: BLE001
+                    stats.errors.append(f"Phase3 Batch {batch_num} DB error: {exc}")
+
+            stats.batches_processed += 1
+            last_id = rows[-1][0]
+
+            print(
+                f"Phase 3 Batch {batch_num}: "
+                f"{batch_resolved} resolved via centroid, "
+                f"{batch_failed} PDOK failures"
+                + (" [DRY RUN]" if dry_run else "")
+            )
+
+            await asyncio.sleep(_BATCH_SLEEP)
+
+    finally:
+        await client.aclose()
 
 
 async def _backfill_phase1(
@@ -282,6 +432,16 @@ async def _run(
     # Phase 1: PDOK WFS lookup → parcel_code
     print("=== Phase 1: Populate parcel_cache.parcel_code ===")
     await _backfill_phase1(
+        gemeente_code=gemeente_code,
+        batch_size=batch_size,
+        dry_run=dry_run,
+        stats=stats,
+    )
+    print()
+
+    # Phase 3: Centroid-based lookup for 16-digit BAG pand IDs
+    print("=== Phase 3: Resolve BAG pand IDs via centroid → PDOK WFS ===")
+    await _backfill_phase3_centroid(
         gemeente_code=gemeente_code,
         batch_size=batch_size,
         dry_run=dry_run,
