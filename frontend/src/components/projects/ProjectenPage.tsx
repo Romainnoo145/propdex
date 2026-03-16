@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearch } from '@tanstack/react-router'
 import type { ProjectResponse } from '@/lib/types/project'
 import ProjectEditModal from './ProjectEditModal'
 import ChangeTimeline from '@/components/notifications/ChangeTimeline'
@@ -10,6 +11,8 @@ import { GemeenteView } from './GemeenteView'
 import { ProjectWorkspaceHeader } from './WorkspaceHeader'
 import { WijkScanList } from './WijkScanList'
 import { useProjectenWorkspace } from './useProjectenWorkspace'
+import { PortfolioModeToggle } from './PortfolioModeToggle'
+import { PortfolioView } from './PortfolioView'
 import { normalizeAreaName } from '@/lib/geo/normalizers'
 import {
   ChevronIcon,
@@ -27,6 +30,8 @@ import {
  */
 export default function ProjectenPage() {
   const ws = useProjectenWorkspace()
+  const search = useSearch({ from: '/_authenticated/projecten' })
+  const isPortfolioMode = search.portfolio_mode === true
   const deleteMutation = useDeleteProject()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -66,12 +71,30 @@ export default function ProjectenPage() {
 
   return (
     <div className="space-y-4">
-      {ws.isDemo && (
+      {/* Mode toggle — always visible */}
+      <div className="flex items-center">
+        <PortfolioModeToggle isPortfolioMode={isPortfolioMode} />
+      </div>
+
+      {ws.isDemo && !isPortfolioMode && (
         <div className="rounded-lg border border-aura-amber/30 bg-aura-amber/10 px-4 py-3 text-sm text-aura-amber">
           Voorbeelddata — start de backend om projecten te beheren
         </div>
       )}
 
+      {/* Portfolio mode branch */}
+      {isPortfolioMode && (
+        <PortfolioView
+          allGemeenteCards={ws.allGemeenteCards}
+          provinceOptions={ws.provinceOptions}
+          provincieGeojson={ws.provincieGeojson}
+          gemeenteGeojson={ws.gemeenteGeojson}
+        />
+      )}
+
+      {/* Workspace mode branch */}
+      {!isPortfolioMode && (
+        <>
       {!ws.hasGemeenteDetail && (
         <ProjectWorkspaceHeader
           title={ws.workspaceTitle}
@@ -207,6 +230,9 @@ export default function ProjectenPage() {
             Nog geen projecten gevonden. Projecten worden automatisch gekoppeld via scan- en rapportflows.
           </p>
         </div>
+      )}
+
+        </>
       )}
 
       <ProjectEditModal
