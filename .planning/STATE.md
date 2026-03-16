@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v17.0
 milestone_name: Projecten Portfolio
 status: completed
-stopped_at: Completed 111.1-01-PLAN.md — parcel_code + parcel_cache_id FK migration
-last_updated: "2026-03-16T05:25:56.306Z"
+stopped_at: Completed 111.1-02-PLAN.md — parcel_code backfill + parcel_favorites FK populated
+last_updated: "2026-03-16T06:17:13.461Z"
 last_activity: 2026-03-16 -- 111-02 complete (FavoritedParcelCard + PipelineStagePill + Wijk Parcel Grid)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 88
 ---
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 88%
 | Phase 110 P01 | 45 | 1 tasks | 10 files |
 | Phase 111 P1 | 6 | 7 tasks | 10 files |
 | Phase 111 P2 | 3 | 2min | 3 files |
+| Phase 111.1 P02 | 49 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Progress: [█████████░] 88%
 - [Phase 111.1-01]: parcel_code is display-only space-separated (Venlo I 6658); parcel_id remains BRK dash-format — two fields for two purposes
 - [Phase 111.1-01]: No UniqueConstraint on (org, parcel_code) yet — deferred until backfill confirms no duplicates
 - [Phase 111.1-01]: Alembic chain fix: deleted duplicate a1b2c3d4e5f6 revision, rebased g7b8c9d0e1f2 onto 4c5d6e7f8a9b, stamped DB at h8c9d0e1f2g3
+- [Phase 111.1-02]: PDOK OGC API (api.pdok.nl) not WFS: OGC supports identificatie_lokaal_id filter param, WFS CQL_FILTER silently returns unrelated results when no match
+- [Phase 111.1-02]: 16-digit BAG pand IDs (0983xxxxxxxx) are NOT Kadaster OGC IDs — skip during backfill, leave parcel_code NULL
+- [Phase 111.1-02]: parcel_code coverage 50.8% overall is correct — 50% rows have 16-digit BAG IDs that cannot be resolved; 99.97% of queryable 14-digit rows resolved
 
 ### Key Patterns (carry forward)
 
@@ -114,8 +118,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-16T05:25:56.303Z
-**Stopped At:** Completed 111.1-01-PLAN.md — parcel_code + parcel_cache_id FK migration
+**Last Session:** 2026-03-16T06:17:13.459Z
+**Stopped At:** Completed 111.1-02-PLAN.md — parcel_code backfill + parcel_favorites FK populated
 **Next Action:** Phase 111 complete — Phase 112 (Pipeline Stage Management) next
 
 ---
