@@ -18,15 +18,11 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
-/** For long addresses, drop the postcode+gemeente so truncation stays clean.
- *  Short: "Keiweg 12, 5911AA Venlo" (fits → shown in full)
- *  Long:  "Monseigneur Boermansstraat 20" (postcode stripped → truncates cleanly after street) */
-function displayAddress(address: string | null, maxLen = 32): string {
-  if (!address) return 'Onbekend adres'
-  if (address.length <= maxLen) return address
-  // Strip ", postcode gemeente" suffix for long addresses
-  const m = address.match(/^(.+?)\s*,\s*\d{4}\s?[A-Z]{2}/)
-  return m ? m[1] : address
+/** Split "Straat 1, 1234AB Venlo" → ["Straat 1", ", 1234AB Venlo"] for clean truncation */
+function splitAddress(address: string | null): [string, string] {
+  if (!address) return ['Onbekend adres', '']
+  const m = address.match(/^(.+?)\s*(,\s*\d{4}\s?[A-Z]{2}.*)$/)
+  return m ? [m[1], m[2]] : [address, '']
 }
 
 type PanelView =
@@ -144,8 +140,9 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
               </button>
             )}
             <div className="min-w-0 max-w-full">
-              <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
-                {displayAddress(parcel.address)}
+              <h2 className="flex text-[28px] font-bold tracking-tighter text-slate-900 leading-tight overflow-hidden whitespace-nowrap">
+                <span className="truncate">{splitAddress(parcel.address)[0]}</span>
+                <span className="shrink-0">{splitAddress(parcel.address)[1]}</span>
               </h2>
               <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
                 {view.kind !== 'overview'
