@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v17.0
+milestone_name: Projecten Portfolio
+status: completed
+stopped_at: Completed 111.1-01-PLAN.md — parcel_code + parcel_cache_id FK migration
+last_updated: "2026-03-16T05:25:56.306Z"
+last_activity: 2026-03-16 -- 111-02 complete (FavoritedParcelCard + PipelineStagePill + Wijk Parcel Grid)
+progress:
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
+---
+
 # Propdex -- Project State
 
 ## Project Reference
@@ -16,7 +32,7 @@ Plan: 2/2 in current phase
 Status: Complete
 Last activity: 2026-03-16 -- 111-02 complete (FavoritedParcelCard + PipelineStagePill + Wijk Parcel Grid)
 
-Progress: [░░░░░░░░░░] 0% (v17.0)
+Progress: [█████████░] 88%
 
 ---
 
@@ -46,6 +62,10 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 111.1 inserted after Phase 111: Parcel Identity Unification — add parcel_code to parcel_cache, backfill display strings, FK from parcel_favorites/parcel_documents (URGENT)
+
 ### Decisions
 
 - [Phase 108-01]: Discount model: overall = potentie × (1 - risico_discount), max 50% cap, 70/30 default balance
@@ -68,6 +88,9 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [Phase 111-01]: Level 4 parcel list is placeholder in plan 1 — FavoritedParcelCard delivered in plan 2
 - [Phase 111-02]: IIFE in JSX for wijk parcel grid keeps complex filtering readable without sub-component extraction
 - [Phase 111-02]: Null wijk_naam maps to 'Onbekende wijk' in URL; reverse-mapped on filtering via equality check
+- [Phase 111.1-01]: parcel_code is display-only space-separated (Venlo I 6658); parcel_id remains BRK dash-format — two fields for two purposes
+- [Phase 111.1-01]: No UniqueConstraint on (org, parcel_code) yet — deferred until backfill confirms no duplicates
+- [Phase 111.1-01]: Alembic chain fix: deleted duplicate a1b2c3d4e5f6 revision, rebased g7b8c9d0e1f2 onto 4c5d6e7f8a9b, stamped DB at h8c9d0e1f2g3
 
 ### Key Patterns (carry forward)
 
@@ -91,8 +114,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-16T04:06:00Z
-**Stopped At:** Completed 111-02-PLAN.md — FavoritedParcelCard + PipelineStagePill + Wijk Parcel Grid
+**Last Session:** 2026-03-16T05:25:56.303Z
+**Stopped At:** Completed 111.1-01-PLAN.md — parcel_code + parcel_cache_id FK migration
 **Next Action:** Phase 111 complete — Phase 112 (Pipeline Stage Management) next
 
 ---
