@@ -18,16 +18,13 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
-/** Strip gemeente name from address: "Straat 1, 1234AB Venlo" → "Straat 1, 1234AB" */
-function stripGemeente(address: string | null): string {
-  if (!address) return 'Onbekend adres'
-  // Match ", <postcode> <gemeente>" at the end — keep street + postcode, drop gemeente
-  const m = address.match(/^(.+,\s*\d{4}\s?[A-Z]{2})\s+\S+$/)
-  if (m) return m[1]
-  // Match trailing " <gemeente>" after postcode without comma
-  const m2 = address.match(/^(.+\d{4}\s?[A-Z]{2})\s+\S+$/)
-  if (m2) return m2[1]
-  return address
+/** Split address into street and suffix: "Straat 1, 1234AB Venlo" → ["Straat 1", ", 1234AB Venlo"] */
+function splitAddress(address: string | null): { street: string; suffix: string | null } {
+  if (!address) return { street: 'Onbekend adres', suffix: null }
+  // Split at last comma before postcode
+  const m = address.match(/^(.+?)\s*,\s*(\d{4}\s?[A-Z]{2}.*)$/)
+  if (m) return { street: m[1], suffix: `, ${m[2]}` }
+  return { street: address, suffix: null }
 }
 
 type PanelView =
@@ -133,7 +130,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
       >
         {/* Address header */}
         <div className="px-8 pt-8">
-          <div className="flex items-center gap-2 pr-16">
+          <div className="flex items-center gap-2 pr-20">
             {view.kind !== 'overview' && (
               <button
                 type="button"
@@ -145,8 +142,11 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
               </button>
             )}
             <div className="min-w-0 max-w-full">
-              <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
-                {stripGemeente(parcel.address)}
+              <h2 className="flex items-baseline text-[28px] font-bold tracking-tighter text-slate-900 leading-tight overflow-hidden whitespace-nowrap">
+                <span className="truncate">{splitAddress(parcel.address).street}</span>
+                {splitAddress(parcel.address).suffix && (
+                  <span className="shrink-0 text-slate-400 font-semibold text-lg ml-0.5">{splitAddress(parcel.address).suffix}</span>
+                )}
               </h2>
               <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
                 {view.kind !== 'overview'
