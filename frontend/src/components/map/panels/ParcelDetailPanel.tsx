@@ -18,17 +18,6 @@ import { useParcelEnrichment } from '@/hooks/useScans'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import type { ScanResultItem } from '@/lib/types/scan'
 
-/** Split "Keizersgracht 123, 1015AB Amsterdam" into street + locality */
-function splitAddress(address: string | null): { street: string; locality: string | null } {
-  if (!address) return { street: 'Onbekend adres', locality: null }
-  const commaIdx = address.indexOf(',')
-  if (commaIdx === -1) return { street: address, locality: null }
-  return {
-    street: address.slice(0, commaIdx).trim(),
-    locality: address.slice(commaIdx + 1).trim() || null,
-  }
-}
-
 type PanelView =
   | { kind: 'overview' }
   | { kind: 'potentie' }
@@ -130,9 +119,9 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
         transition={{ duration: 0.2 }}
         className="flex flex-col h-full overflow-y-auto"
       >
-        {/* Address header — pr-20 keeps text clear of absolute heart/close buttons */}
-        <div className="px-8 pt-8 pr-20">
-          <div className="flex items-center gap-2">
+        {/* Address header */}
+        <div className="px-8 pt-8">
+          <div className="flex items-center gap-2 pr-12">
             {view.kind !== 'overview' && (
               <button
                 type="button"
@@ -145,13 +134,8 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
             )}
             <div className="min-w-0">
               <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
-                {splitAddress(parcel.address).street}
+                {parcel.address || 'Onbekend adres'}
               </h2>
-              {splitAddress(parcel.address).locality && (
-                <p className="text-sm text-slate-500 font-medium truncate">
-                  {splitAddress(parcel.address).locality}
-                </p>
-              )}
               <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
                 {view.kind !== 'overview'
                   ? VIEW_LABELS[view.kind]
