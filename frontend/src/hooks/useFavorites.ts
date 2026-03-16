@@ -13,10 +13,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth/useAuth'
 import { apiFetch } from '@/lib/api'
-import type { FavoriteResponse } from '@/lib/types/portfolio'
+import type { FavoriteResponse, PortfolioResponse } from '@/lib/types/portfolio'
 import type { ScanResultItem } from '@/lib/types/scan'
 
 const FAVORITES_BASE = '/api/parcels/favorites'
+
+/**
+ * Fetch grouped portfolio data for the current authenticated user
+ *
+ * Query key: ['portfolio']
+ * Stale time: 5 minutes
+ * Only runs when user is authenticated
+ */
+export function usePortfolio() {
+  const { accessToken } = useAuth()
+
+  return useQuery<PortfolioResponse, Error>({
+    queryKey: ['portfolio'],
+    queryFn: () => apiFetch<PortfolioResponse>('/api/portfolio', { method: 'GET', accessToken }),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!accessToken,
+  })
+}
 
 /**
  * Fetch all favorites for the current authenticated user
@@ -132,6 +150,7 @@ export function useToggleFavorite() {
     onSettled: () => {
       // Always refetch to ensure server state is reflected
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
   })
 }

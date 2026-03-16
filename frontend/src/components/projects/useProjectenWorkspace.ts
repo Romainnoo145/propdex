@@ -272,7 +272,7 @@ export function useProjectenWorkspace() {
     hasGemeenteDetail, regularProjects, workspaceTitle, workspaceSubtitle,
     totaalMeldingen, totaalProvincies, gemeentenInSelectedProvince,
     provinceOptions, selectedProvince, provinceStatsByCode,
-    selectedProvinceGemeenteCards, recentCards,
+    allGemeenteCards, selectedProvinceGemeenteCards, recentCards,
     favoriteSelectedProvinceCards, nonFavoriteSelectedProvinceCards, favoriteCodeSet,
     standaloneWijkCountInSelectedProvince,
     gemeenteGeojson, provincieGeojson, detailWijkGeojson,
