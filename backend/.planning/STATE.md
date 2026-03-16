@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v16.0
 milestone_name: Score Intelligence
 status: completed
-stopped_at: Completed 112-01-PLAN.md
-last_updated: "2026-03-16T07:33:41.646Z"
+stopped_at: Completed 112-02-PLAN.md
+last_updated: "2026-03-16T07:38:44.589Z"
 last_activity: 2026-03-12 -- Plan 104-02 complete (Due diligence PDF template)
 progress:
   total_phases: 11
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 50
 ---
 
@@ -64,6 +64,7 @@ Progress: [█████░░░░░] 50%
 | Phase 105 P02 | 4min | 2 tasks | 4 files |
 | Phase 104 P01 | 3min | 2 tasks | 3 files |
 | Phase 112 P01 | 8min | 2 tasks | 5 files |
+| Phase 112 P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ Progress: [█████░░░░░] 50%
 - [Phase 112]: useUpdatePipelineStage does NOT invalidate portfolio queries — portfolio has no pipeline data
 - [Phase 112]: PipelineStagePill renders as button only when onClick prop provided (backward compat)
 - [Phase 112]: AfgerondModal uses createPortal(content, document.body) — same z-index pattern as EigendomModal
+- [Phase 112]: filteredFavorites memo is the single source of truth for all filtered counts across all drill-down levels
+- [Phase 112]: PipelineStageFilter uses functional search updater to preserve all existing URL params when toggling stage
 
 ### Key Patterns (carry forward)
 
@@ -164,8 +167,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-16T07:33:41.644Z
-**Stopped At:** Completed 112-01-PLAN.md
+**Last Session:** 2026-03-16T07:38:44.587Z
+**Stopped At:** Completed 112-02-PLAN.md
 
 **Next Action:** Phase 104 complete. Begin next phase.
 
