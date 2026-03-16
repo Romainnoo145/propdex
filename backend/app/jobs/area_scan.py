@@ -1170,6 +1170,18 @@ async def _upsert_parcel_cache(
         raise ValueError("Missing cadastral parcel identifier")
     identificatie = identificatie.strip()
 
+    # Derive PDOK display string (e.g. "Venlo I 6658") for parcel_code
+    parcel_code_display: str | None = None
+    kgw = properties.get("kadastrale_gemeente_waarde")
+    sec = properties.get("sectie")
+    pnr = properties.get("perceelnummer")
+    if (
+        isinstance(kgw, str) and kgw.strip()
+        and isinstance(sec, str) and sec.strip()
+        and pnr is not None
+    ):
+        parcel_code_display = f"{kgw.strip()} {sec.strip()} {pnr}"
+
     # Compute area and centroid from geometry
     geometry = feature.get("geometry")
     if not isinstance(geometry, dict):
@@ -1232,11 +1244,14 @@ async def _upsert_parcel_cache(
         parcel.bouwjaar = bouwjaar
         parcel.pand_status = pand_status
         parcel.updated_at = datetime.utcnow()
+        if parcel_code_display:
+            parcel.parcel_code = parcel_code_display
         session.add(parcel)
     else:
         parcel = ParcelCache(
             organization_id=org_id,
             parcel_id=identificatie,
+            parcel_code=parcel_code_display,
             geometry=geom_expr,
             area_m2=area_m2,
             has_pand=has_pand,
