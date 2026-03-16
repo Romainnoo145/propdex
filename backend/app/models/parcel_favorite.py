@@ -28,6 +28,12 @@ class ParcelFavorite(Base, TenantMixin, TimestampMixin):
         nullable=False,
         comment="Kadaster parcel ID (e.g. HTT02-A-1234)",
     )
+    parcel_cache_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("parcel_cache.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="FK to parcel_cache.id -- populated after parcel_code unification",
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,

@@ -40,6 +40,13 @@ class ParcelCache(Base, TenantMixin, TimestampMixin):
         String(50), nullable=False, index=True,
     )
 
+    # PDOK display string (e.g., "Venlo I 6658") — derived at scan time from
+    # kadastrale_gemeente_waarde + sectie + perceelnummer properties
+    parcel_code: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True,
+        comment="PDOK display string (e.g. 'Venlo I 6658')",
+    )
+
     # --- Tier 1: Lightweight pre-scan data (stable, always populated) ---
 
     # Geometry stored in EPSG:28992 (RD New - Dutch national grid)
@@ -90,5 +97,6 @@ class ParcelCache(Base, TenantMixin, TimestampMixin):
     __table_args__ = (
         Index("ix_parcel_cache_org_gemeente", "organization_id", "gemeente_code"),
         Index("ix_parcel_cache_org_parcel", "organization_id", "parcel_id"),
+        Index("ix_parcel_cache_org_parcel_code", "organization_id", "parcel_code"),
         UniqueConstraint("organization_id", "parcel_id", name="uq_parcel_cache_org_parcel"),
     )
