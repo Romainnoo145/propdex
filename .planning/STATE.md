@@ -4,7 +4,7 @@ milestone: v17.0
 milestone_name: Projecten Portfolio
 status: completed
 stopped_at: Completed 111.1-02-PLAN.md — parcel_code backfill + parcel_favorites FK populated
-last_updated: "2026-03-16T06:17:13.461Z"
+last_updated: "2026-03-16T06:21:29.768Z"
 last_activity: 2026-03-16 -- 111-02 complete (FavoritedParcelCard + PipelineStagePill + Wijk Parcel Grid)
 progress:
   total_phases: 6
