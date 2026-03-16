@@ -1,7 +1,7 @@
-"""Backfill parcel_code for existing parcel_cache rows via PDOK WFS batch lookup.
+"""Backfill parcel_code for existing parcel_cache rows via PDOK OGC API batch lookup.
 
-Phase 1: Populate parcel_cache.parcel_code from PDOK WFS using the BRK numeric
-         identificatie stored in parcel_id.
+Phase 1: Populate parcel_cache.parcel_code from PDOK OGC API using the numeric
+         identificatie_lokaal_id stored in parcel_id.
 
 Phase 2: Populate parcel_favorites.parcel_cache_id FK by joining on
          parcel_favorites.parcel_id = parcel_cache.parcel_code.
@@ -10,7 +10,7 @@ Usage:
     python -m app.tools.backfill_parcel_code [--gemeente GM0983] [--dry-run] [--batch-size 200]
 
 Options:
-    --gemeente GM0983    Optional filter by gemeente_code (GM prefix stripped internally)
+    --gemeente GM0983    Optional filter by gemeente_code (GM prefix normalised internally)
     --dry-run            Log planned actions without writing to the database
     --batch-size 200     Number of rows per processing batch (default: 200)
 """
@@ -29,11 +29,15 @@ from app.core.database import async_session_factory
 from app.core.http_client import create_government_api_client
 from app.models.parcel_cache import ParcelCache
 
-# PDOK Kadaster WFS endpoint for perceel data
-PDOK_WFS_URL = "https://service.pdok.nl/kadaster/kadastralekaart/wfs/v5_0"
+# PDOK Kadaster OGC API endpoint for perceel data (snake_case properties)
+# This is the same endpoint used by area_scan.py (PDOKCadastralClient)
+PDOK_OGC_URL = "https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections/perceel/items"
 
-# Pattern: pure numeric identificatie (BRK format, e.g. "0983100000006658")
-_NUMERIC_RE = re.compile(r"^\d+$")
+# Pattern: 14-digit numeric Kadaster identificatie_lokaal_id (PDOK OGC API format)
+# e.g. "37560332970000" — these match the OGC API identificatie_lokaal_id field.
+# 16-digit numeric IDs (e.g. "0983100000006658") are BAG pand identificaties stored as
+# fallback — they do NOT match PDOK Kadaster identifiers and will not return results.
+_KADASTER_ID_RE = re.compile(r"^\d{14}$")
 
 # Max concurrent PDOK requests — polite to PDOK infrastructure
 _SEMAPHORE_LIMIT = 10
@@ -66,15 +70,12 @@ async def _fetch_parcel_display_code(
     async with semaphore:
         try:
             response = await client.get(
-                PDOK_WFS_URL,
+                PDOK_OGC_URL,
                 params={
-                    "service": "WFS",
-                    "version": "2.0.0",
-                    "request": "GetFeature",
-                    "typeName": "kadastralekaart:Perceel",
-                    "CQL_FILTER": f"identificatie='{identificatie}'",
-                    "outputFormat": "application/json",
-                    "count": "1",
+                    "f": "json",
+                    "limit": "1",
+                    # OGC API filter by identificatie_lokaal_id (matches parcel_cache.parcel_id)
+                    "identificatie_lokaal_id": identificatie,
                 },
                 timeout=15.0,
             )
@@ -85,6 +86,7 @@ async def _fetch_parcel_display_code(
             if not features:
                 return None
             props = features[0].get("properties") or {}
+            # OGC API returns snake_case property names
             gemeente = (props.get("kadastrale_gemeente_waarde") or "").strip()
             sectie = (props.get("sectie") or "").strip()
             perceelnummer = props.get("perceelnummer")
@@ -140,7 +142,9 @@ async def _backfill_phase1(
                 parcel_id: str,
             ) -> tuple[uuid.UUID, str | None, str]:
                 """Returns (id, parcel_code_or_none, status)."""
-                if not _NUMERIC_RE.match(parcel_id):
+                if not _KADASTER_ID_RE.match(parcel_id):
+                    # Non-14-digit IDs: either dash-format fallback or 16-digit BAG pand IDs
+                    # Neither is queryable via PDOK Kadaster OGC API
                     return (row_id, None, "skipped")
                 code = await _fetch_parcel_display_code(parcel_id, client, semaphore)
                 if code is None:
@@ -186,7 +190,7 @@ async def _backfill_phase1(
             print(
                 f"Batch {batch_num}: "
                 f"{batch_resolved} resolved, "
-                f"{batch_skipped} skipped (non-numeric), "
+                f"{batch_skipped} skipped (non-14-digit ID), "
                 f"{batch_failed} PDOK failures"
                 + (" [DRY RUN]" if dry_run else "")
             )
@@ -260,10 +264,12 @@ async def _run(
     dry_run: bool,
 ) -> int:
     """Run both phases of the parcel_code backfill."""
-    # Strip GM prefix if provided (DB stores without prefix)
+    # Normalise to GM-prefixed format (DB stores with GM prefix, e.g. "GM0983")
     gemeente_code: str | None = None
     if gemeente is not None:
-        gemeente_code = gemeente.removeprefix("GM")
+        # Accept both "GM0983" and "0983" — normalise to "GM0983"
+        code = gemeente.strip()
+        gemeente_code = code if code.startswith("GM") else f"GM{code}"
 
     stats = BackfillStats()
 
@@ -292,7 +298,7 @@ async def _run(
     print("Backfill complete:")
     print(f"  Total rows inspected:              {stats.total_inspected}")
     print(f"  parcel_code resolved:              {stats.code_resolved}")
-    print(f"  parcel_code skipped (non-numeric): {stats.code_skipped_non_numeric}")
+    print(f"  parcel_code skipped (non-14-digit): {stats.code_skipped_non_numeric}")
     print(f"  parcel_code failed (PDOK error):   {stats.code_failed_pdok}")
     print(f"  favorites FK updated:              {stats.favorites_fk_updated}")
     print(f"  favorites FK unmatched:            {stats.favorites_fk_unmatched}")
