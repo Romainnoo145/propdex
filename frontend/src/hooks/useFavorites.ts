@@ -98,6 +98,7 @@ export function useToggleFavorite() {
             gemeente_code: parcel.gemeente_code ?? null,
             gemeente_naam: gemeenteNaam ?? null,
             wijk_naam: wijkNaam ?? null,
+            address: parcel.address ?? null,
           }),
           accessToken,
         })
@@ -126,6 +127,7 @@ export function useToggleFavorite() {
             gemeente_code: parcel.gemeente_code ?? null,
             gemeente_naam: gemeenteNaam ?? null,
             wijk_naam: wijkNaam ?? null,
+            address: parcel.address ?? null,
             pipeline_stage: 'Gesignaleerd',
             afgerond_reden: null,
             notitie: null,

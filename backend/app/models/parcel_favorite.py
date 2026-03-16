@@ -52,6 +52,11 @@ class ParcelFavorite(Base, TenantMixin, TimestampMixin):
             "deliberate substitution per RESEARCH.md findings"
         ),
     )
+    address: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Denormalized BAG address for display",
+    )
     pipeline_stage: Mapped[str] = mapped_column(
         String(30),
         nullable=False,

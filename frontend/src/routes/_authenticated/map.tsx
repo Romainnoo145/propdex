@@ -2314,8 +2314,8 @@ function MapPage() {
           <ParcelDetailPanel
             key="parcel-panel"
             parcel={inspectorParcel}
-            gemeenteNaam={activeGemeente?.naam}
-            wijkNaam={urlWijkNaam}
+            gemeenteNaam={activePanel?.kind === 'parcel' && activePanel.gemeenteNaam ? activePanel.gemeenteNaam : activeGemeente?.naam}
+            wijkNaam={activePanel?.kind === 'parcel' && activePanel.wijkNaam ? activePanel.wijkNaam : urlWijkNaam}
             onClose={() => {
               setActivePanel(null)
               setParcelGeometryHighlight(null)

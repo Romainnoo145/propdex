@@ -14,6 +14,7 @@ class FavoriteCreate(BaseModel):
     gemeente_code: str | None = Field(default=None, max_length=10)
     gemeente_naam: str | None = Field(default=None, max_length=100)
     wijk_naam: str | None = Field(default=None, max_length=200)
+    address: str | None = Field(default=None, max_length=500)
 
 
 class PipelineUpdateRequest(BaseModel):
@@ -35,6 +36,7 @@ class FavoriteResponse(BaseModel):
     gemeente_code: str | None
     gemeente_naam: str | None
     wijk_naam: str | None
+    address: str | None
     pipeline_stage: str
     afgerond_reden: str | None
     notitie: str | None

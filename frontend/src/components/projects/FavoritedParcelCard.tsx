@@ -13,19 +13,15 @@ export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCard
     year: 'numeric',
   })
 
-  const displayGemeente = favorite.gemeente_naam ?? favorite.gemeente_code ?? '—'
-  const displayWijk = favorite.wijk_naam ?? null
+  const displayAddress = favorite.address ?? favorite.gemeente_naam ?? favorite.gemeente_code ?? '—'
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-3 transition-all hover:border-aura-amber/35 hover:shadow-[0_0_0_1px_rgba(217,170,56,0.12)]">
-      {/* Row 1: Parcel info + stage pill */}
+      {/* Row 1: Address + stage pill */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-0.5">
-          <p className="text-xs font-mono text-neutral-500 truncate">{favorite.parcel_id}</p>
-          <p className="text-sm font-semibold text-aura-ink leading-tight">{displayGemeente}</p>
-          {displayWijk && (
-            <p className="text-xs text-neutral-600">{displayWijk}</p>
-          )}
+          <p className="text-sm font-semibold text-aura-ink leading-tight truncate">{displayAddress}</p>
+          <p className="text-xs font-mono text-neutral-400 truncate">{favorite.parcel_id}</p>
         </div>
         <PipelineStagePill stage={favorite.pipeline_stage} />
       </div>

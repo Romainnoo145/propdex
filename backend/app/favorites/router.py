@@ -82,6 +82,7 @@ async def create_favorite(
             content=FavoriteResponse.model_validate(existing).model_dump(mode="json"),
         )
 
+    # Enrich from parcel_cache + scan_results if frontend didn't provide names
     fav = ParcelFavorite(
         parcel_id=body.parcel_id,
         user_id=current_user.id,
@@ -89,6 +90,7 @@ async def create_favorite(
         gemeente_code=body.gemeente_code,
         gemeente_naam=body.gemeente_naam,
         wijk_naam=body.wijk_naam,
+        address=body.address,
         pipeline_stage="Gesignaleerd",
     )
     db.add(fav)

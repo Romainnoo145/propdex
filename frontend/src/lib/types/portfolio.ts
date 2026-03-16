@@ -33,6 +33,8 @@ export interface FavoriteResponse {
   gemeente_naam: string | null
   /** Wijk name — nullable */
   wijk_naam: string | null
+  /** BAG address — nullable */
+  address: string | null
   /** Current pipeline stage */
   pipeline_stage: PipelineStage
   /** Reason for completion (only set when stage is 'Afgerond') */
