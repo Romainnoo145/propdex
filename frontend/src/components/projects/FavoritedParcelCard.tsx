@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 import { PipelineStagePill } from './PipelineStagePill'
+import { PipelineStageSelector } from './PipelineStageSelector'
+import { AfgerondModal } from './AfgerondModal'
 
 interface FavoritedParcelCardProps {
   favorite: FavoriteResponse
@@ -7,6 +10,9 @@ interface FavoritedParcelCardProps {
 }
 
 export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCardProps) {
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [afgerondOpen, setAfgerondOpen] = useState(false)
+
   const formattedDate = new Date(favorite.created_at).toLocaleDateString('nl-NL', {
     day: 'numeric',
     month: 'long',
@@ -23,7 +29,21 @@ export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCard
           <p className="text-sm font-semibold text-aura-ink leading-tight truncate">{displayAddress}</p>
           <p className="text-xs font-mono text-neutral-400 truncate">{favorite.parcel_id}</p>
         </div>
-        <PipelineStagePill stage={favorite.pipeline_stage} />
+        <div className="relative flex-shrink-0">
+          <PipelineStagePill
+            stage={favorite.pipeline_stage}
+            onClick={() => setSelectorOpen(!selectorOpen)}
+            afgerondReden={favorite.afgerond_reden}
+          />
+          {selectorOpen && (
+            <PipelineStageSelector
+              currentStage={favorite.pipeline_stage}
+              parcelId={favorite.parcel_id}
+              onClose={() => setSelectorOpen(false)}
+              onAfgerond={() => setAfgerondOpen(true)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Row 2: Date + ghost button */}
@@ -38,6 +58,12 @@ export function FavoritedParcelCard({ favorite, onOpenMap }: FavoritedParcelCard
           </button>
         )}
       </div>
+
+      <AfgerondModal
+        parcelId={favorite.parcel_id}
+        isOpen={afgerondOpen}
+        onClose={() => setAfgerondOpen(false)}
+      />
     </div>
   )
 }
