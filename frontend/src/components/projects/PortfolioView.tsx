@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { usePortfolio } from '@/hooks/useFavorites'
+import { toast } from 'sonner'
+import { usePortfolio, useParcelFavorites } from '@/hooks/useFavorites'
 import type { GemeenteScopeCard, ProvinceOption } from '@/hooks/useMunicipalityWorkspaceStats'
 import { PortfolioBreadcrumb } from './PortfolioBreadcrumb'
 import { PortfolioProvincieView } from './PortfolioProvincieView'
 import { PortfolioGemeenteView } from './PortfolioGemeenteView'
 import { PortfolioWijkView } from './PortfolioWijkView'
+import { FavoritedParcelCard } from './FavoritedParcelCard'
 
 interface PortfolioViewProps {
   allGemeenteCards: GemeenteScopeCard[]
@@ -33,6 +35,7 @@ export function PortfolioView({
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/projecten' })
   const { data: portfolio, isLoading } = usePortfolio()
+  const { data: favorites } = useParcelFavorites()
 
   const selectedProvinceCode = search.portfolio_provincie ?? null
   const selectedGemeenteCode = search.portfolio_gemeente ?? null
@@ -143,14 +146,42 @@ export function PortfolioView({
         wijkName={selectedWijkNaam ?? undefined}
       />
 
-      {/* Level 4: Parcel list for selected wijk */}
-      {selectedWijkNaam && selectedGemeenteCode && (
-        <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 px-6 py-8 text-center">
-          <p className="text-sm text-neutral-600">
-            Percelen voor <span className="font-semibold">{selectedWijkNaam}</span> worden hier getoond in plan 2.
-          </p>
-        </div>
-      )}
+      {/* Level 4: Parcel cards for selected wijk */}
+      {selectedWijkNaam && selectedGemeenteCode && (() => {
+        const wijkFavorites = (favorites ?? []).filter((f) => {
+          if (f.gemeente_code !== selectedGemeenteCode) return false
+          // "Onbekende wijk" in URL matches favorites where wijk_naam is null
+          if (selectedWijkNaam === 'Onbekende wijk') return f.wijk_naam === null
+          return f.wijk_naam === selectedWijkNaam
+        })
+
+        return (
+          <div>
+            <p className="text-sm font-medium text-neutral-600 mb-3">
+              {wijkFavorites.length} percelen in {selectedWijkNaam}
+            </p>
+            {wijkFavorites.length === 0 ? (
+              <p className="text-sm text-neutral-500 px-1">Geen opgeslagen percelen in deze wijk.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {wijkFavorites.map((favorite) => (
+                  <FavoritedParcelCard
+                    key={favorite.id}
+                    favorite={favorite}
+                    onOpenMap={() => {
+                      navigate({
+                        to: '/map',
+                        search: { gemeente_code: selectedGemeenteCode } as Record<string, string>,
+                      })
+                      toast.info('Zoek het perceel via het adres-zoekvenster')
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Level 3: Wijk cards for selected gemeente */}
       {!selectedWijkNaam && selectedGemeenteCode && (
