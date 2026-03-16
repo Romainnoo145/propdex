@@ -210,9 +210,17 @@ export function VergunningenModal({ records, address, onClose }: VergunningenMod
 
 /* ── VergunningCard ───────────────────────────────────────────── */
 
+/** Resolve a clickable URL: use url field, or construct from identifier (gmb-YYYY-NNNNNN) */
+function resolveUrl(record: BekendmakingRecord): string | null {
+  if (record.url) return record.url
+  if (record.identifier) return `https://zoek.officielebekendmakingen.nl/${record.identifier}`
+  return null
+}
+
 function VergunningCard({ record }: { record: BekendmakingRecord }) {
   const meta = getTypeMeta(record.type)
   const Icon = meta.icon
+  const href = resolveUrl(record)
 
   return (
     <div className="rounded-[16px] bg-[#F2F6F3] p-4 transition-colors hover:bg-[#ECF1ED]">
@@ -247,10 +255,10 @@ function VergunningCard({ record }: { record: BekendmakingRecord }) {
             )}
           </div>
         </div>
-        {record.url && (
+        {href && (
           <button
             type="button"
-            onClick={() => window.open(record.url, '_blank')}
+            onClick={() => window.open(href, '_blank')}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#0E1111] transition-colors hover:bg-[#E8EDEB] mt-0.5"
             title="Bekijk op overheid.nl"
           >
