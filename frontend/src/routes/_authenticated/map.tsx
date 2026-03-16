@@ -69,6 +69,11 @@ import {
   addScannedWijkHighlight,
   removeScannedWijkHighlight,
 } from '@/components/map/ScannedWijkHighlightLayer'
+import {
+  addFavoriteMarkersLayer,
+  updateFavoriteMarkers,
+} from '@/components/map/FavoriteMarkersLayer'
+import { useFavoriteCentroids } from '@/hooks/useFavoriteCentroids'
 import { useTriggerScan, useScanPolling, useScanHistory } from '@/hooks/useScans'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 import { useMonitoredProjects } from '@/hooks/useProjects'
@@ -340,6 +345,9 @@ function MapPage() {
 
   // Monitored projects for wijk overlay
   const { data: monitoredProjects } = useMonitoredProjects()
+
+  // Favorite parcel centroids for map markers
+  const { data: favoriteCentroids } = useFavoriteCentroids()
 
   // Scan history for scanned wijk highlight
   const { data: scanHistory } = useScanHistory({ limit: 100 })
@@ -1156,6 +1164,10 @@ function MapPage() {
           addParcelScoreLayer(map, tileUrl, 'parcel_scores')
         }
         loadedScoreLayerScanIdRef.current = scanId
+        // Add favorite markers layer on top of parcel score layer
+        if (!map.getSource('favorite-markers')) {
+          addFavoriteMarkersLayer(map)
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (message.includes('Style is not done loading')) {
@@ -1203,6 +1215,14 @@ function MapPage() {
     // Force tile reload with new cache buster
     ensureParcelScoreLayer(activeScanId, Date.now().toString())
   }, [scoreWeightsData, activeScanId, mapReady, ensureParcelScoreLayer])
+
+  // Update favorite markers when centroids data changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    if (!map.getSource('favorite-markers')) return
+    updateFavoriteMarkers(map, favoriteCentroids ?? [])
+  }, [favoriteCentroids, mapReady])
 
   // Handle scan completion and failure
   useEffect(() => {
