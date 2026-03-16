@@ -38,7 +38,7 @@ export function PortfolioWijkView({
         return (
           <div
             key={`${wijk.wijk_naam ?? 'unknown'}-${idx}`}
-            onClick={() => onWijkSelect(wijk.wijk_naam ?? '')}
+            onClick={() => onWijkSelect(wijk.wijk_naam ?? 'Onbekende wijk')}
             className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 cursor-pointer transition-all hover:border-aura-amber/40 hover:shadow-[0_0_0_1px_rgba(217,170,56,0.10)]"
           >
             {/* Name + badge row */}
