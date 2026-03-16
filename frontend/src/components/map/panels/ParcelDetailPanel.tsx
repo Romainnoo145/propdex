@@ -133,7 +133,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
       >
         {/* Address header */}
         <div className="px-8 pt-8">
-          <div className="flex items-center gap-2 pr-12">
+          <div className="flex items-center gap-2 pr-16">
             {view.kind !== 'overview' && (
               <button
                 type="button"
