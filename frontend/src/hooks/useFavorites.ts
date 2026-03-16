@@ -96,8 +96,8 @@ export function useToggleFavorite() {
           body: JSON.stringify({
             parcel_id: parcel.parcel_code,
             gemeente_code: parcel.gemeente_code ?? null,
-            gemeente_naam: null,
-            wijk_naam: null,
+            gemeente_naam: parcel.gemeente_naam ?? null,
+            wijk_naam: parcel.wijk_naam ?? null,
           }),
           accessToken,
         })
@@ -124,8 +124,8 @@ export function useToggleFavorite() {
             parcel_id: parcel.parcel_code,
             user_id: '',
             gemeente_code: parcel.gemeente_code ?? null,
-            gemeente_naam: null,
-            wijk_naam: null,
+            gemeente_naam: parcel.gemeente_naam ?? null,
+            wijk_naam: parcel.wijk_naam ?? null,
             pipeline_stage: 'Gesignaleerd',
             afgerond_reden: null,
             notitie: null,
