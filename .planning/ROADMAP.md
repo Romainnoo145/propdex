@@ -34,6 +34,7 @@
 NOW:   109 Backend Foundation      → ParcelFavorite + PipelineStage models + API
        110 Refactor + HeartButton   → ProjectList.tsx sub-components + heart button
        111 Portfolio Navigation     → Provincie → gemeente → wijk → parcel drill-down
+       111.1 Identity Unification   → parcel_code + FK backfill (URGENT)
        112 Pipeline Stages          → Stage pills, filtering, Afgerond reason capture
        113 Map Markers              → Favorited parcel markers on map tiles
 LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lage prio)
@@ -48,6 +49,7 @@ LATER: 94-97 Aura Reskin           → cosmetische updates overige pagina's (lag
 - [x] **Phase 109: Backend Foundation** - ParcelFavorite + PipelineStage models, CRUD API, bulk portfolio endpoint (completed 2026-03-15)
 - [x] **Phase 110: ProjectList Refactor + HeartButton** - Extract ProjectList.tsx sub-components, add heart button to parcel detail panel (completed 2026-03-15)
 - [x] **Phase 111: Portfolio Navigation** - Full provincie → gemeente → wijk → parcel drill-down with Aura cards (completed 2026-03-16)
+- [ ] **Phase 111.1: Parcel Identity Unification** - Add parcel_code to parcel_cache, backfill PDOK display strings, FK from parcel_favorites (INSERTED, URGENT)
 - [ ] **Phase 112: Pipeline Stages** - Per-parcel pipeline stage tracking, stage selector, cross-wijk filtering
 - [ ] **Phase 113: Map Markers** - Favorited parcel map markers + wijk/gemeente count badges
 
@@ -102,6 +104,23 @@ Plans:
 - [ ] 111-01-PLAN.md -- Provincie + gemeente + wijk card views with drill-down navigation + breadcrumb
 - [ ] 111-02-PLAN.md -- Wijk parcel card grid (FavoritedParcelCard + PipelineStagePill) + FAV-04 count badges
 
+### Phase 111.1: Parcel Identity Unification (INSERTED)
+
+**Goal:** Unify parcel identifiers so favorites can join to parcel_cache geometry/address/enrichment data -- add parcel_code column, backfill from PDOK WFS, add FK from parcel_favorites to parcel_cache
+**Depends on:** Phase 111
+**Requirements**: PID-01, PID-02, PID-03, PID-04, PID-05
+**Success Criteria** (what must be TRUE):
+  1. `parcel_cache` has `parcel_code VARCHAR(50)` storing PDOK display strings (e.g. "Venlo I 6658")
+  2. `parcel_favorites` has `parcel_cache_id UUID FK` pointing to `parcel_cache.id`
+  3. New scans populate `parcel_code` at scan time from PDOK feature properties
+  4. Backfill tool populates `parcel_code` for all 137k existing Venlo rows via PDOK WFS
+  5. Backfill tool populates `parcel_favorites.parcel_cache_id` by joining on `parcel_code = parcel_favorites.parcel_id`
+**Plans**: 2 plans (2 waves)
+
+Plans:
+- [ ] 111.1-01-PLAN.md -- Alembic migration + model updates + scan-time parcel_code derivation (wave 1)
+- [ ] 111.1-02-PLAN.md -- PDOK WFS batch backfill tool + FK population + data verification (wave 2)
+
 ### Phase 112: Pipeline Stages
 **Goal**: Users can track the acquisition status of each favorited parcel through the 5-stage Dutch pipeline and filter their portfolio by stage
 **Depends on**: Phase 111
@@ -140,6 +159,7 @@ Plans:
 | 109. Backend Foundation | 2/2 | Complete    | 2026-03-15 |
 | 110. ProjectList Refactor + HeartButton | 2/2 | Complete    | 2026-03-15 |
 | 111. Portfolio Navigation | 2/2 | Complete    | 2026-03-16 |
+| 111.1. Parcel Identity Unification | 0/2 | Not started | - |
 | 112. Pipeline Stages | 0/1 | Not started | - |
 | 113. Map Markers | 0/1 | Not started | - |
 
@@ -371,4 +391,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-03-15 -- v17.0 Projecten Portfolio roadmap created (phases 109-113)*
+*Last updated: 2026-03-16 -- Phase 111.1 Parcel Identity Unification planned (2 plans, 2 waves)*
