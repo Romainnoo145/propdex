@@ -12,18 +12,18 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 - [x] **FAV-01**: User can click heart button on parcel detail panel to favorite/unfavorite a parcel (server-side, org-scoped)
 - [x] **FAV-02**: Heart button positioned next to close button, close button aligned with panel title
 - [ ] **FAV-03**: Favorited parcels show a distinct marker/color on map tiles
-- [ ] **FAV-04**: Wijk and gemeente cards show favorite count badge ("3 parcelen opgeslagen")
+- [x] **FAV-04**: Wijk and gemeente cards show favorite count badge ("3 parcelen opgeslagen")
 
 ### Portfolio Navigation
 
-- [ ] **PORT-01**: Projecten page is full-page layout (standard width, Aura styling, not bento)
-- [ ] **PORT-02**: Provincie level shows image cards for all 12 Dutch provinces
-- [ ] **PORT-03**: Clicking a provincie shows gemeente cards within that provincie (SVG silhouettes)
-- [ ] **PORT-04**: Clicking a gemeente shows wijk cards within that gemeente (text + count badge, no SVG — wijk GeoJSON unavailable in portfolio mode)
+- [x] **PORT-01**: Projecten page is full-page layout (standard width, Aura styling, not bento)
+- [x] **PORT-02**: Provincie level shows image cards for all 12 Dutch provinces
+- [x] **PORT-03**: Clicking a provincie shows gemeente cards within that provincie (SVG silhouettes)
+- [x] **PORT-04**: Clicking a gemeente shows wijk cards within that gemeente (text + count badge, no SVG — wijk GeoJSON unavailable in portfolio mode)
 - [ ] **PORT-05**: Clicking a wijk shows favorited parcel cards (Kadaster ID, gemeente, wijk, pipeline stage)
-- [ ] **PORT-06**: Ghost button at bottom of each level to open detail view
-- [ ] **PORT-07**: Breadcrumb navigation (Projecten → Limburg → Venlo → Wijk 01)
-- [ ] **PORT-08**: Only show provincies/gemeenten/wijken that contain favorited parcels
+- [x] **PORT-06**: Ghost button at bottom of each level to open detail view
+- [x] **PORT-07**: Breadcrumb navigation (Projecten → Limburg → Venlo → Wijk 01)
+- [x] **PORT-08**: Only show provincies/gemeenten/wijken that contain favorited parcels
 
 ### Pipeline
 
@@ -106,15 +106,15 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 | FAV-01 | Phase 110 | Complete |
 | FAV-02 | Phase 110 | Complete |
 | FAV-03 | Phase 113 | Pending |
-| FAV-04 | Phase 111 | Pending |
-| PORT-01 | Phase 111 | Pending |
-| PORT-02 | Phase 111 | Pending |
-| PORT-03 | Phase 111 | Pending |
-| PORT-04 | Phase 111 | Pending |
+| FAV-04 | Phase 111 | Complete |
+| PORT-01 | Phase 111 | Complete |
+| PORT-02 | Phase 111 | Complete |
+| PORT-03 | Phase 111 | Complete |
+| PORT-04 | Phase 111 | Complete |
 | PORT-05 | Phase 111 | Pending |
-| PORT-06 | Phase 111 | Pending |
-| PORT-07 | Phase 111 | Pending |
-| PORT-08 | Phase 111 | Pending |
+| PORT-06 | Phase 111 | Complete |
+| PORT-07 | Phase 111 | Complete |
+| PORT-08 | Phase 111 | Complete |
 | PIPE-01 | Phase 112 | Pending |
 | PIPE-02 | Phase 112 | Pending |
 | PIPE-03 | Phase 112 | Pending |

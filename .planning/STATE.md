@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Area -> Opportunity Intelligence -- scan any Dutch municipality and instantly find development opportunities
-**Current focus:** v17.0 Projecten Portfolio -- Phase 109: Backend Foundation
+**Current focus:** v17.0 Projecten Portfolio -- Phase 111: Portfolio Navigation
 
 ---
 
 ## Current Position
 
-Phase: 109 of 113 (Backend Foundation)
-Plan: 2/2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-15 -- 109-02 complete (Favorites CRUD router + portfolio endpoint)
+Phase: 111 of 113 (Portfolio Navigation)
+Plan: 1/2 in current phase
+Status: In Progress
+Last activity: 2026-03-16 -- 111-01 complete (Portfolio mode toggle + drill-down navigation)
 
 Progress: [░░░░░░░░░░] 0% (v17.0)
 
@@ -41,6 +41,7 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 | 109 P02 | 1 | 2min | 2min |
 | Phase 110 P02 | 4 | 2 tasks | 5 files |
 | Phase 110 P01 | 45 | 1 tasks | 10 files |
+| Phase 111 P1 | 6 | 7 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Progress: [░░░░░░░░░░] 0% (v17.0)
 - [Phase 110-02]: Uses parcel.parcel_code (Kadaster string) for favorites API calls — FavoriteResponse.parcel_id stores Kadaster string, so parcel_code is the correct comparison key throughout
 - [Phase 110-02]: ParcelPanelShell headerActions prop slot: optional ReactNode renders left of close button in flex container — backward compatible, clean separation of concerns
 - [Phase 110-01]: Extracted 3 extra files (WijkScanList, WorkspaceHeader, useMunicipalityResolver) beyond plan to keep all files under 300 lines — props-down pattern, no Context introduced
+- [Phase 111-01]: portfolio_* URL params use separate namespace from workspace params to avoid navigation collisions
+- [Phase 111-01]: Level 4 parcel list is placeholder in plan 1 — FavoritedParcelCard delivered in plan 2
 
 ### Key Patterns (carry forward)
 
@@ -85,8 +88,8 @@ None.
 
 ## Session Continuity
 
-**Last Session:** 2026-03-15T17:31:46.496Z
-**Stopped At:** Completed 110-01-PLAN.md — ProjectList refactor into sub-components
+**Last Session:** 2026-03-16T03:44:02.050Z
+**Stopped At:** Completed 111-01-PLAN.md — Portfolio mode toggle + drill-down navigation
 **Next Action:** Phase 109 complete — run `/gsd:plan-phase 110` for frontend heart button
 
 ---
