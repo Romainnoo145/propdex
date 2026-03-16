@@ -424,6 +424,8 @@ async def batch_fetch_postcode_enrichment(
                             "type": r.get("type", ""),
                             "date": r.get("date", ""),
                             "identifier": r.get("identifier", ""),
+                            "url": r.get("url", ""),
+                            "municipality": r.get("municipality", ""),
                         }
                         for r in records
                     ],
