@@ -10,10 +10,11 @@
 **Vision:** Transform the UI from a 5-route app into a dual-panel map intelligence system. Navigation collapses to 2 items (Kaart + Opgeslagen). The map becomes the entire product surface — gemeente intelligence lives in a new left panel with summary cards and full-page modals, parcel intelligence stays in the right panel. Kansenkaart heatmap adds color mode switching for spatial opportunity visualization. Pipeline management moves from dead Projecten page into enriched Opgeslagen favorites.
 
 **Key deliverables:**
-- Navigation: 5 items → 2 (Kaart + Opgeslagen)
+- Navigation: 5 items → 3 (Kaart + Opgeslagen + Jurisprudentie)
 - Dual-panel map: existing right panel (parcel) + new left panel (~400px GemeenteContextPanel on gemeente boundary click)
 - Gemeente intelligence via left panel summary cards → full-page modals (DemografieModal, JuridischKlimaatModal, MeldingenModal, WijkenModal)
-- Kill standalone routes: Projecten, Rapporten, Jurisprudentie, Meldingen
+- Kill standalone routes: Projecten, Rapporten (Jurisprudentie stays — wizard explorer is a different interaction model)
+- Meldingen feed absorbs into map/gemeente panels
 - Kansenkaart heatmap + map color modes
 - Pipeline → Completeness model + enriched favorites in Opgeslagen view
 
