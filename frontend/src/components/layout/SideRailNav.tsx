@@ -2,9 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { useUnreadCounts } from '@/hooks/useNotifications'
-import { NotificationBadge } from '@/components/notifications/NotificationBadge'
-import { Map, FolderOpen, Bell, FileText, Scale, Settings, LogOut } from 'lucide-react'
+import { Map, Bookmark, Scale, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -18,7 +16,6 @@ export default function SideRailNav() {
   const matchRoute = useMatchRoute()
   const { logout } = useAuth()
   const navigate = useNavigate()
-  const { data: unreadData } = useUnreadCounts()
 
   const handleLogout = async () => {
     await logout()
@@ -27,20 +24,7 @@ export default function SideRailNav() {
 
   const mainItems: NavItem[] = [
     { icon: <Map size={22} strokeWidth={1.5} />, label: 'Kaart', to: '/map' },
-    { icon: <FolderOpen size={22} strokeWidth={1.5} />, label: 'Projecten', to: '/projecten' },
-    {
-      icon: <Bell size={22} strokeWidth={1.5} />,
-      label: 'Meldingen',
-      to: '/meldingen',
-      search: { gemeente: undefined } as unknown as Record<string, string>,
-      badge: <NotificationBadge count={unreadData?.total_unread ?? 0} />,
-    },
-    {
-      icon: <FileText size={22} strokeWidth={1.5} />,
-      label: 'Rapporten',
-      to: '/rapporten',
-      search: { project_id: undefined, q: undefined } as unknown as Record<string, string>,
-    },
+    { icon: <Bookmark size={22} strokeWidth={1.5} />, label: 'Opgeslagen', to: '/opgeslagen' },
     {
       icon: <Scale size={22} strokeWidth={1.5} />,
       label: 'Jurisprudentie',
@@ -127,6 +111,17 @@ export default function SideRailNav() {
                 <LogOut size={22} strokeWidth={1.5} />
               </span>
               <span className="absolute inset-0 rounded-full bg-white/0 transition-all duration-300 group-hover:bg-white/20" />
+            </div>
+            <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              Uitloggen
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+all duration-300 group-hover:bg-white/20" />
             </div>
             <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
               Uitloggen

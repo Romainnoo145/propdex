@@ -64,6 +64,6 @@ export const ResultatenActive: Story = {
   decorators: [withRouter('/resultaten')],
 }
 
-export const ProjectenActive: Story = {
-  decorators: [withRouter('/projecten')],
+export const OpgeslagenActive: Story = {
+  decorators: [withRouter('/opgeslagen')],
 }
