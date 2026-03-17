@@ -681,3 +681,6 @@
 - "Risk-profile endpoint checks each source independently (bodem, bodemtype, funderingsrisico)"
 - "useParcelEnrichment uses placeholderData + disabled query pattern for zero-fetch flags path"
 - "Added 4 environmental sources (natura2000, overstromingsrisico, geluid, luchtkwaliteit) to types and schemas"
+- "/projecten and /rapporten routes become redirect stubs (not deleted) — preserves internal navigations from ParcelDetailPanel.tsx which cannot be modified per KNOWLEDGE.md"
+- "Meldingen route kept alive but removed from nav — route deletion deferred to S03 after meldingen feed is embedded in gemeente modal"
+- "Bookmark icon for Opgeslagen nav item (replaces FolderOpen/Projecten) — semantic match for saved/favorited parcels"
