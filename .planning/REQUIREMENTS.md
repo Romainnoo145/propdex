@@ -20,7 +20,7 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 - [x] **PORT-02**: Provincie level shows image cards for all 12 Dutch provinces
 - [x] **PORT-03**: Clicking a provincie shows gemeente cards within that provincie (SVG silhouettes)
 - [x] **PORT-04**: Clicking a gemeente shows wijk cards within that gemeente (text + count badge, no SVG — wijk GeoJSON unavailable in portfolio mode)
-- [ ] **PORT-05**: Clicking a wijk shows favorited parcel cards (Kadaster ID, gemeente, wijk, pipeline stage)
+- [x] **PORT-05**: Clicking a wijk shows favorited parcel cards (Kadaster ID, gemeente, wijk, pipeline stage)
 - [x] **PORT-06**: Ghost button at bottom of each level to open detail view
 - [x] **PORT-07**: Breadcrumb navigation (Projecten → Limburg → Venlo → Wijk 01)
 - [x] **PORT-08**: Only show provincies/gemeenten/wijken that contain favorited parcels
@@ -111,7 +111,7 @@ Requirements for Projecten Portfolio milestone. Each maps to roadmap phases.
 | PORT-02 | Phase 111 | Complete |
 | PORT-03 | Phase 111 | Complete |
 | PORT-04 | Phase 111 | Complete |
-| PORT-05 | Phase 111 | Pending |
+| PORT-05 | Phase 111 | Complete |
 | PORT-06 | Phase 111 | Complete |
 | PORT-07 | Phase 111 | Complete |
 | PORT-08 | Phase 111 | Complete |

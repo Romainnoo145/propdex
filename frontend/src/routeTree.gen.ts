@@ -16,6 +16,7 @@ import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-cal
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
+import { Route as AuthenticatedOpgeslagenRouteImport } from './routes/_authenticated/opgeslagen'
 import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authenticated/meldingen'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authenticated/jurisprudentie'
@@ -57,6 +58,11 @@ const AuthenticatedRapportenRoute = AuthenticatedRapportenRouteImport.update({
 const AuthenticatedProjectenRoute = AuthenticatedProjectenRouteImport.update({
   id: '/projecten',
   path: '/projecten',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedOpgeslagenRoute = AuthenticatedOpgeslagenRouteImport.update({
+  id: '/opgeslagen',
+  path: '/opgeslagen',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMeldingenRoute = AuthenticatedMeldingenRouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
+  '/opgeslagen': typeof AuthenticatedOpgeslagenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
+  '/opgeslagen': typeof AuthenticatedOpgeslagenRoute
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/meldingen': typeof AuthenticatedMeldingenRoute
+  '/_authenticated/opgeslagen': typeof AuthenticatedOpgeslagenRoute
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/jurisprudentie'
     | '/map'
     | '/meldingen'
+    | '/opgeslagen'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/jurisprudentie'
     | '/map'
     | '/meldingen'
+    | '/opgeslagen'
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisprudentie'
     | '/_authenticated/map'
     | '/_authenticated/meldingen'
+    | '/_authenticated/opgeslagen'
     | '/_authenticated/projecten'
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
@@ -260,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/projecten'
       fullPath: '/projecten'
       preLoaderRoute: typeof AuthenticatedProjectenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/opgeslagen': {
+      id: '/_authenticated/opgeslagen'
+      path: '/opgeslagen'
+      fullPath: '/opgeslagen'
+      preLoaderRoute: typeof AuthenticatedOpgeslagenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/meldingen': {
@@ -343,6 +362,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedJurisprudentieRoute: typeof AuthenticatedJurisprudentieRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedMeldingenRoute: typeof AuthenticatedMeldingenRoute
+  AuthenticatedOpgeslagenRoute: typeof AuthenticatedOpgeslagenRoute
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
@@ -355,6 +375,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedJurisprudentieRoute: AuthenticatedJurisprudentieRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedMeldingenRoute: AuthenticatedMeldingenRoute,
+  AuthenticatedOpgeslagenRoute: AuthenticatedOpgeslagenRoute,
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,

@@ -1,0 +1,11 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="10 -6.8 94.3 125.7">
+ <style type="text/css">
+  .st0{fill:#009286;}
+  .st1{fill:#F3C000;}
+ </style>
+ <polygon class="st0" points="10.1,40.1 33.9,40.1 30,50.6 22,71.9 10.1,60 "/>
+ <g>
+  <path class="st0" d="M10-6.8h94.3v78.6c0,0-5.9,4.3-23.2,21.6s-24,25.5-24,25.5L10,71.7V-6.8z"/>
+  <polyline class="st1" points="56.7,24.2 104.3,71.7 57.1,118.8"/>
+ </g>
+</svg>

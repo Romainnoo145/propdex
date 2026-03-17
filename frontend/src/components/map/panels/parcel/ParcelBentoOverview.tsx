@@ -8,6 +8,8 @@ import { BouwjaarTimeline } from './BouwjaarTimeline'
 import { EigendomModal } from './EigendomModal'
 import { VergunningenModal } from './VergunningenModal'
 import { BestemmingModal } from './BestemmingModal'
+import { OnbebouwdModal } from './OnbebouwdModal'
+import { ScoreBreakdownModal } from './ScoreBreakdownModal'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
@@ -124,6 +126,8 @@ export function ParcelBentoOverview({
   const [showEigendom, setShowEigendom] = useState(false)
   const [showVergunningen, setShowVergunningen] = useState(false)
   const [showBestemming, setShowBestemming] = useState(false)
+  const [showOnbebouwd, setShowOnbebouwd] = useState(false)
+  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false)
   const { data: weightsData } = useOrgScoreWeights()
   const category = deriveBestemmingCategory(parcel.bestemmingen)
   const bm = parcel.building_metrics
@@ -202,7 +206,7 @@ export function ParcelBentoOverview({
           type="button"
           onClick={() => {
             setActiveCard('score')
-            onSelectCategory('potentie')
+            setShowScoreBreakdown(true)
           }}
           className="group flex flex-col rounded-[20px] overflow-hidden transition-all duration-200"
           style={{
@@ -241,6 +245,7 @@ export function ParcelBentoOverview({
           score={parcel.potentie_score ?? null}
           color="#22C55E"
           type="potentie"
+          onClick={() => onSelectCategory('potentie')}
         />
         <ScoreCircleCard
           icon={<ShieldAlert size={16} strokeWidth={1.5} />}
@@ -248,11 +253,13 @@ export function ParcelBentoOverview({
           score={parcel.risico_score ?? null}
           color="#EF4444"
           type="risico"
+          onClick={() => onSelectCategory('risico')}
         />
         <BeschikbaarCard
           percentage={vrijPct}
           m2={vrijM2}
           highlight={vrijPct != null && vrijPct >= 40}
+          onClick={() => setShowOnbebouwd(true)}
         />
       </div>
 
@@ -280,6 +287,34 @@ export function ParcelBentoOverview({
           <EigendomModal
             parcel={parcel}
             onClose={() => setShowEigendom(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Score breakdown modal */}
+      <AnimatePresence>
+        {showScoreBreakdown && (
+          <ScoreBreakdownModal
+            score={parcel.score}
+            potentieScore={parcel.potentie_score ?? null}
+            risicScore={parcel.risico_score ?? null}
+            scoreBreakdown={parcel.score_breakdown}
+            address={parcel.address}
+            isCustomProfile={weightsData?.is_custom ?? false}
+            onClose={() => setShowScoreBreakdown(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Onbebouwd modal */}
+      <AnimatePresence>
+        {showOnbebouwd && (
+          <OnbebouwdModal
+            perceelM2={parcel.area_m2}
+            gebouwM2={bm?.pand_oppervlakte_m2 ?? null}
+            hasPand={parcel.has_pand}
+            address={parcel.address}
+            onClose={() => setShowOnbebouwd(false)}
           />
         )}
       </AnimatePresence>
@@ -327,12 +362,14 @@ function ScoreCircleCard({
   label,
   score,
   color,
+  onClick,
 }: {
   icon: React.ReactNode
   label: string
   score: number | null
   color: string
   type: 'potentie' | 'risico'
+  onClick?: () => void
 }) {
   const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
   const r = 48
@@ -341,7 +378,11 @@ function ScoreCircleCard({
   return (
     <motion.div
       variants={fadeUp}
-      className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 transition-colors duration-200 hover:shadow-sm"
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+      className={`flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 transition-colors duration-200 hover:shadow-sm${onClick ? ' cursor-pointer' : ''}`}
     >
       {/* Top: icon + label + chevrons */}
       <div className="flex items-start justify-between">
@@ -402,17 +443,23 @@ function BeschikbaarCard({
   percentage,
   m2,
   highlight,
+  onClick,
 }: {
   percentage: number | null
   m2: number | null
   highlight?: boolean
+  onClick?: () => void
 }) {
   const accentColor = highlight ? '#F9A826' : '#94a3b8'
 
   return (
     <motion.div
       variants={fadeUp}
-      className="flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm"
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+      className={`flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm${onClick ? ' cursor-pointer' : ''}`}
       style={{
         background: highlight ? 'rgba(249, 168, 38, 0.08)' : '#FFFFFF',
         border: highlight ? '1px solid rgba(249, 168, 38, 0.3)' : '1px solid #EAEFEF',
