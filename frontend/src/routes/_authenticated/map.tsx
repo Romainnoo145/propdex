@@ -97,11 +97,7 @@ import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
 import type { ScanResultItem, ScanListItem } from '@/lib/types/scan'
 import { calculateBboxFromGeometry } from '@/lib/geo-utils'
 import { normalizeAreaName, normalizeGemeenteCode } from '@/lib/geo/normalizers'
-
-type ActivePanel =
-  | { kind: 'gemeente'; code: string; naam: string; bbox: [number, number, number, number] }
-  | { kind: 'wijk'; code: string; naam: string; gemeenteCode: string; gemeenteNaam: string; latestScan: ScanListItem | null }
-  | { kind: 'parcel'; parcel: ScanResultItem; gemeenteNaam?: string | null; wijkNaam?: string | null }
+import { useMapPanels, type ActivePanel } from '@/hooks/useMapPanels'
 
 interface MapSearchParams {
   postcode?: string
@@ -234,8 +230,6 @@ function MapPage() {
   const tileCacheBusterRef = useRef<string>(Date.now().toString())
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
-  const [activePanel, setActivePanel] = useState<ActivePanel | null>(null)
-  const inspectorParcel = activePanel?.kind === 'parcel' ? activePanel.parcel : null
   const [autoEnableParcelsKey, setAutoEnableParcelsKey] = useState<string | null>(null)
   const parcelClickRequestSeqRef = useRef(0)
 
@@ -351,6 +345,28 @@ function MapPage() {
 
   // Scan history for scanned wijk highlight
   const { data: scanHistory } = useScanHistory({ limit: 100 })
+
+  // Panel orchestration hook — manages ActivePanel state and navigation handlers
+  const {
+    activePanel,
+    setActivePanel,
+    inspectorParcel,
+    handleGemeentePanelSelectWijk,
+    handleWijkPanelBack,
+    handleCloseGemeentePanel,
+    handleCloseParcelPanel,
+  } = useMapPanels({
+    activeGemeenteRef,
+    wijkGeojson,
+    scanHistory,
+    mapRef,
+    setActiveGemeente,
+    setWijkGeojson,
+    setParcelGeometryHighlight,
+    removeWijkBoundariesLayer,
+    removeScanAreaHighlight,
+    addScanAreaHighlight,
+  })
 
   const scannedWijkNames = useMemo(() => {
     if (!activeGemeente || !scanHistory?.scans) return []
@@ -2070,61 +2086,6 @@ function MapPage() {
     )
   }, [zoneInfo, triggerScan, isScanRunning])
 
-  // Panel navigation: select wijk from gemeente panel
-  const handleGemeentePanelSelectWijk = useCallback(
-    (wijkCode: string, wijkNaam: string) => {
-      const currentGemeente = activeGemeenteRef.current
-      if (!currentGemeente) return
-
-      // Find feature to get bbox and geometry for highlighting
-      const feature = wijkGeojson?.features.find(
-        (f) => (f.properties?.statcode as string) === wijkCode
-      )
-      if (feature && mapRef.current) {
-        const geom = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
-        const bbox = calculateBboxFromGeometry(geom) as [number, number, number, number]
-        removeScanAreaHighlight(mapRef.current)
-        addScanAreaHighlight(mapRef.current, geom)
-        mapRef.current.fitBounds(bbox, { padding: 50, duration: 600, maxZoom: 16 })
-      }
-
-      const latestScan = scanHistory?.scans?.find(
-        (s) =>
-          s.gemeente_code === currentGemeente.code &&
-          s.wijk_naam === wijkNaam &&
-          s.status === 'completed'
-      ) ?? null
-
-      setActivePanel({
-        kind: 'wijk',
-        code: wijkCode,
-        naam: wijkNaam,
-        gemeenteCode: currentGemeente.code,
-        gemeenteNaam: currentGemeente.naam,
-        latestScan,
-      })
-    },
-    [wijkGeojson, scanHistory?.scans]
-  )
-
-  // Panel navigation: go back to gemeente panel from wijk panel
-  const handleWijkPanelBack = useCallback(() => {
-    const currentGemeente = activeGemeenteRef.current
-    if (!currentGemeente) {
-      setActivePanel(null)
-      return
-    }
-    setActivePanel({
-      kind: 'gemeente',
-      code: currentGemeente.code,
-      naam: currentGemeente.naam,
-      bbox: currentGemeente.bbox,
-    })
-    if (mapRef.current) {
-      removeScanAreaHighlight(mapRef.current)
-    }
-  }, [])
-
   // Panel: start scan from wijk panel
   const handleWijkPanelStartScan = useCallback(() => {
     if (!activePanel || activePanel.kind !== 'wijk') return
@@ -2304,17 +2265,7 @@ function MapPage() {
           naam={activePanel.naam}
           wijkGeojson={wijkGeojson}
           scannedWijkNames={scannedWijkNames}
-          onClose={() => {
-            setActivePanel(null)
-            setActiveGemeente(null)
-            if (wijkGeojsonRef.current && mapRef.current) {
-              removeWijkBoundariesLayer(mapRef.current)
-              setWijkGeojson(null)
-            }
-            if (mapRef.current) {
-              mapRef.current.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
-            }
-          }}
+          onClose={handleCloseGemeentePanel}
           onSelectWijk={handleGemeentePanelSelectWijk}
         />
       )}
@@ -2336,10 +2287,7 @@ function MapPage() {
             parcel={inspectorParcel}
             gemeenteNaam={activePanel?.kind === 'parcel' && activePanel.gemeenteNaam ? activePanel.gemeenteNaam : activeGemeente?.naam}
             wijkNaam={activePanel?.kind === 'parcel' && activePanel.wijkNaam ? activePanel.wijkNaam : urlWijkNaam}
-            onClose={() => {
-              setActivePanel(null)
-              setParcelGeometryHighlight(null)
-            }}
+            onClose={handleCloseParcelPanel}
           />
         )}
       </AnimatePresence>
