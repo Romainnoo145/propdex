@@ -684,3 +684,7 @@
 - "/projecten and /rapporten routes become redirect stubs (not deleted) — preserves internal navigations from ParcelDetailPanel.tsx which cannot be modified per KNOWLEDGE.md"
 - "Meldingen route kept alive but removed from nav — route deletion deferred to S03 after meldingen feed is embedded in gemeente modal"
 - "Bookmark icon for Opgeslagen nav item (replaces FolderOpen/Projecten) — semantic match for saved/favorited parcels"
+- "GemeenteModal state lives inside GemeenteContextPanel (not map.tsx) — modal open/close is local to the panel, does not affect activePanel state"
+- "JuridischKlimaatModal is a thin wrapper around existing JurisprudenceSection — no data fetching duplication"
+- "MeldingenModal extracts core feed rendering from meldingen.tsx (~200 lines) rather than embedding the full 1,195-line route component"
+- "/meldingen route becomes redirect stub to /map (same pattern as /projecten → /opgeslagen)"
