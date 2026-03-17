@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Users, Scale, Bell, MapPin, X } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
 import { LeftPanelShell } from './LeftPanelShell'
 import { DemografieModal } from './gemeente/DemografieModal'
 import { WijkenModal } from './gemeente/WijkenModal'
+import { JuridischKlimaatModal } from './gemeente/JuridischKlimaatModal'
+import { MeldingenModal } from './gemeente/MeldingenModal'
 import type { ScanListItem } from '@/lib/types/scan'
 
 export type GemeenteCardCategory = 'demografie' | 'juridisch' | 'meldingen' | 'wijken'
@@ -67,11 +68,6 @@ export function GemeenteContextPanel({
   const scannedCount = scannedWijkNames.length
 
   const handleCardClick = (category: GemeenteCardCategory) => {
-    if (category === 'juridisch' || category === 'meldingen') {
-      // T02 will wire these
-      toast.info(`${category} — komt in S03-T02`)
-      return
-    }
     setOpenModal(category)
   }
 
@@ -187,6 +183,20 @@ export function GemeenteContextPanel({
               setOpenModal(null)
               onSelectWijk(c, n)
             }}
+          />
+        )}
+        {openModal === 'juridisch' && (
+          <JuridischKlimaatModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            onClose={() => setOpenModal(null)}
+          />
+        )}
+        {openModal === 'meldingen' && (
+          <MeldingenModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            onClose={() => setOpenModal(null)}
           />
         )}
       </AnimatePresence>
