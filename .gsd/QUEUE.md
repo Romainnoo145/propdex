@@ -33,7 +33,24 @@
 
 ---
 
-### M003 — v19.0 Vergunning & Bestuurlijke Intelligence
+### M003 — Shared Data Catalog + User-Scoped Favorites
+
+**Vision:** Transform from org-scoped multi-tenant to shared data catalog with user-scoped favorites and paywall-gated access. All scan/parcel/cache data becomes shared across all users. Favorites, reports, and user-generated content remain user-scoped.
+
+**Key deliverables:**
+- De-tenant ~10 models (AreaScan, ScanResult, ParcelCache, CachedAPIResponse, ChangeRecord, PDFDocument, ParsingJob, JuridischAnalyseJob, FundaListingSnapshot)
+- Keep ~8 models user/org-scoped (ParcelFavorite → user-scoped, SavedReport, ParcelDocument, GeneratedDossier, etc.)
+- Entitlement/paywall layer for gated access
+- RLS rewrite for shared vs user-scoped tables
+- Test suite update (~50+ files)
+
+**Scope:** Backend only — 709 org_id references across 73 files. Frontend unchanged.
+
+*Queued: 2026-03-17*
+
+---
+
+### M004 — v19.0 Vergunning & Bestuurlijke Intelligence
 
 **Vision:** Make Propdex the definitive source for understanding a municipality's political and regulatory posture toward development. Scrape raadsinformatiebrieven, surface subsidie opportunities, compute per-parcel vergunningkans, detect BOPA signals, and build gemeente profile dashboards.
 
@@ -49,7 +66,7 @@
 
 ---
 
-### M004 — v20.0 Ontwikkel Quickscan & Scenarios
+### M005 — v20.0 Ontwikkel Quickscan & Scenarios
 
 **Vision:** Move beyond "what's here" to "what could you do with it." Use-case specific scoring for optoppen, splitsen, transformatie, and nieuwbouw. Side-by-side scenario comparison. Confidence scoring based on data coverage. Custom zoekprofielen with multi-criteria filtering.
 
@@ -64,7 +81,7 @@
 
 ---
 
-### M005 — v21.0 Document Automation & Workflow
+### M006 — v21.0 Document Automation & Workflow
 
 **Vision:** Close the loop from intelligence to action. AI summarizes documents, generates concept briefs to property owners and pre-consultation requests to municipalities. Per-parcel action suggestions, task management with deadlines, and vergunning preparation checklists turn Propdex from an intelligence tool into a workflow system.
 
