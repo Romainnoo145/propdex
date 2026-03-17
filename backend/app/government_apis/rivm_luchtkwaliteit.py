@@ -93,7 +93,7 @@ class RIVMLuchtkwaliteitClient:
             feats = data.get("features", [])
             if feats:
                 gi = feats[0].get("properties", {}).get("GRAY_INDEX")
-                if gi is not None and gi != 0:
+                if gi is not None:
                     no2_val = round(float(gi), 1)
 
         # Fetch PM10
@@ -109,7 +109,7 @@ class RIVMLuchtkwaliteitClient:
             feats = data.get("features", [])
             if feats:
                 gi = feats[0].get("properties", {}).get("GRAY_INDEX")
-                if gi is not None and gi != 0:
+                if gi is not None:
                     pm10_val = round(float(gi), 1)
 
         if no2_val is None and pm10_val is None:

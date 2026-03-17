@@ -173,12 +173,6 @@ class Settings(BaseSettings):
         description="Redis URL for ARQ task queue",
     )
 
-    # Tile Server Configuration
-    MARTIN_TILE_URL: str = Field(
-        default="http://localhost:3000",
-        description="Martin tile server URL (optional, PostGIS ST_AsMVT is primary tile path)",
-    )
-
     # CBS Configuration
     cbs_dataset_id: str = Field(
         default="86165NED",
