@@ -356,8 +356,8 @@ function MeldingenPage() {
             title="Geen meldingen"
             description="Wijzigingen in bestemmingsplannen en vergunningen verschijnen hier zodra ze gedetecteerd worden."
             action={{
-              label: 'Naar projecten',
-              onClick: () => navigate({ to: '/projecten' }),
+              label: 'Naar opgeslagen',
+              onClick: () => navigate({ to: '/opgeslagen' }),
             }}
           />
         )}

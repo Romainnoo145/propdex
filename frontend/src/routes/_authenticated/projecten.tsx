@@ -1,32 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
-import ResultsShell from '@/components/layout/ResultsShell'
-import ProjectList from '@/components/projects/ProjectList'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-const projectenSearchSchema = z.object({
-  gemeente_id: z.string().optional(),
-  gemeente_code: z.string().optional(),
-  wijk_id: z.string().optional(),
-  provincie_code: z.string().optional(),
-  portfolio_mode: z.boolean().optional(),
-  portfolio_provincie: z.string().optional(),
-  portfolio_gemeente: z.string().optional(),
-  portfolio_wijk: z.string().optional(),
-  portfolio_stage: z
-    .enum(['Gesignaleerd', 'Onderzoek', 'Contact', 'Besluit', 'Afgerond'])
-    .optional(),
-})
-
+/**
+ * Redirect stub — /projecten is removed from nav in M002-S01.
+ * Kept as redirect (not deleted) because ParcelDetailPanel.tsx and other
+ * components navigate here and cannot be modified per KNOWLEDGE.md.
+ */
 export const Route = createFileRoute('/_authenticated/projecten')({
-  validateSearch: projectenSearchSchema,
-  component: ProjectenPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/opgeslagen' })
+  },
 })
-
-function ProjectenPage() {
-  return (
-    <ResultsShell contentClassName="max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Project list */}
-      <ProjectList />
-    </ResultsShell>
-  )
-}

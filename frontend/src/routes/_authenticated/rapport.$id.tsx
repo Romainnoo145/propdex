@@ -45,9 +45,9 @@ function RapportPage() {
 
   const backLabel =
     search.from === 'rapporten'
-      ? 'Terug naar rapporten'
+      ? 'Terug naar opgeslagen'
       : search.from === 'projecten'
-        ? 'Terug naar projecten'
+        ? 'Terug naar opgeslagen'
         : search.from === 'meldingen'
           ? 'Terug naar meldingen'
           : search.from === 'resultaten'
@@ -56,11 +56,11 @@ function RapportPage() {
 
   const handleBack = () => {
     if (search.from === 'rapporten') {
-      navigate({ to: '/rapporten', search: { project_id: undefined, q: undefined } })
+      navigate({ to: '/opgeslagen' })
       return
     }
     if (search.from === 'projecten') {
-      navigate({ to: '/projecten' })
+      navigate({ to: '/opgeslagen' })
       return
     }
     if (search.from === 'meldingen') {
@@ -71,7 +71,7 @@ function RapportPage() {
       window.history.back()
       return
     }
-    navigate({ to: search.from === 'resultaten' ? '/resultaten' : '/projecten' })
+    navigate({ to: search.from === 'resultaten' ? '/resultaten' : '/opgeslagen' })
   }
 
   const handleViewOnMap = () => {

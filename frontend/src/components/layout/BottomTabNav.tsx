@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { Map, FolderOpen, FileText } from 'lucide-react'
+import { Map, Bookmark, Scale } from 'lucide-react'
 
 /**
  * Bottom tab bar navigation for mobile viewports.
@@ -29,24 +29,23 @@ export default function BottomTabNav() {
       </Link>
 
       <Link
-        to="/projecten"
+        to="/opgeslagen"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-          matchRoute({ to: '/projecten' }) ? 'text-aura-amber' : 'text-neutral-600'
+          matchRoute({ to: '/opgeslagen' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
       >
-        <FolderOpen size={20} />
-        <span className="text-xs">Projecten</span>
+        <Bookmark size={20} />
+        <span className="text-xs">Opgeslagen</span>
       </Link>
 
       <Link
-        to="/rapporten"
-        search={{ project_id: undefined, q: undefined }}
+        to="/jurisprudentie"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-          matchRoute({ to: '/rapporten' }) ? 'text-aura-amber' : 'text-neutral-600'
+          matchRoute({ to: '/jurisprudentie' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
       >
-        <FileText size={20} />
-        <span className="text-xs">Rapporten</span>
+        <Scale size={20} />
+        <span className="text-xs">Jurisprudentie</span>
       </Link>
     </nav>
   )

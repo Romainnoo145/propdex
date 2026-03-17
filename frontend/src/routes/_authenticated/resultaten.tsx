@@ -87,7 +87,7 @@ function ResultatenPage() {
       window.history.back()
       return
     }
-    void navigate({ to: '/projecten' })
+    void navigate({ to: '/opgeslagen' })
   }
 
   const handleOpenScan = (nextScanId: string) => {

@@ -113,8 +113,8 @@ export const ResultatenActive: Story = {
   decorators: [withProviders('/resultaten')],
 }
 
-export const ProjectenActive: Story = {
-  decorators: [withProviders('/projecten')],
+export const OpgeslagenActive: Story = {
+  decorators: [withProviders('/opgeslagen')],
 }
 
 export const InstellingenActive: Story = {

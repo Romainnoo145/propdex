@@ -33,7 +33,7 @@
   > After this: unit tests prove portfolio-navigation works
 - [x] **S13: Parcel Identity Unification** `risk:medium` `depends:[S12]`
   > After this: Add parcel_code column to parcel_cache, parcel_cache_id FK to parcel_favorites, and populate parcel_code at scan time.
-- [ ] **S14: Pipeline Stages** `risk:medium` `depends:[S13]` ⚠️ SUPERSEDED by M002/Phase 118
-  > After this: ~~unit tests prove Pipeline Stages works~~ — Pipeline UI moves to Opgeslagen view in v18.0; Projecten page killed
-- [ ] **S15: Map Markers** `risk:medium` `depends:[S14]` ⚠️ CARRIES FORWARD to M002
-  > After this: ~~unit tests prove Map Markers works~~ — Favorite markers carry forward to v18.0 Kansenkaart milestone
+- [x] **S14: Pipeline Stages** `risk:medium` `depends:[S13]` ⛔ SKIPPED — superseded by M002/Phase 118
+  > Skipped: Pipeline UI absorbed into M002 Opgeslagen view; Projecten page killed
+- [x] **S15: Map Markers** `risk:medium` `depends:[S14]` ⛔ SKIPPED — carries forward to M002
+  > Skipped: Favorite markers carry forward to M002 Kansenkaart milestone
