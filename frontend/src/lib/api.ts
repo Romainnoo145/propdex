@@ -67,9 +67,19 @@ const PDOK_BASE_URL = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1'
  * auth modules (avoids circular deps).
  */
 let _tokenRefreshFn: (() => Promise<string | null>) | null = null
+let _refreshInFlight: Promise<string | null> | null = null
 
 export function setTokenRefreshFn(fn: (() => Promise<string | null>) | null) {
   _tokenRefreshFn = fn
+}
+
+/** Deduplicate concurrent refresh calls — all callers share one in-flight request. */
+function deduplicatedRefresh(): Promise<string | null> {
+  if (_refreshInFlight) return _refreshInFlight
+  _refreshInFlight = _tokenRefreshFn!()
+    .catch(() => null)
+    .finally(() => { _refreshInFlight = null })
+  return _refreshInFlight
 }
 
 export async function apiFetch<T>(
@@ -95,9 +105,9 @@ export async function apiFetch<T>(
 
   let response = await doFetch(accessToken)
 
-  // On 401: try silent refresh once, then retry
+  // On 401: try silent refresh once, then retry (deduplicated across concurrent calls)
   if (response.status === 401 && _tokenRefreshFn) {
-    const newToken = await _tokenRefreshFn().catch(() => null)
+    const newToken = await deduplicatedRefresh()
     if (newToken) {
       response = await doFetch(newToken)
     }

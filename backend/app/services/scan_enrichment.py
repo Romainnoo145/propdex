@@ -550,6 +550,8 @@ async def batch_fetch_address_enrichment(
                         "meest_recente_waarde": woz_data.meest_recente_waarde,
                         "meest_recente_peildatum": woz_data.meest_recente_peildatum,
                         "low_confidence": woz_data.low_confidence,
+                        "low_confidence_reden": woz_data.low_confidence_reden,
+                        "bron": woz_data.bron,
                     }
             except Exception as exc:
                 logger.warning("WOZ error for parcel=%s na_id=%s: %s", parcel_id, na_id, exc)

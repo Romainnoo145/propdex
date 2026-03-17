@@ -53,13 +53,22 @@ async def get_current_user(
     if payload.get("type") != "access":
         raise credentials_exception
 
-    # Extract user ID
+    # Extract user ID and organization ID
     user_id = payload.get("sub")
-    if user_id is None:
+    org_id = payload.get("organization_id")
+    if user_id is None or org_id is None:
         raise credentials_exception
 
-    # Fetch user from database
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    # Fetch user from database — filter by org_id for tenant isolation
+    try:
+        result = await db.execute(
+            select(User).where(
+                User.id == uuid.UUID(user_id),
+                User.organization_id == uuid.UUID(org_id),
+            )
+        )
+    except ValueError as err:
+        raise credentials_exception from err
     user = result.scalar_one_or_none()
 
     if user is None:
