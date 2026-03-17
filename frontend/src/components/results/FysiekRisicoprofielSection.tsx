@@ -91,7 +91,11 @@ export function FysiekRisicoprofielSection({
     ? 'border border-amber-500/20 rounded-md p-4 bg-amber-500/[0.02]'
     : ''
 
-  const bodemDossierCount = profiel.bodem_data?.dossiers?.length ?? 0
+  // Handle both data shapes: on-demand (dossiers array) and cached flags (dossiers_count number)
+  const bodemRaw = profiel.bodem_data as Record<string, unknown> | null | undefined
+  const bodemDossierCount = bodemRaw?.dossiers_count as number
+    ?? (bodemRaw?.dossiers as unknown[] | undefined)?.length
+    ?? 0
 
   return (
     <div className={wrapperClass}>

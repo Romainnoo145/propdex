@@ -396,6 +396,8 @@ export interface WozData {
   meest_recente_waarde: number | null
   meest_recente_peildatum: string | null
   low_confidence: boolean
+  low_confidence_reden?: string | null
+  bron?: string
 }
 
 export interface BodemData {
