@@ -2266,12 +2266,9 @@ function MapPage() {
           code={activePanel.code}
           wijkGeojson={wijkGeojson}
           scannedWijkNames={scannedWijkNames}
+          scans={scanHistory?.scans ?? []}
           onClose={handleCloseGemeentePanel}
           onSelectWijk={handleGemeentePanelSelectWijk}
-          onCardClick={(category) => {
-            // Placeholder — S03 wires these to full-page modals
-            toast.info(`${category} — komt in S03`)
-          }}
         />
       )}
       {activePanel?.kind === 'wijk' && (
