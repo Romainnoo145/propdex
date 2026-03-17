@@ -11,7 +11,7 @@ import LayerToggle from '@/components/map/LayerToggle'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
 import { ParcelDetailPanel } from '@/components/map/panels/ParcelDetailPanel'
-import { GemeenteMapPanel } from '@/components/map/panels/GemeenteMapPanel'
+import { GemeenteContextPanel } from '@/components/map/panels/GemeenteContextPanel'
 import { WijkMapPanel } from '@/components/map/panels/WijkMapPanel'
 import { usePropertyLookup } from '@/hooks/usePropertyLookup'
 import { useRecentViewed } from '@/hooks/useRecentViewed'
@@ -2261,12 +2261,17 @@ function MapPage() {
 
       {/* Map detail panels — only one visible at a time */}
       {activePanel?.kind === 'gemeente' && (
-        <GemeenteMapPanel
+        <GemeenteContextPanel
           naam={activePanel.naam}
+          code={activePanel.code}
           wijkGeojson={wijkGeojson}
           scannedWijkNames={scannedWijkNames}
           onClose={handleCloseGemeentePanel}
           onSelectWijk={handleGemeentePanelSelectWijk}
+          onCardClick={(category) => {
+            // Placeholder — S03 wires these to full-page modals
+            toast.info(`${category} — komt in S03`)
+          }}
         />
       )}
       {activePanel?.kind === 'wijk' && (
