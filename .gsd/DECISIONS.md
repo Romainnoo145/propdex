@@ -690,3 +690,7 @@
 - "M002: WIJK-01 through WIJK-04 (Bottom Bento Sheet) superseded by GemeenteContextPanel left-panel design"
 - "M002: PORT-01 through PORT-08 (Projecten portfolio) superseded — portfolio moves to Opgeslagen with flat grouped view"
 - "M002: Meldingen modal preserves core feed functionality (infinite scroll, read tracking, gemeente filter) from the 1,195-line standalone route"
+- "GemeenteContextPanel renders on LEFT side (fixed left-[112px]) while ParcelDetailPanel stays on RIGHT (portal-based 620px) — panels are mutually exclusive via ActivePanel union type but positioned on opposite sides"
+- "LeftPanelShell created for left-side panels (distinct from MapPanelShell right-side and ParcelPanelShell portal-based)"
+- "useMapPanels hook extracts panel navigation handlers only (gemeente↔wijk, close) — parcel-opening calls stay inline in map.tsx due to heavy local dependencies"
+- "Summary card onClick handlers are toast placeholders in S02 — S03 wires them to full-page modals"
