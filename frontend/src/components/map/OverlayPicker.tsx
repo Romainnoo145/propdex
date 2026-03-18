@@ -111,7 +111,10 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
               return (
                 <button
                   key={overlay.id}
-                  onClick={() => handleSelect(overlay.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelect(overlay.id)
+                  }}
                   className={`w-full text-left px-3 py-1.5 flex items-center gap-2 transition-colors ${
                     isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
                   }`}

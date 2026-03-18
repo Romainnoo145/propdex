@@ -2057,47 +2057,60 @@ function MapPage() {
   // Unified overlay select handler for OverlayPicker
   const handleOverlaySelect = useCallback(
     (overlayId: import('@/lib/map/layers').ParcelOverlayLayerId) => {
-      if (!mapRef.current) return
+      const map = mapRef.current
+      if (!map) return
+
+      // Turn off bestemmingsplan if switching away from it
+      if (layerState.showBestemmingsplan && overlayId !== 'bestemmingsplan') {
+        handleBestemmingsplanToggle()
+      }
 
       if (overlayId === 'bestemmingsplan') {
-        // Turn off all score overlays
-        handleScoreToggle(false)
-        handleBuiltStatusToggle(false)
-        handleReportStatusToggle(false)
-        handleVacancySignalToggle(false)
-        handleBuildCapacityToggle(false)
-        handleFoundationRiskToggle(false)
-        // Turn on bestemmingsplan if not already on
+        // Hide all score overlays directly (bypass isStyleLoaded guard)
+        for (const layerId of [
+          'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
+          'parcel-built-status-fill', 'parcel-report-status-fill',
+          'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
+        ]) {
+          if (map.getLayer(layerId)) {
+            try { map.setLayoutProperty(layerId, 'visibility', 'none') } catch { /* */ }
+          }
+        }
         if (!layerState.showBestemmingsplan) handleBestemmingsplanToggle()
         layerActions.setActiveParcelOverlay('bestemmingsplan')
       } else {
-        // Turn off bestemmingsplan if active
-        if (layerState.showBestemmingsplan) handleBestemmingsplanToggle()
-        // Turn off all score overlays first
-        handleScoreToggle(false)
-        handleBuiltStatusToggle(false)
-        handleReportStatusToggle(false)
-        handleVacancySignalToggle(false)
-        handleBuildCapacityToggle(false)
-        handleFoundationRiskToggle(false)
-        // Turn on the selected one
-        const handlers: Record<string, (v: boolean) => void> = {
-          potential: handleScoreToggle,
-          built_status: handleBuiltStatusToggle,
-          report_coverage: handleReportStatusToggle,
-          vacancy_signal: handleVacancySignalToggle,
-          build_capacity: handleBuildCapacityToggle,
-          foundation_risk: handleFoundationRiskToggle,
+        // Map overlay IDs to their MapLibre fill layer IDs
+        const OVERLAY_FILL_LAYERS: Record<string, string> = {
+          potential: 'parcel-score-fill',
+          built_status: 'parcel-built-status-fill',
+          report_coverage: 'parcel-report-status-fill',
+          vacancy_signal: 'parcel-vacancy-signal-fill',
+          build_capacity: 'parcel-build-capacity-fill',
+          foundation_risk: 'parcel-foundation-risk-fill',
         }
-        handlers[overlayId]?.(true)
+
+        // Hide all fill layers, then show only the selected one
+        for (const [id, layerId] of Object.entries(OVERLAY_FILL_LAYERS)) {
+          if (map.getLayer(layerId)) {
+            try {
+              map.setLayoutProperty(layerId, 'visibility', id === overlayId ? 'visible' : 'none')
+            } catch { /* */ }
+          }
+        }
+
+        // Show/hide score outline layers (only for potential)
+        for (const outlineId of ['parcel-score-outline', 'parcel-score-selected-outline']) {
+          if (map.getLayer(outlineId)) {
+            try {
+              map.setLayoutProperty(outlineId, 'visibility', overlayId === 'potential' ? 'visible' : 'none')
+            } catch { /* */ }
+          }
+        }
+
+        layerActions.setActiveParcelOverlay(overlayId)
       }
     },
-    [
-      mapRef, layerState.showBestemmingsplan, layerActions,
-      handleScoreToggle, handleBuiltStatusToggle, handleReportStatusToggle,
-      handleVacancySignalToggle, handleBuildCapacityToggle, handleFoundationRiskToggle,
-      handleBestemmingsplanToggle,
-    ]
+    [mapRef, layerState.showBestemmingsplan, layerActions, handleBestemmingsplanToggle]
   )
 
   // Handle "Scan dit gebied" from bestemmingsplan zone
