@@ -1963,6 +1963,10 @@ function MapPage() {
         setBestemmingsplanVisibility(map, true)
         layerActions.setBestemmingsplan(true)
         layerActions.setActiveParcelOverlay('bestemmingsplan')
+        // Auto-zoom: PDOK bestemmingsplan data only available at higher zoom levels
+        if (map.getZoom() < 13) {
+          map.easeTo({ zoom: 13, duration: 550 })
+        }
       } else {
         // Hide layer
         setBestemmingsplanVisibility(map, false)
