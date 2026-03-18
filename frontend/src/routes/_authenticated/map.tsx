@@ -8,7 +8,6 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/primitives/Button'
 import MapShell from '@/components/layout/MapShell'
 import LayerToggle from '@/components/map/LayerToggle'
-import OverlayLegend from '@/components/map/OverlayLegend'
 import OverlayPicker from '@/components/map/OverlayPicker'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
@@ -2329,12 +2328,6 @@ function MapPage() {
           lngLat={propertyLngLat}
         />
       )}
-
-      {/* Overlay color mode legend — bottom-right */}
-      <OverlayLegend
-        activeOverlay={layerState.activeParcelOverlay}
-        visible={layerState.showParcels && !!activeScanId}
-      />
 
       {/* Overlay picker — bottom-right, only when parcels active */}
       {layerState.showParcels && (

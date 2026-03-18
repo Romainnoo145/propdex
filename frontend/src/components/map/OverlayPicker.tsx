@@ -9,16 +9,76 @@ interface OverlayPickerProps {
   onSelect: (id: ParcelOverlayLayerId) => void
 }
 
+/* ── Inline legend per overlay mode ── */
+
+function Dot({ color }: { color: string }) {
+  return <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+}
+
+function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
+  switch (overlay) {
+    case 'potential':
+      return (
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-neutral-500">40</span>
+          <div className="h-2 w-12 rounded-full" style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }} />
+          <span className="text-[10px] text-neutral-500">100</span>
+        </div>
+      )
+    case 'built_status':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">Bebouwd</span>
+          <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
+        </div>
+      )
+    case 'report_coverage':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Rapport</span>
+          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Geen</span>
+        </div>
+      )
+    case 'vacancy_signal':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
+          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Leegstaand</span>
+          <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">In gebruik</span>
+        </div>
+      )
+    case 'build_capacity':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#16a34a" /><span className="text-[10px] text-neutral-500">Hoog</span>
+          <Dot color="#eab308" /><span className="text-[10px] text-neutral-500">Middel</span>
+          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Laag</span>
+        </div>
+      )
+    case 'foundation_risk':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Hoog</span>
+          <Dot color="#fbbf24" /><span className="text-[10px] text-neutral-500">Middel</span>
+          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Laag</span>
+        </div>
+      )
+    case 'bestemmingsplan':
+      return null // BestemmingsplanLegend component handles this
+    default:
+      return null
+  }
+}
+
 /**
  * Floating layer-picker button (bottom-right of map).
+ * Shows active overlay label + inline legend.
  * Click opens a compact card with radio-style overlay options.
- * Selecting an option switches the map overlay and closes the card.
  */
 export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPickerProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Close on click outside
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
@@ -42,18 +102,19 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
 
   return (
     <div ref={ref} className="absolute bottom-4 right-4 z-[var(--z-map-controls)]">
-      {/* Trigger button */}
+      {/* Trigger — icon + label + inline legend */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 h-10 px-3.5 rounded-xl transition-colors duration-200 shadow-lg ${
+        className={`flex items-center gap-2.5 h-10 px-3.5 rounded-xl transition-colors duration-200 shadow-lg ${
           open
             ? 'bg-aura-amber text-white'
             : 'bg-white/70 backdrop-blur-xl border border-white/40 text-aura-ink/80 hover:bg-white/90'
         }`}
         aria-label="Kleurmodus kiezen"
       >
-        <Layers className="h-4 w-4" />
+        <Layers className="h-4 w-4 shrink-0" />
         <span className="text-[13px] font-medium">{activeLabel}</span>
+        {!open && <InlineLegend overlay={activeOverlay} />}
       </button>
 
       {/* Popover card — opens upward */}
