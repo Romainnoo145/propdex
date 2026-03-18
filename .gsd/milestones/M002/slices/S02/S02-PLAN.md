@@ -47,7 +47,7 @@
 
 ## Tasks
 
-- [ ] **T01: Extract useMapPanels hook from map.tsx** `est:1h`
+- [x] **T01: Extract useMapPanels hook from map.tsx** `est:1h`
   - Why: map.tsx is 2,373 lines with ~20 setActivePanel calls scattered throughout. Extracting panel orchestration reduces complexity and makes the ActivePanel type a clean contract boundary. This must land first because T02 builds on the hook.
   - Files: `frontend/src/hooks/useMapPanels.ts`, `frontend/src/routes/_authenticated/map.tsx`
   - Do:
