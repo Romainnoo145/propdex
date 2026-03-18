@@ -27,7 +27,7 @@
 
 ## Tasks
 
-- [ ] **T01: Update nav components and route redirects** `est:45m`
+- [x] **T01: Update nav components and route redirects** `est:45m`
   - Why: All nav and route changes are tightly coupled — updating nav without fixing routes would leave broken links, and redirect routes can't be verified without the nav changes.
   - Files: `frontend/src/components/layout/SideRailNav.tsx`, `frontend/src/components/layout/BottomTabNav.tsx`, `frontend/src/routes/_authenticated/projecten.tsx`, `frontend/src/routes/_authenticated/rapporten.tsx`, `frontend/src/routeTree.gen.ts`, `frontend/src/routes/_authenticated/rapport.$id.tsx`, `frontend/src/routes/_authenticated/resultaten.tsx`, `frontend/src/routes/_authenticated/meldingen.tsx`, `frontend/src/stories/layout/SideRailNav.stories.tsx`, `frontend/src/stories/layout/BottomTabNav.stories.tsx`
   - Do:
