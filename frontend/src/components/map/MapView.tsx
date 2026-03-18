@@ -62,7 +62,6 @@ export default function MapView({
       });
       map = createdMap;
 
-      createdMap.addControl(new maplibregl.NavigationControl(), 'top-right');
       createdMap.addControl(
         new maplibregl.GeolocateControl({
           positionOptions: { enableHighAccuracy: true },

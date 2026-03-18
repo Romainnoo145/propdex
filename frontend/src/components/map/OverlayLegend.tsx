@@ -111,7 +111,7 @@ export default function OverlayLegend({ activeOverlay, visible }: OverlayLegendP
   if (!LegendComponent) return null
 
   return (
-    <div className="absolute bottom-4 right-4 z-[var(--z-map-controls)] bg-aura-glass-white/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-white/40 shadow-glass">
+    <div className="absolute top-6 right-4 z-[var(--z-map-controls)] bg-aura-glass-white/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-white/40 shadow-glass">
       <LegendComponent />
     </div>
   )
