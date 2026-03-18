@@ -546,13 +546,20 @@ function MapPage() {
     } else {
       currentCenteredWijkNameRef.current = null
       layerActions.setActiveParcelOverlay(null)
+      // Also turn off bestemmingsplan if it was active
+      if (layerState.showBestemmingsplan) {
+        layerActions.setBestemmingsplan(false)
+        if (mapRef.current?.getLayer('bestemmingsplan-layer')) {
+          try { mapRef.current.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'none') } catch { /* */ }
+        }
+      }
     }
 
     if (!visible) return
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName])
+  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName, layerState.showBestemmingsplan, mapRef])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -2066,7 +2073,10 @@ function MapPage() {
 
       // Turn off bestemmingsplan if switching away from it
       if (layerState.showBestemmingsplan && overlayId !== 'bestemmingsplan') {
-        handleBestemmingsplanToggle()
+        layerActions.setBestemmingsplan(false)
+        if (map.getLayer('bestemmingsplan-layer')) {
+          try { map.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'none') } catch { /* */ }
+        }
       }
 
       if (overlayId === 'bestemmingsplan') {
@@ -2080,7 +2090,14 @@ function MapPage() {
             try { map.setLayoutProperty(layerId, 'visibility', 'none') } catch { /* */ }
           }
         }
-        if (!layerState.showBestemmingsplan) handleBestemmingsplanToggle()
+        // Activate bestemmingsplan layer directly (bypass toggle state)
+        if (!map.getSource('pdok-bestemmingsplan')) {
+          addBestemmingsplanLayer(map)
+        }
+        if (map.getLayer('bestemmingsplan-layer')) {
+          try { map.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'visible') } catch { /* */ }
+        }
+        layerActions.setBestemmingsplan(true)
         layerActions.setActiveParcelOverlay('bestemmingsplan')
         // Auto-zoom: PDOK bestemmingsplan data needs higher zoom
         if (map.getZoom() < 13) {
@@ -2118,7 +2135,7 @@ function MapPage() {
         layerActions.setActiveParcelOverlay(overlayId)
       }
     },
-    [mapRef, layerState.showBestemmingsplan, layerActions, handleBestemmingsplanToggle]
+    [mapRef, layerState.showBestemmingsplan, layerActions]
   )
 
   // Handle "Scan dit gebied" from bestemmingsplan zone
