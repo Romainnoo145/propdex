@@ -700,3 +700,5 @@
 - "/meldingen converted to redirect stub (Navigate to /map) instead of route deletion — existing internal navigations from rapport.$id.tsx hit this route safely"
 - "DemografieModal aggregates CBS data from scanned wijken (no gemeente-level CBS endpoint) — shows empty state when no scans exist"
 - "openModal state managed locally in GemeenteContextPanel (not lifted to map.tsx) — card click → modal is self-contained"
+- "aggregateMetrics extracted from DemografieModal to shared cbs-aggregation.ts util — reused by GemeenteContextPanel for inline Demografie tab content"
+- "WijkMapPanel uses layoutId='wijk-tab' (distinct from 'gemeente-tab') to prevent cross-panel framer-motion animation conflicts"
