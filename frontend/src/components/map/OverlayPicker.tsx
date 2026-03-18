@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Layers, Info } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { MAP_LAYER_CATALOG } from '@/lib/map/layers'
 import type { ParcelOverlayLayerId } from '@/lib/map/layers'
 
@@ -72,12 +72,11 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
 
 /**
  * Floating layer-picker (bottom-right).
- * Button: Layers icon + active label + inline legend (auto-width).
- * Popover: name + info icon per option, no descriptions.
+ * Button: Layers icon + active label + inline legend.
+ * Popover: just names, solid background, no info icons.
  */
 export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPickerProps) {
   const [open, setOpen] = useState(false)
-  const [tooltip, setTooltip] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -103,7 +102,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
 
   return (
     <div ref={ref} className="absolute bottom-4 right-4 z-[var(--z-map-controls)]">
-      {/* Trigger — auto width */}
+      {/* Trigger */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2.5 h-10 px-3.5 rounded-xl shadow-lg bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 text-aura-ink/80 hover:bg-white/60 transition-colors duration-200"
@@ -114,7 +113,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
         <InlineLegend overlay={activeOverlay} />
       </button>
 
-      {/* Popover — opens upward, auto width */}
+      {/* Popover — solid white, no transparency, just names */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -122,37 +121,22 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 min-w-[200px] bg-white/90 backdrop-blur-xl border border-white/40 rounded-2xl shadow-lg overflow-hidden py-1"
+            className="absolute bottom-full right-0 mb-2 min-w-[180px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-1"
           >
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id
               return (
-                <div key={overlay.id} className="relative">
-                  <button
-                    onClick={() => handleSelect(overlay.id)}
-                    className={`w-full text-left px-3.5 py-2 flex items-center justify-between transition-colors ${
-                      isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
-                    }`}
-                  >
-                    <span className={`text-[12px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
-                      {overlay.label}
-                    </span>
-                    <Info
-                      className="h-3.5 w-3.5 text-neutral-300 hover:text-neutral-500 shrink-0"
-                      onMouseEnter={(e) => {
-                        e.stopPropagation()
-                        setTooltip(overlay.description)
-                      }}
-                      onMouseLeave={() => setTooltip(null)}
-                    />
-                  </button>
-                  {/* Tooltip on info hover */}
-                  {tooltip === overlay.description && (
-                    <div className="absolute right-10 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-neutral-800 text-white text-[10px] rounded-lg whitespace-nowrap shadow-lg pointer-events-none">
-                      {overlay.description}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={overlay.id}
+                  onClick={() => handleSelect(overlay.id)}
+                  className={`w-full text-left px-3.5 py-2 transition-colors ${
+                    isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
+                  }`}
+                >
+                  <span className={`text-[12px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
+                    {overlay.label}
+                  </span>
+                </button>
               )
             })}
           </motion.div>
