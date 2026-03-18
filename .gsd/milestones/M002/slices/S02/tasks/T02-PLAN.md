@@ -102,3 +102,10 @@ Manual verification:
 - `frontend/src/components/map/panels/GemeenteContextPanel.tsx` (~150-200 lines)
 - Updated map.tsx with GemeenteContextPanel replacing GemeenteMapPanel
 - GemeenteMapPanel.tsx deleted
+
+## Observability Impact
+
+- **Panel state transitions**: `activePanel.kind === 'gemeente'` in React DevTools on the `useMapPanels` hook signals GemeenteContextPanel is mounted.
+- **Card click modals**: `openModal` local state in GemeenteContextPanel tracks which summary card modal is open (demografie/juridisch/meldingen/wijken or null).
+- **Failure visibility**: If the left panel doesn't appear after clicking a gemeente, check `activePanel` state in DevTools — if `kind !== 'gemeente'`, the click handler in map.tsx isn't setting it. If the panel mounts but is invisible, check z-index and left positioning in LeftPanelShell.
+- **Escape key**: LeftPanelShell registers a global keydown listener — if Escape doesn't close the panel, check that `onClose` prop is wired.
