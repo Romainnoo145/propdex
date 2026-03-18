@@ -129,11 +129,11 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
                 <button
                   key={overlay.id}
                   onClick={() => handleSelect(overlay.id)}
-                  className={`w-full text-left px-3 py-1.5 transition-colors ${
+                  className={`w-full text-left px-2.5 py-1 transition-colors ${
                     isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
                   }`}
                 >
-                  <span className={`text-[12px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
+                  <span className={`text-[11px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
                     {overlay.label}
                   </span>
                 </button>
