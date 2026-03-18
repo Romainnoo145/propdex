@@ -93,10 +93,10 @@ This milestone is complete only when all are true:
 - [x] **S01: Nav Simplification** `risk:low` `depends:[]`
   > After this: SideRailNav shows 3 items (Kaart, Opgeslagen, Jurisprudentie), BottomTabNav matches, /projecten and /rapporten routes are deleted, /meldingen route still exists but is removed from nav (killed in S03), no broken links anywhere in the app
 
-- [ ] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
+- [x] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
   > After this: Clicking a gemeente boundary opens a ~400px left panel via panelPortalRef with summary cards (Demografie, Juridisch Klimaat, Meldingen, Wijken). Panel closes when clicking elsewhere or selecting a parcel. ParcelDetailPanel works unchanged. map.tsx panel orchestration extracted into useMapPanels hook.
 
-- [ ] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
+- [x] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
   > After this: Clicking a summary card in GemeenteContextPanel opens a full-page modal with real data. Demografie modal shows CBS demographics. JuridischKlimaat modal shows klimaat analysis. Meldingen modal embeds the meldingen feed with gemeente filter and infinite scroll. Wijken modal shows wijk list with scan summaries. /meldingen standalone route is deleted.
 
 - [ ] **S04: Map Color Modes + Kansenkaart** `risk:medium` `depends:[S01]`
@@ -104,6 +104,9 @@ This milestone is complete only when all are true:
 
 - [ ] **S05: Enriched Opgeslagen + Pipeline** `risk:low` `depends:[S01]`
   > After this: /opgeslagen shows favorited parcels grouped by gemeente with pipeline stage pills (Gesignaleerd → Onderzoek → Contact → Besluit → Afgerond). User can change pipeline stage inline. Completeness indicators show data coverage per parcel. Afgerond captures reason (Gekocht/Afgewezen). Filter by pipeline stage works across all groups.
+
+- [ ] **S06: Gemeente & Wijk Data-First Panel Content** `risk:medium` `depends:[S02,S03]`
+  > After this: GemeenteContextPanel and WijkMapPanel show real data inline — not just navigation buttons. Research phase audits all available backend data per gemeente (CBS demographics, jurisprudentie stats, meldingen counts, wijk metrics) and per wijk (scan results, CBS neighborhood metrics, jurisprudentie, bekendmakingen). Panel interiors redesigned like ParcelDetailPanel: KPI grid with real numbers, pill tabs for sections (Overzicht/Demografie/Meldingen), data-first cards matching ScoreCircleCard/KenmerkenCard patterns. Wijk panel shows scan stats, CBS metrics, and juridisch klimaat inline — not behind modal clicks. Modals reserved for drill-down detail only.
 
 ## Boundary Map
 

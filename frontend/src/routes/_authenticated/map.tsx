@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/primitives/Button'
 import MapShell from '@/components/layout/MapShell'
 import LayerToggle from '@/components/map/LayerToggle'
+import OverlayLegend from '@/components/map/OverlayLegend'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
 import { ParcelDetailPanel } from '@/components/map/panels/ParcelDetailPanel'
@@ -21,6 +22,7 @@ import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/
 import {
   addGemeenteBoundariesLayer,
   setGemeenteBoundariesVisibility,
+  clearGemeenteSelection,
 } from '@/components/map/GemeenteBoundariesLayer'
 import {
   addWijkBoundariesLayer,
@@ -186,7 +188,7 @@ function parseFeatureInt(value: unknown): number | null {
 
 function MapPage() {
   // MapView is now in the parent layout — get mapRef/mapReady from context
-  const { mapRef, mapReady, panelOpen } = useMapContext()
+  const { mapRef, mapReady, panelOpen, leftPanelOpen } = useMapContext()
   const navigate = useNavigate()
   const {
     postcode,
@@ -298,35 +300,6 @@ function MapPage() {
     }
   }, [activeScanId])
 
-  // Re-center map when parcel panel opens (shift left to keep parcel visible)
-  useEffect(() => {
-    const map = mapRef.current
-    if (!inspectorParcel || !map || !mapReady) return
-    // Use parcel geometry centroid or bounding box center
-    const geom = (inspectorParcel as unknown as { geometry?: GeoJSON.Geometry }).geometry
-    let lng: number | undefined
-    let lat: number | undefined
-    if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
-      const bbox = calculateBboxFromGeometry(geom)
-      if (bbox) {
-        lng = (bbox[0] + bbox[2]) / 2
-        lat = (bbox[1] + bbox[3]) / 2
-      }
-    }
-    // Fallback: try latitude/longitude fields from tile feature
-    if (lng == null || lat == null) {
-      const p = inspectorParcel as unknown as { longitude?: number; latitude?: number }
-      lng = p.longitude
-      lat = p.latitude
-    }
-    if (lng == null || lat == null) return
-    // Project to screen, shift right by half panel width (210px) since panel is on LEFT
-    const point = map.project([lng, lat])
-    point.x += 210
-    const adjusted = map.unproject(point)
-    map.easeTo({ center: adjusted, duration: 500 })
-  }, [inspectorParcel, mapRef, mapReady])
-
   // Shared navigation handler for CTA button and completion useEffect
   const handleViewResults = useCallback(() => {
     if (navigatedRef.current || !activeScanId) return
@@ -367,6 +340,35 @@ function MapPage() {
     removeScanAreaHighlight,
     addScanAreaHighlight,
   })
+
+  // Re-center map when parcel panel opens (shift left to keep parcel visible)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!inspectorParcel || !map || !mapReady) return
+    // Use parcel geometry centroid or bounding box center
+    const geom = (inspectorParcel as unknown as { geometry?: GeoJSON.Geometry }).geometry
+    let lng: number | undefined
+    let lat: number | undefined
+    if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+      const bbox = calculateBboxFromGeometry(geom)
+      if (bbox) {
+        lng = (bbox[0] + bbox[2]) / 2
+        lat = (bbox[1] + bbox[3]) / 2
+      }
+    }
+    // Fallback: try latitude/longitude fields from tile feature
+    if (lng == null || lat == null) {
+      const p = inspectorParcel as unknown as { longitude?: number; latitude?: number }
+      lng = p.longitude
+      lat = p.latitude
+    }
+    if (lng == null || lat == null) return
+    // Project to screen, shift right by half panel width (210px) since panel is on LEFT
+    const point = map.project([lng, lat])
+    point.x += 210
+    const adjusted = map.unproject(point)
+    map.easeTo({ center: adjusted, duration: 500 })
+  }, [inspectorParcel, mapRef, mapReady])
 
   const scannedWijkNames = useMemo(() => {
     if (!activeGemeente || !scanHistory?.scans) return []
@@ -505,11 +507,11 @@ function MapPage() {
   // Exit gemeente mode: hide boundaries, clear gemeente/wijk state.
   // Uses refs so it can be called from any callback without stale closure issues.
   const exitGemeenteMode = useCallback(() => {
-    if (!isGemeentenVisibleRef.current) return
     layerActions.setGemeenten(false)
     const map = mapRef.current
     if (map) {
       setGemeenteBoundariesVisibility(map, false)
+      clearGemeenteSelection(map)
       if (wijkGeojsonRef.current) {
         removeWijkBoundariesLayer(map)
         setWijkGeojson(null)
@@ -518,7 +520,8 @@ function MapPage() {
     }
     setSelectedArea(null)
     setActiveGemeente(null)
-  }, [layerActions, mapRef])
+    setActivePanel(null)
+  }, [layerActions, mapRef, setActivePanel])
 
   const handleParcelsLayerToggle = useCallback((visible: boolean) => {
     layerActions.setParcels(visible)
@@ -1635,10 +1638,13 @@ function MapPage() {
       removeScanAreaHighlight(mapRef.current)
       addScanAreaHighlight(mapRef.current, geometry)
 
-      // Zoom to wijk
+      // Zoom to wijk — percentage-based padding
+      const canvas = mapRef.current.getCanvas()
+      const padX = Math.round(canvas.clientWidth * 0.08)
+      const padY = Math.round(canvas.clientHeight * 0.08)
       mapRef.current.fitBounds(
         [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
-        { padding: 50, duration: 600, maxZoom: 16 }
+        { padding: { top: padY, bottom: padY, left: padX, right: padX }, duration: 600, maxZoom: 15 }
       )
 
       // Find latest scan for this wijk
@@ -1737,10 +1743,22 @@ function MapPage() {
       // Set active gemeente context, zoom, and open panel
       setActiveGemeente({ code: gemeenteCode, naam: gemeenteNaam, bbox })
       setActivePanel({ kind: 'gemeente', code: gemeenteCode, naam: gemeenteNaam, bbox })
-      mapRef.current.fitBounds(
-        [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
-        { padding: 50, duration: 800, maxZoom: 15 }
-      )
+      // Zoom to gemeente — delay slightly so the left panel portal has expanded
+      // and the map canvas has resized (first click measures pre-shrink canvas otherwise)
+      const map = mapRef.current
+      setTimeout(() => {
+        if (!map) return
+        map.resize()
+        const canvas = map.getCanvas()
+        const cw = canvas.clientWidth
+        const ch = canvas.clientHeight
+        const padX = Math.round(cw * 0.08)
+        const padY = Math.round(ch * 0.08)
+        map.fitBounds(
+          [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
+          { padding: { top: padY, bottom: padY, left: padX, right: padX }, duration: 800, maxZoom: 12 }
+        )
+      }, 400) // matches 350ms portal transition + buffer
 
       // Fetch wijken from backend
       try {
@@ -1758,7 +1776,7 @@ function MapPage() {
           setWijkBoundariesVisibility(mapRef.current, true)
         }
 
-        if (options?.showLoadedToast ?? true) {
+        if (options?.showLoadedToast) {
           toast.success(`${gemeenteNaam}: ${geojson.features.length} wijken geladen`)
         }
 
@@ -1798,11 +1816,15 @@ function MapPage() {
       const map = mapRef.current
 
       if (next) {
-        // Gemeenten ON → turn off parcels (exclusive modes)
+        // Gemeenten ON → turn off parcels (exclusive modes), close any parcel panel
         if (layerState.showParcels) {
           handleParcelsLayerToggle(false)
           setParcelBoundariesVisibility(map, false)
         }
+        // Close any active panel and zoom to NL overview
+        setActivePanel(null)
+        setParcelGeometryHighlight(null)
+        map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
         return
       }
 
@@ -1818,7 +1840,7 @@ function MapPage() {
       setActivePanel(null)
       map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
     },
-    [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle]
+    [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle, setActivePanel, setParcelGeometryHighlight]
   )
 
   // Handle direct gemeente/wijk navigation from projects flow.
@@ -2128,10 +2150,10 @@ function MapPage() {
 
   return (
     <MapShell>
-      {/* Search pill — top-left */}
+      {/* Search pill — top-left, shifts right when left panel (gemeente/wijk) or right panel (parcel) is open */}
       <motion.div
-        className="absolute top-6 left-6 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
-        animate={{ x: panelOpen ? 620 : 0 }}
+        className="absolute top-6 left-8 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
+        animate={{ x: panelOpen ? 620 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <AddressSearch onSelect={handleAddressSelect} />
@@ -2139,8 +2161,8 @@ function MapPage() {
 
       {/* View toggle — bottom-left */}
       <motion.div
-        className="absolute bottom-6 left-6 z-[var(--z-search-bar)] h-12 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-3 shadow-lg"
-        animate={{ x: panelOpen ? 620 : 0 }}
+        className="absolute bottom-6 left-8 z-[var(--z-search-bar)] h-12 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-3 shadow-lg"
+        animate={{ x: panelOpen ? 620 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <LayerToggle
@@ -2247,17 +2269,11 @@ function MapPage() {
         />
       )}
 
-      {/* Score gradient legend — bottom-right */}
-      {layerState.activeParcelOverlay === 'potential' && layerState.showParcels && !!activeScanId && (
-        <div className="absolute bottom-4 right-4 z-[var(--z-map-controls)] bg-aura-glass-white/60 backdrop-blur-md rounded-lg px-3 py-2 flex items-center gap-2 border border-white/40 shadow-glass">
-          <span className="text-xs text-neutral-600">40</span>
-          <div
-            className="h-3 w-24 rounded-full"
-            style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }}
-          />
-          <span className="text-xs text-neutral-600">100</span>
-        </div>
-      )}
+      {/* Overlay color mode legend — bottom-right */}
+      <OverlayLegend
+        activeOverlay={layerState.activeParcelOverlay}
+        visible={layerState.showParcels && !!activeScanId}
+      />
 
       {/* Map detail panels — only one visible at a time */}
       {activePanel?.kind === 'gemeente' && (
@@ -2265,7 +2281,6 @@ function MapPage() {
           naam={activePanel.naam}
           code={activePanel.code}
           wijkGeojson={wijkGeojson}
-          scannedWijkNames={scannedWijkNames}
           scans={scanHistory?.scans ?? []}
           onClose={handleCloseGemeentePanel}
           onSelectWijk={handleGemeentePanelSelectWijk}

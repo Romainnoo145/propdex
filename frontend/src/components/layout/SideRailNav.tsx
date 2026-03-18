@@ -66,7 +66,7 @@ export default function SideRailNav() {
 
   return (
     /* Ghost container — TRANSPARENT, absolute center axis at 110px */
-    <div className="fixed left-0 top-0 bottom-0 w-[110px] flex flex-col items-center justify-between py-10 z-[100]">
+    <div className="fixed left-0 top-0 bottom-0 w-[130px] flex flex-col items-center justify-between py-10 z-[100]">
 
       {/* Top: Logo — centered in the 110px column */}
       <div className="w-full flex justify-center">
@@ -121,14 +121,4 @@ export default function SideRailNav() {
     </div>
   )
 }
-all duration-300 group-hover:bg-white/20" />
-            </div>
-            <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-              Uitloggen
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+

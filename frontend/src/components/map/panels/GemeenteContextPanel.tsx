@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { Users, Scale, Bell, MapPin, X } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
+import { useState, useMemo, useCallback } from 'react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { Users, Scale, Bell, MapPin, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import { LeftPanelShell } from './LeftPanelShell'
 import { DemografieModal } from './gemeente/DemografieModal'
 import { WijkenModal } from './gemeente/WijkenModal'
 import { JuridischKlimaatModal } from './gemeente/JuridischKlimaatModal'
 import { MeldingenModal } from './gemeente/MeldingenModal'
-import type { ScanListItem } from '@/lib/types/scan'
+import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 export type GemeenteCardCategory = 'demografie' | 'juridisch' | 'meldingen' | 'wijken'
 
@@ -14,192 +14,334 @@ interface GemeenteContextPanelProps {
   naam: string
   code: string
   wijkGeojson: GeoJSON.FeatureCollection | null
-  scannedWijkNames: string[]
   scans: ScanListItem[]
   onClose: () => void
   onSelectWijk: (wijkCode: string, wijkNaam: string) => void
 }
 
-const SUMMARY_CARDS: {
-  category: GemeenteCardCategory
-  icon: React.ReactNode
-  title: string
-  description: string
-}[] = [
-  {
-    category: 'demografie',
-    icon: <Users size={20} />,
-    title: 'Demografie',
-    description: 'Bevolkingsopbouw en statistieken',
-  },
-  {
-    category: 'juridisch',
-    icon: <Scale size={20} />,
-    title: 'Juridisch Klimaat',
-    description: 'Vergunningen en jurisprudentie',
-  },
-  {
-    category: 'meldingen',
-    icon: <Bell size={20} />,
-    title: 'Meldingen',
-    description: 'Bestemmingsplanwijzigingen',
-  },
-  {
-    category: 'wijken',
-    icon: <MapPin size={20} />,
-    title: 'Wijken',
-    description: 'Wijkoverzicht en scans',
-  },
+/* ── Tabs (same pattern as CategoryTabs in parcel panel) ───── */
+
+type GemeenteTab = 'overzicht' | 'demografie' | 'wijken'
+
+const TABS: { key: GemeenteTab; label: string }[] = [
+  { key: 'overzicht', label: 'Overzicht' },
+  { key: 'demografie', label: 'Demografie' },
+  { key: 'wijken', label: 'Wijken' },
 ]
+
+/* ── Animation ─────────────────────────────────────────────── */
+
+const staggerContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+}
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
+}
+
+/* ── Aggregate CBS data ────────────────────────────────────── */
+
+function aggregateInwoners(scans: ScanListItem[], gemeenteCode: string): number | null {
+  let total = 0
+  for (const s of scans) {
+    if (s.gemeente_code !== gemeenteCode || s.status !== 'completed' || !s.neighborhood_metrics) continue
+    const m = s.neighborhood_metrics as CbsNeighborhoodMetrics
+    const n = m.data?.demografie?.aantal_inwoners
+    if (typeof n === 'number') total += n
+  }
+  return total > 0 ? total : null
+}
+
+function aggregateWoz(scans: ScanListItem[], gemeenteCode: string): number | null {
+  let sum = 0
+  let count = 0
+  for (const s of scans) {
+    if (s.gemeente_code !== gemeenteCode || s.status !== 'completed' || !s.neighborhood_metrics) continue
+    const m = s.neighborhood_metrics as CbsNeighborhoodMetrics
+    const v = m.data?.gemiddelde_woz_waarde
+    if (typeof v === 'number') { sum += v; count++ }
+  }
+  return count > 0 ? Math.round(sum / count) : null
+}
+
+/* ── Component ─────────────────────────────────────────────── */
 
 export function GemeenteContextPanel({
   naam,
   code,
   wijkGeojson,
-  scannedWijkNames,
   scans,
   onClose,
   onSelectWijk,
 }: GemeenteContextPanelProps) {
+  const [activeTab, setActiveTab] = useState<GemeenteTab>('overzicht')
   const [openModal, setOpenModal] = useState<GemeenteCardCategory | null>(null)
 
   const features = wijkGeojson?.features ?? []
   const wijkCount = features.length
-  const scannedCount = scannedWijkNames.length
 
-  const handleCardClick = (category: GemeenteCardCategory) => {
-    setOpenModal(category)
-  }
+  const inwoners = useMemo(() => aggregateInwoners(scans, code), [scans, code])
+  const woz = useMemo(() => aggregateWoz(scans, code), [scans, code])
+  const completedScans = useMemo(() => scans.filter(s => s.gemeente_code === code && s.status === 'completed').length, [scans, code])
+
+  const handleSelectTab = useCallback((tab: GemeenteTab) => {
+    if (tab === 'demografie') {
+      setOpenModal('demografie')
+    } else {
+      setActiveTab(tab)
+    }
+  }, [])
 
   return (
     <>
       <LeftPanelShell onClose={onClose}>
-        <div className="p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-aura-ink">{naam}</h2>
-              <p className="text-xs text-neutral-500 mt-0.5">Gemeente · {code}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:text-aura-ink hover:bg-neutral-200/60 transition-colors"
-              aria-label="Sluiten"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Stats bar */}
-          <div className="flex gap-2 mb-5">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-neutral-200/80 text-neutral-700">
-              {wijkCount} wijken
-            </span>
-            {scannedCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100/80 text-emerald-700">
-                {scannedCount} gescand
-              </span>
-            )}
-          </div>
-
-          {/* Summary cards grid */}
-          <div className="grid grid-cols-2 gap-2.5 mb-5">
-            {SUMMARY_CARDS.map((card) => (
-              <button
-                key={card.category}
-                onClick={() => handleCardClick(card.category)}
-                className="flex flex-col items-start gap-2 rounded-xl border border-white/30 bg-white/40 p-3.5 text-left transition-all hover:bg-white/60 hover:shadow-sm group"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-aura-amber/10 text-aura-amber transition-colors group-hover:bg-aura-amber/20">
-                  {card.icon}
+        <motion.div
+          className="flex flex-col"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+        >
+          {/* ── Header (matches ParcelDetailPanel) ─────── */}
+          <motion.div variants={fadeUp} className="px-8 pt-8">
+            <div className="min-w-0 max-w-full pr-16">
+              <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
+                {naam}
+              </h2>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-widest">
+                  Gemeente
                 </span>
-                <div>
-                  <h3 className="text-sm font-medium text-aura-ink leading-tight">
-                    {card.category === 'wijken' ? `${wijkCount} ${card.title.toLowerCase()}` : card.title}
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5 leading-snug">{card.description}</p>
+                <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums">
+                  {code}
+                </span>
+              </div>
+            </div>
+
+            {/* ── Pill Tabs (same as CategoryTabs) ──────── */}
+            <div className="flex w-full h-[48px] rounded-full p-1 bg-[#F2F6F3] mt-6">
+              {TABS.map(({ key, label }) => {
+                const isActive = activeTab === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSelectTab(key)}
+                    className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
+                    style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '13px',
+                      fontWeight: isActive ? 700 : 600,
+                      letterSpacing: isActive ? '-0.01em' : '0',
+                      color: isActive ? undefined : '#94a3b8',
+                    }}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="gemeente-tab"
+                        className="absolute inset-0 rounded-full"
+                        style={{ background: '#0E1111' }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </motion.div>
+
+          {/* ── Tab Content ─────────────────────────────── */}
+          <AnimatePresence mode="wait">
+            {activeTab === 'overzicht' && (
+              <motion.div
+                key="overzicht"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                {/* 2×2 KPI Grid (styled like potentie/risico cards) */}
+                <div className="grid grid-cols-2 gap-1.5 mt-6 px-8">
+                  <KpiCard
+                    icon={<Users size={16} strokeWidth={1.5} />}
+                    color="#F9A826"
+                    value={inwoners != null ? inwoners.toLocaleString('nl-NL') : '—'}
+                    label="Inwoners"
+                    onClick={() => setOpenModal('demografie')}
+                  />
+                  <KpiCard
+                    icon={<Scale size={16} strokeWidth={1.5} />}
+                    color="#22C55E"
+                    value={woz != null ? `€${woz.toLocaleString('nl-NL')}` : '—'}
+                    label="Gem. WOZ"
+                    onClick={() => setOpenModal('juridisch')}
+                  />
+                  <KpiCard
+                    icon={<Bell size={16} strokeWidth={1.5} />}
+                    color="#3b82f6"
+                    value={completedScans > 0 ? String(completedScans) : '—'}
+                    label="Scans"
+                    onClick={() => setOpenModal('meldingen')}
+                  />
+                  <KpiCard
+                    icon={<MapPin size={16} strokeWidth={1.5} />}
+                    color="#8b5cf6"
+                    value={wijkCount > 0 ? String(wijkCount) : '—'}
+                    label="Wijken"
+                    onClick={() => setOpenModal('wijken')}
+                  />
                 </div>
-              </button>
-            ))}
-          </div>
 
-          {/* Divider */}
-          <div className="h-px bg-neutral-200/60 mb-4" />
+                {/* Quick wijk preview — first 6 wijken */}
+                <div className="px-8 mt-6 mb-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase"
+                    style={{ letterSpacing: '0.2em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    Wijken
+                  </span>
+                </div>
+                <div className="px-8 pb-6">
+                  <WijkList features={features.slice(0, 6)} onSelectWijk={onSelectWijk} />
+                  {features.length > 6 && (
+                    <button
+                      onClick={() => setActiveTab('wijken')}
+                      className="w-full mt-2 h-[40px] rounded-[14px] bg-[#F2F6F3] text-[13px] font-semibold text-[#0E1111] hover:bg-[#E8EDEB] transition-colors flex items-center justify-center gap-1"
+                    >
+                      Alle {features.length} wijken bekijken
+                      <ChevronRight size={14} className="text-slate-400" />
+                    </button>
+                  )}
+                </div>
 
-          {/* Wijk list */}
-          <div>
-            <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2.5">
-              Wijken
-            </h3>
-            {features.length === 0 ? (
-              <p className="text-sm text-neutral-500 py-2">Wijken laden...</p>
-            ) : (
-              <ul className="space-y-0.5">
-                {features.map((feature) => {
-                  const featureCode = (feature.properties?.statcode as string) ?? ''
-                  const name = (feature.properties?.statnaam as string) ?? featureCode
-                  const isScanned = scannedWijkNames.includes(name)
-                  return (
-                    <li key={featureCode}>
-                      <button
-                        onClick={() => onSelectWijk(featureCode, name)}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-aura-ink hover:bg-white/60 transition-colors flex items-center justify-between group"
-                      >
-                        <span className="truncate">{name}</span>
-                        {isScanned && (
-                          <span className="text-xs text-emerald-600 opacity-70 group-hover:opacity-100">
-                            gescand
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+                {/* Trust metadata */}
+                <div className="px-8 pb-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-300">Bron: CBS · PDOK</span>
+                    <span className="text-[9px] uppercase tracking-wider text-slate-300">{code}</span>
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </div>
-        </div>
+
+            {activeTab === 'wijken' && (
+              <motion.div
+                key="wijken"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="px-8 pt-6 pb-6"
+              >
+                <WijkList features={features} onSelectWijk={onSelectWijk} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </LeftPanelShell>
 
       {/* Modals */}
       <AnimatePresence>
         {openModal === 'demografie' && (
-          <DemografieModal
-            gemeenteNaam={naam}
-            gemeenteCode={code}
-            scans={scans}
-            onClose={() => setOpenModal(null)}
-          />
+          <DemografieModal gemeenteNaam={naam} gemeenteCode={code} scans={scans} onClose={() => setOpenModal(null)} />
         )}
         {openModal === 'wijken' && (
-          <WijkenModal
-            gemeenteNaam={naam}
-            gemeenteCode={code}
-            wijkGeojson={wijkGeojson}
-            scannedWijkNames={scannedWijkNames}
-            scans={scans}
-            onClose={() => setOpenModal(null)}
-            onSelectWijk={(c, n) => {
-              setOpenModal(null)
-              onSelectWijk(c, n)
-            }}
+          <WijkenModal gemeenteNaam={naam} gemeenteCode={code} wijkGeojson={wijkGeojson} scans={scans} onClose={() => setOpenModal(null)}
+            onSelectWijk={(c, n) => { setOpenModal(null); onSelectWijk(c, n) }}
           />
         )}
         {openModal === 'juridisch' && (
-          <JuridischKlimaatModal
-            gemeenteNaam={naam}
-            gemeenteCode={code}
-            onClose={() => setOpenModal(null)}
-          />
+          <JuridischKlimaatModal gemeenteNaam={naam} gemeenteCode={code} onClose={() => setOpenModal(null)} />
         )}
         {openModal === 'meldingen' && (
-          <MeldingenModal
-            gemeenteNaam={naam}
-            gemeenteCode={code}
-            onClose={() => setOpenModal(null)}
-          />
+          <MeldingenModal gemeenteNaam={naam} gemeenteCode={code} onClose={() => setOpenModal(null)} />
         )}
       </AnimatePresence>
     </>
+  )
+}
+
+/* ── KPI Card (matches ScoreCircleCard / KenmerkenCard style) ── */
+
+function KpiCard({
+  icon,
+  color,
+  value,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode
+  color: string
+  value: string
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col justify-between rounded-[24px] bg-white border border-[#EAEFEF] p-5 text-left transition-all duration-200 hover:shadow-sm cursor-pointer"
+    >
+      {/* Top: icon + label + chevrons */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color }}>{icon}</span>
+          <span
+            className="text-[11px] font-extrabold uppercase"
+            style={{ letterSpacing: '0.15em', color: '#94a3b8' }}
+          >
+            {label}
+          </span>
+        </div>
+        <div className="flex flex-col -space-y-1 text-slate-200">
+          <ChevronUp size={14} strokeWidth={2} />
+          <ChevronDown size={14} strokeWidth={2} />
+        </div>
+      </div>
+
+      {/* Value */}
+      <div className="mt-3">
+        <span
+          className="text-[32px] font-black tracking-tighter tabular-nums leading-none"
+          style={{ color: value !== '—' ? '#0E1111' : '#cbd5e1' }}
+        >
+          {value}
+        </span>
+      </div>
+    </button>
+  )
+}
+
+/* ── Wijk List (clean rows, no boxes) ──────────────────────── */
+
+function WijkList({
+  features,
+  onSelectWijk,
+}: {
+  features: GeoJSON.Feature[]
+  onSelectWijk: (code: string, naam: string) => void
+}) {
+  if (features.length === 0) {
+    return <p className="text-[13px] text-slate-400 py-4 text-center">Wijken laden...</p>
+  }
+
+  return (
+    <div>
+      {features.map((feature) => {
+        const featureCode = (feature.properties?.statcode as string) ?? ''
+        const name = (feature.properties?.statnaam as string) ?? featureCode
+        return (
+          <button
+            key={featureCode}
+            onClick={() => onSelectWijk(featureCode, name)}
+            className="group w-full flex items-center justify-between py-3 border-b border-slate-100/80 last:border-0 text-left transition-colors duration-150 hover:bg-slate-50/50"
+          >
+            <span className="text-[13px] font-medium text-slate-700 truncate">
+              {name}
+            </span>
+            <ChevronRight size={14} className="text-slate-200 group-hover:text-[#F9A826] shrink-0 transition-colors duration-150" />
+          </button>
+        )
+      })}
+    </div>
   )
 }

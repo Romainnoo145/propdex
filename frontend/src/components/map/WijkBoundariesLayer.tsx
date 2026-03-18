@@ -63,8 +63,8 @@ export function addWijkBoundariesLayer(
       type: 'fill',
       source: WIJK_SOURCE_ID,
       paint: {
-        'fill-color': '#10b981',
-        'fill-opacity': 0,
+        'fill-color': '#d97706',
+        'fill-opacity': 0.08,
       },
     },
     beforeLayer
@@ -77,10 +77,10 @@ export function addWijkBoundariesLayer(
       type: 'line',
       source: WIJK_SOURCE_ID,
       paint: {
-        'line-color': '#10b981', // Emerald green
-        'line-width': 1.5,
-        'line-dasharray': [4, 3],
-        'line-opacity': 0.6,
+        'line-color': '#d97706', // Amber-600 — visible as highlighted context
+        'line-width': 2,
+        'line-dasharray': [3, 2],
+        'line-opacity': 0.85,
       },
     },
     beforeLayer

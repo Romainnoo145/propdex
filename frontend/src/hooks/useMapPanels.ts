@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { ScanListItem } from '@/lib/types/scan'
 import { calculateBboxFromGeometry } from '@/lib/geo-utils'
+import { clearGemeenteSelection } from '@/components/map/GemeenteBoundariesLayer'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -65,7 +66,10 @@ export function useMapPanels({
         const bbox = calculateBboxFromGeometry(geom) as [number, number, number, number]
         removeScanAreaHighlight(mapRef.current)
         addScanAreaHighlight(mapRef.current, geom)
-        mapRef.current.fitBounds(bbox, { padding: 50, duration: 600, maxZoom: 16 })
+        const canvas = mapRef.current.getCanvas()
+        const padX = Math.round(canvas.clientWidth * 0.08)
+        const padY = Math.round(canvas.clientHeight * 0.08)
+        mapRef.current.fitBounds(bbox, { padding: { top: padY, bottom: padY, left: padX, right: padX }, duration: 600, maxZoom: 15 })
       }
 
       const latestScan =
@@ -103,6 +107,15 @@ export function useMapPanels({
     })
     if (mapRef.current) {
       removeScanAreaHighlight(mapRef.current)
+      // Zoom back to gemeente bounds
+      const map = mapRef.current
+      const canvas = map.getCanvas()
+      const padX = Math.round(canvas.clientWidth * 0.08)
+      const padY = Math.round(canvas.clientHeight * 0.08)
+      map.fitBounds(
+        currentGemeente.bbox,
+        { padding: { top: padY, bottom: padY, left: padX, right: padX }, duration: 800, maxZoom: 12 }
+      )
     }
   }, [activeGemeenteRef, mapRef, removeScanAreaHighlight])
 
@@ -112,6 +125,7 @@ export function useMapPanels({
     setActiveGemeente(null)
     if (mapRef.current) {
       const map = mapRef.current
+      clearGemeenteSelection(map)
       if (map.getSource('cbs-wijken')) {
         removeWijkBoundariesLayer(map)
         setWijkGeojson(null)

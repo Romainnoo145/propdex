@@ -102,3 +102,10 @@ Manual verification:
 - `frontend/src/components/map/panels/GemeenteContextPanel.tsx` (~150-200 lines)
 - Updated map.tsx with GemeenteContextPanel replacing GemeenteMapPanel
 - GemeenteMapPanel.tsx deleted
+
+## Observability Impact
+
+- **Signals changed**: `setLeftPanelOpen(true/false)` in MapContext signals layout that left panel is open — used for search bar shifting and map padding
+- **activePanel state**: Inspect `useMapPanels` hook in React DevTools to see current `activePanel.kind` (`gemeente` | `wijk` | `parcel` | null)
+- **Failure inspection**: Panel doesn't open → check `activePanel` is being set. If null after gemeente click, inspect `inspectorMode` state and map layer click bindings. CBS data shows "—" → check scan history has completed scans with `neighborhood_metrics`
+- **inspectorParcel TDZ**: If "Cannot access 'inspectorParcel' before initialization" appears, the useEffect referencing it was moved above the `useMapPanels()` call — must stay below it

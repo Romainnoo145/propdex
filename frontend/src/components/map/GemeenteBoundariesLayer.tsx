@@ -14,6 +14,8 @@ let provincieGeoJSONCache: GeoJSON.FeatureCollection | null = null;
 
 // Track hovered gemeente for feature-state management
 let hoveredGemeenteId: string | null = null;
+// Track selected (clicked) gemeente for persistent highlight
+let selectedGemeenteId: string | null = null;
 
 /**
  * Fetch CBS gemeente boundaries from PDOK WFS.
@@ -113,6 +115,8 @@ export function addGemeenteBoundariesLayer(
         'fill-color': '#d4a843',
         'fill-opacity': [
           'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          0.35, // Selected — constant highlight
           ['boolean', ['feature-state', 'hover'], false],
           0.4, // Hover opacity
           0.15, // Default opacity
@@ -130,8 +134,18 @@ export function addGemeenteBoundariesLayer(
       source: GEMEENTE_SOURCE_ID,
       paint: {
         'line-color': '#d4a843',
-        'line-width': 1,
-        'line-opacity': 0.5,
+        'line-width': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          2.5,
+          1,
+        ],
+        'line-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          0.9,
+          0.5,
+        ],
       },
     },
     beforeLayer
@@ -162,6 +176,20 @@ export function addGemeenteBoundariesLayer(
         geometry &&
         (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon')
       ) {
+        // Clear previous selection
+        if (selectedGemeenteId) {
+          map.setFeatureState(
+            { source: GEMEENTE_SOURCE_ID, id: selectedGemeenteId },
+            { selected: false }
+          );
+        }
+        // Set new selection
+        selectedGemeenteId = statcode;
+        map.setFeatureState(
+          { source: GEMEENTE_SOURCE_ID, id: selectedGemeenteId },
+          { selected: true }
+        );
+
         const bbox = calculateBboxFromGeometry(geometry);
         onGemeenteClick(statcode, statnaam, bbox, geometry);
       }
@@ -226,9 +254,12 @@ export function addGemeenteBoundariesLayer(
  * @param map - MapLibre GL JS map instance
  */
 export function removeGemeenteBoundariesLayer(map: maplibregl.Map): void {
-  // Clear hover state and reset cursor
+  // Clear hover and selection state
   if (hoveredGemeenteId) {
     hoveredGemeenteId = null;
+  }
+  if (selectedGemeenteId) {
+    selectedGemeenteId = null;
   }
   map.getCanvas().style.cursor = '';
 
@@ -266,5 +297,18 @@ export function setGemeenteBoundariesVisibility(
 
   if (map.getLayer(GEMEENTE_LINE_LAYER)) {
     map.setLayoutProperty(GEMEENTE_LINE_LAYER, 'visibility', visibility);
+  }
+}
+
+/**
+ * Clear the selected gemeente highlight (call when panel closes).
+ */
+export function clearGemeenteSelection(map: maplibregl.Map): void {
+  if (selectedGemeenteId && map.getSource(GEMEENTE_SOURCE_ID)) {
+    map.setFeatureState(
+      { source: GEMEENTE_SOURCE_ID, id: selectedGemeenteId },
+      { selected: false }
+    );
+    selectedGemeenteId = null;
   }
 }

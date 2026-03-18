@@ -65,7 +65,7 @@
   - Verify: `cd frontend && npx tsc --noEmit` passes. App loads, all existing panel interactions work identically.
   - Done when: map.tsx is shorter by ~80-100 lines, useMapPanels hook manages ActivePanel state, all panel transitions work.
 
-- [ ] **T02: Create GemeenteContextPanel with summary cards on left side** `est:1h`
+- [x] **T02: Create GemeenteContextPanel with summary cards on left side** `est:1h`
   - Why: The current GemeenteMapPanel is a right-side overlay with a simple wijk list. S02 requires a left-side panel (~400px) with summary cards for 4 intelligence categories. This replaces GemeenteMapPanel.
   - Files: `frontend/src/components/map/panels/GemeenteContextPanel.tsx`, `frontend/src/components/map/panels/LeftPanelShell.tsx`, `frontend/src/routes/_authenticated/map.tsx`
   - Do:
