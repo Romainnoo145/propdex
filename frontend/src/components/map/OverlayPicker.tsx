@@ -105,7 +105,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
       {/* Trigger */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2.5 h-10 px-3.5 rounded-xl shadow-lg bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 text-aura-ink/80 hover:bg-white/60 transition-colors duration-200"
+        className="flex items-center gap-2.5 h-10 px-3.5 rounded-xl shadow-lg bg-white border border-neutral-200 text-aura-ink hover:bg-neutral-50 transition-colors duration-200"
         aria-label="Kleurmodus kiezen"
       >
         <Layers className="h-4 w-4 shrink-0" />
@@ -121,7 +121,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 min-w-[160px] bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-xl shadow-lg overflow-hidden py-0.5"
+            className="absolute bottom-full right-0 mb-2 min-w-[160px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-0.5"
           >
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id

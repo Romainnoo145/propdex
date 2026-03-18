@@ -2212,7 +2212,7 @@ function MapPage() {
     <MapShell>
       {/* Search pill — top-left, shifts right when left panel (gemeente/wijk) or right panel (parcel) is open */}
       <motion.div
-        className="absolute top-6 left-8 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
+        className="absolute top-6 left-8 z-[var(--z-search-bar)] h-14 bg-white border border-neutral-200 rounded-full flex items-center px-4 shadow-lg"
         animate={{ x: panelOpen ? 636 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
@@ -2221,7 +2221,7 @@ function MapPage() {
 
       {/* View toggle — bottom-left */}
       <motion.div
-        className="absolute bottom-6 left-8 z-[var(--z-search-bar)] h-12 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-3 shadow-lg"
+        className="absolute bottom-6 left-8 z-[var(--z-search-bar)] h-12 bg-white border border-neutral-200 rounded-full flex items-center px-3 shadow-lg"
         animate={{ x: panelOpen ? 636 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
