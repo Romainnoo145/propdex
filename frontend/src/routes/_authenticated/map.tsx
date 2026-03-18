@@ -510,9 +510,18 @@ function MapPage() {
     layerActions.setGemeenten(false)
     const map = mapRef.current
     if (map) {
-      setGemeenteBoundariesVisibility(map, false)
+      // Force-hide gemeente boundaries (bypass isStyleLoaded guard)
+      try {
+        if (map.getLayer('gemeente-fill')) {
+          map.setLayoutProperty('gemeente-fill', 'visibility', 'none')
+        }
+        if (map.getLayer('gemeente-line')) {
+          map.setLayoutProperty('gemeente-line', 'visibility', 'none')
+        }
+      } catch { /* style not loaded — layers will be hidden on next idle */ }
       clearGemeenteSelection(map)
-      if (wijkGeojsonRef.current) {
+      // Remove wijk boundaries if source exists (don't rely on ref alone)
+      if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
         removeWijkBoundariesLayer(map)
         setWijkGeojson(null)
       }
@@ -2153,7 +2162,7 @@ function MapPage() {
       {/* Search pill — top-left, shifts right when left panel (gemeente/wijk) or right panel (parcel) is open */}
       <motion.div
         className="absolute top-6 left-8 z-[var(--z-search-bar)] h-14 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-4 shadow-lg"
-        animate={{ x: panelOpen ? 620 : leftPanelOpen ? 636 : 0 }}
+        animate={{ x: panelOpen ? 636 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <AddressSearch onSelect={handleAddressSelect} />
@@ -2162,7 +2171,7 @@ function MapPage() {
       {/* View toggle — bottom-left */}
       <motion.div
         className="absolute bottom-6 left-8 z-[var(--z-search-bar)] h-12 bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-full flex items-center px-3 shadow-lg"
-        animate={{ x: panelOpen ? 620 : leftPanelOpen ? 636 : 0 }}
+        animate={{ x: panelOpen ? 636 : leftPanelOpen ? 636 : 0 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <LayerToggle

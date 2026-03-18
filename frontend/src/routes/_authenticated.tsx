@@ -101,15 +101,16 @@ function AuthenticatedLayout() {
         {/* The App Container: floats on the desk with breathing room */}
         <div className="relative h-full pt-4 pr-4 pb-4">
           {/* Content area — flex row: [left panel slot] + [map] + [right panel slot] */}
-          <div className="relative h-full ml-[130px] min-w-0 flex gap-4">
+          <div className="relative h-full ml-[130px] min-w-0 flex">
             {/* Left panel portal target — gemeente/wijk context panels rendered here via createPortal */}
             <div
               ref={leftPanelPortalRef}
               className="shrink-0 h-full relative"
               style={{
                 width: leftPanelOpen ? '620px' : '0px',
+                marginRight: leftPanelOpen ? '16px' : '0px',
                 overflow: leftPanelOpen ? 'visible' : 'hidden',
-                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1), margin-right 350ms cubic-bezier(0.4, 0, 0.2, 1)',
                 zIndex: 10,
               }}
             />
@@ -120,8 +121,9 @@ function AuthenticatedLayout() {
               className="shrink-0 h-full relative"
               style={{
                 width: panelOpen ? '620px' : '0px',
+                marginRight: panelOpen ? '16px' : '0px',
                 overflow: panelOpen ? 'visible' : 'hidden',
-                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1), margin-right 350ms cubic-bezier(0.4, 0, 0.2, 1)',
                 zIndex: 10,
               }}
             />
