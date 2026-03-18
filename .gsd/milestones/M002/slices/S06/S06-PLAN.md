@@ -46,7 +46,7 @@
 
 ## Tasks
 
-- [ ] **T01: WijkMapPanel data-first redesign with pill tabs and CBS cards** `est:1h`
+- [x] **T01: WijkMapPanel data-first redesign with pill tabs and CBS cards** `est:1h`
   - Why: WijkMapPanel currently shows only CbsNeighborhoodCard and JurisprudenceSection without tabs or KPI grid. Need pill tabs, KPI summary, and all 6 CBS cards inline.
   - Files: `frontend/src/components/map/panels/WijkMapPanel.tsx`
   - Do: Add pill tabs (Overzicht/Demografie/Juridisch) with framer-motion layoutId="wijk-tab". Add KPI grid to Overzicht (inwoners, WOZ, scan count from latestScan). Move JurisprudenceSection to Juridisch tab. Add all 6 CBS cards to Demografie tab: CbsNeighborhoodCard (already imported), NabijheidCard, CriminaliteitCard, AgeDistributionCard, IncomeCard, HouseholdCard. Guard each with optional field check (metrics.nabijheid && ...). Keep inside hasCompletedScan guard.

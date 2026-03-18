@@ -161,3 +161,9 @@ Browser (manual, requires dev server + backend):
 
 - `frontend/src/components/map/panels/WijkMapPanel.tsx` — expanded from 177 to ~300-350 lines with pill tabs, KPI grid, 6 CBS cards across 3 tabs
 - TypeScript compiles clean
+
+## Observability Impact
+
+- **New signals:** CBS card sections appear/disappear based on `neighborhood_metrics` sub-field availability — absent sections indicate missing data, not a bug
+- **Inspection:** React DevTools → `activeTab` state on WijkMapPanel shows current tab. KPI cards show "—" when metrics fields are null.
+- **Failure visibility:** If all CBS cards on Demografie tab are absent, `latestScan.neighborhood_metrics` is null — check scan backend for CBS data fetch failures
