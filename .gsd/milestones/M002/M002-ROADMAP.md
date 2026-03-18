@@ -90,7 +90,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Nav Simplification** `risk:low` `depends:[]`
+- [x] **S01: Nav Simplification** `risk:low` `depends:[]`
   > After this: SideRailNav shows 3 items (Kaart, Opgeslagen, Jurisprudentie), BottomTabNav matches, /projecten and /rapporten routes are deleted, /meldingen route still exists but is removed from nav (killed in S03), no broken links anywhere in the app
 
 - [ ] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
