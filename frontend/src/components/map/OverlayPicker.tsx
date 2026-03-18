@@ -121,7 +121,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 min-w-[180px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-1"
+            className="absolute bottom-full right-0 mb-2 min-w-[160px] bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 rounded-xl shadow-lg overflow-hidden py-0.5"
           >
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id
@@ -129,7 +129,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
                 <button
                   key={overlay.id}
                   onClick={() => handleSelect(overlay.id)}
-                  className={`w-full text-left px-3.5 py-2 transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 transition-colors ${
                     isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
                   }`}
                 >
