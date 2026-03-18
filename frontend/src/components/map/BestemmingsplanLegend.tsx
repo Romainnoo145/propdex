@@ -13,7 +13,7 @@ export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
   if (!visible) return null
 
   return (
-    <div className="absolute bottom-16 right-4 z-[var(--z-map-controls)] w-44 bg-white border border-neutral-200 rounded-xl shadow-lg py-2 px-3 max-h-80 overflow-y-auto">
+    <div className="absolute bottom-16 right-4 z-[var(--z-map-controls)] min-w-[170px] bg-white border border-neutral-200 rounded-xl shadow-lg py-2 px-3 max-h-80 overflow-y-auto">
       <div className="space-y-1">
         {SVBP2012_HOOFDGROEPEN.map((hoofdgroep) => (
           <div key={hoofdgroep.key} className="flex items-center gap-2">
