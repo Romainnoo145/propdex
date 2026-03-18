@@ -30,15 +30,13 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
     case 'potential':
       return (
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-neutral-500">40</span>
-          <div className="h-2 w-12 rounded-full" style={{ background: 'linear-gradient(to right, #f59e0b, #84cc16, #16a34a)' }} />
-          <span className="text-[10px] text-neutral-500">100</span>
+          <div className="h-2 w-10 rounded-full" style={{ background: 'linear-gradient(to right, #f59e0b, #16a34a)' }} />
+          <span className="text-[10px] text-neutral-500">Potentie</span>
         </div>
       )
     case 'built_status':
       return (
         <div className="flex items-center gap-1.5">
-          <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">Bebouwd</span>
           <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
         </div>
       )
@@ -46,11 +44,9 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
       return (
         <div className="flex items-center gap-1.5">
           <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Opgeslagen</span>
-          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Niet</span>
         </div>
       )
     case 'bestemmingsplan':
-      return null
     default:
       return null
   }
