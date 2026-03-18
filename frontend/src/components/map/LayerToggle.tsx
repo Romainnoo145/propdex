@@ -359,7 +359,7 @@ function LayerToggle({
         {showParcels && (
           <>
             <div className="h-5 w-px bg-white/30 shrink-0" />
-            <div className="relative" ref={overlayMenuRef}>
+            <div className="relative flex items-center" ref={overlayMenuRef}>
               <button
                 onClick={() => setOverlayMenuOpen((prev) => !prev)}
                 className={`relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
@@ -371,37 +371,39 @@ function LayerToggle({
               >
                 <span className="whitespace-nowrap">{activeOverlayEntry?.label ?? 'Potentie'}</span>
                 <ChevronUp
-                  className={`h-4 w-4 transition-transform duration-200 ${overlayMenuOpen ? '' : 'rotate-180'}`}
+                  className={`h-4 w-4 transition-transform duration-200 ${overlayMenuOpen ? 'rotate-90' : '-rotate-90'}`}
                 />
               </button>
 
-              {/* Dropdown — opens upward */}
+              {/* Horizontal expand — extends toolbar to the right */}
               <AnimatePresence>
                 {overlayMenuOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute bottom-full left-0 mb-2 min-w-[180px] bg-white/90 backdrop-blur-xl border border-white/40 rounded-xl shadow-lg overflow-hidden"
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                    className="overflow-hidden flex items-center"
                   >
-                    {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
-                      const isActive = activeParcelOverlay === overlay.id
-                      return (
-                        <button
-                          key={overlay.id}
-                          onClick={() => handleOverlaySelect(overlay.id)}
-                          className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                            isActive
-                              ? 'bg-aura-amber/15 text-aura-amber font-medium'
-                              : 'text-aura-ink/80 hover:bg-white/50'
-                          }`}
-                        >
-                          <div className="font-medium text-[13px]">{overlay.label}</div>
-                          <div className="text-[11px] text-neutral-500 leading-tight">{overlay.description}</div>
-                        </button>
-                      )
-                    })}
+                    <div className="h-5 w-px bg-white/30 shrink-0 mx-1" />
+                    <div className="flex items-center gap-0.5">
+                      {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
+                        const isActive = activeParcelOverlay === overlay.id
+                        return (
+                          <button
+                            key={overlay.id}
+                            onClick={() => handleOverlaySelect(overlay.id)}
+                            className={`whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 ${
+                              isActive
+                                ? 'bg-aura-amber text-white'
+                                : 'text-aura-ink/60 hover:text-aura-ink hover:bg-white/30'
+                            }`}
+                          >
+                            {overlay.label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
