@@ -64,16 +64,19 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
         </div>
       )
     case 'bestemmingsplan':
-      return null // BestemmingsplanLegend component handles this
+      return null
     default:
       return null
   }
 }
 
+/* ── Fixed width so button and popover match ── */
+const PICKER_WIDTH = 'w-[280px]'
+
 /**
  * Floating layer-picker button (bottom-right of map).
  * Shows active overlay label + inline legend.
- * Click opens a compact card with radio-style overlay options.
+ * Click opens a compact card with overlay options — same width as button.
  */
 export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPickerProps) {
   const [open, setOpen] = useState(false)
@@ -102,22 +105,20 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
 
   return (
     <div ref={ref} className="absolute bottom-4 right-4 z-[var(--z-map-controls)]">
-      {/* Trigger — icon + label + inline legend */}
+      {/* Trigger — fixed width, icon + label + inline legend */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2.5 h-10 px-3.5 rounded-xl transition-colors duration-200 shadow-lg ${
-          open
-            ? 'bg-aura-amber text-white'
-            : 'bg-white/70 backdrop-blur-xl border border-white/40 text-aura-ink/80 hover:bg-white/90'
-        }`}
+        className={`${PICKER_WIDTH} flex items-center gap-2.5 h-10 px-3.5 rounded-xl transition-colors duration-200 shadow-lg bg-white/40 backdrop-blur-2xl border border-white/30 ring-1 ring-inset ring-white/30 text-aura-ink/80 hover:bg-white/60`}
         aria-label="Kleurmodus kiezen"
       >
         <Layers className="h-4 w-4 shrink-0" />
         <span className="text-[13px] font-medium">{activeLabel}</span>
-        {!open && <InlineLegend overlay={activeOverlay} />}
+        <div className="ml-auto">
+          <InlineLegend overlay={activeOverlay} />
+        </div>
       </button>
 
-      {/* Popover card — opens upward */}
+      {/* Popover card — same width, opens upward */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -125,38 +126,23 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 w-56 bg-white/90 backdrop-blur-xl border border-white/40 rounded-2xl shadow-lg overflow-hidden py-1.5"
+            className={`${PICKER_WIDTH} absolute bottom-full right-0 mb-2 bg-white/90 backdrop-blur-xl border border-white/40 rounded-2xl shadow-lg overflow-hidden py-1`}
           >
-            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-              Kleurmodus
-            </div>
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id
               return (
                 <button
                   key={overlay.id}
                   onClick={() => handleSelect(overlay.id)}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
+                  className={`w-full text-left px-3.5 py-1.5 transition-colors ${
                     isActive
                       ? 'bg-aura-amber/10'
                       : 'hover:bg-neutral-50'
                   }`}
                 >
-                  <div
-                    className={`h-3 w-3 rounded-full border-2 flex-shrink-0 ${
-                      isActive
-                        ? 'border-aura-amber bg-aura-amber'
-                        : 'border-neutral-300 bg-transparent'
-                    }`}
-                  />
-                  <div>
-                    <div className={`text-[13px] leading-tight ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/80'}`}>
-                      {overlay.label}
-                    </div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">
-                      {overlay.description}
-                    </div>
-                  </div>
+                  <span className={`text-[12px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
+                    {overlay.label}
+                  </span>
                 </button>
               )
             })}
