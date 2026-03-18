@@ -12,15 +12,15 @@
     "pid": 864781
   },
   {
-    "id": "f16da2fa",
+    "id": "70dd487f",
     "label": "vite-wt",
     "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/.gsd/worktrees/M002/frontend && npx vite --port 9300",
     "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
-    "startedAt": 1773788571772,
+    "startedAt": 1773792812236,
     "processType": "server",
     "group": null,
     "readyPattern": null,
     "readyPort": 9300,
-    "pid": 872879
+    "pid": 887279
   }
 ]
