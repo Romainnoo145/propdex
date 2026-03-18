@@ -39,7 +39,7 @@
   - Verify: `cd frontend && npx tsc --noEmit`. Click Demografie card → modal with CBS data. Click Wijken card → modal with wijk list. Close → back to panel.
   - Done when: Two modals render with real data, modal shell is reusable for T02.
 
-- [ ] **T02: Juridisch Klimaat + Meldingen modals, kill /meldingen route** `est:1.5h`
+- [x] **T02: Juridisch Klimaat + Meldingen modals, kill /meldingen route** `est:1.5h`
   - Why: These two modals embed existing complex components (JurisprudenceSection, infinite scroll feed). The meldingen embedding is the most complex part — the existing 1,195-line route has infinite scroll, read tracking, and filtering that must be preserved in modal form. Killing /meldingen route is bundled here since the feature is now modal-only.
   - Files: `frontend/src/components/map/panels/gemeente/JuridischKlimaatModal.tsx` (new), `frontend/src/components/map/panels/gemeente/MeldingenModal.tsx` (new), `frontend/src/components/map/panels/GemeenteContextPanel.tsx`, `frontend/src/routes/_authenticated/meldingen.tsx`
   - Do:
