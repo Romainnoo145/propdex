@@ -7,6 +7,7 @@ export type ParcelOverlayLayerId =
   | 'vacancy_signal'
   | 'build_capacity'
   | 'foundation_risk'
+  | 'bestemmingsplan'
 
 export interface PersistedMapLayerState {
   basemap: BaseMapLayerId
@@ -49,6 +50,11 @@ export const MAP_LAYER_CATALOG = {
       id: 'foundation_risk' as const,
       label: 'Funderingsrisico',
       description: 'Indicatief risico op basis van bouwjaar (pre-1970)',
+    },
+    {
+      id: 'bestemmingsplan' as const,
+      label: 'Bestemmingsplan',
+      description: 'Bestemmingsvlakken en functieaanduidingen',
     },
   ],
   boundaryOverlays: [

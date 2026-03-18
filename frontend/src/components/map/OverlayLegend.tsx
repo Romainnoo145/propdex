@@ -83,6 +83,15 @@ function FoundationRiskLegend() {
   )
 }
 
+function BestemmingsplanLegendEntry() {
+  return (
+    <div className="flex items-center gap-3">
+      <Swatch color="#6366F1" label="Bestemming" />
+      <Swatch color="#818CF8" label="Functie" />
+    </div>
+  )
+}
+
 const LEGEND_MAP: Record<ParcelOverlayLayerId, () => React.JSX.Element> = {
   potential: PotentialLegend,
   built_status: BuiltStatusLegend,
@@ -90,10 +99,13 @@ const LEGEND_MAP: Record<ParcelOverlayLayerId, () => React.JSX.Element> = {
   vacancy_signal: VacancySignalLegend,
   build_capacity: BuildCapacityLegend,
   foundation_risk: FoundationRiskLegend,
+  bestemmingsplan: BestemmingsplanLegendEntry,
 }
 
 export default function OverlayLegend({ activeOverlay, visible }: OverlayLegendProps) {
   if (!visible || !activeOverlay) return null
+  // Bestemmingsplan has its own dedicated BestemmingsplanLegend component
+  if (activeOverlay === 'bestemmingsplan') return null
 
   const LegendComponent = LEGEND_MAP[activeOverlay]
   if (!LegendComponent) return null

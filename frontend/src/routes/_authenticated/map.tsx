@@ -1962,14 +1962,19 @@ function MapPage() {
         // Show layer
         setBestemmingsplanVisibility(map, true)
         layerActions.setBestemmingsplan(true)
+        layerActions.setActiveParcelOverlay('bestemmingsplan')
       } else {
         // Hide layer
         setBestemmingsplanVisibility(map, false)
         layerActions.setBestemmingsplan(false)
         setZoneInfo(null)
+        // Revert to default overlay if bestemmingsplan was active
+        if (layerState.activeParcelOverlay === 'bestemmingsplan') {
+          layerActions.setActiveParcelOverlay('potential')
+        }
       }
     },
-    [layerState.showBestemmingsplan, layerActions, mapRef]
+    [layerState.showBestemmingsplan, layerState.activeParcelOverlay, layerActions, mapRef]
   )
 
   // BAG Panden layer toggle handler

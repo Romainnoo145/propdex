@@ -83,14 +83,15 @@ function ToggleButton({ active, sectionId, onClick, glow = false, children }: To
   )
 }
 
-/** Map ParcelOverlayLayerId → internal setParcelOverlayMode key */
-const OVERLAY_TO_MODE: Record<ParcelOverlayLayerId, 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation'> = {
+/** Map ParcelOverlayLayerId → internal setParcelOverlayMode key (null = handled separately) */
+const OVERLAY_TO_MODE: Record<ParcelOverlayLayerId, 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | null> = {
   potential: 'score',
   built_status: 'built',
   report_coverage: 'report',
   vacancy_signal: 'vacancy',
   build_capacity: 'capacity',
   foundation_risk: 'foundation',
+  bestemmingsplan: null, // handled via onBestemmingsplanToggle
 }
 
 function LayerToggle({
@@ -255,15 +256,16 @@ function LayerToggle({
   ])
 
   // Ensure score overlay is active when parcels are on but no overlay is selected
-  const showScore = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
-  const showBuiltStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[1].id
-  const showReportStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
-  const showVacancySignal = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
-  const showBuildCapacity = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
-  const showFoundationRisk = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[5].id
+  const showScore = activeParcelOverlay === 'potential'
+  const showBuiltStatus = activeParcelOverlay === 'built_status'
+  const showReportStatus = activeParcelOverlay === 'report_coverage'
+  const showVacancySignal = activeParcelOverlay === 'vacancy_signal'
+  const showBuildCapacity = activeParcelOverlay === 'build_capacity'
+  const showFoundationRisk = activeParcelOverlay === 'foundation_risk'
+  const isBestemmingsplanActive = activeParcelOverlay === 'bestemmingsplan'
 
   const hasActiveOverlay =
-    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity || showFoundationRisk
+    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity || showFoundationRisk || isBestemmingsplanActive
 
   // Derived: ensures parcels always have an overlay when visible
   const needsDefaultOverlay = useMemo(
@@ -296,6 +298,8 @@ function LayerToggle({
       onVacancySignalToggle?.(false)
       onBuildCapacityToggle?.(false)
       onFoundationRiskToggle?.(false)
+      // Turn off bestemmingsplan when parcels go off
+      if (showBestemmingsplan) onBestemmingsplanToggle()
     }
   }
 
@@ -310,13 +314,21 @@ function LayerToggle({
 
   const handleOverlaySelect = useCallback(
     (overlayId: ParcelOverlayLayerId) => {
-      const mode = OVERLAY_TO_MODE[overlayId]
-      if (mode) {
-        setParcelOverlayMode(mode)
+      if (overlayId === 'bestemmingsplan') {
+        // Bestemmingsplan: turn off score overlays, turn on bestemmingsplan
+        setParcelOverlayMode('none')
+        if (!showBestemmingsplan) onBestemmingsplanToggle()
+      } else {
+        // Score overlay: turn off bestemmingsplan if active, switch to new mode
+        if (showBestemmingsplan) onBestemmingsplanToggle()
+        const mode = OVERLAY_TO_MODE[overlayId]
+        if (mode) {
+          setParcelOverlayMode(mode)
+        }
       }
       setOverlayMenuOpen(false)
     },
-    [setParcelOverlayMode]
+    [setParcelOverlayMode, showBestemmingsplan, onBestemmingsplanToggle]
   )
 
   return (
@@ -343,27 +355,15 @@ function LayerToggle({
           Perceel
         </ToggleButton>
 
-        {/* Intelligence layer — only when parcels active */}
-        {showParcels && (
-          <ToggleButton
-            active={showBestemmingsplan}
-            sectionId="parceel"
-            onClick={onBestemmingsplanToggle}
-            glow
-          >
-            Bestemmingsplan
-          </ToggleButton>
-        )}
-
         {/* Overlay mode selector — only when parcels active */}
         {showParcels && (
           <div className="relative" ref={overlayMenuRef}>
             <button
               onClick={() => setOverlayMenuOpen((prev) => !prev)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-full transition-colors duration-200 ${
+              className={`relative flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
                 overlayMenuOpen
-                  ? 'bg-aura-amber/20 text-aura-amber'
-                  : 'text-aura-ink/70 hover:text-aura-ink hover:bg-white/20'
+                  ? 'text-aura-amber'
+                  : 'text-aura-ink/70 hover:text-aura-ink hover:scale-105'
               }`}
               aria-label="Kleurmodus kiezen"
             >
