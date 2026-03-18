@@ -93,7 +93,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Nav Simplification** `risk:low` `depends:[]`
   > After this: SideRailNav shows 3 items (Kaart, Opgeslagen, Jurisprudentie), BottomTabNav matches, /projecten and /rapporten routes are deleted, /meldingen route still exists but is removed from nav (killed in S03), no broken links anywhere in the app
 
-- [ ] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
+- [x] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
   > After this: Clicking a gemeente boundary opens a ~400px left panel via panelPortalRef with summary cards (Demografie, Juridisch Klimaat, Meldingen, Wijken). Panel closes when clicking elsewhere or selecting a parcel. ParcelDetailPanel works unchanged. map.tsx panel orchestration extracted into useMapPanels hook.
 
 - [ ] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
