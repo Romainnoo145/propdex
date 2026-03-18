@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Layers, TrendingUp, Building2, FileText, DoorOpen, Ruler, ShieldAlert, Map } from 'lucide-react'
+import { Layers, TrendingUp, Building2, Map } from 'lucide-react'
 import { MAP_LAYER_CATALOG } from '@/lib/map/layers'
 import type { ParcelOverlayLayerId } from '@/lib/map/layers'
 
@@ -12,10 +12,10 @@ interface OverlayPickerProps {
 const OVERLAY_ICONS: Record<ParcelOverlayLayerId, React.ComponentType<{ className?: string }>> = {
   potential: TrendingUp,
   built_status: Building2,
-  report_coverage: FileText,
-  vacancy_signal: DoorOpen,
-  build_capacity: Ruler,
-  foundation_risk: ShieldAlert,
+  report_coverage: Building2,
+  vacancy_signal: Building2,
+  build_capacity: Building2,
+  foundation_risk: Building2,
   bestemmingsplan: Map,
 }
 
@@ -40,37 +40,6 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
         <div className="flex items-center gap-1.5">
           <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">Bebouwd</span>
           <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
-        </div>
-      )
-    case 'report_coverage':
-      return (
-        <div className="flex items-center gap-1.5">
-          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Rapport</span>
-          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Geen</span>
-        </div>
-      )
-    case 'vacancy_signal':
-      return (
-        <div className="flex items-center gap-1.5">
-          <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
-          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Leegstaand</span>
-          <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">In gebruik</span>
-        </div>
-      )
-    case 'build_capacity':
-      return (
-        <div className="flex items-center gap-1.5">
-          <Dot color="#16a34a" /><span className="text-[10px] text-neutral-500">Hoog</span>
-          <Dot color="#eab308" /><span className="text-[10px] text-neutral-500">Middel</span>
-          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Laag</span>
-        </div>
-      )
-    case 'foundation_risk':
-      return (
-        <div className="flex items-center gap-1.5">
-          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Hoog</span>
-          <Dot color="#fbbf24" /><span className="text-[10px] text-neutral-500">Middel</span>
-          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Laag</span>
         </div>
       )
     case 'bestemmingsplan':
