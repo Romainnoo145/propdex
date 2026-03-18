@@ -37,7 +37,7 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
     case 'built_status':
       return (
         <div className="flex items-center gap-1.5">
-          <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
+          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Leeg</span>
         </div>
       )
     case 'report_coverage':

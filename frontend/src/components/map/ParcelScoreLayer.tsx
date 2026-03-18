@@ -97,8 +97,8 @@ export function addParcelScoreLayer(
         'match',
         ['downcase', ['to-string', ['coalesce', ['get', 'has_pand'], 'false']]],
         ['true', '1', 'yes'],
-        '#ef4444', // Bebouwd
-        '#22c55e', // Onbebouwd
+        'transparent', // Bebouwd — niet markeren
+        '#f59e0b', // Onbebouwd/leeg — amber highlight
       ],
       'fill-opacity': [
         'case',
@@ -128,8 +128,8 @@ export function addParcelScoreLayer(
         'match',
         ['downcase', ['to-string', ['coalesce', ['get', 'has_report'], 'false']]],
         ['true', '1', 'yes'],
-        '#f59e0b', // Rapport bestaat
-        '#64748b', // Nog geen rapport
+        '#f59e0b', // Opgeslagen/rapport bestaat — amber highlight
+        'transparent', // Niet opgeslagen — niet markeren
       ],
       'fill-opacity': [
         'case',
