@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import type maplibregl from 'maplibre-gl'
-import { ChevronUp } from 'lucide-react'
 import {
   addParcelBoundariesLayer,
   setParcelBoundariesVisibility,
@@ -117,21 +116,6 @@ function LayerToggle({
   autoEnableParcelsKey,
   hasScoreData: _hasScoreData,
 }: LayerToggleProps) {
-  const [overlayMenuOpen, setOverlayMenuOpen] = useState(false)
-  const overlayMenuRef = useRef<HTMLDivElement>(null)
-
-  // Close overlay menu on click outside
-  useEffect(() => {
-    if (!overlayMenuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (overlayMenuRef.current && !overlayMenuRef.current.contains(e.target as Node)) {
-        setOverlayMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [overlayMenuOpen])
-
   const isStyleReady = useCallback(() => {
     const map = mapRef.current
     return Boolean(map && mapReady && map.isStyleLoaded())
@@ -306,31 +290,6 @@ function LayerToggle({
   /* ── Determine active view level for layoutId ── */
   const activeViewLevel = showParcels ? 'perceel' : showGemeenten ? 'gemeente' : null
 
-  /* ── Active overlay label for the selector button ── */
-  const activeOverlayEntry = useMemo(
-    () => MAP_LAYER_CATALOG.parcelOverlays.find((o) => o.id === activeParcelOverlay),
-    [activeParcelOverlay]
-  )
-
-  const handleOverlaySelect = useCallback(
-    (overlayId: ParcelOverlayLayerId) => {
-      if (overlayId === 'bestemmingsplan') {
-        // Bestemmingsplan: turn off score overlays, turn on bestemmingsplan
-        setParcelOverlayMode('none')
-        if (!showBestemmingsplan) onBestemmingsplanToggle()
-      } else {
-        // Score overlay: turn off bestemmingsplan if active, switch to new mode
-        if (showBestemmingsplan) onBestemmingsplanToggle()
-        const mode = OVERLAY_TO_MODE[overlayId]
-        if (mode) {
-          setParcelOverlayMode(mode)
-        }
-      }
-      setOverlayMenuOpen(false)
-    },
-    [setParcelOverlayMode, showBestemmingsplan, onBestemmingsplanToggle]
-  )
-
   return (
     <div className="flex items-center gap-1">
       {/* View level */}
@@ -349,67 +308,11 @@ function LayerToggle({
       <div className="flex items-center gap-0.5 px-1">
         <ToggleButton
           active={activeViewLevel === 'perceel'}
-          sectionId="parceel"
+          sectionId="perceel"
           onClick={handleParcelsToggle}
         >
           Perceel
         </ToggleButton>
-
-        {/* Overlay mode selector — only when parcels active */}
-        {showParcels && (
-          <>
-            <div className="h-5 w-px bg-white/30 shrink-0" />
-            <div className="relative flex items-center" ref={overlayMenuRef}>
-              <button
-                onClick={() => setOverlayMenuOpen((prev) => !prev)}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
-                  overlayMenuOpen
-                    ? 'text-aura-amber'
-                    : 'text-aura-ink/70 hover:text-aura-ink hover:scale-105'
-                }`}
-                aria-label="Kleurmodus kiezen"
-              >
-                <span className="whitespace-nowrap">{activeOverlayEntry?.label ?? 'Potentie'}</span>
-                <ChevronUp
-                  className={`h-4 w-4 transition-transform duration-200 ${overlayMenuOpen ? 'rotate-90' : '-rotate-90'}`}
-                />
-              </button>
-
-              {/* Horizontal expand — extends toolbar to the right */}
-              <AnimatePresence>
-                {overlayMenuOpen && (
-                  <motion.div
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 'auto', opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                    className="overflow-hidden flex items-center"
-                  >
-                    <div className="h-5 w-px bg-white/30 shrink-0 mx-1" />
-                    <div className="flex items-center gap-0.5">
-                      {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
-                        const isActive = activeParcelOverlay === overlay.id
-                        return (
-                          <button
-                            key={overlay.id}
-                            onClick={() => handleOverlaySelect(overlay.id)}
-                            className={`whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 ${
-                              isActive
-                                ? 'bg-aura-amber text-white'
-                                : 'text-aura-ink/60 hover:text-aura-ink hover:bg-white/30'
-                            }`}
-                          >
-                            {overlay.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </>
-        )}
       </div>
     </div>
   )

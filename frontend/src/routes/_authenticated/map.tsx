@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import MapShell from '@/components/layout/MapShell'
 import LayerToggle from '@/components/map/LayerToggle'
 import OverlayLegend from '@/components/map/OverlayLegend'
+import OverlayPicker from '@/components/map/OverlayPicker'
 import { AddressSearch } from '@/components/search/AddressSearch'
 import { PropertyQuickCard } from '@/components/property/PropertyQuickCard'
 import { ParcelDetailPanel } from '@/components/map/panels/ParcelDetailPanel'
@@ -2054,6 +2055,52 @@ function MapPage() {
     setShowScannedWijkBoundaries(visible)
   }, [])
 
+  // Unified overlay select handler for OverlayPicker
+  const handleOverlaySelect = useCallback(
+    (overlayId: import('@/lib/map/layers').ParcelOverlayLayerId) => {
+      if (!mapRef.current) return
+
+      if (overlayId === 'bestemmingsplan') {
+        // Turn off all score overlays
+        handleScoreToggle(false)
+        handleBuiltStatusToggle(false)
+        handleReportStatusToggle(false)
+        handleVacancySignalToggle(false)
+        handleBuildCapacityToggle(false)
+        handleFoundationRiskToggle(false)
+        // Turn on bestemmingsplan if not already on
+        if (!layerState.showBestemmingsplan) handleBestemmingsplanToggle()
+        layerActions.setActiveParcelOverlay('bestemmingsplan')
+      } else {
+        // Turn off bestemmingsplan if active
+        if (layerState.showBestemmingsplan) handleBestemmingsplanToggle()
+        // Turn off all score overlays first
+        handleScoreToggle(false)
+        handleBuiltStatusToggle(false)
+        handleReportStatusToggle(false)
+        handleVacancySignalToggle(false)
+        handleBuildCapacityToggle(false)
+        handleFoundationRiskToggle(false)
+        // Turn on the selected one
+        const handlers: Record<string, (v: boolean) => void> = {
+          potential: handleScoreToggle,
+          built_status: handleBuiltStatusToggle,
+          report_coverage: handleReportStatusToggle,
+          vacancy_signal: handleVacancySignalToggle,
+          build_capacity: handleBuildCapacityToggle,
+          foundation_risk: handleFoundationRiskToggle,
+        }
+        handlers[overlayId]?.(true)
+      }
+    },
+    [
+      mapRef, layerState.showBestemmingsplan, layerActions,
+      handleScoreToggle, handleBuiltStatusToggle, handleReportStatusToggle,
+      handleVacancySignalToggle, handleBuildCapacityToggle, handleFoundationRiskToggle,
+      handleBestemmingsplanToggle,
+    ]
+  )
+
   // Handle "Scan dit gebied" from bestemmingsplan zone
   const handleScanZone = useCallback(() => {
     if (!mapRef.current || !zoneInfo) return
@@ -2288,6 +2335,14 @@ function MapPage() {
         activeOverlay={layerState.activeParcelOverlay}
         visible={layerState.showParcels && !!activeScanId}
       />
+
+      {/* Overlay picker — bottom-right, only when parcels active */}
+      {layerState.showParcels && (
+        <OverlayPicker
+          activeOverlay={layerState.activeParcelOverlay}
+          onSelect={handleOverlaySelect}
+        />
+      )}
 
       {/* Map detail panels — only one visible at a time */}
       {activePanel?.kind === 'gemeente' && (
