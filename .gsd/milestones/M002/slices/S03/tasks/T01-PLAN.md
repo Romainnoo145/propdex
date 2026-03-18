@@ -86,3 +86,10 @@ Manual: Click Demografie card → modal with CBS data. Click Wijken card → wij
 - `frontend/src/components/map/panels/gemeente/WijkenModal.tsx` (~120 lines)
 - Updated GemeenteContextPanel.tsx (modal state, no more onCardClick prop)
 - Updated map.tsx (removed onCardClick handler)
+
+## Observability Impact
+
+- **State inspection**: `openModal` state on GemeenteContextPanel reveals which modal is active (null = none). Inspect via React DevTools.
+- **Fallback visibility**: DemografieModal renders explicit "Geen CBS data beschikbaar" when no completed scans exist — visible in UI without tooling.
+- **Escape key handler**: GemeenteModal registers/deregisters `keydown` on mount/unmount. A stale listener would prevent close — check DOM event listeners if escape stops working.
+- **Portal rendering**: Modals use `createPortal(document.body)` — inspectable in DOM root outside the React tree.

@@ -27,7 +27,7 @@
 
 ## Tasks
 
-- [ ] **T01: Create modal shell and Demografie + Wijken modals** `est:1h`
+- [x] **T01: Create modal shell and Demografie + Wijken modals** `est:1h`
   - Why: Establishes the full-page modal pattern and delivers 2 simpler modals that don't require embedding existing complex components. Demografie uses CBS data (already available via wijk-level hooks — aggregate for gemeente). Wijken reuses the wijk list from GemeenteContextPanel in expanded form.
   - Files: `frontend/src/components/map/panels/gemeente/GemeenteModal.tsx` (new), `frontend/src/components/map/panels/gemeente/DemografieModal.tsx` (new), `frontend/src/components/map/panels/gemeente/WijkenModal.tsx` (new), `frontend/src/components/map/panels/GemeenteContextPanel.tsx`, `frontend/src/routes/_authenticated/map.tsx`
   - Do:
@@ -60,3 +60,11 @@
 - `frontend/src/components/map/panels/GemeenteContextPanel.tsx`
 - `frontend/src/routes/_authenticated/map.tsx`
 - `frontend/src/routes/_authenticated/meldingen.tsx`
+
+## Observability / Diagnostics
+
+- **Modal open/close**: inspect `openModal` state in React DevTools on `GemeenteContextPanel`. Non-null means a modal is rendered.
+- **CBS data availability**: DemografieModal shows "Geen CBS data beschikbaar" fallback when no completed scans with neighborhood_metrics exist for the gemeente. Check that completed scans exist with `neighborhood_metrics` populated.
+- **Wijk scan status**: WijkenModal derives scanned status from `scans` array — inspect the `scannedWijkNames` memo via React DevTools.
+- **Modal portal**: All modals render via `createPortal(document.body)` at z-index 60 — inspect DOM root for the portal element.
+- **Escape key**: GemeenteModal registers `keydown` listener on mount. If escape doesn't close, check for competing listeners.
