@@ -96,7 +96,7 @@ This milestone is complete only when all are true:
 - [x] **S02: GemeenteContextPanel** `risk:high` `depends:[S01]`
   > After this: Clicking a gemeente boundary opens a ~400px left panel via panelPortalRef with summary cards (Demografie, Juridisch Klimaat, Meldingen, Wijken). Panel closes when clicking elsewhere or selecting a parcel. ParcelDetailPanel works unchanged. map.tsx panel orchestration extracted into useMapPanels hook.
 
-- [ ] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
+- [x] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
   > After this: Clicking a summary card in GemeenteContextPanel opens a full-page modal with real data. Demografie modal shows CBS demographics. JuridischKlimaat modal shows klimaat analysis. Meldingen modal embeds the meldingen feed with gemeente filter and infinite scroll. Wijken modal shows wijk list with scan summaries. /meldingen standalone route is deleted.
 
 - [ ] **S04: Map Color Modes + Kansenkaart** `risk:medium` `depends:[S01]`
