@@ -2082,6 +2082,10 @@ function MapPage() {
         }
         if (!layerState.showBestemmingsplan) handleBestemmingsplanToggle()
         layerActions.setActiveParcelOverlay('bestemmingsplan')
+        // Auto-zoom: PDOK bestemmingsplan data needs higher zoom
+        if (map.getZoom() < 13) {
+          map.easeTo({ zoom: 13, duration: 550 })
+        }
       } else {
         // Map overlay IDs to their MapLibre fill layer IDs
         const OVERLAY_FILL_LAYERS: Record<string, string> = {
