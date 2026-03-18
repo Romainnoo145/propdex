@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Layers, TrendingUp, Building2, Map } from 'lucide-react'
+import { Layers, TrendingUp, Building2, Bookmark, Map } from 'lucide-react'
 import { MAP_LAYER_CATALOG } from '@/lib/map/layers'
 import type { ParcelOverlayLayerId } from '@/lib/map/layers'
 
@@ -12,7 +12,7 @@ interface OverlayPickerProps {
 const OVERLAY_ICONS: Record<ParcelOverlayLayerId, React.ComponentType<{ className?: string }>> = {
   potential: TrendingUp,
   built_status: Building2,
-  report_coverage: Building2,
+  report_coverage: Bookmark,
   vacancy_signal: Building2,
   build_capacity: Building2,
   foundation_risk: Building2,
@@ -40,6 +40,13 @@ function InlineLegend({ overlay }: { overlay: ParcelOverlayLayerId | null }) {
         <div className="flex items-center gap-1.5">
           <Dot color="#ef4444" /><span className="text-[10px] text-neutral-500">Bebouwd</span>
           <Dot color="#22c55e" /><span className="text-[10px] text-neutral-500">Leeg</span>
+        </div>
+      )
+    case 'report_coverage':
+      return (
+        <div className="flex items-center gap-1.5">
+          <Dot color="#f59e0b" /><span className="text-[10px] text-neutral-500">Opgeslagen</span>
+          <Dot color="#64748b" /><span className="text-[10px] text-neutral-500">Niet</span>
         </div>
       )
     case 'bestemmingsplan':
@@ -100,7 +107,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 w-[148px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-0.5"
+            className="absolute bottom-full right-0 mb-2 min-w-[170px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-1"
           >
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id
@@ -109,7 +116,7 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
                 <button
                   key={overlay.id}
                   onClick={() => handleSelect(overlay.id)}
-                  className={`w-full text-left px-2.5 py-1 flex items-center gap-2 transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 flex items-center gap-2 transition-colors ${
                     isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
                   }`}
                 >

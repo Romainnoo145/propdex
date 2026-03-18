@@ -32,6 +32,11 @@ export const MAP_LAYER_CATALOG = {
       description: 'Bebouwd versus onbebouwd perceel',
     },
     {
+      id: 'report_coverage' as const,
+      label: 'Opgeslagen',
+      description: 'Percelen die je hebt opgeslagen',
+    },
+    {
       id: 'bestemmingsplan' as const,
       label: 'Bestemmingsplan',
       description: 'Bestemmingsvlakken en functieaanduidingen',

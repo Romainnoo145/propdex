@@ -17,7 +17,7 @@ export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
 
   return (
     <div
-      className="fixed top-20 right-14 z-[var(--z-map-controls)] w-48 bg-aura-glass-white/60 rounded-lg shadow-lg border border-neutral-200"
+      className="fixed top-20 right-14 z-[var(--z-map-controls)] w-48 bg-white rounded-lg shadow-lg border border-neutral-200"
     >
       {/* Header */}
       <button
