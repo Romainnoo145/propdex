@@ -99,10 +99,10 @@ This milestone is complete only when all are true:
 - [x] **S03: Gemeente Intelligence Modals** `risk:medium` `depends:[S02]`
   > After this: Clicking a summary card in GemeenteContextPanel opens a full-page modal with real data. Demografie modal shows CBS demographics. JuridischKlimaat modal shows klimaat analysis. Meldingen modal embeds the meldingen feed with gemeente filter and infinite scroll. Wijken modal shows wijk list with scan summaries. /meldingen standalone route is deleted.
 
-- [ ] **S04: Map Color Modes + Kansenkaart** `risk:medium` `depends:[S01]`
+- [x] **S04: Map Color Modes + Kansenkaart** `risk:medium` `depends:[S01]`
   > After this: LayerToggle UI has 2+ color modes for the ParcelScoreLayer. User can switch between "Opportunity Score" (existing gradient) and at least one alternative visualization (e.g. built status, vacancy signal). Favorited parcels show a distinct marker/color on the map. Mode switching is instant (client-side repaint, no new API calls).
 
-- [ ] **S05: Enriched Opgeslagen + Pipeline** `risk:low` `depends:[S01]`
+- [x] **S05: Enriched Opgeslagen + Pipeline** `risk:low` `depends:[S01]`
   > After this: /opgeslagen shows favorited parcels grouped by gemeente with pipeline stage pills (Gesignaleerd → Onderzoek → Contact → Besluit → Afgerond). User can change pipeline stage inline. Completeness indicators show data coverage per parcel. Afgerond captures reason (Gekocht/Afgewezen). Filter by pipeline stage works across all groups.
 
 - [ ] **S06: Gemeente & Wijk Data-First Panel Content** `risk:medium` `depends:[S02,S03]`
