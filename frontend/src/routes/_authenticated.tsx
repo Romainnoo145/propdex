@@ -25,8 +25,10 @@ export const Route = createFileRoute('/_authenticated')({
 function AuthenticatedLayout() {
   const mapRef = useRef<MapLibreMap | null>(null)
   const panelPortalRef = useRef<HTMLDivElement | null>(null)
+  const leftPanelPortalRef = useRef<HTMLDivElement | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [leftPanelOpen, setLeftPanelOpen] = useState(false)
   const matchRoute = useMatchRoute()
   const isMapVisible = !!matchRoute({ to: '/map', fuzzy: true })
   const { accessToken } = useAuth()
@@ -69,7 +71,7 @@ function AuthenticatedLayout() {
       clearInterval(interval)
       clearTimeout(timeout)
     }
-  }, [panelOpen, mapReady])
+  }, [panelOpen, leftPanelOpen, mapReady])
 
   useEffect(() => {
     if (!isMapVisible && mapRef.current) {
@@ -98,16 +100,30 @@ function AuthenticatedLayout() {
 
         {/* The App Container: floats on the desk with breathing room */}
         <div className="relative h-full pt-4 pr-4 pb-4">
-          {/* Content area — flex row: [panel slot] + [map] */}
-          <div className="relative h-full ml-[110px] min-w-0 flex gap-4">
-            {/* Panel portal target — panel content rendered here via createPortal from map.tsx */}
+          {/* Content area — flex row: [left panel slot] + [map] + [right panel slot] */}
+          <div className="relative h-full ml-[130px] min-w-0 flex">
+            {/* Left panel portal target — gemeente/wijk context panels rendered here via createPortal */}
+            <div
+              ref={leftPanelPortalRef}
+              className="shrink-0 h-full relative"
+              style={{
+                width: leftPanelOpen ? '620px' : '0px',
+                marginRight: leftPanelOpen ? '16px' : '0px',
+                overflow: leftPanelOpen ? 'visible' : 'hidden',
+                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1), margin-right 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                zIndex: 10,
+              }}
+            />
+
+            {/* Right panel portal target — parcel detail panel rendered here via createPortal */}
             <div
               ref={panelPortalRef}
               className="shrink-0 h-full relative"
               style={{
                 width: panelOpen ? '620px' : '0px',
+                marginRight: panelOpen ? '16px' : '0px',
                 overflow: panelOpen ? 'visible' : 'hidden',
-                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'width 350ms cubic-bezier(0.4, 0, 0.2, 1), margin-right 350ms cubic-bezier(0.4, 0, 0.2, 1)',
                 zIndex: 10,
               }}
             />
@@ -125,7 +141,7 @@ function AuthenticatedLayout() {
             </div>
 
             {/* Outlet: absolute overlay on map route, flex child on other routes */}
-            <MapContext.Provider value={{ mapRef, mapReady, panelPortalRef, panelOpen, setPanelOpen }}>
+            <MapContext.Provider value={{ mapRef, mapReady, panelPortalRef, panelOpen, setPanelOpen, leftPanelPortalRef, leftPanelOpen, setLeftPanelOpen }}>
               {isMapVisible ? (
                 <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
                   <Outlet />

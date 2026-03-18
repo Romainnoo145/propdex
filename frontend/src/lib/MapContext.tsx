@@ -5,11 +5,16 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 interface MapContextValue {
   mapRef: RefObject<MapLibreMap | null>
   mapReady: boolean
-  /** Ref to the panel portal target in _authenticated layout */
+  /** Ref to the right panel portal target in _authenticated layout (parcel detail) */
   panelPortalRef: RefObject<HTMLDivElement | null>
-  /** Whether a side panel is currently open (triggers map resize) */
+  /** Whether the right panel is currently open (triggers map resize) */
   panelOpen: boolean
   setPanelOpen: (open: boolean) => void
+  /** Ref to the left panel portal target in _authenticated layout (gemeente/wijk context) */
+  leftPanelPortalRef: RefObject<HTMLDivElement | null>
+  /** Whether the left panel is currently open (triggers map resize) */
+  leftPanelOpen: boolean
+  setLeftPanelOpen: (open: boolean) => void
 }
 
 export const MapContext = createContext<MapContextValue | null>(null)

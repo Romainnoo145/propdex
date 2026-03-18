@@ -88,6 +88,13 @@ Then visually verify:
 - /meldingen → loads normally
 - /rapport/{id} → loads normally
 
+## Observability Impact
+
+- **Route redirects**: /projecten and /rapporten now throw `redirect()` in `beforeLoad` — TanStack Router handles these client-side. No server-side signals. Verify by navigating to old URLs and confirming the URL bar shows /opgeslagen.
+- **Nav item count**: Visually verify SideRailNav renders exactly 3 `<Link>` elements in the main nav pod. BottomTabNav renders exactly 3 `<Link>` elements.
+- **No new runtime signals**: This is a static nav/routing change. No API calls, no logging, no error states introduced.
+- **Failure visibility**: If a redirect route file is accidentally deleted, TanStack Router will 404. The route files must remain as redirect stubs.
+
 ## Inputs
 
 - Current SideRailNav.tsx (5 main items: Kaart, Projecten, Meldingen, Rapporten, Jurisprudentie)

@@ -105,6 +105,9 @@ This milestone is complete only when all are true:
 - [ ] **S05: Enriched Opgeslagen + Pipeline** `risk:low` `depends:[S01]`
   > After this: /opgeslagen shows favorited parcels grouped by gemeente with pipeline stage pills (Gesignaleerd → Onderzoek → Contact → Besluit → Afgerond). User can change pipeline stage inline. Completeness indicators show data coverage per parcel. Afgerond captures reason (Gekocht/Afgewezen). Filter by pipeline stage works across all groups.
 
+- [ ] **S06: Gemeente & Wijk Data-First Panel Content** `risk:medium` `depends:[S02,S03]`
+  > After this: GemeenteContextPanel and WijkMapPanel show real data inline — not just navigation buttons. Research phase audits all available backend data per gemeente (CBS demographics, jurisprudentie stats, meldingen counts, wijk metrics) and per wijk (scan results, CBS neighborhood metrics, jurisprudentie, bekendmakingen). Panel interiors redesigned like ParcelDetailPanel: KPI grid with real numbers, pill tabs for sections (Overzicht/Demografie/Meldingen), data-first cards matching ScoreCircleCard/KenmerkenCard patterns. Wijk panel shows scan stats, CBS metrics, and juridisch klimaat inline — not behind modal clicks. Modals reserved for drill-down detail only.
+
 ## Boundary Map
 
 ### S01 → S02

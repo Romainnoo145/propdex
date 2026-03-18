@@ -131,11 +131,9 @@ body {
   display: none;
 }
 
-/* Make attribution compact (small (i) icon, expands on click) */
-/* Aligned with toggle bar bottom row */
+/* Hide MapLibre attribution entirely — tile provider credit in app footer */
 .maplibregl-ctrl-attrib {
-  font-size: 10px;
-  opacity: 0.6;
+  display: none !important;
 }
 
 /* Property popup -- glassmorphism "te koop" sign anchored to parcel */

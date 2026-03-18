@@ -82,6 +82,17 @@ function ToggleButton({ active, sectionId, onClick, glow = false, children }: To
   )
 }
 
+/** Map ParcelOverlayLayerId → internal setParcelOverlayMode key (null = handled separately) */
+const OVERLAY_TO_MODE: Record<ParcelOverlayLayerId, 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | null> = {
+  potential: 'score',
+  built_status: 'built',
+  report_coverage: 'report',
+  vacancy_signal: 'vacancy',
+  build_capacity: 'capacity',
+  foundation_risk: 'foundation',
+  bestemmingsplan: null, // handled via onBestemmingsplanToggle
+}
+
 function LayerToggle({
   mapRef,
   mapReady = false,
@@ -229,15 +240,16 @@ function LayerToggle({
   ])
 
   // Ensure score overlay is active when parcels are on but no overlay is selected
-  const showScore = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[0].id
-  const showBuiltStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[1].id
-  const showReportStatus = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[2].id
-  const showVacancySignal = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[3].id
-  const showBuildCapacity = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[4].id
-  const showFoundationRisk = activeParcelOverlay === MAP_LAYER_CATALOG.parcelOverlays[5].id
+  const showScore = activeParcelOverlay === 'potential'
+  const showBuiltStatus = activeParcelOverlay === 'built_status'
+  const showReportStatus = activeParcelOverlay === 'report_coverage'
+  const showVacancySignal = activeParcelOverlay === 'vacancy_signal'
+  const showBuildCapacity = activeParcelOverlay === 'build_capacity'
+  const showFoundationRisk = activeParcelOverlay === 'foundation_risk'
+  const isBestemmingsplanActive = activeParcelOverlay === 'bestemmingsplan'
 
   const hasActiveOverlay =
-    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity || showFoundationRisk
+    showScore || showBuiltStatus || showReportStatus || showVacancySignal || showBuildCapacity || showFoundationRisk || isBestemmingsplanActive
 
   // Derived: ensures parcels always have an overlay when visible
   const needsDefaultOverlay = useMemo(
@@ -270,6 +282,8 @@ function LayerToggle({
       onVacancySignalToggle?.(false)
       onBuildCapacityToggle?.(false)
       onFoundationRiskToggle?.(false)
+      // Turn off bestemmingsplan when parcels go off
+      if (showBestemmingsplan) onBestemmingsplanToggle()
     }
   }
 
@@ -294,23 +308,11 @@ function LayerToggle({
       <div className="flex items-center gap-0.5 px-1">
         <ToggleButton
           active={activeViewLevel === 'perceel'}
-          sectionId="parceel"
+          sectionId="perceel"
           onClick={handleParcelsToggle}
         >
           Perceel
         </ToggleButton>
-
-        {/* Intelligence layer — only when parcels active */}
-        {showParcels && (
-          <ToggleButton
-            active={showBestemmingsplan}
-            sectionId="parceel"
-            onClick={onBestemmingsplanToggle}
-            glow
-          >
-            Bestemmingsplan
-          </ToggleButton>
-        )}
       </div>
     </div>
   )

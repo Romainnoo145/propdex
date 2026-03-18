@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { SVBP2012_HOOFDGROEPEN } from '@/lib/svbp2012'
 
 interface BestemmingsplanLegendProps {
@@ -6,52 +5,26 @@ interface BestemmingsplanLegendProps {
 }
 
 /**
- * Collapsible legend component displaying SVBP2012 hoofdgroep color swatches.
- * Only renders when bestemmingsplan layer is active.
+ * Compact bestemmingsplan color legend.
+ * Positioned bottom-right above the OverlayPicker button.
+ * No header — just the color swatches.
  */
 export function BestemmingsplanLegend({ visible }: BestemmingsplanLegendProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
-
-  // Early return if layer not visible
   if (!visible) return null
 
   return (
-    <div
-      className="fixed top-20 right-14 z-[var(--z-map-controls)] w-48 bg-aura-glass-white/60 rounded-lg shadow-lg border border-neutral-200"
-    >
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-aura-ink hover:bg-neutral-200 rounded-t-lg transition-colors"
-      >
-        <span>Legenda</span>
-        <span className="text-neutral-600 text-xs">
-          {isExpanded ? '▼' : '▶'}
-        </span>
-      </button>
-
-      {/* Color list */}
-      {isExpanded && (
-        <div className="px-3 pb-3 max-h-96 overflow-y-auto">
-          <div className="space-y-1.5 pt-1">
-            {SVBP2012_HOOFDGROEPEN.map((hoofdgroep) => (
-              <div
-                key={hoofdgroep.key}
-                className="flex items-center gap-2"
-              >
-                <div
-                  className="w-3 h-3 rounded-sm border border-black/10 flex-shrink-0"
-                  style={{ backgroundColor: hoofdgroep.color }}
-                />
-                <span className="text-xs text-neutral-700">
-                  {hoofdgroep.label}
-                </span>
-              </div>
-            ))}
+    <div className="absolute bottom-16 right-4 z-[var(--z-map-controls)] min-w-[170px] bg-white border border-neutral-200 rounded-xl shadow-lg py-2 px-3 max-h-80 overflow-y-auto">
+      <div className="space-y-1">
+        {SVBP2012_HOOFDGROEPEN.map((hoofdgroep) => (
+          <div key={hoofdgroep.key} className="flex items-center gap-2">
+            <div
+              className="w-2.5 h-2.5 rounded-sm border border-black/10 flex-shrink-0"
+              style={{ backgroundColor: hoofdgroep.color }}
+            />
+            <span className="text-[11px] text-neutral-700">{hoofdgroep.label}</span>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   )
 }

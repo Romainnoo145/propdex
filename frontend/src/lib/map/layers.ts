@@ -7,6 +7,7 @@ export type ParcelOverlayLayerId =
   | 'vacancy_signal'
   | 'build_capacity'
   | 'foundation_risk'
+  | 'bestemmingsplan'
 
 export interface PersistedMapLayerState {
   basemap: BaseMapLayerId
@@ -27,28 +28,18 @@ export const MAP_LAYER_CATALOG = {
     },
     {
       id: 'built_status' as const,
-      label: 'Bebouwd/Leeg',
-      description: 'Pand aanwezig versus onbebouwd perceel',
+      label: 'Leegstand',
+      description: 'Bebouwd versus onbebouwd perceel',
     },
     {
       id: 'report_coverage' as const,
-      label: 'Rapporten',
-      description: 'Percelen met bestaand rapport',
+      label: 'Opgeslagen',
+      description: 'Percelen die je hebt opgeslagen',
     },
     {
-      id: 'vacancy_signal' as const,
-      label: 'Leegstand',
-      description: 'Leeg perceel, leegstaand pand of in gebruik',
-    },
-    {
-      id: 'build_capacity' as const,
-      label: 'Planruimte',
-      description: 'Planruimte op basis van FAR/TAR-indicatoren',
-    },
-    {
-      id: 'foundation_risk' as const,
-      label: 'Funderingsrisico',
-      description: 'Indicatief risico op basis van bouwjaar (pre-1970)',
+      id: 'bestemmingsplan' as const,
+      label: 'Bestemmingsplan',
+      description: 'Bestemmingsvlakken en functieaanduidingen',
     },
   ],
   boundaryOverlays: [

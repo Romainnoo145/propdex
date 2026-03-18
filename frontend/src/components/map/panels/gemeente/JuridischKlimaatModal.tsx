@@ -13,7 +13,7 @@ interface JuridischKlimaatModalProps {
  */
 export function JuridischKlimaatModal({ gemeenteNaam, onClose }: JuridischKlimaatModalProps) {
   return (
-    <GemeenteModal title={`Juridisch Klimaat · ${gemeenteNaam}`} onClose={onClose}>
+    <GemeenteModal title={`Juridisch Klimaat · ${gemeenteNaam}`} onClose={onClose} maxWidth="max-w-5xl">
       <JurisprudenceSection gemeenteNaam={gemeenteNaam} wijkNaam={null} />
     </GemeenteModal>
   )

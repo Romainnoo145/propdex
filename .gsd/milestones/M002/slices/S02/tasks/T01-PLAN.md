@@ -84,6 +84,12 @@ Manual: click gemeente → panel opens. Select wijk → wijk panel. Back → gem
 - MapPanelShell.tsx for reference (right-side positioning)
 - ScanListItem type for latestScan in wijk panel
 
+## Observability Impact
+
+- **New inspection surface:** `useMapPanels` hook state visible in React DevTools — shows `activePanel` object with `kind` discriminator (`gemeente` | `wijk` | `parcel` | null)
+- **Failure diagnosis:** If a panel doesn't open, check `activePanel` state in devtools. If transitions fail, verify the hook's dependencies (activeGemeenteRef, wijkGeojson, mapRef) are populated.
+- **No logging added:** Panel state transitions are purely in-memory React state. Add `console.debug` in handlers if runtime tracing is needed.
+
 ## Expected Output
 
 - `frontend/src/hooks/useMapPanels.ts` (~120-150 lines)

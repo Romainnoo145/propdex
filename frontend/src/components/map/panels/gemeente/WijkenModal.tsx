@@ -7,7 +7,6 @@ interface WijkenModalProps {
   gemeenteNaam: string
   gemeenteCode: string
   wijkGeojson: GeoJSON.FeatureCollection | null
-  scannedWijkNames: string[]
   scans: ScanListItem[]
   onClose: () => void
   onSelectWijk: (code: string, naam: string) => void
@@ -26,12 +25,22 @@ export function WijkenModal({
   gemeenteNaam,
   gemeenteCode,
   wijkGeojson,
-  scannedWijkNames,
   scans,
   onClose,
   onSelectWijk,
 }: WijkenModalProps) {
   const features = wijkGeojson?.features ?? []
+
+  // Derive scanned wijk names from completed scans
+  const scannedWijkNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const scan of scans) {
+      if (scan.gemeente_code === gemeenteCode && scan.status === 'completed' && scan.wijk_naam) {
+        names.add(scan.wijk_naam)
+      }
+    }
+    return [...names]
+  }, [scans, gemeenteCode])
 
   // Build scan info per wijk
   const wijkScanInfo = useMemo(() => {

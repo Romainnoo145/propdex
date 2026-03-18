@@ -25,6 +25,13 @@
 - Manual: navigate to /meldingen → page renders normally
 - Manual: navigate to /rapport/{id} → page renders normally
 
+## Observability / Diagnostics
+
+- **Redirect routes**: /projecten and /rapporten are client-side redirects via TanStack Router `beforeLoad`. No server logs. Verify by navigating to old URLs → should arrive at /opgeslagen.
+- **Nav correctness**: SideRailNav and BottomTabNav each render exactly 3 navigation items. Visual inspection or DOM query (`document.querySelectorAll('nav a')`) confirms count.
+- **No new runtime signals**: Static nav/routing changes only. No APIs, no structured logs, no error states.
+- **Failure mode**: If redirect stub files are deleted, old URLs will 404. Route files must remain.
+
 ## Tasks
 
 - [x] **T01: Update nav components and route redirects** `est:45m`

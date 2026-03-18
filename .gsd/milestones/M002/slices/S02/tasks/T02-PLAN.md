@@ -105,7 +105,7 @@ Manual verification:
 
 ## Observability Impact
 
-- **Panel state transitions**: `activePanel.kind === 'gemeente'` in React DevTools on the `useMapPanels` hook signals GemeenteContextPanel is mounted.
-- **Card click modals**: `openModal` local state in GemeenteContextPanel tracks which summary card modal is open (demografie/juridisch/meldingen/wijken or null).
-- **Failure visibility**: If the left panel doesn't appear after clicking a gemeente, check `activePanel` state in DevTools — if `kind !== 'gemeente'`, the click handler in map.tsx isn't setting it. If the panel mounts but is invisible, check z-index and left positioning in LeftPanelShell.
-- **Escape key**: LeftPanelShell registers a global keydown listener — if Escape doesn't close the panel, check that `onClose` prop is wired.
+- **Signals changed**: `setLeftPanelOpen(true/false)` in MapContext signals layout that left panel is open — used for search bar shifting and map padding
+- **activePanel state**: Inspect `useMapPanels` hook in React DevTools to see current `activePanel.kind` (`gemeente` | `wijk` | `parcel` | null)
+- **Failure inspection**: Panel doesn't open → check `activePanel` is being set. If null after gemeente click, inspect `inspectorMode` state and map layer click bindings. CBS data shows "—" → check scan history has completed scans with `neighborhood_metrics`
+- **inspectorParcel TDZ**: If "Cannot access 'inspectorParcel' before initialization" appears, the useEffect referencing it was moved above the `useMapPanels()` call — must stay below it

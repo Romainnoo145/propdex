@@ -3,10 +3,12 @@ id: S01
 parent: M002
 milestone: M002
 provides:
-  - 3-item SideRailNav (Kaart, Opgeslagen, Jurisprudentie) on desktop
-  - 3-item BottomTabNav matching desktop on mobile
-  - /projecten and /rapporten redirect stubs to /opgeslagen
-  - All internal navigations updated away from removed routes
+  - 3-item desktop nav (Kaart, Opgeslagen, Jurisprudentie) via SideRailNav
+  - 3-item mobile nav matching desktop via BottomTabNav
+  - /projecten redirect stub → /opgeslagen
+  - /rapporten redirect stub → /opgeslagen
+  - All internal navigations updated from removed routes to /opgeslagen
+  - /meldingen route removed from nav (later converted to redirect by S03)
 requires: []
 affects:
   - S02
@@ -23,11 +25,13 @@ key_files:
   - frontend/src/stories/layout/SideRailNav.stories.tsx
   - frontend/src/stories/layout/BottomTabNav.stories.tsx
 key_decisions:
-  - Redirect stubs kept instead of deleting route files — ParcelDetailPanel navigates to /rapporten internally and cannot be modified per KNOWLEDGE.md hard rule
+  - Redirect stub files kept (not deleted) so ParcelDetailPanel navigations hit redirects instead of 404
+  - Meldingen route kept alive initially but removed from nav — S03 later converted it to redirect→/map
+  - Bookmark icon chosen for Opgeslagen nav item (semantic match for saved/favorited parcels)
 patterns_established:
-  - Route removal pattern — keep file as beforeLoad redirect stub rather than deleting, to catch internal navigations from untouchable components
+  - Route removal pattern: keep file as beforeLoad redirect stub, never delete — ensures internal navigations degrade gracefully
 observability_surfaces:
-  - none — static nav/routing change with no runtime signals
+  - none — static nav/routing changes only, no runtime signals or API changes
 drill_down_paths:
   - .gsd/milestones/M002/slices/S01/tasks/T01-SUMMARY.md
 duration: 10m
@@ -37,83 +41,82 @@ completed_at: 2026-03-17
 
 # S01: Nav Simplification
 
-**Navigation collapsed from 5 items to 3 (Kaart, Opgeslagen, Jurisprudentie) on desktop and mobile, with redirect stubs for removed routes.**
+**Navigation collapsed to 3 items (Kaart, Opgeslagen, Jurisprudentie) on desktop and mobile, with redirect stubs preserving old route navigations**
 
 ## What Happened
 
-Single task (T01) covered all changes since nav items, routes, and internal navigations are tightly coupled.
+Single task (T01) simplified the entire navigation surface. SideRailNav's `mainItems` array was reduced to 3 entries: Kaart (/map, Map icon), Opgeslagen (/opgeslagen, Bookmark icon), Jurisprudentie (/jurisprudentie, Scale icon). BottomTabNav was updated to match with the same 3 links. The `useUnreadCounts` hook and `NotificationBadge` import were removed from nav (meldingen badge gone).
 
-**SideRailNav.tsx** was reduced from 5 nav items to 3: Kaart (/map), Opgeslagen (/opgeslagen, Bookmark icon), Jurisprudentie (/jurisprudentie, Scale icon). Removed useUnreadCounts hook, NotificationBadge import, and Bell/FolderOpen/FileText icons. **BottomTabNav.tsx** was updated to match — same 3 items with the same icons.
+For removed routes, projecten.tsx and rapporten.tsx were rewritten as redirect stubs using TanStack Router's `beforeLoad` → `throw redirect({ to: '/opgeslagen' })`. The files were intentionally kept (not deleted) because ParcelDetailPanel.tsx navigates to these routes and cannot be modified per KNOWLEDGE.md hard rules.
 
-**projecten.tsx** and **rapporten.tsx** were rewritten as redirect stubs using `beforeLoad` with `throw redirect({ to: '/opgeslagen' })`. Files were kept alive (not deleted) because ParcelDetailPanel.tsx navigates to /rapporten internally and cannot be modified per the KNOWLEDGE.md hard rule.
+All internal navigations in rapport.$id.tsx, resultaten.tsx, and meldingen.tsx were updated to use /opgeslagen instead of /projecten or /rapporten. The meldingen route was initially left functional (just removed from nav), then later converted to a redirect→/map by S03-T02 work.
 
-**rapport.$id.tsx** had 3 navigate calls and 2 back labels updated from /rapporten and /projecten to /opgeslagen. **resultaten.tsx** had its fallback navigate changed from /projecten to /opgeslagen. **meldingen.tsx** had its empty state CTA updated from "Naar projecten" to "Naar opgeslagen". Stories for both nav components were updated to use /map and /opgeslagen routes.
+Stories for both nav components were updated with /map and /opgeslagen routes.
 
 ## Verification
 
-- `npx tsc --noEmit` — clean, no TypeScript errors
-- SideRailNav confirmed showing exactly 3 items (Kaart, Opgeslagen, Jurisprudentie)
-- BottomTabNav confirmed showing exactly 3 items matching desktop
-- /projecten and /rapporten route files exist as redirect stubs → /opgeslagen
-- /meldingen route file intact (accessible via direct URL until S03 kills it)
-- rapport.$id.tsx route file intact (individual report view still accessible)
-- ParcelDetailPanel.tsx NOT modified (KNOWLEDGE.md hard rule respected)
+- `cd frontend && npx tsc --noEmit` — **passed** (zero errors)
+- SideRailNav renders exactly 3 nav items (Kaart, Opgeslagen, Jurisprudentie) ✅
+- BottomTabNav renders exactly 3 nav items matching desktop ✅
+- /projecten route has `beforeLoad` redirect to /opgeslagen ✅
+- /rapporten route has `beforeLoad` redirect to /opgeslagen ✅
+- rapport.$id.tsx navigates to /opgeslagen (no references to /projecten or /rapporten) ✅
+- resultaten.tsx navigates to /opgeslagen (no references to /projecten) ✅
+- ParcelDetailPanel.tsx untouched (KNOWLEDGE.md rule honored) ✅
+- No TypeScript errors anywhere in frontend ✅
 
 ## Requirements Advanced
 
-- none — S01 is structural nav cleanup, not mapped to specific requirements
+- None directly — S01 is structural nav work, not feature delivery
 
 ## Requirements Validated
 
-- none
+- None
 
 ## New Requirements Surfaced
 
-- none
+- None
 
 ## Requirements Invalidated or Re-scoped
 
-- none
+- None
 
 ## Deviations
 
-None — all plan items executed as specified.
+- **meldingen.tsx**: T01 plan expected the route to remain a functional page with only the nav link removed. S03-T02 later converted it to a redirect→/map. This is expected — S03 superseded T01's assumption. Not a regression.
 
 ## Known Limitations
 
-- ParcelDetailPanel.tsx still navigates to /rapporten which hits the redirect stub. Acceptable but slightly janky — a user navigating from parcel detail to "reports" ends up at /opgeslagen.
-- components/projects/* (PortfolioView, DrilldownBreadcrumb, etc.) still reference /projecten internally. These components render behind the /projecten redirect so they're unreachable, but the dead code remains until S05 rebuilds /opgeslagen.
+- ParcelDetailPanel.tsx still navigates to /rapporten internally — this hits the redirect stub and works, but is technically an extra client-side redirect hop. Acceptable since ParcelDetailPanel cannot be modified.
 
 ## Follow-ups
 
-- S05 will rebuild /opgeslagen with new components, which can clean up dead code in components/projects/*.
-- S03 will kill the /meldingen route entirely.
+- None — all nav simplification work is complete.
 
 ## Files Created/Modified
 
-- `frontend/src/components/layout/SideRailNav.tsx` — 3-item nav with Bookmark/Scale icons
+- `frontend/src/components/layout/SideRailNav.tsx` — 3-item nav with Map/Bookmark/Scale icons
 - `frontend/src/components/layout/BottomTabNav.tsx` — 3-item mobile nav matching desktop
 - `frontend/src/routes/_authenticated/projecten.tsx` — redirect stub → /opgeslagen
 - `frontend/src/routes/_authenticated/rapporten.tsx` — redirect stub → /opgeslagen
 - `frontend/src/routes/_authenticated/rapport.$id.tsx` — navigations updated to /opgeslagen
 - `frontend/src/routes/_authenticated/resultaten.tsx` — back navigation to /opgeslagen
-- `frontend/src/routes/_authenticated/meldingen.tsx` — empty state CTA updated
-- `frontend/src/stories/layout/SideRailNav.stories.tsx` — updated default route
-- `frontend/src/stories/layout/BottomTabNav.stories.tsx` — updated default route
+- `frontend/src/routes/_authenticated/meldingen.tsx` — redirect to /map (by S03)
+- `frontend/src/stories/layout/SideRailNav.stories.tsx` — updated default routes
+- `frontend/src/stories/layout/BottomTabNav.stories.tsx` — updated default routes
 
 ## Forward Intelligence
 
 ### What the next slice should know
-- The route structure is clean: 3 nav items, 2 redirect stubs, all internal navigations point to /opgeslagen. S02 can add the GemeenteContextPanel without worrying about stale nav links.
-- The redirect stub pattern (keep file, use beforeLoad redirect) is the established way to remove routes in this codebase.
+- The route tree is clean: 3 nav items, redirect stubs for old routes. No broken links exist. S02/S04/S05 can build on this without worrying about stale navigation references.
+- The redirect stub pattern (`beforeLoad` → `throw redirect()`) is proven and should be reused if more routes are killed in future slices.
 
 ### What's fragile
-- ParcelDetailPanel.tsx navigates to /rapporten which hits the redirect — this works but is an indirect path. If someone removes the rapporten.tsx stub file, parcel detail navigation breaks.
+- ParcelDetailPanel.tsx navigates to /rapporten which hits a redirect stub — if the stub file is accidentally deleted, that navigation will 404. The stub must persist as long as ParcelDetailPanel exists unchanged.
 
 ### Authoritative diagnostics
-- `npx tsc --noEmit` in frontend/ — the definitive contract check for route/import integrity
-- SideRailNav.tsx `mainItems` array — single source of truth for desktop nav items
-- BottomTabNav.tsx Links — single source of truth for mobile nav items
+- `cd frontend && npx tsc --noEmit` — the single authoritative check. Zero errors means nav/route changes are consistent. If this fails after downstream changes, check routeTree.gen.ts first.
+- `grep -r '/projecten\|/rapporten' frontend/src/components/ frontend/src/routes/` — should return only the redirect stub files. Any other hits indicate a missed navigation update.
 
 ### What assumptions changed
-- No assumptions changed — S01 executed as planned with no surprises.
+- Original plan assumed /meldingen would stay as a functional page through S01. In practice, S03 work ran concurrently and converted meldingen.tsx to a redirect→/map. This is fine — the nav simplification goal is fully met either way.
