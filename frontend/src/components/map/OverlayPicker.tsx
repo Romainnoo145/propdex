@@ -1,12 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Layers } from 'lucide-react'
+import { Layers, TrendingUp, Building2, FileText, DoorOpen, Ruler, ShieldAlert, Map } from 'lucide-react'
 import { MAP_LAYER_CATALOG } from '@/lib/map/layers'
 import type { ParcelOverlayLayerId } from '@/lib/map/layers'
 
 interface OverlayPickerProps {
   activeOverlay: ParcelOverlayLayerId | null
   onSelect: (id: ParcelOverlayLayerId) => void
+}
+
+const OVERLAY_ICONS: Record<ParcelOverlayLayerId, React.ComponentType<{ className?: string }>> = {
+  potential: TrendingUp,
+  built_status: Building2,
+  report_coverage: FileText,
+  vacancy_signal: DoorOpen,
+  build_capacity: Ruler,
+  foundation_risk: ShieldAlert,
+  bestemmingsplan: Map,
 }
 
 /* ── Inline legend per overlay mode ── */
@@ -121,18 +131,20 @@ export default function OverlayPicker({ activeOverlay, onSelect }: OverlayPicker
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full right-0 mb-2 min-w-[160px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-0.5"
+            className="absolute bottom-full right-0 mb-2 w-[148px] bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden py-0.5"
           >
             {MAP_LAYER_CATALOG.parcelOverlays.map((overlay) => {
               const isActive = activeOverlay === overlay.id
+              const Icon = OVERLAY_ICONS[overlay.id]
               return (
                 <button
                   key={overlay.id}
                   onClick={() => handleSelect(overlay.id)}
-                  className={`w-full text-left px-2.5 py-1 transition-colors ${
+                  className={`w-full text-left px-2.5 py-1 flex items-center gap-2 transition-colors ${
                     isActive ? 'bg-aura-amber/10' : 'hover:bg-neutral-50'
                   }`}
                 >
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-aura-amber' : 'text-neutral-400'}`} />
                   <span className={`text-[11px] ${isActive ? 'font-medium text-aura-amber' : 'text-aura-ink/70'}`}>
                     {overlay.label}
                   </span>
