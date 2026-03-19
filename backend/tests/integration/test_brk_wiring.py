@@ -94,8 +94,28 @@ async def org_id(test_db):
     return org.id
 
 
+@pytest.fixture
+async def user_id(test_db, org_id):
+    """Create a test user and return its ID."""
+    from app.auth.password import hash_password
+    from app.models.user import User
+    user = User(
+        email="brk@test.com",
+        hashed_password=hash_password("Test123!"),
+        full_name="BRK Test User",
+        organization_id=org_id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+    )
+    test_db.add(user)
+    await test_db.flush()
+    await test_db.commit()
+    return user.id
+
+
 @pytest.mark.asyncio
-async def test_save_report_strips_brk_ownership(test_db, org_id):
+async def test_save_report_strips_brk_ownership(test_db, org_id, user_id):
     """save_report() must strip brk_ownership from report_data before JSONB persist.
 
     BRK-04: eigendomsdata must never be stored in the database.
@@ -109,6 +129,7 @@ async def test_save_report_strips_brk_ownership(test_db, org_id):
         report_data=report_data,
         notes=None,
         project_id=None,
+        user_id=user_id,
         organization_id=org_id,
         session=test_db,
     )
@@ -121,7 +142,7 @@ async def test_save_report_strips_brk_ownership(test_db, org_id):
 
 
 @pytest.mark.asyncio
-async def test_update_report_data_strips_brk_ownership(test_db, org_id):
+async def test_update_report_data_strips_brk_ownership(test_db, org_id, user_id):
     """update_report_data() must strip brk_ownership from report_data before JSONB persist.
 
     BRK-04: eigendomsdata must never be stored in the database.
@@ -132,6 +153,7 @@ async def test_update_report_data_strips_brk_ownership(test_db, org_id):
         report_data=initial_data,
         notes=None,
         project_id=None,
+        user_id=user_id,
         organization_id=org_id,
         session=test_db,
     )
@@ -145,6 +167,7 @@ async def test_update_report_data_strips_brk_ownership(test_db, org_id):
 
     updated_report = await service.update_report_data(
         report_id=report.id,
+        user_id=user_id,
         organization_id=org_id,
         fresh_data=fresh_data,
         session=test_db,

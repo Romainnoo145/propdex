@@ -209,7 +209,6 @@ async def _get_wijk_scans(
     stmt = (
         select(AreaScan.id, AreaScan.wijk_naam)
         .where(
-            AreaScan.organization_id == org_id,
             AreaScan.status == "completed",
         )
         .order_by(AreaScan.id)
@@ -239,8 +238,6 @@ async def _load_scan_parcels(
             select(ScanResult, ParcelCache)
             .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
             .where(
-                ScanResult.organization_id == org_id,
-                ParcelCache.organization_id == org_id,
                 ScanResult.scan_id == wijk_scan_id,
             )
             .order_by(ScanResult.id)

@@ -102,3 +102,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+filterwarnings = [
+    "ignore::DeprecationWarning:asyncio",
+    "ignore::DeprecationWarning:pytest_asyncio",
+    "ignore::DeprecationWarning:slowapi",
+    "ignore::DeprecationWarning:arq",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning",
+]

@@ -86,8 +86,6 @@ async def _backfill_org(
                 select(ScanResult.id, ScanResult.score, ScanResult.flags, ParcelCache)
                 .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                 .where(
-                    ScanResult.organization_id == org_id,
-                    ParcelCache.organization_id == org_id,
                 )
                 .order_by(ScanResult.id)
                 .limit(batch_size)

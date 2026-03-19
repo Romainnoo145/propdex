@@ -6,10 +6,10 @@ from datetime import datetime
 from sqlalchemy import ForeignKey, Index, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class UserNotificationState(Base, TenantMixin, TimestampMixin):
+class UserNotificationState(Base, TimestampMixin):
     """
     UserNotificationState model - tracks when each user last viewed changes for each project.
 
@@ -17,7 +17,7 @@ class UserNotificationState(Base, TenantMixin, TimestampMixin):
     - Compare ChangeRecord.detected_at with UserNotificationState.last_viewed_at
     - Records newer than last_viewed_at are "unread"
 
-    Multi-tenant isolated via organization_id.
+    User-scoped — each user has their own notification state.
     Updated whenever user views changes for a specific project.
     """
 

@@ -24,26 +24,30 @@ VALID_SRU_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
         <srw:record>
             <srw:recordData>
                 <gzd:gzd xmlns:gzd="http://standaarden.overheid.nl/sru"
-                         xmlns:overheidop="http://standaarden.overheid.nl/product/metadata/">
-                    <overheidop:title>Omgevingsvergunning Hoofdstraat 42</overheidop:title>
-                    <overheidop:identifier>gmb-2024-12345</overheidop:identifier>
-                    <overheidop:type>Omgevingsvergunning</overheidop:type>
-                    <overheidop:date>2024-01-15</overheidop:date>
-                    <overheidop:spatial>Amsterdam</overheidop:spatial>
-                    <overheidop:source>https://officielebekendmakingen.nl/gmb-2024-12345</overheidop:source>
+                         xmlns:dcterms="http://purl.org/dc/terms/">
+                    <dcterms:title>Omgevingsvergunning Hoofdstraat 42</dcterms:title>
+                    <dcterms:identifier>gmb-2024-12345</dcterms:identifier>
+                    <dcterms:type>Omgevingsvergunning</dcterms:type>
+                    <dcterms:modified>2024-01-15</dcterms:modified>
+                    <dcterms:creator>Amsterdam</dcterms:creator>
+                    <gzd:enrichedData>
+                        <gzd:url>https://officielebekendmakingen.nl/gmb-2024-12345</gzd:url>
+                    </gzd:enrichedData>
                 </gzd:gzd>
             </srw:recordData>
         </srw:record>
         <srw:record>
             <srw:recordData>
                 <gzd:gzd xmlns:gzd="http://standaarden.overheid.nl/sru"
-                         xmlns:overheidop="http://standaarden.overheid.nl/product/metadata/">
-                    <overheidop:title>Bestemmingsplan Centrum</overheidop:title>
-                    <overheidop:identifier>gmb-2024-67890</overheidop:identifier>
-                    <overheidop:type>Bestemmingsplan</overheidop:type>
-                    <overheidop:date>2024-02-01</overheidop:date>
-                    <overheidop:spatial>Amsterdam</overheidop:spatial>
-                    <overheidop:source>https://officielebekendmakingen.nl/gmb-2024-67890</overheidop:source>
+                         xmlns:dcterms="http://purl.org/dc/terms/">
+                    <dcterms:title>Bestemmingsplan Centrum</dcterms:title>
+                    <dcterms:identifier>gmb-2024-67890</dcterms:identifier>
+                    <dcterms:type>Bestemmingsplan</dcterms:type>
+                    <dcterms:modified>2024-02-01</dcterms:modified>
+                    <dcterms:creator>Amsterdam</dcterms:creator>
+                    <gzd:enrichedData>
+                        <gzd:url>https://officielebekendmakingen.nl/gmb-2024-67890</gzd:url>
+                    </gzd:enrichedData>
                 </gzd:gzd>
             </srw:recordData>
         </srw:record>
@@ -59,8 +63,8 @@ INCOMPLETE_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
         <srw:record>
             <srw:recordData>
                 <gzd:gzd xmlns:gzd="http://standaarden.overheid.nl/sru"
-                         xmlns:overheidop="http://standaarden.overheid.nl/product/metadata/">
-                    <overheidop:title>Partial Record</overheidop:title>
+                         xmlns:dcterms="http://purl.org/dc/terms/">
+                    <dcterms:title>Partial Record</dcterms:title>
                     <!-- Missing identifier, type, date, municipality, url -->
                 </gzd:gzd>
             </srw:recordData>

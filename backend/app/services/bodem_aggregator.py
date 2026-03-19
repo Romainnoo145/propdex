@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import uuid
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,6 @@ async def fetch_bodem_data(
     x: float,
     y: float,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
 ) -> BodemData:
@@ -33,7 +31,6 @@ async def fetch_bodem_data(
         x: RD New X coordinate (EPSG:28992)
         y: RD New Y coordinate (EPSG:28992)
         client: httpx AsyncClient for connection pooling
-        organization_id: Tenant ID for multi-tenant cache isolation
         session: SQLAlchemy async session for cache operations
         force_refresh: If True, bypass cache and fetch fresh data
 
@@ -51,7 +48,6 @@ async def fetch_bodem_data(
     cached = await get_cached_or_fetch(
         cache_key=cache_key,
         source="bodemloket",
-        organization_id=organization_id,
         fetch_fn=fetch_fn,
         session=session,
         force_refresh=force_refresh,

@@ -1,19 +1,17 @@
-"""MVT tile generation with multi-tenant filtering.
+"""MVT tile generation for scan results.
 
-Generates Mapbox Vector Tiles (MVT) directly from PostGIS using ST_AsMVT,
-filtered by organization_id for multi-tenant isolation.
+Generates Mapbox Vector Tiles (MVT) directly from PostGIS using ST_AsMVT.
+All scan data is shared — no org-scoped filtering.
 
 This approach bypasses Martin for security -- no external service has full
 table access. Per research pitfall #3: NEVER expose Martin directly to frontend.
 
 Benefits over Martin proxy:
-1. Built-in multi-tenant filtering via SQL WHERE clause
-2. No risk of cross-tenant data leakage
-3. Score data included via JOIN (Martin only serves parcel_cache columns)
-4. No additional infrastructure dependency
+1. Score data included via JOIN (Martin only serves parcel_cache columns)
+2. No additional infrastructure dependency
+3. Filtering logic (infrastructure, roads, parks) applied at tile level
 """
 
-import uuid
 from math import atan, pi, sinh
 
 from sqlalchemy import text
@@ -46,15 +44,13 @@ async def generate_mvt_tile(
     z: int,
     x: int,
     y: int,
-    organization_id: uuid.UUID,
-    scan_id: uuid.UUID,
+    scan_id: int | None,
     db: AsyncSession,
 ) -> bytes | None:
-    """Generate MVT tile directly from PostGIS with tenant filtering.
+    """Generate MVT tile directly from PostGIS.
 
-    Uses ST_AsMVT + ST_AsMVTGeom for server-side tile generation,
-    filtered by organization_id for multi-tenant isolation and by
-    scan_id to scope to the active scan's results.
+    Uses ST_AsMVT + ST_AsMVTGeom for server-side tile generation.
+    Scan data is shared — no org-scoped filtering.
 
     The query joins parcel_cache (geometry) with scan_results (score)
     and transforms coordinates from storage EPSG:28992 to tile bounds
@@ -64,8 +60,7 @@ async def generate_mvt_tile(
         z: Tile zoom level
         x: Tile column
         y: Tile row
-        organization_id: Tenant UUID for data isolation
-        scan_id: Scan UUID to scope results
+        scan_id: Scan UUID to scope results (unused currently, kept for API compat)
         db: Async database session
 
     Returns:
@@ -81,13 +76,12 @@ async def generate_mvt_tile(
                 28992
             ) AS geom
         ),
-        -- One scan_result per parcel per org (dedup constraint).
+        -- One scan_result per parcel (unique constraint on parcel_id).
         best_sr AS (
             SELECT sr.parcel_id,
                    sr.score,
                    sr.flags
             FROM scan_results sr
-            WHERE sr.organization_id = :org_id
         ),
         mvt_data AS (
             SELECT
@@ -133,12 +127,10 @@ async def generate_mvt_tile(
             FROM parcel_cache pc
             JOIN best_sr sr ON sr.parcel_id = pc.id
             LEFT JOIN saved_reports rep
-              ON rep.organization_id = pc.organization_id
-             AND rep.source_parcel_id = pc.id
+              ON rep.source_parcel_id = pc.id
              AND rep.deleted_at IS NULL
             CROSS JOIN bounds
-            WHERE pc.organization_id = :org_id
-            AND ST_Intersects(pc.geometry, bounds.geom)
+            WHERE ST_Intersects(pc.geometry, bounds.geom)
             -- Hide non-developable parcels (infrastructure + protected land)
             AND NOT (pc.bestemmingen::text ILIKE '%%"type": "verkeer"%%')
             AND NOT (pc.bestemmingen::text ILIKE '%%"type": "water"%%')
@@ -180,7 +172,6 @@ async def generate_mvt_tile(
             "lat_min": lat_min,
             "lon_max": lon_max,
             "lat_max": lat_max,
-            "org_id": str(organization_id),
         },
     )
 

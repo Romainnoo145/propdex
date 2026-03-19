@@ -2,7 +2,6 @@
 
 import logging
 import re
-import uuid
 from datetime import datetime
 
 import httpx
@@ -62,22 +61,19 @@ def construct_pdf_url(plan_idn: str) -> str | None:
 
 async def get_stored_pdf(
     plan_idn: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> PDFDocument | None:
     """
-    Check if PDF is already stored for this plan and organization.
+    Check if PDF is already stored for this plan.
 
     Args:
         plan_idn: IMRO plan identifier
-        organization_id: Tenant ID
         session: SQLAlchemy async session
 
     Returns:
         PDFDocument if found, None otherwise
     """
     stmt = select(PDFDocument).where(
-        PDFDocument.organization_id == organization_id,
         PDFDocument.plan_idn == plan_idn,
     )
     result = await session.execute(stmt)
@@ -86,7 +82,6 @@ async def get_stored_pdf(
 
 async def download_and_store_pdf(
     plan_idn: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     client: httpx.AsyncClient,
 ) -> PDFDocument:
@@ -98,7 +93,6 @@ async def download_and_store_pdf(
 
     Args:
         plan_idn: IMRO plan identifier
-        organization_id: Tenant ID
         session: SQLAlchemy async session
         client: Shared httpx AsyncClient for downloads
 
@@ -109,9 +103,9 @@ async def download_and_store_pdf(
         PDFDownloadError: If validation, download, or storage fails
     """
     # Check if already stored
-    existing = await get_stored_pdf(plan_idn, organization_id, session)
+    existing = await get_stored_pdf(plan_idn, session)
     if existing:
-        logger.info(f"PDF already stored for {plan_idn} (org {organization_id})")
+        logger.info(f"PDF already stored for {plan_idn}")
         return existing
 
     # Validate IMRO identifier
@@ -162,7 +156,6 @@ async def download_and_store_pdf(
 
     # Store in database
     pdf_doc = PDFDocument(
-        organization_id=organization_id,
         plan_idn=plan_idn,
         file_data=pdf_data,
         file_size=len(pdf_data),
@@ -177,8 +170,7 @@ async def download_and_store_pdf(
     await session.commit()
 
     logger.info(
-        f"Successfully stored PDF for {plan_idn} ({len(pdf_data)} bytes, "
-        f"org {organization_id})"
+        f"Successfully stored PDF for {plan_idn} ({len(pdf_data)} bytes)"
     )
 
     return pdf_doc
@@ -187,7 +179,6 @@ async def download_and_store_pdf(
 async def store_uploaded_pdf(
     plan_idn: str,
     pdf_data: bytes,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> PDFDocument:
     """
@@ -198,7 +189,6 @@ async def store_uploaded_pdf(
     Args:
         plan_idn: IMRO plan identifier
         pdf_data: PDF file bytes
-        organization_id: Tenant ID
         session: SQLAlchemy async session
 
     Returns:
@@ -231,7 +221,6 @@ async def store_uploaded_pdf(
 
     # Store in database
     pdf_doc = PDFDocument(
-        organization_id=organization_id,
         plan_idn=plan_idn,
         file_data=pdf_data,
         file_size=len(pdf_data),
@@ -247,7 +236,7 @@ async def store_uploaded_pdf(
 
     logger.info(
         f"Successfully stored user-uploaded PDF for {plan_idn} "
-        f"({len(pdf_data)} bytes, org {organization_id})"
+        f"({len(pdf_data)} bytes)"
     )
 
     return pdf_doc

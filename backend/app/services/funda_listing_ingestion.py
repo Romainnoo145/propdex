@@ -235,7 +235,6 @@ def parse_funda_detail_page(listing_url: str, detail_html: str) -> ParsedFundaLi
 
 
 async def _match_parcel_for_listing(
-    organization_id: uuid.UUID,
     listing: ParsedFundaListing,
     session: AsyncSession,
 ) -> uuid.UUID | None:
@@ -244,7 +243,6 @@ async def _match_parcel_for_listing(
         return None
 
     query = select(ParcelCache.id, ParcelCache.address).where(
-        ParcelCache.organization_id == organization_id,
         ParcelCache.address.is_not(None),
         func.lower(ParcelCache.address).contains(listing.street.lower()),
     )
@@ -282,7 +280,6 @@ async def _match_parcel_for_listing(
 
 async def ingest_funda_area_snapshots(
     *,
-    organization_id: uuid.UUID,
     area_name: str,
     max_listings: int,
     session: AsyncSession,
@@ -328,12 +325,11 @@ async def ingest_funda_area_snapshots(
         if parsed is None:
             continue
 
-        matched_parcel_id = await _match_parcel_for_listing(organization_id, parsed, session)
+        matched_parcel_id = await _match_parcel_for_listing(parsed, session)
         if matched_parcel_id:
             matched += 1
 
         payload = {
-            "organization_id": organization_id,
             "source": "funda",
             "listing_external_id": parsed.listing_external_id,
             "listing_url": parsed.listing_url,
@@ -355,7 +351,7 @@ async def ingest_funda_area_snapshots(
 
         stmt = pg_insert(FundaListingSnapshot).values(payload)
         stmt = stmt.on_conflict_do_update(
-            constraint="uq_funda_listing_snapshots_org_source_listing_day",
+            constraint="uq_funda_listing_snapshots_source_listing_day",
             set_={
                 "listing_url": stmt.excluded.listing_url,
                 "area_name": stmt.excluded.area_name,
@@ -388,7 +384,6 @@ async def ingest_funda_area_snapshots(
 
 async def build_funda_listing_signal_map(
     parcel_ids: list[uuid.UUID],
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> dict[uuid.UUID, dict[str, int]]:
     """Aggregate listing duration and price-change proxies per parcel."""
@@ -401,7 +396,6 @@ async def build_funda_listing_signal_map(
             FundaListingSnapshot.snapshot_date,
             FundaListingSnapshot.price_eur,
         ).where(
-            FundaListingSnapshot.organization_id == organization_id,
             FundaListingSnapshot.source == "funda",
             FundaListingSnapshot.matched_parcel_id.in_(parcel_ids),
         )

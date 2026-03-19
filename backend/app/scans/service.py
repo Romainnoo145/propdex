@@ -29,7 +29,6 @@ def _buildability_subscore_expr():
 
 
 async def expire_stale_scans(
-    organization_id: uuid.UUID,
     session: AsyncSession,
     stale_minutes: int = 15,
 ) -> int:
@@ -42,7 +41,6 @@ async def expire_stale_scans(
     stmt = (
         update(AreaScan)
         .where(
-            AreaScan.organization_id == organization_id,
             AreaScan.status.in_(["pending", "running"]),
             AreaScan.created_at < cutoff,
         )
@@ -56,14 +54,13 @@ async def expire_stale_scans(
 
 
 async def get_existing_scan(
-    organization_id: uuid.UUID,
     gemeente_code: str,
     session: AsyncSession,
     bbox: dict | None = None,
     project_id: uuid.UUID | None = None,
 ) -> AreaScan | None:
     """
-    Get most recent completed scan for organization + gemeente + bbox.
+    Get most recent completed scan for gemeente + bbox.
 
     Only returns scans with status='completed'. Pending/running/failed scans
     are not considered "existing" — they should not block re-scanning.
@@ -73,7 +70,6 @@ async def get_existing_scan(
     scan from matching when a wijk-specific scan is requested.
 
     Args:
-        organization_id: Tenant organization ID
         gemeente_code: CBS gemeentecode
         bbox: Optional bounding box dict with minx, miny, maxx, maxy (EPSG:28992)
         session: Database session
@@ -81,13 +77,12 @@ async def get_existing_scan(
     Returns:
         AreaScan | None: Most recent completed scan or None
     """
-    # First, expire any stale scans for this org
-    await expire_stale_scans(organization_id, session)
+    # First, expire any stale scans
+    await expire_stale_scans(session)
 
     query = (
         select(AreaScan)
         .where(
-            AreaScan.organization_id == organization_id,
             AreaScan.gemeente_code == gemeente_code,
             AreaScan.status == "completed",
         )
@@ -125,6 +120,8 @@ async def get_or_create_wijk_project(
     When a wijk scan is triggered, automatically creates:
     1. A gemeente parent project (if not exists)
     2. A wijk child project under that gemeente (if not exists)
+
+    Note: Project is still org-scoped, so organization_id is required here.
 
     Returns the wijk project ID to link to the scan.
     """
@@ -177,13 +174,13 @@ async def get_or_create_wijk_project(
 
 
 async def create_scan(
-    organization_id: uuid.UUID,
     gemeente_code: str,
     gemeente_naam: str,
     bbox: dict,
     session: AsyncSession,
     wijk_naam: str | None = None,
     project_id: uuid.UUID | None = None,
+    organization_id: uuid.UUID | None = None,
 ) -> AreaScan:
     """
     Create a new area scan record.
@@ -191,25 +188,25 @@ async def create_scan(
     Automatically creates a gemeente→wijk project hierarchy and links the scan.
 
     Args:
-        organization_id: Tenant organization ID
         gemeente_code: CBS gemeentecode
         gemeente_naam: Gemeente display name
         bbox: Bounding box dict with minx, miny, maxx, maxy keys
         session: Database session
         wijk_naam: Optional CBS wijk name
+        project_id: Optional explicit project ID
+        organization_id: Optional org ID — only used for Project creation (still org-scoped)
 
     Returns:
         AreaScan: The created scan
     """
     resolved_project_id = project_id
-    if resolved_project_id is None:
+    if resolved_project_id is None and organization_id is not None:
         # Auto-create project hierarchy for wijk scans when no explicit folder is provided.
         resolved_project_id = await get_or_create_wijk_project(
             organization_id, gemeente_code, gemeente_naam, wijk_naam, session
         )
 
     scan = AreaScan(
-        organization_id=organization_id,
         gemeente_code=gemeente_code,
         gemeente_naam=gemeente_naam,
         wijk_naam=wijk_naam,
@@ -271,15 +268,13 @@ async def reset_scan_for_rescan(
 
 async def get_scan_by_id(
     scan_id: uuid.UUID,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> AreaScan | None:
     """
-    Get scan by ID with multi-tenant isolation.
+    Get scan by ID.
 
     Args:
         scan_id: Scan UUID
-        organization_id: Tenant organization ID
         session: Database session
 
     Returns:
@@ -287,7 +282,6 @@ async def get_scan_by_id(
     """
     query = select(AreaScan).where(
         AreaScan.id == scan_id,
-        AreaScan.organization_id == organization_id,
     )
 
     result = await session.execute(query)
@@ -296,7 +290,6 @@ async def get_scan_by_id(
 
 async def list_scan_results_by_ids(
     scan_id: uuid.UUID,
-    organization_id: uuid.UUID,
     parcel_ids: list[uuid.UUID],
     sort_by: str = "score",
     sort_order: str = "desc",
@@ -310,7 +303,6 @@ async def list_scan_results_by_ids(
 
     Args:
         scan_id: Scan UUID
-        organization_id: Tenant organization ID
         parcel_ids: List of parcel UUIDs to include
         sort_by: Sort field (score, vacancy_subscore, buildability_subscore,
                  area_m2, address, bouwjaar)
@@ -326,7 +318,6 @@ async def list_scan_results_by_ids(
         .join(ParcelCache, ScanResult.parcel_id == ParcelCache.id)
         .where(
             ScanResult.scan_id == scan_id,
-            ScanResult.organization_id == organization_id,
             ScanResult.parcel_id.in_(parcel_ids),
         )
     )
@@ -351,7 +342,6 @@ async def list_scan_results_by_ids(
 
 async def list_scan_results(
     scan_id: uuid.UUID,
-    organization_id: uuid.UUID,
     has_pand: bool | None,
     search: str | None,
     bestemming_type: str | None,
@@ -372,7 +362,6 @@ async def list_scan_results(
 
     Args:
         scan_id: Scan UUID
-        organization_id: Tenant organization ID
         has_pand: Filter by building presence (True/False/None)
         search: Free-text search across address, parcel code, status, and bestemming JSON
         bestemming_type: Filter by zoning type substring (e.g., "Wonen")
@@ -398,7 +387,6 @@ async def list_scan_results(
         .join(ParcelCache, ScanResult.parcel_id == ParcelCache.id)
         .where(
             ScanResult.scan_id == scan_id,
-            ScanResult.organization_id == organization_id,
         )
     )
 
@@ -489,7 +477,6 @@ async def list_scan_results(
 
 
 async def list_scans(
-    organization_id: uuid.UUID,
     offset: int,
     limit: int,
     session: AsyncSession,
@@ -504,7 +491,6 @@ async def list_scans(
     parcels_total which reflects discovered parcels before qualification.
 
     Args:
-        organization_id: Tenant organization ID
         offset: Pagination offset
         limit: Page size
         session: Database session
@@ -522,7 +508,6 @@ async def list_scans(
 
     query = (
         select(AreaScan, parcel_count_subq.label("parcel_count"))
-        .where(AreaScan.organization_id == organization_id)
     )
 
     if project_id is not None:

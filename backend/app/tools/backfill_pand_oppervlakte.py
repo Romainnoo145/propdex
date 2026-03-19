@@ -72,12 +72,11 @@ def _parse_uuid(value: str) -> uuid.UUID:
 async def _list_target_scans(
     organization_id: uuid.UUID | None,
     scan_id: uuid.UUID | None,
-) -> list[tuple[uuid.UUID, uuid.UUID, float, float, float, float]]:
-    """Return (scan_id, org_id, bbox_minx, bbox_miny, bbox_maxx, bbox_maxy) tuples."""
+) -> list[tuple[uuid.UUID, float, float, float, float]]:
+    """Return (scan_id, bbox_minx, bbox_miny, bbox_maxx, bbox_maxy) tuples."""
     async with async_session_factory() as session:
         stmt = select(
             AreaScan.id,
-            AreaScan.organization_id,
             AreaScan.bbox_minx,
             AreaScan.bbox_miny,
             AreaScan.bbox_maxx,
@@ -86,9 +85,6 @@ async def _list_target_scans(
 
         if scan_id is not None:
             stmt = stmt.where(AreaScan.id == scan_id)
-        if organization_id is not None:
-            stmt = stmt.where(AreaScan.organization_id == organization_id)
-
         stmt = stmt.order_by(AreaScan.id)
         rows = (await session.execute(stmt)).all()
         return [(r[0], r[1], r[2], r[3], r[4], r[5]) for r in rows]
@@ -143,9 +139,7 @@ async def _backfill_scan(
                 )
                 .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                 .where(
-                    ScanResult.organization_id == org_id,
                     ScanResult.scan_id == scan_id,
-                    ParcelCache.organization_id == org_id,
                 )
                 .order_by(ScanResult.id)
                 .limit(batch_size)

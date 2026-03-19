@@ -7,10 +7,10 @@ from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class ChangeRecord(Base, TenantMixin, TimestampMixin):
+class ChangeRecord(Base, TimestampMixin):
     """
     ChangeRecord model - stores detected changes from external APIs.
 
@@ -18,7 +18,7 @@ class ChangeRecord(Base, TenantMixin, TimestampMixin):
     - "permit": Building permits from Omgevingsloket API
     - "zoning": Zoning plan changes from Ruimtelijkeplannen.nl API
 
-    Multi-tenant isolated via organization_id.
+    Shared data — visible to all authenticated users.
     Changes are immutable once detected (created_at/updated_at from TimestampMixin).
     """
 

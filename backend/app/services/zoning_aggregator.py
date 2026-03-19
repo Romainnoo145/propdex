@@ -3,7 +3,6 @@
 import html
 import logging
 import re
-import uuid
 from typing import Any
 
 import httpx
@@ -386,7 +385,6 @@ async def fetch_zoning_data(
     x: float,
     y: float,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
 ) -> ZoningData | None:
@@ -401,7 +399,6 @@ async def fetch_zoning_data(
         x: X coordinate in EPSG:28992 (RD New)
         y: Y coordinate in EPSG:28992 (RD New)
         client: Shared httpx AsyncClient from app.state
-        organization_id: Tenant ID for cache isolation
         session: SQLAlchemy async session for cache
         force_refresh: If True, bypass cache and fetch fresh data
 
@@ -655,7 +652,6 @@ async def fetch_zoning_data(
     cache_result = await get_cached_or_fetch(
         cache_key=cache_key,
         source="dso",
-        organization_id=organization_id,
         fetch_fn=_fetch,
         session=session,
         force_refresh=force_refresh,

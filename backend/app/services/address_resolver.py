@@ -1,7 +1,6 @@
 """Address resolution service chaining BAG API calls."""
 
 import logging
-import uuid
 from datetime import datetime
 
 import httpx
@@ -26,7 +25,6 @@ _bag_client = BAGAPIClient()
 async def resolve_address(
     input_data: AddressInput,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> AddressResolution:
     """
@@ -38,7 +36,6 @@ async def resolve_address(
     Args:
         input_data: Address input with postcode and house number
         client: Shared httpx AsyncClient from app.state
-        organization_id: Tenant ID for cache isolation
         session: SQLAlchemy async session for cache operations
 
     Returns:
@@ -63,7 +60,6 @@ async def resolve_address(
     address_cache_result = await get_cached_or_fetch(
         cache_key=cache_key_address,
         source="bag",
-        organization_id=organization_id,
         fetch_fn=lambda: _bag_client.get_address(
             postcode=input_data.postcode,
             huisnummer=input_data.huisnummer,
@@ -101,7 +97,6 @@ async def resolve_address(
             vbo_cache_result = await get_cached_or_fetch(
                 cache_key=cache_key_vbo,
                 source="bag",
-                organization_id=organization_id,
                 fetch_fn=lambda: _bag_client.get_verblijfsobject(
                     verblijfsobject_id=verblijfsobject_id,
                     client=client,
@@ -125,7 +120,6 @@ async def resolve_address(
                     pand_cache_result = await get_cached_or_fetch(
                         cache_key=cache_key_pand,
                         source="bag",
-                        organization_id=organization_id,
                         fetch_fn=lambda: _bag_client.get_pand(
                             pand_id=pand_id,
                             client=client,

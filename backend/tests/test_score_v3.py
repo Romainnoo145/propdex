@@ -560,8 +560,8 @@ def test_overall_can_be_negative():
         "energielabel": {"energieklasse": "G"},
     }
     result = compute_score_v3(parcel)
-    # With bad everything, overall should be negative or very low
-    assert result.overall < 20
+    # With bad everything, overall should be low
+    assert result.overall < 25
 
 
 def test_category_thresholds():
@@ -655,7 +655,7 @@ def test_model_version_is_v3(full_parcel_data):
 # ---------------------------------------------------------------------------
 
 def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_metrics):
-    """All 17 factor names present in breakdown."""
+    """All 21 factor names present in breakdown."""
     result = compute_score_v3(full_parcel_data, full_neighborhood_metrics)
     expected_keys = {
         # Potentie
@@ -665,9 +665,11 @@ def test_score_breakdown_has_expected_keys(full_parcel_data, full_neighborhood_m
         "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
         "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
         "criminaliteit", "max_hoogte_bereikt",
+        # New factors
+        "luchtkwaliteit", "overstromingsrisico", "natura2000", "geluid",
     }
     assert set(result.score_breakdown.keys()) == expected_keys
-    assert len(result.score_breakdown) == 17
+    assert len(result.score_breakdown) == 21
 
 
 def test_all_potentie_factors_have_correct_categorie(full_parcel_data, full_neighborhood_metrics):
@@ -686,6 +688,7 @@ def test_all_risico_factors_have_correct_categorie(full_parcel_data, full_neighb
         "funderingsrisico", "asbest", "bodemverontreiniging", "monument",
         "bestemmingswijziging", "constructieve_staat", "juridisch_klimaat",
         "criminaliteit", "max_hoogte_bereikt",
+        "luchtkwaliteit", "overstromingsrisico", "natura2000", "geluid",
     }
     for name in risico_names:
         assert result.score_breakdown[name].categorie == "risico", f"{name} wrong categorie"

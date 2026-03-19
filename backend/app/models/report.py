@@ -7,15 +7,15 @@ from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class SavedReport(Base, TenantMixin, TimestampMixin):
+class SavedReport(Base, TimestampMixin):
     """
     SavedReport model for storing complete property intelligence reports.
 
     Stores full PropertyReportResponse as JSONB with denormalized fields
-    for filtering and search. Multi-tenant isolated via organization_id.
+    for filtering and search. User-scoped — each user owns their reports.
     Supports soft-delete for recoverable deletion.
     """
 
@@ -24,6 +24,12 @@ class SavedReport(Base, TenantMixin, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="User who created this report",
     )
 
     report_name: Mapped[str] = mapped_column(
@@ -66,14 +72,13 @@ class SavedReport(Base, TenantMixin, TimestampMixin):
     )
 
     __table_args__ = (
-        Index("ix_saved_reports_org_created", "organization_id", "created_at"),
-        Index("ix_saved_reports_org_updated", "organization_id", "updated_at"),
-        Index("ix_saved_reports_org_city", "organization_id", "city"),
-        Index("ix_saved_reports_org_project", "organization_id", "project_id"),
-        Index("ix_saved_reports_org_source_parcel", "organization_id", "source_parcel_id"),
+        Index("ix_saved_reports_user_created", "user_id", "created_at"),
+        Index("ix_saved_reports_user_city", "user_id", "city"),
+        Index("ix_saved_reports_user_project", "user_id", "project_id"),
+        Index("ix_saved_reports_user_source_parcel", "user_id", "source_parcel_id"),
         Index(
-            "uq_saved_reports_org_source_parcel_active",
-            "organization_id",
+            "uq_saved_reports_user_source_parcel_active",
+            "user_id",
             "source_parcel_id",
             unique=True,
             postgresql_where=text(

@@ -20,6 +20,7 @@ def rce_client():
 def _make_rce_response(docs: list[dict]) -> MagicMock:
     """Create a mock response for RCE Solr API."""
     response = MagicMock(spec=httpx.Response)
+    response.status_code = 200
     response.json.return_value = {"response": {"docs": docs}}
     return response
 
@@ -78,6 +79,7 @@ class TestGetByMonumentNumber:
 
     async def test_malformed_response(self, rce_client):
         response = MagicMock(spec=httpx.Response)
+        response.status_code = 200
         response.json.return_value = {}
         client = AsyncMock(spec=httpx.AsyncClient)
         client.get.return_value = response

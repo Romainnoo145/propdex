@@ -1,7 +1,6 @@
 """PDF parsing background job for ARQ worker."""
 
 import logging
-import uuid
 from datetime import datetime
 
 import httpx
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def pdf_parsing_job(
     ctx: dict,
     plan_idn: str,
-    organization_id: str,
+    organization_id: str | None = None,  # kept for backward compat with queued jobs
     pdf_url: str | None = None,
 ) -> dict:
     """
@@ -36,7 +35,7 @@ async def pdf_parsing_job(
     Args:
         ctx: ARQ context (contains redis connection, etc.)
         plan_idn: IMRO plan identifier
-        organization_id: Tenant UUID as string
+        organization_id: Deprecated — kept for backward compat with already-queued jobs
         pdf_url: Optional explicit PDF URL (None = construct from plan_idn)
 
     Returns:
@@ -57,21 +56,18 @@ async def pdf_parsing_job(
         autoflush=False,
     )
 
-    org_id = uuid.UUID(organization_id)
-
     try:
         async with session_factory() as session:
             # Update ParsingJob status to "in_progress"
             stmt = select(ParsingJob).where(
                 ParsingJob.plan_idn == plan_idn,
-                ParsingJob.organization_id == org_id,
             )
             result = await session.execute(stmt)
             job = result.scalar_one_or_none()
 
             if not job:
                 logger.error(
-                    f"ParsingJob not found for plan_idn={plan_idn}, org={org_id}"
+                    f"ParsingJob not found for plan_idn={plan_idn}"
                 )
                 return {"plan_idn": plan_idn, "status": "error", "error": "Job not found"}
 
@@ -81,16 +77,16 @@ async def pdf_parsing_job(
             await session.flush()
             await session.commit()
 
-            logger.info(f"Starting PDF parsing for {plan_idn} (org {org_id})")
+            logger.info(f"Starting PDF parsing for {plan_idn}")
 
             # Get or download PDF
-            pdf_doc = await get_stored_pdf(plan_idn, org_id, session)
+            pdf_doc = await get_stored_pdf(plan_idn, session)
             if not pdf_doc:
                 # Need to download
                 try:
                     async with httpx.AsyncClient(timeout=60.0) as http_client:
                         pdf_doc = await download_and_store_pdf(
-                            plan_idn, org_id, session, http_client
+                            plan_idn, session, http_client
                         )
                 except PDFDownloadError as e:
                     logger.error(f"PDF download failed for {plan_idn}: {e}")
@@ -135,7 +131,6 @@ async def pdf_parsing_job(
 
             # Check if cache entry exists (upsert pattern)
             stmt = select(CachedAPIResponse).where(
-                CachedAPIResponse.organization_id == org_id,
                 CachedAPIResponse.cache_key == cache_key,
             )
             result = await session.execute(stmt)
@@ -151,7 +146,6 @@ async def pdf_parsing_job(
             else:
                 # Create new
                 cached_entry = CachedAPIResponse(
-                    organization_id=org_id,
                     cache_key=cache_key,
                     source="ai_parsed",
                     response_data=parsed_result.model_dump(),
@@ -182,7 +176,6 @@ async def pdf_parsing_job(
             async with session_factory() as session:
                 stmt = select(ParsingJob).where(
                     ParsingJob.plan_idn == plan_idn,
-                    ParsingJob.organization_id == org_id,
                 )
                 result = await session.execute(stmt)
                 job = result.scalar_one_or_none()

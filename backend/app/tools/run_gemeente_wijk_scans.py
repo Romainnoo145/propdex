@@ -150,7 +150,6 @@ async def _latest_scan_for_wijk(
         result = await session.execute(
             select(AreaScan)
             .where(
-                AreaScan.organization_id == org_id,
                 AreaScan.gemeente_code == gemeente_code,
                 AreaScan.wijk_naam == wijk_naam,
             )
@@ -217,7 +216,6 @@ async def _enqueue_scan(
             scan = await scan_service.reset_scan_for_rescan(existing_scan, session)
         else:
             scan = await scan_service.create_scan(
-                organization_id=org_id,
                 gemeente_code=gemeente_code,
                 gemeente_naam=gemeente_naam,
                 bbox={

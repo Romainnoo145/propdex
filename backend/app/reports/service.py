@@ -18,14 +18,14 @@ from app.models.scan_result import ScanResult
 from app.schemas.property import PropertyReportResponse
 
 
-def active_reports_query(organization_id: uuid.UUID):
+def active_reports_query(user_id: uuid.UUID):
     """
-    Base query for active (non-deleted) reports filtered by organization_id.
+    Base query for active (non-deleted) reports filtered by user_id.
 
     All list/get operations MUST use this helper to prevent deleted reports from leaking.
     """
     return select(SavedReport).where(
-        SavedReport.organization_id == organization_id,
+        SavedReport.user_id == user_id,
         SavedReport.deleted_at.is_(None),
     )
 
@@ -251,8 +251,6 @@ async def _resolve_location_context_from_parcel(
         )
         .join(ScanResult, ScanResult.scan_id == AreaScan.id)
         .where(
-            AreaScan.organization_id == organization_id,
-            ScanResult.organization_id == organization_id,
             ScanResult.parcel_id == parcel_id,
         )
         .order_by(ScanResult.created_at.desc())
@@ -270,7 +268,6 @@ async def _resolve_location_context_from_parcel(
         parcel_code_result = await session.execute(
             select(ParcelCache.gemeente_code).where(
                 ParcelCache.id == parcel_id,
-                ParcelCache.organization_id == organization_id,
             )
         )
         parcel_gemeente_code = parcel_code_result.scalar_one_or_none()
@@ -280,13 +277,14 @@ async def _resolve_location_context_from_parcel(
 
 
 async def _backfill_unassigned_reports(
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> None:
     """Backfill legacy reports without project_id to gemeente folders."""
     unassigned_result = await session.execute(
         select(SavedReport).where(
-            SavedReport.organization_id == organization_id,
+            SavedReport.user_id == user_id,
             SavedReport.deleted_at.is_(None),
             SavedReport.project_id.is_(None),
         )
@@ -349,6 +347,7 @@ async def save_report(
     report_data: dict,
     notes: str | None,
     project_id: uuid.UUID | None,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     session: AsyncSession,
     parcel_id: uuid.UUID | None = None,
@@ -361,7 +360,8 @@ async def save_report(
         report_data: Full PropertyReportResponse dict
         notes: Optional free-text notes
         project_id: Optional project folder ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project resolution)
         session: Database session
         parcel_id: Optional ParcelCache ID (used to resolve wijk context)
 
@@ -409,7 +409,7 @@ async def save_report(
     if parcel_id is not None:
         existing_for_parcel = await get_report_by_source_parcel(
             parcel_id=parcel_id,
-            organization_id=organization_id,
+            user_id=user_id,
             session=session,
         )
         if existing_for_parcel is not None:
@@ -457,7 +457,7 @@ async def save_report(
 
     # Create SavedReport
     report = SavedReport(
-        organization_id=organization_id,
+        user_id=user_id,
         report_name=report_name,
         report_data=report_data_json,
         postcode=postcode,
@@ -477,7 +477,7 @@ async def save_report(
         if parcel_id is not None:
             existing_for_parcel = await get_report_by_source_parcel(
                 parcel_id=parcel_id,
-                organization_id=organization_id,
+                user_id=user_id,
                 session=session,
             )
             if existing_for_parcel is not None:
@@ -493,16 +493,16 @@ async def save_report(
 
 async def get_report_by_source_parcel(
     parcel_id: uuid.UUID,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     session: AsyncSession,
 ) -> SavedReport | None:
     """
-    Return active report linked to a source parcel for this organization.
+    Return active report linked to a source parcel for this user.
     """
     result = await session.execute(
         select(SavedReport)
         .where(
-            SavedReport.organization_id == organization_id,
+            SavedReport.user_id == user_id,
             SavedReport.source_parcel_id == parcel_id,
             SavedReport.deleted_at.is_(None),
         )
@@ -512,6 +512,7 @@ async def get_report_by_source_parcel(
 
 
 async def list_reports(
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     city: str | None,
     project_id: uuid.UUID | None,
@@ -526,7 +527,8 @@ async def list_reports(
     List saved reports with filtering, search, sorting, and pagination.
 
     Args:
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project scope queries)
         city: Optional city filter (exact match)
         project_id: Optional project filter (selected project + descendants)
         search_query: Optional search query (ILIKE on report_name)
@@ -540,10 +542,10 @@ async def list_reports(
         tuple: (list of SavedReport, total count)
     """
     # One-time safety pass: ensure legacy data is also folder-linked.
-    await _backfill_unassigned_reports(organization_id=organization_id, session=session)
+    await _backfill_unassigned_reports(user_id=user_id, organization_id=organization_id, session=session)
 
     # Start from active reports query
-    query = active_reports_query(organization_id)
+    query = active_reports_query(user_id)
 
     # Apply optional filters
     if city is not None:
@@ -590,6 +592,7 @@ async def list_reports(
 
 async def get_report(
     report_id: uuid.UUID,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> SavedReport:
@@ -598,7 +601,8 @@ async def get_report(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project resolution)
         session: Database session
 
     Returns:
@@ -607,7 +611,7 @@ async def get_report(
     Raises:
         HTTPException: If report not found
     """
-    query = active_reports_query(organization_id).where(SavedReport.id == report_id)
+    query = active_reports_query(user_id).where(SavedReport.id == report_id)
     result = await session.execute(query)
     report = result.scalar_one_or_none()
 
@@ -633,6 +637,7 @@ async def get_report(
 
 async def soft_delete_report(
     report_id: uuid.UUID,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> SavedReport:
@@ -641,7 +646,8 @@ async def soft_delete_report(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project resolution in get_report)
         session: Database session
 
     Returns:
@@ -650,7 +656,7 @@ async def soft_delete_report(
     Raises:
         HTTPException: If report not found
     """
-    report = await get_report(report_id, organization_id, session)
+    report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
     report.deleted_at = datetime.utcnow()
     await session.commit()
     return report
@@ -658,7 +664,7 @@ async def soft_delete_report(
 
 async def restore_report(
     report_id: uuid.UUID,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     session: AsyncSession,
 ) -> SavedReport:
     """
@@ -666,7 +672,7 @@ async def restore_report(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
         session: Database session
 
     Returns:
@@ -677,7 +683,7 @@ async def restore_report(
     """
     # Query DELETED reports
     query = select(SavedReport).where(
-        SavedReport.organization_id == organization_id,
+        SavedReport.user_id == user_id,
         SavedReport.id == report_id,
         SavedReport.deleted_at.is_not(None),
     )
@@ -697,6 +703,7 @@ async def restore_report(
 
 async def update_report_notes(
     report_id: uuid.UUID,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     notes: str | None,
     session: AsyncSession,
@@ -706,7 +713,8 @@ async def update_report_notes(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project resolution in get_report)
         notes: New notes content (None to clear)
         session: Database session
 
@@ -716,7 +724,7 @@ async def update_report_notes(
     Raises:
         HTTPException: If report not found
     """
-    report = await get_report(report_id, organization_id, session)
+    report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
     report.notes = notes
     await session.commit()
     return report
@@ -724,6 +732,7 @@ async def update_report_notes(
 
 async def assign_report_to_project(
     report_id: uuid.UUID,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     project_id: uuid.UUID | None,
     session: AsyncSession,
@@ -733,7 +742,8 @@ async def assign_report_to_project(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project verification)
         project_id: Project ID (None auto-maps to gemeente folder)
         session: Database session
 
@@ -743,7 +753,7 @@ async def assign_report_to_project(
     Raises:
         HTTPException: If report or project not found
     """
-    report = await get_report(report_id, organization_id, session)
+    report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
 
     # Never leave a report unassigned. Null requests map to auto gemeente folder.
     if project_id is None:
@@ -782,6 +792,7 @@ async def assign_report_to_project(
 
 async def update_report_data(
     report_id: uuid.UUID,
+    user_id: uuid.UUID,
     organization_id: uuid.UUID,
     fresh_data: dict,
     session: AsyncSession,
@@ -791,7 +802,8 @@ async def update_report_data(
 
     Args:
         report_id: Report ID
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
+        organization_id: Organization ID (for project resolution in get_report)
         fresh_data: Fresh PropertyReportResponse dict
         session: Database session
 
@@ -808,7 +820,7 @@ async def update_report_data(
     except Exception as e:
         raise ValueError(f"Invalid fresh_data: {e}") from e
 
-    report = await get_report(report_id, organization_id, session)
+    report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
 
     # Update report_data JSONB
     # BRK eigendomsdata MUST be stripped before JSONB persist (Kadaster Tier 3 never-store terms).
@@ -832,14 +844,14 @@ async def update_report_data(
 
 
 async def get_distinct_cities(
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     session: AsyncSession,
 ) -> list[str]:
     """
     Get list of distinct cities from active reports for filter dropdown.
 
     Args:
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
         session: Database session
 
     Returns:
@@ -848,7 +860,7 @@ async def get_distinct_cities(
     query = (
         select(SavedReport.city)
         .where(
-            SavedReport.organization_id == organization_id,
+            SavedReport.user_id == user_id,
             SavedReport.deleted_at.is_(None),
         )
         .distinct()
@@ -862,7 +874,6 @@ async def get_distinct_cities(
 
 async def save_generated_dossier(
     report_id: uuid.UUID,
-    organization_id: uuid.UUID,
     user_id: uuid.UUID,
     file_size: int,
     session: AsyncSession,
@@ -872,7 +883,6 @@ async def save_generated_dossier(
 
     Args:
         report_id: SavedReport ID the dossier belongs to
-        organization_id: Tenant organization ID
         user_id: ID of the user who generated the dossier
         file_size: PDF file size in bytes
         session: Database session
@@ -881,7 +891,6 @@ async def save_generated_dossier(
         GeneratedDossier: The created audit record
     """
     dossier = GeneratedDossier(
-        organization_id=organization_id,
         report_id=report_id,
         generated_by_user_id=user_id,
         file_size_bytes=file_size,
@@ -895,7 +904,7 @@ async def save_generated_dossier(
 
 async def list_generated_dossiers(
     report_id: uuid.UUID,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     session: AsyncSession,
 ) -> list[GeneratedDossier]:
     """
@@ -903,7 +912,7 @@ async def list_generated_dossiers(
 
     Args:
         report_id: SavedReport ID to list dossiers for
-        organization_id: Tenant organization ID
+        user_id: Owner user ID
         session: Database session
 
     Returns:
@@ -912,7 +921,7 @@ async def list_generated_dossiers(
     result = await session.execute(
         select(GeneratedDossier)
         .where(
-            GeneratedDossier.organization_id == organization_id,
+            GeneratedDossier.generated_by_user_id == user_id,
             GeneratedDossier.report_id == report_id,
         )
         .order_by(desc(GeneratedDossier.created_at))

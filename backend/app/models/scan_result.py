@@ -7,12 +7,12 @@ from sqlalchemy import ForeignKey, Index, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin
+from app.models.base import Base
 
 
-class ScanResult(Base, TenantMixin):
+class ScanResult(Base):
     """
-    ScanResult model - one row per parcel per organization.
+    ScanResult model - one row per parcel.
 
     Each record represents the latest scan data for a specific parcel.
     When a newer wijk scan covers the same parcel, the existing row is
@@ -21,7 +21,7 @@ class ScanResult(Base, TenantMixin):
     This ensures each parcel appears in exactly ONE scan_result, preventing
     data duplication from overlapping wijk bounding boxes.
 
-    Multi-tenant isolated via organization_id.
+    Shared data — visible to all authenticated users.
     """
 
     __tablename__ = "scan_results"
@@ -53,9 +53,8 @@ class ScanResult(Base, TenantMixin):
     )
 
     __table_args__ = (
-        Index("ix_scan_results_org_parcel", "organization_id", "parcel_id"),
         UniqueConstraint(
-            "organization_id", "parcel_id",
-            name="uq_scan_results_org_parcel",
+            "parcel_id",
+            name="uq_scan_results_parcel",
         ),
     )

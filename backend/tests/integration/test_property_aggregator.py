@@ -154,10 +154,11 @@ class TestPropertyAggregatorOrchestration:
             mock_cache_result.data = [
                 {
                     "properties": {
-                        "kadastraleAanduiding": "ASD04 S 12345",
-                        "perceelnummer": "12345",
+                        "identificatie": "KAD001",
+                        "kadastrale_gemeente_waarde": "ASD04",
                         "sectie": "S",
-                        "oppervlakte": 150,
+                        "perceelnummer": 12345,
+                        "kadastrale_grootte_waarde": 150,
                     },
                     "geometry": {
                         "type": "Polygon",
@@ -176,7 +177,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -197,6 +197,7 @@ class TestPropertyAggregatorOrchestration:
         # Cadastral section
         assert len(result.cadastral_parcels) == 1
         assert result.cadastral_parcels[0].kadastrale_aanduiding == "ASD04 S 12345"
+        assert result.cadastral_parcels[0].oppervlakte == 150
 
         # Zoning section
         assert result.zoning is not None
@@ -210,9 +211,9 @@ class TestPropertyAggregatorOrchestration:
         assert result.map_data is not None
         assert result.map_data.center_rd == [121687.0, 487484.0]
 
-        # Completeness score (5 sections available: address, building, cadastral, zoning, monuments)
-        # AI parsing is not_available (arq_pool=None), so 5/6 = 0.833...
-        assert result.completeness_score > 0.8
+        # Completeness score (5 sections available out of 11: address, building, cadastral, zoning, monuments)
+        # AI parsing is not_available (arq_pool=None), energy_label/woz fail mock mismatch, brk unconfigured
+        assert result.completeness_score == pytest.approx(5 / 11, rel=0.01)
 
         # Data sources
         assert any("BAG API v2" in src.source for src in result.data_sources)
@@ -245,7 +246,6 @@ class TestPropertyAggregatorOrchestration:
                 await aggregate_property_data(
                     input_data=input_data,
                     client=client,
-                    organization_id=org_id,
                     session=test_db,
                     force_refresh=False,
                     arq_pool=None,
@@ -270,7 +270,6 @@ class TestPropertyAggregatorOrchestration:
                 await aggregate_property_data(
                     input_data=input_data,
                     client=client,
-                    organization_id=org_id,
                     session=test_db,
                     force_refresh=False,
                     arq_pool=None,
@@ -307,7 +306,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -326,9 +324,8 @@ class TestPropertyAggregatorOrchestration:
         # Errors list should contain zoning error
         assert any("Bestemmingsplan data niet beschikbaar" in err for err in result.errors)
 
-        # Completeness score should reflect missing zoning (4/6 sections: address, building, monuments, ai_parsing unavailable)
-        # address=1, building=1, cadastral=0, zoning=0, monuments=1, ai=0 = 3/6
-        assert result.completeness_score == 0.5  # 3/6
+        # Completeness score: address=1, building=1, monuments=1, rest=0 → 3/11
+        assert result.completeness_score == pytest.approx(3 / 11, rel=0.01)
 
     async def test_partial_failure_monuments_unavailable(self, test_db, org_id):
         """Monument fetch failure is gracefully handled, other sections still populated."""
@@ -358,7 +355,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -378,8 +374,8 @@ class TestPropertyAggregatorOrchestration:
         # Errors list should contain monument error
         assert any("Monument data niet beschikbaar" in err for err in result.errors)
 
-        # Completeness score: address=1, building=1, cadastral=0, zoning=1, monuments=0, ai=0 = 3/6
-        assert result.completeness_score == 0.5
+        # Completeness score: address=1, building=1, zoning=1, rest=0 → 3/11
+        assert result.completeness_score == pytest.approx(3 / 11, rel=0.01)
 
     async def test_partial_failure_cadastral_unavailable(self, test_db, org_id):
         """Cadastral fetch failure is gracefully handled, other sections still populated."""
@@ -402,7 +398,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -420,8 +415,8 @@ class TestPropertyAggregatorOrchestration:
         # Errors list should contain cadastral error
         assert any("Cadastral data unavailable" in err for err in result.errors)
 
-        # Completeness score: address=1, building=1, cadastral=0, zoning=1, monuments=1, ai=0 = 4/6
-        assert result.completeness_score == pytest.approx(0.666, rel=0.01)
+        # Completeness score: address=1, building=1, zoning=1, monuments=1, rest=0 → 4/11
+        assert result.completeness_score == pytest.approx(4 / 11, rel=0.01)
 
     async def test_no_coordinates_skips_parallel_fetches(self, test_db, org_id):
         """When building has no geometry, parallel fetches are skipped."""
@@ -439,7 +434,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -459,13 +453,13 @@ class TestPropertyAggregatorOrchestration:
         # Map data should be None (no coordinates)
         assert result.map_data is None
 
-        # Completeness score: only address available = 1/6
-        assert result.completeness_score == pytest.approx(0.166, rel=0.01)
+        # Completeness score: only address available → 1/11
+        assert result.completeness_score == pytest.approx(1 / 11, rel=0.01)
 
-        # Parallel fetch functions should not be called (coordinates=None)
+        # Coordinate-dependent fetches should not be called
         mock_fetch_zoning.assert_not_called()
         mock_fetch_monuments.assert_not_called()
-        mock_get_cached.assert_not_called()
+        # get_cached_or_fetch IS called for ep_online and woz (coordinate-independent)
 
     async def test_polygon_geometry_extracts_centroid(self, test_db, org_id):
         """Polygon geometry is converted to centroid for parallel fetches."""
@@ -493,7 +487,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -502,16 +495,17 @@ class TestPropertyAggregatorOrchestration:
         # Parallel fetches should have been called (coordinates extracted from polygon)
         mock_fetch_zoning.assert_called_once()
         mock_fetch_monuments.assert_called_once()
-        mock_get_cached.assert_called_once()
+        # get_cached_or_fetch called for cadastral, ep_online, and woz
+        assert mock_get_cached.call_count >= 1
 
-        # Verify coordinates were extracted (first point of polygon: [121600.0, 487400.0])
+        # Verify coordinates were extracted (centroid of polygon: [121700.0, 487500.0])
         zoning_call_kwargs = mock_fetch_zoning.call_args.kwargs
-        assert zoning_call_kwargs["x"] == 121600.0
-        assert zoning_call_kwargs["y"] == 487400.0
+        assert zoning_call_kwargs["x"] == 121700.0
+        assert zoning_call_kwargs["y"] == 487500.0
 
         # Map data should have center coordinates from polygon centroid
         assert result.map_data is not None
-        assert result.map_data.center_rd == [121600.0, 487400.0]
+        assert result.map_data.center_rd == [121700.0, 487500.0]
 
     async def test_completeness_score_calculation(self, test_db, org_id):
         """Completeness score correctly reflects available sections."""
@@ -530,7 +524,11 @@ class TestPropertyAggregatorOrchestration:
             mock_cache_result = AsyncMock()
             mock_cache_result.data = [
                 {
-                    "properties": {"kadastraleAanduiding": "TEST"},
+                    "properties": {
+                        "kadastrale_gemeente_waarde": "TEST",
+                        "sectie": "A",
+                        "perceelnummer": 1,
+                    },
                     "geometry": None,
                 }
             ]
@@ -545,14 +543,13 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
             )
 
-        # Sections: address=1, building=1, cadastral=1, zoning=1, monuments=1, ai=0 = 5/6
-        assert result.completeness_score == pytest.approx(0.833, rel=0.01)
+        # Sections: address=1, building=1, cadastral=1, zoning=1, monuments=1, rest=0 → 5/11
+        assert result.completeness_score == pytest.approx(5 / 11, rel=0.01)
 
         # Test 2: Only address and building
         mock_resolution_minimal = make_mock_address_resolution(with_geometry=False)
@@ -564,14 +561,13 @@ class TestPropertyAggregatorOrchestration:
             result_minimal = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
             )
 
-        # Sections: address=1, building=0, cadastral=0, zoning=0, monuments=0, ai=0 = 1/6
-        assert result_minimal.completeness_score == pytest.approx(0.166, rel=0.01)
+        # Sections: address=1, rest=0 → 1/11
+        assert result_minimal.completeness_score == pytest.approx(1 / 11, rel=0.01)
 
     async def test_ai_parsing_section_without_arq_pool(self, test_db, org_id):
         """When arq_pool=None, AI parsing section has status 'not_available'."""
@@ -598,7 +594,6 @@ class TestPropertyAggregatorOrchestration:
             result = await aggregate_property_data(
                 input_data=input_data,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
                 arq_pool=None,
@@ -611,5 +606,5 @@ class TestPropertyAggregatorOrchestration:
         assert result.ai_parsing.error_message == "AI parsing niet beschikbaar"
 
         # AI parsing should NOT contribute to completeness score
-        # Sections: address=1, building=1, cadastral=0, zoning=0, monuments=0, ai=0 = 2/6
-        assert result.completeness_score == pytest.approx(0.333, rel=0.01)
+        # Sections: address=1, building=1, rest=0 → 2/11
+        assert result.completeness_score == pytest.approx(2 / 11, rel=0.01)

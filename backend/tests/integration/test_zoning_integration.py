@@ -128,7 +128,6 @@ class TestZoningFullFlow:
                 x=121687.0,
                 y=487484.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -145,7 +144,6 @@ class TestZoningFullFlow:
 
         # Direct DB assertion: cache entry exists
         stmt = select(CachedAPIResponse).where(
-            CachedAPIResponse.organization_id == org_id,
             CachedAPIResponse.source == "dso",
             CachedAPIResponse.cache_key.startswith("dso:zoning:"),
         )
@@ -198,7 +196,6 @@ class TestZoningFullFlow:
                 x=121700.0,
                 y=487500.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -211,7 +208,6 @@ class TestZoningFullFlow:
                 x=121700.0,
                 y=487500.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -267,7 +263,6 @@ class TestZoningFullFlow:
                 x=121750.0,
                 y=487550.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -279,7 +274,6 @@ class TestZoningFullFlow:
                 x=121750.0,
                 y=487550.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=True,
             )
@@ -301,7 +295,6 @@ class TestZoningFullFlow:
                 x=121800.0,
                 y=487600.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -311,8 +304,7 @@ class TestZoningFullFlow:
 
         # Cache entry should still be created
         stmt = select(CachedAPIResponse).where(
-            CachedAPIResponse.organization_id == org_id,
-            CachedAPIResponse.cache_key.startswith("dso:zoning:v3:121800.0:487600.0"),
+            CachedAPIResponse.cache_key.startswith("dso:zoning:v4:121800.0:487600.0"),
         )
         cache_entry = (await test_db.execute(stmt)).scalar_one()
         assert cache_entry is not None
@@ -345,7 +337,6 @@ class TestZoningFullFlow:
                 x=121850.0,
                 y=487650.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -410,7 +401,6 @@ class TestZoningFullFlow:
                 x=121700.0,
                 y=487500.0,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=True,
             )

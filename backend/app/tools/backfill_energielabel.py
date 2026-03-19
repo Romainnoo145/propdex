@@ -157,7 +157,6 @@ async def _run(gemeente: str) -> int:
             await session.execute(
                 select(AreaScan.id, AreaScan.wijk_naam)
                 .where(
-                    AreaScan.organization_id == org_id,
                     AreaScan.status == "completed",
                     func.lower(AreaScan.gemeente_naam) == gemeente.lower(),
                 )
@@ -188,8 +187,6 @@ async def _run(gemeente: str) -> int:
                         select(ScanResult, ParcelCache)
                         .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                         .where(
-                            ScanResult.organization_id == org_id,
-                            ParcelCache.organization_id == org_id,
                             ScanResult.scan_id == scan_id,
                         )
                         .order_by(ScanResult.id)
@@ -271,8 +268,6 @@ async def _run(gemeente: str) -> int:
                         select(ScanResult, ParcelCache)
                         .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                         .where(
-                            ScanResult.organization_id == org_id,
-                            ParcelCache.organization_id == org_id,
                             ScanResult.scan_id == scan_id,
                         )
                         .order_by(ScanResult.id)

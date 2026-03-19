@@ -256,7 +256,7 @@ def _derive_bag_attributes_for_parcel(
 async def area_scan_job(
     ctx: dict,
     scan_id: str,
-    organization_id: str,
+    organization_id: str | None = None,
 ) -> dict:
     """
     Background job: Scan area for parcels, qualify, resolve addresses, create project.
@@ -293,7 +293,7 @@ async def area_scan_job(
     )
 
     scan_uuid = uuid.UUID(scan_id)
-    org_id = uuid.UUID(organization_id)
+    org_id = uuid.UUID(organization_id) if organization_id else None
     http_client: httpx.AsyncClient | None = None
 
     try:
@@ -305,7 +305,6 @@ async def area_scan_job(
 
             stmt = select(AreaScan).where(
                 AreaScan.id == scan_uuid,
-                AreaScan.organization_id == org_id,
             )
             result = await session.execute(stmt)
             scan = result.scalar_one_or_none()
@@ -615,7 +614,6 @@ async def area_scan_job(
             if all_ranked:
                 listing_signal_by_parcel = await build_funda_listing_signal_map(
                     [parcel.id for parcel, *_rest in all_ranked],
-                    org_id,
                     session,
                 )
 
@@ -679,7 +677,6 @@ async def area_scan_job(
 
                     ranked_values.append(
                         {
-                            "organization_id": org_id,
                             "scan_id": scan.id,
                             "parcel_id": parcel.id,
                             "score": 0,  # Placeholder — updated in Phase 6 (Score v3.0)
@@ -1008,7 +1005,6 @@ async def area_scan_job(
             try:
                 retro_matched = await retro_match_changes_for_gemeente(
                     gemeente_code=scan.gemeente_code,
-                    organization_id=org_id,
                     session=session,
                     client=http_client,
                 )
@@ -1038,7 +1034,6 @@ async def area_scan_job(
             async with session_factory() as session:
                 stmt = select(AreaScan).where(
                     AreaScan.id == scan_uuid,
-                    AreaScan.organization_id == org_id,
                 )
                 result = await session.execute(stmt)
                 scan = result.scalar_one_or_none()
@@ -1058,7 +1053,6 @@ async def area_scan_job(
             async with session_factory() as session:
                 stmt = select(AreaScan).where(
                     AreaScan.id == scan_uuid,
-                    AreaScan.organization_id == org_id,
                 )
                 result = await session.execute(stmt)
                 scan = result.scalar_one_or_none()
@@ -1221,7 +1215,6 @@ async def _upsert_parcel_cache(
 
     # Check if entry already exists
     stmt = select(ParcelCache).where(
-        ParcelCache.organization_id == org_id,
         ParcelCache.parcel_id == identificatie,
     )
     result = await session.execute(stmt)
@@ -1249,7 +1242,6 @@ async def _upsert_parcel_cache(
         session.add(parcel)
     else:
         parcel = ParcelCache(
-            organization_id=org_id,
             parcel_id=identificatie,
             parcel_code=parcel_code_display,
             geometry=geom_expr,

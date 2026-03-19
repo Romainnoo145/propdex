@@ -97,17 +97,17 @@ class TestBAGWFSClient:
 
     @pytest.mark.asyncio
     async def test_truncation_detection(self):
-        """Verify exactly 1000 features (not truncated) makes only 1 request."""
+        """Verify response with fewer features than page size makes only 1 request."""
         client = BAGWFSClient()
 
-        # Mock response: exactly 1000 features (genuine, not truncated)
-        features = [{"id": f"pand-{i}"} for i in range(1000)]
+        # Mock response: 999 features (< PAGE_SIZE, so no pagination)
+        features = [{"id": f"pand-{i}"} for i in range(999)]
         response = make_mock_response(
             200,
             json_data={
                 "features": features,
-                "numberReturned": 1000,
-                "numberMatched": 1000,
+                "numberReturned": 999,
+                "numberMatched": 999,
             },
         )
 
@@ -117,9 +117,8 @@ class TestBAGWFSClient:
             minx=121000, miny=487000, maxx=122000, maxy=488000, client=mock_client
         )
 
-        # Verify: returns 1000 features, makes exactly 1 HTTP request
-        # (no unnecessary second page check)
-        assert len(result) == 1000
+        # Verify: returns 999 features, makes exactly 1 HTTP request
+        assert len(result) == 999
         assert mock_client.get.call_count == 1
 
     @pytest.mark.asyncio

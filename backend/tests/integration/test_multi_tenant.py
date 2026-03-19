@@ -6,7 +6,9 @@ import pytest
 from fastapi import HTTPException
 
 from app.auth.jwt import create_access_token
+from app.auth.password import hash_password
 from app.models.organization import Organization
+from app.models.user import User
 from app.reports import service
 from app.services.cache_manager import get_cached_or_fetch
 
@@ -50,33 +52,47 @@ def _make_report_data(
 
 
 @pytest.fixture
-async def two_orgs(test_db):
-    """Create two organizations for multi-tenant isolation tests."""
+async def two_orgs_with_users(test_db):
+    """Create two organizations with users for isolation tests."""
     org_a = Organization(name="Org A")
     org_b = Organization(name="Org B")
     test_db.add(org_a)
     test_db.add(org_b)
     await test_db.flush()
+
+    user_a = User(
+        email="a@test.com",
+        hashed_password=hash_password("TestPass123!"),
+        full_name="User A",
+        organization_id=org_a.id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+    )
+    user_b = User(
+        email="b@test.com",
+        hashed_password=hash_password("TestPass123!"),
+        full_name="User B",
+        organization_id=org_b.id,
+        email_verified=True,
+        auth_provider="email",
+        is_active=True,
+    )
+    test_db.add(user_a)
+    test_db.add(user_b)
     await test_db.commit()
-    return org_a.id, org_b.id
 
-
-@pytest.fixture
-async def two_orgs_with_users(test_db, create_test_user):
-    """Create two orgs with users for API-level auth tests."""
-    user_a, org_a = await create_test_user(email="a@test.com", org_name="Org A")
-    user_b, org_b = await create_test_user(email="b@test.com", org_name="Org B")
     return (user_a, org_a), (user_b, org_b)
 
 
 class TestReportIsolation:
-    """Test cross-organization report access returns 404 (not 403) preventing enumeration."""
+    """Test cross-user report access returns 404 (not 403) preventing enumeration."""
 
-    async def test_get_cross_org_returns_404(self, test_db, two_orgs):
-        """Test org B cannot read org A's report via service layer (returns 404)."""
-        org_a_id, org_b_id = two_orgs
+    async def test_get_cross_user_returns_404(self, test_db, two_orgs_with_users):
+        """Test user B cannot read user A's report via service layer (returns 404)."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves a report
+        # User A saves a report
         report_data = _make_report_data(
             straatnaam="Keizersgracht",
             huisnummer="123",
@@ -85,25 +101,31 @@ class TestReportIsolation:
         )
         report_a = await service.save_report(
             report_data=report_data,
-            notes="Org A's report",
+            notes="User A's report",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
-        # Org B tries to get it
+        # User B tries to get it
         with pytest.raises(HTTPException) as exc_info:
-            await service.get_report(report_a.id, org_b_id, test_db)
+            await service.get_report(
+                report_id=report_a.id,
+                user_id=user_b.id,
+                organization_id=org_b.id,
+                session=test_db,
+            )
 
         # Should be 404 (not 403) to prevent resource enumeration
         assert exc_info.value.status_code == 404
         assert "not found" in exc_info.value.detail.lower()
 
-    async def test_list_cross_org_returns_empty(self, test_db, two_orgs):
-        """Test org B cannot list org A's reports (returns empty list)."""
-        org_a_id, org_b_id = two_orgs
+    async def test_list_cross_user_returns_empty(self, test_db, two_orgs_with_users):
+        """Test user B cannot list user A's reports (returns empty list)."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves 2 reports
+        # User A saves 2 reports
         report_data_1 = _make_report_data(
             straatnaam="Herengracht",
             huisnummer="456",
@@ -114,7 +136,8 @@ class TestReportIsolation:
             report_data=report_data_1,
             notes="Report 1",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
@@ -128,13 +151,15 @@ class TestReportIsolation:
             report_data=report_data_2,
             notes="Report 2",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
-        # Org B lists reports
+        # User B lists reports
         reports, total = await service.list_reports(
-            organization_id=org_b_id,
+            user_id=user_b.id,
+            organization_id=org_b.id,
             city=None,
             project_id=None,
             search_query=None,
@@ -145,15 +170,15 @@ class TestReportIsolation:
             session=test_db,
         )
 
-        # Should return empty (not org A's reports)
+        # Should return empty (not user A's reports)
         assert total == 0
         assert len(reports) == 0
 
-    async def test_delete_cross_org_returns_404(self, test_db, two_orgs):
-        """Test org B cannot soft-delete org A's report (returns 404)."""
-        org_a_id, org_b_id = two_orgs
+    async def test_delete_cross_user_returns_404(self, test_db, two_orgs_with_users):
+        """Test user B cannot soft-delete user A's report (returns 404)."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves a report
+        # User A saves a report
         report_data = _make_report_data(
             straatnaam="Damrak",
             huisnummer="1",
@@ -164,26 +189,37 @@ class TestReportIsolation:
             report_data=report_data,
             notes="Cannot delete me",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
-        # Org B tries to delete it
+        # User B tries to delete it
         with pytest.raises(HTTPException) as exc_info:
-            await service.soft_delete_report(report_a.id, org_b_id, test_db)
+            await service.soft_delete_report(
+                report_id=report_a.id,
+                user_id=user_b.id,
+                organization_id=org_b.id,
+                session=test_db,
+            )
 
         # Should be 404
         assert exc_info.value.status_code == 404
 
-        # Verify org A's report still exists (not deleted)
-        report_check = await service.get_report(report_a.id, org_a_id, test_db)
+        # Verify user A's report still exists (not deleted)
+        report_check = await service.get_report(
+            report_id=report_a.id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
+            session=test_db,
+        )
         assert report_check.deleted_at is None
 
-    async def test_distinct_cities_cross_org_isolated(self, test_db, two_orgs):
-        """Test distinct cities endpoint returns only requesting org's cities."""
-        org_a_id, org_b_id = two_orgs
+    async def test_distinct_cities_cross_user_isolated(self, test_db, two_orgs_with_users):
+        """Test distinct cities endpoint returns only requesting user's cities."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves reports in Amsterdam and Rotterdam
+        # User A saves reports in Amsterdam and Rotterdam
         amsterdam_data = _make_report_data(
             straatnaam="Kalverstraat",
             huisnummer="1",
@@ -194,7 +230,8 @@ class TestReportIsolation:
             report_data=amsterdam_data,
             notes="Amsterdam report",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
@@ -208,11 +245,12 @@ class TestReportIsolation:
             report_data=rotterdam_data,
             notes="Rotterdam report",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
 
-        # Org B saves report in Utrecht
+        # User B saves report in Utrecht
         utrecht_data = _make_report_data(
             straatnaam="Oudegracht",
             huisnummer="99",
@@ -223,27 +261,34 @@ class TestReportIsolation:
             report_data=utrecht_data,
             notes="Utrecht report",
             project_id=None,
-            organization_id=org_b_id,
+            user_id=user_b.id,
+            organization_id=org_b.id,
             session=test_db,
         )
 
-        # Get distinct cities for org A
-        cities_a = await service.get_distinct_cities(org_a_id, test_db)
+        # Get distinct cities for user A
+        cities_a = await service.get_distinct_cities(
+            user_id=user_a.id,
+            session=test_db,
+        )
         assert set(cities_a) == {"Amsterdam", "Rotterdam"}
 
-        # Get distinct cities for org B
-        cities_b = await service.get_distinct_cities(org_b_id, test_db)
+        # Get distinct cities for user B
+        cities_b = await service.get_distinct_cities(
+            user_id=user_b.id,
+            session=test_db,
+        )
         assert cities_b == ["Utrecht"]
 
 
 class TestSoftDeleteIsolation:
-    """Test soft-deleted reports are invisible to all organizations."""
+    """Test soft-deleted reports are invisible to all users."""
 
-    async def test_deleted_report_invisible_to_own_org_list(self, test_db, two_orgs):
-        """Test soft-deleted report is invisible in own org's list."""
-        org_a_id, org_b_id = two_orgs
+    async def test_deleted_report_invisible_to_own_user_list(self, test_db, two_orgs_with_users):
+        """Test soft-deleted report is invisible in own user's list."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves and soft-deletes a report
+        # User A saves and soft-deletes a report
         report_data = _make_report_data(
             straatnaam="Vijzelstraat",
             huisnummer="50",
@@ -254,14 +299,21 @@ class TestSoftDeleteIsolation:
             report_data=report_data,
             notes="Will be deleted",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
-        await service.soft_delete_report(report_a.id, org_a_id, test_db)
+        await service.soft_delete_report(
+            report_id=report_a.id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
+            session=test_db,
+        )
 
-        # List reports for org A
+        # List reports for user A
         reports, total = await service.list_reports(
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             city=None,
             project_id=None,
             search_query=None,
@@ -276,11 +328,11 @@ class TestSoftDeleteIsolation:
         assert total == 0
         assert len(reports) == 0
 
-    async def test_deleted_report_invisible_to_other_org_get(self, test_db, two_orgs):
-        """Test soft-deleted report from org A is invisible to org B get (404)."""
-        org_a_id, org_b_id = two_orgs
+    async def test_deleted_report_invisible_to_other_user_get(self, test_db, two_orgs_with_users):
+        """Test soft-deleted report from user A is invisible to user B get (404)."""
+        (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves and soft-deletes a report
+        # User A saves and soft-deletes a report
         report_data = _make_report_data(
             straatnaam="Nieuwezijds Voorburgwal",
             huisnummer="147",
@@ -291,58 +343,65 @@ class TestSoftDeleteIsolation:
             report_data=report_data,
             notes="Deleted report",
             project_id=None,
-            organization_id=org_a_id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
             session=test_db,
         )
-        await service.soft_delete_report(report_a.id, org_a_id, test_db)
+        await service.soft_delete_report(
+            report_id=report_a.id,
+            user_id=user_a.id,
+            organization_id=org_a.id,
+            session=test_db,
+        )
 
-        # Org B tries to get it (even with valid UUID)
+        # User B tries to get it (even with valid UUID)
         with pytest.raises(HTTPException) as exc_info:
-            await service.get_report(report_a.id, org_b_id, test_db)
+            await service.get_report(
+                report_id=report_a.id,
+                user_id=user_b.id,
+                organization_id=org_b.id,
+                session=test_db,
+            )
 
-        # Should be 404 (not leaked via cross-org access even when deleted)
+        # Should be 404 (not leaked via cross-user access even when deleted)
         assert exc_info.value.status_code == 404
 
 
-class TestCacheIsolation:
-    """Test cache entries for same key but different orgs are independent."""
+class TestSharedCacheAccess:
+    """Cache is shared across all users — same key returns same data regardless of caller."""
 
-    async def test_same_cache_key_different_orgs_independent(self, test_db, two_orgs):
-        """Test same cache key for different orgs stores independent data."""
-        org_a_id, org_b_id = two_orgs
+    async def test_same_cache_key_is_shared(self, test_db, two_orgs_with_users):
+        """Test same cache key returns shared data (no org isolation)."""
+        cache_key = "bag:test:shared"
 
-        # Both orgs query with same cache key
-        cache_key = "bag:test:isolation"
+        fetch_first = AsyncMock(return_value={"data": "shared_value"})
+        fetch_second = AsyncMock(return_value={"data": "should_not_be_called"})
 
-        fetch_a = AsyncMock(return_value={"org": "A", "data": "org_a_specific"})
-        fetch_b = AsyncMock(return_value={"org": "B", "data": "org_b_specific"})
-
-        result_a = await get_cached_or_fetch(
+        result_first = await get_cached_or_fetch(
             cache_key=cache_key,
             source="bag",
-            organization_id=org_a_id,
-            fetch_fn=fetch_a,
+            fetch_fn=fetch_first,
             session=test_db,
         )
-        result_b = await get_cached_or_fetch(
+        result_second = await get_cached_or_fetch(
             cache_key=cache_key,
             source="bag",
-            organization_id=org_b_id,
-            fetch_fn=fetch_b,
+            fetch_fn=fetch_second,
             session=test_db,
         )
 
-        # Both fetch functions called (not shared)
-        fetch_a.assert_called_once()
-        fetch_b.assert_called_once()
+        # Only first fetch called — second gets cached data
+        fetch_first.assert_called_once()
+        fetch_second.assert_not_called()
 
-        # Data is organization-specific
-        assert result_a.data["org"] == "A"
-        assert result_b.data["org"] == "B"
+        # Both see same shared data
+        assert result_first.data == {"data": "shared_value"}
+        assert result_second.data == {"data": "shared_value"}
+        assert result_second.is_cached is True
 
 
 class TestAPIEndpointIsolation:
-    """Test API endpoints with JWT tokens enforce org isolation."""
+    """Test API endpoints with JWT tokens enforce user isolation."""
 
     async def test_api_get_report_cross_org_returns_404(
         self, async_client, test_db, two_orgs_with_users
@@ -350,7 +409,7 @@ class TestAPIEndpointIsolation:
         """Test org B's JWT cannot access org A's report via API (returns 404)."""
         (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves a report via service layer
+        # User A saves a report via service layer
         report_data = _make_report_data(
             straatnaam="Rokin",
             huisnummer="75",
@@ -359,22 +418,23 @@ class TestAPIEndpointIsolation:
         )
         report_a = await service.save_report(
             report_data=report_data,
-            notes="Org A's API report",
+            notes="User A's API report",
             project_id=None,
+            user_id=user_a.id,
             organization_id=org_a.id,
             session=test_db,
         )
 
-        # Create JWT for org B
+        # Create JWT for user B
         token_b = create_access_token(str(user_b.id), str(org_b.id))
 
-        # Send GET request with org B's token
+        # Send GET request with user B's token
         response = await async_client.get(
             f"/api/reports/{report_a.id}",
             headers={"Authorization": f"Bearer {token_b}"},
         )
 
-        # Should return 404 (org isolation at API level)
+        # Should return 404 (user isolation at API level)
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
@@ -384,7 +444,7 @@ class TestAPIEndpointIsolation:
         """Test org B's JWT lists only own reports (not org A's) via API."""
         (user_a, org_a), (user_b, org_b) = two_orgs_with_users
 
-        # Org A saves 2 reports via service layer
+        # User A saves 2 reports via service layer
         report_data_1 = _make_report_data(
             straatnaam="Spui",
             huisnummer="10",
@@ -393,8 +453,9 @@ class TestAPIEndpointIsolation:
         )
         await service.save_report(
             report_data=report_data_1,
-            notes="Org A Report 1",
+            notes="User A Report 1",
             project_id=None,
+            user_id=user_a.id,
             organization_id=org_a.id,
             session=test_db,
         )
@@ -407,16 +468,17 @@ class TestAPIEndpointIsolation:
         )
         await service.save_report(
             report_data=report_data_2,
-            notes="Org A Report 2",
+            notes="User A Report 2",
             project_id=None,
+            user_id=user_a.id,
             organization_id=org_a.id,
             session=test_db,
         )
 
-        # Create JWT for org B
+        # Create JWT for user B
         token_b = create_access_token(str(user_b.id), str(org_b.id))
 
-        # Send GET request to list reports with org B's token
+        # Send GET request to list reports with user B's token
         response = await async_client.get(
             "/api/reports",
             headers={"Authorization": f"Bearer {token_b}"},

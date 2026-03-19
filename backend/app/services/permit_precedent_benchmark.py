@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 import re
-import uuid
 from collections import Counter
 from datetime import datetime, timedelta
 from statistics import median
@@ -94,7 +93,6 @@ def _p75(values: list[int]) -> int | None:
 
 async def _resolve_gemeente_scope(
     *,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     postcode: str | None,
     huisnummer: int | None,
@@ -107,7 +105,6 @@ async def _resolve_gemeente_scope(
             await session.execute(
                 select(ChangeRecord)
                 .where(
-                    ChangeRecord.organization_id == organization_id,
                     ChangeRecord.change_type == "permit",
                     ChangeRecord.change_date >= lookback_since,
                     func.upper(
@@ -133,7 +130,6 @@ async def _resolve_gemeente_scope(
             await session.execute(
                 select(ChangeRecord.gemeente_naam)
                 .where(
-                    ChangeRecord.organization_id == organization_id,
                     ChangeRecord.change_type == "permit",
                     func.lower(ChangeRecord.gemeente_naam) == city_clean,
                     ChangeRecord.change_date >= lookback_since,
@@ -149,7 +145,6 @@ async def _resolve_gemeente_scope(
         await session.execute(
             select(ChangeRecord.gemeente_naam)
             .where(
-                ChangeRecord.organization_id == organization_id,
                 ChangeRecord.change_type == "permit",
             )
             .order_by(desc(ChangeRecord.change_date))
@@ -161,7 +156,6 @@ async def _resolve_gemeente_scope(
 
 async def build_permit_precedent_benchmark(
     *,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     postcode: str | None,
     huisnummer: int | None,
@@ -171,7 +165,6 @@ async def build_permit_precedent_benchmark(
     """Build municipality-scoped permit precedent benchmark from stored change records."""
     lookback_since = datetime.utcnow() - timedelta(days=max(30, lookback_days))
     gemeente_scope = await _resolve_gemeente_scope(
-        organization_id=organization_id,
         session=session,
         postcode=postcode,
         huisnummer=huisnummer,
@@ -185,7 +178,6 @@ async def build_permit_precedent_benchmark(
         await session.execute(
             select(ChangeRecord)
             .where(
-                ChangeRecord.organization_id == organization_id,
                 ChangeRecord.change_type == "permit",
                 func.lower(ChangeRecord.gemeente_naam) == gemeente_scope.lower(),
                 ChangeRecord.change_date >= lookback_since,

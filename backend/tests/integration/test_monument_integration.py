@@ -45,7 +45,6 @@ class TestMonumentFullFlow:
                 pand_id=None,
                 verblijfsobject_id=None,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -67,7 +66,6 @@ class TestMonumentFullFlow:
 
         # Direct DB assertion: cache entry exists
         stmt = select(CachedAPIResponse).where(
-            CachedAPIResponse.organization_id == org_id,
             CachedAPIResponse.source == "rce",
             CachedAPIResponse.cache_key.startswith("rce:monument:"),
         )
@@ -91,7 +89,6 @@ class TestMonumentFullFlow:
                 pand_id=None,
                 verblijfsobject_id=None,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -130,7 +127,6 @@ class TestMonumentFullFlow:
                 pand_id=None,
                 verblijfsobject_id=None,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -144,7 +140,6 @@ class TestMonumentFullFlow:
                 pand_id=None,
                 verblijfsobject_id=None,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )
@@ -172,7 +167,6 @@ class TestMonumentFullFlow:
                 pand_id=None,
                 verblijfsobject_id=None,
                 client=client,
-                organization_id=org_id,
                 session=test_db,
                 force_refresh=False,
             )

@@ -95,7 +95,6 @@ async def check_report_freshness(
             stmt = (
                 select(CachedAPIResponse)
                 .where(
-                    CachedAPIResponse.organization_id == organization_id,
                     CachedAPIResponse.cache_key.ilike(f"%{pattern}%"),
                 )
                 .order_by(CachedAPIResponse.fetched_at.desc())

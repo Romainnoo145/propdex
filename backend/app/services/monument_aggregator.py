@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +21,6 @@ async def _fetch_rce(
     x: float,
     y: float,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
 ) -> MonumentSourceResult:
@@ -33,7 +31,6 @@ async def _fetch_rce(
         x: RD X coordinate
         y: RD Y coordinate
         client: httpx AsyncClient for connection pooling
-        organization_id: Tenant ID
         session: SQLAlchemy async session for cache
         force_refresh: If True, bypass cache
 
@@ -52,7 +49,6 @@ async def _fetch_rce(
         cache_result = await get_cached_or_fetch(
             cache_key=cache_key,
             source="rce",
-            organization_id=organization_id,
             fetch_fn=fetch_fn,
             session=session,
             force_refresh=force_refresh,
@@ -89,7 +85,6 @@ async def _fetch_rce(
 
 async def _fetch_bag_monument(
     verblijfsobject_id: str | None,
-    organization_id: uuid.UUID,  # noqa: ARG001
     session: AsyncSession,  # noqa: ARG001
     force_refresh: bool = False,  # noqa: ARG001
 ) -> MonumentSourceResult:
@@ -101,7 +96,6 @@ async def _fetch_bag_monument(
 
     Args:
         verblijfsobject_id: BAG verblijfsobject identifier
-        organization_id: Tenant ID (unused in MVP)
         session: SQLAlchemy async session (unused in MVP)
         force_refresh: If True, bypass cache (unused in MVP)
 
@@ -123,7 +117,6 @@ async def _fetch_bag_monument(
 
 
 async def _fetch_kadaster_monument(
-    organization_id: uuid.UUID,  # noqa: ARG001
     session: AsyncSession,  # noqa: ARG001
     force_refresh: bool = False,  # noqa: ARG001
 ) -> MonumentSourceResult:
@@ -134,7 +127,6 @@ async def _fetch_kadaster_monument(
     Returns error indicating this limitation.
 
     Args:
-        organization_id: Tenant ID (unused in MVP)
         session: SQLAlchemy async session (unused in MVP)
         force_refresh: If True, bypass cache (unused in MVP)
 
@@ -155,7 +147,6 @@ async def fetch_monument_status(
     pand_id: str | None,  # noqa: ARG001
     verblijfsobject_id: str | None,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
 ) -> MonumentStatus | None:
@@ -172,7 +163,6 @@ async def fetch_monument_status(
         pand_id: BAG pand identifier (unused in MVP)
         verblijfsobject_id: BAG verblijfsobject identifier
         client: httpx AsyncClient for connection pooling
-        organization_id: Tenant ID
         session: SQLAlchemy async session
         force_refresh: If True, bypass cache for all sources
 
@@ -180,9 +170,9 @@ async def fetch_monument_status(
         MonumentStatus with aggregated data and conflict detection, or None if all sources failed
     """
     # Fetch from all three sources in parallel
-    rce_task = _fetch_rce(x, y, client, organization_id, session, force_refresh)
-    bag_task = _fetch_bag_monument(verblijfsobject_id, organization_id, session, force_refresh)
-    kadaster_task = _fetch_kadaster_monument(organization_id, session, force_refresh)
+    rce_task = _fetch_rce(x, y, client, session, force_refresh)
+    bag_task = _fetch_bag_monument(verblijfsobject_id, session, force_refresh)
+    kadaster_task = _fetch_kadaster_monument(session, force_refresh)
 
     results = await asyncio.gather(rce_task, bag_task, kadaster_task, return_exceptions=True)
 
@@ -267,7 +257,6 @@ async def fetch_monument_status(
                 detail_cache = await get_cached_or_fetch(
                     cache_key=cache_key,
                     source="rce_detail",
-                    organization_id=organization_id,
                     fetch_fn=_fetch_rce_detail,
                     session=session,
                     force_refresh=force_refresh,

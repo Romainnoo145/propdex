@@ -54,7 +54,6 @@ class TestRetroMatchChangesForGemeente:
 
         count = await retro_match_changes_for_gemeente(
             gemeente_code="GM0983",
-            organization_id=org_id,
             session=mock_session,
             client=mock_client,
         )
@@ -87,7 +86,6 @@ class TestRetroMatchChangesForGemeente:
 
         count = await retro_match_changes_for_gemeente(
             gemeente_code="GM0983",
-            organization_id=org_id,
             session=mock_session,
             client=mock_client,
         )
@@ -124,7 +122,6 @@ class TestRetroMatchChangesForGemeente:
 
             count = await retro_match_changes_for_gemeente(
                 gemeente_code="GM0983",
-                organization_id=org_id,
                 session=mock_session,
                 client=mock_client,
             )
@@ -153,7 +150,6 @@ class TestRetroMatchChangesForGemeente:
 
             count = await retro_match_changes_for_gemeente(
                 gemeente_code="GM0983",
-                organization_id=org_id,
                 session=mock_session,
                 client=mock_client,
             )
@@ -189,7 +185,6 @@ class TestRetroMatchChangesForGemeente:
 
             count = await retro_match_changes_for_gemeente(
                 gemeente_code="GM0983",
-                organization_id=org_id,
                 session=mock_session,
                 client=mock_client,
             )
@@ -210,7 +205,6 @@ class TestRetroMatchChangesForGemeente:
 
         await retro_match_changes_for_gemeente(
             gemeente_code="GM0983",
-            organization_id=org_id,
             session=mock_session,
             client=mock_client,
         )
@@ -252,7 +246,6 @@ class TestRetroMatchChangesForGemeente:
 
             count = await retro_match_changes_for_gemeente(
                 gemeente_code="GM0983",
-                organization_id=org_id,
                 session=mock_session,
                 client=mock_client,
             )

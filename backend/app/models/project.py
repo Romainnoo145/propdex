@@ -5,14 +5,15 @@ import uuid
 from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class Project(Base, TenantMixin, TimestampMixin):
+class Project(Base, TimestampMixin):
     """
     Project model for organizing saved reports into named folders.
 
-    Multi-tenant isolated via organization_id.
+    Organization_id is nullable — retained for backward compatibility
+    with existing project hierarchies but not required for new projects.
     Projects are optional - reports can exist without a project.
 
     Extended in Phase 26 to support hierarchical gemeente/wijk grouping
@@ -24,6 +25,12 @@ class Project(Base, TenantMixin, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         server_default=text("gen_random_uuid()"),
+    )
+
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     name: Mapped[str] = mapped_column(

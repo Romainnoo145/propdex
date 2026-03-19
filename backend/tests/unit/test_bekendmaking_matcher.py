@@ -27,7 +27,6 @@ class TestFindParcelAtPoint:
         result = await find_parcel_at_point(
             x=121348.243,
             y=487347.752,
-            organization_id=org_id,
             session=session,
         )
 
@@ -47,7 +46,6 @@ class TestFindParcelAtPoint:
         result = await find_parcel_at_point(
             x=0.0,
             y=0.0,
-            organization_id=org_id,
             session=session,
         )
 
@@ -66,7 +64,6 @@ class TestFindParcelAtPoint:
         await find_parcel_at_point(
             x=121348.243,
             y=487347.752,
-            organization_id=org_id,
             session=session,
         )
 
@@ -80,6 +77,4 @@ class TestFindParcelAtPoint:
         assert "ST_Contains" in sql
         assert "ST_SetSRID" in sql
         assert "ST_MakePoint" in sql
-        # org_id is rendered as hex without dashes by SQLAlchemy
-        assert org_id.hex in sql
         assert "LIMIT" in sql

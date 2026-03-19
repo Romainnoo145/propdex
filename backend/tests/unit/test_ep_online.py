@@ -14,12 +14,12 @@ from tests.api_mocks import make_mock_client, make_mock_response
 TEST_VBO_ID = "0363010000000001"
 
 SAMPLE_EP_RESPONSE = {
-    "energieKlasse": "A",
-    "registratieDatum": "2023-01-15",
-    "geldigTot": "2033-01-15",
-    "soortOpname": "Basisopname",
-    "berekeningType": "NTA 8800",
-    "opnameDatum": "2023-01-10",
+    "Energieklasse": "A",
+    "Registratiedatum": "2023-01-15",
+    "Geldig_tot": "2033-01-15",
+    "Gebouwklasse": "Basisopname",
+    "Berekeningstype": "NTA 8800",
+    "Opnamedatum": "2023-01-10",
 }
 
 

@@ -127,10 +127,10 @@ class TestDeriveBagAttributesForParcel:
 
     def test_accumulates_total_footprint_from_multiple_buildings(self):
         parcel = Polygon([(0, 0), (20, 0), (20, 20), (0, 20)])
-        # building_a: 4x4 = 16 m2 inside parcel
-        building_a = Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
-        # building_b: 3x5 = 15 m2 inside parcel, non-overlapping with building_a
-        building_b = Polygon([(10, 10), (13, 10), (13, 15), (10, 15)])
+        # building_a: 6x6 = 36 m2 inside parcel (36/400 = 9% > 5% threshold)
+        building_a = Polygon([(1, 1), (7, 1), (7, 7), (1, 7)])
+        # building_b: 6x5 = 30 m2 inside parcel (30/400 = 7.5% > 5% threshold)
+        building_b = Polygon([(10, 10), (16, 10), (16, 15), (10, 15)])
         bag_index = BagSpatialIndex(
             tree=None,
             geometries=[building_a, building_b],
@@ -154,7 +154,7 @@ class TestDeriveBagAttributesForParcel:
         )
 
         assert has_pand is True
-        assert pand_oppervlakte_m2 == pytest.approx(16 + 15, abs=1.0)
+        assert pand_oppervlakte_m2 == pytest.approx(36 + 30, abs=1.0)
 
 
 class TestDeriveBagAttributesIdentificaties:

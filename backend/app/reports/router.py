@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
 from app.middleware.rate_limit import limiter
@@ -143,7 +143,6 @@ async def save_report(
     request: Request,
     report_request: ReportSaveRequest,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -175,7 +174,8 @@ async def save_report(
             report_data=report_request.report_data,
             notes=report_request.notes,
             project_id=report_request.project_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
             return_status=True,
         )
@@ -219,7 +219,6 @@ async def list_reports(
     offset: int = 0,
     limit: int = 50,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportListResponse:
     """
@@ -240,7 +239,6 @@ async def list_reports(
         offset: Pagination offset (default 0)
         limit: Pagination limit (default 50, max 100)
         current_user: Authenticated user
-        organization_id: Tenant ID
         db: Database session
 
     Returns:
@@ -254,7 +252,8 @@ async def list_reports(
         limit = min(limit, 100)
 
         reports, total = await service.list_reports(
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             city=city,
             project_id=project_id,
             search_query=search,
@@ -296,7 +295,6 @@ async def list_reports(
 async def get_cities(
     request: Request,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[str]:
     """
@@ -307,7 +305,6 @@ async def get_cities(
     Args:
         request: FastAPI request object
         current_user: Authenticated user
-        organization_id: Tenant ID
         db: Database session
 
     Returns:
@@ -318,7 +315,7 @@ async def get_cities(
     """
     try:
         cities = await service.get_distinct_cities(
-            organization_id=organization_id,
+            user_id=current_user.id,
             session=db,
         )
         return cities
@@ -341,7 +338,6 @@ async def generate_report_from_address(
     request: Request,
     body: ReportFromAddressRequest,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -361,7 +357,7 @@ async def generate_report_from_address(
             property_data = await aggregate_property_data(
                 input_data=address_input,
                 client=request.app.state.http_client,
-                organization_id=organization_id,
+                organization_id=current_user.organization_id,
                 session=db,
                 force_refresh=False,
                 arq_pool=request.app.state.arq_pool,
@@ -378,7 +374,8 @@ async def generate_report_from_address(
             report_data=property_data.model_dump(mode="json"),
             notes=body.notes,
             project_id=body.project_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
             parcel_id=None,
             return_status=True,
@@ -422,7 +419,6 @@ async def generate_report_from_parcel(
     response: Response,
     body: ReportFromParcelRequest,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> GenerateReportFromParcelResponse:
     """
@@ -454,7 +450,6 @@ async def generate_report_from_parcel(
         result = await db.execute(
             select(ParcelCache).where(
                 ParcelCache.id == body.parcel_id,
-                ParcelCache.organization_id == organization_id,
             )
         )
         parcel = result.scalar_one_or_none()
@@ -468,21 +463,23 @@ async def generate_report_from_parcel(
         # This avoids duplicate reports and skips costly re-aggregation.
         existing_report = await service.get_report_by_source_parcel(
             parcel_id=body.parcel_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
             session=db,
         )
         if existing_report is not None:
             if body.project_id is not None and existing_report.project_id != body.project_id:
                 existing_report = await service.assign_report_to_project(
                     report_id=existing_report.id,
-                    organization_id=organization_id,
+                    user_id=current_user.id,
+                    organization_id=current_user.organization_id,
                     project_id=body.project_id,
                     session=db,
                 )
             if body.notes is not None and existing_report.notes != body.notes:
                 existing_report = await service.update_report_notes(
                     report_id=existing_report.id,
-                    organization_id=organization_id,
+                    user_id=current_user.id,
+                    organization_id=current_user.organization_id,
                     notes=body.notes,
                     session=db,
                 )
@@ -514,7 +511,6 @@ async def generate_report_from_parcel(
 
             centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
                 ParcelCache.id == body.parcel_id,
-                ParcelCache.organization_id == organization_id,
             )
             centroid_row = (await db.execute(centroid_query)).one_or_none()
             rd_point = _parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
@@ -550,7 +546,7 @@ async def generate_report_from_parcel(
             property_data = await aggregate_property_data(
                 input_data=address_input,
                 client=request.app.state.http_client,
-                organization_id=organization_id,
+                organization_id=current_user.organization_id,
                 session=db,
                 force_refresh=False,
                 arq_pool=request.app.state.arq_pool,
@@ -569,7 +565,6 @@ async def generate_report_from_parcel(
             .join(AreaScan, ScanResult.scan_id == AreaScan.id)
             .where(
                 ScanResult.parcel_id == body.parcel_id,
-                ScanResult.organization_id == organization_id,
                 AreaScan.status == "completed",
             )
             .order_by(ScanResult.created_at.desc())
@@ -598,7 +593,8 @@ async def generate_report_from_parcel(
             report_data=property_data.model_dump(mode="json"),
             notes=body.notes,
             project_id=body.project_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
             parcel_id=body.parcel_id,
             return_status=True,
@@ -645,7 +641,6 @@ async def get_report(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -670,7 +665,8 @@ async def get_report(
     try:
         report = await service.get_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
@@ -685,7 +681,7 @@ async def get_report(
                     fresh = await aggregate_property_data(
                         input_data=address_input,
                         client=request.app.state.http_client,
-                        organization_id=organization_id,
+                        organization_id=current_user.organization_id,
                         session=db,
                         force_refresh=False,
                         arq_pool=request.app.state.arq_pool,
@@ -693,7 +689,8 @@ async def get_report(
                     fresh_data = fresh.model_dump(mode="json")
                     report = await service.update_report_data(
                         report_id=report.id,
-                        organization_id=organization_id,
+                        user_id=current_user.id,
+                        organization_id=current_user.organization_id,
                         fresh_data=fresh_data,
                         session=db,
                     )
@@ -745,7 +742,6 @@ async def delete_report(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     """
@@ -772,7 +768,8 @@ async def delete_report(
     try:
         await service.soft_delete_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
@@ -793,7 +790,6 @@ async def restore_report(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -820,7 +816,7 @@ async def restore_report(
     try:
         report = await service.restore_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
             session=db,
         )
 
@@ -853,7 +849,6 @@ async def update_notes(
     report_id: uuid.UUID,
     update_request: ReportUpdateNotes,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -879,7 +874,8 @@ async def update_notes(
     try:
         report = await service.update_report_notes(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             notes=update_request.notes,
             session=db,
         )
@@ -913,7 +909,6 @@ async def assign_project(
     report_id: uuid.UUID,
     assign_request: ReportAssignProject,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -942,7 +937,8 @@ async def assign_project(
     try:
         report = await service.assign_report_to_project(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             project_id=assign_request.project_id,
             session=db,
         )
@@ -976,7 +972,6 @@ async def refresh_report(
     report_id: uuid.UUID,
     refresh_request: ReportSaveRequest,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """
@@ -1008,7 +1003,8 @@ async def refresh_report(
     try:
         report = await service.update_report_data(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             fresh_data=refresh_request.report_data,
             session=db,
         )
@@ -1046,7 +1042,6 @@ async def export_report_pdf(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """
@@ -1077,7 +1072,8 @@ async def export_report_pdf(
         # Fetch report (validates tenant + exists + not deleted)
         report = await service.get_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
@@ -1116,7 +1112,6 @@ async def generate_startdossier(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """
@@ -1146,7 +1141,8 @@ async def generate_startdossier(
         # Fetch report (validates tenant + exists + not deleted)
         report = await service.get_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
@@ -1164,7 +1160,6 @@ async def generate_startdossier(
         # Save audit record
         await service.save_generated_dossier(
             report_id=report.id,
-            organization_id=organization_id,
             user_id=current_user.id,
             file_size=len(pdf_bytes),
             session=db,
@@ -1198,7 +1193,6 @@ async def list_dossiers(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[GeneratedDossierResponse]:
     """
@@ -1227,13 +1221,14 @@ async def list_dossiers(
         # Verify report exists and belongs to this org
         await service.get_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
         dossiers = await service.list_generated_dossiers(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
             session=db,
         )
 
@@ -1254,7 +1249,6 @@ async def get_report_freshness(
     request: Request,
     report_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> ReportFreshnessResponse:
     """
@@ -1284,14 +1278,15 @@ async def get_report_freshness(
         # Fetch report (validates tenant + exists + not deleted)
         report = await service.get_report(
             report_id=report_id,
-            organization_id=organization_id,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 
         # Check freshness
         freshness_data = await check_report_freshness(
             report=report,
-            organization_id=organization_id,
+            organization_id=current_user.organization_id,
             session=db,
         )
 

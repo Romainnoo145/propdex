@@ -149,7 +149,6 @@ class TestGenerateFromParcel:
         token = await _get_auth_token(async_client, user.email)
 
         parcel = ParcelCache(
-            organization_id=org.id,
             parcel_id="TEST-PARCEL-001",
             geometry=WKTElement(
                 "MULTIPOLYGON(((155000 463000,155010 463000,155010 463010,155000 463010,155000 463000)))",
@@ -192,7 +191,7 @@ class TestGenerateFromParcel:
         assert mocked_aggregate.await_count == 1
 
         count_query = select(func.count()).select_from(SavedReport).where(
-            SavedReport.organization_id == org.id,
+            SavedReport.user_id == user.id,
             SavedReport.deleted_at.is_(None),
             SavedReport.source_parcel_id == parcel.id,
         )

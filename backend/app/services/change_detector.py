@@ -235,7 +235,6 @@ async def detect_zoning_changes(
     last_checked: datetime,
     client: httpx.AsyncClient,
     session: AsyncSession,
-    organization_id: str | None = None,
     gemeente_naam: str | None = None,
 ) -> list[ChangeRecord]:
     """Detect zoning plan changes via DSO Ruimtelijke Plannen API v4.
@@ -335,7 +334,6 @@ async def detect_zoning_changes(
             response_data={"plans": current_plans},
             fetched_at=datetime.utcnow(),
             ttl_seconds=86400 * 7,  # 7 days
-            organization_id=organization_id,
         )
         session.add(new_cache)
         await session.flush()

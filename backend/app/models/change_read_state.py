@@ -6,10 +6,10 @@ from datetime import datetime
 from sqlalchemy import ForeignKey, Index, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin
+from app.models.base import Base
 
 
-class ChangeReadState(Base, TenantMixin):
+class ChangeReadState(Base):
     """
     ChangeReadState model - tracks which changes each user has read.
 
@@ -23,7 +23,7 @@ class ChangeReadState(Base, TenantMixin):
     - ondelete=CASCADE on both FKs -- cleanup is automatic
     - No TimestampMixin (no updated_at needed)
 
-    Multi-tenant isolated via organization_id.
+    User-scoped — each user has their own read state.
     """
 
     __tablename__ = "change_read_states"

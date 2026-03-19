@@ -7,10 +7,10 @@ from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class AreaScan(Base, TenantMixin, TimestampMixin):
+class AreaScan(Base, TimestampMixin):
     """
     AreaScan model for tracking area intelligence scan jobs.
 
@@ -21,7 +21,7 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     Status flow: pending -> running -> (completed | completed_with_warnings | failed | cancelled)
     Progress phases: fetching_parcels -> cross_referencing_bag -> querying_bestemmingen
 
-    Multi-tenant isolated via organization_id.
+    Shared data — visible to all authenticated users.
     """
 
     __tablename__ = "area_scans"
@@ -85,7 +85,4 @@ class AreaScan(Base, TenantMixin, TimestampMixin):
     # ARQ job reference
     job_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    __table_args__ = (
-        Index("ix_area_scans_org_status", "organization_id", "status"),
-        Index("ix_area_scans_org_gemeente", "organization_id", "gemeente_code"),
-    )
+    __table_args__ = ()

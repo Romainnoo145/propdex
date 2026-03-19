@@ -42,7 +42,6 @@ async def test_fetch_bodem_uses_rounded_cache_key():
             x=121234.567,
             y=487654.321,
             client=mock_client,
-            organization_id=org_id,
             session=mock_session,
         )
 
@@ -70,7 +69,6 @@ async def test_fetch_bodem_returns_bodemdata():
             x=208888.0,
             y=378594.0,
             client=mock_client,
-            organization_id=org_id,
             session=mock_session,
         )
 
@@ -108,7 +106,6 @@ async def test_cache_hit_no_http_call():
             x=208888.0,
             y=378594.0,
             client=mock_client,
-            organization_id=org_id,
             session=mock_session,
         )
 

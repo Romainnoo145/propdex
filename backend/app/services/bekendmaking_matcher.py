@@ -31,7 +31,6 @@ RETRO_MATCH_CONCURRENCY = 5
 async def find_parcel_at_point(
     x: float,
     y: float,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> uuid.UUID | None:
     """Find the ParcelCache.id whose geometry contains the RD point (x, y).
@@ -42,7 +41,6 @@ async def find_parcel_at_point(
     Args:
         x: X coordinate in EPSG:28992 (RD New)
         y: Y coordinate in EPSG:28992 (RD New)
-        organization_id: Organization UUID for multi-tenant isolation
         session: Async SQLAlchemy session
 
     Returns:
@@ -52,7 +50,6 @@ async def find_parcel_at_point(
     stmt = (
         select(ParcelCache.id)
         .where(
-            ParcelCache.organization_id == organization_id,
             func.ST_Contains(ParcelCache.geometry, point),
         )
         .limit(1)
@@ -63,7 +60,6 @@ async def find_parcel_at_point(
 
 async def find_matching_parcels(
     postcode: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> list[dict]:
     """Find ParcelCache entries whose address contains this postcode.
@@ -85,7 +81,6 @@ async def find_matching_parcels(
         )
         .join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
         .where(
-            ParcelCache.organization_id == organization_id,
             ParcelCache.address.isnot(None),
             (
                 ParcelCache.address.ilike(f"%{pattern_no_space}%")
@@ -110,10 +105,12 @@ async def find_matching_parcels(
 
 async def find_matching_reports(
     postcode: str,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     session: AsyncSession,
 ) -> list[dict]:
     """Find SavedReport entries matching this postcode.
+
+    User-scoped — returns only the requesting user's reports.
 
     Returns:
         List of dicts: {report_id, report_name}
@@ -123,7 +120,7 @@ async def find_matching_reports(
     stmt = (
         select(SavedReport.id, SavedReport.report_name)
         .where(
-            SavedReport.organization_id == organization_id,
+            SavedReport.user_id == user_id,
             SavedReport.postcode == normalized,
             SavedReport.deleted_at.is_(None),
         )
@@ -143,18 +140,16 @@ async def find_matching_reports(
 
 async def find_changes_for_parcel(
     parcel_id: uuid.UUID,
-    organization_id: uuid.UUID,
     session: AsyncSession,
 ) -> list[ChangeRecord]:
     """Find ChangeRecords matching a parcel's address postcode (reverse lookup).
 
     Extracts postcode from the parcel's address, then queries ChangeRecords
-    with matching postcode within the same organization.
+    with matching postcode.
     """
     # Get parcel address
     stmt = select(ParcelCache.address).where(
         ParcelCache.id == parcel_id,
-        ParcelCache.organization_id == organization_id,
     )
     result = await session.execute(stmt)
     address = result.scalar_one_or_none()
@@ -170,7 +165,6 @@ async def find_changes_for_parcel(
     stmt = (
         select(ChangeRecord)
         .where(
-            ChangeRecord.organization_id == organization_id,
             ChangeRecord.postcode.in_(postcodes),
         )
         .order_by(ChangeRecord.detected_at.desc())
@@ -182,7 +176,6 @@ async def find_changes_for_parcel(
 
 async def retro_match_changes_for_gemeente(
     gemeente_code: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     client: httpx.AsyncClient,
 ) -> int:
@@ -198,7 +191,6 @@ async def retro_match_changes_for_gemeente(
 
     Args:
         gemeente_code: CBS gemeente code (e.g., "GM0983")
-        organization_id: Organization UUID for multi-tenant isolation
         session: Async SQLAlchemy session (caller handles commit)
         client: Shared httpx AsyncClient for PDOK geocoding
 
@@ -210,7 +202,6 @@ async def retro_match_changes_for_gemeente(
         select(ChangeRecord)
         .join(Project, ChangeRecord.project_id == Project.id)
         .where(
-            ChangeRecord.organization_id == organization_id,
             ChangeRecord.matched_parcel_id.is_(None),
             Project.gemeente_code == gemeente_code,
         )
@@ -266,7 +257,7 @@ async def retro_match_changes_for_gemeente(
             return False
 
         parcel_id = await find_parcel_at_point(
-            coords[0], coords[1], organization_id, session
+            coords[0], coords[1], session
         )
         if parcel_id:
             change.matched_parcel_id = parcel_id

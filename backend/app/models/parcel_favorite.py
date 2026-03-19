@@ -5,16 +5,17 @@ import uuid
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class ParcelFavorite(Base, TenantMixin, TimestampMixin):
+class ParcelFavorite(Base, TimestampMixin):
     """
     Parcel favorited by a user, with pipeline stage tracking.
 
-    Stores the Kadaster string parcel_id directly (not FK to parcel_cache)
-    so favorites survive cache flushes. Location context (gemeente, wijk) is
-    denormalized at write time from the frontend's active scan context.
+    User-scoped — each user has their own favorites. Stores the Kadaster
+    string parcel_id directly (not FK to parcel_cache) so favorites survive
+    cache flushes. Location context (gemeente, wijk) is denormalized at
+    write time from the frontend's active scan context.
     """
 
     __tablename__ = "parcel_favorites"
@@ -82,11 +83,10 @@ class ParcelFavorite(Base, TenantMixin, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint(
-            "organization_id",
             "user_id",
             "parcel_id",
-            name="uq_parcel_favorites_org_user_parcel",
+            name="uq_parcel_favorites_user_parcel",
         ),
-        Index("ix_parcel_favorites_org_user", "organization_id", "user_id"),
-        Index("ix_parcel_favorites_org_gemeente", "organization_id", "gemeente_code"),
+        Index("ix_parcel_favorites_user", "user_id"),
+        Index("ix_parcel_favorites_user_gemeente", "user_id", "gemeente_code"),
     )

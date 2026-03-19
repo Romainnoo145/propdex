@@ -87,7 +87,6 @@ async def _validate_gemeente(
         # Determine which gemeente_code format exists in the DB
         count_with = await session.execute(
             select(func.count(AreaScan.id)).where(
-                AreaScan.organization_id == org_id,
                 AreaScan.gemeente_code == gemeente_code_with_prefix,
                 AreaScan.status.in_(_COMPLETE_STATUSES),
             )
@@ -96,7 +95,6 @@ async def _validate_gemeente(
         if (count_with.scalar() or 0) == 0:
             count_bare = await session.execute(
                 select(func.count(AreaScan.id)).where(
-                    AreaScan.organization_id == org_id,
                     AreaScan.gemeente_code == gemeente_code_bare,
                     AreaScan.status.in_(_COMPLETE_STATUSES),
                 )
@@ -154,9 +152,6 @@ async def _validate_gemeente(
             .join(ScanResult, ScanResult.scan_id == AreaScan.id)
             .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
             .where(
-                AreaScan.organization_id == org_id,
-                ScanResult.organization_id == org_id,
-                ParcelCache.organization_id == org_id,
                 AreaScan.gemeente_code == code_to_use,
                 AreaScan.status.in_(_COMPLETE_STATUSES),
             )
@@ -213,9 +208,6 @@ async def _score_consistency_check(
             .join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
             .join(AreaScan, AreaScan.id == ScanResult.scan_id)
             .where(
-                AreaScan.organization_id == org_id,
-                ScanResult.organization_id == org_id,
-                ParcelCache.organization_id == org_id,
                 AreaScan.gemeente_code == code_to_use,
                 AreaScan.status.in_(_COMPLETE_STATUSES),
             )

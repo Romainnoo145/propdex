@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import JobStatusResponse
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.government_apis.base import APINotFoundError, GovernmentAPIError
 from app.government_apis.pdok_locatieserver import PDOKLocatieserver
@@ -35,7 +35,6 @@ async def lookup_property(
     input_data: AddressInput,
     force_refresh: bool = False,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> PropertyReportResponse:
     """
@@ -77,7 +76,6 @@ async def lookup_property(
         result = await aggregate_property_data(
             input_data=input_data,
             client=client,
-            organization_id=organization_id,
             session=db,
             force_refresh=force_refresh,
             arq_pool=request.app.state.arq_pool,
@@ -163,7 +161,6 @@ async def job_status(
     request: Request,
     job_id: str,
     current_user: User = Depends(get_current_active_user),  # noqa: B008
-    organization_id: uuid.UUID = Depends(get_current_organization_id),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> JobStatusResponse:
     """
@@ -193,7 +190,6 @@ async def job_status(
         # Get job status with tenant isolation
         ai_parsing_section = await get_job_status(
             job_id=job_id,
-            organization_id=organization_id,
             session=db,
             arq_pool=request.app.state.arq_pool,
         )
@@ -252,7 +248,6 @@ async def upload_pdf(
     plan_idn: str,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),  # noqa: B008
-    organization_id: uuid.UUID = Depends(get_current_organization_id),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> JobStatusResponse:
     """
@@ -312,14 +307,12 @@ async def upload_pdf(
         await store_uploaded_pdf(
             plan_idn=plan_idn,
             pdf_data=pdf_bytes,
-            organization_id=organization_id,
             session=db,
         )
 
         # Enqueue parsing job
         job = await enqueue_parsing_job(
             plan_idn=plan_idn,
-            organization_id=organization_id,
             session=db,
             arq_pool=request.app.state.arq_pool,
         )

@@ -79,7 +79,6 @@ async def _parcel_scope_rows(
                 ParcelCache.has_pand,
                 func.ST_AsGeoJSON(ParcelCache.geometry).label("geometry_raw"),
             )
-            .where(ParcelCache.organization_id == org_id)
             .where(
                 ((ParcelCache.has_pand.is_(True)) & (ParcelCache.address.is_(None)))
                 | ((ParcelCache.has_pand.is_(False)) & (ParcelCache.address.is_not(None)))
@@ -93,7 +92,6 @@ async def _parcel_scope_rows(
             stmt = stmt.where(
                 select(ScanResult.id)
                 .where(
-                    ScanResult.organization_id == org_id,
                     ScanResult.scan_id == scan_id,
                     ScanResult.parcel_id == ParcelCache.id,
                 )
@@ -104,8 +102,6 @@ async def _parcel_scope_rows(
                 select(ScanResult.id)
                 .join(AreaScan, AreaScan.id == ScanResult.scan_id)
                 .where(
-                    ScanResult.organization_id == org_id,
-                    AreaScan.organization_id == org_id,
                     ScanResult.parcel_id == ParcelCache.id,
                 )
             )
@@ -200,7 +196,6 @@ async def _backfill_org(
                         sa_update(ParcelCache)
                         .where(
                             ParcelCache.id == bindparam("parcel_id"),
-                            ParcelCache.organization_id == org_id,
                         )
                         .values(address=bindparam("address")),
                         updates,

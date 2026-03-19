@@ -5,15 +5,15 @@ import uuid
 from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class ParcelDocument(Base, TenantMixin, TimestampMixin):
+class ParcelDocument(Base, TimestampMixin):
     """
     Document attached to a specific parcel within a dossier category.
 
-    Supports PDF, images, DOCX, and XLSX uploads (max 25MB).
-    Stored in PostgreSQL with LargeBinary for simplicity (matching PDFDocument pattern).
+    User-scoped via uploaded_by_user_id. Supports PDF, images, DOCX, and
+    XLSX uploads (max 25MB). Stored in PostgreSQL with LargeBinary.
     """
 
     __tablename__ = "parcel_documents"
@@ -52,17 +52,17 @@ class ParcelDocument(Base, TenantMixin, TimestampMixin):
         nullable=False,
         comment="File size in bytes",
     )
-    uploaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
+    uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
         comment="User who uploaded the document",
     )
 
     __table_args__ = (
-        Index("ix_parcel_documents_org_parcel", "organization_id", "parcel_id"),
+        Index("ix_parcel_documents_user_parcel", "uploaded_by_user_id", "parcel_id"),
         Index(
-            "ix_parcel_documents_org_parcel_type",
-            "organization_id",
+            "ix_parcel_documents_user_parcel_type",
+            "uploaded_by_user_id",
             "parcel_id",
             "document_type",
         ),

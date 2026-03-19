@@ -1,6 +1,5 @@
 """Tests for monument aggregator helper functions and multi-source consensus."""
 
-import uuid
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -19,10 +18,9 @@ class TestFetchBagMonument:
 
     async def test_none_verblijfsobject_id_returns_error(self):
         """None verblijfsobject_id should return error message."""
-        org_id = uuid.uuid4()
         session = AsyncMock()
 
-        result = await _fetch_bag_monument(None, org_id, session, False)
+        result = await _fetch_bag_monument(None, session, False)
 
         assert result.source == "BAG"
         assert result.error == "Geen verblijfsobject ID beschikbaar"
@@ -30,10 +28,9 @@ class TestFetchBagMonument:
 
     async def test_any_verblijfsobject_id_returns_unavailable_error(self):
         """Any verblijfsobject_id returns MVP stub unavailable error."""
-        org_id = uuid.uuid4()
         session = AsyncMock()
 
-        result = await _fetch_bag_monument("0363010000123456", org_id, session, False)
+        result = await _fetch_bag_monument("0363010000123456", session, False)
 
         assert result.source == "BAG"
         assert result.error == "Monument status niet beschikbaar via BAG API"
@@ -41,10 +38,9 @@ class TestFetchBagMonument:
 
     async def test_source_is_always_bag(self):
         """Source field should always be 'BAG'."""
-        org_id = uuid.uuid4()
         session = AsyncMock()
 
-        result = await _fetch_bag_monument("0363010000123456", org_id, session, False)
+        result = await _fetch_bag_monument("0363010000123456", session, False)
 
         assert result.source == "BAG"
 
@@ -54,10 +50,9 @@ class TestFetchKadasterMonument:
 
     async def test_always_returns_unavailable_error(self):
         """Should always return MVP stub unavailable error."""
-        org_id = uuid.uuid4()
         session = AsyncMock()
 
-        result = await _fetch_kadaster_monument(org_id, session, False)
+        result = await _fetch_kadaster_monument(session, False)
 
         assert result.source == "Kadaster"
         assert result.error == "Monument status niet beschikbaar via Kadaster API"
@@ -65,21 +60,15 @@ class TestFetchKadasterMonument:
 
     async def test_source_is_always_kadaster(self):
         """Source field should always be 'Kadaster'."""
-        org_id = uuid.uuid4()
         session = AsyncMock()
 
-        result = await _fetch_kadaster_monument(org_id, session, False)
+        result = await _fetch_kadaster_monument(session, False)
 
         assert result.source == "Kadaster"
 
 
 class TestFetchMonumentStatus:
     """Test multi-source monument aggregation with conflict detection."""
-
-    @pytest.fixture
-    def test_org_id(self):
-        """Test organization ID."""
-        return uuid.uuid4()
 
     @pytest.fixture
     def test_session(self):
@@ -92,7 +81,7 @@ class TestFetchMonumentStatus:
         return AsyncMock(spec=httpx.AsyncClient)
 
     async def test_rce_rijksmonument_bag_kadaster_unavailable(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """RCE says rijksmonument, BAG/Kadaster unavailable: consensus rijksmonument."""
         rce_result = MonumentSourceResult(
@@ -119,7 +108,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.consensus_status == "rijksmonument"
@@ -129,7 +118,7 @@ class TestFetchMonumentStatus:
         assert "omgevingsvergunning" in result.restrictions_summary[0].lower()
 
     async def test_rce_not_monument_bag_kadaster_unavailable(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """RCE says not monument, BAG/Kadaster unavailable: consensus geen_monument."""
         rce_result = MonumentSourceResult(source="RCE", is_monument=False)
@@ -150,7 +139,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.consensus_status == "geen_monument"
@@ -159,7 +148,7 @@ class TestFetchMonumentStatus:
         assert len(result.restrictions_summary) == 0  # No restrictions
 
     async def test_rce_monument_bag_not_monument_conflict(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """RCE says monument, BAG says not monument: has_conflict=True."""
         rce_result = MonumentSourceResult(
@@ -183,7 +172,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.has_conflict is True
@@ -193,7 +182,7 @@ class TestFetchMonumentStatus:
         assert result.consensus_status is None  # No consensus when conflict
         assert result.is_monument is True  # ANY source says monument
 
-    async def test_all_sources_return_errors(self, test_org_id, test_session, test_client):
+    async def test_all_sources_return_errors(self, test_session, test_client):
         """All sources return errors: has_conflict=False, consensus_status=None."""
         rce_result = MonumentSourceResult(source="RCE", error="RCE API error: timeout")
         bag_result = MonumentSourceResult(
@@ -213,7 +202,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.has_conflict is False
@@ -222,7 +211,7 @@ class TestFetchMonumentStatus:
         assert len(result.restrictions_summary) == 0
 
     async def test_rce_raises_exception_converted_to_error(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """RCE raises exception: return_exceptions=True converts to error MonumentSourceResult."""
         bag_result = MonumentSourceResult(
@@ -242,7 +231,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         # Exception should be converted to error result
@@ -251,7 +240,7 @@ class TestFetchMonumentStatus:
         assert "Fetch error" in rce_source.error
         assert "Unexpected error in RCE fetch" in rce_source.error
 
-    async def test_gemeentelijk_monument_type(self, test_org_id, test_session, test_client):
+    async def test_gemeentelijk_monument_type(self, test_session, test_client):
         """gemeentelijk_monument type: consensus_status and 3 restriction items."""
         rce_result = MonumentSourceResult(
             source="RCE",
@@ -276,7 +265,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.consensus_status == "gemeentelijk_monument"
@@ -285,7 +274,7 @@ class TestFetchMonumentStatus:
         assert len(result.restrictions_summary) == 3  # Gemeentelijk has 3 items
         assert "omgevingsvergunning" in result.restrictions_summary[0].lower()
 
-    async def test_multiple_sources_agree_monument(self, test_org_id, test_session, test_client):
+    async def test_multiple_sources_agree_monument(self, test_session, test_client):
         """Multiple sources agreeing on monument status: no conflict."""
         rce_result = MonumentSourceResult(
             source="RCE",
@@ -306,7 +295,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.has_conflict is False
@@ -314,7 +303,7 @@ class TestFetchMonumentStatus:
         assert result.is_monument is True
 
     async def test_multiple_sources_agree_not_monument(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """Multiple sources agreeing on not monument: no conflict."""
         rce_result = MonumentSourceResult(source="RCE", is_monument=False)
@@ -331,7 +320,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.has_conflict is False
@@ -339,7 +328,7 @@ class TestFetchMonumentStatus:
         assert result.is_monument is False
 
     async def test_two_sources_disagree_third_has_error(
-        self, test_org_id, test_session, test_client
+        self, test_session, test_client
     ):
         """Two sources disagree, third has error: conflict detected."""
         rce_result = MonumentSourceResult(
@@ -362,7 +351,7 @@ class TestFetchMonumentStatus:
             mock_kadaster.return_value = kadaster_result
 
             result = await fetch_monument_status(
-                121687.0, 487484.0, None, None, test_client, test_org_id, test_session, False
+                121687.0, 487484.0, None, None, test_client, test_session, False
             )
 
         assert result.has_conflict is True

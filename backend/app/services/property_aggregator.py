@@ -229,7 +229,6 @@ def _extract_ai_limit_candidates(
 
 async def _fetch_market_signals(
     *,
-    organization_id: uuid.UUID,
     postcode: str | None,
     huisnummer: int | None,
     city: str | None,
@@ -255,7 +254,6 @@ async def _fetch_market_signals(
         FundaListingSnapshot.price_eur,
         FundaListingSnapshot.house_number,
     ).where(
-        FundaListingSnapshot.organization_id == organization_id,
         FundaListingSnapshot.source == "funda",
         func.upper(func.replace(func.coalesce(FundaListingSnapshot.postcode, ""), " ", ""))
         == postcode_norm,
@@ -725,7 +723,6 @@ async def fetch_brk_ownership(
 async def aggregate_property_data(
     input_data: AddressInput,
     client: httpx.AsyncClient,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     force_refresh: bool = False,
     arq_pool: ArqRedis | None = None,
@@ -742,7 +739,6 @@ async def aggregate_property_data(
     Args:
         input_data: Address input with postcode and house number
         client: Shared httpx AsyncClient
-        organization_id: Tenant ID for cache isolation
         session: SQLAlchemy async session for cache operations
         force_refresh: If True, bypass all caches and fetch fresh data
         arq_pool: ARQ Redis pool for job enqueueing (required for AI parsing)
@@ -774,7 +770,6 @@ async def aggregate_property_data(
         address_resolution = await resolve_address(
             input_data=input_data,
             client=client,
-            organization_id=organization_id,
             session=session,
         )
     except APINotFoundError as e:
@@ -816,7 +811,6 @@ async def aggregate_property_data(
             cache_result = await get_cached_or_fetch(
                 cache_key=cache_key,
                 source="kadaster",
-                organization_id=organization_id,
                 fetch_fn=lambda: _cadastral_client.get_parcels_by_point(
                     x=x,
                     y=y,
@@ -883,7 +877,6 @@ async def aggregate_property_data(
                 x=x,
                 y=y,
                 client=client,
-                organization_id=organization_id,
                 session=session,
                 force_refresh=force_refresh,
             )
@@ -906,7 +899,6 @@ async def aggregate_property_data(
                 pand_id=pand_id,
                 verblijfsobject_id=vo_id,
                 client=client,
-                organization_id=organization_id,
                 session=session,
                 force_refresh=force_refresh,
             )
@@ -929,7 +921,6 @@ async def aggregate_property_data(
             cache_result = await get_cached_or_fetch(
                 cache_key=cache_key,
                 source="ep_online",
-                organization_id=organization_id,
                 fetch_fn=_fetch_ep,
                 session=session,
                 force_refresh=force_refresh,
@@ -953,7 +944,6 @@ async def aggregate_property_data(
             cache_result = await get_cached_or_fetch(
                 cache_key=cache_key,
                 source="woz",
-                organization_id=organization_id,
                 fetch_fn=_fetch_woz,
                 session=session,
                 force_refresh=force_refresh,
@@ -969,7 +959,6 @@ async def aggregate_property_data(
         """Fetch Funda market-friction signals for this exact address."""
         try:
             return await _fetch_market_signals(
-                organization_id=organization_id,
                 postcode=address.postcode,
                 huisnummer=address.huisnummer,
                 city=address.woonplaats,
@@ -991,7 +980,6 @@ async def aggregate_property_data(
                 x=rd_x,
                 y=rd_y,
                 client=client,
-                organization_id=organization_id,
                 session=session,
                 force_refresh=force_refresh,
             )
@@ -1011,7 +999,6 @@ async def aggregate_property_data(
                 x=rd_x,
                 y=rd_y,
                 client=client,
-                organization_id=organization_id,
                 session=session,
                 force_refresh=force_refresh,
             )
@@ -1029,7 +1016,6 @@ async def aggregate_property_data(
             return await fetch_funderingsrisico_data(
                 pc6=postcode,
                 client=client,
-                organization_id=organization_id,
                 session=session,
                 force_refresh=force_refresh,
             )
@@ -1122,7 +1108,6 @@ async def aggregate_property_data(
         funderingsrisicogebied = funderingsrisico_result
 
     permit_precedents = await build_permit_precedent_benchmark(
-        organization_id=organization_id,
         session=session,
         postcode=address.postcode,
         huisnummer=address.huisnummer,
@@ -1142,7 +1127,6 @@ async def aggregate_property_data(
             try:
                 ai_parsing_section = await get_or_parse_plan(
                     plan_idn=plan_idn,
-                    organization_id=organization_id,
                     session=session,
                     arq_pool=arq_pool,
                 )

@@ -1,7 +1,6 @@
 """Plan aggregator service for cache-first lookup and job orchestration."""
 
 import logging
-import uuid
 from datetime import datetime
 
 from arq import ArqRedis
@@ -18,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 async def enqueue_parsing_job(
     plan_idn: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     arq_pool: ArqRedis,
 ) -> ParsingJob:
@@ -29,7 +27,6 @@ async def enqueue_parsing_job(
 
     Args:
         plan_idn: IMRO plan identifier
-        organization_id: Tenant UUID
         session: SQLAlchemy async session
         arq_pool: ARQ Redis pool for job enqueueing
 
@@ -38,7 +35,6 @@ async def enqueue_parsing_job(
     """
     # Create ParsingJob record
     job = ParsingJob(
-        organization_id=organization_id,
         plan_idn=plan_idn,
         status="queued",
         job_id="",  # Will be updated after enqueue
@@ -52,7 +48,6 @@ async def enqueue_parsing_job(
     arq_job = await arq_pool.enqueue_job(
         "pdf_parsing_job",
         plan_idn=plan_idn,
-        organization_id=str(organization_id),
     )
 
     # Update ParsingJob with ARQ job_id
@@ -62,7 +57,7 @@ async def enqueue_parsing_job(
     await session.commit()
 
     logger.info(
-        f"Enqueued parsing job {arq_job.job_id} for plan {plan_idn} (org {organization_id})"
+        f"Enqueued parsing job {arq_job.job_id} for plan {plan_idn}"
     )
 
     return job
@@ -70,7 +65,6 @@ async def enqueue_parsing_job(
 
 async def get_or_parse_plan(
     plan_idn: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     arq_pool: ArqRedis,
 ) -> AIParsingSection:
@@ -85,7 +79,6 @@ async def get_or_parse_plan(
 
     Args:
         plan_idn: IMRO plan identifier
-        organization_id: Tenant UUID
         session: SQLAlchemy async session
         arq_pool: ARQ Redis pool for job enqueueing
 
@@ -95,7 +88,6 @@ async def get_or_parse_plan(
     # 1. Cache check
     cache_key = f"ai_parsed:{plan_idn}"
     stmt = select(CachedAPIResponse).where(
-        CachedAPIResponse.organization_id == organization_id,
         CachedAPIResponse.cache_key == cache_key,
     )
     result = await session.execute(stmt)
@@ -116,7 +108,6 @@ async def get_or_parse_plan(
 
     # 2. Active job check
     stmt = select(ParsingJob).where(
-        ParsingJob.organization_id == organization_id,
         ParsingJob.plan_idn == plan_idn,
         ParsingJob.status.in_(["queued", "in_progress"]),
     )
@@ -134,7 +125,6 @@ async def get_or_parse_plan(
 
     # 3. Prior download failure check
     stmt = select(ParsingJob).where(
-        ParsingJob.organization_id == organization_id,
         ParsingJob.plan_idn == plan_idn,
         ParsingJob.status == "failed",
     )
@@ -157,7 +147,7 @@ async def get_or_parse_plan(
 
     # 4. Enqueue new job
     logger.info(f"No cache or active job for {plan_idn}, enqueueing new job")
-    job = await enqueue_parsing_job(plan_idn, organization_id, session, arq_pool)
+    job = await enqueue_parsing_job(plan_idn, session, arq_pool)
     return AIParsingSection(
         status="queued",
         job_id=job.job_id,
@@ -187,33 +177,30 @@ def get_primary_plan_idn(zoning_data: ZoningData | None) -> str | None:
 
 async def get_job_status(
     job_id: str,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     arq_pool: ArqRedis,
 ) -> AIParsingSection:
     """
-    Check job status for polling endpoint with tenant isolation.
+    Check job status for polling endpoint.
 
     Args:
         job_id: ARQ job identifier
-        organization_id: Tenant UUID
         session: SQLAlchemy async session
         arq_pool: ARQ Redis pool (for future job info queries)
 
     Returns:
         AIParsingSection: Current job status with parsed data if complete
     """
-    # Query ParsingJob with tenant isolation
+    # Query ParsingJob
     stmt = select(ParsingJob).where(
         ParsingJob.job_id == job_id,
-        ParsingJob.organization_id == organization_id,
     )
     result = await session.execute(stmt)
     job = result.scalar_one_or_none()
 
     if not job:
         logger.warning(
-            f"Job {job_id} not found or does not belong to org {organization_id}"
+            f"Job {job_id} not found"
         )
         return AIParsingSection(status="not_available")
 
@@ -221,7 +208,6 @@ async def get_job_status(
     if job.status == "complete":
         cache_key = f"ai_parsed:{job.plan_idn}"
         stmt = select(CachedAPIResponse).where(
-            CachedAPIResponse.organization_id == organization_id,
             CachedAPIResponse.cache_key == cache_key,
         )
         result = await session.execute(stmt)

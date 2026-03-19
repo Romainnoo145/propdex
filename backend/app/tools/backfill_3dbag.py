@@ -148,8 +148,6 @@ async def _backfill_scan(
                 .join(ParcelCache, ParcelCache.id == ScanResult.parcel_id)
                 .where(
                     ScanResult.scan_id == scan_id,
-                    ScanResult.organization_id == org_id,
-                    ParcelCache.organization_id == org_id,
                 )
                 .order_by(ScanResult.id)
                 .limit(500)
@@ -291,7 +289,6 @@ async def _run(
         stmt = (
             select(AreaScan)
             .where(
-                AreaScan.organization_id == org_id,
                 AreaScan.status.in_(["completed", "completed_with_warnings"]),
             )
             .order_by(AreaScan.wijk_naam)

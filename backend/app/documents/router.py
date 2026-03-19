@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.documents.schemas import DocumentListResponse, DocumentResponse
 from app.middleware.rate_limit import limiter
@@ -68,7 +68,6 @@ async def upload_document(
     document_type: str,
     file: UploadFile,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentResponse:
     """Upload a document for a parcel in a specific dossier category."""
@@ -102,19 +101,18 @@ async def upload_document(
         file_data=file_bytes,
         file_size=len(file_bytes),
         uploaded_by_user_id=current_user.id,
-        organization_id=organization_id,
     )
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
 
     logger.info(
-        "Document uploaded: parcel=%s type=%s file=%s size=%d org=%s",
+        "Document uploaded: parcel=%s type=%s file=%s size=%d user=%s",
         parcel_id,
         document_type,
         doc.filename,
         doc.file_size,
-        organization_id,
+        current_user.id,
     )
 
     return DocumentResponse.model_validate(doc)
@@ -128,7 +126,6 @@ async def list_documents(
     parcel_id: str,
     document_type: str | None = None,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentListResponse:
     """List document metadata for a parcel (without file bytes)."""
@@ -136,7 +133,7 @@ async def list_documents(
         select(ParcelDocument)
         .options(defer(ParcelDocument.file_data))
         .where(
-            ParcelDocument.organization_id == organization_id,
+            ParcelDocument.uploaded_by_user_id == current_user.id,
             ParcelDocument.parcel_id == parcel_id,
         )
         .order_by(ParcelDocument.created_at.desc())
@@ -150,7 +147,7 @@ async def list_documents(
 
     # Count query
     count_query = select(func.count(ParcelDocument.id)).where(
-        ParcelDocument.organization_id == organization_id,
+        ParcelDocument.uploaded_by_user_id == current_user.id,
         ParcelDocument.parcel_id == parcel_id,
     )
     if document_type is not None:
@@ -172,14 +169,13 @@ async def download_document(
     parcel_id: str,
     document_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Download/preview a document file."""
     result = await db.execute(
         select(ParcelDocument).where(
             ParcelDocument.id == document_id,
-            ParcelDocument.organization_id == organization_id,
+            ParcelDocument.uploaded_by_user_id == current_user.id,
             ParcelDocument.parcel_id == parcel_id,
         )
     )
@@ -208,14 +204,13 @@ async def delete_document(
     parcel_id: str,
     document_id: uuid.UUID,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Delete a document."""
     result = await db.execute(
         select(ParcelDocument).where(
             ParcelDocument.id == document_id,
-            ParcelDocument.organization_id == organization_id,
+            ParcelDocument.uploaded_by_user_id == current_user.id,
             ParcelDocument.parcel_id == parcel_id,
         )
     )
@@ -231,8 +226,8 @@ async def delete_document(
     await db.commit()
 
     logger.info(
-        "Document deleted: id=%s parcel=%s org=%s",
+        "Document deleted: id=%s parcel=%s user=%s",
         document_id,
         parcel_id,
-        organization_id,
+        current_user.id,
     )

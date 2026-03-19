@@ -197,7 +197,6 @@ async def rescore_weights_job(ctx: dict, *, organization_id: str) -> dict:
                 stmt = (
                     select(ScanResult)
                     .where(
-                        ScanResult.organization_id == org_uuid,
                         ScanResult.flags.isnot(None),
                     )
                     .order_by(ScanResult.id)

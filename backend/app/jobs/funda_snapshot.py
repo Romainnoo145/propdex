@@ -1,7 +1,6 @@
 """Background job for ingesting Funda listing snapshots."""
 
 import logging
-import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -13,17 +12,15 @@ logger = logging.getLogger(__name__)
 
 async def funda_snapshot_job(
     ctx: dict,
-    organization_id: str,
     area_names: list[str] | None = None,
     max_listings: int = 60,
 ) -> dict:
     """
-    Fetch Funda listings for one organization and store daily snapshots.
+    Fetch Funda listings and store daily snapshots.
 
     This is a Phase 59 PoC job. It intentionally runs for a scoped set of areas
     (default: Arcen) to validate data quality before scaling.
     """
-    org_id = uuid.UUID(organization_id)
     engine = create_async_engine(
         settings.DATABASE_URL,
         pool_size=4,
@@ -49,7 +46,6 @@ async def funda_snapshot_job(
             for area_name in target_areas:
                 try:
                     stats = await ingest_funda_area_snapshots(
-                        organization_id=org_id,
                         area_name=area_name,
                         max_listings=max_listings,
                         session=session,
@@ -59,8 +55,7 @@ async def funda_snapshot_job(
                 except Exception as exc:  # pragma: no cover - network/runtime-dependent
                     await session.rollback()
                     logger.exception(
-                        "Funda snapshot failed for org=%s area=%s: %s",
-                        org_id,
+                        "Funda snapshot failed for area=%s: %s",
                         area_name,
                         exc,
                     )
@@ -81,7 +76,6 @@ async def funda_snapshot_job(
         total_matched = sum(int(item.get("matched_parcels", 0)) for item in summary)
         return {
             "status": "completed",
-            "organization_id": str(org_id),
             "areas": target_areas,
             "max_listings": max_listings,
             "total_snapshots_upserted": total_upserted,

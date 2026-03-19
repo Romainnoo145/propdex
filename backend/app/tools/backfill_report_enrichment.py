@@ -52,7 +52,6 @@ async def backfill_reports(dry_run: bool = False) -> None:
                 .join(AreaScan, ScanResult.scan_id == AreaScan.id)
                 .where(
                     ScanResult.parcel_id == report.source_parcel_id,
-                    ScanResult.organization_id == report.organization_id,
                     AreaScan.status == "completed",
                 )
                 .order_by(ScanResult.created_at.desc())

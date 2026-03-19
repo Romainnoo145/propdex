@@ -9,10 +9,10 @@ from sqlalchemy import Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class ParcelCache(Base, TenantMixin, TimestampMixin):
+class ParcelCache(Base, TimestampMixin):
     """
     ParcelCache model for storing parcel geometry and enrichment data.
 
@@ -24,7 +24,7 @@ class ParcelCache(Base, TenantMixin, TimestampMixin):
     - Tier 3: BRK eigendomsdata - NEVER stored here (legitimate interest basis)
               Always queried fresh at request time from Kadaster API.
 
-    Multi-tenant isolated via organization_id. Geometry stored in EPSG:28992
+    Shared data — visible to all authenticated users. Geometry stored in EPSG:28992
     (RD New - Dutch national grid) with GIST spatial index for fast intersection queries.
     """
 
@@ -95,8 +95,5 @@ class ParcelCache(Base, TenantMixin, TimestampMixin):
     # BRK data is always queried fresh at request time (legitimate interest)
 
     __table_args__ = (
-        Index("ix_parcel_cache_org_gemeente", "organization_id", "gemeente_code"),
-        Index("ix_parcel_cache_org_parcel", "organization_id", "parcel_id"),
-        Index("ix_parcel_cache_org_parcel_code", "organization_id", "parcel_code"),
-        UniqueConstraint("organization_id", "parcel_id", name="uq_parcel_cache_org_parcel"),
+        UniqueConstraint("parcel_id", name="uq_parcel_cache_parcel"),
     )

@@ -58,32 +58,27 @@ class TestFindPlansAtLocation:
         resp2 = make_mock_response(200, page2)
 
         client = AsyncMock(spec=httpx.AsyncClient)
-        client.post.return_value = resp1
-        client.get.return_value = resp2
+        client.post.side_effect = [resp1, resp2]
 
         result = await dso_client.find_plans_at_location(121687.0, 487484.0, client)
         assert result == [{"id": "p1"}, {"id": "p2"}]
-        client.get.assert_called_once()
+        assert client.post.call_count == 2
 
     async def test_max_5_pages(self, dso_client):
         """Stops at 5 pages even if more are available."""
+        # Build 5 pages: pages 1-4 have next links, page 5 also has next link but code stops at page <= 5
         pages = []
-        for i in range(6):
-            href = f"https://dso.nl/page{i+2}" if i < 5 else None
-            pages.append(_make_plans_page([{"id": f"p{i+1}"}], next_href=href if i < 5 else None))
-
-        # Page 1 via POST, pages 2-6 all have next links
-        for i in range(1, 6):
-            pages[i] = _make_plans_page([{"id": f"p{i+1}"}], next_href=f"https://dso.nl/page{i+2}")
+        for i in range(5):
+            href = f"https://dso.nl/page{i+2}"
+            pages.append(_make_plans_page([{"id": f"p{i+1}"}], next_href=href))
 
         client = AsyncMock(spec=httpx.AsyncClient)
-        client.post.return_value = make_mock_response(200, pages[0])
-        # Pages 2-5 (4 GET calls max, since page_count starts at 1 and stops at < 5)
-        client.get.side_effect = [make_mock_response(200, pages[i]) for i in range(1, 5)]
+        # All pages via POST (code uses POST for all pagination)
+        client.post.side_effect = [make_mock_response(200, p) for p in pages]
 
         result = await dso_client.find_plans_at_location(121687.0, 487484.0, client)
         assert len(result) == 5  # 5 pages, 1 plan each
-        assert client.get.call_count == 4  # 4 GET calls (page 1 was POST)
+        assert client.post.call_count == 5  # 5 POST calls (page 1 + pages 2-5)
 
     async def test_empty_plans(self, dso_client):
         page_data = _make_plans_page([])
@@ -116,7 +111,14 @@ class TestFindPlansAtLocation:
 
         await dso_client.find_plans_at_location(121687.0, 487484.0, client)
         call_kwargs = client.post.call_args.kwargs
-        assert call_kwargs["json"] == {"type": "Point", "coordinates": [121687.0, 487484.0]}
+        assert call_kwargs["json"] == {
+            "_geo": {
+                "intersectAndNotTouches": {
+                    "type": "Point",
+                    "coordinates": [121687.0, 487484.0],
+                },
+            },
+        }
 
 
 class TestGetBestemmingsvlakken:

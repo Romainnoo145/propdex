@@ -279,7 +279,6 @@ def _extract_match_hints(
 async def _find_parcel_by_address_hint(
     street: str,
     huisnummer: int,
-    organization_id: uuid.UUID,
     session: AsyncSession,
     postcode: str | None = None,
     city: str | None = None,
@@ -292,7 +291,6 @@ async def _find_parcel_by_address_hint(
     normalized_city = city.lower().strip() if isinstance(city, str) and city.strip() else None
 
     query = select(ParcelCache.id, ParcelCache.address).where(
-        ParcelCache.organization_id == organization_id,
         ParcelCache.address.is_not(None),
         func.lower(ParcelCache.address).contains(normalized_street),
     )
@@ -323,7 +321,6 @@ async def _find_parcel_by_address_hint(
 
 async def _try_match_parcel(
     change: ChangeRecord,
-    organization_id: uuid.UUID,
     client: httpx.AsyncClient,
     session: AsyncSession,
 ) -> uuid.UUID | None:
@@ -351,7 +348,7 @@ async def _try_match_parcel(
 
     if coords is not None:
         matched = await find_parcel_at_point(
-            coords[0], coords[1], organization_id, session
+            coords[0], coords[1], session
         )
         if matched is not None:
             return matched
@@ -359,7 +356,6 @@ async def _try_match_parcel(
     return await _find_parcel_by_address_hint(
         street=street,
         huisnummer=huisnummer,
-        organization_id=organization_id,
         session=session,
         postcode=_normalize_postcode(components.get("postcode")),
         city=_normalize_street_hint(components.get("city")),
@@ -502,14 +498,11 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                     )
 
                     # Detect zoning changes via DSO plan state comparison
-                    # Use first project's organization_id for cache storage
-                    org_id = projects[0].organization_id
                     zoning_changes = await detect_zoning_changes(
                         gemeente_code=gemeente_code,
                         last_checked=last_checked,
                         client=http_client,
                         session=session,
-                        organization_id=str(org_id) if org_id else None,
                         gemeente_naam=gemeente_naam,
                     )
 
@@ -553,7 +546,6 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                         # Attempt geocode + spatial parcel match
                         matched_id = await _try_match_parcel(
                             change,
-                            parent_project.organization_id,
                             http_client,
                             session,
                         )
@@ -563,7 +555,6 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                                 matched_id = await _find_parcel_by_address_hint(
                                     street=hints[0],
                                     huisnummer=hints[1],
-                                    organization_id=parent_project.organization_id,
                                     session=session,
                                     postcode=hints[2],
                                     city=hints[3],
@@ -578,7 +569,6 @@ async def daily_change_monitor_job(ctx: dict) -> dict:
                                     )
 
                         change_record = ChangeRecord(
-                            organization_id=parent_project.organization_id,
                             project_id=parent_project.id,
                             change_type=change.change_type,
                             external_id=change.external_id,
@@ -648,7 +638,6 @@ async def initial_change_fetch(
     project_id: str,
     gemeente_naam: str,
     gemeente_code: str,
-    organization_id: str,
 ) -> None:
     """Fetch bekendmakingen for a newly created gemeente project (30-day lookback).
 
@@ -666,7 +655,6 @@ async def initial_change_fetch(
         http_client = httpx.AsyncClient(timeout=60.0)
         async with session_factory() as session:
             proj_uuid = uuid.UUID(project_id)
-            org_uuid = uuid.UUID(organization_id)
             last_checked = datetime.utcnow() - timedelta(days=30)
 
             logger.info(
@@ -683,7 +671,6 @@ async def initial_change_fetch(
 
             stored = 0
             for change in permit_changes:
-                change.organization_id = org_uuid
                 change.project_id = proj_uuid
                 change.gemeente_naam = gemeente_naam
 
@@ -709,7 +696,7 @@ async def initial_change_fetch(
 
                 # Attempt geocode + spatial parcel match
                 matched_id = await _try_match_parcel(
-                    change, org_uuid, http_client, session
+                    change, http_client, session
                 )
                 if matched_id is None:
                     hints = _extract_match_hints(change, effective_postcode)
@@ -717,7 +704,6 @@ async def initial_change_fetch(
                         matched_id = await _find_parcel_by_address_hint(
                             street=hints[0],
                             huisnummer=hints[1],
-                            organization_id=org_uuid,
                             session=session,
                             postcode=hints[2],
                             city=hints[3],

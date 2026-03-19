@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user, get_current_organization_id
+from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.favorites.schemas import (
     FavoriteCentroidResponse,
@@ -30,14 +30,12 @@ portfolio_router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
 
 async def _get_favorite_or_404(
     db: AsyncSession,
-    org_id: uuid.UUID,
     user_id: uuid.UUID,
     parcel_id: str,
 ) -> ParcelFavorite:
-    """Fetch favorite by (org, user, parcel) or raise 404."""
+    """Fetch favorite by (user, parcel) or raise 404."""
     result = await db.execute(
         select(ParcelFavorite).where(
-            ParcelFavorite.organization_id == org_id,
             ParcelFavorite.user_id == user_id,
             ParcelFavorite.parcel_id == parcel_id,
         )
@@ -58,7 +56,6 @@ async def create_favorite(
     request: Request,
     body: FavoriteCreate,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> FavoriteResponse:
     """
@@ -68,7 +65,6 @@ async def create_favorite(
     # Idempotency check
     result = await db.execute(
         select(ParcelFavorite).where(
-            ParcelFavorite.organization_id == organization_id,
             ParcelFavorite.user_id == current_user.id,
             ParcelFavorite.parcel_id == body.parcel_id,
         )
@@ -87,7 +83,6 @@ async def create_favorite(
     fav = ParcelFavorite(
         parcel_id=body.parcel_id,
         user_id=current_user.id,
-        organization_id=organization_id,
         gemeente_code=body.gemeente_code,
         gemeente_naam=body.gemeente_naam,
         wijk_naam=body.wijk_naam,
@@ -99,10 +94,9 @@ async def create_favorite(
     await db.refresh(fav)
 
     logger.info(
-        "Favorite created: parcel=%s user=%s org=%s",
+        "Favorite created: parcel=%s user=%s",
         fav.parcel_id,
         current_user.id,
-        organization_id,
     )
 
     return FavoriteResponse.model_validate(fav)
@@ -116,14 +110,12 @@ async def create_favorite(
 async def list_favorites(
     request: Request,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[FavoriteResponse]:
-    """Return all favorites for the current user in the current organisation."""
+    """Return all favorites for the current user."""
     result = await db.execute(
         select(ParcelFavorite)
         .where(
-            ParcelFavorite.organization_id == organization_id,
             ParcelFavorite.user_id == current_user.id,
         )
         .order_by(ParcelFavorite.created_at.desc())
@@ -141,19 +133,17 @@ async def delete_favorite(
     request: Request,
     parcel_id: str,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Remove a parcel from favorites. Returns 204 No Content."""
-    fav = await _get_favorite_or_404(db, organization_id, current_user.id, parcel_id)
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
     await db.delete(fav)
     await db.commit()
 
     logger.info(
-        "Favorite deleted: parcel=%s user=%s org=%s",
+        "Favorite deleted: parcel=%s user=%s",
         parcel_id,
         current_user.id,
-        organization_id,
     )
 
 
@@ -165,10 +155,9 @@ async def delete_favorite(
 async def list_favorite_centroids(
     request: Request,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[FavoriteCentroidResponse]:
-    """Return centroid lon/lat for all favorited parcels in the current organisation."""
+    """Return centroid lon/lat for all favorited parcels for the current user."""
     result = await db.execute(
         text(
             """
@@ -179,12 +168,10 @@ async def list_favorite_centroids(
             FROM parcel_favorites pf
             JOIN parcel_cache pc
               ON pc.parcel_id = pf.parcel_id
-             AND pc.organization_id = :org_id
             WHERE pf.user_id = :user_id
-              AND pf.organization_id = :org_id
             """
         ),
-        {"org_id": str(organization_id), "user_id": str(current_user.id)},
+        {"user_id": str(current_user.id)},
     )
     return [
         FavoriteCentroidResponse(
@@ -206,14 +193,13 @@ async def update_pipeline(
     parcel_id: str,
     body: PipelineUpdateRequest,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> FavoriteResponse:
     """
     Update the pipeline stage for a favorited parcel.
     Pydantic Literal validation on PipelineUpdateRequest.stage auto-returns 422 for invalid values.
     """
-    fav = await _get_favorite_or_404(db, organization_id, current_user.id, parcel_id)
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
 
     fav.pipeline_stage = body.stage
     if body.stage == "Afgerond":
@@ -227,11 +213,10 @@ async def update_pipeline(
     await db.refresh(fav)
 
     logger.info(
-        "Pipeline updated: parcel=%s stage=%s user=%s org=%s",
+        "Pipeline updated: parcel=%s stage=%s user=%s",
         parcel_id,
         body.stage,
         current_user.id,
-        organization_id,
     )
 
     return FavoriteResponse.model_validate(fav)
@@ -245,11 +230,10 @@ async def update_pipeline(
 async def get_portfolio(
     request: Request,
     current_user: User = Depends(get_current_active_user),
-    organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
 ) -> PortfolioResponse:
     """
-    Return all favorites grouped by gemeente/wijk for the current organisation.
+    Return all favorites grouped by gemeente/wijk for the current user.
     Uses a single GROUP BY query — no N+1 queries.
     Provincie grouping is derived by the frontend from gemeente_code using CBS GeoJSON.
     """
@@ -261,7 +245,7 @@ async def get_portfolio(
                 ParcelFavorite.wijk_naam,
                 func.count(ParcelFavorite.id).label("parcel_count"),
             )
-            .where(ParcelFavorite.organization_id == organization_id)
+            .where(ParcelFavorite.user_id == current_user.id)
             .group_by(
                 ParcelFavorite.gemeente_code,
                 ParcelFavorite.gemeente_naam,
