@@ -5,15 +5,16 @@ import uuid
 from sqlalchemy import Index, Integer, LargeBinary, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class PDFDocument(Base, TenantMixin, TimestampMixin):
+class PDFDocument(Base, TimestampMixin):
     """
     Bestemmingsplan PDF storage with metadata.
 
     PDFs stored permanently linked to plan_idn for reuse across addresses.
     Multiple addresses in the same bestemmingsplan area share the same PDF.
+    Shared across all users — plan_idn is the lookup key.
     """
 
     __tablename__ = "pdf_documents"
@@ -49,5 +50,5 @@ class PDFDocument(Base, TenantMixin, TimestampMixin):
     )
 
     __table_args__ = (
-        Index("ix_pdf_documents_org_plan", "organization_id", "plan_idn"),
+        Index("ix_pdf_documents_plan", "plan_idn"),
     )

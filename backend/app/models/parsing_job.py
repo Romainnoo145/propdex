@@ -1,19 +1,19 @@
-"""AI parsing job metadata model for tenant-scoped job tracking."""
+"""AI parsing job metadata model for shared job tracking."""
 
 import uuid
 
 from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class ParsingJob(Base, TenantMixin, TimestampMixin):
+class ParsingJob(Base, TimestampMixin):
     """
-    AI parsing job metadata for tenant-scoped job tracking.
+    AI parsing job metadata for job tracking.
 
-    Stores job_id from ARQ alongside plan_idn and organization_id.
-    Enables tenant isolation: job status endpoint validates organization ownership.
+    Stores job_id from ARQ alongside plan_idn.
+    Shared across all users — job results are reusable for any plan_idn.
     """
 
     __tablename__ = "parsing_jobs"
@@ -47,5 +47,5 @@ class ParsingJob(Base, TenantMixin, TimestampMixin):
     )
 
     __table_args__ = (
-        Index("ix_parsing_jobs_org_plan", "organization_id", "plan_idn"),
+        Index("ix_parsing_jobs_plan", "plan_idn"),
     )

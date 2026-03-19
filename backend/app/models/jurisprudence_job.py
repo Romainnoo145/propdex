@@ -1,4 +1,4 @@
-"""AI jurisprudence analysis job metadata model for tenant-scoped job tracking."""
+"""AI jurisprudence analysis job metadata model for shared job tracking."""
 
 import uuid
 
@@ -6,15 +6,15 @@ from sqlalchemy import Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class JuridischAnalyseJob(Base, TenantMixin, TimestampMixin):
+class JuridischAnalyseJob(Base, TimestampMixin):
     """
-    AI jurisprudence analysis job metadata for tenant-scoped job tracking.
+    AI jurisprudence analysis job metadata for job tracking.
 
-    Stores job_id from ARQ alongside gemeente_naam, ecli_list, and organization_id.
-    Enables tenant isolation: job status endpoint validates organization ownership.
+    Stores job_id from ARQ alongside gemeente_naam and ecli_list.
+    Shared across all users — analysis results are reusable for any gemeente.
     """
 
     __tablename__ = "juridisch_analyse_jobs"
@@ -54,8 +54,7 @@ class JuridischAnalyseJob(Base, TenantMixin, TimestampMixin):
 
     __table_args__ = (
         Index(
-            "ix_juridisch_analyse_jobs_org_gemeente",
-            "organization_id",
+            "ix_juridisch_analyse_jobs_gemeente",
             "gemeente_naam",
         ),
     )

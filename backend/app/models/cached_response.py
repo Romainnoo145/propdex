@@ -7,15 +7,15 @@ from sqlalchemy import Index, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class CachedAPIResponse(Base, TenantMixin, TimestampMixin):
+class CachedAPIResponse(Base, TimestampMixin):
     """
     Cache table for government API responses.
 
     Stores API responses in JSONB format with TTL metadata for cache invalidation.
-    Multi-tenant isolated via organization_id.
+    Shared across all users — cache_key is globally unique.
     """
 
     __tablename__ = "cached_api_responses"
@@ -49,6 +49,6 @@ class CachedAPIResponse(Base, TenantMixin, TimestampMixin):
     )
 
     __table_args__ = (
-        Index("ix_cached_responses_org_key", "organization_id", "cache_key"),
-        UniqueConstraint("organization_id", "cache_key", name="uq_cached_responses_org_key"),
+        Index("ix_cached_responses_key", "cache_key"),
+        UniqueConstraint("cache_key", name="uq_cached_responses_key"),
     )

@@ -7,12 +7,14 @@ from sqlalchemy import Date, ForeignKey, Index, Integer, String, Text, UniqueCon
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class FundaListingSnapshot(Base, TenantMixin, TimestampMixin):
+class FundaListingSnapshot(Base, TimestampMixin):
     """
     Daily snapshot of a single Funda listing.
+
+    Shared across all users — listing data is public market information.
 
     Used to derive:
     - listing_duration_days (first_seen -> last_seen)
@@ -76,15 +78,13 @@ class FundaListingSnapshot(Base, TenantMixin, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint(
-            "organization_id",
             "source",
             "listing_external_id",
             "snapshot_date",
-            name="uq_funda_listing_snapshots_org_source_listing_day",
+            name="uq_funda_listing_snapshots_source_listing_day",
         ),
         Index(
-            "ix_funda_listing_snapshots_org_parcel_day",
-            "organization_id",
+            "ix_funda_listing_snapshots_parcel_day",
             "matched_parcel_id",
             "snapshot_date",
         ),
