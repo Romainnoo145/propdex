@@ -69,6 +69,7 @@ export function GemeenteContextPanel({
               >
                 <OverviewTab
                   naam={naam}
+                  code={code}
                   scans={scans}
                   gemeenteCode={code}
                   onSelectWijk={onSelectWijk}

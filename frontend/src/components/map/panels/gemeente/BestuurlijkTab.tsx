@@ -1,8 +1,10 @@
+import { motion } from 'framer-motion'
 import { ExternalLink, FileText, Loader2, Banknote, ScrollText, Landmark } from 'lucide-react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
 import { useSubsidies, type SubsidieResponse } from '@/hooks/useSubsidies'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 import { useErfgoed } from '@/hooks/useErfgoed'
+import { staggerContainer, fadeUp } from './animations'
 
 interface BestuurlijkTabProps {
   gemeenteNaam: string
@@ -104,9 +106,14 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
   const { data: erfgoedData, isLoading: erfgoedLoading } = useErfgoed(gemeenteNaam)
 
   return (
-    <div className="px-8 pt-5 pb-6">
+    <motion.div
+      className="px-8 pt-5 pb-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
       {/* ── Raadsinformatie section ── */}
-      <div className="mb-5">
+      <motion.div variants={fadeUp} className="mb-5">
         <div className="flex items-center justify-between mb-3">
           <span
             className="text-[10px] font-extrabold uppercase"
@@ -141,10 +148,10 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
             {raadsData.dekking ? 'Geen relevante stukken gevonden.' : 'Niet beschikbaar voor deze gemeente.'}
           </p>
         )}
-      </div>
+      </motion.div>
 
       {/* ── Huisvestingsverordening section ── */}
-      <div className="mb-5">
+      <motion.div variants={fadeUp} className="mb-5">
         <div className="flex items-center justify-between mb-3">
           <span
             className="text-[10px] font-extrabold uppercase"
@@ -193,10 +200,10 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
             Geen huisvestingsverordening gevonden voor {gemeenteNaam}.
           </p>
         )}
-      </div>
+      </motion.div>
 
       {/* ── Subsidies section ── */}
-      <div>
+      <motion.div variants={fadeUp}>
         <div className="flex items-center justify-between mb-3">
           <span
             className="text-[10px] font-extrabold uppercase"
@@ -229,10 +236,10 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
         {!subsidieLoading && subsidieData && subsidieData.subsidies.length === 0 && (
           <p className="text-[12px] text-slate-400 py-2">Geen relevante subsidies gevonden.</p>
         )}
-      </div>
+      </motion.div>
 
       {/* ── Erfgoed section ── */}
-      <div className="mb-5">
+      <motion.div variants={fadeUp} className="mb-5">
         <div className="flex items-center justify-between mb-3">
           <span
             className="text-[10px] font-extrabold uppercase"
@@ -289,14 +296,14 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
             Geen beschermde stads- of dorpsgezichten in {gemeenteNaam}.
           </p>
         )}
-      </div>
+      </motion.div>
 
       {/* Source attribution */}
-      <div className="mt-4 pt-2 border-t border-slate-50">
+      <motion.div variants={fadeUp} className="mt-4 pt-2 border-t border-slate-50">
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
           Bron: Open Raadsinformatie · RVO · KOOP · RCE
         </span>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
