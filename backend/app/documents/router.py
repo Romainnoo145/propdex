@@ -106,6 +106,17 @@ async def upload_document(
     await db.commit()
     await db.refresh(doc)
 
+    # Trigger AI summarization for PDFs (non-blocking — failures are silent)
+    try:
+        from app.services.document_summarizer import summarize_document
+
+        summary = await summarize_document(file_bytes, file.content_type or "", doc.filename)
+        if summary:
+            doc.ai_summary = summary
+            await db.commit()
+    except Exception:
+        logger.debug("AI summarization skipped for %s", doc.filename)
+
     logger.info(
         "Document uploaded: parcel=%s type=%s file=%s size=%d user=%s",
         parcel_id,

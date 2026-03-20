@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, text
+from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -56,6 +56,11 @@ class ParcelDocument(Base, TimestampMixin):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         comment="User who uploaded the document",
+    )
+    ai_summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AI-generated summary of the document content",
     )
 
     __table_args__ = (

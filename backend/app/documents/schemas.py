@@ -17,6 +17,7 @@ class DocumentResponse(BaseModel):
     file_size: int
     uploaded_at: datetime = Field(validation_alias="created_at")
     uploaded_by_user_id: uuid.UUID | None
+    ai_summary: str | None = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

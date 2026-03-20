@@ -393,3 +393,295 @@ async def get_actievoorstellen(
         "acties": [asdict(a) for a in acties],
         "total": len(acties),
     }
+
+
+@router.post("/{parcel_id}/generate/{template_id}")
+async def generate_document_endpoint(
+    parcel_id: str,
+    template_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Generate a concept document for a parcel.
+
+    Available templates: eigenaar_brief, vooroverleg_request.
+    Returns rendered Markdown. Use the parcel's data to fill in
+    location, bestemming, scores, and development strategy.
+
+    Args:
+        parcel_id: Parcel cache ID (UUID)
+        template_id: Template key (eigenaar_brief, vooroverleg_request)
+    """
+    from sqlalchemy import desc, select
+
+    from app.models.scan_result import ScanResult
+    from app.services.document_generator import generate_document, list_templates
+
+    # Validate template
+    valid_ids = {t["id"] for t in list_templates()}
+    if template_id not in valid_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown template: {template_id}. Available: {', '.join(valid_ids)}",
+        )
+
+    # Get parcel data
+    stmt = (
+        select(ScanResult)
+        .where(ScanResult.parcel_id == parcel_id)
+        .order_by(desc(ScanResult.created_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    sr = result.scalar_one_or_none()
+
+    if sr is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No scan data found for parcel {parcel_id}",
+        )
+
+    flags = sr.flags or {}
+
+    # Generate document
+    rendered = generate_document(template_id, flags)
+    if rendered is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document generation failed",
+        )
+
+    return {
+        "parcel_id": parcel_id,
+        "template_id": template_id,
+        "content": rendered,
+        "format": "markdown",
+    }
+
+
+@router.get("/templates")
+async def list_document_templates(
+    current_user: User = Depends(get_current_active_user),
+) -> dict:
+    """List available document generation templates."""
+    from app.services.document_generator import list_templates
+    return {"templates": list_templates()}
+
+
+# ── Task Management ──────────────────────────────────────────────
+
+
+@router.get("/{parcel_id}/tasks")
+async def list_parcel_tasks(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """List all tasks for a parcel (user-scoped)."""
+    from sqlalchemy import select
+
+    from app.models.parcel_task import ParcelTask
+
+    stmt = (
+        select(ParcelTask)
+        .where(
+            ParcelTask.user_id == current_user.id,
+            ParcelTask.parcel_id == parcel_id,
+        )
+        .order_by(ParcelTask.created_at)
+    )
+    result = await db.execute(stmt)
+    tasks = result.scalars().all()
+
+    return {
+        "parcel_id": parcel_id,
+        "tasks": [
+            {
+                "id": str(t.id),
+                "title": t.title,
+                "description": t.description,
+                "status": t.status,
+                "priority": t.priority,
+                "category": t.category,
+                "use_case": t.use_case,
+                "deadline": t.deadline.isoformat() if t.deadline else None,
+                "source_actie_id": t.source_actie_id,
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in tasks
+        ],
+        "total": len(tasks),
+    }
+
+
+@router.post("/{parcel_id}/tasks", status_code=201)
+async def create_parcel_task(
+    parcel_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Create a new task for a parcel."""
+    from app.models.parcel_task import ParcelTask
+
+    body = await request.json()
+
+    task = ParcelTask(
+        user_id=current_user.id,
+        parcel_id=parcel_id,
+        title=body.get("title", ""),
+        description=body.get("description"),
+        status=body.get("status", "todo"),
+        priority=body.get("priority", "gemiddeld"),
+        category=body.get("category"),
+        use_case=body.get("use_case"),
+        deadline=body.get("deadline"),
+        source_actie_id=body.get("source_actie_id"),
+    )
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    return {
+        "id": str(task.id),
+        "title": task.title,
+        "status": task.status,
+        "created": True,
+    }
+
+
+@router.patch("/{parcel_id}/tasks/{task_id}")
+async def update_parcel_task(
+    parcel_id: str,
+    task_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Update a task (status, title, deadline, etc.)."""
+    from sqlalchemy import select
+
+    from app.models.parcel_task import ParcelTask
+
+    stmt = select(ParcelTask).where(
+        ParcelTask.id == task_id,
+        ParcelTask.user_id == current_user.id,
+        ParcelTask.parcel_id == parcel_id,
+    )
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    body = await request.json()
+    for field in ("title", "description", "status", "priority", "category", "use_case", "deadline"):
+        if field in body:
+            setattr(task, field, body[field])
+
+    await db.commit()
+
+    return {"id": str(task.id), "status": task.status, "updated": True}
+
+
+@router.delete("/{parcel_id}/tasks/{task_id}", status_code=204)
+async def delete_parcel_task(
+    parcel_id: str,
+    task_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a task."""
+    from sqlalchemy import delete, select
+
+    from app.models.parcel_task import ParcelTask
+
+    stmt = select(ParcelTask).where(
+        ParcelTask.id == task_id,
+        ParcelTask.user_id == current_user.id,
+    )
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    await db.delete(task)
+    await db.commit()
+
+
+@router.post("/{parcel_id}/tasks/from-acties")
+async def create_tasks_from_actievoorstellen(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Auto-create tasks from actievoorstellen for a parcel.
+
+    Computes actievoorstellen, creates tasks for each one that
+    doesn't already exist (matched by source_actie_id).
+    """
+    from dataclasses import asdict
+
+    from sqlalchemy import desc, select
+
+    from app.models.parcel_task import ParcelTask
+    from app.models.scan_result import ScanResult
+    from app.services.actievoorstellen import compute_actievoorstellen
+    from app.services.use_case_scoring import compute_use_case_scores
+
+    # Get parcel data
+    stmt = (
+        select(ScanResult)
+        .where(ScanResult.parcel_id == parcel_id)
+        .order_by(desc(ScanResult.created_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    sr = result.scalar_one_or_none()
+
+    if sr is None or not sr.flags:
+        return {"parcel_id": parcel_id, "created": 0, "skipped": 0}
+
+    flags = sr.flags or {}
+    breakdown = flags.get("score_breakdown", {})
+    uc_scores = None
+    if breakdown:
+        uc_results = compute_use_case_scores(breakdown)
+        if uc_results:
+            uc_scores = {k: asdict(v) for k, v in uc_results.items()}
+
+    acties = compute_actievoorstellen(flags, uc_scores)
+
+    # Check existing tasks to avoid duplicates
+    existing_stmt = select(ParcelTask.source_actie_id).where(
+        ParcelTask.user_id == current_user.id,
+        ParcelTask.parcel_id == parcel_id,
+        ParcelTask.source_actie_id.isnot(None),
+    )
+    existing_result = await db.execute(existing_stmt)
+    existing_ids = {row[0] for row in existing_result.all()}
+
+    created = 0
+    skipped = 0
+    for actie in acties:
+        if actie.id in existing_ids:
+            skipped += 1
+            continue
+        task = ParcelTask(
+            user_id=current_user.id,
+            parcel_id=parcel_id,
+            title=actie.title,
+            description=actie.description,
+            priority=actie.priority,
+            category=actie.category,
+            use_case=actie.use_case,
+            source_actie_id=actie.id,
+        )
+        db.add(task)
+        created += 1
+
+    if created > 0:
+        await db.commit()
+
+    return {"parcel_id": parcel_id, "created": created, "skipped": skipped}

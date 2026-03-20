@@ -12,6 +12,7 @@ from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache  # noqa: F401
 from app.models.parcel_document import ParcelDocument  # noqa: F401
 from app.models.parcel_favorite import ParcelFavorite  # noqa: F401
+from app.models.parcel_task import ParcelTask  # noqa: F401
 from app.models.parsing_job import ParsingJob  # noqa: F401
 from app.models.pdf_document import PDFDocument  # noqa: F401
 from app.models.project import Project  # noqa: F401
