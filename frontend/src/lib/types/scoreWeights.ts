@@ -245,3 +245,24 @@ export const PRESETS: PresetDef[] = [
     },
   },
 ]
+
+// ── Use-case scoring types ──────────────────────────────────────
+
+export interface UseCaseScore {
+  use_case: string
+  label: string
+  score: number
+  category: 'Hoog' | 'Gemiddeld' | 'Laag'
+  top_factors: string[]
+  description: string
+}
+
+export type UseCaseScores = Record<'optoppen' | 'splitsen' | 'transformatie' | 'nieuwbouw', UseCaseScore>
+
+/** Colors per use case for UI consistency */
+export const USE_CASE_COLORS: Record<string, string> = {
+  optoppen: '#8b5cf6',      // violet
+  splitsen: '#0ea5e9',      // sky
+  transformatie: '#f59e0b',  // amber
+  nieuwbouw: '#22c55e',     // green
+}

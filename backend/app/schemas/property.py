@@ -621,6 +621,10 @@ class PropertyReportResponse(BaseModel):
         default=None,
         description="Per-factor FactorResult dicts from v3.0 engine",
     )
+    use_case_scores: dict | None = Field(
+        default=None,
+        description="Per-use-case scores: {optoppen, splitsen, transformatie, nieuwbouw}",
+    )
     score_model_version: str | None = Field(
         default=None,
         description="Score model version identifier (e.g. score-v3.0)",

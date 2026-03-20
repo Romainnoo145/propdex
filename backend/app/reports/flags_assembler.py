@@ -1,12 +1,25 @@
 """Assemble PropertyReportResponse enrichment fields from scan_results.flags."""
 
+from dataclasses import asdict
 from datetime import datetime
 
 from app.schemas.property import DataSourceInfo, SectionSourceInfo
+from app.services.use_case_scoring import compute_use_case_scores
 
 
 def assemble_enrichment_from_flags(flags: dict) -> dict:
     """Extract pre-cached enrichment from scan_results.flags into PropertyReportResponse field dict."""
+    # Compute use-case scores on-the-fly from stored breakdown
+    breakdown = flags.get("score_breakdown")
+    uc_scores = None
+    if breakdown:
+        uc_results = compute_use_case_scores(breakdown)
+        if uc_results:
+            uc_scores = {
+                uc_id: asdict(uc_score)
+                for uc_id, uc_score in uc_results.items()
+            }
+
     return {
         "vergunningen_data": flags.get("vergunningen"),
         "energielabel_flags": flags.get("energielabel"),
@@ -20,6 +33,7 @@ def assemble_enrichment_from_flags(flags: dict) -> dict:
         "luchtkwaliteit_flags": flags.get("luchtkwaliteit"),
         "scores_v3": flags.get("scores"),
         "score_breakdown_v3": flags.get("score_breakdown"),
+        "use_case_scores": uc_scores,
         "score_model_version": flags.get("score_model_version"),
     }
 
