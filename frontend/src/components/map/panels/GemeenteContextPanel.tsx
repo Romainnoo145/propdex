@@ -2,13 +2,11 @@ import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { LeftPanelShell } from './LeftPanelShell'
-import { GemeenteHeader } from './gemeente/GemeenteHeader'
 import { GemeenteCategoryTabs, type GemeenteLayer } from './gemeente/GemeenteCategoryTabs'
 import { GemeenteOverview } from './gemeente/GemeenteOverview'
 import { KlimaatLayer } from './gemeente/KlimaatLayer'
-import { BestuurlijkTab } from './gemeente/BestuurlijkTab'
-import { WijkenTab } from './gemeente/WijkenTab'
-import { WijkenModal } from './gemeente/WijkenModal'
+import { BestuurlijkLayer } from './gemeente/BestuurlijkLayer'
+import { ActiviteitLayer } from './gemeente/ActiviteitLayer'
 import type { ScanListItem } from '@/lib/types/scan'
 
 const prefersReducedMotion =
@@ -44,7 +42,6 @@ export function GemeenteContextPanel({
   onSelectWijk,
 }: GemeenteContextPanelProps) {
   const [activeLayer, setActiveLayer] = useState<GemeenteLayer | null>(null)
-  const [showWijkenModal, setShowWijkenModal] = useState(false)
 
   const handleSelectLayer = useCallback((layer: GemeenteLayer) => {
     setActiveLayer(layer)
@@ -132,15 +129,14 @@ export function GemeenteContextPanel({
                   <KlimaatLayer gemeenteNaam={naam} gemeenteCode={code} />
                 )}
                 {activeLayer === 'bestuurlijk' && (
-                  <BestuurlijkTab gemeenteNaam={naam} />
+                  <BestuurlijkLayer gemeenteNaam={naam} />
                 )}
                 {activeLayer === 'activiteit' && (
-                  <WijkenTab
-                    wijkGeojson={wijkGeojson}
+                  <ActiviteitLayer
                     scans={scans}
                     gemeenteCode={code}
+                    wijkGeojson={wijkGeojson}
                     onSelectWijk={onSelectWijk}
-                    onOpenModal={() => setShowWijkenModal(true)}
                   />
                 )}
               </motion.div>
@@ -158,20 +154,6 @@ export function GemeenteContextPanel({
           </div>
         </motion.div>
       </LeftPanelShell>
-
-      {/* Modals */}
-      <AnimatePresence>
-        {showWijkenModal && (
-          <WijkenModal
-            gemeenteNaam={naam}
-            gemeenteCode={code}
-            wijkGeojson={wijkGeojson}
-            scans={scans}
-            onClose={() => setShowWijkenModal(false)}
-            onSelectWijk={(c, n) => { setShowWijkenModal(false); onSelectWijk(c, n) }}
-          />
-        )}
-      </AnimatePresence>
     </>
   )
 }
