@@ -1,11 +1,18 @@
-import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Scan, Eye, Home, BarChart3, DollarSign } from 'lucide-react'
+import { useMemo } from 'react'
+import { motion } from 'framer-motion'
+import {
+  ArrowLeft,
+  Scan,
+  Eye,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  type LucideIcon,
+} from 'lucide-react'
 import { LeftPanelShell } from './LeftPanelShell'
-import { StatRingCard } from './gemeente/StatRingCard'
-import { staggerContainer, fadeUp } from './gemeente/animations'
-import { WijkCbsTab } from './gemeente/WijkCbsTab'
-import { JurisprudenceSection } from '@/components/projects/JurisprudenceSection'
+import { VerdictHero } from './gemeente/VerdictHero'
+import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
+import { staggerContainer } from './gemeente/animations'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkMapPanelProps {
@@ -18,12 +25,248 @@ interface WijkMapPanelProps {
   onViewResults: (scanId: string) => void
 }
 
-type WijkTab = 'overzicht' | 'juridisch'
+/* ── Markt-score derivation ────────────────────────────────── */
 
-const TABS: { key: WijkTab; label: string }[] = [
-  { key: 'overzicht', label: 'Overzicht' },
-  { key: 'juridisch', label: 'Juridisch' },
-]
+interface MarktVerdict {
+  score: number | null
+  label: string
+  color: string
+  Icon: LucideIcon
+  subtitle: string
+}
+
+/**
+ * Derive "markt-score" from CBS data.
+ * Based on data coverage (how many fields are present) + key signals.
+ *
+ * - Data present: each non-null metric adds points (max ~60 from coverage)
+ * - Koopwoning%: high = more market opportunity (+up to 15)
+ * - Inkomen: higher = more buying power (+up to 15)
+ * - Low criminaliteit: safer = better market (+up to 10)
+ */
+function deriveMarktScore(metrics: CbsNeighborhoodMetrics | null): number | null {
+  if (!metrics) return null
+
+  const d = metrics.data
+  let score = 0
+  let fields = 0
+
+  // Coverage points — each present field earns base points
+  const checkField = (v: unknown) => {
+    if (v != null && v !== 0) { score += 6; fields++ }
+  }
+
+  checkField(d.demografie?.percentage_koopwoningen)
+  checkField(d.demografie?.aantal_inwoners)
+  checkField(d.gemiddelde_woz_waarde)
+  checkField(d.inkomen?.gem_gestandaardiseerd)
+  checkField(d.huishoudens?.totaal)
+  checkField(d.leeftijdsverdeling?.perc_25_44)
+  checkField(metrics.criminaliteit?.per_1000_inwoners)
+  checkField(metrics.nabijheid?.afstanden?.supermarkt_km)
+  checkField(d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000)
+  // Max 54 from 9 fields
+
+  // Koopwoning bonus (high = buy market)
+  const koop = d.demografie?.percentage_koopwoningen
+  if (koop != null) score += Math.round((koop / 100) * 15)
+
+  // Inkomen bonus (higher = more purchasing power)
+  const ink = d.inkomen?.gem_gestandaardiseerd
+  if (ink != null) score += Math.min(15, Math.round((ink / 40000) * 15))
+
+  // Safety bonus (low crime = better)
+  const crim = metrics.criminaliteit?.per_1000_inwoners
+  if (crim != null) score += Math.max(0, Math.round((1 - Math.min(crim, 100) / 100) * 10))
+
+  if (fields === 0) return null
+  return Math.min(100, score)
+}
+
+function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
+  if (score == null || !hasData) {
+    return {
+      score: null,
+      label: 'GEEN DATA',
+      color: '#94a3b8',
+      Icon: BarChart3,
+      subtitle: 'Nog geen wijkdata beschikbaar',
+    }
+  }
+  if (score >= 65) {
+    return {
+      score,
+      label: 'STERK MARKTPROFIEL',
+      color: '#22c55e',
+      Icon: TrendingUp,
+      subtitle: 'Hoog inkomen · veel koopwoningen · goede voorzieningen',
+    }
+  }
+  if (score >= 40) {
+    return {
+      score,
+      label: 'GEMIDDELD PROFIEL',
+      color: '#f59e0b',
+      Icon: BarChart3,
+      subtitle: 'Gemengd marktbeeld · kansen afhankelijk van strategie',
+    }
+  }
+  return {
+    score,
+    label: 'ONTWIKKELGEBIED',
+    color: '#0ea5e9',
+    Icon: TrendingDown,
+    subtitle: 'Lagere marktdruk · mogelijk transformatie-kansen',
+  }
+}
+
+/* ── CBS → intelligence cards ──────────────────────────────── */
+
+function buildCards(metrics: CbsNeighborhoodMetrics | null, parcelCount: number | null): IntelCard[] {
+  if (!metrics) {
+    // Empty state — show 9 placeholder cards
+    return [
+      { key: 'koopwoning', label: 'KOOPWONING', value: '—', sub: 'Koop-potentieel' },
+      { key: 'bouwjaar', label: 'BOUWJAAR', value: '—', sub: 'Woningvoorraad' },
+      { key: 'eenpersoons', label: 'EENPERSOONS', value: '—', sub: 'Huishoudtype' },
+      { key: 'inkomen', label: 'INKOMEN', value: '—', sub: 'Koopkracht' },
+      { key: 'woz', label: 'WOZ-WAARDE', value: '—', sub: 'Woningwaarde' },
+      { key: 'inwoners', label: 'INWONERS', value: '—', sub: 'Marktomvang' },
+      { key: 'criminaliteit', label: 'CRIMINALITEIT', value: '—', sub: 'Veiligheid' },
+      { key: 'supermarkt', label: 'SUPERMARKT', value: '—', sub: 'Voorzieningen' },
+      { key: 'leeftijd', label: 'LEEFTIJD', value: '—', sub: 'Demografie' },
+    ]
+  }
+
+  const d = metrics.data
+  const crim = metrics.criminaliteit
+  const nab = metrics.nabijheid
+
+  // Eenpersoons %
+  const hh = d.huishoudens
+  const eenpersoonsPct = hh?.totaal && hh.eenpersoons
+    ? Math.round((hh.eenpersoons / hh.totaal) * 100)
+    : null
+
+  // Dominant age group
+  const leeftijd = d.leeftijdsverdeling
+  let dominantAge = '—'
+  let dominantAgeSub = 'Geen leeftijdsdata'
+  if (leeftijd) {
+    const buckets: [string, number | null][] = [
+      ['0–14', leeftijd.perc_0_14],
+      ['15–24', leeftijd.perc_15_24],
+      ['25–44', leeftijd.perc_25_44],
+      ['45–64', leeftijd.perc_45_64],
+      ['65+', leeftijd.perc_65_plus],
+    ]
+    const top = buckets.filter(b => b[1] != null).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]
+    if (top && top[1] != null) {
+      dominantAge = `${Math.round(top[1])}%`
+      const label = top[0]
+      dominantAgeSub = label === '65+' ? 'Vergrijzing — doorstroomkans'
+        : label === '25–44' ? 'Jong werkend — huurmarkt'
+        : label === '0–14' ? 'Gezinswijk — koopmarkt'
+        : label === '15–24' ? 'Studentenwijk — kamerverhuur'
+        : 'Gevestigd — stabiele markt'
+      dominantAge = `${Math.round(top[1])}% ${label}`
+    }
+  }
+
+  const koop = d.demografie?.percentage_koopwoningen
+  const bouwjaar = d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000
+  const inkomen = d.inkomen?.gem_gestandaardiseerd
+  const woz = d.gemiddelde_woz_waarde
+  const inwoners = d.demografie?.aantal_inwoners
+  const crimPer1k = crim?.per_1000_inwoners
+  const supermarkt = nab?.afstanden?.supermarkt_km
+
+  return [
+    {
+      key: 'koopwoning',
+      label: 'KOOPWONING',
+      value: koop != null ? `${Math.round(koop)}%` : '—',
+      sub: koop != null
+        ? koop >= 60 ? 'Sterke koopmarkt' : koop >= 40 ? 'Gemengd koop/huur' : 'Huurmarkt dominant'
+        : 'Geen data',
+      accentColor: koop != null ? (koop >= 60 ? '#22c55e' : koop >= 40 ? '#f59e0b' : '#0ea5e9') : undefined,
+      badge: koop != null ? 'KOOP' : undefined,
+    },
+    {
+      key: 'bouwjaar',
+      label: 'BOUWJAAR',
+      value: bouwjaar != null ? `${Math.round(bouwjaar)}% <2000` : '—',
+      sub: bouwjaar != null
+        ? bouwjaar >= 70 ? 'Veel renovatie-kansen' : bouwjaar >= 40 ? 'Gemengde voorraad' : 'Nieuwbouw dominant'
+        : 'Geen data',
+      accentColor: bouwjaar != null ? (bouwjaar >= 70 ? '#f59e0b' : '#94a3b8') : undefined,
+    },
+    {
+      key: 'eenpersoons',
+      label: 'EENPERSOONS',
+      value: eenpersoonsPct != null ? `${eenpersoonsPct}%` : '—',
+      sub: eenpersoonsPct != null
+        ? eenpersoonsPct >= 50 ? 'Splitsen interessant' : eenpersoonsPct >= 30 ? 'Gemengde huishoudens' : 'Gezinswijk'
+        : 'Geen data',
+      accentColor: eenpersoonsPct != null && eenpersoonsPct >= 50 ? '#8b5cf6' : undefined,
+    },
+    {
+      key: 'inkomen',
+      label: 'INKOMEN',
+      value: inkomen != null ? `€${Math.round(inkomen).toLocaleString('nl-NL')}` : '—',
+      sub: inkomen != null
+        ? inkomen >= 30000 ? 'Hoge koopkracht' : inkomen >= 22000 ? 'Gemiddelde koopkracht' : 'Lagere koopkracht'
+        : 'Mediaan gestandaardiseerd',
+      accentColor: inkomen != null ? (inkomen >= 30000 ? '#22c55e' : inkomen >= 22000 ? '#f59e0b' : '#94a3b8') : undefined,
+    },
+    {
+      key: 'woz',
+      label: 'WOZ-WAARDE',
+      value: woz != null ? `€${Math.round(woz).toLocaleString('nl-NL')}` : '—',
+      sub: woz != null ? 'Gemiddelde woningwaarde' : 'Geen WOZ data',
+      accentColor: '#0ea5e9',
+    },
+    {
+      key: 'inwoners',
+      label: 'INWONERS',
+      value: inwoners != null ? inwoners.toLocaleString('nl-NL') : '—',
+      sub: parcelCount != null ? `${parcelCount.toLocaleString('nl-NL')} percelen geanalyseerd` : 'Marktomvang',
+      badge: parcelCount != null ? String(parcelCount) : undefined,
+      accentColor: '#6366f1',
+    },
+    {
+      key: 'criminaliteit',
+      label: 'CRIMINALITEIT',
+      value: crimPer1k != null ? `${Math.round(crimPer1k * 10) / 10}/1k` : '—',
+      sub: crimPer1k != null
+        ? crimPer1k <= 30 ? 'Veilige wijk' : crimPer1k <= 60 ? 'Gemiddeld' : 'Aandachtspunt'
+        : 'Geen data',
+      accentColor: crimPer1k != null
+        ? crimPer1k <= 30 ? '#22c55e' : crimPer1k <= 60 ? '#f59e0b' : '#ef4444'
+        : undefined,
+    },
+    {
+      key: 'supermarkt',
+      label: 'SUPERMARKT',
+      value: supermarkt != null ? `${Math.round(supermarkt * 10) / 10} km` : '—',
+      sub: supermarkt != null
+        ? supermarkt <= 0.5 ? 'Uitstekend voorzieningenniveau' : supermarkt <= 1.5 ? 'Goed bereikbaar' : 'Beperkte voorzieningen'
+        : 'Geen data',
+      accentColor: supermarkt != null
+        ? supermarkt <= 0.5 ? '#22c55e' : supermarkt <= 1.5 ? '#f59e0b' : '#ef4444'
+        : undefined,
+    },
+    {
+      key: 'leeftijd',
+      label: 'LEEFTIJD',
+      value: dominantAge,
+      sub: dominantAgeSub,
+      accentColor: '#8b5cf6',
+    },
+  ]
+}
+
+/* ── Component ─────────────────────────────────────────────── */
 
 export function WijkMapPanel({
   naam,
@@ -34,18 +277,13 @@ export function WijkMapPanel({
   onStartScan,
   onViewResults,
 }: WijkMapPanelProps) {
-  const [activeTab, setActiveTab] = useState<WijkTab>('overzicht')
   const hasCompletedScan = latestScan?.status === 'completed'
   const metrics = (hasCompletedScan ? latestScan.neighborhood_metrics : null) as CbsNeighborhoodMetrics | null
+  const parcelCount = hasCompletedScan ? latestScan.parcel_count : null
 
-  const handleTabSelect = useCallback((tab: WijkTab) => {
-    setActiveTab(tab)
-  }, [])
-
-  // Derive hero KPI values
-  const percelen = hasCompletedScan ? latestScan.parcel_count : null
-  const koop = metrics?.data?.demografie?.percentage_koopwoningen ?? null
-  const woz = metrics?.data?.gemiddelde_woz_waarde ?? null
+  const marktScore = useMemo(() => deriveMarktScore(metrics), [metrics])
+  const verdict = deriveVerdict(marktScore, hasCompletedScan)
+  const cards = useMemo(() => buildCards(metrics, parcelCount), [metrics, parcelCount])
 
   /* Footer CTA */
   const footer = hasCompletedScan ? (
@@ -72,8 +310,13 @@ export function WijkMapPanel({
 
   return (
     <LeftPanelShell onClose={onClose} footer={footer}>
-      <div className="flex flex-col">
-        {/* ── Header (compact — name + badge) ──────────── */}
+      <motion.div
+        className="flex flex-col h-full overflow-y-auto"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        {/* ── Header ───────────────────────────────────── */}
         <div className="px-8 pt-8">
           {/* Back breadcrumb */}
           <button
@@ -92,127 +335,34 @@ export function WijkMapPanel({
             <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
               {naam}
             </h2>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-xs text-slate-400 font-medium uppercase tracking-widest">
-                Wijk
-              </span>
-              <span
-                className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                style={{
-                  backgroundColor: hasCompletedScan ? '#22c55e15' : '#94a3b815',
-                  color: hasCompletedScan ? '#22c55e' : '#94a3b8',
-                }}
-              >
-                {hasCompletedScan ? 'Gescand' : 'Niet gescand'}
-              </span>
-            </div>
-          </div>
-
-          {/* Tabs — right after header */}
-          <div className="flex w-full h-[44px] rounded-full p-1 bg-[#F2F6F3] mt-4">
-            {TABS.map(({ key, label }) => {
-              const isActive = activeTab === key
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleTabSelect(key)}
-                  className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
-                  style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: '13px',
-                    fontWeight: isActive ? 700 : 600,
-                    letterSpacing: isActive ? '-0.01em' : '0',
-                    color: isActive ? undefined : '#94a3b8',
-                  }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="wijk-tab"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: '#0E1111' }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>{label}</span>
-                </button>
-              )
-            })}
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-1">
+              Marktprofiel
+            </p>
           </div>
         </div>
 
-        {/* ── Tab Content ─────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'overzicht' && (
-            <motion.div
-              key="overzicht"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              {/* 3 Hero KPIs — animated StatRingCards */}
-              <motion.div
-                className="grid grid-cols-3 gap-1.5 px-8 pt-4"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-              >
-                <StatRingCard
-                  icon={<Home size={16} strokeWidth={1.5} />}
-                  label="Percelen"
-                  value={percelen}
-                  displayValue={percelen != null ? percelen.toLocaleString('nl-NL') : undefined}
-                  color="#F9A826"
-                />
-                <StatRingCard
-                  icon={<BarChart3 size={16} strokeWidth={1.5} />}
-                  label="Koopwoning"
-                  value={koop != null ? Math.round(koop) : null}
-                  unit="%"
-                  color="#22c55e"
-                  showRing
-                  subtitle="Koop-potentieel"
-                />
-                <StatRingCard
-                  icon={<DollarSign size={16} strokeWidth={1.5} />}
-                  label="Gem. WOZ"
-                  value={woz != null ? Math.round(woz) : null}
-                  displayValue={woz != null ? `€${Math.round(woz).toLocaleString('nl-NL')}` : undefined}
-                  color="#0ea5e9"
-                />
-              </motion.div>
-
-              {/* CBS detail grid */}
-              <WijkCbsTab metrics={metrics} />
-            </motion.div>
-          )}
-
-          {activeTab === 'juridisch' && (
-            <motion.div
-              key="juridisch"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="px-8 pt-5 pb-6"
-            >
-              <div className="max-h-[400px] overflow-y-auto rounded-[16px]">
-                <JurisprudenceSection gemeenteNaam={gemeenteNaam} wijkNaam={naam} />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* ── Verdict + Grid ───────────────────────────── */}
+        <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
+          <VerdictHero
+            score={verdict.score}
+            label={verdict.label}
+            subtitle={verdict.subtitle}
+            color={verdict.color}
+            icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
+          />
+          <IntelligenceGrid cards={cards} />
+        </div>
 
         {/* ── Trust metadata ───────────────────────────── */}
-        <div className="px-8 pb-6 mt-auto">
+        <div className="px-8 pb-6">
           <div className="flex items-center justify-between">
             <span className="text-[9px] uppercase tracking-wider text-slate-300">
               Bron: CBS · Kadaster · PDOK
+              {metrics?.peiljaar ? ` · ${metrics.peiljaar}` : ''}
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
     </LeftPanelShell>
   )
 }
