@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.schemas.gemeente import (
+    BeschermdGezichtResponse,
+    ErfgoedResponse,
     GemeenteProfile,
     HuisvestingsverordeningResponse,
     RaadsinformatieResponse,
@@ -17,6 +19,7 @@ from app.schemas.gemeente import (
 from app.services.gemeente_profile import build_gemeente_profile
 from app.services.koop_sru_client import search_huisvestingsverordening
 from app.services.raadsinformatie import get_raadsinformatie
+from app.services.rce_erfgoed_client import get_beschermde_gezichten
 from app.services.rvo_client import fetch_development_subsidies
 
 logger = logging.getLogger(__name__)
@@ -120,4 +123,33 @@ async def get_huisvestingsverordening(
         modified=result.modified,
         subject=result.subject,
         url=result.url,
+    )
+
+
+@router.get("/{gemeente_naam}/erfgoed", response_model=ErfgoedResponse)
+async def get_gemeente_erfgoed(
+    gemeente_naam: str,
+    current_user=Depends(get_current_active_user),
+) -> ErfgoedResponse:
+    """Get beschermde stadsgezichten for a municipality from RCE WFS.
+
+    Fetches all townscapes from RCE (cached 24h) and filters
+    by gemeente name. Returns matching beschermde gezichten.
+
+    Args:
+        gemeente_naam: Municipality display name (e.g., "Amsterdam")
+    """
+    gezichten = await get_beschermde_gezichten(gemeente_naam)
+    return ErfgoedResponse(
+        gemeente_naam=gemeente_naam,
+        beschermde_gezichten=[
+            BeschermdGezichtResponse(
+                naam=g.naam,
+                type=g.type,
+                aangewezen=g.aangewezen,
+                oppervlakte_ha=g.oppervlakte_ha,
+            )
+            for g in gezichten
+        ],
+        total=len(gezichten),
     )

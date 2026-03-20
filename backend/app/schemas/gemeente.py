@@ -87,3 +87,20 @@ class HuisvestingsverordeningResponse(BaseModel):
     modified: str | None = Field(default=None, description="Last modified date")
     subject: str | None = Field(default=None, description="Subject classification")
     url: str | None = Field(default=None, description="Link to officielebekendmakingen.nl")
+
+
+class BeschermdGezichtResponse(BaseModel):
+    """A beschermd stads- or dorpsgezicht."""
+
+    naam: str = Field(description="Name of the protected area")
+    type: str = Field(description="stadsgezicht or dorpsgezicht")
+    aangewezen: str | None = Field(default=None, description="Date of designation")
+    oppervlakte_ha: float | None = Field(default=None, description="Area in hectares")
+
+
+class ErfgoedResponse(BaseModel):
+    """Erfgoed overview for a municipality."""
+
+    gemeente_naam: str = Field(description="Municipality name")
+    beschermde_gezichten: list[BeschermdGezichtResponse] = Field(default_factory=list)
+    total: int = Field(default=0)

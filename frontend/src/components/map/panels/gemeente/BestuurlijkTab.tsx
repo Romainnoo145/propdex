@@ -1,7 +1,8 @@
-import { ExternalLink, FileText, Loader2, Banknote, ScrollText } from 'lucide-react'
+import { ExternalLink, FileText, Loader2, Banknote, ScrollText, Landmark } from 'lucide-react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
 import { useSubsidies, type SubsidieResponse } from '@/hooks/useSubsidies'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
+import { useErfgoed } from '@/hooks/useErfgoed'
 
 interface BestuurlijkTabProps {
   gemeenteNaam: string
@@ -100,6 +101,7 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
   const { data: raadsData, isLoading: raadsLoading } = useRaadsinformatie(gemeenteNaam)
   const { data: subsidieData, isLoading: subsidieLoading } = useSubsidies()
   const { data: hvvData, isLoading: hvvLoading } = useHuisvestingsverordening(gemeenteNaam)
+  const { data: erfgoedData, isLoading: erfgoedLoading } = useErfgoed(gemeenteNaam)
 
   return (
     <div className="px-8 pt-5 pb-6">
@@ -229,10 +231,70 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
         )}
       </div>
 
+      {/* ── Erfgoed section ── */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <span
+            className="text-[10px] font-extrabold uppercase"
+            style={{ letterSpacing: '0.15em', color: '#d97706' }}
+          >
+            Beschermd Erfgoed
+          </span>
+          {erfgoedData && erfgoedData.total > 0 && (
+            <span className="text-[10px] text-slate-400">
+              {erfgoedData.total} gezicht{erfgoedData.total !== 1 ? 'en' : ''}
+            </span>
+          )}
+        </div>
+
+        {erfgoedLoading && (
+          <div className="flex items-center gap-2 py-3 justify-center text-slate-400">
+            <Loader2 size={14} className="animate-spin" />
+            <span className="text-[12px]">Erfgoed ophalen...</span>
+          </div>
+        )}
+
+        {!erfgoedLoading && erfgoedData && erfgoedData.total > 0 && (
+          <div>
+            {erfgoedData.beschermde_gezichten.map((g) => (
+              <div key={g.naam} className="flex items-start gap-2.5 py-2 border-b border-slate-100 last:border-b-0">
+                <Landmark size={14} strokeWidth={1.5} className="text-amber-600 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[13px] font-semibold text-[#0E1111] leading-snug">
+                    {g.naam}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
+                      {g.type}
+                    </span>
+                    {g.aangewezen && (
+                      <span className="text-[11px] text-slate-400 tabular-nums">
+                        sinds {formatDate(g.aangewezen)}
+                      </span>
+                    )}
+                    {g.oppervlakte_ha != null && (
+                      <span className="text-[11px] text-slate-400 tabular-nums">
+                        {g.oppervlakte_ha} ha
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!erfgoedLoading && erfgoedData && erfgoedData.total === 0 && (
+          <p className="text-[12px] text-slate-400 py-2">
+            Geen beschermde stads- of dorpsgezichten in {gemeenteNaam}.
+          </p>
+        )}
+      </div>
+
       {/* Source attribution */}
       <div className="mt-4 pt-2 border-t border-slate-50">
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
-          Bron: Open Raadsinformatie (VNG) · RVO
+          Bron: Open Raadsinformatie · RVO · KOOP · RCE
         </span>
       </div>
     </div>
