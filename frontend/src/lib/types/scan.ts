@@ -282,6 +282,8 @@ export interface ScanResultItem {
   potentie_score?: number | null
   /** Score v3.0 risico subscore (0-100, null for v2.1 scans) */
   risico_score?: number | null
+  /** Use-case specific scores: optoppen/splitsen/transformatie/nieuwbouw */
+  use_case_scores?: Record<string, { use_case: string; label: string; score: number; category: string; top_factors: string[]; description: string }> | null
   /** Vacancy classification for development focus */
   vacancy_signal: string | null
   /** Vacancy confidence score (0-1) */

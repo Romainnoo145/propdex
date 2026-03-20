@@ -10,6 +10,7 @@ import { VergunningenModal } from './VergunningenModal'
 import { BestemmingModal } from './BestemmingModal'
 import { OnbebouwdModal } from './OnbebouwdModal'
 import { ScoreBreakdownModal } from './ScoreBreakdownModal'
+import { UseCaseScoreCards } from './UseCaseScoreCards'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
@@ -262,6 +263,9 @@ export function ParcelBentoOverview({
           onClick={() => setShowOnbebouwd(true)}
         />
       </div>
+
+      {/* ── Use-case scores ───────────────────────────── */}
+      <UseCaseScoreCards scores={parcel.use_case_scores} />
 
       {/* ── Secondary Fields ──────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
