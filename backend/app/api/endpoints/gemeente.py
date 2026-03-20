@@ -9,11 +9,13 @@ from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.schemas.gemeente import (
     GemeenteProfile,
+    HuisvestingsverordeningResponse,
     RaadsinformatieResponse,
     SubsidieResponse,
     SubsidiesResponse,
 )
 from app.services.gemeente_profile import build_gemeente_profile
+from app.services.koop_sru_client import search_huisvestingsverordening
 from app.services.raadsinformatie import get_raadsinformatie
 from app.services.rvo_client import fetch_development_subsidies
 
@@ -89,3 +91,33 @@ async def get_gemeente_raadsinformatie(
         limit: Maximum number of documents to return (1-25, default 10)
     """
     return await get_raadsinformatie(gemeente_naam, limit=limit)
+
+
+@router.get("/{gemeente_naam}/huisvestingsverordening", response_model=HuisvestingsverordeningResponse)
+async def get_huisvestingsverordening(
+    gemeente_naam: str,
+    current_user=Depends(get_current_active_user),
+) -> HuisvestingsverordeningResponse:
+    """Search for a gemeente's huisvestingsverordening via KOOP SRU.
+
+    Queries officielebekendmakingen.nl for the most recent
+    huisvestingsverordening. Returns metadata + link. Cached 1 hour.
+
+    Args:
+        gemeente_naam: Municipality display name (e.g., "Amsterdam", "Venlo")
+    """
+    result = await search_huisvestingsverordening(gemeente_naam)
+    if result is None:
+        return HuisvestingsverordeningResponse(
+            gemeente_naam=gemeente_naam,
+            heeft_verordening=False,
+        )
+    return HuisvestingsverordeningResponse(
+        gemeente_naam=gemeente_naam,
+        heeft_verordening=True,
+        title=result.title,
+        identifier=result.identifier,
+        modified=result.modified,
+        subject=result.subject,
+        url=result.url,
+    )

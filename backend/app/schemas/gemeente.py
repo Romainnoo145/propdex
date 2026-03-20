@@ -75,3 +75,15 @@ class SubsidiesResponse(BaseModel):
     subsidies: list[SubsidieResponse] = Field(default_factory=list)
     total: int = Field(default=0, description="Number of relevant subsidies")
     source: str = Field(default="RVO", description="Data source")
+
+
+class HuisvestingsverordeningResponse(BaseModel):
+    """Huisvestingsverordening metadata for a municipality."""
+
+    gemeente_naam: str = Field(description="Municipality name")
+    heeft_verordening: bool = Field(description="Whether a huisvestingsverordening was found")
+    title: str | None = Field(default=None, description="Document title")
+    identifier: str | None = Field(default=None, description="KOOP document identifier")
+    modified: str | None = Field(default=None, description="Last modified date")
+    subject: str | None = Field(default=None, description="Subject classification")
+    url: str | None = Field(default=None, description="Link to officielebekendmakingen.nl")

@@ -1,6 +1,7 @@
-import { ExternalLink, FileText, Loader2, Banknote } from 'lucide-react'
+import { ExternalLink, FileText, Loader2, Banknote, ScrollText } from 'lucide-react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
 import { useSubsidies, type SubsidieResponse } from '@/hooks/useSubsidies'
+import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 
 interface BestuurlijkTabProps {
   gemeenteNaam: string
@@ -98,6 +99,7 @@ function SubsidieCard({ subsidie }: { subsidie: SubsidieResponse }) {
 export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
   const { data: raadsData, isLoading: raadsLoading } = useRaadsinformatie(gemeenteNaam)
   const { data: subsidieData, isLoading: subsidieLoading } = useSubsidies()
+  const { data: hvvData, isLoading: hvvLoading } = useHuisvestingsverordening(gemeenteNaam)
 
   return (
     <div className="px-8 pt-5 pb-6">
@@ -135,6 +137,58 @@ export function BestuurlijkTab({ gemeenteNaam }: BestuurlijkTabProps) {
         {!raadsLoading && raadsData && (!raadsData.dekking || raadsData.stukken.length === 0) && (
           <p className="text-[12px] text-slate-400 py-2">
             {raadsData.dekking ? 'Geen relevante stukken gevonden.' : 'Niet beschikbaar voor deze gemeente.'}
+          </p>
+        )}
+      </div>
+
+      {/* ── Huisvestingsverordening section ── */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <span
+            className="text-[10px] font-extrabold uppercase"
+            style={{ letterSpacing: '0.15em', color: '#8b5cf6' }}
+          >
+            Huisvestingsverordening
+          </span>
+        </div>
+
+        {hvvLoading && (
+          <div className="flex items-center gap-2 py-3 justify-center text-slate-400">
+            <Loader2 size={14} className="animate-spin" />
+            <span className="text-[12px]">Verordening zoeken...</span>
+          </div>
+        )}
+
+        {!hvvLoading && hvvData && hvvData.heeft_verordening && (
+          <div className="flex items-start gap-2.5 py-2">
+            <ScrollText size={14} strokeWidth={1.5} className="text-violet-500 mt-0.5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h4 className="text-[13px] font-semibold text-[#0E1111] leading-snug">
+                {hvvData.title}
+              </h4>
+              {hvvData.modified && (
+                <span className="text-[11px] text-slate-400 tabular-nums">
+                  {formatDate(hvvData.modified)}
+                </span>
+              )}
+              {hvvData.url && (
+                <a
+                  href={hvvData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:text-violet-700 mt-1 transition-colors"
+                >
+                  Bekijk verordening
+                  <ExternalLink size={10} />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!hvvLoading && hvvData && !hvvData.heeft_verordening && (
+          <p className="text-[12px] text-slate-400 py-2">
+            Geen huisvestingsverordening gevonden voor {gemeenteNaam}.
           </p>
         )}
       </div>
