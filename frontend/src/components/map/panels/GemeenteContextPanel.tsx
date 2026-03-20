@@ -1,20 +1,25 @@
 import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft } from 'lucide-react'
 import { LeftPanelShell } from './LeftPanelShell'
 import { GemeenteHeader } from './gemeente/GemeenteHeader'
-import { GemeenteTabBar, type GemeenteTab } from './gemeente/GemeenteTabBar'
-import { OverviewTab } from './gemeente/OverviewTab'
-import { DemografieTab } from './gemeente/DemografieTab'
-import { JuridischTab } from './gemeente/JuridischTab'
+import { GemeenteCategoryTabs, type GemeenteLayer } from './gemeente/GemeenteCategoryTabs'
+import { GemeenteOverview } from './gemeente/GemeenteOverview'
+import { KlimaatLayer } from './gemeente/KlimaatLayer'
 import { BestuurlijkTab } from './gemeente/BestuurlijkTab'
 import { WijkenTab } from './gemeente/WijkenTab'
-import { DemografieModal } from './gemeente/DemografieModal'
 import { WijkenModal } from './gemeente/WijkenModal'
-import { JuridischKlimaatModal } from './gemeente/JuridischKlimaatModal'
-import { MeldingenModal } from './gemeente/MeldingenModal'
 import type { ScanListItem } from '@/lib/types/scan'
 
-export type GemeenteCardCategory = 'demografie' | 'juridisch' | 'meldingen' | 'wijken'
+const prefersReducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const LAYER_LABELS: Record<GemeenteLayer, string> = {
+  klimaat: 'Klimaat',
+  bestuurlijk: 'Bestuurlijk',
+  activiteit: 'Activiteit',
+}
 
 interface GemeenteContextPanelProps {
   naam: string
@@ -25,6 +30,11 @@ interface GemeenteContextPanelProps {
   onSelectWijk: (wijkCode: string, wijkNaam: string) => void
 }
 
+/**
+ * Gemeente panel — het instituut-paneel.
+ * Architecture mirrors ParcelDetailPanel: overview + 3 toggle layers.
+ * Zero demografie — that lives in the wijk panel.
+ */
 export function GemeenteContextPanel({
   naam,
   code,
@@ -33,110 +43,106 @@ export function GemeenteContextPanel({
   onClose,
   onSelectWijk,
 }: GemeenteContextPanelProps) {
-  const [activeTab, setActiveTab] = useState<GemeenteTab | null>(null)
-  const [openModal, setOpenModal] = useState<GemeenteCardCategory | null>(null)
+  const [activeLayer, setActiveLayer] = useState<GemeenteLayer | null>(null)
+  const [showWijkenModal, setShowWijkenModal] = useState(false)
 
-  const handleSelectTab = useCallback((tab: GemeenteTab | null) => {
-    setActiveTab(tab)
+  const handleSelectLayer = useCallback((layer: GemeenteLayer) => {
+    setActiveLayer(layer)
+  }, [])
+
+  const handleBack = useCallback(() => {
+    setActiveLayer(null)
   }, [])
 
   return (
     <>
       <LeftPanelShell onClose={onClose}>
-        <div className="flex flex-col">
-          {/* ── Header (name + badges only — compact, persistent) ── */}
-          <GemeenteHeader
-            naam={naam}
-            code={code}
-            scans={scans}
-            gemeenteCode={code}
-          />
+        <motion.div
+          key={naam}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="flex flex-col h-full overflow-y-auto"
+        >
+          {/* ── Header ─────────────────────────────────── */}
+          <div className="px-8 pt-8">
+            <div className="flex items-center gap-2 pr-16">
+              {activeLayer && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex items-center justify-center h-7 w-7 rounded-full bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-colors shrink-0"
+                  aria-label="Terug"
+                >
+                  <ArrowLeft className="h-4 w-4 text-aura-ink" />
+                </button>
+              )}
+              <div className="min-w-0 max-w-full">
+                <h2 className="text-[28px] font-bold tracking-tighter text-slate-900 leading-tight truncate">
+                  {naam}
+                </h2>
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-widest truncate mt-1">
+                  {activeLayer ? LAYER_LABELS[activeLayer] : `Gemeente · ${code}`}
+                </p>
+              </div>
+            </div>
 
-          {/* ── Tabs (right below header) ──────────────── */}
-          <div className="px-8 mt-4">
-            <GemeenteTabBar activeTab={activeTab} onSelect={handleSelectTab} />
+            {/* ── Category Tabs ─────────────────────────── */}
+            <div className="mt-6">
+              <GemeenteCategoryTabs
+                activeLayer={activeLayer}
+                onSelect={handleSelectLayer}
+              />
+            </div>
           </div>
 
-          {/* ── Content (scrollable, full page per tab) ── */}
+          {/* ── Content — AnimatePresence view switch ──── */}
           <AnimatePresence mode="wait">
-            {activeTab === null && (
+            {activeLayer === null ? (
               <motion.div
                 key="overview"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                initial={prefersReducedMotion ? false : { opacity: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4 flex-1 flex flex-col min-h-0"
               >
-                <OverviewTab
+                <GemeenteOverview
                   naam={naam}
                   code={code}
-                  scans={scans}
                   gemeenteCode={code}
                   onSelectWijk={onSelectWijk}
-                  onSwitchToWijken={() => setActiveTab('wijken')}
+                  onSwitchToKlimaat={() => setActiveLayer('klimaat')}
+                  onSwitchToActiviteit={() => setActiveLayer('activiteit')}
                 />
               </motion.div>
-            )}
-
-            {activeTab === 'demografie' && (
+            ) : (
               <motion.div
-                key="demografie"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                key={activeLayer}
+                initial={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0.15 }
+                    : { type: 'spring', stiffness: 400, damping: 30 }
+                }
+                className="flex-1 flex flex-col overflow-y-auto"
               >
-                <DemografieTab
-                  scans={scans}
-                  gemeenteCode={code}
-                  onOpenModal={() => setOpenModal('demografie')}
-                />
-              </motion.div>
-            )}
-
-            {activeTab === 'juridisch' && (
-              <motion.div
-                key="juridisch"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <JuridischTab
-                  gemeenteNaam={naam}
-                  gemeenteCode={code}
-                  onOpenModal={() => setOpenModal('juridisch')}
-                />
-              </motion.div>
-            )}
-
-            {activeTab === 'bestuurlijk' && (
-              <motion.div
-                key="bestuurlijk"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <BestuurlijkTab gemeenteNaam={naam} />
-              </motion.div>
-            )}
-
-            {activeTab === 'wijken' && (
-              <motion.div
-                key="wijken"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <WijkenTab
-                  wijkGeojson={wijkGeojson}
-                  scans={scans}
-                  gemeenteCode={code}
-                  onSelectWijk={onSelectWijk}
-                  onOpenModal={() => setOpenModal('wijken')}
-                />
+                {activeLayer === 'klimaat' && (
+                  <KlimaatLayer gemeenteNaam={naam} gemeenteCode={code} />
+                )}
+                {activeLayer === 'bestuurlijk' && (
+                  <BestuurlijkTab gemeenteNaam={naam} />
+                )}
+                {activeLayer === 'activiteit' && (
+                  <WijkenTab
+                    wijkGeojson={wijkGeojson}
+                    scans={scans}
+                    gemeenteCode={code}
+                    onSelectWijk={onSelectWijk}
+                    onOpenModal={() => setShowWijkenModal(true)}
+                  />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -144,28 +150,26 @@ export function GemeenteContextPanel({
           {/* ── Trust metadata ──────────────────────────── */}
           <div className="px-8 pb-6 mt-auto">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] uppercase tracking-wider text-slate-300">Bron: CBS · PDOK</span>
+              <span className="text-[9px] uppercase tracking-wider text-slate-300">
+                Bron: Kadaster · PDOK · DSO
+              </span>
               <span className="text-[9px] uppercase tracking-wider text-slate-300">{code}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </LeftPanelShell>
 
       {/* Modals */}
       <AnimatePresence>
-        {openModal === 'demografie' && (
-          <DemografieModal gemeenteNaam={naam} gemeenteCode={code} scans={scans} onClose={() => setOpenModal(null)} />
-        )}
-        {openModal === 'wijken' && (
-          <WijkenModal gemeenteNaam={naam} gemeenteCode={code} wijkGeojson={wijkGeojson} scans={scans} onClose={() => setOpenModal(null)}
-            onSelectWijk={(c, n) => { setOpenModal(null); onSelectWijk(c, n) }}
+        {showWijkenModal && (
+          <WijkenModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            wijkGeojson={wijkGeojson}
+            scans={scans}
+            onClose={() => setShowWijkenModal(false)}
+            onSelectWijk={(c, n) => { setShowWijkenModal(false); onSelectWijk(c, n) }}
           />
-        )}
-        {openModal === 'juridisch' && (
-          <JuridischKlimaatModal gemeenteNaam={naam} gemeenteCode={code} onClose={() => setOpenModal(null)} />
-        )}
-        {openModal === 'meldingen' && (
-          <MeldingenModal gemeenteNaam={naam} gemeenteCode={code} onClose={() => setOpenModal(null)} />
         )}
       </AnimatePresence>
     </>
