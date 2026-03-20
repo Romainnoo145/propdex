@@ -56,3 +56,22 @@ class RaadsinformatieResponse(BaseModel):
     dekking: bool = Field(description="Whether the gemeente is covered by ORI")
     stukken: list[RaadsstukResponse] = Field(default_factory=list, description="Council documents")
     total_found: int = Field(default=0, description="Total documents found")
+
+
+class SubsidieResponse(BaseModel):
+    """A development-relevant subsidy from RVO."""
+
+    id: str = Field(description="RVO subsidy ID")
+    title: str = Field(description="Subsidy name")
+    intro: str | None = Field(default=None, description="Short description")
+    url: str | None = Field(default=None, description="Link to RVO page")
+    sectors: list[str] = Field(default_factory=list, description="Relevant sectors")
+    targets: list[str] = Field(default_factory=list, description="Target groups")
+
+
+class SubsidiesResponse(BaseModel):
+    """Development-relevant subsidies list."""
+
+    subsidies: list[SubsidieResponse] = Field(default_factory=list)
+    total: int = Field(default=0, description="Number of relevant subsidies")
+    source: str = Field(default="RVO", description="Data source")

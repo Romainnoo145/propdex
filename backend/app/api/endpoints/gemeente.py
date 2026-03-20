@@ -7,13 +7,52 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
-from app.schemas.gemeente import GemeenteProfile, RaadsinformatieResponse
+from app.schemas.gemeente import (
+    GemeenteProfile,
+    RaadsinformatieResponse,
+    SubsidieResponse,
+    SubsidiesResponse,
+)
 from app.services.gemeente_profile import build_gemeente_profile
 from app.services.raadsinformatie import get_raadsinformatie
+from app.services.rvo_client import fetch_development_subsidies
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# ── Static routes MUST come before /{gemeente_naam} wildcard ──
+
+
+@router.get("/subsidies/development", response_model=SubsidiesResponse)
+async def get_development_subsidies(
+    current_user=Depends(get_current_active_user),
+) -> SubsidiesResponse:
+    """Get development-relevant national subsidies from RVO.
+
+    Fetches subsidies from the RVO open data API, filtered for
+    bouw/woning/verduurzaming relevance. Cached for 1 hour.
+    """
+    results = await fetch_development_subsidies()
+    return SubsidiesResponse(
+        subsidies=[
+            SubsidieResponse(
+                id=s.id,
+                title=s.title,
+                intro=s.intro,
+                url=s.url,
+                sectors=s.sectors,
+                targets=s.targets,
+            )
+            for s in results
+        ],
+        total=len(results),
+        source="RVO",
+    )
+
+
+# ── Gemeente-scoped routes ──
 
 
 @router.get("/{gemeente_naam}/profile", response_model=GemeenteProfile)
