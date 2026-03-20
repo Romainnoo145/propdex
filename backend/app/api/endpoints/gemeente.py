@@ -57,6 +57,30 @@ async def get_development_subsidies(
     )
 
 
+@router.get("/checklists/{use_case}")
+async def get_checklist_for_use_case(
+    use_case: str,
+    current_user=Depends(get_current_active_user),
+) -> dict:
+    """Get vergunning preparation checklist for a development use case.
+
+    Returns a checklist of required documents, checks, and steps.
+    Available use cases: optoppen, splitsen, transformatie, nieuwbouw.
+    """
+    from dataclasses import asdict
+
+    from app.services.checklists import get_checklist
+
+    items = get_checklist(use_case)
+    if not items:
+        return {"use_case": use_case, "items": [], "total": 0, "error": f"Unknown use case: {use_case}"}
+    return {
+        "use_case": use_case,
+        "items": [asdict(item) for item in items],
+        "total": len(items),
+    }
+
+
 # ── Gemeente-scoped routes ──
 
 

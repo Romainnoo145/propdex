@@ -338,3 +338,58 @@ async def upload_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during PDF upload",
         ) from e
+
+
+@router.get("/{parcel_id}/actievoorstellen")
+async def get_actievoorstellen(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get actionable next-step recommendations for a parcel.
+
+    Computes prioritized actions based on parcel scores, risk factors,
+    and use-case scores. Deterministic — no AI calls.
+
+    Args:
+        parcel_id: Parcel cache ID (UUID)
+    """
+    from dataclasses import asdict
+
+    from sqlalchemy import desc, select
+
+    from app.models.scan_result import ScanResult
+    from app.services.actievoorstellen import compute_actievoorstellen
+    from app.services.use_case_scoring import compute_use_case_scores
+
+    # Find the most recent scan result for this parcel
+    stmt = (
+        select(ScanResult)
+        .where(ScanResult.parcel_id == parcel_id)
+        .order_by(desc(ScanResult.created_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    sr = result.scalar_one_or_none()
+
+    if sr is None or not sr.flags:
+        return {"parcel_id": parcel_id, "acties": [], "total": 0}
+
+    flags = sr.flags or {}
+
+    # Compute use-case scores from breakdown
+    breakdown = flags.get("score_breakdown", {})
+    uc_scores = None
+    if breakdown:
+        uc_results = compute_use_case_scores(breakdown)
+        if uc_results:
+            uc_scores = {k: asdict(v) for k, v in uc_results.items()}
+
+    # Compute actievoorstellen
+    acties = compute_actievoorstellen(flags, uc_scores)
+
+    return {
+        "parcel_id": parcel_id,
+        "acties": [asdict(a) for a in acties],
+        "total": len(acties),
+    }

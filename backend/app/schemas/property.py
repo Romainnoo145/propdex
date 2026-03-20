@@ -629,3 +629,24 @@ class PropertyReportResponse(BaseModel):
         default=None,
         description="Score model version identifier (e.g. score-v3.0)",
     )
+
+
+class ActieVoorstelResponse(BaseModel):
+    """A concrete action suggestion for a parcel."""
+
+    id: str = Field(description="Unique action ID")
+    use_case: str | None = Field(default=None, description="Relevant use case or None for general")
+    priority: str = Field(description="hoog / gemiddeld / laag")
+    category: str = Field(description="onderzoek / vergunning / financieel / juridisch")
+    title: str = Field(description="Action title in Dutch")
+    description: str = Field(description="Detailed description")
+    estimated_effort: str | None = Field(default=None, description="Estimated cost/time")
+    blocking: bool = Field(default=False, description="Whether this blocks other actions")
+
+
+class ActievoorstellenResponse(BaseModel):
+    """Actievoorstellen for a parcel."""
+
+    parcel_id: str = Field(description="Parcel identifier")
+    acties: list[ActieVoorstelResponse] = Field(default_factory=list)
+    total: int = Field(default=0)
