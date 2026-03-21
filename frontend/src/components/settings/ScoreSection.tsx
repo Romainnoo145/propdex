@@ -15,7 +15,7 @@ import {
   RISICO_FACTORS,
 } from '@/lib/types/scoreWeights'
 import { PresetCards } from './PresetCards'
-import { BalanceSlider } from './BalanceSlider'
+import { RiskAppetite } from './RiskAppetite'
 import { FactorTable } from './FactorTable'
 
 const MIN_ACTIVE = 3
@@ -160,53 +160,14 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         />
       </div>
 
-      {/* Threshold + Balance side by side */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-          <p className="text-[12px] font-semibold text-[#0E1111]">
-            Minimale score op kaart
-          </p>
-          <div className="flex gap-2">
-            {[
-              { value: 0, label: '0', sub: 'Alles' },
-              { value: 30, label: '30', sub: 'Laag' },
-              { value: 50, label: '50', sub: 'Midden' },
-              { value: 60, label: '60', sub: 'Standaard' },
-              { value: 80, label: '80', sub: 'Top' },
-            ].map((step) => {
-              const isActive = formState.score_threshold === step.value
-              return (
-                <button
-                  key={step.value}
-                  type="button"
-                  onClick={() => updateFormState({ score_threshold: step.value })}
-                  className={`flex-1 rounded-[12px] border-2 py-3 text-center transition-all ${
-                    isActive
-                      ? 'border-[#0E1111] bg-[#F9A826]'
-                      : 'border-[#0E1111]/20 bg-white hover:border-[#0E1111]/40'
-                  }`}
-                >
-                  <p className={`text-[14px] font-black tabular-nums ${isActive ? 'text-[#0E1111]' : 'text-[#0E1111]'}`}>
-                    {step.label}
-                  </p>
-                  <p className={`text-[10px] mt-0.5 ${isActive ? 'text-[#0E1111]/60' : 'text-slate-400'}`}>
-                    {step.sub}
-                  </p>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-          <p className="text-[12px] font-semibold text-[#0E1111]">
-            Potentie / Risico verhouding
-          </p>
-          <BalanceSlider
-            value={formState.potentie_risico_balance}
-            onChange={(val) => updateFormState({ potentie_risico_balance: val })}
-          />
-        </div>
+      {/* Risk appetite — combined balance + threshold */}
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+        <p className="text-[12px] font-semibold text-[#0E1111]">Risicoprofiel</p>
+        <RiskAppetite
+          balance={formState.potentie_risico_balance}
+          threshold={formState.score_threshold}
+          onChange={(balance, threshold) => updateFormState({ potentie_risico_balance: balance, score_threshold: threshold })}
+        />
       </div>
 
       {/* Factor tables side by side */}
