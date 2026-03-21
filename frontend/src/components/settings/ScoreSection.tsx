@@ -173,28 +173,38 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         </div>
 
         <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px] font-semibold text-[#0E1111]">
-              Minimale score op kaart
-            </p>
-            <span className="text-[14px] font-black text-[#0E1111] tabular-nums">
-              {formState.score_threshold}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={formState.score_threshold}
-            onChange={(e) =>
-              updateFormState({ score_threshold: Number(e.target.value) })
-            }
-            className="w-full accent-[#F9A826]"
-          />
-          <div className="flex justify-between text-[11px] text-slate-400">
-            <span>Alles tonen</span>
-            <span>Alleen topkansen</span>
+          <p className="text-[12px] font-semibold text-[#0E1111]">
+            Minimale score op kaart
+          </p>
+          <div className="flex gap-2">
+            {[
+              { value: 0, label: '0', sub: 'Alles' },
+              { value: 25, label: '25', sub: 'Laag' },
+              { value: 50, label: '50', sub: 'Midden' },
+              { value: 75, label: '75', sub: 'Hoog' },
+              { value: 100, label: '100', sub: 'Top' },
+            ].map((step) => {
+              const isActive = formState.score_threshold === step.value
+              return (
+                <button
+                  key={step.value}
+                  type="button"
+                  onClick={() => updateFormState({ score_threshold: step.value })}
+                  className={`flex-1 rounded-[12px] border-2 py-3 text-center transition-all ${
+                    isActive
+                      ? 'border-[#0E1111] bg-[#F9A826]'
+                      : 'border-[#0E1111]/20 bg-white hover:border-[#0E1111]/40'
+                  }`}
+                >
+                  <p className={`text-[14px] font-black tabular-nums ${isActive ? 'text-[#0E1111]' : 'text-[#0E1111]'}`}>
+                    {step.label}
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${isActive ? 'text-[#0E1111]/60' : 'text-slate-400'}`}>
+                    {step.sub}
+                  </p>
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
