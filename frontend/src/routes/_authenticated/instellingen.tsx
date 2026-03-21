@@ -41,7 +41,7 @@ function InstellingenLayout() {
           <SettingsTabNav />
         </motion.div>
 
-        <motion.div variants={fadeUp} className="mt-6 max-w-3xl pb-8">
+        <motion.div variants={fadeUp} className="mt-6 pb-8">
           <Outlet />
         </motion.div>
       </motion.div>

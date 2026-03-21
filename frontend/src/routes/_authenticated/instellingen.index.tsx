@@ -10,11 +10,15 @@ export const Route = createFileRoute('/_authenticated/instellingen/')({
 
 function InstellingenIndexPage() {
   return (
-    <div className="max-w-2xl space-y-4">
-      <AccountSection />
-      <PasswordSection />
-      <NotificationsSection />
-      <AppearanceSection />
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
+        <AccountSection />
+        <PasswordSection />
+      </div>
+      <div className="space-y-4">
+        <NotificationsSection />
+        <AppearanceSection />
+      </div>
     </div>
   )
 }

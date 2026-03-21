@@ -131,55 +131,61 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         </p>
       </div>
 
-      {/* Preset cards */}
-      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-        <p className="text-[12px] font-semibold text-[#0E1111]">Kies een startprofiel</p>
-        <PresetCards
-          presets={PRESETS}
-          activePreset={formState.preset}
-          onSelect={handlePresetSelect}
-        />
-      </div>
-
-      {/* Balance slider */}
-      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-        <p className="text-[12px] font-semibold text-[#0E1111]">
-          Potentie / Risico verhouding
-        </p>
-        <BalanceSlider
-          value={formState.potentie_risico_balance}
-          onChange={(val) => updateFormState({ potentie_risico_balance: val })}
-        />
-      </div>
-
-      {/* Score threshold */}
-      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[12px] font-semibold text-[#0E1111]">
-            Minimale score op kaart
-          </p>
-          <span className="text-[14px] font-black text-[#0E1111] tabular-nums">
-            {formState.score_threshold}
-          </span>
+      {/* Top row: presets + balance/threshold */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Preset cards */}
+        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+          <p className="text-[12px] font-semibold text-[#0E1111]">Kies een startprofiel</p>
+          <PresetCards
+            presets={PRESETS}
+            activePreset={formState.preset}
+            onSelect={handlePresetSelect}
+          />
         </div>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={5}
-          value={formState.score_threshold}
-          onChange={(e) =>
-            updateFormState({ score_threshold: Number(e.target.value) })
-          }
-          className="w-full accent-[#F9A826]"
-        />
-        <div className="flex justify-between text-[11px] text-slate-400">
-          <span>Alles tonen</span>
-          <span>Alleen topkansen</span>
+
+        <div className="space-y-4">
+          {/* Balance slider */}
+          <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+            <p className="text-[12px] font-semibold text-[#0E1111]">
+              Potentie / Risico verhouding
+            </p>
+            <BalanceSlider
+              value={formState.potentie_risico_balance}
+              onChange={(val) => updateFormState({ potentie_risico_balance: val })}
+            />
+          </div>
+
+          {/* Score threshold */}
+          <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-[#0E1111]">
+                Minimale score op kaart
+              </p>
+              <span className="text-[14px] font-black text-[#0E1111] tabular-nums">
+                {formState.score_threshold}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={formState.score_threshold}
+              onChange={(e) =>
+                updateFormState({ score_threshold: Number(e.target.value) })
+              }
+              className="w-full accent-[#F9A826]"
+            />
+            <div className="flex justify-between text-[11px] text-slate-400">
+              <span>Alles tonen</span>
+              <span>Alleen topkansen</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Potentie factor table */}
+      {/* Factor tables row */}
+      <div className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
         <p className="text-[12px] font-semibold text-[#0E1111]">Potentie factoren</p>
         <FactorTable
@@ -201,6 +207,7 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           onChange={handleRisicoWeightChange}
           minActive={MIN_ACTIVE}
         />
+      </div>
       </div>
 
       {/* Save button area */}
