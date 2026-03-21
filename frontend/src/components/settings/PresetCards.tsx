@@ -9,7 +9,7 @@ interface PresetCardsProps {
 
 export function PresetCards({ presets, activePreset, onSelect }: PresetCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-4 gap-3">
       {presets.map((preset) => {
         const isActive = preset.id === activePreset
         return (
