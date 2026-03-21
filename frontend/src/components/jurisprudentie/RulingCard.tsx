@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Clock, ExternalLink, Loader2 } from 'lucide-react'
+import { Clock, ExternalLink, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { getJurisprudenceDoc } from '@/lib/api'
 import type { ExplorerRuling } from '@/hooks/useExplorer'
+import type { ExplorerFilters } from '@/lib/api'
 
 /** Dutch display labels for rechtsgrond keys */
 const RECHTSGROND_LABELS: Record<string, string> = {
@@ -13,17 +14,16 @@ const RECHTSGROND_LABELS: Record<string, string> = {
   etfal_ruimtelijke_ordening: 'ETFAL / Ruimtelijke ordening',
 }
 
-/** Color mapping for uitkomst values — amber palette only */
-function uitkomstColor(uitkomst: string | null): string {
+function uitkomstStyle(uitkomst: string | null): string {
   switch (uitkomst) {
     case 'toegewezen':
-      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+      return 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25'
     case 'afgewezen':
-      return 'bg-red-500/15 text-red-400 border-red-500/25'
+      return 'bg-red-500/15 text-red-600 hover:bg-red-500/25'
     case 'gedeeltelijk':
-      return 'bg-amber-500/15 text-amber-400 border-amber-500/25'
+      return 'bg-[#F9A826]/15 text-[#D48B1A] hover:bg-[#F9A826]/25'
     default:
-      return 'bg-neutral-300/30 text-neutral-600 border-neutral-300/25'
+      return 'bg-slate-100 text-slate-500'
   }
 }
 
@@ -48,9 +48,10 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
 
 interface RulingCardProps {
   ruling: ExplorerRuling
+  onFilterChange?: (dimension: keyof ExplorerFilters, value: string) => void
 }
 
-export default function RulingCard({ ruling }: RulingCardProps) {
+export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [fullText, setFullText] = useState<string | null>(null)
   const [loadingText, setLoadingText] = useState(false)
@@ -71,11 +72,10 @@ export default function RulingCard({ ruling }: RulingCardProps) {
     ? dateFmt.format(new Date(ruling.datum_uitspraak))
     : null
 
-  const handleExpand = async () => {
+  const handleCardClick = async () => {
     const newExpanded = !expanded
     setExpanded(newExpanded)
 
-    // Lazy-load full ruling text on first expand
     if (newExpanded && fullText === null && !loadingText) {
       setLoadingText(true)
       try {
@@ -89,137 +89,142 @@ export default function RulingCard({ ruling }: RulingCardProps) {
     }
   }
 
+  /** Pill click → set filter, stop event from toggling card */
+  const pill = (
+    dimension: keyof ExplorerFilters,
+    value: string | null,
+    label: string,
+    className: string,
+  ) => {
+    if (!value) return null
+    const clickable = !!onFilterChange
+    return (
+      <button
+        key={`${dimension}-${value}`}
+        type="button"
+        disabled={!clickable}
+        onClick={clickable ? (e) => { e.stopPropagation(); onFilterChange(dimension, value) } : undefined}
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${className} ${clickable ? 'cursor-pointer' : ''}`}
+      >
+        {label}
+      </button>
+    )
+  }
+
   return (
     <div
-      className="rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4 transition-colors hover:border-neutral-300"
+      onClick={handleCardClick}
+      className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-all hover:shadow-md cursor-pointer select-none"
     >
-      {/* Header row */}
+      {/* Header: Instantie left, datum right */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-mono text-neutral-600">{ruling.ecli}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-600">
-            {ruling.instantie && <span>{ruling.instantie}</span>}
-            {ruling.instantie && datumFormatted && (
-              <span className="text-neutral-500">|</span>
-            )}
-            {datumFormatted && <span>{datumFormatted}</span>}
-          </div>
+          {(ruling.instantie || ruling.extracted_gemeente) && (
+            <p className="text-[14px] font-semibold text-[#0E1111]">
+              {ruling.instantie}{ruling.extracted_gemeente ? ` — ${ruling.extracted_gemeente}` : ''}
+            </p>
+          )}
+          <p className="mt-1 text-[10px] text-slate-300 tracking-wide">{ruling.ecli}</p>
         </div>
-        <button
-          onClick={handleExpand}
-          className="shrink-0 rounded p-1 text-neutral-600 transition-colors hover:bg-neutral-200 hover:text-aura-ink"
-          aria-label={expanded ? 'Inklappen' : 'Uitklappen'}
-        >
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
+        {datumFormatted && (
+          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold tabular-nums text-[#0E1111] border border-[#EAEFEF] shrink-0">
+            {datumFormatted}
+          </span>
+        )}
       </div>
 
-      {/* Badges row */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        {ruling.extracted_gemeente && (
-          <span className="inline-flex items-center rounded-full border border-neutral-300/25 bg-neutral-300/30 px-2 py-0.5 text-xs text-neutral-700">
-            {ruling.extracted_gemeente}
-          </span>
-        )}
-        {ruling.vergunningstype && (
-          <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">
-            {ruling.vergunningstype}
-          </span>
-        )}
-        <span
-          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${uitkomstColor(ruling.uitkomst)}`}
-        >
-          {uitkomstLabel(ruling.uitkomst)}
-        </span>
+      {/* Filter pills */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {pill('uitkomst', ruling.uitkomst, uitkomstLabel(ruling.uitkomst), uitkomstStyle(ruling.uitkomst))}
+
+        {pill('vergunningstype', ruling.vergunningstype, ruling.vergunningstype ?? '', 'bg-[#F9A826]/10 text-[#D48B1A] hover:bg-[#F9A826]/20')}
+
         {ruling.doorlooptijd_dagen != null && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-neutral-300/25 bg-neutral-300/30 px-2 py-0.5 text-xs text-neutral-600">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] text-slate-500 tabular-nums">
             <Clock size={10} />
             {ruling.doorlooptijd_dagen}d
           </span>
         )}
+
+        {ruling.rechtsgronden.map((rg) =>
+          pill('rechtsgrond', rg, RECHTSGROND_LABELS[rg] ?? rg, 'bg-slate-50 text-slate-400 font-medium hover:bg-slate-100 hover:text-slate-600')
+        )}
       </div>
 
-      {/* Tegenstanders badges */}
-      {tegenstanders.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {tegenstanders.map((t) => (
-            <span
-              key={t}
-              className="rounded border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Rechtsgrond tags */}
-      {ruling.rechtsgronden.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {ruling.rechtsgronden.map((rg) => (
-            <span
-              key={rg}
-              className="rounded border border-neutral-300/50 bg-neutral-200/50 px-1.5 py-0.5 text-[10px] text-neutral-600"
-            >
-              {RECHTSGROND_LABELS[rg] ?? rg}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Summary preview (collapsed) */}
+      {/* Summary (collapsed only) */}
       {summaryText && !expanded && (
-        <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-neutral-700">
+        <p className="mt-4 line-clamp-2 text-[13px] leading-[1.7] text-slate-500">
           {summaryText}
         </p>
       )}
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-3 space-y-3 border-t border-neutral-200 pt-3">
+        <div className="mt-6 space-y-6 border-t border-[#EAEFEF] pt-6">
           {summaryText && (
             <div>
-              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-600">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
                 Samenvatting
-              </h4>
-              <p className="text-sm leading-relaxed text-neutral-700">{summaryText}</p>
-            </div>
-          )}
-          {relevantieText && (
-            <div>
-              <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-600">
-                Relevantie
-              </h4>
-              <p className="text-sm leading-relaxed text-neutral-700">{relevantieText}</p>
+              </p>
+              <p className="text-[13px] leading-[1.8] text-slate-600">{summaryText}</p>
             </div>
           )}
 
-          {/* Full ruling text */}
+          {relevantieText && (
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
+                Relevantie
+              </p>
+              <p className="text-[13px] leading-[1.8] text-slate-600">{relevantieText}</p>
+            </div>
+          )}
+
+          {/* Tegenstanders */}
+          {tegenstanders.length > 0 && (
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
+                Tegenstanders
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {tegenstanders.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Full text */}
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-neutral-600">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
                 Uitspraaktekst
-              </h4>
+              </p>
               <a
                 href={`https://uitspraken.rechtspraak.nl/details?id=${ruling.ecli}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-amber-400/70 transition-colors hover:text-amber-300"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1 text-[11px] font-medium text-[#F9A826] transition-colors hover:text-[#E8971F]"
               >
                 Rechtspraak.nl <ExternalLink size={10} />
               </a>
             </div>
             {loadingText && (
-              <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
+              <div className="flex items-center gap-2 py-6 text-[13px] text-slate-400">
                 <Loader2 size={14} className="animate-spin" />
                 Uitspraak laden...
               </div>
             )}
             {fullText && (
-              <div className="max-h-96 overflow-y-auto rounded border border-neutral-200 bg-aura-canvas p-3">
-                <pre className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-700">
+              <div className="max-h-[500px] overflow-y-auto rounded-[14px] bg-[#F2F6F3] p-6">
+                <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-[#0E1111]/80">
                   {fullText}
-                </pre>
+                </p>
               </div>
             )}
           </div>

@@ -56,3 +56,4 @@ tmp/
 
 # ── GSD baseline (auto-generated) ──
 .gsd
+.vite/

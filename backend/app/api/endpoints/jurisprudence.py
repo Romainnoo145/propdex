@@ -658,13 +658,22 @@ async def explore_rulings(
         if row.count >= 2
     ]
 
-    # Opponent profiles: aggregate tegenstanders across filtered results
+    # Opponent profiles: aggregate tegenstanders WITHOUT uitkomst filter
+    # (uitkomst filter only affects ruling cards, not opponent stats)
+    opp_clauses = _build_explorer_filters(
+        gemeente=gemeente,
+        vergunningstype=vergunningstype,
+        uitkomst=None,  # exclude uitkomst from opponent filtering
+        rechtsgrond=rechtsgrond,
+        rechtbank_niveau=rechtbank_niveau,
+        periode=periode,
+    )
     opp_stmt = (
         select(RulingCache.tegenstanders, RulingCache.ecli, RulingCache.uitkomst)
         .where(RulingCache.tegenstanders.isnot(None))
     )
-    if all_clauses:
-        opp_stmt = opp_stmt.where(*all_clauses)
+    if opp_clauses:
+        opp_stmt = opp_stmt.where(*opp_clauses)
     opp_rows = (await db.execute(opp_stmt)).all()
 
     # Normalize opponent names (case-insensitive dedup, keep first-seen casing)
@@ -682,9 +691,11 @@ async def explore_rulings(
             if canonical not in opponent_map:
                 opponent_map[canonical] = {"naam": canonical, "zaken": 0, "gewonnen": 0, "verloren": 0}
             opponent_map[canonical]["zaken"] += 1
-            if row.uitkomst == "toegewezen":
+            if row.uitkomst == "afgewezen":
+                # Beroep afgewezen = tegenstander (bestuursorgaan) wint
                 opponent_map[canonical]["gewonnen"] += 1
-            elif row.uitkomst == "afgewezen":
+            elif row.uitkomst == "toegewezen":
+                # Beroep toegewezen = tegenstander verliest
                 opponent_map[canonical]["verloren"] += 1
 
     opponent_profiles = sorted(

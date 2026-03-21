@@ -1,7 +1,6 @@
 import { Lightbulb } from 'lucide-react'
 import type { ExplorerFilters, FacetItem } from '@/hooks/useExplorer'
 
-/** Dutch display labels for filter dimension names */
 const DIMENSION_LABELS: Record<keyof ExplorerFilters, string> = {
   gemeente: 'Gemeente',
   vergunningstype: 'Vergunningstype',
@@ -38,21 +37,17 @@ export default function BroadenSuggestion({
 }: BroadenSuggestionProps) {
   const hasActiveFilters = Object.values(activeFilters).some(Boolean)
 
-  // Only render when < 3 results AND at least one filter is active
   if (resultCount >= 3 || !hasActiveFilters) return null
 
-  // Compute suggestions: for each active filter, estimate how many more results
-  // by looking at the total of that dimension's facet counts
   const suggestions: Suggestion[] = []
 
   for (const [dim, value] of Object.entries(activeFilters) as [keyof ExplorerFilters, string | undefined][]) {
-    if (!value || dim === 'periode') continue // periode doesn't have facet counts
+    if (!value || dim === 'periode') continue
 
     const facetKey = dim as keyof NonNullable<typeof facets>
     const dimensionFacets = facets?.[facetKey]
     if (!dimensionFacets) continue
 
-    // Total results across all values in this dimension (with other filters applied)
     const totalInDimension = dimensionFacets.reduce((sum, f) => sum + f.count, 0)
     const additional = Math.max(0, totalInDimension - resultCount)
 
@@ -65,20 +60,19 @@ export default function BroadenSuggestion({
     }
   }
 
-  // Sort by most additional results first
   suggestions.sort((a, b) => b.additionalResults - a.additionalResults)
 
   return (
-    <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4">
+    <div className="rounded-[24px] border border-[#F9A826]/20 bg-[#F9A826]/5 p-5">
       <div className="flex items-start gap-3">
-        <Lightbulb size={18} className="mt-0.5 shrink-0 text-amber-400" />
+        <Lightbulb size={18} className="mt-0.5 shrink-0 text-[#F9A826]" />
         <div>
           {resultCount === 0 ? (
-            <p className="text-sm text-neutral-700">
+            <p className="text-[13px] font-semibold text-[#0E1111]">
               Geen uitspraken gevonden.
             </p>
           ) : (
-            <p className="text-sm text-neutral-700">
+            <p className="text-[13px] font-semibold text-[#0E1111]">
               Slechts {resultCount} {resultCount === 1 ? 'uitspraak' : 'uitspraken'} gevonden.
             </p>
           )}
@@ -89,7 +83,7 @@ export default function BroadenSuggestion({
                 <li key={s.dimension}>
                   <button
                     onClick={() => onRemoveFilter(s.dimension)}
-                    className="text-sm text-amber-400 underline decoration-amber-400/30 underline-offset-2 transition-colors hover:text-amber-300 hover:decoration-amber-300/50"
+                    className="text-[13px] text-[#F9A826] underline decoration-[#F9A826]/30 underline-offset-2 transition-colors hover:text-[#E8971F] hover:decoration-[#E8971F]/50"
                   >
                     Verwijder filter &apos;{DIMENSION_LABELS[s.dimension]}: {s.filterValue}&apos;
                     {' '}voor ~{s.additionalResults} meer {s.additionalResults === 1 ? 'resultaat' : 'resultaten'}
@@ -98,7 +92,7 @@ export default function BroadenSuggestion({
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-1 text-[13px] text-slate-500">
               Probeer een andere gemeente of tijdsperiode.
             </p>
           )}

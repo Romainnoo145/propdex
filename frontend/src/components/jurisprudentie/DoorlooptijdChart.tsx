@@ -24,41 +24,41 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
   const maxDays = Math.max(...withAvg.map((d) => d.avg_dagen!))
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Clock size={16} className="text-amber-500/60" />
-        <h3 className="text-sm font-semibold text-aura-ink">
+    <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Clock size={14} className="text-[#F9A826]" />
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
           Doorlooptijd per type
-        </h3>
-        <span className="text-xs text-neutral-500">Gemiddeld aantal dagen</span>
+        </p>
+        <span className="text-[11px] text-slate-400 ml-1">Gemiddeld aantal dagen</span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {withAvg
           .sort((a, b) => (b.avg_dagen ?? 0) - (a.avg_dagen ?? 0))
           .map((d) => {
             const pct = maxDays > 0 ? ((d.avg_dagen ?? 0) / maxDays) * 100 : 0
             const weeks = Math.round((d.avg_dagen ?? 0) / 7)
             return (
-              <div key={d.vergunningstype} className="space-y-0.5">
+              <div key={d.vergunningstype} className="space-y-1">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-neutral-700">
+                  <span className="text-[13px] font-semibold text-[#0E1111]">
                     {TYPE_LABELS[d.vergunningstype] ?? d.vergunningstype}
                   </span>
-                  <span className="text-xs tabular-nums text-neutral-600">
+                  <span className="text-[11px] tabular-nums text-slate-500">
                     {d.avg_dagen}d ({weeks}w)
-                    <span className="ml-1 text-neutral-500">
+                    <span className="ml-1.5 text-slate-300">
                       n={d.count}
                     </span>
                   </span>
                 </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-neutral-200">
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-[#F2F6F3]">
                   <div
-                    className="rounded-full bg-amber-500/50"
+                    className="rounded-full bg-[#F9A826]/60"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
                 {d.min_dagen != null && d.max_dagen != null && (
-                  <p className="text-[10px] text-neutral-500">
+                  <p className="text-[10px] text-slate-400">
                     {d.min_dagen}d – {d.max_dagen}d
                   </p>
                 )}

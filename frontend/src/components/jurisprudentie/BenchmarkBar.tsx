@@ -6,92 +6,76 @@ interface BenchmarkBarProps {
   results: ExplorerRuling[]
 }
 
-export default function BenchmarkBar({ uitkomstFacets, totalCount, results }: BenchmarkBarProps) {
+/**
+ * Donut chart showing outcome distribution — sits right-aligned in the hero.
+ * Three segments: emerald (toegewezen), red-500 (afgewezen), amber (gedeeltelijk).
+ * Center shows total decided count.
+ */
+export default function BenchmarkBar({ uitkomstFacets }: BenchmarkBarProps) {
   const toegewezen = uitkomstFacets.find((f) => f.value === 'toegewezen')?.count ?? 0
   const afgewezen = uitkomstFacets.find((f) => f.value === 'afgewezen')?.count ?? 0
   const gedeeltelijk = uitkomstFacets.find((f) => f.value === 'gedeeltelijk')?.count ?? 0
 
   const decided = toegewezen + afgewezen + gedeeltelijk
-  const winPct = decided > 0 ? Math.round((toegewezen / decided) * 100) : 0
-  const lossPct = decided > 0 ? Math.round((afgewezen / decided) * 100) : 0
-  const partialPct = decided > 0 ? Math.round((gedeeltelijk / decided) * 100) : 0
+  if (decided === 0) return null
 
-  // Average doorlooptijd from loaded results
-  const doorlooptijdValues = results
-    .map((r) => r.doorlooptijd_dagen)
-    .filter((d): d is number => d != null)
-  const avgDoorlooptijd =
-    doorlooptijdValues.length > 0
-      ? Math.round(doorlooptijdValues.reduce((a, b) => a + b, 0) / doorlooptijdValues.length)
-      : null
+  // SVG donut math
+  const r = 38
+  const circumference = 2 * Math.PI * r
 
-  if (totalCount === 0) return null
+  const segments = [
+    { count: toegewezen, color: '#22c55e', label: 'toegewezen' },  // emerald-500
+    { count: gedeeltelijk, color: '#F9A826', label: 'gedeeltelijk' },
+    { count: afgewezen, color: '#ef4444', label: 'afgewezen' },    // red-500
+  ].filter(s => s.count > 0)
+
+  // Calculate offsets for each segment
+  let accumulated = 0
+  const arcs = segments.map(s => {
+    const frac = s.count / decided
+    const dashLen = frac * circumference
+    const offset = circumference - accumulated * circumference
+    accumulated += frac
+    return { ...s, dashLen, offset, frac }
+  })
 
   return (
-    <div className="mb-4 rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4">
-      <div className="flex flex-wrap items-center gap-6">
-        <Stat value={totalCount} label="uitspraken" />
+    <div className="flex items-center gap-4">
+      {/* Donut */}
+      <div className="relative flex items-center justify-center">
+        <svg viewBox="0 0 96 96" className="h-[88px] w-[88px]" style={{ transform: 'rotate(-90deg)' }}>
+          {/* Track */}
+          <circle cx="48" cy="48" r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+          {/* Segments */}
+          {arcs.map((arc) => (
+            <circle
+              key={arc.label}
+              cx="48"
+              cy="48"
+              r={r}
+              fill="none"
+              stroke={arc.color}
+              strokeWidth="8"
+              strokeDasharray={`${arc.dashLen} ${circumference - arc.dashLen}`}
+              strokeDashoffset={arc.offset}
+            />
+          ))}
+        </svg>
+        <span className="absolute text-[20px] font-black tabular-nums leading-none text-[#0E1111]">
+          {decided}
+        </span>
+      </div>
 
-        <Divider />
-
-        <Stat value={`${winPct}%`} label="toegewezen" className="text-emerald-400" />
-        <Stat value={`${lossPct}%`} label="afgewezen" className="text-red-400" />
-        {partialPct > 0 && (
-          <Stat value={`${partialPct}%`} label="gedeeltelijk" className="text-amber-400" />
-        )}
-
-        {avgDoorlooptijd != null && (
-          <>
-            <Divider />
-            <Stat value={avgDoorlooptijd} label="gem. dagen" />
-          </>
-        )}
-
-        {/* Distribution bar */}
-        {decided > 0 && (
-          <div className="ml-auto hidden w-48 sm:block">
-            <div className="flex h-2.5 overflow-hidden rounded-full bg-neutral-200">
-              <div
-                className="bg-emerald-500 transition-all"
-                style={{ width: `${winPct}%` }}
-              />
-              <div
-                className="bg-amber-500 transition-all"
-                style={{ width: `${partialPct}%` }}
-              />
-              <div
-                className="bg-red-500 transition-all"
-                style={{ width: `${lossPct}%` }}
-              />
-            </div>
-            <div className="mt-1 flex justify-between text-[10px] text-neutral-500">
-              <span>{toegewezen} gewonnen</span>
-              <span>{afgewezen} verloren</span>
-            </div>
-          </div>
-        )}
+      {/* Legend */}
+      <div className="flex flex-col gap-1">
+        {segments.map((s) => (
+          <span key={s.label} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="tabular-nums font-semibold text-[#0E1111]">{s.count}</span>
+            {s.label}
+          </span>
+        ))}
       </div>
     </div>
   )
-}
-
-function Stat({
-  value,
-  label,
-  className = 'text-aura-ink',
-}: {
-  value: number | string
-  label: string
-  className?: string
-}) {
-  return (
-    <div>
-      <p className={`text-xl font-bold tabular-nums ${className}`}>{value}</p>
-      <p className="text-[11px] text-neutral-500">{label}</p>
-    </div>
-  )
-}
-
-function Divider() {
-  return <div className="h-8 w-px bg-neutral-200" />
 }

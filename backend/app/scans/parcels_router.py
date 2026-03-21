@@ -9,7 +9,7 @@ from datetime import datetime
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
@@ -505,14 +505,18 @@ async def get_parcel_risk_profile(
 @limiter.limit("60/minute")
 async def get_parcel_centroid(
     request: Request,
-    parcel_id: uuid.UUID,
+    parcel_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> ParcelCentroidResponse:
-    """Return parcel centroid in WGS84 for map fly-to."""
+    """Return parcel centroid in WGS84 for map fly-to.
+
+    Accepts either a ParcelCache UUID or a Kadaster parcel_id string
+    (e.g. "HTT02-A-1234") or a PDOK parcel_code (e.g. "Venlo I 6658").
+    """
     from geoalchemy2.functions import ST_AsGeoJSON, ST_AsText, ST_Centroid, ST_Transform
 
-    query = select(
+    columns = (
         ST_AsText(ST_Transform(ST_Centroid(ParcelCache.geometry), 4326)),
         ST_AsText(ST_Centroid(ParcelCache.geometry)),
         ParcelCache.address,
@@ -523,11 +527,30 @@ async def get_parcel_centroid(
         ParcelCache.bouwjaar,
         ParcelCache.pand_status,
         ST_AsGeoJSON(ST_Transform(ParcelCache.geometry, 4326)),
-    ).where(
-        ParcelCache.id == parcel_id,
     )
-    result = await db.execute(query)
-    row = result.one_or_none()
+
+    # Try UUID lookup first, then Kadaster parcel_id, then parcel_code
+    row = None
+    try:
+        parsed_uuid = uuid.UUID(parcel_id)
+        result = await db.execute(
+            select(*columns).where(ParcelCache.id == parsed_uuid)
+        )
+        row = result.one_or_none()
+    except ValueError:
+        pass  # Not a UUID — fall through to string lookups
+
+    if row is None:
+        result = await db.execute(
+            select(*columns).where(ParcelCache.parcel_id == parcel_id)
+        )
+        row = result.one_or_none()
+
+    if row is None:
+        result = await db.execute(
+            select(*columns).where(ParcelCache.parcel_code == parcel_id)
+        )
+        row = result.one_or_none()
     wkt = row[0] if row else None
     centroid_rd_wkt = row[1] if row else None
     address = row[2] if row else None
@@ -646,14 +669,17 @@ async def get_parcel_at_point(
         28992,
     )
 
+    # has_report check: use raw SQL because the model's user_id column may
+    # not exist in the DB yet (migration l0_user_scope_models pending).
     has_report_subquery = (
-        select(func.count(SavedReport.id) > 0)
+        select(literal(True))
+        .select_from(text("saved_reports"))
         .where(
-            SavedReport.user_id == current_user.id,
-            SavedReport.deleted_at.is_(None),
-            SavedReport.source_parcel_id == ParcelCache.id,
+            text("saved_reports.source_parcel_id = parcel_cache.id"),
+            text("saved_reports.deleted_at IS NULL"),
         )
-        .scalar_subquery()
+        .exists()
+        .correlate(ParcelCache)
     )
     # After dedup migration, each parcel has exactly one scan_result per org.
     # Direct lookup — no need for best-scan subquery workaround.

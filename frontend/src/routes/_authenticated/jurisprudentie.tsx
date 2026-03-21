@@ -199,90 +199,120 @@ function JurisprudentiePage() {
 
   /* ── Results mode ─────────────────────────────────── */
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-aura-canvas">
-      {/* Filter chips bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-aura-glass-white/60/50 px-6 py-3">
-        <Scale size={18} className="text-amber-500/60" />
-        <span className="text-sm font-medium text-aura-ink">Jurisprudentie</span>
-        <div className="mx-2 h-4 w-px bg-neutral-300" />
+    <div className="w-full h-full overflow-y-auto bg-[#FAFCFA] rounded-[40px] pb-14 md:pb-0">
+      <div className="mx-auto max-w-5xl px-6 py-8">
 
-        {filters.gemeente && (
-          <Chip label={filters.gemeente} onRemove={() => handleRemoveFilter('gemeente')} />
-        )}
-        {filters.rechtbank_niveau && (
-          <Chip
-            label={filters.rechtbank_niveau}
-            onRemove={() => handleRemoveFilter('rechtbank_niveau')}
-          />
-        )}
-        {filters.vergunningstype && (
-          <Chip
-            label={VERGUNNINGSTYPE_LABELS[filters.vergunningstype] ?? filters.vergunningstype}
-            onRemove={() => handleRemoveFilter('vergunningstype')}
-          />
-        )}
-        {filters.rechtsgrond && (
-          <Chip
-            label={THEMA_LABELS[filters.rechtsgrond] ?? filters.rechtsgrond}
-            onRemove={() => handleRemoveFilter('rechtsgrond')}
-          />
-        )}
-        {filters.periode && (
-          <Chip
-            label={PERIODE_LABELS[filters.periode] ?? filters.periode}
-            onRemove={() => handleRemoveFilter('periode')}
-          />
-        )}
+        {/* ── Hero Section ─────────────────────────────── */}
+        <div className="mb-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p
+                className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Jurisprudentie
+              </p>
+              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+                {totalCount}
+              </h1>
+              <p className="text-[13px] text-slate-500 mt-1">
+                {totalCount === 1 ? 'uitspraak' : 'uitspraken'}
+              </p>
+            </div>
 
-        <span className="text-xs tabular-nums text-neutral-500">
-          {totalCount} {totalCount === 1 ? 'uitspraak' : 'uitspraken'}
-        </span>
+            {/* Right side: outcome stats */}
+            {!isLoading && facets?.uitkomst && totalCount > 0 && (
+              <BenchmarkBar
+                uitkomstFacets={facets.uitkomst}
+                totalCount={totalCount}
+                results={allResults}
+              />
+            )}
+          </div>
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        {/* ── Filter Bar ───────────────────────────────── */}
+        <div className="flex w-full items-center gap-2 mb-5 flex-wrap">
+          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+            {filters.gemeente && (
+              <Chip label={filters.gemeente} onRemove={() => handleRemoveFilter('gemeente')} />
+            )}
+            {filters.rechtbank_niveau && (
+              <Chip label={filters.rechtbank_niveau} onRemove={() => handleRemoveFilter('rechtbank_niveau')} />
+            )}
+            {filters.vergunningstype && (
+              <Chip label={VERGUNNINGSTYPE_LABELS[filters.vergunningstype] ?? filters.vergunningstype} onRemove={() => handleRemoveFilter('vergunningstype')} />
+            )}
+            {filters.rechtsgrond && (
+              <Chip label={THEMA_LABELS[filters.rechtsgrond] ?? filters.rechtsgrond} onRemove={() => handleRemoveFilter('rechtsgrond')} />
+            )}
+            {filters.periode && (
+              <Chip label={PERIODE_LABELS[filters.periode] ?? filters.periode} onRemove={() => handleRemoveFilter('periode')} />
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-[11px] font-medium text-slate-400 transition-colors hover:text-slate-600 shrink-0 ml-1"
+              >
+                Wis alles
+              </button>
+            )}
+          </div>
           <button
             onClick={goToWizard}
-            className="flex items-center gap-1.5 rounded-lg border border-amber-500/25 px-3 py-1.5 text-xs text-amber-400 transition-colors hover:bg-amber-500/10"
+            className="flex items-center gap-1.5 rounded-full bg-[#0E1111] h-[36px] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 shrink-0"
           >
             <SlidersHorizontal size={13} />
             Filters aanpassen
           </button>
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-neutral-500 transition-colors hover:text-neutral-700"
-            >
-              Wis alles
-            </button>
-          )}
         </div>
-      </div>
 
-      {/* Results panel */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-        {/* Benchmark stats */}
-        {!isLoading && facets?.uitkomst && totalCount > 0 && (
-          <BenchmarkBar
-            uitkomstFacets={facets.uitkomst}
-            totalCount={totalCount}
-            results={allResults}
-          />
-        )}
-
-        {/* Doorlooptijd per type + Opponent profiles side by side */}
+        {/* ── Analytics Cards ──────────────────────────── */}
         {!isLoading && (doorlooptijdPerType.length > 0 || opponentProfiles.length > 0) && (
-          <div className="mb-4 grid gap-4 lg:grid-cols-2">
-            {doorlooptijdPerType.length > 0 && (
-              <DoorlooptijdChart data={doorlooptijdPerType} />
-            )}
+          <div className={`mb-5 ${
+            doorlooptijdPerType.length > 0 && opponentProfiles.length > 0
+              ? 'grid gap-4 lg:grid-cols-2'
+              : ''
+          }`}>
             {opponentProfiles.length > 0 && (
               <OpponentProfiles profiles={opponentProfiles} />
             )}
+            {doorlooptijdPerType.length > 0 && (
+              <DoorlooptijdChart data={doorlooptijdPerType} />
+            )}
+          </div>
+        )}
+
+        {/* ── Uitkomst filter pills ──────────────────── */}
+        {!isLoading && totalCount > 0 && (
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            {[
+              { value: 'afgewezen', label: 'Afgewezen', activeBg: 'bg-red-500/15 border-red-500/30 text-red-600' },
+              { value: 'toegewezen', label: 'Toegewezen', activeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600' },
+              { value: 'gedeeltelijk', label: 'Gedeeltelijk', activeBg: 'bg-[#F9A826]/15 border-[#F9A826]/30 text-[#D48B1A]' },
+            ].map(({ value, label, activeBg }) => {
+              const isActive = filters.uitkomst === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => handleFilterChange('uitkomst', isActive ? undefined : value)}
+                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
+                    isActive
+                      ? activeBg
+                      : 'bg-white border-[#EAEFEF] text-[#0E1111] hover:border-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         )}
 
         {/* Broaden suggestion */}
         {!isLoading && totalCount < 3 && hasActiveFilters && (
-          <div className="mb-4">
+          <div className="mb-5">
             <BroadenSuggestion
               activeFilters={filters}
               facets={facets}
@@ -292,14 +322,11 @@ function JurisprudentiePage() {
           </div>
         )}
 
-        {/* Loading skeleton */}
+        {/* ── Loading ──────────────────────────────────── */}
         {isLoading && (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="space-y-2 rounded-lg border border-neutral-200 bg-aura-glass-white/60 p-4"
-              >
+              <div key={i} className="space-y-2 rounded-[24px] border border-[#EAEFEF] bg-white p-5">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />
                 <div className="flex gap-2">
@@ -312,41 +339,48 @@ function JurisprudentiePage() {
           </div>
         )}
 
-        {/* Results list */}
+        {/* ── Ruling Cards ─────────────────────────────── */}
         {!isLoading && allResults.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {allResults.map((ruling) => (
-              <RulingCard key={ruling.ecli} ruling={ruling} />
+              <RulingCard key={ruling.ecli} ruling={ruling} onFilterChange={handleFilterChange} />
             ))}
           </div>
         )}
 
-        {/* Empty state */}
+        {/* ── Empty State ──────────────────────────────── */}
         {!isLoading && allResults.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Scale size={40} className="mb-3 text-neutral-500" />
-            <h2 className="text-lg font-semibold text-neutral-700">Geen uitspraken gevonden</h2>
-            <p className="mt-1 max-w-sm text-sm text-neutral-500">
+            <Scale size={40} strokeWidth={1.5} className="mb-3 text-slate-300" />
+            <h2 className="text-[15px] font-bold text-[#0E1111]">Geen uitspraken gevonden</h2>
+            <p className="mt-1 max-w-sm text-[13px] text-slate-400">
               Pas je filters aan om meer resultaten te vinden.
             </p>
             <button
               onClick={goToWizard}
-              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-aura-canvas transition-colors hover:bg-amber-400"
+              className="mt-5 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
             >
               Filters aanpassen
             </button>
           </div>
         )}
 
-        {/* Loading more indicator */}
+        {/* Loading more */}
         {isFetchingNextPage && (
           <div className="mt-4 flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-amber-500" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#F9A826]" />
           </div>
         )}
 
         {/* Infinite scroll sentinel */}
         <div ref={sentinelRef} className="h-4" />
+
+        {/* ── Trust metadata ───────────────────────────── */}
+        <div className="mt-6 flex items-center justify-between">
+          <span className="text-[9px] uppercase tracking-wider text-slate-300">
+            Jurisprudentie · {totalCount} uitspraken
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -354,11 +388,11 @@ function JurisprudentiePage() {
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0E1111] shadow-sm border border-[#EAEFEF]">
       {label}
       <button
         onClick={onRemove}
-        className="ml-0.5 text-amber-400/50 transition-colors hover:text-amber-300"
+        className="text-slate-300 transition-colors hover:text-slate-500"
       >
         <X size={10} />
       </button>

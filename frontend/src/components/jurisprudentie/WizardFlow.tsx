@@ -78,7 +78,13 @@ export default function WizardFlow({
     return null
   })
 
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => {
+    // If filters are already set, start at the last step so user can tweak
+    if (filters.periode || filters.rechtsgrond || filters.vergunningstype || filters.gemeente || filters.rechtbank_niveau) {
+      return 4
+    }
+    return 0
+  })
   const [gemeenteSearch, setGemeenteSearch] = useState('')
 
   const gemeenteFacets = facets?.gemeente ?? []
@@ -125,8 +131,8 @@ export default function WizardFlow({
   const progressIndex = stepSequence.indexOf(step)
 
   return (
-    <div className="flex h-full flex-col bg-aura-canvas">
-      {/* ── Progress dots (clickable) ──────────────────── */}
+    <div className="flex h-full flex-col bg-[#FAFCFA] rounded-[40px] pb-14 md:pb-0">
+      {/* ── Progress dots ──────────────────────────────── */}
       <div className="flex justify-center pt-8">
         <div className="flex items-center gap-2">
           {stepSequence.map((s, i) => (
@@ -135,10 +141,10 @@ export default function WizardFlow({
               onClick={() => setStep(s)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 i === progressIndex
-                  ? 'w-8 bg-amber-500'
+                  ? 'w-8 bg-[#F9A826]'
                   : i < progressIndex
-                    ? 'w-2 bg-amber-500/50 hover:bg-amber-400/70'
-                    : 'w-2 bg-neutral-300 hover:bg-neutral-400'
+                    ? 'w-2 bg-[#F9A826]/50 hover:bg-[#F9A826]/70'
+                    : 'w-2 bg-slate-200 hover:bg-slate-300'
               }`}
             />
           ))}
@@ -153,7 +159,7 @@ export default function WizardFlow({
             title="Op welk niveau zoek je?"
             subtitle="Kies het schaalniveau voor je zoekopdracht"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <WizardCard
                 label="Landelijk"
                 desc="Zoek door alle uitspraken in heel Nederland"
@@ -197,7 +203,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.rechtbank_niveau?.length && (
-              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
+              <p className="mt-4 text-[13px] text-slate-400">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -211,7 +217,7 @@ export default function WizardFlow({
                 placeholder="Zoek gemeente..."
                 value={gemeenteSearch}
                 onChange={(e) => setGemeenteSearch(e.target.value)}
-                className="h-10 text-base"
+                className="h-10 text-[13px]"
               />
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {filteredGemeenten.map((f) => (
@@ -227,7 +233,7 @@ export default function WizardFlow({
                   />
                 ))}
                 {filteredGemeenten.length === 0 && gemeenteSearch.trim() && (
-                  <p className="col-span-full py-4 text-center text-sm text-neutral-500">
+                  <p className="col-span-full py-4 text-center text-[13px] text-slate-400">
                     Geen gemeenten gevonden voor &quot;{gemeenteSearch}&quot;
                   </p>
                 )}
@@ -244,7 +250,7 @@ export default function WizardFlow({
           >
             <button
               onClick={() => setStep(0)}
-              className="rounded-lg bg-neutral-200 px-4 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-300"
+              className="rounded-full bg-[#F2F6F3] px-5 py-2.5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#E8EEEA]"
             >
               Ga naar schaalniveau
             </button>
@@ -269,7 +275,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.vergunningstype?.length && (
-              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
+              <p className="mt-4 text-[13px] text-slate-400">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -293,7 +299,7 @@ export default function WizardFlow({
               ))}
             </div>
             {!facets?.rechtsgrond?.length && (
-              <p className="mt-4 text-sm text-neutral-500">Gegevens laden...</p>
+              <p className="mt-4 text-[13px] text-slate-400">Gegevens laden...</p>
             )}
           </StepPage>
         )}
@@ -301,7 +307,7 @@ export default function WizardFlow({
         {/* Step 4: Periode */}
         {step === 4 && (
           <StepPage title="Welke periode?" subtitle="Hoe ver wil je terugkijken?">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(
                 [
                   { value: '1jaar', label: '1 jaar', sub: 'Sinds vorig jaar' },
@@ -334,9 +340,9 @@ export default function WizardFlow({
         {step > 0 ? (
           <button
             onClick={goBack}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-neutral-600 transition-colors hover:text-aura-ink"
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-slate-400 transition-colors hover:text-[#0E1111]"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={14} />
             Vorige
           </button>
         ) : (
@@ -347,17 +353,17 @@ export default function WizardFlow({
           {step > 0 && step < 4 && (
             <button
               onClick={goNext}
-              className="rounded-lg px-4 py-2 text-sm text-neutral-500 transition-colors hover:text-neutral-700"
+              className="rounded-full px-4 py-2 text-[13px] font-medium text-slate-400 transition-colors hover:text-slate-600"
             >
               Overslaan
             </button>
           )}
           <button
             onClick={onComplete}
-            className="flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-aura-canvas transition-colors hover:bg-amber-400"
+            className="flex items-center gap-2 rounded-full bg-[#0E1111] px-6 py-2.5 text-[13px] font-semibold text-[#F9A826] transition-colors hover:bg-slate-800"
           >
             Toon {totalCount} resultaten
-            <ArrowRight size={16} />
+            <ArrowRight size={14} />
           </button>
         </div>
       </div>
@@ -378,8 +384,16 @@ function StepPage({
 }) {
   return (
     <div className="w-full max-w-3xl text-center">
-      <h1 className="text-2xl font-bold text-aura-ink sm:text-3xl">{title}</h1>
-      <p className="mt-2 text-sm text-neutral-600 sm:text-base">{subtitle}</p>
+      <p
+        className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-3"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+      >
+        Jurisprudentie
+      </p>
+      <h1 className="text-[28px] font-black tracking-tight text-[#0E1111] sm:text-[36px]">
+        {title}
+      </h1>
+      <p className="mt-2 text-[13px] text-slate-500">{subtitle}</p>
       <div className="mt-8">{children}</div>
     </div>
   )
@@ -403,27 +417,33 @@ function WizardCard({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col overflow-hidden rounded-xl border-2 px-4 py-5 text-left transition-all sm:p-6 ${
+      className={`relative flex flex-col overflow-hidden rounded-[24px] border-2 px-5 py-5 text-left transition-all ${
         selected
-          ? 'border-amber-500 bg-amber-500/10'
-          : 'border-neutral-200 bg-aura-glass-white/60 hover:border-neutral-300'
+          ? 'border-[#0E1111] bg-[#F9A826]'
+          : 'border-[#0E1111]/40 bg-white hover:border-[#0E1111]/60 hover:shadow-sm'
       }`}
     >
       {selected && (
-        <Check size={16} className="absolute right-3 top-3 text-amber-400" />
+        <Check size={14} className="absolute right-3 top-3 text-[#0E1111]" />
       )}
       <span
-        className={`block min-h-[1.75rem] break-words text-base font-semibold leading-6 sm:text-lg sm:leading-7 ${
-          selected ? 'text-amber-300' : 'text-aura-ink'
+        className={`block text-[15px] font-bold leading-snug ${
+          selected ? 'text-[#0E1111]' : 'text-[#0E1111]'
         }`}
       >
         {label}
       </span>
-      <span className="mt-1 block min-h-[2.5rem] text-sm leading-5 text-neutral-600">
-        {desc ?? '\u00A0'}
-      </span>
+      {desc && (
+        <span className={`mt-1.5 block text-[12px] leading-relaxed ${
+          selected ? 'text-[#0E1111]/60' : 'text-slate-400'
+        }`}>
+          {desc}
+        </span>
+      )}
       {count != null && (
-        <span className="mt-auto block pt-2 text-sm tabular-nums text-neutral-500">
+        <span className={`mt-auto block pt-3 text-[11px] font-semibold tabular-nums ${
+          selected ? 'text-[#0E1111]/70' : 'text-[#F9A826]'
+        }`}>
           {count} zaken
         </span>
       )}
@@ -445,17 +465,19 @@ function SubCard({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
+      className={`flex items-center justify-between rounded-[12px] border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-all ${
         selected
-          ? 'border-amber-500/60 bg-amber-500/10 text-amber-300'
-          : 'border-neutral-300 text-neutral-700 hover:border-neutral-400 hover:bg-aura-glass-white/60'
+          ? 'border-[#0E1111] bg-[#F9A826] text-[#0E1111]'
+          : 'border-[#0E1111]/40 bg-white text-[#0E1111] hover:border-[#0E1111]/60 hover:shadow-sm'
       }`}
     >
       <span className="flex items-center gap-1.5">
-        {selected && <Check size={12} className="text-amber-400" />}
+        {selected && <Check size={12} className="text-[#0E1111]" />}
         {label}
       </span>
-      <span className="ml-1.5 text-xs text-neutral-500">({count})</span>
+      <span className={`ml-1.5 text-[11px] font-semibold tabular-nums ${
+        selected ? 'text-[#0E1111]/70' : 'text-[#F9A826]'
+      }`}>({count})</span>
     </button>
   )
 }

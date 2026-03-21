@@ -1080,51 +1080,80 @@ function MapPage() {
 
     fetchParcelCentroid(urlParcelId, accessToken)
       .then(async (centroid) => {
-        // Fetch full scan data so detail panel shows all fields
-        const full = await fetchParcelAtPoint(
-          centroid.lng,
-          centroid.lat,
-          accessToken,
-          { scanId: activeScanIdRef.current },
-        )
+        // Fly to parcel immediately — don't wait for enrichment
         exitGemeenteMode()
         setAutoEnableParcelsKey(key)
         setPropertyLngLat([centroid.lng, centroid.lat])
         setTier('none')
-        setActivePanel({ kind: 'parcel', parcel:
-          makeInspectorParcel({
-            parcelId: full.parcel_id,
-            address: full.address ?? centroid.address ?? fallbackAddress ?? null,
-            parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
-            gemeenteCode: full.gemeente_code ?? centroid.gemeente_code ?? null,
-            areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
-            hasPand: full.has_pand,
-            bouwjaar: full.bouwjaar ?? centroid.bouwjaar ?? null,
-            pandStatus: full.pand_status ?? centroid.pand_status ?? null,
-            score: full.score ?? null,
-            scoreCategory: full.score_category ?? null,
-            scoreBreakdown: full.score_breakdown ?? null,
-            potentieScore: full.potentie_score ?? null,
-            risicoScore: full.risico_score ?? null,
-            vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
-            vacancyConfidence: full.vacancy_confidence ?? null,
-            vacancyReasons: full.vacancy_reasons ?? null,
-            vacancyModelVersion: full.vacancy_model_version ?? null,
-            marketSignals: full.market_signals ?? null,
-            opportunitySignals: full.opportunity_signals ?? null,
-            buildingMetrics: full.building_metrics ?? null,
-            bestemmingen: full.bestemmingen ?? null,
-            hasReport: full.has_report,
-          })
-        })
-        if (full.geometry ?? centroid.geometry) {
+
+        if (centroid.geometry) {
           setParcelGeometryHighlight({
             lng: centroid.lng,
             lat: centroid.lat,
-            parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
-            areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
-            geometry: (full.geometry ?? centroid.geometry)!,
+            parcelCode: centroid.parcel_code ?? null,
+            areaM2: centroid.area_m2 ?? null,
+            geometry: centroid.geometry,
           })
+        }
+
+        // Open panel with basic centroid data first
+        const basicParcel = makeInspectorParcel({
+          parcelId: urlParcelId,
+          address: centroid.address ?? fallbackAddress ?? null,
+          parcelCode: centroid.parcel_code ?? null,
+          gemeenteCode: centroid.gemeente_code ?? null,
+          areaM2: centroid.area_m2 ?? null,
+          hasPand: centroid.has_pand ?? undefined,
+          bouwjaar: centroid.bouwjaar ?? null,
+          pandStatus: centroid.pand_status ?? null,
+        })
+        setActivePanel({ kind: 'parcel', parcel: basicParcel })
+
+        // Try to enrich with full scan data (score, building_metrics, vacancy, etc.)
+        try {
+          const full = await fetchParcelAtPoint(
+            centroid.lng,
+            centroid.lat,
+            accessToken,
+            { scanId: activeScanIdRef.current },
+          )
+          setActivePanel({ kind: 'parcel', parcel:
+            makeInspectorParcel({
+              parcelId: full.parcel_id,
+              address: full.address ?? centroid.address ?? fallbackAddress ?? null,
+              parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+              gemeenteCode: full.gemeente_code ?? centroid.gemeente_code ?? null,
+              areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+              hasPand: full.has_pand,
+              bouwjaar: full.bouwjaar ?? centroid.bouwjaar ?? null,
+              pandStatus: full.pand_status ?? centroid.pand_status ?? null,
+              score: full.score ?? null,
+              scoreCategory: full.score_category ?? null,
+              scoreBreakdown: full.score_breakdown ?? null,
+              potentieScore: full.potentie_score ?? null,
+              risicoScore: full.risico_score ?? null,
+              vacancySignal: (full.vacancy_signal as ScanResultItem['vacancy_signal']) ?? null,
+              vacancyConfidence: full.vacancy_confidence ?? null,
+              vacancyReasons: full.vacancy_reasons ?? null,
+              vacancyModelVersion: full.vacancy_model_version ?? null,
+              marketSignals: full.market_signals ?? null,
+              opportunitySignals: full.opportunity_signals ?? null,
+              buildingMetrics: full.building_metrics ?? null,
+              bestemmingen: full.bestemmingen ?? null,
+              hasReport: full.has_report,
+            })
+          })
+          if (full.geometry) {
+            setParcelGeometryHighlight({
+              lng: centroid.lng,
+              lat: centroid.lat,
+              parcelCode: full.parcel_code ?? centroid.parcel_code ?? null,
+              areaM2: full.area_m2 ?? centroid.area_m2 ?? null,
+              geometry: full.geometry,
+            })
+          }
+        } catch {
+          // Enrichment failed — basic panel + map centering still work
         }
       })
       .catch(() => {
