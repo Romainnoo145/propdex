@@ -16,12 +16,12 @@ function InstellingenIndexPage() {
       <div className="space-y-4">
         <AccountSection />
         <PasswordSection />
-        <NotificationsSection />
-        <SubscriptionSection />
+        <AppearanceSection />
       </div>
       <div className="space-y-4">
+        <SubscriptionSection />
         <CompanySection />
-        <AppearanceSection />
+        <NotificationsSection />
       </div>
     </div>
   )

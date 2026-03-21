@@ -16,6 +16,7 @@ export function CompanySection() {
       <div className="space-y-4">
         <Field label="Bedrijfsnaam" placeholder="Nog niet ingesteld" />
         <Field label="KvK-nummer" placeholder="Nog niet ingesteld" />
+        <Field label="BTW-nummer" placeholder="Nog niet ingesteld" />
         <Field label="Adres" placeholder="Nog niet ingesteld" />
         <Field label="Telefoon" placeholder="Nog niet ingesteld" />
         <Field label="Website" placeholder="Nog niet ingesteld" />
