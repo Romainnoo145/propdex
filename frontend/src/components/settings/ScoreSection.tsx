@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Sliders } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useOrgScoreWeights,
@@ -14,33 +14,24 @@ import {
   POTENTIE_FACTORS,
   RISICO_FACTORS,
 } from '@/lib/types/scoreWeights'
-import { BentoPod } from '@/components/primitives/BentoPod'
 import { PresetCards } from './PresetCards'
 import { BalanceSlider } from './BalanceSlider'
 import { FactorTable } from './FactorTable'
 
 const MIN_ACTIVE = 3
 
-/**
- * Score customization settings section
- *
- * Outer shell handles loading state.
- * Inner form component (ScoreForm) receives initialConfig and owns form state.
- * This pattern avoids setState-in-useEffect by passing loaded data as props.
- */
 export function ScoreSection() {
   const { data: loadedData, isLoading } = useOrgScoreWeights()
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-neutral-500">
+      <div className="flex items-center gap-2 text-slate-400">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Score-profiel laden...</span>
+        <span className="text-[13px]">Score-profiel laden...</span>
       </div>
     )
   }
 
-  // Pass loaded data as stable prop — ScoreForm initializes from it
   return <ScoreForm key={loadedData?.weights.preset} initialConfig={loadedData?.weights} />
 }
 
@@ -48,10 +39,6 @@ interface ScoreFormProps {
   initialConfig: ScoreWeightsConfig | undefined
 }
 
-/**
- * Inner form component — owns all mutable form state.
- * Keyed on preset so it re-mounts when server data changes.
- */
 function ScoreForm({ initialConfig }: ScoreFormProps) {
   const { mutateAsync: saveWeights, isPending: isSaving } = useSaveScoreWeights()
   const queryClient = useQueryClient()
@@ -63,10 +50,8 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
   const [isDirty, setIsDirty] = useState(false)
 
   const { data: jobStatus } = useRescoreJobStatus(activeJobId)
-
   const jobDone = jobStatus?.status === 'complete' || jobStatus?.status === 'failed'
 
-  // When rescore job completes, invalidate score-weights so map picks up new scores
   const prevJobDoneRef = useRef(false)
   useEffect(() => {
     if (jobStatus?.status === 'complete' && !prevJobDoneRef.current) {
@@ -75,7 +60,6 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
     prevJobDoneRef.current = jobDone
   }, [jobStatus?.status, jobDone, queryClient])
 
-  // Validation: at least MIN_ACTIVE factors active per category
   const activePotentieCount = POTENTIE_FACTORS.filter(
     (f) => (formState.potentie_weights[f.key] ?? 0) > 0,
   ).length
@@ -84,10 +68,8 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
   ).length
   const isValid = activePotentieCount >= MIN_ACTIVE && activeRisicoCount >= MIN_ACTIVE
   const isJobRunning = !!activeJobId && !jobDone
-
   const canSave = isDirty && isValid && !isSaving && !isJobRunning
 
-  // Resolve current preset weights for toggle restore
   const currentPreset = PRESETS.find((p) => p.id === formState.preset) ?? PRESETS[0]!
 
   const updateFormState = (partial: Partial<ScoreWeightsConfig>) => {
@@ -136,42 +118,47 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
 
   return (
     <div className="space-y-4">
-      {/* Section header */}
-      <BentoPod size="spacious">
-        <h2 className="text-lg font-semibold text-aura-ink">Score profiel</h2>
-        <p className="mt-1 text-sm text-neutral-600">
+      {/* Header */}
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Sliders size={14} className="text-[#F9A826]" />
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
+            Score profiel
+          </p>
+        </div>
+        <p className="text-[13px] text-slate-500">
           Pas de scoremethode aan voor je organisatie
         </p>
-      </BentoPod>
+      </div>
 
       {/* Preset cards */}
-      <BentoPod size="spacious" className="space-y-3">
-        <p className="text-sm font-medium text-aura-ink">Kies een startprofiel</p>
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+        <p className="text-[12px] font-semibold text-[#0E1111]">Kies een startprofiel</p>
         <PresetCards
           presets={PRESETS}
           activePreset={formState.preset}
           onSelect={handlePresetSelect}
         />
-      </BentoPod>
+      </div>
 
       {/* Balance slider */}
-      <BentoPod size="spacious" className="space-y-3">
-        <p className="text-sm font-medium text-aura-ink">
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+        <p className="text-[12px] font-semibold text-[#0E1111]">
           Potentie / Risico verhouding
         </p>
         <BalanceSlider
           value={formState.potentie_risico_balance}
           onChange={(val) => updateFormState({ potentie_risico_balance: val })}
         />
-      </BentoPod>
+      </div>
 
       {/* Score threshold */}
-      <BentoPod size="spacious" className="space-y-3">
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-aura-ink">
+          <p className="text-[12px] font-semibold text-[#0E1111]">
             Minimale score op kaart
           </p>
-          <span className="text-sm font-bold text-aura-ink tabular-nums">
+          <span className="text-[14px] font-black text-[#0E1111] tabular-nums">
             {formState.score_threshold}
           </span>
         </div>
@@ -184,17 +171,17 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           onChange={(e) =>
             updateFormState({ score_threshold: Number(e.target.value) })
           }
-          className="w-full accent-aura-amber"
+          className="w-full accent-[#F9A826]"
         />
-        <div className="flex justify-between text-[11px] text-neutral-400">
+        <div className="flex justify-between text-[11px] text-slate-400">
           <span>Alles tonen</span>
           <span>Alleen topkansen</span>
         </div>
-      </BentoPod>
+      </div>
 
       {/* Potentie factor table */}
-      <BentoPod size="spacious" className="space-y-3">
-        <p className="text-sm font-medium text-aura-ink">Potentie factoren</p>
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+        <p className="text-[12px] font-semibold text-[#0E1111]">Potentie factoren</p>
         <FactorTable
           factors={POTENTIE_FACTORS}
           weights={formState.potentie_weights}
@@ -202,11 +189,11 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           onChange={handlePotentieWeightChange}
           minActive={MIN_ACTIVE}
         />
-      </BentoPod>
+      </div>
 
       {/* Risico factor table */}
-      <BentoPod size="spacious" className="space-y-3">
-        <p className="text-sm font-medium text-aura-ink">Risico factoren</p>
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+        <p className="text-[12px] font-semibold text-[#0E1111]">Risico factoren</p>
         <FactorTable
           factors={RISICO_FACTORS}
           weights={formState.risico_weights}
@@ -214,15 +201,15 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           onChange={handleRisicoWeightChange}
           minActive={MIN_ACTIVE}
         />
-      </BentoPod>
+      </div>
 
       {/* Save button area */}
-      <BentoPod size="spacious" className="space-y-4">
+      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
         <button
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="h-12 rounded-full bg-aura-obsidian px-8 text-[15px] font-bold tracking-tight text-white transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="h-12 rounded-full bg-[#0E1111] px-8 text-[13px] font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSaving || isJobRunning ? (
             <span className="flex items-center gap-2">
@@ -234,34 +221,33 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           )}
         </button>
 
-        {/* Impact preview when job completes */}
         {jobStatus?.status === 'complete' && (
-          <div className="rounded-xl bg-aura-canvas p-4 space-y-2">
-            <p className="text-sm font-semibold text-aura-ink">
+          <div className="rounded-[16px] bg-[#F2F6F3] p-5 space-y-3">
+            <p className="text-[12px] font-semibold text-[#0E1111]">
               Herberekening voltooid
             </p>
-            <div className="grid grid-cols-3 gap-3 mt-2">
+            <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
-                <p className="text-lg font-bold text-green-600">
+                <p className="text-[18px] font-black text-emerald-600 tabular-nums">
                   {jobStatus.up_count.toLocaleString('nl-NL')}
                 </p>
-                <p className="text-xs text-neutral-500">percelen omhoog</p>
+                <p className="text-[11px] text-slate-400">percelen omhoog</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-red-500">
+                <p className="text-[18px] font-black text-red-500 tabular-nums">
                   {jobStatus.down_count.toLocaleString('nl-NL')}
                 </p>
-                <p className="text-xs text-neutral-500">percelen omlaag</p>
+                <p className="text-[11px] text-slate-400">percelen omlaag</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-neutral-600">
+                <p className="text-[18px] font-black text-slate-500 tabular-nums">
                   {jobStatus.unchanged_count.toLocaleString('nl-NL')}
                 </p>
-                <p className="text-xs text-neutral-500">ongewijzigd</p>
+                <p className="text-[11px] text-slate-400">ongewijzigd</p>
               </div>
             </div>
             {jobStatus.avg_delta !== 0 && (
-              <p className="text-xs text-neutral-500 text-center">
+              <p className="text-[11px] text-slate-400 text-center">
                 Gemiddelde wijziging:{' '}
                 {jobStatus.avg_delta > 0 ? '+' : ''}
                 {jobStatus.avg_delta.toFixed(1)} punt
@@ -270,13 +256,12 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           </div>
         )}
 
-        {/* Job failed */}
         {jobStatus?.status === 'failed' && (
-          <p className="text-sm text-red-500">
+          <p className="text-[13px] text-red-500">
             Herberekening mislukt — probeer opnieuw
           </p>
         )}
-      </BentoPod>
+      </div>
     </div>
   )
 }

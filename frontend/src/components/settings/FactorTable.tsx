@@ -8,14 +8,6 @@ interface FactorTableProps {
   minActive?: number
 }
 
-/**
- * Factor toggle table (potentie or risico)
- *
- * Columns: Factor name | Description | Toggle
- * - Toggling off sets weight to 0
- * - Toggling on restores the current preset weight
- * - Shows validation warning when active count < minActive
- */
 export function FactorTable({
   factors,
   weights,
@@ -39,19 +31,19 @@ export function FactorTable({
           return (
             <label
               key={factor.key}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-aura-glass-white/40 transition-colors cursor-pointer"
+              className="flex items-center gap-3 rounded-[12px] px-3.5 py-2.5 hover:bg-[#F2F6F3] transition-colors cursor-pointer"
             >
               <input
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => handleToggle(factor.key, e.target.checked)}
-                className="h-4 w-4 shrink-0 rounded accent-aura-amber cursor-pointer"
+                className="h-4 w-4 shrink-0 rounded accent-[#F9A826] cursor-pointer"
               />
               <div className="min-w-0">
-                <span className="text-sm font-medium text-aura-ink">
+                <span className="text-[13px] font-semibold text-[#0E1111]">
                   {factor.label}
                 </span>
-                <p className="text-xs text-neutral-500 truncate">
+                <p className="text-[11px] text-slate-400 truncate">
                   {factor.description}
                 </p>
               </div>
@@ -60,7 +52,7 @@ export function FactorTable({
         })}
       </div>
       {showWarning && (
-        <p className="mt-2 text-xs text-red-500">
+        <p className="mt-2 text-[11px] text-red-500">
           Minimaal {minActive} factoren moeten actief zijn
         </p>
       )}
