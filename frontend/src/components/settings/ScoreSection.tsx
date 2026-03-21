@@ -118,17 +118,36 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header with save button */}
       <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Sliders size={14} className="text-[#F9A826]" />
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
-            Score profiel
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Sliders size={14} className="text-[#F9A826]" />
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
+                Score profiel
+              </p>
+            </div>
+            <p className="text-[13px] text-slate-500">
+              Pas de scoremethode aan voor je organisatie
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            className="rounded-full bg-[#0E1111] px-6 py-2.5 text-[12px] font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            {isSaving || isJobRunning ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Herberekening...
+              </span>
+            ) : (
+              'Opslaan + herbereken'
+            )}
+          </button>
         </div>
-        <p className="text-[13px] text-slate-500">
-          Pas de scoremethode aan voor je organisatie
-        </p>
       </div>
 
       {/* Top row: presets + balance/threshold */}
@@ -210,65 +229,47 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
       </div>
       </div>
 
-      {/* Save button area */}
-      <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="h-12 rounded-full bg-[#0E1111] px-8 text-[13px] font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {isSaving || isJobRunning ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Herberekening bezig...
-            </span>
-          ) : (
-            'Opslaan + herbereken'
-          )}
-        </button>
-
-        {jobStatus?.status === 'complete' && (
-          <div className="rounded-[16px] bg-[#F2F6F3] p-5 space-y-3">
-            <p className="text-[12px] font-semibold text-[#0E1111]">
-              Herberekening voltooid
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <p className="text-[18px] font-black text-emerald-600 tabular-nums">
-                  {jobStatus.up_count.toLocaleString('nl-NL')}
-                </p>
-                <p className="text-[11px] text-slate-400">percelen omhoog</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[18px] font-black text-red-500 tabular-nums">
-                  {jobStatus.down_count.toLocaleString('nl-NL')}
-                </p>
-                <p className="text-[11px] text-slate-400">percelen omlaag</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[18px] font-black text-slate-500 tabular-nums">
-                  {jobStatus.unchanged_count.toLocaleString('nl-NL')}
-                </p>
-                <p className="text-[11px] text-slate-400">ongewijzigd</p>
-              </div>
-            </div>
-            {jobStatus.avg_delta !== 0 && (
-              <p className="text-[11px] text-slate-400 text-center">
-                Gemiddelde wijziging:{' '}
-                {jobStatus.avg_delta > 0 ? '+' : ''}
-                {jobStatus.avg_delta.toFixed(1)} punt
-              </p>
-            )}
-          </div>
-        )}
-
-        {jobStatus?.status === 'failed' && (
-          <p className="text-[13px] text-red-500">
-            Herberekening mislukt — probeer opnieuw
+      {/* Job status feedback */}
+      {jobStatus?.status === 'complete' && (
+        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-3">
+          <p className="text-[12px] font-semibold text-[#0E1111]">
+            Herberekening voltooid
           </p>
-        )}
-      </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center">
+              <p className="text-[18px] font-black text-emerald-600 tabular-nums">
+                {jobStatus.up_count.toLocaleString('nl-NL')}
+              </p>
+              <p className="text-[11px] text-slate-400">percelen omhoog</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[18px] font-black text-red-500 tabular-nums">
+                {jobStatus.down_count.toLocaleString('nl-NL')}
+              </p>
+              <p className="text-[11px] text-slate-400">percelen omlaag</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[18px] font-black text-slate-500 tabular-nums">
+                {jobStatus.unchanged_count.toLocaleString('nl-NL')}
+              </p>
+              <p className="text-[11px] text-slate-400">ongewijzigd</p>
+            </div>
+          </div>
+          {jobStatus.avg_delta !== 0 && (
+            <p className="text-[11px] text-slate-400 text-center">
+              Gemiddelde wijziging:{' '}
+              {jobStatus.avg_delta > 0 ? '+' : ''}
+              {jobStatus.avg_delta.toFixed(1)} punt
+            </p>
+          )}
+        </div>
+      )}
+
+      {jobStatus?.status === 'failed' && (
+        <p className="text-[13px] text-red-500">
+          Herberekening mislukt — probeer opnieuw
+        </p>
+      )}
     </div>
   )
 }
