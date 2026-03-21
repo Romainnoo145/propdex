@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Bookmark, MapPin, ChevronDown, ChevronRight, Search, X, Check } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Bookmark, MapPin, ChevronDown, ChevronRight, Search, X, Check, Heart } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -9,22 +10,6 @@ import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
 const STAGES: PipelineStage[] = ['Gesignaleerd', 'Onderzoek', 'Contact', 'Besluit', 'Afgerond']
-
-const STAGE_COLORS: Record<PipelineStage, string> = {
-  Gesignaleerd: 'bg-neutral-200 text-neutral-700',
-  Onderzoek: 'bg-blue-100 text-blue-700',
-  Contact: 'bg-amber-100 text-amber-700',
-  Besluit: 'bg-purple-100 text-purple-700',
-  Afgerond: 'bg-emerald-100 text-emerald-700',
-}
-
-const STAGE_COLORS_ACTIVE: Record<PipelineStage, string> = {
-  Gesignaleerd: 'bg-neutral-800 text-white',
-  Onderzoek: 'bg-blue-600 text-white',
-  Contact: 'bg-amber-500 text-white',
-  Besluit: 'bg-purple-600 text-white',
-  Afgerond: 'bg-emerald-600 text-white',
-}
 
 export const Route = createFileRoute('/_authenticated/opgeslagen')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -35,11 +20,87 @@ export const Route = createFileRoute('/_authenticated/opgeslagen')({
   component: OpgeslagenPage,
 })
 
+/* ── Animations ────────────────────────────────────────────── */
+
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
+}
+
+/* ── Helpers ───────────────────────────────────────────────── */
+
 interface GemeenteGroup {
   gemeente_naam: string
   gemeente_code: string | null
   parcels: FavoriteResponse[]
+  stageCounts: Record<PipelineStage, number>
 }
+
+function buildGroups(favorites: FavoriteResponse[]): GemeenteGroup[] {
+  const map = new Map<string, GemeenteGroup>()
+
+  for (const fav of favorites) {
+    const key = fav.gemeente_naam ?? 'Onbekend'
+    if (!map.has(key)) {
+      map.set(key, {
+        gemeente_naam: key,
+        gemeente_code: fav.gemeente_code,
+        parcels: [],
+        stageCounts: { Gesignaleerd: 0, Onderzoek: 0, Contact: 0, Besluit: 0, Afgerond: 0 },
+      })
+    }
+    const group = map.get(key)!
+    group.parcels.push(fav)
+    group.stageCounts[fav.pipeline_stage]++
+  }
+
+  const sorted = [...map.values()].sort((a, b) =>
+    a.gemeente_naam.localeCompare(b.gemeente_naam, 'nl'),
+  )
+  for (const group of sorted) {
+    group.parcels.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+  }
+  return sorted
+}
+
+/* ── Stage progress ring (mini) ────────────────────────────── */
+
+function StageRing({ counts, total }: { counts: Record<PipelineStage, number>; total: number }) {
+  const r = 18
+  const circumference = 2 * Math.PI * r
+  // Show progress as: Afgerond = full, Besluit = 80%, Contact = 60%, Onderzoek = 40%, Gesignaleerd = 20%
+  const progress = total > 0
+    ? (counts.Afgerond * 1 + counts.Besluit * 0.8 + counts.Contact * 0.6 + counts.Onderzoek * 0.4 + counts.Gesignaleerd * 0.2) / total
+    : 0
+
+  return (
+    <svg viewBox="0 0 44 44" className="h-10 w-10 shrink-0" style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx="22" cy="22" r={r} fill="none" stroke="#f1f5f9" strokeWidth="4" />
+      <motion.circle
+        cx="22"
+        cy="22"
+        r={r}
+        fill="none"
+        stroke="#F9A826"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        initial={{ strokeDashoffset: circumference }}
+        animate={{ strokeDashoffset: circumference - progress * circumference }}
+        transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
+      />
+    </svg>
+  )
+}
+
+/* ── Main Page ─────────────────────────────────────────────── */
 
 function OpgeslagenPage() {
   const navigate = useNavigate()
@@ -48,36 +109,12 @@ function OpgeslagenPage() {
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Group favorites by gemeente
-  const groups = useMemo(() => {
-    if (!favorites?.length) return []
+  const groups = useMemo(() => buildGroups(favorites ?? []), [favorites])
 
-    const map = new Map<string, GemeenteGroup>()
-
-    for (const fav of favorites) {
-      const key = fav.gemeente_naam ?? 'Onbekend'
-      if (!map.has(key)) {
-        map.set(key, { gemeente_naam: key, gemeente_code: fav.gemeente_code, parcels: [] })
-      }
-      map.get(key)!.parcels.push(fav)
-    }
-
-    const sorted = [...map.values()].sort((a, b) =>
-      a.gemeente_naam.localeCompare(b.gemeente_naam, 'nl'),
-    )
-    for (const group of sorted) {
-      group.parcels.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
-    }
-    return sorted
-  }, [favorites])
-
-  // Filter by search + pipeline stage
+  // Filter
   const filteredGroups = useMemo(() => {
     let result = groups
 
-    // Stage filter
     if (stageFilter) {
       result = result
         .map((g) => ({
@@ -87,7 +124,6 @@ function OpgeslagenPage() {
         .filter((g) => g.parcels.length > 0)
     }
 
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim()
       result = result
@@ -107,8 +143,9 @@ function OpgeslagenPage() {
   }, [groups, searchQuery, stageFilter])
 
   const totalCount = favorites?.length ?? 0
+  const gemeenteCount = groups.length
 
-  // Stage counts for filter bar
+  // Stage counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const stage of STAGES) counts[stage] = 0
@@ -119,11 +156,7 @@ function OpgeslagenPage() {
   }, [favorites])
 
   const setStageFilter = (stage: PipelineStage | undefined) => {
-    navigate({
-      to: '/opgeslagen',
-      search: { stage },
-      replace: true,
-    })
+    navigate({ to: '/opgeslagen', search: { stage }, replace: true })
   }
 
   const toggleGemeente = (naam: string) => {
@@ -152,7 +185,6 @@ function OpgeslagenPage() {
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
         </div>
       </ResultsShell>
     )
@@ -160,136 +192,229 @@ function OpgeslagenPage() {
 
   return (
     <ResultsShell>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-aura-ink tracking-tight font-display">
-            Opgeslagen
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {totalCount} {totalCount === 1 ? 'perceel' : 'percelen'} opgeslagen
-          </p>
-        </div>
-      </div>
-
-      {totalCount === 0 ? (
-        <EmptyState
-          icon={<Bookmark size={40} strokeWidth={1.5} className="text-slate-300" />}
-          title="Geen opgeslagen percelen"
-          description="Gebruik het hartje op de kaart om percelen op te slaan."
-        />
-      ) : (
-        <>
-          {/* Pipeline stage filter */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            <button
-              onClick={() => setStageFilter(undefined)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                !stageFilter
-                  ? 'bg-aura-ink text-white'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-              }`}
-            >
-              Alle ({totalCount})
-            </button>
-            {STAGES.map((stage) => (
-              <button
-                key={stage}
-                onClick={() => setStageFilter(stageFilter === stage ? undefined : stage)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  stageFilter === stage
-                    ? STAGE_COLORS_ACTIVE[stage]
-                    : `${STAGE_COLORS[stage]} hover:opacity-80`
-                }`}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        {/* ── Hero Section ─────────────────────────────── */}
+        <motion.div variants={fadeUp} className="mb-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p
+                className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
               >
-                {stage} ({stageCounts[stage] ?? 0})
-              </button>
-            ))}
-          </div>
-
-          {/* Search */}
-          <div className="relative mb-5">
-            <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek op adres, perceel of gemeente..."
-              className="w-full h-10 pl-10 pr-4 bg-[#F2F6F3] rounded-full text-[13px] text-aura-ink placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-aura-amber/30 transition"
-            />
-          </div>
-
-          {/* Gemeente groups */}
-          <div className="space-y-3">
-            {filteredGroups.map((group) => {
-              const isExpanded = expandedGemeenten.has(group.gemeente_naam)
-
-              return (
-                <div
-                  key={group.gemeente_naam}
-                  className="bg-white/60 backdrop-blur-xl rounded-[24px] border border-white/30 overflow-hidden"
-                >
-                  {/* Gemeente header */}
-                  <button
-                    onClick={() => toggleGemeente(group.gemeente_naam)}
-                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#F2F6F3]/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F2F6F3]">
-                        <MapPin size={16} className="text-aura-ink" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[14px] font-bold text-aura-ink tracking-tight">
-                          {group.gemeente_naam}
-                        </p>
-                        <p className="text-[12px] text-slate-500">
-                          {group.parcels.length} {group.parcels.length === 1 ? 'perceel' : 'percelen'}
-                        </p>
-                      </div>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronDown size={18} className="text-slate-400" />
-                    ) : (
-                      <ChevronRight size={18} className="text-slate-400" />
-                    )}
-                  </button>
-
-                  {/* Parcel list */}
-                  {isExpanded && (
-                    <div className="border-t border-[#EAEFEF]">
-                      {group.parcels.map((parcel) => (
-                        <ParcelRow
-                          key={parcel.id}
-                          parcel={parcel}
-                          onNavigate={() => navigateToParcel(parcel)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {filteredGroups.length === 0 && (searchQuery || stageFilter) && (
-            <div className="text-center py-12 text-[13px] text-slate-400">
-              Geen resultaten
-              {stageFilter && ` voor stage "${stageFilter}"`}
-              {searchQuery && ` met zoekterm "${searchQuery}"`}
+                Portfolio
+              </p>
+              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+                {totalCount}
+              </h1>
+              <p className="text-[13px] text-slate-500 mt-1">
+                {totalCount === 1 ? 'perceel' : 'percelen'} in {gemeenteCount} {gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}
+              </p>
             </div>
-          )}
-        </>
-      )}
+
+            {/* Mini stage summary */}
+            {totalCount > 0 && (
+              <div className="flex items-center gap-4">
+                {STAGES.filter(s => stageCounts[s] > 0).map((stage) => (
+                  <div key={stage} className="text-right">
+                    <span className="text-[20px] font-black text-[#0E1111] tabular-nums leading-none">
+                      {stageCounts[stage]}
+                    </span>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">
+                      {stage}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {totalCount === 0 ? (
+          <motion.div variants={fadeUp}>
+            <EmptyState
+              icon={<Heart size={40} strokeWidth={1.5} className="text-slate-300" />}
+              title="Geen opgeslagen percelen"
+              description="Gebruik het hartje op de kaart om percelen op te slaan in je portfolio."
+            />
+          </motion.div>
+        ) : (
+          <>
+            {/* ── Pipeline Filter Bar ──────────────────── */}
+            <motion.div variants={fadeUp} className="flex w-full h-[44px] rounded-full p-1 bg-[#F2F6F3] mb-5">
+              <button
+                onClick={() => setStageFilter(undefined)}
+                className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '12px',
+                  fontWeight: !stageFilter ? 700 : 600,
+                  color: !stageFilter ? undefined : '#94a3b8',
+                }}
+              >
+                {!stageFilter && (
+                  <motion.div
+                    layoutId="pipeline-tab"
+                    className="absolute inset-0 rounded-full bg-[#0E1111]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className={`relative z-10 ${!stageFilter ? 'text-white' : ''}`}>
+                  Alle
+                </span>
+              </button>
+              {STAGES.map((stage) => (
+                <button
+                  key={stage}
+                  onClick={() => setStageFilter(stageFilter === stage ? undefined : stage)}
+                  className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '12px',
+                    fontWeight: stageFilter === stage ? 700 : 600,
+                    color: stageFilter === stage ? undefined : '#94a3b8',
+                  }}
+                >
+                  {stageFilter === stage && (
+                    <motion.div
+                      layoutId="pipeline-tab"
+                      className="absolute inset-0 rounded-full bg-[#0E1111]"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className={`relative z-10 ${stageFilter === stage ? 'text-white' : ''}`}>
+                    {stage}
+                  </span>
+                </button>
+              ))}
+            </motion.div>
+
+            {/* ── Search ───────────────────────────────── */}
+            <motion.div variants={fadeUp} className="relative mb-6">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Zoek op adres, perceel of gemeente..."
+                className="w-full h-[44px] pl-11 pr-4 bg-[#F2F6F3] rounded-full text-[13px] text-[#0E1111] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#F9A826]/30 transition"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </motion.div>
+
+            {/* ── Gemeente Groups ──────────────────────── */}
+            <div className="space-y-2">
+              {filteredGroups.map((group) => {
+                const isExpanded = expandedGemeenten.has(group.gemeente_naam)
+
+                return (
+                  <motion.div
+                    key={group.gemeente_naam}
+                    variants={fadeUp}
+                    className="bg-white rounded-[24px] border border-[#EAEFEF] overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {/* Gemeente header */}
+                    <button
+                      onClick={() => toggleGemeente(group.gemeente_naam)}
+                      className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <StageRing counts={group.stageCounts} total={group.parcels.length} />
+                        <div className="text-left">
+                          <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">
+                            {group.gemeente_naam}
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {group.parcels.length} {group.parcels.length === 1 ? 'perceel' : 'percelen'}
+                            {group.gemeente_code && <span className="ml-1.5 text-slate-300">· {group.gemeente_code}</span>}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* Stage dots summary */}
+                        <div className="flex items-center gap-1">
+                          {STAGES.filter(s => group.stageCounts[s] > 0).map((stage) => (
+                            <span
+                              key={stage}
+                              className="text-[10px] font-bold text-slate-400 tabular-nums"
+                            >
+                              {group.stageCounts[stage]}
+                            </span>
+                          ))}
+                        </div>
+                        {isExpanded ? (
+                          <ChevronDown size={16} className="text-slate-300" />
+                        ) : (
+                          <ChevronRight size={16} className="text-slate-300" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Parcel list */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="border-t border-[#EAEFEF]">
+                            {group.parcels.map((parcel) => (
+                              <ParcelRow
+                                key={parcel.id}
+                                parcel={parcel}
+                                onNavigate={() => navigateToParcel(parcel)}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {filteredGroups.length === 0 && (searchQuery || stageFilter) && (
+              <motion.div variants={fadeUp} className="text-center py-16">
+                <p className="text-[13px] text-slate-400">
+                  Geen resultaten
+                  {stageFilter && ` in "${stageFilter}"`}
+                  {searchQuery && ` voor "${searchQuery}"`}
+                </p>
+              </motion.div>
+            )}
+
+            {/* ── Trust metadata ───────────────────────── */}
+            <motion.div variants={fadeUp} className="mt-6 flex items-center justify-between">
+              <span className="text-[9px] uppercase tracking-wider text-slate-300">
+                Portfolio · {totalCount} percelen
+              </span>
+            </motion.div>
+          </>
+        )}
+      </motion.div>
     </ResultsShell>
   )
 }
 
-// ---------------------------------------------------------------------------
-// ParcelRow with pipeline stage pill
-// ---------------------------------------------------------------------------
+/* ── ParcelRow ─────────────────────────────────────────────── */
 
 function ParcelRow({
   parcel,
@@ -302,13 +427,13 @@ function ParcelRow({
   const subtitle = parcel.address ? parcel.parcel_id : null
 
   return (
-    <div className="flex items-center justify-between px-5 py-3 border-b border-[#EAEFEF] last:border-b-0 hover:bg-[#F2F6F3]/50 transition-colors">
+    <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors">
       <button onClick={onNavigate} className="min-w-0 flex-1 text-left">
-        <p className="text-[13px] font-semibold text-aura-ink truncate">
+        <p className="text-[13px] font-semibold text-[#0E1111] truncate">
           {address}
         </p>
         {subtitle && (
-          <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+          <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
             {subtitle}
           </p>
         )}
@@ -321,9 +446,7 @@ function ParcelRow({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Pipeline stage pill with dropdown
-// ---------------------------------------------------------------------------
+/* ── Pipeline Stage Pill ───────────────────────────────────── */
 
 function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -331,7 +454,6 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const updateStage = useUpdatePipelineStage()
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: MouseEvent) => {
@@ -363,6 +485,9 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
     setShowAfgerondForm(false)
   }
 
+  // Stage index for visual indicator
+  const stageIndex = STAGES.indexOf(parcel.pipeline_stage)
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -370,37 +495,54 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
           e.stopPropagation()
           setIsOpen(!isOpen)
         }}
-        className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${STAGE_COLORS[parcel.pipeline_stage]} hover:opacity-80`}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F2F6F3] text-[11px] font-semibold text-[#0E1111] hover:bg-[#E8EDEB] transition-colors"
       >
+        {/* Stage progress dots */}
+        <div className="flex items-center gap-0.5">
+          {STAGES.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 w-1.5 rounded-full ${
+                i <= stageIndex ? 'bg-[#F9A826]' : 'bg-slate-200'
+              }`}
+            />
+          ))}
+        </div>
         {parcel.pipeline_stage}
-        {parcel.pipeline_stage === 'Afgerond' && parcel.afgerond_reden && (
-          <span className="ml-1 opacity-70">· {parcel.afgerond_reden}</span>
-        )}
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl border border-neutral-200 bg-white shadow-lg py-1">
-          {STAGES.map((stage) => (
+        <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-[16px] border border-[#EAEFEF] bg-white shadow-lg py-1.5">
+          {STAGES.map((stage, i) => (
             <button
               key={stage}
               onClick={(e) => {
                 e.stopPropagation()
                 handleStageSelect(stage)
               }}
-              className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-neutral-50 flex items-center gap-2 ${
-                stage === parcel.pipeline_stage ? 'font-semibold' : ''
-              }`}
+              className="w-full text-left px-4 py-2.5 text-[12px] transition-colors hover:bg-[#F2F6F3] flex items-center gap-3"
             >
-              <span className={`h-2 w-2 rounded-full ${STAGE_COLORS[stage].split(' ')[0]}`} />
-              {stage}
-              {stage === parcel.pipeline_stage && <Check size={12} className="ml-auto" />}
+              <div className="flex items-center gap-0.5">
+                {STAGES.map((_, j) => (
+                  <span
+                    key={j}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      j <= i ? 'bg-[#F9A826]' : 'bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className={stage === parcel.pipeline_stage ? 'font-bold' : 'text-slate-600'}>
+                {stage}
+              </span>
+              {stage === parcel.pipeline_stage && <Check size={12} className="ml-auto text-[#F9A826]" />}
             </button>
           ))}
         </div>
       )}
 
-      {/* Afgerond reason modal */}
+      {/* Afgerond modal */}
       {showAfgerondForm && (
         <AfgerondForm
           onSubmit={handleAfgerondSubmit}
@@ -411,9 +553,7 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Afgerond reason form (mini modal)
-// ---------------------------------------------------------------------------
+/* ── Afgerond Form ─────────────────────────────────────────── */
 
 function AfgerondForm({
   onSubmit,
@@ -427,26 +567,31 @@ function AfgerondForm({
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30" onClick={onCancel} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-aura-ink">Afgerond markeren</h3>
-          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onCancel} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="relative w-full max-w-sm rounded-[24px] bg-white shadow-2xl p-6"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-[15px] font-bold text-[#0E1111]">Afgerond markeren</h3>
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">
             <X size={16} />
           </button>
         </div>
 
         {/* Reason */}
-        <p className="text-xs text-neutral-500 mb-2">Reden</p>
-        <div className="flex gap-2 mb-4">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-2">Reden</p>
+        <div className="flex gap-2 mb-5">
           {['Gekocht', 'Afgewezen'].map((option) => (
             <button
               key={option}
               onClick={() => setReden(option)}
-              className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+              className={`flex-1 h-[44px] rounded-full text-[13px] font-semibold transition-all ${
                 reden === option
-                  ? 'border-aura-amber bg-aura-amber/10 text-aura-amber'
-                  : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'
+                  ? 'bg-[#0E1111] text-white'
+                  : 'bg-[#F2F6F3] text-[#0E1111] hover:bg-[#E8EDEB]'
               }`}
             >
               {option}
@@ -455,31 +600,31 @@ function AfgerondForm({
         </div>
 
         {/* Note */}
-        <p className="text-xs text-neutral-500 mb-1.5">Notitie (optioneel)</p>
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-2">Notitie</p>
         <textarea
           value={notitie}
           onChange={(e) => setNotitie(e.target.value)}
           placeholder="Eventuele toelichting..."
-          className="w-full h-20 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-aura-ink placeholder:text-neutral-400 outline-none focus:ring-2 focus:ring-aura-amber/30 resize-none"
+          className="w-full h-24 rounded-[14px] bg-[#F2F6F3] px-4 py-3 text-[13px] text-[#0E1111] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#F9A826]/30 resize-none"
         />
 
         {/* Actions */}
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-5">
           <button
             onClick={onCancel}
-            className="flex-1 py-2 rounded-lg text-xs font-medium border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            className="flex-1 h-[44px] rounded-full bg-[#F2F6F3] text-[13px] font-semibold text-[#0E1111] hover:bg-[#E8EDEB] transition-colors"
           >
             Annuleren
           </button>
           <button
             onClick={() => onSubmit(reden, notitie)}
             disabled={!reden}
-            className="flex-1 py-2 rounded-lg text-xs font-medium bg-aura-amber text-aura-ink hover:bg-aura-amber/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 h-[44px] rounded-full bg-[#0E1111] text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40 transition-all"
           >
             Bevestigen
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
