@@ -1,6 +1,9 @@
+import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Scale, ShieldCheck, ShieldAlert, ShieldQuestion, type LucideIcon } from 'lucide-react'
 import { VerdictHero } from './VerdictHero'
 import { IntelligenceGrid, type IntelCard } from './IntelligenceGrid'
+import { JuridischKlimaatModal } from './JuridischKlimaatModal'
 import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
 
 interface KlimaatLayerProps {
@@ -108,8 +111,9 @@ function trendLabel(bek30: number, bek90: number, bek365: number): { value: stri
 
 /* ── Component ─────────────────────────────────────────────── */
 
-export function KlimaatLayer({ gemeenteNaam }: KlimaatLayerProps) {
+export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) {
   const { data: profile, isLoading } = useGemeenteProfile(gemeenteNaam)
+  const [showModal, setShowModal] = useState(false)
 
   const klimaatScore = profile
     ? deriveKlimaatScore(profile.severity_label, profile.approval_rate_pct, profile.avg_doorlooptijd_days)
@@ -200,18 +204,29 @@ export function KlimaatLayer({ gemeenteNaam }: KlimaatLayerProps) {
       sub: profile?.sample_size ? `${profile.sample_size} bekendmakingen geanalyseerd` : 'Geen steekproef',
       accentColor: profile?.data_coverage === 'high' ? '#22c55e' : profile?.data_coverage === 'medium' ? '#f59e0b' : '#94a3b8',
     },
-  ]
+  ].map(card => ({ ...card, onClick: () => setShowModal(true) }))
 
   return (
-    <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
-      <VerdictHero
-        score={verdict.score}
-        label={verdict.label}
-        subtitle={verdict.subtitle}
-        color={verdict.color}
-        icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
-      />
-      <IntelligenceGrid cards={cards} />
-    </div>
+    <>
+      <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
+        <VerdictHero
+          score={verdict.score}
+          label={verdict.label}
+          subtitle={verdict.subtitle}
+          color={verdict.color}
+          icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
+        />
+        <IntelligenceGrid cards={cards} />
+      </div>
+      <AnimatePresence>
+        {showModal && (
+          <JuridischKlimaatModal
+            gemeenteNaam={gemeenteNaam}
+            gemeenteCode={gemeenteCode}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   )
 }

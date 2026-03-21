@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   Scan,
@@ -12,6 +12,7 @@ import {
 import { LeftPanelShell } from './LeftPanelShell'
 import { VerdictHero } from './gemeente/VerdictHero'
 import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
+import { WijkDetailModal } from './gemeente/WijkDetailModal'
 import { staggerContainer } from './gemeente/animations'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
@@ -122,7 +123,11 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
 
 /* ── CBS → intelligence cards ──────────────────────────────── */
 
-function buildCards(metrics: CbsNeighborhoodMetrics | null, parcelCount: number | null): IntelCard[] {
+function buildCards(
+  metrics: CbsNeighborhoodMetrics | null,
+  parcelCount: number | null,
+  onCardClick?: (key: string) => void,
+): IntelCard[] {
   if (!metrics) {
     // Empty state — show 9 placeholder cards
     return [
@@ -263,7 +268,10 @@ function buildCards(metrics: CbsNeighborhoodMetrics | null, parcelCount: number 
       sub: dominantAgeSub,
       accentColor: '#8b5cf6',
     },
-  ]
+  ].map(card => ({
+    ...card,
+    onClick: onCardClick ? () => onCardClick(card.key) : undefined,
+  }))
 }
 
 /* ── Component ─────────────────────────────────────────────── */
@@ -283,7 +291,15 @@ export function WijkMapPanel({
 
   const marktScore = useMemo(() => deriveMarktScore(metrics), [metrics])
   const verdict = deriveVerdict(marktScore, hasCompletedScan)
-  const cards = useMemo(() => buildCards(metrics, parcelCount), [metrics, parcelCount])
+
+  const [openMetric, setOpenMetric] = useState<string | null>(null)
+  const handleCardClick = metrics ? (key: string) => setOpenMetric(key) : undefined
+
+  const cards = useMemo(
+    () => buildCards(metrics, parcelCount, handleCardClick),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [metrics, parcelCount, !!handleCardClick],
+  )
 
   /* Footer CTA */
   const footer = hasCompletedScan ? (
@@ -363,6 +379,18 @@ export function WijkMapPanel({
           </div>
         </div>
       </motion.div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {openMetric && metrics && (
+          <WijkDetailModal
+            metricKey={openMetric as 'koopwoning' | 'bouwjaar' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'}
+            metrics={metrics}
+            wijkNaam={naam}
+            onClose={() => setOpenMetric(null)}
+          />
+        )}
+      </AnimatePresence>
     </LeftPanelShell>
   )
 }

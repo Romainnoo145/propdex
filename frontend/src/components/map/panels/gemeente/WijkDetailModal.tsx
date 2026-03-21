@@ -1,0 +1,282 @@
+import { motion } from 'framer-motion'
+import { GemeenteModal } from './GemeenteModal'
+import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
+
+type MetricKey = 'koopwoning' | 'bouwjaar' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'
+
+interface WijkDetailModalProps {
+  metricKey: MetricKey
+  metrics: CbsNeighborhoodMetrics
+  wijkNaam: string
+  onClose: () => void
+}
+
+const METRIC_TITLES: Record<MetricKey, string> = {
+  koopwoning: 'Woningtype',
+  bouwjaar: 'Woningvoorraad',
+  eenpersoons: 'Huishoudens',
+  inkomen: 'Inkomen',
+  woz: 'WOZ-waarde',
+  inwoners: 'Bevolking',
+  criminaliteit: 'Criminaliteit',
+  supermarkt: 'Voorzieningen',
+  leeftijd: 'Leeftijdsverdeling',
+}
+
+/* ── Horizontal bar component ──────────────────────────────── */
+
+function HBar({ label, value, max, color, suffix = '' }: { label: string; value: number | null; max: number; color: string; suffix?: string }) {
+  const pct = value != null && max > 0 ? Math.min(100, (value / max) * 100) : 0
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[11px] font-bold text-slate-500 w-24 shrink-0 text-right tabular-nums">
+        {label}
+      </span>
+      <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
+        />
+      </div>
+      <span className="text-[12px] font-bold text-slate-900 w-16 tabular-nums">
+        {value != null ? `${Math.round(value * 10) / 10}${suffix}` : '—'}
+      </span>
+    </div>
+  )
+}
+
+/* ── Stat row ──────────────────────────────────────────────── */
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+      <span className="text-[12px] text-slate-500">{label}</span>
+      <span className="text-[13px] font-bold text-slate-900 tabular-nums">{value}</span>
+    </div>
+  )
+}
+
+/* ── Section header ────────────────────────────────────────── */
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <h3
+      className="text-[10px] font-black text-slate-400 uppercase mb-3 mt-5 first:mt-0"
+      style={{ letterSpacing: '0.2em' }}
+    >
+      {title}
+    </h3>
+  )
+}
+
+/* ── Per-metric content ────────────────────────────────────── */
+
+function KoopwoningContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const koop = metrics.data.demografie?.percentage_koopwoningen
+  const huur = metrics.data.demografie?.percentage_huurwoningen
+  return (
+    <>
+      <SectionHeader title="Eigendomsverdeling" />
+      <div className="space-y-3">
+        <HBar label="Koopwoning" value={koop} max={100} color="#22c55e" suffix="%" />
+        <HBar label="Huurwoning" value={huur} max={100} color="#3b82f6" suffix="%" />
+      </div>
+      <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
+        <p className="text-[12px] text-slate-600 leading-relaxed">
+          {koop != null && koop >= 60
+            ? 'Sterke koopmarkt — geschikt voor nieuwbouw koopwoningen en optoppen.'
+            : koop != null && koop >= 40
+            ? 'Gemengde markt — zowel koop als huur kansrijk.'
+            : 'Huurmarkt dominant — focus op huurwoningen of transformatie naar koop.'}
+        </p>
+      </div>
+    </>
+  )
+}
+
+function LeeftijdContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const l = metrics.data.leeftijdsverdeling
+  if (!l) return <p className="text-[13px] text-slate-400">Geen leeftijdsdata beschikbaar.</p>
+  const max = Math.max(l.perc_0_14 ?? 0, l.perc_15_24 ?? 0, l.perc_25_44 ?? 0, l.perc_45_64 ?? 0, l.perc_65_plus ?? 0, 1)
+  return (
+    <>
+      <SectionHeader title="Leeftijdsverdeling" />
+      <div className="space-y-3">
+        <HBar label="0–14 jaar" value={l.perc_0_14} max={max} color="#22c55e" suffix="%" />
+        <HBar label="15–24 jaar" value={l.perc_15_24} max={max} color="#3b82f6" suffix="%" />
+        <HBar label="25–44 jaar" value={l.perc_25_44} max={max} color="#8b5cf6" suffix="%" />
+        <HBar label="45–64 jaar" value={l.perc_45_64} max={max} color="#f59e0b" suffix="%" />
+        <HBar label="65+ jaar" value={l.perc_65_plus} max={max} color="#ef4444" suffix="%" />
+      </div>
+      <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
+        <p className="text-[12px] text-slate-600 leading-relaxed">
+          {(l.perc_65_plus ?? 0) >= 25
+            ? 'Vergrijzende wijk — doorstroomwoningen en levensloopbestendig bouwen kansrijk.'
+            : (l.perc_25_44 ?? 0) >= 30
+            ? 'Jong-werkende wijk — huurappartementen en starterswoningen in trek.'
+            : 'Gebalanceerde leeftijdsopbouw — breed woningaanbod passend.'}
+        </p>
+      </div>
+    </>
+  )
+}
+
+function InkomenContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const ink = metrics.data.inkomen
+  if (!ink) return <p className="text-[13px] text-slate-400">Geen inkomensdata beschikbaar.</p>
+  return (
+    <>
+      <SectionHeader title="Inkomensverdeling" />
+      <div className="space-y-1">
+        <StatRow label="Gem. per ontvanger" value={ink.gem_per_ontvanger != null ? `€${Math.round(ink.gem_per_ontvanger).toLocaleString('nl-NL')}` : '—'} />
+        <StatRow label="Gem. per inwoner" value={ink.gem_per_inwoner != null ? `€${Math.round(ink.gem_per_inwoner).toLocaleString('nl-NL')}` : '—'} />
+        <StatRow label="Gestandaardiseerd" value={ink.gem_gestandaardiseerd != null ? `€${Math.round(ink.gem_gestandaardiseerd).toLocaleString('nl-NL')}` : '—'} />
+      </div>
+      <SectionHeader title="Verdeling" />
+      <div className="space-y-3">
+        <HBar label="Laagste 40%" value={ink.perc_laagste_40} max={100} color="#ef4444" suffix="%" />
+        <HBar label="Hoogste 20%" value={ink.perc_hoogste_20} max={100} color="#22c55e" suffix="%" />
+      </div>
+    </>
+  )
+}
+
+function HuishoudensContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const hh = metrics.data.huishoudens
+  if (!hh) return <p className="text-[13px] text-slate-400">Geen huishoudensdata beschikbaar.</p>
+  const max = hh.totaal ?? 1
+  return (
+    <>
+      <SectionHeader title="Huishoudsamenstelling" />
+      <div className="space-y-3">
+        <HBar label="Eenpersoons" value={hh.eenpersoons} max={max} color="#8b5cf6" />
+        <HBar label="Zonder kinderen" value={hh.zonder_kinderen} max={max} color="#3b82f6" />
+        <HBar label="Met kinderen" value={hh.met_kinderen} max={max} color="#22c55e" />
+      </div>
+      <div className="mt-4 space-y-1">
+        <StatRow label="Totaal huishoudens" value={hh.totaal?.toLocaleString('nl-NL') ?? '—'} />
+        <StatRow label="Gem. grootte" value={hh.gemiddelde_grootte != null ? String(Math.round(hh.gemiddelde_grootte * 10) / 10) : '—'} />
+      </div>
+    </>
+  )
+}
+
+function CriminaliteitContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const c = metrics.criminaliteit
+  if (!c) return <p className="text-[13px] text-slate-400">Geen criminaliteitsdata beschikbaar.</p>
+  const cat = c.categorien
+  const maxCat = Math.max(cat.vermogensdelicten?.per_1000 ?? 0, cat.vernieling?.per_1000 ?? 0, cat.geweld?.per_1000 ?? 0, 1)
+  return (
+    <>
+      <SectionHeader title="Criminaliteit per 1.000 inwoners" />
+      <div className="space-y-3">
+        <HBar label="Vermogen" value={cat.vermogensdelicten?.per_1000} max={maxCat} color="#f59e0b" suffix="/1k" />
+        <HBar label="Vernieling" value={cat.vernieling?.per_1000} max={maxCat} color="#ef4444" suffix="/1k" />
+        <HBar label="Geweld" value={cat.geweld?.per_1000} max={maxCat} color="#dc2626" suffix="/1k" />
+      </div>
+      <div className="mt-4 space-y-1">
+        <StatRow label="Totaal misdrijven" value={c.totaal_misdrijven?.toLocaleString('nl-NL') ?? '—'} />
+        <StatRow label="Per 1.000 inwoners" value={c.per_1000_inwoners != null ? String(Math.round(c.per_1000_inwoners * 10) / 10) : '—'} />
+      </div>
+    </>
+  )
+}
+
+function NabijheidContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
+  const n = metrics.nabijheid
+  if (!n) return <p className="text-[13px] text-slate-400">Geen nabijheidsdata beschikbaar.</p>
+  const a = n.afstanden
+  const maxKm = Math.max(a.supermarkt_km ?? 0, a.huisarts_km ?? 0, a.basisschool_km ?? 0, a.kinderdagverblijf_km ?? 0, a.treinstation_km ?? 0, a.overstapstation_km ?? 0, 1)
+  return (
+    <>
+      <SectionHeader title="Afstand tot voorzieningen (km)" />
+      <div className="space-y-3">
+        <HBar label="Supermarkt" value={a.supermarkt_km} max={maxKm} color="#22c55e" suffix=" km" />
+        <HBar label="Huisarts" value={a.huisarts_km} max={maxKm} color="#3b82f6" suffix=" km" />
+        <HBar label="Basisschool" value={a.basisschool_km} max={maxKm} color="#8b5cf6" suffix=" km" />
+        <HBar label="Kinderopvang" value={a.kinderdagverblijf_km} max={maxKm} color="#f59e0b" suffix=" km" />
+        <HBar label="Treinstation" value={a.treinstation_km} max={maxKm} color="#0ea5e9" suffix=" km" />
+        <HBar label="OV-knooppunt" value={a.overstapstation_km} max={maxKm} color="#6366f1" suffix=" km" />
+      </div>
+    </>
+  )
+}
+
+function SimpleStatContent({ metrics, metricKey }: { metrics: CbsNeighborhoodMetrics; metricKey: MetricKey }) {
+  const d = metrics.data
+  switch (metricKey) {
+    case 'bouwjaar': {
+      const voor = d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000
+      const na = d.bouwjaar_distributie?.percentage_bouwjaar_vanaf_2000
+      return (
+        <>
+          <SectionHeader title="Bouwjaarperiode" />
+          <div className="space-y-3">
+            <HBar label="Vóór 2000" value={voor} max={100} color="#f59e0b" suffix="%" />
+            <HBar label="Vanaf 2000" value={na} max={100} color="#22c55e" suffix="%" />
+          </div>
+          <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
+            <p className="text-[12px] text-slate-600 leading-relaxed">
+              {(voor ?? 0) >= 70
+                ? 'Overwegend oudere voorraad — renovatie, verduurzaming en optoppen kansrijk.'
+                : 'Relatief nieuwere voorraad — minder renovatie-kansen, focus op verdichting.'}
+            </p>
+          </div>
+        </>
+      )
+    }
+    case 'woz':
+      return (
+        <>
+          <SectionHeader title="WOZ-waarde" />
+          <StatRow label="Gemiddelde WOZ" value={d.gemiddelde_woz_waarde != null ? `€${Math.round(d.gemiddelde_woz_waarde).toLocaleString('nl-NL')}` : '—'} />
+          <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
+            <p className="text-[12px] text-slate-600 leading-relaxed">
+              De gemiddelde WOZ-waarde geeft een indicatie van het prijsniveau. Vergelijk met aankoopprijs om rendementspotentieel te beoordelen.
+            </p>
+          </div>
+        </>
+      )
+    case 'inwoners':
+      return (
+        <>
+          <SectionHeader title="Bevolking" />
+          <StatRow label="Aantal inwoners" value={d.demografie?.aantal_inwoners?.toLocaleString('nl-NL') ?? '—'} />
+          <StatRow label="Stedelijkheid" value={d.stedelijkheid?.omschrijving ?? '—'} />
+          <StatRow label="Adressendichtheid" value={d.stedelijkheid?.omgevingsadressendichtheid != null ? `${Math.round(d.stedelijkheid.omgevingsadressendichtheid)}/km²` : '—'} />
+        </>
+      )
+    default:
+      return <p className="text-[13px] text-slate-400">Geen aanvullende data beschikbaar.</p>
+  }
+}
+
+/* ── Main component ────────────────────────────────────────── */
+
+export function WijkDetailModal({ metricKey, metrics, wijkNaam, onClose }: WijkDetailModalProps) {
+  const title = `${METRIC_TITLES[metricKey]} · ${wijkNaam}`
+  const peiljaar = metrics.peiljaar
+
+  const footer = peiljaar ? (
+    <span className="text-[10px] text-slate-400">
+      CBS data · peiljaar {peiljaar}
+    </span>
+  ) : undefined
+
+  return (
+    <GemeenteModal title={title} onClose={onClose} footer={footer}>
+      {metricKey === 'koopwoning' && <KoopwoningContent metrics={metrics} />}
+      {metricKey === 'leeftijd' && <LeeftijdContent metrics={metrics} />}
+      {metricKey === 'inkomen' && <InkomenContent metrics={metrics} />}
+      {metricKey === 'eenpersoons' && <HuishoudensContent metrics={metrics} />}
+      {metricKey === 'criminaliteit' && <CriminaliteitContent metrics={metrics} />}
+      {metricKey === 'supermarkt' && <NabijheidContent metrics={metrics} />}
+      {(metricKey === 'bouwjaar' || metricKey === 'woz' || metricKey === 'inwoners') && (
+        <SimpleStatContent metrics={metrics} metricKey={metricKey} />
+      )}
+    </GemeenteModal>
+  )
+}
