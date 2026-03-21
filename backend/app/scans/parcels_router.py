@@ -941,7 +941,12 @@ async def get_parcel_at_point(
     if isinstance(pdok_area_m2, float) and pdok_area_m2 > 0:
         resolved_area_m2 = pdok_area_m2
 
-    resolved_parcel_code = pdok_parcel_code or row.get("parcel_code")
+    resolved_parcel_code = row.get("parcel_code")
+    # Only use PDOK parcel_code if it matches the same parcel cache record.
+    # PDOK may return a neighbouring cadastral parcel if the click point
+    # is near a boundary, causing a mismatch with the address shown.
+    if pdok_parcel_code and not resolved_parcel_code:
+        resolved_parcel_code = pdok_parcel_code
     resolved_lng = float(centroid_match.group(1))
     resolved_lat = float(centroid_match.group(2))
     if (
