@@ -15,8 +15,8 @@ function InstellingenIndexPage() {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-4">
         <AccountSection />
-        <PasswordSection />
         <AppearanceSection />
+        <PasswordSection />
       </div>
       <div className="space-y-4">
         <SubscriptionSection />
