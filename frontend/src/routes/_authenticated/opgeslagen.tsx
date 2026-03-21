@@ -236,7 +236,7 @@ function OpgeslagenPage() {
         {totalCount === 0 ? (
           <motion.div variants={fadeUp}>
             <EmptyState
-              icon={<Heart size={40} strokeWidth={1.5} className="text-slate-300" />}
+              icon={<Heart size={40} strokeWidth={1.5} className="text-[#F9A826]" />}
               title="Geen opgeslagen percelen"
               description="Gebruik het hartje op de kaart om percelen op te slaan in je portfolio."
             />

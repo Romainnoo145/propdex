@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useRef, useCallback, useEffect, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { Scale, SlidersHorizontal, X } from 'lucide-react'
 import { useExplorerResults, type ExplorerFilters } from '@/hooks/useExplorer'
 import WizardFlow from '@/components/jurisprudentie/WizardFlow'
@@ -9,6 +10,16 @@ import BroadenSuggestion from '@/components/jurisprudentie/BroadenSuggestion'
 import OpponentProfiles from '@/components/jurisprudentie/OpponentProfiles'
 import DoorlooptijdChart from '@/components/jurisprudentie/DoorlooptijdChart'
 import { Skeleton } from '@/components/feedback/Skeleton'
+
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
+}
 
 const THEMA_LABELS: Record<string, string> = {
   etfal_ruimtelijke_ordening: 'Ruimtelijke impact',
@@ -200,10 +211,15 @@ function JurisprudentiePage() {
   /* ── Results mode ─────────────────────────────────── */
   return (
     <div className="w-full h-full overflow-y-auto bg-[#FAFCFA] rounded-[40px] pb-14 md:pb-0">
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      <motion.div
+        className="mx-auto max-w-5xl px-6 py-8"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
 
         {/* ── Hero Section ─────────────────────────────── */}
-        <div className="mb-8">
+        <motion.div variants={fadeUp} className="mb-8">
           <div className="flex items-end justify-between">
             <div>
               <p
@@ -229,10 +245,10 @@ function JurisprudentiePage() {
               />
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Filter Bar ───────────────────────────────── */}
-        <div className="flex w-full items-center gap-2 mb-5 flex-wrap">
+        <motion.div variants={fadeUp} className="flex w-full items-center gap-2 mb-5 flex-wrap">
           <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
             {filters.gemeente && (
               <Chip label={filters.gemeente} onRemove={() => handleRemoveFilter('gemeente')} />
@@ -266,11 +282,11 @@ function JurisprudentiePage() {
             <SlidersHorizontal size={13} />
             Filters aanpassen
           </button>
-        </div>
+        </motion.div>
 
         {/* ── Analytics Cards ──────────────────────────── */}
         {!isLoading && (doorlooptijdPerType.length > 0 || opponentProfiles.length > 0) && (
-          <div className={`mb-5 ${
+          <motion.div variants={fadeUp} className={`mb-5 ${
             doorlooptijdPerType.length > 0 && opponentProfiles.length > 0
               ? 'grid gap-4 lg:grid-cols-2'
               : ''
@@ -281,12 +297,12 @@ function JurisprudentiePage() {
             {doorlooptijdPerType.length > 0 && (
               <DoorlooptijdChart data={doorlooptijdPerType} />
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* ── Uitkomst filter pills ──────────────────── */}
         {!isLoading && totalCount > 0 && (
-          <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <motion.div variants={fadeUp} className="flex items-center gap-2 mb-5 flex-wrap">
             {[
               { value: 'afgewezen', label: 'Afgewezen', activeBg: 'bg-red-500/15 border-red-500/30 text-red-600' },
               { value: 'toegewezen', label: 'Toegewezen', activeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600' },
@@ -307,7 +323,7 @@ function JurisprudentiePage() {
                 </button>
               )
             })}
-          </div>
+          </motion.div>
         )}
 
         {/* Broaden suggestion */}
@@ -341,11 +357,11 @@ function JurisprudentiePage() {
 
         {/* ── Ruling Cards ─────────────────────────────── */}
         {!isLoading && allResults.length > 0 && (
-          <div className="space-y-2">
+          <motion.div variants={fadeUp} className="space-y-2">
             {allResults.map((ruling) => (
               <RulingCard key={ruling.ecli} ruling={ruling} onFilterChange={handleFilterChange} />
             ))}
-          </div>
+          </motion.div>
         )}
 
         {/* ── Empty State ──────────────────────────────── */}
@@ -381,7 +397,7 @@ function JurisprudentiePage() {
             Jurisprudentie · {totalCount} uitspraken
           </span>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
