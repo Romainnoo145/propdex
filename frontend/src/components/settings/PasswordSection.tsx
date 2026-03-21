@@ -127,7 +127,7 @@ export function PasswordSection() {
                 <p className="text-[11px] text-red-500">{errors.confirm_password.message}</p>
               )}
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-start">
               <button
                 type="submit"
                 disabled={isSubmitting}
