@@ -33,7 +33,7 @@ export function IntelligenceGrid({ cards, perPage = 9, page = 0, onPageChange }:
 
   return (
     <>
-      <div className="flex-1 mt-4 relative">
+      <div className="flex-1 mt-4 relative min-h-0 flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
@@ -42,7 +42,8 @@ export function IntelligenceGrid({ cards, perPage = 9, page = 0, onPageChange }:
             animate="show"
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-3 gap-1.5 auto-rows-fr"
+            className="grid grid-cols-3 gap-1.5 flex-1"
+            style={{ gridTemplateRows: `repeat(${Math.ceil(pageCards.length / 3)}, minmax(140px, 1fr))` }}
           >
             {pageCards.map((card) => (
               <IntelCardComponent key={card.key} card={card} />
@@ -101,7 +102,7 @@ function IntelCardComponent({ card }: { card: IntelCard }) {
       tabIndex={interactive ? 0 : undefined}
       onClick={card.onClick}
       onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') card.onClick?.() } : undefined}
-      className={`bg-white border border-slate-100 rounded-[24px] p-5 flex flex-col justify-between shadow-sm transition-shadow overflow-hidden ${
+      className={`bg-white border border-slate-100 rounded-[24px] p-6 flex flex-col justify-between shadow-sm transition-shadow overflow-hidden ${
         interactive ? 'cursor-pointer hover:shadow-md' : 'hover:shadow-sm'
       }`}
       whileHover={interactive ? { scale: 1.02 } : undefined}
@@ -127,14 +128,14 @@ function IntelCardComponent({ card }: { card: IntelCard }) {
       </div>
 
       {/* Middle: value */}
-      <div className="flex-1 flex items-center min-w-0 my-2">
+      <div className="flex-1 flex items-center min-w-0">
         <span className="text-2xl font-black text-slate-900 tracking-tighter leading-none truncate">
           {card.value}
         </span>
       </div>
 
       {/* Bottom: insight */}
-      <div className="border-t border-slate-50 pt-2.5 min-w-0">
+      <div className="border-t border-slate-50 pt-3 min-w-0">
         <span className="text-[11px] font-bold text-slate-400 leading-tight truncate block">
           {card.sub}
         </span>

@@ -144,7 +144,7 @@ export function GemeenteContextPanel({
           </AnimatePresence>
 
           {/* ── Trust metadata ──────────────────────────── */}
-          <div className="px-8 pb-6 mt-auto">
+          <div className="px-8 pb-6 shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-[9px] uppercase tracking-wider text-slate-300">
                 Bron: Kadaster · PDOK · DSO
