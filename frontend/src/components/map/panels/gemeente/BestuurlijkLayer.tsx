@@ -212,16 +212,16 @@ export function BestuurlijkLayer({ gemeenteNaam }: BestuurlijkLayerProps) {
       accentColor: '#d97706',
     })
 
-    // Subsidies
+    // Subsidies (national — not gemeente-specific)
     result.push({
       key: 'subsidies',
-      label: 'SUBSIDIES',
+      label: 'SUBSIDIES (NL)',
       value: subsidieLoading ? '...' : subsidieData?.total
         ? `${subsidieData.total} REGELING${subsidieData.total !== 1 ? 'EN' : ''}`
         : 'GEEN',
-      sub: subsidieData?.subsidies?.[0]?.title?.slice(0, 30) ?? 'Geen relevante subsidies',
+      sub: 'Landelijke ontwikkelsubsidies (RVO)',
       accentColor: subsidieData?.total ? '#22c55e' : '#94a3b8',
-      badge: subsidieData?.source ?? undefined,
+      badge: 'LANDELIJK',
     })
 
     // Top subsidie detail
@@ -234,18 +234,18 @@ export function BestuurlijkLayer({ gemeenteNaam }: BestuurlijkLayerProps) {
       accentColor: '#22c55e',
     })
 
-    // Data coverage summary
+    // Data coverage summary — count actual data, not API reachability
     const sources = [
-      raadsData?.dekking ? 'ORI' : null,
-      hvvData ? 'KOOP' : null,
-      erfgoedData ? 'RCE' : null,
-      subsidieData ? 'RVO' : null,
+      raadsData?.dekking && raadsData.total_found > 0 ? 'ORI' : null,
+      hvvData?.heeft_verordening ? 'KOOP' : null,
+      erfgoedData?.total && erfgoedData.total > 0 ? 'RCE' : null,
+      subsidieData?.total && subsidieData.total > 0 ? 'RVO' : null,
     ].filter(Boolean)
     result.push({
       key: 'bronnen',
-      label: 'BRONNEN',
+      label: 'DATA BRONNEN',
       value: `${sources.length}/4`,
-      sub: sources.length > 0 ? sources.join(' · ') : 'Geen bronnen beschikbaar',
+      sub: sources.length > 0 ? sources.join(' · ') : 'Geen bronnen met data',
       accentColor: sources.length >= 3 ? '#22c55e' : sources.length >= 2 ? '#f59e0b' : '#94a3b8',
     })
 
