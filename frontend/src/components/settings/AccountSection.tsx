@@ -34,7 +34,8 @@ export function AccountSection() {
 
   const onSubmit = async (data: AccountFormData) => {
     try {
-      const updatedUser = await updateProfile(data)
+      const { phone: _, ...profileData } = data
+      const updatedUser = await updateProfile(profileData)
       updateUser(updatedUser)
       toast.success('Profiel opgeslagen')
     } catch (err) {

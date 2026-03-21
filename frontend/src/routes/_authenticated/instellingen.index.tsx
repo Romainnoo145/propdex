@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AccountSection } from '@/components/settings/AccountSection'
 import { PasswordSection } from '@/components/settings/PasswordSection'
 import { CompanySection } from '@/components/settings/CompanySection'
+import { SubscriptionSection } from '@/components/settings/SubscriptionSection'
 import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { AppearanceSection } from '@/components/settings/AppearanceSection'
 
@@ -16,6 +17,7 @@ function InstellingenIndexPage() {
         <AccountSection />
         <PasswordSection />
         <NotificationsSection />
+        <SubscriptionSection />
       </div>
       <div className="space-y-4">
         <CompanySection />
