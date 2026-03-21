@@ -4,11 +4,11 @@ interface BalanceSliderProps {
 }
 
 const BALANCE_STEPS = [
-  { value: 0.2, label: '20/80', sub: 'Risico-focus' },
-  { value: 0.4, label: '40/60', sub: 'Risico-zwaar' },
+  { value: 0.3, label: '30/70', sub: 'Risico-focus' },
   { value: 0.5, label: '50/50', sub: 'Gebalanceerd' },
-  { value: 0.6, label: '60/40', sub: 'Potentie-zwaar' },
-  { value: 0.8, label: '80/20', sub: 'Potentie-focus' },
+  { value: 0.65, label: '65/35', sub: 'Licht potentie' },
+  { value: 0.8, label: '80/20', sub: 'Potentie-zwaar' },
+  { value: 0.85, label: '85/15', sub: 'Potentie-focus' },
 ]
 
 export function BalanceSlider({ value, onChange }: BalanceSliderProps) {

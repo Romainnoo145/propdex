@@ -169,10 +169,10 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
           <div className="flex gap-2">
             {[
               { value: 0, label: '0', sub: 'Alles' },
-              { value: 25, label: '25', sub: 'Laag' },
+              { value: 30, label: '30', sub: 'Laag' },
               { value: 50, label: '50', sub: 'Midden' },
-              { value: 75, label: '75', sub: 'Hoog' },
-              { value: 100, label: '100', sub: 'Top' },
+              { value: 60, label: '60', sub: 'Standaard' },
+              { value: 80, label: '80', sub: 'Top' },
             ].map((step) => {
               const isActive = formState.score_threshold === step.value
               return (
