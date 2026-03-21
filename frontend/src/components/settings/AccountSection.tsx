@@ -10,6 +10,7 @@ import { useUpdateProfile } from '@/hooks/useSettings'
 const accountSchema = z.object({
   full_name: z.string().min(1, 'Naam is verplicht').max(255),
   email: z.string().email('Ongeldig e-mailadres'),
+  phone: z.string().max(20).optional().or(z.literal('')),
 })
 
 type AccountFormData = z.infer<typeof accountSchema>
@@ -27,6 +28,7 @@ export function AccountSection() {
     defaultValues: {
       full_name: user?.full_name ?? '',
       email: user?.email ?? '',
+      phone: '',
     },
   })
 
@@ -79,6 +81,18 @@ export function AccountSection() {
           {errors.email && (
             <p className="text-[11px] text-red-500">{errors.email.message}</p>
           )}
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="phone" className="block text-[12px] font-semibold text-[#0E1111]">
+            Telefoon
+          </label>
+          <Input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="+31 6 12345678"
+            {...register('phone')}
+          />
         </div>
         <div className="flex justify-end">
           <button
