@@ -22,7 +22,7 @@ export function AccountSection() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { errors, isDirty },
   } = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
@@ -33,6 +33,7 @@ export function AccountSection() {
   })
 
   const onSubmit = async (data: AccountFormData) => {
+    if (!isDirty) return
     try {
       const { phone: _, ...profileData } = data
       const updatedUser = await updateProfile(profileData)
@@ -54,7 +55,7 @@ export function AccountSection() {
       <p className="text-[13px] text-slate-500">
         Beheer je naam en e-mailadres
       </p>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onBlur={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="full_name" className="block text-[12px] font-semibold text-[#0E1111]">
             Naam
@@ -94,15 +95,6 @@ export function AccountSection() {
             placeholder="+31 6 12345678"
             {...register('phone')}
           />
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={!isDirty || isSubmitting}
-            className="rounded-full bg-[#0E1111] px-5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-40"
-          >
-            {isSubmitting ? 'Opslaan...' : 'Opslaan'}
-          </button>
         </div>
       </form>
     </div>
