@@ -360,7 +360,7 @@ export default function WizardFlow({
           )}
           <button
             onClick={onComplete}
-            className="flex items-center gap-2 rounded-full bg-[#0E1111] px-6 py-2.5 text-[13px] font-semibold text-[#F9A826] transition-colors hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-full bg-[#0E1111] px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
           >
             Toon {totalCount} resultaten
             <ArrowRight size={14} />

@@ -324,7 +324,7 @@ function OpgeslagenPage() {
                   <motion.div
                     key={group.gemeente_naam}
                     variants={fadeUp}
-                    className="bg-white rounded-[24px] border border-[#EAEFEF] overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    className="bg-white rounded-[24px] border border-[#EAEFEF] shadow-sm hover:shadow-md transition-shadow"
                   >
                     {/* Gemeente header */}
                     <button
