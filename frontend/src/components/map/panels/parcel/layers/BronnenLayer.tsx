@@ -113,6 +113,9 @@ function buildPages(
   meldingenCount: number,
   hasReport: boolean,
   energielabel: string | null,
+  wozWaarde: number | null,
+  geluidDb: number | null,
+  natura2000Naam: string | null,
 ): DossierPage[] {
   const hasBestemming = Array.isArray(parcel.bestemmingen) && parcel.bestemmingen.length > 0
 
@@ -187,9 +190,9 @@ function buildPages(
           key: 'woz',
           label: 'WOZ',
           Icon: Banknote,
-          value: 'LEEG',
-          sub: 'WOZ-waardebeschikking',
-          filled: false,
+          value: wozWaarde != null ? `€${Math.round(wozWaarde).toLocaleString('nl-NL')}` : 'LEEG',
+          sub: wozWaarde != null ? 'WOZ-waarde beschikbaar' : 'WOZ-waardebeschikking',
+          filled: wozWaarde != null,
           documents: [],
         },
         {
@@ -306,18 +309,18 @@ function buildPages(
           key: 'milieuzones',
           label: 'MILIEUZONES',
           Icon: TreePine,
-          value: 'LEEG',
-          sub: 'Natura 2000, beschermd gebied',
-          filled: false,
+          value: natura2000Naam ? 'NABIJ' : 'LEEG',
+          sub: natura2000Naam ? natura2000Naam.slice(0, 28) : 'Natura 2000, beschermd gebied',
+          filled: !!natura2000Naam,
           documents: [],
         },
         {
           key: 'geluid',
           label: 'GELUID',
           Icon: Volume2,
-          value: 'LEEG',
-          sub: 'Geluidsbelasting Lden',
-          filled: false,
+          value: geluidDb != null ? `${Math.round(geluidDb)} DB` : 'LEEG',
+          sub: geluidDb != null ? 'Geluidsbelasting Lden' : 'Geluidsbelasting Lden',
+          filled: geluidDb != null,
           documents: [],
         },
         {
@@ -678,8 +681,11 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
   const vergunningen = enrichment.data?.enrichment_data?.vergunningen ?? []
   const meldingen = parcelChanges.data ?? []
   const energielabel = enrichment.data?.energielabel?.energieklasse ?? null
+  const wozWaarde = enrichment.data?.woz_data?.meest_recente_waarde ?? null
+  const geluidDb = enrichment.data?.geluid_data?.lden_db ?? null
+  const natura2000Naam = enrichment.data?.natura2000_data?.naam ?? null
 
-  const rawPages = buildPages(parcel, vergunningen.length, meldingen.length, hasReport, energielabel)
+  const rawPages = buildPages(parcel, vergunningen.length, meldingen.length, hasReport, energielabel, wozWaarde, geluidDb, natura2000Naam)
   const userDocs = documentsQuery.data?.documents ?? []
   const pages = mergeDocuments(rawPages, userDocs)
   const totalPages = pages.length
