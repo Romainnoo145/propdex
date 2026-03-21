@@ -4,8 +4,6 @@ import { z } from 'zod'
 import { User } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/primitives/Input'
-import { Button } from '@/components/primitives/Button'
-import { BentoPod } from '@/components/primitives/BentoPod'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useUpdateProfile } from '@/hooks/useSettings'
 
@@ -43,17 +41,19 @@ export function AccountSection() {
   }
 
   return (
-    <BentoPod size="spacious" className="space-y-4">
+    <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-5">
       <div className="flex items-center gap-2">
-        <User className="h-5 w-5 text-aura-amber" />
-        <h2 className="text-lg font-semibold text-aura-ink">Account</h2>
+        <User size={14} className="text-[#F9A826]" />
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
+          Account
+        </p>
       </div>
-      <p className="text-sm text-neutral-600">
+      <p className="text-[13px] text-slate-500">
         Beheer je naam en e-mailadres
       </p>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <label htmlFor="full_name" className="block text-sm font-medium text-aura-ink">
+          <label htmlFor="full_name" className="block text-[12px] font-semibold text-[#0E1111]">
             Naam
           </label>
           <Input
@@ -63,11 +63,11 @@ export function AccountSection() {
             {...register('full_name')}
           />
           {errors.full_name && (
-            <p className="text-xs text-error">{errors.full_name.message}</p>
+            <p className="text-[11px] text-red-500">{errors.full_name.message}</p>
           )}
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="account_email" className="block text-sm font-medium text-aura-ink">
+          <label htmlFor="account_email" className="block text-[12px] font-semibold text-[#0E1111]">
             E-mailadres
           </label>
           <Input
@@ -77,20 +77,19 @@ export function AccountSection() {
             {...register('email')}
           />
           {errors.email && (
-            <p className="text-xs text-error">{errors.email.message}</p>
+            <p className="text-[11px] text-red-500">{errors.email.message}</p>
           )}
         </div>
         <div className="flex justify-end">
-          <Button
+          <button
             type="submit"
-            variant="primary"
-            size="md"
             disabled={!isDirty || isSubmitting}
+            className="rounded-full bg-[#0E1111] px-5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-40"
           >
             {isSubmitting ? 'Opslaan...' : 'Opslaan'}
-          </Button>
+          </button>
         </div>
       </form>
-    </BentoPod>
+    </div>
   )
 }

@@ -1,16 +1,6 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
-/**
- * Tab navigation for settings pages
- *
- * Shows two tabs:
- * - Account → /instellingen
- * - Score profiel → /instellingen/score
- *
- * Active tab: bg-aura-obsidian text-white rounded-full pill
- * Inactive: text-aura-ink hover:bg-[#F2F6F3]
- */
 export function SettingsTabNav() {
   const matchRoute = useMatchRoute()
 
@@ -18,28 +8,38 @@ export function SettingsTabNav() {
   const isAccountActive = !isScoreActive
 
   return (
-    <nav className="flex gap-1 rounded-full bg-aura-glass-white/40 border border-white/40 p-1 w-fit">
+    <nav className="flex gap-1 rounded-full bg-[#F2F6F3] p-1 w-fit">
       <Link
         to="/instellingen"
-        className={cn(
-          'px-5 py-2 rounded-full text-sm font-medium transition-colors',
-          isAccountActive
-            ? 'bg-aura-obsidian text-white'
-            : 'text-aura-ink hover:bg-[#F2F6F3]',
-        )}
+        className="relative px-5 py-2 rounded-full text-[12px] font-semibold transition-colors"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
       >
-        Account
+        {isAccountActive && (
+          <motion.div
+            layoutId="settings-tab"
+            className="absolute inset-0 rounded-full bg-[#0E1111]"
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+          />
+        )}
+        <span className={`relative z-10 ${isAccountActive ? 'text-white' : 'text-slate-500'}`}>
+          Account
+        </span>
       </Link>
       <Link
         to="/instellingen/score"
-        className={cn(
-          'px-5 py-2 rounded-full text-sm font-medium transition-colors',
-          isScoreActive
-            ? 'bg-aura-obsidian text-white'
-            : 'text-aura-ink hover:bg-[#F2F6F3]',
-        )}
+        className="relative px-5 py-2 rounded-full text-[12px] font-semibold transition-colors"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
       >
-        Score profiel
+        {isScoreActive && (
+          <motion.div
+            layoutId="settings-tab"
+            className="absolute inset-0 rounded-full bg-[#0E1111]"
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+          />
+        )}
+        <span className={`relative z-10 ${isScoreActive ? 'text-white' : 'text-slate-500'}`}>
+          Score profiel
+        </span>
       </Link>
     </nav>
   )

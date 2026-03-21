@@ -5,8 +5,6 @@ import { z } from 'zod'
 import { Key, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/primitives/Input'
-import { Button } from '@/components/primitives/Button'
-import { BentoPod } from '@/components/primitives/BentoPod'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useChangePassword } from '@/hooks/useSettings'
 
@@ -58,27 +56,26 @@ export function PasswordSection() {
   const isEmailUser = user?.auth_provider === 'email'
 
   return (
-    <BentoPod size="spacious" className="space-y-4">
+    <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-5">
       <div className="flex items-center gap-2">
-        <Key className="h-5 w-5 text-aura-amber" />
-        <h2 className="text-lg font-semibold text-aura-ink">Wachtwoord</h2>
+        <Key size={14} className="text-[#F9A826]" />
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
+          Wachtwoord
+        </p>
       </div>
 
       {!isEmailUser ? (
-        <p className="text-sm text-neutral-600">
+        <p className="text-[13px] text-slate-500">
           Wachtwoord wordt beheerd via Google
         </p>
       ) : (
         <>
-          <p className="text-sm text-neutral-600">
+          <p className="text-[13px] text-slate-500">
             Wijzig je wachtwoord
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <label
-                htmlFor="current_password"
-                className="block text-sm font-medium text-aura-ink"
-              >
+              <label htmlFor="current_password" className="block text-[12px] font-semibold text-[#0E1111]">
                 Huidig wachtwoord
               </label>
               <Input
@@ -88,16 +85,11 @@ export function PasswordSection() {
                 {...register('current_password')}
               />
               {errors.current_password && (
-                <p className="text-xs text-error">
-                  {errors.current_password.message}
-                </p>
+                <p className="text-[11px] text-red-500">{errors.current_password.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <label
-                htmlFor="new_password"
-                className="block text-sm font-medium text-aura-ink"
-              >
+              <label htmlFor="new_password" className="block text-[12px] font-semibold text-[#0E1111]">
                 Nieuw wachtwoord
               </label>
               <div className="relative">
@@ -111,27 +103,18 @@ export function PasswordSection() {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-600 hover:text-aura-ink"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-[#0E1111]"
                   aria-label={showNewPassword ? 'Verberg wachtwoord' : 'Toon wachtwoord'}
                 >
-                  {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
               {errors.new_password && (
-                <p className="text-xs text-error">
-                  {errors.new_password.message}
-                </p>
+                <p className="text-[11px] text-red-500">{errors.new_password.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <label
-                htmlFor="confirm_password"
-                className="block text-sm font-medium text-aura-ink"
-              >
+              <label htmlFor="confirm_password" className="block text-[12px] font-semibold text-[#0E1111]">
                 Bevestig wachtwoord
               </label>
               <Input
@@ -141,24 +124,21 @@ export function PasswordSection() {
                 {...register('confirm_password')}
               />
               {errors.confirm_password && (
-                <p className="text-xs text-error">
-                  {errors.confirm_password.message}
-                </p>
+                <p className="text-[11px] text-red-500">{errors.confirm_password.message}</p>
               )}
             </div>
             <div className="flex justify-end">
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="md"
                 disabled={isSubmitting}
+                className="rounded-full bg-[#0E1111] px-5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-40"
               >
                 {isSubmitting ? 'Opslaan...' : 'Wachtwoord wijzigen'}
-              </Button>
+              </button>
             </div>
           </form>
         </>
       )}
-    </BentoPod>
+    </div>
   )
 }
