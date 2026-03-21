@@ -307,6 +307,15 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
           }
         }
         // Factor missing from breakdown — show placeholder
+        // Special case: capaciteit is computed client-side, not in backend breakdown
+        if (key === 'capaciteit') {
+          return {
+            label: FACTOR_LABELS[key] ?? key.toUpperCase(),
+            value: capacityValue(parcel),
+            sub: capacitySub(parcel),
+            pts: 0,
+          }
+        }
         return {
           label: FACTOR_LABELS[key] ?? key.toUpperCase(),
           value: '\u2014',

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { GemeenteModal } from './GemeenteModal'
 import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
-type MetricKey = 'koopwoning' | 'bouwjaar' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'
+type MetricKey = 'koopwoning' | 'dichtheid' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'
 
 interface WijkDetailModalProps {
   metricKey: MetricKey
@@ -13,7 +13,7 @@ interface WijkDetailModalProps {
 
 const METRIC_TITLES: Record<MetricKey, string> = {
   koopwoning: 'Woningtype',
-  bouwjaar: 'Woningvoorraad',
+  dichtheid: 'Stedelijkheid',
   eenpersoons: 'Huishoudens',
   inkomen: 'Inkomen',
   woz: 'WOZ-waarde',
@@ -208,21 +208,23 @@ function NabijheidContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
 function SimpleStatContent({ metrics, metricKey }: { metrics: CbsNeighborhoodMetrics; metricKey: MetricKey }) {
   const d = metrics.data
   switch (metricKey) {
-    case 'bouwjaar': {
-      const voor = d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000
-      const na = d.bouwjaar_distributie?.percentage_bouwjaar_vanaf_2000
+    case 'dichtheid': {
+      const sted = d.stedelijkheid
       return (
         <>
-          <SectionHeader title="Bouwjaarperiode" />
-          <div className="space-y-3">
-            <HBar label="Vóór 2000" value={voor} max={100} color="#f59e0b" suffix="%" />
-            <HBar label="Vanaf 2000" value={na} max={100} color="#22c55e" suffix="%" />
+          <SectionHeader title="Stedelijkheid" />
+          <div className="space-y-1">
+            <StatRow label="Klasse" value={sted?.omschrijving ?? '—'} />
+            <StatRow label="Adressendichtheid" value={sted?.omgevingsadressendichtheid != null ? `${Math.round(sted.omgevingsadressendichtheid)}/km²` : '—'} />
+            <StatRow label="Stedelijkheidsklasse" value={sted?.klasse != null ? `${sted.klasse} van 5` : '—'} />
           </div>
           <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
             <p className="text-[12px] text-slate-600 leading-relaxed">
-              {(voor ?? 0) >= 70
-                ? 'Overwegend oudere voorraad — renovatie, verduurzaming en optoppen kansrijk.'
-                : 'Relatief nieuwere voorraad — minder renovatie-kansen, focus op verdichting.'}
+              {(sted?.klasse ?? 5) <= 2
+                ? 'Zeer stedelijk gebied — hoge dichtheid, meer concurrentie maar ook meer vraag. Focus op transformatie en verdichting.'
+                : (sted?.klasse ?? 5) <= 3
+                ? 'Matig stedelijk — balans tussen vraag en beschikbaarheid. Geschikt voor diverse ontwikkelstrategieën.'
+                : 'Landelijk gebied — meer ruimte, lagere grondprijzen. Geschikt voor nieuwbouw en grotere projecten.'}
             </p>
           </div>
         </>
@@ -274,7 +276,7 @@ export function WijkDetailModal({ metricKey, metrics, wijkNaam, onClose }: WijkD
       {metricKey === 'eenpersoons' && <HuishoudensContent metrics={metrics} />}
       {metricKey === 'criminaliteit' && <CriminaliteitContent metrics={metrics} />}
       {metricKey === 'supermarkt' && <NabijheidContent metrics={metrics} />}
-      {(metricKey === 'bouwjaar' || metricKey === 'woz' || metricKey === 'inwoners') && (
+      {(metricKey === 'dichtheid' || metricKey === 'woz' || metricKey === 'inwoners') && (
         <SimpleStatContent metrics={metrics} metricKey={metricKey} />
       )}
     </GemeenteModal>

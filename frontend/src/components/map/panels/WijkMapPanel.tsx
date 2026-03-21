@@ -65,7 +65,7 @@ function deriveMarktScore(metrics: CbsNeighborhoodMetrics | null): number | null
   checkField(d.leeftijdsverdeling?.perc_25_44)
   checkField(metrics.criminaliteit?.per_1000_inwoners)
   checkField(metrics.nabijheid?.afstanden?.supermarkt_km)
-  checkField(d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000)
+  checkField(d.stedelijkheid?.omgevingsadressendichtheid)
   // Max 54 from 9 fields
 
   // Koopwoning bonus (high = buy market)
@@ -132,7 +132,7 @@ function buildCards(
     // Empty state — show 9 placeholder cards
     return [
       { key: 'koopwoning', label: 'KOOPWONING', value: '—', sub: 'Koop-potentieel' },
-      { key: 'bouwjaar', label: 'BOUWJAAR', value: '—', sub: 'Woningvoorraad' },
+      { key: 'dichtheid', label: 'DICHTHEID', value: '—', sub: 'Stedelijkheidsklasse' },
       { key: 'eenpersoons', label: 'EENPERSOONS', value: '—', sub: 'Huishoudtype' },
       { key: 'inkomen', label: 'INKOMEN', value: '—', sub: 'Koopkracht' },
       { key: 'woz', label: 'WOZ-WAARDE', value: '—', sub: 'Woningwaarde' },
@@ -179,7 +179,6 @@ function buildCards(
   }
 
   const koop = d.demografie?.percentage_koopwoningen
-  const bouwjaar = d.bouwjaar_distributie?.percentage_bouwjaar_voor_2000
   const inkomen = d.inkomen?.gem_gestandaardiseerd
   const woz = d.gemiddelde_woz_waarde
   const inwoners = d.demografie?.aantal_inwoners
@@ -198,13 +197,15 @@ function buildCards(
       badge: koop != null ? 'KOOP' : undefined,
     },
     {
-      key: 'bouwjaar',
-      label: 'BOUWJAAR',
-      value: bouwjaar != null ? `${Math.round(bouwjaar)}% <2000` : '—',
-      sub: bouwjaar != null
-        ? bouwjaar >= 70 ? 'Veel renovatie-kansen' : bouwjaar >= 40 ? 'Gemengde voorraad' : 'Nieuwbouw dominant'
-        : 'Geen data',
-      accentColor: bouwjaar != null ? (bouwjaar >= 70 ? '#f59e0b' : '#94a3b8') : undefined,
+      key: 'dichtheid',
+      label: 'DICHTHEID',
+      value: d.stedelijkheid?.omgevingsadressendichtheid != null
+        ? `${Math.round(d.stedelijkheid.omgevingsadressendichtheid)}/km²`
+        : d.stedelijkheid?.omschrijving ?? '—',
+      sub: d.stedelijkheid?.omschrijving ?? 'Stedelijkheidsklasse',
+      accentColor: d.stedelijkheid?.klasse != null
+        ? d.stedelijkheid.klasse <= 2 ? '#7c3aed' : d.stedelijkheid.klasse <= 3 ? '#3b82f6' : '#94a3b8'
+        : undefined,
     },
     {
       key: 'eenpersoons',
