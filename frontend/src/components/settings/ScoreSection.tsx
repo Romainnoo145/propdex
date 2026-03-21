@@ -160,18 +160,8 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
         />
       </div>
 
-      {/* Balance + Threshold side by side */}
+      {/* Threshold + Balance side by side */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
-          <p className="text-[12px] font-semibold text-[#0E1111]">
-            Potentie / Risico verhouding
-          </p>
-          <BalanceSlider
-            value={formState.potentie_risico_balance}
-            onChange={(val) => updateFormState({ potentie_risico_balance: val })}
-          />
-        </div>
-
         <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
           <p className="text-[12px] font-semibold text-[#0E1111]">
             Minimale score op kaart
@@ -206,6 +196,16 @@ function ScoreForm({ initialConfig }: ScoreFormProps) {
               )
             })}
           </div>
+        </div>
+
+        <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+          <p className="text-[12px] font-semibold text-[#0E1111]">
+            Potentie / Risico verhouding
+          </p>
+          <BalanceSlider
+            value={formState.potentie_risico_balance}
+            onChange={(val) => updateFormState({ potentie_risico_balance: val })}
+          />
         </div>
       </div>
 

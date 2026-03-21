@@ -19,10 +19,6 @@ export function BalanceSlider({ value, onChange }: BalanceSliderProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[12px] font-semibold">
-        <span className="text-[#F9A826]">Potentie</span>
-        <span className="text-red-500">Risico</span>
-      </div>
       <div className="flex gap-2">
         {BALANCE_STEPS.map((step) => {
           const isActive = step.value === activeStep.value
