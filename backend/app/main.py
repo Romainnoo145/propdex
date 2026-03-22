@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router
 from app.core.config import settings
@@ -99,6 +100,7 @@ app.include_router(scans_router)
 app.include_router(monitoring_router)
 app.include_router(users_router)
 app.include_router(jurisprudence_router, prefix="/api/jurisprudence", tags=["Jurisprudence"])
+app.include_router(gemeente_router, prefix="/api/gemeente", tags=["Gemeente"])
 
 
 @app.get("/")
