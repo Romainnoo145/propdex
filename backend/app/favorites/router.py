@@ -83,6 +83,7 @@ async def create_favorite(
     fav = ParcelFavorite(
         parcel_id=body.parcel_id,
         user_id=current_user.id,
+        organization_id=current_user.organization_id,
         gemeente_code=body.gemeente_code,
         gemeente_naam=body.gemeente_naam,
         wijk_naam=body.wijk_naam,
