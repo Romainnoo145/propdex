@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const mountedRef = useRef(false)
 
   /** Perform a silent token refresh and update state. Returns new token or null. */
   const silentRefresh = useCallback(async (): Promise<string | null> => {
@@ -54,8 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setTokenRefreshFn(null)
   }, [silentRefresh])
 
-  // Silent refresh on mount
+  // Silent refresh on mount — guarded against StrictMode double-mount
   useEffect(() => {
+    if (mountedRef.current) return
+    mountedRef.current = true
+
     refreshApi()
       .then(async (data) => {
         setAccessToken(data.access_token)
