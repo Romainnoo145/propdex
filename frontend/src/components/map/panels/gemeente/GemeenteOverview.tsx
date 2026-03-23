@@ -38,11 +38,11 @@ const fadeUp: Variants = {
 /* ── Stedelijkheid image mapping ───────────────────────────── */
 
 const STEDELIJKHEID_IMAGES: Record<string, string> = {
-  'Zeer sterk stedelijk': '/images/stedelijkheid/zeer-sterk-stedelijk.svg',
-  'Sterk stedelijk': '/images/stedelijkheid/sterk-stedelijk.svg',
-  'Matig stedelijk': '/images/stedelijkheid/matig-stedelijk.svg',
-  'Weinig stedelijk': '/images/stedelijkheid/weinig-stedelijk.svg',
-  'Niet stedelijk': '/images/stedelijkheid/niet-stedelijk.svg',
+  'Zeer sterk stedelijk': '/images/stedelijkheid/zeer-sterk-stedelijk.jpg',
+  'Sterk stedelijk': '/images/stedelijkheid/sterk-stedelijk.jpg',
+  'Matig stedelijk': '/images/stedelijkheid/matig-stedelijk.jpg',
+  'Weinig stedelijk': '/images/stedelijkheid/weinig-stedelijk.jpg',
+  'Niet stedelijk': '/images/stedelijkheid/niet-stedelijk.jpg',
 }
 
 /* ── CardLabelBar ──────────────────────────────────────────── */
