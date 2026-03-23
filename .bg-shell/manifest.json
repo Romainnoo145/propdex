@@ -14,17 +14,17 @@
     "pid": 29266
   },
   {
-    "id": "3a06b3bd",
+    "id": "7f8b13f5",
     "label": "frontend",
     "command": "cd frontend && npx vite --port 9300",
     "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
     "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-22T13-49-14-335Z_5ceef8d1-77c2-4a4f-85d4-01d96543a338.jsonl",
     "persistAcrossSessions": false,
-    "startedAt": 1774261639552,
+    "startedAt": 1774270326928,
     "processType": "server",
     "group": "propdex",
     "readyPattern": null,
     "readyPort": 9300,
-    "pid": 295461
+    "pid": 347941
   }
 ]

@@ -75,34 +75,68 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
 /* ── BekendmakingenDivider ─────────────────────────────────── */
 
 function BekendmakingenDivider({ total, topTypes }: { total: number; topTypes: [string, number][] }) {
+  const maxCount = topTypes.length > 0 ? topTypes[0][1] : 1
+
   return (
-    <div className="relative flex flex-col items-center py-3">
-      {/* Center line with total */}
-      <div className="flex items-center w-full gap-3">
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#EAEFEF]" />
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F2F6F3]">
-          <span className="text-[11px] font-black text-[#0E1111] tabular-nums">{total}</span>
-          <span className="text-[10px] text-neutral-400 font-medium">bekendmakingen</span>
-        </div>
-        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#EAEFEF]" />
+    <div className="w-full py-4">
+      {/* Header — same pattern as BouwjaarTimeline */}
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="text-[10px] font-black text-slate-400 uppercase"
+          style={{ letterSpacing: '0.2em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Bekendmakingen
+        </span>
+        <span
+          className="bg-black text-white text-[10px] px-2.5 py-1 rounded-full font-black tabular-nums"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          {total} totaal
+        </span>
       </div>
 
-      {/* Slick type legenda — small dots + labels */}
+      {/* The etched track — amber fill proportional to top types */}
+      <div className="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        {/* Tick marks every ~10% */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 h-full"
+            style={{
+              left: `${(i + 1) * 10}%`,
+              width: '1px',
+              background: 'rgba(255,255,255,0.7)',
+              zIndex: 2,
+            }}
+          />
+        ))}
+
+        {/* Amber fill — represents how much is categorized (non-Overig) */}
+        {total > 0 && (
+          <div
+            className="absolute top-0 left-0 h-full rounded-full"
+            style={{
+              width: `${Math.min(100, (topTypes.reduce((s, [, c]) => s + c, 0) / total) * 100)}%`,
+              background: '#F9A826',
+              boxShadow: '0 0 8px rgba(249,168,38,0.3)',
+              zIndex: 1,
+            }}
+          />
+        )}
+      </div>
+
+      {/* Type labels under the track */}
       {topTypes.length > 0 && (
-        <div className="flex items-center justify-center gap-4 mt-2">
-          {topTypes.map(([type, count], i) => {
-            const opacity = 0.4 + (1 - i / topTypes.length) * 0.6
-            return (
-              <div key={type} className="flex items-center gap-1.5">
-                <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: '#F9A826', opacity }}
-                />
-                <span className="text-[9px] text-neutral-400 font-medium">{type}</span>
-                <span className="text-[9px] font-bold text-neutral-500 tabular-nums">{count}</span>
-              </div>
-            )
-          })}
+        <div className="flex items-center justify-between mt-2">
+          {topTypes.map(([type, count]) => (
+            <span
+              key={type}
+              className="text-[9px] font-bold tabular-nums text-slate-400"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              {type} ({count})
+            </span>
+          ))}
         </div>
       )}
     </div>
@@ -280,11 +314,11 @@ export function GemeenteOverview({
           <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
         </motion.button>
 
-        {/* Card 3: Vergunningen (totaal + goedgekeurd/afgewezen) */}
+        {/* Card 3: Subsidies */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToVergunningen}
+          onClick={onSwitchToRegelgeving}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826] transition-all duration-200"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -292,21 +326,10 @@ export function GemeenteOverview({
         >
           <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
             <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
-              {profile?.sample_size ?? '—'}
+              {subsidies?.total ?? '—'}
             </span>
-            {profile?.sample_size != null && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <span className="text-[16px] font-black tabular-nums text-[#22C55E]">
-                  {Math.round((profile.approval_rate_pct ?? 0) / 100 * profile.sample_size)}
-                </span>
-                <span className="text-[14px] font-bold text-neutral-300">/</span>
-                <span className="text-[16px] font-black tabular-nums text-[#EF4444]">
-                  {Math.round((profile.rejection_rate_pct ?? 0) / 100 * profile.sample_size)}
-                </span>
-              </div>
-            )}
           </div>
-          <CardLabelBar label="Vergunningen" isActive />
+          <CardLabelBar label="Subsidies" isActive />
         </motion.button>
       </div>
 
@@ -329,7 +352,47 @@ export function GemeenteOverview({
           onClick={onSwitchToVergunningen}
         />
 
-        <PlaceholderCard />
+        {/* Vergunningen — totaal + groen/rood split */}
+        <motion.div
+          variants={fadeUp}
+          role="button"
+          tabIndex={0}
+          onClick={onSwitchToVergunningen}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToVergunningen() }}
+          className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 transition-colors duration-200 hover:shadow-sm cursor-pointer"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-neutral-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <span className="text-[11px] font-extrabold uppercase text-neutral-400" style={{ letterSpacing: '0.15em' }}>Vergunningen</span>
+            </div>
+            <div className="flex flex-col -space-y-1 text-slate-200">
+              <ChevronUp size={14} strokeWidth={2} />
+              <ChevronDown size={14} strokeWidth={2} />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-5xl font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
+              {profile?.sample_size ?? '—'}
+            </span>
+            {profile?.sample_size != null && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[14px] font-black tabular-nums text-[#22C55E]">
+                  {Math.round((profile.approval_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+                <span className="text-[12px] font-bold text-neutral-300">/</span>
+                <span className="text-[14px] font-black tabular-nums text-[#EF4444]">
+                  {Math.round((profile.rejection_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div />
+        </motion.div>
 
         {/* Subsidies — amber highlight like BeschikbaarCard */}
         <motion.div
