@@ -1,20 +1,21 @@
 import { useMemo } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import {
-  CheckCircle2,
-  ShieldAlert,
   ChevronUp,
   ChevronDown,
   Search,
-  MapPin,
   FileText,
   Landmark,
   Banknote,
+  Sparkles,
+  Heart,
 } from 'lucide-react'
 import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 import { useErfgoed } from '@/hooks/useErfgoed'
 import { useSubsidies } from '@/hooks/useSubsidies'
+import { useGemeenteAnalysisStatus } from '@/hooks/useJurisprudence'
+import { useParcelFavorites } from '@/hooks/useFavorites'
 
 interface GemeenteOverviewProps {
   naam: string
@@ -38,16 +39,7 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
 }
 
-/* ── Score derivation ──────────────────────────────────────── */
-
-function deriveScore(approval: number | null, doorlooptijd: number | null): number | null {
-  if (approval == null) return null
-  let s = Math.round(approval * 0.6)
-  if (doorlooptijd != null) {
-    s += doorlooptijd < 30 ? 40 : doorlooptijd < 60 ? 30 : doorlooptijd < 90 ? 20 : doorlooptijd < 120 ? 10 : 0
-  }
-  return Math.min(100, Math.max(0, s))
-}
+/* ── Score color ────────────────────────────────────────────── */
 
 function scoreColor(s: number | null): string {
   if (s == null) return '#94a3b8'
@@ -83,34 +75,50 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
   )
 }
 
-/* ── ScoreGauge (matches parcel panel ScoreGauge) ──────────── */
+/* ── Dual-Color Ring (verleend green + afgewezen red) ───── */
 
-function ScoreGauge({ score, color }: { score: number | null; color: string }) {
+function DualRing({ approved: a, rejected: rej }: { approved: number | null; rejected: number | null }) {
   const r = 48
-  const circumference = 2 * Math.PI * r
-  const normalised = score != null ? Math.min(100, Math.max(0, score)) / 100 : 0
+  const circ = 2 * Math.PI * r
+  const approvedNorm = a != null ? a / 100 : 0
+  const rejectedNorm = rej != null ? rej / 100 : 0
 
   return (
     <div className="relative flex items-center justify-center">
       <svg viewBox="0 0 120 120" className="h-[120px] w-[120px]" style={{ transform: 'rotate(-90deg)' }}>
         <circle cx="60" cy="60" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
-        {score != null && (
+        {/* Green arc — approved */}
+        {a != null && (
           <motion.circle
             cx="60" cy="60" r={r} fill="none"
-            stroke={color} strokeWidth="12" strokeLinecap="round"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset: circumference - normalised * circumference }}
+            stroke="#22C55E" strokeWidth="12" strokeLinecap="round"
+            strokeDasharray={circ}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: circ - approvedNorm * circ }}
             transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
           />
         )}
+        {/* Red arc — rejected (starts where green ends) */}
+        {rej != null && (
+          <motion.circle
+            cx="60" cy="60" r={r} fill="none"
+            stroke="#EF4444" strokeWidth="12" strokeLinecap="round"
+            strokeDasharray={circ}
+            style={{ transformOrigin: '60px 60px', transform: `rotate(${approvedNorm * 360}deg)` }}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: circ - rejectedNorm * circ }}
+            transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1], delay: 0.6 }}
+          />
+        )}
       </svg>
-      <span
-        className="absolute text-5xl font-black tracking-tighter tabular-nums leading-none"
-        style={{ color: score != null ? color : '#cbd5e1' }}
-      >
-        {score != null ? Math.round(score) : '—'}
-      </span>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-[28px] font-black tracking-tighter tabular-nums text-[#22C55E] leading-none">
+          {a != null ? `${Math.round(a)}%` : '—'}
+        </span>
+        <span className="text-[12px] font-bold text-[#EF4444]/70 tabular-nums -mt-0.5">
+          {rej != null ? `${Math.round(rej)}%` : ''}
+        </span>
+      </div>
     </div>
   )
 }
@@ -280,12 +288,18 @@ export function GemeenteOverview({
   const { data: hvv } = useHuisvestingsverordening(naam)
   const { data: erfgoed } = useErfgoed(naam)
   const { data: subsidies } = useSubsidies()
+  const { data: analysis } = useGemeenteAnalysisStatus(naam)
+  const { data: favorites } = useParcelFavorites()
 
-  const hScore = profile ? deriveScore(profile.approval_rate_pct, profile.avg_doorlooptijd_days) : null
-  const hColor = scoreColor(hScore)
+  const approvalRate = profile?.approval_rate_pct ?? null
+  const rejectionRate = profile?.rejection_rate_pct ?? null
+  const succeskans = analysis?.vergunnings_succeskans ?? null
 
-  const approvalRate = profile?.approval_rate_pct
-  const rejectionRate = profile?.rejection_rate_pct
+  // Count favorites in this gemeente
+  const favCount = useMemo(() => {
+    if (!favorites) return 0
+    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === naam.toLowerCase()).length
+  }, [favorites, naam])
 
   // Top types excluding Overig
   const topTypes = useMemo(() => {
@@ -306,9 +320,56 @@ export function GemeenteOverview({
       initial="hidden"
       animate="show"
     >
-      {/* ── 3 Bento Cards (like Satelliet/Bestemming/Score) ── */}
+      {/* ── 3 Bento Cards: Favorieten / Succeskans / Verleend-ring ── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
-        {/* Card 1: Haalbaarheid score */}
+        {/* Card 1: Favorieten in gemeente */}
+        <motion.button
+          variants={fadeUp}
+          type="button"
+          onClick={onSwitchToRegelgeving}
+          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] relative">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.4 }}
+            >
+              <Heart size={32} fill="#EF4444" className="text-[#EF4444] mb-2" />
+            </motion.div>
+            <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${favCount > 0 ? 'text-[#0E1111]' : 'text-neutral-300'}`}>
+              {favCount}
+            </span>
+          </div>
+          <CardLabelBar label="Favorieten" isActive={false} />
+        </motion.button>
+
+        {/* Card 2: Succeskans */}
+        <motion.button
+          variants={fadeUp}
+          type="button"
+          onClick={onSwitchToVergunningen}
+          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
+            <Sparkles size={16} className="text-[#F9A826] mb-2" />
+            <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${succeskans != null ? 'text-[#F9A826]' : 'text-neutral-300'}`}>
+              {succeskans != null ? Math.round(succeskans) : '—'}
+            </span>
+            {succeskans != null && (
+              <span className="text-[18px] font-black text-[#F9A826]/50 -mt-1">%</span>
+            )}
+          </div>
+          <CardLabelBar label="Succeskans" isActive={false} />
+        </motion.button>
+
+        {/* Card 3: Dual-color ring (verleend + afgewezen) */}
         <motion.button
           variants={fadeUp}
           type="button"
@@ -319,55 +380,9 @@ export function GemeenteOverview({
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
-            <ScoreGauge score={hScore} color={hColor} />
+            <DualRing approved={approvalRate} rejected={rejectionRate} />
           </div>
-          <CardLabelBar label="Haalbaarheid" isActive />
-        </motion.button>
-
-        {/* Card 2: Verleend % */}
-        <motion.button
-          variants={fadeUp}
-          type="button"
-          onClick={onSwitchToVergunningen}
-          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
-            <div className="flex flex-col items-center">
-              <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#22C55E]">
-                {approvalRate != null ? `${Math.round(approvalRate)}` : '—'}
-              </span>
-              {approvalRate != null && (
-                <span className="text-[20px] font-black text-[#22C55E]/60 -mt-1">%</span>
-              )}
-            </div>
-          </div>
-          <CardLabelBar label="Verleend" isActive={false} />
-        </motion.button>
-
-        {/* Card 3: Afgewezen % */}
-        <motion.button
-          variants={fadeUp}
-          type="button"
-          onClick={onSwitchToVergunningen}
-          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
-            <div className="flex flex-col items-center">
-              <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${rejectionRate != null ? 'text-[#EF4444]' : 'text-neutral-300'}`}>
-                {rejectionRate != null ? `${Math.round(rejectionRate)}` : '—'}
-              </span>
-              {rejectionRate != null && (
-                <span className="text-[20px] font-black text-[#EF4444]/60 -mt-1">%</span>
-              )}
-            </div>
-          </div>
-          <CardLabelBar label="Afgewezen" isActive={false} />
+          <CardLabelBar label="Vergunningen" isActive />
         </motion.button>
       </div>
 
@@ -407,24 +422,14 @@ export function GemeenteOverview({
       {/* ── Vergunning types (like UseCaseScoreCards) ────── */}
       <VergunningTypeCards types={topTypes.slice(0, 4)} />
 
-      {/* ── Secondary Fields (like pandstatus/vergunningen) ── */}
+      {/* ── Secondary Fields ──────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
-        <SecondaryField
-          value={profile?.severity_label && profile.severity_label !== 'Onbekend'
-            ? `${profile.severity_label} vergunningsbeleid`
-            : isLoading ? '...' : 'Geen data'}
-          onClick={onSwitchToVergunningen}
-        />
         <SecondaryField
           value={profile?.avg_doorlooptijd_days != null && profile.avg_doorlooptijd_days > 0
             ? `~${profile.avg_doorlooptijd_days} dagen doorlooptijd`
             : isLoading ? '...' : 'Geen doorlooptijd data'}
           onClick={onSwitchToVergunningen}
         />
-      </motion.div>
-
-      {/* ── Row 6: Wijken ────────────────────────────────── */}
-      <motion.div variants={fadeUp} className="mt-1.5 grid grid-cols-1">
         <SecondaryField
           value={`${wijkCount} wijken`}
           onClick={() => onSelectWijk('', '')}

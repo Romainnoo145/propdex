@@ -199,3 +199,22 @@ export function useTrendData(gemeenteNaam: string) {
         staleTime: 10 * 60_000, // 10 min -- trend data changes slowly
     })
 }
+
+/**
+ * Passive read-only hook for gemeente analysis scores.
+ *
+ * Uses GET /analyze/status/{gemeente} — does NOT trigger AI analysis.
+ * Returns cached scores if available (succeskans, klimaat_score).
+ * Safe for overview cards where we don't want to start background jobs.
+ */
+export function useGemeenteAnalysisStatus(gemeenteNaam: string) {
+    const { accessToken } = useAuth()
+
+    return useQuery<AnalyzeGemeenteResponse, Error>({
+        queryKey: ['jurisprudence', 'analysis-status', gemeenteNaam],
+        queryFn: () => pollRulingAnalysis(gemeenteNaam, accessToken),
+        enabled: !!accessToken && gemeenteNaam.length > 0,
+        staleTime: 10 * 60_000,
+        retry: 1,
+    })
+}
