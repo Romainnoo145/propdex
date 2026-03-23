@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-export type GemeenteLayer = 'klimaat' | 'bestuurlijk' | 'activiteit'
+export type GemeenteLayer = 'vergunningen' | 'regelgeving' | 'beleid' | 'activiteit'
 
 interface GemeenteCategoryTabsProps {
   activeLayer: GemeenteLayer | null
@@ -8,19 +8,19 @@ interface GemeenteCategoryTabsProps {
 }
 
 const TABS: { key: GemeenteLayer; label: string }[] = [
-  { key: 'klimaat', label: 'Klimaat' },
-  { key: 'bestuurlijk', label: 'Bestuurlijk' },
-  { key: 'activiteit', label: 'Activiteit' },
+  { key: 'vergunningen', label: 'Vergunningen' },
+  { key: 'regelgeving', label: 'Regelgeving' },
+  { key: 'beleid', label: 'Beleid & Nieuws' },
+  { key: 'activiteit', label: 'Mijn Activiteit' },
 ]
 
 /**
- * Pill tab switcher — matches ParcelDetailPanel's CategoryTabs exactly.
- * 3 layers: Klimaat (regulatory) / Bestuurlijk (political) / Activiteit (my work).
- * Unlike old GemeenteTabBar, clicking active tab does NOT deselect (layers are one-way like parcel panel).
+ * Pill tab switcher for gemeente panel — 4 layers.
+ * Overview is shown when activeLayer is null (no tab selected).
  */
 export function GemeenteCategoryTabs({ activeLayer, onSelect }: GemeenteCategoryTabsProps) {
   return (
-    <div className="flex w-full h-[48px] rounded-full p-1 bg-[#F2F6F3]">
+    <div className="flex w-full h-[44px] rounded-full p-1 bg-[#F2F6F3]">
       {TABS.map(({ key, label }) => {
         const isActive = activeLayer === key
         return (
@@ -31,7 +31,7 @@ export function GemeenteCategoryTabs({ activeLayer, onSelect }: GemeenteCategory
             className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
             style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: isActive ? 700 : 600,
               letterSpacing: isActive ? '-0.01em' : '0',
               color: isActive ? undefined : '#94a3b8',

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { LeftPanelShell } from './LeftPanelShell'
@@ -14,9 +14,10 @@ const prefersReducedMotion =
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const LAYER_LABELS: Record<GemeenteLayer, string> = {
-  klimaat: 'Klimaat',
-  bestuurlijk: 'Bestuurlijk',
-  activiteit: 'Activiteit',
+  vergunningen: 'Vergunningen',
+  regelgeving: 'Regelgeving',
+  beleid: 'Beleid & Nieuws',
+  activiteit: 'Mijn Activiteit',
 }
 
 interface GemeenteContextPanelProps {
@@ -30,8 +31,8 @@ interface GemeenteContextPanelProps {
 
 /**
  * Gemeente panel — het instituut-paneel.
- * Architecture mirrors ParcelDetailPanel: overview + 3 toggle layers.
- * Zero demografie — that lives in the wijk panel.
+ * Overview (default) + 4 toggle layers:
+ *   Vergunningen / Regelgeving / Beleid & Nieuws / Mijn Activiteit
  */
 export function GemeenteContextPanel({
   naam,
@@ -50,6 +51,10 @@ export function GemeenteContextPanel({
   const handleBack = useCallback(() => {
     setActiveLayer(null)
   }, [])
+
+  const wijkCount = useMemo(() => {
+    return wijkGeojson?.features?.length ?? 0
+  }, [wijkGeojson])
 
   return (
     <>
@@ -107,9 +112,8 @@ export function GemeenteContextPanel({
                   naam={naam}
                   code={code}
                   gemeenteCode={code}
+                  wijkCount={wijkCount}
                   onSelectWijk={onSelectWijk}
-                  onSwitchToKlimaat={() => setActiveLayer('klimaat')}
-                  onSwitchToActiviteit={() => setActiveLayer('activiteit')}
                 />
               </motion.div>
             ) : (
@@ -125,12 +129,23 @@ export function GemeenteContextPanel({
                 }
                 className="flex-1 flex flex-col overflow-y-auto"
               >
-                {activeLayer === 'klimaat' && (
+                {/* Vergunningen tab — reuses KlimaatLayer for now (S02 will replace) */}
+                {activeLayer === 'vergunningen' && (
                   <KlimaatLayer gemeenteNaam={naam} gemeenteCode={code} />
                 )}
-                {activeLayer === 'bestuurlijk' && (
+                {/* Regelgeving tab — reuses BestuurlijkLayer for now (S03 will replace) */}
+                {activeLayer === 'regelgeving' && (
                   <BestuurlijkLayer gemeenteNaam={naam} />
                 )}
+                {/* Beleid & Nieuws — placeholder, S04 will build */}
+                {activeLayer === 'beleid' && (
+                  <div className="flex-1 flex items-center justify-center px-8">
+                    <p className="text-[13px] text-neutral-400 text-center">
+                      Beleid & Nieuws wordt binnenkort toegevoegd.
+                    </p>
+                  </div>
+                )}
+                {/* Mijn Activiteit — reuses ActiviteitLayer for now (S05 will replace) */}
                 {activeLayer === 'activiteit' && (
                   <ActiviteitLayer
                     scans={scans}
