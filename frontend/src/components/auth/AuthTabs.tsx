@@ -22,7 +22,7 @@ export function AuthTabs({
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
   return (
-    <div className="w-full max-w-md rounded-[24px] border border-[#EAEFEF] bg-white p-6 shadow-lg">
+    <div className="w-full rounded-[24px] bg-white p-6">
       {/* Tab list */}
       <div
         role="tablist"
