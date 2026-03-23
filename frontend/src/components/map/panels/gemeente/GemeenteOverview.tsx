@@ -7,7 +7,6 @@ import {
   FileText,
   Landmark,
   Banknote,
-  Sparkles,
   Heart,
 } from 'lucide-react'
 import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
@@ -355,7 +354,6 @@ export function GemeenteOverview({
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
-            <Sparkles size={16} className="text-[#F9A826] mb-2" />
             <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${succeskans != null ? 'text-[#F9A826]' : 'text-neutral-300'}`}>
               {succeskans != null ? Math.round(succeskans) : '—'}
             </span>

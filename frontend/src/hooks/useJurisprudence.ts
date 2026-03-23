@@ -215,6 +215,7 @@ export function useGemeenteAnalysisStatus(gemeenteNaam: string) {
         queryFn: () => pollRulingAnalysis(gemeenteNaam, accessToken),
         enabled: !!accessToken && gemeenteNaam.length > 0,
         staleTime: 10 * 60_000,
-        retry: 1,
+        retry: 2,
+        retryDelay: 1000,
     })
 }
