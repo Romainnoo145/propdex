@@ -107,8 +107,8 @@ function LeeftijdContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
       <div className="space-y-3">
         <HBar label="0–14 jaar" value={l.perc_0_14} max={max} color="#22c55e" suffix="%" />
         <HBar label="15–24 jaar" value={l.perc_15_24} max={max} color="#3b82f6" suffix="%" />
-        <HBar label="25–44 jaar" value={l.perc_25_44} max={max} color="#8b5cf6" suffix="%" />
-        <HBar label="45–64 jaar" value={l.perc_45_64} max={max} color="#f59e0b" suffix="%" />
+        <HBar label="25–44 jaar" value={l.perc_25_44} max={max} color="#F9A826" suffix="%" />
+        <HBar label="45–64 jaar" value={l.perc_45_64} max={max} color="#F9A826" suffix="%" />
         <HBar label="65+ jaar" value={l.perc_65_plus} max={max} color="#ef4444" suffix="%" />
       </div>
       <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
@@ -152,7 +152,7 @@ function HuishoudensContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
     <>
       <SectionHeader title="Huishoudsamenstelling" />
       <div className="space-y-3">
-        <HBar label="Eenpersoons" value={hh.eenpersoons} max={max} color="#8b5cf6" />
+        <HBar label="Eenpersoons" value={hh.eenpersoons} max={max} color="#F9A826" />
         <HBar label="Zonder kinderen" value={hh.zonder_kinderen} max={max} color="#3b82f6" />
         <HBar label="Met kinderen" value={hh.met_kinderen} max={max} color="#22c55e" />
       </div>
@@ -173,7 +173,7 @@ function CriminaliteitContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) 
     <>
       <SectionHeader title="Criminaliteit per 1.000 inwoners" />
       <div className="space-y-3">
-        <HBar label="Vermogen" value={cat.vermogensdelicten?.per_1000} max={maxCat} color="#f59e0b" suffix="/1k" />
+        <HBar label="Vermogen" value={cat.vermogensdelicten?.per_1000} max={maxCat} color="#F9A826" suffix="/1k" />
         <HBar label="Vernieling" value={cat.vernieling?.per_1000} max={maxCat} color="#ef4444" suffix="/1k" />
         <HBar label="Geweld" value={cat.geweld?.per_1000} max={maxCat} color="#dc2626" suffix="/1k" />
       </div>
@@ -196,10 +196,10 @@ function NabijheidContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
       <div className="space-y-3">
         <HBar label="Supermarkt" value={a.supermarkt_km} max={maxKm} color="#22c55e" suffix=" km" />
         <HBar label="Huisarts" value={a.huisarts_km} max={maxKm} color="#3b82f6" suffix=" km" />
-        <HBar label="Basisschool" value={a.basisschool_km} max={maxKm} color="#8b5cf6" suffix=" km" />
-        <HBar label="Kinderopvang" value={a.kinderdagverblijf_km} max={maxKm} color="#f59e0b" suffix=" km" />
-        <HBar label="Treinstation" value={a.treinstation_km} max={maxKm} color="#0ea5e9" suffix=" km" />
-        <HBar label="OV-knooppunt" value={a.overstapstation_km} max={maxKm} color="#6366f1" suffix=" km" />
+        <HBar label="Basisschool" value={a.basisschool_km} max={maxKm} color="#F9A826" suffix=" km" />
+        <HBar label="Kinderopvang" value={a.kinderdagverblijf_km} max={maxKm} color="#F9A826" suffix=" km" />
+        <HBar label="Treinstation" value={a.treinstation_km} max={maxKm} color="#0E1111" suffix=" km" />
+        <HBar label="OV-knooppunt" value={a.overstapstation_km} max={maxKm} color="#0E1111" suffix=" km" />
       </div>
     </>
   )

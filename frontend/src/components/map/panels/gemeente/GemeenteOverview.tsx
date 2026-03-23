@@ -4,13 +4,11 @@ import {
   ChevronUp,
   ChevronDown,
   Search,
-  Heart,
 } from 'lucide-react'
-import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
+import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
-import { useSubsidies } from '@/hooks/useSubsidies'
 import { useGemeenteAnalysisStatus } from '@/hooks/useJurisprudence'
-import { useParcelFavorites } from '@/hooks/useFavorites'
+import { useRaadsinformatie } from '@/hooks/useRaadsinformatie'
 
 interface GemeenteOverviewProps {
   naam: string
@@ -21,6 +19,7 @@ interface GemeenteOverviewProps {
   onSelectWijk: (code: string, naam: string) => void
   onSwitchToVergunningen: () => void
   onSwitchToRegelgeving: () => void
+  onSwitchToBeleid: () => void
 }
 
 /* ── Animation ─────────────────────────────────────────────── */
@@ -137,9 +136,9 @@ function BekendmakingenDivider({ total, approvalPct, topTypes }: { total: number
 /* ── ScoreCircleCard ────────────────────────────────────────── */
 
 function ScoreCircleCard({
-  icon, label, score, color, onClick,
+  icon, label, score, color, suffix, onClick,
 }: {
-  icon: React.ReactNode; label: string; score: number | null; color: string; onClick?: () => void
+  icon: React.ReactNode; label: string; score: number | null; color: string; suffix?: string; onClick?: () => void
 }) {
   const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
   const r = 48
@@ -177,28 +176,9 @@ function ScoreCircleCard({
           )}
         </svg>
         <span className="absolute text-5xl font-black tracking-tighter tabular-nums leading-none" style={{ color: score !== null ? color : '#cbd5e1' }}>
-          {score !== null ? Math.round(score) : '—'}
+          {score !== null ? `${Math.round(score)}${suffix ?? ''}` : '—'}
         </span>
       </div>
-      <div />
-    </motion.div>
-  )
-}
-
-/* ── Placeholder card for empty slots ──────────────────────── */
-
-function PlaceholderCard() {
-  return (
-    <motion.div
-      variants={fadeUp}
-      className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] border-dashed p-5"
-    >
-      <div className="flex items-center gap-1.5">
-        <span className="text-[11px] font-extrabold uppercase text-neutral-300" style={{ letterSpacing: '0.15em' }}>
-          Binnenkort
-        </span>
-      </div>
-      <div className="flex-1" />
       <div />
     </motion.div>
   )
@@ -233,19 +213,21 @@ export function GemeenteOverview({
   onSelectWijk,
   onSwitchToVergunningen,
   onSwitchToRegelgeving,
+  onSwitchToBeleid,
 }: GemeenteOverviewProps) {
-  const { data: profile, isLoading } = useGemeenteProfile(naam)
+  const { data: profile } = useGemeenteProfile(naam)
   const { data: hvv } = useHuisvestingsverordening(naam)
-  const { data: subsidies } = useSubsidies()
   const { data: analysis } = useGemeenteAnalysisStatus(naam)
-  const { data: favorites } = useParcelFavorites()
+  const { data: raadsData } = useRaadsinformatie(naam)
 
   const succeskans = analysis?.vergunnings_succeskans ?? null
+  const approvalPct = profile?.approval_rate_pct ?? null
+  const doorlooptijd = profile?.avg_doorlooptijd_days ?? null
+  const severityLabel = profile?.severity_label ?? null
+  const severityColor = severityLabel ? (SEVERITY_COLORS[severityLabel] ?? '#94a3b8') : '#94a3b8'
 
-  const favCount = useMemo(() => {
-    if (!favorites) return 0
-    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === naam.toLowerCase()).length
-  }, [favorites, naam])
+  // Normalise doorlooptijd to 0–100 scale (cap at 180 days)
+  const doorlooptijdNorm = doorlooptijd != null ? Math.min(100, Math.round((doorlooptijd / 180) * 100)) : null
 
   // Top types excluding Overig + Vergunningbesluit
   const topTypes = useMemo(() => {
@@ -282,44 +264,58 @@ export function GemeenteOverview({
           <CardLabelBar label={stedelijkheid ?? 'Onbekend'} isActive={false} />
         </motion.div>
 
-        {/* Card 2: Favorieten */}
+        {/* Card 2: Vergunning-klimaat — severity label met kleurcode */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToRegelgeving}
+          onClick={onSwitchToVergunningen}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.4 }}
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-2">
+            {/* Colored dot */}
+            <div
+              className="h-6 w-6 rounded-full"
+              style={{ backgroundColor: severityColor }}
+            />
+            <span
+              className="text-[18px] font-black tracking-tight text-center leading-tight px-2"
+              style={{ color: '#0E1111' }}
             >
-              <Heart size={48} fill="#EF4444" className="text-[#EF4444]" />
-            </motion.div>
+              {severityLabel && severityLabel !== 'Onbekend' ? severityLabel : '—'}
+            </span>
+            {approvalPct != null && (
+              <span className="text-[11px] font-bold text-slate-400 tabular-nums">
+                {Math.round(approvalPct)}% goedgekeurd
+              </span>
+            )}
           </div>
-          <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
+          <CardLabelBar label="Vergunningklimaat" isActive={false} />
         </motion.button>
 
-        {/* Card 3: Subsidies */}
+        {/* Card 3: Raadsinformatie — politieke activiteit (amber active) */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToRegelgeving}
+          onClick={onSwitchToBeleid}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826] transition-all duration-200"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-1">
             <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
-              {subsidies?.total ?? '—'}
+              {raadsData?.total_found ?? '—'}
             </span>
+            {raadsData?.dekking === false && (
+              <span className="text-[10px] font-bold text-slate-400">
+                Niet bij ORI
+              </span>
+            )}
           </div>
-          <CardLabelBar label="Subsidies" isActive />
+          <CardLabelBar label="Raadsstukken" isActive />
         </motion.button>
       </div>
 
@@ -327,19 +323,20 @@ export function GemeenteOverview({
       <motion.div variants={fadeUp} className="mt-2">
         <BekendmakingenDivider
           total={profile?.sample_size ?? 0}
-          approvalPct={profile?.approval_rate_pct ?? null}
+          approvalPct={approvalPct}
           topTypes={topTypes}
         />
       </motion.div>
 
       {/* ── 3 Circle Cards ───────────────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
-        {/* Rechtszaken — links */}
+        {/* Goedkeurings% — links */}
         <ScoreCircleCard
-          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>}
-          label="Rechtszaken"
-          score={analysis?.total_count ?? null}
-          color="#0E1111"
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>}
+          label="Goedkeuring"
+          score={approvalPct != null ? Math.round(approvalPct) : null}
+          color={approvalPct != null ? (approvalPct >= 80 ? '#22C55E' : approvalPct >= 50 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+          suffix="%"
           onClick={onSwitchToVergunningen}
         />
 
@@ -352,45 +349,24 @@ export function GemeenteOverview({
           onClick={onSwitchToVergunningen}
         />
 
-        {/* Subsidies — amber highlight like BeschikbaarCard */}
-        <motion.div
-          variants={fadeUp}
-          role="button"
-          tabIndex={0}
-          onClick={onSwitchToRegelgeving}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToRegelgeving() }}
-          className="flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm cursor-pointer"
-          style={{
-            background: 'rgba(249, 168, 38, 0.08)',
-            border: '1px solid rgba(249, 168, 38, 0.3)',
-          }}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#F9A826]">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 4v16M2 12h20"/></svg>
-              </span>
-              <span className="text-[11px] font-extrabold uppercase text-[#F9A826]" style={{ letterSpacing: '0.15em' }}>
-                Subsidies
-              </span>
-            </div>
-            <div className="flex flex-col -space-y-1 text-slate-200">
-              <ChevronUp size={14} strokeWidth={2} />
-              <ChevronDown size={14} strokeWidth={2} />
-            </div>
-          </div>
+        {/* Doorlooptijd — rechts */}
+        <ScoreCircleCard
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+          label="Doorlooptijd"
+          score={doorlooptijdNorm}
+          color={doorlooptijd != null ? (doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+          onClick={onSwitchToVergunningen}
+        />
+      </div>
 
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-5xl font-black tracking-tighter tabular-nums leading-none text-[#F9A826]">
-              {subsidies?.total ?? '—'}
-            </span>
-          </div>
-
-          <span className="text-[10px] font-bold uppercase block text-center text-[#F9A826]/60">
-            regelingen (NL)
+      {/* Doorlooptijd days label */}
+      {doorlooptijd != null && (
+        <motion.div variants={fadeUp} className="mt-1 flex justify-end">
+          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+            ~{doorlooptijd} dagen gem.
           </span>
         </motion.div>
-      </div>
+      )}
 
       {/* ── Secondary Fields ─────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
@@ -407,7 +383,7 @@ export function GemeenteOverview({
       {/* ── Trust Metadata ───────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 flex items-center justify-between">
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
-          Bron: KOOP · Rechtspraak · RCE · RVO
+          Bron: KOOP · Rechtspraak · ORI
         </span>
         <span className="text-[9px] uppercase tracking-wider text-slate-300">
           {profile?.data_coverage ?? '—'} dekking

@@ -14,7 +14,7 @@ const STEDELIJKHEID_COLORS: Record<string, string> = {
   'Zeer sterk stedelijk': '#7c3aed',
   'Sterk stedelijk': '#3b82f6',
   'Matig stedelijk': '#22c55e',
-  'Weinig stedelijk': '#f59e0b',
+  'Weinig stedelijk': '#F9A826',
   'Niet stedelijk': '#94a3b8',
 }
 

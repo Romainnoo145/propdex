@@ -110,8 +110,8 @@ export function ActiviteitLayer({
   const verdictColor = activityScore == null
     ? '#94a3b8'
     : activityScore >= 60 ? '#22c55e'
-    : activityScore >= 20 ? '#f59e0b'
-    : wijkenMetData > 0 ? '#0ea5e9'
+    : activityScore >= 20 ? '#F9A826'
+    : wijkenMetData > 0 ? '#F9A826'
     : '#94a3b8'
 
   const verdictSubtitle = wijkenMetData > 0

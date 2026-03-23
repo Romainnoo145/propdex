@@ -82,7 +82,7 @@ function deriveVerdict(score: number | null): KlimaatVerdict {
     return {
       score,
       label: 'GEMIDDELD KLIMAAT',
-      color: '#f59e0b',
+      color: '#F9A826',
       Icon: Scale,
       subtitle: 'Standaard vergunningstraject · let op doorlooptijd',
     }
@@ -147,7 +147,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
       sub: 'Goedkeuringsgraad',
       badge: profile?.sample_size ? `n=${profile.sample_size}` : undefined,
       accentColor: profile?.approval_rate_pct != null
-        ? profile.approval_rate_pct >= 80 ? '#22c55e' : profile.approval_rate_pct >= 50 ? '#f59e0b' : '#ef4444'
+        ? profile.approval_rate_pct >= 80 ? '#22c55e' : profile.approval_rate_pct >= 50 ? '#F9A826' : '#ef4444'
         : undefined,
     },
     {
@@ -156,7 +156,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
       value: profile?.rejection_rate_pct != null ? `${Math.round(profile.rejection_rate_pct)}%` : '—',
       sub: 'Afwijzingspercentage',
       accentColor: profile?.rejection_rate_pct != null
-        ? profile.rejection_rate_pct <= 10 ? '#22c55e' : profile.rejection_rate_pct <= 25 ? '#f59e0b' : '#ef4444'
+        ? profile.rejection_rate_pct <= 10 ? '#22c55e' : profile.rejection_rate_pct <= 25 ? '#F9A826' : '#ef4444'
         : undefined,
     },
     {
@@ -165,7 +165,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
       value: profile?.avg_doorlooptijd_days != null ? `~${profile.avg_doorlooptijd_days}D` : '—',
       sub: 'Gemiddelde afhandeling',
       accentColor: profile?.avg_doorlooptijd_days != null
-        ? profile.avg_doorlooptijd_days <= 30 ? '#22c55e' : profile.avg_doorlooptijd_days <= 90 ? '#f59e0b' : '#ef4444'
+        ? profile.avg_doorlooptijd_days <= 30 ? '#22c55e' : profile.avg_doorlooptijd_days <= 90 ? '#F9A826' : '#ef4444'
         : undefined,
     },
     {
@@ -188,21 +188,21 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
       value: topPermitType ? topPermitType[0].slice(0, 14).toUpperCase() : '—',
       sub: topPermitType ? `${topPermitType[1]} aanvragen` : 'Geen data',
       badge: topPermitType ? String(topPermitType[1]) : undefined,
-      accentColor: '#6366f1',
+      accentColor: '#F9A826',
     },
     {
       key: 'bekendm-30d',
       label: 'RECENT',
       value: profile ? String(profile.bekendmakingen_30d) : '—',
       sub: 'Afgelopen 30 dagen',
-      accentColor: '#0ea5e9',
+      accentColor: '#0E1111',
     },
     {
       key: 'dekking',
       label: 'DATA DEKKING',
       value: isLoading ? '...' : (profile?.data_coverage?.toUpperCase() ?? '—'),
       sub: profile?.sample_size ? `${profile.sample_size} bekendmakingen geanalyseerd` : 'Geen steekproef',
-      accentColor: profile?.data_coverage === 'high' ? '#22c55e' : profile?.data_coverage === 'medium' ? '#f59e0b' : '#94a3b8',
+      accentColor: profile?.data_coverage === 'high' ? '#22c55e' : profile?.data_coverage === 'medium' ? '#F9A826' : '#94a3b8',
     },
   ].map(card => ({ ...card, onClick: () => setShowModal(true) }))
 
