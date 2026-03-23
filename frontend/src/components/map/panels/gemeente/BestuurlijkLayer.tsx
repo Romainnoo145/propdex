@@ -66,7 +66,7 @@ function deriveVerdict(
     return {
       score,
       label: 'EXTRA REGELGEVING',
-      color: '#f59e0b',
+      color: '#F9A826',
       Icon: ScrollText,
       subtitle: 'Splitsingsverordening en erfgoed aanwezig — let op extra eisen',
     }
@@ -75,7 +75,7 @@ function deriveVerdict(
     return {
       score,
       label: 'SPLITSINGSVERORDENING',
-      color: '#f59e0b',
+      color: '#F9A826',
       Icon: ScrollText,
       subtitle: 'Regels voor woningsplitsing en kamerverhuur actief',
     }
@@ -84,7 +84,7 @@ function deriveVerdict(
     return {
       score,
       label: 'ERFGOED AANWEZIG',
-      color: '#d97706',
+      color: '#F9A826',
       Icon: Landmark,
       subtitle: `${erfgoedCount} beschermd${erfgoedCount > 1 ? 'e' : ''} gezicht${erfgoedCount > 1 ? 'en' : ''} — strengere welstandseisen`,
     }
@@ -135,8 +135,8 @@ function HvvCard({ heeftVerordening, title, url }: {
       variants={fadeUp}
       className="rounded-[16px] p-5 border transition-shadow"
       style={{
-        background: active ? 'rgba(139, 92, 246, 0.04)' : 'white',
-        borderColor: active ? 'rgba(139, 92, 246, 0.2)' : '#EAEFEF',
+        background: active ? 'rgba(249, 168, 38, 0.04)' : 'white',
+        borderColor: active ? 'rgba(249, 168, 38, 0.25)' : '#EAEFEF',
       }}
     >
       <div className="flex items-start justify-between">
@@ -145,8 +145,8 @@ function HvvCard({ heeftVerordening, title, url }: {
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
               style={{
-                color: active ? '#8b5cf6' : '#94a3b8',
-                backgroundColor: active ? 'rgba(139, 92, 246, 0.1)' : '#f8fafc',
+                color: active ? '#F9A826' : '#94a3b8',
+                backgroundColor: active ? 'rgba(249, 168, 38, 0.1)' : '#f8fafc',
               }}
             >
               {active ? 'ACTIEF' : 'NIET AANWEZIG'}
@@ -174,7 +174,7 @@ function HvvCard({ heeftVerordening, title, url }: {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center h-8 w-8 rounded-full bg-[#F2F6F3] text-slate-400 hover:text-[#8b5cf6] transition-colors shrink-0 ml-3"
+            className="flex items-center justify-center h-8 w-8 rounded-full bg-[#F2F6F3] text-slate-400 hover:text-[#F9A826] transition-colors shrink-0 ml-3"
             aria-label="Open verordening"
           >
             <ExternalLink size={14} />
@@ -201,8 +201,8 @@ function ErfgoedGezichtCard({ gezicht }: { gezicht: BeschermdGezichtResponse }) 
             <span
               className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
               style={{
-                color: isStad ? '#d97706' : '#0ea5e9',
-                backgroundColor: isStad ? 'rgba(217, 119, 6, 0.1)' : 'rgba(14, 165, 233, 0.1)',
+                color: isStad ? '#F9A826' : '#0E1111',
+                backgroundColor: isStad ? 'rgba(249, 168, 38, 0.1)' : 'rgba(14, 17, 17, 0.06)',
               }}
             >
               {isStad ? 'Stadsgezicht' : 'Dorpsgezicht'}
@@ -322,7 +322,7 @@ export function BestuurlijkLayer({ gemeenteNaam }: BestuurlijkLayerProps) {
           label="Beschermd erfgoed"
         >
           {erfgoedData?.total != null && erfgoedData.total > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-[10px] font-black text-amber-600 tabular-nums">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums" style={{ color: '#F9A826', backgroundColor: 'rgba(249, 168, 38, 0.1)' }}>
               {erfgoedData.total}
             </span>
           )}

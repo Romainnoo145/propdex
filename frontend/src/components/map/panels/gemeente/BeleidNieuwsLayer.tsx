@@ -67,7 +67,7 @@ function deriveVerdict(
   return {
     score,
     label: 'BEPERKT INZICHT',
-    color: '#f59e0b',
+    color: '#F9A826',
     Icon: BookOpen,
     subtitle: 'Gedeeltelijke beleidsinformatie',
   }
@@ -76,11 +76,11 @@ function deriveVerdict(
 /* ── Raadsstuk type badge ──────────────────────────────────── */
 
 const TYPE_COLORS: Record<string, string> = {
-  motie: '#8b5cf6',
-  raadsbrief: '#0ea5e9',
-  besluit: '#22c55e',
-  amendement: '#f59e0b',
-  initiatiefvoorstel: '#ec4899',
+  motie: '#F9A826',
+  raadsbrief: '#0E1111',
+  besluit: '#22C55E',
+  amendement: '#F9A826',
+  initiatiefvoorstel: '#0E1111',
 }
 
 function typeBadgeColor(type: string | null): string {
