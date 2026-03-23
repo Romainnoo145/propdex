@@ -338,13 +338,10 @@ export function GemeenteOverview({
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.4 }}
             >
-              <Heart size={32} fill="#EF4444" className="text-[#EF4444] mb-2" />
+              <Heart size={48} fill="#EF4444" className="text-[#EF4444]" />
             </motion.div>
-            <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${favCount > 0 ? 'text-[#0E1111]' : 'text-neutral-300'}`}>
-              {favCount}
-            </span>
           </div>
-          <CardLabelBar label="Favorieten" isActive={false} />
+          <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
         </motion.button>
 
         {/* Card 2: Succeskans */}
