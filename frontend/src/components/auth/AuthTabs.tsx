@@ -22,21 +22,21 @@ export function AuthTabs({
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-6 shadow-lg">
+    <div className="w-full max-w-md rounded-[24px] border border-[#EAEFEF] bg-white p-6 shadow-lg">
       {/* Tab list */}
       <div
         role="tablist"
-        className="mb-6 flex border-b border-neutral-200"
+        className="mb-6 flex border-b border-[#EAEFEF]"
       >
         <button
           role="tab"
           aria-selected={activeTab === 'login'}
           aria-controls="login-panel"
           onClick={() => setActiveTab('login')}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+          className={`flex-1 px-4 py-2.5 text-sm font-bold transition-colors ${
             activeTab === 'login'
-              ? 'border-b-2 border-aura-amber text-aura-amber'
-              : 'text-neutral-600 hover:text-aura-ink'
+              ? 'border-b-2 border-[#F9A826] text-[#F9A826]'
+              : 'text-neutral-400 hover:text-aura-ink'
           }`}
         >
           Log in
@@ -46,10 +46,10 @@ export function AuthTabs({
           aria-selected={activeTab === 'register'}
           aria-controls="register-panel"
           onClick={() => setActiveTab('register')}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+          className={`flex-1 px-4 py-2.5 text-sm font-bold transition-colors ${
             activeTab === 'register'
-              ? 'border-b-2 border-aura-amber text-aura-amber'
-              : 'text-neutral-600 hover:text-aura-ink'
+              ? 'border-b-2 border-[#F9A826] text-[#F9A826]'
+              : 'text-neutral-400 hover:text-aura-ink'
           }`}
         >
           Register

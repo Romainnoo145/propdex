@@ -77,7 +77,7 @@ export function LoginForm({ onLogin, onSuccess }: LoginFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-lg bg-aura-amber px-4 py-2 text-sm font-medium text-aura-obsidian hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-[14px] bg-[#F9A826] px-4 py-3 text-sm font-bold text-white hover:bg-[#E8971F] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
       >
         {isSubmitting ? 'Logging in...' : 'Log in'}
       </button>

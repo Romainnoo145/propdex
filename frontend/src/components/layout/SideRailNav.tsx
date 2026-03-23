@@ -66,8 +66,8 @@ export default function SideRailNav() {
 
       {/* Top: Logo */}
       <div className="w-full flex justify-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-aura-obsidian shadow-lg">
-          <span className="text-white font-display text-xl font-bold">P</span>
+        <div className="flex h-16 w-16 items-center justify-center rounded-full overflow-hidden">
+          <img src="/images/propdex-logo.svg" alt="Propdex" className="h-16 w-16" />
         </div>
       </div>
 
