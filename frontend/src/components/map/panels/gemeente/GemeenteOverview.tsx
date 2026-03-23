@@ -7,7 +7,7 @@ import {
   Heart,
   Bell,
 } from 'lucide-react'
-import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
+import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 import { useGemeenteAnalysisStatus } from '@/hooks/useJurisprudence'
 import { useRaadsinformatie } from '@/hooks/useRaadsinformatie'
@@ -231,11 +231,6 @@ export function GemeenteOverview({
   const succeskans = analysis?.vergunnings_succeskans ?? null
   const approvalPct = profile?.approval_rate_pct ?? null
   const doorlooptijd = profile?.avg_doorlooptijd_days ?? null
-  const severityLabel = profile?.severity_label ?? null
-  const severityColor = severityLabel ? (SEVERITY_COLORS[severityLabel] ?? '#94a3b8') : '#94a3b8'
-
-  // Normalise doorlooptijd to 0–100 scale (cap at 180 days)
-  const doorlooptijdNorm = doorlooptijd != null ? Math.min(100, Math.round((doorlooptijd / 180) * 100)) : null
 
   // Unread notifications (total across all projects)
   const totalUnread = unreadData?.total_unread ?? 0
@@ -359,44 +354,89 @@ export function GemeenteOverview({
         />
       </motion.div>
 
-      {/* ── 3 Circle Cards ───────────────────────────── */}
+      {/* ── Bottom row: 3 stat cards ────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
-        {/* Raadsstukken — links */}
-        <ScoreCircleCard
-          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>}
-          label="Raadsstukken"
-          score={raadsData?.total_found != null && raadsData.total_found > 0 ? Math.min(100, raadsData.total_found * 10) : null}
-          color={raadsData?.dekking ? '#0E1111' : '#94a3b8'}
+        {/* Raadsstukken — animated count card */}
+        <motion.div
+          variants={fadeUp}
+          role="button"
+          tabIndex={0}
           onClick={onSwitchToBeleid}
-        />
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToBeleid() }}
+          className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
+        >
+          <div className="flex items-center gap-1.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+            <span className="text-[11px] font-extrabold uppercase text-slate-400" style={{ letterSpacing: '0.15em' }}>Raadsstukken</span>
+          </div>
+          <div className="flex items-center justify-center flex-1">
+            <motion.span
+              className="text-5xl font-black tracking-tighter tabular-nums leading-none"
+              style={{ color: raadsData?.total_found ? '#0E1111' : '#cbd5e1' }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+            >
+              {raadsData?.total_found ?? '—'}
+            </motion.span>
+          </div>
+          {raadsData?.dekking === false && (
+            <span className="text-[10px] font-bold text-slate-400 text-center">Niet bij ORI</span>
+          )}
+          {raadsData?.dekking && raadsData.total_found > 0 && (
+            <span className="text-[10px] font-bold text-slate-400 text-center">stukken gevonden</span>
+          )}
+          <div />
+        </motion.div>
 
-        {/* Winkans bezwaar — midden */}
+        {/* Winkans bezwaar — cirkel (is een percentage) */}
         <ScoreCircleCard
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
           label="Winkans bezwaar"
           score={succeskans != null ? Math.round(succeskans) : null}
           color={succeskans != null ? (succeskans >= 60 ? '#22C55E' : succeskans >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+          suffix="%"
           onClick={onSwitchToVergunningen}
         />
 
-        {/* Doorlooptijd — rechts */}
-        <ScoreCircleCard
-          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
-          label="Doorlooptijd"
-          score={doorlooptijdNorm}
-          color={doorlooptijd != null ? (doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+        {/* Doorlooptijd — animated dagen card */}
+        <motion.div
+          variants={fadeUp}
+          role="button"
+          tabIndex={0}
           onClick={onSwitchToVergunningen}
-        />
-      </div>
-
-      {/* Doorlooptijd days label */}
-      {doorlooptijd != null && (
-        <motion.div variants={fadeUp} className="mt-1 flex justify-end">
-          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-            ~{doorlooptijd} dagen gem.
-          </span>
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToVergunningen() }}
+          className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
+        >
+          <div className="flex items-center gap-1.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={doorlooptijd != null ? (doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span className="text-[11px] font-extrabold uppercase text-slate-400" style={{ letterSpacing: '0.15em' }}>Doorlooptijd</span>
+          </div>
+          <div className="flex flex-col items-center justify-center flex-1 gap-1">
+            <motion.span
+              className="text-5xl font-black tracking-tighter tabular-nums leading-none"
+              style={{ color: doorlooptijd != null ? '#0E1111' : '#cbd5e1' }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.5 }}
+            >
+              {doorlooptijd != null ? `~${doorlooptijd}` : '—'}
+            </motion.span>
+            {doorlooptijd != null && (
+              <motion.span
+                className="text-[12px] font-bold"
+                style={{ color: doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+              >
+                dagen
+              </motion.span>
+            )}
+          </div>
+          <div />
         </motion.div>
-      )}
+      </div>
 
       {/* ── Secondary Fields ─────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
@@ -405,11 +445,8 @@ export function GemeenteOverview({
           onClick={onSwitchToRegelgeving}
         />
         <SecondaryField
-          value={severityLabel && severityLabel !== 'Onbekend'
-            ? `Klimaat: ${severityLabel}`
-            : `${wijkCount} wijken`
-          }
-          onClick={severityLabel && severityLabel !== 'Onbekend' ? onSwitchToVergunningen : () => onSelectWijk('', '')}
+          value={`${wijkCount} wijken`}
+          onClick={() => onSelectWijk('', '')}
         />
       </motion.div>
 
