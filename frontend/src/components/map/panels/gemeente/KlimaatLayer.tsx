@@ -1,223 +1,258 @@
-import { useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
-import { Scale, ShieldCheck, ShieldAlert, ShieldQuestion, type LucideIcon } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Scale,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldQuestion,
+  Clock,
+  TrendingUp,
+  FileText,
+  ExternalLink,
+  type LucideIcon,
+} from 'lucide-react'
 import { VerdictHero } from './VerdictHero'
-import { IntelligenceGrid, type IntelCard } from './IntelligenceGrid'
 import { JuridischKlimaatModal } from './JuridischKlimaatModal'
+import { staggerContainer, fadeUp } from './animations'
 import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
+import { useGemeenteAnalysisStatus, useDoorlooptijdStats } from '@/hooks/useJurisprudence'
 
 interface KlimaatLayerProps {
   gemeenteNaam: string
   gemeenteCode: string
 }
 
-/* ── Score derivation ──────────────────────────────────────── */
+/* ── Score + verdict derivation ────────────────────────────── */
 
-interface KlimaatVerdict {
-  score: number | null
-  label: string
-  color: string
-  Icon: LucideIcon
-  subtitle: string
-}
-
-/**
- * Derive "ontwikkelklimaat" score from gemeente profile data.
- * Combines severity, approval rate, and doorlooptijd into a single 0–100 score.
- *
- * - severity: Gunstig=40, Gemiddeld=25, Ongunstig=10, Zeer ongunstig=0
- * - approval_rate: directly maps to 0–40 (e.g. 80% → 32)
- * - doorlooptijd: <30d=20, 30–60d=15, 60–90d=10, 90–120d=5, >120d=0
- */
-function deriveKlimaatScore(
-  severity: string | null,
-  approvalRate: number | null,
-  doorlooptijd: number | null,
-): number | null {
+function deriveKlimaatScore(severity: string | null, approvalRate: number | null, doorlooptijd: number | null): number | null {
   if (!severity || severity === 'Onbekend') return null
-
-  const severityPts: Record<string, number> = {
-    'Gunstig': 40,
-    'Gemiddeld': 25,
-    'Ongunstig': 10,
-    'Zeer ongunstig': 0,
-  }
-
-  let score = severityPts[severity] ?? 15
-
-  if (approvalRate != null) {
-    score += Math.round((approvalRate / 100) * 40)
-  }
-
+  const pts: Record<string, number> = { 'Gunstig': 40, 'Gemiddeld': 25, 'Ongunstig': 10, 'Zeer ongunstig': 0 }
+  let score = pts[severity] ?? 15
+  if (approvalRate != null) score += Math.round((approvalRate / 100) * 40)
   if (doorlooptijd != null) {
     if (doorlooptijd < 30) score += 20
     else if (doorlooptijd < 60) score += 15
     else if (doorlooptijd < 90) score += 10
     else if (doorlooptijd < 120) score += 5
   }
-
   return Math.min(100, Math.max(0, score))
 }
 
-function deriveVerdict(score: number | null): KlimaatVerdict {
-  if (score == null) {
-    return {
-      score: null,
-      label: 'ONBEKEND',
-      color: '#94a3b8',
-      Icon: ShieldQuestion,
-      subtitle: 'Onvoldoende data beschikbaar',
-    }
-  }
-  if (score >= 70) {
-    return {
-      score,
-      label: 'ONTWIKKELKANSRIJK',
-      color: '#22c55e',
-      Icon: ShieldCheck,
-      subtitle: 'Soepel klimaat · hoge goedkeuring · korte doorlooptijd',
-    }
-  }
-  if (score >= 40) {
-    return {
-      score,
-      label: 'GEMIDDELD KLIMAAT',
-      color: '#F9A826',
-      Icon: Scale,
-      subtitle: 'Standaard vergunningstraject · let op doorlooptijd',
-    }
-  }
-  return {
-    score,
-    label: 'LASTIG KLIMAAT',
-    color: '#ef4444',
-    Icon: ShieldAlert,
-    subtitle: 'Streng beleid · langere trajecten · meer bezwaren',
-  }
+interface Verdict { score: number | null; label: string; color: string; Icon: LucideIcon; subtitle: string }
+
+function deriveVerdict(score: number | null): Verdict {
+  if (score == null) return { score: null, label: 'ONBEKEND', color: '#94a3b8', Icon: ShieldQuestion, subtitle: 'Onvoldoende data beschikbaar' }
+  if (score >= 70) return { score, label: 'ONTWIKKELKANSRIJK', color: '#22C55E', Icon: ShieldCheck, subtitle: 'Soepel klimaat · hoge goedkeuring · korte doorlooptijd' }
+  if (score >= 40) return { score, label: 'GEMIDDELD KLIMAAT', color: '#F9A826', Icon: Scale, subtitle: 'Standaard vergunningstraject · let op doorlooptijd' }
+  return { score, label: 'LASTIG KLIMAAT', color: '#EF4444', Icon: ShieldAlert, subtitle: 'Streng beleid · langere trajecten · meer bezwaren' }
 }
 
-/* ── Trend direction ───────────────────────────────────────── */
-
-function trendLabel(bek30: number, bek90: number, bek365: number): { value: string; sub: string } {
-  // Annualised rate from 30d vs 365d average
-  const monthly30 = bek30
+function trendDirection(bek30: number, bek365: number): { label: string; color: string } {
   const monthly365 = bek365 / 12
-  if (monthly365 === 0) return { value: '—', sub: 'Geen historisch data' }
-  const ratio = monthly30 / monthly365
-  if (ratio > 1.3) return { value: '↑ STIJGEND', sub: 'Meer activiteit recent' }
-  if (ratio < 0.7) return { value: '↓ DALEND', sub: 'Minder activiteit recent' }
-  return { value: '→ STABIEL', sub: 'Consistente activiteit' }
+  if (monthly365 === 0) return { label: 'Geen data', color: '#94a3b8' }
+  const ratio = bek30 / monthly365
+  if (ratio > 1.3) return { label: '↑ Stijgend', color: '#22C55E' }
+  if (ratio < 0.7) return { label: '↓ Dalend', color: '#EF4444' }
+  return { label: '→ Stabiel', color: '#94a3b8' }
 }
 
-/* ── Component ─────────────────────────────────────────────── */
+/* ── Section header ────────────────────────────────────────── */
+
+function SectionHeader({ icon, label, children }: { icon: React.ReactNode; label: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-[10px] font-black text-slate-400 uppercase" style={{ letterSpacing: '0.2em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{label}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/* ── Horizontal bar ────────────────────────────────────────── */
+
+function HBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[11px] font-semibold text-slate-500 w-[120px] truncate">{label}</span>
+      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
+        />
+      </div>
+      <span className="text-[11px] font-black text-slate-600 tabular-nums w-[36px] text-right">{value}</span>
+    </div>
+  )
+}
+
+/* ── Stat card (compact) ───────────────────────────────────── */
+
+function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+  return (
+    <motion.div variants={fadeUp} className="bg-white border border-[#EAEFEF] rounded-[16px] p-4">
+      <span className="text-[10px] font-black text-slate-400 uppercase block" style={{ letterSpacing: '0.15em' }}>{label}</span>
+      <span className="text-[22px] font-black tracking-tighter tabular-nums leading-none mt-2 block" style={{ color: color ?? '#0E1111' }}>{value}</span>
+      {sub && <span className="text-[10px] text-slate-400 mt-1 block">{sub}</span>}
+    </motion.div>
+  )
+}
+
+/* ── Main component ────────────────────────────────────────── */
 
 export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) {
   const { data: profile, isLoading } = useGemeenteProfile(gemeenteNaam)
+  const { data: analysis } = useGemeenteAnalysisStatus(gemeenteNaam)
+  const { data: doorlooptijdData } = useDoorlooptijdStats(gemeenteNaam)
   const [showModal, setShowModal] = useState(false)
 
   const klimaatScore = profile
     ? deriveKlimaatScore(profile.severity_label, profile.approval_rate_pct, profile.avg_doorlooptijd_days)
     : null
-
   const verdict = deriveVerdict(klimaatScore)
 
-  // Build 9 intelligence cards
   const trend = profile
-    ? trendLabel(profile.bekendmakingen_30d, profile.bekendmakingen_90d, profile.bekendmakingen_365d)
-    : { value: '—', sub: 'Laden...' }
+    ? trendDirection(profile.bekendmakingen_30d, profile.bekendmakingen_365d)
+    : { label: 'Laden...', color: '#94a3b8' }
 
-  // Get top permit type
-  const topPermitType = profile?.permit_type_distribution
-    ? Object.entries(profile.permit_type_distribution).sort((a, b) => b[1] - a[1])[0]
-    : null
+  // Permit type distribution sorted
+  const permitTypes = useMemo(() => {
+    if (!profile?.permit_type_distribution) return []
+    return Object.entries(profile.permit_type_distribution)
+      .filter(([k]) => k !== 'Overig')
+      .sort((a, b) => b[1] - a[1])
+  }, [profile?.permit_type_distribution])
 
-  const cards: IntelCard[] = [
-    {
-      key: 'klimaat',
-      label: 'KLIMAAT',
-      value: isLoading ? '...' : (profile?.severity_label ?? '—'),
-      sub: 'Vergunning-klimaat',
-      badge: profile?.data_coverage ?? undefined,
-      accentColor: profile?.severity_label ? (SEVERITY_COLORS[profile.severity_label] ?? '#94a3b8') : undefined,
-    },
-    {
-      key: 'verleend',
-      label: 'VERLEEND',
-      value: profile?.approval_rate_pct != null ? `${Math.round(profile.approval_rate_pct)}%` : '—',
-      sub: 'Goedkeuringsgraad',
-      badge: profile?.sample_size ? `n=${profile.sample_size}` : undefined,
-      accentColor: profile?.approval_rate_pct != null
-        ? profile.approval_rate_pct >= 80 ? '#22c55e' : profile.approval_rate_pct >= 50 ? '#F9A826' : '#ef4444'
-        : undefined,
-    },
-    {
-      key: 'geweigerd',
-      label: 'GEWEIGERD',
-      value: profile?.rejection_rate_pct != null ? `${Math.round(profile.rejection_rate_pct)}%` : '—',
-      sub: 'Afwijzingspercentage',
-      accentColor: profile?.rejection_rate_pct != null
-        ? profile.rejection_rate_pct <= 10 ? '#22c55e' : profile.rejection_rate_pct <= 25 ? '#F9A826' : '#ef4444'
-        : undefined,
-    },
-    {
-      key: 'doorlooptijd',
-      label: 'DOORLOOPTIJD',
-      value: profile?.avg_doorlooptijd_days != null ? `~${profile.avg_doorlooptijd_days}D` : '—',
-      sub: 'Gemiddelde afhandeling',
-      accentColor: profile?.avg_doorlooptijd_days != null
-        ? profile.avg_doorlooptijd_days <= 30 ? '#22c55e' : profile.avg_doorlooptijd_days <= 90 ? '#F9A826' : '#ef4444'
-        : undefined,
-    },
-    {
-      key: 'bekendmakingen',
-      label: 'BEKENDMAKINGEN',
-      value: profile ? String(profile.bekendmakingen_365d) : '—',
-      sub: 'Afgelopen 12 maanden',
-      badge: profile ? `${profile.bekendmakingen_90d} (90d)` : undefined,
-    },
-    {
-      key: 'trend',
-      label: 'TREND',
-      value: trend.value,
-      sub: trend.sub,
-      accentColor: trend.value.includes('↑') ? '#22c55e' : trend.value.includes('↓') ? '#ef4444' : '#94a3b8',
-    },
-    {
-      key: 'type',
-      label: 'TOP TYPE',
-      value: topPermitType ? topPermitType[0].slice(0, 14).toUpperCase() : '—',
-      sub: topPermitType ? `${topPermitType[1]} aanvragen` : 'Geen data',
-      badge: topPermitType ? String(topPermitType[1]) : undefined,
-      accentColor: '#F9A826',
-    },
-    {
-      key: 'bekendm-30d',
-      label: 'RECENT',
-      value: profile ? String(profile.bekendmakingen_30d) : '—',
-      sub: 'Afgelopen 30 dagen',
-      accentColor: '#0E1111',
-    },
-    {
-      key: 'dekking',
-      label: 'DATA DEKKING',
-      value: isLoading ? '...' : (profile?.data_coverage?.toUpperCase() ?? '—'),
-      sub: profile?.sample_size ? `${profile.sample_size} bekendmakingen geanalyseerd` : 'Geen steekproef',
-      accentColor: profile?.data_coverage === 'high' ? '#22c55e' : profile?.data_coverage === 'medium' ? '#F9A826' : '#94a3b8',
-    },
-  ].map(card => ({ ...card, onClick: () => setShowModal(true) }))
+  const maxPermitCount = permitTypes.length > 0 ? permitTypes[0][1] : 1
+
+  // Doorlooptijd per type
+  const doorlooptijdTypes = useMemo(() => {
+    if (!doorlooptijdData) return []
+    return Object.values(doorlooptijdData)
+      .filter((d) => d.avg_dagen != null && !d.insufficient_data)
+      .sort((a, b) => (b.avg_dagen ?? 0) - (a.avg_dagen ?? 0))
+      .slice(0, 5)
+  }, [doorlooptijdData])
+
+  const maxDoorlooptijd = doorlooptijdTypes.length > 0 ? Math.max(...doorlooptijdTypes.map(d => d.avg_dagen ?? 0)) : 1
+
+  // Ruling count
+  const rulingCount = analysis?.total_count ?? 0
+  const succeskans = analysis?.vergunnings_succeskans ?? null
 
   return (
     <>
       <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
         <VerdictHero
-          score={verdict.score}
-          label={verdict.label}
-          subtitle={verdict.subtitle}
+          score={isLoading ? null : verdict.score}
+          label={isLoading ? 'LADEN...' : verdict.label}
+          subtitle={isLoading ? 'Vergunningdata ophalen...' : verdict.subtitle}
           color={verdict.color}
           icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
         />
-        <IntelligenceGrid cards={cards} />
+
+        {/* ── Key metrics row ────────────────────────── */}
+        <motion.div className="mt-6 grid grid-cols-3 gap-1.5" variants={staggerContainer} initial="hidden" animate="show">
+          <StatCard
+            label="Goedgekeurd"
+            value={profile?.approval_rate_pct != null ? `${Math.round(profile.approval_rate_pct)}%` : '—'}
+            sub={profile?.sample_size ? `n=${profile.sample_size}` : undefined}
+            color={profile?.approval_rate_pct != null ? (profile.approval_rate_pct >= 80 ? '#22C55E' : profile.approval_rate_pct >= 50 ? '#F9A826' : '#EF4444') : undefined}
+          />
+          <StatCard
+            label="Doorlooptijd"
+            value={profile?.avg_doorlooptijd_days != null ? `~${profile.avg_doorlooptijd_days}d` : '—'}
+            sub="gem. afhandeling"
+            color={profile?.avg_doorlooptijd_days != null ? (profile.avg_doorlooptijd_days <= 30 ? '#22C55E' : profile.avg_doorlooptijd_days <= 90 ? '#F9A826' : '#EF4444') : undefined}
+          />
+          <StatCard
+            label="Trend"
+            value={trend.label}
+            sub={`${profile?.bekendmakingen_30d ?? 0} / 30d`}
+            color={trend.color}
+          />
+        </motion.div>
+
+        {/* ── Permit type verdeling ───────────────────── */}
+        {permitTypes.length > 0 && (
+          <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
+            <SectionHeader icon={<FileText size={14} className="text-slate-400" />} label="Verdeling per type">
+              <span className="text-[9px] text-slate-300 tabular-nums">{profile?.bekendmakingen_365d ?? 0} / 12m</span>
+            </SectionHeader>
+            <div className="space-y-2.5 bg-white border border-[#EAEFEF] rounded-[16px] p-4">
+              {permitTypes.map(([type, count]) => (
+                <HBar key={type} label={type} value={count} max={maxPermitCount} color="#F9A826" />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Doorlooptijd per type ──────────────────── */}
+        {doorlooptijdTypes.length > 0 && (
+          <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
+            <SectionHeader icon={<Clock size={14} className="text-slate-400" />} label="Doorlooptijd per type" />
+            <div className="space-y-2.5 bg-white border border-[#EAEFEF] rounded-[16px] p-4">
+              {doorlooptijdTypes.map((d) => (
+                <HBar
+                  key={d.vergunningstype}
+                  label={d.vergunningstype}
+                  value={Math.round(d.avg_dagen ?? 0)}
+                  max={maxDoorlooptijd}
+                  color={d.avg_dagen != null ? (d.avg_dagen <= 30 ? '#22C55E' : d.avg_dagen <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Jurisprudentie link ────────────────────── */}
+        <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
+          <SectionHeader icon={<Scale size={14} className="text-slate-400" />} label="Jurisprudentie">
+            {rulingCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 tabular-nums">{rulingCount}</span>
+            )}
+          </SectionHeader>
+
+          <motion.button
+            variants={fadeUp}
+            type="button"
+            onClick={() => setShowModal(true)}
+            className="w-full rounded-[16px] p-4 border border-[#EAEFEF] bg-white text-left transition-shadow hover:shadow-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[14px] font-bold text-[#0E1111]">
+                  {rulingCount > 0 ? `${rulingCount} rechtszaken geanalyseerd` : 'Rechtszaken bekijken'}
+                </span>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {succeskans != null
+                    ? `Winkans bezwaar: ${Math.round(succeskans)}%`
+                    : 'AI-analyse van jurisprudentie in deze gemeente'
+                  }
+                </p>
+              </div>
+              <ExternalLink size={14} className="text-slate-300 shrink-0" />
+            </div>
+          </motion.button>
+        </motion.div>
+
+        {/* ── Trust metadata ──────────────────────────── */}
+        <motion.div variants={fadeUp} className="mt-6 flex items-center justify-between">
+          <span className="text-[9px] uppercase tracking-wider text-slate-300">
+            Bron: KOOP · Rechtspraak.nl · Claude AI
+          </span>
+          <span className="text-[9px] uppercase tracking-wider text-slate-300">
+            {profile?.data_coverage ?? '—'} dekking
+          </span>
+        </motion.div>
       </div>
+
+      {/* Juridisch klimaat modal */}
       <AnimatePresence>
         {showModal && (
           <JuridischKlimaatModal
