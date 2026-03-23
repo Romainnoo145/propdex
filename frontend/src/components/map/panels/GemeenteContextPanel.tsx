@@ -7,7 +7,7 @@ import { GemeenteOverview } from './gemeente/GemeenteOverview'
 import { KlimaatLayer } from './gemeente/KlimaatLayer'
 import { BestuurlijkLayer } from './gemeente/BestuurlijkLayer'
 import { ActiviteitLayer } from './gemeente/ActiviteitLayer'
-import type { ScanListItem } from '@/lib/types/scan'
+import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
@@ -55,6 +55,24 @@ export function GemeenteContextPanel({
   const wijkCount = useMemo(() => {
     return wijkGeojson?.features?.length ?? 0
   }, [wijkGeojson])
+
+  // Derive stedelijkheid from scans (mode of wijk stedelijkheid labels)
+  const stedelijkheid = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const s of scans) {
+      if (s.gemeente_code !== code || s.status !== 'completed' || !s.neighborhood_metrics) continue
+      const m = s.neighborhood_metrics as CbsNeighborhoodMetrics
+      const label = m.data?.stedelijkheid?.omschrijving
+      if (label) counts.set(label, (counts.get(label) ?? 0) + 1)
+    }
+    if (counts.size === 0) return null
+    let best = ''
+    let bestCount = 0
+    for (const [label, c] of counts) {
+      if (c > bestCount) { best = label; bestCount = c }
+    }
+    return best
+  }, [scans, code])
 
   return (
     <>
@@ -113,6 +131,7 @@ export function GemeenteContextPanel({
                   code={code}
                   gemeenteCode={code}
                   wijkCount={wijkCount}
+                  stedelijkheid={stedelijkheid}
                   onSelectWijk={onSelectWijk}
                   onSwitchToVergunningen={() => setActiveLayer('vergunningen')}
                   onSwitchToRegelgeving={() => setActiveLayer('regelgeving')}
