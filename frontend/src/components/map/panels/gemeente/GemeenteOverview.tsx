@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { motion, type Variants } from 'framer-motion'
+import { useMemo, useEffect } from 'react'
+import { motion, useSpring, useTransform, type Variants } from 'framer-motion'
 import {
   Search,
   Heart,
@@ -178,6 +178,61 @@ function ScoreCircleCard({
           {score !== null ? Math.round(score) : '—'}
         </span>
       </div>
+      <div />
+    </motion.div>
+  )
+}
+
+/* ── DoorlooptijdCard — counting-up animated days ──────────── */
+
+function AnimatedNumber({ value }: { value: number }) {
+  const spring = useSpring(0, { stiffness: 40, damping: 20 })
+  const display = useTransform(spring, (v) => `~${Math.round(v)}`)
+
+  useEffect(() => {
+    const timer = setTimeout(() => spring.set(value), 400)
+    return () => clearTimeout(timer)
+  }, [value, spring])
+
+  return (
+    <motion.span
+      className="text-5xl font-black tracking-tighter tabular-nums leading-none text-[#0E1111]"
+    >
+      {display}
+    </motion.span>
+  )
+}
+
+function DoorlooptijdCard({ doorlooptijd, onClick }: { doorlooptijd: number | null; onClick: () => void }) {
+  const color = doorlooptijd != null
+    ? doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444'
+    : '#94a3b8'
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
+      className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
+    >
+      <div className="flex items-center gap-1.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span className="text-[11px] font-extrabold uppercase text-slate-400" style={{ letterSpacing: '0.15em' }}>Doorlooptijd</span>
+      </div>
+      <div className="flex items-center justify-center flex-1">
+        {doorlooptijd != null ? (
+          <AnimatedNumber value={doorlooptijd} />
+        ) : (
+          <span className="text-5xl font-black tracking-tighter tabular-nums leading-none text-slate-200">—</span>
+        )}
+      </div>
+      {doorlooptijd != null && (
+        <span className="text-[10px] font-bold text-center" style={{ color }}>
+          dagen gemiddeld
+        </span>
+      )}
       <div />
     </motion.div>
   )
@@ -393,43 +448,8 @@ export function GemeenteOverview({
           onClick={onSwitchToVergunningen}
         />
 
-        {/* Doorlooptijd — animated dagen card */}
-        <motion.div
-          variants={fadeUp}
-          role="button"
-          tabIndex={0}
-          onClick={onSwitchToVergunningen}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToVergunningen() }}
-          className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
-        >
-          <div className="flex items-center gap-1.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span className="text-[11px] font-extrabold uppercase text-slate-400" style={{ letterSpacing: '0.15em' }}>Doorlooptijd</span>
-          </div>
-          <div className="flex flex-col items-center justify-center flex-1 gap-1">
-            <motion.span
-              className="text-5xl font-black tracking-tighter tabular-nums leading-none"
-              style={{ color: doorlooptijd != null ? '#0E1111' : '#cbd5e1' }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.5 }}
-            >
-              {doorlooptijd != null ? `~${doorlooptijd}` : '—'}
-            </motion.span>
-            {doorlooptijd != null && (
-              <motion.span
-                className="text-[12px] font-bold"
-                style={{ color: doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444' }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-              >
-                dagen
-              </motion.span>
-            )}
-          </div>
-          <div />
-        </motion.div>
+        {/* Doorlooptijd — counting-up animated dagen card */}
+        <DoorlooptijdCard doorlooptijd={doorlooptijd} onClick={onSwitchToVergunningen} />
       </div>
 
       {/* ── Secondary Fields ─────────────────────────── */}
