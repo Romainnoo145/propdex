@@ -319,7 +319,7 @@ export function GemeenteOverview({
       initial="hidden"
       animate="show"
     >
-      {/* ── 3 Bento Cards: Favorieten / Succeskans / Verleend-ring ── */}
+      {/* ── 3 Bento Cards: Favorieten / Winkans / Verleend-ring ── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
         {/* Card 1: Favorieten in gemeente */}
         <motion.button
@@ -343,7 +343,7 @@ export function GemeenteOverview({
           <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
         </motion.button>
 
-        {/* Card 2: Succeskans */}
+        {/* Card 2: Winkans bezwaar — animated ring */}
         <motion.button
           variants={fadeUp}
           type="button"
@@ -353,15 +353,39 @@ export function GemeenteOverview({
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
-            <span className={`text-[48px] font-black tracking-tighter tabular-nums leading-none ${succeskans != null ? 'text-[#F9A826]' : 'text-neutral-300'}`}>
-              {succeskans != null ? Math.round(succeskans) : '—'}
-            </span>
-            {succeskans != null && (
-              <span className="text-[18px] font-black text-[#F9A826]/50 -mt-1">%</span>
-            )}
+          <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
+            {(() => {
+              const val = succeskans != null ? Math.round(succeskans) : null
+              const color = val != null ? (val >= 60 ? '#22C55E' : val >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'
+              const r = 42
+              const circ = 2 * Math.PI * r
+              const norm = val != null ? val / 100 : 0
+              return (
+                <div className="relative flex items-center justify-center">
+                  <svg viewBox="0 0 108 108" className="h-[108px] w-[108px]" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="54" cy="54" r={r} fill="none" stroke="#f1f5f9" strokeWidth="10" />
+                    {val != null && (
+                      <motion.circle
+                        cx="54" cy="54" r={r} fill="none"
+                        stroke={color} strokeWidth="10" strokeLinecap="round"
+                        strokeDasharray={circ}
+                        initial={{ strokeDashoffset: circ }}
+                        animate={{ strokeDashoffset: circ - norm * circ }}
+                        transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
+                      />
+                    )}
+                  </svg>
+                  <span
+                    className="absolute text-[32px] font-black tracking-tighter tabular-nums leading-none"
+                    style={{ color: val != null ? color : '#cbd5e1' }}
+                  >
+                    {val != null ? `${val}` : '—'}
+                  </span>
+                </div>
+              )
+            })()}
           </div>
-          <CardLabelBar label="Succeskans" isActive={false} />
+          <CardLabelBar label="Winkans bezwaar" isActive={false} />
         </motion.button>
 
         {/* Card 3: Dual-color ring (verleend + afgewezen) */}
