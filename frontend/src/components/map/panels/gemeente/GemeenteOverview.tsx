@@ -94,7 +94,7 @@ export function GemeenteOverview({
     if (!profile?.permit_type_distribution) return []
     return Object.entries(profile.permit_type_distribution)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
+      .slice(0, 6)
   }, [profile?.permit_type_distribution])
 
   const maxPermitCount = permitTypes.length > 0 ? permitTypes[0][1] : 1
@@ -203,51 +203,51 @@ export function GemeenteOverview({
         </div>
       </motion.div>
 
-      {/* ── 2. Bekendmakingen & Vergunning-DNA ───────── */}
-      <motion.div variants={fadeUp} className="grid grid-cols-2 gap-1.5 mt-4">
-        {/* Kaart 1: Activiteit tegels */}
+      {/* ── 2. Vergunning-DNA ────────────────────────── */}
+      <motion.div variants={fadeUp} className="mt-4">
         <div className="bg-white rounded-[24px] border border-[#EAEFEF] p-5">
           <span className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-400 block mb-3">
-            Activiteit
+            Vergunning-DNA
           </span>
-          <div className="grid grid-cols-3 gap-1.5">
-            {([
-              { label: '30D', value: profile?.bekendmakingen_30d, showTrend: true },
-              { label: '90D', value: profile?.bekendmakingen_90d, showTrend: false },
-              { label: '365D', value: profile?.bekendmakingen_365d, showTrend: false },
-            ] as const).map((item) => (
-              <div key={item.label} className="bg-[#F2F6F3] rounded-[14px] p-3 text-center">
-                <span className="text-[9px] font-black uppercase text-neutral-400 block">
-                  {item.label}
-                </span>
-                <span className="text-[18px] font-black text-[#0E1111] tabular-nums block mt-1">
-                  {isLoading ? '...' : item.value ?? '—'}
-                </span>
-                {item.showTrend && !isLoading && (
-                  <span className="flex items-center justify-center mt-1">
-                    {trend === 'up' && <TrendingUp size={12} className="text-[#22C55E]" />}
-                    {trend === 'down' && <TrendingDown size={12} className="text-[#EF4444]" />}
-                    {trend === 'stable' && <Minus size={12} className="text-neutral-400" />}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Kaart 2: Type verdeling */}
-        <div className="bg-white rounded-[24px] border border-[#EAEFEF] p-5">
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-400 block mb-3">
-            Type verdeling
-          </span>
+          {/* Activity summary row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-[#F2F6F3] rounded-[14px] px-4 py-2.5 flex-1 text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 block">Totaal</span>
+              <span className="text-[22px] font-black text-[#0E1111] tabular-nums block mt-0.5">
+                {isLoading ? '...' : profile?.sample_size ?? '—'}
+              </span>
+              <span className="text-[9px] text-neutral-400 block">bekendmakingen</span>
+            </div>
+            <div className="bg-[#F2F6F3] rounded-[14px] px-4 py-2.5 flex-1 text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 block">Dekking</span>
+              <span className="text-[14px] font-black text-[#0E1111] uppercase block mt-1">
+                {isLoading ? '...' : profile?.data_coverage ?? '—'}
+              </span>
+            </div>
+            <div className="bg-[#F2F6F3] rounded-[14px] px-4 py-2.5 flex-1 text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 block">Trend</span>
+              <span className="flex items-center justify-center mt-1.5">
+                {!isLoading && (
+                  <>
+                    {trend === 'up' && <TrendingUp size={18} className="text-[#22C55E]" />}
+                    {trend === 'down' && <TrendingDown size={18} className="text-[#EF4444]" />}
+                    {trend === 'stable' && <Minus size={18} className="text-neutral-400" />}
+                  </>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Type distribution bars */}
           {permitTypes.length > 0 ? (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {permitTypes.map(([type, count]) => {
                 const pct = (count / maxPermitCount) * 100
                 return (
                   <div key={type}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] text-neutral-500 truncate mr-2">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] font-medium text-neutral-500 truncate mr-2">
                         {type}
                       </span>
                       <span className="text-[11px] font-bold text-[#0E1111] tabular-nums shrink-0">
@@ -267,7 +267,7 @@ export function GemeenteOverview({
               })}
             </div>
           ) : (
-            <span className="text-[12px] text-neutral-400">Geen data beschikbaar</span>
+            <span className="text-[12px] text-neutral-400">Geen vergunningsdata beschikbaar</span>
           )}
         </div>
       </motion.div>

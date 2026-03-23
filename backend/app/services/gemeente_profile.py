@@ -162,61 +162,58 @@ async def build_gemeente_profile(
 def _simplified_type(category: str, title: str) -> str:
     """Derive permit sub-type from the bekendmaking title.
 
-    The category_label (from classify_bekendmaking) is too coarse — almost
-    everything becomes "Omgevingsvergunning". The title contains the actual
-    activity: kappen, splitsen, dakkapel, inrit, sloop, etc.
-
-    We classify based on title keywords first, then fall back to category.
+    Groups into 6 categories that matter for a vastgoedontwikkelaar:
+    - Bouw & Nieuwbouw: new construction, building
+    - Verbouw & Renovatie: transformation, renovation, modification
+    - Sloop & Kap: demolition, tree removal
+    - Milieu & Veiligheid: environmental, fire safety
+    - Bestemmingsplan: zoning changes
+    - Overig: everything else (inrit, reclame, status-only entries)
     """
     t = title.lower()
 
-    # Specific activity types (check title first — most informative)
-    if "kappen" in t or "kapvergunning" in t or "bomen" in t:
-        return "Kap"
-    if "sloop" in t:
-        return "Sloop"
-    if "splitsen" in t or "splitsing" in t:
-        return "Splitsen"
-    if "dakkapel" in t:
-        return "Dakkapel"
-    if "inrit" in t or "uitweg" in t:
-        return "Inrit/uitweg"
-    if "milieu" in t or "milieugevaarlijk" in t:
-        return "Milieu"
-    if "brandveilig" in t:
-        return "Brandveiligheid"
-    if "reclame" in t or "uiting" in t:
-        return "Reclame"
+    # Bestemmingsplan first (most impactful for developers)
     if "bestemmingsplan" in t or "inpassingsplan" in t:
         return "Bestemmingsplan"
-    if "monument" in t or "erfgoed" in t:
-        return "Monument"
 
-    # Building activity sub-types
-    if any(k in t for k in ("oprichten van een woning", "bouwen van een woning", "nieuwbouw woning")):
-        return "Nieuwbouw woning"
-    if any(k in t for k in ("herontwikkeling", "transformatie", "verbouw", "veranderen")):
-        return "Verbouw/transformatie"
-    if any(k in t for k in ("oprichten van", "bouwen van", "bouw van", "realiseren van")):
-        return "Bouw"
-    if any(k in t for k in ("plaatsen van", "aanbouw", "uitbouw")):
-        return "Aanbouw/plaatsing"
-    if any(k in t for k in ("vervangen van", "wijzigen van", "renovatie", "herstellen")):
-        return "Renovatie/wijziging"
+    # Bouw & Nieuwbouw
+    if any(k in t for k in (
+        "oprichten van een woning", "bouwen van een woning", "nieuwbouw",
+        "oprichten van", "bouwen van", "bouw van", "realiseren van",
+    )):
+        return "Bouw & Nieuwbouw"
 
-    # Status-only entries (no specific activity in title)
-    if any(k in t for k in ("verleende omgevingsvergunning", "verlenging beslistermijn")):
-        return "Omgevingsvergunning"
+    # Verbouw & Renovatie
+    if any(k in t for k in (
+        "splitsen", "splitsing", "dakkapel", "herontwikkeling", "transformatie",
+        "verbouw", "veranderen", "vervangen van", "wijzigen van", "renovatie",
+        "herstellen", "plaatsen van", "aanbouw", "uitbouw",
+    )):
+        return "Verbouw & Renovatie"
 
-    # Fall back to category-based classification
+    # Sloop & Kap
+    if any(k in t for k in ("sloop", "kappen", "kapvergunning", "bomen")):
+        return "Sloop & Kap"
+
+    # Milieu & Veiligheid
+    if any(k in t for k in ("milieu", "milieugevaarlijk", "brandveilig")):
+        return "Milieu & Veiligheid"
+
+    # Status-only entries (verleend/geweigerd/verlengd without specific activity)
+    if any(k in t for k in ("verleende omgevingsvergunning", "verlenging beslistermijn", "geweigerde omgevingsvergunning")):
+        return "Vergunningbesluit"
+
+    # Aanvraag without specific activity
+    if t.startswith("aanvraag") and "omgevingsvergunning" in t:
+        return "Aanvraag (overig)"
+
+    # Fall back to category
     lower = category.lower()
-    if "bestemmingsplan" in lower or "inpassingsplan" in lower:
+    if "bestemmingsplan" in lower:
         return "Bestemmingsplan"
-    if "sloop" in lower:
-        return "Sloop"
-    if "kapvergunning" in lower:
-        return "Kap"
+    if "sloop" in lower or "kap" in lower:
+        return "Sloop & Kap"
     if "milieu" in lower:
-        return "Milieu"
+        return "Milieu & Veiligheid"
 
     return "Overig"
