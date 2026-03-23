@@ -9,6 +9,12 @@ import { BestuurlijkLayer } from './gemeente/BestuurlijkLayer'
 import { ActiviteitLayer } from './gemeente/ActiviteitLayer'
 import { BeleidNieuwsLayer } from './gemeente/BeleidNieuwsLayer'
 import { WijkenModal } from './gemeente/WijkenModal'
+import { MeldingenModal } from './gemeente/MeldingenModal'
+import { FavorietenModal } from './gemeente/FavorietenModal'
+import { RaadsinformatieModal } from './gemeente/RaadsinformatieModal'
+import { JuridischKlimaatModal } from './gemeente/JuridischKlimaatModal'
+import { DoorlooptijdModal } from './gemeente/DoorlooptijdModal'
+import { HuisvestingsModal } from './gemeente/HuisvestingsModal'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 const prefersReducedMotion =
@@ -46,6 +52,12 @@ export function GemeenteContextPanel({
 }: GemeenteContextPanelProps) {
   const [activeLayer, setActiveLayer] = useState<GemeenteLayer | null>(null)
   const [showWijken, setShowWijken] = useState(false)
+  const [showMeldingen, setShowMeldingen] = useState(false)
+  const [showFavorieten, setShowFavorieten] = useState(false)
+  const [showRaadsinformatie, setShowRaadsinformatie] = useState(false)
+  const [showJurisprudentie, setShowJurisprudentie] = useState(false)
+  const [showDoorlooptijd, setShowDoorlooptijd] = useState(false)
+  const [showHuisvesting, setShowHuisvesting] = useState(false)
 
   const handleSelectLayer = useCallback((layer: GemeenteLayer) => {
     setActiveLayer(layer)
@@ -136,10 +148,12 @@ export function GemeenteContextPanel({
                   wijkCount={wijkCount}
                   stedelijkheid={stedelijkheid}
                   onShowWijken={() => setShowWijken(true)}
-                  onSwitchToVergunningen={() => setActiveLayer('vergunningen')}
-                  onSwitchToRegelgeving={() => setActiveLayer('regelgeving')}
-                  onSwitchToBeleid={() => setActiveLayer('beleid')}
-                  onSwitchToActiviteit={() => setActiveLayer('activiteit')}
+                  onShowMeldingen={() => setShowMeldingen(true)}
+                  onShowFavorieten={() => setShowFavorieten(true)}
+                  onShowRaadsinformatie={() => setShowRaadsinformatie(true)}
+                  onShowJurisprudentie={() => setShowJurisprudentie(true)}
+                  onShowDoorlooptijd={() => setShowDoorlooptijd(true)}
+                  onShowHuisvesting={() => setShowHuisvesting(true)}
                 />
               </motion.div>
             ) : (
@@ -190,7 +204,7 @@ export function GemeenteContextPanel({
         </motion.div>
       </LeftPanelShell>
 
-      {/* Wijken modal */}
+      {/* Modals */}
       <AnimatePresence>
         {showWijken && (
           <WijkenModal
@@ -200,6 +214,44 @@ export function GemeenteContextPanel({
             scans={scans}
             onSelectWijk={onSelectWijk}
             onClose={() => setShowWijken(false)}
+          />
+        )}
+        {showMeldingen && (
+          <MeldingenModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            onClose={() => setShowMeldingen(false)}
+          />
+        )}
+        {showFavorieten && (
+          <FavorietenModal
+            gemeenteNaam={naam}
+            onClose={() => setShowFavorieten(false)}
+          />
+        )}
+        {showRaadsinformatie && (
+          <RaadsinformatieModal
+            gemeenteNaam={naam}
+            onClose={() => setShowRaadsinformatie(false)}
+          />
+        )}
+        {showJurisprudentie && (
+          <JuridischKlimaatModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            onClose={() => setShowJurisprudentie(false)}
+          />
+        )}
+        {showDoorlooptijd && (
+          <DoorlooptijdModal
+            gemeenteNaam={naam}
+            onClose={() => setShowDoorlooptijd(false)}
+          />
+        )}
+        {showHuisvesting && (
+          <HuisvestingsModal
+            gemeenteNaam={naam}
+            onClose={() => setShowHuisvesting(false)}
           />
         )}
       </AnimatePresence>

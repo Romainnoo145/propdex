@@ -19,10 +19,12 @@ interface GemeenteOverviewProps {
   wijkCount: number
   stedelijkheid: string | null
   onShowWijken: () => void
-  onSwitchToVergunningen: () => void
-  onSwitchToRegelgeving: () => void
-  onSwitchToBeleid: () => void
-  onSwitchToActiviteit: () => void
+  onShowMeldingen: () => void
+  onShowFavorieten: () => void
+  onShowRaadsinformatie: () => void
+  onShowJurisprudentie: () => void
+  onShowDoorlooptijd: () => void
+  onShowHuisvesting: () => void
 }
 
 /* ── Animation ─────────────────────────────────────────────── */
@@ -272,10 +274,12 @@ export function GemeenteOverview({
   stedelijkheid,
   wijkCount,
   onShowWijken,
-  onSwitchToVergunningen,
-  onSwitchToRegelgeving,
-  onSwitchToBeleid,
-  onSwitchToActiviteit,
+  onShowMeldingen,
+  onShowFavorieten,
+  onShowRaadsinformatie,
+  onShowJurisprudentie,
+  onShowDoorlooptijd,
+  onShowHuisvesting,
 }: GemeenteOverviewProps) {
   const { data: profile } = useGemeenteProfile(naam)
   const { data: hvv } = useHuisvestingsverordening(naam)
@@ -318,9 +322,14 @@ export function GemeenteOverview({
       {/* ── 3 Bento Cards ────────────────────────────── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
         {/* Card 1: Stedelijkheid foto — ACTIVE STATE (amber border) */}
-        <motion.div
+        <motion.button
           variants={fadeUp}
-          className="flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826]"
+          type="button"
+          onClick={onShowWijken}
+          className="flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826] transition-all duration-200"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="relative aspect-[5/6] overflow-hidden">
             <img
@@ -330,13 +339,13 @@ export function GemeenteOverview({
             />
           </div>
           <CardLabelBar label={stedelijkheid ?? 'Onbekend'} isActive />
-        </motion.div>
+        </motion.button>
 
         {/* Card 2: Meldingen — ongelezen bekendmakingen (animated count) */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToActiviteit}
+          onClick={onShowMeldingen}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -377,7 +386,7 @@ export function GemeenteOverview({
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToActiviteit}
+          onClick={onShowFavorieten}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -417,8 +426,8 @@ export function GemeenteOverview({
           variants={fadeUp}
           role="button"
           tabIndex={0}
-          onClick={onSwitchToBeleid}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToBeleid() }}
+          onClick={onShowRaadsinformatie}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onShowRaadsinformatie() }}
           className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
         >
           <div className="flex items-center gap-1.5">
@@ -452,18 +461,18 @@ export function GemeenteOverview({
           score={succeskans != null ? Math.round(succeskans) : null}
           color={succeskans != null ? (succeskans >= 60 ? '#22C55E' : succeskans >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'}
           sub="winkans %"
-          onClick={onSwitchToVergunningen}
+          onClick={onShowJurisprudentie}
         />
 
         {/* Doorlooptijd — counting-up animated dagen card */}
-        <DoorlooptijdCard doorlooptijd={doorlooptijd} onClick={onSwitchToVergunningen} />
+        <DoorlooptijdCard doorlooptijd={doorlooptijd} onClick={onShowDoorlooptijd} />
       </div>
 
       {/* ── Secondary Fields ─────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
         <SecondaryField
           value={hvv?.heeft_verordening ? 'Splitsingsverordening actief' : 'Geen splitsingsverordening'}
-          onClick={onSwitchToRegelgeving}
+          onClick={onShowHuisvesting}
         />
         <SecondaryField
           value={`${wijkCount} wijken`}
