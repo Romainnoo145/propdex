@@ -107,7 +107,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
     return {
       score,
       label: 'GEMIDDELD PROFIEL',
-      color: '#f59e0b',
+      color: '#F9A826',
       Icon: BarChart3,
       subtitle: 'Gemengd marktbeeld · kansen afhankelijk van strategie',
     }
@@ -115,7 +115,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
   return {
     score,
     label: 'ONTWIKKELGEBIED',
-    color: '#0ea5e9',
+    color: '#0E1111',
     Icon: TrendingDown,
     subtitle: 'Lagere marktdruk · mogelijk transformatie-kansen',
   }
@@ -193,7 +193,7 @@ function buildCards(
       sub: koop != null
         ? koop >= 60 ? 'Sterke koopmarkt' : koop >= 40 ? 'Gemengd koop/huur' : 'Huurmarkt dominant'
         : 'Geen data',
-      accentColor: koop != null ? (koop >= 60 ? '#22c55e' : koop >= 40 ? '#f59e0b' : '#0ea5e9') : undefined,
+      accentColor: koop != null ? (koop >= 60 ? '#22c55e' : koop >= 40 ? '#F9A826' : '#0E1111') : undefined,
       badge: koop != null ? 'KOOP' : undefined,
     },
     {
@@ -223,14 +223,14 @@ function buildCards(
       sub: inkomen != null
         ? inkomen >= 30000 ? 'Hoge koopkracht' : inkomen >= 22000 ? 'Gemiddelde koopkracht' : 'Lagere koopkracht'
         : 'Mediaan gestandaardiseerd',
-      accentColor: inkomen != null ? (inkomen >= 30000 ? '#22c55e' : inkomen >= 22000 ? '#f59e0b' : '#94a3b8') : undefined,
+      accentColor: inkomen != null ? (inkomen >= 30000 ? '#22c55e' : inkomen >= 22000 ? '#F9A826' : '#94a3b8') : undefined,
     },
     {
       key: 'woz',
       label: 'WOZ-WAARDE',
       value: woz != null ? `€${Math.round(woz * 1000).toLocaleString('nl-NL')}` : '—',
       sub: woz != null ? 'Gemiddelde woningwaarde' : 'Geen WOZ data',
-      accentColor: '#0ea5e9',
+      accentColor: '#0E1111',
     },
     {
       key: 'inwoners',
@@ -238,7 +238,7 @@ function buildCards(
       value: inwoners != null ? inwoners.toLocaleString('nl-NL') : '—',
       sub: parcelCount != null ? `${parcelCount.toLocaleString('nl-NL')} percelen geanalyseerd` : 'Marktomvang',
       badge: parcelCount != null ? String(parcelCount) : undefined,
-      accentColor: '#6366f1',
+      accentColor: '#F9A826',
     },
     {
       key: 'criminaliteit',
@@ -248,7 +248,7 @@ function buildCards(
         ? crimPer1k <= 30 ? 'Veilige wijk' : crimPer1k <= 60 ? 'Gemiddeld' : 'Aandachtspunt'
         : 'Geen data',
       accentColor: crimPer1k != null
-        ? crimPer1k <= 30 ? '#22c55e' : crimPer1k <= 60 ? '#f59e0b' : '#ef4444'
+        ? crimPer1k <= 30 ? '#22c55e' : crimPer1k <= 60 ? '#F9A826' : '#ef4444'
         : undefined,
     },
     {
@@ -259,7 +259,7 @@ function buildCards(
         ? supermarkt <= 0.5 ? 'Uitstekend voorzieningenniveau' : supermarkt <= 1.5 ? 'Goed bereikbaar' : 'Beperkte voorzieningen'
         : 'Geen data',
       accentColor: supermarkt != null
-        ? supermarkt <= 0.5 ? '#22c55e' : supermarkt <= 1.5 ? '#f59e0b' : '#ef4444'
+        ? supermarkt <= 0.5 ? '#22c55e' : supermarkt <= 1.5 ? '#F9A826' : '#ef4444'
         : undefined,
     },
     {
@@ -368,6 +368,29 @@ export function WijkMapPanel({
             icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
           />
           <IntelligenceGrid cards={cards} />
+
+          {/* ── Roadmap — toekomstige data ──────────────── */}
+          <div className="mt-4 px-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-black text-slate-300 uppercase" style={{ letterSpacing: '0.2em' }}>Binnenkort</span>
+              <div className="h-px flex-1 bg-[#EAEFEF]" />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { naam: 'Funda marktdata', desc: 'Looptijd en prijsmutaties' },
+                { naam: 'VON-prijs', desc: 'Verwachte verkoopprijs' },
+                { naam: 'Leefbaarheid', desc: 'Veiligheid, milieu, voorzieningen' },
+                { naam: 'Transacties', desc: 'Verkoopprijzen en aantallen' },
+                { naam: 'Leegstand', desc: 'Vacaturecijfers per type' },
+                { naam: 'Klimaatrisico', desc: 'Hitte, water, droogte' },
+              ].map(({ naam, desc }) => (
+                <div key={naam} className="bg-[#F8FAF9] border border-dashed border-[#EAEFEF] rounded-[12px] p-3">
+                  <span className="text-[11px] font-bold text-slate-500 block">{naam}</span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ── Trust metadata ───────────────────────────── */}
