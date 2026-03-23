@@ -137,6 +137,7 @@ export function GemeenteContextPanel({
                   onSwitchToVergunningen={() => setActiveLayer('vergunningen')}
                   onSwitchToRegelgeving={() => setActiveLayer('regelgeving')}
                   onSwitchToBeleid={() => setActiveLayer('beleid')}
+                  onSwitchToActiviteit={() => setActiveLayer('activiteit')}
                 />
               </motion.div>
             ) : (

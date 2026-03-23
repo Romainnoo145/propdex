@@ -4,11 +4,15 @@ import {
   ChevronUp,
   ChevronDown,
   Search,
+  Heart,
+  Bell,
 } from 'lucide-react'
 import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 import { useGemeenteAnalysisStatus } from '@/hooks/useJurisprudence'
 import { useRaadsinformatie } from '@/hooks/useRaadsinformatie'
+import { useParcelFavorites } from '@/hooks/useFavorites'
+import { useUnreadCounts } from '@/hooks/useNotifications'
 
 interface GemeenteOverviewProps {
   naam: string
@@ -20,6 +24,7 @@ interface GemeenteOverviewProps {
   onSwitchToVergunningen: () => void
   onSwitchToRegelgeving: () => void
   onSwitchToBeleid: () => void
+  onSwitchToActiviteit: () => void
 }
 
 /* ── Animation ─────────────────────────────────────────────── */
@@ -214,11 +219,14 @@ export function GemeenteOverview({
   onSwitchToVergunningen,
   onSwitchToRegelgeving,
   onSwitchToBeleid,
+  onSwitchToActiviteit,
 }: GemeenteOverviewProps) {
   const { data: profile } = useGemeenteProfile(naam)
   const { data: hvv } = useHuisvestingsverordening(naam)
   const { data: analysis } = useGemeenteAnalysisStatus(naam)
   const { data: raadsData } = useRaadsinformatie(naam)
+  const { data: favorites } = useParcelFavorites()
+  const { data: unreadData } = useUnreadCounts()
 
   const succeskans = analysis?.vergunnings_succeskans ?? null
   const approvalPct = profile?.approval_rate_pct ?? null
@@ -228,6 +236,17 @@ export function GemeenteOverview({
 
   // Normalise doorlooptijd to 0–100 scale (cap at 180 days)
   const doorlooptijdNorm = doorlooptijd != null ? Math.min(100, Math.round((doorlooptijd / 180) * 100)) : null
+
+  // Unread notifications (total across all projects — best we have without per-gemeente)
+  const totalUnread = unreadData?.total_unread ?? 0
+  // Normalise unread to 0–100 for the ring (cap at 50 for visual)
+  const unreadNorm = totalUnread > 0 ? Math.min(100, Math.round((totalUnread / 50) * 100)) : null
+
+  // Favorieten in deze gemeente
+  const favCount = useMemo(() => {
+    if (!favorites) return 0
+    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === naam.toLowerCase()).length
+  }, [favorites, naam])
 
   // Top types excluding Overig + Vergunningbesluit
   const topTypes = useMemo(() => {
@@ -264,43 +283,12 @@ export function GemeenteOverview({
           <CardLabelBar label={stedelijkheid ?? 'Onbekend'} isActive={false} />
         </motion.div>
 
-        {/* Card 2: Vergunning-klimaat — severity label met kleurcode */}
-        <motion.button
-          variants={fadeUp}
-          type="button"
-          onClick={onSwitchToVergunningen}
-          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        >
-          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-2">
-            {/* Colored dot */}
-            <div
-              className="h-6 w-6 rounded-full"
-              style={{ backgroundColor: severityColor }}
-            />
-            <span
-              className="text-[18px] font-black tracking-tight text-center leading-tight px-2"
-              style={{ color: '#0E1111' }}
-            >
-              {severityLabel && severityLabel !== 'Onbekend' ? severityLabel : '—'}
-            </span>
-            {approvalPct != null && (
-              <span className="text-[11px] font-bold text-slate-400 tabular-nums">
-                {Math.round(approvalPct)}% goedgekeurd
-              </span>
-            )}
-          </div>
-          <CardLabelBar label="Vergunningklimaat" isActive={false} />
-        </motion.button>
-
-        {/* Card 3: Raadsinformatie — politieke activiteit (amber active) */}
+        {/* Card 2: Raadsstukken — politieke activiteit (midden, geen active state) */}
         <motion.button
           variants={fadeUp}
           type="button"
           onClick={onSwitchToBeleid}
-          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826] transition-all duration-200"
+          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -314,8 +302,40 @@ export function GemeenteOverview({
                 Niet bij ORI
               </span>
             )}
+            {raadsData?.dekking && raadsData.total_found > 0 && (
+              <span className="text-[10px] font-bold text-slate-400">
+                raadsstukken
+              </span>
+            )}
           </div>
-          <CardLabelBar label="Raadsstukken" isActive />
+          <CardLabelBar label="Beleid & Nieuws" isActive={false} />
+        </motion.button>
+
+        {/* Card 3: Favorieten — link naar percelen in deze gemeente */}
+        <motion.button
+          variants={fadeUp}
+          type="button"
+          onClick={onSwitchToActiviteit}
+          className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-2">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.4 }}
+            >
+              <Heart size={40} fill="#EF4444" className="text-[#EF4444]" />
+            </motion.div>
+            {favCount > 0 && (
+              <span className="text-[16px] font-black tabular-nums text-[#0E1111]">
+                {favCount}
+              </span>
+            )}
+          </div>
+          <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
         </motion.button>
       </div>
 
@@ -330,14 +350,13 @@ export function GemeenteOverview({
 
       {/* ── 3 Circle Cards ───────────────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
-        {/* Goedkeurings% — links */}
+        {/* Meldingen — ongelezen bekendmakingen */}
         <ScoreCircleCard
-          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>}
-          label="Goedkeuring"
-          score={approvalPct != null ? Math.round(approvalPct) : null}
-          color={approvalPct != null ? (approvalPct >= 80 ? '#22C55E' : approvalPct >= 50 ? '#F9A826' : '#EF4444') : '#94a3b8'}
-          suffix="%"
-          onClick={onSwitchToVergunningen}
+          icon={<Bell size={16} />}
+          label="Meldingen"
+          score={unreadNorm}
+          color={totalUnread > 0 ? '#F9A826' : '#94a3b8'}
+          onClick={onSwitchToActiviteit}
         />
 
         {/* Winkans bezwaar — midden */}
@@ -375,8 +394,11 @@ export function GemeenteOverview({
           onClick={onSwitchToRegelgeving}
         />
         <SecondaryField
-          value={`${wijkCount} wijken`}
-          onClick={() => onSelectWijk('', '')}
+          value={severityLabel && severityLabel !== 'Onbekend'
+            ? `Klimaat: ${severityLabel}`
+            : `${wijkCount} wijken`
+          }
+          onClick={severityLabel && severityLabel !== 'Onbekend' ? onSwitchToVergunningen : () => onSelectWijk('', '')}
         />
       </motion.div>
 
