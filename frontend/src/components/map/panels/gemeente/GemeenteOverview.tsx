@@ -109,65 +109,6 @@ function BekendmakingenDivider({ total, topTypes }: { total: number; topTypes: [
   )
 }
 
-/* ── WinkansCard (BeschikbaarCard stijl) ───────────────────── */
-
-function WinkansCard({ percentage, onClick }: { percentage: number | null; onClick?: () => void }) {
-  const hasData = percentage != null
-  const color = hasData ? (percentage >= 60 ? '#22C55E' : percentage >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'
-  const highlight = hasData && percentage < 30
-
-  return (
-    <motion.div
-      variants={fadeUp}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
-      className={`flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm${onClick ? ' cursor-pointer' : ''}`}
-      style={{
-        background: highlight ? 'rgba(239, 68, 68, 0.06)' : '#FFFFFF',
-        border: highlight ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid #EAEFEF',
-      }}
-    >
-      {/* Top: label + chevrons */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-1.5">
-          <span style={{ color }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          </span>
-          <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color }}>
-            Winkans
-          </span>
-        </div>
-        <div className="flex flex-col -space-y-1 text-slate-200">
-          <ChevronUp size={14} strokeWidth={2} />
-          <ChevronDown size={14} strokeWidth={2} />
-        </div>
-      </div>
-
-      {/* Middle: big number */}
-      <div className="flex flex-col items-center gap-1">
-        <span
-          className="text-5xl font-black tracking-tighter tabular-nums leading-none"
-          style={{ color: hasData ? color : '#cbd5e1' }}
-        >
-          {hasData ? percentage : '—'}
-        </span>
-      </div>
-
-      {/* Bottom: percentage label */}
-      {hasData && (
-        <span
-          className="text-[10px] font-bold uppercase block text-center"
-          style={{ color: `${color}99` }}
-        >
-          % winkans bezwaar
-        </span>
-      )}
-      {!hasData && <div />}
-    </motion.div>
-  )
-}
 
 /* ── Placeholder card for empty slots ──────────────────────── */
 
@@ -288,11 +229,11 @@ export function GemeenteOverview({
           <CardLabelBar label={`Favorieten${favCount > 0 ? ` (${favCount})` : ''}`} isActive={false} />
         </motion.button>
 
-        {/* Card 3: Subsidies */}
+        {/* Card 3: Vergunningen (totaal + goedgekeurd/afgewezen) */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToRegelgeving}
+          onClick={onSwitchToVergunningen}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826] transition-all duration-200"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -300,10 +241,21 @@ export function GemeenteOverview({
         >
           <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
             <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
-              {subsidies?.total ?? '—'}
+              {profile?.sample_size ?? '—'}
             </span>
+            {profile?.sample_size != null && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-[16px] font-black tabular-nums text-[#22C55E]">
+                  {Math.round((profile.approval_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+                <span className="text-[14px] font-bold text-neutral-300">/</span>
+                <span className="text-[16px] font-black tabular-nums text-[#EF4444]">
+                  {Math.round((profile.rejection_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+              </div>
+            )}
           </div>
-          <CardLabelBar label="Subsidies" isActive />
+          <CardLabelBar label="Vergunningen" isActive />
         </motion.button>
       </div>
 
@@ -317,12 +269,55 @@ export function GemeenteOverview({
 
       {/* ── 3 Circle Cards ───────────────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
-        <PlaceholderCard />
-        <PlaceholderCard />
-        <WinkansCard
-          percentage={succeskans != null ? Math.round(succeskans) : null}
+        {/* Winkans bezwaar — ScoreCircleCard style */}
+        <ScoreCircleCard
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+          label="Winkans bezwaar"
+          score={succeskans != null ? Math.round(succeskans) : null}
+          color={succeskans != null ? (succeskans >= 60 ? '#22C55E' : succeskans >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'}
           onClick={onSwitchToVergunningen}
         />
+
+        <PlaceholderCard />
+
+        {/* Subsidies — amber highlight like BeschikbaarCard */}
+        <motion.div
+          variants={fadeUp}
+          role="button"
+          tabIndex={0}
+          onClick={onSwitchToRegelgeving}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSwitchToRegelgeving() }}
+          className="flex flex-col justify-between h-full rounded-[24px] p-5 transition-colors duration-200 hover:shadow-sm cursor-pointer"
+          style={{
+            background: 'rgba(249, 168, 38, 0.08)',
+            border: '1px solid rgba(249, 168, 38, 0.3)',
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#F9A826]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 4v16M2 12h20"/></svg>
+              </span>
+              <span className="text-[11px] font-extrabold uppercase text-[#F9A826]" style={{ letterSpacing: '0.15em' }}>
+                Subsidies
+              </span>
+            </div>
+            <div className="flex flex-col -space-y-1 text-slate-200">
+              <ChevronUp size={14} strokeWidth={2} />
+              <ChevronDown size={14} strokeWidth={2} />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-5xl font-black tracking-tighter tabular-nums leading-none text-[#F9A826]">
+              {subsidies?.total ?? '—'}
+            </span>
+          </div>
+
+          <span className="text-[10px] font-bold uppercase block text-center text-[#F9A826]/60">
+            regelingen (NL)
+          </span>
+        </motion.div>
       </div>
 
       {/* ── Secondary Fields ─────────────────────────── */}
