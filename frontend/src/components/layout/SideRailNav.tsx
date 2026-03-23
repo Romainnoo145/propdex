@@ -2,7 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { Map, Bookmark, Scale, Settings, LogOut } from 'lucide-react'
+import { Map, Bookmark, Scale, FileText, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -78,6 +78,25 @@ export default function SideRailNav() {
 
       {/* Bottom: System buttons — no container */}
       <div className="flex flex-col items-center gap-4">
+        <div className="w-full flex justify-center">
+          <Link to="/documentatie" className="group relative flex justify-center">
+            <div className="relative flex h-12 w-12 items-center justify-center">
+              {matchRoute({ to: '/documentatie' }) && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute inset-0 rounded-full bg-aura-obsidian shadow-[0_0_20px_rgba(14,17,17,0.3)]"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`relative z-10 transition-colors duration-300 ${matchRoute({ to: '/documentatie' }) ? 'text-aura-amber drop-shadow-sm' : 'text-slate-500 group-hover:text-aura-ink'}`}>
+                <FileText size={22} strokeWidth={1.5} />
+              </span>
+            </div>
+            <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              Documentatie
+            </span>
+          </Link>
+        </div>
         <div className="w-full flex justify-center">
           <Link to="/instellingen" className="group relative flex justify-center">
             <div className="relative flex h-12 w-12 items-center justify-center">

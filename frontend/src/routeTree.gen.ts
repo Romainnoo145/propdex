@@ -21,6 +21,7 @@ import { Route as AuthenticatedMeldingenRouteImport } from './routes/_authentica
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authenticated/jurisprudentie'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
+import { Route as AuthenticatedDocumentatieRouteImport } from './routes/_authenticated/documentatie'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
@@ -87,6 +88,12 @@ const AuthenticatedInstellingenRoute =
     path: '/instellingen',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDocumentatieRoute =
+  AuthenticatedDocumentatieRouteImport.update({
+    id: '/documentatie',
+    path: '/documentatie',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -113,6 +120,7 @@ const AuthenticatedInstellingenScoreRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
@@ -130,6 +138,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/map': typeof AuthenticatedMapRoute
   '/meldingen': typeof AuthenticatedMeldingenRoute
@@ -148,6 +157,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documentatie': typeof AuthenticatedDocumentatieRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
   '/_authenticated/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/documentatie'
     | '/instellingen'
     | '/jurisprudentie'
     | '/map'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
+    | '/documentatie'
     | '/jurisprudentie'
     | '/map'
     | '/meldingen'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documentatie'
     | '/_authenticated/instellingen'
     | '/_authenticated/jurisprudentie'
     | '/_authenticated/map'
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/documentatie': {
+      id: '/_authenticated/documentatie'
+      path: '/documentatie'
+      fullPath: '/documentatie'
+      preLoaderRoute: typeof AuthenticatedDocumentatieRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -358,6 +378,7 @@ const AuthenticatedInstellingenRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentatieRoute: typeof AuthenticatedDocumentatieRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRouteWithChildren
   AuthenticatedJurisprudentieRoute: typeof AuthenticatedJurisprudentieRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
@@ -371,6 +392,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentatieRoute: AuthenticatedDocumentatieRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRouteWithChildren,
   AuthenticatedJurisprudentieRoute: AuthenticatedJurisprudentieRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
