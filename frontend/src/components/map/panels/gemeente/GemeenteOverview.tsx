@@ -1,8 +1,6 @@
 import { useMemo } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import {
-  ChevronUp,
-  ChevronDown,
   Search,
   Heart,
   Bell,
@@ -158,15 +156,11 @@ function ScoreCircleCard({
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
       className={`flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 transition-colors duration-200 hover:shadow-sm${onClick ? ' cursor-pointer' : ''}`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-1.5">
-          <span style={{ color }}>{icon}</span>
-          <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: '#94a3b8' }}>{label}</span>
-        </div>
-        <div className="flex flex-col -space-y-1 text-slate-200">
-          <ChevronUp size={14} strokeWidth={2} />
-          <ChevronDown size={14} strokeWidth={2} />
-        </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-400">{icon}</span>
+        <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: '#94a3b8' }}>
+          {label}{suffix ? ` ${suffix}` : ''}
+        </span>
       </div>
       <div className="relative flex items-center justify-center my-2">
         <svg viewBox="0 0 120 120" className="h-[140px] w-[140px]" style={{ transform: 'rotate(-90deg)' }}>
@@ -181,7 +175,7 @@ function ScoreCircleCard({
           )}
         </svg>
         <span className="absolute text-5xl font-black tracking-tighter tabular-nums leading-none" style={{ color: score !== null ? color : '#cbd5e1' }}>
-          {score !== null ? `${Math.round(score)}${suffix ?? ''}` : '—'}
+          {score !== null ? Math.round(score) : '—'}
         </span>
       </div>
       <div />
@@ -409,7 +403,7 @@ export function GemeenteOverview({
           className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
         >
           <div className="flex items-center gap-1.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={doorlooptijd != null ? (doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <span className="text-[11px] font-extrabold uppercase text-slate-400" style={{ letterSpacing: '0.15em' }}>Doorlooptijd</span>
           </div>
           <div className="flex flex-col items-center justify-center flex-1 gap-1">
