@@ -7,6 +7,7 @@ import { GemeenteOverview } from './gemeente/GemeenteOverview'
 import { KlimaatLayer } from './gemeente/KlimaatLayer'
 import { BestuurlijkLayer } from './gemeente/BestuurlijkLayer'
 import { ActiviteitLayer } from './gemeente/ActiviteitLayer'
+import { BeleidNieuwsLayer } from './gemeente/BeleidNieuwsLayer'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 const prefersReducedMotion =
@@ -158,13 +159,9 @@ export function GemeenteContextPanel({
                 {activeLayer === 'regelgeving' && (
                   <BestuurlijkLayer gemeenteNaam={naam} />
                 )}
-                {/* Beleid & Nieuws — placeholder, S04 will build */}
+                {/* Beleid & Nieuws — raadsinformatie + subsidies */}
                 {activeLayer === 'beleid' && (
-                  <div className="flex-1 flex items-center justify-center px-8">
-                    <p className="text-[13px] text-neutral-400 text-center">
-                      Beleid & Nieuws wordt binnenkort toegevoegd.
-                    </p>
-                  </div>
+                  <BeleidNieuwsLayer gemeenteNaam={naam} />
                 )}
                 {/* Mijn Activiteit — reuses ActiviteitLayer for now (S05 will replace) */}
                 {activeLayer === 'activiteit' && (

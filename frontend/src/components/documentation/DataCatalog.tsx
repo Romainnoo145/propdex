@@ -212,6 +212,76 @@ const VIEWS: ViewTab[] = [
           { naam: 'Nieuwsfeed', beschrijving: 'Beleidswijzigingen, raadsbesluiten, coalitieakkoorden' },
         ],
       },
+      {
+        naam: 'Omgevingsvisie',
+        beschrijving: 'Wat is de langetermijnvisie van de gemeente op de leefomgeving?',
+        uitleg: 'Sinds de Omgevingswet (2024) is elke gemeente verplicht een omgevingsvisie op te stellen. Dit strategisch document beschrijft de gewenste ontwikkelrichting per gebied — waar mag gebouwd worden, waar komt groen, welke functies zijn gewenst. Voor vastgoedontwikkelaars is dit cruciaal: een project dat past binnen de omgevingsvisie heeft een grotere kans op medewerking van de gemeente. De visie is openbaar maar wordt als PDF gepubliceerd zonder standaard-API.',
+        bron: 'Gemeente websites + AI',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Ontwikkelgebieden', beschrijving: 'Waar wil de gemeente groeien en welke functies zijn gewenst' },
+          { naam: 'Ambities', beschrijving: 'Speerpunten: verdichting, duurzaamheid, leefbaarheid, mobiliteit' },
+        ],
+      },
+      {
+        naam: 'Woonvisie',
+        beschrijving: 'Hoeveel en welke woningen wil de gemeente erbij bouwen?',
+        uitleg: 'De woonvisie beschrijft het woningbouwprogramma: hoeveel woningen tot welk jaar, welke segmenten (sociaal, midden, vrij), voor welke doelgroepen (starters, senioren, gezinnen). Als uw project aansluit bij de woonvisie — bijvoorbeeld betaalbare huurwoningen in een gemeente die daar tekort aan heeft — vergroot dat de kans op medewerking en mogelijke subsidies. De woonvisie is openbaar als PDF maar verschilt sterk per gemeente.',
+        bron: 'Gemeente websites + AI',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Woningbouwprogramma', beschrijving: 'Aantallen per segment: sociaal, midden, vrije sector' },
+          { naam: 'Doelgroepen', beschrijving: 'Starters, senioren, gezinnen, arbeidsmigranten' },
+          { naam: 'Prioriteitsgebieden', beschrijving: 'Wijken of gebieden waar de gemeente actief wil bouwen' },
+        ],
+      },
+      {
+        naam: 'Parkeerbeleid',
+        beschrijving: 'Hoeveel parkeerplaatsen moet u realiseren bij nieuwbouw?',
+        uitleg: 'Parkeernormen bepalen hoeveel parkeerplaatsen u moet realiseren per woning of per m² kantoor/winkel. Dit kan een project maken of breken: in stedelijke gebieden zijn parkeernormen vaak 0,3–0,6 per woning (en soms 0 bij OV-knooppunten), in landelijke gebieden 1,5–2,0. De normen zijn gebaseerd op CROW-publicatie 381 maar worden per gemeente vastgesteld. Hoge parkeernormen verhogen bouwkosten significant (€15.000–40.000 per plek ondergronds).',
+        bron: 'Gemeente websites + CROW',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Parkeernormen', beschrijving: 'Norm per woningtype en per stedelijkheidszone' },
+          { naam: 'Uitzonderingen', beschrijving: 'Vrijstellingen bij OV-knooppunten, autoluwe zones, deelmobiliteit' },
+        ],
+      },
+      {
+        naam: 'Duurzaamheidsbeleid',
+        beschrijving: 'Welke extra duurzaamheidseisen stelt de gemeente?',
+        uitleg: 'Bovenop de landelijke eisen uit het Bouwbesluit stellen veel gemeenten aanvullende duurzaamheidseisen — denk aan gasloos bouwen, minimale BENG-scores, groene daken, klimaatadaptatie (waterberging), en circulair bouwen. Deze eisen variëren sterk per gemeente en kunnen significant impact hebben op bouwkosten en ontwerp. We onderzoeken of deze eisen gestructureerd uit gemeentelijke beleidsdocumenten geëxtraheerd kunnen worden.',
+        bron: 'Gemeente websites + AI',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Energienormen', beschrijving: 'Gasloos, BENG-eisen, EPC-normen boven bouwbesluit' },
+          { naam: 'Klimaatadaptatie', beschrijving: 'Waterberging, groene daken, hittestress-maatregelen' },
+          { naam: 'Circulair bouwen', beschrijving: 'MPG-eisen, hergebruik materialen, sloopprotocol' },
+        ],
+      },
+      {
+        naam: 'Leegstandsverordening',
+        beschrijving: 'Zijn er regels voor leegstaande panden — en kansen voor transformatie?',
+        uitleg: 'Gemeenten met een leegstandsverordening kunnen eigenaren verplichten leegstand te melden en actie te ondernemen. Voor vastgoedontwikkelaars is dit interessant: leegstaande kantoren en winkels zijn potentiële transformatielocaties, en gemeenten met een actief leegstandsbeleid zijn vaak ontvankelijker voor transformatie-initiatieven. De verordening is via de Officiële Bekendmakingen te vinden, vergelijkbaar met de huisvestingsverordening.',
+        bron: 'Officiële Bekendmakingen',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Heeft verordening', beschrijving: 'Ja of nee — en sinds wanneer' },
+          { naam: 'Meldplicht', beschrijving: 'Na hoeveel maanden leegstand moet de eigenaar melden' },
+          { naam: 'Leegstandstax', beschrijving: 'Boete of heffing bij langdurige leegstand' },
+        ],
+      },
+      {
+        naam: 'Erfgoedverordening',
+        beschrijving: 'Zijn er lokale monumenten naast de rijksmonumenten?',
+        uitleg: 'Naast rijksmonumenten (die we al tonen via RCE) kunnen gemeenten eigen lokale monumenten aanwijzen via een erfgoedverordening. Deze gemeentelijke monumenten hebben vergelijkbare beperkingen voor verbouw en sloop, maar vallen onder een ander vergunningregime. Het is belangrijk om dit te weten vóór aankoop: een gemeentelijk monument kan net zo beperkend zijn als een rijksmonument, maar is minder zichtbaar in de standaard registers.',
+        bron: 'Gemeente websites + Erfgoedregister',
+        status: 'roadmap',
+        velden: [
+          { naam: 'Heeft verordening', beschrijving: 'Ja of nee' },
+          { naam: 'Gemeentelijke monumenten', beschrijving: 'Aantal en lijst van lokaal beschermde panden' },
+          { naam: 'Beschermingsregime', beschrijving: 'Welke regels gelden voor verbouw en onderhoud' },
+        ],
+      },
       // ── Innovatie ──
       {
         naam: 'Sociaal draagvlak monitor',
