@@ -186,7 +186,7 @@ export function GemeenteOverview({
             <span className="text-[9px] font-black uppercase tracking-[0.15em] text-neutral-400 block mb-1">
               Verleend
             </span>
-            <span className="text-[20px] font-black text-[#22C55E] tabular-nums">
+            <span className={`text-[20px] font-black tabular-nums ${profile?.approval_rate_pct != null ? 'text-[#22C55E]' : 'text-neutral-300'}`}>
               {isLoading ? '...' : profile?.approval_rate_pct != null ? `${Math.round(profile.approval_rate_pct)}%` : '—'}
             </span>
           </div>
@@ -196,7 +196,7 @@ export function GemeenteOverview({
             <span className="text-[9px] font-black uppercase tracking-[0.15em] text-neutral-400 block mb-1">
               Afgewezen
             </span>
-            <span className="text-[20px] font-black text-[#EF4444] tabular-nums">
+            <span className={`text-[20px] font-black tabular-nums ${profile?.rejection_rate_pct != null ? 'text-[#EF4444]' : 'text-neutral-300'}`}>
               {isLoading ? '...' : profile?.rejection_rate_pct != null ? `${Math.round(profile.rejection_rate_pct)}%` : '—'}
             </span>
           </div>
