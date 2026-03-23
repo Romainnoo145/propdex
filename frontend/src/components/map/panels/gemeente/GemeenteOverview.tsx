@@ -410,11 +410,21 @@ export function GemeenteOverview({
       {/* ── Secondary Fields (like pandstatus/vergunningen) ── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
         <SecondaryField
+          value={profile?.severity_label && profile.severity_label !== 'Onbekend'
+            ? `${profile.severity_label} vergunningsbeleid`
+            : isLoading ? '...' : 'Geen data'}
+          onClick={onSwitchToVergunningen}
+        />
+        <SecondaryField
           value={profile?.avg_doorlooptijd_days != null && profile.avg_doorlooptijd_days > 0
             ? `~${profile.avg_doorlooptijd_days} dagen doorlooptijd`
             : isLoading ? '...' : 'Geen doorlooptijd data'}
           onClick={onSwitchToVergunningen}
         />
+      </motion.div>
+
+      {/* ── Row 6: Wijken ────────────────────────────────── */}
+      <motion.div variants={fadeUp} className="mt-1.5 grid grid-cols-1">
         <SecondaryField
           value={`${wijkCount} wijken`}
           onClick={() => onSelectWijk('', '')}
