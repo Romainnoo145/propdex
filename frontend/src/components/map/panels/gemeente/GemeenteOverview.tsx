@@ -110,6 +110,57 @@ function BekendmakingenDivider({ total, topTypes }: { total: number; topTypes: [
 }
 
 
+/* ── ScoreCircleCard ────────────────────────────────────────── */
+
+function ScoreCircleCard({
+  icon, label, score, color, onClick,
+}: {
+  icon: React.ReactNode; label: string; score: number | null; color: string; onClick?: () => void
+}) {
+  const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
+  const r = 48
+  const circumference = 2 * Math.PI * r
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+      className={`flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 transition-colors duration-200 hover:shadow-sm${onClick ? ' cursor-pointer' : ''}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color }}>{icon}</span>
+          <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: '#94a3b8' }}>{label}</span>
+        </div>
+        <div className="flex flex-col -space-y-1 text-slate-200">
+          <ChevronUp size={14} strokeWidth={2} />
+          <ChevronDown size={14} strokeWidth={2} />
+        </div>
+      </div>
+      <div className="relative flex items-center justify-center my-2">
+        <svg viewBox="0 0 120 120" className="h-[140px] w-[140px]" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="60" cy="60" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
+          {score !== null && (
+            <motion.circle cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+              strokeDasharray={circumference}
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: circumference - (normalised / 100) * circumference }}
+              transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
+            />
+          )}
+        </svg>
+        <span className="absolute text-5xl font-black tracking-tighter tabular-nums leading-none" style={{ color: score !== null ? color : '#cbd5e1' }}>
+          {score !== null ? Math.round(score) : '—'}
+        </span>
+      </div>
+      <div />
+    </motion.div>
+  )
+}
+
 /* ── Placeholder card for empty slots ──────────────────────── */
 
 function PlaceholderCard() {
