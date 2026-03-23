@@ -165,10 +165,11 @@ export function GemeenteContextPanel({
                 {activeLayer === 'beleid' && (
                   <BeleidNieuwsLayer gemeenteNaam={naam} />
                 )}
-                {/* Mijn Activiteit — reuses ActiviteitLayer for now (S05 will replace) */}
+                {/* Mijn Activiteit — notificaties, favorieten, wijken */}
                 {activeLayer === 'activiteit' && (
                   <ActiviteitLayer
                     scans={scans}
+                    gemeenteNaam={naam}
                     gemeenteCode={code}
                     wijkGeojson={wijkGeojson}
                     onSelectWijk={onSelectWijk}
