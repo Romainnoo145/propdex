@@ -18,7 +18,7 @@ interface GemeenteOverviewProps {
   gemeenteCode: string
   wijkCount: number
   stedelijkheid: string | null
-  onSelectWijk: (code: string, naam: string) => void
+  onShowWijken: () => void
   onSwitchToVergunningen: () => void
   onSwitchToRegelgeving: () => void
   onSwitchToBeleid: () => void
@@ -271,7 +271,7 @@ export function GemeenteOverview({
   naam,
   stedelijkheid,
   wijkCount,
-  onSelectWijk,
+  onShowWijken,
   onSwitchToVergunningen,
   onSwitchToRegelgeving,
   onSwitchToBeleid,
@@ -467,7 +467,7 @@ export function GemeenteOverview({
         />
         <SecondaryField
           value={`${wijkCount} wijken`}
-          onClick={() => onSelectWijk('', '')}
+          onClick={onShowWijken}
         />
       </motion.div>
 

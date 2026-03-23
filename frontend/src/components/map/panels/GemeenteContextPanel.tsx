@@ -8,6 +8,7 @@ import { KlimaatLayer } from './gemeente/KlimaatLayer'
 import { BestuurlijkLayer } from './gemeente/BestuurlijkLayer'
 import { ActiviteitLayer } from './gemeente/ActiviteitLayer'
 import { BeleidNieuwsLayer } from './gemeente/BeleidNieuwsLayer'
+import { WijkenModal } from './gemeente/WijkenModal'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 const prefersReducedMotion =
@@ -44,6 +45,7 @@ export function GemeenteContextPanel({
   onSelectWijk,
 }: GemeenteContextPanelProps) {
   const [activeLayer, setActiveLayer] = useState<GemeenteLayer | null>(null)
+  const [showWijken, setShowWijken] = useState(false)
 
   const handleSelectLayer = useCallback((layer: GemeenteLayer) => {
     setActiveLayer(layer)
@@ -133,7 +135,7 @@ export function GemeenteContextPanel({
                   gemeenteCode={code}
                   wijkCount={wijkCount}
                   stedelijkheid={stedelijkheid}
-                  onSelectWijk={onSelectWijk}
+                  onShowWijken={() => setShowWijken(true)}
                   onSwitchToVergunningen={() => setActiveLayer('vergunningen')}
                   onSwitchToRegelgeving={() => setActiveLayer('regelgeving')}
                   onSwitchToBeleid={() => setActiveLayer('beleid')}
@@ -165,14 +167,11 @@ export function GemeenteContextPanel({
                 {activeLayer === 'beleid' && (
                   <BeleidNieuwsLayer gemeenteNaam={naam} />
                 )}
-                {/* Mijn Activiteit — notificaties, favorieten, wijken */}
+                {/* Mijn Activiteit — notificaties, favorieten */}
                 {activeLayer === 'activiteit' && (
                   <ActiviteitLayer
-                    scans={scans}
                     gemeenteNaam={naam}
                     gemeenteCode={code}
-                    wijkGeojson={wijkGeojson}
-                    onSelectWijk={onSelectWijk}
                   />
                 )}
               </motion.div>
@@ -190,6 +189,20 @@ export function GemeenteContextPanel({
           </div>
         </motion.div>
       </LeftPanelShell>
+
+      {/* Wijken modal */}
+      <AnimatePresence>
+        {showWijken && (
+          <WijkenModal
+            gemeenteNaam={naam}
+            gemeenteCode={code}
+            wijkGeojson={wijkGeojson}
+            scans={scans}
+            onSelectWijk={onSelectWijk}
+            onClose={() => setShowWijken(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }

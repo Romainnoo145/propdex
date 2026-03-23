@@ -1,54 +1,14 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Bell, Heart, ExternalLink } from 'lucide-react'
-import { VerdictHero } from './VerdictHero'
+import { Bell, Heart, ExternalLink } from 'lucide-react'
 import { MeldingenModal } from './MeldingenModal'
-import { CompactWijkCard } from './CompactWijkCard'
 import { staggerContainer, fadeUp } from './animations'
 import { useParcelFavorites } from '@/hooks/useFavorites'
 import { useUnreadCounts } from '@/hooks/useNotifications'
-import type { ScanListItem } from '@/lib/types/scan'
 
 interface ActiviteitLayerProps {
-  scans: ScanListItem[]
   gemeenteNaam: string
   gemeenteCode: string
-  wijkGeojson: GeoJSON.FeatureCollection | null
-  onSelectWijk: (code: string, naam: string) => void
-}
-
-/* ── Wijk helpers (unchanged) ──────────────────────────────── */
-
-interface WijkActivity { name: string; code: string; parcelCount: number; scanDate: string }
-
-function deriveWijkActivity(scans: ScanListItem[], gemeenteCode: string): WijkActivity[] {
-  const map = new Map<string, WijkActivity>()
-  for (const s of scans) {
-    if (s.gemeente_code !== gemeenteCode || s.status !== 'completed' || !s.wijk_naam) continue
-    const existing = map.get(s.wijk_naam)
-    if (!existing || s.scan_date > existing.scanDate) {
-      map.set(s.wijk_naam, { name: s.wijk_naam, code: '', parcelCount: s.parcel_count, scanDate: s.scan_date })
-    }
-  }
-  return [...map.values()].sort((a, b) => b.parcelCount - a.parcelCount)
-}
-
-interface WijkEntry { name: string; code: string; hasData: boolean; parcelCount?: number }
-
-function deriveAllWijken(wijkGeojson: GeoJSON.FeatureCollection | null, scannedWijken: WijkActivity[]): WijkEntry[] {
-  const scannedMap = new Map(scannedWijken.map(w => [w.name, w]))
-  const entries: WijkEntry[] = []
-  for (const f of (wijkGeojson?.features ?? [])) {
-    const name = (f.properties?.statnaam as string) ?? ''
-    const code = (f.properties?.statcode as string) ?? ''
-    const scanned = scannedMap.get(name)
-    entries.push({ name, code, hasData: !!scanned, parcelCount: scanned?.parcelCount })
-  }
-  return entries.sort((a, b) => {
-    if (a.hasData && !b.hasData) return -1
-    if (!a.hasData && b.hasData) return 1
-    return a.name.localeCompare(b.name, 'nl')
-  })
 }
 
 /* ── Section header ────────────────────────────────────────── */
@@ -75,11 +35,8 @@ function SectionHeader({ icon, label, count, children }: {
 /* ── Main component ────────────────────────────────────────── */
 
 export function ActiviteitLayer({
-  scans,
   gemeenteNaam,
   gemeenteCode,
-  wijkGeojson,
-  onSelectWijk,
 }: ActiviteitLayerProps) {
   const [showMeldingen, setShowMeldingen] = useState(false)
 
@@ -94,38 +51,9 @@ export function ActiviteitLayer({
     return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === gemeenteNaam.toLowerCase())
   }, [favorites, gemeenteNaam])
 
-  // Wijken
-  const scannedWijken = useMemo(() => deriveWijkActivity(scans, gemeenteCode), [scans, gemeenteCode])
-  const allWijken = useMemo(() => deriveAllWijken(wijkGeojson, scannedWijken), [wijkGeojson, scannedWijken])
-  const totalWijken = allWijken.length
-  const wijkenMetData = scannedWijken.length
-  const totalPercelen = scannedWijken.reduce((sum, w) => sum + w.parcelCount, 0)
-
-  // Verdict
-  const activityScore = totalWijken > 0 ? Math.round((wijkenMetData / totalWijken) * 100) : null
-  const verdictLabel = activityScore == null ? 'GEEN WIJKEN'
-    : activityScore >= 60 ? 'ACTIEF' : activityScore >= 20 ? 'GESTART'
-    : wijkenMetData > 0 ? 'VERKENNEND' : 'NIEUW GEBIED'
-  const verdictColor = activityScore == null ? '#94a3b8'
-    : activityScore >= 60 ? '#22C55E' : activityScore >= 20 ? '#F9A826'
-    : wijkenMetData > 0 ? '#F9A826' : '#94a3b8'
-  const verdictSubtitle = wijkenMetData > 0
-    ? `${wijkenMetData} van ${totalWijken} wijken · ${totalPercelen.toLocaleString('nl-NL')} percelen`
-    : `${totalWijken} wijken beschikbaar`
-
   return (
     <>
       <div className="flex flex-col flex-1 pt-4 px-6 pb-4">
-        <VerdictHero
-          score={activityScore}
-          label={verdictLabel}
-          subtitle={verdictSubtitle}
-          color={verdictColor}
-          icon={activityScore != null && activityScore > 0
-            ? <MapPin className="size-6 text-white" strokeWidth={2.5} />
-            : <Bell className="size-6 text-white" strokeWidth={2.5} />
-          }
-        />
 
         {/* ── Meldingen ──────────────────────────────── */}
         <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
@@ -209,34 +137,6 @@ export function ActiviteitLayer({
                 </span>
               )}
             </div>
-          )}
-        </motion.div>
-
-        {/* ── Wijken ─────────────────────────────────── */}
-        <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
-          <SectionHeader
-            icon={<MapPin size={14} className="text-slate-400" />}
-            label="Wijken"
-            count={totalWijken}
-          />
-
-          <div className="grid grid-cols-2 gap-1.5">
-            {allWijken.slice(0, 8).map((wijk) => (
-              <CompactWijkCard
-                key={wijk.code || wijk.name}
-                name={wijk.name}
-                code={wijk.code}
-                isScanned={wijk.hasData}
-                parcelCount={wijk.parcelCount}
-                onSelect={() => onSelectWijk(wijk.code, wijk.name)}
-              />
-            ))}
-          </div>
-
-          {allWijken.length > 8 && (
-            <motion.div variants={fadeUp} className="mt-2 text-center">
-              <span className="text-[11px] text-slate-400">+ {allWijken.length - 8} meer wijken</span>
-            </motion.div>
           )}
         </motion.div>
 
