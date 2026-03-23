@@ -139,9 +139,9 @@ function BekendmakingenDivider({ total, approvalPct, topTypes }: { total: number
 /* ── ScoreCircleCard ────────────────────────────────────────── */
 
 function ScoreCircleCard({
-  icon, label, score, color, suffix, onClick,
+  icon, label, score, color, sub, onClick,
 }: {
-  icon: React.ReactNode; label: string; score: number | null; color: string; suffix?: string; onClick?: () => void
+  icon: React.ReactNode; label: string; score: number | null; color: string; sub?: string; onClick?: () => void
 }) {
   const normalised = score !== null ? Math.min(100, Math.max(0, Math.round(score))) : 0
   const r = 48
@@ -159,7 +159,7 @@ function ScoreCircleCard({
       <div className="flex items-center gap-1.5">
         <span className="text-slate-400">{icon}</span>
         <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: '#94a3b8' }}>
-          {label}{suffix ? ` ${suffix}` : ''}
+          {label}
         </span>
       </div>
       <div className="relative flex items-center justify-center my-2">
@@ -178,7 +178,10 @@ function ScoreCircleCard({
           {score !== null ? Math.round(score) : '—'}
         </span>
       </div>
-      <div />
+      {sub && (
+        <span className="text-[10px] font-bold text-slate-400 text-center">{sub}</span>
+      )}
+      {!sub && <div />}
     </motion.div>
   )
 }
@@ -215,7 +218,11 @@ function DoorlooptijdCard({ doorlooptijd, onClick }: { doorlooptijd: number | nu
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick() }}
-      className="flex flex-col justify-between h-full rounded-[24px] bg-white border border-[#EAEFEF] p-5 cursor-pointer transition-shadow hover:shadow-sm"
+      className="flex flex-col justify-between h-full rounded-[24px] p-5 cursor-pointer transition-shadow hover:shadow-sm"
+      style={{
+        background: 'rgba(249, 168, 38, 0.08)',
+        border: '1px solid rgba(249, 168, 38, 0.3)',
+      }}
     >
       <div className="flex items-center gap-1.5">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -229,7 +236,7 @@ function DoorlooptijdCard({ doorlooptijd, onClick }: { doorlooptijd: number | nu
         )}
       </div>
       {doorlooptijd != null && (
-        <span className="text-[10px] font-bold text-center" style={{ color }}>
+        <span className="text-[10px] font-bold text-center text-slate-400">
           dagen gemiddeld
         </span>
       )}
@@ -441,10 +448,10 @@ export function GemeenteOverview({
         {/* Winkans bezwaar — cirkel (is een percentage) */}
         <ScoreCircleCard
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-          label="Winkans bezwaar"
+          label="Bezwaar"
           score={succeskans != null ? Math.round(succeskans) : null}
           color={succeskans != null ? (succeskans >= 60 ? '#22C55E' : succeskans >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'}
-          suffix="%"
+          sub="winkans %"
           onClick={onSwitchToVergunningen}
         />
 
