@@ -29,8 +29,8 @@ function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-aura-canvas px-4">
-      <div className="w-full max-w-[440px] rounded-[32px] bg-[#0E1111] px-8 pt-10 pb-8 shadow-2xl">
-        {/* Branding */}
+      <div className="w-full max-w-[420px]">
+        {/* Logo + name */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <img
             src="/images/propdex-logo.svg"
@@ -38,20 +38,22 @@ function AuthPage() {
             className="h-16 w-16 rounded-[16px]"
           />
           <h1
-            className="text-[28px] font-black tracking-tight text-white"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: '-0.02em' }}
+            className="text-[28px] font-black tracking-tight text-[#0E1111]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             Propdex
           </h1>
         </div>
 
-        {/* Auth card — white inset */}
-        <AuthTabs
-          onLogin={login}
-          onRegister={register}
-          onLoginSuccess={handleSuccess}
-          onRegisterSuccess={handleSuccess}
-        />
+        {/* Card */}
+        <div className="rounded-[24px] bg-white border border-[#EAEFEF] p-6 shadow-lg">
+          <AuthTabs
+            onLogin={login}
+            onRegister={register}
+            onLoginSuccess={handleSuccess}
+            onRegisterSuccess={handleSuccess}
+          />
+        </div>
       </div>
     </div>
   )

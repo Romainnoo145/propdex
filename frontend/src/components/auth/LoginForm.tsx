@@ -49,7 +49,7 @@ export function LoginForm({ onLogin, onSuccess }: LoginFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {apiError && (
-        <div className="rounded-lg bg-error/10 border border-error/20 p-3 text-sm text-error">
+        <div className="rounded-[12px] bg-red-50 border border-red-200 p-3 text-[13px] text-red-600">
           {apiError}
         </div>
       )}

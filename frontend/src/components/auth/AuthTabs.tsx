@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
 import { GoogleButton } from './GoogleButton'
@@ -22,75 +23,59 @@ export function AuthTabs({
   const [activeTab, setActiveTab] = useState<TabType>('login')
 
   return (
-    <div className="w-full rounded-[24px] bg-white p-6">
-      {/* Tab list */}
-      <div
-        role="tablist"
-        className="mb-6 flex border-b border-[#EAEFEF]"
-      >
-        <button
-          role="tab"
-          aria-selected={activeTab === 'login'}
-          aria-controls="login-panel"
-          onClick={() => setActiveTab('login')}
-          className={`flex-1 px-4 py-2.5 text-sm font-bold transition-colors ${
-            activeTab === 'login'
-              ? 'border-b-2 border-[#F9A826] text-[#F9A826]'
-              : 'text-neutral-400 hover:text-aura-ink'
-          }`}
-        >
-          Log in
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === 'register'}
-          aria-controls="register-panel"
-          onClick={() => setActiveTab('register')}
-          className={`flex-1 px-4 py-2.5 text-sm font-bold transition-colors ${
-            activeTab === 'register'
-              ? 'border-b-2 border-[#F9A826] text-[#F9A826]'
-              : 'text-neutral-400 hover:text-aura-ink'
-          }`}
-        >
-          Register
-        </button>
+    <div className="space-y-6">
+      {/* Pill tab switcher — matches GemeenteCategoryTabs pattern */}
+      <div className="flex w-full h-[44px] rounded-full p-1 bg-[#F2F6F3]">
+        {(['login', 'register'] as const).map((tab) => {
+          const isActive = activeTab === tab
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab)}
+              className="relative flex-1 h-full rounded-full flex items-center justify-center transition-colors"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '13px',
+                fontWeight: isActive ? 700 : 600,
+                color: isActive ? undefined : '#94a3b8',
+              }}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="auth-tab"
+                  className="absolute inset-0 rounded-full"
+                  style={{ background: '#0E1111' }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>
+                {tab === 'login' ? 'Log in' : 'Register'}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Login tab panel */}
+      {/* Form */}
       {activeTab === 'login' && (
-        <div role="tabpanel" id="login-panel" aria-labelledby="login-tab">
-          <LoginForm onLogin={onLogin} onSuccess={onLoginSuccess} />
-
-          {/* Or divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-neutral-200"></div>
-            <span className="px-3 text-sm text-neutral-600">
-              or
-            </span>
-            <div className="flex-1 border-t border-neutral-200"></div>
-          </div>
-
-          <GoogleButton />
-        </div>
+        <LoginForm onLogin={onLogin} onSuccess={onLoginSuccess} />
       )}
-
-      {/* Register tab panel */}
       {activeTab === 'register' && (
-        <div role="tabpanel" id="register-panel" aria-labelledby="register-tab">
-          <RegisterForm onRegister={onRegister} onSuccess={onRegisterSuccess} />
-
-          {/* Or divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-neutral-200"></div>
-            <span className="px-3 text-sm text-neutral-600">
-              or
-            </span>
-            <div className="flex-1 border-t border-neutral-200"></div>
-          </div>
-
-          <GoogleButton />
-        </div>
+        <RegisterForm onRegister={onRegister} onSuccess={onRegisterSuccess} />
       )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-neutral-200" />
+        <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider">of</span>
+        <div className="flex-1 h-px bg-neutral-200" />
+      </div>
+
+      {/* Google */}
+      <GoogleButton />
     </div>
   )
 }
