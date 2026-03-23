@@ -234,7 +234,7 @@ function SimpleStatContent({ metrics, metricKey }: { metrics: CbsNeighborhoodMet
       return (
         <>
           <SectionHeader title="WOZ-waarde" />
-          <StatRow label="Gemiddelde WOZ" value={d.gemiddelde_woz_waarde != null ? `€${Math.round(d.gemiddelde_woz_waarde).toLocaleString('nl-NL')}` : '—'} />
+          <StatRow label="Gemiddelde WOZ" value={d.gemiddelde_woz_waarde != null ? `€${Math.round(d.gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}` : '—'} />
           <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
             <p className="text-[12px] text-slate-600 leading-relaxed">
               De gemiddelde WOZ-waarde geeft een indicatie van het prijsniveau. Vergelijk met aankoopprijs om rendementspotentieel te beoordelen.

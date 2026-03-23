@@ -228,7 +228,7 @@ function buildCards(
     {
       key: 'woz',
       label: 'WOZ-WAARDE',
-      value: woz != null ? `€${Math.round(woz).toLocaleString('nl-NL')}` : '—',
+      value: woz != null ? `€${Math.round(woz * 1000).toLocaleString('nl-NL')}` : '—',
       sub: woz != null ? 'Gemiddelde woningwaarde' : 'Geen WOZ data',
       accentColor: '#0ea5e9',
     },
