@@ -116,8 +116,8 @@ async def build_gemeente_profile(
             rejected += 1
             total_decided += 1
 
-        # Permit type distribution (simplified category)
-        permit_type = _simplified_type(category)
+        # Permit type distribution (from title content, not just category)
+        permit_type = _simplified_type(category, record.title or "")
         permit_types[permit_type] = permit_types.get(permit_type, 0) + 1
 
         # Bekendmakingen by period
@@ -159,17 +159,64 @@ async def build_gemeente_profile(
     )
 
 
-def _simplified_type(category: str) -> str:
-    """Simplify bekendmaking category to a high-level permit type."""
-    lower = category.lower()
-    if "omgevingsvergunning" in lower:
+def _simplified_type(category: str, title: str) -> str:
+    """Derive permit sub-type from the bekendmaking title.
+
+    The category_label (from classify_bekendmaking) is too coarse — almost
+    everything becomes "Omgevingsvergunning". The title contains the actual
+    activity: kappen, splitsen, dakkapel, inrit, sloop, etc.
+
+    We classify based on title keywords first, then fall back to category.
+    """
+    t = title.lower()
+
+    # Specific activity types (check title first — most informative)
+    if "kappen" in t or "kapvergunning" in t or "bomen" in t:
+        return "Kap"
+    if "sloop" in t:
+        return "Sloop"
+    if "splitsen" in t or "splitsing" in t:
+        return "Splitsen"
+    if "dakkapel" in t:
+        return "Dakkapel"
+    if "inrit" in t or "uitweg" in t:
+        return "Inrit/uitweg"
+    if "milieu" in t or "milieugevaarlijk" in t:
+        return "Milieu"
+    if "brandveilig" in t:
+        return "Brandveiligheid"
+    if "reclame" in t or "uiting" in t:
+        return "Reclame"
+    if "bestemmingsplan" in t or "inpassingsplan" in t:
+        return "Bestemmingsplan"
+    if "monument" in t or "erfgoed" in t:
+        return "Monument"
+
+    # Building activity sub-types
+    if any(k in t for k in ("oprichten van een woning", "bouwen van een woning", "nieuwbouw woning")):
+        return "Nieuwbouw woning"
+    if any(k in t for k in ("herontwikkeling", "transformatie", "verbouw", "veranderen")):
+        return "Verbouw/transformatie"
+    if any(k in t for k in ("oprichten van", "bouwen van", "bouw van", "realiseren van")):
+        return "Bouw"
+    if any(k in t for k in ("plaatsen van", "aanbouw", "uitbouw")):
+        return "Aanbouw/plaatsing"
+    if any(k in t for k in ("vervangen van", "wijzigen van", "renovatie", "herstellen")):
+        return "Renovatie/wijziging"
+
+    # Status-only entries (no specific activity in title)
+    if any(k in t for k in ("verleende omgevingsvergunning", "verlenging beslistermijn")):
         return "Omgevingsvergunning"
-    if "sloop" in lower or "brandveilig" in lower:
-        return "Sloop/Brandveilig"
-    if "kapvergunning" in lower:
-        return "Kapvergunning"
+
+    # Fall back to category-based classification
+    lower = category.lower()
     if "bestemmingsplan" in lower or "inpassingsplan" in lower:
         return "Bestemmingsplan"
+    if "sloop" in lower:
+        return "Sloop"
+    if "kapvergunning" in lower:
+        return "Kap"
     if "milieu" in lower:
         return "Milieu"
+
     return "Overig"
