@@ -237,10 +237,8 @@ export function GemeenteOverview({
   // Normalise doorlooptijd to 0–100 scale (cap at 180 days)
   const doorlooptijdNorm = doorlooptijd != null ? Math.min(100, Math.round((doorlooptijd / 180) * 100)) : null
 
-  // Unread notifications (total across all projects — best we have without per-gemeente)
+  // Unread notifications (total across all projects)
   const totalUnread = unreadData?.total_unread ?? 0
-  // Normalise unread to 0–100 for the ring (cap at 50 for visual)
-  const unreadNorm = totalUnread > 0 ? Math.min(100, Math.round((totalUnread / 50) * 100)) : null
 
   // Favorieten in deze gemeente
   const favCount = useMemo(() => {
@@ -268,10 +266,10 @@ export function GemeenteOverview({
     >
       {/* ── 3 Bento Cards ────────────────────────────── */}
       <div className="grid grid-cols-3 gap-1.5 mt-6">
-        {/* Card 1: Stedelijkheid foto */}
+        {/* Card 1: Stedelijkheid foto — ACTIVE STATE (amber border) */}
         <motion.div
           variants={fadeUp}
-          className="flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent"
+          className="flex flex-col rounded-[20px] overflow-hidden border-2 border-[#F9A826]"
         >
           <div className="relative aspect-[5/6] overflow-hidden">
             <img
@@ -280,35 +278,48 @@ export function GemeenteOverview({
               className="h-full w-full object-cover"
             />
           </div>
-          <CardLabelBar label={stedelijkheid ?? 'Onbekend'} isActive={false} />
+          <CardLabelBar label={stedelijkheid ?? 'Onbekend'} isActive />
         </motion.div>
 
-        {/* Card 2: Raadsstukken — politieke activiteit (midden, geen active state) */}
+        {/* Card 2: Meldingen — ongelezen bekendmakingen (animated count) */}
         <motion.button
           variants={fadeUp}
           type="button"
-          onClick={onSwitchToBeleid}
+          onClick={onSwitchToActiviteit}
           className="group flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-[#EAEFEF]"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-1">
-            <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
-              {raadsData?.total_found ?? '—'}
-            </span>
-            {raadsData?.dekking === false && (
-              <span className="text-[10px] font-bold text-slate-400">
-                Niet bij ORI
-              </span>
-            )}
-            {raadsData?.dekking && raadsData.total_found > 0 && (
-              <span className="text-[10px] font-bold text-slate-400">
-                raadsstukken
-              </span>
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9] gap-2">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.3 }}
+            >
+              <Bell size={28} className="text-[#F9A826]" />
+            </motion.div>
+            <motion.span
+              className="text-[42px] font-black tracking-tighter tabular-nums leading-none"
+              style={{ color: totalUnread > 0 ? '#0E1111' : '#cbd5e1' }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              {totalUnread > 0 ? totalUnread : '—'}
+            </motion.span>
+            {totalUnread > 0 && (
+              <motion.span
+                className="text-[10px] font-bold text-[#F9A826]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+              >
+                ongelezen
+              </motion.span>
             )}
           </div>
-          <CardLabelBar label="Beleid & Nieuws" isActive={false} />
+          <CardLabelBar label="Meldingen" isActive={false} />
         </motion.button>
 
         {/* Card 3: Favorieten — link naar percelen in deze gemeente */}
@@ -350,13 +361,13 @@ export function GemeenteOverview({
 
       {/* ── 3 Circle Cards ───────────────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
-        {/* Meldingen — ongelezen bekendmakingen */}
+        {/* Raadsstukken — links */}
         <ScoreCircleCard
-          icon={<Bell size={16} />}
-          label="Meldingen"
-          score={unreadNorm}
-          color={totalUnread > 0 ? '#F9A826' : '#94a3b8'}
-          onClick={onSwitchToActiviteit}
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>}
+          label="Raadsstukken"
+          score={raadsData?.total_found != null && raadsData.total_found > 0 ? Math.min(100, raadsData.total_found * 10) : null}
+          color={raadsData?.dekking ? '#0E1111' : '#94a3b8'}
+          onClick={onSwitchToBeleid}
         />
 
         {/* Winkans bezwaar — midden */}
