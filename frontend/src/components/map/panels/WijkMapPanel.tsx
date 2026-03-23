@@ -214,7 +214,7 @@ function buildCards(
       sub: eenpersoonsPct != null
         ? eenpersoonsPct >= 50 ? 'Splitsen interessant' : eenpersoonsPct >= 30 ? 'Gemengde huishoudens' : 'Gezinswijk'
         : 'Geen data',
-      accentColor: eenpersoonsPct != null && eenpersoonsPct >= 50 ? '#8b5cf6' : undefined,
+      accentColor: eenpersoonsPct != null && eenpersoonsPct >= 50 ? '#F9A826' : undefined,
     },
     {
       key: 'inkomen',
@@ -267,7 +267,7 @@ function buildCards(
       label: 'LEEFTIJD',
       value: dominantAge,
       sub: dominantAgeSub,
-      accentColor: '#8b5cf6',
+      accentColor: '#F9A826',
     },
   ].map(card => ({
     ...card,
@@ -294,13 +294,26 @@ export function WijkMapPanel({
   const verdict = deriveVerdict(marktScore, hasCompletedScan)
 
   const [openMetric, setOpenMetric] = useState<string | null>(null)
+  const [gridPage, setGridPage] = useState(0)
   const handleCardClick = metrics ? (key: string) => setOpenMetric(key) : undefined
 
-  const cards = useMemo(
+  const dataCards = useMemo(
     () => buildCards(metrics, parcelCount, handleCardClick),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [metrics, parcelCount, !!handleCardClick],
   )
+
+  // Append roadmap items as page 2 cards
+  const cards = useMemo(() => [
+    ...dataCards,
+    // Page 2: roadmap items
+    { key: 'roadmap-funda', label: 'FUNDA MARKTDATA', value: 'Binnenkort', sub: 'Looptijd en prijsmutaties' },
+    { key: 'roadmap-von', label: 'VON-PRIJS', value: 'Binnenkort', sub: 'Verwachte verkoopprijs per type' },
+    { key: 'roadmap-leefbaar', label: 'LEEFBAARHEID', value: 'Binnenkort', sub: 'Veiligheid, milieu, voorzieningen' },
+    { key: 'roadmap-transacties', label: 'TRANSACTIES', value: 'Binnenkort', sub: 'Verkoopprijzen en aantallen' },
+    { key: 'roadmap-leegstand', label: 'LEEGSTAND', value: 'Binnenkort', sub: 'Vacaturecijfers per type vastgoed' },
+    { key: 'roadmap-klimaat', label: 'KLIMAATRISICO', value: 'Binnenkort', sub: 'Hitte, wateroverlast, droogte' },
+  ], [dataCards])
 
   /* Footer CTA */
   const footer = hasCompletedScan ? (
@@ -367,30 +380,7 @@ export function WijkMapPanel({
             color={verdict.color}
             icon={<verdict.Icon className="size-6 text-white" strokeWidth={2.5} />}
           />
-          <IntelligenceGrid cards={cards} />
-
-          {/* ── Roadmap — toekomstige data ──────────────── */}
-          <div className="mt-4 px-2">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] font-black text-slate-300 uppercase" style={{ letterSpacing: '0.2em' }}>Binnenkort</span>
-              <div className="h-px flex-1 bg-[#EAEFEF]" />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {[
-                { naam: 'Funda marktdata', desc: 'Looptijd en prijsmutaties' },
-                { naam: 'VON-prijs', desc: 'Verwachte verkoopprijs' },
-                { naam: 'Leefbaarheid', desc: 'Veiligheid, milieu, voorzieningen' },
-                { naam: 'Transacties', desc: 'Verkoopprijzen en aantallen' },
-                { naam: 'Leegstand', desc: 'Vacaturecijfers per type' },
-                { naam: 'Klimaatrisico', desc: 'Hitte, water, droogte' },
-              ].map(({ naam, desc }) => (
-                <div key={naam} className="bg-[#F8FAF9] border border-dashed border-[#EAEFEF] rounded-[12px] p-3">
-                  <span className="text-[11px] font-bold text-slate-500 block">{naam}</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <IntelligenceGrid cards={cards} page={gridPage} onPageChange={setGridPage} />
         </div>
 
         {/* ── Trust metadata ───────────────────────────── */}

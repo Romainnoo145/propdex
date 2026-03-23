@@ -100,19 +100,56 @@ function KoopwoningContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
 function LeeftijdContent({ metrics }: { metrics: CbsNeighborhoodMetrics }) {
   const l = metrics.data.leeftijdsverdeling
   if (!l) return <p className="text-[13px] text-slate-400">Geen leeftijdsdata beschikbaar.</p>
-  const max = Math.max(l.perc_0_14 ?? 0, l.perc_15_24 ?? 0, l.perc_25_44 ?? 0, l.perc_45_64 ?? 0, l.perc_65_plus ?? 0, 1)
+
+  const groups = [
+    { label: '0–14', value: l.perc_0_14, color: '#22C55E', desc: 'Kinderen' },
+    { label: '15–24', value: l.perc_15_24, color: '#F9A826', desc: 'Jongeren' },
+    { label: '25–44', value: l.perc_25_44, color: '#0E1111', desc: 'Jong werkend' },
+    { label: '45–64', value: l.perc_45_64, color: '#94a3b8', desc: 'Midden' },
+    { label: '65+', value: l.perc_65_plus, color: '#EF4444', desc: 'Senioren' },
+  ]
+  const total = groups.reduce((s, g) => s + (g.value ?? 0), 0) || 1
+  const max = Math.max(...groups.map(g => g.value ?? 0), 1)
+
+  // Find dominant group
+  const dominant = groups.reduce((a, b) => ((b.value ?? 0) > (a.value ?? 0) ? b : a))
+
   return (
     <>
       <SectionHeader title="Leeftijdsverdeling" />
-      <div className="space-y-3">
-        <HBar label="0–14 jaar" value={l.perc_0_14} max={max} color="#22c55e" suffix="%" />
-        <HBar label="15–24 jaar" value={l.perc_15_24} max={max} color="#3b82f6" suffix="%" />
-        <HBar label="25–44 jaar" value={l.perc_25_44} max={max} color="#F9A826" suffix="%" />
-        <HBar label="45–64 jaar" value={l.perc_45_64} max={max} color="#F9A826" suffix="%" />
-        <HBar label="65+ jaar" value={l.perc_65_plus} max={max} color="#ef4444" suffix="%" />
+
+      {/* Stacked horizontal bar — visual overview */}
+      <div className="flex h-6 rounded-full overflow-hidden mb-4">
+        {groups.map((g) => {
+          const pct = (g.value ?? 0) / total * 100
+          return pct > 0 ? (
+            <div
+              key={g.label}
+              className="relative flex items-center justify-center"
+              style={{ width: `${pct}%`, backgroundColor: g.color }}
+            >
+              {pct > 12 && (
+                <span className="text-[9px] font-black text-white tabular-nums">{Math.round(g.value ?? 0)}%</span>
+              )}
+            </div>
+          ) : null
+        })}
       </div>
+
+      {/* Legend + detail bars */}
+      <div className="space-y-3">
+        {groups.map((g) => (
+          <HBar key={g.label} label={`${g.label} jaar`} value={g.value} max={max} color={g.color} suffix="%" />
+        ))}
+      </div>
+
+      {/* Insight */}
       <div className="mt-4 rounded-[14px] bg-[#F2F6F3] p-4">
         <p className="text-[12px] text-slate-600 leading-relaxed">
+          <span className="font-bold" style={{ color: dominant.color }}>{dominant.desc}</span>
+          {' is de grootste groep'}
+          {dominant.value != null ? ` (${Math.round(dominant.value)}%)` : ''}.
+          {' '}
           {(l.perc_65_plus ?? 0) >= 25
             ? 'Vergrijzende wijk — doorstroomwoningen en levensloopbestendig bouwen kansrijk.'
             : (l.perc_25_44 ?? 0) >= 30
