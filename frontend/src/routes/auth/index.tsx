@@ -20,17 +20,12 @@ export const Route = createFileRoute('/auth/')({
 })
 
 function AuthPage() {
-  const { login, register, loginAsDemo } = useAuth()
+  const { login, register } = useAuth()
   const search = Route.useSearch()
   const navigate = useNavigate()
 
   const handleSuccess = () => {
     navigate({ to: search.redirect || '/map' })
-  }
-
-  const handleDemo = () => {
-    loginAsDemo()
-    handleSuccess()
   }
 
   return (
@@ -65,17 +60,6 @@ function AuthPage() {
             onLoginSuccess={handleSuccess}
             onRegisterSuccess={handleSuccess}
           />
-
-          {/* Demo login */}
-          <div className="text-center">
-            <button
-              onClick={handleDemo}
-              className="inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-5 py-2.5 text-[12px] font-bold text-white transition-all hover:bg-[#1a1c1e] hover:shadow-lg"
-            >
-              <span className="h-2 w-2 rounded-full bg-[#F9A826] animate-pulse" />
-              Demo login as info@klarifai.nl
-            </button>
-          </div>
         </div>
       </div>
 
