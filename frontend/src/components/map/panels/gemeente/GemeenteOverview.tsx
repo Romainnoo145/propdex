@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Search,
   Heart,
-  Banknote,
 } from 'lucide-react'
 import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
@@ -130,13 +129,14 @@ function WinkansCard({ percentage, onClick }: { percentage: number | null; onCli
         border: highlight ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid #EAEFEF',
       }}
     >
+      {/* Top: label + chevrons */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-1.5">
           <span style={{ color }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </span>
           <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color }}>
-            Winkans bezwaar
+            Winkans
           </span>
         </div>
         <div className="flex flex-col -space-y-1 text-slate-200">
@@ -145,6 +145,7 @@ function WinkansCard({ percentage, onClick }: { percentage: number | null; onCli
         </div>
       </div>
 
+      {/* Middle: big number */}
       <div className="flex flex-col items-center gap-1">
         <span
           className="text-5xl font-black tracking-tighter tabular-nums leading-none"
@@ -152,12 +153,18 @@ function WinkansCard({ percentage, onClick }: { percentage: number | null; onCli
         >
           {hasData ? percentage : '—'}
         </span>
-        {hasData && (
-          <span className="text-3xl font-black" style={{ color: `${color}99` }}>%</span>
-        )}
       </div>
 
-      <div />
+      {/* Bottom: percentage label */}
+      {hasData && (
+        <span
+          className="text-[10px] font-bold uppercase block text-center"
+          style={{ color: `${color}99` }}
+        >
+          % winkans bezwaar
+        </span>
+      )}
+      {!hasData && <div />}
     </motion.div>
   )
 }
@@ -292,7 +299,6 @@ export function GemeenteOverview({
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
           <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
-            <Banknote size={20} className="text-[#22C55E] mb-2" />
             <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
               {subsidies?.total ?? '—'}
             </span>
@@ -311,12 +317,12 @@ export function GemeenteOverview({
 
       {/* ── 3 Circle Cards ───────────────────────────── */}
       <div className="mt-2 flex-1 grid grid-cols-3 gap-1.5">
+        <PlaceholderCard />
+        <PlaceholderCard />
         <WinkansCard
           percentage={succeskans != null ? Math.round(succeskans) : null}
           onClick={onSwitchToVergunningen}
         />
-        <PlaceholderCard />
-        <PlaceholderCard />
       </div>
 
       {/* ── Secondary Fields ─────────────────────────── */}
