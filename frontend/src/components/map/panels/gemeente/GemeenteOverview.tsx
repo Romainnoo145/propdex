@@ -74,53 +74,6 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
   )
 }
 
-/* ── Dual-Color Ring (verleend green + afgewezen red) ───── */
-
-function DualRing({ approved: a, rejected: rej }: { approved: number | null; rejected: number | null }) {
-  const r = 48
-  const circ = 2 * Math.PI * r
-  const approvedNorm = a != null ? a / 100 : 0
-  const rejectedNorm = rej != null ? rej / 100 : 0
-
-  return (
-    <div className="relative flex items-center justify-center">
-      <svg viewBox="0 0 120 120" className="h-[120px] w-[120px]" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="60" cy="60" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
-        {/* Green arc — approved */}
-        {a != null && (
-          <motion.circle
-            cx="60" cy="60" r={r} fill="none"
-            stroke="#22C55E" strokeWidth="12" strokeLinecap="round"
-            strokeDasharray={circ}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: circ - approvedNorm * circ }}
-            transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1], delay: 0.3 }}
-          />
-        )}
-        {/* Red arc — rejected (starts where green ends) */}
-        {rej != null && (
-          <motion.circle
-            cx="60" cy="60" r={r} fill="none"
-            stroke="#EF4444" strokeWidth="12" strokeLinecap="round"
-            strokeDasharray={circ}
-            style={{ transformOrigin: '60px 60px', transform: `rotate(${approvedNorm * 360}deg)` }}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: circ - rejectedNorm * circ }}
-            transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1], delay: 0.6 }}
-          />
-        )}
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-[28px] font-black tracking-tighter tabular-nums text-[#22C55E] leading-none">
-          {a != null ? `${Math.round(a)}%` : '—'}
-        </span>
-        <span className="text-[12px] font-bold text-[#EF4444]/70 tabular-nums -mt-0.5">
-          {rej != null ? `${Math.round(rej)}%` : ''}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 /* ── ScoreCircleCard (matches parcel panel exactly) ────────── */
 
@@ -388,7 +341,7 @@ export function GemeenteOverview({
           <CardLabelBar label="Winkans bezwaar" isActive={false} />
         </motion.button>
 
-        {/* Card 3: Dual-color ring (verleend + afgewezen) */}
+        {/* Card 3: Vergunningen — totaal + goedgekeurd/afgewezen */}
         <motion.button
           variants={fadeUp}
           type="button"
@@ -398,8 +351,21 @@ export function GemeenteOverview({
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="aspect-[5/6] flex items-center justify-center bg-[#F8FAF9]">
-            <DualRing approved={approvalRate} rejected={rejectionRate} />
+          <div className="aspect-[5/6] flex flex-col items-center justify-center bg-[#F8FAF9]">
+            <span className="text-[48px] font-black tracking-tighter tabular-nums leading-none text-[#0E1111]">
+              {profile?.sample_size ?? '—'}
+            </span>
+            {profile?.sample_size != null && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-[16px] font-black tabular-nums text-[#22C55E]">
+                  {Math.round((profile.approval_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+                <span className="text-[14px] font-bold text-neutral-300">/</span>
+                <span className="text-[16px] font-black tabular-nums text-[#EF4444]">
+                  {Math.round((profile.rejection_rate_pct ?? 0) / 100 * profile.sample_size)}
+                </span>
+              </div>
+            )}
           </div>
           <CardLabelBar label="Vergunningen" isActive />
         </motion.button>
