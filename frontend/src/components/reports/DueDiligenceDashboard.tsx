@@ -209,9 +209,9 @@ export default function DueDiligenceDashboard({
             >
               {renderSectionContent(activeSection, data, sourceParcelId)}
 
-            {/* Notes + PDF footer */}
-            <div className="mt-6 border-t border-[#EAEFEF] pt-4 flex items-center justify-between">
-              {reportId && (
+            {/* Notes footer */}
+            {reportId && (
+            <div className="mt-6 border-t border-[#EAEFEF] pt-4">
                 <button
                   type="button"
                   onClick={() => setNotesOpen((v) => !v)}
@@ -219,16 +219,8 @@ export default function DueDiligenceDashboard({
                 >
                   Notities
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={handleExportPDF}
-                disabled={exportPDF.isPending}
-                className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
-              >
-                Download PDF
-              </button>
             </div>
+            )}
 
             {notesOpen && reportId && (
               <div className="mt-3">
