@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronRight, Search, X, Heart, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useParcelFavorites } from '@/hooks/useFavorites'
+import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -497,15 +498,7 @@ function ParcelRow({
         >
           <MapPin size={14} />
         </button>
-        {parcel.has_report ? (
-          <span className="inline-flex min-h-[28px] items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[11px] font-semibold text-emerald-700">
-            Bekijk rapport
-          </span>
-        ) : (
-          <span className="inline-flex min-h-[28px] items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-700">
-            Genereer rapport
-          </span>
-        )}
+        <PipelineStagePill parcel={parcel} />
       </div>
 
       <PotentieModal
@@ -522,4 +515,82 @@ function ParcelRow({
   )
 }
 
-/* ── Pipeline Stage Pill — removed, rapport badge is now inline in ParcelRow ── */
+/* ── Pipeline Stage Pill (compact dropdown switcher) ──────────────────── */
+
+const PIPELINE_STAGES: PipelineStage[] = ['Gesignaleerd', 'Onderzoek', 'Contact', 'Besluit', 'Afgerond']
+
+function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const updateStage = useUpdatePipelineStage()
+
+  useEffect(() => {
+    if (!isOpen) return undefined
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) { setMenuPosition(null); return undefined }
+    const update = () => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPosition({
+        top: rect.bottom + 6,
+        left: Math.min(window.innerWidth - 180 - 12, Math.max(12, rect.right - 180)),
+      })
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => { window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true) }
+  }, [isOpen])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o) }}
+        className="inline-flex min-h-[28px] items-center rounded-full border border-[#0E1111] bg-[#F9A826] px-3 text-[11px] font-semibold text-[#0E1111] transition-colors hover:bg-[#E8951F]"
+      >
+        {parcel.pipeline_stage}
+      </button>
+      {isOpen && menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 9999 }}
+          className="w-[180px] rounded-[16px] border border-[#EAEFEF] bg-white py-1.5 shadow-xl"
+        >
+          {PIPELINE_STAGES.map((stage) => (
+            <button
+              key={stage}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (stage !== parcel.pipeline_stage) {
+                  updateStage.mutate({ parcelId: parcel.parcel_id, stage })
+                }
+                setIsOpen(false)
+              }}
+              className="flex w-full items-center justify-between px-4 py-2 text-[12px] hover:bg-[#F8FAFA] transition-colors"
+            >
+              <span className={stage === parcel.pipeline_stage ? 'font-bold text-[#0E1111]' : 'text-slate-600'}>
+                {stage}
+              </span>
+              {stage === parcel.pipeline_stage && <Check size={12} className="text-[#F9A826]" />}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
