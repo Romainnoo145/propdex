@@ -3,12 +3,10 @@
  * from FavoriteParcelWorkspaceView.tsx.
  */
 
-import { useState, useCallback } from 'react'
-import { ChevronLeft, MapPin, Download, FileText } from 'lucide-react'
+import { useCallback } from 'react'
+import { ChevronLeft, MapPin, Download } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import { generateStartdossier } from '@/lib/api'
-import { useAuth } from '@/lib/auth/useAuth'
 import SatelliteThumbnail from './SatelliteThumbnail'
 
 /* ─── Props ─────────────────────────────────────────────────── */
@@ -35,28 +33,6 @@ export default function ReportHeader({
   onExportPDF,
 }: ReportHeaderProps) {
   const { address, cadastral_parcels } = data
-  const { accessToken } = useAuth()
-  const [isDossierGenerating, setIsDossierGenerating] = useState(false)
-
-  const handleGenerateDossier = useCallback(async () => {
-    if (!reportId || !accessToken) return
-    setIsDossierGenerating(true)
-    try {
-      const blob = await generateStartdossier(reportId, accessToken)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `risicobeoordeling-${data.address?.postcode?.replace(' ', '') || 'rapport'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('Dossier generation failed:', err)
-    } finally {
-      setIsDossierGenerating(false)
-    }
-  }, [reportId, accessToken, data.address?.postcode])
 
   // Scores
   const scores = data.scores_v3 as Record<string, unknown> | null | undefined
@@ -158,59 +134,40 @@ export default function ReportHeader({
           </div>
         </div>
 
-        {/* Right column: satellite + action buttons */}
-        <div className="flex flex-col items-end gap-3 lg:shrink-0">
-          {/* Satellite thumbnail */}
-          <div className="w-full lg:w-56">
+        {/* Right column: satellite + map button */}
+        <div className="flex items-start gap-3 lg:shrink-0">
+          {/* Satellite thumbnail — prominent */}
+          <div className="w-44 h-28 rounded-[16px] overflow-hidden border border-[#EAEFEF]">
             {center ? (
               <SatelliteThumbnail center={center} />
             ) : (
-              <div className="flex h-36 w-full items-center justify-center rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA]">
-                <span className="text-[11px] text-slate-400">Geen kaartlocatie</span>
+              <div className="flex h-full w-full items-center justify-center bg-[#F8FAFA]">
+                <span className="text-[11px] text-slate-400">Geen locatie</span>
               </div>
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <motion.button
-              type="button"
-              onClick={onViewOnMap}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#F9A826] bg-[#F9A826] px-4 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A]"
-              aria-label="Open op kaart"
-              title="Open op kaart"
-            >
-              <MapPin size={15} />
-              Open op kaart
-            </motion.button>
+          {/* Map icon button — black circle, amber icon */}
+          <button
+            type="button"
+            onClick={onViewOnMap}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
+            aria-label="Open op kaart"
+            title="Open op kaart"
+          >
+            <MapPin size={16} />
+          </button>
 
-            <motion.button
-              type="button"
-              onClick={onExportPDF}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#0E1111] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
-            >
-              <Download size={15} />
-              Download PDF
-            </motion.button>
-
-            {reportId && (
-              <motion.button
-                type="button"
-                onClick={handleGenerateDossier}
-                disabled={isDossierGenerating}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#F9A826] bg-[#F9A826] px-4 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileText size={15} />
-                {isDossierGenerating ? 'Bezig...' : 'Genereer Startdossier'}
-              </motion.button>
-            )}
-          </div>
+          {/* Download PDF */}
+          <button
+            type="button"
+            onClick={onExportPDF}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111] text-white transition-colors hover:bg-slate-800"
+            aria-label="Download PDF"
+            title="Download PDF"
+          >
+            <Download size={16} />
+          </button>
         </div>
       </div>
     </div>
