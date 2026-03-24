@@ -7,21 +7,21 @@
 export type SectionStatus = 'complete' | 'partial' | 'empty'
 
 const BADGE_STYLES: Record<SectionStatus, string> = {
-  complete: 'bg-green-500/10 text-green-600 border-green-500/20',
-  partial: 'bg-amber-400/10 text-amber-600 border-amber-400/20',
-  empty: 'bg-neutral-100 text-neutral-500 border-neutral-200',
+  complete: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  partial: 'border-amber-200 bg-amber-50 text-amber-700',
+  empty: 'border-red-200 bg-red-50 text-red-700',
 }
 
 const BADGE_LABELS: Record<SectionStatus, string> = {
   complete: 'Compleet',
-  partial: 'Gedeeltelijk',
+  partial: 'Deels',
   empty: 'Leeg',
 }
 
 const DOT_STYLES: Record<SectionStatus, string> = {
-  complete: 'bg-green-500',
+  complete: 'bg-emerald-500',
   partial: 'bg-amber-400',
-  empty: 'bg-neutral-300',
+  empty: 'bg-red-400',
 }
 
 export function SectionStatusBadge({ status }: { status: SectionStatus }) {

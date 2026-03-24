@@ -1,21 +1,17 @@
 /**
- * DueDiligenceDashboard — replaces ReportDetailPage monolith
+ * DueDiligenceDashboard — single scrollable page with 7 collapsible sections.
  *
- * Layout: left sidebar (220px) with SectionNav + main content pane
- * with URL-synced active section. All 7 sections wired as of Plan 107-03.
+ * No sidebar. Each section is an accordion card (SectionShell).
+ * First section (Locatiegegevens) starts expanded by default.
  */
 
 import { useCallback } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { useNavigate } from '@tanstack/react-router'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
-import { SectionNav, SECTIONS } from './components/SectionNav'
 import { SectionShell } from './components/SectionShell'
 import { parseNotes, computeSectionStatuses, EMPTY_STATUSES } from './components/sectionUtils'
-import { useExportPDF } from '@/hooks/useReports'
-import { useUpdateNotes } from '@/hooks/useReports'
-import type { SectionKey } from './components/SectionNav'
+import { useExportPDF, useUpdateNotes } from '@/hooks/useReports'
+import type { SectionKey } from './components/sectionUtils'
 import { S1Locatiegegevens } from './sections/S1Locatiegegevens'
 import { S2KadasterEigendom } from './sections/S2KadasterEigendom'
 import { S3BestemmingsplanBouwmogelijkheden } from './sections/S3BestemmingsplanBouwmogelijkheden'
@@ -48,29 +44,23 @@ export interface DueDiligenceDashboardProps {
   onViewOnMap: () => void
 }
 
-/* ─── Section icon map ─────────────────────────────────────── */
+/* ─── Section config ────────────────────────────────────────── */
 
-const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
-  locatiegegevens: MapPin,
-  kadaster: Gavel,
-  bestemmingsplan: LandPlot,
-  risicoprofiel: ShieldAlert,
-  analyse: BarChart3,
-  vergunningen: ScrollText,
-  bronnen: Database,
+interface SectionConfig {
+  key: SectionKey
+  title: string
+  icon: LucideIcon
 }
 
-/* ─── Section title map ─────────────────────────────────────── */
-
-const SECTION_TITLES: Record<SectionKey, string> = {
-  locatiegegevens: '1. Locatiegegevens',
-  kadaster: '2. Kadaster & Eigendom',
-  bestemmingsplan: '3. Bestemmingsplan',
-  risicoprofiel: '4. Risicoprofiel',
-  analyse: '5. Potentie & Risico',
-  vergunningen: '6. Vergunningen',
-  bronnen: '7. Bronvermelding',
-}
+const SECTION_LIST: SectionConfig[] = [
+  { key: 'locatiegegevens', title: '1. Locatiegegevens', icon: MapPin },
+  { key: 'kadaster', title: '2. Kadaster & Eigendom', icon: Gavel },
+  { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', icon: LandPlot },
+  { key: 'risicoprofiel', title: '4. Risicoprofiel', icon: ShieldAlert },
+  { key: 'analyse', title: '5. Potentie & Risico Analyse', icon: BarChart3 },
+  { key: 'vergunningen', title: '6. Vergunningen & Precedenten', icon: ScrollText },
+  { key: 'bronnen', title: '7. Bronvermelding', icon: Database },
+]
 
 /* ─── Section content renderer ──────────────────────────────── */
 
@@ -106,38 +96,14 @@ export default function DueDiligenceDashboard({
   sourceParcelId,
   reportId,
   notes: rawNotes,
-  activeSection: activeSectionProp,
   onBack,
   onViewOnMap,
 }: DueDiligenceDashboardProps) {
-  const navigate = useNavigate()
   const exportPDF = useExportPDF()
   const updateNotes = useUpdateNotes()
 
-  // Resolve active section from prop or default
-  const activeSection: SectionKey =
-    activeSectionProp && SECTIONS.some((s) => s.key === activeSectionProp)
-      ? (activeSectionProp as SectionKey)
-      : 'locatiegegevens'
-
   const notes = parseNotes(rawNotes)
   const sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
-
-  const handleSectionSelect = useCallback(
-    (key: SectionKey) => {
-      // Update ?section= search param while preserving existing params
-      const current = new URLSearchParams(window.location.search)
-      current.set('section', key)
-      window.history.pushState(null, '', `${window.location.pathname}?${current.toString()}`)
-      // Force re-render by navigating with the router (replace to avoid double history entry)
-      void navigate({
-        to: '.',
-        search: Object.fromEntries(current.entries()),
-        replace: true,
-      })
-    },
-    [navigate],
-  )
 
   const handleExportPDF = useCallback(() => {
     if (!reportId) return
@@ -167,7 +133,7 @@ export default function DueDiligenceDashboard({
     return (
       <div className="flex h-full items-center justify-center">
         <p
-          className="text-neutral-400 text-sm"
+          className="text-[#94a3b8] text-[13px]"
           style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
           Rapport laden...
@@ -181,7 +147,7 @@ export default function DueDiligenceDashboard({
     return (
       <div className="flex h-full items-center justify-center">
         <p
-          className="text-neutral-400 text-sm"
+          className="text-[#94a3b8] text-[13px]"
           style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
           Rapport niet gevonden.
@@ -190,63 +156,41 @@ export default function DueDiligenceDashboard({
     )
   }
 
-  const SectionIcon = SECTION_ICONS[activeSection]
-
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className="h-full overflow-y-auto"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
-      {/* Report header (back button + property info) */}
-      <div className="flex-shrink-0">
-        <ReportHeader
-          data={data}
-          backLabel={backLabel}
-          sourceParcelId={sourceParcelId ?? null}
-          reportId={reportId ?? null}
-          onBack={onBack}
-          onViewOnMap={onViewOnMap}
-        />
-      </div>
+    <div className="max-w-5xl mx-auto px-6 py-8 pb-12">
+      <ReportHeader
+        data={data}
+        backLabel={backLabel}
+        sourceParcelId={sourceParcelId ?? null}
+        reportId={reportId ?? null}
+        onBack={onBack}
+        onViewOnMap={onViewOnMap}
+        onExportPDF={handleExportPDF}
+      />
 
-      {/* Dashboard body: nav + content */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left sidebar: section nav */}
-        <aside className="w-[220px] shrink-0 border-r border-neutral-100 overflow-y-auto px-3">
-          <SectionNav
-            activeSection={activeSection}
-            onSelect={handleSectionSelect}
-            sectionStatuses={sectionStatuses}
-          />
-        </aside>
-
-        {/* Main content pane */}
-        <main className="flex-1 min-w-0 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              <SectionShell
-                title={SECTION_TITLES[activeSection]}
-                icon={<SectionIcon size={18} strokeWidth={1.5} />}
-                status={sectionStatuses[activeSection]}
-                sectionKey={activeSection}
-                reportId={reportId ?? null}
-                notes={notes}
-                onNotesChange={handleNotesChange}
-                onExportPDF={handleExportPDF}
-              >
-                {renderSectionContent(activeSection, data, sourceParcelId)}
-              </SectionShell>
-            </motion.div>
-          </AnimatePresence>
-        </main>
+      <div className="mt-6 space-y-3">
+        {SECTION_LIST.map((section) => (
+          <SectionShell
+            key={section.key}
+            title={section.title}
+            icon={section.icon}
+            status={sectionStatuses[section.key]}
+            sectionKey={section.key}
+            reportId={reportId ?? null}
+            notes={notes}
+            onNotesChange={handleNotesChange}
+            onExportPDF={handleExportPDF}
+            defaultOpen={section.key === 'locatiegegevens'}
+          >
+            {renderSectionContent(section.key, data, sourceParcelId)}
+          </SectionShell>
+        ))}
       </div>
+    </div>
     </div>
   )
 }

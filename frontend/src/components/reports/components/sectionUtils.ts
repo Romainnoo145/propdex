@@ -3,8 +3,21 @@
  */
 
 import type { PropertyReportResponse } from '@/lib/types/property'
-import type { SectionKey } from './SectionNav'
 import type { SectionStatus } from './SectionStatusBadge'
+
+/* ─── Section keys (canonical list) ─────────────────────────── */
+
+export const SECTIONS = [
+  'locatiegegevens',
+  'kadaster',
+  'bestemmingsplan',
+  'risicoprofiel',
+  'analyse',
+  'vergunningen',
+  'bronnen',
+] as const
+
+export type SectionKey = (typeof SECTIONS)[number]
 
 /**
  * Parse notes field: accepts JSON object, plain string, or null.
