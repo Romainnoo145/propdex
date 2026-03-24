@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
@@ -110,7 +110,17 @@ function OpgeslagenPage() {
   const { data: favorites, isLoading } = useParcelFavorites()
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
-  const [workspaceParcel, setWorkspaceParcel] = useState<FavoriteResponse | null>(null)
+  const [workspaceParcelId, setWorkspaceParcelId] = useState<string | null>(null)
+
+  // Derive workspaceParcel from fresh query data so mutations are reflected
+  const workspaceParcel = useMemo(
+    () => (workspaceParcelId ? (favorites ?? []).find((f) => f.parcel_id === workspaceParcelId) ?? null : null),
+    [workspaceParcelId, favorites],
+  )
+  const setWorkspaceParcel = useCallback(
+    (p: FavoriteResponse | null) => setWorkspaceParcelId(p?.parcel_id ?? null),
+    [],
+  )
 
   const groups = useMemo(() => buildGroups(favorites ?? []), [favorites])
 

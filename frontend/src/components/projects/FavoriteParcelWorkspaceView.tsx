@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -1189,6 +1189,10 @@ export function FavoriteParcelWorkspaceView({
   const [showContactModal, setShowContactModal] = useState(false)
   const [editingNotitie, setEditingNotitie] = useState(false)
   const [notitieText, setNotitieText] = useState(favorite.notitie ?? '')
+  // Sync local state when favorite prop changes (e.g. after query invalidation)
+  useEffect(() => {
+    if (!editingNotitie) setNotitieText(favorite.notitie ?? '')
+  }, [favorite.notitie, editingNotitie])
   const updateNotitie = useUpdateNotitie()
 
   const handleSaveNotitie = useCallback(() => {
