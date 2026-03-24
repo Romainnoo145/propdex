@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, X, Heart, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
+import { useParcelFavorites } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -494,11 +493,19 @@ function ParcelRow({
           }}
           aria-label="Open op kaart"
           title="Open op kaart"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F2F6F3] text-[#0E1111] transition-colors hover:bg-[#E8EDEB]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
         >
           <MapPin size={14} />
         </button>
-        <PipelineStagePill parcel={parcel} />
+        {parcel.has_report ? (
+          <span className="inline-flex min-h-[28px] items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[11px] font-semibold text-emerald-700">
+            Bekijk rapport
+          </span>
+        ) : (
+          <span className="inline-flex min-h-[28px] items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-700">
+            Genereer rapport
+          </span>
+        )}
       </div>
 
       <PotentieModal
@@ -515,228 +522,4 @@ function ParcelRow({
   )
 }
 
-/* ── Pipeline Stage Pill ───────────────────────────────────── */
-
-function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [showAfgerondForm, setShowAfgerondForm] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
-  const updateStage = useUpdatePipelineStage()
-
-  useEffect(() => {
-    if (!isOpen) return undefined
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) {
-      setMenuPosition(null)
-      return undefined
-    }
-
-    const updatePosition = () => {
-      const rect = triggerRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      const menuWidth = 192
-      const left = Math.min(
-        window.innerWidth - menuWidth - 12,
-        Math.max(12, rect.right - menuWidth),
-      )
-
-      setMenuPosition({
-        top: rect.bottom + 8,
-        left,
-      })
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [isOpen])
-
-  const handleStageSelect = (stage: PipelineStage) => {
-    if (stage === 'Afgerond') {
-      setShowAfgerondForm(true)
-      setIsOpen(false)
-      return
-    }
-    updateStage.mutate({ parcelId: parcel.parcel_id, stage })
-    setIsOpen(false)
-  }
-
-  const handleAfgerondSubmit = (reden: string, notitie: string) => {
-    updateStage.mutate({
-      parcelId: parcel.parcel_id,
-      stage: 'Afgerond',
-      afgerondReden: reden,
-      notitie: notitie || null,
-    })
-    setShowAfgerondForm(false)
-  }
-
-  // Stage index for visual indicator
-  const stageIndex = STAGES.indexOf(parcel.pipeline_stage)
-
-  return (
-    <div className="relative" ref={containerRef}>
-      <button
-        ref={triggerRef}
-        onClick={(e) => {
-          e.stopPropagation()
-          setIsOpen(!isOpen)
-        }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F2F6F3] text-[11px] font-semibold text-[#0E1111] hover:bg-[#E8EDEB] transition-colors"
-      >
-        {/* Stage progress dots */}
-        <div className="flex items-center gap-0.5">
-          {STAGES.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 w-1.5 rounded-full ${
-                i <= stageIndex ? 'bg-[#F9A826]' : 'bg-slate-200'
-              }`}
-            />
-          ))}
-        </div>
-        {parcel.pipeline_stage}
-      </button>
-
-      {isOpen && menuPosition && typeof document !== 'undefined' &&
-        createPortal(
-          <div
-            ref={menuRef}
-            className="fixed z-[1400] w-48 rounded-[16px] border border-[#EAEFEF] bg-white py-1.5 shadow-[0_18px_50px_rgba(15,23,42,0.14)]"
-            style={{ top: menuPosition.top, left: menuPosition.left }}
-          >
-            {STAGES.map((stage, i) => (
-              <button
-                key={stage}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleStageSelect(stage)
-                }}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[12px] transition-colors hover:bg-[#F2F6F3]"
-              >
-                <div className="flex items-center gap-0.5">
-                  {STAGES.map((_, j) => (
-                    <span
-                      key={j}
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        j <= i ? 'bg-[#F9A826]' : 'bg-slate-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className={stage === parcel.pipeline_stage ? 'font-bold' : 'text-slate-600'}>
-                  {stage}
-                </span>
-                {stage === parcel.pipeline_stage && <Check size={12} className="ml-auto text-[#F9A826]" />}
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-
-      {showAfgerondForm && typeof document !== 'undefined' &&
-        createPortal(
-          <AfgerondForm
-            onSubmit={handleAfgerondSubmit}
-            onCancel={() => setShowAfgerondForm(false)}
-          />,
-          document.body,
-        )}
-    </div>
-  )
-}
-
-/* ── Afgerond Form ─────────────────────────────────────────── */
-
-function AfgerondForm({
-  onSubmit,
-  onCancel,
-}: {
-  onSubmit: (reden: string, notitie: string) => void
-  onCancel: () => void
-}) {
-  const [reden, setReden] = useState<string>('')
-  const [notitie, setNotitie] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onCancel} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        className="relative w-full max-w-sm rounded-[24px] bg-white shadow-2xl p-6"
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-[15px] font-bold text-[#0E1111]">Afgerond markeren</h3>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Reason */}
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-2">Reden</p>
-        <div className="flex gap-2 mb-5">
-          {['Gekocht', 'Afgewezen'].map((option) => (
-            <button
-              key={option}
-              onClick={() => setReden(option)}
-              className={`flex-1 h-[44px] rounded-full text-[13px] font-semibold transition-all ${
-                reden === option
-                  ? 'bg-[#0E1111] text-white'
-                  : 'bg-[#F2F6F3] text-[#0E1111] hover:bg-[#E8EDEB]'
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-
-        {/* Note */}
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-2">Notitie</p>
-        <textarea
-          value={notitie}
-          onChange={(e) => setNotitie(e.target.value)}
-          placeholder="Eventuele toelichting..."
-          className="w-full h-24 rounded-[14px] bg-[#F2F6F3] px-4 py-3 text-[13px] text-[#0E1111] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#F9A826]/30 resize-none"
-        />
-
-        {/* Actions */}
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={onCancel}
-            className="flex-1 h-[44px] rounded-full bg-[#F2F6F3] text-[13px] font-semibold text-[#0E1111] hover:bg-[#E8EDEB] transition-colors"
-          >
-            Annuleren
-          </button>
-          <button
-            onClick={() => onSubmit(reden, notitie)}
-            disabled={!reden}
-            className="flex-1 h-[44px] rounded-full bg-[#0E1111] text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40 transition-all"
-          >
-            Bevestigen
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
+/* ── Pipeline Stage Pill — removed, rapport badge is now inline in ParcelRow ── */

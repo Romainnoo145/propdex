@@ -277,3 +277,75 @@ export function useUpdateNotitie() {
     },
   })
 }
+
+// ── Notes ─────────────────────────────────────────────────────────────
+
+export interface FavoriteNoteResponse {
+  id: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export function useFavoriteNotes(parcelId: string | null) {
+  const { accessToken } = useAuth()
+
+  return useQuery<FavoriteNoteResponse[], Error>({
+    queryKey: ['favorite-notes', parcelId],
+    queryFn: () =>
+      apiFetch<FavoriteNoteResponse[]>(
+        `${FAVORITES_BASE}/${encodeURIComponent(parcelId!)}/notes`,
+        { method: 'GET', accessToken },
+      ),
+    enabled: !!parcelId && !!accessToken,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useCreateNote() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<FavoriteNoteResponse, Error, { parcelId: string; content: string }>({
+    mutationFn: ({ parcelId, content }) =>
+      apiFetch<FavoriteNoteResponse>(
+        `${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/notes`,
+        { method: 'POST', accessToken, body: JSON.stringify({ content }) },
+      ),
+    onSuccess: (_data, { parcelId }) => {
+      queryClient.invalidateQueries({ queryKey: ['favorite-notes', parcelId] })
+    },
+  })
+}
+
+export function useUpdateNote() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<FavoriteNoteResponse, Error, { parcelId: string; noteId: string; content: string }>({
+    mutationFn: ({ parcelId, noteId, content }) =>
+      apiFetch<FavoriteNoteResponse>(
+        `${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/notes/${noteId}`,
+        { method: 'PATCH', accessToken, body: JSON.stringify({ content }) },
+      ),
+    onSuccess: (_data, { parcelId }) => {
+      queryClient.invalidateQueries({ queryKey: ['favorite-notes', parcelId] })
+    },
+  })
+}
+
+export function useDeleteNote() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, { parcelId: string; noteId: string }>({
+    mutationFn: ({ parcelId, noteId }) =>
+      apiFetch<void>(
+        `${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/notes/${noteId}`,
+        { method: 'DELETE', accessToken },
+      ),
+    onSuccess: (_data, { parcelId }) => {
+      queryClient.invalidateQueries({ queryKey: ['favorite-notes', parcelId] })
+    },
+  })
+}

@@ -6,6 +6,7 @@ from app.models.cached_response import CachedAPIResponse
 from app.models.change_read_state import ChangeReadState  # noqa: F401
 from app.models.change_record import ChangeRecord  # noqa: F401
 from app.models.funda_listing_snapshot import FundaListingSnapshot  # noqa: F401
+from app.models.favorite_note import FavoriteNote  # noqa: F401
 from app.models.generated_dossier import GeneratedDossier  # noqa: F401
 from app.models.jurisprudence_job import JuridischAnalyseJob  # noqa: F401
 from app.models.organization import Organization

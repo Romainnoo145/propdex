@@ -56,7 +56,8 @@ import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
 import { TruncatedText } from '@/components/map/panels/parcel/TruncatedText'
 import { useDeleteDocument, useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
-import { useUpdateNotitie } from '@/hooks/useFavorites'
+import { useFavoriteNotes, useCreateNote, useUpdateNote, useDeleteNote } from '@/hooks/useFavorites'
+import type { FavoriteNoteResponse } from '@/hooks/useFavorites'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { getDocumentDownloadUrl } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -656,6 +657,214 @@ function WorkspaceInsightCard({
   )
 }
 
+/* ── Multi-Note Block ──────────────────────────────────────── */
+
+function MultiNoteBlock({
+  parcelId,
+  notes,
+  isLoading,
+  createNote,
+  updateNote,
+  deleteNote,
+}: {
+  parcelId: string
+  notes: FavoriteNoteResponse[]
+  isLoading: boolean
+  createNote: ReturnType<typeof useCreateNote>
+  updateNote: ReturnType<typeof useUpdateNote>
+  deleteNote: ReturnType<typeof useDeleteNote>
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [addingNew, setAddingNew] = useState(false)
+  const [newText, setNewText] = useState('')
+
+  const handleExpand = (note: FavoriteNoteResponse) => {
+    if (expandedId === note.id) {
+      setExpandedId(null)
+    } else {
+      setExpandedId(note.id)
+      setEditText(note.content)
+    }
+    setAddingNew(false)
+  }
+
+  const handleSave = (noteId: string) => {
+    const trimmed = editText.trim()
+    if (!trimmed) return
+    updateNote.mutate(
+      { parcelId, noteId, content: trimmed },
+      { onSuccess: () => { setExpandedId(null); toast.success('Notitie bijgewerkt') } },
+    )
+  }
+
+  const handleDelete = (noteId: string) => {
+    deleteNote.mutate(
+      { parcelId, noteId },
+      { onSuccess: () => { setExpandedId(null); toast.success('Notitie verwijderd') } },
+    )
+  }
+
+  const handleCreate = () => {
+    const trimmed = newText.trim()
+    if (!trimmed) return
+    createNote.mutate(
+      { parcelId, content: trimmed },
+      { onSuccess: () => { setAddingNew(false); setNewText(''); toast.success('Notitie toegevoegd') } },
+    )
+  }
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-6 text-center text-[13px] text-slate-400">
+        Notities laden...
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {notes.length === 0 && !addingNew && (
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-6 text-center">
+          <p className="text-[13px] text-slate-400 italic">Nog geen notities — voeg je eerste acquisitiethese toe</p>
+        </div>
+      )}
+
+      {notes.map((note) => {
+        const isExpanded = expandedId === note.id
+        const preview = note.content.length > 80 ? `${note.content.slice(0, 80)}…` : note.content
+
+        return (
+          <motion.div
+            key={note.id}
+            layout
+            className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] overflow-hidden transition-colors hover:border-[#F9A826]/30"
+          >
+            <button
+              type="button"
+              onClick={() => handleExpand(note)}
+              className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+            >
+              <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-slate-700">
+                {isExpanded ? '' : preview}
+              </p>
+              <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
+                {formatDate(note.updated_at)}
+              </span>
+            </button>
+
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-4 pb-4 space-y-3">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={4}
+                      className="w-full resize-none rounded-[12px] border border-[#EAEFEF] bg-white px-3 py-2.5 text-[14px] leading-6 text-slate-700 placeholder:text-slate-400 focus:border-[#F9A826] focus:outline-none focus:ring-1 focus:ring-[#F9A826]"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <motion.button
+                        type="button"
+                        onClick={() => handleSave(note.id)}
+                        disabled={updateNote.isPending}
+                        whileTap={{ scale: 0.96 }}
+                        className="inline-flex min-h-[34px] items-center gap-2 rounded-full bg-[#0E1111] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {updateNote.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Opslaan
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => handleDelete(note.id)}
+                        disabled={deleteNote.isPending}
+                        whileTap={{ scale: 0.96 }}
+                        className="inline-flex min-h-[34px] items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 text-[12px] font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+                      >
+                        {deleteNote.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
+                        <Trash2 size={12} />
+                        Verwijderen
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )
+      })}
+
+      {/* New note form */}
+      <AnimatePresence>
+        {addingNew && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-[16px] border border-[#F9A826]/40 bg-[#FFFDF8] px-4 py-4 space-y-3">
+              <textarea
+                value={newText}
+                onChange={(e) => setNewText(e.target.value)}
+                placeholder="Waarom is dit perceel interessant? Welke strategie lijkt kansrijk?"
+                rows={4}
+                className="w-full resize-none rounded-[12px] border border-[#EAEFEF] bg-white px-3 py-2.5 text-[14px] leading-6 text-slate-700 placeholder:text-slate-400 focus:border-[#F9A826] focus:outline-none focus:ring-1 focus:ring-[#F9A826]"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <motion.button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={createNote.isPending || !newText.trim()}
+                  whileTap={{ scale: 0.96 }}
+                  className="inline-flex min-h-[34px] items-center gap-2 rounded-full bg-[#0E1111] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {createNote.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
+                  Opslaan
+                </motion.button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingNew(false); setNewText('') }}
+                  className="inline-flex min-h-[34px] items-center rounded-full border border-[#EAEFEF] px-4 text-[12px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add note button */}
+      {!addingNew && (
+        <motion.button
+          type="button"
+          onClick={() => { setAddingNew(true); setExpandedId(null) }}
+          whileTap={{ scale: 0.97 }}
+          className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-[12px] font-semibold text-slate-500 transition-colors hover:border-[#F9A826]/40 hover:bg-[#FFFDF8] hover:text-[#0E1111]"
+        >
+          <Lightbulb size={14} />
+          Notitie toevoegen
+        </motion.button>
+      )}
+    </div>
+  )
+}
+
 function FavoriteDossierTabs({
   pages,
   activePage,
@@ -1188,22 +1397,13 @@ export function FavoriteParcelWorkspaceView({
   }, [favorite.has_report, favorite.report_id, favorite.parcel_cache_id, generateReport, navigate])
 
   const [showContactModal, setShowContactModal] = useState(false)
-  const [editingNotitie, setEditingNotitie] = useState(false)
   const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
-  const [notitieText, setNotitieText] = useState(favorite.notitie ?? '')
-  // Sync local state when favorite prop changes (e.g. after query invalidation)
-  useEffect(() => {
-    if (!editingNotitie) setNotitieText(favorite.notitie ?? '')
-  }, [favorite.notitie, editingNotitie])
-  const updateNotitie = useUpdateNotitie()
 
-  const handleSaveNotitie = useCallback(() => {
-    const trimmed = notitieText.trim() || null
-    updateNotitie.mutate(
-      { parcelId: favorite.parcel_id, notitie: trimmed },
-      { onSuccess: () => { setEditingNotitie(false); toast.success('Notitie opgeslagen') } },
-    )
-  }, [notitieText, favorite.parcel_id, updateNotitie])
+  // Multi-note system
+  const notesQuery = useFavoriteNotes(favorite.parcel_id)
+  const createNote = useCreateNote()
+  const updateNote = useUpdateNote()
+  const deleteNote = useDeleteNote()
 
   const handleOpenContact = useCallback(() => {
     setShowContactModal(true)
@@ -1395,11 +1595,6 @@ export function FavoriteParcelWorkspaceView({
                     </>
                   )}
                 </div>
-                {favorite.notitie && (
-                  <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-slate-500">
-                    {favorite.notitie}
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -1513,65 +1708,14 @@ export function FavoriteParcelWorkspaceView({
           className="xl:col-span-2"
           index={0}
         >
-          {editingNotitie ? (
-            <div className="space-y-3">
-              <textarea
-                value={notitieText}
-                onChange={(e) => setNotitieText(e.target.value)}
-                placeholder="Waarom is dit perceel interessant? Welke strategie lijkt kansrijk? Welke aannames moeten eerst gevalideerd worden?"
-                rows={4}
-                className="w-full resize-none rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-[15px] leading-7 text-slate-700 placeholder:text-slate-400 focus:border-[#F9A826] focus:outline-none focus:ring-1 focus:ring-[#F9A826]"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <motion.button
-                  type="button"
-                  onClick={handleSaveNotitie}
-                  disabled={updateNotitie.isPending}
-                  whileTap={{ scale: 0.96 }}
-                  className="inline-flex min-h-[36px] items-center gap-2 rounded-full bg-[#0E1111] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
-                >
-                  {updateNotitie.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
-                  Opslaan
-                </motion.button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingNotitie(false); setNotitieText(favorite.notitie ?? '') }}
-                  className="inline-flex min-h-[36px] items-center rounded-full border border-[#EAEFEF] px-4 text-[12px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                >
-                  Annuleren
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditingNotitie(true)}
-              className="w-full text-left group"
-            >
-              <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-4 transition-colors group-hover:border-[#F9A826]/40 group-hover:bg-[#FFFDF8]">
-                <p className="text-[15px] leading-7 text-slate-700">
-                  {favorite.notitie || (
-                    <span className="text-slate-400 italic">
-                      Klik om een acquisitiethese of notitie toe te voegen...
-                    </span>
-                  )}
-                </p>
-              </div>
-              {favorite.notitie && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`inline-flex min-h-[34px] items-center rounded-full border px-3 text-[12px] font-semibold ${stageBadgeClasses(favorite.pipeline_stage)}`}>
-                    {favorite.pipeline_stage}
-                  </span>
-                  {favorite.afgerond_reden && (
-                    <span className="inline-flex min-h-[34px] items-center rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-3 text-[12px] font-semibold text-slate-600">
-                      {favorite.afgerond_reden}
-                    </span>
-                  )}
-                </div>
-              )}
-            </button>
-          )}
+          <MultiNoteBlock
+            parcelId={favorite.parcel_id}
+            notes={notesQuery.data ?? []}
+            isLoading={notesQuery.isLoading}
+            createNote={createNote}
+            updateNote={updateNote}
+            deleteNote={deleteNote}
+          />
         </WorkspaceInsightCard>
 
         <WorkspaceInsightCard

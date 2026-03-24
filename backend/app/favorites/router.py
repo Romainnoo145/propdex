@@ -2,9 +2,10 @@
 
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -388,6 +389,139 @@ async def update_notitie(
     await db.commit()
     await db.refresh(fav)
     return FavoriteResponse.model_validate(fav)
+
+
+# ── Notes CRUD ─────────────────────────────────────────────────────────
+
+class NoteCreateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+
+class NoteUpdateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+
+class NoteResponse(BaseModel):
+    id: str
+    content: str
+    created_at: str
+    updated_at: str
+
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_note(cls, note: "FavoriteNote") -> "NoteResponse":
+        return cls(
+            id=str(note.id),
+            content=note.content,
+            created_at=note.created_at.isoformat(),
+            updated_at=note.updated_at.isoformat(),
+        )
+
+
+@router.get(
+    "/favorites/{parcel_id}/notes",
+    response_model=list[NoteResponse],
+)
+@limiter.limit("30/minute")
+async def list_notes(
+    request: Request,
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[NoteResponse]:
+    """List all notes for a favorited parcel, newest first."""
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+    from app.models.favorite_note import FavoriteNote
+    result = await db.execute(
+        select(FavoriteNote)
+        .where(FavoriteNote.favorite_id == fav.id)
+        .order_by(FavoriteNote.created_at.desc())
+    )
+    notes = result.scalars().all()
+    return [NoteResponse.from_note(n) for n in notes]
+
+
+@router.post(
+    "/favorites/{parcel_id}/notes",
+    response_model=NoteResponse,
+    status_code=201,
+)
+@limiter.limit("30/minute")
+async def create_note(
+    request: Request,
+    parcel_id: str,
+    body: NoteCreateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> NoteResponse:
+    """Add a new note to a favorited parcel."""
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+    from app.models.favorite_note import FavoriteNote
+    note = FavoriteNote(favorite_id=fav.id, content=body.content)
+    db.add(note)
+    await db.commit()
+    await db.refresh(note)
+    return NoteResponse.from_note(note)
+
+
+@router.patch(
+    "/favorites/{parcel_id}/notes/{note_id}",
+    response_model=NoteResponse,
+)
+@limiter.limit("30/minute")
+async def update_note(
+    request: Request,
+    parcel_id: str,
+    note_id: str,
+    body: NoteUpdateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> NoteResponse:
+    """Update a note's content."""
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+    from app.models.favorite_note import FavoriteNote
+    from sqlalchemy import func as sqlfunc
+    result = await db.execute(
+        select(FavoriteNote).where(
+            FavoriteNote.id == note_id,
+            FavoriteNote.favorite_id == fav.id,
+        )
+    )
+    note = result.scalar_one_or_none()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    note.content = body.content
+    note.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(note)
+    return NoteResponse.from_note(note)
+
+
+@router.delete(
+    "/favorites/{parcel_id}/notes/{note_id}",
+    status_code=204,
+)
+@limiter.limit("30/minute")
+async def delete_note(
+    request: Request,
+    parcel_id: str,
+    note_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a note from a favorited parcel."""
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+    from app.models.favorite_note import FavoriteNote
+    result = await db.execute(
+        select(FavoriteNote).where(
+            FavoriteNote.id == note_id,
+            FavoriteNote.favorite_id == fav.id,
+        )
+    )
+    note = result.scalar_one_or_none()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    await db.delete(note)
+    await db.commit()
 
 
 @portfolio_router.get(
