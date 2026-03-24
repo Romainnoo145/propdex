@@ -1099,18 +1099,9 @@ function MapPage() {
           })
         }
 
-        // Open panel with basic centroid data first
-        const basicParcel = makeInspectorParcel({
-          parcelId: urlParcelId,
-          address: centroid.address ?? fallbackAddress ?? null,
-          parcelCode: centroid.parcel_code ?? null,
-          gemeenteCode: centroid.gemeente_code ?? null,
-          areaM2: centroid.area_m2 ?? null,
-          hasPand: centroid.has_pand ?? undefined,
-          bouwjaar: centroid.bouwjaar ?? null,
-          pandStatus: centroid.pand_status ?? null,
-        })
-        setActivePanel({ kind: 'parcel', parcel: basicParcel })
+        // Don't open panel with basic centroid data — it uses the kadaster parcel_id
+        // which causes 422 errors on enrichment endpoints that expect a UUID.
+        // Wait for fetchParcelAtPoint which returns the real UUID.
 
         // Try to enrich with full scan data (score, building_metrics, vacancy, etc.)
         try {
@@ -1156,7 +1147,18 @@ function MapPage() {
             })
           }
         } catch {
-          // Enrichment failed — basic panel + map centering still work
+          // Enrichment failed — fall back to basic centroid data for the panel.
+          // Use a placeholder UUID-like value so enrichment endpoints don't fire.
+          setActivePanel({ kind: 'parcel', parcel: makeInspectorParcel({
+            parcelId: urlParcelId,
+            address: centroid.address ?? fallbackAddress ?? null,
+            parcelCode: centroid.parcel_code ?? null,
+            gemeenteCode: centroid.gemeente_code ?? null,
+            areaM2: centroid.area_m2 ?? null,
+            hasPand: centroid.has_pand ?? undefined,
+            bouwjaar: centroid.bouwjaar ?? null,
+            pandStatus: centroid.pand_status ?? null,
+          })})
         }
       })
       .catch(() => {

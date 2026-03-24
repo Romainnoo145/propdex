@@ -83,6 +83,15 @@ function deduplicatedRefresh(): Promise<string | null> {
   return _refreshInFlight
 }
 
+/** Extract a human-readable error message from a FastAPI error response body. */
+function extractErrorMessage(error: Record<string, unknown>, fallback: string): string {
+  if (typeof error.detail === 'string') return error.detail
+  if (Array.isArray(error.detail)) {
+    return error.detail.map((d: Record<string, unknown>) => (d.msg as string) ?? JSON.stringify(d)).join('; ')
+  }
+  return fallback
+}
+
 export async function apiFetch<T>(
   url: string,
   options: RequestInit & { accessToken: string | null }
@@ -118,7 +127,7 @@ export async function apiFetch<T>(
     const error = await response
       .json()
       .catch(() => ({ detail: `Request failed with status ${response.status}` }))
-    throw new Error(error.detail || `Request failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Request failed with status ${response.status}`))
   }
 
   // 204 No Content — nothing to parse
@@ -332,7 +341,7 @@ export async function deleteReport(
     const error = await response
       .json()
       .catch(() => ({ detail: `Delete failed with status ${response.status}` }))
-    throw new Error(error.detail || `Delete failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Delete failed with status ${response.status}`))
   }
 }
 
@@ -425,7 +434,7 @@ export async function exportReportPDF(
     const error = await response
       .json()
       .catch(() => ({ detail: `Export failed with status ${response.status}` }))
-    throw new Error(error.detail || `Export failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Export failed with status ${response.status}`))
   }
 
   return response.blob()
@@ -460,7 +469,7 @@ export async function generateStartdossier(
     const error = await response
       .json()
       .catch(() => ({ detail: `Dossier generation failed with status ${response.status}` }))
-    throw new Error(error.detail || `Dossier generation failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Dossier generation failed with status ${response.status}`))
   }
 
   return response.blob()
@@ -503,7 +512,7 @@ export async function uploadBestemmingsplanPDF(
     const error = await response
       .json()
       .catch(() => ({ detail: `Upload failed with status ${response.status}` }))
-    throw new Error(error.detail || `Upload failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Upload failed with status ${response.status}`))
   }
 
   return response.json()
@@ -616,7 +625,7 @@ export async function deleteProject(
     const error = await response
       .json()
       .catch(() => ({ detail: `Delete failed with status ${response.status}` }))
-    throw new Error(error.detail || `Delete failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Delete failed with status ${response.status}`))
   }
 }
 
@@ -681,7 +690,7 @@ export async function generateReportFromParcel(
     const error = await response
       .json()
       .catch(() => ({ detail: `Request failed with status ${response.status}` }))
-    throw new Error(error.detail || `Request failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Request failed with status ${response.status}`))
   }
 
   const payload = await response.json() as
@@ -1778,7 +1787,7 @@ export async function uploadParcelDocument(
     const error = await response
       .json()
       .catch(() => ({ detail: `Upload failed with status ${response.status}` }))
-    throw new Error(error.detail || `Upload failed with status ${response.status}`)
+    throw new Error(extractErrorMessage(error, `Upload failed with status ${response.status}`))
   }
 
   return response.json()

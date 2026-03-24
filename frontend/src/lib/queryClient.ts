@@ -9,10 +9,12 @@ export const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
+      const message = error instanceof Error ? error.message : String(error)
       // Don't show toast for 401s, auth layer usually handles redirects
-      if (error instanceof Error && !error.message.includes('401')) {
-        toast.error(`Fout bij ophalen van gegevens: ${error.message}`)
+      if (!message.includes('401')) {
+        console.error('[QueryCache] Failed query:', query.queryKey, error)
+        toast.error(`Fout bij ophalen van gegevens: ${message}`)
       }
     },
   }),
