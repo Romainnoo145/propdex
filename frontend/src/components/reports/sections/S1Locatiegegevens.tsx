@@ -8,6 +8,7 @@
 import { useRef } from 'react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import SatelliteThumbnail from '../SatelliteThumbnail'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -160,7 +161,14 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
   const woz = data.woz_data
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+      {/* Satellite hero */}
+      {data.map_data?.center_wgs84 && (
+        <div className="w-full h-48 rounded-[20px] overflow-hidden border border-[#EAEFEF]">
+          <SatelliteThumbnail center={data.map_data.center_wgs84} />
+        </div>
+      )}
+
       {/* Adresgegevens */}
       <Card title="Adresgegevens">
         <div className="divide-y divide-[#EAEFEF]">
