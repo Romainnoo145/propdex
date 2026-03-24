@@ -344,12 +344,7 @@ function MapPage() {
   const activePanelRef = useRef<ActivePanel | null>(activePanel)
   activePanelRef.current = activePanel
 
-  // Re-center map when parcel panel opens — no shift needed,
-  // the flyTo is delayed so the panel is already visible.
-  // (kept for map-click flows where panel + flyTo happen simultaneously)
-  useEffect(() => {
-    // intentionally empty — flyTo handles positioning via propertyLngLat effect
-  }, [inspectorParcel, mapRef, mapReady])
+  // (panel re-centering handled by flex layout resize — MapLibre auto-adjusts)
 
   const scannedWijkNames = useMemo(() => {
     if (!activeGemeente || !scanHistory?.scans) return []
@@ -562,21 +557,11 @@ function MapPage() {
   }, [gemeenteGeojsonError])
 
   // Fly to property whenever coordinates are set and map is ready.
-  // Delay 300ms so the detail panel slides in first, then fly to the parcel
-  // centered in the visible (non-panel) map area.
+  // The panel opens via flex layout (350ms transition), which resizes the map canvas.
+  // MapLibre auto-adjusts the center when the canvas resizes, so no manual offset needed.
   useEffect(() => {
     if (!propertyLngLat || !mapReady || !mapRef.current) return
-    const map = mapRef.current
-    const timer = setTimeout(() => {
-      const canvas = map.getCanvas()
-      const panelWidth = Math.min(Math.round(canvas.clientWidth * 0.55), 560)
-      map.flyTo({
-        center: propertyLngLat,
-        zoom: 17,
-        offset: [panelWidth / 2, 0],
-      })
-    }, 300)
-    return () => clearTimeout(timer)
+    mapRef.current.flyTo({ center: propertyLngLat, zoom: 17 })
   }, [propertyLngLat, mapReady])
 
   // Update geometry whenever data changes and map is ready.
@@ -1076,7 +1061,6 @@ function MapPage() {
         // Fly to parcel immediately — don't wait for enrichment
         exitGemeenteMode()
         setAutoEnableParcelsKey(key)
-        setPropertyLngLat([centroid.lng, centroid.lat])
         setTier('none')
 
         if (centroid.geometry) {
@@ -1101,6 +1085,7 @@ function MapPage() {
             accessToken,
             { scanId: activeScanIdRef.current },
           )
+          // 1) Open panel first (slides in)
           setActivePanel({ kind: 'parcel', parcel:
             makeInspectorParcel({
               parcelId: full.parcel_id,
@@ -1127,6 +1112,7 @@ function MapPage() {
               hasReport: full.has_report,
             })
           })
+          setPropertyLngLat([full.lng ?? centroid.lng, full.lat ?? centroid.lat])
           if (full.geometry) {
             setParcelGeometryHighlight({
               lng: centroid.lng,
@@ -1149,6 +1135,7 @@ function MapPage() {
             bouwjaar: centroid.bouwjaar ?? null,
             pandStatus: centroid.pand_status ?? null,
           })})
+          setPropertyLngLat([centroid.lng, centroid.lat])
         }
       })
       .catch(() => {
