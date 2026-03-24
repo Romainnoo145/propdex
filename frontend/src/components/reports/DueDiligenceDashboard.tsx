@@ -19,16 +19,6 @@ import { S4Risicoprofiel } from './sections/S4Risicoprofiel'
 import { S5PotentieRisicoAnalyse } from './sections/S5PotentieRisicoAnalyse'
 import { S6VergunningenPrecedenten } from './sections/S6VergunningenPrecedenten'
 import { S7Bronvermelding } from './sections/S7Bronvermelding'
-import {
-  MapPin,
-  Gavel,
-  LandPlot,
-  ShieldAlert,
-  BarChart3,
-  ScrollText,
-  Database,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -50,17 +40,16 @@ interface SectionConfig {
   key: SectionKey
   title: string
   shortTitle: string
-  icon: LucideIcon
 }
 
 const SECTION_LIST: SectionConfig[] = [
-  { key: 'locatiegegevens', title: '1. Locatiegegevens', shortTitle: 'Locatie', icon: MapPin },
-  { key: 'kadaster', title: '2. Kadaster & Eigendom', shortTitle: 'Kadaster', icon: Gavel },
-  { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', shortTitle: 'Bestemming', icon: LandPlot },
-  { key: 'risicoprofiel', title: '4. Risicoprofiel', shortTitle: 'Risico', icon: ShieldAlert },
-  { key: 'analyse', title: '5. Potentie & Risico Analyse', shortTitle: 'Analyse', icon: BarChart3 },
-  { key: 'vergunningen', title: '6. Vergunningen & Precedenten', shortTitle: 'Vergunningen', icon: ScrollText },
-  { key: 'bronnen', title: '7. Bronvermelding', shortTitle: 'Bronnen', icon: Database },
+  { key: 'locatiegegevens', title: '1. Locatiegegevens', shortTitle: 'Locatie' },
+  { key: 'kadaster', title: '2. Kadaster & Eigendom', shortTitle: 'Kadaster' },
+  { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', shortTitle: 'Bestemming' },
+  { key: 'risicoprofiel', title: '4. Risicoprofiel', shortTitle: 'Risico' },
+  { key: 'analyse', title: '5. Potentie & Risico Analyse', shortTitle: 'Analyse' },
+  { key: 'vergunningen', title: '6. Vergunningen & Precedenten', shortTitle: 'Vergunningen' },
+  { key: 'bronnen', title: '7. Bronvermelding', shortTitle: 'Bronnen' },
 ]
 
 /* ─── Section content renderer ──────────────────────────────── */
@@ -171,40 +160,54 @@ export default function DueDiligenceDashboard({
         onExportPDF={handleExportPDF}
       />
 
-      {/* Section tabs */}
-      <div className="mt-6 flex gap-0 rounded-full border border-[#EAEFEF] bg-[#F8FAFA] p-1">
-        {SECTION_LIST.map((section) => {
-          const isActive = section.key === activeSection
-          const Icon = section.icon
-          return (
-            <button
-              key={section.key}
-              type="button"
-              onClick={() => setActiveSection(section.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2.5 text-[11px] font-semibold transition-colors ${
-                isActive
-                  ? 'bg-[#0E1111] text-white shadow-sm'
-                  : 'text-slate-500 hover:text-[#0E1111]'
-              }`}
-            >
-              <Icon size={14} strokeWidth={1.5} className={isActive ? 'text-[#F9A826]' : ''} />
-              {section.shortTitle}
-            </button>
-          )
-        })}
+      {/* Section tabs — workspace pattern */}
+      <div className="overflow-x-auto pb-1">
+        <div className="flex h-[48px] min-w-max rounded-full bg-[#F2F6F3] p-1">
+          {SECTION_LIST.map((section) => {
+            const isActive = section.key === activeSection
+            return (
+              <button
+                key={section.key}
+                type="button"
+                onClick={() => setActiveSection(section.key)}
+                className="relative flex h-full min-w-[124px] flex-1 items-center justify-center rounded-full px-4 transition-colors"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '13px',
+                  fontWeight: isActive ? 700 : 600,
+                  letterSpacing: isActive ? '-0.01em' : '0',
+                  color: isActive ? undefined : '#94a3b8',
+                }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="rapport-section-tab"
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: '#0E1111' }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className={`relative z-10 ${isActive ? 'text-white' : ''}`}>
+                  {section.shortTitle}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Active section content */}
-      <div className="mt-4">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSection}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
-          >
-            {renderSectionContent(activeSection, data, sourceParcelId)}
+      {/* Active section content — workspace pattern: card wrapper */}
+      <div className="mt-4 rounded-[32px] border border-neutral-200 bg-white p-4 sm:p-6">
+        <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 px-6 py-5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {renderSectionContent(activeSection, data, sourceParcelId)}
 
             {/* Notes + PDF footer */}
             <div className="mt-6 border-t border-[#EAEFEF] pt-4 flex items-center justify-between">
@@ -238,8 +241,9 @@ export default function DueDiligenceDashboard({
                 />
               </div>
             )}
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )
