@@ -344,33 +344,11 @@ function MapPage() {
   const activePanelRef = useRef<ActivePanel | null>(activePanel)
   activePanelRef.current = activePanel
 
-  // Re-center map when parcel panel opens (shift left to keep parcel visible)
+  // Re-center map when parcel panel opens — no shift needed,
+  // the flyTo is delayed so the panel is already visible.
+  // (kept for map-click flows where panel + flyTo happen simultaneously)
   useEffect(() => {
-    const map = mapRef.current
-    if (!inspectorParcel || !map || !mapReady) return
-    // Use parcel geometry centroid or bounding box center
-    const geom = (inspectorParcel as unknown as { geometry?: GeoJSON.Geometry }).geometry
-    let lng: number | undefined
-    let lat: number | undefined
-    if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
-      const bbox = calculateBboxFromGeometry(geom)
-      if (bbox) {
-        lng = (bbox[0] + bbox[2]) / 2
-        lat = (bbox[1] + bbox[3]) / 2
-      }
-    }
-    // Fallback: try latitude/longitude fields from tile feature
-    if (lng == null || lat == null) {
-      const p = inspectorParcel as unknown as { longitude?: number; latitude?: number }
-      lng = p.longitude
-      lat = p.latitude
-    }
-    if (lng == null || lat == null) return
-    // Project to screen, shift right by half panel width (210px) since panel is on LEFT
-    const point = map.project([lng, lat])
-    point.x += 210
-    const adjusted = map.unproject(point)
-    map.easeTo({ center: adjusted, duration: 500 })
+    // intentionally empty — flyTo handles positioning via propertyLngLat effect
   }, [inspectorParcel, mapRef, mapReady])
 
   const scannedWijkNames = useMemo(() => {
@@ -583,20 +561,22 @@ function MapPage() {
     toast.error('Kon gemeentegrenzen niet laden')
   }, [gemeenteGeojsonError])
 
-  // Fly to property whenever coordinates are set and map is ready
+  // Fly to property whenever coordinates are set and map is ready.
+  // Delay 300ms so the detail panel slides in first, then fly to the parcel
+  // centered in the visible (non-panel) map area.
   useEffect(() => {
     if (!propertyLngLat || !mapReady || !mapRef.current) return
-    // Offset the center to the right so the parcel stays visible when the left panel opens.
-    // The panel takes roughly half the viewport width on desktop.
-    const canvas = mapRef.current.getCanvas()
-    // Use padding to account for the detail panel that will open on the left.
-    // The panel takes roughly 55% of viewport width on desktop (max ~560px).
-    const panelWidth = Math.min(Math.round(canvas.clientWidth * 0.55), 560)
-    mapRef.current.flyTo({
-      center: propertyLngLat,
-      zoom: 17,
-      padding: { left: panelWidth, top: 40, bottom: 40, right: 40 },
-    })
+    const map = mapRef.current
+    const timer = setTimeout(() => {
+      const canvas = map.getCanvas()
+      const panelWidth = Math.min(Math.round(canvas.clientWidth * 0.55), 560)
+      map.flyTo({
+        center: propertyLngLat,
+        zoom: 17,
+        offset: [panelWidth / 2, 0],
+      })
+    }, 300)
+    return () => clearTimeout(timer)
   }, [propertyLngLat, mapReady])
 
   // Update geometry whenever data changes and map is ready.
