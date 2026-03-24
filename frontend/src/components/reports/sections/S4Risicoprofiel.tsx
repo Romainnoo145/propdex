@@ -20,8 +20,8 @@ export interface S4RisicoprofielProps {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{title}</p>
       {children}
     </div>
   )
@@ -30,9 +30,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 const RISK_BADGE: Record<string, string> = {
   hoog: 'border-red-300 bg-red-50 text-red-700',
   middel: 'border-amber-300 bg-amber-50 text-amber-700',
-  laag: 'border-green-200 bg-green-50 text-green-700',
-  geen: 'border-green-200 bg-green-50 text-green-700',
-  onbekend: 'border-neutral-200 bg-neutral-50 text-neutral-600',
+  laag: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  geen: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  onbekend: 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600',
 }
 
 const RISK_LABEL: Record<string, string> = {
@@ -45,7 +45,7 @@ const RISK_LABEL: Record<string, string> = {
 
 function RiskBadge({ risk }: { risk: string }) {
   return (
-    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${RISK_BADGE[risk] ?? RISK_BADGE.onbekend}`}>
+    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${RISK_BADGE[risk] ?? RISK_BADGE.onbekend}`}>
       {RISK_LABEL[risk] ?? risk}
     </span>
   )
@@ -53,10 +53,10 @@ function RiskBadge({ risk }: { risk: string }) {
 
 function WBBRow({ dossier }: { dossier: WBBDossierRef }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 space-y-1">
-      {dossier.status_oord && <p className="text-sm font-medium text-[#1A1C1E]">{dossier.status_oord}</p>}
-      {dossier.vervolg_wbb && <p className="text-xs text-neutral-600">Vervolg: {dossier.vervolg_wbb}</p>}
-      {dossier.administrator_nm && <p className="text-xs text-neutral-500">Bevoegd gezag: {dossier.administrator_nm}</p>}
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] p-3 space-y-1">
+      {dossier.status_oord && <p className="text-[13px] font-semibold text-[#0E1111]">{dossier.status_oord}</p>}
+      {dossier.vervolg_wbb && <p className="text-[11px] text-slate-600">Vervolg: {dossier.vervolg_wbb}</p>}
+      {dossier.administrator_nm && <p className="text-[11px] text-slate-500">Bevoegd gezag: {dossier.administrator_nm}</p>}
     </div>
   )
 }
@@ -77,12 +77,12 @@ function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; docu
   }
 
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-neutral-600">{label}</p>
+          <p className="text-[11px] font-semibold text-slate-600">{label}</p>
           {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-neutral-500">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
             </p>
           )}
@@ -92,7 +92,7 @@ function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; docu
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[11px] font-semibold text-neutral-600 transition-colors hover:border-neutral-300 hover:text-neutral-800 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
         >
           {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
         </button>
@@ -103,8 +103,8 @@ function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; docu
 
 function DisabledUploadZone() {
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
-      <p className="text-[11px] text-neutral-400">Koppel een perceel om documenten te uploaden</p>
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+      <p className="text-[11px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
     </div>
   )
 }
@@ -124,11 +124,11 @@ function EnvCard({
   detail?: string | null
   risk?: string | null
 }) {
-  const riskStyle = risk ? (RISK_BADGE[risk] ?? RISK_BADGE.onbekend) : 'border-neutral-200 bg-neutral-50'
+  const riskStyle = risk ? (RISK_BADGE[risk] ?? RISK_BADGE.onbekend) : 'border-[#EAEFEF] bg-[#F8FAFA]'
   return (
-    <div className={`rounded-xl border p-3 ${riskStyle}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">{title}</p>
-      <p className="mt-1 text-sm font-semibold">
+    <div className={`rounded-[16px] border p-3 ${riskStyle}`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-70">{title}</p>
+      <p className="mt-1 text-[13px] font-semibold">
         {value ?? 'Onbekend'}
         {unit ? ` ${unit}` : ''}
       </p>
@@ -159,8 +159,8 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         <Card title="Fysiek Risicoprofiel">
           <div className="space-y-2">
             <RiskBadge risk={frp.overall_risk} />
-            <p className="text-sm text-neutral-700">{frp.overall_explanation}</p>
-            <p className="text-[11px] text-neutral-500">{frp.disclaimer}</p>
+            <p className="text-[13px] text-slate-600 leading-relaxed">{frp.overall_explanation}</p>
+            <p className="text-[11px] text-slate-500">{frp.disclaimer}</p>
           </div>
         </Card>
       )}
@@ -168,18 +168,18 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
       {/* Bodemkwaliteit */}
       <Card title="Bodemkwaliteit">
         {!bodem ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-[13px] text-slate-500">
             {data.bodem_flags ? `Type: ${data.bodemtype_flags ?? data.bodem_flags}` : 'Bodemdata niet beschikbaar'}
           </p>
         ) : bodem.dossiers.length === 0 ? (
           <div className="space-y-1">
-            <p className="text-sm text-neutral-600">Geen geregistreerde verontreiniging gevonden</p>
-            <p className="text-[11px] text-neutral-500">{bodem.disclaimer}</p>
+            <p className="text-[13px] text-slate-600">Geen geregistreerde verontreiniging gevonden</p>
+            <p className="text-[11px] text-slate-500">{bodem.disclaimer}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {bodem.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} />)}
-            <p className="text-[11px] text-neutral-500">{bodem.disclaimer}</p>
+            <p className="text-[11px] text-slate-500">{bodem.disclaimer}</p>
           </div>
         )}
         {sourceParcelId ? (
@@ -194,25 +194,25 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         {fundRisk ? (
           <div className="space-y-2">
             <RiskBadge risk={fundRisk.risk} />
-            <p className="text-sm text-neutral-700">{fundRisk.reden}</p>
+            <p className="text-[13px] text-slate-600 leading-relaxed">{fundRisk.reden}</p>
             {fundRisk.recommended_action && (
-              <p className="text-xs text-neutral-600">Aanbevolen actie: {fundRisk.recommended_action}</p>
+              <p className="text-[11px] text-slate-600">Aanbevolen actie: {fundRisk.recommended_action}</p>
             )}
-            <p className="text-[11px] text-neutral-500">{fundRisk.disclaimer}</p>
+            <p className="text-[11px] text-slate-500">{fundRisk.disclaimer}</p>
           </div>
         ) : fundFlags ? (
           <div className="space-y-1">
-            <p className="text-sm text-neutral-700">
+            <p className="text-[13px] text-slate-600">
               {(fundFlags.legenda as string | undefined) ?? 'Funderingsrisicogebied gedetecteerd'}
             </p>
             {(fundFlags.percvoor1970 as number | undefined) != null && (
-              <p className="text-xs text-neutral-500">
+              <p className="text-[11px] text-slate-500">
                 % panden voor 1970: {(fundFlags.percvoor1970 as number).toFixed(0)}%
               </p>
             )}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">Geen funderingsrisicodata beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Geen funderingsrisicodata beschikbaar</p>
         )}
       </Card>
 
@@ -221,9 +221,9 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         <Card title="Asbestrisico">
           <div className="space-y-2">
             <RiskBadge risk={asbest.risk} />
-            <p className="text-sm text-neutral-700">{asbest.reden}</p>
+            <p className="text-[13px] text-slate-600 leading-relaxed">{asbest.reden}</p>
             {asbest.norm_reference && (
-              <p className="text-xs text-neutral-500">{asbest.norm_reference}</p>
+              <p className="text-[11px] text-slate-500">{asbest.norm_reference}</p>
             )}
           </div>
           {sourceParcelId ? (

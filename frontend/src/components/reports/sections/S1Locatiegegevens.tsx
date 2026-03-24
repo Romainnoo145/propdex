@@ -57,8 +57,8 @@ export const STATUS_EXPLANATIONS: Record<
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{title}</p>
       {children}
     </div>
   )
@@ -76,11 +76,11 @@ function KVRow({
   if (!value) return null
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 shrink-0">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 shrink-0">
         {label}
       </span>
       <span
-        className={`text-sm text-right text-[#1A1C1E] ${mono ? 'font-mono text-xs' : ''}`}
+        className={`text-[13px] text-right font-semibold text-[#0E1111] ${mono ? 'font-mono text-[11px]' : ''}`}
       >
         {value}
       </span>
@@ -113,12 +113,12 @@ function UploadZone({
   }
 
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-neutral-600">{label}</p>
+          <p className="text-[11px] font-semibold text-slate-600">{label}</p>
           {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-neutral-500">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
             </p>
           )}
@@ -128,7 +128,7 @@ function UploadZone({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[11px] font-semibold text-neutral-600 transition-colors hover:border-neutral-300 hover:text-neutral-800 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
         >
           {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
         </button>
@@ -139,8 +139,8 @@ function UploadZone({
 
 function DisabledUploadZone() {
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
-      <p className="text-[11px] text-neutral-400">
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+      <p className="text-[11px] text-slate-400">
         Koppel een perceel om documenten te uploaden
       </p>
     </div>
@@ -163,7 +163,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Adresgegevens */}
       <Card title="Adresgegevens">
-        <div className="divide-y divide-neutral-100">
+        <div className="divide-y divide-[#EAEFEF]">
           <KVRow
             label="Adres"
             value={`${address.straat} ${address.huisnummer}${address.huisletter ?? ''}${address.toevoeging ?? ''}`}
@@ -185,15 +185,15 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
       {/* Gebouwgegevens */}
       <Card title="Gebouwgegevens">
         {building ? (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-[#EAEFEF]">
             <KVRow label="Bouwjaar" value={building.bouwjaar?.toString()} />
             {building.status && (
               <div className="flex items-baseline justify-between gap-4 py-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 shrink-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 shrink-0">
                   Status
                 </span>
                 <span
-                  className={`text-sm ${statusInfo?.severity === 'high' ? 'text-[#F9A826]' : 'text-[#1A1C1E]'}`}
+                  className={`text-[13px] font-semibold ${statusInfo?.severity === 'high' ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
                 >
                   {statusInfo?.label ?? building.status}
                 </span>
@@ -202,14 +202,14 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             <KVRow label="Oppervlakte" value={formatArea(building.oppervlakte)} />
             {building.gebruiksdoel.length > 0 && (
               <div className="flex items-start justify-between gap-4 py-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 shrink-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 shrink-0">
                   Gebruiksdoel
                 </span>
                 <div className="flex flex-wrap justify-end gap-1">
                   {building.gebruiksdoel.map((doel) => (
                     <span
                       key={doel}
-                      className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 text-xs font-medium text-[#1A1C1E]"
+                      className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]"
                     >
                       {doel}
                     </span>
@@ -220,7 +220,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             <KVRow label="Pand ID" value={building.pand_id} mono />
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">Geen gebouwgegevens beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Geen gebouwgegevens beschikbaar</p>
         )}
       </Card>
 
@@ -228,23 +228,23 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
       <Card title="Energielabel">
         {energy && energy.energieklasse ? (
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-center">
-              <p className="text-xs text-neutral-500">Klasse</p>
-              <p className="mt-1 text-2xl font-black tracking-tighter text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2 text-center">
+              <p className="text-[11px] text-slate-400">Klasse</p>
+              <p className="mt-1 text-2xl font-black tracking-tighter text-[#0E1111]">
                 {energy.energieklasse}
               </p>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-center">
-              <p className="text-xs text-neutral-500">Registratie</p>
-              <p className="mt-1 text-sm font-semibold text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2 text-center">
+              <p className="text-[11px] text-slate-400">Registratie</p>
+              <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                 {energy.registratie_datum
                   ? dateFmt.format(new Date(energy.registratie_datum))
                   : '–'}
               </p>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-center">
-              <p className="text-xs text-neutral-500">Geldig tot</p>
-              <p className="mt-1 text-sm font-semibold text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2 text-center">
+              <p className="text-[11px] text-slate-400">Geldig tot</p>
+              <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                 {energy.geldig_tot
                   ? dateFmt.format(new Date(energy.geldig_tot))
                   : '–'}
@@ -252,7 +252,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             </div>
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">
+          <p className="text-[13px] text-slate-500">
             {energy?.niet_geregistreerd_reden ?? 'Geen geregistreerd energielabel gevonden'}
           </p>
         )}
@@ -263,15 +263,15 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         {woz ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-                <p className="text-xs text-neutral-500">Meest recente waarde</p>
-                <p className="mt-1 text-lg font-black tracking-tighter text-[#1A1C1E]">
+              <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+                <p className="text-[11px] text-slate-400">Meest recente waarde</p>
+                <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
                   {formatCurrency(woz.meest_recente_waarde)}
                 </p>
               </div>
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-                <p className="text-xs text-neutral-500">Peildatum</p>
-                <p className="mt-1 text-sm font-semibold text-[#1A1C1E]">
+              <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+                <p className="text-[11px] text-slate-400">Peildatum</p>
+                <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                   {woz.meest_recente_peildatum
                     ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
                     : '–'}
@@ -279,16 +279,16 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
               </div>
             </div>
             {woz.low_confidence && (
-              <div className="rounded-xl border border-[#F9A826]/15 bg-[#F9A826]/[0.04] px-3 py-2">
-                <p className="text-xs text-[#F9A826]/80 font-semibold">Indicatief</p>
-                <p className="mt-0.5 text-xs text-neutral-600">
+              <div className="rounded-[16px] border border-[#F9A826]/15 bg-[#F9A826]/[0.04] px-3 py-2">
+                <p className="text-[11px] text-[#F9A826]/80 font-semibold">Indicatief</p>
+                <p className="mt-0.5 text-[13px] text-slate-600">
                   {woz.low_confidence_reden ?? 'WOZ-data is indicatief.'}
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">Geen WOZ-gegevens beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Geen WOZ-gegevens beschikbaar</p>
         )}
       </Card>
 
@@ -297,15 +297,15 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         {monuments ? (
           <div className="space-y-3">
             <div
-              className={`rounded-xl px-4 py-3 ${monuments.is_monument ? 'border border-[#F9A826]/20 bg-[#F9A826]/[0.06]' : 'border border-neutral-200 bg-neutral-50'}`}
+              className={`rounded-[16px] px-4 py-3 ${monuments.is_monument ? 'border border-[#F9A826]/20 bg-[#F9A826]/[0.06]' : 'border border-[#EAEFEF] bg-[#F8FAFA]'}`}
             >
               <p
-                className={`font-semibold ${monuments.is_monument ? 'text-[#F9A826]' : 'text-neutral-700'}`}
+                className={`font-semibold ${monuments.is_monument ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
               >
                 {monuments.is_monument ? 'Rijksmonument' : 'Niet beschermd'}
               </p>
               {monuments.consensus_status && (
-                <p className="mt-0.5 text-sm text-neutral-600">
+                <p className="mt-0.5 text-[13px] text-slate-600">
                   {monuments.consensus_status}
                 </p>
               )}
@@ -313,7 +313,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             {monuments.restrictions_summary.length > 0 && (
               <ul className="space-y-1">
                 {monuments.restrictions_summary.map((r, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-neutral-700">
+                  <li key={i} className="flex items-start gap-2 text-[13px] text-slate-600">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F9A826]/50" />
                     {r}
                   </li>
@@ -322,7 +322,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             )}
           </div>
         ) : (
-          <p className="text-sm text-neutral-500">Geen monumentgegevens beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Geen monumentgegevens beschikbaar</p>
         )}
         {sourceParcelId ? (
           <UploadZone

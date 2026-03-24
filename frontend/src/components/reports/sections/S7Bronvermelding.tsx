@@ -65,13 +65,13 @@ function StatusBadge({ status }: { status: SourceStatus }) {
       : status === 'blocked'
         ? 'border-amber-200 bg-amber-50 text-amber-700'
         : status === 'unlinked'
-          ? 'border-neutral-200 bg-neutral-50 text-neutral-600'
-          : 'border-green-200 bg-green-50 text-green-700'
+          ? 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-700'
   const label =
     status === 'error' ? 'Fout' : status === 'blocked' ? 'Geblokkeerd' : status === 'unlinked' ? 'Niet gekoppeld' : 'OK'
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{label}</span>
   )
 }
 
@@ -79,14 +79,14 @@ function ConfidenceBadge({ confidence }: { confidence: 'HIGH' | 'MEDIUM' | 'LOW'
   if (!confidence) return null
   const cls =
     confidence === 'HIGH'
-      ? 'border-green-200 bg-green-50 text-green-700'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
       : confidence === 'MEDIUM'
         ? 'border-amber-200 bg-amber-50 text-amber-700'
         : 'border-red-200 bg-red-50 text-red-700'
   const label = confidence === 'HIGH' ? 'Hoog' : confidence === 'MEDIUM' ? 'Middel' : 'Laag'
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{label}</span>
   )
 }
 
@@ -174,40 +174,40 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
     <div className="space-y-4">
       {/* Completeness summary */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center">
-          <p className="text-2xl font-black text-green-700">{okCount}</p>
-          <p className="mt-0.5 text-xs font-semibold text-green-600">Bronnen OK</p>
+        <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-2xl font-black text-emerald-700">{okCount}</p>
+          <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">Bronnen OK</p>
         </div>
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-center">
-          <p className="text-2xl font-black text-neutral-600">{unlinkedCount}</p>
-          <p className="mt-0.5 text-xs font-semibold text-neutral-500">Niet gekoppeld</p>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] p-4 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-2xl font-black text-slate-600">{unlinkedCount}</p>
+          <p className="mt-0.5 text-[11px] font-semibold text-slate-500">Niet gekoppeld</p>
         </div>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
+        <div className="rounded-[20px] border border-red-200 bg-red-50 p-4 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <p className="text-2xl font-black text-red-700">{errorCount}</p>
-          <p className="mt-0.5 text-xs font-semibold text-red-600">Fouten</p>
+          <p className="mt-0.5 text-[11px] font-semibold text-red-600">Fouten</p>
         </div>
       </div>
 
       {/* Source table */}
-      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-        <div className="border-b border-neutral-100 px-4 py-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="border-b border-[#EAEFEF] px-4 py-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
             Databronnen ({sources.length})
           </p>
         </div>
         {sources.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-neutral-500">Geen broninformatie beschikbaar</p>
+            <p className="text-[13px] text-slate-500">Geen broninformatie beschikbaar</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-[#EAEFEF]">
             {sources.map((src, idx) => (
               <div key={idx} className="flex items-start justify-between gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[#1A1C1E]">{src.source}</p>
-                  <p className="text-xs text-neutral-500">{formatAge(src.age_seconds)}</p>
+                  <p className="text-[13px] font-semibold text-[#0E1111]">{src.source}</p>
+                  <p className="text-[11px] text-slate-500">{formatAge(src.age_seconds)}</p>
                   {src.note && (
-                    <p className="mt-0.5 text-xs text-neutral-500 break-words">{src.note}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500 break-words">{src.note}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
@@ -221,15 +221,15 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
       </div>
 
       {/* Disclaimer */}
-      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Disclaimer</p>
-        <p className="text-xs text-neutral-600 leading-relaxed">
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Disclaimer</p>
+        <p className="text-[13px] text-slate-600 leading-relaxed">
           De data in dit rapport is afkomstig van openbare bronnen (BAG, Kadaster, DSO, etc.) en wordt uitsluitend ter
           informatie aangeboden. Propdex garandeert niet de volledigheid, juistheid of actualiteit van de gegevens.
           Raadpleeg voor juridisch bindende informatie altijd de officiële bronnen en bevoegde instanties.
           Gegevens kunnen verouderd zijn — controleer datums bij kritieke beslissingen.
         </p>
-        <p className="mt-2 text-[11px] text-neutral-400">
+        <p className="mt-2 text-[11px] text-slate-400">
           Rapport gegenereerd op {new Date(data.resolved_at).toLocaleString('nl-NL')}
         </p>
       </div>

@@ -27,8 +27,8 @@ function formatArea(value: number | null | undefined): string {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{title}</p>
       {children}
     </div>
   )
@@ -60,12 +60,12 @@ function UploadZone({
   }
 
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-neutral-600">{label}</p>
+          <p className="text-[11px] font-semibold text-slate-600">{label}</p>
           {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-neutral-500">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
             </p>
           )}
@@ -75,7 +75,7 @@ function UploadZone({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[11px] font-semibold text-neutral-600 transition-colors hover:border-neutral-300 hover:text-neutral-800 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
         >
           {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
         </button>
@@ -86,8 +86,8 @@ function UploadZone({
 
 function DisabledUploadZone() {
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-4">
-      <p className="text-[11px] text-neutral-400">
+    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+      <p className="text-[11px] text-slate-400">
         Koppel een perceel om documenten te uploaden
       </p>
     </div>
@@ -107,21 +107,21 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
       {/* Kadastrale percelen */}
       <Card title="Kadastrale percelen">
         {parcels.length === 0 ? (
-          <p className="text-sm text-neutral-500">Geen kadastrale gegevens beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Geen kadastrale gegevens beschikbaar</p>
         ) : (
           <div className="space-y-3">
             {parcels.map((parcel, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] p-3"
               >
                 {parcel.kadastrale_aanduiding && (
-                  <p className="mb-2 text-sm font-semibold text-[#1A1C1E]">
+                  <p className="mb-2 text-[13px] font-semibold text-[#0E1111]">
                     <a
                       href={`https://kadastralekaart.com/perceel/${parcel.kadastrale_aanduiding.replace(/\s+/g, '/')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline decoration-neutral-400 underline-offset-2 hover:text-[#F9A826]"
+                      className="underline decoration-slate-300 underline-offset-2 hover:text-[#F9A826]"
                     >
                       {parcel.kadastrale_aanduiding}
                     </a>
@@ -129,20 +129,20 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                 )}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <p className="text-xs text-neutral-500">Perceelnr</p>
-                    <p className="text-sm font-medium text-neutral-700">
+                    <p className="text-[11px] text-slate-400">Perceelnr</p>
+                    <p className="text-[13px] font-semibold text-[#0E1111]">
                       {parcel.perceelnummer ?? '–'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-500">Sectie</p>
-                    <p className="text-sm font-medium text-neutral-700">
+                    <p className="text-[11px] text-slate-400">Sectie</p>
+                    <p className="text-[13px] font-semibold text-[#0E1111]">
                       {parcel.sectie ?? '–'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-500">Kavelgrootte</p>
-                    <p className="text-sm font-medium text-neutral-700">
+                    <p className="text-[11px] text-slate-400">Kavelgrootte</p>
+                    <p className="text-[13px] font-semibold text-[#0E1111]">
                       {formatArea(parcel.oppervlakte)}
                     </p>
                   </div>
@@ -151,8 +151,8 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             ))}
             {parcels.length > 1 && totalOpp > 0 && (
               <div className="flex justify-end">
-                <span className="text-xs text-neutral-500">
-                  Totaal: <strong className="text-neutral-700">{formatArea(totalOpp)}</strong>
+                <span className="text-[11px] text-slate-500">
+                  Totaal: <strong className="text-[#0E1111]">{formatArea(totalOpp)}</strong>
                 </span>
               </div>
             )}
@@ -172,16 +172,16 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
       {/* BRK Eigendom */}
       <Card title="BRK Eigendom">
         {!ownership ? (
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-            <p className="text-sm text-neutral-600">
+          <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            <p className="text-[13px] text-slate-600">
               Eigendomsgegevens niet opgeslagen (Kadaster Tier 3 voorwaarden)
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-[11px] text-slate-500">
               Open de eigendomsmodal vanuit de kaartweergave om actuele BRK-data op te halen.
             </p>
           </div>
         ) : ownership.status !== 'available' || !ownership.data || ownership.data.length === 0 ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-[13px] text-slate-500">
             {ownership.reason ?? 'Geen eigendomsdata beschikbaar'}
           </p>
         ) : (
@@ -189,12 +189,12 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             {ownership.data.map((item, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2"
+                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2"
               >
-                <p className="text-sm font-semibold text-[#1A1C1E]">
+                <p className="text-[13px] font-semibold text-[#0E1111]">
                   {item.perceel_identificatie}
                 </p>
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   {item.gerechtigden.length} zakelijk gerechtigde
                   {item.gerechtigden.length !== 1 ? 'n' : ''}
                   {item.heeft_hypotheek ? ' · hypotheek geregistreerd' : ''}
@@ -203,7 +203,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                   {item.gerechtigden.map((g, gIdx) => (
                     <span
                       key={gIdx}
-                      className="rounded-full border border-neutral-200 bg-white px-2 py-0.5 text-xs font-medium text-neutral-600"
+                      className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600"
                     >
                       {g.eigenaar_type}
                       {g.aandeel ? ` ${g.aandeel}` : ''}
@@ -219,32 +219,32 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
       {/* Marktsignalen */}
       <Card title="Marktsignalen">
         {!signals ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-[13px] text-slate-500">
             Nog geen Funda-signalen beschikbaar voor dit adres
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-              <p className="text-xs text-neutral-500">Te koop sinds</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+              <p className="text-[11px] text-slate-400">Te koop sinds</p>
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
                 {signals.listing_duration_days} dagen
               </p>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-              <p className="text-xs text-neutral-500">Prijswijzigingen</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+              <p className="text-[11px] text-slate-400">Prijswijzigingen</p>
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
                 {signals.price_change_count}
               </p>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-              <p className="text-xs text-neutral-500">Snapshots</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+              <p className="text-[11px] text-slate-400">Snapshots</p>
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
                 {signals.listing_snapshots_count}
               </p>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-              <p className="text-xs text-neutral-500">Laatste waarneming</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#1A1C1E]">
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
+              <p className="text-[11px] text-slate-400">Laatste waarneming</p>
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
                 {signals.days_since_last_seen} dagen geleden
               </p>
             </div>
