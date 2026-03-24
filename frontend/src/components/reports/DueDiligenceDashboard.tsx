@@ -160,11 +160,7 @@ export default function DueDiligenceDashboard({
   }
 
   return (
-    <div
-      className="h-full overflow-y-auto"
-      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-    >
-    <div className="max-w-5xl mx-auto px-6 py-8 pb-12">
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <ReportHeader
         data={data}
         backLabel={backLabel}
@@ -199,7 +195,7 @@ export default function DueDiligenceDashboard({
       </div>
 
       {/* Active section content */}
-      <div className="mt-4 rounded-[24px] border border-[#EAEFEF] bg-white p-6">
+      <div className="mt-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeSection}
@@ -245,7 +241,6 @@ export default function DueDiligenceDashboard({
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
     </div>
   )
 }

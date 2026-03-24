@@ -118,7 +118,7 @@ export default function ReportHeader({
 
   return (
     <div
-      className="rounded-[24px] border border-[#EAEFEF] bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+      className="pb-6 mb-2"
       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       {/* Kicker + back */}

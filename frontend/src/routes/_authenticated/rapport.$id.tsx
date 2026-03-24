@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useReport } from '@/hooks/useReports'
+import ResultsShell from '@/components/layout/ResultsShell'
 import DueDiligenceDashboard from '@/components/reports/DueDiligenceDashboard'
 import type { PropertyReportResponse } from '@/lib/types/property'
 
@@ -85,16 +86,18 @@ function RapportPage() {
   }
 
   return (
-    <DueDiligenceDashboard
-      data={propertyData}
-      isLoading={savedReport.isLoading}
-      backLabel={backLabel}
-      sourceParcelId={savedReport.data?.source_parcel_id ?? null}
-      reportId={id.startsWith('r') ? null : id}
-      notes={savedReport.data?.notes ?? null}
-      activeSection={search.section}
-      onBack={handleBack}
-      onViewOnMap={handleViewOnMap}
-    />
+    <ResultsShell>
+      <DueDiligenceDashboard
+        data={propertyData}
+        isLoading={savedReport.isLoading}
+        backLabel={backLabel}
+        sourceParcelId={savedReport.data?.source_parcel_id ?? null}
+        reportId={id.startsWith('r') ? null : id}
+        notes={savedReport.data?.notes ?? null}
+        activeSection={search.section}
+        onBack={handleBack}
+        onViewOnMap={handleViewOnMap}
+      />
+    </ResultsShell>
   )
 }
