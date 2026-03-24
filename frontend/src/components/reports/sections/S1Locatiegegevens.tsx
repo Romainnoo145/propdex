@@ -149,86 +149,129 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
   const energy = data.energy_label
   const woz = data.woz_data
 
+  const isMonument = monuments?.is_monument ?? false
+
   return (
     <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      {/* Adresgegevens */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Adresgegevens</p>
-        <div>
-          <KVRow
-            label="Adres"
-            value={`${address.straat} ${address.huisnummer}${address.huisletter ?? ''}${address.toevoeging ?? ''}`}
-          />
-          <KVRow label="Postcode" value={address.postcode} />
-          <KVRow label="Woonplaats" value={address.woonplaats} />
-          <KVRow label="Nummeraanduiding" value={address.nummeraanduiding_id} mono />
-          {address.verblijfsobject_id && (
-            <KVRow label="VBO" value={address.verblijfsobject_id} mono />
+
+      {/* ── 1. Hero Stats Row ──────────────────────────────────── */}
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bouwjaar</p>
+          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
+            {building?.bouwjaar ?? '–'}
+          </p>
+        </div>
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Oppervlakte</p>
+          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
+            {formatArea(building?.oppervlakte)}
+          </p>
+        </div>
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Gebruiksdoel</p>
+          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
+            {building?.gebruiksdoel?.[0] ?? '–'}
+          </p>
+        </div>
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Energielabel</p>
+          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
+            {energy?.energieklasse ?? 'N/A'}
+          </p>
+        </div>
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">WOZ Waarde</p>
+          <p className="text-[15px] font-bold text-[#0E1111] tracking-tight mt-1">
+            {formatCurrency(woz?.meest_recente_waarde)}
+          </p>
+        </div>
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Monument</p>
+          <p className={`text-[18px] font-bold tracking-tight mt-1 ${isMonument ? 'text-[#F9A826]' : 'text-slate-500'}`}>
+            {isMonument ? 'Beschermd' : 'Vrij'}
+          </p>
+        </div>
+      </div>
+
+      {/* ── 2. Adres & Gebouw Details (side by side on lg) ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Card A: Adresgegevens */}
+        <div className="rounded-[16px] border border-[#EAEFEF] p-4 space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Adresgegevens</p>
+          <div>
+            <KVRow
+              label="Adres"
+              value={`${address.straat} ${address.huisnummer}${address.huisletter ?? ''}${address.toevoeging ?? ''}`}
+            />
+            <KVRow label="Postcode" value={address.postcode} />
+            <KVRow label="Woonplaats" value={address.woonplaats} />
+            <KVRow label="Nummeraanduiding" value={address.nummeraanduiding_id} mono />
+            {address.verblijfsobject_id && (
+              <KVRow label="VBO" value={address.verblijfsobject_id} mono />
+            )}
+          </div>
+        </div>
+
+        {/* Card B: Gebouwgegevens */}
+        <div className="rounded-[16px] border border-[#EAEFEF] p-4 space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Gebouwgegevens</p>
+          {building ? (
+            <div>
+              <KVRow label="Bouwjaar" value={building.bouwjaar?.toString()} />
+              {building.status && (
+                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
+                  <span className="text-[12px] text-slate-400">Status</span>
+                  <span
+                    className={`text-[13px] font-semibold text-right ${
+                      statusInfo?.severity === 'high'
+                        ? 'text-[#F9A826]'
+                        : statusInfo?.severity === 'medium'
+                          ? 'text-amber-600'
+                          : 'text-[#0E1111]'
+                    }`}
+                  >
+                    {statusInfo?.label ?? building.status}
+                  </span>
+                </div>
+              )}
+              <KVRow label="Oppervlakte" value={formatArea(building.oppervlakte)} />
+              {building.gebruiksdoel.length > 0 && (
+                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
+                  <span className="text-[12px] text-slate-400">Gebruiksdoel</span>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {building.gebruiksdoel.map((doel) => (
+                      <span
+                        key={doel}
+                        className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]"
+                      >
+                        {doel}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <KVRow label="Pand ID" value={building.pand_id} mono />
+            </div>
+          ) : (
+            <p className="text-[13px] text-slate-500">Geen gebouwgegevens beschikbaar</p>
           )}
         </div>
-        {sourceParcelId ? (
-          <UploadZone parcelId={sourceParcelId} documentType="perceeldata" label="Perceeldocument" />
-        ) : (
-          <DisabledUploadZone />
-        )}
       </div>
 
-      {/* Gebouwgegevens */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Gebouwgegevens</p>
-        {building ? (
-          <div>
-            <KVRow label="Bouwjaar" value={building.bouwjaar?.toString()} />
-            {building.status && (
-              <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
-                <span className="text-[12px] text-slate-400">
-                  Status
-                </span>
-                <span
-                  className={`text-[13px] font-semibold text-right ${statusInfo?.severity === 'high' ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
-                >
-                  {statusInfo?.label ?? building.status}
-                </span>
-              </div>
-            )}
-            <KVRow label="Oppervlakte" value={formatArea(building.oppervlakte)} />
-            {building.gebruiksdoel.length > 0 && (
-              <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
-                <span className="text-[12px] text-slate-400">
-                  Gebruiksdoel
-                </span>
-                <div className="flex flex-wrap justify-end gap-1">
-                  {building.gebruiksdoel.map((doel) => (
-                    <span
-                      key={doel}
-                      className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]"
-                    >
-                      {doel}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            <KVRow label="Pand ID" value={building.pand_id} mono />
-          </div>
-        ) : (
-          <p className="text-[13px] text-slate-500">Geen gebouwgegevens beschikbaar</p>
-        )}
-      </div>
-
-      {/* Energielabel */}
+      {/* ── 3. Energielabel Detail ────────────────────────────── */}
       <div className="space-y-3">
         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Energielabel</p>
         {energy && energy.energieklasse ? (
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[12px] text-slate-400">Klasse</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Klasse</p>
               <p className="mt-1 text-2xl font-black tracking-tighter text-[#0E1111]">
                 {energy.energieklasse}
               </p>
             </div>
             <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[12px] text-slate-400">Registratie</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Registratie</p>
               <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                 {energy.registratie_datum
                   ? dateFmt.format(new Date(energy.registratie_datum))
@@ -236,7 +279,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
               </p>
             </div>
             <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[12px] text-slate-400">Geldig tot</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Geldig tot</p>
               <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                 {energy.geldig_tot
                   ? dateFmt.format(new Date(energy.geldig_tot))
@@ -251,20 +294,20 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         )}
       </div>
 
-      {/* WOZ Waarde */}
+      {/* ── 4. WOZ Detail ─────────────────────────────────────── */}
       <div className="space-y-3">
         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">WOZ Waarde</p>
         {woz ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
-                <p className="text-[12px] text-slate-400">Meest recente waarde</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Meest recente waarde</p>
                 <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
                   {formatCurrency(woz.meest_recente_waarde)}
                 </p>
               </div>
               <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
-                <p className="text-[12px] text-slate-400">Peildatum</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Peildatum</p>
                 <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                   {woz.meest_recente_peildatum
                     ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
@@ -286,18 +329,18 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         )}
       </div>
 
-      {/* Monumentstatus */}
+      {/* ── 5. Monumentstatus ─────────────────────────────────── */}
       <div className="space-y-3">
         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Monumentstatus</p>
         {monuments ? (
           <div className="space-y-3">
             <div
-              className={`rounded-[16px] px-4 py-3 ${monuments.is_monument ? 'border border-[#F9A826]/20 bg-[#F9A826]/[0.06]' : 'border border-[#EAEFEF] bg-[#F8FAFA]'}`}
+              className={`rounded-[16px] px-4 py-3 ${isMonument ? 'border border-[#F9A826]/20 bg-[#F9A826]/[0.06]' : 'border border-[#EAEFEF] bg-[#F8FAFA]'}`}
             >
               <p
-                className={`font-semibold ${monuments.is_monument ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
+                className={`font-semibold ${isMonument ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
               >
-                {monuments.is_monument ? 'Rijksmonument' : 'Niet beschermd'}
+                {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
               </p>
               {monuments.consensus_status && (
                 <p className="mt-0.5 text-[13px] text-slate-600">
@@ -319,16 +362,14 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         ) : (
           <p className="text-[13px] text-slate-500">Geen monumentgegevens beschikbaar</p>
         )}
-        {sourceParcelId ? (
-          <UploadZone
-            parcelId={sourceParcelId}
-            documentType="monument"
-            label="Monumentdocument"
-          />
-        ) : (
-          <DisabledUploadZone />
-        )}
       </div>
+
+      {/* ── 6. Upload Zone ────────────────────────────────────── */}
+      {sourceParcelId ? (
+        <UploadZone parcelId={sourceParcelId} documentType="perceeldata" label="Document toevoegen" />
+      ) : (
+        <DisabledUploadZone />
+      )}
     </div>
   )
 }
