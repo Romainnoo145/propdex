@@ -19,6 +19,7 @@ import {
   fetchScanResults,
   fetchParcelEnrichment,
   fetchParcelRiskProfile,
+  fetchParcelScanData,
   fetchAerialCrop,
   fetchScanHistory,
   fetchProjectScans,
@@ -32,6 +33,7 @@ import type {
   ScanResultsResponse,
   ScanResultsFilters,
   ScanListResponse,
+  ScanResultItem,
   EnergielabelData,
   WozData,
   BodemData,
@@ -300,5 +302,26 @@ export function useAerialCrop(parcelId: string | null) {
     enabled: !!parcelId && !!accessToken,
     staleTime: 24 * 60 * 60 * 1000, // 24h — aerial images don't change often
     retry: 1, // PDOK may be slow; one retry is enough
+  })
+}
+
+/**
+ * Fetch the full scan result data for a single parcel (score breakdown, building metrics, etc.)
+ *
+ * Used by portfolio workspace to power potentie/risico detail modals.
+ *
+ * Query key: ['parcel-scan-data', parcelCacheId]
+ * Stale time: 5 minutes
+ *
+ * @param parcelCacheId - ParcelCache UUID or null (disabled when null)
+ */
+export function useParcelScanData(parcelCacheId: string | null) {
+  const { accessToken } = useAuth()
+
+  return useQuery<ScanResultItem, Error>({
+    queryKey: ['parcel-scan-data', parcelCacheId],
+    queryFn: () => fetchParcelScanData(parcelCacheId!, accessToken),
+    enabled: !!parcelCacheId && !!accessToken,
+    staleTime: 5 * 60 * 1000,
   })
 }

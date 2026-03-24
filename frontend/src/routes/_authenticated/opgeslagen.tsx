@@ -8,6 +8,7 @@ import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
+import { ScoreBadge, PotentieModal, RisicoModal } from '@/components/projects/ScoreDetailModal'
 import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
@@ -453,6 +454,7 @@ function ParcelRow({
 }) {
   const address = parcel.address || parcel.parcel_id
   const subtitle = parcel.address ? parcel.parcel_id : null
+  const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
 
   return (
     <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors">
@@ -468,6 +470,22 @@ function ParcelRow({
       </button>
 
       <div className="flex items-center gap-2 shrink-0 ml-3">
+        {parcel.potentie_score != null && (
+          <ScoreBadge
+            score={parcel.potentie_score}
+            type="potentie"
+            size="sm"
+            onClick={() => setScoreModal('potentie')}
+          />
+        )}
+        {parcel.risico_score != null && (
+          <ScoreBadge
+            score={parcel.risico_score}
+            type="risico"
+            size="sm"
+            onClick={() => setScoreModal('risico')}
+          />
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -482,6 +500,17 @@ function ParcelRow({
         </button>
         <PipelineStagePill parcel={parcel} />
       </div>
+
+      <PotentieModal
+        open={scoreModal === 'potentie'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={parcel.parcel_cache_id}
+      />
+      <RisicoModal
+        open={scoreModal === 'risico'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={parcel.parcel_cache_id}
+      />
     </div>
   )
 }

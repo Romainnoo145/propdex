@@ -62,6 +62,7 @@ import { getDocumentDownloadUrl } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
+import { PotentieModal, RisicoModal } from './ScoreDetailModal'
 
 const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx'
 const MAX_VISIBLE_DOCS = 2
@@ -1188,6 +1189,7 @@ export function FavoriteParcelWorkspaceView({
 
   const [showContactModal, setShowContactModal] = useState(false)
   const [editingNotitie, setEditingNotitie] = useState(false)
+  const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
   const [notitieText, setNotitieText] = useState(favorite.notitie ?? '')
   // Sync local state when favorite prop changes (e.g. after query invalidation)
   useEffect(() => {
@@ -1347,12 +1349,14 @@ export function FavoriteParcelWorkspaceView({
                   {(favorite.potentie_score != null || favorite.risico_score != null) && (
                     <>
                       {favorite.potentie_score != null && (
-                        <motion.span
+                        <motion.button
+                          type="button"
+                          onClick={() => setScoreModal('potentie')}
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.15 }}
-                          className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[12px] font-semibold text-emerald-700"
-                          title="Potentie score"
+                          className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-[12px] font-semibold text-emerald-700 cursor-pointer hover:shadow-sm transition-shadow"
+                          title="Potentie score — klik voor details"
                         >
                           <svg viewBox="0 0 12 12" className="size-3">
                             <circle cx="6" cy="6" r="5" fill="none" stroke="#d1fae5" strokeWidth="2" />
@@ -1364,15 +1368,17 @@ export function FavoriteParcelWorkspaceView({
                             />
                           </svg>
                           {Math.round(favorite.potentie_score)}
-                        </motion.span>
+                        </motion.button>
                       )}
                       {favorite.risico_score != null && (
-                        <motion.span
+                        <motion.button
+                          type="button"
+                          onClick={() => setScoreModal('risico')}
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.25 }}
-                          className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 text-[12px] font-semibold text-red-700"
-                          title="Risico score"
+                          className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 text-[12px] font-semibold text-red-700 cursor-pointer hover:shadow-sm transition-shadow"
+                          title="Risico score — klik voor details"
                         >
                           <svg viewBox="0 0 12 12" className="size-3">
                             <circle cx="6" cy="6" r="5" fill="none" stroke="#fee2e2" strokeWidth="2" />
@@ -1384,7 +1390,7 @@ export function FavoriteParcelWorkspaceView({
                             />
                           </svg>
                           {Math.round(favorite.risico_score)}
-                        </motion.span>
+                        </motion.button>
                       )}
                     </>
                   )}
@@ -1695,6 +1701,17 @@ export function FavoriteParcelWorkspaceView({
           }}
         />
       )}
+
+      <PotentieModal
+        open={scoreModal === 'potentie'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={favorite.parcel_cache_id}
+      />
+      <RisicoModal
+        open={scoreModal === 'risico'}
+        onClose={() => setScoreModal(null)}
+        parcelCacheId={favorite.parcel_cache_id}
+      />
     </div>
   )
 }

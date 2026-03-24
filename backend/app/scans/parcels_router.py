@@ -36,6 +36,7 @@ from app.scans.schemas import (
     ParcelCentroidResponse,
     ParcelEnrichmentResponse,
     ParcelRiskProfileResponse,
+    ScanResultItem,
 )
 from app.models.report import SavedReport
 from app.services.bekendmaking_matcher import find_parcel_at_point
@@ -343,6 +344,96 @@ async def enrich_parcel(
             enriched_at=parcel.enriched_at,
             is_cached=False,
         )
+
+
+@router.get("/parcels/{parcel_id}/scan-data", response_model=ScanResultItem)
+@limiter.limit("30/minute")
+async def get_parcel_scan_data(
+    request: Request,
+    parcel_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> ScanResultItem:
+    """
+    Fetch the latest scan result data for a single parcel (by ParcelCache UUID).
+
+    Returns the same ScanResultItem shape as the scan results list, but for
+    one parcel. Used by portfolio workspace to power potentie/risico detail modals.
+    """
+    # Join ScanResult → ParcelCache
+    query = (
+        select(ScanResult, ParcelCache)
+        .join(ParcelCache, ScanResult.parcel_id == ParcelCache.id)
+        .where(ScanResult.parcel_id == parcel_id)
+    )
+    row = (await db.execute(query)).one_or_none()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="No scan data for this parcel")
+
+    result, parcel = row
+
+    flags = result.flags or {}
+    score_breakdown = flags.get("score_breakdown")
+    building_metrics = flags.get("building_metrics") if isinstance(flags.get("building_metrics"), dict) else None
+    opportunity_signals = flags.get("opportunity_signals", [])
+
+    # Vacancy confidence
+    listing_signal = _extract_listing_signal_from_enrichment(parcel.enrichment_data)
+    market_signals = _normalize_market_signals(listing_signal) if listing_signal else None
+    vacancy_confidence = compute_vacancy_confidence(
+        parcel,
+        permit_activity=None,
+        listing_signal=listing_signal,
+    )
+
+    # Score category
+    score = result.score
+    score_category = (
+        "High" if score is not None and score >= 65
+        else "Medium" if score is not None and score >= 40
+        else "Low" if score is not None
+        else None
+    )
+
+    # Potentie / risico subscores from flags.scores
+    potentie_score = None
+    risico_score = None
+    scores = flags.get("scores")
+    if isinstance(scores, dict):
+        potentie_score = scores.get("potentie")
+        risico_score = scores.get("risico")
+
+    # Report existence
+    report_q = select(SavedReport.id).where(
+        SavedReport.source_parcel_id == parcel_id,
+    ).limit(1)
+    has_report = (await db.execute(report_q)).scalar_one_or_none() is not None
+
+    return ScanResultItem(
+        parcel_id=parcel.id,
+        parcel_code=parcel.parcel_id,
+        address=parcel.address if parcel.has_pand else None,
+        gemeente_code=parcel.gemeente_code,
+        area_m2=parcel.area_m2,
+        has_pand=parcel.has_pand,
+        bouwjaar=parcel.bouwjaar,
+        pand_status=parcel.pand_status,
+        bestemmingen=parcel.bestemmingen,
+        score=score,
+        score_category=score_category,
+        score_breakdown=score_breakdown,
+        potentie_score=potentie_score,
+        risico_score=risico_score,
+        vacancy_signal=vacancy_confidence.signal.value if hasattr(vacancy_confidence, "signal") else flags.get("vacancy_signal"),
+        vacancy_confidence=vacancy_confidence.confidence,
+        vacancy_reasons=vacancy_confidence.reasons,
+        vacancy_model_version=vacancy_confidence.model_version,
+        market_signals=market_signals,
+        opportunity_signals=opportunity_signals,
+        building_metrics=building_metrics,
+        has_report=has_report,
+    )
 
 
 @router.get("/parcels/{parcel_id}/risk-profile", response_model=ParcelRiskProfileResponse)

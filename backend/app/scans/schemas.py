@@ -211,6 +211,18 @@ class ScanResultItem(BaseModel):
         default=False,
         description="Whether this parcel already has an active saved report",
     )
+    potentie_score: float | None = Field(
+        default=None,
+        description="Potentie subscore (0-100) from v3.0 scoring model",
+        ge=0,
+        le=100,
+    )
+    risico_score: float | None = Field(
+        default=None,
+        description="Risico subscore (0-100) from v3.0 scoring model",
+        ge=0,
+        le=100,
+    )
 
 
 class ScanResultsResponse(BaseModel):

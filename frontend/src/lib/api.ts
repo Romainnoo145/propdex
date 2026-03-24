@@ -35,6 +35,7 @@ import type {
   ScanResultsResponse,
   ScanResultsFilters,
   ScanListResponse,
+  ScanResultItem,
 } from './types/scan'
 import type {
   ChangeRecord,
@@ -1054,6 +1055,25 @@ export async function fetchParcelRiskProfile(
 ): Promise<ParcelRiskProfileResponse> {
   return apiFetch<ParcelRiskProfileResponse>(
     `${SCANS_BASE}/parcels/${parcelId}/risk-profile`,
+    { method: 'GET', accessToken }
+  )
+}
+
+/**
+ * Fetch the latest scan result data for a single parcel (score breakdown, building metrics, etc.)
+ *
+ * GET /api/scans/parcels/{parcelId}/scan-data
+ *
+ * @param parcelId - ParcelCache UUID
+ * @param accessToken - JWT access token
+ * @returns ScanResultItem with full score breakdown
+ */
+export async function fetchParcelScanData(
+  parcelId: string,
+  accessToken: string | null
+): Promise<ScanResultItem> {
+  return apiFetch<ScanResultItem>(
+    `${SCANS_BASE}/parcels/${parcelId}/scan-data`,
     { method: 'GET', accessToken }
   )
 }
