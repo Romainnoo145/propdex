@@ -5,10 +5,10 @@
  * First section (Locatiegegevens) starts expanded by default.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
-import { SectionShell } from './components/SectionShell'
 import { parseNotes, computeSectionStatuses, EMPTY_STATUSES } from './components/sectionUtils'
 import { useExportPDF, useUpdateNotes } from '@/hooks/useReports'
 import type { SectionKey } from './components/sectionUtils'
@@ -104,6 +104,8 @@ export default function DueDiligenceDashboard({
 
   const notes = parseNotes(rawNotes)
   const sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
+  const [activeSection, setActiveSection] = useState<SectionKey>('locatiegegevens')
+  const [notesOpen, setNotesOpen] = useState(false)
 
   const handleExportPDF = useCallback(() => {
     if (!reportId) return
@@ -172,23 +174,75 @@ export default function DueDiligenceDashboard({
         onExportPDF={handleExportPDF}
       />
 
-      <div className="mt-6 space-y-3">
-        {SECTION_LIST.map((section) => (
-          <SectionShell
-            key={section.key}
-            title={section.title}
-            icon={section.icon}
-            status={sectionStatuses[section.key]}
-            sectionKey={section.key}
-            reportId={reportId ?? null}
-            notes={notes}
-            onNotesChange={handleNotesChange}
-            onExportPDF={handleExportPDF}
-            defaultOpen={section.key === 'locatiegegevens'}
+      {/* Section tabs — horizontal toggle bar */}
+      <div className="mt-6 flex gap-0 overflow-x-auto rounded-full border border-[#EAEFEF] bg-[#F8FAFA] p-1">
+        {SECTION_LIST.map((section) => {
+          const isActive = section.key === activeSection
+          const Icon = section.icon
+          return (
+            <button
+              key={section.key}
+              type="button"
+              onClick={() => setActiveSection(section.key)}
+              className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold transition-colors ${
+                isActive
+                  ? 'bg-[#0E1111] text-white shadow-sm'
+                  : 'text-slate-500 hover:text-[#0E1111]'
+              }`}
+            >
+              <Icon size={14} strokeWidth={1.5} className={isActive ? 'text-[#F9A826]' : ''} />
+              <span className="hidden lg:inline">{section.shortTitle ?? section.title.replace(/^\d+\.\s*/, '')}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Active section content */}
+      <div className="mt-4 rounded-[24px] border border-[#EAEFEF] bg-white p-6">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
           >
-            {renderSectionContent(section.key, data, sourceParcelId)}
-          </SectionShell>
-        ))}
+            {renderSectionContent(activeSection, data, sourceParcelId)}
+
+            {/* Notes + PDF footer */}
+            <div className="mt-6 border-t border-[#EAEFEF] pt-4 flex items-center justify-between">
+              {reportId && (
+                <button
+                  type="button"
+                  onClick={() => setNotesOpen((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[12px] font-semibold text-[#94a3b8] hover:text-[#1A1C1E] transition-colors"
+                >
+                  Notities
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                disabled={exportPDF.isPending}
+                className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              >
+                Download PDF
+              </button>
+            </div>
+
+            {notesOpen && reportId && (
+              <div className="mt-3">
+                <textarea
+                  value={notes[activeSection] ?? ''}
+                  onChange={(e) => handleNotesChange(activeSection, e.target.value)}
+                  placeholder="Voeg notities toe voor deze sectie..."
+                  rows={3}
+                  className="w-full resize-none rounded-[12px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2 text-[13px] text-[#1A1C1E] placeholder-[#94a3b8] outline-none"
+                />
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
     </div>
