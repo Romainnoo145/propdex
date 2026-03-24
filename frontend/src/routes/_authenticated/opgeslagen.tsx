@@ -73,33 +73,13 @@ function buildGroups(favorites: FavoriteResponse[]): GemeenteGroup[] {
   return sorted
 }
 
-/* ── Stage progress ring (mini) ────────────────────────────── */
+/* ── Count badge (amber ring with count) ────────────────────── */
 
-function StageRing({ counts, total }: { counts: Record<PipelineStage, number>; total: number }) {
-  const r = 18
-  const circumference = 2 * Math.PI * r
-  // Show progress as: Afgerond = full, Besluit = 80%, Contact = 60%, Onderzoek = 40%, Gesignaleerd = 20%
-  const progress = total > 0
-    ? (counts.Afgerond * 1 + counts.Besluit * 0.8 + counts.Contact * 0.6 + counts.Onderzoek * 0.4 + counts.Gesignaleerd * 0.2) / total
-    : 0
-
+function CountBadge({ total }: { total: number }) {
   return (
-    <svg viewBox="0 0 44 44" className="h-10 w-10 shrink-0" style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx="22" cy="22" r={r} fill="none" stroke="#f1f5f9" strokeWidth="4" />
-      <motion.circle
-        cx="22"
-        cy="22"
-        r={r}
-        fill="none"
-        stroke="#F9A826"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        initial={{ strokeDashoffset: circumference }}
-        animate={{ strokeDashoffset: circumference - progress * circumference }}
-        transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
-      />
-    </svg>
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-[#F9A826]">
+      <span className="text-[14px] font-bold text-[#0E1111] tabular-nums">{total}</span>
+    </div>
   )
 }
 
@@ -358,7 +338,7 @@ function OpgeslagenPage() {
                       className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <StageRing counts={group.stageCounts} total={group.parcels.length} />
+                        <CountBadge total={group.parcels.length} />
                         <div className="text-left">
                           <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">
                             {group.gemeente_naam}
