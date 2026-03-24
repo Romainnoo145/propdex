@@ -681,24 +681,19 @@ async def get_parcel_at_point(
         .exists()
         .correlate(ParcelCache)
     )
-    # After dedup migration, each parcel has exactly one scan_result per org.
-    # Direct lookup — no need for best-scan subquery workaround.
-    scan_score_subquery = (
-        select(ScanResult.score)
-        .where(
-            ScanResult.parcel_id == ParcelCache.id,
-        )
-        .correlate(ParcelCache)
-        .scalar_subquery()
+    # scan_results still stores the latest row per parcel, so hard-scoping by
+    # scan_id can blank parcel enrichment for older/completed scans. Keep parcel
+    # detail aligned with the shared latest dataset until historical snapshots
+    # are modeled explicitly.
+    scan_score_query = select(ScanResult.score).where(
+        ScanResult.parcel_id == ParcelCache.id,
     )
-    scan_flags_subquery = (
-        select(ScanResult.flags)
-        .where(
-            ScanResult.parcel_id == ParcelCache.id,
-        )
-        .correlate(ParcelCache)
-        .scalar_subquery()
+    scan_flags_query = select(ScanResult.flags).where(
+        ScanResult.parcel_id == ParcelCache.id,
     )
+
+    scan_score_subquery = scan_score_query.correlate(ParcelCache).scalar_subquery()
+    scan_flags_subquery = scan_flags_query.correlate(ParcelCache).scalar_subquery()
 
     pdok_geometry_wgs84: dict | None = None
     pdok_parcel_code: str | None = None

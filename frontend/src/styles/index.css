@@ -8,14 +8,19 @@
   --color-aura-ink: #1A1C1E;             /* Ink -- body text */
   --color-aura-amber: #F9A826;           /* Warm Amber -- intelligence/scores */
   --color-aura-amber-hover: #E8971F;     /* Amber hover state */
+  --color-aura-amber-light: #FDE68A;     /* Amber Light -- lightest amber accent */
+  --color-aura-amber-mid: #FBBF24;       /* Amber Mid -- secondary amber */
+  --color-aura-amber-dark: #D4860B;      /* Amber Dark -- deeper amber for contrast */
+  --color-aura-amber-deep: #92400E;      /* Amber Deep -- darkest amber tone */
   --color-aura-mint: #D1E2D8;            /* Sage Mint -- secondary surfaces */
-  --color-aura-green: #22C55E;           /* Vitality Green -- validation */
+  --color-aura-green: #22C55E;           /* Vitality Green -- validation, positive */
   --color-aura-green-hover: #16A34A;     /* Green hover */
+  --color-aura-red: #EF4444;             /* Signal Red -- errors, negative */
 
   /* Semantic status colors */
-  --color-success: #22C55E;
-  --color-error: #EF4444;
-  --color-warning: #F9A826;
+  --color-success: var(--color-aura-green);
+  --color-error: var(--color-aura-red);
+  --color-warning: var(--color-aura-amber);
   --color-info: #3B82F6;
 
   /* Neutral scale */

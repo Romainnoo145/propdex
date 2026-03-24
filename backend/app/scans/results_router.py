@@ -283,7 +283,6 @@ async def get_scan_tiles(
         z=z,
         x=x,
         y=y,
-
         scan_id=scan_id,
         db=db,
     )
@@ -295,7 +294,11 @@ async def get_scan_tiles(
         content=tile_data,
         media_type="application/vnd.mapbox-vector-tile",
         headers={
-            "Cache-Control": "public, max-age=60",
+            "Cache-Control": (
+                "public, max-age=3600, stale-while-revalidate=86400"
+                if scan.status == "completed"
+                else "public, max-age=60"
+            ),
         },
     )
 

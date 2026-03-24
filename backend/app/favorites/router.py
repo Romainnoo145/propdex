@@ -4,7 +4,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
@@ -18,14 +18,76 @@ from app.favorites.schemas import (
     PortfolioResponse,
     PortfolioWijkGroup,
 )
+from app.models.area_scan import AreaScan
 from app.middleware.rate_limit import limiter
 from app.models.parcel_favorite import ParcelFavorite
+from app.models.parcel_cache import ParcelCache
+from app.models.report import SavedReport
+from app.models.scan_result import ScanResult
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/parcels", tags=["Favorites"])
 portfolio_router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
+
+
+def _normalize_gemeente_code(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    code = value.strip().upper()
+    if not code:
+        return None
+    if code.startswith("GM") and len(code) == 6 and code[2:].isdigit():
+        return code
+    if len(code) == 4 and code.isdigit():
+        return f"GM{code}"
+    return code
+
+
+async def _resolve_favorite_context(
+    db: AsyncSession,
+    parcel_id: str,
+) -> dict[str, str | uuid.UUID | None]:
+    result = await db.execute(
+        select(
+            ParcelCache.id.label("parcel_cache_id"),
+            ParcelCache.address,
+            ParcelCache.gemeente_code,
+            AreaScan.gemeente_naam,
+            AreaScan.wijk_naam,
+        )
+        .select_from(ParcelCache)
+        .outerjoin(ScanResult, ScanResult.parcel_id == ParcelCache.id)
+        .outerjoin(AreaScan, AreaScan.id == ScanResult.scan_id)
+        .where(
+            or_(
+                ParcelCache.parcel_id == parcel_id,
+                ParcelCache.parcel_code == parcel_id,
+            ),
+        )
+        .order_by(AreaScan.created_at.desc().nullslast())
+        .limit(1)
+    )
+    row = result.mappings().first()
+
+    if row is None:
+        return {
+            "parcel_cache_id": None,
+            "address": None,
+            "gemeente_code": None,
+            "gemeente_naam": None,
+            "wijk_naam": None,
+        }
+
+    return {
+        "parcel_cache_id": row["parcel_cache_id"],
+        "address": row["address"],
+        "gemeente_code": _normalize_gemeente_code(row["gemeente_code"]),
+        "gemeente_naam": row["gemeente_naam"],
+        "wijk_naam": row["wijk_naam"],
+    }
 
 
 async def _get_favorite_or_404(
@@ -62,6 +124,9 @@ async def create_favorite(
     Add a parcel to favorites. Idempotent: returns existing favorite with 200 if already present.
     Creates a new favorite with pipeline_stage='Gesignaleerd' and returns 201.
     """
+    normalized_gemeente_code = _normalize_gemeente_code(body.gemeente_code)
+    resolved = await _resolve_favorite_context(db, body.parcel_id)
+
     # Idempotency check
     result = await db.execute(
         select(ParcelFavorite).where(
@@ -71,6 +136,39 @@ async def create_favorite(
     )
     existing = result.scalar_one_or_none()
     if existing:
+        updated = False
+        if existing.parcel_cache_id is None and resolved["parcel_cache_id"] is not None:
+            existing.parcel_cache_id = resolved["parcel_cache_id"]  # type: ignore[assignment]
+            updated = True
+        if existing.gemeente_code is None and normalized_gemeente_code is not None:
+            existing.gemeente_code = normalized_gemeente_code
+            updated = True
+        elif existing.gemeente_code is None and resolved["gemeente_code"] is not None:
+            existing.gemeente_code = resolved["gemeente_code"]  # type: ignore[assignment]
+            updated = True
+        if existing.gemeente_naam is None and body.gemeente_naam:
+            existing.gemeente_naam = body.gemeente_naam
+            updated = True
+        elif existing.gemeente_naam is None and resolved["gemeente_naam"] is not None:
+            existing.gemeente_naam = resolved["gemeente_naam"]  # type: ignore[assignment]
+            updated = True
+        if existing.wijk_naam is None and body.wijk_naam:
+            existing.wijk_naam = body.wijk_naam
+            updated = True
+        elif existing.wijk_naam is None and resolved["wijk_naam"] is not None:
+            existing.wijk_naam = resolved["wijk_naam"]  # type: ignore[assignment]
+            updated = True
+        if existing.address is None and body.address:
+            existing.address = body.address
+            updated = True
+        elif existing.address is None and resolved["address"] is not None:
+            existing.address = resolved["address"]  # type: ignore[assignment]
+            updated = True
+
+        if updated:
+            await db.commit()
+            await db.refresh(existing)
+
         # Return existing with 200 — caller must handle status code branching
         from fastapi.responses import JSONResponse
 
@@ -82,12 +180,12 @@ async def create_favorite(
     # Enrich from parcel_cache + scan_results if frontend didn't provide names
     fav = ParcelFavorite(
         parcel_id=body.parcel_id,
+        parcel_cache_id=resolved["parcel_cache_id"],  # type: ignore[arg-type]
         user_id=current_user.id,
-        organization_id=current_user.organization_id,
-        gemeente_code=body.gemeente_code,
-        gemeente_naam=body.gemeente_naam,
-        wijk_naam=body.wijk_naam,
-        address=body.address,
+        gemeente_code=normalized_gemeente_code or resolved["gemeente_code"],  # type: ignore[arg-type]
+        gemeente_naam=body.gemeente_naam or resolved["gemeente_naam"],  # type: ignore[arg-type]
+        wijk_naam=body.wijk_naam or resolved["wijk_naam"],  # type: ignore[arg-type]
+        address=body.address or resolved["address"],  # type: ignore[arg-type]
         pipeline_stage="Gesignaleerd",
     )
     db.add(fav)
@@ -113,16 +211,59 @@ async def list_favorites(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[FavoriteResponse]:
-    """Return all favorites for the current user."""
-    result = await db.execute(
-        select(ParcelFavorite)
-        .where(
-            ParcelFavorite.user_id == current_user.id,
+    """Return all favorites for the current user, enriched with scan scores."""
+    # Subquery: latest scan scores per parcel_cache_id
+    scores_sq = (
+        select(
+            ScanResult.parcel_id.label("parcel_id"),
+            ScanResult.flags["scores"]["potentie"].as_float().label("potentie_score"),
+            ScanResult.flags["scores"]["risico"].as_float().label("risico_score"),
         )
+        .join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        .where(AreaScan.status == "completed")
+        .distinct(ScanResult.parcel_id)
+        .order_by(ScanResult.parcel_id, ScanResult.created_at.desc())
+        .subquery()
+    )
+
+    # Subquery: latest report per source_parcel_id
+    report_sq = (
+        select(
+            SavedReport.source_parcel_id.label("parcel_id"),
+            SavedReport.id.label("report_id"),
+        )
+        .where(
+            SavedReport.user_id == current_user.id,
+            SavedReport.deleted_at.is_(None),
+            SavedReport.source_parcel_id.isnot(None),
+        )
+        .distinct(SavedReport.source_parcel_id)
+        .order_by(SavedReport.source_parcel_id, SavedReport.created_at.desc())
+        .subquery()
+    )
+
+    result = await db.execute(
+        select(
+            ParcelFavorite,
+            scores_sq.c.potentie_score,
+            scores_sq.c.risico_score,
+            report_sq.c.report_id,
+        )
+        .outerjoin(scores_sq, scores_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
+        .outerjoin(report_sq, report_sq.c.parcel_id == ParcelFavorite.parcel_cache_id)
+        .where(ParcelFavorite.user_id == current_user.id)
         .order_by(ParcelFavorite.created_at.desc())
     )
-    favorites = list(result.scalars().all())
-    return [FavoriteResponse.model_validate(f) for f in favorites]
+    responses: list[FavoriteResponse] = []
+    for row in result.all():
+        fav = row[0]
+        resp = FavoriteResponse.model_validate(fav)
+        resp.potentie_score = round(row[1], 1) if row[1] is not None else None
+        resp.risico_score = round(row[2], 1) if row[2] is not None else None
+        resp.has_report = row[3] is not None
+        resp.report_id = row[3]
+        responses.append(resp)
+    return responses
 
 
 @router.delete(

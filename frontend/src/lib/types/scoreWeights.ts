@@ -181,7 +181,7 @@ export const RISICO_FACTORS: FactorMeta[] = [
 export const DEFAULT_WEIGHTS: ScoreWeightsConfig = {
   preset: 'standaard',
   potentie_risico_balance: 0.7,
-  score_threshold: 60,
+  score_threshold: 50,
   potentie_weights: {
     vrije_grond: 12,
     optoppotentie: 10,
@@ -223,7 +223,7 @@ export const PRESETS: PresetDef[] = [
   {
     id: 'snel_kansen', name: 'Snel kansen', description: 'Nadruk op ontwikkelkansen en vrije ruimte',
     config: {
-      preset: 'snel_kansen', potentie_risico_balance: 0.85, score_threshold: 60,
+      preset: 'snel_kansen', potentie_risico_balance: 0.85, score_threshold: 50,
       potentie_weights: { vrije_grond: 20, optoppotentie: 8, bestemming: 10, leegstand: 13, funda_frictie: 7, perceelgrootte: 16, demografie: 6, vergunning_succeskans: 10 },
       risico_weights: { funderingsrisico: 10, asbest: 4, bodemverontreiniging: 5, monument: 4, bestemmingswijziging: 6, constructieve_staat: 5, juridisch_klimaat: 6, criminaliteit: 4, max_hoogte_bereikt: 3, natura2000: 4, overstromingsrisico: 4, geluid: 3, luchtkwaliteit: 3 },
     },
@@ -231,7 +231,7 @@ export const PRESETS: PresetDef[] = [
   {
     id: 'risico_averse', name: 'Risico-avers', description: 'Due diligence focus — risico zwaarder gewogen',
     config: {
-      preset: 'risico_averse', potentie_risico_balance: 0.5, score_threshold: 60,
+      preset: 'risico_averse', potentie_risico_balance: 0.5, score_threshold: 50,
       potentie_weights: { vrije_grond: 10, optoppotentie: 8, bestemming: 10, leegstand: 6, funda_frictie: 4, perceelgrootte: 10, demografie: 6, vergunning_succeskans: 10 },
       risico_weights: { funderingsrisico: 21, asbest: 8, bodemverontreiniging: 11, monument: 6, bestemmingswijziging: 10, constructieve_staat: 9, juridisch_klimaat: 10, criminaliteit: 7, max_hoogte_bereikt: 6, natura2000: 9, overstromingsrisico: 8, geluid: 8, luchtkwaliteit: 6 },
     },
@@ -239,7 +239,7 @@ export const PRESETS: PresetDef[] = [
   {
     id: 'stedelijke_transformatie', name: 'Stedelijke transformatie', description: 'Optimaal voor herontwikkeling in stedelijk gebied',
     config: {
-      preset: 'stedelijke_transformatie', potentie_risico_balance: 0.65, score_threshold: 60,
+      preset: 'stedelijke_transformatie', potentie_risico_balance: 0.65, score_threshold: 50,
       potentie_weights: { vrije_grond: 10, optoppotentie: 16, bestemming: 16, leegstand: 10, funda_frictie: 6, perceelgrootte: 10, demografie: 8, vergunning_succeskans: 18 },
       risico_weights: { funderingsrisico: 12, asbest: 6, bodemverontreiniging: 8, monument: 7, bestemmingswijziging: 10, constructieve_staat: 8, juridisch_klimaat: 9, criminaliteit: 5, max_hoogte_bereikt: 10, natura2000: 4, overstromingsrisico: 5, geluid: 5, luchtkwaliteit: 4 },
     },

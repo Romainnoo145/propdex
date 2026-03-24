@@ -5,6 +5,7 @@ import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { toast } from 'sonner'
 import type { ScanListItem } from '@/lib/types/scan'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { scanControlsEnabled } from '@/lib/features'
 import { resolveWijkBbox } from '@/lib/geo-utils'
 import { ScanIcon } from './ProjectIcons'
 
@@ -58,37 +59,43 @@ export function WijkScanList({
             Gemeentecode niet gevonden voor dit project. Hernoem naar een gemeentenaam of koppel gemeente_code.
           </p>
         )}
-        <button
-          onClick={() => {
-            if (!gemeenteCode) return
-            triggerScan.mutate(
-              {
-                gemeente_code: gemeenteCode,
-                gemeente_naam: projectName,
-                project_id: projectId,
-                ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
-                ...(wijkBboxWgs84 ? { bbox_wgs84: wijkBboxWgs84 } : {}),
-              },
-              {
-                onSuccess: (scan) => {
-                  if (scan.status === 'existing' && !scan.needs_rescan) {
-                    toast.info('Bestaande scan gevonden, resultaten worden geopend')
-                    navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
-                    return
-                  }
-                  toast.success('Scan gestart voor dit project')
+        {scanControlsEnabled ? (
+          <button
+            onClick={() => {
+              if (!gemeenteCode) return
+              triggerScan.mutate(
+                {
+                  gemeente_code: gemeenteCode,
+                  gemeente_naam: projectName,
+                  project_id: projectId,
+                  ...(wijkNaam ? { wijk_naam: wijkNaam } : {}),
+                  ...(wijkBboxWgs84 ? { bbox_wgs84: wijkBboxWgs84 } : {}),
                 },
-                onError: (error) => {
-                  toast.error(error.message || 'Scan starten mislukt')
-                },
-              }
-            )
-          }}
-          disabled={!gemeenteCode || triggerScan.isPending}
-          className="mt-3 min-h-[36px] rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-aura-ink transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {triggerScan.isPending ? 'Scan starten...' : 'Start scan'}
-        </button>
+                {
+                  onSuccess: (scan) => {
+                    if (scan.status === 'existing' && !scan.needs_rescan) {
+                      toast.info('Bestaande scan gevonden, resultaten worden geopend')
+                      navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+                      return
+                    }
+                    toast.success('Scan gestart voor dit project')
+                  },
+                  onError: (error) => {
+                    toast.error(error.message || 'Scan starten mislukt')
+                  },
+                }
+              )
+            }}
+            disabled={!gemeenteCode || triggerScan.isPending}
+            className="mt-3 min-h-[36px] rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-aura-ink transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {triggerScan.isPending ? 'Scan starten...' : 'Start scan'}
+          </button>
+        ) : (
+          <p className="mt-3 text-xs text-neutral-500">
+            Scans worden intern beheerd en verschijnen hier zodra ze beschikbaar zijn.
+          </p>
+        )}
       </div>
     )
   }

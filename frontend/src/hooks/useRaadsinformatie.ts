@@ -25,16 +25,49 @@ export interface RaadsinformatieResponse {
   total_found: number
 }
 
+function normalizeRaadsinformatieUrl(url: string | null): string | null {
+  if (!url) return null
+
+  const trimmed = url.trim()
+  if (!trimmed) return null
+
+  const duplicatedPrefixMatch = trimmed.match(
+    /^https?:\/\/id\.openraadsinformatie\.nl\/(https?:\/\/.+)$/i
+  )
+  if (duplicatedPrefixMatch?.[1]) {
+    return duplicatedPrefixMatch[1]
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith('/')) {
+    return `https://openraadsinformatie.nl${trimmed}`
+  }
+
+  return `https://id.openraadsinformatie.nl/${trimmed.replace(/^\/+/, '')}`
+}
+
 export function useRaadsinformatie(gemeenteNaam: string | null) {
   const { accessToken } = useAuth()
 
   return useQuery<RaadsinformatieResponse, Error>({
     queryKey: ['raadsinformatie', gemeenteNaam],
-    queryFn: () =>
-      apiFetch<RaadsinformatieResponse>(
+    queryFn: async () => {
+      const response = await apiFetch<RaadsinformatieResponse>(
         `/api/gemeente/${encodeURIComponent(gemeenteNaam!)}/raadsinformatie`,
         { method: 'GET', accessToken },
-      ),
+      )
+
+      return {
+        ...response,
+        stukken: response.stukken.map((stuk) => ({
+          ...stuk,
+          bron_url: normalizeRaadsinformatieUrl(stuk.bron_url),
+        })),
+      }
+    },
     staleTime: 10 * 60 * 1000, // 10 min — data changes infrequently
     enabled: !!accessToken && !!gemeenteNaam,
   })

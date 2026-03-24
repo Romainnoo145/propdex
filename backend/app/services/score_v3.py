@@ -80,6 +80,7 @@ DEFAULT_WEIGHTS: dict[str, Any] = {
         "luchtkwaliteit": 4,
     },
     "potentie_risico_balance": 0.7,
+    "score_threshold": 50,
 }
 
 

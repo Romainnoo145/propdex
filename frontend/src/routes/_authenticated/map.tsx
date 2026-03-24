@@ -91,6 +91,7 @@ import {
   resolveParcelByAddress,
 } from '@/lib/api'
 import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
+import { scanControlsEnabled } from '@/lib/features'
 import { useMapContext } from '@/lib/MapContext'
 import { useMapLayerState } from '@/lib/map/useMapLayerState'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
@@ -228,7 +229,7 @@ function MapPage() {
 
   // Score weights for threshold + tile cache busting after rescore
   const { data: scoreWeightsData } = useOrgScoreWeights()
-  const scoreThreshold = scoreWeightsData?.weights.score_threshold ?? 40
+  const scoreThreshold = scoreWeightsData?.weights.score_threshold ?? 50
   const tileCacheBusterRef = useRef<string>(Date.now().toString())
 
   const [wijkGeojson, setWijkGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
@@ -340,6 +341,8 @@ function MapPage() {
     removeScanAreaHighlight,
     addScanAreaHighlight,
   })
+  const activePanelRef = useRef<ActivePanel | null>(activePanel)
+  activePanelRef.current = activePanel
 
   // Re-center map when parcel panel opens (shift left to keep parcel visible)
   useEffect(() => {
@@ -1214,7 +1217,7 @@ function MapPage() {
     if (scoreLayerPendingRef.current) return
     scoreLayerPendingRef.current = true
 
-    const tileUrl = getScanTileUrl(scanId, forceBust)
+    const tileUrl = getScanTileUrl(scanId, forceBust ?? tileCacheBusterRef.current)
 
     const addLayerSafe = () => {
       if (!map.isStyleLoaded()) {
@@ -1223,9 +1226,9 @@ function MapPage() {
       }
       try {
         if (map.getSource('parcel-scores')) {
-          updateParcelScoreSource(map, tileUrl, 'parcel_scores')
+          updateParcelScoreSource(map, tileUrl, 'parcel_scores', scoreThreshold)
         } else {
-          addParcelScoreLayer(map, tileUrl, 'parcel_scores')
+          addParcelScoreLayer(map, tileUrl, 'parcel_scores', scoreThreshold)
         }
         loadedScoreLayerScanIdRef.current = scanId
         // Add favorite markers layer on top of parcel score layer
@@ -1244,7 +1247,7 @@ function MapPage() {
     }
 
     addLayerSafe()
-  }, [mapRef])
+  }, [mapRef, scoreThreshold])
 
   // Show score layer when scan completes
   useEffect(() => {
@@ -1770,8 +1773,15 @@ function MapPage() {
         return null
       }
 
-      // If clicking same gemeente, do nothing unless forced (URL deep-link flow)
-      if (!options?.force && activeGemeenteRef.current?.code === gemeenteCode) {
+      const sameGemeenteSelected = activeGemeenteRef.current?.code === gemeenteCode
+      const gemeentePanelAlreadyOpen =
+        activePanelRef.current?.kind === 'gemeente' &&
+        activePanelRef.current.code === gemeenteCode
+
+      // If the same gemeente is already open, keep the existing context.
+      // Otherwise reopen the panel so switching out to percelen and back
+      // does not leave the map in a stale "selected but hidden" state.
+      if (!options?.force && sameGemeenteSelected && gemeentePanelAlreadyOpen) {
         return wijkGeojsonRef.current
       }
 
@@ -1866,7 +1876,17 @@ function MapPage() {
           handleParcelsLayerToggle(false)
           setParcelBoundariesVisibility(map, false)
         }
-        // Close any active panel and zoom to NL overview
+
+        // Reset any remembered gemeente/wijk context so the next click
+        // always reopens the detail panel instead of hitting a stale guard.
+        clearGemeenteSelection(map)
+        if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
+          removeWijkBoundariesLayer(map)
+          setWijkGeojson(null)
+        }
+        removeScanAreaHighlight(map)
+        setSelectedArea(null)
+        setActiveGemeente(null)
         setActivePanel(null)
         setParcelGeometryHighlight(null)
         map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
@@ -2363,22 +2383,30 @@ function MapPage() {
                 </svg>
               </a>
             )}
-            {/* Scan button — desktop only */}
-            <div className="hidden md:block">
-              <button
-                onClick={handleScanZone}
-                disabled={triggerScan.isPending || !!activeScanId}
-                className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-aura-obsidian bg-aura-amber hover:bg-aura-amber-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
-              >
-                {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
-              </button>
-            </div>
-            {/* Mobile explanation — scanning requires desktop */}
-            <div className="md:hidden mt-3">
-              <div className="rounded-md bg-aura-amber/10 border border-aura-amber/30 px-3 py-2 text-xs text-aura-amber">
-                Gebruik desktop voor scannen
+            {scanControlsEnabled ? (
+              <>
+                {/* Scan button — desktop only */}
+                <div className="hidden md:block">
+                  <button
+                    onClick={handleScanZone}
+                    disabled={triggerScan.isPending || !!activeScanId}
+                    className="mt-3 w-full py-1.5 px-3 text-xs font-medium text-aura-obsidian bg-aura-amber hover:bg-aura-amber-hover disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  >
+                    {triggerScan.isPending ? 'Scan starten...' : 'Scan dit gebied'}
+                  </button>
+                </div>
+                {/* Mobile explanation — scanning requires desktop */}
+                <div className="md:hidden mt-3">
+                  <div className="rounded-md bg-aura-amber/10 border border-aura-amber/30 px-3 py-2 text-xs text-aura-amber">
+                    Gebruik desktop voor scannen
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-3 rounded-md bg-neutral-100 border border-neutral-200 px-3 py-2 text-xs text-neutral-600">
+                Scans worden intern beheerd. Beschikbare resultaten verschijnen automatisch.
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

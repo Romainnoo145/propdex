@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { fadeUp } from './animations'
 
 interface CompactWijkCardProps {
@@ -45,7 +46,7 @@ export function CompactWijkCard({ name, isScanned, parcelCount, onSelect }: Comp
               cy="8"
               r={r}
               fill="none"
-              stroke="#22c55e"
+              stroke="#F9A826"
               strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={circumference}

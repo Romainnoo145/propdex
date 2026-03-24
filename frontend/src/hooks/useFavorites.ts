@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth/useAuth'
 import { apiFetch } from '@/lib/api'
+import { normalizeGemeenteCode } from '@/lib/geo/normalizers'
 import type { FavoriteResponse, PipelineStage, PortfolioResponse } from '@/lib/types/portfolio'
 import type { ScanResultItem } from '@/lib/types/scan'
 
@@ -83,6 +84,8 @@ export function useToggleFavorite() {
     { previousFavorites: FavoriteResponse[] | undefined }
   >({
     mutationFn: async ({ parcel, isFavorited, gemeenteNaam, wijkNaam }) => {
+      const normalizedGemeenteCode = normalizeGemeenteCode(parcel.gemeente_code)
+
       if (isFavorited) {
         // DELETE — returns 204 No Content (apiFetch returns null for 204)
         await apiFetch<null>(`${FAVORITES_BASE}/${encodeURIComponent(parcel.parcel_code)}`, {
@@ -96,7 +99,7 @@ export function useToggleFavorite() {
           method: 'POST',
           body: JSON.stringify({
             parcel_id: parcel.parcel_code,
-            gemeente_code: parcel.gemeente_code ?? null,
+            gemeente_code: normalizedGemeenteCode,
             gemeente_naam: gemeenteNaam ?? null,
             wijk_naam: wijkNaam ?? null,
             address: parcel.address ?? null,
@@ -107,6 +110,8 @@ export function useToggleFavorite() {
     },
 
     onMutate: async ({ parcel, isFavorited, gemeenteNaam, wijkNaam }) => {
+      const normalizedGemeenteCode = normalizeGemeenteCode(parcel.gemeente_code)
+
       // Cancel any in-flight refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ['favorites'] })
 
@@ -124,14 +129,19 @@ export function useToggleFavorite() {
           const optimisticEntry: FavoriteResponse = {
             id: `optimistic-${parcel.parcel_code}`,
             parcel_id: parcel.parcel_code,
+            parcel_cache_id: parcel.parcel_id,
             user_id: '',
-            gemeente_code: parcel.gemeente_code ?? null,
+            gemeente_code: normalizedGemeenteCode,
             gemeente_naam: gemeenteNaam ?? null,
             wijk_naam: wijkNaam ?? null,
             address: parcel.address ?? null,
             pipeline_stage: 'Gesignaleerd',
             afgerond_reden: null,
             notitie: null,
+            potentie_score: parcel.potentie_score ?? null,
+            risico_score: parcel.risico_score ?? null,
+            has_report: false,
+            report_id: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }

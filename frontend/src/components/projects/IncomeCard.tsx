@@ -27,8 +27,8 @@ function deriveWozRatio(
 ): { ratio: number; label: string; color: string } | null {
   if (wozWaarde == null || gemPerOntvanger == null || gemPerOntvanger === 0) return null
   const ratio = (wozWaarde * 1000) / gemPerOntvanger
-  if (ratio > 8) return { ratio, label: 'Hoge marktdruk', color: 'text-orange-400' }
-  if (ratio < 5) return { ratio, label: 'Betaalbaar', color: 'text-green-400' }
+  if (ratio > 8) return { ratio, label: 'Hoge marktdruk', color: 'text-amber-700' }
+  if (ratio < 5) return { ratio, label: 'Betaalbaar', color: 'text-amber-500' }
   return { ratio, label: 'Gemiddeld', color: 'text-neutral-700' }
 }
 
@@ -66,6 +66,11 @@ export function IncomeCard({ inkomen, wozWaarde }: IncomeCardProps) {
         <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
           Inkomen & Vermogen
         </span>
+        {inkomen.peiljaar && (
+          <span className="ml-auto text-xs text-neutral-500">
+            CBS {inkomen.peiljaar}
+          </span>
+        )}
       </div>
 
       {/* Body */}

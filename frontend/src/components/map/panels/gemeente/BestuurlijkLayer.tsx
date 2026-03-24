@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import {
   ScrollText,
   Landmark,
@@ -55,7 +56,7 @@ function deriveVerdict(
     return {
       score: null,
       label: 'GEEN DATA',
-      color: '#94a3b8',
+      color: SLATE_MUTED,
       Icon: ShieldQuestion,
       subtitle: 'Regelgeving-informatie wordt opgehaald',
     }
@@ -66,7 +67,7 @@ function deriveVerdict(
     return {
       score,
       label: 'EXTRA REGELGEVING',
-      color: '#F9A826',
+      color: AMBER.base,
       Icon: ScrollText,
       subtitle: 'Splitsingsverordening en erfgoed aanwezig — let op extra eisen',
     }
@@ -75,7 +76,7 @@ function deriveVerdict(
     return {
       score,
       label: 'SPLITSINGSVERORDENING',
-      color: '#F9A826',
+      color: AMBER.base,
       Icon: ScrollText,
       subtitle: 'Regels voor woningsplitsing en kamerverhuur actief',
     }
@@ -84,7 +85,7 @@ function deriveVerdict(
     return {
       score,
       label: 'ERFGOED AANWEZIG',
-      color: '#F9A826',
+      color: AMBER.base,
       Icon: Landmark,
       subtitle: `${erfgoedCount} beschermd${erfgoedCount > 1 ? 'e' : ''} gezicht${erfgoedCount > 1 ? 'en' : ''} — strengere welstandseisen`,
     }
@@ -92,7 +93,7 @@ function deriveVerdict(
   return {
     score,
     label: 'STANDAARD KADER',
-    color: '#22c55e',
+    color: AMBER.base,
     Icon: ShieldCheck,
     subtitle: 'Geen extra verordeningen — standaard vergunningstraject',
   }
@@ -145,7 +146,7 @@ function HvvCard({ heeftVerordening, title, url }: {
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
               style={{
-                color: active ? '#F9A826' : '#94a3b8',
+                color: active ? AMBER.base : SLATE_MUTED,
                 backgroundColor: active ? 'rgba(249, 168, 38, 0.1)' : '#f8fafc',
               }}
             >
@@ -201,7 +202,7 @@ function ErfgoedGezichtCard({ gezicht }: { gezicht: BeschermdGezichtResponse }) 
             <span
               className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
               style={{
-                color: isStad ? '#F9A826' : '#0E1111',
+                color: isStad ? AMBER.base : OBSIDIAN,
                 backgroundColor: isStad ? 'rgba(249, 168, 38, 0.1)' : 'rgba(14, 17, 17, 0.06)',
               }}
             >
@@ -322,7 +323,7 @@ export function BestuurlijkLayer({ gemeenteNaam }: BestuurlijkLayerProps) {
           label="Beschermd erfgoed"
         >
           {erfgoedData?.total != null && erfgoedData.total > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums" style={{ color: '#F9A826', backgroundColor: 'rgba(249, 168, 38, 0.1)' }}>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums" style={{ color: AMBER.base, backgroundColor: 'rgba(249, 168, 38, 0.1)' }}>
               {erfgoedData.total}
             </span>
           )}

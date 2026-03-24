@@ -870,15 +870,17 @@
         4.1 Bodemkwaliteit
       </h4>
       {% if report_data.get('bodem_flags') %}
+        {% set bf = report_data.get('bodem_flags') %}
         <table class="kv-table">
           <tr>
             <td class="kv-label">Kwaliteitsklasse</td>
-            <td class="kv-value">{{ report_data.get('bodem_flags') }}</td>
+            <td class="kv-value">{% if bf is mapping %}{{ bf.get('kwaliteitsklasse', bf.get('bodemkwaliteit', bf)) }}{% else %}{{ bf }}{% endif %}</td>
           </tr>
           {% if report_data.get('bodemtype_flags') %}
+          {% set bt = report_data.get('bodemtype_flags') %}
           <tr>
             <td class="kv-label">Bodemtype</td>
-            <td class="kv-value">{{ report_data.get('bodemtype_flags') }}</td>
+            <td class="kv-value">{% if bt is mapping %}{{ bt.get('dominant_soiltype', bt.get('description', bt)) }}{% else %}{{ bt }}{% endif %}</td>
           </tr>
           {% endif %}
         </table>
@@ -1318,7 +1320,7 @@
     {% if report_data.get('vergunningen_data') %}
       {% set vergunningen = report_data.get('vergunningen_data') %}
       {% if vergunningen is mapping %}
-        {% set bekendmakingen = vergunningen.get('bekendmakingen', vergunningen.get('items', [])) %}
+        {% set bekendmakingen = vergunningen.get('records', vergunningen.get('bekendmakingen', vergunningen.get('items', []))) %}
       {% else %}
         {% set bekendmakingen = vergunningen %}
       {% endif %}

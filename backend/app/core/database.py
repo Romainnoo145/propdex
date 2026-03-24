@@ -35,15 +35,19 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency that provides database session with RLS context.
 
-    Extracts organization_id from request.state (set by TenantContextMiddleware)
-    and sets PostgreSQL session variable for RLS policies.
+    Extracts organization_id and user_id from request.state (set by
+    TenantContextMiddleware) and sets PostgreSQL session variables for RLS
+    policies.
 
     For authenticated requests: SET LOCAL app.current_tenant_id = org_id
-    For unauthenticated requests: session variable is NOT set, RLS denies access (fail-closed)
+    and SET LOCAL app.current_user_id = user_id.
+    For unauthenticated requests: session variables are NOT set, RLS denies
+    access (fail-closed)
     """
     async with async_session_factory() as session:
-        # Get organization_id from middleware (if authenticated request)
+        # Get request-scoped auth context from middleware (if authenticated request)
         org_id = getattr(request.state, "organization_id", None)
+        user_id = getattr(request.state, "user_id", None)
 
         if org_id:
             # Set session variable for RLS policies (transaction-scoped via SET LOCAL)
@@ -53,6 +57,12 @@ async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
             safe_org_id = str(org_id)
             await session.execute(
                 text(f"SET LOCAL app.current_tenant_id = '{safe_org_id}'"),
+            )
+
+        if user_id:
+            safe_user_id = str(user_id)
+            await session.execute(
+                text(f"SET LOCAL app.current_user_id = '{safe_user_id}'"),
             )
 
         try:

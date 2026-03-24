@@ -10,6 +10,8 @@ export const PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID = 'parcel-vacancy-signal-fill';
 export const PARCEL_BUILD_CAPACITY_FILL_LAYER_ID = 'parcel-build-capacity-fill';
 export const PARCEL_FOUNDATION_RISK_FILL_LAYER_ID = 'parcel-foundation-risk-fill';
 
+const DEFAULT_SCORE_THRESHOLD = 50;
+
 
 // Track hovered parcel for feature-state management
 let hoveredScoreParcelId: string | number | null = null;
@@ -34,7 +36,8 @@ let selectedScoreParcelId: string | number | null = null;
 export function addParcelScoreLayer(
   map: maplibregl.Map,
   tileUrl: string,
-  sourceLayer: string
+  sourceLayer: string,
+  threshold: number = DEFAULT_SCORE_THRESHOLD
 ): void {
   // Guard: Don't re-add if already exists
   if (map.getSource(SOURCE_ID)) {
@@ -56,25 +59,25 @@ export function addParcelScoreLayer(
     type: 'fill',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]], // Only parcels above threshold
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], threshold]],
     paint: {
       'fill-color': [
         'interpolate',
         ['linear'],
         ['get', 'score'],
-        40,  '#f59e0b', // Amber — borderline opportunity
-        60,  '#eab308', // Strong amber — solid opportunity
-        75,  '#84cc16', // Lime — good opportunity
-        90,  '#22c55e', // Green — strong opportunity
+        threshold, '#f59e0b', // Amber — first visible opportunity threshold
+        60,        '#eab308', // Strong amber — solid opportunity
+        75,        '#84cc16', // Lime — good opportunity
+        90,        '#22c55e', // Green — strong opportunity
         100, '#16a34a', // Dark green — highest
       ],
       'fill-opacity': [
         'interpolate',
         ['linear'],
         ['get', 'score'],
-        40, 0.25,  // Subtle at threshold
-        60, 0.45,  // Medium
-        80, 0.6,   // Strong
+        threshold, 0.25, // Subtle at threshold
+        60,        0.45, // Medium
+        80,        0.6,  // Strong
         100, 0.7,  // Brightest
       ],
     },
@@ -249,13 +252,13 @@ export function addParcelScoreLayer(
     minzoom: 14,
   });
 
-  // Add outline layer only for qualifying parcels (score >= 40)
+  // Add outline layer only for qualifying parcels (score >= threshold)
   map.addLayer({
     id: OUTLINE_LAYER_ID,
     type: 'line',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], threshold]],
     paint: {
       'line-color': '#f59e0b', // Amber outline for highlighted parcels
       'line-width': 1.2,
@@ -270,7 +273,7 @@ export function addParcelScoreLayer(
     type: 'line',
     source: SOURCE_ID,
     'source-layer': sourceLayer,
-    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], 40]],
+    filter: ['all', ['has', 'score'], ['>=', ['get', 'score'], threshold]],
     paint: {
       'line-color': '#ffffff',
       'line-width': [
@@ -590,13 +593,14 @@ export function setParcelFoundationRiskVisibility(
 export function updateParcelScoreSource(
   map: maplibregl.Map,
   tileUrl: string,
-  sourceLayer: string
+  sourceLayer: string,
+  threshold: number = DEFAULT_SCORE_THRESHOLD
 ): void {
   // Remove existing implementation
   removeParcelScoreLayer(map);
 
   // Re-add with new URL
-  addParcelScoreLayer(map, tileUrl, sourceLayer);
+  addParcelScoreLayer(map, tileUrl, sourceLayer, threshold);
 }
 
 /**
@@ -607,10 +611,21 @@ export function updateScoreThreshold(
   map: maplibregl.Map,
   threshold: number
 ): void {
-  if (!map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) return;
-  map.setFilter(PARCEL_SCORE_FILL_LAYER_ID, [
+  const thresholdFilter: maplibregl.FilterSpecification = [
     'all',
     ['has', 'score'],
     ['>=', ['get', 'score'], threshold],
-  ]);
+  ];
+
+  if (map.getLayer(PARCEL_SCORE_FILL_LAYER_ID)) {
+    map.setFilter(PARCEL_SCORE_FILL_LAYER_ID, thresholdFilter);
+  }
+
+  if (map.getLayer(OUTLINE_LAYER_ID)) {
+    map.setFilter(OUTLINE_LAYER_ID, thresholdFilter);
+  }
+
+  if (map.getLayer(SELECTED_OUTLINE_LAYER_ID)) {
+    map.setFilter(SELECTED_OUTLINE_LAYER_ID, thresholdFilter);
+  }
 }

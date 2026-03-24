@@ -25,8 +25,8 @@ function deriveVergrijzing(lv: CbsLeeftijdsVerdeling): {
   const young = (lv.perc_0_14 ?? 0) + (lv.perc_15_24 ?? 0)
   const ratio = lv.perc_65_plus / (young || 1)
 
-  if (ratio > 1.5) return { label: 'Vergrijzend', color: 'text-orange-400', arrow: '\u2191' }
-  if (ratio < 0.6) return { label: 'Verjongend', color: 'text-green-400', arrow: '\u2193' }
+  if (ratio > 1.5) return { label: 'Vergrijzend', color: 'text-amber-700', arrow: '\u2191' }
+  if (ratio < 0.6) return { label: 'Verjongend', color: 'text-amber-500', arrow: '\u2193' }
   return { label: 'Stabiel', color: 'text-neutral-600', arrow: '\u2194' }
 }
 

@@ -33,7 +33,10 @@ interface UseMapPanelsParams {
   } | null) => void
   removeWijkBoundariesLayer: (map: MaplibreMap) => void
   removeScanAreaHighlight: (map: MaplibreMap) => void
-  addScanAreaHighlight: (map: MaplibreMap, geom: GeoJSON.Geometry) => void
+  addScanAreaHighlight: (
+    map: MaplibreMap,
+    geom: GeoJSON.Polygon | GeoJSON.MultiPolygon
+  ) => void
 }
 
 export function useMapPanels({

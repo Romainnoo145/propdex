@@ -115,7 +115,8 @@ def upgrade() -> None:
     """)
 
     # ── change_records ────────────────────────────────────────────────
-    # No existing RLS policy to drop
+    # Older local databases may still have the tenant policy from prior RLS rollout.
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_change_records ON change_records")
 
     # Drop TenantMixin auto-index
     op.drop_index("ix_change_records_organization_id", table_name="change_records")

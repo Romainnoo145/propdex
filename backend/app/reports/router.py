@@ -175,7 +175,6 @@ async def save_report(
             notes=report_request.notes,
             project_id=report_request.project_id,
             user_id=current_user.id,
-            organization_id=current_user.organization_id,
             session=db,
             return_status=True,
         )
@@ -253,7 +252,6 @@ async def list_reports(
 
         reports, total = await service.list_reports(
             user_id=current_user.id,
-            organization_id=current_user.organization_id,
             city=city,
             project_id=project_id,
             search_query=search,
@@ -357,7 +355,6 @@ async def generate_report_from_address(
             property_data = await aggregate_property_data(
                 input_data=address_input,
                 client=request.app.state.http_client,
-                organization_id=current_user.organization_id,
                 session=db,
                 force_refresh=False,
                 arq_pool=request.app.state.arq_pool,
@@ -546,7 +543,6 @@ async def generate_report_from_parcel(
             property_data = await aggregate_property_data(
                 input_data=address_input,
                 client=request.app.state.http_client,
-                organization_id=current_user.organization_id,
                 session=db,
                 force_refresh=False,
                 arq_pool=request.app.state.arq_pool,
@@ -681,7 +677,6 @@ async def get_report(
                     fresh = await aggregate_property_data(
                         input_data=address_input,
                         client=request.app.state.http_client,
-                        organization_id=current_user.organization_id,
                         session=db,
                         force_refresh=False,
                         arq_pool=request.app.state.arq_pool,

@@ -1,5 +1,8 @@
 """Application configuration using pydantic-settings."""
 
+from pathlib import Path
+from urllib.parse import urlparse
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,7 +31,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(__file__).resolve().parents[2] / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -45,6 +48,10 @@ class Settings(BaseSettings):
     )
 
     # JWT Configuration
+    ENVIRONMENT: str = Field(
+        default="development",
+        description="Application environment name (development, staging, production)",
+    )
     SECRET_KEY: str = Field(
         default="CHANGE_ME_IN_PRODUCTION",
         description="Secret key for JWT token signing (MUST be changed in production)",
@@ -102,6 +109,22 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = Field(
         default="http://localhost:9300",
         description="Allowed CORS origins (comma-separated in env)",
+    )
+    COOKIE_SECURE: bool | None = Field(
+        default=None,
+        description="Override refresh cookie secure flag. Defaults to HTTPS-aware auto-detection.",
+    )
+    COOKIE_SAMESITE: str = Field(
+        default="lax",
+        description="Refresh cookie SameSite policy (lax, strict, none)",
+    )
+    COOKIE_DOMAIN: str = Field(
+        default="",
+        description="Optional cookie domain for auth refresh cookies",
+    )
+    AUTH_COOKIE_PATH: str = Field(
+        default="/api/auth",
+        description="Path scope for auth refresh cookies",
     )
 
     # Freshness Configuration
@@ -186,7 +209,34 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS string into a list."""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def cookie_secure(self) -> bool:
+        """Resolve secure-cookie behavior from env override or frontend URL."""
+        if self.COOKIE_SECURE is not None:
+            return self.COOKIE_SECURE
+        return urlparse(self.FRONTEND_URL).scheme == "https"
+
+    @property
+    def cookie_samesite(self) -> str:
+        """Normalize SameSite value to a safe allowed option."""
+        value = self.COOKIE_SAMESITE.strip().lower()
+        if value not in {"lax", "strict", "none"}:
+            return "lax"
+        return value
+
+    @property
+    def cookie_domain(self) -> str | None:
+        """Return optional cookie domain if configured."""
+        value = self.COOKIE_DOMAIN.strip()
+        return value or None
+
+    @property
+    def auth_cookie_path(self) -> str:
+        """Return a normalized auth cookie path."""
+        path = self.AUTH_COOKIE_PATH.strip() or "/api/auth"
+        return path if path.startswith("/") else f"/{path}"
 
     @property
     def migration_database_url(self) -> str:

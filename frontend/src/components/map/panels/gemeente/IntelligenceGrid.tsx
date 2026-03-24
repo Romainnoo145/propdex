@@ -7,10 +7,14 @@ export interface IntelCard {
   label: string
   value: string
   sub: string
-  /** Optional accent for the pts badge (e.g. "#22c55e" for green) */
+  /** Optional accent for the pts badge (e.g. "#F9A826" for amber) */
   accentColor?: string
   /** Badge text (e.g. "+2.4", "JA", "—") */
   badge?: string
+  /** Score points for this card (shown as pill) */
+  scorePts?: number | null
+  /** Whether points are positive (potentie) or negative (risico) */
+  scorePositive?: boolean
   onClick?: () => void
 }
 
@@ -95,6 +99,14 @@ export function IntelligenceGrid({ cards, perPage = 9, page = 0, onPageChange }:
 function IntelCardComponent({ card }: { card: IntelCard }) {
   const interactive = !!card.onClick
 
+  // Determine pill display: scorePts takes priority over badge
+  const showScorePill = card.scorePts != null && card.scorePts > 0
+  const pillColor = showScorePill
+    ? card.scorePositive
+      ? 'text-amber-700 bg-amber-100'
+      : 'text-slate-500 bg-slate-100'
+    : undefined
+
   return (
     <motion.div
       variants={fadeUp}
@@ -109,12 +121,16 @@ function IntelCardComponent({ card }: { card: IntelCard }) {
       whileTap={interactive ? { scale: 0.98 } : undefined}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
-      {/* Top: label + badge */}
+      {/* Top: label + score pill or badge */}
       <div className="flex justify-between items-start gap-1">
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-tight truncate">
           {card.label}
         </span>
-        {card.badge != null && (
+        {showScorePill ? (
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${pillColor}`}>
+            +{card.scorePts}
+          </span>
+        ) : card.badge != null ? (
           <span
             className="px-2 py-0.5 rounded-full text-[10px] font-black shrink-0"
             style={{
@@ -124,7 +140,7 @@ function IntelCardComponent({ card }: { card: IntelCard }) {
           >
             {card.badge}
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Middle: value */}

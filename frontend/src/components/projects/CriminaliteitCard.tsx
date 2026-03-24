@@ -47,7 +47,7 @@ const CATEGORIES: {
 
 /**
  * Severity level based on crime rate per 1000 inhabitants.
- * Thresholds based on Dutch national averages (~50 per 1000).
+ * Amber palette — lighter = safer, darker = higher crime.
  */
 function severity(per1000: number | null): {
   color: string
@@ -55,10 +55,12 @@ function severity(per1000: number | null): {
   label: string
 } {
   if (per1000 == null) return { color: 'text-neutral-500', bg: 'bg-neutral-300', label: 'Onbekend' }
-  if (per1000 < 30) return { color: 'text-green-400', bg: 'bg-green-400/15', label: 'Laag' }
-  if (per1000 <= 60) return { color: 'text-amber-400', bg: 'bg-amber-400/15', label: 'Gemiddeld' }
-  if (per1000 <= 100) return { color: 'text-orange-400', bg: 'bg-orange-400/15', label: 'Hoog' }
-  return { color: 'text-red-400', bg: 'bg-red-400/15', label: 'Zeer hoog' }
+  if (per1000 < 25) return { color: 'text-amber-400', bg: 'bg-amber-100', label: 'Zeer veilig' }
+  if (per1000 < 50) return { color: 'text-amber-500', bg: 'bg-amber-100', label: 'Veilig' }
+  if (per1000 <= 80) return { color: 'text-aura-amber', bg: 'bg-amber-100', label: 'Gemiddeld' }
+  if (per1000 <= 150) return { color: 'text-amber-600', bg: 'bg-amber-200/60', label: 'Verhoogd' }
+  if (per1000 <= 250) return { color: 'text-amber-700', bg: 'bg-amber-200/60', label: 'Onveilig' }
+  return { color: 'text-amber-900', bg: 'bg-amber-200/60', label: 'Risicogebied' }
 }
 
 /** Bar width as percentage relative to max category rate */
@@ -93,7 +95,7 @@ export function CriminaliteitCard({ criminaliteit }: CriminaliteitCardProps) {
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
         <span className="text-xs font-medium uppercase tracking-wide text-aura-amber/70">
-          Criminaliteit
+          Veiligheid & Leefbaarheid
         </span>
         <span className="ml-auto rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-500">
           {criminaliteit.peiljaar}

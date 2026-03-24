@@ -65,6 +65,7 @@ def upgrade() -> None:
 
     # Drop TenantMixin auto-index and org_id column
     op.drop_index("ix_saved_reports_organization_id", table_name="saved_reports")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_saved_reports ON saved_reports")
     op.drop_column("saved_reports", "organization_id")
 
     # Create new user-based indexes
@@ -91,6 +92,7 @@ def upgrade() -> None:
     op.drop_index("ix_parcel_favorites_org_user", table_name="parcel_favorites")
     op.drop_index("ix_parcel_favorites_org_gemeente", table_name="parcel_favorites")
     op.drop_index("ix_parcel_favorites_organization_id", table_name="parcel_favorites")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_parcel_favorites ON parcel_favorites")
     op.drop_column("parcel_favorites", "organization_id")
 
     # Create new user-based constraints and indexes
@@ -99,7 +101,6 @@ def upgrade() -> None:
     op.create_index("ix_parcel_favorites_user_gemeente", "parcel_favorites", ["user_id", "gemeente_code"])
 
     # RLS: user-scoped
-    op.execute("DROP POLICY IF EXISTS tenant_isolation_parcel_favorites ON parcel_favorites")
     op.execute("""
         CREATE POLICY user_scope_parcel_favorites ON parcel_favorites
             FOR ALL USING (user_id::text = current_setting('app.current_user_id', TRUE))
@@ -110,6 +111,7 @@ def upgrade() -> None:
     op.drop_index("ix_parcel_documents_org_parcel", table_name="parcel_documents")
     op.drop_index("ix_parcel_documents_org_parcel_type", table_name="parcel_documents")
     op.drop_index("ix_parcel_documents_organization_id", table_name="parcel_documents")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_parcel_documents ON parcel_documents")
 
     # Make uploaded_by_user_id NOT NULL (was nullable)
     op.execute("UPDATE parcel_documents SET uploaded_by_user_id = (SELECT id FROM users LIMIT 1) WHERE uploaded_by_user_id IS NULL")
@@ -122,8 +124,8 @@ def upgrade() -> None:
     op.create_index("ix_parcel_documents_user_parcel_type", "parcel_documents", ["uploaded_by_user_id", "parcel_id", "document_type"])
 
     # RLS: user-scoped
+    op.execute("ALTER TABLE parcel_documents ENABLE ROW LEVEL SECURITY")
     op.execute("""
-        ALTER TABLE parcel_documents ENABLE ROW LEVEL SECURITY;
         CREATE POLICY user_scope_parcel_documents ON parcel_documents
             FOR ALL USING (uploaded_by_user_id::text = current_setting('app.current_user_id', TRUE))
     """)
@@ -132,6 +134,7 @@ def upgrade() -> None:
     op.drop_index("ix_generated_dossiers_org_report", table_name="generated_dossiers")
     op.drop_index("ix_generated_dossiers_org_created", table_name="generated_dossiers")
     op.drop_index("ix_generated_dossiers_organization_id", table_name="generated_dossiers")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_generated_dossiers ON generated_dossiers")
 
     # Make generated_by_user_id NOT NULL (was nullable)
     op.execute("UPDATE generated_dossiers SET generated_by_user_id = (SELECT id FROM users LIMIT 1) WHERE generated_by_user_id IS NULL")
@@ -143,30 +146,32 @@ def upgrade() -> None:
     op.create_index("ix_generated_dossiers_user_created", "generated_dossiers", ["generated_by_user_id", "created_at"])
 
     # RLS: user-scoped
+    op.execute("ALTER TABLE generated_dossiers ENABLE ROW LEVEL SECURITY")
     op.execute("""
-        ALTER TABLE generated_dossiers ENABLE ROW LEVEL SECURITY;
         CREATE POLICY user_scope_generated_dossiers ON generated_dossiers
             FOR ALL USING (generated_by_user_id::text = current_setting('app.current_user_id', TRUE))
     """)
 
     # ── change_read_states ────────────────────────────────────────────
     op.drop_index("ix_change_read_states_organization_id", table_name="change_read_states")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_change_read_states ON change_read_states")
     op.drop_column("change_read_states", "organization_id")
 
     # RLS: user-scoped (constraints already use user_id)
+    op.execute("ALTER TABLE change_read_states ENABLE ROW LEVEL SECURITY")
     op.execute("""
-        ALTER TABLE change_read_states ENABLE ROW LEVEL SECURITY;
         CREATE POLICY user_scope_change_read_states ON change_read_states
             FOR ALL USING (user_id::text = current_setting('app.current_user_id', TRUE))
     """)
 
     # ── user_notification_states ──────────────────────────────────────
     op.drop_index("ix_user_notification_states_organization_id", table_name="user_notification_states")
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_user_notification_states ON user_notification_states")
     op.drop_column("user_notification_states", "organization_id")
 
     # RLS: user-scoped (constraints already use user_id)
+    op.execute("ALTER TABLE user_notification_states ENABLE ROW LEVEL SECURITY")
     op.execute("""
-        ALTER TABLE user_notification_states ENABLE ROW LEVEL SECURITY;
         CREATE POLICY user_scope_user_notification_states ON user_notification_states
             FOR ALL USING (user_id::text = current_setting('app.current_user_id', TRUE))
     """)

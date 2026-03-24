@@ -25,6 +25,8 @@ export interface FavoriteResponse {
   id: string
   /** Kadaster parcel identifier (e.g. "HTT02-A-1234") — NOT ParcelCache UUID */
   parcel_id: string
+  /** ParcelCache UUID — nullable, needed for report generation */
+  parcel_cache_id: string | null
   /** User UUID */
   user_id: string
   /** CBS gemeentecode — nullable */
@@ -41,6 +43,14 @@ export interface FavoriteResponse {
   afgerond_reden: string | null
   /** Free-text note */
   notitie: string | null
+  /** Score v3 potentie (0-100), null if no scan */
+  potentie_score: number | null
+  /** Score v3 risico (0-100), null if no scan */
+  risico_score: number | null
+  /** Whether a generated report exists for this parcel */
+  has_report: boolean
+  /** Report UUID if exists */
+  report_id: string | null
   /** Creation timestamp (ISO 8601 string) */
   created_at: string
   /** Last update timestamp (ISO 8601 string) */

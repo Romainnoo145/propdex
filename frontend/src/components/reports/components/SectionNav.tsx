@@ -8,6 +8,7 @@
 import { motion } from 'framer-motion'
 import { MapPin, Gavel, LandPlot, ShieldAlert, BarChart3, ScrollText, Database } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { SectionStatusDot } from './SectionStatusBadge'
 import type { SectionStatus } from './SectionStatusBadge'
 
@@ -50,7 +51,7 @@ export function SectionNav({ activeSection, onSelect, sectionStatuses }: Section
             onClick={() => onSelect(key)}
             className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-[14px] transition-colors text-left w-full"
             style={{
-              color: isActive ? '#0E1111' : '#94a3b8',
+              color: isActive ? OBSIDIAN : SLATE_MUTED,
             }}
           >
             {isActive && (
@@ -70,7 +71,7 @@ export function SectionNav({ activeSection, onSelect, sectionStatuses }: Section
               className="relative z-10 flex-1 text-[12px] font-semibold tracking-wide leading-tight"
               style={{
                 fontWeight: isActive ? 700 : 600,
-                color: isActive ? '#1A1C1E' : '#94a3b8',
+                color: isActive ? '#1A1C1E' : SLATE_MUTED,
               }}
             >
               {label}

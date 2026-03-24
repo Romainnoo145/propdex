@@ -3,13 +3,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { Bell } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
 import {
-  useInfiniteAllChanges,
+  useGemeenteMonitoringState,
+  useInfiniteProjectChanges,
   useMarkAllRead,
-  useUnreadCounts,
 } from '@/hooks/useNotifications'
 import { useReadTracking } from '@/hooks/useReadTracking'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { formatRelativeTime } from '@/lib/utils/date'
 import { toMapParcelSearch, toMapAddressSearch } from '@/lib/navigation/mapSearch'
@@ -38,20 +39,22 @@ function formatDateLabel(dateKey: string): string {
   })
 }
 
-export function MeldingenModal({ gemeenteNaam, onClose }: MeldingenModalProps) {
+export function MeldingenModal({ gemeenteNaam, gemeenteCode, onClose }: MeldingenModalProps) {
   const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { projectId, unreadCount: totalUnread } = useGemeenteMonitoringState(gemeenteCode)
 
   const {
     data,
     isLoading,
+    isError,
+    error,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteAllChanges(true, gemeenteNaam)
-
-  const { data: unreadData } = useUnreadCounts()
-  const markAllRead = useMarkAllRead()
+  } = useInfiniteProjectChanges(projectId, false)
+  const markAllRead = useMarkAllRead(projectId ?? undefined)
 
   const allChanges = useMemo(
     () => data?.pages.flatMap((p) => p.changes) ?? [],
@@ -127,12 +130,10 @@ export function MeldingenModal({ gemeenteNaam, onClose }: MeldingenModalProps) {
     }
   }
 
-  const totalUnread = unreadData?.total_unread ?? 0
-
   return (
     <GemeenteModal title={`Meldingen · ${gemeenteNaam}`} onClose={onClose}>
       {/* Actions bar */}
-      {totalUnread > 0 && (
+      {totalUnread > 0 && projectId && (
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-200">
           <span className="text-sm text-neutral-600">
             {totalUnread} ongelezen
@@ -162,8 +163,28 @@ export function MeldingenModal({ gemeenteNaam, onClose }: MeldingenModalProps) {
         </div>
       )}
 
+      {!isLoading && !projectId && (
+        <EmptyState
+          icon={<Bell size={32} />}
+          title="Monitoring niet beschikbaar"
+          description={`Er is nog geen gekoppeld meldingenproject voor ${gemeenteNaam}.`}
+        />
+      )}
+
+      {!isLoading && isError && projectId && (
+        <ErrorState
+          message={
+            error instanceof Error
+              ? `Fout bij ophalen van gegevens: ${error.message}`
+              : 'Fout bij ophalen van gegevens.'
+          }
+          actions={[{ label: 'Opnieuw proberen', onClick: () => refetch() }]}
+          className="py-10"
+        />
+      )}
+
       {/* Empty */}
-      {!isLoading && allChanges.length === 0 && (
+      {!isLoading && !isError && projectId && allChanges.length === 0 && (
         <EmptyState
           icon={<Bell size={32} />}
           title="Geen meldingen"
@@ -172,7 +193,7 @@ export function MeldingenModal({ gemeenteNaam, onClose }: MeldingenModalProps) {
       )}
 
       {/* Feed */}
-      {!isLoading && allChanges.length > 0 && (
+      {!isLoading && !isError && projectId && allChanges.length > 0 && (
         <div className="space-y-5">
           {sortedDates.map((dateKey) => {
             const dateChanges = grouped[dateKey]!

@@ -118,6 +118,8 @@ export interface CbsInkomen {
   gem_gestandaardiseerd: number | null
   perc_laagste_40: number | null
   perc_hoogste_20: number | null
+  /** Separate peiljaar when income data comes from an older CBS dataset */
+  peiljaar?: number | null
 }
 
 /**

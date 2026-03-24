@@ -14,6 +14,8 @@ import { VerdictHero } from './gemeente/VerdictHero'
 import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
 import { WijkDetailModal } from './gemeente/WijkDetailModal'
 import { staggerContainer } from './gemeente/animations'
+import { scanControlsEnabled } from '@/lib/features'
+import { AMBER, GREEN, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkMapPanelProps {
@@ -89,7 +91,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
     return {
       score: null,
       label: 'GEEN DATA',
-      color: '#94a3b8',
+      color: SLATE_MUTED,
       Icon: BarChart3,
       subtitle: 'Nog geen wijkdata beschikbaar',
     }
@@ -98,7 +100,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
     return {
       score,
       label: 'STERK MARKTPROFIEL',
-      color: '#22c55e',
+      color: AMBER.base,
       Icon: TrendingUp,
       subtitle: 'Hoog inkomen · veel koopwoningen · goede voorzieningen',
     }
@@ -107,7 +109,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
     return {
       score,
       label: 'GEMIDDELD PROFIEL',
-      color: '#F9A826',
+      color: AMBER.base,
       Icon: BarChart3,
       subtitle: 'Gemengd marktbeeld · kansen afhankelijk van strategie',
     }
@@ -115,10 +117,87 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
   return {
     score,
     label: 'ONTWIKKELGEBIED',
-    color: '#0E1111',
+    color: OBSIDIAN,
     Icon: TrendingDown,
     subtitle: 'Lagere marktdruk · mogelijk transformatie-kansen',
   }
+}
+
+/* ── Per-card score decomposition ──────────────────────────── */
+
+interface CardScore {
+  pts: number
+  positive: boolean // true = potentie, false = risico
+}
+
+/**
+ * Break down the overall markt-score into per-card contributions.
+ * Each card earns 0–11 points. Total max = 100.
+ */
+function deriveCardScores(metrics: CbsNeighborhoodMetrics | null): Record<string, CardScore> {
+  const empty: Record<string, CardScore> = {}
+  if (!metrics) return empty
+
+  const d = metrics.data
+  const scores: Record<string, CardScore> = {}
+
+  // Koopwoning: 0–17 pts (6 base + up to 11 bonus)
+  const koop = d.demografie?.percentage_koopwoningen
+  if (koop != null) {
+    const pts = 6 + Math.round((koop / 100) * 11)
+    scores.koopwoning = { pts, positive: koop >= 40 }
+  }
+
+  // Dichtheid: 6 pts flat
+  const sted = d.stedelijkheid
+  if (sted?.omgevingsadressendichtheid != null) {
+    scores.dichtheid = { pts: 6, positive: (sted.klasse ?? 5) <= 3 }
+  }
+
+  // Eenpersoons: 6 pts flat
+  const hh = d.huishoudens
+  if (hh?.totaal && hh.eenpersoons) {
+    const pct = (hh.eenpersoons / hh.totaal) * 100
+    scores.eenpersoons = { pts: 6, positive: pct >= 30 }
+  }
+
+  // Inkomen: 0–17 pts (6 base + up to 11 bonus)
+  const ink = d.inkomen?.gem_gestandaardiseerd
+  if (ink != null) {
+    const pts = 6 + Math.min(11, Math.round((ink / 40000) * 11))
+    scores.inkomen = { pts, positive: ink >= 22000 }
+  }
+
+  // WOZ: 6 pts flat
+  if (d.gemiddelde_woz_waarde != null) {
+    scores.woz = { pts: 6, positive: true }
+  }
+
+  // Inwoners: 6 pts flat
+  if (d.demografie?.aantal_inwoners != null) {
+    scores.inwoners = { pts: 6, positive: true }
+  }
+
+  // Veiligheid: 0–14 pts (6 base + up to 8 safety bonus)
+  const crim = metrics.criminaliteit?.per_1000_inwoners
+  if (crim != null) {
+    const safetyBonus = Math.max(0, Math.round((1 - Math.min(crim, 100) / 100) * 8))
+    scores.criminaliteit = { pts: 6 + safetyBonus, positive: crim <= 60 }
+  }
+
+  // Voorzieningen: 6 pts flat
+  const sm = metrics.nabijheid?.afstanden?.supermarkt_km
+  if (sm != null) {
+    scores.supermarkt = { pts: 6, positive: sm <= 1.5 }
+  }
+
+  // Leeftijd: 6 pts flat
+  if (d.leeftijdsverdeling?.perc_25_44 != null) {
+    const young = (d.leeftijdsverdeling.perc_25_44 ?? 0) + (d.leeftijdsverdeling.perc_15_24 ?? 0)
+    scores.leeftijd = { pts: 6, positive: young >= 30 }
+  }
+
+  return scores
 }
 
 /* ── CBS → intelligence cards ──────────────────────────────── */
@@ -126,6 +205,7 @@ function deriveVerdict(score: number | null, hasData: boolean): MarktVerdict {
 function buildCards(
   metrics: CbsNeighborhoodMetrics | null,
   parcelCount: number | null,
+  cardScores: Record<string, CardScore>,
   onCardClick?: (key: string) => void,
 ): IntelCard[] {
   if (!metrics) {
@@ -137,9 +217,9 @@ function buildCards(
       { key: 'inkomen', label: 'INKOMEN', value: '—', sub: 'Koopkracht' },
       { key: 'woz', label: 'WOZ-WAARDE', value: '—', sub: 'Woningwaarde' },
       { key: 'inwoners', label: 'INWONERS', value: '—', sub: 'Marktomvang' },
-      { key: 'criminaliteit', label: 'CRIMINALITEIT', value: '—', sub: 'Veiligheid' },
-      { key: 'supermarkt', label: 'SUPERMARKT', value: '—', sub: 'Voorzieningen' },
-      { key: 'leeftijd', label: 'LEEFTIJD', value: '—', sub: 'Demografie' },
+      { key: 'criminaliteit', label: 'VEILIGHEID', value: '—', sub: 'Veiligheid & leefbaarheid' },
+      { key: 'supermarkt', label: 'VOORZIENINGEN', value: '—', sub: 'Nabijheid voorzieningen' },
+      { key: 'leeftijd', label: 'DEMOGRAFIE', value: '—', sub: 'Bevolkingsopbouw' },
     ]
   }
 
@@ -153,10 +233,10 @@ function buildCards(
     ? Math.round((hh.eenpersoons / hh.totaal) * 100)
     : null
 
-  // Dominant age group
+  // Dominant age group → keurmerk
   const leeftijd = d.leeftijdsverdeling
-  let dominantAge = '—'
-  let dominantAgeSub = 'Geen leeftijdsdata'
+  let leeftijdKeurmerk = '—'
+  let leeftijdSub = 'Geen leeftijdsdata'
   if (leeftijd) {
     const buckets: [string, number | null][] = [
       ['0–14', leeftijd.perc_0_14],
@@ -167,14 +247,23 @@ function buildCards(
     ]
     const top = buckets.filter(b => b[1] != null).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]
     if (top && top[1] != null) {
-      dominantAge = `${Math.round(top[1])}%`
       const label = top[0]
-      dominantAgeSub = label === '65+' ? 'Vergrijzing — doorstroomkans'
-        : label === '25–44' ? 'Jong werkend — huurmarkt'
-        : label === '0–14' ? 'Gezinswijk — koopmarkt'
-        : label === '15–24' ? 'Studentenwijk — kamerverhuur'
-        : 'Gevestigd — stabiele markt'
-      dominantAge = `${Math.round(top[1])}% ${label}`
+      if (label === '65+') {
+        leeftijdKeurmerk = 'VERGRIJZEND'
+        leeftijdSub = `${Math.round(top[1])}% is 65+ — doorstroomkans`
+      } else if (label === '25–44') {
+        leeftijdKeurmerk = 'JONG'
+        leeftijdSub = `${Math.round(top[1])}% is 25–44 — huurmarkt`
+      } else if (label === '0–14') {
+        leeftijdKeurmerk = 'GEZINNEN'
+        leeftijdSub = `${Math.round(top[1])}% is 0–14 — koopmarkt`
+      } else if (label === '15–24') {
+        leeftijdKeurmerk = 'STUDENTEN'
+        leeftijdSub = `${Math.round(top[1])}% is 15–24 — kamerverhuur`
+      } else {
+        leeftijdKeurmerk = 'GEVESTIGD'
+        leeftijdSub = `${Math.round(top[1])}% is 45–64 — stabiele markt`
+      }
     }
   }
 
@@ -185,89 +274,140 @@ function buildCards(
   const crimPer1k = crim?.per_1000_inwoners
   const supermarkt = nab?.afstanden?.supermarkt_km
 
+  // Voorzieningen keurmerk (average across all available distances)
+  let voorzieningenKeurmerk = '—'
+  let voorzieningenSub = 'Geen data'
+  if (supermarkt != null) {
+    const afst = nab?.afstanden
+    const dailyDistances = [afst?.supermarkt_km, afst?.huisarts_km, afst?.basisschool_km].filter((v): v is number => v != null)
+    const avgDaily = dailyDistances.length > 0 ? dailyDistances.reduce((a, b) => a + b, 0) / dailyDistances.length : null
+    if (avgDaily != null && avgDaily <= 0.5) {
+      voorzieningenKeurmerk = 'UITSTEKEND'
+      voorzieningenSub = `Gem. ${avgDaily.toFixed(1)} km tot dagelijkse voorz.`
+    } else if (avgDaily != null && avgDaily <= 1.5) {
+      voorzieningenKeurmerk = 'GOED'
+      voorzieningenSub = `Gem. ${avgDaily.toFixed(1)} km tot dagelijkse voorz.`
+    } else {
+      voorzieningenKeurmerk = 'BEPERKT'
+      voorzieningenSub = avgDaily != null ? `Gem. ${avgDaily.toFixed(1)} km — aandachtspunt` : 'Beperkte voorzieningen'
+    }
+  }
+
+  // Veiligheid keurmerk
+  let veiligheidKeurmerk = '—'
+  let veiligheidSub = 'Geen data'
+  if (crimPer1k != null) {
+    if (crimPer1k <= 25) {
+      veiligheidKeurmerk = 'ZEER VEILIG'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — rustige wijk`
+    } else if (crimPer1k <= 50) {
+      veiligheidKeurmerk = 'VEILIG'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — onder gemiddeld`
+    } else if (crimPer1k <= 80) {
+      veiligheidKeurmerk = 'GEMIDDELD'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — stedelijk normaal`
+    } else if (crimPer1k <= 150) {
+      veiligheidKeurmerk = 'VERHOOGD'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — bovengemiddeld`
+    } else if (crimPer1k <= 250) {
+      veiligheidKeurmerk = 'ONVEILIG'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — hoge criminaliteit`
+    } else {
+      veiligheidKeurmerk = 'RISICOGEBIED'
+      veiligheidSub = `${Math.round(crimPer1k)}/1k inw. — zeer hoge criminaliteit`
+    }
+  }
+
+  // Helper to attach score data
+  const s = (key: string) => {
+    const cs = cardScores[key]
+    return cs ? { scorePts: cs.pts, scorePositive: cs.positive } : {}
+  }
+
   return [
     {
       key: 'koopwoning',
       label: 'KOOPWONING',
-      value: koop != null ? `${Math.round(koop)}%` : '—',
-      sub: koop != null
-        ? koop >= 60 ? 'Sterke koopmarkt' : koop >= 40 ? 'Gemengd koop/huur' : 'Huurmarkt dominant'
-        : 'Geen data',
-      accentColor: koop != null ? (koop >= 60 ? '#22c55e' : koop >= 40 ? '#F9A826' : '#0E1111') : undefined,
-      badge: koop != null ? 'KOOP' : undefined,
+      value: koop != null
+        ? koop >= 60 ? 'STERK' : koop >= 40 ? 'GEMENGD' : 'HUURMARKT'
+        : '—',
+      sub: koop != null ? `${Math.round(koop)}% koopwoningen` : 'Geen data',
+      accentColor: AMBER.base,
+      ...s('koopwoning'),
     },
     {
       key: 'dichtheid',
       label: 'DICHTHEID',
-      value: d.stedelijkheid?.omgevingsadressendichtheid != null
-        ? `${Math.round(d.stedelijkheid.omgevingsadressendichtheid)}/km²`
-        : d.stedelijkheid?.omschrijving ?? '—',
-      sub: d.stedelijkheid?.omschrijving ?? 'Stedelijkheidsklasse',
-      accentColor: d.stedelijkheid?.klasse != null
-        ? d.stedelijkheid.klasse <= 2 ? '#7c3aed' : d.stedelijkheid.klasse <= 3 ? '#3b82f6' : '#94a3b8'
-        : undefined,
+      value: d.stedelijkheid?.klasse != null
+        ? d.stedelijkheid.klasse <= 1 ? 'ZEER STERK' : d.stedelijkheid.klasse <= 2 ? 'STERK' : d.stedelijkheid.klasse <= 3 ? 'MATIG' : 'LANDELIJK'
+        : d.stedelijkheid?.omgevingsadressendichtheid != null
+          ? `${Math.round(d.stedelijkheid.omgevingsadressendichtheid)}/km²`
+          : '—',
+      sub: d.stedelijkheid?.omgevingsadressendichtheid != null
+        ? `${Math.round(d.stedelijkheid.omgevingsadressendichtheid)} adr/km²`
+        : 'Stedelijkheidsklasse',
+      accentColor: AMBER.base,
+      ...s('dichtheid'),
     },
     {
       key: 'eenpersoons',
       label: 'EENPERSOONS',
-      value: eenpersoonsPct != null ? `${eenpersoonsPct}%` : '—',
-      sub: eenpersoonsPct != null
-        ? eenpersoonsPct >= 50 ? 'Splitsen interessant' : eenpersoonsPct >= 30 ? 'Gemengde huishoudens' : 'Gezinswijk'
-        : 'Geen data',
-      accentColor: eenpersoonsPct != null && eenpersoonsPct >= 50 ? '#F9A826' : undefined,
+      value: eenpersoonsPct != null
+        ? eenpersoonsPct >= 50 ? 'SPLITSKANS' : eenpersoonsPct >= 30 ? 'GEMENGD' : 'GEZINNEN'
+        : '—',
+      sub: eenpersoonsPct != null ? `${eenpersoonsPct}% eenpersoonshuishoudens` : 'Geen data',
+      accentColor: AMBER.base,
+      ...s('eenpersoons'),
     },
     {
       key: 'inkomen',
       label: 'INKOMEN',
-      value: inkomen != null ? `€${Math.round(inkomen).toLocaleString('nl-NL')}` : '—',
-      sub: inkomen != null
-        ? inkomen >= 30000 ? 'Hoge koopkracht' : inkomen >= 22000 ? 'Gemiddelde koopkracht' : 'Lagere koopkracht'
-        : 'Mediaan gestandaardiseerd',
-      accentColor: inkomen != null ? (inkomen >= 30000 ? '#22c55e' : inkomen >= 22000 ? '#F9A826' : '#94a3b8') : undefined,
+      value: inkomen != null
+        ? inkomen >= 30000 ? 'HOOG' : inkomen >= 22000 ? 'GEMIDDELD' : 'LAGER'
+        : '—',
+      sub: inkomen != null ? `€${Math.round(inkomen).toLocaleString('nl-NL')} gestandaardiseerd` : 'Geen data',
+      accentColor: AMBER.base,
+      ...s('inkomen'),
     },
     {
       key: 'woz',
       label: 'WOZ-WAARDE',
       value: woz != null ? `€${Math.round(woz * 1000).toLocaleString('nl-NL')}` : '—',
       sub: woz != null ? 'Gemiddelde woningwaarde' : 'Geen WOZ data',
-      accentColor: '#0E1111',
+      accentColor: AMBER.base,
+      ...s('woz'),
     },
     {
       key: 'inwoners',
       label: 'INWONERS',
       value: inwoners != null ? inwoners.toLocaleString('nl-NL') : '—',
       sub: parcelCount != null ? `${parcelCount.toLocaleString('nl-NL')} percelen geanalyseerd` : 'Marktomvang',
-      badge: parcelCount != null ? String(parcelCount) : undefined,
-      accentColor: '#F9A826',
+      accentColor: AMBER.base,
+      ...s('inwoners'),
     },
     {
       key: 'criminaliteit',
-      label: 'CRIMINALITEIT',
-      value: crimPer1k != null ? `${Math.round(crimPer1k * 10) / 10}/1k` : '—',
-      sub: crimPer1k != null
-        ? crimPer1k <= 30 ? 'Veilige wijk' : crimPer1k <= 60 ? 'Gemiddeld' : 'Aandachtspunt'
-        : 'Geen data',
-      accentColor: crimPer1k != null
-        ? crimPer1k <= 30 ? '#22c55e' : crimPer1k <= 60 ? '#F9A826' : '#ef4444'
-        : undefined,
+      label: 'VEILIGHEID',
+      value: veiligheidKeurmerk,
+      sub: veiligheidSub,
+      accentColor: AMBER.base,
+      ...s('criminaliteit'),
     },
     {
       key: 'supermarkt',
-      label: 'SUPERMARKT',
-      value: supermarkt != null ? `${Math.round(supermarkt * 10) / 10} km` : '—',
-      sub: supermarkt != null
-        ? supermarkt <= 0.5 ? 'Uitstekend voorzieningenniveau' : supermarkt <= 1.5 ? 'Goed bereikbaar' : 'Beperkte voorzieningen'
-        : 'Geen data',
-      accentColor: supermarkt != null
-        ? supermarkt <= 0.5 ? '#22c55e' : supermarkt <= 1.5 ? '#F9A826' : '#ef4444'
-        : undefined,
+      label: 'VOORZIENINGEN',
+      value: voorzieningenKeurmerk,
+      sub: voorzieningenSub,
+      accentColor: AMBER.base,
+      ...s('supermarkt'),
     },
     {
       key: 'leeftijd',
-      label: 'LEEFTIJD',
-      value: dominantAge,
-      sub: dominantAgeSub,
-      accentColor: '#F9A826',
+      label: 'DEMOGRAFIE',
+      value: leeftijdKeurmerk,
+      sub: leeftijdSub,
+      accentColor: AMBER.base,
+      ...s('leeftijd'),
     },
   ].map(card => ({
     ...card,
@@ -292,15 +432,16 @@ export function WijkMapPanel({
 
   const marktScore = useMemo(() => deriveMarktScore(metrics), [metrics])
   const verdict = deriveVerdict(marktScore, hasCompletedScan)
+  const cardScores = useMemo(() => deriveCardScores(metrics), [metrics])
 
   const [openMetric, setOpenMetric] = useState<string | null>(null)
   const [gridPage, setGridPage] = useState(0)
   const handleCardClick = metrics ? (key: string) => setOpenMetric(key) : undefined
 
   const dataCards = useMemo(
-    () => buildCards(metrics, parcelCount, handleCardClick),
+    () => buildCards(metrics, parcelCount, cardScores, handleCardClick),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [metrics, parcelCount, !!handleCardClick],
+    [metrics, parcelCount, cardScores, !!handleCardClick],
   )
 
   // Append roadmap items as page 2 cards
@@ -326,7 +467,7 @@ export function WijkMapPanel({
       <Eye size={16} strokeWidth={2} />
       Bekijk resultaten
     </button>
-  ) : (
+  ) : scanControlsEnabled ? (
     <button
       type="button"
       onClick={onStartScan}
@@ -336,6 +477,13 @@ export function WijkMapPanel({
       <Scan size={16} strokeWidth={2} />
       Start scan
     </button>
+  ) : (
+    <div
+      className="w-full min-h-[60px] rounded-full border border-neutral-200 bg-neutral-50 px-5 py-4 text-center text-sm font-medium text-neutral-600 flex items-center justify-center"
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+    >
+      Nog geen voorbereide resultaten voor deze wijk
+    </div>
   )
 
   return (
@@ -398,7 +546,7 @@ export function WijkMapPanel({
       <AnimatePresence>
         {openMetric && metrics && (
           <WijkDetailModal
-            metricKey={openMetric as 'koopwoning' | 'bouwjaar' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'}
+            metricKey={openMetric as 'koopwoning' | 'dichtheid' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'}
             metrics={metrics}
             wijkNaam={naam}
             onClose={() => setOpenMetric(null)}

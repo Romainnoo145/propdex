@@ -40,22 +40,40 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _refresh_cookie_options() -> dict[str, object]:
+    """Shared refresh-cookie settings for set and clear operations."""
+    options: dict[str, object] = {
+        "httponly": True,
+        "secure": settings.cookie_secure,
+        "samesite": settings.cookie_samesite,
+        "path": settings.auth_cookie_path,
+    }
+    if settings.cookie_domain:
+        options["domain"] = settings.cookie_domain
+    return options
+
+
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     """Set httpOnly refresh token cookie for secure storage."""
+    cookie_options = _refresh_cookie_options()
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
-        httponly=True,
-        secure=False,  # Allow HTTP in development (localhost)
-        samesite="lax",
+        **cookie_options,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path="/api/auth",  # Only send cookie to auth endpoints
     )
 
 
 def _clear_refresh_cookie(response: Response) -> None:
     """Clear the refresh token cookie on logout."""
-    response.delete_cookie(key="refresh_token", path="/api/auth")
+    response.delete_cookie(
+        key="refresh_token",
+        path=settings.auth_cookie_path,
+        domain=settings.cookie_domain,
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite=settings.cookie_samesite,
+    )
 
 
 @router.post("/register", response_model=CookieTokenResponse, status_code=status.HTTP_201_CREATED)

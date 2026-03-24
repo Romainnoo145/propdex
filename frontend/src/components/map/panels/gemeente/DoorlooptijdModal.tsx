@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion } from 'framer-motion'
 import { Clock } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
@@ -61,7 +62,7 @@ export function DoorlooptijdModal({ gemeenteNaam, onClose }: DoorlooptijdModalPr
         <div className="bg-[#F8FAF9] rounded-[16px] p-5 mb-6 text-center">
           <span
             className="text-[48px] font-black tracking-tighter tabular-nums leading-none"
-            style={{ color: avgDagen <= 30 ? '#22C55E' : avgDagen <= 90 ? '#F9A826' : '#EF4444' }}
+            style={{ color: avgDagen <= 30 ? GREEN : avgDagen <= 90 ? AMBER.base : RED }}
           >
             ~{avgDagen}
           </span>
@@ -96,7 +97,7 @@ export function DoorlooptijdModal({ gemeenteNaam, onClose }: DoorlooptijdModalPr
                 label={d.vergunningstype}
                 value={Math.round(d.avg_dagen ?? 0)}
                 max={maxDagen}
-                color={d.avg_dagen != null ? (d.avg_dagen <= 30 ? '#22C55E' : d.avg_dagen <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+                color={d.avg_dagen != null ? (d.avg_dagen <= 30 ? GREEN : d.avg_dagen <= 90 ? AMBER.base : RED) : SLATE_MUTED}
                 suffix="d"
               />
             ))}

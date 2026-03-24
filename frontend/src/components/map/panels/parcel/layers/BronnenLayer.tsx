@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { toast } from 'sonner'
 import {
   ChevronLeft,
   ChevronRight,
@@ -372,9 +373,9 @@ const MAX_VISIBLE_DOCS = 2
 
 interface DropzoneCardProps {
   card: DossierCard
-  parcelId: string
   uploadingKey: string | null
   onUploadClick: (cardKey: string) => void
+  onFileDrop: (cardKey: string, file: File) => void
   onDelete: (documentId: string) => void
   onDownload: (documentId: string, filename: string) => void
 }
@@ -383,6 +384,7 @@ function DropzoneCard({
   card,
   uploadingKey,
   onUploadClick,
+  onFileDrop,
   onDelete,
   onDownload,
 }: DropzoneCardProps) {
@@ -411,10 +413,13 @@ function DropzoneCard({
       e.stopPropagation()
       setIsDragOver(false)
       if (e.dataTransfer.files.length > 0) {
-        onUploadClick(card.key)
+        const file = e.dataTransfer.files[0]
+        if (file) {
+          onFileDrop(card.key, file)
+        }
       }
     },
-    [card.key, onUploadClick]
+    [card.key, onFileDrop]
   )
 
   const dragProps = {
@@ -667,14 +672,14 @@ interface BronnenLayerProps {
 export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
   const [page, setPage] = useState(0)
   const [uploadingKey, setUploadingKey] = useState<string | null>(null)
-  const [droppedFile, setDroppedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeCardKeyRef = useRef<string | null>(null)
 
   const { accessToken } = useAuth()
   const enrichment = useParcelEnrichment(parcel.parcel_id)
   const parcelChanges = useParcelChanges(parcel.parcel_id)
-  const documentsQuery = useParcelDocuments(parcel.parcel_id)
+  const documentParcelId = parcel.parcel_code || parcel.parcel_id
+  const documentsQuery = useParcelDocuments(documentParcelId)
   const uploadDocument = useUploadDocument()
   const deleteDocument = useDeleteDocument()
 
@@ -704,19 +709,20 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
       setUploadingKey(cardKey)
       try {
         await uploadDocument.mutateAsync({
-          parcelId: parcel.parcel_id,
+          parcelId: documentParcelId,
           documentType: cardKey,
           file,
         })
-      } catch {
-        // Error handled by mutation state
+        toast.success('Document toegevoegd aan dossier')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Upload mislukt')
       } finally {
         setUploadingKey(null)
         activeCardKeyRef.current = null
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
     },
-    [uploadDocument, parcel.parcel_id]
+    [documentParcelId, uploadDocument]
   )
 
   const handleFileChange = useCallback(
@@ -729,32 +735,32 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
     [doUpload]
   )
 
-  // Handle dropped file from DropzoneCard drag-and-drop
-  useEffect(() => {
-    if (droppedFile && activeCardKeyRef.current) {
-      const cardKey = activeCardKeyRef.current
-      doUpload(droppedFile, cardKey)
-      setDroppedFile(null)
-    }
-  }, [droppedFile, doUpload])
+  const handleFileDrop = useCallback(
+    async (cardKey: string, file: File) => {
+      activeCardKeyRef.current = cardKey
+      await doUpload(file, cardKey)
+    },
+    [doUpload]
+  )
 
   const handleDelete = useCallback(
     async (documentId: string) => {
       try {
         await deleteDocument.mutateAsync({
-          parcelId: parcel.parcel_id,
+          parcelId: documentParcelId,
           documentId,
         })
-      } catch {
-        // Error handled by mutation state
+        toast.success('Document verwijderd')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Verwijderen mislukt')
       }
     },
-    [deleteDocument, parcel.parcel_id]
+    [deleteDocument, documentParcelId]
   )
 
   const handleDownload = useCallback(
     async (documentId: string, filename: string) => {
-      const url = getDocumentDownloadUrl(parcel.parcel_id, documentId)
+      const url = getDocumentDownloadUrl(documentParcelId, documentId)
       try {
         const headers: HeadersInit = {}
         if (accessToken) {
@@ -775,11 +781,11 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(blobUrl)
-      } catch {
-        // Silently fail download
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Download mislukt')
       }
     },
-    [parcel.parcel_id, accessToken]
+    [documentParcelId, accessToken]
   )
 
   return (
@@ -848,16 +854,16 @@ export function BronnenLayer({ parcel, hasReport }: BronnenLayerProps) {
             transition={{ duration: 0.2 }}
             className="grid grid-cols-3 gap-1.5 auto-rows-fr h-full"
           >
-            {current.cards.map((card) => (
-              <DropzoneCard
-                key={card.key}
-                card={card}
-                parcelId={parcel.parcel_id}
-                uploadingKey={uploadingKey}
-                onUploadClick={handleUploadClick}
-                onDelete={handleDelete}
-                onDownload={handleDownload}
-              />
+                {current.cards.map((card) => (
+                  <DropzoneCard
+                    key={card.key}
+                    card={card}
+                    uploadingKey={uploadingKey}
+                    onUploadClick={handleUploadClick}
+                    onFileDrop={handleFileDrop}
+                    onDelete={handleDelete}
+                    onDownload={handleDownload}
+                  />
             ))}
           </motion.div>
         </AnimatePresence>

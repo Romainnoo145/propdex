@@ -32,6 +32,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         """Process request to extract tenant context."""
         # Initialize organization_id to None
         request.state.organization_id = None
+        request.state.user_id = None
 
         # Extract Authorization header
         auth_header = request.headers.get("Authorization")
@@ -39,11 +40,14 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             token = auth_header.replace("Bearer ", "")
 
             try:
-                # Decode JWT to extract organization_id
+                # Decode JWT to extract organization/user context
                 payload = decode_token(token)
                 org_id = payload.get("organization_id")
+                user_id = payload.get("sub")
                 if org_id:
                     request.state.organization_id = uuid.UUID(org_id)
+                if user_id:
+                    request.state.user_id = uuid.UUID(user_id)
             except (InvalidTokenError, ValueError):
                 # Silently ignore invalid tokens - public endpoints should work
                 # Auth dependencies will handle validation for protected endpoints

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 
 export type GemeenteLayer = 'vergunningen' | 'regelgeving' | 'beleid' | 'activiteit'
 
@@ -34,14 +35,14 @@ export function GemeenteCategoryTabs({ activeLayer, onSelect }: GemeenteCategory
               fontSize: '12px',
               fontWeight: isActive ? 700 : 600,
               letterSpacing: isActive ? '-0.01em' : '0',
-              color: isActive ? undefined : '#94a3b8',
+              color: isActive ? undefined : SLATE_MUTED,
             }}
           >
             {isActive && (
               <motion.div
                 layoutId="gemeente-layer-tab"
                 className="absolute inset-0 rounded-full"
-                style={{ background: '#0E1111' }}
+                style={{ background: OBSIDIAN }}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}

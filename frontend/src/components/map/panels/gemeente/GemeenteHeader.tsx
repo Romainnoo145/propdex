@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface GemeenteHeaderProps {
@@ -11,11 +12,11 @@ interface GemeenteHeaderProps {
 /* ── Stedelijkheid badge color mapping ──────────────────────── */
 
 const STEDELIJKHEID_COLORS: Record<string, string> = {
-  'Zeer sterk stedelijk': '#7c3aed',
-  'Sterk stedelijk': '#3b82f6',
-  'Matig stedelijk': '#22c55e',
-  'Weinig stedelijk': '#F9A826',
-  'Niet stedelijk': '#94a3b8',
+  'Zeer sterk stedelijk': AMBER.base,
+  'Sterk stedelijk': AMBER.dark,
+  'Matig stedelijk': AMBER.deep,
+  'Weinig stedelijk': AMBER.base,
+  'Niet stedelijk': SLATE_MUTED,
 }
 
 function getStedelijkheid(scans: ScanListItem[], gemeenteCode: string): string | null {
@@ -41,7 +42,7 @@ function getStedelijkheid(scans: ScanListItem[], gemeenteCode: string): string |
  */
 export function GemeenteHeader({ naam, code, scans, gemeenteCode }: GemeenteHeaderProps) {
   const stedelijkheid = useMemo(() => getStedelijkheid(scans, gemeenteCode), [scans, gemeenteCode])
-  const stedelijkheidColor = stedelijkheid ? (STEDELIJKHEID_COLORS[stedelijkheid] ?? '#94a3b8') : '#94a3b8'
+  const stedelijkheidColor = stedelijkheid ? (STEDELIJKHEID_COLORS[stedelijkheid] ?? SLATE_MUTED) : SLATE_MUTED
 
   return (
     <div className="px-8 pt-8">

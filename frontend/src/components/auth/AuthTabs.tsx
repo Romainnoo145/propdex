@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion } from 'framer-motion'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
@@ -40,14 +41,14 @@ export function AuthTabs({
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                 fontSize: '13px',
                 fontWeight: isActive ? 700 : 600,
-                color: isActive ? undefined : '#94a3b8',
+                color: isActive ? undefined : SLATE_MUTED,
               }}
             >
               {isActive && (
                 <motion.div
                   layoutId="auth-tab"
                   className="absolute inset-0 rounded-full"
-                  style={{ background: '#0E1111' }}
+                  style={{ background: OBSIDIAN }}
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                 />
               )}

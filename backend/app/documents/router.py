@@ -2,10 +2,11 @@
 
 import logging
 import uuid
+from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -56,6 +57,69 @@ ALLOWED_CONTENT_TYPES: set[str] = {
 }
 
 
+@lru_cache(maxsize=1)
+def _parcel_documents_insert_sql(include_organization_id: bool) -> str:
+    if include_organization_id:
+        return """
+            INSERT INTO parcel_documents (
+                parcel_id,
+                document_type,
+                filename,
+                content_type,
+                file_data,
+                file_size,
+                uploaded_by_user_id,
+                organization_id
+            ) VALUES (
+                :parcel_id,
+                :document_type,
+                :filename,
+                :content_type,
+                :file_data,
+                :file_size,
+                :uploaded_by_user_id,
+                :organization_id
+            )
+            RETURNING id
+        """
+
+    return """
+        INSERT INTO parcel_documents (
+            parcel_id,
+            document_type,
+            filename,
+            content_type,
+            file_data,
+            file_size,
+            uploaded_by_user_id
+        ) VALUES (
+            :parcel_id,
+            :document_type,
+            :filename,
+            :content_type,
+            :file_data,
+            :file_size,
+            :uploaded_by_user_id
+        )
+        RETURNING id
+    """
+
+
+async def _parcel_documents_has_organization_column(db: AsyncSession) -> bool:
+    result = await db.execute(
+        text(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'parcel_documents'
+              AND column_name = 'organization_id'
+            LIMIT 1
+            """
+        )
+    )
+    return result.scalar() is not None
+
+
 @router.post(
     "/{parcel_id}/documents",
     response_model=DocumentResponse,
@@ -93,18 +157,26 @@ async def upload_document(
             detail=f"File size {len(file_bytes)} bytes exceeds maximum of {MAX_FILE_SIZE} bytes (25MB).",
         )
 
-    doc = ParcelDocument(
-        parcel_id=parcel_id,
-        document_type=document_type,
-        filename=file.filename or "unnamed",
-        content_type=file.content_type,
-        file_data=file_bytes,
-        file_size=len(file_bytes),
-        uploaded_by_user_id=current_user.id,
-    )
-    db.add(doc)
+    include_organization_id = await _parcel_documents_has_organization_column(db)
+
+    params = {
+        "parcel_id": parcel_id,
+        "document_type": document_type,
+        "filename": file.filename or "unnamed",
+        "content_type": file.content_type,
+        "file_data": file_bytes,
+        "file_size": len(file_bytes),
+        "uploaded_by_user_id": current_user.id,
+    }
+    if include_organization_id:
+        params["organization_id"] = current_user.organization_id
+
+    inserted = await db.execute(text(_parcel_documents_insert_sql(include_organization_id)), params)
+    doc_id = inserted.scalar_one()
     await db.commit()
-    await db.refresh(doc)
+
+    result = await db.execute(select(ParcelDocument).where(ParcelDocument.id == doc_id))
+    doc = result.scalar_one()
 
     # Trigger AI summarization for PDFs (non-blocking — failures are silent)
     try:

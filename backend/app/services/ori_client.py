@@ -35,6 +35,32 @@ DEVELOPMENT_KEYWORDS = [
 ]
 
 
+def _normalize_ori_source_url(ori_id: str | None) -> str | None:
+    """Normalize ORI @id values into browser-openable URLs."""
+    if not ori_id:
+        return None
+
+    value = str(ori_id).strip()
+    if not value:
+        return None
+
+    duplicated_prefix_match = re.match(
+        r"^https?://id\.openraadsinformatie\.nl/(https?://.+)$",
+        value,
+        re.IGNORECASE,
+    )
+    if duplicated_prefix_match:
+        return duplicated_prefix_match.group(1)
+
+    if re.match(r"^https?://", value, re.IGNORECASE):
+        return value
+
+    if value.startswith("/"):
+        return f"https://openraadsinformatie.nl{value}"
+
+    return f"https://id.openraadsinformatie.nl/{value.lstrip('/')}"
+
+
 def _gemeente_to_ori_index(gemeente_naam: str) -> str:
     """Convert gemeente display name to ORI index prefix.
 
@@ -189,10 +215,8 @@ async def search_raadsinformatie(
             # Build source URL from @id
             doc_id = str(hit.get("_id", ""))
             ori_id = source.get("@id")
-            source_url = (
-                f"https://id.openraadsinformatie.nl/{ori_id}"
-                if ori_id
-                else None
+            source_url = _normalize_ori_source_url(
+                ori_id if isinstance(ori_id, str) else None
             )
 
             documents.append(

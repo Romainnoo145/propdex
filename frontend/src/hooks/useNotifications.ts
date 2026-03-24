@@ -10,6 +10,7 @@
  * All hooks require authentication and invalidate relevant caches on mutation.
  */
 
+import { useMemo } from 'react'
 import {
   useQuery,
   useMutation,
@@ -29,6 +30,7 @@ import {
   markChangeRead as apiMarkChangeRead,
   markAllChangesRead as apiMarkAllChangesRead,
 } from '@/lib/api'
+import { normalizeGemeenteCode } from '@/lib/geo/normalizers'
 import type {
   ChangeRecord,
   MarkAllReadResponse,
@@ -37,6 +39,7 @@ import type {
   UnreadDetailResponse,
   ChangeRecordListResponse,
 } from '@/lib/types/monitoring'
+import { useMonitoredProjects } from './useProjects'
 
 /**
  * Fetch unread change notification counts
@@ -55,6 +58,49 @@ export function useUnreadCounts() {
     staleTime: 30_000,
     enabled: !!accessToken,
   })
+}
+
+/**
+ * Resolve monitored-project context for a municipality.
+ *
+ * Combines the monitored project tree with unread counts so gemeente-focused
+ * panels can show and mutate scoped notification state instead of org-wide totals.
+ */
+export function useGemeenteMonitoringState(gemeenteCode: string | null | undefined) {
+  const normalizedCode = normalizeGemeenteCode(gemeenteCode)
+  const { data: unreadData } = useUnreadCounts()
+  const { data: monitoredProjects } = useMonitoredProjects()
+
+  return useMemo(() => {
+    if (!normalizedCode) {
+      return {
+        projectId: null,
+        unreadCount: 0,
+        isMonitored: false,
+      }
+    }
+
+    const project = monitoredProjects?.projects.find(
+      (candidate) => normalizeGemeenteCode(candidate.gemeente_code) === normalizedCode
+    ) ?? null
+
+    if (!project) {
+      return {
+        projectId: null,
+        unreadCount: 0,
+        isMonitored: false,
+      }
+    }
+
+    const unreadCount =
+      unreadData?.per_project.find((entry) => entry.project_id === project.id)?.unread_count ?? 0
+
+    return {
+      projectId: project.id,
+      unreadCount,
+      isMonitored: true,
+    }
+  }, [monitoredProjects?.projects, normalizedCode, unreadData?.per_project])
 }
 
 /**
@@ -109,6 +155,41 @@ export function useInfiniteAllChanges(
       return undefined // No more pages
     },
     enabled: !!accessToken,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Infinite scroll hook for project-scoped change history.
+ *
+ * Uses the same pagination shape as the org-wide feed, but keeps the query
+ * scoped to a single monitored project so gemeente drill-downs do not depend
+ * on the broader organization feed path.
+ */
+export function useInfiniteProjectChanges(
+  projectId: string | null,
+  includeMatches = false
+) {
+  const { accessToken } = useAuth()
+
+  return useInfiniteQuery<ChangeRecordListResponse, Error>({
+    queryKey: ['changes', 'project-infinite', projectId, includeMatches],
+    queryFn: ({ pageParam = 0 }) =>
+      fetchProjectChanges(
+        projectId!,
+        accessToken,
+        PAGE_SIZE,
+        pageParam as number,
+        includeMatches
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (lastPage.has_more) {
+        return (lastPageParam as number) + PAGE_SIZE
+      }
+      return undefined
+    },
+    enabled: !!accessToken && !!projectId,
     staleTime: 60_000,
   })
 }

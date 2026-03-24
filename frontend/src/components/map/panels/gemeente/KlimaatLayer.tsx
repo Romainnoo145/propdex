@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scale,
@@ -41,19 +42,19 @@ function deriveKlimaatScore(severity: string | null, approvalRate: number | null
 interface Verdict { score: number | null; label: string; color: string; Icon: LucideIcon; subtitle: string }
 
 function deriveVerdict(score: number | null): Verdict {
-  if (score == null) return { score: null, label: 'ONBEKEND', color: '#94a3b8', Icon: ShieldQuestion, subtitle: 'Onvoldoende data beschikbaar' }
-  if (score >= 70) return { score, label: 'ONTWIKKELKANSRIJK', color: '#22C55E', Icon: ShieldCheck, subtitle: 'Soepel klimaat · hoge goedkeuring · korte doorlooptijd' }
-  if (score >= 40) return { score, label: 'GEMIDDELD KLIMAAT', color: '#F9A826', Icon: Scale, subtitle: 'Standaard vergunningstraject · let op doorlooptijd' }
-  return { score, label: 'LASTIG KLIMAAT', color: '#EF4444', Icon: ShieldAlert, subtitle: 'Streng beleid · langere trajecten · meer bezwaren' }
+  if (score == null) return { score: null, label: 'ONBEKEND', color: SLATE_MUTED, Icon: ShieldQuestion, subtitle: 'Onvoldoende data beschikbaar' }
+  if (score >= 70) return { score, label: 'ONTWIKKELKANSRIJK', color: GREEN, Icon: ShieldCheck, subtitle: 'Soepel klimaat · hoge goedkeuring · korte doorlooptijd' }
+  if (score >= 40) return { score, label: 'GEMIDDELD KLIMAAT', color: AMBER.base, Icon: Scale, subtitle: 'Standaard vergunningstraject · let op doorlooptijd' }
+  return { score, label: 'LASTIG KLIMAAT', color: RED, Icon: ShieldAlert, subtitle: 'Streng beleid · langere trajecten · meer bezwaren' }
 }
 
 function trendDirection(bek30: number, bek365: number): { label: string; color: string } {
   const monthly365 = bek365 / 12
-  if (monthly365 === 0) return { label: 'Geen data', color: '#94a3b8' }
+  if (monthly365 === 0) return { label: 'Geen data', color: SLATE_MUTED }
   const ratio = bek30 / monthly365
-  if (ratio > 1.3) return { label: '↑ Stijgend', color: '#22C55E' }
-  if (ratio < 0.7) return { label: '↓ Dalend', color: '#EF4444' }
-  return { label: '→ Stabiel', color: '#94a3b8' }
+  if (ratio > 1.3) return { label: '↑ Stijgend', color: GREEN }
+  if (ratio < 0.7) return { label: '↓ Dalend', color: RED }
+  return { label: '→ Stabiel', color: SLATE_MUTED }
 }
 
 /* ── Section header ────────────────────────────────────────── */
@@ -97,7 +98,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
   return (
     <motion.div variants={fadeUp} className="bg-white border border-[#EAEFEF] rounded-[16px] p-4">
       <span className="text-[10px] font-black text-slate-400 uppercase block" style={{ letterSpacing: '0.15em' }}>{label}</span>
-      <span className="text-[22px] font-black tracking-tighter tabular-nums leading-none mt-2 block" style={{ color: color ?? '#0E1111' }}>{value}</span>
+      <span className="text-[22px] font-black tracking-tighter tabular-nums leading-none mt-2 block" style={{ color: color ?? OBSIDIAN }}>{value}</span>
       {sub && <span className="text-[10px] text-slate-400 mt-1 block">{sub}</span>}
     </motion.div>
   )
@@ -118,7 +119,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
 
   const trend = profile
     ? trendDirection(profile.bekendmakingen_30d, profile.bekendmakingen_365d)
-    : { label: 'Laden...', color: '#94a3b8' }
+    : { label: 'Laden...', color: SLATE_MUTED }
 
   // Permit type distribution sorted
   const permitTypes = useMemo(() => {
@@ -162,13 +163,13 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
             label="Goedgekeurd"
             value={profile?.approval_rate_pct != null ? `${Math.round(profile.approval_rate_pct)}%` : '—'}
             sub={profile?.sample_size ? `n=${profile.sample_size}` : undefined}
-            color={profile?.approval_rate_pct != null ? (profile.approval_rate_pct >= 80 ? '#22C55E' : profile.approval_rate_pct >= 50 ? '#F9A826' : '#EF4444') : undefined}
+            color={profile?.approval_rate_pct != null ? (profile.approval_rate_pct >= 80 ? GREEN : profile.approval_rate_pct >= 50 ? AMBER.base : RED) : undefined}
           />
           <StatCard
             label="Doorlooptijd"
             value={profile?.avg_doorlooptijd_days != null ? `~${profile.avg_doorlooptijd_days}d` : '—'}
             sub="gem. afhandeling"
-            color={profile?.avg_doorlooptijd_days != null ? (profile.avg_doorlooptijd_days <= 30 ? '#22C55E' : profile.avg_doorlooptijd_days <= 90 ? '#F9A826' : '#EF4444') : undefined}
+            color={profile?.avg_doorlooptijd_days != null ? (profile.avg_doorlooptijd_days <= 30 ? GREEN : profile.avg_doorlooptijd_days <= 90 ? AMBER.base : RED) : undefined}
           />
           <StatCard
             label="Trend"
@@ -203,7 +204,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
                   label={d.vergunningstype}
                   value={Math.round(d.avg_dagen ?? 0)}
                   max={maxDoorlooptijd}
-                  color={d.avg_dagen != null ? (d.avg_dagen <= 30 ? '#22C55E' : d.avg_dagen <= 90 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+                  color={d.avg_dagen != null ? (d.avg_dagen <= 30 ? GREEN : d.avg_dagen <= 90 ? AMBER.base : RED) : SLATE_MUTED}
                 />
               ))}
             </div>

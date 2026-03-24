@@ -1,22 +1,38 @@
 import { useMemo } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
-import { Heart } from 'lucide-react'
+import { Heart, ChevronRight } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
 import { fadeUp } from './animations'
 import { useParcelFavorites } from '@/hooks/useFavorites'
+import { filterFavoritesForGemeente } from '@/lib/favorites'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 
 interface FavorietenModalProps {
   gemeenteNaam: string
+  gemeenteCode: string
   onClose: () => void
 }
 
-export function FavorietenModal({ gemeenteNaam, onClose }: FavorietenModalProps) {
+export function FavorietenModal({ gemeenteNaam, gemeenteCode, onClose }: FavorietenModalProps) {
+  const navigate = useNavigate()
   const { data: favorites } = useParcelFavorites()
 
-  const gemeenteFavorites = useMemo(() => {
-    if (!favorites) return []
-    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === gemeenteNaam.toLowerCase())
-  }, [favorites, gemeenteNaam])
+  const gemeenteFavorites = useMemo(
+    () => filterFavoritesForGemeente(favorites, { gemeenteCode, gemeenteNaam }),
+    [favorites, gemeenteCode, gemeenteNaam],
+  )
+
+  const openParcel = (parcelId: string, fallbackAddress?: string | null) => {
+    navigate({
+      to: '/map',
+      search: toMapParcelSearch({
+        parcelId,
+        fallbackAddress,
+      }),
+    })
+    onClose()
+  }
 
   return (
     <GemeenteModal
@@ -37,12 +53,14 @@ export function FavorietenModal({ gemeenteNaam, onClose }: FavorietenModalProps)
       {gemeenteFavorites.length > 0 && (
         <div className="space-y-2">
           {gemeenteFavorites.map((fav) => (
-            <motion.div
+            <motion.button
               key={fav.id}
+              type="button"
               variants={fadeUp}
               initial="hidden"
               animate="show"
-              className="bg-[#F8FAF9] rounded-[14px] px-4 py-3 flex items-center justify-between"
+              onClick={() => openParcel(fav.parcel_id, fav.address)}
+              className="w-full bg-[#F8FAF9] rounded-[14px] px-4 py-3 flex items-center justify-between gap-3 text-left transition-colors hover:bg-[#EEF3EF]"
             >
               <div className="min-w-0 flex-1">
                 <span className="text-[13px] font-bold text-[#0E1111] block truncate">
@@ -55,8 +73,11 @@ export function FavorietenModal({ gemeenteNaam, onClose }: FavorietenModalProps)
                   <span className="text-[10px] text-slate-300 tabular-nums">{fav.parcel_id}</span>
                 </div>
               </div>
-              <Heart size={14} fill="#EF4444" className="text-[#EF4444] shrink-0" />
-            </motion.div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Heart size={14} fill="#EF4444" className="text-[#EF4444]" />
+                <ChevronRight size={14} className="text-slate-400" />
+              </div>
+            </motion.button>
           ))}
         </div>
       )}

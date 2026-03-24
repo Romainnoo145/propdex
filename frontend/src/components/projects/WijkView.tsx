@@ -13,6 +13,7 @@ import {
 } from '@/lib/geo-utils'
 import { normalizeAreaName, normalizeGemeenteCode } from '@/lib/geo/normalizers'
 import { toMapGemeenteWijkSearch } from '@/lib/navigation/mapSearch'
+import { scanControlsEnabled } from '@/lib/features'
 import {
   MapPinLineIcon,
   ScanIcon,
@@ -207,7 +208,11 @@ export function UnlinkedGemeenteWorkspace({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-xl font-semibold text-aura-ink">{selectedWijk.name}</h3>
-                    <p className="mt-1 text-sm text-neutral-500">Wijk is direct beschikbaar voor scan en kaartnavigatie.</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      {scanControlsEnabled
+                        ? 'Wijk is direct beschikbaar voor scan en kaartnavigatie.'
+                        : 'Wijk is beschikbaar voor kaartnavigatie en voorbereide resultaten.'}
+                    </p>
                   </div>
                   {latestWijkScan ? (
                     <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
@@ -237,34 +242,36 @@ export function UnlinkedGemeenteWorkspace({
                         Bekijk resultaten
                       </button>
                     )}
-                    <button
-                      onClick={() => {
-                        triggerScan.mutate(
-                          {
-                            gemeente_code: gemeenteCode,
-                            gemeente_naam: gemeenteName,
-                            wijk_naam: selectedWijk.name,
-                            ...(selectedWijk.bbox ? { bbox_wgs84: selectedWijk.bbox } : {}),
-                          },
-                          {
-                            onSuccess: (scan) => {
-                              if (scan.status === 'existing' && !scan.needs_rescan) {
-                                toast.info('Bestaande scan gevonden, resultaten worden geopend')
-                                navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
-                                return
-                              }
-                              toast.success(`Scan gestart voor ${selectedWijk.name}`)
+                    {scanControlsEnabled && (
+                      <button
+                        onClick={() => {
+                          triggerScan.mutate(
+                            {
+                              gemeente_code: gemeenteCode,
+                              gemeente_naam: gemeenteName,
+                              wijk_naam: selectedWijk.name,
+                              ...(selectedWijk.bbox ? { bbox_wgs84: selectedWijk.bbox } : {}),
                             },
-                            onError: (error) => toast.error(error.message || 'Scan starten mislukt'),
-                          }
-                        )
-                      }}
-                      disabled={triggerScan.isPending}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-aura-amber bg-aura-amber px-3 py-1.5 text-xs font-semibold text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <ScanIcon />
-                      {triggerScan.isPending ? 'Scan starten...' : 'Start wijkscan'}
-                    </button>
+                            {
+                              onSuccess: (scan) => {
+                                if (scan.status === 'existing' && !scan.needs_rescan) {
+                                  toast.info('Bestaande scan gevonden, resultaten worden geopend')
+                                  navigate({ to: '/resultaten', search: { scan_id: scan.scan_id } })
+                                  return
+                                }
+                                toast.success(`Scan gestart voor ${selectedWijk.name}`)
+                              },
+                              onError: (error) => toast.error(error.message || 'Scan starten mislukt'),
+                            }
+                          )
+                        }}
+                        disabled={triggerScan.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-aura-amber bg-aura-amber px-3 py-1.5 text-xs font-semibold text-aura-obsidian transition-colors hover:bg-aura-amber-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <ScanIcon />
+                        {triggerScan.isPending ? 'Scan starten...' : 'Start wijkscan'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (

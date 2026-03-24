@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Heart, ExternalLink } from 'lucide-react'
 import { MeldingenModal } from './MeldingenModal'
 import { staggerContainer, fadeUp } from './animations'
 import { useParcelFavorites } from '@/hooks/useFavorites'
-import { useUnreadCounts } from '@/hooks/useNotifications'
+import { useGemeenteMonitoringState } from '@/hooks/useNotifications'
+import { filterFavoritesForGemeente } from '@/lib/favorites'
 
 interface ActiviteitLayerProps {
   gemeenteNaam: string
@@ -41,15 +43,13 @@ export function ActiviteitLayer({
   const [showMeldingen, setShowMeldingen] = useState(false)
 
   const { data: favorites } = useParcelFavorites()
-  const { data: unreadData } = useUnreadCounts()
-
-  const totalUnread = unreadData?.total_unread ?? 0
+  const { unreadCount: totalUnread } = useGemeenteMonitoringState(gemeenteCode)
 
   // Favorieten in deze gemeente
-  const gemeenteFavorites = useMemo(() => {
-    if (!favorites) return []
-    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === gemeenteNaam.toLowerCase())
-  }, [favorites, gemeenteNaam])
+  const gemeenteFavorites = useMemo(
+    () => filterFavoritesForGemeente(favorites, { gemeenteCode, gemeenteNaam }),
+    [favorites, gemeenteCode, gemeenteNaam],
+  )
 
   return (
     <>
@@ -59,7 +59,7 @@ export function ActiviteitLayer({
         <motion.div className="mt-6" variants={staggerContainer} initial="hidden" animate="show">
           <SectionHeader icon={<Bell size={14} className="text-slate-400" />} label="Meldingen">
             {totalUnread > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums" style={{ color: '#F9A826', backgroundColor: 'rgba(249,168,38,0.1)' }}>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums" style={{ color: AMBER.base, backgroundColor: 'rgba(249,168,38,0.1)' }}>
                 {totalUnread} nieuw
               </span>
             )}

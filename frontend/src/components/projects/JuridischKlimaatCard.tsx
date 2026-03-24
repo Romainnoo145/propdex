@@ -21,16 +21,16 @@ function overallSeverity(winLoss: WinLossRatio): {
   label: string
 } {
   const pctAfgewezen = Math.round((winLoss.afgewezen / winLoss.total) * 100)
-  if (pctAfgewezen < 15) return { color: 'text-green-400', bg: 'bg-green-400', label: 'Gunstig' }
-  if (pctAfgewezen <= 35) return { color: 'text-amber-400', bg: 'bg-amber-400', label: 'Gemiddeld' }
-  if (pctAfgewezen <= 55) return { color: 'text-orange-400', bg: 'bg-orange-400', label: 'Ongunstig' }
-  return { color: 'text-red-400', bg: 'bg-red-400', label: 'Zeer ongunstig' }
+  if (pctAfgewezen < 15) return { color: 'text-aura-green', bg: 'bg-aura-green', label: 'Gunstig' }
+  if (pctAfgewezen <= 35) return { color: 'text-aura-amber-dark', bg: 'bg-aura-amber', label: 'Gemiddeld' }
+  if (pctAfgewezen <= 55) return { color: 'text-aura-amber-dark', bg: 'bg-aura-amber-dark', label: 'Ongunstig' }
+  return { color: 'text-aura-red', bg: 'bg-aura-red', label: 'Zeer ongunstig' }
 }
 
 const OUTCOME_CONFIG = [
-  { key: 'toegewezen' as const, label: 'Toegewezen', color: 'bg-green-400/60', dot: 'bg-green-400/60' },
-  { key: 'gedeeltelijk' as const, label: 'Gedeeltelijk', color: 'bg-amber-400/60', dot: 'bg-amber-400/60' },
-  { key: 'afgewezen' as const, label: 'Afgewezen', color: 'bg-red-400/60', dot: 'bg-red-400/60' },
+  { key: 'toegewezen' as const, label: 'Toegewezen', color: 'bg-aura-green/70', dot: 'bg-aura-green' },
+  { key: 'gedeeltelijk' as const, label: 'Gedeeltelijk', color: 'bg-aura-amber/70', dot: 'bg-aura-amber' },
+  { key: 'afgewezen' as const, label: 'Afgewezen', color: 'bg-aura-red/70', dot: 'bg-aura-red' },
   { key: 'onbekend' as const, label: 'Onbekend', color: 'bg-neutral-300', dot: 'bg-neutral-300' },
 ]
 
@@ -48,9 +48,9 @@ export function JuridischKlimaatCard({
 }: JuridischKlimaatCardProps) {
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-3">
+      <div className="space-y-3 rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-aura-amber/70 animate-pulse">Analyseren...</span>
+          <span className="text-xs font-medium text-aura-amber/80 animate-pulse">Analyseren...</span>
         </div>
         <Skeleton className="h-10 w-20" />
         <Skeleton className="h-3 w-full" />
@@ -71,20 +71,18 @@ export function JuridischKlimaatCard({
   const firstDoorlooptijd = doorlooptijdEntries.find(s => !s.insufficient_data)
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 space-y-3">
-      {/* Header row: count + severity */}
+    <div className="space-y-3 rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-neutral-700">
+        <p className="text-xs text-neutral-600">
           <span className="text-sm font-bold text-aura-ink tabular-nums">{winLoss.total}</span>
           {' '}uitspraken
         </p>
         <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${sev.bg}`} />
-          <span className={`text-[10px] font-medium ${sev.color}`}>{sev.label}</span>
+          <span className={`h-1.5 w-1.5 rounded-full ${sev.bg}`} />
+          <span className={`text-label ${sev.color}`}>{sev.label}</span>
         </div>
       </div>
 
-      {/* Stacked bar */}
       <div className="flex h-2 w-full overflow-hidden rounded-full">
         {segments.map((seg) => (
           <div
@@ -95,17 +93,15 @@ export function JuridischKlimaatCard({
         ))}
       </div>
 
-      {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
         {segments.map((seg) => (
-          <span key={seg.key} className="flex items-center gap-1 text-[10px] text-neutral-500">
-            <span className={`w-1.5 h-1.5 rounded-full ${seg.dot}`} />
+          <span key={seg.key} className="flex items-center gap-1 text-xs text-neutral-500">
+            <span className={`h-1.5 w-1.5 rounded-full ${seg.dot}`} />
             {seg.count} {seg.label}
           </span>
         ))}
       </div>
 
-      {/* Doorlooptijd — only if data exists */}
       {hasDoorlooptijd && firstDoorlooptijd?.avg_dagen != null && (
         <div className="flex items-center gap-1.5 text-xs text-neutral-600 pt-1 border-t border-neutral-200">
           <Clock className="w-3 h-3" />
@@ -114,7 +110,6 @@ export function JuridischKlimaatCard({
         </div>
       )}
 
-      {/* Multiple doorlooptijd types */}
       {hasDoorlooptijd && doorlooptijdEntries.filter(s => !s.insufficient_data).length > 1 && (
         <div className="space-y-1">
           {doorlooptijdEntries.filter(s => !s.insufficient_data).map((stat) => (
@@ -131,9 +126,8 @@ export function JuridischKlimaatCard({
         </div>
       )}
 
-      {/* Analysis progress */}
       {(pendingCount ?? 0) > 0 && (
-        <p className="text-[10px] text-neutral-500">
+        <p className="text-label text-neutral-500">
           {analyzedCount} van {totalCount} uitspraken geanalyseerd
         </p>
       )}

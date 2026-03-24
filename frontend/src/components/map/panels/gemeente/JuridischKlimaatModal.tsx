@@ -1,5 +1,5 @@
 import { GemeenteModal } from './GemeenteModal'
-import { JurisprudenceSection } from '@/components/projects/JurisprudenceSection'
+import { JuridischKlimaatModalContent } from './JuridischKlimaatModalContent'
 
 interface JuridischKlimaatModalProps {
   gemeenteNaam: string
@@ -7,14 +7,15 @@ interface JuridischKlimaatModalProps {
   onClose: () => void
 }
 
-/**
- * Juridisch Klimaat modal — thin wrapper around existing JurisprudenceSection.
- * The section component handles its own data fetching via hooks.
- */
 export function JuridischKlimaatModal({ gemeenteNaam, onClose }: JuridischKlimaatModalProps) {
   return (
-    <GemeenteModal title={`Juridisch Klimaat · ${gemeenteNaam}`} onClose={onClose} maxWidth="max-w-5xl">
-      <JurisprudenceSection gemeenteNaam={gemeenteNaam} wijkNaam={null} />
+    <GemeenteModal
+      title={`Juridisch Klimaat · ${gemeenteNaam}`}
+      subtitle="Winkans bezwaar, jurisprudentie en documentdetails"
+      onClose={onClose}
+      maxWidth="max-w-5xl"
+    >
+      <JuridischKlimaatModalContent gemeenteNaam={gemeenteNaam} />
     </GemeenteModal>
   )
 }

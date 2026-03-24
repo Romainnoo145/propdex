@@ -226,6 +226,7 @@ export function GemeenteContextPanel({
         {showFavorieten && (
           <FavorietenModal
             gemeenteNaam={naam}
+            gemeenteCode={code}
             onClose={() => setShowFavorieten(false)}
           />
         )}

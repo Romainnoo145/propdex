@@ -90,7 +90,8 @@ def upgrade() -> None:
     """)
 
     # ── juridisch_analyse_jobs ────────────────────────────────────────
-    # No existing RLS policy to drop; enable RLS first
+    # Older local databases may still have the tenant policy from prior RLS rollout.
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_juridisch_analyse_jobs ON juridisch_analyse_jobs")
     op.execute("ALTER TABLE juridisch_analyse_jobs ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE juridisch_analyse_jobs FORCE ROW LEVEL SECURITY")
     op.drop_index("ix_juridisch_analyse_jobs_org_gemeente", table_name="juridisch_analyse_jobs")
@@ -103,7 +104,8 @@ def upgrade() -> None:
     """)
 
     # ── funda_listing_snapshots ───────────────────────────────────────
-    # No existing RLS policy to drop; enable RLS first
+    # Older local databases may still have the tenant policy from prior RLS rollout.
+    op.execute("DROP POLICY IF EXISTS tenant_isolation_funda_listing_snapshots ON funda_listing_snapshots")
     op.execute("ALTER TABLE funda_listing_snapshots ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE funda_listing_snapshots FORCE ROW LEVEL SECURITY")
     op.drop_constraint(

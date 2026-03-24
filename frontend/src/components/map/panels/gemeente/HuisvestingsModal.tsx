@@ -1,4 +1,5 @@
 import { ExternalLink, ScrollText } from 'lucide-react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { GemeenteModal } from './GemeenteModal'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 
@@ -34,7 +35,7 @@ export function HuisvestingsModal({ gemeenteNaam, onClose }: HuisvestingsModalPr
               <span
                 className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
                 style={{
-                  color: active ? '#F9A826' : '#94a3b8',
+                  color: active ? AMBER.base : SLATE_MUTED,
                   backgroundColor: active ? 'rgba(249, 168, 38, 0.1)' : '#f0f2f1',
                 }}
               >

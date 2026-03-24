@@ -6,9 +6,9 @@
  * - inbox: master-detail inbox layout used in gemeente detail
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useProjectChanges } from '@/hooks/useNotifications'
+import { useMarkViewed, useProjectChanges } from '@/hooks/useNotifications'
 import { useReadTracking } from '@/hooks/useReadTracking'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { Skeleton } from '@/components/feedback/Skeleton'
@@ -28,6 +28,8 @@ export default function ChangeTimeline({
   projectId,
   variant = 'timeline',
 }: ChangeTimelineProps) {
+  const { mutate: markViewed } = useMarkViewed()
+  const markedViewedProjectIdRef = useRef<string | null>(null)
   const { data, isLoading, error, refetch } = useProjectChanges(
     projectId,
     true
@@ -62,6 +64,12 @@ export default function ChangeTimeline({
     () => Object.keys(groupedChanges).sort().reverse(),
     [groupedChanges]
   )
+
+  useEffect(() => {
+    if (markedViewedProjectIdRef.current === projectId) return
+    markedViewedProjectIdRef.current = projectId
+    markViewed(projectId)
+  }, [markViewed, projectId])
 
   useEffect(() => {
     if (variant !== 'inbox') return

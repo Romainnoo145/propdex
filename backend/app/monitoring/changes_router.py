@@ -1,9 +1,10 @@
 """Change CRUD endpoints for monitoring."""
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +15,6 @@ from app.models.change_read_state import ChangeReadState
 from app.models.change_record import ChangeRecord
 from app.models.project import Project
 from app.models.user import User
-from app.models.user_notification_state import UserNotificationState
 from app.monitoring._helpers import (
     _build_address_from_components,
     _build_address_from_hints,
@@ -39,9 +39,58 @@ from app.services.bekendmaking_matcher import (
 from app.services.category_classifier import classify_bekendmaking
 from app.services.postcode_extractor import extract_postcodes
 
-from datetime import datetime
-
 router = APIRouter(tags=["monitoring"])
+logger = logging.getLogger(__name__)
+
+
+async def _change_read_states_has_org_column(db: AsyncSession) -> bool:
+    """Return True when the legacy organization_id column is still present."""
+    result = await db.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'change_read_states'
+                  AND column_name = 'organization_id'
+            )
+            """
+        )
+    )
+    return bool(result.scalar())
+
+
+async def _insert_change_read_rows(
+    *,
+    db: AsyncSession,
+    rows: list[dict[str, uuid.UUID]],
+    organization_id: uuid.UUID,
+):
+    """Insert read-state rows across both legacy and current schemas."""
+    if await _change_read_states_has_org_column(db):
+        legacy_rows = [
+            {
+                "organization_id": organization_id,
+                "user_id": row["user_id"],
+                "change_id": row["change_id"],
+            }
+            for row in rows
+        ]
+        return await db.execute(
+            text(
+                """
+                INSERT INTO change_read_states (organization_id, user_id, change_id)
+                VALUES (:organization_id, :user_id, :change_id)
+                ON CONFLICT ON CONSTRAINT uq_change_read_states_user_change DO NOTHING
+                """
+            ),
+            legacy_rows,
+        )
+
+    stmt = pg_insert(ChangeReadState).values(rows).on_conflict_do_nothing(
+        constraint="uq_change_read_states_user_change",
+    )
+    return await db.execute(stmt)
 
 
 @router.get("/changes", response_model=ChangeRecordListResponse)
@@ -60,8 +109,8 @@ async def get_changes(
     """
     Get change history, optionally filtered by project.
 
-    When project_id is provided: returns changes for that project and updates
-    the user's last_viewed_at (existing behavior).
+    When project_id is provided: returns changes for that project after
+    verifying it belongs to the current organization.
 
     When project_id is omitted: returns all organization changes across all
     projects, with project_name included for feed context. No notification
@@ -118,28 +167,6 @@ async def get_changes(
             )
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
-
-        # Side effect: Update last_viewed_at only for per-project requests
-        if project_id is not None:
-            notification_query = select(UserNotificationState).where(
-                UserNotificationState.user_id == current_user.id,
-                UserNotificationState.project_id == project_id,
-            )
-            notification_result = await db.execute(notification_query)
-            notification_state = notification_result.scalar_one_or_none()
-
-            if notification_state is None:
-                notification_state = UserNotificationState(
-                    user_id=current_user.id,
-                    project_id=project_id,
-                    last_viewed_at=datetime.utcnow(),
-                )
-                db.add(notification_state)
-            else:
-                notification_state.last_viewed_at = datetime.utcnow()
-
-            await db.flush()
-            await db.commit()
 
         # For all-org feed, pre-load project names
         project_names: dict[uuid.UUID, str] = {}
@@ -201,16 +228,23 @@ async def get_changes(
             huisnummer_hint = hints_for_ui[1] if hints_for_ui is not None else _extract_huisnummer_from_address(effective_address)
 
             if include_matches and effective_postcode:
-                parcel_matches = await find_matching_parcels(
-                    effective_postcode, db
-                )
-                report_matches = await find_matching_reports(
-                    effective_postcode, current_user.id, db
-                )
-                if parcel_matches:
-                    matched_parcels = [MatchedParcel(**m) for m in parcel_matches]
-                if report_matches:
-                    matched_reports = [MatchedReport(**m) for m in report_matches]
+                try:
+                    parcel_matches = await find_matching_parcels(
+                        effective_postcode, db
+                    )
+                    report_matches = await find_matching_reports(
+                        effective_postcode, current_user.id, db
+                    )
+                    if parcel_matches:
+                        matched_parcels = [MatchedParcel(**m) for m in parcel_matches]
+                    if report_matches:
+                        matched_reports = [MatchedReport(**m) for m in report_matches]
+                except Exception:
+                    logger.exception(
+                        "Failed to enrich matches for change %s (postcode=%s)",
+                        change.id,
+                        effective_postcode,
+                    )
 
             change_responses.append(
                 ChangeRecordResponse(
@@ -433,11 +467,11 @@ async def mark_all_read(
             }
             for cid in change_ids
         ]
-        stmt = pg_insert(ChangeReadState).values(rows).on_conflict_do_nothing(
-            index_elements=None,
-            constraint="uq_change_read_states_user_change",
+        result = await _insert_change_read_rows(
+            db=db,
+            rows=rows,
+            organization_id=organization_id,
         )
-        result = await db.execute(stmt)
         await db.flush()
         await db.commit()
 
@@ -479,17 +513,16 @@ async def mark_change_read(
                 detail="Change not found",
             )
 
-        stmt = (
-            pg_insert(ChangeReadState)
-            .values(
-                user_id=current_user.id,
-                change_id=change_id,
-            )
-            .on_conflict_do_nothing(
-                constraint="uq_change_read_states_user_change",
-            )
+        await _insert_change_read_rows(
+            db=db,
+            rows=[
+                {
+                    "user_id": current_user.id,
+                    "change_id": change_id,
+                }
+            ],
+            organization_id=organization_id,
         )
-        await db.execute(stmt)
         await db.flush()
         await db.commit()
 

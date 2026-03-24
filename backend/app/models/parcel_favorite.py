@@ -40,11 +40,6 @@ class ParcelFavorite(Base, TimestampMixin):
         nullable=False,
         comment="User who favorited this parcel",
     )
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Organization this favorite belongs to",
-    )
     gemeente_code: Mapped[str | None] = mapped_column(
         String(10),
         nullable=True,

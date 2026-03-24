@@ -12,6 +12,7 @@ Benefits over Martin proxy:
 3. Filtering logic (infrastructure, roads, parks) applied at tile level
 """
 
+import uuid
 from math import atan, pi, sinh
 
 from sqlalchemy import text
@@ -44,7 +45,7 @@ async def generate_mvt_tile(
     z: int,
     x: int,
     y: int,
-    scan_id: int | None,
+    scan_id: uuid.UUID,
     db: AsyncSession,
 ) -> bytes | None:
     """Generate MVT tile directly from PostGIS.
@@ -60,7 +61,8 @@ async def generate_mvt_tile(
         z: Tile zoom level
         x: Tile column
         y: Tile row
-        scan_id: Scan UUID to scope results (unused currently, kept for API compat)
+        scan_id: Scan UUID for UI context. Historical tile replay is not
+            safe yet because scan_results still stores latest-per-parcel rows.
         db: Async database session
 
     Returns:
@@ -76,7 +78,8 @@ async def generate_mvt_tile(
                 28992
             ) AS geom
         ),
-        -- One scan_result per parcel (unique constraint on parcel_id).
+        -- scan_results still stores latest-per-parcel data. Do not hard-scope
+        -- by scan_id here until we support immutable historical snapshots.
         best_sr AS (
             SELECT sr.parcel_id,
                    sr.score,

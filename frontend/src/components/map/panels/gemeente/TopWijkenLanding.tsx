@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Heart, ChevronRight, MapPin } from 'lucide-react'
 import { useParcelFavorites } from '@/hooks/useFavorites'
+import { filterFavoritesForGemeente } from '@/lib/favorites'
 
 interface TopWijkenLandingProps {
   gemeenteCode: string
@@ -24,10 +25,14 @@ export function TopWijkenLanding({ gemeenteCode, onSelectWijk, onSwitchToWijken 
   const topWijken = useMemo((): WijkFavCount[] => {
     if (!favorites) return []
 
+    const gemeenteFavorites = filterFavoritesForGemeente(favorites, {
+      gemeenteCode,
+    })
+
     // Filter to this gemeente and group by wijk_naam
     const counts = new Map<string, number>()
-    for (const fav of favorites) {
-      if (fav.gemeente_code === gemeenteCode && fav.wijk_naam) {
+    for (const fav of gemeenteFavorites) {
+      if (fav.wijk_naam) {
         counts.set(fav.wijk_naam, (counts.get(fav.wijk_naam) ?? 0) + 1)
       }
     }

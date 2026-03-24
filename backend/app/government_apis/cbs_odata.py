@@ -55,6 +55,14 @@ DATASET_PEILJAAR: dict[str, int] = {
     "86165NED": 2025,
 }
 
+# Ordered fallback chain: newest → oldest. Used when the primary dataset
+# is missing income measures (CBS publishes income data with a ~1yr delay).
+DATASET_FALLBACK_CHAIN: list[str] = ["86165NED", "85984NED", "85618NED", "85318NED"]
+
+# Income-specific measure keys — used to detect missing income data
+INCOME_KEYS = {"inkomen", "inkomen_per_inwoner", "inkomen_gestandaardiseerd",
+               "inkomen_laagste_40_personen", "inkomen_hoogste_20_personen"}
+
 # CBS Nabijheid voorzieningen dataset (proximity to amenities)
 NABIJHEID_DATASET_ID = "86134NED"
 
@@ -264,6 +272,73 @@ class CBSODataClient:
                 result[human_key] = None
         return result
 
+    async def _fetch_income_fallback(
+        self,
+        client: httpx.AsyncClient,
+        region_identifier: str,
+    ) -> dict[str, float | None]:
+        """
+        Try older datasets to fill in missing income measures.
+
+        CBS publishes income data with ~1yr delay, so the newest Kerncijfers
+        dataset may not have income measures yet. This cascades through
+        DATASET_FALLBACK_CHAIN (skipping the primary dataset) until income
+        data is found.
+
+        Returns:
+            Dict of income keys → values (may be empty if no fallback has data)
+        """
+        income_codes = {k: v for k, v in MEASURE_CODES.items() if k in INCOME_KEYS}
+        measure_filter = " or ".join(
+            f"Measure eq '{code}'" for code in income_codes.values()
+        )
+
+        for ds in DATASET_FALLBACK_CHAIN:
+            if ds == self.dataset_id:
+                continue  # Already tried this one
+            url = f"{BASE_URL}/{ds}/Observations"
+            params = {
+                "$filter": (
+                    f"WijkenEnBuurten eq '{region_identifier}' and ({measure_filter})"
+                ),
+                "$select": "Measure,Value,ValueAttribute",
+            }
+            try:
+                async with cbs_odata_limiter:
+                    response = await retry_with_backoff(
+                        lambda url=url, params=params: client.get(
+                            url, headers=self._headers, params=params, timeout=10.0
+                        ),
+                        source="cbs_income_fallback",
+                    )
+            except Exception:
+                continue
+
+            if response.status_code != 200:
+                continue
+
+            observations = response.json().get("value", [])
+            result: dict[str, float | None] = {}
+            for obs in observations:
+                measure_code = obs.get("Measure", "")
+                human_key = _MEASURE_CODE_TO_KEY.get(measure_code)
+                if human_key is None or human_key not in INCOME_KEYS:
+                    continue
+                value_attr = obs.get("ValueAttribute", "")
+                if value_attr in ("None", ""):
+                    raw = obs.get("Value")
+                    result[human_key] = float(raw) if raw is not None else None
+
+            if any(v is not None for v in result.values()):
+                fallback_year = DATASET_PEILJAAR.get(ds, "?")
+                logger.info(
+                    "CBS income fallback: found data in %s (peiljaar %s) for %s",
+                    ds, fallback_year, region_identifier,
+                )
+                return result, fallback_year
+
+        return {}, None
+
     async def get_neighborhood_data(
         self,
         client: httpx.AsyncClient,
@@ -325,6 +400,20 @@ class CBSODataClient:
 
         data = await self._fetch_observations(client, identifier)
 
+        # Income fallback: if primary dataset has no income data, try older datasets
+        has_income = any(
+            data.get(k) is not None for k in INCOME_KEYS
+        )
+        inkomen_peiljaar = None
+        if not has_income:
+            logger.info(
+                "CBS: no income data in %s for %s — trying fallback datasets",
+                self.dataset_id, identifier,
+            )
+            income_fallback, inkomen_peiljaar = await self._fetch_income_fallback(client, identifier)
+            if income_fallback:
+                data.update(income_fallback)
+
         # Build stedelijkheid value safely
         mvs_raw = data.get("stedelijkheid")
         mvs = int(mvs_raw) if mvs_raw is not None else None
@@ -375,6 +464,7 @@ class CBSODataClient:
                     "gem_gestandaardiseerd": data.get("inkomen_gestandaardiseerd"),
                     "perc_laagste_40": data.get("inkomen_laagste_40_personen"),
                     "perc_hoogste_20": data.get("inkomen_hoogste_20_personen"),
+                    "peiljaar": inkomen_peiljaar,
                 },
             },
         }

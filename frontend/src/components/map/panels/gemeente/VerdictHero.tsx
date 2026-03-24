@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, useSpring, useTransform } from 'framer-motion'
 
 interface VerdictHeroProps {
@@ -35,7 +36,7 @@ export function VerdictHero({ score, label, subtitle, color, icon, barMax = 100 
         {/* Left: huge score */}
         <span
           className="text-7xl font-black tracking-tighter tabular-nums leading-none"
-          style={{ color: score != null ? '#0E1111' : '#cbd5e1' }}
+          style={{ color: score != null ? OBSIDIAN : '#cbd5e1' }}
         >
           {score != null ? Math.round(score) : '—'}
         </span>

@@ -32,6 +32,7 @@ class FavoriteResponse(BaseModel):
 
     id: uuid.UUID
     parcel_id: str
+    parcel_cache_id: uuid.UUID | None = None
     user_id: uuid.UUID
     gemeente_code: str | None
     gemeente_naam: str | None
@@ -40,6 +41,10 @@ class FavoriteResponse(BaseModel):
     pipeline_stage: str
     afgerond_reden: str | None
     notitie: str | None
+    potentie_score: float | None = None
+    risico_score: float | None = None
+    has_report: bool = False
+    report_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

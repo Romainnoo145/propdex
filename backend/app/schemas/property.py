@@ -573,9 +573,9 @@ class PropertyReportResponse(BaseModel):
     )
 
     # Phase 104 additions (Due Diligence Dossier — flags-sourced enrichment)
-    vergunningen_data: list[dict] | None = Field(
+    vergunningen_data: list[dict] | dict | None = Field(
         default=None,
-        description="SRU bekendmakingen records from scan flags",
+        description="SRU bekendmakingen records from scan flags (list or dict with 'records' key)",
     )
     energielabel_flags: dict | None = Field(
         default=None,
@@ -585,13 +585,13 @@ class PropertyReportResponse(BaseModel):
         default=None,
         description="Waardeloket enrichment from scan flags",
     )
-    bodem_flags: str | None = Field(
+    bodem_flags: str | dict | None = Field(
         default=None,
-        description="Bodemkwaliteitsklasse from scan flags",
+        description="Bodemkwaliteitsklasse from scan flags (string or structured dict)",
     )
-    bodemtype_flags: str | None = Field(
+    bodemtype_flags: str | dict | None = Field(
         default=None,
-        description="Soil type (klei/veen/zand/leem) from scan flags",
+        description="Soil type (klei/veen/zand/leem) from scan flags (string or structured dict)",
     )
     funderingsrisico_flags: dict | None = Field(
         default=None,

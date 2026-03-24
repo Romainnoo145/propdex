@@ -50,19 +50,19 @@ export function deriveDoelgroep(
 
 const BADGE_CONFIG: Record<Doelgroep, { bg: string; label: string }> = {
   studentenwijk: {
-    bg: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    bg: 'bg-amber-100 text-amber-700 border border-amber-200',
     label: 'Studentenwijk',
   },
   gezinswijk: {
-    bg: 'bg-green-500/10 text-green-400 border border-green-500/20',
+    bg: 'bg-amber-50 text-amber-600 border border-amber-100',
     label: 'Gezinswijk',
   },
   vergrijzend: {
-    bg: 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+    bg: 'bg-amber-200/60 text-amber-800 border border-amber-300',
     label: 'Vergrijzend',
   },
   gemengd: {
-    bg: 'bg-neutral-300/50 text-neutral-700 border border-neutral-300',
+    bg: 'bg-amber-50/60 text-amber-500 border border-amber-100/60',
     label: 'Gemengd',
   },
 }

@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bookmark, MapPin, ChevronDown, ChevronRight, Search, X, Check, Heart } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
+import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
 import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import type { FavoriteResponse, PipelineStage } from '@/lib/types/portfolio'
 
@@ -108,6 +110,7 @@ function OpgeslagenPage() {
   const { data: favorites, isLoading } = useParcelFavorites()
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
+  const [workspaceParcel, setWorkspaceParcel] = useState<FavoriteResponse | null>(null)
 
   const groups = useMemo(() => buildGroups(favorites ?? []), [favorites])
 
@@ -186,6 +189,18 @@ function OpgeslagenPage() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
+      </ResultsShell>
+    )
+  }
+
+  if (workspaceParcel) {
+    return (
+      <ResultsShell>
+        <FavoriteParcelWorkspaceView
+          favorite={workspaceParcel}
+          onBack={() => setWorkspaceParcel(null)}
+          onOpenMap={() => navigateToParcel(workspaceParcel)}
+        />
       </ResultsShell>
     )
   }
@@ -380,6 +395,7 @@ function OpgeslagenPage() {
                                 key={parcel.id}
                                 parcel={parcel}
                                 onNavigate={() => navigateToParcel(parcel)}
+                                onOpenWorkspace={() => setWorkspaceParcel(parcel)}
                               />
                             ))}
                           </div>
@@ -419,16 +435,18 @@ function OpgeslagenPage() {
 function ParcelRow({
   parcel,
   onNavigate,
+  onOpenWorkspace,
 }: {
   parcel: FavoriteResponse
   onNavigate: () => void
+  onOpenWorkspace: () => void
 }) {
   const address = parcel.address || parcel.parcel_id
   const subtitle = parcel.address ? parcel.parcel_id : null
 
   return (
     <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors">
-      <button onClick={onNavigate} className="min-w-0 flex-1 text-left">
+      <button onClick={onOpenWorkspace} className="min-w-0 flex-1 text-left">
         <p className="text-[13px] font-semibold text-[#0E1111] truncate">
           {address}
         </p>
@@ -440,6 +458,18 @@ function ParcelRow({
       </button>
 
       <div className="flex items-center gap-2 shrink-0 ml-3">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onNavigate()
+          }}
+          aria-label="Open op kaart"
+          title="Open op kaart"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F2F6F3] text-[#0E1111] transition-colors hover:bg-[#E8EDEB]"
+        >
+          <MapPin size={14} />
+        </button>
         <PipelineStagePill parcel={parcel} />
       </div>
     </div>
@@ -451,18 +481,54 @@ function ParcelRow({
 function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   const [isOpen, setIsOpen] = useState(false)
   const [showAfgerondForm, setShowAfgerondForm] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
   const updateStage = useUpdatePipelineStage()
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return undefined
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      if (containerRef.current && !containerRef.current.contains(target)) {
         setIsOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setMenuPosition(null)
+      return undefined
+    }
+
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const menuWidth = 192
+      const left = Math.min(
+        window.innerWidth - menuWidth - 12,
+        Math.max(12, rect.right - menuWidth),
+      )
+
+      setMenuPosition({
+        top: rect.bottom + 8,
+        left,
+      })
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
   }, [isOpen])
 
   const handleStageSelect = (stage: PipelineStage) => {
@@ -489,8 +555,9 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   const stageIndex = STAGES.indexOf(parcel.pipeline_stage)
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={containerRef}>
       <button
+        ref={triggerRef}
         onClick={(e) => {
           e.stopPropagation()
           setIsOpen(!isOpen)
@@ -511,44 +578,50 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
         {parcel.pipeline_stage}
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-[16px] border border-[#EAEFEF] bg-white shadow-lg py-1.5">
-          {STAGES.map((stage, i) => (
-            <button
-              key={stage}
-              onClick={(e) => {
-                e.stopPropagation()
-                handleStageSelect(stage)
-              }}
-              className="w-full text-left px-4 py-2.5 text-[12px] transition-colors hover:bg-[#F2F6F3] flex items-center gap-3"
-            >
-              <div className="flex items-center gap-0.5">
-                {STAGES.map((_, j) => (
-                  <span
-                    key={j}
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      j <= i ? 'bg-[#F9A826]' : 'bg-slate-200'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className={stage === parcel.pipeline_stage ? 'font-bold' : 'text-slate-600'}>
-                {stage}
-              </span>
-              {stage === parcel.pipeline_stage && <Check size={12} className="ml-auto text-[#F9A826]" />}
-            </button>
-          ))}
-        </div>
-      )}
+      {isOpen && menuPosition && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[1400] w-48 rounded-[16px] border border-[#EAEFEF] bg-white py-1.5 shadow-[0_18px_50px_rgba(15,23,42,0.14)]"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
+            {STAGES.map((stage, i) => (
+              <button
+                key={stage}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStageSelect(stage)
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[12px] transition-colors hover:bg-[#F2F6F3]"
+              >
+                <div className="flex items-center gap-0.5">
+                  {STAGES.map((_, j) => (
+                    <span
+                      key={j}
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        j <= i ? 'bg-[#F9A826]' : 'bg-slate-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className={stage === parcel.pipeline_stage ? 'font-bold' : 'text-slate-600'}>
+                  {stage}
+                </span>
+                {stage === parcel.pipeline_stage && <Check size={12} className="ml-auto text-[#F9A826]" />}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
 
-      {/* Afgerond modal */}
-      {showAfgerondForm && (
-        <AfgerondForm
-          onSubmit={handleAfgerondSubmit}
-          onCancel={() => setShowAfgerondForm(false)}
-        />
-      )}
+      {showAfgerondForm && typeof document !== 'undefined' &&
+        createPortal(
+          <AfgerondForm
+            onSubmit={handleAfgerondSubmit}
+            onCancel={() => setShowAfgerondForm(false)}
+          />,
+          document.body,
+        )}
     </div>
   )
 }

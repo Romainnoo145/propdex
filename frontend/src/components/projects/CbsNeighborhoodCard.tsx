@@ -22,12 +22,13 @@ export function CbsNeighborhoodCard({ metrics }: CbsNeighborhoodCardProps) {
 
   if (!hasAnyData) return null
 
-  // Stedelijkheid badge color mapping
+  // Stedelijkheid badge color mapping — amber palette
   function stedelijkheidBadgeClass(klasse: number): string {
     if (klasse === 1) return 'bg-aura-amber/20 text-aura-amber border border-aura-amber/30'
-    if (klasse === 2) return 'bg-aura-amber/10 text-aura-amber/80 border border-aura-amber/20'
-    if (klasse === 3) return 'bg-neutral-300/50 text-neutral-700 border border-neutral-300'
-    return 'bg-neutral-200/50 text-neutral-600 border border-neutral-300'
+    if (klasse === 2) return 'bg-aura-amber/15 text-aura-amber/80 border border-aura-amber/20'
+    if (klasse === 3) return 'bg-amber-100/60 text-amber-700 border border-amber-200'
+    if (klasse === 4) return 'bg-amber-50/60 text-amber-600 border border-amber-100'
+    return 'bg-amber-50/40 text-amber-500 border border-amber-100/60'
   }
 
   const hasKoopHuur =

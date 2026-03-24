@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/react-router'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'
@@ -58,10 +59,14 @@ function AuthenticatedLayout() {
     return () => clearTimeout(timer)
   }, [isMapVisible, mapReady])
 
-  // Trigger map resize during panel transition (350ms CSS transition)
+  useEffect(() => {
+    if (!isMapVisible && mapRef.current) {
+      mapRef.current.getCanvas().style.cursor = ''
+    }
+  }, [isMapVisible])
+
   useEffect(() => {
     if (!mapReady || !mapRef.current) return
-    // Resize repeatedly during the 350ms transition so the map follows the flex change
     const interval = setInterval(() => mapRef.current?.resize(), 16)
     const timeout = setTimeout(() => {
       clearInterval(interval)
@@ -72,12 +77,6 @@ function AuthenticatedLayout() {
       clearTimeout(timeout)
     }
   }, [panelOpen, leftPanelOpen, mapReady])
-
-  useEffect(() => {
-    if (!isMapVisible && mapRef.current) {
-      mapRef.current.getCanvas().style.cursor = ''
-    }
-  }, [isMapVisible])
 
   return (
     <WorkspaceProvider>
@@ -90,7 +89,7 @@ function AuthenticatedLayout() {
         />
         <div
           className="fixed bottom-[-10%] right-[5%] w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{ background: '#F9A826', opacity: 0.20, filter: 'blur(150px)' }}
+          style={{ background: AMBER.base, opacity: 0.20, filter: 'blur(150px)' }}
         />
 
         {/* Fixed sidebar — floats over the canvas, not in the flow */}

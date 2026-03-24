@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, useSpring, useTransform, type Variants } from 'framer-motion'
 import {
   Search,
@@ -8,9 +9,10 @@ import {
 import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 import { useGemeenteAnalysisStatus } from '@/hooks/useJurisprudence'
+import { useGemeenteMonitoringState } from '@/hooks/useNotifications'
 import { useRaadsinformatie } from '@/hooks/useRaadsinformatie'
 import { useParcelFavorites } from '@/hooks/useFavorites'
-import { useUnreadCounts } from '@/hooks/useNotifications'
+import { filterFavoritesForGemeente } from '@/lib/favorites'
 
 interface GemeenteOverviewProps {
   naam: string
@@ -57,7 +59,7 @@ function CardLabelBar({ label, isActive }: { label: string; isActive: boolean })
       className="flex shrink-0 items-center justify-center"
       style={{
         height: 28,
-        background: isActive ? '#F9A826' : '#F2F6F3',
+        background: isActive ? AMBER.base : '#F2F6F3',
       }}
     >
       <span
@@ -111,7 +113,7 @@ function BekendmakingenDivider({ total, approvalPct, topTypes }: { total: number
             className="absolute top-0 left-0 h-full rounded-full"
             style={{
               width: `${approvalPct}%`,
-              background: '#F9A826',
+              background: AMBER.base,
               boxShadow: '0 0 8px rgba(249,168,38,0.3)',
               zIndex: 1,
             }}
@@ -160,7 +162,7 @@ function ScoreCircleCard({
     >
       <div className="flex items-center gap-1.5">
         <span className="text-slate-400">{icon}</span>
-        <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: '#94a3b8' }}>
+        <span className="text-[11px] font-extrabold uppercase" style={{ letterSpacing: '0.15em', color: SLATE_MUTED }}>
           {label}
         </span>
       </div>
@@ -210,8 +212,8 @@ function AnimatedNumber({ value }: { value: number }) {
 
 function DoorlooptijdCard({ doorlooptijd, onClick }: { doorlooptijd: number | null; onClick: () => void }) {
   const color = doorlooptijd != null
-    ? doorlooptijd <= 30 ? '#22C55E' : doorlooptijd <= 90 ? '#F9A826' : '#EF4444'
-    : '#94a3b8'
+    ? doorlooptijd <= 30 ? GREEN : doorlooptijd <= 90 ? AMBER.base : RED
+    : SLATE_MUTED
 
   return (
     <motion.div
@@ -271,6 +273,7 @@ function SecondaryField({ value, onClick }: { value: string; onClick?: () => voi
 
 export function GemeenteOverview({
   naam,
+  gemeenteCode,
   stedelijkheid,
   wijkCount,
   onShowWijken,
@@ -286,20 +289,18 @@ export function GemeenteOverview({
   const { data: analysis } = useGemeenteAnalysisStatus(naam)
   const { data: raadsData } = useRaadsinformatie(naam)
   const { data: favorites } = useParcelFavorites()
-  const { data: unreadData } = useUnreadCounts()
+  const { unreadCount: totalUnread } = useGemeenteMonitoringState(gemeenteCode)
 
   const succeskans = analysis?.vergunnings_succeskans ?? null
   const approvalPct = profile?.approval_rate_pct ?? null
   const doorlooptijd = profile?.avg_doorlooptijd_days ?? null
 
-  // Unread notifications (total across all projects)
-  const totalUnread = unreadData?.total_unread ?? 0
-
   // Favorieten in deze gemeente
-  const favCount = useMemo(() => {
-    if (!favorites) return 0
-    return favorites.filter((f) => f.gemeente_naam?.toLowerCase() === naam.toLowerCase()).length
-  }, [favorites, naam])
+  const gemeenteFavorites = useMemo(
+    () => filterFavoritesForGemeente(favorites, { gemeenteCode, gemeenteNaam: naam }),
+    [favorites, gemeenteCode, naam],
+  )
+  const favCount = gemeenteFavorites.length
 
   // Top types excluding Overig + Vergunningbesluit
   const topTypes = useMemo(() => {
@@ -361,7 +362,7 @@ export function GemeenteOverview({
             </motion.div>
             <motion.span
               className="text-[42px] font-black tracking-tighter tabular-nums leading-none"
-              style={{ color: totalUnread > 0 ? '#0E1111' : '#cbd5e1' }}
+              style={{ color: totalUnread > 0 ? OBSIDIAN : '#cbd5e1' }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.5 }}
@@ -437,7 +438,7 @@ export function GemeenteOverview({
           <div className="flex items-center justify-center flex-1">
             <motion.span
               className="text-5xl font-black tracking-tighter tabular-nums leading-none"
-              style={{ color: raadsData?.total_found ? '#0E1111' : '#cbd5e1' }}
+              style={{ color: raadsData?.total_found ? OBSIDIAN : '#cbd5e1' }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.4 }}
@@ -459,7 +460,7 @@ export function GemeenteOverview({
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
           label="Bezwaar"
           score={succeskans != null ? Math.round(succeskans) : null}
-          color={succeskans != null ? (succeskans >= 60 ? '#22C55E' : succeskans >= 30 ? '#F9A826' : '#EF4444') : '#94a3b8'}
+          color={succeskans != null ? (succeskans >= 60 ? GREEN : succeskans >= 30 ? AMBER.base : RED) : SLATE_MUTED}
           sub="winkans %"
           onClick={onShowJurisprudentie}
         />

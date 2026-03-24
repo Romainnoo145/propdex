@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText,
@@ -50,7 +51,7 @@ function deriveVerdict(
     return {
       score: null,
       label: 'GEEN DATA',
-      color: '#94a3b8',
+      color: SLATE_MUTED,
       Icon: ShieldQuestion,
       subtitle: 'Beleidsinformatie niet beschikbaar',
     }
@@ -59,7 +60,7 @@ function deriveVerdict(
     return {
       score,
       label: 'GOED INZICHT',
-      color: '#22c55e',
+      color: AMBER.base,
       Icon: ShieldCheck,
       subtitle: 'Raadsinformatie en subsidies beschikbaar',
     }
@@ -67,7 +68,7 @@ function deriveVerdict(
   return {
     score,
     label: 'BEPERKT INZICHT',
-    color: '#F9A826',
+    color: AMBER.base,
     Icon: BookOpen,
     subtitle: 'Gedeeltelijke beleidsinformatie',
   }
@@ -76,20 +77,20 @@ function deriveVerdict(
 /* ── Raadsstuk type badge ──────────────────────────────────── */
 
 const TYPE_COLORS: Record<string, string> = {
-  motie: '#F9A826',
-  raadsbrief: '#0E1111',
-  besluit: '#22C55E',
-  amendement: '#F9A826',
-  initiatiefvoorstel: '#0E1111',
+  motie: AMBER.base,
+  raadsbrief: OBSIDIAN,
+  besluit: AMBER.base,
+  amendement: AMBER.base,
+  initiatiefvoorstel: OBSIDIAN,
 }
 
 function typeBadgeColor(type: string | null): string {
-  if (!type) return '#94a3b8'
+  if (!type) return SLATE_MUTED
   const lower = type.toLowerCase()
   for (const [key, color] of Object.entries(TYPE_COLORS)) {
     if (lower.includes(key)) return color
   }
-  return '#94a3b8'
+  return SLATE_MUTED
 }
 
 /* ── Section header ────────────────────────────────────────── */

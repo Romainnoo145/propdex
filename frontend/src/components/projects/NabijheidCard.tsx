@@ -15,22 +15,21 @@ const FACILITIES: { key: keyof CbsNabijheid['afstanden']; label: string; type: '
 
 /**
  * Returns Tailwind text color class based on distance and facility type.
- * Daily facilities: green <= 1km, amber <= 3km, red > 3km
- * Transport: green <= 3km, amber <= 10km, red > 10km
+ * Amber palette: close = bright amber, far = dark amber/muted
  */
 function distanceColor(value: number | null, type: 'daily' | 'transport'): string {
   if (value == null) return 'text-neutral-500'
 
   if (type === 'daily') {
-    if (value <= 1) return 'text-green-400'
-    if (value <= 3) return 'text-amber-400'
-    return 'text-red-400'
+    if (value <= 1) return 'text-aura-amber'
+    if (value <= 3) return 'text-amber-600'
+    return 'text-amber-800'
   }
 
   // transport
-  if (value <= 3) return 'text-green-400'
-  if (value <= 10) return 'text-amber-400'
-  return 'text-red-400'
+  if (value <= 3) return 'text-aura-amber'
+  if (value <= 10) return 'text-amber-600'
+  return 'text-amber-800'
 }
 
 /**

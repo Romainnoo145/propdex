@@ -5,6 +5,7 @@ import { useProjectScans, useTriggerScan } from '@/hooks/useScans'
 import { useWijkGeoJSON } from '@/hooks/useWijkGeoJSON'
 import { useReports } from '@/hooks/useReports'
 import { resolveWijkBbox } from '@/lib/geo-utils'
+import { scanControlsEnabled } from '@/lib/features'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { toast } from 'sonner'
 
@@ -96,6 +97,8 @@ function ActionCardsRow({
 
   const hasScan = !!latestScan
   const isScanning = !!activeScan
+  const canOpenResults = hasScan || isScanning
+  const canTriggerScan = scanControlsEnabled && !!gemeenteCode
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -112,7 +115,7 @@ function ActionCardsRow({
               to: '/resultaten',
               search: { scan_id: activeScan.scan_id },
             })
-          } else if (gemeenteCode) {
+          } else if (canTriggerScan && gemeenteCode) {
             triggerScan.mutate(
               {
                 gemeente_code: gemeenteCode,
@@ -137,7 +140,7 @@ function ActionCardsRow({
             )
           }
         }}
-        disabled={!gemeenteCode || triggerScan.isPending}
+        disabled={(!canOpenResults && !canTriggerScan) || triggerScan.isPending}
         className="group rounded-xl border border-neutral-200 bg-aura-glass-white/60 p-4 text-left transition-colors hover:bg-aura-glass-white/40 hover:border-aura-amber/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <div className="flex items-center gap-2">
@@ -162,14 +165,20 @@ function ActionCardsRow({
           </div>
           <div>
             <p className="text-sm font-medium text-aura-ink group-hover:text-aura-amber transition-colors">
-              {hasScan ? 'Bekijk resultaten' : isScanning ? 'Scan bezig...' : 'Start scan'}
+              {hasScan
+                ? 'Bekijk resultaten'
+                : isScanning
+                  ? 'Scan bezig...'
+                  : canTriggerScan
+                    ? 'Start scan'
+                    : 'Nog geen resultaten'}
             </p>
             <p className="text-[11px] text-neutral-500">
               {hasScan
                 ? `${latestScan.parcel_count} percelen \u00b7 ${dateFmt.format(new Date(latestScan.scan_date))}`
                 : isScanning
                   ? `Gestart ${dateFmt.format(new Date(activeScan.scan_date))}`
-                  : 'Nog niet gescand'}
+                  : 'Scans worden intern voorbereid'}
             </p>
           </div>
         </div>

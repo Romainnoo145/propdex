@@ -7,12 +7,14 @@ from arq import create_pool
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
 
 from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router
 from app.core.config import settings
+from app.core.database import engine
 from app.core.http_client import create_government_api_client
 from app.documents.router import router as documents_router
 from app.favorites.router import portfolio_router
@@ -104,9 +106,46 @@ app.include_router(gemeente_router, prefix="/api/gemeente", tags=["Gemeente"])
 
 
 @app.get("/")
+@app.get("/api/health")
 async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
+    """Liveness probe endpoint."""
     return {
         "status": "ok",
         "service": "propdex-api",
+        "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/api/ready")
+async def readiness_check() -> JSONResponse:
+    """Readiness probe that validates database and Redis connectivity."""
+    checks: dict[str, str] = {}
+    status_code = 200
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:  # pragma: no cover - defensive infra check
+        checks["database"] = f"error:{exc.__class__.__name__}"
+        status_code = 503
+
+    try:
+        arq_pool = getattr(app.state, "arq_pool", None)
+        if arq_pool is None:
+            raise RuntimeError("pool_unavailable")
+        await arq_pool.ping()
+        checks["redis"] = "ok"
+    except Exception as exc:  # pragma: no cover - defensive infra check
+        checks["redis"] = f"error:{exc.__class__.__name__}"
+        status_code = 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "ok" if status_code == 200 else "degraded",
+            "service": "propdex-api",
+            "environment": settings.ENVIRONMENT,
+            "checks": checks,
+        },
+    )
