@@ -586,7 +586,17 @@ function MapPage() {
   // Fly to property whenever coordinates are set and map is ready
   useEffect(() => {
     if (!propertyLngLat || !mapReady || !mapRef.current) return
-    mapRef.current.flyTo({ center: propertyLngLat, zoom: 17 })
+    // Offset the center to the right so the parcel stays visible when the left panel opens.
+    // The panel takes roughly half the viewport width on desktop.
+    const canvas = mapRef.current.getCanvas()
+    // Use padding to account for the detail panel that will open on the left.
+    // The panel takes roughly 55% of viewport width on desktop (max ~560px).
+    const panelWidth = Math.min(Math.round(canvas.clientWidth * 0.55), 560)
+    mapRef.current.flyTo({
+      center: propertyLngLat,
+      zoom: 17,
+      padding: { left: panelWidth, top: 40, bottom: 40, right: 40 },
+    })
   }, [propertyLngLat, mapReady])
 
   // Update geometry whenever data changes and map is ready.
