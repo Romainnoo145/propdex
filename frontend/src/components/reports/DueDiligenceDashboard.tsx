@@ -49,17 +49,18 @@ export interface DueDiligenceDashboardProps {
 interface SectionConfig {
   key: SectionKey
   title: string
+  shortTitle: string
   icon: LucideIcon
 }
 
 const SECTION_LIST: SectionConfig[] = [
-  { key: 'locatiegegevens', title: '1. Locatiegegevens', icon: MapPin },
-  { key: 'kadaster', title: '2. Kadaster & Eigendom', icon: Gavel },
-  { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', icon: LandPlot },
-  { key: 'risicoprofiel', title: '4. Risicoprofiel', icon: ShieldAlert },
-  { key: 'analyse', title: '5. Potentie & Risico Analyse', icon: BarChart3 },
-  { key: 'vergunningen', title: '6. Vergunningen & Precedenten', icon: ScrollText },
-  { key: 'bronnen', title: '7. Bronvermelding', icon: Database },
+  { key: 'locatiegegevens', title: '1. Locatiegegevens', shortTitle: 'Locatie', icon: MapPin },
+  { key: 'kadaster', title: '2. Kadaster & Eigendom', shortTitle: 'Kadaster', icon: Gavel },
+  { key: 'bestemmingsplan', title: '3. Bestemmingsplan & Bouwmogelijkheden', shortTitle: 'Bestemming', icon: LandPlot },
+  { key: 'risicoprofiel', title: '4. Risicoprofiel', shortTitle: 'Risico', icon: ShieldAlert },
+  { key: 'analyse', title: '5. Potentie & Risico Analyse', shortTitle: 'Analyse', icon: BarChart3 },
+  { key: 'vergunningen', title: '6. Vergunningen & Precedenten', shortTitle: 'Vergunningen', icon: ScrollText },
+  { key: 'bronnen', title: '7. Bronvermelding', shortTitle: 'Bronnen', icon: Database },
 ]
 
 /* ─── Section content renderer ──────────────────────────────── */
@@ -174,8 +175,8 @@ export default function DueDiligenceDashboard({
         onExportPDF={handleExportPDF}
       />
 
-      {/* Section tabs — horizontal toggle bar */}
-      <div className="mt-6 flex gap-0 overflow-x-auto rounded-full border border-[#EAEFEF] bg-[#F8FAFA] p-1">
+      {/* Section tabs */}
+      <div className="mt-6 flex gap-0 rounded-full border border-[#EAEFEF] bg-[#F8FAFA] p-1">
         {SECTION_LIST.map((section) => {
           const isActive = section.key === activeSection
           const Icon = section.icon
@@ -184,14 +185,14 @@ export default function DueDiligenceDashboard({
               key={section.key}
               type="button"
               onClick={() => setActiveSection(section.key)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2.5 text-[11px] font-semibold transition-colors ${
                 isActive
                   ? 'bg-[#0E1111] text-white shadow-sm'
                   : 'text-slate-500 hover:text-[#0E1111]'
               }`}
             >
               <Icon size={14} strokeWidth={1.5} className={isActive ? 'text-[#F9A826]' : ''} />
-              <span className="hidden lg:inline">{section.shortTitle ?? section.title.replace(/^\d+\.\s*/, '')}</span>
+              {section.shortTitle}
             </button>
           )
         })}
