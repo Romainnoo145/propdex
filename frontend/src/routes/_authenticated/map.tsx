@@ -558,10 +558,16 @@ function MapPage() {
 
   // Fly to property whenever coordinates are set and map is ready.
   // The panel opens via flex layout (350ms transition), which resizes the map canvas.
-  // MapLibre auto-adjusts the center when the canvas resizes, so no manual offset needed.
+  // After the resize completes, re-center so the parcel is centered in the smaller map.
   useEffect(() => {
     if (!propertyLngLat || !mapReady || !mapRef.current) return
-    mapRef.current.flyTo({ center: propertyLngLat, zoom: 17 })
+    const map = mapRef.current
+    map.flyTo({ center: propertyLngLat, zoom: 17 })
+    // After panel slide-in transition (350ms) + buffer, re-center on the now-smaller canvas
+    const timer = setTimeout(() => {
+      map.easeTo({ center: propertyLngLat, duration: 300 })
+    }, 500)
+    return () => clearTimeout(timer)
   }, [propertyLngLat, mapReady])
 
   // Update geometry whenever data changes and map is ready.
