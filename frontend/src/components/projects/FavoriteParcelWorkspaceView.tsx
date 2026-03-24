@@ -56,6 +56,7 @@ import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
 import { TruncatedText } from '@/components/map/panels/parcel/TruncatedText'
 import { useDeleteDocument, useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import { useUpdateNotitie } from '@/hooks/useFavorites'
 import { useGenerateReportFromParcel } from '@/hooks/useReports'
 import { getDocumentDownloadUrl } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -1186,6 +1187,17 @@ export function FavoriteParcelWorkspaceView({
   }, [favorite.has_report, favorite.report_id, favorite.parcel_cache_id, generateReport, navigate])
 
   const [showContactModal, setShowContactModal] = useState(false)
+  const [editingNotitie, setEditingNotitie] = useState(false)
+  const [notitieText, setNotitieText] = useState(favorite.notitie ?? '')
+  const updateNotitie = useUpdateNotitie()
+
+  const handleSaveNotitie = useCallback(() => {
+    const trimmed = notitieText.trim() || null
+    updateNotitie.mutate(
+      { parcelId: favorite.parcel_id, notitie: trimmed },
+      { onSuccess: () => { setEditingNotitie(false); toast.success('Notitie opgeslagen') } },
+    )
+  }, [notitieText, favorite.parcel_id, updateNotitie])
 
   const handleOpenContact = useCallback(() => {
     setShowContactModal(true)
@@ -1491,28 +1503,64 @@ export function FavoriteParcelWorkspaceView({
           className="xl:col-span-2"
           index={0}
         >
-          {favorite.notitie ? (
+          {editingNotitie ? (
             <div className="space-y-3">
-              <p className="text-[15px] leading-7 text-slate-700">
-                {favorite.notitie}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className={`inline-flex min-h-[34px] items-center rounded-full border px-3 text-[12px] font-semibold ${stageBadgeClasses(favorite.pipeline_stage)}`}>
-                  {favorite.pipeline_stage}
-                </span>
-                {favorite.afgerond_reden && (
-                  <span className="inline-flex min-h-[34px] items-center rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-3 text-[12px] font-semibold text-slate-600">
-                    {favorite.afgerond_reden}
-                  </span>
-                )}
+              <textarea
+                value={notitieText}
+                onChange={(e) => setNotitieText(e.target.value)}
+                placeholder="Waarom is dit perceel interessant? Welke strategie lijkt kansrijk? Welke aannames moeten eerst gevalideerd worden?"
+                rows={4}
+                className="w-full resize-none rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-[15px] leading-7 text-slate-700 placeholder:text-slate-400 focus:border-[#F9A826] focus:outline-none focus:ring-1 focus:ring-[#F9A826]"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <motion.button
+                  type="button"
+                  onClick={handleSaveNotitie}
+                  disabled={updateNotitie.isPending}
+                  whileTap={{ scale: 0.96 }}
+                  className="inline-flex min-h-[36px] items-center gap-2 rounded-full bg-[#0E1111] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {updateNotitie.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
+                  Opslaan
+                </motion.button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingNotitie(false); setNotitieText(favorite.notitie ?? '') }}
+                  className="inline-flex min-h-[36px] items-center rounded-full border border-[#EAEFEF] px-4 text-[12px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  Annuleren
+                </button>
               </div>
             </div>
           ) : (
-            <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-4">
-              <p className="text-[15px] leading-7 text-slate-600">
-                Nog geen acquisitiethese vastgelegd. Gebruik deze ruimte voor waarom dit perceel interessant is, welke strategie kansrijk lijkt en welke aannames eerst gevalideerd moeten worden.
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setEditingNotitie(true)}
+              className="w-full text-left group"
+            >
+              <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-4 transition-colors group-hover:border-[#F9A826]/40 group-hover:bg-[#FFFDF8]">
+                <p className="text-[15px] leading-7 text-slate-700">
+                  {favorite.notitie || (
+                    <span className="text-slate-400 italic">
+                      Klik om een acquisitiethese of notitie toe te voegen...
+                    </span>
+                  )}
+                </p>
+              </div>
+              {favorite.notitie && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className={`inline-flex min-h-[34px] items-center rounded-full border px-3 text-[12px] font-semibold ${stageBadgeClasses(favorite.pipeline_stage)}`}>
+                    {favorite.pipeline_stage}
+                  </span>
+                  {favorite.afgerond_reden && (
+                    <span className="inline-flex min-h-[34px] items-center rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-3 text-[12px] font-semibold text-slate-600">
+                      {favorite.afgerond_reden}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
           )}
         </WorkspaceInsightCard>
 
@@ -1529,94 +1577,60 @@ export function FavoriteParcelWorkspaceView({
             <p className="mt-2 text-[14px] leading-6 text-slate-600">
               {nextStep.detail}
             </p>
-            <motion.button
-              type="button"
-              onClick={handleGenerateReport}
-              disabled={generateReport.isPending || (!favorite.has_report && !favorite.parcel_cache_id)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              className={`mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border px-5 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
-                favorite.has_report
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                  : 'border-[#0E1111] bg-[#F9A826] text-[#0E1111] hover:bg-[#F4B44A]'
-              }`}
-            >
-              <AnimatePresence mode="wait">
-                {generateReport.isPending ? (
-                  <motion.span
-                    key="loading"
-                    initial={{ opacity: 0, rotate: -90 }}
-                    animate={{ opacity: 1, rotate: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Loader2 size={14} className="animate-spin" />
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="idle"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {favorite.has_report ? <FileText size={14} /> : <Sparkles size={14} />}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-              {generateReport.isPending
-                ? 'Rapport genereren...'
-                : favorite.has_report
-                  ? 'Bekijk rapport'
-                  : 'Genereer rapport'}
-            </motion.button>
-          </div>
-        </WorkspaceInsightCard>
-
-        <WorkspaceInsightCard
-          kicker="Dossiergaten"
-          title="Ontbrekende stukken"
-          Icon={FolderArchive}
-          index={2}
-        >
-          {missingCards.length > 0 ? (
-            <div className="space-y-2">
-              {missingCards.slice(0, 5).map((card, i) => (
-                <motion.div
-                  key={card.key}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="flex items-center justify-between gap-3 rounded-[18px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
+            {!favorite.has_report ? (
+              <motion.button
+                type="button"
+                onClick={handleGenerateReport}
+                disabled={generateReport.isPending || !favorite.parcel_cache_id}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-[#F9A826] px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A] disabled:opacity-50"
+              >
+                <AnimatePresence mode="wait">
+                  {generateReport.isPending ? (
+                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Loader2 size={14} className="animate-spin" />
+                    </motion.span>
+                  ) : (
+                    <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Sparkles size={14} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                {generateReport.isPending ? 'Rapport genereren...' : 'Genereer rapport'}
+              </motion.button>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <motion.button
+                  type="button"
+                  onClick={handleGenerateReport}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 text-[13px] font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
                 >
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#0E1111]">
-                      {card.label}
-                    </p>
-                    <p className="mt-1 text-[12px] text-slate-500">
-                      {card.tabLabel} · {card.sub}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full border border-[#F1E1B0] bg-[#FFF8E8] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9A6700]">
-                    Open
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[20px] border border-[#D8E8DE] bg-[#F2F8F4] px-4 py-4">
-              <p className="text-[14px] leading-6 text-slate-600">
-                De kern van dit perceeldossier is gevuld. Gebruik de resterende ruimte vooral voor verdere besluitvorming en opvolging.
-              </p>
-            </div>
-          )}
+                  <FileText size={14} />
+                  Bekijk rapport
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={handleOpenContact}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-white px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-slate-50"
+                >
+                  <Mail size={14} />
+                  Neem contact op
+                </motion.button>
+              </div>
+            )}
+          </div>
         </WorkspaceInsightCard>
 
         <WorkspaceInsightCard
           kicker="Tijdlijn"
           title="Laatste activiteit"
           Icon={ScrollText}
-          index={3}
+          index={2}
         >
           <div className="space-y-2">
             {activityRows.map((row, i) => (
@@ -1642,7 +1656,7 @@ export function FavoriteParcelWorkspaceView({
           kicker="Opvolging"
           title="Contact & eigenaar vervolg"
           Icon={Send}
-          index={4}
+          index={3}
         >
           <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-4">
             <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">

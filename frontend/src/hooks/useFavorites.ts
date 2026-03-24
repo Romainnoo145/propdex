@@ -241,3 +241,39 @@ export function useUpdatePipelineStage() {
     },
   })
 }
+
+/**
+ * Update the free-text note (notitie) on a favorited parcel.
+ * Works in any pipeline stage.
+ */
+export function useUpdateNotitie() {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<FavoriteResponse, Error, { parcelId: string; notitie: string | null }>({
+    mutationFn: ({ parcelId, notitie }) =>
+      apiFetch<FavoriteResponse>(`${FAVORITES_BASE}/${encodeURIComponent(parcelId)}/notitie`, {
+        method: 'PATCH',
+        accessToken,
+        body: JSON.stringify({ notitie }),
+      }),
+
+    onMutate: async ({ parcelId, notitie }) => {
+      await queryClient.cancelQueries({ queryKey: ['favorites'] })
+      const previous = queryClient.getQueryData<FavoriteResponse[]>(['favorites'])
+      queryClient.setQueryData<FavoriteResponse[]>(['favorites'], (old) =>
+        (old ?? []).map((f) => (f.parcel_id === parcelId ? { ...f, notitie } : f)),
+      )
+      return { previous }
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['favorites'], context.previous)
+      toast.error('Notitie opslaan mislukt')
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+    },
+  })
+}

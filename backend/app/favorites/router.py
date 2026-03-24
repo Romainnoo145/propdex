@@ -4,6 +4,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -346,10 +347,11 @@ async def update_pipeline(
     fav.pipeline_stage = body.stage
     if body.stage == "Afgerond":
         fav.afgerond_reden = body.afgerond_reden
-        fav.notitie = body.notitie
+        if body.notitie is not None:
+            fav.notitie = body.notitie
     else:
         fav.afgerond_reden = None
-        fav.notitie = None
+        # Don't wipe notitie on stage change — it's user-owned content
 
     await db.commit()
     await db.refresh(fav)
@@ -361,6 +363,30 @@ async def update_pipeline(
         current_user.id,
     )
 
+    return FavoriteResponse.model_validate(fav)
+
+
+class NotitieUpdateRequest(BaseModel):
+    notitie: str | None = None
+
+
+@router.patch(
+    "/favorites/{parcel_id}/notitie",
+    response_model=FavoriteResponse,
+)
+@limiter.limit("30/minute")
+async def update_notitie(
+    request: Request,
+    parcel_id: str,
+    body: NotitieUpdateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> FavoriteResponse:
+    """Update the free-text note for a favorited parcel (any pipeline stage)."""
+    fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+    fav.notitie = body.notitie
+    await db.commit()
+    await db.refresh(fav)
     return FavoriteResponse.model_validate(fav)
 
 
