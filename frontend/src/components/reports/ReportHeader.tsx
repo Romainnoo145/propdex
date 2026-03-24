@@ -7,7 +7,6 @@ import { useCallback } from 'react'
 import { ChevronLeft, MapPin, Download } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import SatelliteThumbnail from './SatelliteThumbnail'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -43,9 +42,6 @@ export default function ReportHeader({
   const primaryPerceelId = cadastral_parcels[0]?.kadastrale_aanduiding ?? null
   const gemeente = cadastral_parcels[0]?.kadastrale_gemeente ?? address.woonplaats ?? null
   const postcode = address.postcode ?? null
-
-  // Map center for satellite thumbnail
-  const center = data.map_data?.center_wgs84 ?? null
 
   return (
     <div
@@ -134,19 +130,8 @@ export default function ReportHeader({
           </div>
         </div>
 
-        {/* Right column: satellite + map button */}
-        <div className="flex items-start gap-3 lg:shrink-0">
-          {/* Satellite thumbnail — prominent */}
-          <div className="w-44 h-28 rounded-[16px] overflow-hidden border border-[#EAEFEF]">
-            {center ? (
-              <SatelliteThumbnail center={center} />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[#F8FAFA]">
-                <span className="text-[11px] text-slate-400">Geen locatie</span>
-              </div>
-            )}
-          </div>
-
+        {/* Right: action icons */}
+        <div className="flex items-center gap-2 lg:shrink-0">
           {/* Map icon button — black circle, amber icon */}
           <button
             type="button"
@@ -158,15 +143,16 @@ export default function ReportHeader({
             <MapPin size={16} />
           </button>
 
-          {/* Download PDF */}
+          {/* Download PDF — amber with black icon */}
           <button
             type="button"
             onClick={onExportPDF}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111] text-white transition-colors hover:bg-slate-800"
-            aria-label="Download PDF"
-            title="Download PDF"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-[#0E1111] bg-[#F9A826] px-4 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-[#E8951F]"
+            aria-label="Download rapport"
+            title="Download rapport"
           >
-            <Download size={16} />
+            <Download size={14} />
+            Download rapport
           </button>
         </div>
       </div>
