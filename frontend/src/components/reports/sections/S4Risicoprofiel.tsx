@@ -16,20 +16,11 @@ export interface S4RisicoprofielProps {
   sourceParcelId?: string | null
 }
 
-/* ─── Sub-components ─────────────────────────────────────────── */
+/* ─── Risk styling helpers ───────────────────────────────────── */
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{title}</p>
-      {children}
-    </div>
-  )
-}
-
-const RISK_BADGE: Record<string, string> = {
-  hoog: 'border-red-300 bg-red-50 text-red-700',
-  middel: 'border-amber-300 bg-amber-50 text-amber-700',
+const RISK_BADGE_STYLE: Record<string, string> = {
+  hoog: 'border-red-200 bg-red-50 text-red-700',
+  middel: 'border-amber-200 bg-amber-50 text-amber-700',
   laag: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   geen: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   onbekend: 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600',
@@ -43,20 +34,24 @@ const RISK_LABEL: Record<string, string> = {
   onbekend: 'Onbekend',
 }
 
-function RiskBadge({ risk }: { risk: string }) {
+function riskBadge(risk: string) {
+  const style = RISK_BADGE_STYLE[risk] ?? RISK_BADGE_STYLE.onbekend
+  const label = RISK_LABEL[risk] ?? risk
   return (
-    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${RISK_BADGE[risk] ?? RISK_BADGE.onbekend}`}>
-      {RISK_LABEL[risk] ?? risk}
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${style}`}>
+      {label}
     </span>
   )
 }
 
+/* ─── WBB Row ────────────────────────────────────────────────── */
+
 function WBBRow({ dossier }: { dossier: WBBDossierRef }) {
   return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] p-3 space-y-1">
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 space-y-1">
       {dossier.status_oord && <p className="text-[13px] font-semibold text-[#0E1111]">{dossier.status_oord}</p>}
       {dossier.vervolg_wbb && <p className="text-[11px] text-slate-600">Vervolg: {dossier.vervolg_wbb}</p>}
-      {dossier.administrator_nm && <p className="text-[11px] text-slate-500">Bevoegd gezag: {dossier.administrator_nm}</p>}
+      {dossier.administrator_nm && <p className="text-[11px] text-slate-400">Bevoegd gezag: {dossier.administrator_nm}</p>}
     </div>
   )
 }
@@ -82,7 +77,7 @@ function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; docu
         <div>
           <p className="text-[11px] font-semibold text-slate-600">{label}</p>
           {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-slate-500">
+            <p className="mt-0.5 text-[11px] text-slate-400">
               {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
             </p>
           )}
@@ -104,35 +99,7 @@ function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; docu
 function DisabledUploadZone() {
   return (
     <div className="mt-4 border-t border-[#EAEFEF] pt-4">
-      <p className="text-[11px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
-    </div>
-  )
-}
-
-/* ─── Environmental flag helpers ─────────────────────────────── */
-
-function EnvCard({
-  title,
-  value,
-  unit,
-  detail,
-  risk,
-}: {
-  title: string
-  value: string | null | undefined
-  unit?: string
-  detail?: string | null
-  risk?: string | null
-}) {
-  const riskStyle = risk ? (RISK_BADGE[risk] ?? RISK_BADGE.onbekend) : 'border-[#EAEFEF] bg-[#F8FAFA]'
-  return (
-    <div className={`rounded-[16px] border p-3 ${riskStyle}`}>
-      <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-70">{title}</p>
-      <p className="mt-1 text-[13px] font-semibold">
-        {value ?? 'Onbekend'}
-        {unit ? ` ${unit}` : ''}
-      </p>
-      {detail && <p className="mt-0.5 text-[11px] opacity-75">{detail}</p>}
+      <p className="text-[11px] text-slate-400 italic">Koppel een perceel om documenten te uploaden</p>
     </div>
   )
 }
@@ -153,33 +120,35 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
   const lucht = data.luchtkwaliteit_flags as Record<string, unknown> | null | undefined
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Fysiek Risicoprofiel overview */}
       {frp && (
-        <Card title="Fysiek Risicoprofiel">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Fysiek Risicoprofiel</p>
           <div className="space-y-2">
-            <RiskBadge risk={frp.overall_risk} />
+            {riskBadge(frp.overall_risk)}
             <p className="text-[13px] text-slate-600 leading-relaxed">{frp.overall_explanation}</p>
-            <p className="text-[11px] text-slate-500">{frp.disclaimer}</p>
+            <p className="text-[11px] text-slate-400 italic">{frp.disclaimer}</p>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Bodemkwaliteit */}
-      <Card title="Bodemkwaliteit">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Bodemkwaliteit</p>
         {!bodem ? (
-          <p className="text-[13px] text-slate-500">
+          <p className="text-[13px] text-slate-600 leading-relaxed">
             {data.bodem_flags ? `Type: ${data.bodemtype_flags ?? data.bodem_flags}` : 'Bodemdata niet beschikbaar'}
           </p>
         ) : bodem.dossiers.length === 0 ? (
           <div className="space-y-1">
-            <p className="text-[13px] text-slate-600">Geen geregistreerde verontreiniging gevonden</p>
-            <p className="text-[11px] text-slate-500">{bodem.disclaimer}</p>
+            <p className="text-[13px] text-slate-600 leading-relaxed">Geen geregistreerde verontreiniging gevonden</p>
+            <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
           </div>
         ) : (
           <div className="space-y-2">
             {bodem.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} />)}
-            <p className="text-[11px] text-slate-500">{bodem.disclaimer}</p>
+            <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
           </div>
         )}
         {sourceParcelId ? (
@@ -187,43 +156,45 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         ) : (
           <DisabledUploadZone />
         )}
-      </Card>
+      </div>
 
       {/* Funderingsrisico */}
-      <Card title="Funderingsrisico">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Funderingsrisico</p>
         {fundRisk ? (
           <div className="space-y-2">
-            <RiskBadge risk={fundRisk.risk} />
+            {riskBadge(fundRisk.risk)}
             <p className="text-[13px] text-slate-600 leading-relaxed">{fundRisk.reden}</p>
             {fundRisk.recommended_action && (
               <p className="text-[11px] text-slate-600">Aanbevolen actie: {fundRisk.recommended_action}</p>
             )}
-            <p className="text-[11px] text-slate-500">{fundRisk.disclaimer}</p>
+            <p className="text-[11px] text-slate-400 italic">{fundRisk.disclaimer}</p>
           </div>
         ) : fundFlags ? (
           <div className="space-y-1">
-            <p className="text-[13px] text-slate-600">
+            <p className="text-[13px] text-slate-600 leading-relaxed">
               {(fundFlags.legenda as string | undefined) ?? 'Funderingsrisicogebied gedetecteerd'}
             </p>
             {(fundFlags.percvoor1970 as number | undefined) != null && (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-400">
                 % panden voor 1970: {(fundFlags.percvoor1970 as number).toFixed(0)}%
               </p>
             )}
           </div>
         ) : (
-          <p className="text-[13px] text-slate-500">Geen funderingsrisicodata beschikbaar</p>
+          <p className="text-[13px] text-slate-600 leading-relaxed">Geen funderingsrisicodata beschikbaar</p>
         )}
-      </Card>
+      </div>
 
       {/* Asbest */}
       {asbest && (
-        <Card title="Asbestrisico">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Asbestrisico</p>
           <div className="space-y-2">
-            <RiskBadge risk={asbest.risk} />
+            {riskBadge(asbest.risk)}
             <p className="text-[13px] text-slate-600 leading-relaxed">{asbest.reden}</p>
             {asbest.norm_reference && (
-              <p className="text-[11px] text-slate-500">{asbest.norm_reference}</p>
+              <p className="text-[11px] text-slate-400 italic">{asbest.norm_reference}</p>
             )}
           </div>
           {sourceParcelId ? (
@@ -231,44 +202,57 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
           ) : (
             <DisabledUploadZone />
           )}
-        </Card>
+        </div>
       )}
 
-      {/* Environmental enrichment 2x2 grid */}
+      {/* Environmental enrichment 2×2 grid */}
       {(natura ?? overstroom ?? geluid ?? lucht) && (
-        <Card title="Omgevingsrisico's (Phase 99)">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Omgevingsrisico's (Phase 99)</p>
           <div className="grid grid-cols-2 gap-3">
-            <EnvCard
-              title="Natura 2000"
-              value={natura ? `${(natura.distance_m as number | undefined) != null ? `${Math.round(natura.distance_m as number)}m` : 'In zone'}` : undefined}
-              detail={(natura?.zone_name as string | undefined) ?? null}
-              risk={natura ? ((natura.distance_m as number | undefined) != null && (natura.distance_m as number) < 1000 ? 'middel' : 'laag') : undefined}
-            />
-            <EnvCard
-              title="Overstromingsrisico"
-              value={(overstroom?.risk_category as string | undefined) ?? undefined}
-              detail={(overstroom?.risk_label as string | undefined) ?? null}
-              risk={overstroom ? (overstroom.risk_category as string | undefined) ?? 'onbekend' : undefined}
-            />
-            <EnvCard
-              title="Geluidbelasting"
-              value={(geluid?.lden_category as string | undefined) ?? undefined}
-              detail={(geluid?.lden_db as number | undefined) != null ? `${(geluid!.lden_db as number).toFixed(0)} dB Lden` : null}
-              risk={geluid ? ((geluid.lden_db as number | undefined) != null && (geluid.lden_db as number) > 65 ? 'hoog' : (geluid.lden_db as number | undefined) != null && (geluid.lden_db as number) > 55 ? 'middel' : 'laag') : undefined}
-            />
-            <EnvCard
-              title="Luchtkwaliteit"
-              value={(lucht?.no2_category as string | undefined) ?? undefined}
-              detail={(lucht?.no2_ug_m3 as number | undefined) != null ? `NO₂ ${(lucht!.no2_ug_m3 as number).toFixed(0)} μg/m³` : null}
-              risk={lucht ? ((lucht.no2_ug_m3 as number | undefined) != null && (lucht.no2_ug_m3 as number) > 40 ? 'hoog' : (lucht.no2_ug_m3 as number | undefined) != null && (lucht.no2_ug_m3 as number) > 25 ? 'middel' : 'laag') : undefined}
-            />
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Natura 2000</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-600">
+                {natura ? `${(natura.distance_m as number | undefined) != null ? `${Math.round(natura.distance_m as number)}m` : 'In zone'}` : 'Onbekend'}
+              </p>
+              {(natura?.zone_name as string | undefined) && (
+                <p className="mt-0.5 text-[11px] text-slate-400">{natura!.zone_name as string}</p>
+              )}
+            </div>
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Overstromingsrisico</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-600">
+                {(overstroom?.risk_category as string | undefined) ?? 'Onbekend'}
+              </p>
+              {(overstroom?.risk_label as string | undefined) && (
+                <p className="mt-0.5 text-[11px] text-slate-400">{overstroom!.risk_label as string}</p>
+              )}
+            </div>
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Geluidbelasting</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-600">
+                {(geluid?.lden_category as string | undefined) ?? 'Onbekend'}
+              </p>
+              {(geluid?.lden_db as number | undefined) != null && (
+                <p className="mt-0.5 text-[11px] text-slate-400">{(geluid!.lden_db as number).toFixed(0)} dB Lden</p>
+              )}
+            </div>
+            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Luchtkwaliteit</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-600">
+                {(lucht?.no2_category as string | undefined) ?? 'Onbekend'}
+              </p>
+              {(lucht?.no2_ug_m3 as number | undefined) != null && (
+                <p className="mt-0.5 text-[11px] text-slate-400">NO₂ {(lucht!.no2_ug_m3 as number).toFixed(0)} μg/m³</p>
+              )}
+            </div>
           </div>
           {sourceParcelId ? (
             <UploadZone parcelId={sourceParcelId} documentTypes={['geluid', 'stikstof']} label="Geluid / Stikstof rapporten" />
           ) : (
             <DisabledUploadZone />
           )}
-        </Card>
+        </div>
       )}
     </div>
   )

@@ -23,17 +23,6 @@ function formatArea(value: number | null | undefined): string {
   return `${Math.round(value).toLocaleString('nl-NL')} m²`
 }
 
-/* ─── Sub-components ─────────────────────────────────────────── */
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{title}</p>
-      {children}
-    </div>
-  )
-}
-
 /* ─── Upload Zone ────────────────────────────────────────────── */
 
 function UploadZone({
@@ -60,7 +49,7 @@ function UploadZone({
   }
 
   return (
-    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold text-slate-600">{label}</p>
@@ -86,7 +75,7 @@ function UploadZone({
 
 function DisabledUploadZone() {
   return (
-    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3">
       <p className="text-[11px] text-slate-400">
         Koppel een perceel om documenten te uploaden
       </p>
@@ -103,9 +92,11 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
   const totalOpp = parcels.reduce((sum, p) => sum + (p.oppervlakte ?? 0), 0)
 
   return (
-    <div className="space-y-4">
-      {/* Kadastrale percelen */}
-      <Card title="Kadastrale percelen">
+    <div className="space-y-6">
+      {/* ── Kadastrale percelen ── */}
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Kadastrale percelen</p>
+
         {parcels.length === 0 ? (
           <p className="text-[13px] text-slate-500">Geen kadastrale gegevens beschikbaar</p>
         ) : (
@@ -113,7 +104,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             {parcels.map((parcel, idx) => (
               <div
                 key={idx}
-                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] p-3"
+                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
               >
                 {parcel.kadastrale_aanduiding && (
                   <p className="mb-2 text-[13px] font-semibold text-[#0E1111]">
@@ -127,24 +118,24 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                     </a>
                   </p>
                 )}
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-[11px] text-slate-400">Perceelnr</p>
-                    <p className="text-[13px] font-semibold text-[#0E1111]">
+                <div>
+                  <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+                    <span className="text-[12px] text-slate-400">Perceelnr</span>
+                    <span className="text-[13px] font-semibold text-[#0E1111] text-right">
                       {parcel.perceelnummer ?? '–'}
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-[11px] text-slate-400">Sectie</p>
-                    <p className="text-[13px] font-semibold text-[#0E1111]">
+                  <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+                    <span className="text-[12px] text-slate-400">Sectie</span>
+                    <span className="text-[13px] font-semibold text-[#0E1111] text-right">
                       {parcel.sectie ?? '–'}
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-[11px] text-slate-400">Kavelgrootte</p>
-                    <p className="text-[13px] font-semibold text-[#0E1111]">
+                  <div className="flex items-center justify-between py-2 border-b-0">
+                    <span className="text-[12px] text-slate-400">Kavelgrootte</span>
+                    <span className="text-[13px] font-semibold text-[#0E1111] text-right">
                       {formatArea(parcel.oppervlakte)}
-                    </p>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -158,19 +149,24 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             )}
           </div>
         )}
-        {sourceParcelId ? (
-          <UploadZone
-            parcelId={sourceParcelId}
-            documentTypes={['kadaster', 'eigendom', 'erfpacht']}
-            label="Kadaster / Eigendom / Erfpacht"
-          />
-        ) : (
-          <DisabledUploadZone />
-        )}
-      </Card>
 
-      {/* BRK Eigendom */}
-      <Card title="BRK Eigendom">
+        <div className="mt-4">
+          {sourceParcelId ? (
+            <UploadZone
+              parcelId={sourceParcelId}
+              documentTypes={['kadaster', 'eigendom', 'erfpacht']}
+              label="Kadaster / Eigendom / Erfpacht"
+            />
+          ) : (
+            <DisabledUploadZone />
+          )}
+        </div>
+      </div>
+
+      {/* ── BRK Eigendom ── */}
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">BRK Eigendom</p>
+
         {!ownership ? (
           <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
             <p className="text-[13px] text-slate-600">
@@ -189,68 +185,83 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             {ownership.data.map((item, idx) => (
               <div
                 key={idx}
-                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2"
+                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
               >
-                <p className="text-[13px] font-semibold text-[#0E1111]">
-                  {item.perceel_identificatie}
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {item.gerechtigden.length} zakelijk gerechtigde
-                  {item.gerechtigden.length !== 1 ? 'n' : ''}
-                  {item.heeft_hypotheek ? ' · hypotheek geregistreerd' : ''}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {item.gerechtigden.map((g, gIdx) => (
-                    <span
-                      key={gIdx}
-                      className="rounded-full border border-[#EAEFEF] bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600"
-                    >
-                      {g.eigenaar_type}
-                      {g.aandeel ? ` ${g.aandeel}` : ''}
-                    </span>
-                  ))}
+                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+                  <span className="text-[12px] text-slate-400">Perceel</span>
+                  <span className="text-[13px] font-semibold text-[#0E1111] text-right">
+                    {item.perceel_identificatie}
+                  </span>
                 </div>
+                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
+                  <span className="text-[12px] text-slate-400">Gerechtigden</span>
+                  <span className="text-[13px] font-semibold text-[#0E1111] text-right">
+                    {item.gerechtigden.length} zakelijk gerechtigde
+                    {item.gerechtigden.length !== 1 ? 'n' : ''}
+                  </span>
+                </div>
+                {item.heeft_hypotheek && (
+                  <div className="flex items-center justify-between py-2 border-b-0">
+                    <span className="text-[12px] text-slate-400">Hypotheek</span>
+                    <span className="text-[13px] font-semibold text-[#0E1111] text-right">geregistreerd</span>
+                  </div>
+                )}
+                {item.gerechtigden.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {item.gerechtigden.map((g, gIdx) => (
+                      <span
+                        key={gIdx}
+                        className="rounded-full border border-[#EAEFEF] px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 bg-white"
+                      >
+                        {g.eigenaar_type}
+                        {g.aandeel ? ` ${g.aandeel}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Marktsignalen */}
-      <Card title="Marktsignalen">
+      {/* ── Marktsignalen ── */}
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Marktsignalen</p>
+
         {!signals ? (
           <p className="text-[13px] text-slate-500">
             Nog geen Funda-signalen beschikbaar voor dit adres
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
-              <p className="text-[11px] text-slate-400">Te koop sinds</p>
-              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
+          <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+              <span className="text-[12px] text-slate-400">Te koop sinds</span>
+              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
                 {signals.listing_duration_days} dagen
-              </p>
+              </span>
             </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
-              <p className="text-[11px] text-slate-400">Prijswijzigingen</p>
-              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
+            <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+              <span className="text-[12px] text-slate-400">Prijswijzigingen</span>
+              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
                 {signals.price_change_count}
-              </p>
+              </span>
             </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
-              <p className="text-[11px] text-slate-400">Snapshots</p>
-              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
+            <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+              <span className="text-[12px] text-slate-400">Snapshots</span>
+              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
                 {signals.listing_snapshots_count}
-              </p>
+              </span>
             </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2">
-              <p className="text-[11px] text-slate-400">Laatste waarneming</p>
-              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#0E1111]">
+            <div className="flex items-center justify-between py-2 border-b-0">
+              <span className="text-[12px] text-slate-400">Laatste waarneming</span>
+              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
                 {signals.days_since_last_seen} dagen geleden
-              </p>
+              </span>
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   )
 }
