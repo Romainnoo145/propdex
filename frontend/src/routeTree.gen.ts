@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
+import { Route as AuthenticatedSubsidiesRouteImport } from './routes/_authenticated/subsidies'
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
@@ -45,6 +46,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google-callback',
   path: '/auth/google-callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSubsidiesRoute = AuthenticatedSubsidiesRouteImport.update({
+  id: '/subsidies',
+  path: '/subsidies',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedResultatenRoute = AuthenticatedResultatenRouteImport.update({
   id: '/resultaten',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
+  '/subsidies': typeof AuthenticatedSubsidiesRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
+  '/subsidies': typeof AuthenticatedSubsidiesRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
+  '/_authenticated/subsidies': typeof AuthenticatedSubsidiesRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
+    | '/subsidies'
     | '/auth/google-callback'
     | '/auth/'
     | '/instellingen/score'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
+    | '/subsidies'
     | '/auth/google-callback'
     | '/auth'
     | '/instellingen/score'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projecten'
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
+    | '/_authenticated/subsidies'
     | '/auth/google-callback'
     | '/auth/'
     | '/_authenticated/instellingen/score'
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/google-callback'
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/subsidies': {
+      id: '/_authenticated/subsidies'
+      path: '/subsidies'
+      fullPath: '/subsidies'
+      preLoaderRoute: typeof AuthenticatedSubsidiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/resultaten': {
       id: '/_authenticated/resultaten'
@@ -387,6 +406,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
+  AuthenticatedSubsidiesRoute: typeof AuthenticatedSubsidiesRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
 }
 
@@ -401,6 +421,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
+  AuthenticatedSubsidiesRoute: AuthenticatedSubsidiesRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
 }
 

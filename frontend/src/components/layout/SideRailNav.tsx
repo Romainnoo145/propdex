@@ -2,7 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { Map, Bookmark, Scale, FileText, Settings, LogOut } from 'lucide-react'
+import { Map, Bookmark, Scale, HandCoins, FileText, Settings, LogOut } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -30,6 +30,12 @@ export default function SideRailNav() {
       label: 'Jurisprudentie',
       to: '/jurisprudentie',
       search: { gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined, view: undefined } as unknown as Record<string, string>,
+    },
+    {
+      icon: <HandCoins size={22} strokeWidth={1.5} />,
+      label: 'Subsidies',
+      to: '/subsidies',
+      search: { sector: undefined, target: undefined } as unknown as Record<string, string>,
     },
   ]
 
