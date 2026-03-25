@@ -1,13 +1,18 @@
 /**
  * S5 Potentie & Risico Analyse — Due Diligence Dashboard section 5
  *
- * Displays: v3.0 score circles, per-factor breakdown table with expandable narratives
- * Includes upload zone for quickscan documents when sourceParcelId is available.
+ * Displays: v3.0 score circles in a hero stat row, per-factor breakdown
+ * tables wrapped in SectionInsightCards, expandable narratives per factor,
+ * and a dashed-border upload zone for quickscan documents.
+ *
+ * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
 import { useState, useRef } from 'react'
+import { TrendingUp, ShieldAlert } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import { SectionInsightCard } from '../components/SectionInsightCard'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -71,28 +76,19 @@ function parseFactors(
 
 /* ─── Sub-components ─────────────────────────────────────────── */
 
-function ScoreCircle({
+function HeroScoreCell({
   label,
   value,
-  accent,
 }: {
   label: string
   value: number | null | undefined
-  accent: 'green' | 'red' | 'amber'
 }) {
-  const ringColor =
-    accent === 'green'
-      ? 'border-emerald-200'
-      : accent === 'red'
-        ? 'border-red-200'
-        : 'border-[#F9A826]/30'
-
   return (
-    <div className={`flex flex-col items-center gap-1 rounded-[20px] border bg-white p-5 ${ringColor}`}>
-      <p className="text-[48px] font-black text-[#0E1111] tabular-nums leading-none">
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{label}</p>
+      <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">
         {value != null ? Math.round(value) : '–'}
       </p>
-      <p className="text-[12px] text-slate-400">{label}</p>
     </div>
   )
 }
@@ -219,26 +215,35 @@ function UploadZone({ parcelId }: { parcelId: string }) {
   }
 
   return (
-    <div className="border-t border-[#EAEFEF] pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[12px] text-slate-400">Quickscan documenten</p>
-          {existing.length > 0 && (
-            <p className="mt-0.5 text-[12px] text-slate-400">
-              {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-            </p>
-          )}
-        </div>
-        <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[12px] text-slate-400 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
-        >
-          {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
-        </button>
+    <div
+      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
+      onClick={() => fileRef.current?.click()}
+    >
+      <div>
+        <p className="font-semibold text-slate-600">Quickscan documenten</p>
+        {existing.length > 0 && (
+          <p className="mt-0.5 text-slate-500">
+            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
+          </p>
+        )}
       </div>
+      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
+        disabled={upload.isPending}
+        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
+      >
+        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
+      </button>
+    </div>
+  )
+}
+
+function DisabledUploadZone() {
+  return (
+    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
+      Koppel een perceel om documenten te uploaden
     </div>
   )
 }
@@ -259,11 +264,7 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
           </p>
           <p className="mt-1 text-[12px] text-slate-400">Model: {data.score_model_version ?? 'onbekend'}</p>
         </div>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : (
-          <div className="border-t border-[#EAEFEF] pt-4">
-            <p className="text-[12px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
-          </div>
-        )}
+        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
       </div>
     )
   }
@@ -278,11 +279,11 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
 
   return (
     <div className="space-y-6">
-      {/* Score circles */}
-      <div className="flex gap-6 justify-center">
-        <ScoreCircle label="Potentiescore" value={scores?.potentie} accent="green" />
-        <ScoreCircle label="Overall score" value={scores?.overall} accent="amber" />
-        <ScoreCircle label="Risicoscore" value={scores?.risico} accent="red" />
+      {/* ── Hero Stat Row ─────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        <HeroScoreCell label="Potentiescore" value={scores?.potentie} />
+        <HeroScoreCell label="Overall score" value={scores?.overall} />
+        <HeroScoreCell label="Risicoscore" value={scores?.risico} />
       </div>
 
       {data.score_model_version && (
@@ -291,22 +292,24 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
         </p>
       )}
 
-      {/* Potentie factors table */}
+      {/* ── Potentie factors ──────────────────────────────────── */}
       {potentieFactors.length > 0 && (
-        <FactorsTable factors={potentieFactors} title="Potentiefactoren" />
+        <SectionInsightCard kicker="Potentie" title="Potentiefactoren" Icon={TrendingUp}>
+          <FactorsTable factors={potentieFactors} title={`Potentiefactoren`} />
+        </SectionInsightCard>
       )}
 
-      {/* Risico factors table */}
+      {/* ── Risico factors ────────────────────────────────────── */}
       {risicoFactors.length > 0 && (
-        <FactorsTable factors={risicoFactors} title="Risicofactoren" />
+        <SectionInsightCard kicker="Risico" title="Risicofactoren" Icon={ShieldAlert}>
+          <FactorsTable factors={risicoFactors} title={`Risicofactoren`} />
+        </SectionInsightCard>
       )}
 
-      {/* Upload zone */}
+      {/* ── Upload zone ───────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : (
-          <p className="text-[12px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
-        )}
+        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
       </div>
     </div>
   )

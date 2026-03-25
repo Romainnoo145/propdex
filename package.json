@@ -1,0 +1,6 @@
+{
+  "name": "propdex",
+  "private": true,
+  "description": "Propdex monorepo — backend (Python/FastAPI) + frontend (React/Vite)",
+  "workspaces": ["frontend"]
+}

@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { FormField } from '../ui/FormField'
 
 const loginSchema = z.object({
@@ -19,6 +20,7 @@ interface LoginFormProps {
 export function LoginForm({ onLogin, onSuccess }: LoginFormProps) {
   const [apiError, setApiError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -64,15 +66,37 @@ export function LoginForm({ onLogin, onSuccess }: LoginFormProps) {
         autoComplete="email"
       />
 
-      <FormField
-        label="Password"
-        id="login-password"
-        type="password"
-        registration={register('password')}
-        error={errors.password}
-        placeholder="••••••••"
-        autoComplete="current-password"
-      />
+      <div>
+        <label
+          htmlFor="login-password"
+          className="block text-[12px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5"
+        >
+          Password
+        </label>
+        <div className="relative">
+          <input
+            id="login-password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            {...register('password')}
+            className={`block w-full rounded-[14px] border bg-[#F8FAF9] px-4 py-3 pr-11 text-[14px] text-[#0E1111] placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-[#F9A826] focus:border-transparent transition-shadow ${
+              errors.password ? 'border-red-400 focus:ring-red-400' : 'border-[#EAEFEF]'
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+          </button>
+        </div>
+        {errors.password && (
+          <p className="mt-1 text-[12px] text-red-500">{errors.password.message}</p>
+        )}
+      </div>
 
       <button
         type="submit"
