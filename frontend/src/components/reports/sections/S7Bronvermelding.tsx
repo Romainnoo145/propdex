@@ -3,9 +3,13 @@
  *
  * Displays: data source attribution table, data completeness summary, disclaimer
  * No upload zone (bronvermelding is auto-generated).
+ *
+ * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
+import { Database, Info } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
+import { SectionInsightCard } from '../components/SectionInsightCard'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -164,30 +168,30 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
 
   return (
     <div className="space-y-6">
-      {/* Completeness summary */}
+      {/* ── Hero stat row ─────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[24px] font-black text-[#0E1111]">{okCount}</p>
-          <p className="text-[11px] text-slate-400">Bronnen OK</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bronnen OK</p>
+          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{okCount}</p>
         </div>
         <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[24px] font-black text-[#0E1111]">{unlinkedCount}</p>
-          <p className="text-[11px] text-slate-400">Niet gekoppeld</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Niet gekoppeld</p>
+          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{unlinkedCount}</p>
         </div>
         <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[24px] font-black text-[#0E1111]">{errorCount}</p>
-          <p className="text-[11px] text-slate-400">Fouten</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Fouten</p>
+          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{errorCount}</p>
         </div>
       </div>
 
-      {/* Source table */}
-      <div>
+      {/* ── Source table ──────────────────────────────────────── */}
+      <SectionInsightCard kicker="Databronnen" title="Bronvermelding" Icon={Database}>
         {sources.length === 0 ? (
           <p className="text-[12px] text-slate-400">Geen broninformatie beschikbaar</p>
         ) : (
           <div>
             {sources.map((src, idx) => (
-              <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#EAEFEF]">
+              <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#EAEFEF] last:border-b-0">
                 <div className="min-w-0 flex-1">
                   <p className="text-[12px] font-semibold text-[#0E1111]">{src.source}</p>
                   <p className="text-[12px] text-slate-400">{formatAge(src.age_seconds)}</p>
@@ -209,10 +213,10 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
             ))}
           </div>
         )}
-      </div>
+      </SectionInsightCard>
 
-      {/* Disclaimer */}
-      <div className="rounded-[16px] bg-[#F8FAFA] border border-[#EAEFEF] px-4 py-3">
+      {/* ── Disclaimer ────────────────────────────────────────── */}
+      <SectionInsightCard kicker="Juridisch" title="Disclaimer" Icon={Info}>
         <p className="text-[12px] text-slate-500 leading-relaxed">
           De data in dit rapport is afkomstig van openbare bronnen (BAG, Kadaster, DSO, etc.) en wordt uitsluitend ter
           informatie aangeboden. Propdex garandeert niet de volledigheid, juistheid of actualiteit van de gegevens.
@@ -221,7 +225,7 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
         <p className="mt-2 text-[11px] text-slate-400">
           Rapport gegenereerd op {new Date(data.resolved_at).toLocaleString('nl-NL')}
         </p>
-      </div>
+      </SectionInsightCard>
     </div>
   )
 }

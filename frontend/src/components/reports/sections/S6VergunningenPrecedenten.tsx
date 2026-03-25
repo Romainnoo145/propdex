@@ -3,11 +3,15 @@
  *
  * Displays: SRU bekendmakingen (vergunningen_data), permit precedent benchmark
  * Includes upload zone for vergunninghistorie documents when sourceParcelId is available.
+ *
+ * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
 import { useRef } from 'react'
+import { FileText, Scale } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import { SectionInsightCard } from '../components/SectionInsightCard'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -49,26 +53,35 @@ function UploadZone({ parcelId }: { parcelId: string }) {
   }
 
   return (
-    <div className="mt-4 border-t border-[#EAEFEF] pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold text-slate-600">Vergunninghistorie documenten</p>
-          {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-            </p>
-          )}
-        </div>
-        <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
-        >
-          {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
-        </button>
+    <div
+      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
+      onClick={() => fileRef.current?.click()}
+    >
+      <div>
+        <p className="font-semibold text-slate-600">Vergunninghistorie documenten</p>
+        {existing.length > 0 && (
+          <p className="mt-0.5 text-slate-500">
+            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
+          </p>
+        )}
       </div>
+      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
+        disabled={upload.isPending}
+        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
+      >
+        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
+      </button>
+    </div>
+  )
+}
+
+function DisabledUploadZone() {
+  return (
+    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
+      Koppel een perceel om documenten te uploaden
     </div>
   )
 }
@@ -84,17 +97,16 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   if (!hasData) {
     return (
       <div className="space-y-6">
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <p className="text-[13px] font-semibold text-slate-500">Geen vergunningendata beschikbaar</p>
-          <p className="mx-auto mt-2 max-w-sm text-[11px] text-slate-400">
+        <div className="text-center">
+          <p className="text-[13px] font-semibold text-[#0E1111]">Geen vergunningendata beschikbaar</p>
+          <p className="mx-auto mt-2 max-w-sm text-[12px] text-slate-400">
             Vergunningsprecedenten worden opgehaald bij het genereren van een scan op dit adres.
           </p>
         </div>
-        {sourceParcelId && (
-          <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <UploadZone parcelId={sourceParcelId} />
-          </div>
-        )}
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
+          {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
+        </div>
       </div>
     )
   }
@@ -103,12 +115,9 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
 
   return (
     <div className="space-y-6">
-      {/* SRU Bekendmakingen */}
+      {/* ── Vergunningen & Bekendmakingen ─────────────────────── */}
       {vergunningen && vergunningen.length > 0 && (
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
-            Vergunningen &amp; Bekendmakingen ({vergunningen.length})
-          </p>
+        <SectionInsightCard kicker="Vergunningen" title={`Bekendmakingen (${vergunningen.length})`} Icon={FileText}>
           <div>
             {vergunningen.slice(0, 10).map((v, idx) => {
               const vg = v as Record<string, unknown>
@@ -136,15 +145,12 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
               + {vergunningen.length - 10} meer bekendmakingen
             </p>
           )}
-        </div>
+        </SectionInsightCard>
       )}
 
-      {/* Precedent Benchmark */}
+      {/* ── Precedent Benchmark ───────────────────────────────── */}
       {benchmark && (
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
-            Precedent Benchmark
-          </p>
+        <SectionInsightCard kicker="Precedenten" title="Benchmark" Icon={Scale}>
           <div className="space-y-6">
             {/* Stats grid */}
             <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] overflow-hidden">
@@ -242,15 +248,13 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
               </div>
             )}
           </div>
-        </div>
+        </SectionInsightCard>
       )}
 
-      {/* Upload zone */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Documenten</p>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : (
-          <p className="text-[11px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
-        )}
+      {/* ── Upload zone ───────────────────────────────────────── */}
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
+        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
       </div>
     </div>
   )
