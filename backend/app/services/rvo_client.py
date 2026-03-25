@@ -76,15 +76,32 @@ def _parse_list_field(raw: str | list | None) -> list[str]:
 
 
 def _is_development_relevant(item: dict) -> bool:
-    """Check if a subsidy is relevant for property development."""
-    combined = " ".join([
+    """Check if a subsidy is relevant for property development.
+
+    Focuses on title + intro text only — sector names are too generic
+    (e.g. 'Bouw en infrastructuur' matches almost everything).
+    """
+    # Primary: check title and intro for strong signals
+    title_intro = " ".join([
         str(item.get("title", "")),
         str(item.get("intro", "")),
-        str(item.get("sectors", "")),
+    ]).lower()
+
+    # Strong match: any keyword in title/intro
+    if any(kw in title_intro for kw in _RELEVANCE_KEYWORDS):
+        return True
+
+    # Secondary: check if 'bouw en infrastructuur' is the PRIMARY sector
+    # (not just one of many) and subjects/tags reinforce it
+    subjects_tags = " ".join([
         str(item.get("subjects", "")),
         str(item.get("tags", "")),
     ]).lower()
-    return any(kw in combined for kw in _RELEVANCE_KEYWORDS)
+
+    if any(kw in subjects_tags for kw in _RELEVANCE_KEYWORDS):
+        return True
+
+    return False
 
 
 async def fetch_development_subsidies(

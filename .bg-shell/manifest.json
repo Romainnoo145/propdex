@@ -1,16 +1,1 @@
-[
-  {
-    "id": "e225b614",
-    "label": "frontend",
-    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/.gsd/worktrees/M011/frontend && npx vite --port 9300",
-    "cwd": "/home/klarifai/.gsd/projects/68a755344c30/worktrees/M011",
-    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-25T10-12-33-304Z_55848fca-90be-4d88-b769-a52cc1b5d1ea.jsonl",
-    "persistAcrossSessions": false,
-    "startedAt": 1774433637405,
-    "processType": "server",
-    "group": null,
-    "readyPattern": null,
-    "readyPort": 9300,
-    "pid": 210608
-  }
-]
+[]
