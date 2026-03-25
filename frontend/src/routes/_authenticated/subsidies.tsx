@@ -6,7 +6,7 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { HandCoins } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
@@ -70,6 +70,63 @@ function FilterPill({
       {facet.value}
       <span className="ml-1 text-slate-400">{facet.count}</span>
     </button>
+  )
+}
+
+/* ─── Collapsible sector filter ─────────────────────────────── */
+
+const SECTOR_COLLAPSED_COUNT = 6
+
+function SectorFilter({
+  facets,
+  active,
+  onChange,
+}: {
+  facets: SubsidieFacetItem[]
+  active: string | undefined
+  onChange: (value: string) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  // Always show the active sector even if it's beyond the cutoff
+  const visible = useMemo(() => {
+    if (expanded) return facets
+    const top = facets.slice(0, SECTOR_COLLAPSED_COUNT)
+    if (active && !top.some((f) => f.value === active)) {
+      const activeItem = facets.find((f) => f.value === active)
+      if (activeItem) top.push(activeItem)
+    }
+    return top
+  }, [facets, expanded, active])
+
+  const hasMore = facets.length > SECTOR_COLLAPSED_COUNT
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-semibold">
+          Sector
+        </p>
+        {hasMore && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-[10px] text-slate-400 hover:text-[#0E1111] transition-colors"
+          >
+            {expanded ? 'Minder' : `+${facets.length - SECTOR_COLLAPSED_COUNT} meer`}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {visible.map((facet) => (
+          <FilterPill
+            key={facet.value}
+            facet={facet}
+            active={active === facet.value}
+            onClick={() => onChange(facet.value)}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -166,26 +223,16 @@ function SubsidiesPage() {
           >
             {/* Sector */}
             {facets.sectors.length > 0 && (
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-semibold mb-2">
-                  Sector
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {facets.sectors.map((facet) => (
-                    <FilterPill
-                      key={facet.value}
-                      facet={facet}
-                      active={filters.sector === facet.value}
-                      onClick={() =>
-                        handleFilterChange(
-                          'sector',
-                          filters.sector === facet.value ? undefined : facet.value,
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
+              <SectorFilter
+                facets={facets.sectors}
+                active={filters.sector}
+                onChange={(value) =>
+                  handleFilterChange(
+                    'sector',
+                    filters.sector === value ? undefined : value,
+                  )
+                }
+              />
             )}
 
             {/* Doelgroep */}
