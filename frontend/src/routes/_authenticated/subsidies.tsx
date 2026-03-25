@@ -5,33 +5,21 @@
  * ResultsShell wrapper, amber filter pills, responsive card grid.
  */
 
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo, useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { HandCoins } from 'lucide-react'
+import { ExternalLink, Landmark, Building2, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
-import SubsidieCard from '@/components/subsidies/SubsidieCard'
 import {
-  useSubsidieExplorer,
-  type SubsidieFilters,
-  type SubsidieFacetItem,
-} from '@/hooks/useSubsidieExplorer'
-import { Skeleton } from '@/components/feedback/Skeleton'
-import { EmptyState } from '@/components/feedback/EmptyState'
+  CURATED_SUBSIDIES,
+  groupByNiveau,
+  type CuratedSubsidie,
+  type SubsidieNiveau,
+} from '@/lib/subsidies/curatedSubsidies'
 
 /* ─── Route ─────────────────────────────────────────────────── */
 
 export const Route = createFileRoute('/_authenticated/subsidies')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sector:
-      typeof search.sector === 'string' && search.sector.trim()
-        ? search.sector
-        : undefined,
-    target:
-      typeof search.target === 'string' && search.target.trim()
-        ? search.target
-        : undefined,
-  }),
   component: SubsidiesPage,
 })
 
@@ -47,143 +35,76 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
 }
 
-/* ─── Filter pill ───────────────────────────────────────────── */
+/* ─── Niveau config ─────────────────────────────────────────── */
 
-function FilterPill({
-  facet,
-  active,
-  onClick,
-}: {
-  facet: SubsidieFacetItem
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
-        active
-          ? 'bg-[#F9A826]/15 border-[#F9A826]/30 text-[#D48B1A]'
-          : 'bg-white border-[#EAEFEF] text-[#0E1111] hover:border-slate-300'
-      }`}
-    >
-      {facet.value}
-      <span className="ml-1 text-slate-400">{facet.count}</span>
-    </button>
-  )
+const NIVEAU_CONFIG: Record<SubsidieNiveau, { label: string; icon: typeof Landmark }> = {
+  landelijk: { label: 'Landelijk (RVO)', icon: Landmark },
+  provinciaal: { label: 'Provinciaal', icon: Building2 },
+  gemeentelijk: { label: 'Gemeentelijk', icon: MapPin },
 }
 
-/* ─── Collapsible sector filter ─────────────────────────────── */
+/* ─── Curated subsidie card ────────────────────────────────── */
 
-const SECTOR_COLLAPSED_COUNT = 6
-
-function SectorFilter({
-  facets,
-  active,
-  onChange,
-}: {
-  facets: SubsidieFacetItem[]
-  active: string | undefined
-  onChange: (value: string) => void
-}) {
+function CuratedCard({ item }: { item: CuratedSubsidie }) {
   const [expanded, setExpanded] = useState(false)
 
-  // Always show the active sector even if it's beyond the cutoff
-  const visible = useMemo(() => {
-    if (expanded) return facets
-    const top = facets.slice(0, SECTOR_COLLAPSED_COUNT)
-    if (active && !top.some((f) => f.value === active)) {
-      const activeItem = facets.find((f) => f.value === active)
-      if (activeItem) top.push(activeItem)
-    }
-    return top
-  }, [facets, expanded, active])
-
-  const hasMore = facets.length > SECTOR_COLLAPSED_COUNT
-
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-semibold">
-          Sector
-        </p>
-        {hasMore && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="text-[10px] text-slate-400 hover:text-[#0E1111] transition-colors"
-          >
-            {expanded ? 'Minder' : `+${facets.length - SECTOR_COLLAPSED_COUNT} meer`}
-          </button>
+    <motion.div variants={fadeUp}>
+      <div
+        className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-all hover:shadow-md cursor-pointer"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[14px] font-semibold text-[#0E1111] leading-snug">
+              {item.title}
+            </h3>
+            <p className="mt-1.5 text-[13px] text-slate-500 leading-relaxed line-clamp-2">
+              {item.beschrijving}
+            </p>
+          </div>
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#EAEFEF] text-slate-400 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
+              title="Bekijk regeling"
+            >
+              <ExternalLink size={16} strokeWidth={2} />
+            </a>
+          )}
+        </div>
+
+        {/* Tags */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+            {item.doelgroep}
+          </span>
+          {item.regio && (
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
+              {item.regio}
+            </span>
+          )}
+        </div>
+
+        {/* Expanded: voorwaarden */}
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-[#EAEFEF]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Voorwaarden</p>
+            <p className="text-[12px] text-slate-500 leading-relaxed">{item.voorwaarden}</p>
+          </div>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {visible.map((facet) => (
-          <FilterPill
-            key={facet.value}
-            facet={facet}
-            active={active === facet.value}
-            onClick={() => onChange(facet.value)}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ─── Loading skeletons ─────────────────────────────────────── */
-
-function LoadingSkeletons() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5">
-          <Skeleton className="h-5 w-3/4 mb-3" />
-          <Skeleton className="h-4 w-full mb-1" />
-          <Skeleton className="h-4 w-2/3 mb-3" />
-          <div className="flex gap-1.5">
-            <Skeleton className="h-5 w-20 rounded-full" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-          </div>
-        </div>
-      ))}
-    </div>
+    </motion.div>
   )
 }
 
 /* ─── Page ──────────────────────────────────────────────────── */
 
 function SubsidiesPage() {
-  const navigate = useNavigate()
-  const search = Route.useSearch()
-
-  const filters: SubsidieFilters = useMemo(
-    () => ({ sector: search.sector, target: search.target }),
-    [search.sector, search.target],
-  )
-
-  const { data, allCount, isLoading, error } = useSubsidieExplorer(filters)
-
-  const results = data?.results ?? []
-  const facets = data?.facets ?? null
-  const totalCount = data?.total_count ?? 0
-  const hasActiveFilters = Object.values(filters).some(Boolean)
-
-  /** Toggle a single filter dimension, stay in current view */
-  const handleFilterChange = useCallback(
-    (dimension: keyof SubsidieFilters, value: string | undefined) => {
-      navigate({
-        to: '/subsidies',
-        search: {
-          sector: filters.sector,
-          target: filters.target,
-          [dimension]: value,
-        },
-        replace: true,
-      })
-    },
-    [navigate, filters],
-  )
+  const curatedByNiveau = useMemo(() => groupByNiveau(CURATED_SUBSIDIES), [])
 
   return (
     <ResultsShell>
@@ -194,114 +115,60 @@ function SubsidiesPage() {
             className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
-            Beschikbare subsidies
+            Subsidies & regelingen
           </p>
           <div className="mt-1 flex items-baseline gap-3">
             <h1 className="text-[56px] font-black leading-none tracking-tight text-[#0E1111] tabular-nums">
-              {isLoading ? '–' : totalCount}
+              {CURATED_SUBSIDIES.length}
             </h1>
-            {!isLoading && hasActiveFilters && allCount > 0 && (
-              <span className="text-[14px] text-slate-400">
-                van {allCount} regelingen
-              </span>
-            )}
           </div>
-          {!isLoading && !hasActiveFilters && (
-            <p className="mt-1 text-[14px] text-slate-500">
-              bouw- en woningregelingen via RVO
-            </p>
-          )}
+          <p className="mt-1 text-[14px] text-slate-500">
+            woningbouw- en verduurzamingsregelingen op landelijk, provinciaal en gemeentelijk niveau
+          </p>
         </motion.div>
 
-        {/* ── Filter pills ─────────────────────────────────── */}
-        {!isLoading && facets && (
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="mt-6 space-y-4"
-          >
-            {/* Sector */}
-            {facets.sectors.length > 0 && (
-              <SectorFilter
-                facets={facets.sectors}
-                active={filters.sector}
-                onChange={(value) =>
-                  handleFilterChange(
-                    'sector',
-                    filters.sector === value ? undefined : value,
-                  )
-                }
-              />
-            )}
+        {/* ── Subsidies per niveau ──────────────────────────── */}
+        <div className="mt-10 space-y-10">
+          {(['landelijk', 'provinciaal', 'gemeentelijk'] as SubsidieNiveau[]).map((niveau) => {
+            const cfg = NIVEAU_CONFIG[niveau]
+            const Icon = cfg.icon
+            const items = curatedByNiveau.get(niveau)
+            if (!items || items.length === 0) return null
 
-            {/* Doelgroep */}
-            {facets.targets.length > 0 && (
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-semibold mb-2">
-                  Doelgroep
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {facets.targets.map((facet) => (
-                    <FilterPill
-                      key={facet.value}
-                      facet={facet}
-                      active={filters.target === facet.value}
-                      onClick={() =>
-                        handleFilterChange(
-                          'target',
-                          filters.target === facet.value ? undefined : facet.value,
-                        )
-                      }
-                    />
-                  ))}
+            return (
+              <motion.div
+                key={niveau}
+                variants={fadeUp}
+                initial="hidden"
+                animate="show"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#0E1111]">
+                    <Icon size={14} strokeWidth={2} className="text-[#F9A826]" />
+                  </div>
+                  <h2 className="text-[16px] font-bold text-[#0E1111]">{cfg.label}</h2>
+                  <span className="text-[12px] text-slate-400 tabular-nums">{items.length}</span>
+                  <div className="h-px flex-1 bg-[#EAEFEF]" />
                 </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* ── Results ──────────────────────────────────────── */}
-        <div className="mt-8">
-          {isLoading ? (
-            <LoadingSkeletons />
-          ) : error ? (
-            <EmptyState
-              title="Subsidies konden niet worden geladen"
-              description={error.message}
-            />
-          ) : results.length === 0 ? (
-            <EmptyState
-              icon={<HandCoins size={32} strokeWidth={1.5} className="text-slate-400" />}
-              title={hasActiveFilters ? 'Geen subsidies gevonden' : 'Geen subsidies beschikbaar'}
-              description={
-                hasActiveFilters
-                  ? 'Pas de filters aan om meer resultaten te zien.'
-                  : 'Er zijn momenteel geen subsidies beschikbaar.'
-              }
-            />
-          ) : (
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="show"
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {results.map((item) => (
-                <motion.div key={item.id} variants={fadeUp}>
-                  <SubsidieCard item={item} />
+                <motion.div
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="show"
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {items.map((item) => (
+                    <CuratedCard key={item.id} item={item} />
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
-          )}
+              </motion.div>
+            )
+          })}
         </div>
 
         {/* ── Footer ───────────────────────────────────────── */}
-        {!isLoading && results.length > 0 && (
-          <p className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Subsidies · {totalCount} regelingen
-          </p>
-        )}
+        <p className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Subsidies · {CURATED_SUBSIDIES.length} regelingen
+        </p>
       </div>
     </ResultsShell>
   )
