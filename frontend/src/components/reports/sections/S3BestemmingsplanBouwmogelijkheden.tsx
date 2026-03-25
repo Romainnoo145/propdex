@@ -2,13 +2,16 @@
  * S3 Bestemmingsplan & Bouwmogelijkheden — Due Diligence Dashboard section 3
  *
  * Displays: zoning plans, building dimensions, buildability delta, AI parsing, Wkb precheck
+ * Each sub-section wrapped in SectionInsightCard with icon + kicker.
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
 import { useRef } from 'react'
+import { FileText, Ruler, Brain, ShieldCheck } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { splitZoningPlans } from '@/lib/zoningPlans'
 import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import { SectionInsightCard } from '../components/SectionInsightCard'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -22,6 +25,63 @@ export interface S3BestemmingsplanBouwmogelijkhedenProps {
 function formatArea(value: number | null | undefined): string {
   if (value == null) return '–'
   return `${Math.round(value).toLocaleString('nl-NL')} m²`
+}
+
+/* ─── Badge helpers ──────────────────────────────────────────── */
+
+function PlanStatusBadge({ status }: { status: string }) {
+  const colors =
+    status === 'Vastgesteld'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : status === 'Ontwerp'
+        ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
+        : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
+  return (
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
+      {status}
+    </span>
+  )
+}
+
+function AIStatusBadge({ status }: { status: string }) {
+  const colors =
+    status === 'complete'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : status === 'in_progress'
+        ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
+        : status === 'failed'
+          ? 'border-red-200 bg-red-50 text-red-700'
+          : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
+  const labels: Record<string, string> = {
+    complete: 'Voltooid',
+    in_progress: 'Bezig...',
+    failed: 'Mislukt',
+    pending: 'Wachtend',
+  }
+  return (
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
+      {labels[status] ?? status}
+    </span>
+  )
+}
+
+function WkbStatusBadge({ status }: { status: string }) {
+  const colors =
+    status === 'likely_required'
+      ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
+      : status === 'likely_not_required'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
+  const labels: Record<string, string> = {
+    likely_required: 'Waarschijnlijk vereist',
+    likely_not_required: 'Waarschijnlijk niet vereist',
+    not_applicable: 'Niet toepasbaar',
+  }
+  return (
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
+      {labels[status] ?? 'Onzeker'}
+    </span>
+  )
 }
 
 /* ─── Upload Zone ────────────────────────────────────────────── */
@@ -80,8 +140,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
   return (
     <div className="space-y-6">
       {/* Bestemmingsplan */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bestemmingsplan</p>
+      <SectionInsightCard kicker="Bestemmingsplan" title="Bestemmingsplan" Icon={FileText}>
         {!zoning ? (
           <p className="text-[13px] font-semibold text-[#0E1111]">Geen bestemmingsplangegevens beschikbaar</p>
         ) : (() => {
@@ -115,9 +174,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                 <div key={idx} className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
                   <p className="text-[13px] font-semibold text-[#0E1111]">{plan.plan_naam}</p>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                    {plan.plan_status && (
-                      <span className="rounded-full border border-[#EAEFEF] px-2 py-0.5 text-[11px] font-semibold">{plan.plan_status}</span>
-                    )}
+                    {plan.plan_status && <PlanStatusBadge status={plan.plan_status} />}
                     {plan.plan_datum && <span>{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>}
                     {plan.plan_type && <span>{plan.plan_type}</span>}
                   </div>
@@ -144,16 +201,17 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
             </div>
           )
         })()}
-        {sourceParcelId ? (
-          <UploadZone parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} label="Bestemmingsplan / Bestemmingscheck" />
-        ) : (
-          <DisabledUploadZone />
-        )}
-      </div>
+        <div className="mt-4">
+          {sourceParcelId ? (
+            <UploadZone parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} label="Bestemmingsplan / Bestemmingscheck" />
+          ) : (
+            <DisabledUploadZone />
+          )}
+        </div>
+      </SectionInsightCard>
 
       {/* Bouwruimte Delta */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bouwruimte Delta</p>
+      <SectionInsightCard kicker="Bouwruimte" title="Bouwruimte Delta" Icon={Ruler}>
         {!buildability_delta ? (
           <p className="text-[13px] font-semibold text-[#0E1111]">Bouwruimteanalyse niet beschikbaar</p>
         ) : (
@@ -175,47 +233,35 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
             ))}
           </div>
         )}
-      </div>
+      </SectionInsightCard>
 
       {/* AI Interpretatie */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">AI Interpretatie bestemmingsplan</p>
+      <SectionInsightCard kicker="AI Analyse" title="AI Interpretatie" Icon={Brain}>
         {!ai_parsing ? (
           <p className="text-[13px] font-semibold text-[#0E1111]">AI-analyse niet beschikbaar</p>
         ) : ai_parsing.status === 'complete' && ai_parsing.parsed_plan ? (
           <div className="space-y-2">
+            <AIStatusBadge status={ai_parsing.status} />
             <p className="text-[13px] font-semibold text-[#0E1111] leading-relaxed">{ai_parsing.parsed_plan.samenvatting}</p>
             <p className="text-[11px] text-slate-500">{ai_parsing.disclaimer_banner}</p>
           </div>
         ) : ai_parsing.upload_required ? (
-          <div className="rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-            <p className="text-[13px] font-semibold text-[#0E1111]">Upload een bestemmingsplan PDF voor AI-analyse</p>
-            <p className="mt-1 text-[11px] text-slate-500">Status: {ai_parsing.status}</p>
+          <div className="space-y-2">
+            <AIStatusBadge status={ai_parsing.status} />
+            <div className="rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+              <p className="text-[13px] font-semibold text-[#0E1111]">Upload een bestemmingsplan PDF voor AI-analyse</p>
+            </div>
           </div>
         ) : (
-          <p className="text-[13px] font-semibold text-[#0E1111]">Status: {ai_parsing.status}</p>
+          <AIStatusBadge status={ai_parsing.status} />
         )}
-      </div>
+      </SectionInsightCard>
 
       {/* Wkb Precheck */}
       {wkb_precheck && (
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Wkb Startdossier</p>
+        <SectionInsightCard kicker="Wkb Precheck" title="Wkb Startdossier" Icon={ShieldCheck}>
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                wkb_precheck.status === 'likely_required'
-                  ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
-                  : wkb_precheck.status === 'likely_not_required'
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
-              }`}>
-                {wkb_precheck.status === 'likely_required' ? 'Waarschijnlijk vereist'
-                  : wkb_precheck.status === 'likely_not_required' ? 'Waarschijnlijk niet vereist'
-                  : wkb_precheck.status === 'not_applicable' ? 'Niet toepasbaar'
-                  : 'Onzeker'}
-              </span>
-            </div>
+            <WkbStatusBadge status={wkb_precheck.status} />
             {wkb_precheck.triggered_rules.length > 0 && (
               <div className="space-y-1">
                 {wkb_precheck.triggered_rules.slice(0, 3).map((rule, i) => (
@@ -225,7 +271,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
             )}
             <p className="text-[11px] text-slate-500">{wkb_precheck.disclaimer}</p>
           </div>
-        </div>
+        </SectionInsightCard>
       )}
     </div>
   )
