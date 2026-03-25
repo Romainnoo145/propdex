@@ -31,47 +31,49 @@ function DocumentatiePage() {
         animate="show"
       >
         <motion.div variants={fadeUp} className="mb-8">
-          <p
-            className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            Documentatie
-          </p>
-          <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
-            {activeTab === 'data' ? 'Data & bronnen' : 'Actiepunten'}
-          </h1>
-          <p className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed">
-            {activeTab === 'data'
-              ? 'Overzicht van alle databronnen per niveau — gemeente, wijk en perceel. Elke bron toont de herkomst, beschikbaarheid en status.'
-              : 'Manuele taken die opgepakt moeten worden — API configuratie, externe contacten, en roadmap features.'}
-          </p>
-        </motion.div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p
+                className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Documentatie
+              </p>
+              <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
+                {activeTab === 'data' ? 'Data & bronnen' : 'Actiepunten'}
+              </h1>
+              <p className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                {activeTab === 'data'
+                  ? 'Overzicht van alle databronnen per niveau — gemeente, wijk en perceel. Elke bron toont de herkomst, beschikbaarheid en status.'
+                  : 'Manuele taken die opgepakt moeten worden — API configuratie, externe contacten, en roadmap features.'}
+              </p>
+            </div>
 
-        {/* Tab toggle */}
-        <motion.div variants={fadeUp} className="mb-6">
-          <div className="flex items-center bg-[#F2F6F3] rounded-[18px] p-1 max-w-md">
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-[13px] font-bold transition-all duration-200 ${
-                activeTab === 'data'
-                  ? 'bg-[#0E1111] text-white shadow-lg'
-                  : 'text-slate-500 hover:text-[#0E1111]'
-              }`}
-            >
-              <Database size={16} strokeWidth={activeTab === 'data' ? 2 : 1.5} />
-              Data & bronnen
-            </button>
-            <button
-              onClick={() => setActiveTab('acties')}
-              className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-[13px] font-bold transition-all duration-200 ${
-                activeTab === 'acties'
-                  ? 'bg-[#0E1111] text-white shadow-lg'
-                  : 'text-slate-500 hover:text-[#0E1111]'
-              }`}
-            >
-              <ClipboardList size={16} strokeWidth={activeTab === 'acties' ? 2 : 1.5} />
-              Actiepunten
-            </button>
+            {/* Toggle */}
+            <div className="flex items-center rounded-full border border-[#0E1111] p-0.5 shrink-0 mt-2">
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                  activeTab === 'data'
+                    ? 'bg-[#F9A826] text-[#0E1111]'
+                    : 'text-slate-400 hover:text-[#0E1111]'
+                }`}
+                title="Data & bronnen"
+              >
+                <Database size={16} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => setActiveTab('acties')}
+                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                  activeTab === 'acties'
+                    ? 'bg-[#F9A826] text-[#0E1111]'
+                    : 'text-slate-400 hover:text-[#0E1111]'
+                }`}
+                title="Actiepunten"
+              >
+                <ClipboardList size={16} strokeWidth={2} />
+              </button>
+            </div>
           </div>
         </motion.div>
 
