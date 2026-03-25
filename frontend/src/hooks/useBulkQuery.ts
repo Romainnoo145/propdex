@@ -23,6 +23,7 @@ export interface ParsedQuery {
   area_min?: number | null
   area_max?: number | null
   bestemming?: string | null
+  bestemming_exclude?: string | null
   pand_status?: string | null
 }
 
