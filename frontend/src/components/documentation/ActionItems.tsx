@@ -60,15 +60,6 @@ const ITEMS: ActionItem[] = [
     url: 'https://developer.kadaster.nl',
   },
   {
-    id: 'ep-online',
-    title: 'EP-Online API key instellen',
-    description:
-      'Energielabel ophalen faalt zonder API key. Gratis aan te vragen bij RVO. Zonder key wordt de energielabel-sectie verborgen in rapporten.',
-    category: 'api-config',
-    priority: 'hoog',
-    url: 'https://www.ep-online.nl/PublicApi',
-  },
-  {
     id: 'google-oauth',
     title: 'Google OAuth configureren',
     description:
