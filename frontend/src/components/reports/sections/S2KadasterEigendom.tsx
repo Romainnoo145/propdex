@@ -2,12 +2,15 @@
  * S2 Kadaster & Eigendom — Due Diligence Dashboard section 2
  *
  * Displays: cadastral parcels, BRK ownership status, market signals
+ * Each sub-section wrapped in SectionInsightCard with icon + kicker.
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
 import { useRef } from 'react'
+import { Landmark, Users, TrendingUp } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
+import { SectionInsightCard } from '../components/SectionInsightCard'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -21,6 +24,68 @@ export interface S2KadasterEigendomProps {
 function formatArea(value: number | null | undefined): string {
   if (value == null) return '–'
   return `${Math.round(value).toLocaleString('nl-NL')} m²`
+}
+
+/* ─── Badge helpers ──────────────────────────────────────────── */
+
+const OWNER_TYPE_COLORS: Record<string, string> = {
+  natuurlijk_persoon: 'bg-blue-100 text-blue-700',
+  rechtspersoon: 'bg-purple-100 text-purple-700',
+  overheid: 'bg-amber-100 text-amber-700',
+  onbekend: 'bg-slate-100 text-slate-600',
+}
+
+const OWNER_TYPE_LABELS: Record<string, string> = {
+  natuurlijk_persoon: 'Natuurlijk persoon',
+  rechtspersoon: 'Rechtspersoon',
+  overheid: 'Overheid',
+  onbekend: 'Onbekend',
+}
+
+function OwnerTypeBadge({ type }: { type: string }) {
+  const colors = OWNER_TYPE_COLORS[type] ?? 'bg-slate-100 text-slate-600'
+  const label = OWNER_TYPE_LABELS[type] ?? type
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
+      {label}
+    </span>
+  )
+}
+
+function HypotheekBadge() {
+  return (
+    <span className="inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-600">
+      Hypotheek geregistreerd
+    </span>
+  )
+}
+
+function ListingDurationBadge({ days }: { days: number }) {
+  const colors =
+    days < 30
+      ? 'bg-emerald-100 text-emerald-700'
+      : days <= 180
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-red-100 text-red-700'
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${colors}`}>
+      {days} dagen
+    </span>
+  )
+}
+
+function MarketFreshnessBadge({ days }: { days: number }) {
+  const colors =
+    days < 30
+      ? 'bg-emerald-100 text-emerald-700'
+      : days <= 90
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-red-100 text-red-700'
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${colors}`}>
+      {days}d geleden
+    </span>
+  )
 }
 
 /* ─── Upload Zone ────────────────────────────────────────────── */
@@ -94,9 +159,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
   return (
     <div className="space-y-6">
       {/* ── Kadastrale percelen ── */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Kadastrale percelen</p>
-
+      <SectionInsightCard kicker="Kadaster" title="Kadastrale percelen" Icon={Landmark}>
         {parcels.length === 0 ? (
           <p className="text-[13px] text-slate-500">Geen kadastrale gegevens beschikbaar</p>
         ) : (
@@ -161,12 +224,10 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             <DisabledUploadZone />
           )}
         </div>
-      </div>
+      </SectionInsightCard>
 
       {/* ── BRK Eigendom ── */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">BRK Eigendom</p>
-
+      <SectionInsightCard kicker="Eigendom" title="BRK Eigendom" Icon={Users}>
         {!ownership ? (
           <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
             <p className="text-[13px] text-slate-600">
@@ -193,7 +254,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                     {item.perceel_identificatie}
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
+                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
                   <span className="text-[12px] text-slate-400">Gerechtigden</span>
                   <span className="text-[13px] font-semibold text-[#0E1111] text-right">
                     {item.gerechtigden.length} zakelijk gerechtigde
@@ -201,20 +262,19 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                   </span>
                 </div>
                 {item.heeft_hypotheek && (
-                  <div className="flex items-center justify-between py-2 border-b-0">
+                  <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
                     <span className="text-[12px] text-slate-400">Hypotheek</span>
-                    <span className="text-[13px] font-semibold text-[#0E1111] text-right">geregistreerd</span>
+                    <HypotheekBadge />
                   </div>
                 )}
                 {item.gerechtigden.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {item.gerechtigden.map((g, gIdx) => (
-                      <span
-                        key={gIdx}
-                        className="rounded-full border border-[#EAEFEF] px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 bg-white"
-                      >
-                        {g.eigenaar_type}
-                        {g.aandeel ? ` ${g.aandeel}` : ''}
+                      <span key={gIdx} className="flex items-center gap-1.5">
+                        <OwnerTypeBadge type={g.eigenaar_type} />
+                        {g.aandeel && (
+                          <span className="text-[11px] text-slate-500">{g.aandeel}</span>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -223,12 +283,10 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             ))}
           </div>
         )}
-      </div>
+      </SectionInsightCard>
 
       {/* ── Marktsignalen ── */}
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Marktsignalen</p>
-
+      <SectionInsightCard kicker="Markt" title="Marktsignalen" Icon={TrendingUp}>
         {!signals ? (
           <p className="text-[13px] text-slate-500">
             Nog geen Funda-signalen beschikbaar voor dit adres
@@ -237,9 +295,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
           <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
             <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
               <span className="text-[12px] text-slate-400">Te koop sinds</span>
-              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
-                {signals.listing_duration_days} dagen
-              </span>
+              <ListingDurationBadge days={signals.listing_duration_days} />
             </div>
             <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
               <span className="text-[12px] text-slate-400">Prijswijzigingen</span>
@@ -255,13 +311,11 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             </div>
             <div className="flex items-center justify-between py-2 border-b-0">
               <span className="text-[12px] text-slate-400">Laatste waarneming</span>
-              <span className="text-[13px] font-semibold text-[#0E1111] text-right tabular-nums">
-                {signals.days_since_last_seen} dagen geleden
-              </span>
+              <MarketFreshnessBadge days={signals.days_since_last_seen} />
             </div>
           </div>
         )}
-      </div>
+      </SectionInsightCard>
     </div>
   )
 }
