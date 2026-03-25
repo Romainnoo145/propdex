@@ -7,11 +7,12 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Download, Clock, ArrowRight, Loader2,
   AlertTriangle, MessageSquare, Table2, X, Send, CheckCircle2,
+  ChevronUp, ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ResultsShell from '@/components/layout/ResultsShell'
@@ -101,21 +102,88 @@ function TableSkeleton() {
 
 /* ─── Result Table ──────────────────────────────────────────── */
 
+type SortableColumn = 'address' | 'build_year' | 'area_m2' | 'bestemming' | 'pand_status'
+type SortDirection = 'asc' | 'desc'
+
+const COLUMNS: { key: SortableColumn; label: string; numeric: boolean; className?: string }[] = [
+  { key: 'address', label: 'Adres', numeric: false, className: 'min-w-[200px]' },
+  { key: 'build_year', label: 'Bouwjaar', numeric: true, className: 'whitespace-nowrap' },
+  { key: 'area_m2', label: 'Oppervlakte', numeric: true, className: 'whitespace-nowrap' },
+  { key: 'bestemming', label: 'Bestemming', numeric: false, className: 'whitespace-nowrap' },
+  { key: 'pand_status', label: 'Status', numeric: false, className: 'whitespace-nowrap' },
+]
+
 function ResultTable({ results, total }: { results: BulkResult[]; total: number }) {
+  const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  const handleSort = useCallback((col: SortableColumn) => {
+    if (sortColumn === col) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else {
+        // desc → clear
+        setSortColumn(null)
+        setSortDirection('asc')
+      }
+    } else {
+      setSortColumn(col)
+      setSortDirection('asc')
+    }
+  }, [sortColumn, sortDirection])
+
+  const sortedResults = useMemo(() => {
+    if (!sortColumn) return results
+
+    return [...results].sort((a, b) => {
+      const col = sortColumn
+      const aVal = a[col]
+      const bVal = b[col]
+
+      // Null/undefined always sort last regardless of direction
+      const aNull = aVal == null || aVal === ''
+      const bNull = bVal == null || bVal === ''
+      if (aNull && bNull) return 0
+      if (aNull) return 1
+      if (bNull) return -1
+
+      const colDef = COLUMNS.find((c) => c.key === col)
+      let cmp: number
+      if (colDef?.numeric) {
+        cmp = (aVal as number) - (bVal as number)
+      } else {
+        cmp = String(aVal).localeCompare(String(bVal), 'nl')
+      }
+
+      return sortDirection === 'desc' ? -cmp : cmp
+    })
+  }, [results, sortColumn, sortDirection])
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-[#EAEFEF] bg-white">
       <table className="w-full text-left text-[13px]">
         <thead>
           <tr className="border-b border-[#EAEFEF] bg-[#F8FAF8]">
-            <th className="px-4 py-3 font-semibold text-slate-600 min-w-[200px]">Adres</th>
-            <th className="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">Bouwjaar</th>
-            <th className="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">Oppervlakte</th>
-            <th className="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">Bestemming</th>
-            <th className="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">Status</th>
+            {COLUMNS.map((col) => (
+              <th
+                key={col.key}
+                onClick={() => handleSort(col.key)}
+                className={`px-4 py-3 font-semibold text-slate-600 select-none cursor-pointer hover:text-[#0E1111] transition-colors ${col.className ?? ''}`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {col.label}
+                  {sortColumn === col.key && (
+                    sortDirection === 'asc'
+                      ? <ChevronUp size={14} className="text-[#0E1111]" />
+                      : <ChevronDown size={14} className="text-[#0E1111]" />
+                  )}
+                </span>
+              </th>
+            ))}
           </tr>
         </thead>
         <motion.tbody variants={staggerContainer} initial="hidden" animate="show">
-          {results.map((r, i) => (
+          {sortedResults.map((r, i) => (
             <motion.tr
               key={r.parcel_id + i}
               variants={fadeUp}
