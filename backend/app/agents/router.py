@@ -20,6 +20,7 @@ from app.agents.schemas import (
     BulkRequestCreate,
     BulkRequestListResponse,
     BulkRequestResponse,
+    BulkRequestUpdate,
     BulkResult,
     ParsedQuery,
 )
@@ -283,4 +284,53 @@ async def list_bulk_requests(
             for r in rows
         ],
         total=total,
+    )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /bulk-requests/{id} — admin update request status / notes
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/bulk-requests/{request_id}", response_model=BulkRequestResponse)
+async def update_bulk_request(
+    request_id: uuid.UUID,
+    body: BulkRequestUpdate,
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> BulkRequestResponse:
+    """Update a bulk request's status, admin note, or linked results.
+
+    Admin role restriction deferred to S04.
+    """
+    row = (await db.execute(
+        select(BulkRequest).where(BulkRequest.id == request_id)
+    )).scalar_one_or_none()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Bulk request not found")
+
+    if body.status is not None:
+        row.status = body.status
+    if body.admin_note is not None:
+        row.admin_note = body.admin_note
+    if body.results_query_id is not None:
+        row.results_query_id = uuid.UUID(body.results_query_id)
+
+    await db.commit()
+    await db.refresh(row)
+
+    logger.info(
+        "Bulk request updated (id=%s, status=%s)",
+        row.id,
+        row.status,
+    )
+
+    return BulkRequestResponse(
+        id=str(row.id),
+        query_text=row.query_text,
+        status=row.status,
+        admin_note=row.admin_note,
+        results_query_id=str(row.results_query_id) if row.results_query_id else None,
+        created_at=row.created_at.isoformat(),
     )

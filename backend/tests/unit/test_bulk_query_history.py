@@ -14,6 +14,7 @@ from app.agents.schemas import (
     BulkQueryHistoryResponse,
     BulkRequestListResponse,
     BulkRequestResponse,
+    BulkRequestUpdate,
     BulkResult,
 )
 
@@ -267,3 +268,56 @@ async def test_list_bulk_requests():
     assert resp.total == 1
     assert len(resp.requests) == 1
     assert resp.requests[0].status == "pending"
+
+
+# ---------------------------------------------------------------------------
+# Update bulk request (PATCH) tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_update_bulk_request_status():
+    """PATCH /bulk-requests/{id} updates status and admin_note."""
+    from app.agents.router import update_bulk_request
+
+    user = MagicMock()
+    user.id = uuid.uuid4()
+
+    req = _make_bulk_request(user_id=user.id)
+    db = _mock_db_for_single(req)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+
+    body = BulkRequestUpdate(status="completed", admin_note="Done")
+    resp = await update_bulk_request(request_id=req.id, body=body, user=user, db=db)
+
+    assert resp.status == "completed"
+    assert resp.admin_note == "Done"
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_bulk_request_not_found():
+    """PATCH /bulk-requests/{id} returns 404 for non-existent request."""
+    from app.agents.router import update_bulk_request
+    from fastapi import HTTPException
+
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    db = _mock_db_for_single(None)
+
+    body = BulkRequestUpdate(status="completed")
+    with pytest.raises(HTTPException) as exc_info:
+        await update_bulk_request(request_id=uuid.uuid4(), body=body, user=user, db=db)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_bulk_request_invalid_status():
+    """PATCH with invalid status value is rejected by Pydantic (422)."""
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        BulkRequestUpdate(status="invalid")

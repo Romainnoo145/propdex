@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ParsedQuery(BaseModel):
@@ -139,6 +139,16 @@ class BulkRequestResponse(BaseModel):
     admin_note: str | None = None
     results_query_id: str | None = None
     created_at: str
+
+
+class BulkRequestUpdate(BaseModel):
+    """Request body for updating a manual request (admin action)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["pending", "completed", "rejected"] | None = None
+    admin_note: str | None = None
+    results_query_id: str | None = None
 
 
 class BulkRequestListResponse(BaseModel):
