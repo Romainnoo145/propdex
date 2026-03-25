@@ -2,6 +2,8 @@
 
 from app.models.area_scan import AreaScan  # noqa: F401
 from app.models.base import Base
+from app.models.bulk_query import BulkQuery  # noqa: F401
+from app.models.bulk_request import BulkRequest  # noqa: F401
 from app.models.cached_response import CachedAPIResponse
 from app.models.change_read_state import ChangeReadState  # noqa: F401
 from app.models.change_record import ChangeRecord  # noqa: F401
@@ -31,6 +33,8 @@ __all__ = [
     "RefreshToken",
     "CachedAPIResponse",
     "AreaScan",
+    "BulkQuery",
+    "BulkRequest",
     "ParcelCache",
     "ScanResult",
     "ParcelDocument",

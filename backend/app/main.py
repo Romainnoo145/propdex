@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
 
+from app.agents.router import router as agents_router
 from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router
@@ -103,6 +104,7 @@ app.include_router(monitoring_router)
 app.include_router(users_router)
 app.include_router(jurisprudence_router, prefix="/api/jurisprudence", tags=["Jurisprudence"])
 app.include_router(gemeente_router, prefix="/api/gemeente", tags=["Gemeente"])
+app.include_router(agents_router)
 
 
 @app.get("/")

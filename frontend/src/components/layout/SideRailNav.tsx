@@ -2,7 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { Map, Bookmark, Scale, PiggyBank, FileText, Settings, LogOut } from 'lucide-react'
+import { Map, Bookmark, Scale, PiggyBank, FileText, Settings, LogOut, Search } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -37,6 +37,7 @@ export default function SideRailNav() {
       to: '/subsidies',
       search: { sector: undefined, target: undefined } as unknown as Record<string, string>,
     },
+    { icon: <Search size={22} strokeWidth={1.5} />, label: 'Verkenner', to: '/verkenner' },
   ]
 
   const renderNavButton = (item: NavItem) => {

@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
+import { Route as AuthenticatedVerkennerRouteImport } from './routes/_authenticated/verkenner'
 import { Route as AuthenticatedSubsidiesRouteImport } from './routes/_authenticated/subsidies'
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
@@ -46,6 +47,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google-callback',
   path: '/auth/google-callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedVerkennerRoute = AuthenticatedVerkennerRouteImport.update({
+  id: '/verkenner',
+  path: '/verkenner',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSubsidiesRoute = AuthenticatedSubsidiesRouteImport.update({
   id: '/subsidies',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/subsidies': typeof AuthenticatedSubsidiesRoute
+  '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
   '/subsidies': typeof AuthenticatedSubsidiesRoute
+  '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
   '/_authenticated/subsidies': typeof AuthenticatedSubsidiesRoute
+  '/_authenticated/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/rapporten'
     | '/resultaten'
     | '/subsidies'
+    | '/verkenner'
     | '/auth/google-callback'
     | '/auth/'
     | '/instellingen/score'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/rapporten'
     | '/resultaten'
     | '/subsidies'
+    | '/verkenner'
     | '/auth/google-callback'
     | '/auth'
     | '/instellingen/score'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
     | '/_authenticated/subsidies'
+    | '/_authenticated/verkenner'
     | '/auth/google-callback'
     | '/auth/'
     | '/_authenticated/instellingen/score'
@@ -277,6 +289,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/google-callback'
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/verkenner': {
+      id: '/_authenticated/verkenner'
+      path: '/verkenner'
+      fullPath: '/verkenner'
+      preLoaderRoute: typeof AuthenticatedVerkennerRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/subsidies': {
       id: '/_authenticated/subsidies'
@@ -407,6 +426,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
   AuthenticatedSubsidiesRoute: typeof AuthenticatedSubsidiesRoute
+  AuthenticatedVerkennerRoute: typeof AuthenticatedVerkennerRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
 }
 
@@ -422,6 +442,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
   AuthenticatedSubsidiesRoute: AuthenticatedSubsidiesRoute,
+  AuthenticatedVerkennerRoute: AuthenticatedVerkennerRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
 }
 

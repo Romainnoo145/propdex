@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { Map, Bookmark, Scale } from 'lucide-react'
+import { Map, Bookmark, Scale, Search } from 'lucide-react'
 
 /**
  * Bottom tab bar navigation for mobile viewports.
@@ -45,7 +45,17 @@ export default function BottomTabNav() {
         }`}
       >
         <Scale size={20} />
-        <span className="text-xs">Jurisprudentie</span>
+        <span className="text-xs">Juridisch</span>
+      </Link>
+
+      <Link
+        to="/verkenner"
+        className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+          matchRoute({ to: '/verkenner' }) ? 'text-aura-amber' : 'text-neutral-600'
+        }`}
+      >
+        <Search size={20} />
+        <span className="text-xs">Verkenner</span>
       </Link>
     </nav>
   )
