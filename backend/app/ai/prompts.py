@@ -164,12 +164,16 @@ Je vertaalt natuurlijke-taal zoekopdrachten naar gestructureerde filterparameter
 | build_year_max | int | Maximaal bouwjaar (inclusief) | 1970 (voor "voor 1970") |
 | area_min | float | Minimaal perceeloppervlak in m² | 100.0 |
 | area_max | float | Maximaal perceeloppervlak in m² | 500.0 |
-| bestemming | string | Bestemmingstype | "Wonen", "Bedrijf", "Agrarisch", "Maatschappelijk" |
+| bestemming | string | Bestemmingstype (lowercase) — inclusief filter | "wonen", "bedrijf", "agrarisch", "maatschappelijk", "kantoor", "horeca", "recreatie", "sport", "natuur", "groen", "gemengd", "verkeer", "water", "tuin", "woongebied", "overig" |
+| bestemming_exclude | string | Bestemmingstype om UIT TE SLUITEN (voor "niet wonen", "geen bedrijf") | zelfde waarden als bestemming |
 | pand_status | string | Status van het pand | "Pand in gebruik", "Bouw gestart", "Sloopvergunning verleend" |
 
 **Regels:**
 - Retourneer ALLEEN een JSON object met de bovenstaande velden.
 - Velden die NIET in de zoekopdracht voorkomen moeten `null` zijn.
+- **BELANGRIJK: "woningen", "huizen", "panden", "gebouwen" zijn generieke termen voor ALLE panden — NIET een bestemming filter.** Gebruik bestemming alleen wanneer de gebruiker expliciet een bestemmingstype noemt (bijv. "bestemming kantoor", "bedrijfspanden", "horecapanden", "agrarische panden").
+- Gebruik `bestemming_exclude` voor uitsluitingen ("niet wonen", "geen woningen" → bestemming_exclude: "wonen").
+- Gebruik NOOIT beide tegelijk — bestemming en bestemming_exclude sluiten elkaar uit.
 - Retourneer NOOIT SQL — alleen gestructureerde filterparameters.
 - Als de zoekopdracht vraagt om informatie die NIET in de 6 dimensies beschikbaar is
   (bijv. huurprijs, eigenaar, vergunningen, WOZ-waarde, energielabel), retourneer dan:
@@ -178,13 +182,22 @@ Je vertaalt natuurlijke-taal zoekopdrachten naar gestructureerde filterparameter
 **Voorbeelden:**
 
 Invoer: "Alle woningen in Venlo met bouwjaar voor 1970"
-Uitvoer: {"municipality": "Venlo", "build_year_min": null, "build_year_max": 1970, "area_min": null, "area_max": null, "bestemming": "Wonen", "pand_status": null}
+Uitvoer: {"municipality": "Venlo", "build_year_min": null, "build_year_max": 1970, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
+
+Invoer: "Woningen in Amsterdam"
+Uitvoer: {"municipality": "Amsterdam", "build_year_min": null, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
 
 Invoer: "Bedrijfspanden groter dan 500m2 in Amsterdam"
-Uitvoer: {"municipality": "Amsterdam", "build_year_min": null, "build_year_max": null, "area_min": 500.0, "area_max": null, "bestemming": "Bedrijf", "pand_status": null}
+Uitvoer: {"municipality": "Amsterdam", "build_year_min": null, "build_year_max": null, "area_min": 500.0, "area_max": null, "bestemming": "bedrijf", "bestemming_exclude": null, "pand_status": null}
 
 Invoer: "Panden in aanbouw in Utrecht gebouwd na 2010"
-Uitvoer: {"municipality": "Utrecht", "build_year_min": 2010, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "pand_status": "Bouw gestart"}
+Uitvoer: {"municipality": "Utrecht", "build_year_min": 2010, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": "Bouw gestart"}
+
+Invoer: "Kantoorpanden in Amsterdam"
+Uitvoer: {"municipality": "Amsterdam", "build_year_min": null, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": "kantoor", "bestemming_exclude": null, "pand_status": null}
+
+Invoer: "Panden in Venlo die geen woningen zijn"
+Uitvoer: {"municipality": "Venlo", "build_year_min": null, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": "wonen", "pand_status": null}
 
 Invoer: "Wat is de gemiddelde huurprijs in Rotterdam?"
 Uitvoer: {"unsupported": true, "reason": "Huurprijs is niet beschikbaar in de kadaster-database. Beschikbare filters: gemeente, bouwjaar, oppervlakte, bestemming en pandstatus."}

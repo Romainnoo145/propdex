@@ -33,7 +33,11 @@ class ParsedQuery(BaseModel):
     )
     bestemming: str | None = Field(
         default=None,
-        description="Zoning type, e.g. 'Wonen', 'Bedrijf', 'Agrarisch'",
+        description="Zoning type to include, e.g. 'wonen', 'bedrijf', 'kantoor'",
+    )
+    bestemming_exclude: str | None = Field(
+        default=None,
+        description="Zoning type to exclude, e.g. 'wonen' for 'niet wonen'",
     )
     pand_status: str | None = Field(
         default=None,

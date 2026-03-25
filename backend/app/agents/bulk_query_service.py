@@ -204,6 +204,13 @@ async def execute_bulk_query(
             ParcelCache.bestemmingen.op("@>")(func.cast(literal(target), PG_JSONB))
         )
 
+    # Bestemming exclusion: NOT @> [{"type": "wonen"}]
+    if parsed.bestemming_exclude:
+        target = json.dumps([{"type": parsed.bestemming_exclude.lower()}])
+        filters.append(
+            ~ParcelCache.bestemmingen.op("@>")(func.cast(literal(target), PG_JSONB))
+        )
+
     # Pand status: exact match
     if parsed.pand_status:
         filters.append(ParcelCache.pand_status == parsed.pand_status)
