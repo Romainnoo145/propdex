@@ -1137,6 +1137,30 @@ export async function fetchScanHistory(
   return apiFetch<ScanListResponse>(url, { method: 'GET', accessToken })
 }
 
+/** Response shape for aggregated funda market signals per scan. */
+export interface FundaSummaryResponse {
+  scan_id: string
+  listings_with_data: number
+  avg_listing_duration_days: number | null
+  total_price_changes: number
+  avg_days_since_last_seen: number | null
+  total_listing_snapshots: number
+}
+
+/**
+ * Fetch aggregated funda market signals for a scan.
+ * GET /api/scans/{scanId}/funda-summary
+ */
+export async function fetchFundaSummary(
+  scanId: string,
+  accessToken: string | null
+): Promise<FundaSummaryResponse> {
+  return apiFetch<FundaSummaryResponse>(
+    `${SCANS_BASE}/${scanId}/funda-summary`,
+    { method: 'GET', accessToken }
+  )
+}
+
 /**
  * Fetch paginated scans for a specific project
  * GET /api/projects/{projectId}/scans

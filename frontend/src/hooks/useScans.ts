@@ -23,6 +23,7 @@ import {
   fetchAerialCrop,
   fetchScanHistory,
   fetchProjectScans,
+  fetchFundaSummary,
 } from '@/lib/api'
 import type {
   ParcelEnrichmentResponse,
@@ -323,5 +324,24 @@ export function useParcelScanData(parcelCacheId: string | null) {
     queryFn: () => fetchParcelScanData(parcelCacheId!, accessToken),
     enabled: !!parcelCacheId && !!accessToken,
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * Fetch aggregated funda market signals for a scan.
+ *
+ * Query key: ['funda-summary', scanId]
+ * Stale time: 10 minutes — data changes only on rescan.
+ *
+ * @param scanId - AreaScan UUID or null (disabled when null)
+ */
+export function useFundaSummary(scanId: string | null) {
+  const { accessToken } = useAuth()
+
+  return useQuery({
+    queryKey: ['funda-summary', scanId],
+    queryFn: () => fetchFundaSummary(scanId!, accessToken),
+    enabled: !!scanId && !!accessToken,
+    staleTime: 10 * 60 * 1000,
   })
 }

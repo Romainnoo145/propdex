@@ -453,6 +453,27 @@ class ScanListResponse(BaseModel):
     limit: int = Field(description="Page size", ge=0)
 
 
+class FundaSummaryResponse(BaseModel):
+    """Aggregated funda market signals across all parcels in a scan."""
+
+    scan_id: uuid.UUID = Field(description="Scan UUID")
+    listings_with_data: int = Field(
+        default=0, description="Number of parcels with market_signals data", ge=0
+    )
+    avg_listing_duration_days: float | None = Field(
+        default=None, description="Average listing duration in days across parcels"
+    )
+    total_price_changes: int = Field(
+        default=0, description="Total price changes across all parcels", ge=0
+    )
+    avg_days_since_last_seen: float | None = Field(
+        default=None, description="Average days since last funda listing seen"
+    )
+    total_listing_snapshots: int = Field(
+        default=0, description="Total listing snapshots across all parcels", ge=0
+    )
+
+
 class ParcelRiskProfileResponse(BaseModel):
     """Response for per-parcel fysiek risicoprofiel."""
 

@@ -406,7 +406,3 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
     </span>
   )
 }
-   </button>
-    </span>
-  )
-}

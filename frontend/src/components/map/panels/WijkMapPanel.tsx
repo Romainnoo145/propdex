@@ -15,6 +15,7 @@ import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
 import { WijkDetailModal } from './gemeente/WijkDetailModal'
 import { scanControlsEnabled } from '@/lib/features'
 import { AMBER } from '@/lib/tokens'
+import { useFundaSummary } from '@/hooks/useScans'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkMapPanelProps {
@@ -427,6 +428,8 @@ export function WijkMapPanel({
 }: WijkMapPanelProps) {
   const hasCompletedScan = latestScan?.status === 'completed'
   const metrics = (hasCompletedScan ? latestScan.neighborhood_metrics : null) as CbsNeighborhoodMetrics | null
+  const scanId = hasCompletedScan ? latestScan.scan_id : null
+  const { data: fundaSummary } = useFundaSummary(scanId)
   const parcelCount = hasCompletedScan ? latestScan.parcel_count : null
 
   const marktScore = useMemo(() => deriveMarktScore(metrics), [metrics])
@@ -443,17 +446,36 @@ export function WijkMapPanel({
     [metrics, parcelCount, cardScores, !!handleCardClick],
   )
 
+  const fundaCard: IntelCard = useMemo(() => {
+    if (fundaSummary && fundaSummary.listings_with_data > 0) {
+      const avgDays = fundaSummary.avg_listing_duration_days
+      return {
+        key: 'funda-marktdata',
+        label: 'FUNDA MARKTDATA',
+        value: avgDays != null ? `${Math.round(avgDays)}d` : '–',
+        sub: `${fundaSummary.total_price_changes} prijsmutaties · ${fundaSummary.listings_with_data} panden`,
+        accentColor: AMBER.base,
+      }
+    }
+    return {
+      key: 'funda-marktdata',
+      label: 'FUNDA MARKTDATA',
+      value: 'Geen data',
+      sub: 'Geen funda-signalen gevonden',
+    }
+  }, [fundaSummary])
+
   // Append roadmap items as page 2 cards
   const cards = useMemo(() => [
     ...dataCards,
-    // Page 2: roadmap items
-    { key: 'roadmap-funda', label: 'FUNDA MARKTDATA', value: 'Binnenkort', sub: 'Looptijd en prijsmutaties' },
+    // Page 2: funda card (dynamic) + roadmap items (static)
+    fundaCard,
     { key: 'roadmap-von', label: 'VON-PRIJS', value: 'Binnenkort', sub: 'Verwachte verkoopprijs per type' },
     { key: 'roadmap-leefbaar', label: 'LEEFBAARHEID', value: 'Binnenkort', sub: 'Veiligheid, milieu, voorzieningen' },
     { key: 'roadmap-transacties', label: 'TRANSACTIES', value: 'Binnenkort', sub: 'Verkoopprijzen en aantallen' },
     { key: 'roadmap-leegstand', label: 'LEEGSTAND', value: 'Binnenkort', sub: 'Vacaturecijfers per type vastgoed' },
     { key: 'roadmap-klimaat', label: 'KLIMAATRISICO', value: 'Binnenkort', sub: 'Hitte, wateroverlast, droogte' },
-  ], [dataCards])
+  ], [dataCards, fundaCard])
 
   /* Footer CTA */
   const footer = hasCompletedScan ? (

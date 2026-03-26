@@ -12,6 +12,7 @@ from app.auth.dependencies import get_current_active_user, get_current_organizat
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.report import SavedReport
+from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
 from app.scans.helpers import (
@@ -20,6 +21,7 @@ from app.scans.helpers import (
     _normalize_market_signals,
 )
 from app.scans.schemas import (
+    FundaSummaryResponse,
     ScanResultItem,
     ScanResultsResponse,
 )
@@ -30,6 +32,86 @@ from app.services.parcel_scoring import compute_vacancy_confidence
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/{scan_id}/funda-summary", response_model=FundaSummaryResponse)
+@limiter.limit("60/minute")
+async def get_funda_summary(
+    request: Request,
+    scan_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> FundaSummaryResponse:
+    """
+    Aggregate funda market signals across all parcels in a scan.
+
+    Reads market_signals from scan_results.flags for all results in the scan
+    and computes wijk-level averages/totals for looptijd and prijsmutaties.
+
+    Returns:
+        FundaSummaryResponse with aggregated market metrics
+    """
+    scan = await service.get_scan_by_id(scan_id, db)
+    if not scan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found",
+        )
+
+    # Fetch all scan_results with non-null flags for this scan
+    result = await db.execute(
+        select(ScanResult.flags).where(
+            ScanResult.scan_id == scan_id,
+            ScanResult.flags.isnot(None),
+        )
+    )
+    rows = result.scalars().all()
+
+    # Aggregate market_signals from flags
+    listing_durations: list[int] = []
+    total_price_changes = 0
+    total_snapshots = 0
+    days_since_last_seen_list: list[int] = []
+
+    for flags in rows:
+        ms = flags.get("market_signals") if isinstance(flags, dict) else None
+        if not isinstance(ms, dict):
+            continue
+
+        duration = ms.get("listing_duration_days")
+        if isinstance(duration, (int, float)) and duration > 0:
+            listing_durations.append(int(duration))
+
+        price_changes = ms.get("price_change_count")
+        if isinstance(price_changes, int):
+            total_price_changes += price_changes
+
+        snapshots = ms.get("listing_snapshots_count")
+        if isinstance(snapshots, int):
+            total_snapshots += snapshots
+
+        days_last = ms.get("days_since_last_seen")
+        if isinstance(days_last, (int, float)) and days_last >= 0:
+            days_since_last_seen_list.append(int(days_last))
+
+    listings_with_data = len(listing_durations) or len(days_since_last_seen_list)
+
+    return FundaSummaryResponse(
+        scan_id=scan_id,
+        listings_with_data=max(len(listing_durations), len(days_since_last_seen_list)),
+        avg_listing_duration_days=(
+            round(sum(listing_durations) / len(listing_durations), 1)
+            if listing_durations
+            else None
+        ),
+        total_price_changes=total_price_changes,
+        avg_days_since_last_seen=(
+            round(sum(days_since_last_seen_list) / len(days_since_last_seen_list), 1)
+            if days_since_last_seen_list
+            else None
+        ),
+        total_listing_snapshots=total_snapshots,
+    )
 
 
 @router.get("/{scan_id}/results", response_model=ScanResultsResponse)
