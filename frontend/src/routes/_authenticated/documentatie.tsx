@@ -33,7 +33,7 @@ function DocumentatiePage() {
               <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
                 {activeTab === 'data' ? 'Data & bronnen' : 'Actiepunten'}
               </h1>
-              <p className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed">
+              <p className="text-[14px] text-slate-500 mt-2 max-w-2xl leading-relaxed" style={{ textWrap: 'pretty' }}>
                 {activeTab === 'data'
                   ? 'Overzicht van alle databronnen per niveau — gemeente, wijk en perceel. Elke bron toont de herkomst, beschikbaarheid en status.'
                   : 'Manuele taken die opgepakt moeten worden — API configuratie, externe contacten, en roadmap features.'}
@@ -75,3 +75,4 @@ function DocumentatiePage() {
     </ResultsShell>
   )
 }
+

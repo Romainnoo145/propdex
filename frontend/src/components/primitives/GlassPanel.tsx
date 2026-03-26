@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const glassPanelVariants = cva(
-  'border border-white/40 transition-all duration-250',
+  'border border-white/40 transition-[background-color,box-shadow,border-color] duration-250',
   {
     variants: {
       blur: {

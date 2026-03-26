@@ -23,7 +23,7 @@ function InstellingenLayout() {
           >
             Instellingen
           </p>
-          <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]">
+          <h1 className="text-[32px] font-black tracking-tight text-[#0E1111]" style={{ textWrap: 'balance' }}>
             Account & voorkeuren
           </h1>
         </motion.div>

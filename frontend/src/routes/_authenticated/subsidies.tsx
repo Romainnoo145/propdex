@@ -42,7 +42,7 @@ function CuratedCard({ item }: { item: CuratedSubsidie }) {
   return (
     <motion.div variants={fadeUp}>
       <div
-        className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-all hover:shadow-md cursor-pointer"
+        className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-shadow hover:shadow-md cursor-pointer"
         onClick={() => setExpanded((v) => !v)}
       >
         <div className="flex items-start justify-between gap-3">
@@ -137,7 +137,7 @@ function SubsidiesPage() {
                   <div className="flex size-8 items-center justify-center rounded-full bg-[#0E1111]">
                     <Icon size={14} strokeWidth={2} className="text-[#F9A826]" />
                   </div>
-                  <h2 className="text-[16px] font-bold text-[#0E1111]">{cfg.label}</h2>
+                  <h2 className="text-[16px] font-bold text-[#0E1111]" style={{ textWrap: 'balance' }}>{cfg.label}</h2>
                   <span className="text-[12px] text-slate-400 tabular-nums">{items.length}</span>
                   <div className="h-px flex-1 bg-[#EAEFEF]" />
                 </div>

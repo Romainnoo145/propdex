@@ -219,7 +219,7 @@ function JurisprudentiePage() {
               >
                 Jurisprudentie
               </p>
-              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums" style={{ textWrap: 'balance' }}>
                 {totalCount}
               </h1>
               <p className="text-[13px] text-slate-500 mt-1">
@@ -403,6 +403,10 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
       >
         <X size={10} />
       </button>
+    </span>
+  )
+}
+   </button>
     </span>
   )
 }

@@ -383,9 +383,9 @@ function VerkennerResults({ queryId }: { queryId: string }) {
               <ArrowLeft size={14} />
               Verkenner
             </button>
-            <h1 className="text-lg font-semibold text-[#0E1111]">Zoekresultaten</h1>
+            <h1 className="text-lg font-semibold text-[#0E1111]" style={{ textWrap: 'balance' }}>Zoekresultaten</h1>
             {data && (
-              <span className="text-xs text-neutral-500">
+              <span className="text-xs text-neutral-500 tabular-nums">
                 {data.result_count.toLocaleString('nl-NL')} resultaten
               </span>
             )}

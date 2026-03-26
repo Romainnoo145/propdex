@@ -204,10 +204,10 @@ function OpgeslagenPage() {
               >
                 Portfolio
               </p>
-              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums" style={{ textWrap: 'balance' }}>
                 {totalCount}
               </h1>
-              <p className="text-[13px] text-slate-500 mt-1">
+              <p className="text-[13px] text-slate-500 mt-1" style={{ textWrap: 'pretty' }}>
                 {totalCount === 1 ? 'perceel' : 'percelen'} in {gemeenteCount} {gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}
               </p>
             </div>
