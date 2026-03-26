@@ -1,3 +1,24 @@
+// ---------------------------------------------------------------------------
+// Layer lifecycle operation types (used by useMapLayerLifecycle)
+// ---------------------------------------------------------------------------
+
+/**
+ * Discriminated union for all map layer operations that can be queued
+ * through the lifecycle manager. Exported for consumers that need
+ * to build operations programmatically (e.g. batch layer setup).
+ */
+export type LayerOperation =
+  | { type: 'ensureSource'; id: string; spec: unknown }
+  | { type: 'ensureLayer'; layer: unknown; beforeId?: string }
+  | { type: 'removeLayer'; layerId: string }
+  | { type: 'removeSource'; sourceId: string }
+  | { type: 'setVisibility'; layerId: string; visible: boolean }
+  | { type: 'updateGeoJSON'; sourceId: string; data: GeoJSON.GeoJSON }
+
+// ---------------------------------------------------------------------------
+// Layer state types
+// ---------------------------------------------------------------------------
+
 export type BaseMapLayerId = 'kaart' | 'aerial'
 
 export type ParcelOverlayLayerId =
