@@ -3,9 +3,10 @@ import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
-import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin, Bookmark, FileText } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
+import { useReports } from '@/hooks/useReports'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -80,6 +81,8 @@ function OpgeslagenPage() {
   const navigate = useNavigate()
   const { stage: stageFilter } = Route.useSearch()
   const { data: favorites, isLoading } = useParcelFavorites()
+  const { data: reportsData, isLoading: reportsLoading } = useReports()
+  const [activeTab, setActiveTab] = useState<'percelen' | 'rapporten'>('percelen')
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [workspaceParcelId, setWorkspaceParcelId] = useState<string | null>(null)
@@ -202,18 +205,48 @@ function OpgeslagenPage() {
                 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
               >
-                Portfolio
+                {activeTab === 'percelen' ? 'Portfolio' : 'Rapporten'}
               </p>
               <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums" style={{ textWrap: 'balance' }}>
-                {totalCount}
+                {activeTab === 'percelen' ? totalCount : (reportsData?.total ?? 0)}
               </h1>
               <p className="text-[13px] text-slate-500 mt-1" style={{ textWrap: 'pretty' }}>
-                {totalCount === 1 ? 'perceel' : 'percelen'} in {gemeenteCount} {gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}
+                {activeTab === 'percelen'
+                  ? `${totalCount === 1 ? 'perceel' : 'percelen'} in ${gemeenteCount} ${gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}`
+                  : `${(reportsData?.total ?? 0) === 1 ? 'rapport' : 'rapporten'} opgeslagen`
+                }
               </p>
             </div>
 
-            {/* Mini stage summary */}
-            {totalCount > 0 && (
+            {/* Toggle + Mini stage summary */}
+            <div className="flex items-center gap-4">
+              {/* Tab toggle */}
+              <div className="flex items-center rounded-full border border-[#0E1111] p-0.5">
+                <button
+                  onClick={() => setActiveTab('percelen')}
+                  className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                    activeTab === 'percelen'
+                      ? 'bg-[#F9A826] text-[#0E1111]'
+                      : 'text-slate-400 hover:text-[#0E1111]'
+                  }`}
+                  title="Percelen"
+                >
+                  <Bookmark size={16} strokeWidth={2} />
+                </button>
+                <button
+                  onClick={() => setActiveTab('rapporten')}
+                  className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                    activeTab === 'rapporten'
+                      ? 'bg-[#F9A826] text-[#0E1111]'
+                      : 'text-slate-400 hover:text-[#0E1111]'
+                  }`}
+                  title="Rapporten"
+                >
+                  <FileText size={16} strokeWidth={2} />
+                </button>
+              </div>
+
+              {activeTab === 'percelen' && totalCount > 0 && (
               <div className="flex items-center gap-4">
                 {STAGES.filter(s => stageCounts[s] > 0).map((stage) => (
                   <div key={stage} className="text-right">
@@ -227,10 +260,14 @@ function OpgeslagenPage() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </motion.div>
 
-        {totalCount === 0 ? (
+        {activeTab === 'rapporten' ? (
+          /* ── Rapporten tab ── */
+          <RapportenView reports={reportsData?.reports ?? []} isLoading={reportsLoading} navigate={navigate} />
+        ) : totalCount === 0 ? (
           <motion.div variants={fadeUp}>
             <EmptyState
               icon={<Heart size={40} strokeWidth={1.5} className="text-[#F9A826]" />}
@@ -565,5 +602,103 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
         document.body,
       )}
     </>
+  )
+}
+
+/* ─── Rapporten View ──────────────────────────────────────── */
+
+function RapportenView({
+  reports,
+  isLoading: loading,
+  navigate,
+}: {
+  reports: { id: string; report_name: string; postcode: string; city: string; completeness_score: number; created_at: string; updated_at: string }[]
+  isLoading: boolean
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    )
+  }
+
+  if (reports.length === 0) {
+    return (
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        <EmptyState
+          icon={<FileText size={40} strokeWidth={1.5} className="text-[#F9A826]" />}
+          title="Geen rapporten"
+          description="Genereer een rapport vanuit een perceeldetail om het hier terug te vinden."
+        />
+      </motion.div>
+    )
+  }
+
+  // Group by city
+  const byCity = new Map<string, typeof reports>()
+  for (const r of reports) {
+    const list = byCity.get(r.city) ?? []
+    list.push(r)
+    byCity.set(r.city, list)
+  }
+
+  const dateFmt = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  return (
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+      {[...byCity.entries()].map(([city, cityReports]) => (
+        <motion.div key={city} variants={fadeUp}>
+          <div className="bg-white rounded-[24px] border border-[#EAEFEF] shadow-sm">
+            {/* City header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAEFEF]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-[#F9A826]">
+                  <span className="text-[14px] font-bold text-[#0E1111] tabular-nums">{cityReports.length}</span>
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">{city}</p>
+                  <p className="text-[11px] text-slate-400">{cityReports.length} {cityReports.length === 1 ? 'rapport' : 'rapporten'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Report rows */}
+            <div className="divide-y divide-[#EAEFEF]">
+              {cityReports.map((report) => (
+                <button
+                  key={report.id}
+                  onClick={() => navigate({ to: '/rapport/$id', params: { id: report.id } })}
+                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-semibold text-[#0E1111] truncate">{report.report_name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {report.postcode} · {dateFmt.format(new Date(report.created_at))}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    {/* Completeness ring */}
+                    <div className="relative flex items-center justify-center" style={{ width: 36, height: 36 }}>
+                      <svg viewBox="0 0 36 36" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#EAEFEF" strokeWidth="2.5" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#F9A826" strokeWidth="2.5"
+                          strokeDasharray={`${(report.completeness_score / 100) * (2 * Math.PI * 14)} ${(2 * Math.PI * 14) - (report.completeness_score / 100) * (2 * Math.PI * 14)}`}
+                          strokeLinecap="round" />
+                      </svg>
+                      <span className="absolute text-[10px] font-bold tabular-nums text-[#0E1111]">{Math.round(report.completeness_score)}</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-400" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </motion.div>
   )
 }
