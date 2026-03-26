@@ -185,6 +185,7 @@ function VerkennerPage() {
         <div
           ref={threadRef}
           className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-20 sm:pb-4"
+          aria-live="polite"
         >
           <div className="mx-auto max-w-3xl">
             <AnimatePresence>

@@ -124,7 +124,7 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
               {ruling.instantie}{ruling.extracted_gemeente ? ` — ${ruling.extracted_gemeente}` : ''}
             </p>
           )}
-          <p className="mt-1 text-[10px] text-slate-300 tracking-wide">{ruling.ecli}</p>
+          <p className="mt-1 text-[10px] text-slate-500 tracking-wide">{ruling.ecli}</p>
         </div>
         {datumFormatted && (
           <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold tabular-nums text-[#0E1111] border border-[#EAEFEF] shrink-0">

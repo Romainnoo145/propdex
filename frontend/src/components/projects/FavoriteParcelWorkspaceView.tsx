@@ -993,7 +993,7 @@ function DropzoneCard({
                 event.stopPropagation()
                 onDownload(document.id, document.filename)
               }}
-              className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
+              className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-400'}`}
               title="Download"
             >
               <Download className="size-3" />
@@ -1004,7 +1004,7 @@ function DropzoneCard({
                 event.stopPropagation()
                 onDelete(document.id)
               }}
-              className={`shrink-0 transition-colors hover:text-red-400 ${isDark ? 'text-white/30' : 'text-slate-300'}`}
+              className={`shrink-0 transition-colors hover:text-red-400 ${isDark ? 'text-white/30' : 'text-slate-400'}`}
               title="Verwijderen"
             >
               <Trash2 className="size-3" />
@@ -1037,7 +1037,7 @@ function DropzoneCard({
           onUploadClick(card.key)
         }}
         className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${
-          isDark ? 'text-white/40 hover:text-amber-400' : 'text-slate-300 hover:text-amber-400'
+          isDark ? 'text-white/40 hover:text-amber-400' : 'text-slate-400 hover:text-amber-400'
         }`}
       >
         <Upload className="size-2.5" />
@@ -1117,8 +1117,8 @@ function DropzoneCard({
             uploadingIndicator
           ) : (
             <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <Upload className="size-2.5 text-slate-300" />
-              <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-300 transition-colors group-hover:text-amber-400">
+              <Upload className="size-2.5 text-slate-400" />
+              <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-400 transition-colors group-hover:text-amber-400">
                 VOEG BIJLAGE TOE
               </span>
             </div>
@@ -1168,7 +1168,7 @@ function DropzoneCard({
               className="size-10 text-slate-900 opacity-[0.05] transition-all duration-300 group-hover:scale-110 group-hover:opacity-[0.30]"
               strokeWidth={1.5}
             />
-            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.1em] text-slate-300 transition-colors group-hover:text-amber-400">
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.1em] text-slate-400 transition-colors group-hover:text-amber-400">
               SLEEP HIER OF KLIK
             </p>
           </>
@@ -1631,7 +1631,7 @@ export function FavoriteParcelWorkspaceView({
               <div className="flex items-center justify-between">
                 <span className="tabular-nums text-7xl font-black leading-none tracking-tighter text-slate-900">
                   {filledCount}
-                  <span className="text-2xl font-bold text-slate-300">/{current.cards.length}</span>
+                  <span className="text-2xl font-bold text-slate-400">/{current.cards.length}</span>
                 </span>
 
                 <div className="min-w-0 flex-1 px-6">

@@ -335,6 +335,7 @@ function OpgeslagenPage() {
                     {/* Gemeente header */}
                     <button
                       onClick={() => toggleGemeente(group.gemeente_naam)}
+                      aria-expanded={isExpanded}
                       className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
@@ -363,9 +364,9 @@ function OpgeslagenPage() {
                           ))}
                         </div>
                         {isExpanded ? (
-                          <ChevronDown size={16} className="text-slate-300" />
+                          <ChevronDown size={16} className="text-slate-400" />
                         ) : (
-                          <ChevronRight size={16} className="text-slate-300" />
+                          <ChevronRight size={16} className="text-slate-400" />
                         )}
                       </div>
                     </button>
@@ -410,7 +411,7 @@ function OpgeslagenPage() {
 
             {/* ── Trust metadata ───────────────────────── */}
             <motion.div variants={fadeUp} className="mt-6 flex items-center justify-between">
-              <span className="text-[9px] uppercase tracking-wider text-slate-300">
+              <span className="text-[9px] uppercase tracking-wider text-slate-500">
                 Portfolio · {totalCount} percelen
               </span>
             </motion.div>

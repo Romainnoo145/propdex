@@ -22,7 +22,7 @@ export function CompanySection() {
         <Field label="Website" placeholder="Nog niet ingesteld" />
       </div>
 
-      <p className="text-[11px] text-slate-300 italic">
+      <p className="text-[11px] text-slate-500 italic">
         Bedrijfsgegevens zijn binnenkort bewerkbaar
       </p>
     </div>

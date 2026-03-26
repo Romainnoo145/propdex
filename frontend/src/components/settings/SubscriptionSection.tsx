@@ -33,7 +33,7 @@ export function SubscriptionSection() {
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-300 italic">
+      <p className="text-[11px] text-slate-500 italic">
         Facturatie en abonnementsbeheer binnenkort beschikbaar
       </p>
     </div>

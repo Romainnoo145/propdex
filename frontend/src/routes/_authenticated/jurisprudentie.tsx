@@ -408,7 +408,7 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
       {label}
       <button
         onClick={onRemove}
-        className="text-slate-300 transition-colors hover:text-slate-500"
+        className="text-slate-400 transition-colors hover:text-slate-500"
       >
         <X size={10} />
       </button>
