@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
-import { ArrowLeft, Map, Search, Download, Heart, Loader2 } from 'lucide-react'
+import { ArrowLeft, Map, Search, Download, Heart, Loader2, FileText, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -505,6 +505,20 @@ function VerkennerResults({ queryId }: { queryId: string }) {
               >
                 {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Heart size={14} />}
                 Opslaan
+              </button>
+              <button
+                onClick={() => toast.info('Rapport genereren wordt binnenkort beschikbaar')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
+              >
+                <FileText size={14} />
+                Rapport
+              </button>
+              <button
+                onClick={() => toast.info('Contact zoeken wordt binnenkort beschikbaar')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
+              >
+                <Users size={14} />
+                Contact
               </button>
               <button
                 onClick={handleCsvExport}
