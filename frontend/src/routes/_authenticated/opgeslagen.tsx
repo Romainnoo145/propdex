@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
@@ -24,16 +25,6 @@ export const Route = createFileRoute('/_authenticated/opgeslagen')({
 })
 
 /* ── Animations ────────────────────────────────────────────── */
-
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
-}
 
 /* ── Helpers ───────────────────────────────────────────────── */
 

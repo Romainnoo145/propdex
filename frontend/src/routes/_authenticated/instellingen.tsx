@@ -1,17 +1,8 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { SettingsTabNav } from '@/components/settings/SettingsTabNav'
-
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
-}
 
 export const Route = createFileRoute('/_authenticated/instellingen')({
   component: InstellingenLayout,

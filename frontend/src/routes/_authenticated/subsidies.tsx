@@ -8,6 +8,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import { ExternalLink, Landmark, Building2, MapPin } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import {
@@ -24,16 +25,6 @@ export const Route = createFileRoute('/_authenticated/subsidies')({
 })
 
 /* ─── Animations ────────────────────────────────────────────── */
-
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
-}
 
 /* ─── Niveau config ─────────────────────────────────────────── */
 

@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import { useReport } from '@/hooks/useReports'
 import ResultsShell from '@/components/layout/ResultsShell'
 import DueDiligenceDashboard from '@/components/reports/DueDiligenceDashboard'
@@ -87,7 +89,13 @@ function RapportPage() {
 
   return (
     <ResultsShell>
-      <DueDiligenceDashboard
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={fadeUp}>
+          <DueDiligenceDashboard
         data={propertyData}
         isLoading={savedReport.isLoading}
         backLabel={backLabel}
@@ -98,6 +106,8 @@ function RapportPage() {
         onBack={handleBack}
         onViewOnMap={handleViewOnMap}
       />
+        </motion.div>
+      </motion.div>
     </ResultsShell>
   )
 }

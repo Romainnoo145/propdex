@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import { ArrowLeft, Map, Search, Download, Heart, Loader2, FileText, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
@@ -128,9 +130,14 @@ function ResultatenPage() {
 
   return (
     <ResultsShell fullWidth className="scrollbar-hidden">
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <motion.div
+        className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
         {/* Header bar */}
-        <div className="shrink-0 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-4 py-4 sm:px-5">
+        <motion.div variants={fadeUp} className="shrink-0 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleBack}
@@ -186,19 +193,19 @@ function ResultatenPage() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Mobile read-only banner — explains scan/export are desktop-only (MOB-01) */}
         {isMobile && (
-          <div className="mt-3 rounded-md border border-aura-amber/30 bg-aura-amber/10 px-3 py-2 text-xs text-aura-amber shrink-0">
+          <motion.div variants={fadeUp} className="mt-3 rounded-md border border-aura-amber/30 bg-aura-amber/10 px-3 py-2 text-xs text-aura-amber shrink-0">
             Gebruik desktop voor scannen en exporteren
-          </div>
+          </motion.div>
         )}
 
         {scan_id ? (
           <>
             {/* Results table — fills remaining height */}
-            <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60">
+            <motion.div variants={fadeUp} className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60">
               <ResultsTable
                 scanId={scan_id}
                 filters={filters}
@@ -210,7 +217,7 @@ function ResultatenPage() {
                 onSelectionChange={setSelectedParcelIds}
                 selectionKey={selectionKey}
               />
-            </div>
+            </motion.div>
 
             {/* Bulk action bar — appears when parcels are selected; hidden on mobile (checkboxes are hidden in card view) */}
             {!isMobile && (
@@ -246,7 +253,7 @@ function ResultatenPage() {
             />
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Parcel detail modal — always rendered for double-click support */}
       <ParcelDetailModal
@@ -360,9 +367,14 @@ function VerkennerResults({ queryId }: { queryId: string }) {
 
   return (
     <ResultsShell fullWidth className="scrollbar-hidden">
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <motion.div
+        className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
         {/* Header */}
-        <div className="shrink-0 rounded-2xl border border-neutral-200 bg-white px-4 py-4 sm:px-5">
+        <motion.div variants={fadeUp} className="shrink-0 rounded-2xl border border-neutral-200 bg-white px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => navigate({ to: '/verkenner' })}
@@ -406,10 +418,10 @@ function VerkennerResults({ queryId }: { queryId: string }) {
               className="h-9 rounded-md border-neutral-300 bg-white py-2 text-xs focus:border-amber-400"
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* Table */}
-        <div className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        <motion.div variants={fadeUp} className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 size={24} className="animate-spin text-amber-500" />
@@ -482,7 +494,7 @@ function VerkennerResults({ queryId }: { queryId: string }) {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Bulk actions */}
         {selectedIds.size > 0 && (
@@ -531,7 +543,7 @@ function VerkennerResults({ queryId }: { queryId: string }) {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
     </ResultsShell>
   )
 }

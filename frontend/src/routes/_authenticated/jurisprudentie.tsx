@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useRef, useCallback, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { staggerContainer, fadeUp } from '@/lib/animations'
 import { Scale, SlidersHorizontal, X } from 'lucide-react'
 import { useExplorerResults, type ExplorerFilters } from '@/hooks/useExplorer'
 import WizardFlow from '@/components/jurisprudentie/WizardFlow'
@@ -10,16 +11,6 @@ import BroadenSuggestion from '@/components/jurisprudentie/BroadenSuggestion'
 import OpponentProfiles from '@/components/jurisprudentie/OpponentProfiles'
 import DoorlooptijdChart from '@/components/jurisprudentie/DoorlooptijdChart'
 import { Skeleton } from '@/components/feedback/Skeleton'
-
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
-}
 
 const THEMA_LABELS: Record<string, string> = {
   etfal_ruimtelijke_ordening: 'Ruimtelijke impact',
