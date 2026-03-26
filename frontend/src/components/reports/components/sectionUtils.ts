@@ -15,6 +15,7 @@ export const SECTIONS = [
   'analyse',
   'vergunningen',
   'bronnen',
+  'checklist',
 ] as const
 
 export type SectionKey = (typeof SECTIONS)[number]
@@ -77,6 +78,7 @@ export function computeSectionStatuses(
           ? 'partial'
           : 'empty',
     bronnen: data.section_sources.length > 0 ? 'complete' : 'empty',
+    checklist: data.use_case_scores != null ? 'complete' : 'empty',
   }
 }
 
@@ -88,4 +90,5 @@ export const EMPTY_STATUSES: Record<SectionKey, SectionStatus> = {
   analyse: 'empty',
   vergunningen: 'empty',
   bronnen: 'empty',
+  checklist: 'empty',
 }
