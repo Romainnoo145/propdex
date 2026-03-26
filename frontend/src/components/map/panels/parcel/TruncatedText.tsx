@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, memo } from 'react'
 
-export function TruncatedText({ text, className }: { text: string; className?: string }) {
+export const TruncatedText = memo(function TruncatedText({ text, className }: { text: string; className?: string }) {
   const ref = useRef<HTMLParagraphElement>(null)
   const [isTruncated, setIsTruncated] = useState(false)
 
@@ -26,4 +26,4 @@ export function TruncatedText({ text, className }: { text: string; className?: s
       )}
     </div>
   )
-}
+})

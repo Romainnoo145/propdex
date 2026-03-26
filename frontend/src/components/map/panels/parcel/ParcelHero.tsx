@@ -1,10 +1,11 @@
+import { memo } from 'react'
 import { useAerialCrop } from '@/hooks/useScans'
 
 interface ParcelHeroProps {
   parcelId: string
 }
 
-export function ParcelHero({ parcelId }: ParcelHeroProps) {
+export const ParcelHero = memo(function ParcelHero({ parcelId }: ParcelHeroProps) {
   const { data: blobUrl, isLoading } = useAerialCrop(parcelId)
 
   return (
@@ -36,4 +37,4 @@ export function ParcelHero({ parcelId }: ParcelHeroProps) {
       />
     </div>
   )
-}
+})

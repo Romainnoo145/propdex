@@ -5,7 +5,7 @@ from datetime import datetime
 
 from geoalchemy2 import Geometry
 from geoalchemy2.types import WKBElement
-from sqlalchemy import Index, String, UniqueConstraint, text
+from sqlalchemy import String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 

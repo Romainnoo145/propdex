@@ -2,6 +2,7 @@ import React, { Suspense, useRef } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { Toaster } from 'sonner';
 import MapShell from '@/components/layout/MapShell';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Lazy load MapLibre components to reduce initial bundle size
 const MapView = React.lazy(() => import('@/components/map/MapView'));
@@ -21,9 +22,11 @@ function App() {
   return (
     <>
       <MapShell>
-        <Suspense fallback={<MapSkeleton />}>
-          <MapView mapRef={mapRef} />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<MapSkeleton />}>
+            <MapView mapRef={mapRef} />
+          </Suspense>
+        </ErrorBoundary>
       </MapShell>
       <Toaster position="top-right" richColors />
     </>

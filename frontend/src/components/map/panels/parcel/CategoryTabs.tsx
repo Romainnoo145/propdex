@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { CategoryKey } from './ParcelBentoOverview'
@@ -13,7 +14,7 @@ const TABS: { key: CategoryKey; label: string }[] = [
   { key: 'dossiers', label: 'Dossiers' },
 ]
 
-export function CategoryTabs({ activeCategory, onSelect }: CategoryTabsProps) {
+export const CategoryTabs = memo(function CategoryTabs({ activeCategory, onSelect }: CategoryTabsProps) {
   return (
     <div className="flex w-full h-[48px] rounded-full p-1 bg-[#F2F6F3]">
       {TABS.map(({ key, label }) => {
@@ -49,4 +50,4 @@ export function CategoryTabs({ activeCategory, onSelect }: CategoryTabsProps) {
       })}
     </div>
   )
-}
+})
