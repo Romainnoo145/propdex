@@ -27,18 +27,8 @@ import {
   addWijkBoundariesLayer,
 } from '@/components/map/WijkBoundariesLayer'
 import {
-  addBestemmingsplanLayer,
-  setBestemmingsplanVisibility,
   setupBestemmingsplanClickHandler,
 } from '@/components/map/BestemmingsplanLayer'
-import {
-  addBAGPandLayer,
-  removeBAGPandLayer,
-  setBAGPandVisibility,
-} from '@/components/map/BAGPandLayer'
-import {
-  setParcelBoundariesVisibility,
-} from '@/components/map/ParcelBoundariesLayer'
 import {
   addParcelScoreLayer,
   updateParcelScoreSource,
@@ -48,18 +38,13 @@ import {
   PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID,
   PARCEL_BUILD_CAPACITY_FILL_LAYER_ID,
   PARCEL_FOUNDATION_RISK_FILL_LAYER_ID,
-  setParcelBuiltStatusVisibility,
-  setParcelBuildCapacityVisibility,
-  setParcelFoundationRiskVisibility,
-  setParcelVacancySignalVisibility,
-  setParcelReportStatusVisibility,
-  setParcelScoreVisibility,
   updateScoreThreshold,
 } from '@/components/map/ParcelScoreLayer'
 import {
-  addFavoriteMarkersLayer,
-  updateFavoriteMarkers,
+  FAVORITE_MARKERS_SOURCE,
+  FAVORITE_MARKERS_LAYER,
 } from '@/components/map/FavoriteMarkersLayer'
+import { PDOK_BAG_PAND_WMS, PDOK_BESTEMMINGSPLAN_WMS, NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { useFavoriteCentroids } from '@/hooks/useFavoriteCentroids'
 import { useTriggerScan, useScanPolling, useScanHistory } from '@/hooks/useScans'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
@@ -75,7 +60,6 @@ import {
   fetchParcelAtPoint,
   resolveParcelByAddress,
 } from '@/lib/api'
-import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { scanControlsEnabled } from '@/lib/features'
 import { useMapContext } from '@/lib/MapContext'
 import { useMapLayerState } from '@/lib/map/useMapLayerState'
@@ -333,6 +317,139 @@ function MapPage() {
       lifecycle.setVisibility('wijk-fill', visible)
       lifecycle.setVisibility('wijk-line', visible)
       lifecycle.setVisibility('wijk-labels', visible)
+    },
+    [lifecycle],
+  )
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle-managed helpers: bestemmingsplan, BAG, parcel boundaries, favorites
+  // ---------------------------------------------------------------------------
+
+  /** Add bestemmingsplan WMS layer via lifecycle (idempotent, style-readiness queued). */
+  const addBestemmingsplanLayerManaged = useCallback(() => {
+    lifecycle.ensureSource('pdok-bestemmingsplan', {
+      type: 'raster',
+      tiles: [PDOK_BESTEMMINGSPLAN_WMS],
+      tileSize: 256,
+      minzoom: 10,
+      maxzoom: 19,
+    })
+    lifecycle.ensureLayer({
+      id: 'bestemmingsplan-layer',
+      type: 'raster',
+      source: 'pdok-bestemmingsplan',
+      minzoom: 10,
+      layout: { visibility: 'none' },
+      paint: { 'raster-opacity': 0.6 },
+    })
+  }, [lifecycle])
+
+  /** Set bestemmingsplan layer visibility via lifecycle. */
+  const setBestemmingsplanVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('bestemmingsplan-layer', visible)
+    },
+    [lifecycle],
+  )
+
+  /** Add BAG pand WMS layer via lifecycle (idempotent, style-readiness queued). */
+  const addBAGPandLayerManaged = useCallback(() => {
+    lifecycle.ensureSource('pdok-bag-pand', {
+      type: 'raster',
+      tiles: [PDOK_BAG_PAND_WMS],
+      tileSize: 256,
+      minzoom: 10,
+      maxzoom: 19,
+    })
+    lifecycle.ensureLayer({
+      id: 'bag-pand-layer',
+      type: 'raster',
+      source: 'pdok-bag-pand',
+      minzoom: 14,
+      layout: { visibility: 'none' },
+      paint: { 'raster-opacity': 0.35 },
+    })
+  }, [lifecycle])
+
+  /** Set BAG pand layer visibility via lifecycle. */
+  const setBAGPandVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('bag-pand-layer', visible)
+    },
+    [lifecycle],
+  )
+
+  /** Set parcel boundaries visibility via lifecycle. */
+  const setParcelBoundariesVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('parcel-boundaries', visible)
+    },
+    [lifecycle],
+  )
+
+  /** Ensure favorite markers source/layer via lifecycle. */
+  const ensureFavoriteMarkersManaged = useCallback(() => {
+    lifecycle.ensureSource(FAVORITE_MARKERS_SOURCE, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    })
+    lifecycle.ensureLayer({
+      id: FAVORITE_MARKERS_LAYER,
+      type: 'circle',
+      source: FAVORITE_MARKERS_SOURCE,
+      paint: {
+        'circle-radius': 7,
+        'circle-color': '#ef4444',
+        'circle-stroke-width': 2.5,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9,
+      },
+      minzoom: 12,
+    })
+  }, [lifecycle])
+
+  /** Update favorite markers GeoJSON data via lifecycle. */
+  const updateFavoriteMarkersManaged = useCallback(
+    (centroids: { parcel_code: string; lon: number; lat: number }[]) => {
+      lifecycle.updateGeoJSONSource(FAVORITE_MARKERS_SOURCE, {
+        type: 'FeatureCollection',
+        features: centroids.map((c) => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] },
+          properties: { parcel_code: c.parcel_code },
+        })),
+      })
+    },
+    [lifecycle],
+  )
+
+  /** Track parcel score layer sources/layers for lifecycle cleanup. */
+  const trackParcelScoreLayers = useCallback(() => {
+    lifecycle.trackSource('parcel-scores')
+    lifecycle.trackLayer('parcel-score-fill')
+    lifecycle.trackLayer('parcel-score-outline')
+    lifecycle.trackLayer('parcel-score-selected-outline')
+    lifecycle.trackLayer('parcel-built-status-fill')
+    lifecycle.trackLayer('parcel-report-status-fill')
+    lifecycle.trackLayer('parcel-vacancy-signal-fill')
+    lifecycle.trackLayer('parcel-build-capacity-fill')
+    lifecycle.trackLayer('parcel-foundation-risk-fill')
+  }, [lifecycle])
+
+  /** Set parcel score fill layer visibility via lifecycle. */
+  const setParcelScoreVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('parcel-score-fill', visible)
+      lifecycle.setVisibility('parcel-score-outline', visible)
+      lifecycle.setVisibility('parcel-score-selected-outline', visible)
+    },
+    [lifecycle],
+  )
+
+  /** Set individual overlay layer visibility via lifecycle. */
+  const setOverlayVisibilityManaged = useCallback(
+    (layerId: string, visible: boolean) => {
+      lifecycle.setVisibility(layerId, visible)
     },
     [lifecycle],
   )
@@ -649,9 +766,7 @@ function MapPage() {
       // Also turn off bestemmingsplan if it was active
       if (layerState.showBestemmingsplan) {
         layerActions.setBestemmingsplan(false)
-        if (mapRef.current?.getLayer('bestemmingsplan-layer')) {
-          try { mapRef.current.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'none') } catch { /* */ }
-        }
+        setBestemmingsplanVisibilityManaged(false)
       }
     }
 
@@ -659,7 +774,7 @@ function MapPage() {
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName, layerState.showBestemmingsplan, mapRef])
+  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName, layerState.showBestemmingsplan, setBestemmingsplanVisibilityManaged])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -1311,7 +1426,6 @@ function MapPage() {
   }, [postcode, huisnummer, navTs, navigate, focusAddressWithLookup])
 
   const loadedScoreLayerScanIdRef = useRef<string | null>(null)
-  const scoreLayerPendingRef = useRef(false)
 
   const ensureParcelScoreLayer = useCallback((scanId: string, forceBust?: string) => {
     const map = mapRef.current
@@ -1322,41 +1436,46 @@ function MapPage() {
       return
     }
 
-    // Skip if another call is already in-flight for the same scan
-    if (scoreLayerPendingRef.current) return
-    scoreLayerPendingRef.current = true
-
     const tileUrl = getScanTileUrl(scanId, forceBust ?? tileCacheBusterRef.current)
 
-    const addLayerSafe = () => {
-      if (!map.isStyleLoaded()) {
-        map.once('styledata', addLayerSafe)
-        return // Don't clear pending — still waiting
+    // The lifecycle hook handles style-readiness queuing, so no manual
+    // style-guard/pending logic needed. addParcelScoreLayer is complex
+    // (8 layers + mouse event handlers) so we keep it, but wrap in
+    // lifecycle's style-readiness guarantee.
+    const addOrUpdate = () => {
+      if (map.getSource('parcel-scores')) {
+        updateParcelScoreSource(map, tileUrl, 'parcel_scores', scoreThreshold)
+      } else {
+        addParcelScoreLayer(map, tileUrl, 'parcel_scores', scoreThreshold)
       }
+      loadedScoreLayerScanIdRef.current = scanId
+      trackParcelScoreLayers()
+      // Add favorite markers layer on top of parcel score layer
+      ensureFavoriteMarkersManaged()
+    }
+
+    // Use lifecycle's style-readiness — if style is loaded, execute now;
+    // otherwise queue via a no-op ensureSource that flushes when ready,
+    // then run our setup.
+    if (map.isStyleLoaded()) {
       try {
-        if (map.getSource('parcel-scores')) {
-          updateParcelScoreSource(map, tileUrl, 'parcel_scores', scoreThreshold)
-        } else {
-          addParcelScoreLayer(map, tileUrl, 'parcel_scores', scoreThreshold)
-        }
-        loadedScoreLayerScanIdRef.current = scanId
-        // Add favorite markers layer on top of parcel score layer
-        if (!map.getSource('favorite-markers')) {
-          addFavoriteMarkersLayer(map)
-        }
+        addOrUpdate()
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (message.includes('Style is not done loading')) {
-          map.once('styledata', addLayerSafe)
-          return // Don't clear pending — still waiting
+          map.once('styledata', () => {
+            try { addOrUpdate() } catch (e) { console.warn('[ensureParcelScoreLayer] retry failed:', e) }
+          })
+        } else {
+          console.warn('[ensureParcelScoreLayer] failed:', error)
         }
-        throw error
       }
-      scoreLayerPendingRef.current = false
+    } else {
+      map.once('styledata', () => {
+        try { addOrUpdate() } catch (e) { console.warn('[ensureParcelScoreLayer] deferred failed:', e) }
+      })
     }
-
-    addLayerSafe()
-  }, [mapRef, scoreThreshold])
+  }, [mapRef, scoreThreshold, trackParcelScoreLayers, ensureFavoriteMarkersManaged])
 
   // Show score layer when scan completes
   useEffect(() => {
@@ -1394,11 +1513,9 @@ function MapPage() {
 
   // Update favorite markers when centroids data changes
   useEffect(() => {
-    const map = mapRef.current
-    if (!map || !mapReady) return
-    if (!map.getSource('favorite-markers')) return
-    updateFavoriteMarkers(map, favoriteCentroids ?? [])
-  }, [favoriteCentroids, mapReady])
+    if (!mapReady) return
+    updateFavoriteMarkersManaged(favoriteCentroids ?? [])
+  }, [favoriteCentroids, mapReady, updateFavoriteMarkersManaged])
 
   // Handle scan completion and failure
   useEffect(() => {
@@ -1650,15 +1767,7 @@ function MapPage() {
     }
   }, [accessToken, makeInspectorParcel, mapReady, mapRef])
 
-  // Cleanup BAG layer on unmount (scan area cleanup handled by lifecycle hook)
-  useEffect(() => {
-    const map = mapRef.current
-    return () => {
-      if (map) {
-        removeBAGPandLayer(map)
-      }
-    }
-  }, [])
+  // BAG layer cleanup handled by lifecycle hook — no manual unmount needed
 
   // Show monitored wijk overlay when wijk GeoJSON loads and monitored projects exist
   useEffect(() => {
@@ -1989,7 +2098,7 @@ function MapPage() {
         // Gemeenten ON → turn off parcels (exclusive modes), close any parcel panel
         if (layerState.showParcels) {
           handleParcelsLayerToggle(false)
-          setParcelBoundariesVisibility(map, false)
+          setParcelBoundariesVisibilityManaged(false)
         }
 
         // Reset any remembered gemeente/wijk context so the next click
@@ -2129,12 +2238,10 @@ function MapPage() {
       const next = !layerState.showBestemmingsplan
 
       if (next) {
-        // Add source if it doesn't exist
-        if (!map.getSource('pdok-bestemmingsplan')) {
-          addBestemmingsplanLayer(map)
-        }
+        // Add source/layer via lifecycle if it doesn't exist
+        addBestemmingsplanLayerManaged()
         // Show layer
-        setBestemmingsplanVisibility(map, true)
+        setBestemmingsplanVisibilityManaged(true)
         layerActions.setBestemmingsplan(true)
         layerActions.setActiveParcelOverlay('bestemmingsplan')
         // Auto-zoom: PDOK bestemmingsplan data only available at higher zoom levels
@@ -2143,7 +2250,7 @@ function MapPage() {
         }
       } else {
         // Hide layer
-        setBestemmingsplanVisibility(map, false)
+        setBestemmingsplanVisibilityManaged(false)
         layerActions.setBestemmingsplan(false)
         setZoneInfo(null)
         // Revert to default overlay if bestemmingsplan was active
@@ -2152,80 +2259,70 @@ function MapPage() {
         }
       }
     },
-    [layerState.showBestemmingsplan, layerState.activeParcelOverlay, layerActions, mapRef]
+    [layerState.showBestemmingsplan, layerState.activeParcelOverlay, layerActions, mapRef, addBestemmingsplanLayerManaged, setBestemmingsplanVisibilityManaged]
   )
 
   // BAG Panden layer toggle handler
   const handleBAGPandenToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      const map = mapRef.current
-
       if (visible) {
-        if (!map.getSource('pdok-bag-pand')) {
-          addBAGPandLayer(map)
-        }
-        setBAGPandVisibility(map, true)
+        addBAGPandLayerManaged()
+        setBAGPandVisibilityManaged(true)
       } else {
-        setBAGPandVisibility(map, false)
+        setBAGPandVisibilityManaged(false)
       }
     },
-    []
+    [addBAGPandLayerManaged, setBAGPandVisibilityManaged]
   )
 
   // Score layer visibility toggle handler
   const handleScoreToggle = useCallback(
     (visible: boolean) => {
       if (!mapRef.current) return
-      setParcelScoreVisibility(mapRef.current, visible)
+      setParcelScoreVisibilityManaged(visible)
       if (visible) layerActions.setActiveParcelOverlay('potential')
     },
-    [layerActions]
+    [layerActions, setParcelScoreVisibilityManaged]
   )
 
   const handleBuiltStatusToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelBuiltStatusVisibility(mapRef.current, visible)
+      setOverlayVisibilityManaged(PARCEL_BUILT_STATUS_FILL_LAYER_ID, visible)
       if (visible) layerActions.setActiveParcelOverlay('built_status')
     },
-    [layerActions]
+    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleReportStatusToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelReportStatusVisibility(mapRef.current, visible)
+      setOverlayVisibilityManaged(PARCEL_REPORT_STATUS_FILL_LAYER_ID, visible)
       if (visible) layerActions.setActiveParcelOverlay('report_coverage')
     },
-    [layerActions]
+    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleVacancySignalToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelVacancySignalVisibility(mapRef.current, visible)
+      setOverlayVisibilityManaged(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, visible)
       if (visible) layerActions.setActiveParcelOverlay('vacancy_signal')
     },
-    [layerActions]
+    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleBuildCapacityToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelBuildCapacityVisibility(mapRef.current, visible)
+      setOverlayVisibilityManaged(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, visible)
       if (visible) layerActions.setActiveParcelOverlay('build_capacity')
     },
-    [layerActions]
+    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleFoundationRiskToggle = useCallback(
     (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelFoundationRiskVisibility(mapRef.current, visible)
+      setOverlayVisibilityManaged(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, visible)
       if (visible) layerActions.setActiveParcelOverlay('foundation_risk')
     },
-    [layerActions]
+    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleScannedScopeToggle = useCallback((visible: boolean) => {
@@ -2241,29 +2338,21 @@ function MapPage() {
       // Turn off bestemmingsplan if switching away from it
       if (layerState.showBestemmingsplan && overlayId !== 'bestemmingsplan') {
         layerActions.setBestemmingsplan(false)
-        if (map.getLayer('bestemmingsplan-layer')) {
-          try { map.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'none') } catch { /* */ }
-        }
+        setBestemmingsplanVisibilityManaged(false)
       }
 
       if (overlayId === 'bestemmingsplan') {
-        // Hide all score overlays directly (bypass isStyleLoaded guard)
+        // Hide all score overlays via lifecycle
         for (const layerId of [
           'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
           'parcel-built-status-fill', 'parcel-report-status-fill',
           'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
         ]) {
-          if (map.getLayer(layerId)) {
-            try { map.setLayoutProperty(layerId, 'visibility', 'none') } catch { /* */ }
-          }
+          lifecycle.setVisibility(layerId, false)
         }
-        // Activate bestemmingsplan layer directly (bypass toggle state)
-        if (!map.getSource('pdok-bestemmingsplan')) {
-          addBestemmingsplanLayer(map)
-        }
-        if (map.getLayer('bestemmingsplan-layer')) {
-          try { map.setLayoutProperty('bestemmingsplan-layer', 'visibility', 'visible') } catch { /* */ }
-        }
+        // Activate bestemmingsplan layer via lifecycle
+        addBestemmingsplanLayerManaged()
+        setBestemmingsplanVisibilityManaged(true)
         layerActions.setBestemmingsplan(true)
         layerActions.setActiveParcelOverlay('bestemmingsplan')
         // Auto-zoom: PDOK bestemmingsplan data needs higher zoom
@@ -2283,26 +2372,18 @@ function MapPage() {
 
         // Hide all fill layers, then show only the selected one
         for (const [id, layerId] of Object.entries(OVERLAY_FILL_LAYERS)) {
-          if (map.getLayer(layerId)) {
-            try {
-              map.setLayoutProperty(layerId, 'visibility', id === overlayId ? 'visible' : 'none')
-            } catch { /* */ }
-          }
+          lifecycle.setVisibility(layerId, id === overlayId)
         }
 
         // Show/hide score outline layers (only for potential)
         for (const outlineId of ['parcel-score-outline', 'parcel-score-selected-outline']) {
-          if (map.getLayer(outlineId)) {
-            try {
-              map.setLayoutProperty(outlineId, 'visibility', overlayId === 'potential' ? 'visible' : 'none')
-            } catch { /* */ }
-          }
+          lifecycle.setVisibility(outlineId, overlayId === 'potential')
         }
 
         layerActions.setActiveParcelOverlay(overlayId)
       }
     },
-    [mapRef, layerState.showBestemmingsplan, layerActions]
+    [mapRef, layerState.showBestemmingsplan, layerActions, lifecycle, addBestemmingsplanLayerManaged, setBestemmingsplanVisibilityManaged]
   )
 
   // Handle "Scan dit gebied" from bestemmingsplan zone
