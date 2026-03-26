@@ -3,7 +3,7 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Cache TTL configuration (in seconds)
@@ -210,6 +210,19 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS string into a list."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def _reject_default_secret_key(self) -> "Settings":
+        """Reject the default SECRET_KEY in non-development environments."""
+        if (
+            self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION"
+            and self.ENVIRONMENT not in ("development", "test", "testing")
+        ):
+            raise ValueError(
+                f"SECRET_KEY must be changed from the default value in "
+                f"'{self.ENVIRONMENT}' environment"
+            )
+        return self
 
     @property
     def cookie_secure(self) -> bool:

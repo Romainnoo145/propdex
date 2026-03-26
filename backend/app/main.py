@@ -2,12 +2,16 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from arq import create_pool
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from starlette.requests import Request as StarletteRequest
+from starlette.responses import Response as StarletteResponse
 from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
 
@@ -72,8 +76,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
 
 # Add tenant context middleware (after CORS)
@@ -81,6 +85,26 @@ app.add_middleware(TenantContextMiddleware)
 
 # Add GZip compression (after tenant context — runs outermost, compresses all responses)
 app.add_middleware(GZipMiddleware, minimum_size=500)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inject standard security response headers on every response."""
+
+    async def dispatch(
+        self, request: StarletteRequest, call_next: Any
+    ) -> StarletteResponse:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 # Custom rate limit exceeded handler

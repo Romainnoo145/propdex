@@ -32,6 +32,7 @@ from app.auth.schemas import (
 )
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import audit_logger
 from app.middleware.rate_limit import limiter
 from app.models.organization import Organization
 from app.models.refresh_token import RefreshToken
@@ -291,7 +292,10 @@ async def refresh(
     # TOKEN THEFT DETECTION: JTI not found means token was already used
     if token_record is None:
         # This is a security incident - revoke ALL user tokens
-        print(f"SECURITY WARNING: Refresh token reuse detected for user {user_id}")
+        audit_logger.warning(
+            "token_reuse_detected: Refresh token reuse detected for user %s",
+            user_id,
+        )
         # Revoke all non-revoked tokens for this user
         stmt = (
             select(RefreshToken)
