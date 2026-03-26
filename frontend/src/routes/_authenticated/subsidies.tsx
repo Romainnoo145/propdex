@@ -195,13 +195,13 @@ function SubsidiesPage() {
           >
             Subsidies & regelingen
           </p>
-          <div className="mt-1 flex items-baseline gap-3">
-            <h1 className="text-[56px] font-black leading-none tracking-tight text-[#0E1111] tabular-nums">
-              {CURATED_SUBSIDIES.length} <span className="text-[24px]">regelingen</span>
+          <div className="mt-1">
+            <h1 className="text-[32px] font-black leading-none tracking-tight text-[#0E1111]">
+              {CURATED_SUBSIDIES.length} regelingen
             </h1>
           </div>
-          <p className="mt-1 text-[14px] text-slate-500">
-            regelingen op landelijk, provinciaal en gemeentelijk niveau
+          <p className="mt-2 text-[13px] text-slate-500" style={{ textWrap: 'pretty' }}>
+            op landelijk, provinciaal en gemeentelijk niveau
           </p>
         </motion.div>
 
