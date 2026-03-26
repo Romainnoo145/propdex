@@ -2,13 +2,14 @@
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.chat_schemas import ChatRequest, ChatResponse
 from app.agents.chat_service import dispatch_chat
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/api/agents", tags=["Agents"])
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
 async def chat(
+    request: Request,
     body: ChatRequest,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),

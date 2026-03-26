@@ -8,6 +8,28 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from starlette.testclient import TestClient
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_request():
+    """Build a mock Starlette Request for rate-limited endpoints."""
+    from starlette.requests import Request
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "query_string": b"",
+        "headers": [],
+        "root_path": "",
+        "app": MagicMock(),
+        "state": {},
+    }
+    return Request(scope)
 
 from app.agents.schemas import (
     BulkQueryDetailResponse,
@@ -134,7 +156,7 @@ async def test_list_bulk_queries():
     q = _make_bulk_query(user_id=user.id)
     db = _mock_db_for_list([q], total=1)
 
-    resp = await list_bulk_queries(offset=0, limit=20, user=user, db=db)
+    resp = await list_bulk_queries(request=_make_request(), offset=0, limit=20, user=user, db=db)
 
     assert resp.total == 1
     assert len(resp.queries) == 1
@@ -153,7 +175,7 @@ async def test_get_bulk_query_detail():
     q = _make_bulk_query(user_id=user.id)
     db = _mock_db_for_single(q)
 
-    resp = await get_bulk_query(query_id=q.id, user=user, db=db)
+    resp = await get_bulk_query(request=_make_request(), query_id=q.id, user=user, db=db)
 
     assert resp.result_count == 2
     assert len(resp.results) == 2
@@ -171,7 +193,7 @@ async def test_get_bulk_query_not_found():
     db = _mock_db_for_single(None)
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_bulk_query(query_id=uuid.uuid4(), user=user, db=db)
+        await get_bulk_query(request=_make_request(), query_id=uuid.uuid4(), user=user, db=db)
 
     assert exc_info.value.status_code == 404
 
@@ -189,7 +211,7 @@ async def test_get_bulk_query_forbidden():
     db = _mock_db_for_single(q)
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_bulk_query(query_id=q.id, user=user, db=db)
+        await get_bulk_query(request=_make_request(), query_id=q.id, user=user, db=db)
 
     assert exc_info.value.status_code == 403
 
@@ -210,7 +232,7 @@ async def test_csv_export():
     q = _make_bulk_query(user_id=user.id)
     db = _mock_db_for_single(q)
 
-    resp = await export_bulk_query_csv(query_id=q.id, user=user, db=db)
+    resp = await export_bulk_query_csv(request=_make_request(), query_id=q.id, user=user, db=db)
 
     assert resp.media_type == "text/csv"
 
@@ -243,7 +265,7 @@ async def test_create_bulk_request():
     db = _mock_db_for_insert()
 
     body = BulkRequestCreate(query_text="Wat is de WOZ-waarde in Venlo?")
-    resp = await create_bulk_request(body=body, user=user, db=db)
+    resp = await create_bulk_request(request=_make_request(), body=body, user=user, db=db)
 
     assert resp.status == "pending"
     assert resp.query_text == "Wat is de WOZ-waarde in Venlo?"
@@ -262,7 +284,7 @@ async def test_list_bulk_requests():
     req = _make_bulk_request()
     db = _mock_db_for_list([req], total=1)
 
-    resp = await list_bulk_requests(status=None, offset=0, limit=20, user=user, db=db)
+    resp = await list_bulk_requests(request=_make_request(), status=None, offset=0, limit=20, user=user, db=db)
 
     assert resp.total == 1
     assert len(resp.requests) == 1

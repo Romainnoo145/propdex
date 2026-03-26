@@ -2,11 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.schemas.gemeente import (
     BeschermdGezichtResponse,
     ErfgoedResponse,
@@ -31,7 +32,9 @@ router = APIRouter()
 
 
 @router.get("/subsidies/development", response_model=SubsidiesResponse)
+@limiter.limit("60/minute")
 async def get_development_subsidies(
+    request: Request,
     current_user=Depends(get_current_active_user),
 ) -> SubsidiesResponse:
     """Get development-relevant national subsidies from RVO.
@@ -58,7 +61,9 @@ async def get_development_subsidies(
 
 
 @router.get("/checklists/{use_case}")
+@limiter.limit("60/minute")
 async def get_checklist_for_use_case(
+    request: Request,
     use_case: str,
     current_user=Depends(get_current_active_user),
 ) -> dict:
@@ -85,7 +90,9 @@ async def get_checklist_for_use_case(
 
 
 @router.get("/{gemeente_naam}/profile", response_model=GemeenteProfile)
+@limiter.limit("60/minute")
 async def get_gemeente_profile(
+    request: Request,
     gemeente_naam: str,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
@@ -102,7 +109,9 @@ async def get_gemeente_profile(
 
 
 @router.get("/{gemeente_naam}/raadsinformatie", response_model=RaadsinformatieResponse)
+@limiter.limit("60/minute")
 async def get_gemeente_raadsinformatie(
+    request: Request,
     gemeente_naam: str,
     limit: int = Query(default=10, ge=1, le=25),
     current_user=Depends(get_current_active_user),
@@ -121,7 +130,9 @@ async def get_gemeente_raadsinformatie(
 
 
 @router.get("/{gemeente_naam}/huisvestingsverordening", response_model=HuisvestingsverordeningResponse)
+@limiter.limit("60/minute")
 async def get_huisvestingsverordening(
+    request: Request,
     gemeente_naam: str,
     current_user=Depends(get_current_active_user),
 ) -> HuisvestingsverordeningResponse:
@@ -151,7 +162,9 @@ async def get_huisvestingsverordening(
 
 
 @router.get("/{gemeente_naam}/erfgoed", response_model=ErfgoedResponse)
+@limiter.limit("60/minute")
 async def get_gemeente_erfgoed(
+    request: Request,
     gemeente_naam: str,
     current_user=Depends(get_current_active_user),
 ) -> ErfgoedResponse:

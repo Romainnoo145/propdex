@@ -5,7 +5,7 @@ import io
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +26,7 @@ from app.agents.schemas import (
 from app.ai.claude_client import AIParsingError
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models.bulk_query import BulkQuery
 from app.models.bulk_request import BulkRequest
 from app.models.user import User
@@ -41,7 +42,9 @@ router = APIRouter(prefix="/api/agents", tags=["Agents"])
 
 
 @router.post("/bulk-query", response_model=BulkQueryResponse)
+@limiter.limit("30/minute")
 async def bulk_query(
+    request: Request,
     body: BulkQueryRequest,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -103,7 +106,9 @@ async def bulk_query(
 
 
 @router.get("/bulk-queries", response_model=BulkQueryHistoryResponse)
+@limiter.limit("30/minute")
 async def list_bulk_queries(
+    request: Request,
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     user: User = Depends(get_current_active_user),
@@ -141,7 +146,9 @@ async def list_bulk_queries(
 
 
 @router.get("/bulk-queries/{query_id}", response_model=BulkQueryDetailResponse)
+@limiter.limit("30/minute")
 async def get_bulk_query(
+    request: Request,
     query_id: uuid.UUID,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -180,7 +187,9 @@ CSV_HEADERS = ["Perceel ID", "Adres", "Gemeente", "Bouwjaar", "Oppervlakte (m²)
 
 
 @router.get("/bulk-queries/{query_id}/csv")
+@limiter.limit("30/minute")
 async def export_bulk_query_csv(
+    request: Request,
     query_id: uuid.UUID,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -216,7 +225,9 @@ async def export_bulk_query_csv(
 
 
 @router.post("/bulk-request", response_model=BulkRequestResponse)
+@limiter.limit("30/minute")
 async def create_bulk_request(
+    request: Request,
     body: BulkRequestCreate,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -249,7 +260,9 @@ async def create_bulk_request(
 
 
 @router.get("/bulk-requests", response_model=BulkRequestListResponse)
+@limiter.limit("30/minute")
 async def list_bulk_requests(
+    request: Request,
     status: str | None = Query(None, description="Filter by status: pending, completed, rejected"),
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),

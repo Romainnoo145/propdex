@@ -16,6 +16,7 @@ from app.auth.jwt import create_email_verification_token
 from app.auth.password import hash_password, verify_password
 from app.auth.schemas import MessageResponse, UserResponse
 from app.core.database import get_db
+from app.middleware.rate_limit import limiter
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.score_weights import (
@@ -36,7 +37,9 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 @router.patch("/me", response_model=UserResponse)
+@limiter.limit("30/minute")
 async def update_profile(
+    request: Request,
     data: UserProfileUpdate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
@@ -78,7 +81,9 @@ async def update_profile(
 
 
 @router.put("/me/password", response_model=MessageResponse)
+@limiter.limit("30/minute")
 async def change_password(
+    request: Request,
     data: PasswordChange,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -107,7 +112,9 @@ async def change_password(
 
 
 @router.get("/me/preferences", response_model=UserPreferences)
+@limiter.limit("30/minute")
 async def get_preferences(
+    request: Request,
     current_user: User = Depends(get_current_active_user),
 ) -> UserPreferences:
     """
@@ -120,7 +127,9 @@ async def get_preferences(
 
 
 @router.patch("/me/preferences", response_model=UserPreferences)
+@limiter.limit("30/minute")
 async def update_preferences(
+    request: Request,
     data: UserPreferencesUpdate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -138,7 +147,9 @@ async def update_preferences(
 
 
 @router.get("/org/score-weights", response_model=ScoreWeightsResponse)
+@limiter.limit("30/minute")
 async def get_score_weights(
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     organization_id: uuid.UUID = Depends(get_current_organization_id),
     db: AsyncSession = Depends(get_db),
@@ -173,6 +184,7 @@ async def get_score_weights(
 
 
 @router.put("/org/score-weights", response_model=ScoreWeightsResponse)
+@limiter.limit("30/minute")
 async def save_score_weights(
     request: Request,
     data: SaveScoreWeightsRequest,
@@ -233,6 +245,7 @@ async def save_score_weights(
 
 
 @router.get("/org/score-weights/job/{job_id}", response_model=RescoreJobStatus)
+@limiter.limit("30/minute")
 async def get_rescore_job_status(
     request: Request,
     job_id: str,
