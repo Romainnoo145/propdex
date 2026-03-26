@@ -287,9 +287,26 @@ function VerkennerPage() {
 
   const currentQueryId = selectedHistoryId ?? activeResult?.query_id ?? null
 
-  const handleCsvDownload = useCallback(() => {
+  const handleCsvDownload = useCallback(async () => {
     if (!currentQueryId || !accessToken) return
-    window.open(getBulkQueryCsvUrl(currentQueryId), '_blank')
+    try {
+      const res = await fetch(getBulkQueryCsvUrl(currentQueryId), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!res.ok) throw new Error(`CSV download failed: ${res.status}`)
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition')
+      const filenameMatch = disposition?.match(/filename="?([^";\n]+)"?/)
+      const filename = filenameMatch?.[1] ?? 'verkenner-resultaten.csv'
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[Verkenner] CSV download error:', err)
+    }
   }, [currentQueryId, accessToken])
 
   useEffect(() => {
