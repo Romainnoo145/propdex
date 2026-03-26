@@ -197,7 +197,7 @@ function SubsidiesPage() {
           </p>
           <div className="mt-1 flex items-baseline gap-3">
             <h1 className="text-[56px] font-black leading-none tracking-tight text-[#0E1111] tabular-nums">
-              {CURATED_SUBSIDIES.length}
+              {CURATED_SUBSIDIES.length} <span className="text-[24px]">regelingen</span>
             </h1>
           </div>
           <p className="mt-1 text-[14px] text-slate-500">

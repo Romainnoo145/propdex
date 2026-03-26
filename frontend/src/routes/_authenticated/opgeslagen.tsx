@@ -208,7 +208,7 @@ function OpgeslagenPage() {
                 {activeTab === 'percelen' ? 'Portfolio' : 'Rapporten'}
               </p>
               <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums" style={{ textWrap: 'balance' }}>
-                {activeTab === 'percelen' ? totalCount : (reportsData?.total ?? 0)}
+                {activeTab === 'percelen' ? totalCount : (reportsData?.total ?? 0)} <span className="text-[24px]">{activeTab === 'percelen' ? 'opgeslagen' : 'rapporten'}</span>
               </h1>
               <p className="text-[13px] text-slate-500 mt-1" style={{ textWrap: 'pretty' }}>
                 {activeTab === 'percelen'
@@ -598,10 +598,11 @@ function RapportenView({
   isLoading: boolean
   navigate: ReturnType<typeof useNavigate>
 }) {
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set())
+
   if (loading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
       </div>
@@ -620,7 +621,6 @@ function RapportenView({
     )
   }
 
-  // Group by city
   const byCity = new Map<string, typeof reports>()
   for (const r of reports) {
     const list = byCity.get(r.city) ?? []
@@ -628,59 +628,69 @@ function RapportenView({
     byCity.set(r.city, list)
   }
 
+  const toggleCity = (city: string) => {
+    setExpandedCities((prev) => {
+      const next = new Set(prev)
+      if (next.has(city)) next.delete(city)
+      else next.add(city)
+      return next
+    })
+  }
+
   const dateFmt = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
-      {[...byCity.entries()].map(([city, cityReports]) => (
-        <motion.div key={city} variants={fadeUp}>
-          <div className="bg-white rounded-[24px] border border-[#EAEFEF] shadow-sm">
-            {/* City header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAEFEF]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-[#F9A826]">
-                  <span className="text-[14px] font-bold text-[#0E1111] tabular-nums">{cityReports.length}</span>
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
+      {[...byCity.entries()].map(([city, cityReports]) => {
+        const isExpanded = expandedCities.has(city)
+        return (
+          <motion.div key={city} variants={fadeUp}>
+            <div className="bg-white rounded-[24px] border border-[#EAEFEF] shadow-sm hover:shadow-md transition-shadow">
+              {/* City header — clickable to expand */}
+              <button
+                aria-expanded={isExpanded}
+                onClick={() => toggleCity(city)}
+                className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-[#F9A826]">
+                    <span className="text-[14px] font-bold text-[#0E1111] tabular-nums">{cityReports.length}</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">{city}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{cityReports.length} {cityReports.length === 1 ? 'rapport' : 'rapporten'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">{city}</p>
-                  <p className="text-[11px] text-slate-400">{cityReports.length} {cityReports.length === 1 ? 'rapport' : 'rapporten'}</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold text-slate-400 tabular-nums">{cityReports.length}</span>
+                  {isExpanded ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
                 </div>
-              </div>
-            </div>
+              </button>
 
-            {/* Report rows */}
-            <div className="divide-y divide-[#EAEFEF]">
-              {cityReports.map((report) => (
-                <button
-                  key={report.id}
-                  onClick={() => navigate({ to: '/rapport/$id', params: { id: report.id } })}
-                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-semibold text-[#0E1111] truncate">{report.report_name}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {report.postcode} · {dateFmt.format(new Date(report.created_at))}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-4">
-                    {/* Completeness ring */}
-                    <div className="relative flex items-center justify-center" style={{ width: 36, height: 36 }}>
-                      <svg viewBox="0 0 36 36" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#EAEFEF" strokeWidth="2.5" />
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#F9A826" strokeWidth="2.5"
-                          strokeDasharray={`${(report.completeness_score / 100) * (2 * Math.PI * 14)} ${(2 * Math.PI * 14) - (report.completeness_score / 100) * (2 * Math.PI * 14)}`}
-                          strokeLinecap="round" />
-                      </svg>
-                      <span className="absolute text-[10px] font-bold tabular-nums text-[#0E1111]">{Math.round(report.completeness_score)}</span>
-                    </div>
-                    <ChevronRight size={16} className="text-slate-400" />
-                  </div>
-                </button>
-              ))}
+              {/* Expanded: report rows */}
+              {isExpanded && (
+                <div className="border-t border-[#EAEFEF] divide-y divide-[#EAEFEF]">
+                  {cityReports.map((report) => (
+                    <button
+                      key={report.id}
+                      onClick={() => navigate({ to: '/rapport/$id', params: { id: report.id } })}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors text-left"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-semibold text-[#0E1111] truncate">{report.report_name}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {report.postcode} · {dateFmt.format(new Date(report.created_at))}
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-400 shrink-0 ml-4" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        )
+      })}
     </motion.div>
   )
 }
