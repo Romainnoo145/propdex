@@ -20,6 +20,7 @@ from app.favorites.schemas import (
     PortfolioResponse,
     PortfolioWijkGroup,
 )
+from app.agents.chat_schemas import BulkFavoriteCreate, BulkFavoriteResponse
 from app.models.area_scan import AreaScan
 from app.middleware.rate_limit import limiter
 from app.models.parcel_favorite import ParcelFavorite
@@ -201,6 +202,86 @@ async def create_favorite(
     )
 
     return FavoriteResponse.model_validate(fav)
+
+
+@router.post(
+    "/favorites/bulk",
+    response_model=BulkFavoriteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("10/minute")
+async def create_favorites_bulk(
+    request: Request,
+    body: BulkFavoriteCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> BulkFavoriteResponse:
+    """
+    Bulk-add parcels to favorites. Idempotent: skips already-existing favorites.
+    Returns counts of created, existing, and failed entries.
+    Max 500 parcel_ids per call.
+    """
+    created = 0
+    existing = 0
+    failed = 0
+
+    # Deduplicate input
+    unique_ids = list(dict.fromkeys(body.parcel_ids))
+
+    # Batch-check which already exist
+    existing_result = await db.execute(
+        select(ParcelFavorite.parcel_id).where(
+            ParcelFavorite.user_id == current_user.id,
+            ParcelFavorite.parcel_id.in_(unique_ids),
+        )
+    )
+    existing_set = set(existing_result.scalars().all())
+    existing = len(existing_set)
+
+    # Batch-resolve parcel_cache_ids for new favorites
+    new_ids = [pid for pid in unique_ids if pid not in existing_set]
+    cache_lookup: dict[str, uuid.UUID | None] = {}
+    if new_ids:
+        cache_result = await db.execute(
+            select(ParcelCache.parcel_id, ParcelCache.id).where(
+                or_(
+                    ParcelCache.parcel_id.in_(new_ids),
+                    ParcelCache.parcel_code.in_(new_ids),
+                )
+            )
+        )
+        for row in cache_result.all():
+            cache_lookup[row[0]] = row[1]
+
+    # Insert new favorites
+    for pid in new_ids:
+        try:
+            fav = ParcelFavorite(
+                parcel_id=pid,
+                parcel_cache_id=cache_lookup.get(pid),
+                user_id=current_user.id,
+                gemeente_code=body.gemeente_code,
+                gemeente_naam=body.gemeente_naam,
+                pipeline_stage="Gesignaleerd",
+            )
+            db.add(fav)
+            created += 1
+        except Exception as e:
+            logger.warning("Bulk favorite failed for parcel %s: %s", pid, e)
+            failed += 1
+
+    if created > 0:
+        await db.commit()
+
+    logger.info(
+        "Bulk favorites: user=%s created=%d existing=%d failed=%d",
+        current_user.id,
+        created,
+        existing,
+        failed,
+    )
+
+    return BulkFavoriteResponse(created=created, existing=existing, failed=failed)
 
 
 @router.get(

@@ -204,3 +204,75 @@ Uitvoer: {"unsupported": true, "reason": "Huurprijs is niet beschikbaar in de ka
 
 Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
 """
+
+
+CHAT_INTENT_CLASSIFIER_PROMPT = """
+Je bent een intent-classifier voor Propdex, een Nederlands vastgoed-intelligence platform.
+Classificeer het bericht van de gebruiker in precies één intent en extraheer de relevante parameters.
+
+## Beschikbare intents
+
+| Intent | Wanneer | Parameters |
+|--------|---------|------------|
+| PARCEL_SEARCH | Zoeken naar percelen/panden met filters (gemeente, bouwjaar, oppervlakte, bestemming, pandstatus) | municipality, build_year_min, build_year_max, area_min, area_max, bestemming, bestemming_exclude, pand_status |
+| PARCEL_DETAIL | Vragen over EEN specifiek adres of perceel. Bevat een straatnaam + huisnummer. | address (volledig adres als string) |
+| MY_FAVORITES | Vragen over opgeslagen/gefavoriseerde percelen, pipeline, portfolio | stage (optioneel: Gesignaleerd/Onderzoek/Contact/Besluit/Afgerond), gemeente (optioneel) |
+| MY_REPORTS | Vragen over eerder gegenereerde rapporten | city (optioneel) |
+| UNSUPPORTED | Alles wat niet in de andere categorieën past | reason (korte uitleg in NL waarom dit niet ondersteund is) |
+
+## Regels
+
+- Een specifiek adres (straatnaam + huisnummer + eventueel stad) is ALTIJD `PARCEL_DETAIL`, nooit `PARCEL_SEARCH`.
+- Alleen een gemeentenaam zonder specifiek adres is `PARCEL_SEARCH` (bijv. "Venlo" → zoek alle percelen in Venlo).
+- "Mijn opgeslagen", "mijn favorieten", "pipeline", "portfolio" → `MY_FAVORITES`.
+- "Mijn rapporten", "eerder gegenereerd", "hoeveel rapporten" → `MY_REPORTS`.
+- Vragen over huurprijzen, marktprijzen, hypotheken, tekeningen, of andere data die niet in het platform zit → `UNSUPPORTED`.
+- **BELANGRIJK: "woningen", "huizen", "panden", "gebouwen" zijn generieke termen voor ALLE panden — NIET een bestemming filter.** Gebruik bestemming alleen wanneer de gebruiker expliciet een bestemmingstype noemt (bijv. "bestemming kantoor", "bedrijfspanden", "horecapanden", "agrarische panden").
+- Parameters die niet in het bericht voorkomen zijn `null`.
+
+## Verfijning (refinement)
+
+Als er een vorige intent en parameters worden meegegeven, bekijk dan of het nieuwe bericht een VERFIJNING is:
+- Als het bericht voortbouwt op de vorige query (bijv. "alleen bouwjaar voor 1980" na een PARCEL_SEARCH), BEHOUD alle vorige parameters en werk alleen de genoemde bij.
+- Als het bericht een compleet nieuwe vraag is, negeer de vorige context.
+
+## Voorbeelden
+
+Bericht: "Alle woningen in Venlo met bouwjaar voor 1970"
+→ {"intent": "PARCEL_SEARCH", "params": {"municipality": "Venlo", "build_year_max": 1970}}
+
+Bericht: "Woningen in Amsterdam"
+→ {"intent": "PARCEL_SEARCH", "params": {"municipality": "Amsterdam"}}
+
+Bericht: "Bedrijfspanden groter dan 500m2 in Amsterdam"
+→ {"intent": "PARCEL_SEARCH", "params": {"municipality": "Amsterdam", "area_min": 500.0, "bestemming": "bedrijf"}}
+
+Bericht: "Vertel me alles over Leutherweg 139 Venlo"
+→ {"intent": "PARCEL_DETAIL", "params": {"address": "Leutherweg 139, Venlo"}}
+
+Bericht: "Wat weet je over Keizersgracht 420 Amsterdam?"
+→ {"intent": "PARCEL_DETAIL", "params": {"address": "Keizersgracht 420, Amsterdam"}}
+
+Bericht: "Welke percelen heb ik opgeslagen?"
+→ {"intent": "MY_FAVORITES", "params": {}}
+
+Bericht: "Welke percelen staan op Onderzoek?"
+→ {"intent": "MY_FAVORITES", "params": {"stage": "Onderzoek"}}
+
+Bericht: "Mijn opgeslagen in Venlo"
+→ {"intent": "MY_FAVORITES", "params": {"gemeente": "Venlo"}}
+
+Bericht: "Hoeveel rapporten heb ik voor Amsterdam?"
+→ {"intent": "MY_REPORTS", "params": {"city": "Amsterdam"}}
+
+Bericht: "Laat mijn rapporten zien"
+→ {"intent": "MY_REPORTS", "params": {}}
+
+Bericht: "Wat is de gemiddelde huurprijs in Rotterdam?"
+→ {"intent": "UNSUPPORTED", "params": {"reason": "Huurprijzen zijn niet beschikbaar in Propdex. Het platform bevat kadasterdata, bestemmingsplannen, rapporten en opgeslagen percelen."}}
+
+Bericht: "Alleen bouwjaar voor 1980" (vorige: PARCEL_SEARCH, params: {"municipality": "Venlo"})
+→ {"intent": "PARCEL_SEARCH", "params": {"municipality": "Venlo", "build_year_max": 1980}}
+
+Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
+"""
