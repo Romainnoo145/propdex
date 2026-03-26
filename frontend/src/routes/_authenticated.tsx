@@ -148,16 +148,8 @@ function AuthenticatedLayout() {
 
             {/* Outlet: absolute overlay on map route, flex child on other routes */}
             <MapContext.Provider value={{ mapRef, mapReady, panelPortalRef, panelOpen, setPanelOpen, leftPanelPortalRef, leftPanelOpen, setLeftPanelOpen }}>
-              <main id="main-content">
-                {isMapVisible ? (
-                  <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-                    <Outlet />
-                  </div>
-                ) : (
-                  <div className="flex-1 min-w-0 relative h-full">
-                    <Outlet />
-                  </div>
-                )}
+              <main id="main-content" className={isMapVisible ? 'absolute inset-0 pointer-events-none' : 'flex-1 min-w-0 relative h-full'} style={isMapVisible ? { zIndex: 1 } : undefined}>
+                <Outlet />
               </main>
             </MapContext.Provider>
           </div>

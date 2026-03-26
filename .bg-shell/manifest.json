@@ -1,30 +1,30 @@
 [
   {
-    "id": "63e3421b",
-    "label": "backend",
-    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/uvicorn app.main:app --port 8000 --reload",
-    "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
-    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T11-25-32-230Z_e1b63e54-67a9-42fb-b211-800559280aa3.jsonl",
-    "persistAcrossSessions": false,
-    "startedAt": 1774524567175,
-    "processType": "server",
-    "group": "dev",
-    "readyPattern": null,
-    "readyPort": 8000,
-    "pid": 133090
-  },
-  {
-    "id": "309cdc08",
+    "id": "42785ae0",
     "label": "frontend",
     "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/frontend && npx vite --port 9300",
     "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
-    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T11-25-32-230Z_e1b63e54-67a9-42fb-b211-800559280aa3.jsonl",
+    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T11-32-20-508Z_a12a704a-23e7-4c79-9f6e-10a1c3084cfc.jsonl",
     "persistAcrossSessions": false,
-    "startedAt": 1774524567180,
+    "startedAt": 1774532124679,
     "processType": "server",
-    "group": "dev",
+    "group": null,
     "readyPattern": null,
     "readyPort": 9300,
-    "pid": 133091
+    "pid": 161242
+  },
+  {
+    "id": "91198365",
+    "label": "backend",
+    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/uvicorn app.main:app --port 8000 --reload",
+    "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
+    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T11-32-20-508Z_a12a704a-23e7-4c79-9f6e-10a1c3084cfc.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1774533410454,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 8000,
+    "pid": 165679
   }
 ]

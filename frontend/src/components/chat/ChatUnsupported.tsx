@@ -51,7 +51,7 @@ export function ChatUnsupported({ reason }: Props) {
         <button
           onClick={() => requestMutation.mutate()}
           disabled={requestMutation.isPending}
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-3 py-1.5 text-[12px] font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#F9A826] px-3 py-1.5 text-[12px] font-medium text-[#0E1111] hover:bg-[#E8971F] disabled:opacity-50 transition-colors"
         >
           {requestMutation.isPending ? (
             <Loader2 size={14} className="animate-spin" />

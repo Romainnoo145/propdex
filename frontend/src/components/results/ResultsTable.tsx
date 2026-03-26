@@ -9,7 +9,7 @@ import {
   type RowSelectionState,
   type Updater,
 } from '@tanstack/react-table'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search, MapPin, Heart } from 'lucide-react'
 import { useScanResults } from '@/hooks/useScans'
 import type { ScanResultItem, ScanResultsFilters } from '@/lib/types/scan'
 import { extractScoreSubscores } from '@/lib/score'
@@ -23,6 +23,8 @@ interface ResultsTableProps {
   filters?: ScanResultsFilters
   selectedParcelId?: string | null
   onRowClick?: (parcel: ScanResultItem) => void
+  onViewOnMap?: (parcel: ScanResultItem) => void
+  onFavorite?: (parcel: ScanResultItem) => void
   onTotalChange?: (total: number) => void
   onTotalUnfilteredChange?: (total: number) => void
   onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void
@@ -33,37 +35,55 @@ interface ResultsTableProps {
   selectionKey?: number
 }
 
-// Score badge — amber-based glow system (high-end dark mode)
+// Reusable score ring — configurable color, used for potentie/risico/score
+function ScoreRing({ score, color = '#F9A826' }: { score: number | null; color?: string }) {
+  if (score === null) return <span className="text-neutral-400 text-xs">--</span>
+  const r = 14
+  const circumference = 2 * Math.PI * r
+  const fill = (score / 100) * circumference
+  const gap = circumference - fill
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 36, height: 36 }}>
+      <svg viewBox="0 0 36 36" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="18" cy="18" r={r} fill="none" stroke="#EAEFEF" strokeWidth="2.5" />
+        <circle cx="18" cy="18" r={r} fill="none" stroke={color} strokeWidth="2.5" strokeDasharray={`${fill} ${gap}`} strokeLinecap="round" />
+      </svg>
+      <span className="absolute text-[10px] font-bold tabular-nums text-[#0E1111]">{score}</span>
+    </div>
+  )
+}
+
+// Score badge — amber ring for main score column
 function ScoreBadge({
   score,
-  category,
 }: {
   score: number | null
   category: string | null
 }) {
-  if (score === null || category === null) {
-    return (
-      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-200/60 text-neutral-500 border border-neutral-200">
-        --
-      </span>
-    )
+  if (score === null) {
+    return <span className="text-neutral-400 text-xs">--</span>
   }
 
-  // Amber intensity scales with score category
-  const styles = {
-    High: 'bg-aura-amber/15 text-aura-amber border-aura-amber/30 shadow-[0_0_8px_rgba(217,170,56,0.15)]',
-    Medium: 'bg-aura-amber/8 text-aura-amber/70 border-aura-amber/15',
-    Low: 'bg-neutral-200/60 text-neutral-600 border-neutral-200',
-  }
-
-  const style = styles[category as keyof typeof styles] ?? styles.Low
+  const s = Math.round(score)
+  const r = 16
+  const circumference = 2 * Math.PI * r
+  const fill = (s / 100) * circumference
+  const gap = circumference - fill
 
   return (
-    <span
-      className={`inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-xs font-bold tabular-nums border ${style}`}
-    >
-      {score.toFixed(0)}
-    </span>
+    <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
+      <svg viewBox="0 0 40 40" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="20" cy="20" r={r} fill="none" stroke="#EAEFEF" strokeWidth="3" />
+        <circle
+          cx="20" cy="20" r={r} fill="none"
+          stroke="#F9A826"
+          strokeWidth="3"
+          strokeDasharray={`${fill} ${gap}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-[11px] font-bold tabular-nums text-[#0E1111]">{s}</span>
+    </div>
   )
 }
 
@@ -106,6 +126,8 @@ export default function ResultsTable({
   filters = {},
   selectedParcelId,
   onRowClick,
+  onViewOnMap,
+  onFavorite,
   onTotalChange,
   onTotalUnfilteredChange,
   onSortChange,
@@ -259,16 +281,21 @@ export default function ResultsTable({
       },
     }),
     columnHelper.accessor('area_m2', {
-      header: 'Oppervlak (m²)',
+      header: 'Onbebouwd',
       enableSorting: true,
+      size: 90,
       cell: (info) => {
-        const value = info.getValue()
-        return value !== null ? (
-          <span className="tabular-nums text-neutral-700">
-            {Math.round(value).toLocaleString('nl-NL')}
+        const area = info.getValue()
+        const bm = info.row.original.building_metrics
+        const pandOpp = bm?.pand_oppervlakte_m2
+        // Show unbuild area if we have pand footprint, otherwise total area
+        const displayArea = (pandOpp != null && area != null) ? Math.max(0, Math.round(area - pandOpp)) : area != null ? Math.round(area) : null
+        return displayArea !== null ? (
+          <span className="tabular-nums text-neutral-700 text-[12px]">
+            {displayArea.toLocaleString('nl-NL')} m²
           </span>
         ) : (
-          <span className="text-neutral-500">--</span>
+          <span className="text-neutral-400">--</span>
         )
       },
     }),
@@ -307,15 +334,24 @@ export default function ResultsTable({
       enableSorting: true,
       cell: (info) => <LeegstandBadge hasPand={info.getValue()} />,
     }),
-    columnHelper.accessor(
-      (row) => extractScoreSubscores(row.score_breakdown).buildability,
-      {
-        id: 'buildability_subscore',
-        header: 'Bouwruimte',
-        enableSorting: true,
-        cell: (info) => <SubscoreBadge value={info.getValue()} />,
-      }
-    ),
+    columnHelper.accessor('potentie_score', {
+      header: 'Potentie',
+      enableSorting: true,
+      size: 60,
+      cell: (info) => {
+        const value = info.getValue()
+        return <ScoreRing score={value != null ? Math.round(value) : null} color="#22c55e" />
+      },
+    }),
+    columnHelper.accessor('risico_score', {
+      header: 'Risico',
+      enableSorting: true,
+      size: 60,
+      cell: (info) => {
+        const value = info.getValue()
+        return <ScoreRing score={value != null ? Math.round(value) : null} color="#ef4444" />
+      },
+    }),
     columnHelper.accessor('score', {
       header: 'Score',
       enableSorting: true,
@@ -324,6 +360,36 @@ export default function ResultsTable({
           score={info.getValue()}
           category={info.row.original.score_category}
         />
+      ),
+    }),
+    // Action buttons — map + favorite
+    columnHelper.display({
+      id: 'actions',
+      header: '',
+      size: 80,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {onViewOnMap && (
+            <button
+              onClick={() => onViewOnMap(row.original)}
+              aria-label="Open op kaart"
+              title="Open op kaart"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
+            >
+              <MapPin size={14} />
+            </button>
+          )}
+          {onFavorite && (
+            <button
+              onClick={() => onFavorite(row.original)}
+              aria-label="Opslaan"
+              title="Opslaan"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#EAEFEF] text-slate-400 transition-colors hover:text-red-500 hover:border-red-200"
+            >
+              <Heart size={14} />
+            </button>
+          )}
+        </div>
       ),
     }),
   ]
@@ -346,6 +412,7 @@ export default function ResultsTable({
       sorting,
       pagination,
       rowSelection,
+      columnVisibility: { parcel_code: false, bouwjaar: false },
     },
     onSortingChange: handleSortingChange,
     onPaginationChange: handlePaginationChange,
@@ -398,26 +465,11 @@ export default function ResultsTable({
       <div className="h-full w-full flex flex-col">
         {/* Header with summary */}
         <div className="px-4 py-3 border-b border-neutral-200">
-          <h3 className="text-aura-ink font-semibold text-base">
+          <h3 className="text-[#0E1111] font-semibold text-base">
             {areaTitle}
           </h3>
-          {data.neighborhood_metrics?.data && (
-            <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1.5 pt-1 border-t border-neutral-200">
-              {data.neighborhood_metrics.data.gemiddelde_woz_waarde != null && (
-                <span className="bg-aura-amber/10 text-aura-amber px-1.5 py-0.5 rounded-sm border border-aura-amber/20 text-[10px]">
-                  WOZ &euro;{Math.round(data.neighborhood_metrics.data.gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}
-                </span>
-              )}
-              {data.neighborhood_metrics.data.stedelijkheid.klasse != null && (
-                <span className="bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-sm border border-neutral-200 text-[10px]">
-                  {data.neighborhood_metrics.data.stedelijkheid.omschrijving}
-                </span>
-              )}
-            </div>
-          )}
-          <p className="text-neutral-500 text-xs mt-0.5">
-            <span className="text-neutral-700 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
-            <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
+          <p className="text-slate-500 text-xs mt-0.5">
+            <span className="text-[#0E1111] font-medium tabular-nums">{data.total.toLocaleString('nl-NL')}</span> percelen
           </p>
         </div>
 
@@ -465,41 +517,17 @@ export default function ResultsTable({
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* Header with summary */}
-      <div className="px-6 py-4 border-b border-neutral-200">
-        <h3 className="text-aura-ink font-semibold text-lg flex items-center gap-3">
-          {areaTitle}
-          {data.neighborhood_metrics?.data && (
-            <span className="flex items-center gap-2 text-xs font-normal">
-              {data.neighborhood_metrics.data.gemiddelde_woz_waarde != null && (
-                <span className="bg-aura-amber/10 text-aura-amber px-2 py-0.5 rounded-full border border-aura-amber/20">
-                  WOZ: &euro;{Math.round(data.neighborhood_metrics.data.gemiddelde_woz_waarde * 1000).toLocaleString('nl-NL')}
-                </span>
-              )}
-              {data.neighborhood_metrics.data.stedelijkheid.klasse != null && (
-                <span className="bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full border border-neutral-200">
-                  {data.neighborhood_metrics.data.stedelijkheid.omschrijving}
-                </span>
-              )}
-            </span>
-          )}
-        </h3>
-        <p className="text-neutral-500 text-sm mt-1">
-          <span className="text-neutral-700 font-medium">{data.total.toLocaleString('nl-NL')}</span> in ranking van{' '}
-          <span className="tabular-nums">{data.parcels_total.toLocaleString('nl-NL')}</span> gescand
-        </p>
-      </div>
 
       {/* Table container with scroll */}
       <div className="scrollbar-hidden flex-1 overflow-y-auto">
         <table className="w-full">
-          <thead className="sticky top-0 bg-aura-glass-white/60 border-b border-neutral-200">
+          <thead className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-[#EAEFEF]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-neutral-700 transition-colors' : ''
+                    className={`px-5 py-2.5 text-left text-[11px] font-medium text-slate-400 tracking-wide ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-slate-600 transition-colors' : ''
                       }`}
                     onClick={header.column.getToggleSortingHandler()}
                   >

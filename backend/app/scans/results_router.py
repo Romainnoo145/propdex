@@ -301,6 +301,8 @@ async def list_results(
                 score=result.score,
                 score_category=score_category_value,
                 score_breakdown=score_breakdown,
+                potentie_score=result.flags.get("scores", {}).get("potentie") if result.flags else None,
+                risico_score=result.flags.get("scores", {}).get("risico") if result.flags else None,
                 vacancy_signal=vacancy_signal,
                 vacancy_confidence=vacancy_confidence.confidence,
                 vacancy_reasons=vacancy_confidence.reasons,

@@ -8,7 +8,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import ResultsShell from '@/components/layout/ResultsShell'
 import ResultsTable from '@/components/results/ResultsTable'
-import { ParcelDetailModal } from '@/components/results/ParcelDetailModal'
+import { ParcelDetailPanel } from '@/components/map/panels/ParcelDetailPanel'
 import { BulkActionBar } from '@/components/results/BulkActionBar'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { SearchInput } from '@/components/primitives'
@@ -62,7 +62,23 @@ function ResultatenPage() {
     () => scans.find((scan) => scan.scan_id === scan_id) ?? null,
     [scans, scan_id]
   )
-  const recentScans = useMemo(() => scans.slice(0, 8), [scans])
+  const recentScans = useMemo(() => {
+    const sorted = [...scans].sort((a, b) => {
+      // Extract wijk number from "Wijk XX ..." for natural sort
+      const numA = parseInt(a.wijk_naam?.match(/\d+/)?.[0] ?? '999')
+      const numB = parseInt(b.wijk_naam?.match(/\d+/)?.[0] ?? '999')
+      return numA - numB
+    })
+    // Move active scan to front
+    if (scan_id) {
+      const idx = sorted.findIndex((s) => s.scan_id === scan_id)
+      if (idx > 0) {
+        const [active] = sorted.splice(idx, 1)
+        sorted.unshift(active)
+      }
+    }
+    return sorted.slice(0, 20)
+  }, [scans, scan_id])
 
   // Derive filters from URL search params (memoized to prevent re-render loops)
   const filters: ScanResultsFilters = useMemo(() => ({
@@ -129,34 +145,32 @@ function ResultatenPage() {
   }
 
   return (
-    <ResultsShell fullWidth className="scrollbar-hidden">
-      <motion.div
-        className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-      >
-        {/* Header bar */}
-        <motion.div variants={fadeUp} className="shrink-0 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-200 hover:text-aura-ink min-h-[44px]"
-            >
-              <ArrowLeft size={14} />
-              Terug
-            </button>
-            <h1 className="text-lg font-semibold text-aura-ink">Scanresultaten</h1>
-            {activeScan && (
-              <p className="text-xs text-neutral-500">
-                {dateFmt.format(new Date(activeScan.scan_date))} · {activeScan.status} · {activeScan.parcel_count} percelen
-              </p>
-            )}
-          </div>
-          <div className="mt-3 rounded-md border border-neutral-200 bg-aura-glass-white/40 p-2.5">
-            <label htmlFor="parcel-search-results" className="sr-only">
-              Zoek percelen
-            </label>
+    <div className="flex h-full">
+      {/* ── Results shell (shrinks when detail opens) ── */}
+      <div className="flex-1 min-w-[500px] h-full overflow-hidden rounded-[40px] bg-[#FAFCFA] pb-14 md:pb-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+          {/* Header */}
+          <div className="shrink-0 pt-6 pb-4">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Scanresultaten
+                </p>
+                {activeScan ? (
+                  <>
+                    <h1 className="text-[40px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+                      {activeScan.parcel_count.toLocaleString('nl-NL')}
+                    </h1>
+                    <p className="text-[13px] text-slate-500 mt-1">
+                      percelen in {activeScan.wijk_naam ?? activeScan.gemeente_naam}
+                    </p>
+                  </>
+                ) : (
+                  <h1 className="text-[32px] font-black tracking-tight text-[#0E1111] leading-none">Selecteer een scan</h1>
+                )}
+              </div>
+            </div>
+
             <SearchInput
               id="parcel-search-results"
               value={search.parcel_q ?? ''}
@@ -164,120 +178,100 @@ function ResultatenPage() {
               placeholder="Zoek percelen (adres, perceelcode, status)"
               name="q_scan_results"
               leftIcon={<Search size={14} />}
-              className="h-9 rounded-md border-neutral-300 bg-aura-glass-white/60 py-2 text-xs focus:border-aura-amber/50"
+              className="h-[44px] rounded-full border-[#EAEFEF] bg-[#F2F6F3] py-2 text-[13px] text-[#0E1111] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#F9A826]/30"
             />
+
             {recentScans.length > 0 && (
-              <div className="scrollbar-hidden mt-2 max-h-36 space-y-1 overflow-auto">
-                <p className="px-1 text-[11px] uppercase tracking-wide text-neutral-500">Recente scans</p>
+              <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-hidden">
                 {recentScans.map((scan) => {
                   const isActive = scan.scan_id === scan_id
                   return (
                     <button
                       key={scan.scan_id}
                       onClick={() => handleOpenScan(scan.scan_id)}
-                      className={`flex w-full items-center justify-between rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                      className={`shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-medium transition-colors whitespace-nowrap ${
                         isActive
-                          ? 'border-aura-amber/40 bg-aura-amber/10 text-aura-amber'
-                          : 'border-neutral-200 bg-aura-glass-white/60 text-neutral-700 hover:bg-neutral-200'
+                          ? 'bg-[#0E1111] text-white'
+                          : 'bg-white border border-[#EAEFEF] text-slate-600 hover:border-[#0E1111] hover:text-[#0E1111]'
                       }`}
                     >
-                      <span className="truncate">
-                        {dateFmt.format(new Date(scan.scan_date))} · {scan.status} · {(scan.wijk_naam ?? scan.gemeente_naam)}
-                      </span>
-                      <span className="ml-2 shrink-0 tabular-nums text-[11px] text-neutral-500">
-                        {scan.parcel_count}
-                      </span>
+                      {scan.wijk_naam ?? scan.gemeente_naam}
+                      <span className="ml-1.5 tabular-nums text-[10px] opacity-60">{scan.parcel_count.toLocaleString('nl-NL')}</span>
                     </button>
                   )
                 })}
               </div>
             )}
           </div>
-        </motion.div>
 
-        {/* Mobile read-only banner — explains scan/export are desktop-only (MOB-01) */}
-        {isMobile && (
-          <motion.div variants={fadeUp} className="mt-3 rounded-md border border-aura-amber/30 bg-aura-amber/10 px-3 py-2 text-xs text-aura-amber shrink-0">
-            Gebruik desktop voor scannen en exporteren
-          </motion.div>
-        )}
+          {isMobile && (
+            <div className="shrink-0 mb-3 rounded-full border border-[#F9A826]/30 bg-[#F9A826]/10 px-4 py-2 text-xs text-[#F9A826]">
+              Gebruik desktop voor scannen en exporteren
+            </div>
+          )}
 
-        {scan_id ? (
-          <>
-            {/* Results table — fills remaining height */}
-            <motion.div variants={fadeUp} className="mt-4 flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60">
-              <ResultsTable
-                scanId={scan_id}
-                filters={filters}
-                onRowClick={(parcel) => setModalParcel(parcel)}
-                onTotalChange={setTotal}
-                onSortChange={handleSortChange}
-                onPageChange={handlePageChange}
-                currentPage={search.page ?? 0}
-                onSelectionChange={setSelectedParcelIds}
-                selectionKey={selectionKey}
+          {scan_id ? (
+            <>
+              <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-[#EAEFEF] bg-white">
+                <ResultsTable
+                  scanId={scan_id}
+                  filters={filters}
+                  onRowClick={(parcel) => setModalParcel(parcel)}
+                  onViewOnMap={(parcel) => {
+                    void navigate({
+                      to: '/map',
+                      search: {
+                        scan_id,
+                        parcel_id: parcel.parcel_id,
+                        ...(parcel.address ? { fallback_address: parcel.address } : {}),
+                        _t: Date.now(),
+                      },
+                    })
+                  }}
+                  onTotalChange={setTotal}
+                  onSortChange={handleSortChange}
+                  onPageChange={handlePageChange}
+                  currentPage={search.page ?? 0}
+                  onSelectionChange={setSelectedParcelIds}
+                  selectionKey={selectionKey}
+                />
+              </div>
+              {!isMobile && (
+                <BulkActionBar
+                  selectedCount={selectedParcelIds.length}
+                  onExport={() => {
+                    const params = new URLSearchParams({ parcel_ids: selectedParcelIds.join(',') })
+                    window.open(`/api/scans/${scan_id}/export/selection?${params.toString()}`, '_blank')
+                  }}
+                  onClearSelection={() => { setSelectedParcelIds([]); setSelectionKey((k) => k + 1) }}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                icon={<Map size={32} />}
+                title="Geen scan geselecteerd"
+                description="Selecteer een scan hierboven om resultaten te bekijken."
+                action={{ label: 'Naar kaart', onClick: () => navigate({ to: '/map' }) }}
               />
-            </motion.div>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Bulk action bar — appears when parcels are selected; hidden on mobile (checkboxes are hidden in card view) */}
-            {!isMobile && (
-              <BulkActionBar
-                selectedCount={selectedParcelIds.length}
-                onExport={() => {
-                  const params = new URLSearchParams({
-                    parcel_ids: selectedParcelIds.join(','),
-                  })
-                  window.open(
-                    `/api/scans/${scan_id}/export/selection?${params.toString()}`,
-                    '_blank',
-                  )
-                }}
-                onClearSelection={() => {
-                  setSelectedParcelIds([])
-                  setSelectionKey((k) => k + 1)
-                }}
-              />
-            )}
-          </>
-        ) : (
-          /* Empty state */
-          <div className="flex-1 flex items-center justify-center">
-            <EmptyState
-              icon={<Map size={32} />}
-              title="Geen scan geselecteerd"
-              description="Selecteer een scan op de kaart om resultaten te bekijken."
-              action={{
-                label: 'Naar kaart',
-                onClick: () => navigate({ to: '/map' }),
-              }}
-            />
-          </div>
-        )}
-      </motion.div>
-
-      {/* Parcel detail modal — always rendered for double-click support */}
-      <ParcelDetailModal
-        parcel={modalParcel}
-        isOpen={!!modalParcel}
-        onClose={() => setModalParcel(null)}
-        onViewOnMap={
-          scan_id && modalParcel
-            ? () =>
-                void navigate({
-                  to: '/map',
-                  search: {
-                    scan_id,
-                    parcel_id: modalParcel.parcel_id,
-                    ...(modalParcel.address
-                      ? { fallback_address: modalParcel.address }
-                      : {}),
-                    _t: Date.now(),
-                  },
-                })
-            : undefined
-        }
-      />
-    </ResultsShell>
+      {/* ── Detail panel (flex sibling, pushes table) ── */}
+      {modalParcel && (
+        <div className="shrink-0 h-full w-[420px] overflow-y-auto rounded-[40px] bg-white border border-white/20 ml-4">
+          <ParcelDetailPanel
+            parcel={modalParcel}
+            onClose={() => setModalParcel(null)}
+            gemeenteNaam={activeScan?.gemeente_naam}
+            wijkNaam={activeScan?.wijk_naam}
+          />
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -3,10 +3,11 @@
  * that are NOT available via the RVO open data API.
  *
  * Sources: RVO.nl, provincial/municipal subsidy portals.
- * Last updated: 2026-03-25
+ * Last updated: 2026-03-26
  */
 
 export type SubsidieNiveau = 'landelijk' | 'provinciaal' | 'gemeentelijk'
+export type SubsidieStatus = 'open' | 'gesloten' | 'doorlopend'
 
 export interface CuratedSubsidie {
   id: string
@@ -16,6 +17,10 @@ export interface CuratedSubsidie {
   doelgroep: string
   beschrijving: string
   voorwaarden: string
+  budget?: string
+  maxBedrag?: string
+  status: SubsidieStatus
+  deadline?: string
   url?: string
 }
 
@@ -27,9 +32,13 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Subsidie voor bouwprojecten van ≥200 woningen waarbij minstens 50% betaalbaar is. Dekt maximaal 50% van het financiële tekort.',
+      'Specifieke uitkering voor gemeenten die het tekort aan betaalbare woningen willen oplossen voor starters en lage/middeninkomens. Dekt max 50% van het publiek financieel tekort bij woningbouwprojecten van ≥200 woningen.',
     voorwaarden:
-      'Project mag nog niet gestart zijn en moet binnen drie jaar starten. Minimaal 200 woningen, waarvan ≥50% betaalbaar.',
+      'Min. 200 woningen, ≥50% betaalbaar (sociale huur, middenhuur of koop tot €420.000). Bouw nog niet gestart, eerste woningen binnen 3 jaar, laatste binnen 10 jaar. Gemeente dekt overige 50% tekort. Aanvraag via eHerkenning niveau 2+.',
+    budget: '€95 mln (8e ronde)',
+    maxBedrag: 'Geen maximum per aanvraag',
+    status: 'gesloten',
+    deadline: '19 maart 2026',
     url: 'https://www.rvo.nl/subsidies-financiering/woningbouwimpuls',
   },
   {
@@ -38,9 +47,12 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Vaste bijdrage van €7.000 per betaalbare woning die in het voorgaande jaar in aanbouw is genomen. Totaalbudget ±€2,5 mrd (2026–2030).',
+      'Vaste bijdrage van €7.000 per betaalbare woning die in het voorgaande jaar in aanbouw is genomen. Onderdeel van het programma "Meer woningen" met totaalbudget van ±€2,5 miljard (2026–2030).',
     voorwaarden:
-      'Betaalbare woning moet in aanbouw zijn genomen in het voorgaande kalenderjaar.',
+      'Betaalbare woning moet in aanbouw zijn genomen in het voorgaande kalenderjaar. Niet combineerbaar met WBI voor dezelfde woningen.',
+    budget: '±€2,5 mrd (2026–2030)',
+    maxBedrag: '€7.000 per woning',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/realisatiestimulans',
   },
   {
@@ -49,9 +61,11 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Subsidie voor verbetering en transformatie van bestaande bebouwing in kwetsbare gebieden — splitsen, optoppen, slopen/nieuwbouw.',
+      'Subsidie voor verbetering en transformatie van bestaande bebouwing in kwetsbare gebieden — splitsen, optoppen, slopen/nieuwbouw. Gericht op leefbaarheidsverbetering in aandachtswijken.',
     voorwaarden:
-      'Minimaal 100 woningen stedelijk (50 buiten stedelijk). Gemeente dekt 30% van het tekort. Start binnen twee jaar.',
+      'Min. 100 woningen stedelijk (50 buiten stedelijk). Gemeente dekt 30% van het tekort. Start binnen twee jaar na toekenning.',
+    budget: 'Meerdere rondes per jaar',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/volkshuisvestingsfonds',
   },
   {
@@ -60,20 +74,23 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Aannemers / verhuurders',
     beschrijving:
-      'Subsidie (2026: €50 mln) voor aanschaf of lease van nieuwe emissievrije bouwmachines.',
+      'Subsidie voor aanschaf of lease van nieuwe emissievrije bouwmachines. Onderdeel van de transitie naar schone bouwplaatsen conform Schone Lucht Akkoord.',
     voorwaarden:
       'Machines moeten nieuw zijn en op de "Lijst Bouwmachines SSEB" staan. Aanvrager wordt eigenaar na lease en moet juiste SBI-code hebben.',
+    budget: '€50 mln (2026)',
+    status: 'open',
     url: 'https://www.rvo.nl/subsidies-financiering/sseb',
   },
   {
     id: 'szgw',
     title: 'Stimuleringsregeling Zorggeschikte Woningen (SZGW)',
     niveau: 'landelijk',
-    doelgroep: 'Woningcorporaties en zorgorganisaties',
+    doelgroep: 'Woningcorporaties, zorgorganisaties',
     beschrijving:
-      'Subsidie voor bouw of transformatie van sociale huurwoningen geschikt voor ouderen en zorgbehoevenden.',
+      'Subsidie voor bouw of transformatie van sociale huurwoningen geschikt voor ouderen en zorgbehoevenden. Draagt bij aan het scheiden van wonen en zorg.',
     voorwaarden:
-      'Minimaal 15% van de woningen voor Wlz-profielen. Transformatie vanaf €40.000 per woning. Start binnen drie jaar, afronding binnen vijf jaar.',
+      'Min. 15% woningen voor Wlz-profielen. Transformatie vanaf €40.000 per woning. Start binnen 3 jaar, afronding binnen 5 jaar na toekenning.',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/szgw',
   },
   {
@@ -82,9 +99,10 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Investeerders in flexwoningen',
     beschrijving:
-      'Garandeert verplaatsing en compenseert de onrendabele top wanneer nieuwe flexwoningen (sociale huur) na 10–20 jaar moeten worden verplaatst of verkocht.',
+      'Garandeert verplaatsing en compenseert de onrendabele top wanneer nieuwe flexwoningen (sociale huur) na 10–20 jaar moeten worden verplaatst of verkocht. Vermindert investeringsrisico voor flexwoning-exploitanten.',
     voorwaarden:
-      'Woning moet nieuw en energie-efficiënt zijn met minimale levensduur van 25 (verplaatsbaar) of 50 jaar.',
+      'Woning moet nieuw en energie-efficiënt zijn met min. levensduur van 25 jaar (verplaatsbaar) of 50 jaar (permanent).',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/rthf',
   },
   {
@@ -93,20 +111,24 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Financiering voor aanpassing of transformatie van gebouwen voor grote statushoudersgezinnen (≥6 personen).',
+      'Financiering voor aanpassing of transformatie van gebouwen voor grote statushoudersgezinnen (≥6 personen). Ondersteunt de wettelijke huisvestingstaak van gemeenten.',
     voorwaarden:
-      'Max €35.000 (6–9 personen) of €50.000 (≥10 personen) per project. Afronding binnen één jaar.',
+      'Max €35.000 (6–9 personen) of €50.000 (≥10 personen) per project. Afronding binnen één jaar na toekenning.',
+    maxBedrag: '€35.000 – €50.000 per project',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/hggv',
   },
   {
     id: 'soo',
     title: 'Stimuleringsregeling ontmoetingsruimten in ouderenhuisvesting (SOO)',
     niveau: 'landelijk',
-    doelgroep: 'Woningcorporaties, zorginstellingen, bewonersinitiatieven',
+    doelgroep: 'Corporaties, zorginstellingen, bewoners',
     beschrijving:
-      'Max €2.500 per m² voor (ver)bouw van ontmoetingsruimten in wooncomplexen voor 55-plussers.',
+      'Subsidie voor (ver)bouw van ontmoetingsruimten in wooncomplexen voor 55-plussers. Bestrijdt eenzaamheid en bevordert gemeenschapsvorming.',
     voorwaarden:
-      'Bouw mag niet starten vóór subsidie-toekenning. Start binnen drie jaar, afronding binnen zeven jaar.',
+      'Bouw mag niet starten vóór subsidie-toekenning. Start binnen 3 jaar, afronding binnen 7 jaar.',
+    maxBedrag: '€2.500 per m²',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/soo',
   },
   {
@@ -115,9 +137,12 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Budget van €60 mln (2025-ronde) voor huisvesting van studenten, statushouders, arbeidsmigranten en daklozen.',
+      'Subsidie voor huisvesting van studenten, statushouders, arbeidsmigranten en daklozen. Onderdeel van het programma "Een thuis voor iedereen".',
     voorwaarden:
-      'Max €9.000 per woning en €5 mln per gemeente. Woningen binnen vijf jaar gerealiseerd, minstens tien jaar voor doelgroep beschikbaar.',
+      'Max €9.000 per woning en €5 mln per gemeente. Woningen binnen 5 jaar gerealiseerd, min. 10 jaar voor doelgroep beschikbaar.',
+    budget: '€60 mln (2025-ronde)',
+    maxBedrag: '€9.000 per woning, max €5 mln per gemeente',
+    status: 'doorlopend',
     url: 'https://www.rvo.nl/subsidies-financiering/rha',
   },
   {
@@ -126,9 +151,12 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     niveau: 'landelijk',
     doelgroep: 'Gemeenten, woningcorporaties',
     beschrijving:
-      'Subsidie voor realisatie van flexwoningen en transformatie van bestaande gebouwen naar woningen. Onderdeel van programma "Meer woningen".',
+      'Specifieke uitkering voor realisatie van flexwoningen, transformatiewoningen, optoppen en splitsing. Gericht op snelle toevoeging van betaalbare sociale huurwoningen voor kwetsbare doelgroepen.',
     voorwaarden:
-      'Zie RVO voor actuele voorwaarden per ronde.',
+      'Min. 10 jaar sociale huur. 30% gereserveerd voor statushouders/ontheemden/spoedzoekers. Aantoonbaar financieel tekort. Niet combineerbaar met andere rijksuitkeringen voor zelfde project.',
+    budget: 'Budget 2026–2027',
+    status: 'open',
+    deadline: '31 december 2027',
     url: 'https://www.rvo.nl/subsidies-financiering/sft',
   },
 
@@ -140,9 +168,10 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     regio: 'Noord-Brabant',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Versnellen van pre-ontwikkeling (vergunningen, planvorming) bij woningbouwprojecten. Budget voor flexpool om extra capaciteit in te huren.',
+      'Versnellen van pre-ontwikkeling (vergunningen, planvorming) bij woningbouwprojecten. Budget voor flexpool om extra ambtelijke capaciteit in te huren bij gemeenten.',
     voorwaarden:
-      'Continuatie van "Bijdrageregeling Stimulering woningbouw 2023". Derde tranche april 2025. Extra middelen voor "Een thuis voor iedereen" en "Wonen en zorg voor ouderen".',
+      'Derde tranche april 2025. Extra middelen voor "Een thuis voor iedereen" en "Wonen en zorg voor ouderen". Aanvraag via provincie.',
+    status: 'open',
     url: 'https://www.brabant.nl/subsidy/subsidieregeling-woningbouwversnelling',
   },
   {
@@ -152,9 +181,12 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     regio: 'Utrecht',
     doelgroep: 'Gemeenten',
     beschrijving:
-      'Ondersteunt gemeenten bij het versnellen van bestaande woningbouwprojecten door knelpunten op te lossen.',
+      'Ondersteunt gemeenten bij het versnellen van bestaande woningbouwprojecten door knelpunten op te lossen — externe expertise of dekking onrendabele top.',
     voorwaarden:
-      'Open van 31 december 2025 tot 31 december 2028. Totaalbudget €25 mln. Voor externe expertise of dekking onrendabele top.',
+      'Open van 31 december 2025 tot 31 december 2028. Aanvraag bij Gedeputeerde Staten.',
+    budget: '€25 mln totaal',
+    status: 'open',
+    deadline: '31 december 2028',
     url: 'https://www.provincie-utrecht.nl/subsidie/versnelling-woningbouw',
   },
   {
@@ -166,7 +198,9 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     beschrijving:
       'Rentekortinglening tot €25.000 voor energiebesparende maatregelen (isolatie, warmtepomp, zonnepanelen). Vult het gat waar Limburgse gemeenten geen eigen regelingen hebben.',
     voorwaarden:
-      'Eigenaar-bewoner of VvE in Limburg. Minimaal twee maatregelen uit de lijst. Lening via SVn met lage rente.',
+      'Eigenaar-bewoner of VvE in Limburg. Min. twee maatregelen uit de lijst. Lening via SVn met lage rente.',
+    maxBedrag: '€25.000 per woning',
+    status: 'doorlopend',
     url: 'https://www.limburg.nl/onderwerpen/wonen/duurzaam-thuis',
   },
   {
@@ -176,9 +210,10 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     regio: 'Limburg',
     doelgroep: 'Starters op de woningmarkt',
     beschrijving:
-      'Aanvulling op de hypotheek voor eerste koopwoningen. Geen subsidie maar een rentekortinglening via SVn. Beschikbaar in de meeste Limburgse gemeenten.',
+      'Aanvulling op de hypotheek voor eerste koopwoningen via rentekortinglening (SVn). Beschikbaar in de meeste Limburgse gemeenten. Overbrugt het verschil tussen maximale hypotheek en koopsom.',
     voorwaarden:
       'Eerste koopwoning, inkomen onder grens, woning onder maximale koopsom. Per gemeente kunnen aanvullende voorwaarden gelden.',
+    status: 'doorlopend',
     url: 'https://www.svn.nl/starterslening',
   },
 
@@ -188,33 +223,36 @@ export const CURATED_SUBSIDIES: CuratedSubsidie[] = [
     title: 'Subsidieregeling Betaalbare Woningbouw 2025',
     niveau: 'gemeentelijk',
     regio: 'Emmen',
-    doelgroep: 'Projectontwikkelaars, woningcorporaties, bewonersinitiatieven',
+    doelgroep: 'Ontwikkelaars, corporaties, bewoners',
     beschrijving:
-      'Subsidie om betaalbare woningen te bouwen of de woningvoorraad te verbeteren.',
+      'Subsidie om betaalbare woningen te bouwen of de woningvoorraad te verbeteren. Onderdeel van Woondeal-afspraken.',
     voorwaarden:
-      'Minimaal vier woningen per project, binnen bebouwde kom. Minstens 30% sociale huur, middenhuur of betaalbare koop. Moet deel uitmaken van Woondeal.',
+      'Min. 4 woningen per project, binnen bebouwde kom. Minstens 30% sociale huur, middenhuur of betaalbare koop. Moet deel uitmaken van Woondeal.',
+    status: 'open',
   },
   {
     id: 'venlo-monumenten',
     title: 'Monumenten- en erfgoedsubsidie',
     niveau: 'gemeentelijk',
     regio: 'Venlo',
-    doelgroep: 'Eigenaren van gemeentelijke monumenten en beeldbepalende panden',
+    doelgroep: 'Eigenaren van gemeentelijke monumenten',
     beschrijving:
-      'Incidentele subsidies of goedkope leningen voor onderhoud en restauratie van gemeentelijke monumenten. Aanvragen via afdeling erfgoed.',
+      'Incidentele subsidies of goedkope leningen voor onderhoud en restauratie van gemeentelijke monumenten. Aanvragen via afdeling erfgoed gemeente Venlo.',
     voorwaarden:
-      'Pand moet gemeentelijk monument of beeldbepalend zijn. Geen aparte Venlo-specifieke bouwsubsidie — voor woningbouw verwijst Venlo naar provinciale en landelijke regelingen.',
+      'Pand moet gemeentelijk monument of beeldbepalend zijn. Voor woningbouw verwijst Venlo naar provinciale en landelijke regelingen.',
+    status: 'doorlopend',
   },
   {
     id: 'limburg-gemeenten-erfgoed',
-    title: 'Erfgoed- en gevelsubsidies (diverse Limburgse gemeenten)',
+    title: 'Erfgoed- en gevelsubsidies (diverse gemeenten)',
     niveau: 'gemeentelijk',
-    regio: 'Maastricht, Heerlen, Sittard-Geleen, Roermond, Weert, Venray',
+    regio: 'Diverse Limburgse gem.',
     doelgroep: 'Eigenaren van monumenten, panden in beschermd gezicht',
     beschrijving:
-      'Incidentele subsidies voor restauratie van rijks- of gemeentelijke monumenten en gevelrenovatie in beschermde stads- of dorpsgezichten. Per gemeente verschillende voorwaarden.',
+      'Incidentele subsidies voor restauratie van rijks- of gemeentelijke monumenten en gevelrenovatie in beschermde stads- of dorpsgezichten.',
     voorwaarden:
       'Verschilt per gemeente. Raadpleeg de gemeentelijke website of neem contact op met de afdeling wonen/vergunningen. Regelingen wijzigen regelmatig.',
+    status: 'doorlopend',
   },
 ]
 
