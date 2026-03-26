@@ -1,16 +1,30 @@
 [
   {
-    "id": "61fa83ad",
+    "id": "f7c58d9b",
+    "label": "backend",
+    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/uvicorn app.main:app --port 8000 --reload",
+    "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
+    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T10-53-57-783Z_b3b2cdf2-34bc-4d03-92b3-35c4bf361614.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1774522458288,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 8000,
+    "pid": 117201
+  },
+  {
+    "id": "134348b5",
     "label": "frontend",
     "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/frontend && npx vite --port 9300",
     "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
-    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T10-32-19-025Z_f3db62a4-394d-4000-93ec-851cc1526dc8.jsonl",
+    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-03-26T10-53-57-783Z_b3b2cdf2-34bc-4d03-92b3-35c4bf361614.jsonl",
     "persistAcrossSessions": false,
-    "startedAt": 1774521824914,
+    "startedAt": 1774522458297,
     "processType": "server",
     "group": null,
     "readyPattern": null,
     "readyPort": 9300,
-    "pid": 111171
+    "pid": 117202
   }
 ]
