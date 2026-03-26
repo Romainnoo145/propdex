@@ -1279,7 +1279,37 @@
       {% endif %}
     </div>
 
+    <!-- 4.1b Bodemtype (BRO Bodemkaart) — standalone soil_profile -->
+    {% if report_data.get('soil_profile') and not report_data.get('fysiek_risico_profiel') %}
+      {% set sp = report_data.get('soil_profile') %}
+    <div class="risk-block">
+      <h4><span class="dot dot-amber"></span> 4.1b Bodemtype (BRO)</h4>
+      <table class="kv-table">
+        {% if sp.get('dominant_type_label') %}
+        <tr>
+          <td class="kv-label">Grondsoort</td>
+          <td class="kv-value"><strong>{{ sp.get('dominant_type_label') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilname') %}
+        <tr>
+          <td class="kv-label">Bodemprofielnaam</td>
+          <td class="kv-value">{{ sp.get('soilname') }}</td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilcode') %}
+        <tr>
+          <td class="kv-label">Bodemcode</td>
+          <td class="kv-value" style="font-size:8pt;color:var(--brand-muted);">{{ sp.get('soilcode') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      <div class="source-meta">{{ sp.get('disclaimer', 'Bron: BRO Bodemkaart 1:50.000 (PDOK)') }}</div>
+    </div>
+    {% endif %}
+
     <!-- 4.2 Funderingsrisico -->
+    {% if not report_data.get('fysiek_risico_profiel') %}
     <div class="risk-block">
       <h4>
         {% if report_data.get('funderingsrisico_flags') %}
@@ -1317,6 +1347,48 @@
         <p class="no-data">Niet beschikbaar — funderingsrisico niet opgehaald.</p>
       {% endif %}
     </div>
+    {% endif %}
+
+    <!-- 4.2b Funderingsrisicogebied (PDOK postcode-level) — standalone -->
+    {% if report_data.get('funderingsrisicogebied') and not report_data.get('fysiek_risico_profiel') %}
+      {% set frg = report_data.get('funderingsrisicogebied') %}
+    <div class="risk-block">
+      <h4><span class="dot dot-amber"></span> 4.2b Funderingsrisicogebied (postcodeniveau)</h4>
+      <table class="kv-table">
+        {% if frg.get('legenda') %}
+        <tr>
+          <td class="kv-label">Gebiedsclassificatie</td>
+          <td class="kv-value">{{ frg.get('legenda') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('fgr') %}
+        <tr>
+          <td class="kv-label">Funderingsgebied</td>
+          <td class="kv-value">{{ frg.get('fgr') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('pc6') %}
+        <tr>
+          <td class="kv-label">Postcode</td>
+          <td class="kv-value">{{ frg.get('pc6') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('percvoor1970') is not none %}
+        <tr>
+          <td class="kv-label">% bebouwing voor 1970</td>
+          <td class="kv-value">{{ frg.get('percvoor1970') }}%</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('gemeente') %}
+        <tr>
+          <td class="kv-label">Gemeente</td>
+          <td class="kv-value">{{ frg.get('gemeente') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      <div class="source-meta">{{ frg.get('disclaimer', 'Bron: PDOK Indicatieve Gebieden Funderingsproblematiek') }}</div>
+    </div>
+    {% endif %}
 
     <!-- 4.3 Asbest -->
     <div class="risk-block">
@@ -1587,6 +1659,160 @@
         <p class="no-data">Niet beschikbaar — overstromingsrisico niet opgehaald.</p>
       {% endif %}
     </div>
+
+    <!-- 4.9 Fysiek Risicoprofiel (composiet) -->
+    {% if report_data.get('fysiek_risico_profiel') %}
+      {% set frp = report_data.get('fysiek_risico_profiel') %}
+    <div class="risk-block" style="border-left-color:{% if frp.get('overall_risk') == 'hoog' %}var(--brand-red){% elif frp.get('overall_risk') == 'middel' %}var(--brand-accent){% elif frp.get('overall_risk') == 'laag' %}var(--brand-green){% else %}var(--brand-border){% endif %};">
+      <h4>
+        {% if frp.get('overall_risk') == 'hoog' %}
+          <span class="dot dot-red"></span>
+        {% elif frp.get('overall_risk') == 'middel' %}
+          <span class="dot dot-amber"></span>
+        {% elif frp.get('overall_risk') == 'laag' %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.9 Fysiek Risicoprofiel (gecombineerd)
+      </h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Totaal risiconiveau</td>
+          <td class="kv-value">
+            <strong>{{ frp.get('overall_risk', 'onbekend') | title }}</strong>
+          </td>
+        </tr>
+        {% if frp.get('overall_explanation') %}
+        <tr>
+          <td class="kv-label">Toelichting</td>
+          <td class="kv-value">{{ frp.get('overall_explanation') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+
+      <!-- Foundation risk sub-block -->
+      {% if frp.get('foundation_risk') %}
+        {% set fr = frp.get('foundation_risk') %}
+      <h4 style="margin-top:0.6em;">Funderingsrisico</h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Risiconiveau</td>
+          <td class="kv-value">
+            {% if fr.get('risk') == 'hoog' %}
+              <strong style="color:var(--brand-red);">Hoog</strong>
+            {% elif fr.get('risk') == 'middel' %}
+              <strong style="color:var(--brand-accent);">Middel</strong>
+            {% elif fr.get('risk') == 'laag' %}
+              <strong style="color:var(--brand-green);">Laag</strong>
+            {% else %}
+              Onbekend
+            {% endif %}
+          </td>
+        </tr>
+        {% if fr.get('bouwjaar') is not none %}
+        <tr>
+          <td class="kv-label">Bouwjaar (gebruikt)</td>
+          <td class="kv-value">{{ fr.get('bouwjaar') }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('bodemtype') %}
+        <tr>
+          <td class="kv-label">Bodemtype (gebruikt)</td>
+          <td class="kv-value">{{ fr.get('bodemtype') | title }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('reden') %}
+        <tr>
+          <td class="kv-label">Toelichting</td>
+          <td class="kv-value">{{ fr.get('reden') }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('recommended_action') %}
+        <tr>
+          <td class="kv-label">Aanbevolen actie</td>
+          <td class="kv-value">{{ fr.get('recommended_action') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- Soil profile sub-block -->
+      {% if frp.get('soil_profile') %}
+        {% set sp = frp.get('soil_profile') %}
+      <h4 style="margin-top:0.6em;">Bodemtype (BRO)</h4>
+      <table class="kv-table">
+        {% if sp.get('dominant_type_label') %}
+        <tr>
+          <td class="kv-label">Grondsoort</td>
+          <td class="kv-value"><strong>{{ sp.get('dominant_type_label') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilname') %}
+        <tr>
+          <td class="kv-label">Bodemprofielnaam</td>
+          <td class="kv-value">{{ sp.get('soilname') }}</td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilcode') %}
+        <tr>
+          <td class="kv-label">Bodemcode</td>
+          <td class="kv-value" style="font-size:8pt;color:var(--brand-muted);">{{ sp.get('soilcode') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- Funderingsrisicogebied sub-block -->
+      {% if frp.get('funderingsrisicogebied') %}
+        {% set frg = frp.get('funderingsrisicogebied') %}
+      <h4 style="margin-top:0.6em;">Funderingsrisicogebied (postcodeniveau)</h4>
+      <table class="kv-table">
+        {% if frg.get('legenda') %}
+        <tr>
+          <td class="kv-label">Gebiedsclassificatie</td>
+          <td class="kv-value">{{ frg.get('legenda') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('fgr') %}
+        <tr>
+          <td class="kv-label">Funderingsgebied</td>
+          <td class="kv-value">{{ frg.get('fgr') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('percvoor1970') is not none %}
+        <tr>
+          <td class="kv-label">% bebouwing voor 1970</td>
+          <td class="kv-value">{{ frg.get('percvoor1970') }}%</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- KCAF cost indication -->
+      {% if frp.get('kcaf_cost') %}
+        {% set kcaf = frp.get('kcaf_cost') %}
+      <h4 style="margin-top:0.6em;">Funderingsherstel kostenbenchmark (KCAF)</h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Geschatte kosten (totaal)</td>
+          <td class="kv-value">€ {{ "{:,.0f}".format(kcaf.get('low_eur', 0)).replace(",", ".") }} — € {{ "{:,.0f}".format(kcaf.get('high_eur', 0)).replace(",", ".") }}</td>
+        </tr>
+        <tr>
+          <td class="kv-label">Per m²</td>
+          <td class="kv-value">€ {{ kcaf.get('low_per_m2', 0) }} — € {{ kcaf.get('high_per_m2', 0) }} /m²</td>
+        </tr>
+        <tr>
+          <td class="kv-label">Gebruiksoppervlakte</td>
+          <td class="kv-value">{{ kcaf.get('oppervlakte_m2', '—') }} m²</td>
+        </tr>
+      </table>
+      <p style="font-size:7.5pt;color:var(--brand-muted);margin-top:0.2em;">{{ kcaf.get('disclaimer', '') }}</p>
+      {% endif %}
+
+      <p style="font-size:7.5pt;color:var(--brand-muted);margin-top:0.4em;">{{ frp.get('disclaimer', '') }}</p>
+    </div>
+    {% endif %}
   </div>
 
   <!-- ===== SECTIE 5: POTENTIE & RISICO ANALYSE ===== -->
@@ -1686,6 +1912,89 @@
 
     {% if not potentie_factors and not risico_factors %}
     <p class="no-data">Geen scorefactoren beschikbaar — Score v3.0 engine nog niet uitgevoerd voor dit perceel.</p>
+    {% endif %}
+
+    <!-- Use-case scores -->
+    {% if report_data.get('use_case_scores') %}
+      {% set ucs = report_data.get('use_case_scores') %}
+    <h3>Use-case scores</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Use case</th>
+          <th>Score</th>
+          <th>Geschiktheid</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for uc_name, uc_val in ucs.items() %}
+        <tr>
+          <td><strong>{{ uc_name | replace('_', ' ') | title }}</strong></td>
+          <td>
+            {% if uc_val is mapping %}
+              {{ uc_val.get('score', uc_val.get('total', '—')) }}
+            {% elif uc_val is number %}
+              {{ uc_val | round(0) | int }}
+            {% else %}
+              {{ uc_val }}
+            {% endif %}
+          </td>
+          <td>
+            {% if uc_val is mapping %}
+              {% set sc = uc_val.get('score', uc_val.get('total', 0)) %}
+            {% elif uc_val is number %}
+              {% set sc = uc_val %}
+            {% else %}
+              {% set sc = 0 %}
+            {% endif %}
+            {% if sc is number and sc >= 70 %}
+              <span style="color:var(--brand-green);">Hoog potentieel</span>
+            {% elif sc is number and sc >= 40 %}
+              <span style="color:var(--brand-accent);">Matig potentieel</span>
+            {% elif sc is number %}
+              <span style="color:var(--brand-muted);">Beperkt potentieel</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="source-meta">Bron: Propdex Use-Case Scoring Engine | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- Market signals (Funda) -->
+    {% if report_data.get('market_signals') %}
+      {% set ms = report_data.get('market_signals') %}
+    <h3>Marktsignalen</h3>
+    <table class="kv-table">
+      {% if ms.get('listing_duration_days') is not none %}
+      <tr>
+        <td class="kv-label">Aanbodperiode</td>
+        <td class="kv-value">{{ ms.get('listing_duration_days') }} dagen</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('price_change_count') is not none and ms.get('price_change_count') > 0 %}
+      <tr>
+        <td class="kv-label">Prijswijzigingen</td>
+        <td class="kv-value">{{ ms.get('price_change_count') }}×</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('listing_snapshots_count') is not none and ms.get('listing_snapshots_count') > 0 %}
+      <tr>
+        <td class="kv-label">Snapshots waargenomen</td>
+        <td class="kv-value">{{ ms.get('listing_snapshots_count') }}</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('days_since_last_seen') is not none %}
+      <tr>
+        <td class="kv-label">Dagen sinds laatst gezien</td>
+        <td class="kv-value">{{ ms.get('days_since_last_seen') }} dagen</td>
+      </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: {{ ms.get('source', 'Funda') | title }} marktsignalen | Betrouwbaarheid: GEMIDDELD</div>
     {% endif %}
 
     <div class="source-meta">Bron: Propdex Score v3.0 Engine (17 factoren) | Betrouwbaarheid: HOOG</div>
