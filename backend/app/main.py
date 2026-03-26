@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from arq import create_pool
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
@@ -77,6 +78,9 @@ app.add_middleware(
 
 # Add tenant context middleware (after CORS)
 app.add_middleware(TenantContextMiddleware)
+
+# Add GZip compression (after tenant context — runs outermost, compresses all responses)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 # Custom rate limit exceeded handler

@@ -526,10 +526,11 @@ def score_asbest(parcel_data: dict) -> FactorResult:
 
     risk_label = "Hoog" if score >= 0.7 else "Beperkt" if score > 0 else "Verwaarloosbaar"
     kort = f"{risk_label} asbestrisico \u2014 bouwjaar {bouwjaar}"
+    building_type = "industriële gebouwen" if industrial else "woningen en utiliteitsgebouwen"
     lang = (
         f"Het gebouw dateert van {bouwjaar}. "
         + (
-            f"Asbest werd in Nederland tot 1993 veel gebruikt, vooral in {'industri\u00eble gebouwen' if industrial else 'woningen en utiliteitsgebouwen'}. Bij renovatie of sloop is een asbestinventarisatie verplicht. Overtreding kan leiden tot boetes tot \u20ac30.000."
+            f"Asbest werd in Nederland tot 1993 veel gebruikt, vooral in {building_type}. Bij renovatie of sloop is een asbestinventarisatie verplicht. Overtreding kan leiden tot boetes tot \u20ac30.000."
             if pre_1994 else
             "Het bouwjaar valt na het asbestverbod van 1993. Het risico op asbesthoudende materialen is verwaarloosbaar."
         )
