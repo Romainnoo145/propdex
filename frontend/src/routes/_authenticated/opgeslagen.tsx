@@ -199,7 +199,7 @@ function OpgeslagenPage() {
       >
         {/* ── Hero Section ─────────────────────────────── */}
         <motion.div variants={fadeUp} className="mb-8">
-          <div className="flex items-end justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <p
                 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
@@ -212,54 +212,36 @@ function OpgeslagenPage() {
               </h1>
               <p className="text-[13px] text-slate-500 mt-1" style={{ textWrap: 'pretty' }}>
                 {activeTab === 'percelen'
-                  ? `${totalCount === 1 ? 'perceel' : 'percelen'} in ${gemeenteCount} ${gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}`
+                  ? `opgeslagen in ${gemeenteCount} ${gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}`
                   : `${(reportsData?.total ?? 0) === 1 ? 'rapport' : 'rapporten'} opgeslagen`
                 }
               </p>
             </div>
 
-            {/* Toggle + Mini stage summary */}
-            <div className="flex items-center gap-4">
-              {/* Tab toggle */}
-              <div className="flex items-center rounded-full border border-[#0E1111] p-0.5">
-                <button
-                  onClick={() => setActiveTab('percelen')}
-                  className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                    activeTab === 'percelen'
-                      ? 'bg-[#F9A826] text-[#0E1111]'
-                      : 'text-slate-400 hover:text-[#0E1111]'
-                  }`}
-                  title="Percelen"
-                >
-                  <Bookmark size={16} strokeWidth={2} />
-                </button>
-                <button
-                  onClick={() => setActiveTab('rapporten')}
-                  className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                    activeTab === 'rapporten'
-                      ? 'bg-[#F9A826] text-[#0E1111]'
-                      : 'text-slate-400 hover:text-[#0E1111]'
-                  }`}
-                  title="Rapporten"
-                >
-                  <FileText size={16} strokeWidth={2} />
-                </button>
-              </div>
-
-              {activeTab === 'percelen' && totalCount > 0 && (
-              <div className="flex items-center gap-4">
-                {STAGES.filter(s => stageCounts[s] > 0).map((stage) => (
-                  <div key={stage} className="text-right">
-                    <span className="text-[20px] font-black text-[#0E1111] tabular-nums leading-none">
-                      {stageCounts[stage]}
-                    </span>
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">
-                      {stage}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Toggle — same position as documentatie */}
+            <div className="flex items-center rounded-full border border-[#0E1111] p-0.5 shrink-0 mt-2">
+              <button
+                onClick={() => setActiveTab('percelen')}
+                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                  activeTab === 'percelen'
+                    ? 'bg-[#F9A826] text-[#0E1111]'
+                    : 'text-slate-400 hover:text-[#0E1111]'
+                }`}
+                title="Percelen"
+              >
+                <Bookmark size={16} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => setActiveTab('rapporten')}
+                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
+                  activeTab === 'rapporten'
+                    ? 'bg-[#F9A826] text-[#0E1111]'
+                    : 'text-slate-400 hover:text-[#0E1111]'
+                }`}
+                title="Rapporten"
+              >
+                <FileText size={16} strokeWidth={2} />
+              </button>
             </div>
           </div>
         </motion.div>

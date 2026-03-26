@@ -201,7 +201,7 @@ function SubsidiesPage() {
             </h1>
           </div>
           <p className="mt-1 text-[14px] text-slate-500">
-            woningbouw- en verduurzamingsregelingen op landelijk, provinciaal en gemeentelijk niveau
+            regelingen op landelijk, provinciaal en gemeentelijk niveau
           </p>
         </motion.div>
 
