@@ -701,6 +701,148 @@
     </table>
     {% endif %}
 
+    <!-- Energielabel -->
+    {% if report_data.get('energy_label') %}
+      {% set elabel = report_data.get('energy_label') %}
+    <h3>Energielabel</h3>
+    <table class="kv-table">
+      {% if elabel.get('is_geregistreerd') %}
+        {% if elabel.get('energieklasse') %}
+        <tr>
+          <td class="kv-label">Energieklasse</td>
+          <td class="kv-value"><strong>{{ elabel.get('energieklasse') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('registratie_datum') %}
+        <tr>
+          <td class="kv-label">Registratiedatum</td>
+          <td class="kv-value">{{ elabel.get('registratie_datum') }}</td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('geldig_tot') %}
+        <tr>
+          <td class="kv-label">Geldig tot</td>
+          <td class="kv-value">{{ elabel.get('geldig_tot') }}{% if elabel.get('is_geldig') == false %} <span style="color:var(--brand-red);">(verlopen)</span>{% endif %}</td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('berekenings_type') %}
+        <tr>
+          <td class="kv-label">Berekeningsmethode</td>
+          <td class="kv-value">{{ elabel.get('berekenings_type') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">Status</td>
+          <td class="kv-value no-data">{{ elabel.get('niet_geregistreerd_reden', 'Niet geregistreerd bij EP-Online') }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: EP-Online V5 (RVO) | Betrouwbaarheid: HOOG</div>
+    {% elif report_data.get('energielabel_flags') %}
+      {% set eflags = report_data.get('energielabel_flags') %}
+    <h3>Energielabel</h3>
+    <table class="kv-table">
+      {% if eflags is mapping %}
+        {% if eflags.get('energieklasse') or eflags.get('label') %}
+        <tr>
+          <td class="kv-label">Energieklasse</td>
+          <td class="kv-value"><strong>{{ eflags.get('energieklasse', eflags.get('label', '—')) }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if eflags.get('registratie_datum') %}
+        <tr>
+          <td class="kv-label">Registratiedatum</td>
+          <td class="kv-value">{{ eflags.get('registratie_datum') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">Energielabel</td>
+          <td class="kv-value">{{ eflags }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: EP-Online | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- WOZ waarde -->
+    {% if report_data.get('woz_data') %}
+      {% set woz = report_data.get('woz_data') %}
+    <h3>WOZ-waarde</h3>
+    <table class="kv-table">
+      {% if woz.get('meest_recente_waarde') is not none %}
+      <tr>
+        <td class="kv-label">Meest recente WOZ-waarde</td>
+        <td class="kv-value"><strong>€ {{ "{:,.0f}".format(woz.get('meest_recente_waarde')).replace(",", ".") }}</strong></td>
+      </tr>
+      {% endif %}
+      {% if woz.get('meest_recente_peildatum') %}
+      <tr>
+        <td class="kv-label">Peildatum</td>
+        <td class="kv-value">{{ woz.get('meest_recente_peildatum') }}</td>
+      </tr>
+      {% endif %}
+      {% if woz.get('grondoppervlakte') is not none %}
+      <tr>
+        <td class="kv-label">Grondoppervlakte</td>
+        <td class="kv-value">{{ woz.get('grondoppervlakte') }} m²</td>
+      </tr>
+      {% endif %}
+      {% if woz.get('low_confidence') %}
+      <tr>
+        <td class="kv-label">Betrouwbaarheid</td>
+        <td class="kv-value" style="color:var(--brand-accent);">{{ woz.get('low_confidence_reden', 'Data afkomstig uit onofficiële bron') }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% if woz.get('waarden') and woz.get('waarden') | length > 1 %}
+    <h4>WOZ-waardenhistorie</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Peildatum</th>
+          <th>Vastgestelde waarde</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in woz.get('waarden', [])[:5] %}
+        <tr>
+          <td>{{ w.get('peildatum', '—') }}</td>
+          <td>{% if w.get('vastgestelde_waarde') is not none %}€ {{ "{:,.0f}".format(w.get('vastgestelde_waarde')).replace(",", ".") }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <div class="source-meta">Bron: {{ woz.get('bron', 'WOZ Waardeloket') }} | Betrouwbaarheid: {% if woz.get('low_confidence') %}GEMIDDELD{% else %}HOOG{% endif %}</div>
+    {% elif report_data.get('woz_flags') %}
+      {% set wflags = report_data.get('woz_flags') %}
+    <h3>WOZ-waarde</h3>
+    <table class="kv-table">
+      {% if wflags is mapping %}
+        {% if wflags.get('waarde') or wflags.get('woz_waarde') %}
+        <tr>
+          <td class="kv-label">WOZ-waarde</td>
+          <td class="kv-value"><strong>€ {{ wflags.get('waarde', wflags.get('woz_waarde', '—')) }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if wflags.get('peildatum') %}
+        <tr>
+          <td class="kv-label">Peildatum</td>
+          <td class="kv-value">{{ wflags.get('peildatum') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">WOZ-waarde</td>
+          <td class="kv-value">{{ wflags }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: WOZ Waardeloket | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
     <div class="source-meta">Bron: BAG — Basisregistratie Adressen en Gebouwen (PDOK) | Betrouwbaarheid: HOOG</div>
   </div>
 
@@ -737,9 +879,103 @@
     <p class="no-data">Geen kadastrale gegevens beschikbaar.</p>
     {% endif %}
 
+    <!-- BRK Ownership -->
+    {% if report_data.get('brk_ownership') %}
+      {% set brk = report_data.get('brk_ownership') %}
+      {% if brk.get('status') == 'available' and brk.get('data') %}
+    <h3>Eigendomsgegevens (BRK)</h3>
+        {% for po in brk.get('data', []) %}
+    <h4>{{ po.get('perceel_identificatie', 'Perceel') }}</h4>
+          {% if po.get('gerechtigden') and po.get('gerechtigden') | length > 0 %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Naam / Entiteit</th>
+          <th>Zakelijk recht</th>
+          <th>Aandeel</th>
+          <th>Koopsom</th>
+          <th>Koopjaar</th>
+        </tr>
+      </thead>
+      <tbody>
+            {% for g in po.get('gerechtigden', []) %}
+        <tr>
+          <td>
+                {% if g.get('eigenaar_type') == 'natuurlijk_persoon' %}Natuurlijk persoon
+                {% elif g.get('eigenaar_type') == 'rechtspersoon' %}Rechtspersoon
+                {% elif g.get('eigenaar_type') == 'overheid' %}Overheid
+                {% else %}Onbekend{% endif %}
+          </td>
+          <td>
+                {# AVG: NEVER render naam for natuurlijk_persoon #}
+                {% if g.get('eigenaar_type') == 'natuurlijk_persoon' %}
+                  <span class="no-data">Niet getoond (AVG)</span>
+                {% elif g.get('naam') %}
+                  {{ g.get('naam') }}{% if g.get('kvk_nummer') %} <span style="font-size:8pt;color:var(--brand-muted);">(KvK: {{ g.get('kvk_nummer') }})</span>{% endif %}
+                {% else %}
+                  —
+                {% endif %}
+          </td>
+          <td>{{ g.get('zakelijk_recht_type', '—') }}</td>
+          <td>{{ g.get('aandeel', '—') }}</td>
+          <td>{% if g.get('koopsom') is not none %}€ {{ "{:,.0f}".format(g.get('koopsom')).replace(",", ".") }}{% else %}—{% endif %}</td>
+          <td>{{ g.get('koopjaar', '—') }}</td>
+        </tr>
+            {% endfor %}
+      </tbody>
+    </table>
+          {% else %}
+    <p class="no-data">Geen gerechtigden gevonden voor dit perceel.</p>
+          {% endif %}
+          {% if po.get('heeft_hypotheek') and po.get('hypotheken') | length > 0 %}
+    <h4 style="margin-top:0.5em;">Hypotheken</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Hypotheekhouder</th>
+          <th>Bedrag</th>
+          <th>Aard</th>
+        </tr>
+      </thead>
+      <tbody>
+            {% for h in po.get('hypotheken', []) %}
+        <tr>
+          <td>{{ h.get('hypotheekhouder_naam', '—') }}</td>
+          <td>{% if h.get('bedrag') is not none %}€ {{ "{:,.0f}".format(h.get('bedrag')).replace(",", ".") }}{% else %}—{% endif %}</td>
+          <td>{{ h.get('aard', '—') }}</td>
+        </tr>
+            {% endfor %}
+      </tbody>
+    </table>
+          {% endif %}
+          {% if po.get('beslagen') and po.get('beslagen') | length > 0 %}
+    <div class="disclaimer-box" style="margin-top:0.4em;">
+      <strong>⚠ Beslag geregistreerd:</strong>
+      <ul style="margin-left:1em;margin-top:0.2em;">
+            {% for b in po.get('beslagen', []) %}
+        <li>{{ b.get('aard', 'Onbekend type beslag') }}</li>
+            {% endfor %}
+      </ul>
+    </div>
+          {% endif %}
+        {% endfor %}
+    <div class="source-meta">Bron: Kadaster BRK Bevragen V2 (live) | Opgehaald: {{ brk.get('fetched_at', '—')[:10] if brk.get('fetched_at') else '—' }} | Betrouwbaarheid: HOOG</div>
+      {% elif brk.get('status') == 'unavailable' %}
+    <div class="note-box">
+      <strong>Eigendomsinformatie:</strong> {{ brk.get('reason', 'BRK eigendomsdata is momenteel niet beschikbaar.') }}
+      {% if brk.get('admin_hint') %}<br><span style="font-size:8pt;color:var(--brand-muted);">{{ brk.get('admin_hint') }}</span>{% endif %}
+    </div>
+      {% elif brk.get('status') == 'error' %}
+    <div class="disclaimer-box">
+      <strong>Fout bij ophalen eigendomsdata:</strong> {{ brk.get('reason', 'Onbekende fout bij BRK API.') }}
+    </div>
+      {% endif %}
+    {% else %}
     <div class="note-box">
       <strong>Eigendomsinformatie:</strong> Gedetailleerde eigendomsgegevens (eigenaar, zakelijk recht, koopsom) zijn beschikbaar via on-demand BRK opvraging binnen Propdex. Raadpleeg de "Eigendom" functie in het perceeldossier voor actuele BRK-data (Kadaster Tier 3).
     </div>
+    {% endif %}
 
     <div class="source-meta">Bron: PDOK Kadaster OGC API (BRK Percelen) | Betrouwbaarheid: HOOG</div>
   </div>
@@ -847,6 +1083,151 @@
 
     {% else %}
     <p class="no-data">Geen bestemmingsplangegevens beschikbaar.</p>
+    {% endif %}
+
+    <!-- Buildability Delta -->
+    {% if report_data.get('buildability_delta') %}
+      {% set bd = report_data.get('buildability_delta') %}
+    <h3>Bouwenvelop-analyse (huidige vs. toegestane bebouwing)</h3>
+    <table class="kv-table">
+      {% if bd.get('parcel_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Perceeloppervlakte</td>
+        <td class="kv-value">{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_built_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Huidig bebouwd oppervlak</td>
+        <td class="kv-value">{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_built_ratio_pct') is not none %}
+      <tr>
+        <td class="kv-label">Huidige bebouwingsgraad</td>
+        <td class="kv-value">{{ bd.get('current_built_ratio_pct') | round(1) }}%</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('max_bebouwingspercentage_pct') is not none %}
+      <tr>
+        <td class="kv-label">Max. bebouwingspercentage (bestemmingsplan)</td>
+        <td class="kv-value">{{ bd.get('max_bebouwingspercentage_pct') | round(1) }}%</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('max_buildable_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Max. bebouwbaar oppervlak</td>
+        <td class="kv-value">{{ bd.get('max_buildable_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('remaining_buildable_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Resterende bouwruimte</td>
+        <td class="kv-value">
+          <strong>{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²</strong>
+          {% if bd.get('remaining_buildable_area_m2') > 0 %}
+            <span style="color:var(--brand-green);font-size:8.5pt;"> (uitbreidingsruimte)</span>
+          {% elif bd.get('remaining_buildable_area_m2') == 0 %}
+            <span style="color:var(--brand-muted);font-size:8.5pt;"> (volledig benut)</span>
+          {% else %}
+            <span style="color:var(--brand-red);font-size:8.5pt;"> (overschreden)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_far') is not none %}
+      <tr>
+        <td class="kv-label">Huidige FAR (Floor Area Ratio)</td>
+        <td class="kv-value">{{ bd.get('current_far') | round(2) }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: BAG + DSO (berekend) | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- Wkb Classification -->
+    {% if report_data.get('wkb_classification') %}
+      {% set wkbc = report_data.get('wkb_classification') %}
+    <h3>Wkb Gevolgklasse</h3>
+    <table class="kv-table">
+      <tr>
+        <td class="kv-label">Wkb van toepassing</td>
+        <td class="kv-value">
+          {% if wkbc.get('wkb_applicable') %}
+            <strong style="color:var(--brand-green);">Ja</strong>
+          {% else %}
+            <strong>Nee</strong>{% if wkbc.get('exclusion_reason') %} — {{ wkbc.get('exclusion_reason') }}{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="kv-label">Gevolgklasse</td>
+        <td class="kv-value">
+          {% if wkbc.get('gevolgklasse') == 'GK1' %}
+            <strong>GK1</strong> (grondgebonden woning)
+          {% elif wkbc.get('gevolgklasse') == 'niet_van_toepassing' %}
+            Niet van toepassing
+          {% else %}
+            Onbekend
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:8pt;color:var(--brand-muted);margin-top:0.2em;">{{ wkbc.get('disclaimer', '') }}</p>
+    {% endif %}
+
+    <!-- Wkb Precheck -->
+    {% if report_data.get('wkb_precheck') %}
+      {% set wkbp = report_data.get('wkb_precheck') %}
+    <h3>Wkb Startdossier Precheck</h3>
+    <div class="risk-block">
+      <h4>
+        {% if wkbp.get('status') == 'likely_required' %}
+          <span class="dot dot-amber"></span>
+        {% elif wkbp.get('status') == 'likely_not_required' or wkbp.get('status') == 'not_applicable' %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        Status: {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
+        <span style="font-size:8pt;color:var(--brand-muted);margin-left:0.5em;">(zekerheid: {{ wkbp.get('confidence', 'low') }})</span>
+      </h4>
+      {% if wkbp.get('triggered_rules') and wkbp.get('triggered_rules') | length > 0 %}
+      <table class="data-table" style="margin-top:0.4em;">
+        <thead>
+          <tr>
+            <th>Regel</th>
+            <th>Effect</th>
+            <th>Toelichting</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in wkbp.get('triggered_rules', []) %}
+          <tr>
+            <td style="font-size:8.5pt;">{{ rule.get('title', rule.get('code', '—')) }}</td>
+            <td style="font-size:8.5pt;">
+              {% if rule.get('impact') == 'increase' %}↑ waarschijnlijker
+              {% elif rule.get('impact') == 'decrease' %}↓ minder waarschijnlijk
+              {% else %}? onzeker{% endif %}
+            </td>
+            <td style="font-size:8.5pt;">{{ rule.get('reason', '—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if wkbp.get('missing_inputs') and wkbp.get('missing_inputs') | length > 0 %}
+      <p style="font-size:8.5pt;color:var(--brand-muted);margin-top:0.3em;">
+        <strong>Ontbrekende gegevens:</strong> {{ wkbp.get('missing_inputs') | join(', ') }}
+      </p>
+      {% endif %}
+      {% if wkbp.get('required_documents') and wkbp.get('required_documents') | length > 0 %}
+      <p style="font-size:8.5pt;margin-top:0.2em;">
+        <strong>Aanbevolen documenten:</strong> {{ wkbp.get('required_documents') | join(', ') }}
+      </p>
+      {% endif %}
+    </div>
+    <p style="font-size:8pt;color:var(--brand-muted);margin-top:0.2em;">{{ wkbp.get('disclaimer', '') }}</p>
     {% endif %}
 
     <div class="source-meta">Bron: DSO Ruimtelijke Plannen (PDOK) | Betrouwbaarheid: HOOG</div>
