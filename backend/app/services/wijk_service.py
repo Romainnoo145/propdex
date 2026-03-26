@@ -37,6 +37,13 @@ async def get_wijken_in_gemeente(
     # Strip GM prefix if present: "GM0983" -> "0983"
     gemeente_statcode = gemeente_code.replace("GM", "")
 
+    # Validate gemeente_code is exactly 4 digits after stripping GM prefix
+    if not gemeente_statcode.isdigit() or len(gemeente_statcode) != 4:
+        raise ValueError(
+            f"Invalid gemeente_code '{gemeente_code}': "
+            f"must be 4 digits (e.g., '0983') or GM-prefixed (e.g., 'GM0983')"
+        )
+
     # Use OGC XML FILTER with PropertyIsLike wildcard pattern
     # Pattern: WK0983% matches WK098301, WK098302, etc.
     # CRITICAL: Use OGC XML FILTER (not CQL_FILTER -- silently ignored by PDOK CBS WFS)
