@@ -80,6 +80,13 @@ function AuthenticatedLayout() {
 
   return (
     <WorkspaceProvider>
+      {/* Skip navigation link — visible on focus for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-aura-obsidian focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg"
+      >
+        Ga naar hoofdinhoud
+      </a>
       {/* The Desk: Morning Mist canvas with background blobs */}
       <div className="h-screen w-screen overflow-hidden bg-aura-canvas">
         {/* Background mesh blobs — sidebar absorbs Sage Mint via backdrop-blur */}
@@ -141,15 +148,17 @@ function AuthenticatedLayout() {
 
             {/* Outlet: absolute overlay on map route, flex child on other routes */}
             <MapContext.Provider value={{ mapRef, mapReady, panelPortalRef, panelOpen, setPanelOpen, leftPanelPortalRef, leftPanelOpen, setLeftPanelOpen }}>
-              {isMapVisible ? (
-                <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-                  <Outlet />
-                </div>
-              ) : (
-                <div className="flex-1 min-w-0 relative h-full">
-                  <Outlet />
-                </div>
-              )}
+              <main id="main-content">
+                {isMapVisible ? (
+                  <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+                    <Outlet />
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0 relative h-full">
+                    <Outlet />
+                  </div>
+                )}
+              </main>
             </MapContext.Provider>
           </div>
         </div>

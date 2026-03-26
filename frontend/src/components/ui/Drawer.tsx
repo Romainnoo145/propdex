@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useId } from 'react';
 import FocusLock from 'react-focus-lock';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
@@ -7,6 +7,7 @@ interface DrawerProps {
   onClose: () => void;
   children: React.ReactNode;
   width?: 'sm' | 'md' | 'lg';
+  title?: string;
 }
 
 const widthClasses = {
@@ -22,8 +23,9 @@ const widthClasses = {
  * - Backdrop click to close
  * - CSS slide-in animation
  */
-export function Drawer({ isOpen, onClose, children, width = 'md' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, children, width = 'md', title }: DrawerProps) {
   const isAnimatingRef = useRef(false);
+  const titleId = useId();
 
   useEscapeKey(onClose, isOpen);
 
@@ -54,9 +56,11 @@ export function Drawer({ isOpen, onClose, children, width = 'md' }: DrawerProps)
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
           className={`fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[85vh] border-t border-neutral-200 bg-aura-glass-white/60 shadow-2xl flex flex-col md:inset-x-auto md:right-0 md:top-0 md:bottom-0 md:rounded-none md:max-h-none md:border-t-0 md:border-l md:border-neutral-200 ${widthClasses[width]} md:w-full transition-transform duration-300 ease-out translate-x-0`}
           style={{ zIndex: 'calc(var(--z-property-panel) + 1)' }}
         >
+          {title && <span id={titleId} className="sr-only">{title}</span>}
           {/* Drag handle - mobile only */}
           <div className="flex justify-center py-2 md:hidden flex-shrink-0">
             <div className="w-10 h-1 bg-neutral-300 rounded-full" />

@@ -15,11 +15,13 @@ export default function BottomTabNav() {
 
   return (
     <nav
+      aria-label="Navigatie"
       className="fixed inset-x-0 bottom-0 flex border-t border-neutral-200 bg-aura-glass-white/60 md:hidden"
       style={{ zIndex: 'var(--z-bottom-nav)' }}
     >
       <Link
         to="/map"
+        aria-label="Kaart"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
           matchRoute({ to: '/map' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
@@ -30,6 +32,7 @@ export default function BottomTabNav() {
 
       <Link
         to="/opgeslagen"
+        aria-label="Opgeslagen"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
           matchRoute({ to: '/opgeslagen' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
@@ -40,6 +43,7 @@ export default function BottomTabNav() {
 
       <Link
         to="/jurisprudentie"
+        aria-label="Juridisch"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
           matchRoute({ to: '/jurisprudentie' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}
@@ -50,6 +54,7 @@ export default function BottomTabNav() {
 
       <Link
         to="/verkenner"
+        aria-label="Verkenner"
         className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
           matchRoute({ to: '/verkenner' }) ? 'text-aura-amber' : 'text-neutral-600'
         }`}

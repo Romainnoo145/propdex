@@ -44,7 +44,7 @@ export default function SideRailNav() {
     const isActive = matchRoute({ to: item.to })
     return (
       <div key={item.to + item.label} className="w-full flex justify-center">
-        <Link to={item.to} search={item.search} className="group relative flex justify-center">
+        <Link to={item.to} search={item.search} aria-label={item.label} className="group relative flex justify-center">
           <div className="relative flex h-12 w-12 items-center justify-center">
             {isActive && (
               <motion.div
@@ -69,7 +69,7 @@ export default function SideRailNav() {
   const isSettingsActive = matchRoute({ to: '/instellingen' })
 
   return (
-    <div className="fixed left-0 top-0 bottom-0 w-[130px] flex flex-col items-center justify-between py-10 z-[100]">
+    <nav aria-label="Hoofdnavigatie" className="fixed left-0 top-0 bottom-0 w-[130px] flex flex-col items-center justify-between py-10 z-[100]">
 
       {/* Top: Logo */}
       <div className="w-full flex justify-center">
@@ -86,7 +86,7 @@ export default function SideRailNav() {
       {/* Bottom: System buttons — no container */}
       <div className="flex flex-col items-center gap-4">
         <div className="w-full flex justify-center">
-          <Link to="/documentatie" className="group relative flex justify-center">
+          <Link to="/documentatie" aria-label="Documentatie" className="group relative flex justify-center">
             <div className="relative flex h-12 w-12 items-center justify-center">
               {matchRoute({ to: '/documentatie' }) && (
                 <motion.div
@@ -105,7 +105,7 @@ export default function SideRailNav() {
           </Link>
         </div>
         <div className="w-full flex justify-center">
-          <Link to="/instellingen" className="group relative flex justify-center">
+          <Link to="/instellingen" aria-label="Instellingen" className="group relative flex justify-center">
             <div className="relative flex h-12 w-12 items-center justify-center">
               {isSettingsActive && (
                 <motion.div
@@ -124,7 +124,7 @@ export default function SideRailNav() {
           </Link>
         </div>
         <div className="w-full flex justify-center">
-          <button onClick={handleLogout} className="group relative flex justify-center">
+          <button onClick={handleLogout} aria-label="Uitloggen" className="group relative flex justify-center">
             <div className="relative flex h-12 w-12 items-center justify-center">
               <span className="text-slate-500 transition-colors duration-300 group-hover:text-aura-ink">
                 <LogOut size={22} strokeWidth={1.5} />
@@ -136,6 +136,6 @@ export default function SideRailNav() {
           </button>
         </div>
       </div>
-    </div>
+    </nav>
   )
 }
