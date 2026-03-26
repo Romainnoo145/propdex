@@ -172,9 +172,13 @@ export function ActionItems() {
                   <div
                     key={item.id}
                     onClick={() => setSelected(item)}
-                    className="flex h-full flex-col rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-shadow hover:shadow-md cursor-pointer"
+                    className={`flex h-full flex-col rounded-[24px] border bg-white px-6 py-5 transition-shadow hover:shadow-md cursor-pointer ${
+                      item.priority === 'hoog' ? 'border-l-[3px] border-l-red-400 border-[#EAEFEF]' : 'border-[#EAEFEF]'
+                    }`}
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#F9A826] mb-1.5 line-clamp-1">
+                    <p className={`text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5 line-clamp-1 ${
+                      item.priority === 'hoog' ? 'text-red-500' : item.priority === 'middel' ? 'text-[#F9A826]' : 'text-slate-400'
+                    }`}>
                       {item.priority}
                     </p>
                     <h3 className="text-[14px] font-semibold text-[#0E1111] leading-snug">{item.title}</h3>

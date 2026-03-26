@@ -513,15 +513,15 @@ async def get_report_by_source_parcel(
 
 async def list_reports(
     user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    city: str | None,
-    project_id: uuid.UUID | None,
-    search_query: str | None,
-    sort_by: str,
-    sort_order: str,
-    offset: int,
-    limit: int,
-    session: AsyncSession,
+    organization_id: uuid.UUID | None = None,
+    city: str | None = None,
+    project_id: uuid.UUID | None = None,
+    search_query: str | None = None,
+    sort_by: str = "updated",
+    sort_order: str = "desc",
+    offset: int = 0,
+    limit: int = 50,
+    session: AsyncSession | None = None,
 ) -> tuple[list[SavedReport], int]:
     """
     List saved reports with filtering, search, sorting, and pagination.
@@ -542,7 +542,8 @@ async def list_reports(
         tuple: (list of SavedReport, total count)
     """
     # One-time safety pass: ensure legacy data is also folder-linked.
-    await _backfill_unassigned_reports(user_id=user_id, organization_id=organization_id, session=session)
+    if organization_id is not None:
+        await _backfill_unassigned_reports(user_id=user_id, organization_id=organization_id, session=session)
 
     # Start from active reports query
     query = active_reports_query(user_id)
@@ -551,13 +552,15 @@ async def list_reports(
     if city is not None:
         query = query.where(SavedReport.city == city)
 
-    if project_id is not None:
+    if project_id is not None and organization_id is not None:
         scoped_project_ids = await _collect_project_scope_ids(
             organization_id=organization_id,
             root_project_id=project_id,
             session=session,
         )
         query = query.where(SavedReport.project_id.in_(scoped_project_ids))
+    elif project_id is not None:
+        query = query.where(SavedReport.project_id == project_id)
 
     if search_query is not None:
         query = query.where(SavedReport.report_name.ilike(f"%{search_query}%"))
