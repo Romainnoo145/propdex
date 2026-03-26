@@ -61,7 +61,7 @@ export default function BenchmarkBar({ uitkomstFacets }: BenchmarkBarProps) {
             />
           ))}
         </svg>
-        <span className="absolute text-[20px] font-black tabular-nums leading-none text-[#0E1111]">
+        <span className="absolute text-[20px] font-black tabular-nums leading-none text-aura-obsidian">
           {decided}
         </span>
       </div>
@@ -71,7 +71,7 @@ export default function BenchmarkBar({ uitkomstFacets }: BenchmarkBarProps) {
         {segments.map((s) => (
           <span key={s.label} className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="tabular-nums font-semibold text-[#0E1111]">{s.count}</span>
+            <span className="tabular-nums font-semibold text-aura-obsidian">{s.count}</span>
             {s.label}
           </span>
         ))}

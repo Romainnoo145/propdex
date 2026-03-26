@@ -219,7 +219,7 @@ function JurisprudentiePage() {
               >
                 Jurisprudentie
               </p>
-              <h1 className="text-[56px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums" style={{ textWrap: 'balance' }}>
+              <h1 className="text-[56px] font-black tracking-tighter text-aura-obsidian leading-none tabular-nums" style={{ textWrap: 'balance' }}>
                 {totalCount}
               </h1>
               <p className="text-[13px] text-slate-500 mt-1">
@@ -268,7 +268,7 @@ function JurisprudentiePage() {
           </div>
           <button
             onClick={goToWizard}
-            className="flex items-center gap-1.5 rounded-full bg-[#0E1111] h-[36px] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 shrink-0"
+            className="flex items-center gap-1.5 rounded-full bg-aura-obsidian h-[36px] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 shrink-0"
           >
             <SlidersHorizontal size={13} />
             Filters aanpassen
@@ -297,7 +297,7 @@ function JurisprudentiePage() {
             {[
               { value: 'afgewezen', label: 'Afgewezen', activeBg: 'bg-red-500/15 border-red-500/30 text-red-600' },
               { value: 'toegewezen', label: 'Toegewezen', activeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600' },
-              { value: 'gedeeltelijk', label: 'Gedeeltelijk', activeBg: 'bg-[#F9A826]/15 border-[#F9A826]/30 text-[#D48B1A]' },
+              { value: 'gedeeltelijk', label: 'Gedeeltelijk', activeBg: 'bg-aura-amber/15 border-aura-amber/30 text-aura-amber' },
             ].map(({ value, label, activeBg }) => {
               const isActive = filters.uitkomst === value
               return (
@@ -307,7 +307,7 @@ function JurisprudentiePage() {
                   className={`inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
                     isActive
                       ? activeBg
-                      : 'bg-white border-[#EAEFEF] text-[#0E1111] hover:border-slate-300'
+                      : 'bg-aura-glass-white/60 border-neutral-200 text-aura-obsidian hover:border-slate-300'
                   }`}
                 >
                   {label}
@@ -333,7 +333,7 @@ function JurisprudentiePage() {
         {isLoading && (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-2 rounded-[24px] border border-[#EAEFEF] bg-white p-5">
+              <div key={i} className="space-y-2 rounded-2xl border border-neutral-200 bg-aura-glass-white/60 p-5">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />
                 <div className="flex gap-2">
@@ -359,13 +359,13 @@ function JurisprudentiePage() {
         {!isLoading && allResults.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Scale size={40} strokeWidth={1.5} className="mb-3 text-slate-300" />
-            <h2 className="text-[15px] font-bold text-[#0E1111]">Geen uitspraken gevonden</h2>
+            <h2 className="text-[15px] font-bold text-aura-obsidian">Geen uitspraken gevonden</h2>
             <p className="mt-1 max-w-sm text-[13px] text-slate-400">
               Pas je filters aan om meer resultaten te vinden.
             </p>
             <button
               onClick={goToWizard}
-              className="mt-5 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
+              className="mt-5 rounded-full bg-aura-obsidian px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
             >
               Filters aanpassen
             </button>
@@ -375,7 +375,7 @@ function JurisprudentiePage() {
         {/* Loading more */}
         {isFetchingNextPage && (
           <div className="mt-4 flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#F9A826]" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-aura-amber" />
           </div>
         )}
 
@@ -395,7 +395,7 @@ function JurisprudentiePage() {
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0E1111] shadow-sm border border-[#EAEFEF]">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-aura-glass-white/60 px-3 py-1.5 text-[11px] font-semibold text-aura-obsidian shadow-sm border border-neutral-200">
       {label}
       <button
         onClick={onRemove}

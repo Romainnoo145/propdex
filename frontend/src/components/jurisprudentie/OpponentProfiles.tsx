@@ -15,7 +15,7 @@ function CaseRing({ zaken }: { zaken: number }) {
       <svg viewBox="0 0 40 40" className="h-11 w-11" style={{ transform: 'rotate(-90deg)' }}>
         <circle cx="20" cy="20" r={r} fill="none" stroke="#F9A826" strokeWidth="3.5" />
       </svg>
-      <span className="absolute text-[10px] font-black tabular-nums leading-none text-[#0E1111]">
+      <span className="absolute text-[10px] font-black tabular-nums leading-none text-aura-obsidian">
         {zaken}
       </span>
     </div>
@@ -30,9 +30,9 @@ export default function OpponentProfiles({ profiles }: OpponentProfilesProps) {
   const hasMore = profiles.length > 5
 
   return (
-    <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-5">
+    <div className="rounded-2xl border border-neutral-200 bg-aura-glass-white/60 p-5">
       <div className="mb-4 flex items-center gap-2">
-        <Shield size={14} className="text-[#F9A826]" />
+        <Shield size={14} className="text-aura-amber" />
         <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
           Tegenstanders
         </p>
@@ -41,10 +41,10 @@ export default function OpponentProfiles({ profiles }: OpponentProfilesProps) {
         {visible.map((p) => (
           <div
             key={p.naam}
-            className="flex items-center gap-3 rounded-[12px] bg-[#F2F6F3] px-3.5 py-2.5"
+            className="flex items-center gap-3 rounded-[12px] bg-aura-canvas px-3.5 py-2.5"
           >
             <CaseRing zaken={p.zaken} />
-            <p className="truncate text-[13px] font-semibold text-[#0E1111] min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-aura-obsidian min-w-0 flex-1">
               {p.naam}
             </p>
             {/* Right: gewonnen count — always visible */}
@@ -52,7 +52,7 @@ export default function OpponentProfiles({ profiles }: OpponentProfilesProps) {
               {p.gewonnen > 0 && (
                 <span className="text-[13px] font-black text-emerald-600">↑</span>
               )}
-              <span className="text-[13px] font-bold tabular-nums text-[#0E1111]">
+              <span className="text-[13px] font-bold tabular-nums text-aura-obsidian">
                 {p.gewonnen} gewonnen
               </span>
             </div>

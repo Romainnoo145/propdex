@@ -141,9 +141,9 @@ export default function WizardFlow({
               onClick={() => setStep(s)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 i === progressIndex
-                  ? 'w-8 bg-[#F9A826]'
+                  ? 'w-8 bg-aura-amber'
                   : i < progressIndex
-                    ? 'w-2 bg-[#F9A826]/50 hover:bg-[#F9A826]/70'
+                    ? 'w-2 bg-aura-amber/50 hover:bg-aura-amber/70'
                     : 'w-2 bg-slate-200 hover:bg-slate-300'
               }`}
             />
@@ -250,7 +250,7 @@ export default function WizardFlow({
           >
             <button
               onClick={() => setStep(0)}
-              className="rounded-full bg-[#F2F6F3] px-5 py-2.5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#E8EEEA]"
+              className="rounded-full bg-aura-canvas px-5 py-2.5 text-[13px] font-semibold text-aura-obsidian transition-colors hover:bg-neutral-200"
             >
               Ga naar schaalniveau
             </button>
@@ -340,7 +340,7 @@ export default function WizardFlow({
         {step > 0 ? (
           <button
             onClick={goBack}
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-slate-400 transition-colors hover:text-[#0E1111]"
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-slate-400 transition-colors hover:text-aura-obsidian"
           >
             <ArrowLeft size={14} />
             Vorige
@@ -360,7 +360,7 @@ export default function WizardFlow({
           )}
           <button
             onClick={onComplete}
-            className="flex items-center gap-2 rounded-full bg-[#0E1111] px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-full bg-aura-obsidian px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-slate-800"
           >
             Toon {totalCount} resultaten
             <ArrowRight size={14} />
@@ -390,7 +390,7 @@ function StepPage({
       >
         Jurisprudentie
       </p>
-      <h1 className="text-[28px] font-black tracking-tight text-[#0E1111] sm:text-[36px]">
+      <h1 className="text-[28px] font-black tracking-tight text-aura-obsidian sm:text-[36px]">
         {title}
       </h1>
       <p className="mt-2 text-[13px] text-slate-500">{subtitle}</p>
@@ -417,32 +417,32 @@ function WizardCard({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col overflow-hidden rounded-[24px] border-2 px-5 py-5 text-left transition-all ${
+      className={`relative flex flex-col overflow-hidden rounded-2xl border-2 px-5 py-5 text-left transition-all ${
         selected
-          ? 'border-[#0E1111] bg-[#F9A826]'
-          : 'border-[#0E1111]/40 bg-white hover:border-[#0E1111]/60 hover:shadow-sm'
+          ? 'border-aura-obsidian bg-aura-amber'
+          : 'border-aura-obsidian/40 bg-aura-glass-white/60 hover:border-aura-obsidian/60 hover:shadow-sm'
       }`}
     >
       {selected && (
-        <Check size={14} className="absolute right-3 top-3 text-[#0E1111]" />
+        <Check size={14} className="absolute right-3 top-3 text-aura-obsidian" />
       )}
       <span
         className={`block text-[15px] font-bold leading-snug ${
-          selected ? 'text-[#0E1111]' : 'text-[#0E1111]'
+          selected ? 'text-aura-obsidian' : 'text-aura-obsidian'
         }`}
       >
         {label}
       </span>
       {desc && (
         <span className={`mt-1.5 block text-[12px] leading-relaxed ${
-          selected ? 'text-[#0E1111]/60' : 'text-slate-400'
+          selected ? 'text-aura-obsidian/60' : 'text-slate-400'
         }`}>
           {desc}
         </span>
       )}
       {count != null && (
         <span className={`mt-auto block pt-3 text-[11px] font-semibold tabular-nums ${
-          selected ? 'text-[#0E1111]/70' : 'text-[#F9A826]'
+          selected ? 'text-aura-obsidian/70' : 'text-aura-amber'
         }`}>
           {count} zaken
         </span>
@@ -467,16 +467,16 @@ function SubCard({
       onClick={onClick}
       className={`flex items-center justify-between rounded-[12px] border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-all ${
         selected
-          ? 'border-[#0E1111] bg-[#F9A826] text-[#0E1111]'
-          : 'border-[#0E1111]/40 bg-white text-[#0E1111] hover:border-[#0E1111]/60 hover:shadow-sm'
+          ? 'border-aura-obsidian bg-aura-amber text-aura-obsidian'
+          : 'border-aura-obsidian/40 bg-aura-glass-white/60 text-aura-obsidian hover:border-aura-obsidian/60 hover:shadow-sm'
       }`}
     >
       <span className="flex items-center gap-1.5">
-        {selected && <Check size={12} className="text-[#0E1111]" />}
+        {selected && <Check size={12} className="text-aura-obsidian" />}
         {label}
       </span>
       <span className={`ml-1.5 text-[11px] font-semibold tabular-nums ${
-        selected ? 'text-[#0E1111]/70' : 'text-[#F9A826]'
+        selected ? 'text-aura-obsidian/70' : 'text-aura-amber'
       }`}>({count})</span>
     </button>
   )

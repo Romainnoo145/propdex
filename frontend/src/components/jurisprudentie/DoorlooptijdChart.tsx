@@ -24,9 +24,9 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
   const maxDays = Math.max(...withAvg.map((d) => d.avg_dagen!))
 
   return (
-    <div className="rounded-[24px] border border-[#EAEFEF] bg-white p-5">
+    <div className="rounded-2xl border border-neutral-200 bg-aura-glass-white/60 p-5">
       <div className="mb-4 flex items-center gap-2">
-        <Clock size={14} className="text-[#F9A826]" />
+        <Clock size={14} className="text-aura-amber" />
         <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
           Doorlooptijd per type
         </p>
@@ -41,7 +41,7 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
             return (
               <div key={d.vergunningstype} className="space-y-1">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[13px] font-semibold text-[#0E1111]">
+                  <span className="text-[13px] font-semibold text-aura-obsidian">
                     {TYPE_LABELS[d.vergunningstype] ?? d.vergunningstype}
                   </span>
                   <span className="text-[11px] tabular-nums text-slate-500">
@@ -51,9 +51,9 @@ export default function DoorlooptijdChart({ data }: DoorlooptijdChartProps) {
                     </span>
                   </span>
                 </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-[#F2F6F3]">
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-aura-canvas">
                   <div
-                    className="rounded-full bg-[#F9A826]/60"
+                    className="rounded-full bg-aura-amber/60"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

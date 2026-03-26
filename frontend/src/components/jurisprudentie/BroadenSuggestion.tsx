@@ -63,16 +63,16 @@ export default function BroadenSuggestion({
   suggestions.sort((a, b) => b.additionalResults - a.additionalResults)
 
   return (
-    <div className="rounded-[24px] border border-[#F9A826]/20 bg-[#F9A826]/5 p-5">
+    <div className="rounded-2xl border border-aura-amber/20 bg-aura-amber/5 p-5">
       <div className="flex items-start gap-3">
-        <Lightbulb size={18} className="mt-0.5 shrink-0 text-[#F9A826]" />
+        <Lightbulb size={18} className="mt-0.5 shrink-0 text-aura-amber" />
         <div>
           {resultCount === 0 ? (
-            <p className="text-[13px] font-semibold text-[#0E1111]">
+            <p className="text-[13px] font-semibold text-aura-obsidian">
               Geen uitspraken gevonden.
             </p>
           ) : (
-            <p className="text-[13px] font-semibold text-[#0E1111]">
+            <p className="text-[13px] font-semibold text-aura-obsidian">
               Slechts {resultCount} {resultCount === 1 ? 'uitspraak' : 'uitspraken'} gevonden.
             </p>
           )}
@@ -83,7 +83,7 @@ export default function BroadenSuggestion({
                 <li key={s.dimension}>
                   <button
                     onClick={() => onRemoveFilter(s.dimension)}
-                    className="text-[13px] text-[#F9A826] underline decoration-[#F9A826]/30 underline-offset-2 transition-colors hover:text-[#E8971F] hover:decoration-[#E8971F]/50"
+                    className="text-[13px] text-aura-amber underline decoration-aura-amber/30 underline-offset-2 transition-colors hover:text-aura-amber/80 hover:decoration-aura-amber/50"
                   >
                     Verwijder filter &apos;{DIMENSION_LABELS[s.dimension]}: {s.filterValue}&apos;
                     {' '}voor ~{s.additionalResults} meer {s.additionalResults === 1 ? 'resultaat' : 'resultaten'}

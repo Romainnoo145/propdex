@@ -21,7 +21,7 @@ function uitkomstStyle(uitkomst: string | null): string {
     case 'afgewezen':
       return 'bg-red-500/15 text-red-600 hover:bg-red-500/25'
     case 'gedeeltelijk':
-      return 'bg-[#F9A826]/15 text-[#D48B1A] hover:bg-[#F9A826]/25'
+      return 'bg-aura-amber/15 text-aura-amber hover:bg-aura-amber/25'
     default:
       return 'bg-slate-100 text-slate-500'
   }
@@ -114,20 +114,20 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
   return (
     <div
       onClick={handleCardClick}
-      className="rounded-[24px] border border-[#EAEFEF] bg-white px-6 py-5 transition-all hover:shadow-md cursor-pointer select-none"
+      className="rounded-2xl border border-neutral-200 bg-aura-glass-white/60 px-6 py-5 transition-all hover:shadow-md cursor-pointer select-none"
     >
       {/* Header: Instantie left, datum right */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {(ruling.instantie || ruling.extracted_gemeente) && (
-            <p className="text-[14px] font-semibold text-[#0E1111]">
+            <p className="text-[14px] font-semibold text-aura-obsidian">
               {ruling.instantie}{ruling.extracted_gemeente ? ` — ${ruling.extracted_gemeente}` : ''}
             </p>
           )}
           <p className="mt-1 text-[10px] text-slate-500 tracking-wide">{ruling.ecli}</p>
         </div>
         {datumFormatted && (
-          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold tabular-nums text-[#0E1111] border border-[#EAEFEF] shrink-0">
+          <span className="rounded-full bg-aura-glass-white/60 px-3 py-1 text-[11px] font-semibold tabular-nums text-aura-obsidian border border-neutral-200 shrink-0">
             {datumFormatted}
           </span>
         )}
@@ -137,10 +137,10 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {pill('uitkomst', ruling.uitkomst, uitkomstLabel(ruling.uitkomst), uitkomstStyle(ruling.uitkomst))}
 
-        {pill('vergunningstype', ruling.vergunningstype, ruling.vergunningstype ?? '', 'bg-[#F9A826]/10 text-[#D48B1A] hover:bg-[#F9A826]/20')}
+        {pill('vergunningstype', ruling.vergunningstype, ruling.vergunningstype ?? '', 'bg-aura-amber/10 text-aura-amber hover:bg-aura-amber/20')}
 
         {ruling.doorlooptijd_dagen != null && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] text-slate-500 tabular-nums">
+          <span className="inline-flex items-center gap-1 rounded-full bg-aura-canvas px-2.5 py-0.5 text-[11px] text-slate-500 tabular-nums">
             <Clock size={10} />
             {ruling.doorlooptijd_dagen}d
           </span>
@@ -160,10 +160,10 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-6 space-y-6 border-t border-[#EAEFEF] pt-6">
+        <div className="mt-6 space-y-6 border-t border-neutral-200 pt-6">
           {summaryText && (
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-aura-obsidian mb-2">
                 Samenvatting
               </p>
               <p className="text-[13px] leading-[1.8] text-slate-600">{summaryText}</p>
@@ -172,7 +172,7 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
 
           {relevantieText && (
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-aura-obsidian mb-2">
                 Relevantie
               </p>
               <p className="text-[13px] leading-[1.8] text-slate-600">{relevantieText}</p>
@@ -182,14 +182,14 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
           {/* Tegenstanders */}
           {tegenstanders.length > 0 && (
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111] mb-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-aura-obsidian mb-2">
                 Tegenstanders
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {tegenstanders.map((t) => (
                   <span
                     key={t}
-                    className="rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
+                    className="rounded-full bg-aura-canvas px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
                   >
                     {t}
                   </span>
@@ -201,7 +201,7 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
           {/* Full text */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0E1111]">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-aura-obsidian">
                 Uitspraaktekst
               </p>
               <a
@@ -209,7 +209,7 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1 text-[11px] font-medium text-[#F9A826] transition-colors hover:text-[#E8971F]"
+                className="flex items-center gap-1 text-[11px] font-medium text-aura-amber transition-colors hover:text-aura-amber/80"
               >
                 Rechtspraak.nl <ExternalLink size={10} />
               </a>
@@ -221,8 +221,8 @@ export default function RulingCard({ ruling, onFilterChange }: RulingCardProps) 
               </div>
             )}
             {fullText && (
-              <div className="max-h-[500px] overflow-y-auto rounded-[14px] bg-[#F2F6F3] p-6">
-                <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-[#0E1111]/80">
+              <div className="max-h-[500px] overflow-y-auto rounded-[14px] bg-aura-canvas p-6">
+                <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-aura-obsidian/80">
                   {fullText}
                 </p>
               </div>
