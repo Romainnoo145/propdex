@@ -24,7 +24,6 @@ from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.models.user_notification_state import UserNotificationState
 
-
 USER_SCOPED_MODELS = [
     ParcelFavorite,
     SavedReport,

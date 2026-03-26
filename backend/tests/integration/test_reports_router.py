@@ -8,9 +8,9 @@ from geoalchemy2 import WKTElement
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
+from app.main import app
 from app.models.parcel_cache import ParcelCache
 from app.models.report import SavedReport
-from app.main import app
 from app.schemas.property import PropertyReportResponse
 
 

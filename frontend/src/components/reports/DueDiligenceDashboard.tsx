@@ -93,7 +93,8 @@ export default function DueDiligenceDashboard({
   const updateNotes = useUpdateNotes()
 
   const notes = parseNotes(rawNotes)
-  const sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- will be used for section status indicators
+  const _sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
   const [activeSection, setActiveSection] = useState<SectionKey>('locatiegegevens')
   const [notesOpen, setNotesOpen] = useState(false)
 

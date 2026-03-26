@@ -1,13 +1,12 @@
 """Unit tests for fetch_bodem_data() aggregator with 30-day cache (Phase 68)."""
 
 import uuid
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.bodem_aggregator import fetch_bodem_data
 from app.schemas.bodem import BodemData
-
+from app.services.bodem_aggregator import fetch_bodem_data
 
 _BODEM_DICT = {
     "dossiers": [],
@@ -19,7 +18,7 @@ _BODEM_DICT = {
 @pytest.mark.asyncio
 async def test_fetch_bodem_uses_rounded_cache_key():
     """Cache key must round coordinates to nearest meter."""
-    org_id = uuid.uuid4()
+    _org_id = uuid.uuid4()
     mock_session = AsyncMock()
     mock_client = AsyncMock()
 
@@ -52,7 +51,7 @@ async def test_fetch_bodem_uses_rounded_cache_key():
 @pytest.mark.asyncio
 async def test_fetch_bodem_returns_bodemdata():
     """fetch_bodem_data must return a BodemData instance (parsed from cached dict)."""
-    org_id = uuid.uuid4()
+    _org_id = uuid.uuid4()
     mock_session = AsyncMock()
     mock_client = AsyncMock()
 
@@ -80,7 +79,7 @@ async def test_fetch_bodem_returns_bodemdata():
 @pytest.mark.asyncio
 async def test_cache_hit_no_http_call():
     """When get_cached_or_fetch returns immediately (cache hit), query_by_point must NOT be called."""
-    org_id = uuid.uuid4()
+    _org_id = uuid.uuid4()
     mock_session = AsyncMock()
     mock_client = AsyncMock()
 

@@ -2,7 +2,6 @@
 
 from app.auth.password import hash_password, verify_password
 
-
 # Hash tests
 
 

@@ -3,12 +3,14 @@
 import logging
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.chat_schemas import BulkFavoriteCreate, BulkFavoriteResponse
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.favorites.schemas import (
@@ -20,16 +22,18 @@ from app.favorites.schemas import (
     PortfolioResponse,
     PortfolioWijkGroup,
 )
-from app.agents.chat_schemas import BulkFavoriteCreate, BulkFavoriteResponse
-from app.models.area_scan import AreaScan
 from app.middleware.rate_limit import limiter
-from app.models.parcel_favorite import ParcelFavorite
+from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
+from app.models.parcel_favorite import ParcelFavorite
 from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from app.models.favorite_note import FavoriteNote
 
 router = APIRouter(prefix="/api/parcels", tags=["Favorites"])
 portfolio_router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
@@ -559,8 +563,8 @@ async def update_note(
 ) -> NoteResponse:
     """Update a note's content."""
     fav = await _get_favorite_or_404(db, current_user.id, parcel_id)
+
     from app.models.favorite_note import FavoriteNote
-    from sqlalchemy import func as sqlfunc
     result = await db.execute(
         select(FavoriteNote).where(
             FavoriteNote.id == note_id,

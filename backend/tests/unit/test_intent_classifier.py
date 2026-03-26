@@ -9,9 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.agents.chat_service import classify_intent, _strip_code_fences, _build_suggestions
+from app.agents.chat_service import _build_suggestions, _strip_code_fences, classify_intent
 from app.agents.schemas import ParsedQuery
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 

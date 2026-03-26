@@ -5,8 +5,7 @@ import re
 
 import httpx
 
-from app.government_apis.base import handle_api_response
-from app.government_apis.base import retry_with_backoff
+from app.government_apis.base import handle_api_response, retry_with_backoff
 from app.government_apis.rate_limiter import pdok_locatieserver_limiter
 
 logger = logging.getLogger(__name__)
@@ -133,7 +132,7 @@ class PDOKLocatieserver:
             try:
                 async with pdok_locatieserver_limiter:
                     response = await retry_with_backoff(
-                        lambda: client.get(url, params=params),
+                        lambda p=params: client.get(url, params=p),
                         source="pdok",
                     )
                 data = handle_api_response(response, source="pdok")
@@ -184,7 +183,7 @@ class PDOKLocatieserver:
             try:
                 async with pdok_locatieserver_limiter:
                     response = await retry_with_backoff(
-                        lambda: client.get(url, params=params),
+                        lambda p=params: client.get(url, params=p),
                         source="pdok",
                     )
                 data = handle_api_response(response, source="pdok")

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER } from '@/lib/tokens'
 import { createFileRoute, Outlet, redirect, useMatchRoute } from '@tanstack/react-router'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import SideRailNav from '@/components/layout/SideRailNav'

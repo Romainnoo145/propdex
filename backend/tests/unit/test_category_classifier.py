@@ -1,9 +1,7 @@
 """Unit tests for category_classifier.classify_bekendmaking()."""
 
-import pytest
 
 from app.services.category_classifier import classify_bekendmaking
-
 
 # ---------------------------------------------------------------------------
 # Permit categories

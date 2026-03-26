@@ -1,7 +1,6 @@
 """Shared test fixtures for Propdex test suite."""
 
-import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest

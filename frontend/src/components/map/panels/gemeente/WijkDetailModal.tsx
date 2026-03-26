@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { GemeenteModal } from './GemeenteModal'
 import type { CbsNeighborhoodMetrics } from '@/lib/types/scan'
-import { AMBER, AMBER_GRADIENT, GREEN, RED } from '@/lib/tokens'
+import { AMBER } from '@/lib/tokens'
 
 type MetricKey = 'koopwoning' | 'dichtheid' | 'eenpersoons' | 'inkomen' | 'woz' | 'inwoners' | 'criminaliteit' | 'supermarkt' | 'leeftijd'
 

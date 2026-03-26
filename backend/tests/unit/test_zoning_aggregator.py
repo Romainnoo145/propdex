@@ -1,9 +1,8 @@
 """Tests for zoning aggregator helper functions."""
 
-from unittest.mock import MagicMock
 
 import pytest
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
 from app.schemas.zoning import BuildingDimensions
 from app.services.zoning_aggregator import (
@@ -22,7 +21,6 @@ class TestFindContainingFeatures:
     def test_point_inside_polygon_returns_feature(self):
         """Point inside polygon should return the feature."""
         property_point = Point(50, 50)
-        polygon = Polygon([[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]])
         features = [
             {
                 "naam": "TestFeature",

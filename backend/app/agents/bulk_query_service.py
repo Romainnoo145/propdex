@@ -4,7 +4,7 @@ import json
 import logging
 import time
 
-from sqlalchemy import func, literal, select, type_coerce
+from sqlalchemy import func, literal, select
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 

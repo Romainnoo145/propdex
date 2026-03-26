@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText,
@@ -292,6 +292,7 @@ export function BeleidNieuwsLayer({ gemeenteNaam }: BeleidNieuwsLayerProps) {
   )
 
   // Sort raadsstukken by date descending
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const sortedStukken = useMemo(() => {
     if (!raadsData?.stukken) return []
     return [...raadsData.stukken].sort((a, b) => {

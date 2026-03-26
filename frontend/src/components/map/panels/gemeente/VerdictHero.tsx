@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { OBSIDIAN } from '@/lib/tokens'
 import { motion, useSpring, useTransform } from 'framer-motion'
 
 interface VerdictHeroProps {

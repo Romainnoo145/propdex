@@ -7,7 +7,6 @@ import {
   ShieldAlert,
   ShieldQuestion,
   Clock,
-  TrendingUp,
   FileText,
   ExternalLink,
   type LucideIcon,
@@ -15,7 +14,7 @@ import {
 import { VerdictHero } from './VerdictHero'
 import { JuridischKlimaatModal } from './JuridischKlimaatModal'
 import { staggerContainer, fadeUp } from './animations'
-import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
+import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useGemeenteAnalysisStatus, useDoorlooptijdStats } from '@/hooks/useJurisprudence'
 
 interface KlimaatLayerProps {
@@ -122,6 +121,7 @@ export function KlimaatLayer({ gemeenteNaam, gemeenteCode }: KlimaatLayerProps) 
     : { label: 'Laden...', color: SLATE_MUTED }
 
   // Permit type distribution sorted
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const permitTypes = useMemo(() => {
     if (!profile?.permit_type_distribution) return []
     return Object.entries(profile.permit_type_distribution)

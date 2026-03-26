@@ -16,7 +16,7 @@ from app.agents.chat_schemas import (
     ParcelDetailSummary,
     ReportSummary,
 )
-from app.agents.schemas import BulkResult, ParsedQuery
+from app.agents.schemas import ParsedQuery
 from app.ai.claude_client import AIParsingError, create_claude_client
 from app.ai.prompts import CHAT_INTENT_CLASSIFIER_PROMPT
 from app.models.parcel_cache import ParcelCache
@@ -193,6 +193,7 @@ async def handle_parcel_search(
 
     # Persist BulkQuery record so /resultaten?query_id= can fetch it
     import uuid as _uuid
+
     from app.models.bulk_query import BulkQuery
 
     record = BulkQuery(
@@ -220,7 +221,8 @@ async def _build_count_query(parsed: ParsedQuery, db: AsyncSession):
     """Build a COUNT-only query from parsed filters. Returns (count_select, base_select, n_filters)."""
     import json as _json
 
-    from sqlalchemy import func as sqlfunc, literal
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import literal
     from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 
     count_q = select(sqlfunc.count()).select_from(ParcelCache)

@@ -45,9 +45,9 @@ async def get_current_user(
     try:
         payload = decode_token(token)
     except ExpiredSignatureError:
-        raise credentials_exception
+        raise credentials_exception from None
     except InvalidTokenError:
-        raise credentials_exception
+        raise credentials_exception from None
 
     # Verify token type
     if payload.get("type") != "access":

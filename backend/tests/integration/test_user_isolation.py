@@ -4,15 +4,13 @@ Proves that user A cannot see user B's favorites, reports, or documents.
 This is the end-to-end verification that S03's user-scoping works correctly.
 """
 
-import uuid
 
 import pytest
 from sqlalchemy import func, select
 
 from app.models.organization import Organization
-from app.models.parcel_favorite import ParcelFavorite
 from app.models.parcel_document import ParcelDocument
-from app.models.report import SavedReport
+from app.models.parcel_favorite import ParcelFavorite
 from app.reports import service as report_service
 
 

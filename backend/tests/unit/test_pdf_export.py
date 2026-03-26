@@ -4,9 +4,7 @@ Tests are SYNCHRONOUS (def test_*, not async def) because WeasyPrint is CPU-boun
 """
 
 import asyncio
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from app.reports.pdf_export import generate_report_pdf
 

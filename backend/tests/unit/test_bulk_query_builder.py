@@ -5,9 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.agents.schemas import BulkResult, ParsedQuery
+from app.agents.schemas import ParsedQuery
 from app.ai.claude_client import AIParsingError
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -45,7 +44,6 @@ def _make_mock_db(
     call_idx = {"n": 0}
 
     async def _execute_side_effect(stmt, *args, **kwargs):
-        idx = call_idx["n"]
         call_idx["n"] += 1
         result = MagicMock()
 

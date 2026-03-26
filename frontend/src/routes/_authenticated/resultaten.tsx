@@ -55,11 +55,6 @@ function ResultatenPage() {
 
   const { scan_id, query_id } = search
 
-  // If query_id is present, render Verkenner results
-  if (query_id) {
-    return <VerkennerResults queryId={query_id} />
-  }
-
   const scans = scanHistoryData?.scans ?? []
   const activeScan = useMemo(
     () => scans.find((scan) => scan.scan_id === scan_id) ?? null,
@@ -75,6 +70,11 @@ function ResultatenPage() {
     offset: (search.page ?? 0) * 50,
     limit: 50,
   }), [search.parcel_q, search.sort_by, search.sort_order, search.page])
+
+  // If query_id is present, render Verkenner results
+  if (query_id) {
+    return <VerkennerResults queryId={query_id} />
+  }
 
   const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
     void navigate({
@@ -311,6 +311,7 @@ function VerkennerResults({ queryId }: { queryId: string }) {
     onError: () => toast.error('Opslaan mislukt'),
   })
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- manual memo deps are correct; compiler can't infer optional chaining
   const filteredResults = useMemo(() => {
     if (!data?.results) return []
     if (!searchFilter.trim()) return data.results

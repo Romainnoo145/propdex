@@ -5,9 +5,6 @@ import {
   addParcelBoundariesLayer,
   setParcelBoundariesVisibility,
 } from './ParcelBoundariesLayer'
-import {
-  MAP_LAYER_CATALOG,
-} from '@/lib/map/layers'
 import type { BaseMapLayerId, ParcelOverlayLayerId } from '@/lib/map/layers'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 
@@ -80,17 +77,6 @@ function ToggleButton({ active, sectionId, onClick, glow = false, children }: To
       <span className="relative z-10">{children}</span>
     </button>
   )
-}
-
-/** Map ParcelOverlayLayerId → internal setParcelOverlayMode key (null = handled separately) */
-const OVERLAY_TO_MODE: Record<ParcelOverlayLayerId, 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | null> = {
-  potential: 'score',
-  built_status: 'built',
-  report_coverage: 'report',
-  vacancy_signal: 'vacancy',
-  build_capacity: 'capacity',
-  foundation_risk: 'foundation',
-  bestemmingsplan: null, // handled via onBestemmingsplanToggle
 }
 
 function LayerToggle({

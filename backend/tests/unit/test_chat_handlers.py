@@ -6,14 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.agents.chat_schemas import ChatRequest
 from app.agents.chat_service import (
-    handle_parcel_detail,
+    dispatch_chat,
     handle_my_favorites,
     handle_my_reports,
-    dispatch_chat,
+    handle_parcel_detail,
 )
-from app.agents.chat_schemas import ChatRequest
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 

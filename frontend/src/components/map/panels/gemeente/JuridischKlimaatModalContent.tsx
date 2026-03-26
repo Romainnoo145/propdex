@@ -119,23 +119,24 @@ export function JuridischKlimaatModalContent({ gemeenteNaam }: JuridischKlimaatM
 
   const rulings = feedData?.rulings ?? []
   const feedErrorMessage = error instanceof Error ? error.message : 'Onbekende fout'
-  const selectedRuling = useMemo(
-    () => rulings.find((r) => r.ecli === selectedEcli) ?? rulings[0] ?? null,
-    [rulings, selectedEcli],
-  )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when gemeente changes
     setSelectedEcli(null)
   }, [gemeenteNaam])
 
-  useEffect(() => {
-    if (!selectedEcli && rulings.length > 0) {
-      setSelectedEcli(rulings[0]!.ecli)
+  // Derive effective ECLI: if selectedEcli is valid use it, otherwise fall back to first ruling
+  const effectiveEcli = useMemo(() => {
+    if (selectedEcli && rulings.some((r) => r.ecli === selectedEcli)) {
+      return selectedEcli
     }
-    if (selectedEcli && !rulings.some((r) => r.ecli === selectedEcli)) {
-      setSelectedEcli(rulings[0]?.ecli ?? null)
-    }
+    return rulings[0]?.ecli ?? null
   }, [rulings, selectedEcli])
+
+  const selectedRuling = useMemo(
+    () => rulings.find((r) => r.ecli === effectiveEcli) ?? rulings[0] ?? null,
+    [rulings, effectiveEcli],
+  )
 
   const isPending = feedData?.ingestion_status === 'pending'
   const isRefreshing = feedData?.ingestion_status === 'refreshing'

@@ -426,7 +426,7 @@ class TestPropertyAggregatorOrchestration:
             patch("app.services.property_aggregator.resolve_address", return_value=mock_resolution),
             patch("app.services.property_aggregator.fetch_zoning_data") as mock_fetch_zoning,
             patch("app.services.property_aggregator.fetch_monument_status") as mock_fetch_monuments,
-            patch("app.services.property_aggregator.get_cached_or_fetch") as mock_get_cached,
+            patch("app.services.property_aggregator.get_cached_or_fetch") as _mock_get_cached,
         ):
             client = AsyncMock(spec=httpx.AsyncClient)
             input_data = AddressInput(postcode="1015 CJ", huisnummer=123)

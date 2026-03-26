@@ -265,7 +265,7 @@ async def refresh(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
-        )
+        ) from None
 
     # Verify token type
     if payload.get("type") != "refresh":
@@ -300,7 +300,7 @@ async def refresh(
         stmt = (
             select(RefreshToken)
             .where(RefreshToken.user_id == uuid.UUID(user_id))
-            .where(RefreshToken.revoked == False)
+            .where(RefreshToken.revoked.is_(False))
         )
         result = await db.execute(stmt)
         tokens_to_revoke = result.scalars().all()
@@ -444,12 +444,12 @@ async def verify_email(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Verification link expired. Request a new one.",
-        )
+        ) from None
     except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification link",
-        )
+        ) from None
 
     # Verify token type
     if payload.get("type") != "email_verification":
@@ -568,12 +568,12 @@ async def confirm_password_reset(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset link expired. Request a new one.",
-        )
+        ) from None
     except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid reset link",
-        )
+        ) from None
 
     # Verify token type
     if payload.get("type") != "password_reset":
@@ -608,7 +608,7 @@ async def confirm_password_reset(
     stmt = (
         select(RefreshToken)
         .where(RefreshToken.user_id == user.id)
-        .where(RefreshToken.revoked == False)
+        .where(RefreshToken.revoked.is_(False))
     )
     result = await db.execute(stmt)
     tokens_to_revoke = result.scalars().all()
@@ -695,7 +695,7 @@ async def google_callback(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to exchange authorization code: {str(e)}",
-        )
+        ) from e
 
     # Fetch user info from Google
     try:
@@ -713,7 +713,7 @@ async def google_callback(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to fetch user info from Google: {str(e)}",
-        )
+        ) from e
 
     # Check if user exists by email
     result = await db.execute(

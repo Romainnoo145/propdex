@@ -211,10 +211,6 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 function DoorlooptijdCard({ doorlooptijd, onClick }: { doorlooptijd: number | null; onClick: () => void }) {
-  const color = doorlooptijd != null
-    ? doorlooptijd <= 30 ? GREEN : doorlooptijd <= 90 ? AMBER.base : RED
-    : SLATE_MUTED
-
   return (
     <motion.div
       variants={fadeUp}
@@ -303,6 +299,7 @@ export function GemeenteOverview({
   const favCount = gemeenteFavorites.length
 
   // Top types excluding Overig + Vergunningbesluit
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const topTypes = useMemo(() => {
     if (!profile?.permit_type_distribution) return []
     return Object.entries(profile.permit_type_distribution)

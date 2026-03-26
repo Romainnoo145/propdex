@@ -1,12 +1,12 @@
 """Unit tests for BodemloketClient ArcGIS REST spatial query (Phase 68)."""
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
-from tests.api_mocks import make_mock_response, make_mock_client
+import pytest
+
 from app.government_apis.bodemloket_arcgis import BodemloketClient
 from app.schemas.bodem import BodemData, WBBDossierRef
-
+from tests.api_mocks import make_mock_client, make_mock_response
 
 # Confirmed live response field from SPIKE.md (WBB_DOSSIER_DBK=17892535 — second feature at ±25m)
 _SINGLE_FEATURE_RESPONSE = {

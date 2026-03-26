@@ -1,20 +1,17 @@
 """Scan results, tiles, and export endpoints."""
 
-import json
 import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user, get_current_organization_id
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
-from app.models.parcel_cache import ParcelCache
 from app.models.report import SavedReport
-from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans import service
 from app.scans.helpers import (

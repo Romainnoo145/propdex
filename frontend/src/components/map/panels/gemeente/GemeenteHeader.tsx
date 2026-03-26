@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER, SLATE_MUTED } from '@/lib/tokens'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface GemeenteHeaderProps {

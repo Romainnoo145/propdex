@@ -7,7 +7,7 @@ import jwt as jwt_module
 import pytest
 from httpx import AsyncClient
 
-from app.auth.jwt import create_email_verification_token, create_password_reset_token
+from app.auth.jwt import create_password_reset_token
 from app.core.config import settings
 
 

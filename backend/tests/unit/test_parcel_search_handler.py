@@ -3,12 +3,12 @@
 Tests handle_parcel_search() with mocked DB queries.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.agents.chat_service import handle_parcel_search, _build_suggestions, COUNT_THRESHOLD
-from app.agents.schemas import ParsedQuery
+import pytest
 
+from app.agents.chat_service import _build_suggestions, handle_parcel_search
+from app.agents.schemas import ParsedQuery
 
 # ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ async def test_count_first_triggers_when_above_threshold(mock_db):
             mock_db.execute = AsyncMock(return_value=count_result)
 
             # Build a fake count query select
-            from sqlalchemy import select, func
+            from sqlalchemy import func, select
             fake_count_q = select(func.count())
             mock_count.return_value = (fake_count_q, None, 1)
 
@@ -188,7 +188,6 @@ class TestRefinementParamMerging:
                 mock_count.return_value = (MagicMock(), None, 2)
 
                 with patch("app.agents.chat_service.execute_bulk_query", new_callable=AsyncMock) as mock_exec:
-                    from app.agents.schemas import BulkResult
                     mock_exec.return_value = ([], 100)
 
                     response = await handle_parcel_search(

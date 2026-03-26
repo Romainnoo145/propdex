@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { MapPin } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
 import { CompactWijkCard } from './CompactWijkCard'
-import { staggerContainer, fadeUp } from './animations'
+import { staggerContainer } from './animations'
 import type { ScanListItem } from '@/lib/types/scan'
 
 interface WijkenModalProps {

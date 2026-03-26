@@ -13,9 +13,8 @@ import { LeftPanelShell } from './LeftPanelShell'
 import { VerdictHero } from './gemeente/VerdictHero'
 import { IntelligenceGrid, type IntelCard } from './gemeente/IntelligenceGrid'
 import { WijkDetailModal } from './gemeente/WijkDetailModal'
-import { staggerContainer } from './gemeente/animations'
 import { scanControlsEnabled } from '@/lib/features'
-import { AMBER, GREEN, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER } from '@/lib/tokens'
 import type { ScanListItem, CbsNeighborhoodMetrics } from '@/lib/types/scan'
 
 interface WijkMapPanelProps {

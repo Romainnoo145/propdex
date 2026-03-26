@@ -14,7 +14,6 @@ from app.auth.jwt import (
 )
 from app.core.config import settings
 
-
 # Access token tests
 
 

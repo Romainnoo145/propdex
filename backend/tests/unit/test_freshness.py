@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.cached_response import CachedAPIResponse
 from app.models.organization import Organization
 from app.models.report import SavedReport

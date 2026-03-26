@@ -11,7 +11,6 @@ from typing import Any
 
 from app.services.score_v3 import FactorResult
 
-
 # ---------------------------------------------------------------------------
 # Normalization helpers
 # ---------------------------------------------------------------------------
@@ -465,7 +464,6 @@ def score_funderingsrisico(parcel_data: dict) -> FactorResult:
     if slappe_bodem and pre_1970 and score < 1.0:
         score = min(1.0, score + 0.15)
 
-    kort_labels = {1.0: "Hoog", 0.8: "Hoog"}
     risk_label = "Hoog" if score >= 0.7 else "Gemiddeld" if score >= 0.4 else "Laag"
 
     kort = f"{risk_label} funderingsrisico \u2014 {fgr}, {'slappe bodem' if slappe_bodem else 'stabiele bodem'}"

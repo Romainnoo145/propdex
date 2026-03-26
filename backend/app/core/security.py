@@ -4,7 +4,6 @@ import logging
 import uuid
 from datetime import datetime
 
-
 # Dedicated audit logger — can be configured independently from application logs
 audit_logger = logging.getLogger("audit.security")
 

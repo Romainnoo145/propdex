@@ -1,6 +1,5 @@
 """Integration tests for spatial operations and shared scan data access."""
 
-import pytest
 from geoalchemy2 import WKTElement
 from sqlalchemy import func, select, text
 

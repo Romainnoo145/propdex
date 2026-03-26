@@ -21,12 +21,12 @@ from app.government_apis.sru_bekendmakingen import sru_client
 from app.middleware.rate_limit import limiter
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache
+from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
 from app.models.user import User
 from app.scans.helpers import (
     _extract_listing_signal_from_enrichment,
     _filter_vergunningen_for_parcel,
-    _is_missing_address,
     _normalize_market_signals,
     _resolve_parcel_address_from_centroid,
     _resolve_pdok_cadastral_parcel_at_rd,
@@ -38,13 +38,11 @@ from app.scans.schemas import (
     ParcelRiskProfileResponse,
     ScanResultItem,
 )
-from app.models.report import SavedReport
 from app.services.bekendmaking_matcher import find_parcel_at_point
 from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     extract_building_metrics,
 )
-from app.services.spatial_helpers import transform_point_to_wgs84
 from app.services.wijk_service import get_wijken_in_gemeente
 
 logger = logging.getLogger(__name__)
@@ -452,7 +450,6 @@ async def get_parcel_risk_profile(
 
     Requires JWT authentication. Rate limited to 30 requests per minute.
     """
-    import asyncio
     import re as re_mod
 
     from geoalchemy2.functions import ST_AsText, ST_Centroid
@@ -1288,7 +1285,7 @@ async def get_aerial_crop(
     Proxies PDOK WMS Actueel_orthoHR layer, cropped around the parcel centroid.
     Image is 840x360 (retina 2x of 420x180 display) with 24h cache.
     """
-    from geoalchemy2.functions import ST_Centroid, ST_X, ST_Y
+    from geoalchemy2.functions import ST_X, ST_Y, ST_Centroid
 
     query = select(
         ST_X(ST_Centroid(ParcelCache.geometry)),

@@ -9,7 +9,6 @@ interface OpponentProfilesProps {
 /** Amber ring — fill relative to maxZaken so top opponent = full ring */
 function CaseRing({ zaken }: { zaken: number }) {
   const r = 16
-  const circumference = 2 * Math.PI * r
 
   return (
     <div className="relative flex items-center justify-center shrink-0">

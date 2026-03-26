@@ -1,6 +1,5 @@
 """Property lookup API endpoints."""
 
-import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -592,7 +591,7 @@ async def delete_parcel_task(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Delete a task."""
-    from sqlalchemy import delete, select
+    from sqlalchemy import select
 
     from app.models.parcel_task import ParcelTask
 

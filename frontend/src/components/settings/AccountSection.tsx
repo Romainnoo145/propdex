@@ -35,7 +35,8 @@ export function AccountSection() {
   const onSubmit = async (data: AccountFormData) => {
     if (!isDirty) return
     try {
-      const { phone: _, ...profileData } = data
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { phone: _phone, ...profileData } = data
       const updatedUser = await updateProfile(profileData)
       updateUser(updatedUser)
       toast.success('Profiel opgeslagen')

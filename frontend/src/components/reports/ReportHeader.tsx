@@ -3,7 +3,6 @@
  * from FavoriteParcelWorkspaceView.tsx.
  */
 
-import { useCallback } from 'react'
 import { ChevronLeft, MapPin, Download } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
@@ -24,9 +23,9 @@ interface ReportHeaderProps {
 
 export default function ReportHeader({
   data,
-  backLabel,
-  sourceParcelId,
-  reportId = null,
+  backLabel: _backLabel,
+  sourceParcelId: _sourceParcelId,
+  reportId: _reportId = null,
   onBack,
   onViewOnMap,
   onExportPDF,

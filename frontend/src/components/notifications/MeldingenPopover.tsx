@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, ExternalLink, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck } from 'lucide-react'
 import { NotificationBadge } from './NotificationBadge'
 import { useUnreadCounts, useInfiniteAllChanges, useMarkAllRead, useMarkChangeRead } from '@/hooks/useNotifications'
 import { toMapParcelSearch, toMapAddressSearch } from '@/lib/navigation/mapSearch'

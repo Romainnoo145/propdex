@@ -1,5 +1,5 @@
-import { ExternalLink, ScrollText } from 'lucide-react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { ExternalLink } from 'lucide-react'
+import { AMBER, SLATE_MUTED } from '@/lib/tokens'
 import { GemeenteModal } from './GemeenteModal'
 import { useHuisvestingsverordening } from '@/hooks/useHuisvestingsverordening'
 

@@ -14,7 +14,7 @@ from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Multi, ST_SetSRID
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.strtree import STRtree
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -42,13 +42,13 @@ from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     derive_opportunity_insights,
 )
-from app.services.score_v3 import compute_score_v3
 from app.services.scan_enrichment import (
     batch_fetch_address_enrichment,
     batch_fetch_bodem_data,
     batch_fetch_environmental_data,
     batch_fetch_postcode_enrichment,
 )
+from app.services.score_v3 import compute_score_v3
 from app.services.spatial_helpers import transform_point_to_rd
 
 logger = logging.getLogger(__name__)

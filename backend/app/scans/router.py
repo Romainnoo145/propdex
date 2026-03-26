@@ -337,8 +337,8 @@ async def trigger_scan(
 # --- Static path routes MUST come before /{scan_id} to avoid UUID parsing ---
 # Include sub-routers with static paths (/wijken, /parcels/*) before dynamic routes.
 
-from app.scans.parcels_router import router as parcels_router
-from app.scans.results_router import router as results_router
+from app.scans.parcels_router import router as parcels_router  # noqa: E402
+from app.scans.results_router import router as results_router  # noqa: E402
 
 router.include_router(parcels_router)
 

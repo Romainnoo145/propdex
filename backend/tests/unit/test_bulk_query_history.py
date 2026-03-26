@@ -2,14 +2,11 @@
 
 import csv
 import io
-import json
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from starlette.testclient import TestClient
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -31,13 +28,6 @@ def _make_request():
     }
     return Request(scope)
 
-from app.agents.schemas import (
-    BulkQueryDetailResponse,
-    BulkQueryHistoryResponse,
-    BulkRequestListResponse,
-    BulkRequestResponse,
-    BulkResult,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -185,8 +175,9 @@ async def test_get_bulk_query_detail():
 @pytest.mark.asyncio
 async def test_get_bulk_query_not_found():
     """GET /bulk-queries/{id} returns 404 for non-existent query."""
-    from app.agents.router import get_bulk_query
     from fastapi import HTTPException
+
+    from app.agents.router import get_bulk_query
 
     user = MagicMock()
     user.id = uuid.uuid4()
@@ -201,8 +192,9 @@ async def test_get_bulk_query_not_found():
 @pytest.mark.asyncio
 async def test_get_bulk_query_forbidden():
     """GET /bulk-queries/{id} returns 403 for another user's query."""
-    from app.agents.router import get_bulk_query
     from fastapi import HTTPException
+
+    from app.agents.router import get_bulk_query
 
     user = MagicMock()
     user.id = uuid.uuid4()

@@ -7,7 +7,7 @@ Deterministic — no AI calls. Pure rule-based derivation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal
 
 
@@ -39,7 +39,6 @@ def compute_actievoorstellen(
         Sorted list of ActieVoorstel (highest priority first)
     """
     acties: list[ActieVoorstel] = []
-    scores = parcel_data.get("scores", {})
     breakdown = parcel_data.get("score_breakdown", {})
 
     # ── General actions (apply to all use cases) ────────────────

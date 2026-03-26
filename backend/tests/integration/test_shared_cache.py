@@ -5,11 +5,9 @@ JuridischAnalyseJob, and FundaListingSnapshot work without
 organization_id — all data is shared across authenticated users.
 """
 
-import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock
 
-import pytest
 from sqlalchemy import select
 
 from app.models.cached_response import CachedAPIResponse

@@ -169,8 +169,8 @@ async def get_monitored_projects(
 
 
 # Include sub-routers (no prefix — routes already include their paths)
-from app.monitoring.changes_router import router as changes_router
-from app.monitoring.subscriptions_router import router as subscriptions_router
+from app.monitoring.changes_router import router as changes_router  # noqa: E402
+from app.monitoring.subscriptions_router import router as subscriptions_router  # noqa: E402
 
 router.include_router(changes_router)
 router.include_router(subscriptions_router)

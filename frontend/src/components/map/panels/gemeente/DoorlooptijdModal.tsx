@@ -1,9 +1,8 @@
 import { useMemo } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER, GREEN, RED, SLATE_MUTED } from '@/lib/tokens'
 import { motion } from 'framer-motion'
 import { Clock } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
-import { fadeUp } from './animations'
 import { useGemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useDoorlooptijdStats } from '@/hooks/useJurisprudence'
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Heart, ExternalLink } from 'lucide-react'
 import { MeldingenModal } from './MeldingenModal'

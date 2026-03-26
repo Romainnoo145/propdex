@@ -7,16 +7,16 @@ from typing import Any
 from arq import create_pool
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response as StarletteResponse
-from sqlalchemy import text
-from slowapi.errors import RateLimitExceeded
 
-from app.agents.router import router as agents_router
 from app.agents.chat_router import router as chat_router
+from app.agents.router import router as agents_router
 from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { GemeenteModal } from './GemeenteModal'
@@ -82,6 +82,7 @@ function StukCard({ stuk }: { stuk: RaadsstukResponse }) {
 export function RaadsinformatieModal({ gemeenteNaam, onClose }: RaadsinformatieModalProps) {
   const { data: raadsData, isLoading } = useRaadsinformatie(gemeenteNaam)
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const sortedStukken = useMemo(() => {
     if (!raadsData?.stukken) return []
     return [...raadsData.stukken].sort((a, b) => {

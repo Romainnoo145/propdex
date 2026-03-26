@@ -1,6 +1,5 @@
 """Integration tests for POST /api/parcels/favorites/bulk endpoint."""
 
-import uuid
 
 import pytest
 from httpx import AsyncClient

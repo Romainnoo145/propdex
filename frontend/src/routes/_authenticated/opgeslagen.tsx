@@ -518,6 +518,7 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   }, [isOpen])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- positioning from DOM rect is external system sync
     if (!isOpen) { setMenuPosition(null); return undefined }
     const update = () => {
       const rect = triggerRef.current?.getBoundingClientRect()

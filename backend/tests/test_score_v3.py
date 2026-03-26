@@ -3,8 +3,6 @@
 import pytest
 
 from app.services.score_v3 import (
-    FactorResult,
-    ScoreV3Result,
     compute_score_v3,
 )
 from app.services.score_v3_factors import (
@@ -29,7 +27,6 @@ from app.services.score_v3_factors import (
     score_vergunning_succeskans,
     score_vrije_grond,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

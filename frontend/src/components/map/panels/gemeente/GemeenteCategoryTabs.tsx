@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 
 export type GemeenteLayer = 'vergunningen' | 'regelgeving' | 'beleid' | 'activiteit'
 

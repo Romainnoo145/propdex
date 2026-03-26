@@ -1,5 +1,4 @@
-import { useMemo } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { AMBER, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import {
   ScrollText,
   Landmark,

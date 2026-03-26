@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import re
-import uuid
 from datetime import date, datetime
 
 import httpx
@@ -24,8 +23,8 @@ from app.models.funda_listing_snapshot import FundaListingSnapshot
 from app.schemas.address import AddressInput, BuildingData
 from app.schemas.bodem import BodemData
 from app.schemas.brk_ownership import (
-    BRKOwnership,
     Beslag,
+    BRKOwnership,
     Hypotheek,
     PerceelOwnership,
     ZakelijkGerechtigde,

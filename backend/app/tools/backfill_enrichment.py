@@ -587,7 +587,6 @@ async def _run_inner(
     total_enriched_coord = 0
     total_enriched_addr = 0
     total_rescored = 0
-    total_skipped = 0
     total_errors = 0
 
     for org_index, org_id in enumerate(org_ids, start=1):

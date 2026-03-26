@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { fadeUp } from './animations'
 
 interface CompactWijkCardProps {

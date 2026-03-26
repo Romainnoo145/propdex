@@ -34,7 +34,7 @@ async def summarize_document(
         return None
 
     try:
-        from app.ai.claude_client import AIParsingError, create_claude_client
+        from app.ai.claude_client import create_claude_client
 
         client = create_claude_client()
 

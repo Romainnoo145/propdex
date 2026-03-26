@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from app.schemas.monument import MonumentSourceResult, MonumentStatus
+from app.schemas.monument import MonumentSourceResult
 from app.services.monument_aggregator import (
     _fetch_bag_monument,
     _fetch_kadaster_monument,

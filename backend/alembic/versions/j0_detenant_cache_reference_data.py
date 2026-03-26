@@ -16,16 +16,16 @@ Revises: i9d0e1f2g3h4
 Create Date: 2026-03-19
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "j0_detenant_cache"
-down_revision: Union[str, Sequence[str], None] = "i9d0e1f2g3h4"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "i9d0e1f2g3h4"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Tables that already had RLS enabled (from migration 0800fa8394d7)

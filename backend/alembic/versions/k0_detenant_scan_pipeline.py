@@ -15,16 +15,16 @@ Revises: j0_detenant_cache
 Create Date: 2026-03-19
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "k0_detenant_scan_pipeline"
-down_revision: Union[str, Sequence[str], None] = "j0_detenant_cache"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "j0_detenant_cache"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Tables with existing RLS policies (from migration 2f812ea42f2e)

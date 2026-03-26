@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AMBER, GREEN, RED, OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
+import { OBSIDIAN, SLATE_MUTED } from '@/lib/tokens'
 import { motion } from 'framer-motion'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'

@@ -14,7 +14,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import type { ChangeRecord } from '@/lib/types/monitoring'
 import { formatRelativeTime } from '@/lib/utils/date'
 import { toMapParcelSearch, toMapAddressSearch } from '@/lib/navigation/mapSearch'
-import { extractHuisnummer, formatPostcode } from '@/lib/utils/address'
+import { extractHuisnummer } from '@/lib/utils/address'
 
 interface MeldingenModalProps {
   gemeenteNaam: string

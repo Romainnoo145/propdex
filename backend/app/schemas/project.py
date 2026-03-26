@@ -80,7 +80,7 @@ class ProjectResponse(BaseModel):
         default=0,
         description="Number of unread changes for this project",
     )
-    children: list["ProjectResponse"] = Field(
+    children: list[ProjectResponse] = Field(
         default=[],
         description="Child projects in hierarchy",
     )

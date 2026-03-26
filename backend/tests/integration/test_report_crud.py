@@ -7,11 +7,11 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import func, select
 
+from app.auth.password import hash_password
 from app.models.organization import Organization
 from app.models.project import Project
 from app.models.report import SavedReport
 from app.models.user import User
-from app.auth.password import hash_password
 from app.reports import service
 
 

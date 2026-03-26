@@ -130,7 +130,7 @@ function SystemContent({ message, chat }: {
       return <ChatUnsupported reason={message.reason} />
 
     default:
-      return <p className="text-[13px] text-slate-600">{'message' in message ? String((message as any).message) : 'Bericht ontvangen.'}</p>
+      return <p className="text-[13px] text-slate-600">{'message' in message ? String((message as Record<string, unknown>).message) : 'Bericht ontvangen.'}</p>
   }
 }
 
