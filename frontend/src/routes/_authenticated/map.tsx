@@ -21,23 +21,16 @@ import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
 import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/PropertyGeometryLayer'
 import {
   addGemeenteBoundariesLayer,
-  setGemeenteBoundariesVisibility,
   clearGemeenteSelection,
 } from '@/components/map/GemeenteBoundariesLayer'
 import {
   addWijkBoundariesLayer,
-  removeWijkBoundariesLayer,
-  setWijkBoundariesVisibility,
 } from '@/components/map/WijkBoundariesLayer'
 import {
   addBestemmingsplanLayer,
   setBestemmingsplanVisibility,
   setupBestemmingsplanClickHandler,
 } from '@/components/map/BestemmingsplanLayer'
-import {
-  addScanAreaHighlight,
-  removeScanAreaHighlight,
-} from '@/components/map/ScanAreaHighlightLayer'
 import {
   addBAGPandLayer,
   removeBAGPandLayer,
@@ -64,14 +57,6 @@ import {
   updateScoreThreshold,
 } from '@/components/map/ParcelScoreLayer'
 import {
-  addMonitoredWijkOverlay,
-  removeMonitoredWijkOverlay,
-} from '@/components/map/MonitoredWijkOverlay'
-import {
-  addScannedWijkHighlight,
-  removeScannedWijkHighlight,
-} from '@/components/map/ScannedWijkHighlightLayer'
-import {
   addFavoriteMarkersLayer,
   updateFavoriteMarkers,
 } from '@/components/map/FavoriteMarkersLayer'
@@ -94,6 +79,7 @@ import { NL_CENTER, NL_ZOOM } from '@/lib/pdok'
 import { scanControlsEnabled } from '@/lib/features'
 import { useMapContext } from '@/lib/MapContext'
 import { useMapLayerState } from '@/lib/map/useMapLayerState'
+import { useMapLayerLifecycle } from '@/lib/map/useMapLayerLifecycle'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
 import type { ZoneFeatureInfo } from '@/lib/types/bestemmingsplan'
@@ -205,6 +191,151 @@ function MapPage() {
   const { accessToken } = useAuth()
   // Single source of truth for all layer toggle state
   const { state: layerState, actions: layerActions } = useMapLayerState()
+  const lifecycle = useMapLayerLifecycle(mapRef, mapReady)
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle-managed layer helpers
+  // ---------------------------------------------------------------------------
+
+  /** Add scan area highlight via lifecycle (style-readiness queued, auto-cleanup). */
+  const addScanAreaHighlightManaged = useCallback(
+    (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon) => {
+      lifecycle.ensureSource('scan-area-highlight', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry, properties: {} },
+      })
+      lifecycle.ensureLayer({
+        id: 'scan-area-fill',
+        type: 'fill',
+        source: 'scan-area-highlight',
+        paint: { 'fill-color': '#8b5cf6', 'fill-opacity': 0.15 },
+      })
+      lifecycle.ensureLayer({
+        id: 'scan-area-outline',
+        type: 'line',
+        source: 'scan-area-highlight',
+        paint: { 'line-color': '#8b5cf6', 'line-width': 3, 'line-dasharray': [2, 2] },
+      })
+    },
+    [lifecycle],
+  )
+
+  /** Remove scan area highlight via lifecycle. */
+  const removeScanAreaHighlightManaged = useCallback(() => {
+    lifecycle.removeLayer('scan-area-outline')
+    lifecycle.removeLayer('scan-area-fill')
+    lifecycle.removeSource('scan-area-highlight')
+  }, [lifecycle])
+
+  /** Add monitored wijk overlay via lifecycle. */
+  const addMonitoredWijkOverlayManaged = useCallback(
+    (wijkGeojsonData: GeoJSON.FeatureCollection, monitoredWijkNames: string[]) => {
+      const monitoredSet = new Set(monitoredWijkNames)
+      const filteredFeatures = wijkGeojsonData.features.filter((feature) => {
+        const wijkNaam = feature.properties?.statnaam as string | undefined
+        return wijkNaam && monitoredSet.has(wijkNaam)
+      })
+      lifecycle.ensureSource('monitored-wijken', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: filteredFeatures },
+      })
+      lifecycle.ensureLayer(
+        {
+          id: 'monitored-wijken-fill',
+          type: 'fill',
+          source: 'monitored-wijken',
+          paint: { 'fill-color': 'rgba(59, 130, 246, 0.15)', 'fill-antialias': true },
+        },
+        'wijk-fill',
+      )
+      lifecycle.ensureLayer(
+        {
+          id: 'monitored-wijken-line',
+          type: 'line',
+          source: 'monitored-wijken',
+          paint: { 'line-color': 'rgba(59, 130, 246, 0.5)', 'line-width': 1 },
+        },
+        'wijk-fill',
+      )
+    },
+    [lifecycle],
+  )
+
+  /** Remove monitored wijk overlay via lifecycle. */
+  const removeMonitoredWijkOverlayManaged = useCallback(() => {
+    lifecycle.removeLayer('monitored-wijken-line')
+    lifecycle.removeLayer('monitored-wijken-fill')
+    lifecycle.removeSource('monitored-wijken')
+  }, [lifecycle])
+
+  /** Add scanned wijk highlight via lifecycle. */
+  const addScannedWijkHighlightManaged = useCallback(
+    (wijkGeojsonData: GeoJSON.FeatureCollection, names: string[]) => {
+      const scannedSet = new Set(names.filter(Boolean))
+      const filteredFeatures = wijkGeojsonData.features.filter((feature) => {
+        const wijkNaam = feature.properties?.statnaam as string | undefined
+        return wijkNaam && scannedSet.has(wijkNaam)
+      })
+      if (filteredFeatures.length === 0) return
+      lifecycle.ensureSource('scanned-wijken', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: filteredFeatures },
+      })
+      lifecycle.ensureLayer(
+        {
+          id: 'scanned-wijken-fill',
+          type: 'fill',
+          source: 'scanned-wijken',
+          paint: { 'fill-color': 'rgba(245, 158, 11, 0)', 'fill-opacity': 0 },
+        },
+        'wijk-fill',
+      )
+      lifecycle.ensureLayer(
+        {
+          id: 'scanned-wijken-line',
+          type: 'line',
+          source: 'scanned-wijken',
+          paint: { 'line-color': 'rgba(245, 158, 11, 0.7)', 'line-width': 2 },
+        },
+        'wijk-fill',
+      )
+    },
+    [lifecycle],
+  )
+
+  /** Remove scanned wijk highlight via lifecycle. */
+  const removeScannedWijkHighlightManaged = useCallback(() => {
+    lifecycle.removeLayer('scanned-wijken-line')
+    lifecycle.removeLayer('scanned-wijken-fill')
+    lifecycle.removeSource('scanned-wijken')
+  }, [lifecycle])
+
+  /** Set gemeente boundaries visibility via lifecycle (style-readiness queued). */
+  const setGemeenteBoundariesVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('gemeente-fill', visible)
+      lifecycle.setVisibility('gemeente-line', visible)
+    },
+    [lifecycle],
+  )
+
+  /** Remove wijk boundaries via lifecycle (idempotent, queued). */
+  const removeWijkBoundariesLayerManaged = useCallback(() => {
+    lifecycle.removeLayer('wijk-labels')
+    lifecycle.removeLayer('wijk-line')
+    lifecycle.removeLayer('wijk-fill')
+    lifecycle.removeSource('cbs-wijken')
+  }, [lifecycle])
+
+  /** Set wijk boundaries visibility via lifecycle. */
+  const setWijkBoundariesVisibilityManaged = useCallback(
+    (visible: boolean) => {
+      lifecycle.setVisibility('wijk-fill', visible)
+      lifecycle.setVisibility('wijk-line', visible)
+      lifecycle.setVisibility('wijk-labels', visible)
+    },
+    [lifecycle],
+  )
 
   const [tier, setTier] = useState<ViewTier>('none')
   // demo data removed — all property data comes from lookup API
@@ -337,9 +468,9 @@ function MapPage() {
     setActiveGemeente,
     setWijkGeojson,
     setParcelGeometryHighlight,
-    removeWijkBoundariesLayer,
-    removeScanAreaHighlight,
-    addScanAreaHighlight,
+    removeWijkBoundariesLayer: removeWijkBoundariesLayerManaged,
+    removeScanAreaHighlight: removeScanAreaHighlightManaged,
+    addScanAreaHighlight: addScanAreaHighlightManaged,
   })
   const activePanelRef = useRef<ActivePanel | null>(activePanel)
   activePanelRef.current = activePanel
@@ -486,27 +617,20 @@ function MapPage() {
     layerActions.setGemeenten(false)
     const map = mapRef.current
     if (map) {
-      // Force-hide gemeente boundaries (bypass isStyleLoaded guard)
-      try {
-        if (map.getLayer('gemeente-fill')) {
-          map.setLayoutProperty('gemeente-fill', 'visibility', 'none')
-        }
-        if (map.getLayer('gemeente-line')) {
-          map.setLayoutProperty('gemeente-line', 'visibility', 'none')
-        }
-      } catch { /* style not loaded — layers will be hidden on next idle */ }
+      // Hide gemeente boundaries via lifecycle (style-readiness queued)
+      setGemeenteBoundariesVisibilityManaged(false)
       clearGemeenteSelection(map)
       // Remove wijk boundaries if source exists (don't rely on ref alone)
       if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
-        removeWijkBoundariesLayer(map)
+        removeWijkBoundariesLayerManaged()
         setWijkGeojson(null)
       }
-      removeScanAreaHighlight(map)
+      removeScanAreaHighlightManaged()
     }
     setSelectedArea(null)
     setActiveGemeente(null)
     setActivePanel(null)
-  }, [layerActions, mapRef, setActivePanel])
+  }, [layerActions, mapRef, setActivePanel, setGemeenteBoundariesVisibilityManaged, removeWijkBoundariesLayerManaged, removeScanAreaHighlightManaged])
 
   const handleParcelsLayerToggle = useCallback((visible: boolean) => {
     layerActions.setParcels(visible)
@@ -1526,12 +1650,11 @@ function MapPage() {
     }
   }, [accessToken, makeInspectorParcel, mapReady, mapRef])
 
-  // Cleanup highlight and BAG layer on unmount
+  // Cleanup BAG layer on unmount (scan area cleanup handled by lifecycle hook)
   useEffect(() => {
     const map = mapRef.current
     return () => {
       if (map) {
-        removeScanAreaHighlight(map)
         removeBAGPandLayer(map)
       }
     }
@@ -1562,12 +1685,10 @@ function MapPage() {
 
     if (monitoredWijkNames.length === 0) return
 
-    addMonitoredWijkOverlay(mapRef.current, wijkGeojson, monitoredWijkNames)
+    addMonitoredWijkOverlayManaged(wijkGeojson, monitoredWijkNames)
 
     return () => {
-      if (mapRef.current) {
-        removeMonitoredWijkOverlay(mapRef.current)
-      }
+      removeMonitoredWijkOverlayManaged()
     }
   }, [mapReady, wijkGeojson, monitoredProjects])
 
@@ -1576,15 +1697,15 @@ function MapPage() {
     if (!mapReady || !mapRef.current) return
 
     if (!showScannedWijkBoundaries || !wijkGeojson || scannedWijkNames.length === 0) {
-      removeScannedWijkHighlight(mapRef.current)
+      removeScannedWijkHighlightManaged()
       return
     }
 
-    addScannedWijkHighlight(mapRef.current, wijkGeojson, scannedWijkNames)
+    addScannedWijkHighlightManaged(wijkGeojson, scannedWijkNames)
     return () => {
-      if (mapRef.current) removeScannedWijkHighlight(mapRef.current)
+      removeScannedWijkHighlightManaged()
     }
-  }, [mapReady, wijkGeojson, scannedWijkNames, showScannedWijkBoundaries])
+  }, [mapReady, wijkGeojson, scannedWijkNames, showScannedWijkBoundaries, addScannedWijkHighlightManaged, removeScannedWijkHighlightManaged])
 
   // Handle address selection from search
   const handleAddressSelect = useCallback(async (suggestion: SuggestResult) => {
@@ -1668,8 +1789,8 @@ function MapPage() {
       if (!currentGemeente || !mapRef.current) return
 
       // Highlight selected wijk
-      removeScanAreaHighlight(mapRef.current)
-      addScanAreaHighlight(mapRef.current, geometry)
+      removeScanAreaHighlightManaged()
+      addScanAreaHighlightManaged(geometry)
 
       // Zoom to wijk — percentage-based padding
       const canvas = mapRef.current.getCanvas()
@@ -1716,7 +1837,7 @@ function MapPage() {
       {
         onSuccess: (data) => {
           setActiveScanId(data.scan_id)
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          removeScanAreaHighlightManaged()
           setSelectedArea(null)
           if (data.status === 'existing' && !data.needs_rescan) {
             shouldAutoFollowScanRef.current = false
@@ -1729,19 +1850,19 @@ function MapPage() {
         },
         onError: (err) => {
           toast.error(`Scan starten mislukt: ${err.message}`)
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          removeScanAreaHighlightManaged()
           setSelectedArea(null)
         },
       }
     )
-  }, [pendingScan, triggerScan, navigate])
+  }, [pendingScan, triggerScan, navigate, removeScanAreaHighlightManaged])
 
   // Cancel wijk scan confirmation
   const handleCancelScan = useCallback(() => {
     setPendingScan(null)
-    if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+    removeScanAreaHighlightManaged()
     setSelectedArea(null)
-  }, [])
+  }, [removeScanAreaHighlightManaged])
 
   const activateGemeenteContext = useCallback(
     async (
@@ -1772,12 +1893,12 @@ function MapPage() {
 
       // Clear previous wijk layer if switching gemeente
       if (wijkGeojsonRef.current && mapRef.current) {
-        removeWijkBoundariesLayer(mapRef.current)
+        removeWijkBoundariesLayerManaged()
         setWijkGeojson(null)
       }
 
       // Remove any existing scan area highlight
-      removeScanAreaHighlight(mapRef.current)
+      removeScanAreaHighlightManaged()
       setSelectedArea(null)
 
       // Set active gemeente context, zoom, and open panel
@@ -1808,12 +1929,17 @@ function MapPage() {
         // Replace wijk layer with fresh data
         if (mapRef.current) {
           if (mapRef.current.getSource('cbs-wijken')) {
-            removeWijkBoundariesLayer(mapRef.current)
+            removeWijkBoundariesLayerManaged()
           }
           addWijkBoundariesLayer(mapRef.current, geojson, (code, naam, nextBbox, geometry) => {
             handleWijkClickRef.current(code, naam, nextBbox, geometry)
           })
-          setWijkBoundariesVisibility(mapRef.current, true)
+          // Track wijk layers/source for lifecycle cleanup
+          lifecycle.trackSource('cbs-wijken')
+          lifecycle.trackLayer('wijk-fill')
+          lifecycle.trackLayer('wijk-line')
+          lifecycle.trackLayer('wijk-labels')
+          setWijkBoundariesVisibilityManaged(true)
         }
 
         if (options?.showLoadedToast) {
@@ -1840,11 +1966,15 @@ function MapPage() {
       addGemeenteBoundariesLayer(map, gemeenteGeojson, (gemeenteCode, gemeenteNaam, bbox, _geometry) => {
         void activateGemeenteContext(gemeenteCode, gemeenteNaam, bbox)
       })
+      // Track gemeente layers for lifecycle cleanup
+      lifecycle.trackSource('cbs-gemeenten')
+      lifecycle.trackLayer('gemeente-fill')
+      lifecycle.trackLayer('gemeente-line')
       return
     }
 
-    setGemeenteBoundariesVisibility(map, true)
-  }, [mapReady, mapRef, layerState.showGemeenten, gemeenteGeojson, activateGemeenteContext])
+    setGemeenteBoundariesVisibilityManaged(true)
+  }, [mapReady, mapRef, layerState.showGemeenten, gemeenteGeojson, activateGemeenteContext, lifecycle, setGemeenteBoundariesVisibilityManaged])
 
   // Gemeenten layer toggle handler — no-arg, uses hook action
   const handleGemeentenToggle = useCallback(
@@ -1866,10 +1996,10 @@ function MapPage() {
         // always reopens the detail panel instead of hitting a stale guard.
         clearGemeenteSelection(map)
         if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
-          removeWijkBoundariesLayer(map)
+          removeWijkBoundariesLayerManaged()
           setWijkGeojson(null)
         }
-        removeScanAreaHighlight(map)
+        removeScanAreaHighlightManaged()
         setSelectedArea(null)
         setActiveGemeente(null)
         setActivePanel(null)
@@ -1879,18 +2009,18 @@ function MapPage() {
       }
 
       // Gemeenten OFF → hide boundaries, clear all gemeente/wijk context
-      setGemeenteBoundariesVisibility(map, false)
+      setGemeenteBoundariesVisibilityManaged(false)
       if (wijkGeojsonRef.current) {
-        removeWijkBoundariesLayer(map)
+        removeWijkBoundariesLayerManaged()
         setWijkGeojson(null)
       }
-      removeScanAreaHighlight(map)
+      removeScanAreaHighlightManaged()
       setSelectedArea(null)
       setActiveGemeente(null)
       setActivePanel(null)
       map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
     },
-    [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle, setActivePanel, setParcelGeometryHighlight]
+    [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle, setActivePanel, setParcelGeometryHighlight, removeWijkBoundariesLayerManaged, removeScanAreaHighlightManaged, setGemeenteBoundariesVisibilityManaged]
   )
 
   // Handle direct gemeente/wijk navigation from projects flow.
@@ -1917,8 +2047,11 @@ function MapPage() {
         addGemeenteBoundariesLayer(map, geojson, (gemeenteCode, gemeenteNaam, bbox, _geometry) => {
           void activateGemeenteContext(gemeenteCode, gemeenteNaam, bbox)
         })
+        lifecycle.trackSource('cbs-gemeenten')
+        lifecycle.trackLayer('gemeente-fill')
+        lifecycle.trackLayer('gemeente-line')
       } else {
-        setGemeenteBoundariesVisibility(map, true)
+        setGemeenteBoundariesVisibilityManaged(true)
       }
 
       const targetCode = normalizeGemeenteCode(urlGemeenteCode)
@@ -2212,7 +2345,7 @@ function MapPage() {
         [bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]], [bbox[0], bbox[1]],
       ]],
     }
-    addScanAreaHighlight(mapRef.current, bboxPolygon)
+    addScanAreaHighlightManaged(bboxPolygon)
     setSelectedArea({ bbox, name: `${zoneInfo.info.bestemmingType} - ${zoneInfo.info.planNaam}`, source: 'bestemmingsplan' })
 
     // Trigger scan directly (bestemmingsplan click is already a deliberate action)
@@ -2221,7 +2354,7 @@ function MapPage() {
       {
         onSuccess: (data) => {
           setActiveScanId(data.scan_id)
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          removeScanAreaHighlightManaged()
           setSelectedArea(null)
           setZoneInfo(null) // Close zone info card
           if (data.status === 'existing' && !data.needs_rescan) {
@@ -2233,7 +2366,7 @@ function MapPage() {
         },
         onError: (err) => {
           toast.error(`Scan starten mislukt: ${err.message}`)
-          if (mapRef.current) removeScanAreaHighlight(mapRef.current)
+          removeScanAreaHighlightManaged()
           setSelectedArea(null)
         },
       }

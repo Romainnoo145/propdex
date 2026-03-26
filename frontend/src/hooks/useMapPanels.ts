@@ -31,10 +31,9 @@ interface UseMapPanelsParams {
     areaM2: number | null
     geometry: GeoJSON.Geometry
   } | null) => void
-  removeWijkBoundariesLayer: (map: MaplibreMap) => void
-  removeScanAreaHighlight: (map: MaplibreMap) => void
+  removeWijkBoundariesLayer: () => void
+  removeScanAreaHighlight: () => void
   addScanAreaHighlight: (
-    map: MaplibreMap,
     geom: GeoJSON.Polygon | GeoJSON.MultiPolygon
   ) => void
 }
@@ -67,8 +66,8 @@ export function useMapPanels({
       if (feature && mapRef.current) {
         const geom = feature.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon
         const bbox = calculateBboxFromGeometry(geom) as [number, number, number, number]
-        removeScanAreaHighlight(mapRef.current)
-        addScanAreaHighlight(mapRef.current, geom)
+        removeScanAreaHighlight()
+        addScanAreaHighlight(geom)
         const canvas = mapRef.current.getCanvas()
         const padX = Math.round(canvas.clientWidth * 0.08)
         const padY = Math.round(canvas.clientHeight * 0.08)
@@ -109,7 +108,7 @@ export function useMapPanels({
       bbox: currentGemeente.bbox,
     })
     if (mapRef.current) {
-      removeScanAreaHighlight(mapRef.current)
+      removeScanAreaHighlight()
       // Zoom back to gemeente bounds
       const map = mapRef.current
       const canvas = map.getCanvas()
@@ -130,7 +129,7 @@ export function useMapPanels({
       const map = mapRef.current
       clearGemeenteSelection(map)
       if (map.getSource('cbs-wijken')) {
-        removeWijkBoundariesLayer(map)
+        removeWijkBoundariesLayer()
         setWijkGeojson(null)
       }
       map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
