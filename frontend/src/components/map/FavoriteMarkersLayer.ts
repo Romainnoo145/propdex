@@ -1,59 +1,28 @@
 /**
  * FavoriteMarkersLayer
  *
- * Renders favorited parcels as amber heart markers on the MapLibre map.
- * Uses a symbol layer with a heart icon (loaded as image).
+ * Renders favorited parcels as red circle markers on the MapLibre map.
+ * Markers are added as a GeoJSON source + circle layer so they update
+ * reactively without reloading tiles.
  *
  * Layer is added AFTER the parcel score layer so it renders on top.
- * Always visible when user has favorites — not tied to layer toggles.
+ * Visibility is NOT tied to the Percelen toggle — favorites markers
+ * serve a different purpose (portfolio awareness) and should always
+ * be visible when the user has favorites.
  */
 
 import type maplibregl from 'maplibre-gl'
 
 export const FAVORITE_MARKERS_SOURCE = 'favorite-markers'
-export const FAVORITE_MARKERS_LAYER = 'favorite-markers-heart'
-const HEART_IMAGE_ID = 'heart-icon'
+export const FAVORITE_MARKERS_LAYER = 'favorite-markers-circle'
 
 /**
- * Create a heart-shaped canvas icon for MapLibre.
- * Returns an ImageData-compatible object.
- */
-function createHeartImage(size: number, color: string): { width: number; height: number; data: Uint8Array } {
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
-  const s = size
-
-  // Draw heart shape
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.moveTo(s / 2, s * 0.85)
-  ctx.bezierCurveTo(s * 0.1, s * 0.55, s * 0.0, s * 0.3, s * 0.25, s * 0.15)
-  ctx.bezierCurveTo(s * 0.35, s * 0.1, s * 0.45, s * 0.15, s * 0.5, s * 0.25)
-  ctx.bezierCurveTo(s * 0.55, s * 0.15, s * 0.65, s * 0.1, s * 0.75, s * 0.15)
-  ctx.bezierCurveTo(s * 1.0, s * 0.3, s * 0.9, s * 0.55, s / 2, s * 0.85)
-  ctx.closePath()
-  ctx.fill()
-
-  // White stroke
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = size * 0.08
-  ctx.stroke()
-
-  return ctx.getImageData(0, 0, size, size) as unknown as { width: number; height: number; data: Uint8Array }
-}
-
-/**
- * Add the GeoJSON source and symbol layer for favorite heart markers.
+ * Add the GeoJSON source and circle layer for favorite markers.
+ * Initializes with an empty FeatureCollection.
+ *
+ * Call this after addParcelScoreLayer so markers render on top.
  */
 export function addFavoriteMarkersLayer(map: maplibregl.Map): void {
-  // Add heart icon image
-  if (!map.hasImage(HEART_IMAGE_ID)) {
-    const img = createHeartImage(48, '#F9A826')
-    map.addImage(HEART_IMAGE_ID, img)
-  }
-
   map.addSource(FAVORITE_MARKERS_SOURCE, {
     type: 'geojson',
     data: {
@@ -64,13 +33,14 @@ export function addFavoriteMarkersLayer(map: maplibregl.Map): void {
 
   map.addLayer({
     id: FAVORITE_MARKERS_LAYER,
-    type: 'symbol',
+    type: 'circle',
     source: FAVORITE_MARKERS_SOURCE,
-    layout: {
-      'icon-image': HEART_IMAGE_ID,
-      'icon-size': 0.55,
-      'icon-allow-overlap': true,
-      'icon-ignore-placement': true,
+    paint: {
+      'circle-radius': 7,
+      'circle-color': '#ef4444',
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': '#ffffff',
+      'circle-opacity': 0.9,
     },
     minzoom: 12,
   })
@@ -78,6 +48,7 @@ export function addFavoriteMarkersLayer(map: maplibregl.Map): void {
 
 /**
  * Update the favorite markers GeoJSON source with fresh centroid data.
+ * Calling this with an empty array clears all markers without errors.
  */
 export function updateFavoriteMarkers(
   map: maplibregl.Map,
@@ -103,6 +74,7 @@ export function updateFavoriteMarkers(
 
 /**
  * Remove the favorite markers layer and source from the map.
+ * Safe to call even if they were never added.
  */
 export function removeFavoriteMarkersLayer(map: maplibregl.Map): void {
   if (map.getLayer(FAVORITE_MARKERS_LAYER)) {
