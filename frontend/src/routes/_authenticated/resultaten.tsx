@@ -158,7 +158,7 @@ function ResultatenPage() {
                 </p>
                 {activeScan ? (
                   <>
-                    <h1 className="text-[40px] font-black tracking-tighter text-[#0E1111] leading-none tabular-nums">
+                    <h1 className="text-[40px] font-black tracking-tighter text-aura-obsidian leading-none tabular-nums">
                       {activeScan.parcel_count.toLocaleString('nl-NL')}
                     </h1>
                     <p className="text-[13px] text-slate-500 mt-1">
@@ -166,7 +166,7 @@ function ResultatenPage() {
                     </p>
                   </>
                 ) : (
-                  <h1 className="text-[32px] font-black tracking-tight text-[#0E1111] leading-none">Selecteer een scan</h1>
+                  <h1 className="text-[32px] font-black tracking-tight text-aura-obsidian leading-none">Selecteer een scan</h1>
                 )}
               </div>
             </div>
@@ -178,7 +178,7 @@ function ResultatenPage() {
               placeholder="Zoek percelen (adres, perceelcode, status)"
               name="q_scan_results"
               leftIcon={<Search size={14} />}
-              className="h-[44px] rounded-full border-[#EAEFEF] bg-[#F2F6F3] py-2 text-[13px] text-[#0E1111] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#F9A826]/30"
+              className="h-[44px] rounded-full border-neutral-200 bg-aura-canvas py-2 text-[13px] text-aura-obsidian placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-aura-amber/30"
             />
 
             {recentScans.length > 0 && (
@@ -191,8 +191,8 @@ function ResultatenPage() {
                       onClick={() => handleOpenScan(scan.scan_id)}
                       className={`shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-medium transition-colors whitespace-nowrap ${
                         isActive
-                          ? 'bg-[#0E1111] text-white'
-                          : 'bg-white border border-[#EAEFEF] text-slate-600 hover:border-[#0E1111] hover:text-[#0E1111]'
+                          ? 'bg-aura-obsidian text-white'
+                          : 'bg-aura-glass-white/60 border border-neutral-200 text-slate-600 hover:border-aura-obsidian hover:text-aura-obsidian'
                       }`}
                     >
                       {scan.wijk_naam ?? scan.gemeente_naam}
@@ -205,14 +205,14 @@ function ResultatenPage() {
           </div>
 
           {isMobile && (
-            <div className="shrink-0 mb-3 rounded-full border border-[#F9A826]/30 bg-[#F9A826]/10 px-4 py-2 text-xs text-[#F9A826]">
+            <div className="shrink-0 mb-3 rounded-full border border-aura-amber/30 bg-aura-amber/10 px-4 py-2 text-xs text-aura-amber">
               Gebruik desktop voor scannen en exporteren
             </div>
           )}
 
           {scan_id ? (
             <>
-              <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-[#EAEFEF] bg-white">
+              <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-neutral-200 bg-aura-glass-white/60">
                 <ResultsTable
                   scanId={scan_id}
                   filters={filters}
