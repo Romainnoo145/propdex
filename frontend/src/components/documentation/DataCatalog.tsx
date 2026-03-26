@@ -160,15 +160,28 @@ const VIEWS: ViewTab[] = [
           { naam: 'Gelezen/ongelezen', beschrijving: 'Per melding bijgehouden of u het al bekeken heeft' },
         ],
       },
-      // ── Beschikbaar ──
       {
         naam: 'Vergunning-checklists',
         beschrijving: 'Wat heb ik nodig om een vergunning aan te vragen?',
-        uitleg: 'Per ontwikkelstrategie (optoppen, splitsen, transformatie, nieuwbouw) krijgt u een complete checklist met alle benodigde documenten, onderzoeken en vergunningen — inclusief geschatte kosten. Bijvoorbeeld: bij optoppen heeft u een constructief rapport (€2.000–4.000), funderingsonderzoek (€3.000–8.000) en bouwtekeningen (€3.000–6.000) nodig. Deze functie is gebouwd maar nog niet zichtbaar in de interface.',
+        uitleg: 'Per ontwikkelstrategie (optoppen, splitsen, transformatie, nieuwbouw) krijgt u een complete checklist met alle benodigde documenten, onderzoeken en vergunningen — inclusief geschatte kosten. Dit is het 8e tabblad in de rapportweergave (/rapport). Per strategie ziet u alle voorbereidingsstappen met kostenindicatie en een label "verplicht" of "aanbevolen", zodat u precies weet wat u moet regelen en wat het gaat kosten.',
         bron: 'Propdex kennisbank',
-        status: 'beschikbaar',
+        status: 'live',
         velden: [
           { naam: 'Checklist-items', beschrijving: 'Categorie, titel, beschrijving, verplicht/optioneel, geschatte kosten' },
+        ],
+      },
+      {
+        naam: 'Verkenner AI Chat',
+        beschrijving: 'Stel vragen in gewoon Nederlands en krijg direct antwoord.',
+        uitleg: 'De Verkenner bevat een AI-chatinterface waarmee u in gewoon Nederlands vragen kunt stellen over uw percelen, gemeenten en wijken. De chat classificeert uw vraag automatisch naar het juiste type (zoeken, perceeldetails, favorieten, rapportlijst) en voert de bijbehorende actie uit. U kunt percelen zoeken, details opvragen, favorieten beheren en rapporten raadplegen — allemaal via een gesprek. De resultaten worden direct in de chatinterface getoond met klikbare links naar de betreffende percelen of rapporten.',
+        bron: 'Propdex + Claude AI',
+        status: 'live',
+        velden: [
+          { naam: 'Intent-classificatie', beschrijving: 'Automatische herkenning van uw vraagtype (zoeken, details, favorieten, etc.)' },
+          { naam: 'Zoekresultaten', beschrijving: 'Percelen zoeken op adres, postcode of plaats met directe links' },
+          { naam: 'Perceeldetails', beschrijving: 'Score, bestemming, oppervlakte en andere kerndata per perceel' },
+          { naam: 'Favorieten', beschrijving: 'Uw opgeslagen percelen bekijken en beheren via chat' },
+          { naam: 'Rapportlijst', beschrijving: 'Overzicht van gegenereerde rapporten met directe links' },
         ],
       },
       // ── Roadmap ──
@@ -388,10 +401,10 @@ const VIEWS: ViewTab[] = [
       {
         naam: 'Funda marktdata',
         beschrijving: 'Hoe lang staan woningen te koop en hoe vaak zakken prijzen?',
-        uitleg: 'We verzamelen dagelijks snapshots van Funda-aanbod. Daaruit berekenen we de gemiddelde looptijd (hoe lang staat een woning te koop?) en het aantal prijsmutaties (hoe vaak wordt de vraagprijs verlaagd?). Dit zijn sterke signalen voor marktdruk. De data wordt al verzameld maar is nog niet zichtbaar in de interface.',
+        uitleg: 'We verzamelen dagelijks snapshots van Funda-aanbod. Daaruit berekenen we de gemiddelde looptijd (hoe lang staat een woning te koop?) en het aantal prijsmutaties (hoe vaak wordt de vraagprijs verlaagd?). In het wijkpaneel ziet u een samenvattingskaart met de gemiddelde looptijd en prijsmutaties via het funda-summary endpoint. Let op: de data is alleen beschikbaar voor wijken waar de funda-enrichment is uitgevoerd.',
         bron: 'Funda',
         bronUrl: 'https://www.funda.nl',
-        status: 'beschikbaar',
+        status: 'live',
         velden: [
           { naam: 'Looptijd', beschrijving: 'Gemiddeld aantal dagen dat een woning te koop staat' },
           { naam: 'Prijsmutaties', beschrijving: 'Aantal keer dat de vraagprijs is gewijzigd' },

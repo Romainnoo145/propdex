@@ -52,6 +52,8 @@ const ITEMS: ActionItem[] = [
   { id: 'welstandsnota', title: 'Welstandsnota AI-parsing', description: 'Gemeentelijke welstandsnota\'s zijn alleen als PDF beschikbaar. AI-parsing om automatisch de belangrijkste eisen per gebied te extraheren.', category: 'roadmap', priority: 'laag' },
   { id: 'omgevingsvisie', title: 'Omgevingsvisie per gemeente', description: 'Elke gemeente publiceert een omgevingsvisie (verplicht sinds Omgevingswet 2024). PDF-parsing of gestructureerde data extractie.', category: 'roadmap', priority: 'laag' },
   { id: 'parkeerbeleid', title: 'Parkeernormen per gemeente', description: 'CROW-381 parkeernormen variëren per gemeente. Automatisch ophalen of handmatig invoeren. Impact op bouwkosten.', category: 'roadmap', priority: 'laag' },
+  { id: 'funda-enrichment', title: 'Funda enrichment draaien', description: 'Het funda-summary endpoint bestaat en de wijkkaart toont de data, maar alle waarden zijn null omdat de funda-enrichment nog niet is uitgevoerd voor enige scan. Enrichment moet handmatig getriggerd worden om looptijd- en prijsmutatiedata te vullen.', category: 'api-config', priority: 'middel' },
+  { id: 'chat-model-upgrade', title: 'Verkenner chat model upgrade', description: 'De AI-chat in de Verkenner gebruikt momenteel Haiku, wat matige Nederlandse antwoorden oplevert. Upgrade naar Sonnet voor betere kwaliteit, of vereenvoudig de intent-classificatie om verwarring te verminderen.', category: 'roadmap', priority: 'middel' },
 ]
 
 /* ── Detail Modal ──────────────────────────────────────────── */
