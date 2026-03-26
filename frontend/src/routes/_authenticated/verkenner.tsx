@@ -246,37 +246,35 @@ function VerkennerPage() {
                   </div>
 
                   {/* Composer — inline in empty state */}
-                  <div className="mt-8 w-full max-w-2xl flex items-center gap-2">
+                  <div className="mt-8 w-full max-w-2xl relative">
                     <button
                       onClick={() => setShowHistory((v) => !v)}
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
                         showHistory
-                          ? 'border-[#F9A826] bg-amber-50 text-[#F9A826]'
-                          : 'border-[#EAEFEF] text-slate-400 hover:text-[#0E1111] hover:border-[#0E1111]'
+                          ? 'bg-[#F9A826] text-[#0E1111]'
+                          : 'text-slate-400 hover:text-[#0E1111]'
                       }`}
                       title="Geschiedenis"
                     >
-                      <Clock size={18} />
+                      <Clock size={16} />
                     </button>
-                    <div className="relative flex-1">
-                      <textarea
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Stel een vraag..."
-                        rows={1}
-                        className="w-full resize-none rounded-full border border-[#EAEFEF] bg-white h-12 px-5 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
-                        disabled={chat.isPending}
-                      />
-                      <button
-                        onClick={handleSubmit}
-                        disabled={!input.trim() || chat.isPending}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
-                      >
-                        <ArrowUp size={18} strokeWidth={2} />
-                      </button>
-                    </div>
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Stel een vraag..."
+                      rows={1}
+                      className="w-full resize-none rounded-full border border-[#EAEFEF] bg-white h-12 pl-14 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
+                      disabled={chat.isPending}
+                    />
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!input.trim() || chat.isPending}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
+                    >
+                      <ArrowUp size={16} strokeWidth={2.5} />
+                    </button>
                   </div>
                 </motion.div>
               )}
@@ -294,41 +292,36 @@ function VerkennerPage() {
 
         {/* Composer — only when chat has messages */}
         {!isEmpty && (
-        <div className="shrink-0 border-t border-[#EAEFEF] bg-[#FAFCFA] px-4 sm:px-6 py-3">
-          <div className="mx-auto max-w-3xl flex items-center gap-2">
-            {/* History toggle */}
+        <div className="shrink-0 px-4 sm:px-6 pb-4 pt-2">
+          <div className="mx-auto max-w-3xl relative">
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
                 showHistory
-                  ? 'border-[#F9A826] bg-amber-50 text-[#F9A826]'
-                  : 'border-[#EAEFEF] text-slate-400 hover:text-[#0E1111] hover:border-[#0E1111]'
+                  ? 'bg-[#F9A826] text-[#0E1111]'
+                  : 'text-slate-400 hover:text-[#0E1111]'
               }`}
               title="Geschiedenis"
             >
-              <Clock size={18} />
+              <Clock size={16} />
             </button>
-
-            {/* Input */}
-            <div className="relative flex-1">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Stel een vraag..."
-                rows={1}
-                className="w-full resize-none rounded-full border border-[#EAEFEF] bg-white h-12 px-5 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
-                disabled={chat.isPending}
-              />
-              <button
-                onClick={handleSubmit}
-                disabled={!input.trim() || chat.isPending}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
-              >
-                <ArrowUp size={18} strokeWidth={2} />
-              </button>
-            </div>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Stel een vraag..."
+              rows={1}
+              className="w-full resize-none rounded-full border border-[#EAEFEF] bg-white h-12 pl-14 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
+              disabled={chat.isPending}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim() || chat.isPending}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
+            >
+              <ArrowUp size={16} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
         )}
