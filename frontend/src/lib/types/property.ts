@@ -487,6 +487,19 @@ export interface FysiekRisicoProfiel {
 }
 
 /**
+ * Score for a specific development use case (optoppen, splitsen, etc.)
+ * Backend: app.services.use_case_scoring.UseCaseScore
+ */
+export interface UseCaseScore {
+  use_case: string
+  label: string
+  score: number
+  category: string
+  top_factors: string[]
+  description: string
+}
+
+/**
  * Extended property report with zoning, monuments, and map data
  *
  * Includes all data from PropertyLookupResponse plus additional
@@ -524,6 +537,9 @@ export interface PropertyReportResponse {
   permit_precedents?: PermitPrecedentBenchmark | null
   brk_ownership?: BRKOwnership | null
   fysiek_risico_profiel?: FysiekRisicoProfiel | null
+
+  // Phase 15 additions (Vergunning Checklists)
+  use_case_scores?: Record<string, UseCaseScore> | null
 
   // Phase 104 additions (Due Diligence Dossier — flags-sourced enrichment)
   vergunningen_data?: Record<string, unknown>[] | null
