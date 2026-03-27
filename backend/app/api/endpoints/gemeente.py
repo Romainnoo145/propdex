@@ -74,15 +74,16 @@ async def get_checklist_for_use_case(
     """
     from dataclasses import asdict
 
-    from app.services.checklists import get_checklist
+    from app.services.checklists import PHASE_ORDER, get_checklist
 
     items = get_checklist(use_case)
     if not items:
-        return {"use_case": use_case, "items": [], "total": 0, "error": f"Unknown use case: {use_case}"}
+        return {"use_case": use_case, "items": [], "total": 0, "phases": PHASE_ORDER, "error": f"Unknown use case: {use_case}"}
     return {
         "use_case": use_case,
         "items": [asdict(item) for item in items],
         "total": len(items),
+        "phases": PHASE_ORDER,
     }
 
 
