@@ -26,7 +26,7 @@ export function ChatReportsList({ reports, count, message }: Props) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[13px] font-semibold text-[#0E1111]">
+      <p className="text-[13px] font-semibold text-aura-obsidian">
         {count} {count === 1 ? 'rapport' : 'rapporten'}
       </p>
       <div className="space-y-1">
@@ -34,11 +34,11 @@ export function ChatReportsList({ reports, count, message }: Props) {
           <button
             key={r.id}
             onClick={() => navigate({ to: '/rapport/$id', params: { id: r.id } })}
-            className="w-full flex items-center gap-3 rounded-lg border border-[#EAEFEF] bg-white px-3 py-2 text-left hover:bg-[#F8FAF8] transition-colors"
+            className="w-full flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left hover:bg-aura-canvas transition-colors"
           >
             <FileText size={14} className="text-slate-400 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-medium text-[#0E1111] truncate">{r.report_name}</p>
+              <p className="text-[12px] font-medium text-aura-obsidian truncate">{r.report_name}</p>
               <p className="text-[10px] text-slate-400">
                 {r.city && `${r.city} · `}
                 {new Date(r.created_at).toLocaleDateString('nl-NL')}

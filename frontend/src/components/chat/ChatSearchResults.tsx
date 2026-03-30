@@ -41,7 +41,7 @@ export function ChatSearchResults({ total, parsed, queryId }: Props) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Search size={16} className="text-amber-500" />
-        <span className="text-[14px] font-bold text-[#0E1111]">
+        <span className="text-[14px] font-bold text-aura-obsidian">
           {total.toLocaleString('nl-NL')} resultaten gevonden
         </span>
       </div>

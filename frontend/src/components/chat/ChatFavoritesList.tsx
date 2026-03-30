@@ -3,6 +3,8 @@
  */
 
 import { Heart } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
+import { toMapParcelSearch } from '@/lib/navigation/mapSearch'
 import type { FavoriteSummary } from '@/hooks/useChat'
 
 const STAGE_COLORS: Record<string, string> = {
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function ChatFavoritesList({ favorites, count, message }: Props) {
+  const navigate = useNavigate()
   if (favorites.length === 0) {
     return (
       <div className="flex items-center gap-2 text-[13px] text-slate-400">
@@ -31,17 +34,24 @@ export function ChatFavoritesList({ favorites, count, message }: Props) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[13px] font-semibold text-[#0E1111]">
+      <p className="text-[13px] font-semibold text-aura-obsidian">
         {count} opgeslagen {count === 1 ? 'perceel' : 'percelen'}
       </p>
       <div className="space-y-1">
         {favorites.slice(0, 15).map((f) => (
           <div
             key={f.parcel_id}
-            className="flex items-center justify-between rounded-lg border border-[#EAEFEF] bg-white px-3 py-2"
+            onClick={() => navigate({
+              to: '/map',
+              search: toMapParcelSearch({
+                parcelId: f.parcel_id,
+                fallbackAddress: f.address ?? undefined,
+              }),
+            })}
+            className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 cursor-pointer hover:bg-aura-canvas transition-colors"
           >
             <div className="min-w-0">
-              <p className="text-[12px] font-medium text-[#0E1111] truncate">
+              <p className="text-[12px] font-medium text-aura-obsidian truncate">
                 {f.address || f.parcel_id}
               </p>
               {f.gemeente_naam && (

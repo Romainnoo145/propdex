@@ -41,6 +41,7 @@ export interface ParcelDetailSummary {
   parcel_code?: string | null
   address?: string | null
   municipality?: string | null
+  gemeente_code?: string | null
   bouwjaar?: number | null
   area_m2?: number | null
   bestemming?: string | null

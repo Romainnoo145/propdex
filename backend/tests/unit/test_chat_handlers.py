@@ -21,6 +21,7 @@ def _make_parcel_cache_row(
     parcel_id="NL.IMKAD.KadastraalObject.12345",
     parcel_code="Venlo I 1234",
     address="Leutherweg 139, 5921JH Venlo",
+    gemeente_code="0983",
     bouwjaar=1965,
     area_m2=450.0,
     bestemmingen=None,
@@ -32,6 +33,7 @@ def _make_parcel_cache_row(
     row.parcel_id = parcel_id
     row.parcel_code = parcel_code
     row.address = address
+    row.gemeente_code = gemeente_code
     row.bouwjaar = bouwjaar
     row.area_m2 = area_m2
     row.bestemmingen = bestemmingen or [{"type": "wonen", "naam": "Wonen"}]

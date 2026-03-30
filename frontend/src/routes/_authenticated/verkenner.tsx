@@ -54,12 +54,12 @@ function HistoryShell({
   return (
     <div className="h-full w-[340px] shrink-0 overflow-hidden rounded-[40px] bg-white border border-white/20 flex flex-col">
       {/* Header */}
-      <div className="shrink-0 px-5 pt-6 pb-3 border-b border-[#EAEFEF]">
+      <div className="shrink-0 px-5 pt-6 pb-3 border-b border-neutral-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-[14px] font-bold text-[#0E1111]">Geschiedenis</h3>
+          <h3 className="text-[14px] font-bold text-aura-obsidian">Geschiedenis</h3>
           <button
             onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-full border border-[#EAEFEF] text-slate-400 hover:text-[#0E1111] hover:border-[#0E1111] transition-colors"
+            className="flex size-7 items-center justify-center rounded-full border border-neutral-200 text-slate-400 hover:text-aura-obsidian hover:border-aura-obsidian transition-colors"
           >
             <X size={14} />
           </button>
@@ -77,9 +77,9 @@ function HistoryShell({
           <button
             key={q.id}
             onClick={() => onSelect(q.query_text)}
-            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F2F6F3] transition-colors"
+            className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-aura-canvas transition-colors"
           >
-            <p className="text-[13px] text-[#0E1111] font-medium line-clamp-1">
+            <p className="text-[13px] text-aura-obsidian font-medium line-clamp-1">
               {q.query_text}
             </p>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
@@ -122,7 +122,7 @@ function MessageBubble({ message, chat }: {
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 mt-0.5">
         <Compass size={14} className="text-amber-500" />
       </div>
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-[#EAEFEF] px-4 py-3 shadow-sm">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-neutral-200 px-4 py-3 shadow-sm">
         <SystemContent message={message} chat={chat} />
       </div>
     </motion.div>
@@ -210,7 +210,7 @@ function VerkennerPage() {
       </AnimatePresence>
 
       {/* ── Chat shell ─────────────────────────────────── */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden rounded-[40px] bg-[#FAFCFA] flex flex-col">
+      <div className="flex-1 min-w-0 h-full overflow-hidden rounded-[40px] bg-aura-canvas flex flex-col">
 
         {/* Thread */}
         <div ref={threadRef} className="flex-1 overflow-y-auto px-4 sm:px-6">
@@ -227,7 +227,7 @@ function VerkennerPage() {
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
                     <Compass size={24} className="text-amber-500" />
                   </div>
-                  <h1 className="mt-4 text-[32px] sm:text-[42px] font-black tracking-tight text-[#0E1111]">
+                  <h1 className="mt-4 text-[32px] sm:text-[42px] font-black tracking-tight text-aura-obsidian">
                     Verkenner
                   </h1>
                   <p className="mt-2 text-[13px] text-slate-500 max-w-md">
@@ -251,8 +251,8 @@ function VerkennerPage() {
                       onClick={() => setShowHistory((v) => !v)}
                       className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
                         showHistory
-                          ? 'bg-[#F9A826] text-[#0E1111]'
-                          : 'text-slate-400 hover:text-[#0E1111]'
+                          ? 'bg-aura-amber text-aura-obsidian'
+                          : 'text-slate-400 hover:text-aura-obsidian'
                       }`}
                       title="Geschiedenis"
                     >
@@ -265,13 +265,13 @@ function VerkennerPage() {
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Stel een vraag..."
-                      className="w-full rounded-full border border-[#EAEFEF] bg-white h-12 pl-14 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
+                      className="w-full rounded-full border border-neutral-200 bg-white h-12 pl-14 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 focus:outline-none focus:border-aura-amber transition-colors"
                       disabled={chat.isPending}
                     />
                     <button
                       onClick={handleSubmit}
                       disabled={!input.trim() || chat.isPending}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian disabled:opacity-30 hover:bg-aura-amber-hover transition-colors"
                     >
                       <ArrowUp size={16} strokeWidth={2.5} />
                     </button>
@@ -298,8 +298,8 @@ function VerkennerPage() {
               onClick={() => setShowHistory((v) => !v)}
               className={`absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full transition-colors z-10 ${
                 showHistory
-                  ? 'bg-[#F9A826] text-[#0E1111]'
-                  : 'text-slate-400 hover:text-[#0E1111]'
+                  ? 'bg-aura-amber text-aura-obsidian'
+                  : 'text-slate-400 hover:text-aura-obsidian'
               }`}
               title="Geschiedenis"
             >
@@ -312,13 +312,13 @@ function VerkennerPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Stel een vraag..."
-              className="w-full rounded-full border border-[#EAEFEF] bg-white h-12 pl-14 pr-14 text-[14px] text-[#0E1111] placeholder:text-slate-400 focus:outline-none focus:border-[#F9A826] transition-colors"
+              className="w-full rounded-full border border-neutral-200 bg-white h-12 pl-14 pr-14 text-[14px] text-aura-obsidian placeholder:text-slate-400 focus:outline-none focus:border-aura-amber transition-colors"
               disabled={chat.isPending}
             />
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || chat.isPending}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#F9A826] text-[#0E1111] disabled:opacity-30 hover:bg-[#E8971F] transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian disabled:opacity-30 hover:bg-aura-amber-hover transition-colors"
             >
               <ArrowUp size={16} strokeWidth={2.5} />
             </button>

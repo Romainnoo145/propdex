@@ -319,6 +319,7 @@ async def handle_parcel_detail(
         parcel_code=parcel.parcel_code,
         address=parcel.address,
         municipality=None,  # gemeente_code available, not name
+        gemeente_code=parcel.gemeente_code,
         bouwjaar=parcel.bouwjaar,
         area_m2=parcel.area_m2,
         bestemming=(

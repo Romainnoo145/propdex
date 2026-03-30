@@ -18,7 +18,7 @@ export function ChatCountPreview({ count, message, suggestions, onSuggestion, on
       {/* Count display */}
       <div className="flex items-center gap-2">
         <Search size={16} className="text-slate-400" />
-        <span className="text-[13px] font-semibold text-[#0E1111]">
+        <span className="text-[13px] font-semibold text-aura-obsidian">
           {count.toLocaleString('nl-NL')} resultaten
         </span>
       </div>
@@ -31,7 +31,7 @@ export function ChatCountPreview({ count, message, suggestions, onSuggestion, on
             <button
               key={s}
               onClick={() => onSuggestion(s)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#EAEFEF] bg-white px-3 py-1.5 text-[12px] text-slate-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
+              className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] text-slate-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
             >
               {s}
             </button>

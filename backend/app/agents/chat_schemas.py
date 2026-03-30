@@ -93,6 +93,7 @@ class ParcelDetailSummary(BaseModel):
     parcel_code: str | None = None
     address: str | None = None
     municipality: str | None = None
+    gemeente_code: str | None = None
     bouwjaar: int | None = None
     area_m2: float | None = None
     bestemming: str | None = None
