@@ -24,6 +24,7 @@ import {
   ExternalLink,
   ChevronRight,
   Download,
+  Eye,
   X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -430,6 +431,18 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
       })
   }
 
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!parcelId || !docStatus?.document_id) return
+    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${docStatus.document_id}`
+    fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob)
+        window.open(blobUrl, '_blank')
+      })
+  }
+
   return (
     <div className="flex items-center gap-3 border-b border-[#EAEFEF] last:border-b-0">
       {/* Checkbox — stops propagation so clicking it doesn't open the modal */}
@@ -458,27 +471,34 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {isGenerated ? (
-            <span className="rounded-full border border-green-200 bg-green-50 px-1.5 py-0 text-[10px] font-medium text-green-700">
-              PDF beschikbaar
-            </span>
-          ) : item.required ? (
-            <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800">
-              Verplicht
-            </span>
-          ) : (
-            <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0 text-[10px] font-medium text-slate-500">
-              Aanbevolen
-            </span>
+          {!isGenerated && (
+            item.required ? (
+              <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800">
+                Verplicht
+              </span>
+            ) : (
+              <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0 text-[10px] font-medium text-slate-500">
+                Aanbevolen
+              </span>
+            )
           )}
           {isGenerated ? (
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 transition-colors hover:bg-green-100"
-            >
-              <Download className="size-3" />
-              Download
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleView}
+                className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                title="Bekijk PDF"
+              >
+                <Eye className="size-3.5" />
+              </button>
+              <button
+                onClick={handleDownload}
+                className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                title="Download PDF"
+              >
+                <Download className="size-3.5" />
+              </button>
+            </div>
           ) : (
             <ChevronRight className="size-3.5 text-slate-300" />
           )}
