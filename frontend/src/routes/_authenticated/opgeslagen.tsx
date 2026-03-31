@@ -3,10 +3,9 @@ import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
-import { ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin, Bookmark, FileText } from 'lucide-react'
+import { ClipboardCheck, ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin, Bookmark } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
-import { useReports } from '@/hooks/useReports'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -81,8 +80,6 @@ function OpgeslagenPage() {
   const navigate = useNavigate()
   const { stage: stageFilter } = Route.useSearch()
   const { data: favorites, isLoading } = useParcelFavorites()
-  const { data: reportsData, isLoading: reportsLoading } = useReports()
-  const [activeTab, setActiveTab] = useState<'percelen' | 'rapporten'>('percelen')
   const [expandedGemeenten, setExpandedGemeenten] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [workspaceParcelId, setWorkspaceParcelId] = useState<string | null>(null)
@@ -199,57 +196,23 @@ function OpgeslagenPage() {
       >
         {/* ── Hero Section ─────────────────────────────── */}
         <motion.div variants={fadeUp} className="mb-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p
-                className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              >
-                {activeTab === 'percelen' ? 'Portfolio' : 'Rapporten'}
-              </p>
-              <h1 className="text-[32px] font-black tracking-tight text-[#0E1111] leading-none" style={{ textWrap: 'balance' }}>
-                {activeTab === 'percelen' ? `${totalCount} opgeslagen` : `${reportsData?.total ?? 0} rapporten`}
-              </h1>
-              <p className="text-[13px] text-slate-500 mt-2" style={{ textWrap: 'pretty' }}>
-                {activeTab === 'percelen'
-                  ? `in ${gemeenteCount} ${gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}`
-                  : 'bekijk en beheer je gegenereerde rapporten'
-                }
-              </p>
-            </div>
-
-            {/* Toggle — same position as documentatie */}
-            <div className="flex items-center rounded-full border border-[#0E1111] p-0.5 shrink-0 mt-2">
-              <button
-                onClick={() => setActiveTab('percelen')}
-                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                  activeTab === 'percelen'
-                    ? 'bg-[#F9A826] text-[#0E1111]'
-                    : 'text-slate-400 hover:text-[#0E1111]'
-                }`}
-                title="Percelen"
-              >
-                <Bookmark size={16} strokeWidth={2} />
-              </button>
-              <button
-                onClick={() => setActiveTab('rapporten')}
-                className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                  activeTab === 'rapporten'
-                    ? 'bg-[#F9A826] text-[#0E1111]'
-                    : 'text-slate-400 hover:text-[#0E1111]'
-                }`}
-                title="Rapporten"
-              >
-                <FileText size={16} strokeWidth={2} />
-              </button>
-            </div>
+          <div>
+            <p
+              className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400 mb-2"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Portfolio
+            </p>
+            <h1 className="text-[32px] font-black tracking-tight text-[#0E1111] leading-none" style={{ textWrap: 'balance' }}>
+              {totalCount} opgeslagen
+            </h1>
+            <p className="text-[13px] text-slate-500 mt-2" style={{ textWrap: 'pretty' }}>
+              in {gemeenteCount} {gemeenteCount === 1 ? 'gemeente' : 'gemeenten'}
+            </p>
           </div>
         </motion.div>
 
-        {activeTab === 'rapporten' ? (
-          /* ── Rapporten tab ── */
-          <RapportenView reports={reportsData?.reports ?? []} isLoading={reportsLoading} navigate={navigate} />
-        ) : totalCount === 0 ? (
+        {totalCount === 0 ? (
           <motion.div variants={fadeUp}>
             <EmptyState
               icon={<Heart size={40} strokeWidth={1.5} className="text-[#F9A826]" />}
@@ -391,15 +354,17 @@ function OpgeslagenPage() {
                           transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className="border-t border-[#EAEFEF]">
-                            {group.parcels.map((parcel) => (
-                              <ParcelRow
-                                key={parcel.id}
-                                parcel={parcel}
-                                onNavigate={() => navigateToParcel(parcel)}
-                                onOpenWorkspace={() => setWorkspaceParcel(parcel)}
-                              />
-                            ))}
+                          <div className="border-t border-[#EAEFEF] p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {group.parcels.map((parcel) => (
+                                <ParcelCard
+                                  key={parcel.id}
+                                  parcel={parcel}
+                                  onNavigate={() => navigateToParcel(parcel)}
+                                  onOpenWorkspace={() => setWorkspaceParcel(parcel)}
+                                />
+                              ))}
+                            </div>
                           </div>
                         </motion.div>
                       )}
@@ -432,9 +397,9 @@ function OpgeslagenPage() {
   )
 }
 
-/* ── ParcelRow ─────────────────────────────────────────────── */
+/* ── ParcelCard ─────────────────────────────────────────────── */
 
-function ParcelRow({
+function ParcelCard({
   parcel,
   onNavigate,
   onOpenWorkspace,
@@ -444,52 +409,84 @@ function ParcelRow({
   onOpenWorkspace: () => void
 }) {
   const address = parcel.address || parcel.parcel_id
-  const subtitle = parcel.address ? parcel.parcel_id : null
+  const subtitle = parcel.address
+    ? [parcel.wijk_naam, parcel.gemeente_naam].filter(Boolean).join(' · ')
+    : null
   const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
+  const navigate = useNavigate()
 
   return (
-    <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors">
-      <button onClick={onOpenWorkspace} className="min-w-0 flex-1 text-left">
-        <p className="text-[13px] font-semibold text-[#0E1111] truncate">
-          {address}
-        </p>
-        {subtitle && (
-          <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
-            {subtitle}
+    <div
+      onClick={() => onOpenWorkspace()}
+      className="cursor-pointer rounded-[20px] border border-[#EAEFEF] bg-white px-5 py-4 transition-shadow hover:shadow-md"
+    >
+      {/* Top: address + pipeline stage */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-bold text-[#0E1111] leading-snug">
+            {address}
           </p>
-        )}
-      </button>
-
-      <div className="flex items-center gap-2 shrink-0 ml-3">
-        {parcel.potentie_score != null && (
-          <ScoreBadge
-            score={parcel.potentie_score}
-            type="potentie"
-            size="sm"
-            onClick={() => setScoreModal('potentie')}
-          />
-        )}
-        {parcel.risico_score != null && (
-          <ScoreBadge
-            score={parcel.risico_score}
-            type="risico"
-            size="sm"
-            onClick={() => setScoreModal('risico')}
-          />
-        )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onNavigate()
-          }}
-          aria-label="Open op kaart"
-          title="Open op kaart"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
-        >
-          <MapPin size={14} />
-        </button>
+          {subtitle && (
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
         <PipelineStagePill parcel={parcel} />
+      </div>
+
+      {/* Scores + actions on one line */}
+      <div className="mt-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {parcel.potentie_score != null && (
+            <ScoreBadge
+              score={parcel.potentie_score}
+              type="potentie"
+              size="sm"
+              onClick={() => setScoreModal('potentie')}
+            />
+          )}
+          {parcel.risico_score != null && (
+            <ScoreBadge
+              score={parcel.risico_score}
+              type="risico"
+              size="sm"
+              onClick={() => setScoreModal('risico')}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {/* Checklist */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              if (parcel.has_report && parcel.report_id) {
+                navigate({ to: '/checklist/$id', params: { id: parcel.report_id } })
+              }
+            }}
+            disabled={!parcel.has_report}
+            title={parcel.has_report ? 'Vergunning checklist' : 'Checklist beschikbaar na rapport'}
+            className={`flex size-8 items-center justify-center rounded-full transition-colors ${
+              parcel.has_report
+                ? 'bg-amber-500 border border-[#0E1111] text-[#0E1111] hover:bg-amber-400'
+                : 'bg-[#F2F6F3] text-slate-300'
+            }`}
+          >
+            <ClipboardCheck size={14} />
+          </button>
+          {/* Map */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onNavigate()
+            }}
+            title="Bekijk op kaart"
+            className="flex size-8 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
+          >
+            <MapPin size={14} />
+          </button>
+        </div>
       </div>
 
       <PotentieModal
@@ -551,7 +548,7 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
         ref={triggerRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o) }}
-        className="inline-flex min-h-[28px] items-center rounded-full border border-[#0E1111] bg-[#F9A826] px-3 text-[11px] font-semibold text-[#0E1111] transition-colors hover:bg-[#E8951F]"
+        className="inline-flex min-h-[28px] items-center rounded-full border border-amber-300 bg-amber-50 px-3 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-100"
       >
         {parcel.pipeline_stage}
       </button>
@@ -587,108 +584,3 @@ function PipelineStagePill({ parcel }: { parcel: FavoriteResponse }) {
   )
 }
 
-/* ─── Rapporten View ──────────────────────────────────────── */
-
-function RapportenView({
-  reports,
-  isLoading: loading,
-  navigate,
-}: {
-  reports: { id: string; report_name: string; postcode: string; city: string; completeness_score: number; created_at: string; updated_at: string }[]
-  isLoading: boolean
-  navigate: ReturnType<typeof useNavigate>
-}) {
-  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set())
-
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-    )
-  }
-
-  if (reports.length === 0) {
-    return (
-      <motion.div variants={fadeUp} initial="hidden" animate="show">
-        <EmptyState
-          icon={<FileText size={40} strokeWidth={1.5} className="text-[#F9A826]" />}
-          title="Geen rapporten"
-          description="Genereer een rapport vanuit een perceeldetail om het hier terug te vinden."
-        />
-      </motion.div>
-    )
-  }
-
-  const byCity = new Map<string, typeof reports>()
-  for (const r of reports) {
-    const list = byCity.get(r.city) ?? []
-    list.push(r)
-    byCity.set(r.city, list)
-  }
-
-  const toggleCity = (city: string) => {
-    setExpandedCities((prev) => {
-      const next = new Set(prev)
-      if (next.has(city)) next.delete(city)
-      else next.add(city)
-      return next
-    })
-  }
-
-  const dateFmt = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
-
-  return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
-      {[...byCity.entries()].map(([city, cityReports]) => {
-        const isExpanded = expandedCities.has(city)
-        return (
-          <motion.div key={city} variants={fadeUp}>
-            <div className="bg-white rounded-[24px] border border-[#EAEFEF] shadow-sm hover:shadow-md transition-shadow">
-              <button
-                aria-expanded={isExpanded}
-                onClick={() => toggleCity(city)}
-                className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-[#F9A826]">
-                    <span className="text-[14px] font-bold text-[#0E1111] tabular-nums">{cityReports.length}</span>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[15px] font-bold text-[#0E1111] tracking-tight">{city}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{cityReports.length} {cityReports.length === 1 ? 'rapport' : 'rapporten'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold text-slate-400 tabular-nums">{cityReports.length}</span>
-                  {isExpanded ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
-                </div>
-              </button>
-
-              {isExpanded && (
-                <div className="border-t border-[#EAEFEF] divide-y divide-[#EAEFEF]">
-                  {cityReports.map((report) => (
-                    <button
-                      key={report.id}
-                      onClick={() => navigate({ to: '/rapport/$id', params: { id: report.id } })}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-semibold text-[#0E1111] truncate">{report.report_name}</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {report.postcode} · {dateFmt.format(new Date(report.created_at))}
-                        </p>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-400 shrink-0 ml-4" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )
-      })}
-    </motion.div>
-  )
-}

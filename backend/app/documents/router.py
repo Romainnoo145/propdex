@@ -12,7 +12,7 @@ from sqlalchemy.orm import defer
 
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
-from app.documents.schemas import DocumentListResponse, DocumentResponse
+from app.documents.schemas import ChecklistItemStatus, ChecklistStatusResponse, DocumentListResponse, DocumentResponse
 from app.middleware.rate_limit import limiter
 from app.models.parcel_document import ParcelDocument
 from app.models.user import User
@@ -45,6 +45,7 @@ VALID_DOCUMENT_TYPES: set[str] = {
     "documenten",
     "correspondentie",
     "ideeen",
+    "checklist",
     # Checklist auto-generated document types (M020)
     "wkb_precheck",
     "monumenten",
@@ -248,6 +249,67 @@ async def list_documents(
     return DocumentListResponse(
         documents=[DocumentResponse.model_validate(d) for d in documents],
         total=total,
+    )
+
+
+@router.get(
+    "/{parcel_id}/checklist-status",
+    response_model=ChecklistStatusResponse,
+)
+async def get_checklist_status(
+    parcel_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> ChecklistStatusResponse:
+    """Get checklist completion status for a parcel.
+
+    Maps generated checklist documents back to their checklist item IDs,
+    returning which items have generated PDFs available for download.
+    """
+    from app.reports.checklist_pdf import CHECKLIST_DOC_CONFIGS
+
+    # Fetch all checklist-type documents for this parcel
+    checklist_doc_types = set(CHECKLIST_DOC_CONFIGS.keys())
+    query = (
+        select(ParcelDocument)
+        .options(defer(ParcelDocument.file_data))
+        .where(
+            ParcelDocument.uploaded_by_user_id == current_user.id,
+            ParcelDocument.parcel_id == parcel_id,
+            ParcelDocument.document_type.in_(checklist_doc_types),
+        )
+    )
+    result = await db.execute(query)
+    docs = list(result.scalars().all())
+
+    # Build doc_type → document mapping (latest per type)
+    doc_by_type: dict[str, ParcelDocument] = {}
+    for doc in docs:
+        if doc.document_type not in doc_by_type:
+            doc_by_type[doc.document_type] = doc
+
+    # Build item status mapping
+    items: dict[str, ChecklistItemStatus] = {}
+    for doc_type, config in CHECKLIST_DOC_CONFIGS.items():
+        doc = doc_by_type.get(doc_type)
+        for item_id in config.checklist_item_ids:
+            if doc:
+                items[item_id] = ChecklistItemStatus(
+                    status="generated",
+                    document_id=doc.id,
+                    document_type=doc_type,
+                    filename=doc.filename,
+                )
+            else:
+                items[item_id] = ChecklistItemStatus(status="pending")
+
+    generated_count = sum(1 for v in items.values() if v.status == "generated")
+
+    return ChecklistStatusResponse(
+        parcel_id=parcel_id,
+        items=items,
+        generated_count=generated_count,
+        total_count=len(items),
     )
 
 

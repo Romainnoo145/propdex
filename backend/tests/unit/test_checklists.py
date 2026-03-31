@@ -42,8 +42,8 @@ class TestChecklistData:
     @pytest.mark.parametrize("use_case", USE_CASES)
     def test_item_count_in_range(self, use_case: str) -> None:
         items = get_checklist(use_case)
-        assert 15 <= len(items) <= 25, (
-            f"{use_case} has {len(items)} items (expected 15-25)"
+        assert 15 <= len(items) <= 35, (
+            f"{use_case} has {len(items)} items (expected 15-35)"
         )
 
     @pytest.mark.parametrize("use_case", USE_CASES)

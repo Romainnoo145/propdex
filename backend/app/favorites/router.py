@@ -257,15 +257,18 @@ async def create_favorites_bulk(
         for row in cache_result.all():
             cache_lookup[row[0]] = row[1]
 
-    # Insert new favorites
+    # Insert new favorites — resolve context for each
     for pid in new_ids:
         try:
+            resolved = await _resolve_favorite_context(db, pid)
             fav = ParcelFavorite(
                 parcel_id=pid,
-                parcel_cache_id=cache_lookup.get(pid),
+                parcel_cache_id=resolved["parcel_cache_id"] or cache_lookup.get(pid),
                 user_id=current_user.id,
-                gemeente_code=body.gemeente_code,
-                gemeente_naam=body.gemeente_naam,
+                gemeente_code=body.gemeente_code or resolved["gemeente_code"],
+                gemeente_naam=body.gemeente_naam or resolved["gemeente_naam"],
+                wijk_naam=resolved["wijk_naam"],
+                address=resolved["address"],
                 pipeline_stage="Gesignaleerd",
             )
             db.add(fav)

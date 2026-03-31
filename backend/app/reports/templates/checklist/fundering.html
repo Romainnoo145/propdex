@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.risk-level {
+  display: inline-block;
+  font-weight: 700;
+  padding: 0.1cm 0.3cm;
+  border-radius: 3px;
+  font-size: 9pt;
+}
+.risk-hoog { background: #FEE2E2; color: #991B1B; }
+.risk-middel { background: #FEF3C7; color: #92400E; }
+.risk-laag { background: #DCFCE7; color: #166534; }
+.risk-onbekend { background: var(--brand-bg); color: var(--brand-muted); }
+{% endblock %}
+
+{% block content %}
+<h2>Funderingsrisico</h2>
+
+{% set frg = report_data.get('funderingsrisicogebied') %}
+{% set frp = report_data.get('fysiek_risico_profiel') %}
+{% set fr = (frp or {}).get('foundation_risk') %}
+
+{% if frg or fr %}
+
+{# --- Funderingsrisicogebied (postcode-level) --- #}
+{% if frg %}
+<h2>Funderingsrisicogebied (postcodeniveau)</h2>
+<table>
+  {% if frg.get('legenda') %}
+  <tr>
+    <th>Gebiedsclassificatie</th>
+    <td>{{ frg.get('legenda') }}</td>
+  </tr>
+  {% endif %}
+  {% if frg.get('fgr') %}
+  <tr>
+    <th>Funderingsgebied</th>
+    <td>{{ frg.get('fgr') }}</td>
+  </tr>
+  {% endif %}
+  {% if frg.get('pc6') %}
+  <tr>
+    <th>Postcode</th>
+    <td>{{ frg.get('pc6') }}</td>
+  </tr>
+  {% endif %}
+  {% if frg.get('percvoor1970') is not none %}
+  <tr>
+    <th>% bebouwing voor 1970</th>
+    <td>{{ frg.get('percvoor1970') }}%</td>
+  </tr>
+  {% endif %}
+  {% if frg.get('gemeente') %}
+  <tr>
+    <th>Gemeente</th>
+    <td>{{ frg.get('gemeente') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Foundation risk from fysiek_risico_profiel --- #}
+{% if fr %}
+<h2>Funderingsrisico (berekend)</h2>
+<table>
+  <tr>
+    <th>Risiconiveau</th>
+    <td>
+      {% set fr_risk = fr.get('risk', 'onbekend') %}
+      <span class="risk-level risk-{{ fr_risk }}">{{ fr_risk | title }}</span>
+    </td>
+  </tr>
+  {% if fr.get('bouwjaar') is not none %}
+  <tr>
+    <th>Bouwjaar (gebruikt)</th>
+    <td>{{ fr.get('bouwjaar') }}</td>
+  </tr>
+  {% endif %}
+  {% if fr.get('bodemtype') %}
+  <tr>
+    <th>Bodemtype (gebruikt)</th>
+    <td>{{ fr.get('bodemtype') | title }}</td>
+  </tr>
+  {% endif %}
+  {% if fr.get('reden') %}
+  <tr>
+    <th>Toelichting</th>
+    <td>{{ fr.get('reden') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{% else %}
+<p class="na">Geen funderingsgegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

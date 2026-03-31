@@ -1599,24 +1599,127 @@ export function FavoriteParcelWorkspaceView({
             </div>
           </div>
 
-          <div className="flex items-start justify-end lg:shrink-0">
+          <div className="flex items-center gap-2 lg:shrink-0">
+            {/* Bekijk rapport */}
             <motion.button
               type="button"
+              onClick={() => {
+                if (favorite.has_report && favorite.report_id) {
+                  navigate({ to: '/rapport/$id', params: { id: favorite.report_id } })
+                }
+              }}
+              disabled={!favorite.has_report}
+              whileHover={favorite.has_report ? { scale: 1.04 } : undefined}
+              whileTap={favorite.has_report ? { scale: 0.96 } : undefined}
+              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-[13px] font-semibold transition-colors ${
+                favorite.has_report
+                  ? 'border-2 border-[#0E1111] bg-amber-500 text-[#0E1111] hover:bg-amber-400'
+                  : 'border border-[#EAEFEF] bg-[#F2F6F3] text-slate-400 cursor-default'
+              }`}
+              title={favorite.has_report ? 'Bekijk rapport' : 'Rapport wordt gegenereerd…'}
+            >
+              <FileText size={15} />
+              Bekijk rapport
+            </motion.button>
+            {/* Checklist */}
+            <button
+              type="button"
+              onClick={() => {
+                if (favorite.has_report && favorite.report_id) {
+                  navigate({ to: '/checklist/$id', params: { id: favorite.report_id } })
+                }
+              }}
+              disabled={!favorite.has_report}
+              className={`flex size-10 shrink-0 items-center justify-center rounded-full transition-colors ${
+                favorite.has_report
+                  ? 'bg-amber-500 border border-[#0E1111] text-[#0E1111] hover:bg-amber-400'
+                  : 'bg-[#F2F6F3] text-slate-400'
+              }`}
+              title={favorite.has_report ? 'Vergunning checklist' : 'Checklist beschikbaar na rapport'}
+            >
+              <ClipboardCheck size={16} />
+            </button>
+            {/* Map */}
+            <button
+              type="button"
               onClick={onOpenMap}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#F9A826] bg-[#F9A826] px-4 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A]"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800"
               aria-label="Open op kaart"
               title="Open op kaart"
             >
-              <MapPin size={15} />
-              Open op kaart
-            </motion.button>
+              <MapPin size={16} />
+            </button>
           </div>
         </div>
       </div>
 
-      <FavoriteDossierTabs pages={pages} activePage={page} onSelect={setPage} />
+      {/* 1. Aanpak / Volgende stap */}
+      <WorkspaceInsightCard
+        kicker="Aanpak"
+        title="Volgende stap"
+        Icon={ClipboardCheck}
+        index={0}
+      >
+        <div className="rounded-[20px] border border-[#F1E1B0] bg-[#FFF8E8] px-4 py-4">
+          <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">
+            {nextStep.title}
+          </p>
+          <p className="mt-2 text-[14px] leading-6 text-slate-600">
+            {nextStep.detail}
+          </p>
+          {!favorite.has_report ? (
+            <motion.button
+              type="button"
+              onClick={handleGenerateReport}
+              disabled={generateReport.isPending || !favorite.parcel_cache_id}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-[#F9A826] px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A] disabled:opacity-50"
+            >
+              <AnimatePresence mode="wait">
+                {generateReport.isPending ? (
+                  <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Loader2 size={14} className="animate-spin" />
+                  </motion.span>
+                ) : (
+                  <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Sparkles size={14} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {generateReport.isPending ? 'Rapport genereren...' : 'Genereer rapport'}
+            </motion.button>
+          ) : (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <motion.button
+                type="button"
+                onClick={handleGenerateReport}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 text-[13px] font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+              >
+                <FileText size={14} />
+                Bekijk rapport
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={handleOpenContact}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-white px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-slate-50"
+              >
+                <Mail size={14} />
+                Neem contact op
+              </motion.button>
+            </div>
+          )}
+        </div>
+      </WorkspaceInsightCard>
+
+      {/* 2. Dossier tabs + cards */}      {/* 3. Dossier tabs + cards */}
+      <div className="mt-4">
+        <FavoriteDossierTabs pages={pages} activePage={page} onSelect={setPage} />
+      </div>
 
       <div className="mt-4 rounded-[32px] border border-neutral-200 bg-white p-4 sm:p-6">
         <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 px-6 py-5">
@@ -1698,16 +1801,12 @@ export function FavoriteParcelWorkspaceView({
             </AnimatePresence>
           )}
         </div>
-      </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <WorkspaceInsightCard
-          kicker="Werkhypothese"
-          title="Notities & acquisitiethese"
-          Icon={Lightbulb}
-          className="xl:col-span-2"
-          index={0}
-        >
+        {/* Notes section — inside dossier context */}
+        <div className="mt-4 border-t border-[#EAEFEF] pt-4">
+          <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
+            Notities
+          </p>
           <MultiNoteBlock
             parcelId={favorite.parcel_id}
             notes={notesQuery.data ?? []}
@@ -1716,122 +1815,36 @@ export function FavoriteParcelWorkspaceView({
             updateNote={updateNote}
             deleteNote={deleteNote}
           />
-        </WorkspaceInsightCard>
-
-        <WorkspaceInsightCard
-          kicker="Aanpak"
-          title="Volgende stap"
-          Icon={ClipboardCheck}
-          index={1}
-        >
-          <div className="rounded-[20px] border border-[#F1E1B0] bg-[#FFF8E8] px-4 py-4">
-            <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">
-              {nextStep.title}
-            </p>
-            <p className="mt-2 text-[14px] leading-6 text-slate-600">
-              {nextStep.detail}
-            </p>
-            {!favorite.has_report ? (
-              <motion.button
-                type="button"
-                onClick={handleGenerateReport}
-                disabled={generateReport.isPending || !favorite.parcel_cache_id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.96 }}
-                className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-[#F9A826] px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F4B44A] disabled:opacity-50"
-              >
-                <AnimatePresence mode="wait">
-                  {generateReport.isPending ? (
-                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Loader2 size={14} className="animate-spin" />
-                    </motion.span>
-                  ) : (
-                    <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Sparkles size={14} />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                {generateReport.isPending ? 'Rapport genereren...' : 'Genereer rapport'}
-              </motion.button>
-            ) : (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <motion.button
-                  type="button"
-                  onClick={handleGenerateReport}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 text-[13px] font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
-                >
-                  <FileText size={14} />
-                  Bekijk rapport
-                </motion.button>
-                <motion.button
-                  type="button"
-                  onClick={handleOpenContact}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-white px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-slate-50"
-                >
-                  <Mail size={14} />
-                  Neem contact op
-                </motion.button>
-              </div>
-            )}
-          </div>
-        </WorkspaceInsightCard>
-
-        <WorkspaceInsightCard
-          kicker="Tijdlijn"
-          title="Laatste activiteit"
-          Icon={ScrollText}
-          index={2}
-        >
-          <div className="space-y-2">
-            {activityRows.map((row, i) => (
-              <motion.div
-                key={row.label}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="rounded-[18px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
-              >
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
-                  {row.label}
-                </p>
-                <p className="mt-1 text-[14px] leading-6 text-slate-700">
-                  {row.value}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </WorkspaceInsightCard>
-
-        <WorkspaceInsightCard
-          kicker="Opvolging"
-          title="Contact & eigenaar vervolg"
-          Icon={Send}
-          index={3}
-        >
-          <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-4">
-            <p className="text-[16px] font-bold tracking-tight text-[#0E1111]">
-              {contactFollowUp.title}
-            </p>
-            <p className="mt-2 text-[14px] leading-6 text-slate-600">
-              {contactFollowUp.detail}
-            </p>
-            <motion.button
-              type="button"
-              onClick={handleOpenContact}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-[#0E1111] bg-white px-5 text-[13px] font-semibold text-[#0E1111] transition-colors hover:bg-slate-50"
-            >
-              <Mail size={14} />
-              Neem contact op
-            </motion.button>
-          </div>
-        </WorkspaceInsightCard>
+        </div>
       </div>
+
+      {/* 4. Activiteit */}
+      <WorkspaceInsightCard
+        kicker="Tijdlijn"
+        title="Laatste activiteit"
+        Icon={ScrollText}
+        className="mt-4"
+        index={3}
+      >
+        <div className="space-y-2">
+          {activityRows.map((row, i) => (
+            <motion.div
+              key={row.label}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="rounded-[18px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
+            >
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-400">
+                {row.label}
+              </p>
+              <p className="mt-1 text-[14px] leading-6 text-slate-700">
+                {row.value}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </WorkspaceInsightCard>
 
       {showContactModal && (
         <WorkspaceContactModal

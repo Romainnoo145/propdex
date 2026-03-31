@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Bodemkwaliteit</h2>
+
+{% set bf = report_data.get('bodem_flags') %}
+{% set bt = report_data.get('bodemtype_flags') %}
+{% set bodem = report_data.get('bodem_data') %}
+{% set sp = report_data.get('soil_profile') %}
+{% set frp_sp = (report_data.get('fysiek_risico_profiel') or {}).get('soil_profile') %}
+
+{% if bf or bodem or sp or frp_sp %}
+
+{# --- Bodem flags (kwaliteitsklasse + bodemtype) --- #}
+{% if bf %}
+<table>
+  <tr>
+    <th>Kwaliteitsklasse</th>
+    <td>{% if bf is mapping %}{{ bf.get('kwaliteitsklasse', bf.get('bodemkwaliteit', 'Niet beschikbaar')) }}{% else %}{{ bf }}{% endif %}</td>
+  </tr>
+  {% if bt %}
+  <tr>
+    <th>Bodemtype</th>
+    <td>{% if bt is mapping %}{{ bt.get('dominant_soiltype', bt.get('description', 'Niet beschikbaar')) }}{% else %}{{ bt }}{% endif %}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Contamination dossiers --- #}
+{% if bodem %}
+{% if bodem.get('dossiers') and bodem.get('dossiers') | length > 0 %}
+<h2>Verontreinigingsdossiers</h2>
+<p style="color: var(--brand-red); font-weight: 700;">
+  ⚠ Verontreinigingsdossiers aangetroffen — raadpleeg bevoegd gezag.
+</p>
+{% else %}
+<p>Geen verontreiniging gevonden in Bodemloket (binnen zoekradius).</p>
+{% endif %}
+{% endif %}
+
+{# --- Soil profile (standalone or from fysiek_risico_profiel) --- #}
+{% set soil = sp or frp_sp %}
+{% if soil %}
+<h2>Bodemtype (BRO)</h2>
+<table>
+  {% if soil.get('dominant_type_label') %}
+  <tr>
+    <th>Grondsoort</th>
+    <td><strong>{{ soil.get('dominant_type_label') }}</strong></td>
+  </tr>
+  {% endif %}
+  {% if soil.get('soilname') %}
+  <tr>
+    <th>Bodemprofielnaam</th>
+    <td>{{ soil.get('soilname') }}</td>
+  </tr>
+  {% endif %}
+  {% if soil.get('soilcode') %}
+  <tr>
+    <th>Bodemcode</th>
+    <td>{{ soil.get('soilcode') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{% else %}
+<p class="na">Geen bodemgegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

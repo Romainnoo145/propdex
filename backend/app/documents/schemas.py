@@ -22,6 +22,24 @@ class DocumentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+class ChecklistItemStatus(BaseModel):
+    """Status of a single checklist item's generated document."""
+
+    status: str  # "generated" or "pending"
+    document_id: uuid.UUID | None = None
+    document_type: str | None = None
+    filename: str | None = None
+
+
+class ChecklistStatusResponse(BaseModel):
+    """Checklist completion status for a parcel."""
+
+    parcel_id: str
+    items: dict[str, ChecklistItemStatus]
+    generated_count: int
+    total_count: int
+
+
 class DocumentListResponse(BaseModel):
     """List of documents with total count."""
 

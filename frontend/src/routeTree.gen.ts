@@ -28,6 +28,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
+import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -128,6 +129,12 @@ const AuthenticatedInstellingenScoreRoute =
     path: '/score',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
+const AuthenticatedChecklistIdRoute =
+  AuthenticatedChecklistIdRouteImport.update({
+    id: '/checklist/$id',
+    path: '/checklist/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
+  '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
@@ -164,6 +172,7 @@ export interface FileRoutesByTo {
   '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
+  '/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
@@ -186,6 +195,7 @@ export interface FileRoutesById {
   '/_authenticated/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
+  '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/verkenner'
     | '/auth/google-callback'
     | '/auth/'
+    | '/checklist/$id'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen/'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/verkenner'
     | '/auth/google-callback'
     | '/auth'
+    | '/checklist/$id'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
@@ -248,6 +260,7 @@ export interface FileRouteTypes {
     | '/_authenticated/verkenner'
     | '/auth/google-callback'
     | '/auth/'
+    | '/_authenticated/checklist/$id'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
     | '/_authenticated/instellingen/'
@@ -395,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenScoreRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
+    '/_authenticated/checklist/$id': {
+      id: '/_authenticated/checklist/$id'
+      path: '/checklist/$id'
+      fullPath: '/checklist/$id'
+      preLoaderRoute: typeof AuthenticatedChecklistIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -427,6 +447,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
   AuthenticatedSubsidiesRoute: typeof AuthenticatedSubsidiesRoute
   AuthenticatedVerkennerRoute: typeof AuthenticatedVerkennerRoute
+  AuthenticatedChecklistIdRoute: typeof AuthenticatedChecklistIdRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
 }
 
@@ -443,6 +464,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
   AuthenticatedSubsidiesRoute: AuthenticatedSubsidiesRoute,
   AuthenticatedVerkennerRoute: AuthenticatedVerkennerRoute,
+  AuthenticatedChecklistIdRoute: AuthenticatedChecklistIdRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
 }
 

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.score-display {
+  display: flex;
+  gap: 1.5cm;
+  margin-top: 0.3cm;
+  margin-bottom: 0.5cm;
+}
+.score-box {
+  text-align: center;
+  padding: 0.4cm 0.6cm;
+  border-radius: 6px;
+  min-width: 3cm;
+}
+.score-box .score-num {
+  font-size: 22pt;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.score-box .score-lbl {
+  font-size: 8pt;
+  color: var(--brand-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.score-potentie { background: #DCFCE7; }
+.score-potentie .score-num { color: #166534; }
+.score-risico { background: #FEE2E2; }
+.score-risico .score-num { color: #991B1B; }
+{% endblock %}
+
+{% block content %}
+<h2>Haalbaarheidsinschatting</h2>
+
+{% set scores = report_data.get('scores_v3') %}
+{% set ucs = report_data.get('use_case_scores') %}
+{% set bd = report_data.get('buildability_delta') %}
+{% set zon = report_data.get('zoning') %}
+
+{% if scores or zon %}
+
+{# --- Scores V3 gauges --- #}
+{% if scores %}
+<h2>Propdex Scores</h2>
+<div class="score-display">
+  <div class="score-box score-potentie">
+    <div class="score-num">{{ scores.get('potentie', 0) | round(0) | int }}</div>
+    <div class="score-lbl">Potentie</div>
+  </div>
+  <div class="score-box score-risico">
+    <div class="score-num">{{ scores.get('risico', 0) | round(0) | int }}</div>
+    <div class="score-lbl">Risico</div>
+  </div>
+</div>
+{% endif %}
+
+{# --- Use-case scores --- #}
+{% if ucs %}
+<h2>Use-case geschiktheid</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Use case</th>
+      <th>Score</th>
+      <th>Geschiktheid</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for uc_name, uc_val in ucs.items() %}
+    <tr>
+      <td><strong>{{ uc_name | replace('_', ' ') | title }}</strong></td>
+      <td>
+        {% if uc_val is mapping %}
+          {{ uc_val.get('score', uc_val.get('total', '—')) }}
+        {% elif uc_val is number %}
+          {{ uc_val | round(0) | int }}
+        {% else %}
+          {{ uc_val }}
+        {% endif %}
+      </td>
+      <td>
+        {% if uc_val is mapping %}
+          {% set sc = uc_val.get('score', uc_val.get('total', 0)) %}
+        {% elif uc_val is number %}
+          {% set sc = uc_val %}
+        {% else %}
+          {% set sc = 0 %}
+        {% endif %}
+        {% if sc is number and sc >= 70 %}
+          <span style="color: var(--brand-green);">Hoog potentieel</span>
+        {% elif sc is number and sc >= 40 %}
+          <span style="color: var(--brand-accent);">Matig potentieel</span>
+        {% elif sc is number %}
+          <span style="color: var(--brand-muted);">Beperkt potentieel</span>
+        {% else %}
+          —
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# --- Buildability delta --- #}
+{% if bd %}
+<h2>Bouwenvelop-analyse</h2>
+<table>
+  {% if bd.get('parcel_area_m2') is not none %}
+  <tr>
+    <th>Perceeloppervlakte</th>
+    <td>{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('current_built_area_m2') is not none %}
+  <tr>
+    <th>Huidig bebouwd oppervlak</th>
+    <td>{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('remaining_buildable_area_m2') is not none %}
+  <tr>
+    <th>Resterende bouwruimte</th>
+    <td>
+      <strong>{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²</strong>
+      {% if bd.get('remaining_buildable_area_m2') > 0 %}
+        <span style="color: var(--brand-green); font-size: 8.5pt;"> (uitbreidingsruimte)</span>
+      {% elif bd.get('remaining_buildable_area_m2') == 0 %}
+        <span style="color: var(--brand-muted); font-size: 8.5pt;"> (volledig benut)</span>
+      {% else %}
+        <span style="color: var(--brand-red); font-size: 8.5pt;"> (overschreden)</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Zoning headline --- #}
+{% if zon %}
+<h2>Bestemmingsplan</h2>
+<table>
+  {% if zon.get('bestemmingsplan_naam') %}
+  <tr>
+    <th>Plan</th>
+    <td>{{ zon.get('bestemmingsplan_naam') }}</td>
+  </tr>
+  {% endif %}
+  {% if zon.get('primary_bestemming') %}
+  <tr>
+    <th>Primaire bestemming</th>
+    <td>{{ zon.get('primary_bestemming') }}</td>
+  </tr>
+  {% endif %}
+  {% if zon.get('max_bouwhoogte_m') is not none %}
+  <tr>
+    <th>Max. bouwhoogte</th>
+    <td>{{ zon.get('max_bouwhoogte_m') }} m</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{% else %}
+<p class="na">Geen haalbaarheidsgegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

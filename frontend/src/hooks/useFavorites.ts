@@ -13,7 +13,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth/useAuth'
-import { apiFetch } from '@/lib/api'
+import { apiFetch, generateReportFromParcel } from '@/lib/api'
 import { normalizeGemeenteCode } from '@/lib/geo/normalizers'
 import type { FavoriteResponse, PipelineStage, PortfolioResponse } from '@/lib/types/portfolio'
 import type { ScanResultItem } from '@/lib/types/scan'
@@ -150,6 +150,21 @@ export function useToggleFavorite() {
       })
 
       return { previousFavorites }
+    },
+
+    onSuccess: (data, { isFavorited }) => {
+      // Auto-generate report when a new favorite is created
+      if (!isFavorited && data && data.parcel_cache_id && !data.has_report) {
+        // Fire-and-forget: don't block the UI
+        generateReportFromParcel(data.parcel_cache_id, accessToken)
+          .then(() => {
+            // Refresh favorites to pick up has_report=true
+            queryClient.invalidateQueries({ queryKey: ['favorites'] })
+          })
+          .catch(() => {
+            // Silent failure — user can manually generate later
+          })
+      }
     },
 
     onError: (_error, _variables, context) => {

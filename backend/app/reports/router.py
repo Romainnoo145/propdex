@@ -596,6 +596,32 @@ async def generate_report_from_parcel(
             return_status=True,
         )
 
+        # 5b. Auto-generate checklist PDFs for newly created reports (M020)
+        if created:
+            try:
+                from app.reports.checklist_orchestrator import generate_checklist_documents
+
+                checklist_result = await generate_checklist_documents(
+                    report_data=report.report_data,
+                    report_name=report.report_name,
+                    parcel_id=body.parcel_id,
+                    user_id=current_user.id,
+                    db=db,
+                )
+                logger.info(
+                    "Checklist docs for parcel=%s: generated=%d failed=%d skipped=%d",
+                    body.parcel_id,
+                    len(checklist_result.generated),
+                    len(checklist_result.failed),
+                    len(checklist_result.skipped),
+                )
+            except Exception:
+                logger.warning(
+                    "Checklist doc generation failed for parcel=%s — report saved successfully",
+                    body.parcel_id,
+                    exc_info=True,
+                )
+
         # 6. Return report detail
         if not created:
             response.status_code = status.HTTP_200_OK

@@ -144,6 +144,18 @@ def _make_checklist_report_data(**overrides) -> dict:
         "bodem_data": {
             "dominant_type_label": "Klei",
             "soilname": "Poldervaaggrond",
+            "dossiers": [],
+        },
+        "bodem_flags": {
+            "kwaliteitsklasse": "Wonen",
+        },
+        "bodemtype_flags": {
+            "dominant_soiltype": "Klei",
+        },
+        "soil_profile": {
+            "dominant_type_label": "Klei",
+            "soilname": "Poldervaaggrond",
+            "soilcode": "pVz",
         },
         "funderingsrisicogebied": {
             "legenda": "Indicatief hoog risico",
@@ -151,16 +163,37 @@ def _make_checklist_report_data(**overrides) -> dict:
         },
         "asbest_indicator": {
             "risico": "aanwezig_kans",
+            "risk": "middel",
             "bouwjaar_relevant": True,
             "toelichting": "Bouwjaar vóór 1994 — asbest kan aanwezig zijn.",
+            "reden": "Bouwjaar vóór 1994 — asbest kan aanwezig zijn.",
         },
         "permit_precedents": {
             "permits_found": 3,
             "summary": "3 bouwvergunningen gevonden.",
+            "mediaan_doorlooptijd_dagen": 42,
+            "goedgekeurd_pct": 85,
+        },
+        "vergunningen_data": {
+            "records": [
+                {"datum": "2024-01-15", "type": "Omgevingsvergunning", "titel": "Verbouwing achtergevel"},
+                {"datum": "2023-06-20", "type": "Omgevingsvergunning", "titel": "Dakopbouw"},
+                {"datum": "2022-11-03", "type": "Sloopmelding", "titel": "Slopen asbesthoudende dakbedekking"},
+            ],
         },
         "scores_v3": {
             "potentie": 74.5,
             "risico": 32.1,
+        },
+        "use_case_scores": {
+            "optoppen": {"score": 72, "total": 100},
+            "splitsen": {"score": 45, "total": 100},
+            "transformatie": {"score": 28, "total": 100},
+        },
+        "buildability_delta": {
+            "parcel_area_m2": 200.0,
+            "current_built_area_m2": 120.0,
+            "remaining_buildable_area_m2": 40.0,
         },
         "brk_ownership": {
             "status": "available",
@@ -520,6 +553,117 @@ class TestPDFGeneration:
         result = generate_checklist_pdf("risicoprofiel", report_data, "Env Flags Test")
         assert isinstance(result, bytes)
         assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    # --- Bodem ---
+
+    def test_generate_bodem_pdf(self):
+        """bodem template generates valid PDF with full data."""
+        report_data = _make_checklist_report_data()
+        result = generate_checklist_pdf("bodem", report_data, "Test Report")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_bodem_partial_data(self):
+        """bodem with only bodem_data={} still produces valid PDF."""
+        report_data = _make_checklist_report_data(
+            bodem_data={"dominant_type_label": "Zand"},
+            bodem_flags=None,
+            bodemtype_flags=None,
+            soil_profile=None,
+        )
+        result = generate_checklist_pdf("bodem", report_data, "Partial Test")
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    # --- Fundering ---
+
+    def test_generate_fundering_pdf(self):
+        """fundering template generates valid PDF with full data."""
+        report_data = _make_checklist_report_data()
+        result = generate_checklist_pdf("fundering", report_data, "Test Report")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_fundering_partial_data(self):
+        """fundering with only legenda='Onbekend' still produces valid PDF."""
+        report_data = _make_checklist_report_data(
+            funderingsrisicogebied={"legenda": "Onbekend"},
+            fysiek_risico_profiel=None,
+        )
+        result = generate_checklist_pdf("fundering", report_data, "Partial Test")
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    # --- Asbest ---
+
+    def test_generate_asbest_pdf(self):
+        """asbest template generates valid PDF with full data."""
+        report_data = _make_checklist_report_data()
+        result = generate_checklist_pdf("asbest", report_data, "Test Report")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_asbest_partial_data(self):
+        """asbest with only risk='onbekend' still produces valid PDF."""
+        report_data = _make_checklist_report_data(
+            asbest_indicator={"risk": "onbekend"},
+        )
+        result = generate_checklist_pdf("asbest", report_data, "Partial Test")
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    # --- Vergunningen ---
+
+    def test_generate_vergunningen_pdf(self):
+        """vergunningen template generates valid PDF with full data."""
+        report_data = _make_checklist_report_data()
+        result = generate_checklist_pdf("vergunningen", report_data, "Test Report")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_vergunningen_partial_data(self):
+        """vergunningen with only permit_precedents, no vergunningen_data → valid PDF."""
+        report_data = _make_checklist_report_data(
+            vergunningen_data=None,
+        )
+        result = generate_checklist_pdf("vergunningen", report_data, "Partial Test")
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_vergunningen_list_data(self):
+        """vergunningen_data as a plain list (not mapping) still renders."""
+        report_data = _make_checklist_report_data(
+            vergunningen_data=[
+                {"datum": "2024-01-15", "type": "Omgevingsvergunning", "titel": "Test"},
+            ],
+        )
+        result = generate_checklist_pdf("vergunningen", report_data, "List Test")
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    # --- Haalbaarheid ---
+
+    def test_generate_haalbaarheid_pdf(self):
+        """haalbaarheid template generates valid PDF with full data."""
+        report_data = _make_checklist_report_data()
+        result = generate_checklist_pdf("haalbaarheid", report_data, "Test Report")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+        assert result[:5] == b"%PDF-"
+
+    def test_generate_haalbaarheid_partial_data(self):
+        """haalbaarheid with zoning + scores_v3 only, no use_case_scores/buildability_delta → valid PDF."""
+        report_data = _make_checklist_report_data(
+            use_case_scores=None,
+            buildability_delta=None,
+        )
+        result = generate_checklist_pdf("haalbaarheid", report_data, "Partial Test")
+        assert isinstance(result, bytes)
         assert result[:5] == b"%PDF-"
 
 

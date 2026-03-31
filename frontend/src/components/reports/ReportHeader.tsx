@@ -3,8 +3,9 @@
  * from FavoriteParcelWorkspaceView.tsx.
  */
 
-import { ChevronLeft, MapPin, Download } from 'lucide-react'
+import { ChevronLeft, MapPin, Download, ClipboardCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useNavigate } from '@tanstack/react-router'
 import type { PropertyReportResponse } from '@/lib/types/property'
 
 /* ─── Props ─────────────────────────────────────────────────── */
@@ -25,11 +26,12 @@ export default function ReportHeader({
   data,
   backLabel: _backLabel,
   sourceParcelId: _sourceParcelId,
-  reportId: _reportId = null,
+  reportId = null,
   onBack,
   onViewOnMap,
   onExportPDF,
 }: ReportHeaderProps) {
+  const navigate = useNavigate()
   const { address, cadastral_parcels } = data
 
   // Scores
@@ -131,6 +133,19 @@ export default function ReportHeader({
 
         {/* Right: action icons */}
         <div className="flex items-center gap-2 lg:shrink-0">
+          {/* Checklist icon button */}
+          {reportId && (
+            <button
+              type="button"
+              onClick={() => navigate({ to: '/checklist/$id', params: { id: reportId } })}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500 border-2 border-[#0E1111] text-[#0E1111] transition-colors hover:bg-amber-400"
+              aria-label="Vergunning checklist"
+              title="Vergunning checklist"
+            >
+              <ClipboardCheck size={16} />
+            </button>
+          )}
+
           {/* Map icon button — black circle, amber icon */}
           <button
             type="button"

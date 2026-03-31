@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.risk-level {
+  display: inline-block;
+  font-weight: 700;
+  padding: 0.1cm 0.3cm;
+  border-radius: 3px;
+  font-size: 9pt;
+}
+.risk-hoog { background: #FEE2E2; color: #991B1B; }
+.risk-middel { background: #FEF3C7; color: #92400E; }
+.risk-laag { background: #DCFCE7; color: #166534; }
+.risk-geen { background: #DCFCE7; color: #166534; }
+.risk-onbekend { background: var(--brand-bg); color: var(--brand-muted); }
+.risk-aanwezig_kans { background: #FEF3C7; color: #92400E; }
+{% endblock %}
+
+{% block content %}
+<h2>Asbest Indicatie</h2>
+
+{% set asbest = report_data.get('asbest_indicator') %}
+{% if asbest %}
+
+{# Support both 'risk' and 'risico' key names #}
+{% set risk_level = asbest.get('risk', asbest.get('risico', 'onbekend')) %}
+
+<table>
+  <tr>
+    <th>Risiconiveau</th>
+    <td>
+      <span class="risk-level risk-{{ risk_level }}">
+        {% if risk_level == 'hoog' %}
+          Hoog
+        {% elif risk_level == 'middel' or risk_level == 'aanwezig_kans' %}
+          Middel — asbest kan aanwezig zijn
+        {% elif risk_level == 'geen' or risk_level == 'laag' %}
+          Geen (bouwjaar na 1993)
+        {% else %}
+          {{ risk_level | title }}
+        {% endif %}
+      </span>
+    </td>
+  </tr>
+  {% if asbest.get('bouwjaar_relevant') is not none %}
+  <tr>
+    <th>Bouwjaar relevant</th>
+    <td>{{ 'Ja' if asbest.get('bouwjaar_relevant') else 'Nee' }}</td>
+  </tr>
+  {% endif %}
+  {% set toelichting = asbest.get('reden', asbest.get('toelichting')) %}
+  {% if toelichting %}
+  <tr>
+    <th>Toelichting</th>
+    <td>{{ toelichting }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+{% else %}
+<p class="na">Geen asbestindicatie beschikbaar.</p>
+{% endif %}
+{% endblock %}

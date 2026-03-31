@@ -19,7 +19,6 @@ import { S4Risicoprofiel } from './sections/S4Risicoprofiel'
 import { S5PotentieRisicoAnalyse } from './sections/S5PotentieRisicoAnalyse'
 import { S6VergunningenPrecedenten } from './sections/S6VergunningenPrecedenten'
 import { S7Bronvermelding } from './sections/S7Bronvermelding'
-import { S8VergunningChecklist } from './sections/S8VergunningChecklist'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -51,7 +50,6 @@ const SECTION_LIST: SectionConfig[] = [
   { key: 'analyse', title: '5. Potentie & Risico Analyse', shortTitle: 'Analyse' },
   { key: 'vergunningen', title: '6. Vergunningen & Precedenten', shortTitle: 'Vergunningen' },
   { key: 'bronnen', title: '7. Bronvermelding', shortTitle: 'Bronnen' },
-  { key: 'checklist', title: '8. Vergunning Checklist', shortTitle: 'Checklist' },
 ]
 
 /* ─── Section content renderer ──────────────────────────────── */
@@ -76,8 +74,6 @@ function renderSectionContent(
       return <S6VergunningenPrecedenten data={data} sourceParcelId={sourceParcelId} />
     case 'bronnen':
       return <S7Bronvermelding data={data} />
-    case 'checklist':
-      return <S8VergunningChecklist data={data} />
   }
 }
 

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Vergunningenhistorie</h2>
+
+{% set vergunningen = report_data.get('vergunningen_data') %}
+{% set prec = report_data.get('permit_precedents') %}
+
+{% if vergunningen or prec %}
+
+{# --- Bekendmakingen table --- #}
+{% if vergunningen %}
+  {% if vergunningen is mapping %}
+    {% set bekendmakingen = vergunningen.get('records', vergunningen.get('bekendmakingen', vergunningen.get('items', []))) %}
+  {% else %}
+    {% set bekendmakingen = vergunningen %}
+  {% endif %}
+
+  {% if bekendmakingen and bekendmakingen | length > 0 %}
+<h2>Recente bekendmakingen</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Datum</th>
+      <th>Type</th>
+      <th>Onderwerp</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for bk in bekendmakingen[:10] %}
+    <tr>
+      <td style="white-space: nowrap;">{{ bk.get('datum', bk.get('date', '—')) }}</td>
+      <td>{{ bk.get('type', bk.get('categorie', '—')) }}</td>
+      <td>{{ bk.get('titel', bk.get('title', bk.get('onderwerp', '—'))) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+    {% if bekendmakingen | length > 10 %}
+<p class="na">{{ bekendmakingen | length - 10 }} meer bekendmakingen niet weergegeven.</p>
+    {% endif %}
+  {% else %}
+<p class="na">Geen bekendmakingen gevonden voor dit adres.</p>
+  {% endif %}
+{% endif %}
+
+{# --- Permit precedents (benchmark) --- #}
+{% if prec %}
+<h2>Vergunningsprecedenten (benchmark)</h2>
+<table>
+  {% if prec.get('permits_found') is not none %}
+  <tr>
+    <th>Gevonden vergunningen</th>
+    <td>{{ prec.get('permits_found') }}</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('summary') %}
+  <tr>
+    <th>Samenvatting</th>
+    <td>{{ prec.get('summary') }}</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('mediaan_doorlooptijd_dagen') is not none %}
+  <tr>
+    <th>Mediaan doorlooptijd</th>
+    <td>{{ prec.get('mediaan_doorlooptijd_dagen') }} dagen</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('goedgekeurd_pct') is not none %}
+  <tr>
+    <th>Goedgekeurd (%)</th>
+    <td>{{ prec.get('goedgekeurd_pct') }}%</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{% else %}
+<p class="na">Geen vergunningendata beschikbaar.</p>
+{% endif %}
+{% endblock %}
