@@ -191,6 +191,10 @@ class Settings(BaseSettings):
         default="claude-sonnet-4-5-20250929",
         description="Model ID for AI analysis (Anthropic or OpenRouter model ID)",
     )
+    AI_MODEL_CHAT: str | None = Field(
+        default=None,
+        description="Model ID for chat classifier (falls back to AI_MODEL if not set)",
+    )
     REDIS_URL: str = Field(
         default="redis://localhost:6379/0",
         description="Redis URL for ARQ task queue",

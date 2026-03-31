@@ -43,6 +43,7 @@ class TestBuildSuggestionsForSearch:
     def test_fully_filtered_offers_escape_hatch(self):
         parsed = ParsedQuery(
             municipality="Venlo",
+            wijk="Blerick",
             build_year_max=1970,
             area_min=100,
             bestemming="wonen",

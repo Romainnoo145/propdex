@@ -8,11 +8,14 @@ import pytest
 
 from app.agents.chat_schemas import ChatRequest
 from app.agents.chat_service import (
+    _build_suggestions,
     dispatch_chat,
     handle_my_favorites,
     handle_my_reports,
     handle_parcel_detail,
+    handle_parcel_search,
 )
+from app.agents.schemas import ParsedQuery
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -279,7 +282,7 @@ class TestDispatchChat:
             response = await dispatch_chat(request, mock_db, str(uuid.uuid4()))
 
         assert response.intent == "UNSUPPORTED"
-        assert "mislukt" in response.message.lower()
+        assert "probeer" in response.message.lower()
 
     @pytest.mark.asyncio
     async def test_handler_exception_returns_unsupported(self, mock_db):
@@ -295,3 +298,83 @@ class TestDispatchChat:
 
         assert response.intent == "UNSUPPORTED"
         assert "mis" in response.message.lower()
+
+
+# ── Wijk suggestion pill tests ───────────────────────────────────────────
+
+class TestBuildSuggestionsWijk:
+
+    def test_includes_wijk_when_municipality_set(self):
+        """Wijk suggestion appears when municipality is set but wijk is not."""
+        parsed = ParsedQuery(municipality="Venlo")
+        suggestions = _build_suggestions(parsed)
+        wijk_suggestions = [s for s in suggestions if "wijk" in s.lower()]
+        assert len(wijk_suggestions) >= 1, f"Expected wijk suggestion, got {suggestions}"
+
+    def test_no_wijk_when_already_set(self):
+        """Wijk suggestion does NOT appear when wijk is already set."""
+        parsed = ParsedQuery(municipality="Venlo", wijk="Blerick")
+        suggestions = _build_suggestions(parsed)
+        wijk_suggestions = [s for s in suggestions if "wijk" in s.lower()]
+        assert len(wijk_suggestions) == 0, f"Wijk suggestion should not appear when wijk is set, got {suggestions}"
+
+    def test_no_wijk_when_no_municipality(self):
+        """Wijk suggestion does NOT appear when municipality is absent."""
+        parsed = ParsedQuery(bestemming="Wonen")
+        suggestions = _build_suggestions(parsed)
+        wijk_suggestions = [s for s in suggestions if "wijk" in s.lower()]
+        assert len(wijk_suggestions) == 0, f"Wijk suggestion should not appear without municipality, got {suggestions}"
+
+
+# ── Wijk parcel search: unscanned wijk ───────────────────────────────────
+
+class TestHandleParcelSearchWijk:
+
+    @pytest.fixture(autouse=True)
+    def _clear_gemeente_cache(self):
+        """Reset the module-level gemeente lookup before each test."""
+        import app.agents.bulk_query_service as svc
+        svc._gemeente_lookup = None
+        yield
+        svc._gemeente_lookup = None
+
+    @pytest.mark.asyncio
+    async def test_unscanned_wijk_returns_error_message(self, mock_db):
+        """Wijk with 0 results returns helpful Dutch error message."""
+        call_idx = {"n": 0}
+
+        async def _execute_side_effect(stmt, *args, **kwargs):
+            call_idx["n"] += 1
+            compiled = str(stmt)
+            result = MagicMock()
+
+            # Gemeente lookup (DISTINCT gemeente_code)
+            if "DISTINCT" in compiled and "gemeente_code" in compiled:
+                result.all.return_value = [("0983", "Hoofdstraat 1, 5911AA Venlo")]
+                return result
+
+            # Count query (check BEFORE ILIKE since wijk count queries contain both)
+            if "count" in compiled.lower():
+                result.scalar_one.return_value = 0
+                return result
+
+            # Gemeente resolve (ILIKE fallback or direct)
+            if "gemeente_code" in compiled and "LIKE" in compiled.upper():
+                result.scalar_one_or_none.return_value = "0983"
+                return result
+
+            # Default
+            result.scalar_one_or_none.return_value = None
+            return result
+
+        mock_db.execute = AsyncMock(side_effect=_execute_side_effect)
+
+        response = await handle_parcel_search(
+            {"municipality": "Venlo", "wijk": "Onbekend"},
+            mock_db,
+            str(uuid.uuid4()),
+        )
+
+        assert response.count == 0
+        assert "Onbekend" in response.message
+        assert "niet gevonden" in response.message.lower() or "wijk" in response.message.lower()

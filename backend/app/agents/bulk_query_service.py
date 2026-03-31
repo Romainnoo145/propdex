@@ -9,9 +9,11 @@ from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.schemas import BulkResult, ParsedQuery
-from app.ai.claude_client import AIParsingError, create_claude_client
+from app.ai.claude_client import AIParsingError, create_chat_claude_client
 from app.ai.prompts import BULK_QUERY_PARSING_PROMPT
+from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
+from app.models.scan_result import ScanResult
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +108,7 @@ async def parse_nl_query(query_text: str) -> tuple[ParsedQuery | None, str | Non
     t0 = time.monotonic()
 
     try:
-        client = create_claude_client()
+        client = create_chat_claude_client()
         response = await client.client.messages.create(
             model=client.model,
             max_tokens=500,
@@ -214,6 +216,15 @@ async def execute_bulk_query(
     # Pand status: exact match
     if parsed.pand_status:
         filters.append(ParcelCache.pand_status == parsed.pand_status)
+
+    # Wijk filter: join through ScanResult→AreaScan (must precede WHERE clauses)
+    if parsed.wijk:
+        base = base.join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
+        base = base.join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        base = base.where(func.lower(AreaScan.wijk_naam).contains(parsed.wijk.lower()))
+        count_q = count_q.join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
+        count_q = count_q.join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        count_q = count_q.where(func.lower(AreaScan.wijk_naam).contains(parsed.wijk.lower()))
 
     # Apply filters
     for f in filters:

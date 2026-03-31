@@ -348,3 +348,21 @@ def create_claude_client() -> ClaudeClient:
             model=settings.AI_MODEL,
         )
     return ClaudeClient(api_key=settings.ANTHROPIC_API_KEY, model=settings.AI_MODEL)
+
+
+def create_chat_claude_client() -> ClaudeClient:
+    """Create ClaudeClient for chat classification.
+
+    Uses AI_MODEL_CHAT if set, otherwise falls back to AI_MODEL.
+    Uses OpenRouter when OPENROUTER_API_KEY is set, otherwise direct Anthropic.
+    """
+    from app.core.config import settings
+
+    model = settings.AI_MODEL_CHAT or settings.AI_MODEL
+    if settings.OPENROUTER_API_KEY:
+        return ClaudeClient(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url=ClaudeClient.OPENROUTER_BASE_URL,
+            model=model,
+        )
+    return ClaudeClient(api_key=settings.ANTHROPIC_API_KEY, model=model)

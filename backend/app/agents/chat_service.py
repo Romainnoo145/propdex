@@ -17,7 +17,7 @@ from app.agents.chat_schemas import (
     ReportSummary,
 )
 from app.agents.schemas import ParsedQuery
-from app.ai.claude_client import AIParsingError, create_claude_client
+from app.ai.claude_client import AIParsingError, create_chat_claude_client
 from app.ai.prompts import CHAT_INTENT_CLASSIFIER_PROMPT
 from app.models.parcel_cache import ParcelCache
 from app.models.parcel_favorite import ParcelFavorite
@@ -71,7 +71,7 @@ async def classify_intent(
             f"(vorige: {previous_intent}, params: {ctx})"
         )
 
-    client = create_claude_client()
+    client = create_chat_claude_client()
     response = await client.client.messages.create(
         model=client.model,
         max_tokens=300,
@@ -123,6 +123,8 @@ def _build_suggestions(parsed: ParsedQuery) -> list[str]:
 
     if "municipality" not in present:
         suggestions.append("Filter op gemeente, bijv. 'in Venlo'")
+    if "wijk" not in present and "municipality" in present:
+        suggestions.append("Filter op wijk, bijv. 'in Blerick'")
     if "build_year_min" not in present and "build_year_max" not in present:
         suggestions.append("Voeg een bouwjaarfilter toe, bijv. 'voor 1980' of 'na 2000'")
     if "area_min" not in present and "area_max" not in present:
@@ -177,6 +179,15 @@ async def handle_parcel_search(
     # Run count query
     count_q, base_q, filters_applied = await _build_count_query(parsed, db)
     total = (await db.execute(count_q)).scalar_one()
+
+    # Early check: if wijk is set but no results, return helpful message
+    if total == 0 and parsed.wijk:
+        return ChatResponse(
+            intent="PARCEL_SEARCH",
+            params=parsed.model_dump(exclude_none=True),
+            count=0,
+            message=f"Wijk '{parsed.wijk}' niet gevonden in gescande data. Controleer de spelling of scan eerst deze wijk.",
+        )
 
     # Count-first: if above threshold and not forced, return preview
     if total > COUNT_THRESHOLD and not force_results:
@@ -261,6 +272,16 @@ async def _build_count_query(parsed: ParsedQuery, db: AsyncSession):
         n_filters += 1
     if parsed.pand_status:
         filters.append(ParcelCache.pand_status == parsed.pand_status)
+        n_filters += 1
+
+    # Wijk filter: join through ScanResult→AreaScan
+    if parsed.wijk:
+        from app.models.area_scan import AreaScan
+        from app.models.scan_result import ScanResult
+
+        count_q = count_q.join(ScanResult, ScanResult.parcel_id == ParcelCache.id)
+        count_q = count_q.join(AreaScan, AreaScan.id == ScanResult.scan_id)
+        count_q = count_q.where(sqlfunc.lower(AreaScan.wijk_naam).contains(parsed.wijk.lower()))
         n_filters += 1
 
     for f in filters:
@@ -460,6 +481,13 @@ async def handle_my_reports(
 
 # ── Dispatcher ───────────────────────────────────────────────────────────
 
+_RECOVERY_SUGGESTIONS = [
+    "Zoek percelen in een gemeente",
+    "Bekijk mijn opgeslagen percelen",
+    "Laat mijn rapporten zien",
+]
+
+
 async def dispatch_chat(
     request: ChatRequest,
     db: AsyncSession,
@@ -468,6 +496,35 @@ async def dispatch_chat(
     """Classify intent and dispatch to the appropriate handler."""
     t0 = time.monotonic()
 
+    # ── Deterministic forceResults bypass ─────────────────────────────
+    # When the user clicks "Toon resultaten" after a COUNT_PREVIEW, skip
+    # the classifier entirely and call handle_parcel_search directly.
+    if (
+        request.force_results
+        and request.previous_intent == "COUNT_PREVIEW"
+        and request.previous_params
+    ):
+        logger.info("forceResults bypass: skipping classifier, using previous params")
+        try:
+            response = await handle_parcel_search(
+                request.previous_params, db, user_id,
+                force_results=True,
+                query_text=request.message,
+            )
+        except Exception as e:
+            logger.exception("Handler error for forceResults bypass: %s", e)
+            response = ChatResponse(
+                intent="UNSUPPORTED",
+                params=request.previous_params,
+                message="Er ging iets mis. Probeer het opnieuw.",
+                suggestions=_RECOVERY_SUGGESTIONS,
+            )
+        response.context_intent = "PARCEL_SEARCH"
+        elapsed = time.monotonic() - t0
+        logger.info("Chat dispatch (%.2fs): forceResults bypass → %s (count=%s)", elapsed, response.intent, response.count)
+        return response
+
+    # ── Classify intent ──────────────────────────────────────────────
     try:
         intent, params = await classify_intent(
             request.message,
@@ -479,9 +536,17 @@ async def dispatch_chat(
         return ChatResponse(
             intent="UNSUPPORTED",
             params={},
-            message=f"Classificatie mislukt: {e.message}",
+            message="Sorry, ik kon je vraag niet verwerken. Probeer het opnieuw of stel je vraag anders.",
+            suggestions=_RECOVERY_SUGGESTIONS,
         )
 
+    # ── Deterministic param merging on refinement ────────────────────
+    # When the user refines a previous query and the classifier returns
+    # the same intent, merge: keep old filters, override with new non-None.
+    if request.previous_params and intent == request.previous_intent:
+        params = {**request.previous_params, **{k: v for k, v in params.items() if v is not None}}
+
+    # ── Dispatch to handler ──────────────────────────────────────────
     try:
         if intent == "PARCEL_SEARCH":
             response = await handle_parcel_search(
@@ -512,8 +577,12 @@ async def dispatch_chat(
         response = ChatResponse(
             intent="UNSUPPORTED",
             params=params,
-            message=f"Er ging iets mis bij het verwerken: {e}",
+            message="Er ging iets mis. Probeer het opnieuw.",
+            suggestions=_RECOVERY_SUGGESTIONS,
         )
+
+    # ── Normalize context_intent (never expose COUNT_PREVIEW) ────────
+    response.context_intent = response.intent if response.intent != "COUNT_PREVIEW" else "PARCEL_SEARCH"
 
     elapsed = time.monotonic() - t0
     logger.info(

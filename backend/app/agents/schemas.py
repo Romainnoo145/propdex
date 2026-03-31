@@ -15,6 +15,10 @@ class ParsedQuery(BaseModel):
         default=None,
         description="Municipality name (gemeente), e.g. 'Venlo', 'Amsterdam'",
     )
+    wijk: str | None = Field(
+        default=None,
+        description="Wijk/buurt name within a municipality, e.g. 'Blerick', 'Arcen'",
+    )
     build_year_min: int | None = Field(
         default=None,
         description="Minimum build year (inclusive), e.g. 2000 for 'na 2000'",

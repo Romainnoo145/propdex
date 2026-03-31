@@ -47,7 +47,7 @@ async def test_chat_unsupported_intent(async_client: AsyncClient, create_test_us
     user, org = await create_test_user()
     token = await _get_auth_token(async_client, user.email)
 
-    with patch("app.agents.chat_service.create_claude_client") as mock_factory:
+    with patch("app.agents.chat_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.model = "test"
         mock_client.client.messages.create = AsyncMock(
@@ -76,7 +76,7 @@ async def test_chat_my_favorites_empty(async_client: AsyncClient, create_test_us
     user, org = await create_test_user()
     token = await _get_auth_token(async_client, user.email)
 
-    with patch("app.agents.chat_service.create_claude_client") as mock_factory:
+    with patch("app.agents.chat_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.model = "test"
         mock_client.client.messages.create = AsyncMock(
@@ -103,7 +103,7 @@ async def test_chat_my_reports_empty(async_client: AsyncClient, create_test_user
     user, org = await create_test_user()
     token = await _get_auth_token(async_client, user.email)
 
-    with patch("app.agents.chat_service.create_claude_client") as mock_factory:
+    with patch("app.agents.chat_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.model = "test"
         mock_client.client.messages.create = AsyncMock(

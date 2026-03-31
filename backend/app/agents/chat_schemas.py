@@ -58,6 +58,10 @@ class ChatResponse(BaseModel):
     """Response from the Verkenner chat endpoint."""
 
     intent: ResponseIntent = Field(description="Classified or synthetic intent")
+    context_intent: str | None = Field(
+        default=None,
+        description="Real intent for refinement context — use instead of intent for tracking (never COUNT_PREVIEW)",
+    )
     params: dict[str, Any] = Field(
         default_factory=dict,
         description="Intent-specific structured params from classification",

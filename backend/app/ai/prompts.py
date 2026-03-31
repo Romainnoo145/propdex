@@ -182,7 +182,10 @@ Je vertaalt natuurlijke-taal zoekopdrachten naar gestructureerde filterparameter
 **Voorbeelden:**
 
 Invoer: "Alle woningen in Venlo met bouwjaar voor 1970"
-Uitvoer: {"municipality": "Venlo", "build_year_min": null, "build_year_max": 1970, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
+Uitvoer: {"municipality": "Venlo", "wijk": null, "build_year_min": null, "build_year_max": 1970, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
+
+Invoer: "woningen in Blerick, Venlo"
+Uitvoer: {"municipality": "Venlo", "wijk": "Blerick", "build_year_min": null, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
 
 Invoer: "Woningen in Amsterdam"
 Uitvoer: {"municipality": "Amsterdam", "build_year_min": null, "build_year_max": null, "area_min": null, "area_max": null, "bestemming": null, "bestemming_exclude": null, "pand_status": null}
@@ -243,6 +246,9 @@ Bericht: "Alle woningen in Venlo met bouwjaar voor 1970"
 
 Bericht: "Woningen in Amsterdam"
 → {"intent": "PARCEL_SEARCH", "params": {"municipality": "Amsterdam"}}
+
+Bericht: "woningen in Blerick, Venlo"
+→ {"intent": "PARCEL_SEARCH", "params": {"municipality": "Venlo", "wijk": "Blerick"}}
 
 Bericht: "Bedrijfspanden groter dan 500m2 in Amsterdam"
 → {"intent": "PARCEL_SEARCH", "params": {"municipality": "Amsterdam", "area_min": 500.0, "bestemming": "bedrijf"}}

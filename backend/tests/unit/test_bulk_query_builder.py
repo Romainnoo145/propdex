@@ -278,7 +278,7 @@ async def test_valid_parse():
 
     mock_response = _mock_claude_response(response_json)
 
-    with patch("app.agents.bulk_query_service.create_claude_client") as mock_factory:
+    with patch("app.agents.bulk_query_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.client.messages.create = AsyncMock(return_value=mock_response)
         mock_client.model = "test-model"
@@ -305,7 +305,7 @@ async def test_unsupported_parse():
 
     mock_response = _mock_claude_response(response_json)
 
-    with patch("app.agents.bulk_query_service.create_claude_client") as mock_factory:
+    with patch("app.agents.bulk_query_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.client.messages.create = AsyncMock(return_value=mock_response)
         mock_client.model = "test-model"
@@ -324,7 +324,7 @@ async def test_malformed_json():
 
     mock_response = _mock_claude_response("This is not JSON at all {broken")
 
-    with patch("app.agents.bulk_query_service.create_claude_client") as mock_factory:
+    with patch("app.agents.bulk_query_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.client.messages.create = AsyncMock(return_value=mock_response)
         mock_client.model = "test-model"
@@ -352,7 +352,7 @@ async def test_markdown_fence_stripping():
 
     mock_response = _mock_claude_response(fenced)
 
-    with patch("app.agents.bulk_query_service.create_claude_client") as mock_factory:
+    with patch("app.agents.bulk_query_service.create_chat_claude_client") as mock_factory:
         mock_client = MagicMock()
         mock_client.client.messages.create = AsyncMock(return_value=mock_response)
         mock_client.model = "test-model"
@@ -414,3 +414,126 @@ async def test_unknown_gemeente_not_found():
 
     code = await resolve_gemeente_code("Nonexistent", db)
     assert code is None
+
+
+# ---------------------------------------------------------------------------
+# Wijk filter tests
+# ---------------------------------------------------------------------------
+
+
+def _make_wijk_mock_db(
+    gemeente_rows=None,
+    count_result=0,
+    query_rows=None,
+):
+    """Build a mock AsyncSession that handles wijk-joined queries.
+
+    The standard _make_mock_db detects ILIKE-fallback queries by looking for
+    'lower' + 'LIKE' in the compiled SQL, but the wijk join also emits
+    lower()/LIKE (via func.lower().contains()). This helper differentiates
+    them by checking for 'area_scans' (wijk join) vs 'parcel_cache' only
+    (gemeente ILIKE fallback).
+    """
+    db = AsyncMock()
+    original_rows = query_rows or []
+    executed_stmts: list[str] = []
+
+    async def _execute_side_effect(stmt, *args, **kwargs):
+        compiled = str(stmt)
+        executed_stmts.append(compiled)
+        result = MagicMock()
+
+        # Gemeente lookup query (DISTINCT gemeente_code)
+        if "DISTINCT" in compiled and "gemeente_code" in compiled:
+            result.all.return_value = gemeente_rows or []
+            return result
+
+        # Count query (has func.count())
+        if "count" in compiled.lower():
+            result.scalar_one.return_value = count_result
+            return result
+
+        # Main select query (returns scalars)
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = original_rows
+        result.scalars.return_value = scalars_mock
+        return result
+
+    db.execute = AsyncMock(side_effect=_execute_side_effect)
+    db._executed_stmts = executed_stmts  # expose for assertions
+    return db
+
+
+@pytest.mark.asyncio
+async def test_wijk_filter_joins_scan_result_and_area_scan():
+    """Wijk filter adds JOINs on ScanResult/AreaScan with case-insensitive match."""
+    from app.agents.bulk_query_service import execute_bulk_query
+
+    parcel = _make_parcel()
+    db = _make_wijk_mock_db(
+        gemeente_rows=[("0983", "Hoofdstraat 1, 5911AA Venlo")],
+        count_result=1,
+        query_rows=[parcel],
+    )
+
+    parsed = ParsedQuery(municipality="Venlo", wijk="Blerick")
+    results, total = await execute_bulk_query(parsed, db)
+
+    assert total == 1
+    assert len(results) == 1
+
+    # Verify the JOINs appear in executed SQL (count + main query)
+    joined_stmts = [s for s in db._executed_stmts if "area_scans" in s.lower()]
+    assert len(joined_stmts) >= 2, f"Expected JOIN on area_scans in ≥2 queries, got {len(joined_stmts)}"
+
+    # Verify wijk_naam filter is present
+    wijk_stmts = [s for s in db._executed_stmts if "wijk_naam" in s.lower()]
+    assert len(wijk_stmts) >= 2, "Wijk filter should appear in count and main queries"
+
+    # Verify case-insensitive matching (lower() used)
+    lower_stmts = [s for s in wijk_stmts if "lower" in s.lower()]
+    assert len(lower_stmts) >= 1, "Wijk filter should use lower() for case-insensitivity"
+
+
+@pytest.mark.asyncio
+async def test_wijk_filter_not_applied_when_none():
+    """No wijk → no JOIN on ScanResult/AreaScan."""
+    from app.agents.bulk_query_service import execute_bulk_query
+
+    parcel = _make_parcel()
+    db = _make_wijk_mock_db(
+        gemeente_rows=[("0983", "Hoofdstraat 1, 5911AA Venlo")],
+        count_result=1,
+        query_rows=[parcel],
+    )
+
+    parsed = ParsedQuery(municipality="Venlo")  # no wijk
+    results, total = await execute_bulk_query(parsed, db)
+
+    assert total == 1
+
+    # No area_scans JOINs should be present
+    joined_stmts = [s for s in db._executed_stmts if "area_scans" in s.lower()]
+    assert len(joined_stmts) == 0, f"No area_scans JOIN expected without wijk, got {len(joined_stmts)}"
+
+
+@pytest.mark.asyncio
+async def test_wijk_with_municipality_applies_both():
+    """Both gemeente_code filter AND wijk join are applied together."""
+    from app.agents.bulk_query_service import execute_bulk_query
+
+    parcel = _make_parcel()
+    db = _make_wijk_mock_db(
+        gemeente_rows=[("0983", "Hoofdstraat 1, 5911AA Venlo")],
+        count_result=1,
+        query_rows=[parcel],
+    )
+
+    parsed = ParsedQuery(municipality="Venlo", wijk="Blerick")
+    results, total = await execute_bulk_query(parsed, db)
+
+    assert total == 1
+
+    # The main query should have BOTH gemeente_code filter AND area_scans JOIN
+    main_stmts = [s for s in db._executed_stmts if "area_scans" in s.lower() and "gemeente_code" in s.lower()]
+    assert len(main_stmts) >= 1, "Expected both gemeente_code and area_scans in at least one query"

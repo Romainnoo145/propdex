@@ -57,6 +57,7 @@ class TestBuildSuggestions:
     def test_all_filters_present(self):
         parsed = ParsedQuery(
             municipality="Venlo",
+            wijk="Blerick",
             build_year_max=1970,
             area_min=100,
             bestemming="wonen",
@@ -69,8 +70,8 @@ class TestBuildSuggestions:
 
 @pytest.fixture
 def mock_claude():
-    """Patch create_claude_client so classify_intent uses a mock."""
-    with patch("app.agents.chat_service.create_claude_client") as mock_factory:
+    """Patch create_chat_claude_client so classify_intent uses a mock."""
+    with patch("app.agents.chat_service.create_chat_claude_client") as mock_factory:
         client = MagicMock()
         client.model = "test-model"
         client.client = MagicMock()

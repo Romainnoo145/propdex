@@ -73,6 +73,7 @@ export interface ReportSummary {
 /** API response from POST /api/agents/chat */
 export interface ChatApiResponse {
   intent: string
+  context_intent?: string | null
   params: Record<string, unknown>
   data: unknown
   count?: number | null
@@ -139,8 +140,9 @@ export function useChat() {
       { message: trimmed, forceResults: opts?.forceResults },
       {
         onSuccess: (resp) => {
-          // Track context for refinement
-          lastIntentRef.current = resp.intent
+          // Track context for refinement — use context_intent to avoid
+          // storing COUNT_PREVIEW as the previous intent
+          lastIntentRef.current = resp.context_intent ?? resp.intent
           lastParamsRef.current = resp.params
           lastCountRef.current = resp.count ?? null
 
