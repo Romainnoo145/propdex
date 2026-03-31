@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.3em;
+  vertical-align: middle;
+}
+.status-amber  { background-color: #F59E0B; }
+.status-green  { background-color: var(--brand-green); }
+.status-grey   { background-color: #9CA3AF; }
+{% endblock %}
+
+{% block content %}
+<h2>Wkb Startdossier Precheck</h2>
+
+{% set wkbp = report_data.get('wkb_precheck') %}
+{% if wkbp %}
+
+  {# --- Status with color indicator --- #}
+  <h2>
+    {% if wkbp.get('status') == 'likely_required' %}
+      <span class="status-indicator status-amber"></span>
+    {% elif wkbp.get('status') in ['likely_not_required', 'not_applicable'] %}
+      <span class="status-indicator status-green"></span>
+    {% else %}
+      <span class="status-indicator status-grey"></span>
+    {% endif %}
+    Status: {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
+    <span style="font-size:8pt;color:var(--brand-muted);margin-left:0.5em;">(zekerheid: {{ wkbp.get('confidence', 'low') }})</span>
+  </h2>
+
+  {# --- Triggered rules table --- #}
+  {% set rules = wkbp.get('triggered_rules', []) %}
+  {% if rules %}
+  <h2>Getriggerde regels</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Regel</th>
+        <th>Effect</th>
+        <th>Toelichting</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr>
+        <td>{{ rule.get('title', rule.get('code', '—')) }}</td>
+        <td>
+          {% if rule.get('impact') == 'increase' %}↑ waarschijnlijker
+          {% elif rule.get('impact') == 'decrease' %}↓ minder waarschijnlijk
+          {% else %}? onzeker{% endif %}
+        </td>
+        <td>{{ rule.get('reason', '—') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# --- Missing inputs --- #}
+  {% if wkbp.get('missing_inputs') and wkbp.get('missing_inputs') | length > 0 %}
+  <p><strong>Ontbrekende gegevens:</strong> {{ wkbp.get('missing_inputs') | join(', ') }}</p>
+  {% endif %}
+
+  {# --- Required documents --- #}
+  {% if wkbp.get('required_documents') and wkbp.get('required_documents') | length > 0 %}
+  <p><strong>Aanbevolen documenten:</strong> {{ wkbp.get('required_documents') | join(', ') }}</p>
+  {% endif %}
+
+  {# --- Disclaimer --- #}
+  {% if wkbp.get('disclaimer') %}
+  <p class="na">{{ wkbp.get('disclaimer') }}</p>
+  {% endif %}
+
+{% else %}
+<p class="na">Geen Wkb-precheck gegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

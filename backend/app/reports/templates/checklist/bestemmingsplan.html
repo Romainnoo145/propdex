@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Bestemmingsplan &amp; Bouwmogelijkheden</h2>
+
+{% set zoning = report_data.get('zoning') %}
+{% if zoning %}
+
+  {# --- Primary designation --- #}
+  <table>
+    <tr>
+      <th>Primaire bestemming</th>
+      <td><strong>{{ zoning.get('primary_bestemming') or zoning.get('bestemmingen', ['Niet beschikbaar'])|first }}</strong></td>
+    </tr>
+    {% if zoning.get('bestemmingsplan_naam') %}
+    <tr>
+      <th>Bestemmingsplan</th>
+      <td>{{ zoning.get('bestemmingsplan_naam') }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {# --- Plans list --- #}
+  {% set plans = zoning.get('plans', []) %}
+  {% if plans %}
+  <h2>Vigerende plannen</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Plannaam</th>
+        <th>Status</th>
+        <th>Datum</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for plan in plans %}
+      <tr>
+        <td>{{ plan.get('plan_naam', '-') }}</td>
+        <td>{{ plan.get('plan_status', '-') }}</td>
+        <td>{{ plan.get('plan_datum', '-') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# --- Building dimensions --- #}
+  {% set dims = zoning.get('building_dimensions') %}
+  {% if dims %}
+  <h2>Bouwdimensies</h2>
+  <table>
+    {% if dims.get('max_hoogte') %}
+    <tr>
+      <th>Max. bouwhoogte</th>
+      <td>{{ dims.get('max_hoogte') }} m</td>
+    </tr>
+    {% endif %}
+    {% if dims.get('max_bouwlagen') %}
+    <tr>
+      <th>Max. bouwlagen</th>
+      <td>{{ dims.get('max_bouwlagen') }} lagen</td>
+    </tr>
+    {% endif %}
+    {% if dims.get('max_bebouwingspercentage') %}
+    <tr>
+      <th>Max. bebouwingspercentage</th>
+      <td>{{ dims.get('max_bebouwingspercentage') }}%</td>
+    </tr>
+    {% endif %}
+    {% if dims.get('max_goothoogte') %}
+    <tr>
+      <th>Max. goothoogte</th>
+      <td>{{ dims.get('max_goothoogte') }} m</td>
+    </tr>
+    {% endif %}
+    {% if not dims.get('max_hoogte') and not dims.get('max_bouwlagen') and not dims.get('max_bebouwingspercentage') and not dims.get('max_goothoogte') %}
+    <tr>
+      <th>Bouwdimensies</th>
+      <td class="na">Geen maatvoeringen beschikbaar</td>
+    </tr>
+    {% endif %}
+  </table>
+  {% endif %}
+
+  {# --- AI parsed rules --- #}
+  {% set ai = report_data.get('ai_parsing') %}
+  {% if ai and ai.get('status') == 'complete' and ai.get('parsed_rules') %}
+  <h2>AI Planregels analyse</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Categorie</th>
+        <th>Regel</th>
+        <th>Waarde</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in ai.get('parsed_rules', []) %}
+      <tr>
+        <td>{{ rule.get('category', 'Overig') }}</td>
+        <td>{{ rule.get('rule_name', '—') }}</td>
+        <td>{{ rule.get('value', 'Niet beschikbaar') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# --- Buildability delta --- #}
+  {% set bd = report_data.get('buildability_delta') %}
+  {% if bd %}
+  <h2>Bouwenvelop-analyse</h2>
+  <table>
+    {% if bd.get('parcel_area_m2') is not none %}
+    <tr>
+      <th>Perceeloppervlakte</th>
+      <td>{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('remaining_capacity_m2') is not none %}
+    <tr>
+      <th>Restcapaciteit</th>
+      <td>{{ bd.get('remaining_capacity_m2') | round(0) | int }} m²</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('summary') %}
+    <tr>
+      <th>Samenvatting</th>
+      <td>{{ bd.get('summary') }}</td>
+    </tr>
+    {% endif %}
+  </table>
+  {% endif %}
+
+  {# --- Data gaps / fallback --- #}
+  {% if zoning.get('data_gaps') %}
+  <h2>Ontbrekende gegevens</h2>
+  <p class="na">{{ zoning.get('data_gaps') }}</p>
+  {% endif %}
+  {% if zoning.get('fallback_used') %}
+  <p class="na"><em>Let op: er is een fallback-bron gebruikt voor deze gegevens.</em></p>
+  {% endif %}
+
+{% else %}
+<p class="na">Geen bestemmingsplangegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

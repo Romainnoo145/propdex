@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Kadastrale Percelen</h2>
+
+{% set parcels = report_data.get('cadastral_parcels', []) %}
+{% if parcels %}
+<table>
+  <thead>
+    <tr>
+      <th>Perceelnummer</th>
+      <th>Oppervlakte (m²)</th>
+      <th>Gemeente</th>
+      <th>Sectie</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for parcel in parcels %}
+    <tr>
+      <td>{{ parcel.get('perceelnummer', '') or '-' }}</td>
+      <td>{{ parcel.get('oppervlakte', '') or '-' }}</td>
+      <td>{{ parcel.get('gemeente', '') or 'Niet beschikbaar' }}</td>
+      <td>{{ parcel.get('sectie', '') or '-' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="na">Geen kadastrale percelen beschikbaar.</p>
+{% endif %}
+
+<h2>Eigendomsinformatie (BRK)</h2>
+
+{% set brk = report_data.get('brk_ownership') %}
+{% if brk and brk.get('status') != 'unavailable' %}
+  {% set eigenaren = brk.get('eigenaren', []) %}
+  {% if eigenaren %}
+  <table>
+    <thead>
+      <tr>
+        <th>Eigenaar</th>
+        <th>Aandeel</th>
+        <th>Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in eigenaren %}
+      <tr>
+        <td>{{ e.get('eigenaar', '') or 'Niet beschikbaar' }}</td>
+        <td>{{ e.get('aandeel', '') or 'Niet beschikbaar' }}</td>
+        <td>{{ e.get('type', '') or 'Niet beschikbaar' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="na">Geen eigenaren gevonden in BRK data.</p>
+  {% endif %}
+{% else %}
+<p class="na">Eigendomsinformatie niet beschikbaar. BRK data wordt alleen opgehaald tijdens rapport generatie.</p>
+{% endif %}
+{% endblock %}

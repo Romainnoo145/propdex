@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Monumentstatus</h2>
+
+{% set mon = report_data.get('monuments') %}
+{% if mon %}
+<table>
+  <tr>
+    <th>Is monument</th>
+    <td>
+      {% if mon.get('is_monument') %}
+        <strong style="color: var(--brand-accent);">Ja</strong>{% if mon.get('consensus_status') %} — {{ mon.get('consensus_status') }}{% endif %}
+      {% else %}
+        Nee
+      {% endif %}
+    </td>
+  </tr>
+  {% if mon.get('is_rijksmonument') is not none %}
+  <tr>
+    <th>Rijksmonument</th>
+    <td>{{ 'Ja' if mon.get('is_rijksmonument') else 'Nee' }}</td>
+  </tr>
+  {% endif %}
+  {% if mon.get('is_gemeentelijk_monument') is not none %}
+  <tr>
+    <th>Gemeentelijk monument</th>
+    <td>{{ 'Ja' if mon.get('is_gemeentelijk_monument') else 'Nee' }}</td>
+  </tr>
+  {% endif %}
+  {% if mon.get('has_conflict') %}
+  <tr>
+    <th>Bronconflict</th>
+    <td>
+      <strong style="color: var(--brand-red);">Ja</strong>
+      {% if mon.get('conflict_note') %} — {{ mon.get('conflict_note') }}{% endif %}
+    </td>
+  </tr>
+  {% endif %}
+</table>
+
+{# --- Restrictions summary --- #}
+{% if mon.get('is_monument') and mon.get('restrictions_summary') %}
+<h2>Beperkingen</h2>
+<ul>
+  {% for r in mon.get('restrictions_summary', []) %}
+  <li>{{ r }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{# --- RCE Detail --- #}
+{% if mon.get('is_monument') and mon.get('rce_detail') %}
+  {% set rce = mon.get('rce_detail') %}
+<h2>RCE Monumentdetail</h2>
+<table>
+  {% if rce.get('rijksmonumentnummer') %}
+  <tr>
+    <th>Rijksmonumentnummer</th>
+    <td>{{ rce.get('rijksmonumentnummer') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('oorspronkelijke_functie') %}
+  <tr>
+    <th>Oorspronkelijke functie</th>
+    <td>{{ rce.get('oorspronkelijke_functie') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('bouwjaar_van') is not none or rce.get('bouwjaar_tot') is not none %}
+  <tr>
+    <th>Bouwperiode</th>
+    <td>{{ rce.get('bouwjaar_van', '?') }} — {{ rce.get('bouwjaar_tot', '?') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('architect') %}
+  <tr>
+    <th>Architect</th>
+    <td>{{ rce.get('architect') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('bouwstijl') %}
+  <tr>
+    <th>Bouwstijl</th>
+    <td>{{ rce.get('bouwstijl') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('redengevende_omschrijving') %}
+  <tr>
+    <th>Redengevende omschrijving</th>
+    <td>{{ rce.get('redengevende_omschrijving') }}</td>
+  </tr>
+  {% endif %}
+  {% if rce.get('monument_register_url') %}
+  <tr>
+    <th>Register</th>
+    <td>{{ rce.get('monument_register_url') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Sources --- #}
+{% set sources = mon.get('sources', []) %}
+{% if sources %}
+<h2>Bronnen</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Bron</th>
+      <th>Is monument</th>
+      <th>Type</th>
+      <th>Nummer</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in sources %}
+    <tr>
+      <td>{{ s.get('source', '-') }}</td>
+      <td>
+        {% if s.get('is_monument') is none %}
+          <span class="na">Onbekend</span>
+        {% elif s.get('is_monument') %}
+          Ja
+        {% else %}
+          Nee
+        {% endif %}
+      </td>
+      <td>{{ s.get('monument_type') or '-' }}</td>
+      <td>{{ s.get('monument_nummer') or '-' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% else %}
+<p class="na">Geen monumentgegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

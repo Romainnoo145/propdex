@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Energielabel</h2>
+
+{% set elabel = report_data.get('energy_label') %}
+{% set eflags = report_data.get('energielabel_flags') %}
+
+{% if elabel %}
+  {# --- Registered energy label --- #}
+  {% if elabel.get('is_geregistreerd') %}
+  <table>
+    {% if elabel.get('energieklasse') %}
+    <tr>
+      <th>Energieklasse</th>
+      <td><strong>{{ elabel.get('energieklasse') }}</strong></td>
+    </tr>
+    {% endif %}
+    {% if elabel.get('registratie_datum') %}
+    <tr>
+      <th>Registratiedatum</th>
+      <td>{{ elabel.get('registratie_datum') }}</td>
+    </tr>
+    {% endif %}
+    {% if elabel.get('geldig_tot') %}
+    <tr>
+      <th>Geldig tot</th>
+      <td>
+        {{ elabel.get('geldig_tot') }}
+        {% if elabel.get('is_geldig') == false %}
+          <span style="color:var(--brand-red);">(verlopen)</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if elabel.get('berekenings_type') %}
+    <tr>
+      <th>Berekeningsmethode</th>
+      <td>{{ elabel.get('berekenings_type') }}</td>
+    </tr>
+    {% endif %}
+    {% if elabel.get('soort_opname') %}
+    <tr>
+      <th>Soort opname</th>
+      <td>{{ elabel.get('soort_opname') }}</td>
+    </tr>
+    {% endif %}
+  </table>
+  {% else %}
+  {# --- Not registered --- #}
+  <table>
+    <tr>
+      <th>Status</th>
+      <td class="na">{{ elabel.get('niet_geregistreerd_reden', 'Niet geregistreerd bij EP-Online') }}</td>
+    </tr>
+  </table>
+  {% endif %}
+
+{% elif eflags %}
+  {# --- Fallback: energielabel_flags --- #}
+  <table>
+    {% if eflags is mapping %}
+      {% if eflags.get('energieklasse') or eflags.get('label') %}
+      <tr>
+        <th>Energieklasse</th>
+        <td><strong>{{ eflags.get('energieklasse', eflags.get('label', '—')) }}</strong></td>
+      </tr>
+      {% endif %}
+      {% if eflags.get('registratie_datum') %}
+      <tr>
+        <th>Registratiedatum</th>
+        <td>{{ eflags.get('registratie_datum') }}</td>
+      </tr>
+      {% endif %}
+    {% else %}
+    <tr>
+      <th>Energielabel</th>
+      <td>{{ eflags }}</td>
+    </tr>
+    {% endif %}
+  </table>
+  <p class="na">Bron: EP-Online (fallback) — beperkte gegevens beschikbaar.</p>
+
+{% else %}
+<p class="na">Geen energielabelgegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

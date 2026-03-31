@@ -45,6 +45,12 @@ VALID_DOCUMENT_TYPES: set[str] = {
     "documenten",
     "correspondentie",
     "ideeen",
+    # Checklist auto-generated document types (M020)
+    "wkb_precheck",
+    "monumenten",
+    "vergunningen",
+    "risicoprofiel",
+    "haalbaarheid",
 }
 
 ALLOWED_CONTENT_TYPES: set[str] = {
