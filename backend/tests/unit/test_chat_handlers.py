@@ -74,6 +74,15 @@ def _make_report_row(
     row.report_name = report_name
     row.city = city
     row.created_at = created_at or datetime(2026, 3, 25, 12, 0, 0)
+    row.report_data = {
+        "scores_v3": {"potentie": 65.0, "risico": 35.0},
+        "building": {"bouwjaar": 1975, "oppervlakte": 120, "gebruiksdoel": ["woonfunctie"]},
+        "zoning": {"primary_bestemming": "Wonen"},
+        "energy_label": {"energieklasse": "C"},
+        "asbest_indicator": {"risk": "middel"},
+        "fysiek_risico_profiel": {"overall_risk": "middel"},
+        "monuments": {"is_monument": False},
+    }
     return row
 
 
@@ -252,6 +261,75 @@ class TestHandleMyReports:
         )
         assert response.intent == "MY_REPORTS"
         assert response.count == 1
+
+    @pytest.mark.asyncio
+    async def test_sort_by_potentie(self, mock_db):
+        r1 = _make_report_row(report_name="Low")
+        r1.report_data["scores_v3"]["potentie"] = 30.0
+        r2 = _make_report_row(report_name="High")
+        r2.report_data["scores_v3"]["potentie"] = 90.0
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [r1, r2]
+        mock_db.execute = AsyncMock(return_value=result)
+
+        response = await handle_my_reports(
+            {"sort_by": "potentie", "sort_order": "desc"}, mock_db, str(uuid.uuid4())
+        )
+        assert response.data[0]["report_name"] == "High"
+        assert response.data[1]["report_name"] == "Low"
+
+    @pytest.mark.asyncio
+    async def test_max_risico_filter(self, mock_db):
+        r1 = _make_report_row(report_name="Risky")
+        r1.report_data["scores_v3"]["risico"] = 50.0
+        r2 = _make_report_row(report_name="Safe")
+        r2.report_data["scores_v3"]["risico"] = 20.0
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [r1, r2]
+        mock_db.execute = AsyncMock(return_value=result)
+
+        response = await handle_my_reports(
+            {"max_risico": 35}, mock_db, str(uuid.uuid4())
+        )
+        assert response.count == 1
+        assert response.data[0]["report_name"] == "Safe"
+
+    @pytest.mark.asyncio
+    async def test_min_potentie_filter(self, mock_db):
+        r1 = _make_report_row(report_name="Low")
+        r1.report_data["scores_v3"]["potentie"] = 30.0
+        r2 = _make_report_row(report_name="High")
+        r2.report_data["scores_v3"]["potentie"] = 80.0
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [r1, r2]
+        mock_db.execute = AsyncMock(return_value=result)
+
+        response = await handle_my_reports(
+            {"min_potentie": 50}, mock_db, str(uuid.uuid4())
+        )
+        assert response.count == 1
+        assert response.data[0]["report_name"] == "High"
+
+    @pytest.mark.asyncio
+    async def test_combined_filter_and_sort(self, mock_db):
+        r1 = _make_report_row(report_name="A")
+        r1.report_data["scores_v3"] = {"potentie": 70.0, "risico": 25.0}
+        r2 = _make_report_row(report_name="B")
+        r2.report_data["scores_v3"] = {"potentie": 85.0, "risico": 30.0}
+        r3 = _make_report_row(report_name="C")
+        r3.report_data["scores_v3"] = {"potentie": 90.0, "risico": 50.0}
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [r1, r2, r3]
+        mock_db.execute = AsyncMock(return_value=result)
+
+        response = await handle_my_reports(
+            {"sort_by": "potentie", "sort_order": "desc", "max_risico": 35},
+            mock_db, str(uuid.uuid4()),
+        )
+        # C filtered out (risico 50 > 35), B first (potentie 85), A second (70)
+        assert response.count == 2
+        assert response.data[0]["report_name"] == "B"
+        assert response.data[1]["report_name"] == "A"
 
 
 # ── dispatch_chat integration ────────────────────────────────────────────
