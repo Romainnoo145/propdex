@@ -1,0 +1,160 @@
+# Chat Intent Classifier Evaluation Suite
+#
+# Each entry: input message → expected intent + key params.
+# Run with: cd backend && python -m pytest tests/eval/test_intent_eval.py -v
+#
+# Add new cases when users report misclassifications.
+# The classifier calls Claude, so these tests hit the API (not mocked).
+
+- message: "Laat mijn rapporten zien"
+  expected_intent: MY_REPORTS
+  expected_params: {}
+
+- message: "Welke van mijn rapporten heeft de meeste potentie?"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: potentie
+    sort_order: desc
+
+- message: "Welke hebben de meeste potentie met weinig risico?"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: potentie
+    sort_order: desc
+
+- message: "Sorteer mijn rapporten op risico"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: risico
+
+- message: "Welk rapport heeft het grootste oppervlakte?"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: oppervlakte
+    sort_order: desc
+
+- message: "Oudste panden in mijn rapporten"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: bouwjaar
+    sort_order: asc
+
+- message: "Panden met potentie boven de 60"
+  expected_intent: MY_REPORTS
+  expected_params:
+    min_potentie: 60
+
+- message: "Hoeveel rapporten heb ik voor Amsterdam?"
+  expected_intent: MY_REPORTS
+  expected_params:
+    city: Amsterdam
+
+- message: "Mijn rapporten in Venlo"
+  expected_intent: MY_REPORTS
+  expected_params:
+    city: Venlo
+
+# --- PARCEL_SEARCH ---
+
+- message: "Woningen in Venlo"
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Venlo
+
+- message: "Alle woningen in Venlo met bouwjaar voor 1970"
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Venlo
+    build_year_max: 1970
+
+- message: "Bedrijfspanden groter dan 500m2 in Amsterdam"
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Amsterdam
+    area_min: 500
+
+- message: "Panden in Blerick, Venlo"
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Venlo
+
+- message: "Grote woningen in Rotterdam bouwjaar na 2000"
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Rotterdam
+    build_year_min: 2000
+
+# --- PARCEL_DETAIL ---
+
+- message: "Vertel me alles over Leutherweg 139 Venlo"
+  expected_intent: PARCEL_DETAIL
+  expected_params:
+    address: "Leutherweg 139"
+
+- message: "Wat weet je over Keizersgracht 420 Amsterdam?"
+  expected_intent: PARCEL_DETAIL
+  expected_params:
+    address: "Keizersgracht 420"
+
+- message: "Info over Albatrosstraat 9 Venlo"
+  expected_intent: PARCEL_DETAIL
+  expected_params:
+    address: "Albatrosstraat 9"
+
+# --- MY_FAVORITES ---
+
+- message: "Welke percelen heb ik opgeslagen?"
+  expected_intent: MY_FAVORITES
+  expected_params: {}
+
+- message: "Welke percelen staan op Onderzoek?"
+  expected_intent: MY_FAVORITES
+  expected_params:
+    stage: Onderzoek
+
+- message: "Mijn opgeslagen in Venlo"
+  expected_intent: MY_FAVORITES
+  expected_params:
+    gemeente: Venlo
+
+- message: "Hoeveel favorieten heb ik?"
+  expected_intent: MY_FAVORITES
+  expected_params: {}
+
+# --- UNSUPPORTED ---
+
+- message: "Wat is de gemiddelde huurprijs in Rotterdam?"
+  expected_intent: UNSUPPORTED
+  expected_params: {}
+
+- message: "Bereken mijn hypotheek"
+  expected_intent: UNSUPPORTED
+  expected_params: {}
+
+- message: "Maak een bouwtekening voor mij"
+  expected_intent: UNSUPPORTED
+  expected_params: {}
+
+# --- Tricky / edge cases ---
+
+- message: "Welke van deze heeft het meeste potentie?"
+  previous_intent: MY_REPORTS
+  previous_params: {}
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: potentie
+    sort_order: desc
+
+- message: "Alleen bouwjaar voor 1980"
+  previous_intent: PARCEL_SEARCH
+  previous_params:
+    municipality: Venlo
+  expected_intent: PARCEL_SEARCH
+  expected_params:
+    municipality: Venlo
+    build_year_max: 1980
+
+- message: "Vergelijk mijn rapporten op oppervlakte"
+  expected_intent: MY_REPORTS
+  expected_params:
+    sort_by: oppervlakte
