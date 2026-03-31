@@ -433,7 +433,7 @@ async def handle_my_reports(
     db: AsyncSession,
     user_id: str,
 ) -> ChatResponse:
-    """Handle MY_REPORTS: query user's saved reports."""
+    """Handle MY_REPORTS: query user's saved reports with optional sorting/ranking."""
     import uuid as _uuid
 
     query = (
@@ -453,15 +453,67 @@ async def handle_my_reports(
     result = await db.execute(query)
     rows = result.scalars().all()
 
-    reports = [
-        ReportSummary(
-            id=str(r.id),
-            report_name=r.report_name,
-            city=r.city if r.city else None,
-            created_at=r.created_at.isoformat(),
-        ).model_dump()
-        for r in rows
-    ]
+    reports = []
+    for r in rows:
+        rd = r.report_data or {}
+        scores = rd.get("scores_v3") or {}
+        building = rd.get("building") or {}
+        zoning = rd.get("zoning") or {}
+        energy = rd.get("energy_label") or {}
+        asbest = rd.get("asbest_indicator") or {}
+        frp = rd.get("fysiek_risico_profiel") or {}
+        monuments = rd.get("monuments") or {}
+        gebruiksdoel_raw = building.get("gebruiksdoel")
+        if isinstance(gebruiksdoel_raw, list):
+            gebruiksdoel = ", ".join(gebruiksdoel_raw)
+        else:
+            gebruiksdoel = gebruiksdoel_raw
+
+        reports.append(
+            ReportSummary(
+                id=str(r.id),
+                report_name=r.report_name,
+                city=r.city if r.city else None,
+                created_at=r.created_at.isoformat(),
+                potentie=scores.get("potentie"),
+                risico=scores.get("risico"),
+                bouwjaar=building.get("bouwjaar"),
+                oppervlakte=building.get("oppervlakte"),
+                gebruiksdoel=gebruiksdoel,
+                bestemming=zoning.get("primary_bestemming"),
+                energielabel=energy.get("energieklasse"),
+                asbest_risk=asbest.get("risk"),
+                fysiek_risk=frp.get("overall_risk"),
+                is_monument=monuments.get("is_monument"),
+            ).model_dump()
+        )
+
+    # Sort/rank if requested
+    sort_by = params.get("sort_by")
+    sort_order = params.get("sort_order", "desc")
+    filter_risk = params.get("filter_risk")
+
+    # Filter by risk level if requested
+    if filter_risk and reports:
+        reports = [
+            r for r in reports
+            if r.get("asbest_risk") == filter_risk
+            or r.get("fysiek_risk") == filter_risk
+        ]
+
+    if sort_by and reports:
+        sort_key_map = {
+            "potentie": "potentie",
+            "risico": "risico",
+            "bouwjaar": "bouwjaar",
+            "oppervlakte": "oppervlakte",
+        }
+        key = sort_key_map.get(sort_by)
+        if key:
+            reports.sort(
+                key=lambda r: r.get(key) if r.get(key) is not None else -999,
+                reverse=(sort_order == "desc"),
+            )
 
     msg = None
     if not rows:
@@ -469,6 +521,13 @@ async def handle_my_reports(
             msg = f"Geen rapporten gevonden voor {city}."
         else:
             msg = "Je hebt nog geen rapporten gegenereerd."
+    elif sort_by:
+        label = {"potentie": "potentiescore", "risico": "risicoscore", "bouwjaar": "bouwjaar", "oppervlakte": "oppervlakte"}.get(sort_by, sort_by)
+        direction = "hoogste" if sort_order == "desc" else "laagste"
+        top = reports[0]
+        msg = f"{len(reports)} rapporten gesorteerd op {direction} {label}. Top: {top.get('report_name')} ({label}: {top.get(sort_by, '?')})."
+    elif filter_risk:
+        msg = f"{len(reports)} rapporten met risico '{filter_risk}' gevonden." if reports else f"Geen rapporten met risico '{filter_risk}' gevonden."
 
     return ChatResponse(
         intent="MY_REPORTS",

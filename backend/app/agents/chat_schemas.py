@@ -125,13 +125,28 @@ class FavoriteSummary(BaseModel):
 # ── Report summary (returned by MY_REPORTS handler) ──────────────────────
 
 class ReportSummary(BaseModel):
-    """Lightweight report for inline chat display."""
+    """Report summary for inline chat display — includes key metrics for comparison."""
 
     id: str
     report_name: str
     address: str | None = None
     city: str | None = None
     created_at: str
+    # Scores
+    potentie: float | None = None
+    risico: float | None = None
+    # Building
+    bouwjaar: int | None = None
+    oppervlakte: int | None = None
+    gebruiksdoel: str | None = None
+    # Zoning
+    bestemming: str | None = None
+    # Energy
+    energielabel: str | None = None
+    # Risk
+    asbest_risk: str | None = None
+    fysiek_risk: str | None = None
+    is_monument: bool | None = None
 
 
 # ── Bulk favorites ───────────────────────────────────────────────────────

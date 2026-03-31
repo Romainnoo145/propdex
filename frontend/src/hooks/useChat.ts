@@ -68,6 +68,16 @@ export interface ReportSummary {
   address?: string | null
   city?: string | null
   created_at: string
+  potentie?: number | null
+  risico?: number | null
+  bouwjaar?: number | null
+  oppervlakte?: number | null
+  gebruiksdoel?: string | null
+  bestemming?: string | null
+  energielabel?: string | null
+  asbest_risk?: string | null
+  fysiek_risk?: string | null
+  is_monument?: boolean | null
 }
 
 /** API response from POST /api/agents/chat */

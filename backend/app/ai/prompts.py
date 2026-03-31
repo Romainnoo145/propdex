@@ -220,7 +220,7 @@ Classificeer het bericht van de gebruiker in precies één intent en extraheer d
 | PARCEL_SEARCH | Zoeken naar percelen/panden met filters (gemeente, bouwjaar, oppervlakte, bestemming, pandstatus) | municipality, build_year_min, build_year_max, area_min, area_max, bestemming, bestemming_exclude, pand_status |
 | PARCEL_DETAIL | Vragen over EEN specifiek adres of perceel. Bevat een straatnaam + huisnummer. | address (volledig adres als string) |
 | MY_FAVORITES | Vragen over opgeslagen/gefavoriseerde percelen, pipeline, portfolio | stage (optioneel: Gesignaleerd/Onderzoek/Contact/Besluit/Afgerond), gemeente (optioneel) |
-| MY_REPORTS | Vragen over eerder gegenereerde rapporten | city (optioneel) |
+| MY_REPORTS | Vragen over eerder gegenereerde rapporten, vergelijken, rangschikken op score/kenmerk | city (optioneel), sort_by (optioneel: potentie/risico/bouwjaar/oppervlakte), sort_order (optioneel: desc/asc, default desc), filter_risk (optioneel: hoog/middel/laag) |
 | UNSUPPORTED | Alles wat niet in de andere categorieën past | reason (korte uitleg in NL waarom dit niet ondersteund is) |
 
 ## Regels
@@ -229,6 +229,8 @@ Classificeer het bericht van de gebruiker in precies één intent en extraheer d
 - Alleen een gemeentenaam zonder specifiek adres is `PARCEL_SEARCH` (bijv. "Venlo" → zoek alle percelen in Venlo).
 - "Mijn opgeslagen", "mijn favorieten", "pipeline", "portfolio" → `MY_FAVORITES`.
 - "Mijn rapporten", "eerder gegenereerd", "hoeveel rapporten" → `MY_REPORTS`.
+- "Welke heeft de meeste potentie/risico", "sorteer op", "rangschik", "vergelijk mijn rapporten" → `MY_REPORTS` met sort_by parameter.
+- Als de vorige intent `MY_REPORTS` was en de gebruiker vraagt "welke heeft de meeste X" of "sorteer op X", classificeer als `MY_REPORTS` met sort_by.
 - Vragen over huurprijzen, marktprijzen, hypotheken, tekeningen, of andere data die niet in het platform zit → `UNSUPPORTED`.
 - **BELANGRIJK: "woningen", "huizen", "panden", "gebouwen" zijn generieke termen voor ALLE panden — NIET een bestemming filter.** Gebruik bestemming alleen wanneer de gebruiker expliciet een bestemmingstype noemt (bijv. "bestemming kantoor", "bedrijfspanden", "horecapanden", "agrarische panden").
 - Parameters die niet in het bericht voorkomen zijn `null`.
@@ -273,6 +275,21 @@ Bericht: "Hoeveel rapporten heb ik voor Amsterdam?"
 
 Bericht: "Laat mijn rapporten zien"
 → {"intent": "MY_REPORTS", "params": {}}
+
+Bericht: "Welke van mijn rapporten heeft de meeste potentie?"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "potentie", "sort_order": "desc"}}
+
+Bericht: "Sorteer mijn rapporten op risico"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "risico", "sort_order": "desc"}}
+
+Bericht: "Welk rapport heeft het grootste oppervlakte?"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "oppervlakte", "sort_order": "desc"}}
+
+Bericht: "Welke rapporten hebben hoog asbestrisico?"
+→ {"intent": "MY_REPORTS", "params": {"filter_risk": "hoog"}}
+
+Bericht: "Oudste panden in mijn rapporten"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "bouwjaar", "sort_order": "asc"}}
 
 Bericht: "Wat is de gemiddelde huurprijs in Rotterdam?"
 → {"intent": "UNSUPPORTED", "params": {"reason": "Huurprijzen zijn niet beschikbaar in Propdex. Het platform bevat kadasterdata, bestemmingsplannen, rapporten en opgeslagen percelen."}}
