@@ -23,6 +23,7 @@ import {
   FileText,
   ExternalLink,
   ChevronRight,
+  Download,
   X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -39,6 +40,36 @@ import { SectionInsightCard } from '../components/SectionInsightCard'
 export interface S8VergunningChecklistProps {
   data: PropertyReportResponse
   sourceParcelId?: string | null
+}
+
+/* ─── Checklist document status types ────────────────────────── */
+
+interface ChecklistItemDocStatus {
+  status: 'generated' | 'pending'
+  document_id?: string
+  document_type?: string
+  filename?: string
+}
+
+interface ChecklistStatusResponse {
+  parcel_id: string
+  items: Record<string, ChecklistItemDocStatus>
+  generated_count: number
+  total_count: number
+}
+
+function useChecklistDocuments(parcelId: string | null | undefined) {
+  const { accessToken } = useAuth()
+  return useQuery<ChecklistStatusResponse, Error>({
+    queryKey: ['checklist-doc-status', parcelId],
+    queryFn: () =>
+      apiFetch<ChecklistStatusResponse>(`/api/documents/${parcelId}/checklist-status`, {
+        method: 'GET',
+        accessToken,
+      }),
+    enabled: !!parcelId && !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  })
 }
 
 /* ─── Constants ──────────────────────────────────────────────── */
@@ -373,11 +404,32 @@ function ItemDetailModal({ item, checked, onClose, onToggle, onUpload, isUploadi
 interface CompactRowProps {
   item: ChecklistItem
   checked: boolean
+  docStatus?: ChecklistItemDocStatus
+  parcelId?: string | null
   onToggle: (id: string) => void
   onOpen: (item: ChecklistItem) => void
 }
 
-function CompactItemRow({ item, checked, onToggle, onOpen }: CompactRowProps) {
+function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }: CompactRowProps) {
+  const isGenerated = docStatus?.status === 'generated'
+  const { accessToken } = useAuth()
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!parcelId || !docStatus?.document_id) return
+    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${docStatus.document_id}`
+    fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = docStatus.filename ?? `${docStatus.document_type}.pdf`
+        a.click()
+        URL.revokeObjectURL(blobUrl)
+      })
+  }
+
   return (
     <div className="flex items-center gap-3 border-b border-[#EAEFEF] last:border-b-0">
       {/* Checkbox — stops propagation so clicking it doesn't open the modal */}
@@ -387,12 +439,12 @@ function CompactItemRow({ item, checked, onToggle, onOpen }: CompactRowProps) {
           onToggle(item.id)
         }}
         className={`flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-          checked
+          checked || isGenerated
             ? 'border-amber-500 bg-amber-500 text-white'
             : 'border-slate-300 bg-white hover:border-slate-400'
         }`}
       >
-        {checked && <Check className="size-3.5" strokeWidth={3} />}
+        {(checked || isGenerated) && <Check className="size-3.5" strokeWidth={3} />}
       </button>
 
       {/* Clickable row → opens modal */}
@@ -401,12 +453,16 @@ function CompactItemRow({ item, checked, onToggle, onOpen }: CompactRowProps) {
         className="flex min-w-0 flex-1 items-center gap-2 py-3 text-left transition-colors hover:bg-[#FAFCFA] -mx-1 px-1 rounded-lg"
       >
         <div className="min-w-0 flex-1">
-          <span className={`text-[12px] font-semibold ${checked ? 'text-slate-400 line-through' : 'text-[#0E1111]'}`}>
+          <span className={`text-[12px] font-semibold ${checked || isGenerated ? 'text-slate-400 line-through' : 'text-[#0E1111]'}`}>
             {item.title}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {item.required ? (
+          {isGenerated ? (
+            <span className="rounded-full border border-green-200 bg-green-50 px-1.5 py-0 text-[10px] font-medium text-green-700">
+              PDF beschikbaar
+            </span>
+          ) : item.required ? (
             <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800">
               Verplicht
             </span>
@@ -415,7 +471,17 @@ function CompactItemRow({ item, checked, onToggle, onOpen }: CompactRowProps) {
               Aanbevolen
             </span>
           )}
-          <ChevronRight className="size-3.5 text-slate-300" />
+          {isGenerated ? (
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 transition-colors hover:bg-green-100"
+            >
+              <Download className="size-3" />
+              Download
+            </button>
+          ) : (
+            <ChevronRight className="size-3.5 text-slate-300" />
+          )}
         </div>
       </button>
     </div>
@@ -434,6 +500,7 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
 
   const { data: checklist, isLoading, error } = useChecklist(activeUseCase)
   const { data: progress } = useChecklistProgress(sourceParcelId ?? undefined, activeUseCase)
+  const { data: docStatus } = useChecklistDocuments(sourceParcelId)
   const updateProgress = useUpdateChecklistProgress()
   const uploadDoc = useUploadDocument()
 
@@ -521,7 +588,12 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
 
   const phases = checklist.phases ?? []
   const groups = groupByPhase(checklist.items, phases)
-  const totalChecked = checkedSet.size
+  const generatedIds = new Set(
+    Object.entries(docStatus?.items ?? {})
+      .filter(([, v]) => v.status === 'generated')
+      .map(([k]) => k),
+  )
+  const totalChecked = checklist.items.filter((i) => checkedSet.has(i.id) || generatedIds.has(i.id)).length
   const totalItems = checklist.items.length
 
   return (
@@ -575,7 +647,7 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
 
       {/* ── Phased checklist — compact rows ───────────────────── */}
       {Array.from(groups.entries()).map(([phase, items]) => {
-        const phaseChecked = items.filter((i) => checkedSet.has(i.id)).length
+        const phaseChecked = items.filter((i) => checkedSet.has(i.id) || generatedIds.has(i.id)).length
 
         return (
           <SectionInsightCard
@@ -598,6 +670,8 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
                   key={item.id}
                   item={item}
                   checked={checkedSet.has(item.id)}
+                  docStatus={docStatus?.items[item.id]}
+                  parcelId={sourceParcelId}
                   onToggle={handleToggle}
                   onOpen={setActiveItem}
                 />

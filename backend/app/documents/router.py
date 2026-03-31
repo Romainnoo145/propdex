@@ -265,6 +265,9 @@ async def get_checklist_status(
 
     Maps generated checklist documents back to their checklist item IDs,
     returning which items have generated PDFs available for download.
+
+    Lazy generation: if no checklist docs exist yet but the parcel has a
+    saved report, generates them on the fly (backfill for pre-M020 reports).
     """
     from app.reports.checklist_pdf import CHECKLIST_DOC_CONFIGS
 
@@ -281,6 +284,41 @@ async def get_checklist_status(
     )
     result = await db.execute(query)
     docs = list(result.scalars().all())
+
+    # Lazy generation: no checklist docs yet → try generating from saved report
+    if not docs:
+        try:
+            from app.reports import service as report_service
+            from app.reports.checklist_orchestrator import generate_checklist_documents
+
+            report = await report_service.get_report_by_source_parcel(
+                parcel_id=parcel_id,
+                user_id=current_user.id,
+                session=db,
+            )
+            if report and report.report_data:
+                gen_result = await generate_checklist_documents(
+                    report_data=report.report_data,
+                    report_name=report.report_name,
+                    parcel_id=parcel_id,
+                    user_id=current_user.id,
+                    db=db,
+                )
+                await db.commit()
+                logger.info(
+                    "Lazy-generated checklist docs for parcel=%s: generated=%d",
+                    parcel_id,
+                    len(gen_result.generated),
+                )
+                # Re-fetch the newly created docs
+                result = await db.execute(query)
+                docs = list(result.scalars().all())
+        except Exception:
+            logger.warning(
+                "Lazy checklist generation failed for parcel=%s",
+                parcel_id,
+                exc_info=True,
+            )
 
     # Build doc_type → document mapping (latest per type)
     doc_by_type: dict[str, ParcelDocument] = {}
