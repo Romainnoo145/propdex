@@ -406,26 +406,29 @@ interface CompactRowProps {
   item: ChecklistItem
   checked: boolean
   docStatus?: ChecklistItemDocStatus
+  uploadedDocId?: string
   parcelId?: string | null
   onToggle: (id: string) => void
   onOpen: (item: ChecklistItem) => void
 }
 
-function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }: CompactRowProps) {
+function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onToggle, onOpen }: CompactRowProps) {
   const isGenerated = docStatus?.status === 'generated'
+  const hasDocument = isGenerated || !!uploadedDocId
+  const documentId = docStatus?.document_id ?? uploadedDocId
   const { accessToken } = useAuth()
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!parcelId || !docStatus?.document_id) return
-    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${docStatus.document_id}`
+    if (!parcelId || !documentId) return
+    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${documentId}`
     fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => res.blob())
       .then((blob) => {
         const blobUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = blobUrl
-        a.download = docStatus.filename ?? `${docStatus.document_type}.pdf`
+        a.download = docStatus?.filename ?? `${item.id}.pdf`
         a.click()
         URL.revokeObjectURL(blobUrl)
       })
@@ -433,8 +436,8 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
 
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!parcelId || !docStatus?.document_id) return
-    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${docStatus.document_id}`
+    if (!parcelId || !documentId) return
+    const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${documentId}`
     fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => res.blob())
       .then((blob) => {
@@ -452,12 +455,12 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
           onToggle(item.id)
         }}
         className={`flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-          checked || isGenerated
+          checked || hasDocument
             ? 'border-amber-500 bg-amber-500 text-white'
             : 'border-slate-300 bg-white hover:border-slate-400'
         }`}
       >
-        {(checked || isGenerated) && <Check className="size-3.5" strokeWidth={3} />}
+        {(checked || hasDocument) && <Check className="size-3.5" strokeWidth={3} />}
       </button>
 
       {/* Clickable row → opens modal */}
@@ -466,12 +469,12 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
         className="flex min-w-0 flex-1 items-center gap-2 py-3 text-left transition-colors hover:bg-[#FAFCFA] -mx-1 px-1 rounded-lg"
       >
         <div className="min-w-0 flex-1">
-          <span className={`text-[12px] font-semibold ${checked || isGenerated ? 'text-slate-400 line-through' : 'text-[#0E1111]'}`}>
+          <span className={`text-[12px] font-semibold ${checked || hasDocument ? 'text-slate-400 line-through' : 'text-[#0E1111]'}`}>
             {item.title}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {!isGenerated && (
+          {!hasDocument && (
             item.required ? (
               <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800">
                 Verplicht
@@ -482,7 +485,7 @@ function CompactItemRow({ item, checked, docStatus, parcelId, onToggle, onOpen }
               </span>
             )
           )}
-          {isGenerated ? (
+          {hasDocument ? (
             <div className="flex items-center gap-1">
               <button
                 onClick={handleView}
@@ -550,20 +553,24 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
       uploadDoc.mutate(
         { parcelId: sourceParcelId, documentType: 'checklist', file },
         {
-          onSuccess: () => {
-            if (!checkedSet.has(itemId)) {
-              const current = progress?.checked_items ?? []
-              updateProgress.mutate({
-                parcelId: sourceParcelId,
-                useCase: activeUseCase!,
-                checkedItems: [...current, itemId],
-              })
-            }
+          onSuccess: (doc) => {
+            // Auto-check the item and store the document_id
+            const currentChecked = progress?.checked_items ?? []
+            const nextChecked = currentChecked.includes(itemId)
+              ? currentChecked
+              : [...currentChecked, itemId]
+            const currentUploaded = progress?.uploaded_documents ?? {}
+            updateProgress.mutate({
+              parcelId: sourceParcelId,
+              useCase: activeUseCase!,
+              checkedItems: nextChecked,
+              uploadedDocuments: { ...currentUploaded, [itemId]: doc.id },
+            })
           },
         },
       )
     },
-    [sourceParcelId, activeUseCase, progress, updateProgress, uploadDoc, checkedSet],
+    [sourceParcelId, activeUseCase, progress, updateProgress, uploadDoc],
   )
 
   // No use_case_scores available
@@ -613,7 +620,10 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
       .filter(([, v]) => v.status === 'generated')
       .map(([k]) => k),
   )
-  const totalChecked = checklist.items.filter((i) => checkedSet.has(i.id) || generatedIds.has(i.id)).length
+  const uploadedIds = new Set(Object.keys(progress?.uploaded_documents ?? {}))
+  const totalChecked = checklist.items.filter(
+    (i) => checkedSet.has(i.id) || generatedIds.has(i.id) || uploadedIds.has(i.id),
+  ).length
   const totalItems = checklist.items.length
 
   return (
@@ -667,7 +677,9 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
 
       {/* ── Phased checklist — compact rows ───────────────────── */}
       {Array.from(groups.entries()).map(([phase, items]) => {
-        const phaseChecked = items.filter((i) => checkedSet.has(i.id) || generatedIds.has(i.id)).length
+        const phaseChecked = items.filter(
+          (i) => checkedSet.has(i.id) || generatedIds.has(i.id) || uploadedIds.has(i.id),
+        ).length
 
         return (
           <SectionInsightCard
@@ -691,6 +703,7 @@ export function S8VergunningChecklist({ data, sourceParcelId }: S8VergunningChec
                   item={item}
                   checked={checkedSet.has(item.id)}
                   docStatus={docStatus?.items[item.id]}
+                  uploadedDocId={progress?.uploaded_documents?.[item.id]}
                   parcelId={sourceParcelId}
                   onToggle={handleToggle}
                   onOpen={setActiveItem}

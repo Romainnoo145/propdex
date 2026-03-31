@@ -27,4 +27,5 @@ export interface ChecklistResponse {
 
 export interface ChecklistProgressResponse {
   checked_items: string[]
+  uploaded_documents: Record<string, string>
 }

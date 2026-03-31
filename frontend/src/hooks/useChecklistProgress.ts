@@ -32,7 +32,7 @@ export function useUpdateChecklistProgress() {
   return useMutation<
     ChecklistProgressResponse,
     Error,
-    { parcelId: string; useCase: string; checkedItems: string[] }
+    { parcelId: string; useCase: string; checkedItems: string[]; uploadedDocuments?: Record<string, string> }
   >({
     mutationFn: (vars) =>
       apiFetch<ChecklistProgressResponse>(
@@ -41,7 +41,10 @@ export function useUpdateChecklistProgress() {
           method: 'PUT',
           accessToken,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ checked_items: vars.checkedItems }),
+          body: JSON.stringify({
+            checked_items: vars.checkedItems,
+            uploaded_documents: vars.uploadedDocuments ?? {},
+          }),
         }
       ),
     onMutate: async (vars) => {
@@ -51,6 +54,7 @@ export function useUpdateChecklistProgress() {
       const previous = queryClient.getQueryData<ChecklistProgressResponse>(key)
       queryClient.setQueryData<ChecklistProgressResponse>(key, {
         checked_items: vars.checkedItems,
+        uploaded_documents: vars.uploadedDocuments ?? previous?.uploaded_documents ?? {},
       })
       return { previous, key }
     },

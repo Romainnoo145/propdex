@@ -23,10 +23,12 @@ VALID_USE_CASES = set(CHECKLISTS.keys())
 
 class ChecklistProgressResponse(BaseModel):
     checked_items: list[str]
+    uploaded_documents: dict[str, str] = {}
 
 
 class ChecklistProgressUpdate(BaseModel):
     checked_items: list[str]
+    uploaded_documents: dict[str, str] = {}
 
 
 @router.get("/{parcel_id}/{use_case}", response_model=ChecklistProgressResponse)
@@ -41,14 +43,19 @@ async def get_checklist_progress(
         return ChecklistProgressResponse(checked_items=[])
 
     result = await db.execute(
-        select(ChecklistProgress.checked_items).where(
+        select(ChecklistProgress.checked_items, ChecklistProgress.uploaded_documents).where(
             ChecklistProgress.user_id == current_user.id,
             ChecklistProgress.parcel_id == parcel_id,
             ChecklistProgress.use_case == use_case,
         )
     )
-    row = result.scalar_one_or_none()
-    return ChecklistProgressResponse(checked_items=row if row is not None else [])
+    row = result.one_or_none()
+    if row is None:
+        return ChecklistProgressResponse(checked_items=[], uploaded_documents={})
+    return ChecklistProgressResponse(
+        checked_items=row[0] if row[0] is not None else [],
+        uploaded_documents=row[1] if row[1] is not None else {},
+    )
 
 
 @router.put("/{parcel_id}/{use_case}", response_model=ChecklistProgressResponse)
@@ -68,10 +75,14 @@ async def update_checklist_progress(
         parcel_id=parcel_id,
         use_case=use_case,
         checked_items=body.checked_items,
+        uploaded_documents=body.uploaded_documents,
     )
     stmt = stmt.on_conflict_do_update(
         constraint="uq_checklist_progress_user_parcel_usecase",
-        set_={"checked_items": body.checked_items},
+        set_={
+            "checked_items": body.checked_items,
+            "uploaded_documents": body.uploaded_documents,
+        },
     )
     await db.execute(stmt)
     await db.commit()

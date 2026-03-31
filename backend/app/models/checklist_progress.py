@@ -46,6 +46,12 @@ class ChecklistProgress(Base, TimestampMixin):
         server_default=text("'[]'::jsonb"),
         comment="Array of checked item IDs, e.g. ['nbw-01', 'nbw-05']",
     )
+    uploaded_documents: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+        comment="Map of item_id → document_id for manually uploaded docs",
+    )
 
     __table_args__ = (
         UniqueConstraint(

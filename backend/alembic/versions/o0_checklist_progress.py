@@ -38,6 +38,12 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
+            "uploaded_documents",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
             "created_at",
             sa.DateTime(),
             server_default=sa.text("CURRENT_TIMESTAMP"),
