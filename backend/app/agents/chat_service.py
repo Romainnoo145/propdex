@@ -491,15 +491,17 @@ async def handle_my_reports(
     # Sort/rank if requested
     sort_by = params.get("sort_by")
     sort_order = params.get("sort_order", "desc")
-    filter_risk = params.get("filter_risk")
+    max_risico = params.get("max_risico")
+    min_potentie = params.get("min_potentie")
+    min_oppervlakte = params.get("min_oppervlakte")
 
-    # Filter by risk level if requested
-    if filter_risk and reports:
-        reports = [
-            r for r in reports
-            if r.get("asbest_risk") == filter_risk
-            or r.get("fysiek_risk") == filter_risk
-        ]
+    # Numeric filters
+    if max_risico is not None and reports:
+        reports = [r for r in reports if r.get("risico") is not None and r["risico"] <= max_risico]
+    if min_potentie is not None and reports:
+        reports = [r for r in reports if r.get("potentie") is not None and r["potentie"] >= min_potentie]
+    if min_oppervlakte is not None and reports:
+        reports = [r for r in reports if r.get("oppervlakte") is not None and r["oppervlakte"] >= min_oppervlakte]
 
     if sort_by and reports:
         sort_key_map = {
@@ -525,9 +527,24 @@ async def handle_my_reports(
         label = {"potentie": "potentiescore", "risico": "risicoscore", "bouwjaar": "bouwjaar", "oppervlakte": "oppervlakte"}.get(sort_by, sort_by)
         direction = "hoogste" if sort_order == "desc" else "laagste"
         top = reports[0]
-        msg = f"{len(reports)} rapporten gesorteerd op {direction} {label}. Top: {top.get('report_name')} ({label}: {top.get(sort_by, '?')})."
-    elif filter_risk:
-        msg = f"{len(reports)} rapporten met risico '{filter_risk}' gevonden." if reports else f"Geen rapporten met risico '{filter_risk}' gevonden."
+        filters = []
+        if max_risico is not None:
+            filters.append(f"risico ≤ {max_risico}")
+        if min_potentie is not None:
+            filters.append(f"potentie ≥ {min_potentie}")
+        if min_oppervlakte is not None:
+            filters.append(f"oppervlakte ≥ {min_oppervlakte}m²")
+        filter_str = f" ({', '.join(filters)})" if filters else ""
+        msg = f"{len(reports)} rapporten{filter_str} gesorteerd op {direction} {label}. Top: {top.get('report_name')} ({label}: {top.get(sort_by, '?')})."
+    elif max_risico is not None or min_potentie is not None or min_oppervlakte is not None:
+        filters = []
+        if max_risico is not None:
+            filters.append(f"risico ≤ {max_risico}")
+        if min_potentie is not None:
+            filters.append(f"potentie ≥ {min_potentie}")
+        if min_oppervlakte is not None:
+            filters.append(f"oppervlakte ≥ {min_oppervlakte}m²")
+        msg = f"{len(reports)} rapporten gevonden ({', '.join(filters)})." if reports else f"Geen rapporten gevonden ({', '.join(filters)})."
 
     return ChatResponse(
         intent="MY_REPORTS",

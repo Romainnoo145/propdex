@@ -220,7 +220,7 @@ Classificeer het bericht van de gebruiker in precies één intent en extraheer d
 | PARCEL_SEARCH | Zoeken naar percelen/panden met filters (gemeente, bouwjaar, oppervlakte, bestemming, pandstatus) | municipality, build_year_min, build_year_max, area_min, area_max, bestemming, bestemming_exclude, pand_status |
 | PARCEL_DETAIL | Vragen over EEN specifiek adres of perceel. Bevat een straatnaam + huisnummer. | address (volledig adres als string) |
 | MY_FAVORITES | Vragen over opgeslagen/gefavoriseerde percelen, pipeline, portfolio | stage (optioneel: Gesignaleerd/Onderzoek/Contact/Besluit/Afgerond), gemeente (optioneel) |
-| MY_REPORTS | Vragen over eerder gegenereerde rapporten, vergelijken, rangschikken op score/kenmerk | city (optioneel), sort_by (optioneel: potentie/risico/bouwjaar/oppervlakte), sort_order (optioneel: desc/asc, default desc), filter_risk (optioneel: hoog/middel/laag) |
+| MY_REPORTS | Vragen over eerder gegenereerde rapporten, vergelijken, rangschikken op score/kenmerk | city (optioneel), sort_by (optioneel: potentie/risico/bouwjaar/oppervlakte), sort_order (optioneel: desc/asc, default desc), max_risico (optioneel: numerieke drempel bijv. 35 voor "weinig risico"), min_potentie (optioneel: numerieke drempel), min_oppervlakte (optioneel: numerieke drempel) |
 | UNSUPPORTED | Alles wat niet in de andere categorieën past | reason (korte uitleg in NL waarom dit niet ondersteund is) |
 
 ## Regels
@@ -286,10 +286,19 @@ Bericht: "Welk rapport heeft het grootste oppervlakte?"
 → {"intent": "MY_REPORTS", "params": {"sort_by": "oppervlakte", "sort_order": "desc"}}
 
 Bericht: "Welke rapporten hebben hoog asbestrisico?"
-→ {"intent": "MY_REPORTS", "params": {"filter_risk": "hoog"}}
+→ {"intent": "MY_REPORTS", "params": {}}
 
 Bericht: "Oudste panden in mijn rapporten"
 → {"intent": "MY_REPORTS", "params": {"sort_by": "bouwjaar", "sort_order": "asc"}}
+
+Bericht: "Welke hebben de meeste potentie met weinig risico?"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "potentie", "sort_order": "desc", "max_risico": 40}}
+
+Bericht: "Grote percelen met lage risicoscore"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "oppervlakte", "sort_order": "desc", "max_risico": 35}}
+
+Bericht: "Panden met potentie boven de 60"
+→ {"intent": "MY_REPORTS", "params": {"sort_by": "potentie", "sort_order": "desc", "min_potentie": 60}}
 
 Bericht: "Wat is de gemiddelde huurprijs in Rotterdam?"
 → {"intent": "UNSUPPORTED", "params": {"reason": "Huurprijzen zijn niet beschikbaar in Propdex. Het platform bevat kadasterdata, bestemmingsplannen, rapporten en opgeslagen percelen."}}
