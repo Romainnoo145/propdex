@@ -1,5 +1,25 @@
 {% extends "base.html" %}
 
+{% block summary %}
+{% set zoning = report_data.get('zoning') %}
+{% set bd = report_data.get('buildability_delta') %}
+{% set dims = zoning.get('building_dimensions') if zoning else none %}
+<div class="summary-box">
+  <div class="stat-item">
+    <div class="stat-value">{{ (zoning.get('primary_bestemming') or '—') if zoning else '—' }}</div>
+    <div class="stat-label">Primaire bestemming</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">{% if dims and dims.get('max_hoogte') is not none %}{{ dims.get('max_hoogte') }} m{% elif dims and dims.get('max_bouwhoogte') is not none %}{{ dims.get('max_bouwhoogte') }} m{% else %}—{% endif %}</div>
+    <div class="stat-label">Max. hoogte</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">{% if bd and bd.get('remaining_buildable_area_m2') is not none %}{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²{% elif bd and bd.get('remaining_capacity_m2') is not none %}{{ bd.get('remaining_capacity_m2') | round(0) | int }} m²{% else %}—{% endif %}</div>
+    <div class="stat-label">Restcapaciteit</div>
+  </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <h2>Bestemmingsplan &amp; Bouwmogelijkheden</h2>
 
@@ -7,15 +27,21 @@
 {% if zoning %}
 
   {# --- Primary designation --- #}
-  <table>
+  <table class="kv-table">
     <tr>
-      <th>Primaire bestemming</th>
-      <td><strong>{{ zoning.get('primary_bestemming') or zoning.get('bestemmingen', ['Niet beschikbaar'])|first }}</strong></td>
+      <td class="kv-label">Primaire bestemming</td>
+      <td class="kv-value"><strong>{{ zoning.get('primary_bestemming') or zoning.get('bestemmingen', ['Niet beschikbaar'])|first }}</strong></td>
     </tr>
     {% if zoning.get('bestemmingsplan_naam') %}
     <tr>
-      <th>Bestemmingsplan</th>
-      <td>{{ zoning.get('bestemmingsplan_naam') }}</td>
+      <td class="kv-label">Bestemmingsplan</td>
+      <td class="kv-value">{{ zoning.get('bestemmingsplan_naam') }}</td>
+    </tr>
+    {% endif %}
+    {% if zoning.get('source') %}
+    <tr>
+      <td class="kv-label">Bron</td>
+      <td class="kv-value">{{ zoning.get('source') }}</td>
     </tr>
     {% endif %}
   </table>
@@ -24,10 +50,11 @@
   {% set plans = zoning.get('plans', []) %}
   {% if plans %}
   <h2>Vigerende plannen</h2>
-  <table>
+  <table class="data-table">
     <thead>
       <tr>
         <th>Plannaam</th>
+        <th>Type</th>
         <th>Status</th>
         <th>Datum</th>
       </tr>
@@ -35,48 +62,145 @@
     <tbody>
       {% for plan in plans %}
       <tr>
-        <td>{{ plan.get('plan_naam', '-') }}</td>
-        <td>{{ plan.get('plan_status', '-') }}</td>
-        <td>{{ plan.get('plan_datum', '-') }}</td>
+        <td>{{ plan.get('plan_naam', '—') }}</td>
+        <td>{{ plan.get('plan_type', '—') or '—' }}</td>
+        <td>{{ plan.get('plan_status', '—') }}</td>
+        <td style="white-space: nowrap;">{{ plan.get('plan_datum', '—') }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+
+  {# --- Per-plan details: rules, functie_aanduidingen, gebieds_aanduidingen, teksten --- #}
+  {% for plan in plans %}
+    {# Zoning rules per plan #}
+    {% set rules = plan.get('rules', []) %}
+    {% if rules %}
+    <h2 style="font-size: 11pt;">Bestemmingsregels — {{ plan.get('plan_naam', '') }}</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Bestemming</th>
+          <th>Omschrijving</th>
+          <th>Max. hoogte</th>
+          <th>Max. bouwlagen</th>
+          <th>Max. bebouwing %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in rules %}
+        <tr>
+          <td><strong>{{ rule.get('bestemming', '—') }}</strong></td>
+          <td>{{ rule.get('omschrijving', '') or '—' }}</td>
+          <td>{% if rule.get('building_dimensions') and rule.get('building_dimensions', {}).get('max_hoogte') is not none %}{{ rule.get('building_dimensions', {}).get('max_hoogte') }} m{% else %}—{% endif %}</td>
+          <td>{% if rule.get('building_dimensions') and rule.get('building_dimensions', {}).get('max_bouwlagen') is not none %}{{ rule.get('building_dimensions', {}).get('max_bouwlagen') }}{% else %}—{% endif %}</td>
+          <td>{% if rule.get('building_dimensions') and rule.get('building_dimensions', {}).get('max_bebouwingspercentage') is not none %}{{ rule.get('building_dimensions', {}).get('max_bebouwingspercentage') }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {# Functie-aanduidingen #}
+    {% set fa = plan.get('functie_aanduidingen', []) %}
+    {% if fa %}
+    <h2 style="font-size: 10pt;">Functie-aanduidingen — {{ plan.get('plan_naam', '') }}</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Aanduiding</th><th>Groep</th></tr>
+      </thead>
+      <tbody>
+        {% for f in fa %}
+        <tr>
+          <td>{{ f.get('naam', '—') }}</td>
+          <td>{{ f.get('groep', '') or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {# Gebieds-aanduidingen #}
+    {% set ga = plan.get('gebieds_aanduidingen', []) %}
+    {% if ga %}
+    <h2 style="font-size: 10pt;">Gebieds-aanduidingen — {{ plan.get('plan_naam', '') }}</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Aanduiding</th><th>Groep</th></tr>
+      </thead>
+      <tbody>
+        {% for g in ga %}
+        <tr>
+          <td>{{ g.get('naam', '—') }}</td>
+          <td>{{ g.get('groep', '') or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {# Teksten / planregels #}
+    {% set teksten = plan.get('teksten', []) %}
+    {% if teksten %}
+    <h2 style="font-size: 10pt; page-break-before: auto;">Planregels — {{ plan.get('plan_naam', '') }}</h2>
+    {% for tekst in teksten %}
+    <div class="risk-block" style="border-left-color: var(--brand-border); margin-bottom: 0.4em; page-break-inside: avoid;">
+      <h4 style="font-size: 9pt;">{{ tekst.get('titel', 'Artikel') }}</h4>
+      {% if tekst.get('inhoud') %}
+      <p style="font-size: 8.5pt; white-space: pre-line;">{{ tekst.get('inhoud') }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  {% endfor %}
+
   {% endif %}
 
-  {# --- Building dimensions --- #}
+  {# --- Building dimensions (aggregated) --- #}
   {% set dims = zoning.get('building_dimensions') %}
   {% if dims %}
   <h2>Bouwdimensies</h2>
-  <table>
-    {% if dims.get('max_hoogte') %}
+  <table class="kv-table">
+    {% if dims.get('max_hoogte') is not none %}
     <tr>
-      <th>Max. bouwhoogte</th>
-      <td>{{ dims.get('max_hoogte') }} m</td>
+      <td class="kv-label">Max. bouwhoogte</td>
+      <td class="kv-value">{{ dims.get('max_hoogte') }} m</td>
     </tr>
     {% endif %}
-    {% if dims.get('max_bouwlagen') %}
+    {% if dims.get('max_bouwhoogte') is not none and dims.get('max_hoogte') is none %}
     <tr>
-      <th>Max. bouwlagen</th>
-      <td>{{ dims.get('max_bouwlagen') }} lagen</td>
+      <td class="kv-label">Max. bouwhoogte</td>
+      <td class="kv-value">{{ dims.get('max_bouwhoogte') }} m</td>
     </tr>
     {% endif %}
-    {% if dims.get('max_bebouwingspercentage') %}
+    {% if dims.get('max_bouwlagen') is not none %}
     <tr>
-      <th>Max. bebouwingspercentage</th>
-      <td>{{ dims.get('max_bebouwingspercentage') }}%</td>
+      <td class="kv-label">Max. bouwlagen</td>
+      <td class="kv-value">{{ dims.get('max_bouwlagen') }} lagen</td>
     </tr>
     {% endif %}
-    {% if dims.get('max_goothoogte') %}
+    {% if dims.get('max_bebouwingspercentage') is not none %}
     <tr>
-      <th>Max. goothoogte</th>
-      <td>{{ dims.get('max_goothoogte') }} m</td>
+      <td class="kv-label">Max. bebouwingspercentage</td>
+      <td class="kv-value">{{ dims.get('max_bebouwingspercentage') }}%</td>
     </tr>
     {% endif %}
-    {% if not dims.get('max_hoogte') and not dims.get('max_bouwlagen') and not dims.get('max_bebouwingspercentage') and not dims.get('max_goothoogte') %}
+    {% if dims.get('max_goothoogte') is not none %}
     <tr>
-      <th>Bouwdimensies</th>
-      <td class="na">Geen maatvoeringen beschikbaar</td>
+      <td class="kv-label">Max. goothoogte</td>
+      <td class="kv-value">{{ dims.get('max_goothoogte') }} m</td>
+    </tr>
+    {% endif %}
+    {% if dims.get('max_floor_area_ratio') is not none %}
+    <tr>
+      <td class="kv-label">Max. Floor Area Ratio (FSI)</td>
+      <td class="kv-value">{{ dims.get('max_floor_area_ratio') }}</td>
+    </tr>
+    {% endif %}
+    {% if not dims.get('max_hoogte') and not dims.get('max_bouwlagen') and not dims.get('max_bebouwingspercentage') and not dims.get('max_goothoogte') and not dims.get('max_bouwhoogte') and not dims.get('max_floor_area_ratio') %}
+    <tr>
+      <td class="kv-label">Bouwdimensies</td>
+      <td class="kv-value na">Geen maatvoeringen beschikbaar</td>
     </tr>
     {% endif %}
   </table>
@@ -86,7 +210,7 @@
   {% set ai = report_data.get('ai_parsing') %}
   {% if ai and ai.get('status') == 'complete' and ai.get('parsed_rules') %}
   <h2>AI Planregels analyse</h2>
-  <table>
+  <table class="data-table">
     <thead>
       <tr>
         <th>Categorie</th>
@@ -106,36 +230,112 @@
   </table>
   {% endif %}
 
-  {# --- Buildability delta --- #}
+  {# --- Buildability delta (expanded) --- #}
   {% set bd = report_data.get('buildability_delta') %}
   {% if bd %}
   <h2>Bouwenvelop-analyse</h2>
-  <table>
+
+  {% if bd.get('confidence') %}
+  <p style="margin-bottom: 0.3em;">
+    Betrouwbaarheid:
+    <span class="dot {% if bd.get('confidence') == 'high' %}dot-green{% elif bd.get('confidence') == 'medium' %}dot-amber{% else %}dot-red{% endif %}"></span>
+    <strong>{{ bd.get('confidence') | upper }}</strong>
+    {% if bd.get('limit_source') %} — bron: {{ bd.get('limit_source') }}{% endif %}
+  </p>
+  {% endif %}
+
+  <table class="kv-table">
     {% if bd.get('parcel_area_m2') is not none %}
     <tr>
-      <th>Perceeloppervlakte</th>
-      <td>{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+      <td class="kv-label">Perceeloppervlakte</td>
+      <td class="kv-value">{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
     </tr>
     {% endif %}
-    {% if bd.get('remaining_capacity_m2') is not none %}
+    {% if bd.get('current_built_area_m2') is not none %}
     <tr>
-      <th>Restcapaciteit</th>
-      <td>{{ bd.get('remaining_capacity_m2') | round(0) | int }} m²</td>
+      <td class="kv-label">Huidig bebouwd oppervlak</td>
+      <td class="kv-value">{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
     </tr>
     {% endif %}
-    {% if bd.get('summary') %}
+    {% if bd.get('current_built_ratio_pct') is not none %}
     <tr>
-      <th>Samenvatting</th>
-      <td>{{ bd.get('summary') }}</td>
+      <td class="kv-label">Huidig bebouwingspercentage</td>
+      <td class="kv-value">{{ bd.get('current_built_ratio_pct') | round(1) }}%</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('max_bebouwingspercentage_pct') is not none %}
+    <tr>
+      <td class="kv-label">Max. bebouwingspercentage</td>
+      <td class="kv-value">{{ bd.get('max_bebouwingspercentage_pct') | round(1) }}%</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('max_buildable_area_m2') is not none %}
+    <tr>
+      <td class="kv-label">Max. bebouwbaar oppervlak</td>
+      <td class="kv-value">{{ bd.get('max_buildable_area_m2') | round(0) | int }} m²</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('remaining_buildable_area_m2') is not none %}
+    <tr>
+      <td class="kv-label">Restcapaciteit (oppervlak)</td>
+      <td class="kv-value"><strong>{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²</strong></td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {# FAR fields #}
+  {% if bd.get('current_far') is not none or bd.get('max_far') is not none or bd.get('remaining_far') is not none %}
+  <h2 style="font-size: 10pt;">Floor Area Ratio (FAR)</h2>
+  <table class="kv-table">
+    {% if bd.get('current_far') is not none %}
+    <tr>
+      <td class="kv-label">Huidig FAR</td>
+      <td class="kv-value">{{ bd.get('current_far') | round(2) }}</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('max_far') is not none %}
+    <tr>
+      <td class="kv-label">Max. FAR</td>
+      <td class="kv-value">{{ bd.get('max_far') | round(2) }}</td>
+    </tr>
+    {% endif %}
+    {% if bd.get('remaining_far') is not none %}
+    <tr>
+      <td class="kv-label">Resterend FAR</td>
+      <td class="kv-value"><strong>{{ bd.get('remaining_far') | round(2) }}</strong></td>
     </tr>
     {% endif %}
   </table>
   {% endif %}
 
+  {# Missing fields and notes #}
+  {% if bd.get('missing_fields') %}
+  <p class="na" style="font-size: 8.5pt; margin-top: 0.3em;">Ontbrekende invoer: {{ bd.get('missing_fields') | join(', ') }}</p>
+  {% endif %}
+  {% if bd.get('notes') %}
+  {% for note in bd.get('notes', []) %}
+  <p class="na" style="font-size: 8.5pt;">{{ note }}</p>
+  {% endfor %}
+  {% endif %}
+
+  {% if bd.get('summary') %}
+  <p style="margin-top: 0.3em;">{{ bd.get('summary') }}</p>
+  {% endif %}
+  {% endif %}
+
   {# --- Data gaps / fallback --- #}
-  {% if zoning.get('data_gaps') %}
+  {% set data_gaps = zoning.get('data_gaps', []) %}
+  {% if data_gaps %}
   <h2>Ontbrekende gegevens</h2>
-  <p class="na">{{ zoning.get('data_gaps') }}</p>
+  {% if data_gaps is string %}
+  <p class="na">{{ data_gaps }}</p>
+  {% else %}
+  <ul class="na">
+    {% for gap in data_gaps %}
+    <li>{{ gap }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   {% endif %}
   {% if zoning.get('fallback_used') %}
   <p class="na"><em>Let op: er is een fallback-bron gebruikt voor deze gegevens.</em></p>

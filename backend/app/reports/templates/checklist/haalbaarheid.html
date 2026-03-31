@@ -30,6 +30,35 @@
 .score-risico .score-num { color: #991B1B; }
 {% endblock %}
 
+{% block summary %}
+{% set scores = report_data.get('scores_v3') %}
+{% set bd = report_data.get('buildability_delta') %}
+{% if scores or bd %}
+<div class="summary-box">
+  {% if scores %}
+  <div class="stat-item">
+    <div class="stat-value" style="color: #166534;">{{ scores.get('potentie', 0) | round(0) | int }}</div>
+    <div class="stat-label">Potentie</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value" style="color: #991B1B;">{{ scores.get('risico', 0) | round(0) | int }}</div>
+    <div class="stat-label">Risico</div>
+  </div>
+  {% endif %}
+  <div class="stat-item">
+    <div class="stat-value">
+      {% if bd and bd.get('remaining_buildable_area_m2') is not none %}
+        {{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="stat-label">Restcapaciteit</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <h2>Haalbaarheidsinschatting</h2>
 
@@ -38,7 +67,7 @@
 {% set bd = report_data.get('buildability_delta') %}
 {% set zon = report_data.get('zoning') %}
 
-{% if scores or zon %}
+{% if scores or zon or bd %}
 
 {# --- Scores V3 gauges --- #}
 {% if scores %}
@@ -103,26 +132,44 @@
 </table>
 {% endif %}
 
-{# --- Buildability delta --- #}
+{# --- Buildability delta / Bouwenvelop-analyse --- #}
 {% if bd %}
 <h2>Bouwenvelop-analyse</h2>
-<table>
+<table class="kv-table">
   {% if bd.get('parcel_area_m2') is not none %}
   <tr>
-    <th>Perceeloppervlakte</th>
-    <td>{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+    <td class="kv-label">Perceeloppervlakte</td>
+    <td class="kv-value">{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
   </tr>
   {% endif %}
   {% if bd.get('current_built_area_m2') is not none %}
   <tr>
-    <th>Huidig bebouwd oppervlak</th>
-    <td>{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
+    <td class="kv-label">Huidig bebouwd oppervlak</td>
+    <td class="kv-value">{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('current_built_ratio_pct') is not none %}
+  <tr>
+    <td class="kv-label">Huidig bebouwingspercentage</td>
+    <td class="kv-value">{{ bd.get('current_built_ratio_pct') | round(1) }}%</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('max_bebouwingspercentage_pct') is not none %}
+  <tr>
+    <td class="kv-label">Max. bebouwingspercentage</td>
+    <td class="kv-value">{{ bd.get('max_bebouwingspercentage_pct') | round(1) }}%</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('max_buildable_area_m2') is not none %}
+  <tr>
+    <td class="kv-label">Max. bebouwbaar oppervlak</td>
+    <td class="kv-value">{{ bd.get('max_buildable_area_m2') | round(0) | int }} m²</td>
   </tr>
   {% endif %}
   {% if bd.get('remaining_buildable_area_m2') is not none %}
   <tr>
-    <th>Resterende bouwruimte</th>
-    <td>
+    <td class="kv-label">Resterende bouwruimte</td>
+    <td class="kv-value">
       <strong>{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²</strong>
       {% if bd.get('remaining_buildable_area_m2') > 0 %}
         <span style="color: var(--brand-green); font-size: 8.5pt;"> (uitbreidingsruimte)</span>
@@ -135,28 +182,104 @@
   </tr>
   {% endif %}
 </table>
+
+{# --- FAR analysis --- #}
+{% if bd.get('current_far') is not none or bd.get('max_far') is not none %}
+<h2>Floor Area Ratio (FAR)</h2>
+<table class="kv-table">
+  {% if bd.get('current_far') is not none %}
+  <tr>
+    <td class="kv-label">Huidig FAR</td>
+    <td class="kv-value">{{ bd.get('current_far') | round(2) }}</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('max_far') is not none %}
+  <tr>
+    <td class="kv-label">Maximaal FAR</td>
+    <td class="kv-value">{{ bd.get('max_far') | round(2) }}</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('remaining_far') is not none %}
+  <tr>
+    <td class="kv-label">Resterende FAR</td>
+    <td class="kv-value">
+      <strong>{{ bd.get('remaining_far') | round(2) }}</strong>
+      {% if bd.get('remaining_far') > 0 %}
+        <span style="color: var(--brand-green); font-size: 8.5pt;"> (ruimte beschikbaar)</span>
+      {% elif bd.get('remaining_far') == 0 %}
+        <span style="color: var(--brand-muted); font-size: 8.5pt;"> (volledig benut)</span>
+      {% else %}
+        <span style="color: var(--brand-red); font-size: 8.5pt;"> (overschreden)</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endif %}
+</table>
 {% endif %}
+
+{# --- Limit source & confidence --- #}
+{% if bd.get('limit_source') or bd.get('limit_confidence') or bd.get('confidence') %}
+<h2>Brongegevens & betrouwbaarheid</h2>
+<table class="kv-table">
+  {% if bd.get('limit_source') %}
+  <tr>
+    <td class="kv-label">Brontype limieten</td>
+    <td class="kv-value">{{ bd.get('limit_source') }}</td>
+  </tr>
+  {% endif %}
+  {% if bd.get('limit_confidence') %}
+  <tr>
+    <td class="kv-label">Limietbetrouwbaarheid</td>
+    <td class="kv-value">
+      <span class="confidence-badge confidence-{{ bd.get('limit_confidence') }}">{{ bd.get('limit_confidence') }}</span>
+    </td>
+  </tr>
+  {% endif %}
+  {% if bd.get('confidence') %}
+  <tr>
+    <td class="kv-label">Totale betrouwbaarheid</td>
+    <td class="kv-value">
+      <span class="confidence-badge confidence-{{ bd.get('confidence') }}">{{ bd.get('confidence') }}</span>
+    </td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Missing fields & notes --- #}
+{% if bd.get('missing_fields') %}
+<p style="font-size: 8.5pt; color: var(--brand-muted); margin-top: 0.3cm;">
+  <strong>Ontbrekende velden:</strong> {{ bd.get('missing_fields') | join(', ') }}
+</p>
+{% endif %}
+{% if bd.get('notes') %}
+<p style="font-size: 8.5pt; color: var(--brand-muted);">
+  {% for note in bd.get('notes') %}{{ note }}{% if not loop.last %} {% endif %}{% endfor %}
+</p>
+{% endif %}
+
+{% endif %}{# end bd #}
 
 {# --- Zoning headline --- #}
 {% if zon %}
 <h2>Bestemmingsplan</h2>
-<table>
+<table class="kv-table">
   {% if zon.get('bestemmingsplan_naam') %}
   <tr>
-    <th>Plan</th>
-    <td>{{ zon.get('bestemmingsplan_naam') }}</td>
+    <td class="kv-label">Plan</td>
+    <td class="kv-value">{{ zon.get('bestemmingsplan_naam') }}</td>
   </tr>
   {% endif %}
   {% if zon.get('primary_bestemming') %}
   <tr>
-    <th>Primaire bestemming</th>
-    <td>{{ zon.get('primary_bestemming') }}</td>
+    <td class="kv-label">Primaire bestemming</td>
+    <td class="kv-value">{{ zon.get('primary_bestemming') }}</td>
   </tr>
   {% endif %}
   {% if zon.get('max_bouwhoogte_m') is not none %}
   <tr>
-    <th>Max. bouwhoogte</th>
-    <td>{{ zon.get('max_bouwhoogte_m') }} m</td>
+    <td class="kv-label">Max. bouwhoogte</td>
+    <td class="kv-value">{{ zon.get('max_bouwhoogte_m') }} m</td>
   </tr>
   {% endif %}
 </table>

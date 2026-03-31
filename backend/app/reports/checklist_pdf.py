@@ -105,11 +105,18 @@ CHECKLIST_DOC_CONFIGS: dict[str, ChecklistDocConfig] = {
         required_fields=["fysiek_risico_profiel"],
         checklist_item_ids=[],
     ),
+    "woz": ChecklistDocConfig(
+        template_name="woz.html",
+        confidence="high",
+        title="WOZ Taxatieoverzicht",
+        required_fields=["woz_data"],
+        checklist_item_ids=[],
+    ),
     # --- MEDIUM confidence (indicative — disclaimer required) ---
     "bodem": ChecklistDocConfig(
         template_name="bodem.html",
         confidence="medium",
-        title="Bodem Samenvatting",
+        title="Bodemkwaliteit Screening",
         required_fields=["bodem_data"],
         checklist_item_ids=["tra-06", "nbw-06"],
         disclaimer="Indicatief — vervangt geen NEN 5740 bodemonderzoek",
@@ -117,7 +124,7 @@ CHECKLIST_DOC_CONFIGS: dict[str, ChecklistDocConfig] = {
     "fundering": ChecklistDocConfig(
         template_name="fundering.html",
         confidence="medium",
-        title="Funderingsrisico Samenvatting",
+        title="Funderingsrisico Screening",
         required_fields=["funderingsrisicogebied"],
         checklist_item_ids=["opt-06"],
         disclaimer="Indicatief — vervangt geen funderingsinspectie",
@@ -125,7 +132,7 @@ CHECKLIST_DOC_CONFIGS: dict[str, ChecklistDocConfig] = {
     "asbest": ChecklistDocConfig(
         template_name="asbest.html",
         confidence="medium",
-        title="Asbest Indicatie",
+        title="Asbestrisico Screening",
         required_fields=["asbest_indicator"],
         checklist_item_ids=["opt-07", "tra-07"],
         disclaimer="Indicatief — vervangt geen gecertificeerde asbestinventarisatie",

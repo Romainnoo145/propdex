@@ -12,69 +12,211 @@
 .status-amber  { background-color: #F59E0B; }
 .status-green  { background-color: var(--brand-green); }
 .status-grey   { background-color: #9CA3AF; }
+.status-red    { background-color: var(--brand-red); }
+{% endblock %}
+
+{% block summary %}
+{% set wkbp = report_data.get('wkb_precheck') %}
+{% set wkbc = report_data.get('wkb_classification') %}
+{% if wkbp or wkbc %}
+<div class="summary-box">
+  <div class="stat-item">
+    <div class="stat-value">
+      {% if wkbp %}
+        {% if wkbp.get('status') == 'likely_required' %}
+          <span class="dot dot-amber"></span>
+        {% elif wkbp.get('status') in ['likely_not_required', 'not_applicable'] %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="stat-label">Status</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">
+      {% if wkbc %}
+        {{ wkbc.get('gevolgklasse', '—') }}
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="stat-label">Gevolgklasse</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">
+      {% if wkbp %}
+        <span class="confidence-badge confidence-{{ wkbp.get('confidence', 'low') }}">{{ wkbp.get('confidence', 'low') }}</span>
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="stat-label">Zekerheid</div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <h2>Wkb Startdossier Precheck</h2>
 
 {% set wkbp = report_data.get('wkb_precheck') %}
+{% set wkbc = report_data.get('wkb_classification') %}
+
+{% if wkbp or wkbc %}
+
+{# --- WkbClassification deterministic block --- #}
+{% if wkbc %}
+<h2>Wkb Gevolgklasse Classificatie</h2>
+<table class="kv-table">
+  <tr>
+    <td class="kv-label">Wkb van toepassing</td>
+    <td class="kv-value">
+      {% if wkbc.get('wkb_applicable') %}
+        <strong style="color: var(--brand-green);">Ja</strong>
+      {% else %}
+        <strong style="color: var(--brand-muted);">Nee</strong>
+      {% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td class="kv-label">Gevolgklasse</td>
+    <td class="kv-value">
+      {% if wkbc.get('gevolgklasse') == 'GK1' %}
+        <strong>GK1</strong> — Gevolgklasse 1
+      {% elif wkbc.get('gevolgklasse') == 'niet_van_toepassing' %}
+        Niet van toepassing
+      {% else %}
+        {{ wkbc.get('gevolgklasse', 'onbekend') | replace('_', ' ') | title }}
+      {% endif %}
+    </td>
+  </tr>
+  {% if wkbc.get('exclusion_reason') %}
+  <tr>
+    <td class="kv-label">Uitsluiting</td>
+    <td class="kv-value">
+      {% if wkbc.get('exclusion_reason') == 'rijksmonument' %}
+        Rijksmonument — Wkb niet van toepassing
+      {% elif wkbc.get('exclusion_reason') == 'verbouwing' %}
+        Verbouwing — Wkb niet van toepassing
+      {% else %}
+        {{ wkbc.get('exclusion_reason') }}
+      {% endif %}
+    </td>
+  </tr>
+  {% endif %}
+  {% if wkbc.get('disclaimer') %}
+  <tr>
+    <td class="kv-label">Disclaimer</td>
+    <td class="kv-value" style="font-size: 8.5pt; color: var(--brand-muted);">{{ wkbc.get('disclaimer') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Precheck status with color indicator --- #}
 {% if wkbp %}
+<h2>
+  {% if wkbp.get('status') == 'likely_required' %}
+    <span class="status-indicator status-amber"></span>
+  {% elif wkbp.get('status') in ['likely_not_required', 'not_applicable'] %}
+    <span class="status-indicator status-green"></span>
+  {% else %}
+    <span class="status-indicator status-grey"></span>
+  {% endif %}
+  Status: {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
+  <span style="font-size:8pt;color:var(--brand-muted);margin-left:0.5em;">(zekerheid: {{ wkbp.get('confidence', 'low') }})</span>
+</h2>
 
-  {# --- Status with color indicator --- #}
-  <h2>
-    {% if wkbp.get('status') == 'likely_required' %}
-      <span class="status-indicator status-amber"></span>
-    {% elif wkbp.get('status') in ['likely_not_required', 'not_applicable'] %}
-      <span class="status-indicator status-green"></span>
-    {% else %}
-      <span class="status-indicator status-grey"></span>
+{# --- Triggered rules table --- #}
+{% set rules = wkbp.get('triggered_rules', []) %}
+{% if rules %}
+<h2>Getriggerde regels</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Regel</th>
+      <th>Effect</th>
+      <th>Toelichting</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rule in rules %}
+    <tr>
+      <td>{{ rule.get('title', rule.get('code', '—')) }}</td>
+      <td>
+        {% if rule.get('impact') == 'increase' %}↑ waarschijnlijker
+        {% elif rule.get('impact') == 'decrease' %}↓ minder waarschijnlijk
+        {% else %}? onzeker{% endif %}
+      </td>
+      <td>{{ rule.get('reason', '—') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# --- Layer B refinement metadata --- #}
+{% set lb = wkbp.get('layer_b') %}
+{% if lb and lb.get('applied') %}
+<h2>Layer B Verfijning</h2>
+<table class="kv-table">
+  <tr>
+    <td class="kv-label">Verfijning toegepast</td>
+    <td class="kv-value"><strong style="color: var(--brand-green);">Ja</strong></td>
+  </tr>
+  {% if lb.get('effect_note') %}
+  <tr>
+    <td class="kv-label">Effect</td>
+    <td class="kv-value">{{ lb.get('effect_note') }}</td>
+  </tr>
+  {% endif %}
+  {% if lb.get('input') %}
+    {% set lbi = lb.get('input') %}
+    {% if lbi.get('constructieve_wijziging') is not none %}
+    <tr>
+      <td class="kv-label">Constructieve wijziging</td>
+      <td class="kv-value">{{ 'Ja' if lbi.get('constructieve_wijziging') else 'Nee' }}</td>
+    </tr>
     {% endif %}
-    Status: {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
-    <span style="font-size:8pt;color:var(--brand-muted);margin-left:0.5em;">(zekerheid: {{ wkbp.get('confidence', 'low') }})</span>
-  </h2>
-
-  {# --- Triggered rules table --- #}
-  {% set rules = wkbp.get('triggered_rules', []) %}
-  {% if rules %}
-  <h2>Getriggerde regels</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Regel</th>
-        <th>Effect</th>
-        <th>Toelichting</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for rule in rules %}
-      <tr>
-        <td>{{ rule.get('title', rule.get('code', '—')) }}</td>
-        <td>
-          {% if rule.get('impact') == 'increase' %}↑ waarschijnlijker
-          {% elif rule.get('impact') == 'decrease' %}↓ minder waarschijnlijk
-          {% else %}? onzeker{% endif %}
-        </td>
-        <td>{{ rule.get('reason', '—') }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% if lbi.get('uitbreiding_m2') is not none %}
+    <tr>
+      <td class="kv-label">Uitbreiding</td>
+      <td class="kv-value">{{ lbi.get('uitbreiding_m2') }} m²</td>
+    </tr>
+    {% endif %}
+    {% if lbi.get('functiewijziging') is not none %}
+    <tr>
+      <td class="kv-label">Functiewijziging</td>
+      <td class="kv-value">{{ 'Ja' if lbi.get('functiewijziging') else 'Nee' }}</td>
+    </tr>
+    {% endif %}
   {% endif %}
+</table>
+{% elif lb %}
+<h2>Layer B Verfijning</h2>
+<p class="na">Layer B verfijning niet toegepast. Beschikbare inputs: {{ lb.get('available_inputs', []) | join(', ') }}</p>
+{% endif %}
 
-  {# --- Missing inputs --- #}
-  {% if wkbp.get('missing_inputs') and wkbp.get('missing_inputs') | length > 0 %}
-  <p><strong>Ontbrekende gegevens:</strong> {{ wkbp.get('missing_inputs') | join(', ') }}</p>
-  {% endif %}
+{# --- Missing inputs --- #}
+{% if wkbp.get('missing_inputs') and wkbp.get('missing_inputs') | length > 0 %}
+<p><strong>Ontbrekende gegevens:</strong> {{ wkbp.get('missing_inputs') | join(', ') }}</p>
+{% endif %}
 
-  {# --- Required documents --- #}
-  {% if wkbp.get('required_documents') and wkbp.get('required_documents') | length > 0 %}
-  <p><strong>Aanbevolen documenten:</strong> {{ wkbp.get('required_documents') | join(', ') }}</p>
-  {% endif %}
+{# --- Required documents --- #}
+{% if wkbp.get('required_documents') and wkbp.get('required_documents') | length > 0 %}
+<p><strong>Aanbevolen documenten:</strong> {{ wkbp.get('required_documents') | join(', ') }}</p>
+{% endif %}
 
-  {# --- Disclaimer --- #}
-  {% if wkbp.get('disclaimer') %}
-  <p class="na">{{ wkbp.get('disclaimer') }}</p>
-  {% endif %}
+{# --- Disclaimer --- #}
+{% if wkbp.get('disclaimer') %}
+<p class="na">{{ wkbp.get('disclaimer') }}</p>
+{% endif %}
+{% endif %}{# end wkbp #}
 
 {% else %}
 <p class="na">Geen Wkb-precheck gegevens beschikbaar.</p>

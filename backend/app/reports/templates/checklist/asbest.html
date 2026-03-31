@@ -1,35 +1,22 @@
 {% extends "base.html" %}
 
-{% block extra_css %}
-.risk-level {
-  display: inline-block;
-  font-weight: 700;
-  padding: 0.1cm 0.3cm;
-  border-radius: 3px;
-  font-size: 9pt;
-}
-.risk-hoog { background: #FEE2E2; color: #991B1B; }
-.risk-middel { background: #FEF3C7; color: #92400E; }
-.risk-laag { background: #DCFCE7; color: #166534; }
-.risk-geen { background: #DCFCE7; color: #166534; }
-.risk-onbekend { background: var(--brand-bg); color: var(--brand-muted); }
-.risk-aanwezig_kans { background: #FEF3C7; color: #92400E; }
-{% endblock %}
-
 {% block content %}
-<h2>Asbest Indicatie</h2>
-
 {% set asbest = report_data.get('asbest_indicator') %}
 {% if asbest %}
 
 {# Support both 'risk' and 'risico' key names #}
 {% set risk_level = asbest.get('risk', asbest.get('risico', 'onbekend')) %}
 
-<table>
+<h2>Asbestrisico Indicatie</h2>
+<table class="data-table">
   <tr>
-    <th>Risiconiveau</th>
+    <th style="width:40%;">Kenmerk</th>
+    <th>Waarde</th>
+  </tr>
+  <tr>
+    <td>Risiconiveau</td>
     <td>
-      <span class="risk-level risk-{{ risk_level }}">
+      <span style="display:inline-block;font-weight:700;padding:0.1cm 0.3cm;border-radius:3px;font-size:9pt;{% if risk_level == 'hoog' %}background:#FEE2E2;color:#991B1B;{% elif risk_level == 'middel' or risk_level == 'aanwezig_kans' %}background:#FEF3C7;color:#92400E;{% elif risk_level == 'geen' or risk_level == 'laag' %}background:#DCFCE7;color:#166534;{% else %}background:var(--brand-bg);color:var(--brand-muted);{% endif %}">
         {% if risk_level == 'hoog' %}
           Hoog
         {% elif risk_level == 'middel' or risk_level == 'aanwezig_kans' %}
@@ -44,14 +31,14 @@
   </tr>
   {% if asbest.get('bouwjaar_relevant') is not none %}
   <tr>
-    <th>Bouwjaar relevant</th>
+    <td>Bouwjaar relevant</td>
     <td>{{ 'Ja' if asbest.get('bouwjaar_relevant') else 'Nee' }}</td>
   </tr>
   {% endif %}
   {% set toelichting = asbest.get('reden', asbest.get('toelichting')) %}
   {% if toelichting %}
   <tr>
-    <th>Toelichting</th>
+    <td>Toelichting</td>
     <td>{{ toelichting }}</td>
   </tr>
   {% endif %}
@@ -60,4 +47,11 @@
 {% else %}
 <p class="na">Geen asbestindicatie beschikbaar.</p>
 {% endif %}
+{% endblock %}
+
+{% block disclaimer %}
+<div class="disclaimer-prominent">
+  <strong>⚠ Indicatieve screening</strong>
+  Dit document bevat een indicatieve asbestrisico-inschatting op basis van bouwjaar. Het vervangt geen officiële asbestinventarisatie conform SC-540. Raadpleeg een gecertificeerd asbestinventarisatiebureau voor juridisch bindende resultaten.
+</div>
 {% endblock %}

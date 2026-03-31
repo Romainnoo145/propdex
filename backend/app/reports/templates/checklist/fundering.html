@@ -1,22 +1,6 @@
 {% extends "base.html" %}
 
-{% block extra_css %}
-.risk-level {
-  display: inline-block;
-  font-weight: 700;
-  padding: 0.1cm 0.3cm;
-  border-radius: 3px;
-  font-size: 9pt;
-}
-.risk-hoog { background: #FEE2E2; color: #991B1B; }
-.risk-middel { background: #FEF3C7; color: #92400E; }
-.risk-laag { background: #DCFCE7; color: #166534; }
-.risk-onbekend { background: var(--brand-bg); color: var(--brand-muted); }
-{% endblock %}
-
 {% block content %}
-<h2>Funderingsrisico</h2>
-
 {% set frg = report_data.get('funderingsrisicogebied') %}
 {% set frp = report_data.get('fysiek_risico_profiel') %}
 {% set fr = (frp or {}).get('foundation_risk') %}
@@ -25,35 +9,39 @@
 
 {# --- Funderingsrisicogebied (postcode-level) --- #}
 {% if frg %}
-<h2>Funderingsrisicogebied (postcodeniveau)</h2>
-<table>
+<h2>Funderingsrisicogebied</h2>
+<table class="data-table">
+  <tr>
+    <th style="width:40%;">Kenmerk</th>
+    <th>Waarde</th>
+  </tr>
   {% if frg.get('legenda') %}
   <tr>
-    <th>Gebiedsclassificatie</th>
+    <td>Gebiedsclassificatie</td>
     <td>{{ frg.get('legenda') }}</td>
   </tr>
   {% endif %}
   {% if frg.get('fgr') %}
   <tr>
-    <th>Funderingsgebied</th>
+    <td>Funderingsgebied</td>
     <td>{{ frg.get('fgr') }}</td>
   </tr>
   {% endif %}
   {% if frg.get('pc6') %}
   <tr>
-    <th>Postcode</th>
+    <td>Postcode</td>
     <td>{{ frg.get('pc6') }}</td>
   </tr>
   {% endif %}
   {% if frg.get('percvoor1970') is not none %}
   <tr>
-    <th>% bebouwing voor 1970</th>
+    <td>% bebouwing voor 1970</td>
     <td>{{ frg.get('percvoor1970') }}%</td>
   </tr>
   {% endif %}
   {% if frg.get('gemeente') %}
   <tr>
-    <th>Gemeente</th>
+    <td>Gemeente</td>
     <td>{{ frg.get('gemeente') }}</td>
   </tr>
   {% endif %}
@@ -63,29 +51,33 @@
 {# --- Foundation risk from fysiek_risico_profiel --- #}
 {% if fr %}
 <h2>Funderingsrisico (berekend)</h2>
-<table>
+<table class="data-table">
   <tr>
-    <th>Risiconiveau</th>
+    <th style="width:40%;">Kenmerk</th>
+    <th>Waarde</th>
+  </tr>
+  <tr>
+    <td>Risiconiveau</td>
     <td>
       {% set fr_risk = fr.get('risk', 'onbekend') %}
-      <span class="risk-level risk-{{ fr_risk }}">{{ fr_risk | title }}</span>
+      <span style="display:inline-block;font-weight:700;padding:0.1cm 0.3cm;border-radius:3px;font-size:9pt;{% if fr_risk == 'hoog' %}background:#FEE2E2;color:#991B1B;{% elif fr_risk == 'middel' %}background:#FEF3C7;color:#92400E;{% elif fr_risk == 'laag' %}background:#DCFCE7;color:#166534;{% else %}background:var(--brand-bg);color:var(--brand-muted);{% endif %}">{{ fr_risk | title }}</span>
     </td>
   </tr>
   {% if fr.get('bouwjaar') is not none %}
   <tr>
-    <th>Bouwjaar (gebruikt)</th>
+    <td>Bouwjaar (gebruikt)</td>
     <td>{{ fr.get('bouwjaar') }}</td>
   </tr>
   {% endif %}
   {% if fr.get('bodemtype') %}
   <tr>
-    <th>Bodemtype (gebruikt)</th>
+    <td>Bodemtype (gebruikt)</td>
     <td>{{ fr.get('bodemtype') | title }}</td>
   </tr>
   {% endif %}
   {% if fr.get('reden') %}
   <tr>
-    <th>Toelichting</th>
+    <td>Toelichting</td>
     <td>{{ fr.get('reden') }}</td>
   </tr>
   {% endif %}
@@ -95,4 +87,11 @@
 {% else %}
 <p class="na">Geen funderingsgegevens beschikbaar.</p>
 {% endif %}
+{% endblock %}
+
+{% block disclaimer %}
+<div class="disclaimer-prominent">
+  <strong>⚠ Indicatieve screening</strong>
+  Dit document bevat een indicatieve funderingsrisicoanalyse op basis van openbare data (postcodegebied, bouwjaar, bodemtype). Het vervangt geen officieel funderingsonderzoek. Raadpleeg een constructeur of funderingsspecialist voor juridisch bindende resultaten.
+</div>
 {% endblock %}

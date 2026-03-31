@@ -40,7 +40,7 @@
       padding-top: 0.4em;
     }
 
-    /* Header */
+    /* ===== HEADER ===== */
     .doc-header {
       border-bottom: 3px solid var(--brand-accent);
       padding-bottom: 0.6cm;
@@ -80,7 +80,30 @@
       color: #92400E;
     }
 
-    /* Content */
+    /* ===== SECTION HEADER ===== */
+    .section-header {
+      border-left: 4px solid var(--brand-accent);
+      padding: 0.3em 0 0.3em 0.6em;
+      margin-bottom: 0.8em;
+      page-break-after: avoid;
+    }
+
+    .section-number {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--brand-accent);
+    }
+
+    .section-title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: var(--brand-primary);
+      line-height: 1.2;
+    }
+
+    /* ===== CONTENT — HEADINGS ===== */
     h2 {
       font-size: 13pt;
       font-weight: 700;
@@ -88,15 +111,20 @@
       margin-top: 0.6cm;
       margin-bottom: 0.3cm;
       border-bottom: 1px solid var(--brand-border);
+      border-left: 4px solid var(--brand-accent);
+      padding-left: 0.4em;
       padding-bottom: 0.15cm;
+      page-break-after: avoid;
     }
 
+    /* ===== DATA TABLE (base + .data-table upgrade) ===== */
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 0.3cm;
       margin-bottom: 0.4cm;
       font-size: 9pt;
+      page-break-inside: avoid;
     }
 
     th {
@@ -106,6 +134,9 @@
       padding: 0.2cm 0.3cm;
       border-bottom: 2px solid var(--brand-border);
       color: var(--brand-primary);
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     td {
@@ -118,9 +149,156 @@
       border-bottom: none;
     }
 
+    tr:nth-child(even) td {
+      background: var(--brand-bg);
+    }
+
+    /* Explicit .data-table class for child templates */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.6em 0;
+      font-size: 9.5pt;
+    }
+
+    .data-table th {
+      background: var(--brand-bg);
+      font-weight: 700;
+      color: #374151;
+      text-align: left;
+      padding: 0.5em 0.7em;
+      border-bottom: 2px solid var(--brand-border);
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .data-table td {
+      padding: 0.45em 0.7em;
+      border-bottom: 1px solid var(--brand-border);
+      vertical-align: top;
+      page-break-inside: avoid;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:nth-child(even) td {
+      background: var(--brand-bg);
+    }
+
+    /* ===== KEY-VALUE TABLE ===== */
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.4em 0;
+    }
+
+    .kv-table td {
+      padding: 0.35em 0;
+      border-bottom: 1px solid #F3F4F6;
+      vertical-align: top;
+    }
+
+    .kv-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .kv-label {
+      width: 38%;
+      font-weight: 600;
+      color: #6B7280;
+      font-size: 9pt;
+      padding-right: 0.6em;
+    }
+
+    .kv-value {
+      width: 62%;
+      color: #1F2937;
+      font-size: 9.5pt;
+    }
+
+    /* ===== SUMMARY STAT BOX ===== */
+    .summary-box {
+      border: 1px solid var(--brand-border);
+      border-top: 3px solid var(--brand-accent);
+      border-radius: 4px;
+      padding: 0.6em 0.8em;
+      margin: 0.6em 0;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+
+    .summary-box::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+
+    .stat-item {
+      float: left;
+      width: 33.333%;
+      text-align: center;
+      padding: 0.3em 0.4em;
+    }
+
+    .stat-item:first-child {
+      text-align: left;
+    }
+
+    .stat-item:last-child {
+      text-align: right;
+    }
+
+    .stat-value {
+      font-size: 16pt;
+      font-weight: 800;
+      color: var(--brand-primary);
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand-muted);
+      margin-top: 0.15em;
+    }
+
+    /* ===== RISK INDICATORS ===== */
+    .risk-block {
+      margin: 0.6em 0;
+      padding: 0.5em 0.7em;
+      border-radius: 3px;
+      border-left: 4px solid var(--brand-border);
+      background: var(--brand-bg);
+      page-break-inside: avoid;
+    }
+
+    .risk-block h4 {
+      font-size: 10pt;
+      font-weight: 700;
+      margin-bottom: 0.3em;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 0.6em;
+      height: 0.6em;
+      border-radius: 50%;
+    }
+
+    .dot-green { background: var(--brand-green); }
+    .dot-amber { background: var(--brand-accent); }
+    .dot-red   { background: var(--brand-red); }
+    .dot-grey  { background: #D1D5DB; }
+
+    /* ===== UTILITIES ===== */
     .na { color: var(--brand-muted); font-style: italic; }
 
-    /* Disclaimer */
+    /* ===== DISCLAIMER ===== */
     .disclaimer {
       margin-top: 0.8cm;
       padding: 0.4cm 0.5cm;
@@ -133,6 +311,23 @@
     .disclaimer strong {
       display: block;
       margin-bottom: 0.1cm;
+    }
+
+    /* ===== PROMINENT DISCLAIMER (indicative/screening docs) ===== */
+    .disclaimer-prominent {
+      margin-top: 0.8cm;
+      padding: 0.5cm 0.6cm;
+      background: #FEF3C7;
+      border-left: 4px solid var(--brand-accent);
+      font-size: 9.5pt;
+      color: #92400E;
+      line-height: 1.5;
+    }
+
+    .disclaimer-prominent strong {
+      display: block;
+      margin-bottom: 0.15cm;
+      font-size: 10pt;
     }
 
     {% block extra_css %}{% endblock %}
@@ -152,6 +347,9 @@
       {{ config.confidence }} betrouwbaarheid
     </span>
   </div>
+
+  <!-- Summary stats — overridden by child templates -->
+  {% block summary %}{% endblock %}
 
   <!-- Main content — overridden by child templates -->
   {% block content %}{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if report_data.get('woz_data') %}
+  {% set woz = report_data.get('woz_data') %}
+  <h2>WOZ-waarde</h2>
+  <table class="kv-table">
+    {% if woz.get('meest_recente_waarde') is not none %}
+    <tr>
+      <td class="kv-label">Meest recente WOZ-waarde</td>
+      <td class="kv-value"><strong>€ {{ "{:,.0f}".format(woz.get('meest_recente_waarde')).replace(",", ".") }}</strong></td>
+    </tr>
+    {% endif %}
+    {% if woz.get('meest_recente_peildatum') %}
+    <tr>
+      <td class="kv-label">Peildatum</td>
+      <td class="kv-value">{{ woz.get('meest_recente_peildatum') }}</td>
+    </tr>
+    {% endif %}
+    {% if woz.get('grondoppervlakte') is not none %}
+    <tr>
+      <td class="kv-label">Grondoppervlakte</td>
+      <td class="kv-value">{{ woz.get('grondoppervlakte') }} m²</td>
+    </tr>
+    {% endif %}
+    {% if woz.get('woz_objectnummer') %}
+    <tr>
+      <td class="kv-label">WOZ-objectnummer</td>
+      <td class="kv-value">{{ woz.get('woz_objectnummer') }}</td>
+    </tr>
+    {% endif %}
+    {% if woz.get('low_confidence') %}
+    <tr>
+      <td class="kv-label">Betrouwbaarheid</td>
+      <td class="kv-value" style="color:var(--brand-accent);">{{ woz.get('low_confidence_reden', 'Data afkomstig uit onofficiële bron') }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {% if woz.get('waarden') and woz.get('waarden') | length > 1 %}
+  <h3>WOZ-waardenhistorie</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Peildatum</th>
+        <th>Vastgestelde waarde</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in woz.get('waarden', [])[:10] %}
+      <tr>
+        <td>{{ w.get('peildatum', '—') }}</td>
+        <td>{% if w.get('vastgestelde_waarde') is not none %}€ {{ "{:,.0f}".format(w.get('vastgestelde_waarde')).replace(",", ".") }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="source-meta">Bron: {{ woz.get('bron', 'WOZ Waardeloket') }} | Betrouwbaarheid: {% if woz.get('low_confidence') %}GEMIDDELD{% else %}HOOG{% endif %}</div>
+
+{% elif report_data.get('woz_flags') %}
+  {% set wflags = report_data.get('woz_flags') %}
+  <h2>WOZ-waarde</h2>
+  <table class="kv-table">
+    {% if wflags is mapping %}
+      {% if wflags.get('waarde') or wflags.get('woz_waarde') %}
+      <tr>
+        <td class="kv-label">WOZ-waarde</td>
+        <td class="kv-value"><strong>€ {{ wflags.get('waarde', wflags.get('woz_waarde', '—')) }}</strong></td>
+      </tr>
+      {% endif %}
+      {% if wflags.get('peildatum') %}
+      <tr>
+        <td class="kv-label">Peildatum</td>
+        <td class="kv-value">{{ wflags.get('peildatum') }}</td>
+      </tr>
+      {% endif %}
+    {% else %}
+      <tr>
+        <td class="kv-label">WOZ-waarde</td>
+        <td class="kv-value">{{ wflags }}</td>
+      </tr>
+    {% endif %}
+  </table>
+  <div class="source-meta">Bron: WOZ Waardeloket | Betrouwbaarheid: GEMIDDELD</div>
+
+{% else %}
+  <p class="na">Geen WOZ-gegevens beschikbaar.</p>
+{% endif %}
+{% endblock %}

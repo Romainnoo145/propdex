@@ -9,22 +9,26 @@
 {% if elabel %}
   {# --- Registered energy label --- #}
   {% if elabel.get('is_geregistreerd') %}
-  <table>
+  <table class="data-table">
+    <tr>
+      <th style="width:40%;">Kenmerk</th>
+      <th>Waarde</th>
+    </tr>
     {% if elabel.get('energieklasse') %}
     <tr>
-      <th>Energieklasse</th>
+      <td>Energieklasse</td>
       <td><strong>{{ elabel.get('energieklasse') }}</strong></td>
     </tr>
     {% endif %}
     {% if elabel.get('registratie_datum') %}
     <tr>
-      <th>Registratiedatum</th>
+      <td>Registratiedatum</td>
       <td>{{ elabel.get('registratie_datum') }}</td>
     </tr>
     {% endif %}
     {% if elabel.get('geldig_tot') %}
     <tr>
-      <th>Geldig tot</th>
+      <td>Geldig tot</td>
       <td>
         {{ elabel.get('geldig_tot') }}
         {% if elabel.get('is_geldig') == false %}
@@ -35,22 +39,26 @@
     {% endif %}
     {% if elabel.get('berekenings_type') %}
     <tr>
-      <th>Berekeningsmethode</th>
+      <td>Berekeningsmethode</td>
       <td>{{ elabel.get('berekenings_type') }}</td>
     </tr>
     {% endif %}
     {% if elabel.get('soort_opname') %}
     <tr>
-      <th>Soort opname</th>
+      <td>Soort opname</td>
       <td>{{ elabel.get('soort_opname') }}</td>
     </tr>
     {% endif %}
   </table>
   {% else %}
   {# --- Not registered --- #}
-  <table>
+  <table class="data-table">
     <tr>
-      <th>Status</th>
+      <th style="width:40%;">Kenmerk</th>
+      <th>Waarde</th>
+    </tr>
+    <tr>
+      <td>Status</td>
       <td class="na">{{ elabel.get('niet_geregistreerd_reden', 'Niet geregistreerd bij EP-Online') }}</td>
     </tr>
   </table>
@@ -58,23 +66,27 @@
 
 {% elif eflags %}
   {# --- Fallback: energielabel_flags --- #}
-  <table>
+  <table class="data-table">
+    <tr>
+      <th style="width:40%;">Kenmerk</th>
+      <th>Waarde</th>
+    </tr>
     {% if eflags is mapping %}
       {% if eflags.get('energieklasse') or eflags.get('label') %}
       <tr>
-        <th>Energieklasse</th>
+        <td>Energieklasse</td>
         <td><strong>{{ eflags.get('energieklasse', eflags.get('label', '—')) }}</strong></td>
       </tr>
       {% endif %}
       {% if eflags.get('registratie_datum') %}
       <tr>
-        <th>Registratiedatum</th>
+        <td>Registratiedatum</td>
         <td>{{ eflags.get('registratie_datum') }}</td>
       </tr>
       {% endif %}
     {% else %}
     <tr>
-      <th>Energielabel</th>
+      <td>Energielabel</td>
       <td>{{ eflags }}</td>
     </tr>
     {% endif %}

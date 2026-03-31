@@ -1,26 +1,66 @@
 {% extends "base.html" %}
 
+{% block summary %}
+{% set parcels = report_data.get('cadastral_parcels', []) %}
+{% set brk = report_data.get('brk_ownership') %}
+{% set total_area = parcels | map(attribute='oppervlakte') | select('number') | sum %}
+{% set owner_types = [] %}
+{% if brk and brk.get('status') == 'available' and brk.get('data') %}
+  {% for po in brk.get('data', []) %}
+    {% for g in po.get('gerechtigden', []) %}
+      {% if g.get('eigenaar_type') and g.get('eigenaar_type') not in owner_types %}
+        {% if owner_types.append(g.get('eigenaar_type')) %}{% endif %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+<div class="summary-box">
+  <div class="stat-item">
+    <div class="stat-value">{{ parcels | length }}</div>
+    <div class="stat-label">Percelen</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">{% if total_area %}{{ total_area | int }}{% else %}—{% endif %}</div>
+    <div class="stat-label">Totaal m²</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">
+      {% if owner_types | length > 0 %}
+        {% set type_labels = {'rechtspersoon': 'Rechtspersoon', 'overheid': 'Overheid', 'natuurlijk_persoon': 'Particulier', 'onbekend': 'Onbekend'} %}
+        {{ type_labels.get(owner_types[0], owner_types[0]) }}
+        {% if owner_types | length > 1 %}+{{ owner_types | length - 1 }}{% endif %}
+      {% else %}
+        —
+      {% endif %}
+    </div>
+    <div class="stat-label">Eigendomstype</div>
+  </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <h2>Kadastrale Percelen</h2>
 
 {% set parcels = report_data.get('cadastral_parcels', []) %}
 {% if parcels %}
-<table>
+<table class="data-table">
   <thead>
     <tr>
       <th>Perceelnummer</th>
+      <th>Kadastrale aanduiding</th>
+      <th>Sectie</th>
       <th>Oppervlakte (m²)</th>
       <th>Gemeente</th>
-      <th>Sectie</th>
     </tr>
   </thead>
   <tbody>
     {% for parcel in parcels %}
     <tr>
-      <td>{{ parcel.get('perceelnummer', '') or '-' }}</td>
-      <td>{{ parcel.get('oppervlakte', '') or '-' }}</td>
-      <td>{{ parcel.get('gemeente', '') or 'Niet beschikbaar' }}</td>
-      <td>{{ parcel.get('sectie', '') or '-' }}</td>
+      <td>{{ parcel.get('perceelnummer', '') or '—' }}</td>
+      <td>{{ parcel.get('kadastrale_aanduiding', '') or '—' }}</td>
+      <td>{{ parcel.get('sectie', '') or '—' }}</td>
+      <td>{{ parcel.get('oppervlakte', '') or '—' }}</td>
+      <td>{{ parcel.get('gemeente', '') or '—' }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -29,34 +69,117 @@
 <p class="na">Geen kadastrale percelen beschikbaar.</p>
 {% endif %}
 
+{# ── BRK Eigendomsinformatie ── #}
 <h2>Eigendomsinformatie (BRK)</h2>
 
 {% set brk = report_data.get('brk_ownership') %}
-{% if brk and brk.get('status') != 'unavailable' %}
-  {% set eigenaren = brk.get('eigenaren', []) %}
-  {% if eigenaren %}
-  <table>
+{% if brk and brk.get('status') == 'available' and brk.get('data') %}
+  {% for po in brk.get('data', []) %}
+  <h2 style="font-size: 11pt;">Perceel: {{ po.get('perceel_identificatie', 'Onbekend') }}</h2>
+
+  {# ── Gerechtigden ── #}
+  {% set gerechtigden = po.get('gerechtigden', []) %}
+  {% if gerechtigden %}
+  <table class="data-table">
     <thead>
       <tr>
-        <th>Eigenaar</th>
-        <th>Aandeel</th>
         <th>Type</th>
+        <th>Naam</th>
+        <th>Recht</th>
+        <th>Aandeel</th>
+        <th>Koopsom</th>
+        <th>Koopjaar</th>
       </tr>
     </thead>
     <tbody>
-      {% for e in eigenaren %}
+      {% for g in gerechtigden %}
       <tr>
-        <td>{{ e.get('eigenaar', '') or 'Niet beschikbaar' }}</td>
-        <td>{{ e.get('aandeel', '') or 'Niet beschikbaar' }}</td>
-        <td>{{ e.get('type', '') or 'Niet beschikbaar' }}</td>
+        <td>
+          {% set type_labels = {'rechtspersoon': 'Rechtspersoon', 'overheid': 'Overheid', 'natuurlijk_persoon': 'Particulier', 'onbekend': 'Onbekend'} %}
+          {{ type_labels.get(g.get('eigenaar_type', 'onbekend'), g.get('eigenaar_type', 'Onbekend')) }}
+        </td>
+        <td>
+          {# AVG: NOOIT persoonsnamen tonen voor natuurlijke personen #}
+          {% if g.get('eigenaar_type') == 'natuurlijk_persoon' %}
+            <em class="na">Privacygevoelig — naam niet weergegeven (AVG)</em>
+          {% elif g.get('naam') %}
+            {{ g.get('naam') }}
+            {% if g.get('kvk_nummer') %}<br><small>KvK: {{ g.get('kvk_nummer') }}</small>{% endif %}
+            {% if g.get('statutaire_zetel') %}<br><small>Zetel: {{ g.get('statutaire_zetel') }}</small>{% endif %}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>{{ g.get('zakelijk_recht_type', '') or '—' }}</td>
+        <td>{{ g.get('aandeel', '') or '—' }}</td>
+        <td>{% if g.get('koopsom') is not none %}€ {{ '{:,.0f}'.format(g.get('koopsom')) }}{% else %}—{% endif %}</td>
+        <td>{{ g.get('koopjaar', '') or '—' }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p class="na">Geen eigenaren gevonden in BRK data.</p>
+  <p class="na">Geen gerechtigden gevonden voor dit perceel.</p>
   {% endif %}
+
+  {# ── Hypotheken ── #}
+  {% set hypotheken = po.get('hypotheken', []) %}
+  {% if hypotheken %}
+  <h2 style="font-size: 10pt; margin-top: 0.3cm;">Hypotheken</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Hypotheekhouder</th>
+        <th>Bedrag</th>
+        <th>Aard</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in hypotheken %}
+      <tr>
+        <td>{{ h.get('hypotheekhouder_naam', '') or '—' }}</td>
+        <td>{% if h.get('bedrag') is not none %}€ {{ '{:,.0f}'.format(h.get('bedrag')) }}{% else %}—{% endif %}</td>
+        <td>{{ h.get('aard', '') or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# ── Beslagen ── #}
+  {% set beslagen = po.get('beslagen', []) %}
+  {% if beslagen %}
+  <div class="risk-block" style="border-left-color: var(--brand-red);">
+    <h4><span class="dot dot-red"></span> Beslagen ({{ beslagen | length }})</h4>
+    <table class="data-table">
+      <thead>
+        <tr><th>Aard beslag</th></tr>
+      </thead>
+      <tbody>
+        {% for b in beslagen %}
+        <tr><td>{{ b.get('aard', '') or 'Onbekend type beslag' }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% endfor %}
+
+  {% if brk.get('fetched_at') %}
+  <p class="na" style="margin-top: 0.4cm; font-size: 8pt;">BRK data opgehaald: {{ brk.get('fetched_at') }}</p>
+  {% endif %}
+
+{% elif brk and brk.get('status') == 'error' %}
+<div class="risk-block" style="border-left-color: var(--brand-red);">
+  <h4><span class="dot dot-red"></span> BRK fout</h4>
+  <p>{{ brk.get('reason', 'Eigendomsinformatie kon niet worden opgehaald.') }}</p>
+</div>
+
 {% else %}
-<p class="na">Eigendomsinformatie niet beschikbaar. BRK data wordt alleen opgehaald tijdens rapport generatie.</p>
+<p class="na">Eigendomsinformatie niet beschikbaar.
+  {% if brk and brk.get('reason') %}{{ brk.get('reason') }}{% endif %}
+  {% if brk and brk.get('admin_hint') %}<br><small>{{ brk.get('admin_hint') }}</small>{% endif %}
+</p>
 {% endif %}
 {% endblock %}

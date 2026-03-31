@@ -12,6 +12,56 @@
 .risk-middel { background: #FEF3C7; color: #92400E; }
 .risk-laag { background: #DCFCE7; color: #166534; }
 .risk-onbekend { background: var(--brand-bg); color: var(--brand-muted); }
+.sub-risk-row {
+  display: inline-block;
+  margin-right: 1em;
+  font-size: 8.5pt;
+}
+{% endblock %}
+
+{# --- Macro for risk dot color --- #}
+{% macro risk_dot(level) %}
+  {% if level == 'hoog' %}<span class="dot dot-red"></span>
+  {% elif level == 'middel' %}<span class="dot dot-amber"></span>
+  {% elif level == 'laag' %}<span class="dot dot-green"></span>
+  {% else %}<span class="dot dot-grey"></span>
+  {% endif %}
+{% endmacro %}
+
+{% block summary %}
+{% set frp = report_data.get('fysiek_risico_profiel') %}
+{% if frp %}
+<div class="summary-box">
+  <div class="stat-item">
+    <div class="stat-value">
+      {{ risk_dot(frp.get('overall_risk', 'onbekend')) }}
+      <span class="risk-level risk-{{ frp.get('overall_risk', 'onbekend') }}">{{ frp.get('overall_risk', 'onbekend') | title }}</span>
+    </div>
+    <div class="stat-label">Totaalrisico</div>
+  </div>
+  <div class="stat-item" style="width: 66.666%; text-align: left; padding-left: 1em;">
+    <div class="stat-value" style="font-size: 9pt; font-weight: 600;">
+      {% if frp.get('foundation_risk') %}
+        <span class="sub-risk-row">{{ risk_dot(frp.get('foundation_risk', {}).get('risk', 'onbekend')) }} Fundering</span>
+      {% endif %}
+      {% if frp.get('soil_profile') %}
+        <span class="sub-risk-row"><span class="dot dot-grey"></span> Bodem</span>
+      {% endif %}
+      {% if frp.get('asbest_indicator') %}
+        <span class="sub-risk-row">{{ risk_dot(frp.get('asbest_indicator', {}).get('risk', 'onbekend')) }} Asbest</span>
+      {% endif %}
+      {% if frp.get('bodem_data') %}
+        {% set dossier_count = frp.get('bodem_data', {}).get('dossiers', []) | length %}
+        <span class="sub-risk-row">
+          {% if dossier_count > 0 %}<span class="dot dot-amber"></span>{% else %}<span class="dot dot-green"></span>{% endif %}
+          Verontreiniging
+        </span>
+      {% endif %}
+    </div>
+    <div class="stat-label">Deelrisico's</div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -21,18 +71,18 @@
 {% if frp %}
 
 {# --- Overall risk --- #}
-<table>
+<table class="kv-table">
   <tr>
-    <th>Totaal risiconiveau</th>
-    <td>
+    <td class="kv-label">Totaal risiconiveau</td>
+    <td class="kv-value">
       {% set risk = frp.get('overall_risk', 'onbekend') %}
       <span class="risk-level risk-{{ risk }}">{{ risk | title }}</span>
     </td>
   </tr>
   {% if frp.get('overall_explanation') %}
   <tr>
-    <th>Toelichting</th>
-    <td>{{ frp.get('overall_explanation') }}</td>
+    <td class="kv-label">Toelichting</td>
+    <td class="kv-value">{{ frp.get('overall_explanation') }}</td>
   </tr>
   {% endif %}
 </table>
@@ -41,88 +91,163 @@
 {% if frp.get('foundation_risk') %}
   {% set fr = frp.get('foundation_risk') %}
 <h2>Funderingsrisico</h2>
-<table>
+<table class="kv-table">
   <tr>
-    <th>Risiconiveau</th>
-    <td>
+    <td class="kv-label">Risiconiveau</td>
+    <td class="kv-value">
       {% set fr_risk = fr.get('risk', 'onbekend') %}
       <span class="risk-level risk-{{ fr_risk }}">{{ fr_risk | title }}</span>
     </td>
   </tr>
   {% if fr.get('bouwjaar') is not none %}
   <tr>
-    <th>Bouwjaar (gebruikt)</th>
-    <td>{{ fr.get('bouwjaar') }}</td>
+    <td class="kv-label">Bouwjaar (gebruikt)</td>
+    <td class="kv-value">{{ fr.get('bouwjaar') }}</td>
   </tr>
   {% endif %}
   {% if fr.get('bodemtype') %}
   <tr>
-    <th>Bodemtype (gebruikt)</th>
-    <td>{{ fr.get('bodemtype') | title }}</td>
+    <td class="kv-label">Bodemtype (gebruikt)</td>
+    <td class="kv-value">{{ fr.get('bodemtype') | title }}</td>
   </tr>
   {% endif %}
   {% if fr.get('reden') %}
   <tr>
-    <th>Toelichting</th>
-    <td>{{ fr.get('reden') }}</td>
+    <td class="kv-label">Toelichting</td>
+    <td class="kv-value">{{ fr.get('reden') }}</td>
   </tr>
   {% endif %}
   {% if fr.get('recommended_action') %}
   <tr>
-    <th>Aanbevolen actie</th>
-    <td>{{ fr.get('recommended_action') }}</td>
+    <td class="kv-label">Aanbevolen actie</td>
+    <td class="kv-value">{{ fr.get('recommended_action') }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endif %}
+
+{# --- Asbest indicator sub-block --- #}
+{% if frp.get('asbest_indicator') %}
+  {% set ai = frp.get('asbest_indicator') %}
+<h2>Asbestindicator</h2>
+<table class="kv-table">
+  <tr>
+    <td class="kv-label">Risiconiveau</td>
+    <td class="kv-value">
+      {% set ai_risk = ai.get('risk', 'onbekend') %}
+      <span class="risk-level risk-{{ ai_risk }}">{{ ai_risk | title }}</span>
+    </td>
+  </tr>
+  {% if ai.get('bouwjaar') is not none %}
+  <tr>
+    <td class="kv-label">Bouwjaar (gebruikt)</td>
+    <td class="kv-value">{{ ai.get('bouwjaar') }}</td>
+  </tr>
+  {% endif %}
+  {% if ai.get('norm_reference') %}
+  <tr>
+    <td class="kv-label">Normreferentie</td>
+    <td class="kv-value">{{ ai.get('norm_reference') }}</td>
+  </tr>
+  {% endif %}
+  {% if ai.get('gebruiksdoel_factor') %}
+  <tr>
+    <td class="kv-label">Gebruiksdoel-factor</td>
+    <td class="kv-value">{{ ai.get('gebruiksdoel_factor') }}</td>
+  </tr>
+  {% endif %}
+  {% if ai.get('reden') %}
+  <tr>
+    <td class="kv-label">Toelichting</td>
+    <td class="kv-value">{{ ai.get('reden') }}</td>
   </tr>
   {% endif %}
 </table>
 {% endif %}
 
 {# --- Soil profile sub-block --- #}
-{% if frp.get('soil_profile') %}
+{% if frp.get('soil_profile') and not report_data.get('_suppress_soil_in_risicoprofiel') %}
   {% set sp = frp.get('soil_profile') %}
 <h2>Bodemtype (BRO)</h2>
-<table>
+<table class="kv-table">
   {% if sp.get('dominant_type_label') %}
   <tr>
-    <th>Grondsoort</th>
-    <td><strong>{{ sp.get('dominant_type_label') }}</strong></td>
+    <td class="kv-label">Grondsoort</td>
+    <td class="kv-value"><strong>{{ sp.get('dominant_type_label') }}</strong></td>
   </tr>
   {% endif %}
   {% if sp.get('soilname') %}
   <tr>
-    <th>Bodemprofielnaam</th>
-    <td>{{ sp.get('soilname') }}</td>
+    <td class="kv-label">Bodemprofielnaam</td>
+    <td class="kv-value">{{ sp.get('soilname') }}</td>
   </tr>
   {% endif %}
   {% if sp.get('soilcode') %}
   <tr>
-    <th>Bodemcode</th>
-    <td>{{ sp.get('soilcode') }}</td>
+    <td class="kv-label">Bodemcode</td>
+    <td class="kv-value">{{ sp.get('soilcode') }}</td>
   </tr>
   {% endif %}
 </table>
 {% endif %}
 
+{# --- Bodem data / WBB dossiers sub-block --- #}
+{% if frp.get('bodem_data') %}
+  {% set bd = frp.get('bodem_data') %}
+  {% set dossiers = bd.get('dossiers', []) %}
+<h2>Bodemverontreiniging (WBB)</h2>
+{% if dossiers | length > 0 %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>SIKB ID</th>
+      <th>Status oordeel</th>
+      <th>Vervolg WBB</th>
+      <th>Sanering</th>
+      <th>Bevoegd gezag</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in dossiers %}
+    <tr>
+      <td>{{ d.get('sikb_id') or '—' }}</td>
+      <td>{{ d.get('status_oord') or '—' }}</td>
+      <td>{{ d.get('vervolg_wbb') or '—' }}</td>
+      <td>{{ d.get('statusver') or '—' }}</td>
+      <td>{{ d.get('administrator_nm') or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color: var(--brand-green); font-weight: 600;">Geen WBB-dossiers gevonden binnen zoekgebied.</p>
+{% endif %}
+{% if bd.get('disclaimer') %}
+<p class="na" style="font-size: 8pt;">{{ bd.get('disclaimer') }}</p>
+{% endif %}
+{% endif %}
+
 {# --- Funderingsrisicogebied sub-block --- #}
-{% set frg = report_data.get('funderingsrisicogebied') %}
+{% set frg = frp.get('funderingsrisicogebied') or report_data.get('funderingsrisicogebied') %}
 {% if frg %}
 <h2>Funderingsrisicogebied (postcodeniveau)</h2>
-<table>
+<table class="kv-table">
   {% if frg.get('legenda') %}
   <tr>
-    <th>Gebiedsclassificatie</th>
-    <td>{{ frg.get('legenda') }}</td>
+    <td class="kv-label">Gebiedsclassificatie</td>
+    <td class="kv-value">{{ frg.get('legenda') }}</td>
   </tr>
   {% endif %}
   {% if frg.get('fgr') %}
   <tr>
-    <th>Funderingsgebied</th>
-    <td>{{ frg.get('fgr') }}</td>
+    <td class="kv-label">Funderingsgebied</td>
+    <td class="kv-value">{{ frg.get('fgr') }}</td>
   </tr>
   {% endif %}
   {% if frg.get('percvoor1970') is not none %}
   <tr>
-    <th>% bebouwing voor 1970</th>
-    <td>{{ frg.get('percvoor1970') }}%</td>
+    <td class="kv-label">% bebouwing voor 1970</td>
+    <td class="kv-value">{{ frg.get('percvoor1970') }}%</td>
   </tr>
   {% endif %}
 </table>
@@ -132,19 +257,19 @@
 {% if frp.get('kcaf_cost') %}
   {% set kcaf = frp.get('kcaf_cost') %}
 <h2>Funderingsherstel kostenbenchmark (KCAF)</h2>
-<table>
+<table class="kv-table">
   <tr>
-    <th>Geschatte kosten (totaal)</th>
-    <td>€ {{ "{:,.0f}".format(kcaf.get('low_eur', 0)).replace(",", ".") }} — € {{ "{:,.0f}".format(kcaf.get('high_eur', 0)).replace(",", ".") }}</td>
+    <td class="kv-label">Geschatte kosten (totaal)</td>
+    <td class="kv-value">€ {{ "{:,.0f}".format(kcaf.get('low_eur', 0)).replace(",", ".") }} — € {{ "{:,.0f}".format(kcaf.get('high_eur', 0)).replace(",", ".") }}</td>
   </tr>
   <tr>
-    <th>Per m²</th>
-    <td>€ {{ kcaf.get('low_per_m2', 0) }} — € {{ kcaf.get('high_per_m2', 0) }} /m²</td>
+    <td class="kv-label">Per m²</td>
+    <td class="kv-value">€ {{ kcaf.get('low_per_m2', 0) }} — € {{ kcaf.get('high_per_m2', 0) }} /m²</td>
   </tr>
   {% if kcaf.get('oppervlakte_m2') %}
   <tr>
-    <th>Gebruiksoppervlakte</th>
-    <td>{{ kcaf.get('oppervlakte_m2') }} m²</td>
+    <td class="kv-label">Gebruiksoppervlakte</td>
+    <td class="kv-value">{{ kcaf.get('oppervlakte_m2') }} m²</td>
   </tr>
   {% endif %}
 </table>
@@ -159,11 +284,11 @@
 {% set natura = report_data.get('natura2000_flags') %}
 {% if natura %}
 <h2>Natura 2000</h2>
-<table>
+<table class="kv-table">
   {% for key, value in natura.items() %}
   <tr>
-    <th>{{ key | replace('_', ' ') | title }}</th>
-    <td>{{ value }}</td>
+    <td class="kv-label">{{ key | replace('_', ' ') | title }}</td>
+    <td class="kv-value">{{ value }}</td>
   </tr>
   {% endfor %}
 </table>
@@ -173,11 +298,11 @@
 {% set overstroming = report_data.get('overstromingsrisico_flags') %}
 {% if overstroming %}
 <h2>Overstromingsrisico</h2>
-<table>
+<table class="kv-table">
   {% for key, value in overstroming.items() %}
   <tr>
-    <th>{{ key | replace('_', ' ') | title }}</th>
-    <td>{{ value }}</td>
+    <td class="kv-label">{{ key | replace('_', ' ') | title }}</td>
+    <td class="kv-value">{{ value }}</td>
   </tr>
   {% endfor %}
 </table>
@@ -187,11 +312,11 @@
 {% set geluid = report_data.get('geluid_flags') %}
 {% if geluid %}
 <h2>Geluidbelasting</h2>
-<table>
+<table class="kv-table">
   {% for key, value in geluid.items() %}
   <tr>
-    <th>{{ key | replace('_', ' ') | title }}</th>
-    <td>{{ value }}</td>
+    <td class="kv-label">{{ key | replace('_', ' ') | title }}</td>
+    <td class="kv-value">{{ value }}</td>
   </tr>
   {% endfor %}
 </table>
@@ -201,14 +326,22 @@
 {% set lucht = report_data.get('luchtkwaliteit_flags') %}
 {% if lucht %}
 <h2>Luchtkwaliteit</h2>
-<table>
+<table class="kv-table">
   {% for key, value in lucht.items() %}
   <tr>
-    <th>{{ key | replace('_', ' ') | title }}</th>
-    <td>{{ value }}</td>
+    <td class="kv-label">{{ key | replace('_', ' ') | title }}</td>
+    <td class="kv-value">{{ value }}</td>
   </tr>
   {% endfor %}
 </table>
+{% endif %}
+
+{# --- Overall disclaimer --- #}
+{% if frp.get('disclaimer') %}
+<div class="disclaimer" style="margin-top: 0.6cm;">
+  <strong>Disclaimer</strong>
+  {{ frp.get('disclaimer') }}
+</div>
 {% endif %}
 
 {% else %}

@@ -1,5 +1,32 @@
 {% extends "base.html" %}
 
+{% block summary %}
+{% set vergunningen = report_data.get('vergunningen_data') %}
+{% set prec = report_data.get('permit_precedents') %}
+{% set bk_count = 0 %}
+{% if vergunningen %}
+  {% if vergunningen is mapping %}
+    {% set bk_count = (vergunningen.get('records', vergunningen.get('bekendmakingen', vergunningen.get('items', []))) or []) | length %}
+  {% else %}
+    {% set bk_count = vergunningen | length %}
+  {% endif %}
+{% endif %}
+<div class="summary-box">
+  <div class="stat-item">
+    <div class="stat-value">{{ bk_count }}</div>
+    <div class="stat-label">Bekendmakingen</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">{% if prec and prec.get('mediaan_doorlooptijd_dagen') is not none %}{{ prec.get('mediaan_doorlooptijd_dagen') }}{% elif prec and prec.get('median_processing_days') is not none %}{{ prec.get('median_processing_days') }}{% else %}—{% endif %}</div>
+    <div class="stat-label">Mediaan doorlooptijd (dgn)</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">{% if prec and prec.get('goedgekeurd_pct') is not none %}{{ prec.get('goedgekeurd_pct') }}%{% else %}—{% endif %}</div>
+    <div class="stat-label">Goedkeuring %</div>
+  </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <h2>Vergunningenhistorie</h2>
 
@@ -18,7 +45,7 @@
 
   {% if bekendmakingen and bekendmakingen | length > 0 %}
 <h2>Recente bekendmakingen</h2>
-<table>
+<table class="data-table">
   <thead>
     <tr>
       <th>Datum</th>
@@ -47,32 +74,117 @@
 {# --- Permit precedents (benchmark) --- #}
 {% if prec %}
 <h2>Vergunningsprecedenten (benchmark)</h2>
-<table>
+
+<table class="kv-table">
+  {% if prec.get('gemeente_scope') %}
+  <tr>
+    <td class="kv-label">Gemeente scope</td>
+    <td class="kv-value">{{ prec.get('gemeente_scope') }}</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('comparable_type') %}
+  <tr>
+    <td class="kv-label">Vergelijkbaar type</td>
+    <td class="kv-value">{{ prec.get('comparable_type') }}</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('sample_size') is not none %}
+  <tr>
+    <td class="kv-label">Steekproefomvang</td>
+    <td class="kv-value">{{ prec.get('sample_size') }} vergunningen</td>
+  </tr>
+  {% endif %}
+  {% if prec.get('lookback_days') is not none %}
+  <tr>
+    <td class="kv-label">Terugkijkperiode</td>
+    <td class="kv-value">{{ prec.get('lookback_days') }} dagen</td>
+  </tr>
+  {% endif %}
   {% if prec.get('permits_found') is not none %}
   <tr>
-    <th>Gevonden vergunningen</th>
-    <td>{{ prec.get('permits_found') }}</td>
+    <td class="kv-label">Gevonden vergunningen</td>
+    <td class="kv-value">{{ prec.get('permits_found') }}</td>
   </tr>
   {% endif %}
-  {% if prec.get('summary') %}
+  {% if prec.get('mediaan_doorlooptijd_dagen') is not none or prec.get('median_processing_days') is not none %}
   <tr>
-    <th>Samenvatting</th>
-    <td>{{ prec.get('summary') }}</td>
+    <td class="kv-label">Mediaan doorlooptijd</td>
+    <td class="kv-value">{{ prec.get('mediaan_doorlooptijd_dagen', prec.get('median_processing_days')) }} dagen</td>
   </tr>
   {% endif %}
-  {% if prec.get('mediaan_doorlooptijd_dagen') is not none %}
+  {% if prec.get('p75_processing_days') is not none %}
   <tr>
-    <th>Mediaan doorlooptijd</th>
-    <td>{{ prec.get('mediaan_doorlooptijd_dagen') }} dagen</td>
+    <td class="kv-label">P75 doorlooptijd</td>
+    <td class="kv-value">{{ prec.get('p75_processing_days') }} dagen</td>
   </tr>
   {% endif %}
   {% if prec.get('goedgekeurd_pct') is not none %}
   <tr>
-    <th>Goedgekeurd (%)</th>
-    <td>{{ prec.get('goedgekeurd_pct') }}%</td>
+    <td class="kv-label">Goedgekeurd (%)</td>
+    <td class="kv-value">{{ prec.get('goedgekeurd_pct') }}%</td>
   </tr>
   {% endif %}
 </table>
+
+{# --- Outcome distribution --- #}
+{% set od = prec.get('outcome_distribution', {}) %}
+{% if od and od | length > 0 %}
+<h2 style="font-size: 10pt;">Uitkomstverdeling</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Uitkomst</th>
+      <th>Aantal</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for outcome, count in od.items() %}
+    <tr>
+      <td>{{ outcome }}</td>
+      <td>{{ count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if prec.get('summary') %}
+<p style="margin-top: 0.3em;">{{ prec.get('summary') }}</p>
+{% endif %}
+
+{% if prec.get('low_sample_warning') %}
+<div class="risk-block" style="border-left-color: var(--brand-accent);">
+  <h4><span class="dot dot-amber"></span> Let op</h4>
+  <p>{{ prec.get('low_sample_warning') }}</p>
+</div>
+{% endif %}
+
+{# --- References table --- #}
+{% set refs = prec.get('references', []) %}
+{% if refs %}
+<h2 style="font-size: 10pt;">Referentie-vergunningen</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Datum</th>
+      <th>Titel</th>
+      <th>Uitkomst</th>
+      <th>Bron</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ref in refs %}
+    <tr>
+      <td style="white-space: nowrap;">{{ ref.get('change_date', '—') }}</td>
+      <td>{{ ref.get('title', '—') }}</td>
+      <td>{{ ref.get('outcome', '—') }}</td>
+      <td>{% if ref.get('source_url') %}<a href="{{ ref.get('source_url') }}" style="color: var(--brand-accent);">Link</a>{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% endif %}
 
 {% else %}
