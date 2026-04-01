@@ -185,13 +185,9 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
 
       {/* ── 5. Monumentstatus ─────────────────────────────────── */}
       <SectionInsightCard kicker="Monument" title="Monumentstatus" Icon={Landmark}>
-        <div className="flex items-center justify-between py-2">
-          <span className="text-[12px] text-slate-400">Status</span>
-          {isMonument
-            ? <AmberBadge variant="amber">Rijksmonument</AmberBadge>
-            : <span className="text-[13px] text-slate-600">Niet beschermd</span>
-          }
-        </div>
+        <p className="text-[13px] text-slate-600">
+          {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
+        </p>
         {monuments?.consensus_status && (
           <KVRow label="Bron" value={monuments.consensus_status} />
         )}
