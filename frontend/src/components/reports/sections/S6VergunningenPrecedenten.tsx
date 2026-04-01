@@ -7,7 +7,7 @@
  * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
-import { FileText, Scale } from 'lucide-react'
+import { FileText, Scale, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { SectionNotes, SubCard } from '../components'
@@ -53,10 +53,9 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
             Vergunningsprecedenten worden opgehaald bij het genereren van een scan op dit adres.
           </p>
         </div>
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-          {sourceParcelId ? <SectionNotes parcelId={sourceParcelId} documentTypes={['vergunninghistorie']} label="Vergunninghistorie documenten" /> : <SectionNotes parcelId={null} />}
-        </div>
+        <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+          <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['vergunninghistorie']} />
+        </SectionInsightCard>
       </div>
     )
   }
@@ -202,10 +201,9 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
       )}
 
       {/* ── Upload zone ───────────────────────────────────────── */}
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-        <SectionNotes parcelId={sourceParcelId} documentTypes={['vergunninghistorie']} label="Vergunninghistorie documenten" />
-      </div>
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes parcelId={sourceParcelId} documentTypes={['vergunninghistorie']} />
+      </SectionInsightCard>
     </div>
   )
 }

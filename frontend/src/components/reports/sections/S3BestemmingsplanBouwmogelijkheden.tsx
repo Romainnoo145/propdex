@@ -6,7 +6,7 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { FileText, Ruler, Brain, ShieldCheck } from 'lucide-react'
+import { FileText, Ruler, Brain, ShieldCheck, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { splitZoningPlans } from '@/lib/zoningPlans'
 import { SectionInsightCard } from '../components/SectionInsightCard'
@@ -148,9 +148,6 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
             </div>
           )
         })()}
-        <div className="mt-4">
-          <SectionNotes parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} label="Bestemmingsplan documenten" />
-        </div>
       </SectionInsightCard>
 
       {/* Bouwruimte Delta */}
@@ -224,6 +221,11 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
           </div>
         </SectionInsightCard>
       )}
+
+      {/* ── Section Notes ─────────────────────────────────────── */}
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} />
+      </SectionInsightCard>
     </div>
   )
 }

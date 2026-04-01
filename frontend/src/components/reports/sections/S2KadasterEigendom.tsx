@@ -6,7 +6,7 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { Landmark, Users, TrendingUp } from 'lucide-react'
+import { Landmark, Users, TrendingUp, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { SubCard, SectionNotes, formatArea } from '../components'
@@ -233,7 +233,9 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
       </SectionInsightCard>
 
       {/* ── Section Notes ─────────────────────────────────────── */}
-      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['kadaster']} />
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['kadaster']} />
+      </SectionInsightCard>
     </div>
   )
 }

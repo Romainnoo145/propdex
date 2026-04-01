@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react'
-import { TrendingUp, ShieldAlert } from 'lucide-react'
+import { TrendingUp, ShieldAlert, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { SubCard, SectionNotes } from '../components'
@@ -209,7 +209,9 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
           </p>
           <p className="mt-1 text-[12px] text-slate-400">Model: {data.score_model_version ?? 'onbekend'}</p>
         </div>
-        <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} label="Quickscan documenten" />
+        <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+          <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} />
+        </SectionInsightCard>
       </div>
     )
   }
@@ -269,7 +271,9 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
       )}
 
       {/* ── Notes / uploads ───────────────────────────────────── */}
-      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} label="Quickscan documenten" />
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} />
+      </SectionInsightCard>
     </div>
   )
 }

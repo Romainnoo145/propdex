@@ -7,7 +7,7 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { ShieldAlert, Droplets, Construction, AlertTriangle, TreePine } from 'lucide-react'
+import { ShieldAlert, Droplets, Construction, AlertTriangle, TreePine, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse, WBBDossierRef } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { KVRow, SubCard, formatCurrency, SectionNotes } from '../components'
@@ -210,11 +210,12 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
       )}
 
       {/* ── Section Notes ─────────────────────────────────────── */}
-      <SectionNotes
-        parcelId={sourceParcelId ?? null}
-        documentTypes={['bodem', 'fundering', 'asbest', 'geluid', 'stikstof']}
-        label="Risicoprofiel documenten"
-      />
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes
+          parcelId={sourceParcelId ?? null}
+          documentTypes={['bodem', 'fundering', 'asbest', 'geluid', 'stikstof']}
+        />
+      </SectionInsightCard>
     </div>
   )
 }
