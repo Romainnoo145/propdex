@@ -8,7 +8,7 @@
 import { MapPin, Building2, Zap, TrendingUp, Landmark, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { KVRow, SubCard, SectionNotes, formatArea, formatCurrency } from '../components'
+import { KVRow, SectionNotes, formatArea, formatCurrency } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -82,37 +82,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
   return (
     <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* ── 1. Key facts ──────────────────────────────────────── */}
-      <SectionInsightCard kicker="Overzicht" title="Kerngegevens" Icon={Building2}>
-        <div className="grid grid-cols-3 gap-3">
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bouwjaar</p>
-            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-              {building?.bouwjaar ?? '–'}
-            </p>
-          </SubCard>
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Oppervlakte</p>
-            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-              {formatArea(building?.oppervlakte)}
-            </p>
-          </SubCard>
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Gebruiksdoel</p>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {building?.gebruiksdoel?.length ? (
-                building.gebruiksdoel.map((doel) => (
-                  <AmberBadge key={doel}>{doel}</AmberBadge>
-                ))
-              ) : (
-                <span className="text-[13px] text-slate-400">–</span>
-              )}
-            </div>
-          </SubCard>
-        </div>
-      </SectionInsightCard>
-
-      {/* ── 2. Adres & Gebouw Details (side by side on lg) ───── */}
+      {/* ── 1. Adres & Gebouw Details (side by side on lg) ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SectionInsightCard kicker="Locatie" title="Adresgegevens" Icon={MapPin}>
           <div>
@@ -191,25 +161,16 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
       {/* ── 4. WOZ Waarde ─────────────────────────────────────── */}
       <SectionInsightCard kicker="Waarde" title="WOZ Waarde" Icon={TrendingUp}>
         {woz ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <SubCard>
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Meest recente waarde</p>
-                <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-                  {formatCurrency(woz.meest_recente_waarde)}
-                </p>
-              </SubCard>
-              <SubCard>
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Peildatum</p>
-                <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
-                  {woz.meest_recente_peildatum
-                    ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
-                    : '–'}
-                </p>
-              </SubCard>
-            </div>
+          <div>
+            <KVRow label="Meest recente waarde" value={formatCurrency(woz.meest_recente_waarde)} />
+            <KVRow
+              label="Peildatum"
+              value={woz.meest_recente_peildatum
+                ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
+                : '–'}
+            />
             {woz.low_confidence && (
-              <div className="rounded-[16px] border border-[#F9A826]/15 bg-[#F9A826]/[0.04] px-4 py-3">
+              <div className="mt-3 rounded-[16px] border border-[#F9A826]/15 bg-[#F9A826]/[0.04] px-4 py-3">
                 <p className="text-[12px] text-[#F9A826]/80 font-semibold">Indicatief</p>
                 <p className="mt-0.5 text-[13px] text-slate-600">
                   {woz.low_confidence_reden ?? 'WOZ-data is indicatief.'}
@@ -226,9 +187,10 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
       <SectionInsightCard kicker="Monument" title="Monumentstatus" Icon={Landmark}>
         <div className="flex items-center justify-between py-2">
           <span className="text-[12px] text-slate-400">Status</span>
-          <AmberBadge variant={isMonument ? 'amber' : 'slate'}>
-            {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
-          </AmberBadge>
+          {isMonument
+            ? <AmberBadge variant="amber">Rijksmonument</AmberBadge>
+            : <span className="text-[13px] text-slate-600">Niet beschermd</span>
+          }
         </div>
         {monuments?.consensus_status && (
           <KVRow label="Bron" value={monuments.consensus_status} />
