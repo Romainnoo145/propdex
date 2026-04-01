@@ -43,13 +43,13 @@ function BuildabilityBar({ parcelArea, builtArea, remainingArea }: { parcelArea:
     <div className="space-y-3">
       <div className="relative h-7 w-full overflow-hidden rounded-full bg-slate-100">
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-l-full bg-slate-300"
+          className="absolute inset-y-0 left-0 rounded-l-full bg-[#0E1111]"
           initial={{ width: 0 }}
           animate={{ width: `${builtPct}%` }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         />
         <motion.div
-          className="absolute inset-y-0 bg-amber-300"
+          className="absolute inset-y-0 rounded-r-full border border-[#0E1111] bg-amber-300"
           style={{ left: `${builtPct}%` }}
           initial={{ width: 0 }}
           animate={{ width: `${remainPct}%` }}
@@ -58,11 +58,11 @@ function BuildabilityBar({ parcelArea, builtArea, remainingArea }: { parcelArea:
       </div>
       <div className="flex flex-wrap gap-4 text-[11px]">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-slate-300" />
+          <span className="h-2 w-2 rounded-full bg-[#0E1111]" />
           <span className="text-slate-500">Bebouwd {formatArea(builtArea)}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-amber-300" />
+          <span className="h-2 w-2 rounded-full border border-[#0E1111] bg-amber-300" />
           <span className="text-slate-500">Bebouwbaar {formatArea(remainingArea)}</span>
         </span>
         <span className="ml-auto text-[12px] font-semibold text-slate-600">
@@ -127,9 +127,9 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                   <p className="text-[12px] text-slate-700">{plan.plan_naam}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     {plan.plan_status && (
-                      <SemanticPill tone={plan.plan_status === 'Vastgesteld' ? 'green' : 'amber'}>
+                      <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2 py-0.5 text-[10px] font-medium text-slate-500">
                         {plan.plan_status.toLowerCase()}
-                      </SemanticPill>
+                      </span>
                     )}
                     {plan.plan_datum && (
                       <span className="text-[11px] text-slate-400">{new Date(plan.plan_datum).toLocaleDateString('nl-NL')}</span>
@@ -195,7 +195,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadDocument.isPending}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-amber-300 px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-amber-400 disabled:opacity-50"
                 >
                   <Upload size={14} />
                   {uploadDocument.isPending ? 'Uploaden...' : 'Upload PDF'}
@@ -215,14 +215,17 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
 
       {/* ── Wkb Precheck ──────────────────────────────────────── */}
       {wkb_precheck && (
-        <SectionInsightCard kicker="Wkb" title="Wkb Startdossier" Icon={ShieldCheck}>
-          <SemanticPill tone={wkb_precheck.status === 'likely_required' ? 'amber' : 'green'}>
-            {wkb_precheck.status === 'likely_required'
-              ? 'Waarschijnlijk vereist'
-              : wkb_precheck.status === 'likely_not_required'
-                ? 'Waarschijnlijk niet vereist'
-                : 'Onzeker'}
-          </SemanticPill>
+        <SectionInsightCard kicker="Wkb" title="Kwaliteitsborging" Icon={ShieldCheck}>
+          <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+            <span className="text-[12px] text-slate-400">Status</span>
+            <SemanticPill tone={wkb_precheck.status === 'likely_required' ? 'amber' : 'green'}>
+              {wkb_precheck.status === 'likely_required'
+                ? 'Waarschijnlijk vereist'
+                : wkb_precheck.status === 'likely_not_required'
+                  ? 'Niet vereist'
+                  : 'Onzeker'}
+            </SemanticPill>
+          </div>
           {wkb_precheck.triggered_rules.length > 0 && (
             <ul className="mt-2 space-y-1">
               {wkb_precheck.triggered_rules.slice(0, 3).map((rule, i) => (
