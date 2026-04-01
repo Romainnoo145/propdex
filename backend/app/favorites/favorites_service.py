@@ -90,11 +90,41 @@ async def _get_favorite_or_404(
     user_id: uuid.UUID,
     parcel_id: str,
 ) -> ParcelFavorite:
-    """Fetch favorite by (user, parcel) or raise 404."""
+    """Fetch favorite by (user, parcel).
+
+    Accepts either the ParcelFavorite.parcel_id string **or** the
+    ParcelCache UUID (source_parcel_id from reports).  When a UUID is
+    supplied, it is resolved to the parcel_id string via parcel_cache
+    so that both the workspace and report views can use the same route.
+    """
+    # Direct lookup first (parcel code string — workspace path)
     result = await db.execute(
         select(ParcelFavorite).where(
             ParcelFavorite.user_id == user_id,
             ParcelFavorite.parcel_id == parcel_id,
+        )
+    )
+    fav = result.scalar_one_or_none()
+    if fav:
+        return fav
+
+    # Fallback: treat parcel_id as a ParcelCache UUID and resolve
+    try:
+        cache_uuid = uuid.UUID(parcel_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found")
+
+    cache_result = await db.execute(
+        select(ParcelCache.parcel_id).where(ParcelCache.id == cache_uuid)
+    )
+    resolved_code = cache_result.scalar_one_or_none()
+    if not resolved_code:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found")
+
+    result = await db.execute(
+        select(ParcelFavorite).where(
+            ParcelFavorite.user_id == user_id,
+            ParcelFavorite.parcel_id == resolved_code,
         )
     )
     fav = result.scalar_one_or_none()
