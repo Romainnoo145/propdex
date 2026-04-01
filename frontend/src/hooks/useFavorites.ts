@@ -314,6 +314,7 @@ export function useFavoriteNotes(parcelId: string | null) {
       ),
     enabled: !!parcelId && !!accessToken,
     staleTime: 30 * 1000,
+    retry: false,
   })
 }
 

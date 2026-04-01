@@ -9,8 +9,8 @@ import { useCallback, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import ReportHeader from './ReportHeader'
-import { parseNotes, computeSectionStatuses, EMPTY_STATUSES } from './components/sectionUtils'
-import { useExportPDF, useUpdateNotes } from '@/hooks/useReports'
+import { computeSectionStatuses, EMPTY_STATUSES } from './components/sectionUtils'
+import { useExportPDF } from '@/hooks/useReports'
 import type { SectionKey } from './components/sectionUtils'
 import { S1Locatiegegevens } from './sections/S1Locatiegegevens'
 import { S2KadasterEigendom } from './sections/S2KadasterEigendom'
@@ -85,18 +85,15 @@ export default function DueDiligenceDashboard({
   backLabel = 'Terug',
   sourceParcelId,
   reportId,
-  notes: rawNotes,
+  notes: _rawNotes,
   onBack,
   onViewOnMap,
 }: DueDiligenceDashboardProps) {
   const exportPDF = useExportPDF()
-  const updateNotes = useUpdateNotes()
 
-  const notes = parseNotes(rawNotes)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- will be used for section status indicators
   const _sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
   const [activeSection, setActiveSection] = useState<SectionKey>('locatiegegevens')
-  const [notesOpen, setNotesOpen] = useState(false)
 
   const handleExportPDF = useCallback(() => {
     if (!reportId) return
@@ -111,15 +108,6 @@ export default function DueDiligenceDashboard({
       },
     })
   }, [reportId, exportPDF])
-
-  const handleNotesChange = useCallback(
-    (sectionKey: string, text: string) => {
-      if (!reportId) return
-      const merged = { ...notes, [sectionKey]: text }
-      updateNotes.mutate({ reportId, notes: JSON.stringify(merged) })
-    },
-    [reportId, notes, updateNotes],
-  )
 
   // Loading state
   if (isLoading) {
@@ -210,30 +198,6 @@ export default function DueDiligenceDashboard({
             >
               {renderSectionContent(activeSection, data, sourceParcelId)}
 
-            {/* Notes footer */}
-            {reportId && (
-            <div className="mt-6 border-t border-[#EAEFEF] pt-4">
-                <button
-                  type="button"
-                  onClick={() => setNotesOpen((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[12px] font-semibold text-[#94a3b8] hover:text-[#1A1C1E] transition-colors"
-                >
-                  Notities
-                </button>
-            </div>
-            )}
-
-            {notesOpen && reportId && (
-              <div className="mt-3">
-                <textarea
-                  value={notes[activeSection] ?? ''}
-                  onChange={(e) => handleNotesChange(activeSection, e.target.value)}
-                  placeholder="Voeg notities toe voor deze sectie..."
-                  rows={3}
-                  className="w-full resize-none rounded-[12px] border border-[#EAEFEF] bg-[#F8FAFA] px-3 py-2 text-[13px] text-[#1A1C1E] placeholder-[#94a3b8] outline-none"
-                />
-              </div>
-            )}
             </motion.div>
           </AnimatePresence>
         </div>
