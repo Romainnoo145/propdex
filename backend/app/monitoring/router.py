@@ -15,14 +15,15 @@ from app.models.change_record import ChangeRecord
 from app.models.project import Project
 from app.models.user import User
 from app.models.user_notification_state import UserNotificationState
+from app.schemas.common import StatusResponse
 from app.schemas.project import ProjectListResponse, ProjectResponse
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
+router = APIRouter(prefix="/api/monitoring", tags=["Monitoring"])
 
 
-@router.post("/viewed/{project_id}")
+@router.post("/viewed/{project_id}", response_model=StatusResponse)
 @limiter.limit("60/minute")
 async def mark_viewed(
     request: Request,

@@ -1,8 +1,11 @@
 """Scan CRUD service layer for area scan operations."""
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 
+import httpx
+from shapely.geometry import box
 from sqlalchemy import Float, asc, cast, delete, desc, func, nulls_last, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +13,13 @@ from app.models.area_scan import AreaScan
 from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.scan_result import ScanResult
+from app.scans.helpers import _resolve_wijk_bbox_from_geojson
+from app.scans.schemas import ScanListItem, ScanResponse
+from app.services.gemeente_service import get_gemeente_bbox
+from app.services.spatial_helpers import transform_bbox_to_rd, transform_point_to_wgs84
+from app.services.wijk_service import get_wijken_in_gemeente
+
+logger = logging.getLogger(__name__)
 
 
 def _vacancy_subscore_expr():
@@ -525,3 +535,201 @@ async def list_scans(
     query = query.order_by(AreaScan.created_at.desc()).offset(offset).limit(limit)
     result = await session.execute(query)
     return list(result.all()), total
+
+
+# ---------------------------------------------------------------------------
+# Helpers extracted from router (M023/S02/T05)
+# ---------------------------------------------------------------------------
+
+
+def build_scan_list_items(
+    scans: list[tuple],
+) -> list[ScanListItem]:
+    """Transform raw (AreaScan, parcel_count) tuples into ScanListItem list."""
+    items: list[ScanListItem] = []
+    for scan, parcel_count in scans:
+        bbox_wgs84 = None
+        if (
+            scan.bbox_minx is not None
+            and scan.bbox_miny is not None
+            and scan.bbox_maxx is not None
+            and scan.bbox_maxy is not None
+        ):
+            min_lon_raw, min_lat_raw = transform_point_to_wgs84(scan.bbox_minx, scan.bbox_miny)
+            max_lon_raw, max_lat_raw = transform_point_to_wgs84(scan.bbox_maxx, scan.bbox_maxy)
+            bbox_wgs84 = (
+                min(min_lon_raw, max_lon_raw),
+                min(min_lat_raw, max_lat_raw),
+                max(min_lon_raw, max_lon_raw),
+                max(min_lat_raw, max_lat_raw),
+            )
+
+        items.append(
+            ScanListItem(
+                scan_id=scan.id,
+                gemeente_naam=scan.gemeente_naam,
+                gemeente_code=scan.gemeente_code,
+                wijk_naam=scan.wijk_naam,
+                neighborhood_metrics=scan.neighborhood_metrics,
+                bbox_wgs84=bbox_wgs84,
+                scan_date=scan.created_at,
+                status=scan.status,
+                parcel_count=parcel_count or 0,
+                project_id=scan.project_id,
+            )
+        )
+    return items
+
+
+async def resolve_scan_bbox(
+    gemeente_code: str,
+    wijk_naam: str | None,
+    bbox_wgs84: tuple[float, float, float, float] | None,
+    http_client: httpx.AsyncClient,
+) -> dict:
+    """Resolve WGS84 bbox → RD bbox dict, or fall back to gemeente bbox.
+
+    Returns dict with minx/miny/maxx/maxy in EPSG:28992 (RD New).
+
+    Raises:
+        ValueError: If bbox is invalid (out of NL bounds, min >= max, too large)
+        or wijk/gemeente cannot be resolved.
+    """
+    # If wijk scan without explicit bbox, resolve from CBS WFS geometry
+    if bbox_wgs84 is None and wijk_naam:
+        try:
+            wijken_geojson = await get_wijken_in_gemeente(gemeente_code, http_client)
+        except ValueError as e:
+            raise ValueError(
+                f"No wijken found for gemeente {gemeente_code}: {e}"
+            ) from e
+        except httpx.HTTPError as e:
+            raise ValueError("CBS WFS service unavailable") from e
+
+        resolved = _resolve_wijk_bbox_from_geojson(wijken_geojson, wijk_naam)
+        if resolved is None:
+            raise ValueError(
+                f"Could not resolve wijk bbox for '{wijk_naam}'. "
+                "Selecteer de wijk op de kaart of stuur bbox_wgs84 mee."
+            )
+        bbox_wgs84 = resolved
+        logger.info(
+            "Resolved wijk bbox from CBS WFS for gemeente=%s wijk=%s",
+            gemeente_code,
+            wijk_naam,
+        )
+
+    if bbox_wgs84:
+        min_lon, min_lat, max_lon, max_lat = bbox_wgs84
+
+        # Validate within Netherlands WGS84 bounds
+        if not (3.3 <= min_lon <= 7.2 and 3.3 <= max_lon <= 7.2 and
+                50.7 <= min_lat <= 53.6 and 50.7 <= max_lat <= 53.6):
+            raise ValueError("Bbox coordinates are outside Netherlands bounds")
+
+        if min_lon >= max_lon or min_lat >= max_lat:
+            raise ValueError("Invalid bbox: min coordinates must be less than max")
+
+        minx, miny, maxx, maxy = transform_bbox_to_rd(min_lon, min_lat, max_lon, max_lat)
+
+        bbox_geom = box(minx, miny, maxx, maxy)
+        area_m2 = bbox_geom.area
+        MAX_AREA = 500_000_000  # 500 km²
+
+        if area_m2 > MAX_AREA:
+            raise ValueError(
+                f"Scan area {area_m2 / 1_000_000:.1f} km² exceeds maximum of 500 km². "
+                "Selecteer een kleiner gebied."
+            )
+
+        return {"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy}
+
+    # Fall back to gemeente bbox
+    try:
+        return await get_gemeente_bbox(gemeente_code, http_client)
+    except ValueError as e:
+        raise ValueError(f"Invalid gemeente: {e}") from e
+
+
+async def process_trigger_scan(
+    gemeente_code: str,
+    gemeente_naam: str,
+    wijk_naam: str | None,
+    bbox_wgs84: tuple[float, float, float, float] | None,
+    force_rescan: bool,
+    target_project_id: uuid.UUID | None,
+    organization_id: uuid.UUID,
+    http_client: httpx.AsyncClient,
+    arq_pool,
+    session: AsyncSession,
+) -> ScanResponse:
+    """Core trigger-scan business logic.
+
+    Resolves bbox, checks existing scans, creates/resets scan, enqueues ARQ job.
+
+    Raises:
+        ValueError: For validation/resolution errors (→ HTTP 400/404/502).
+        LookupError: When a referenced project is not found (→ HTTP 404).
+    """
+    bbox = await resolve_scan_bbox(gemeente_code, wijk_naam, bbox_wgs84, http_client)
+
+    # Validate explicit project linkage
+    if target_project_id is not None:
+        project_result = await session.execute(
+            select(Project).where(
+                Project.id == target_project_id,
+                Project.organization_id == organization_id,
+            ).limit(1)
+        )
+        if project_result.scalar_one_or_none() is None:
+            raise LookupError("Project not found")
+
+    # Check for existing scan
+    existing_scan = await get_existing_scan(
+        gemeente_code=gemeente_code,
+        bbox=bbox,
+        project_id=target_project_id,
+        session=session,
+    )
+
+    if existing_scan and not force_rescan:
+        days_old = (datetime.utcnow() - existing_scan.created_at).days
+        return ScanResponse(
+            scan_id=existing_scan.id,
+            status="existing",
+            gemeente_naam=existing_scan.gemeente_naam,
+            gemeente_code=existing_scan.gemeente_code,
+            scan_date=existing_scan.created_at,
+            needs_rescan=days_old > 30,
+            message=f"Scan from {existing_scan.created_at.strftime('%Y-%m-%d')} already exists. Use force_rescan=true to re-scan.",
+        )
+
+    if existing_scan and force_rescan:
+        scan = await reset_scan_for_rescan(existing_scan, session)
+    else:
+        scan = await create_scan(
+            gemeente_code=gemeente_code,
+            gemeente_naam=gemeente_naam,
+            bbox=bbox,
+            session=session,
+            wijk_naam=wijk_naam,
+            project_id=target_project_id,
+            organization_id=organization_id,
+        )
+
+    # Enqueue ARQ job
+    job = await arq_pool.enqueue_job("area_scan_job", str(scan.id), str(organization_id))
+    scan.job_id = job.job_id
+    session.add(scan)
+    await session.flush()
+    await session.commit()
+
+    return ScanResponse(
+        scan_id=scan.id,
+        status="pending",
+        gemeente_naam=scan.gemeente_naam,
+        gemeente_code=scan.gemeente_code,
+        scan_date=scan.created_at,
+        needs_rescan=False,
+        message="Scan started successfully",
+    )

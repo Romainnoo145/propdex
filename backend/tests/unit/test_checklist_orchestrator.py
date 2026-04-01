@@ -30,6 +30,7 @@ def _make_full_report_data() -> dict:
         "asbest_indicator": {"risk": "geen"},
         "permit_precedents": {"permits_found": 2},
         "scores_v3": {"potentie": 70, "risico": 30},
+        "woz_data": {"woz_waarde": 350000},
     }
 
 
@@ -72,11 +73,11 @@ class TestChecklistOrchestrator:
             )
 
         assert isinstance(result, ChecklistGenerationResult)
-        assert len(result.generated) == 11
+        assert len(result.generated) == 12
         assert len(result.failed) == 0
         assert len(result.skipped) == 0
-        assert result.total_bytes == 9 * 11  # b"%PDF-fake" = 9 bytes × 11 docs
-        assert mock_pdf.call_count == 11
+        assert result.total_bytes == 9 * 12  # b"%PDF-fake" = 9 bytes × 12 docs
+        assert mock_pdf.call_count == 12
 
     @pytest.mark.asyncio
     async def test_skips_unavailable_docs(self, mock_db, user_id):
@@ -102,7 +103,7 @@ class TestChecklistOrchestrator:
         assert "kadaster" in result.generated
         assert "energielabel" in result.generated
         assert len(result.generated) == 2
-        assert len(result.skipped) == 9  # 11 total - 2 available
+        assert len(result.skipped) == 10  # 12 total - 2 available
         assert mock_pdf.call_count == 2
 
     @pytest.mark.asyncio
@@ -131,7 +132,7 @@ class TestChecklistOrchestrator:
         assert len(result.failed) == 1
         assert result.failed[0]["doc_type"] == "kadaster"
         assert "Template render failed" in result.failed[0]["error"]
-        assert len(result.generated) == 10  # 11 - 1 failure
+        assert len(result.generated) == 11  # 12 - 1 failure
 
     @pytest.mark.asyncio
     async def test_returns_summary_dict_structure(self, mock_db, user_id):
@@ -176,7 +177,7 @@ class TestChecklistOrchestrator:
 
         assert len(result.generated) == 0
         assert len(result.failed) == 0
-        assert len(result.skipped) == 11
+        assert len(result.skipped) == 12
         assert result.total_bytes == 0
         mock_pdf.assert_not_called()
 
@@ -204,3 +205,4 @@ class TestChecklistOrchestrator:
         # 2 available types (kadaster, bestemmingsplan) → 2 inserts + 1 flush
         assert mock_db.execute.call_count == 2
         mock_db.flush.assert_awaited_once()
+

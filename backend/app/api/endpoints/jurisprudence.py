@@ -14,6 +14,16 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from app.api.endpoints.jurisprudence_schemas import (
+    AnalysisStatusResponse,
+    AnalysisTriggerResponse,
+    DoorlooptijdResponse,
+    ExplorerResponse,
+    GemeenteRulingsResponse,
+    JurisprudenceDocResponse,
+    JurisprudenceSearchResponse,
+    TrendResponse,
+)
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.government_apis.base import GovernmentAPIError
@@ -25,13 +35,13 @@ from app.services.doorlooptijd import get_doorlooptijd_stats
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/api/jurisprudence", tags=["Jurisprudence"])
 
 # 7-day TTL for ruling cache freshness check
 RULING_CACHE_TTL_SECONDS = 7 * 24 * 3600
 
 
-@router.get("/search")
+@router.get("/search", response_model=JurisprudenceSearchResponse)
 async def search_jurisprudence(
     request: Request,
     q: str = Query(..., description="Search query string"),
@@ -61,7 +71,7 @@ async def search_jurisprudence(
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
-@router.get("/rulings/{gemeente_naam}")
+@router.get("/rulings/{gemeente_naam}", response_model=GemeenteRulingsResponse)
 async def get_gemeente_rulings(
     gemeente_naam: str,
     request: Request,
@@ -191,7 +201,7 @@ async def get_gemeente_rulings(
     }
 
 
-@router.get("/doc/{ecli:path}")
+@router.get("/doc/{ecli:path}", response_model=JurisprudenceDocResponse)
 async def get_jurisprudence_doc(
     ecli: str,
     request: Request,
@@ -225,7 +235,7 @@ async def get_jurisprudence_doc(
         raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
-@router.post("/analyze/{gemeente_naam}")
+@router.post("/analyze/{gemeente_naam}", response_model=AnalysisTriggerResponse)
 @limiter.limit("10/minute")
 async def trigger_ruling_analysis(
     gemeente_naam: str,
@@ -317,7 +327,7 @@ async def trigger_ruling_analysis(
     }
 
 
-@router.get("/analyze/status/{gemeente_naam}")
+@router.get("/analyze/status/{gemeente_naam}", response_model=AnalysisStatusResponse)
 async def poll_ruling_analysis(
     gemeente_naam: str,
     db: AsyncSession = Depends(get_db),
@@ -366,7 +376,7 @@ async def poll_ruling_analysis(
     }
 
 
-@router.get("/doorlooptijd/{gemeente_naam}")
+@router.get("/doorlooptijd/{gemeente_naam}", response_model=DoorlooptijdResponse)
 async def get_doorlooptijd(
     gemeente_naam: str,
     db: AsyncSession = Depends(get_db),
@@ -554,7 +564,7 @@ async def _compute_facet(
     return [{"value": row.value, "count": row.count} for row in result.all()]
 
 
-@router.get("/explorer")
+@router.get("/explorer", response_model=ExplorerResponse)
 async def explore_rulings(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
@@ -715,7 +725,7 @@ async def explore_rulings(
 # --- Trend endpoint ---
 
 
-@router.get("/trend/{gemeente_naam}")
+@router.get("/trend/{gemeente_naam}", response_model=TrendResponse)
 @limiter.limit("30/minute")
 async def get_trend(
     gemeente_naam: str,

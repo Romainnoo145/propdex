@@ -70,3 +70,7 @@ class FavoriteCentroidResponse(BaseModel):
     parcel_code: str
     lon: float
     lat: float
+
+
+class NotitieUpdateRequest(BaseModel):
+    notitie: str | None = None

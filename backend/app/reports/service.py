@@ -1,5 +1,8 @@
 """Report management service layer with CRUD operations."""
 
+import asyncio
+import io
+import logging
 import re
 import uuid
 from datetime import datetime
@@ -15,7 +18,11 @@ from app.models.parcel_cache import ParcelCache
 from app.models.project import Project
 from app.models.report import SavedReport
 from app.models.scan_result import ScanResult
-from app.schemas.property import PropertyReportResponse
+from app.schemas.address import AddressInput
+from app.schemas.property import CadastralParcel, PropertyReportResponse
+from app.services.property_aggregator import aggregate_property_data, fetch_brk_ownership
+
+logger = logging.getLogger(__name__)
 
 
 def active_reports_query(user_id: uuid.UUID):
@@ -348,8 +355,8 @@ async def save_report(
     notes: str | None,
     project_id: uuid.UUID | None,
     user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    session: AsyncSession,
+    organization_id: uuid.UUID | None = None,
+    session: AsyncSession = None,
     parcel_id: uuid.UUID | None = None,
     return_status: bool = False,
 ) -> SavedReport | tuple[SavedReport, bool]:
@@ -930,3 +937,406 @@ async def list_generated_dossiers(
         .order_by(desc(GeneratedDossier.created_at))
     )
     return list(result.scalars().all())
+
+
+# ---------------------------------------------------------------------------
+# Helpers migrated from router.py
+# ---------------------------------------------------------------------------
+
+
+def extract_report_address_input(
+    report_data: dict,
+    fallback_postcode: str | None = None,
+) -> AddressInput | None:
+    """Build AddressInput from stored report payload."""
+    address = report_data.get("address")
+    if not isinstance(address, dict):
+        return None
+
+    postcode = address.get("postcode") or fallback_postcode
+    huisnummer_raw = address.get("huisnummer")
+    try:
+        huisnummer = int(huisnummer_raw)
+    except (TypeError, ValueError):
+        return None
+
+    if not postcode or huisnummer <= 0:
+        return None
+
+    try:
+        return AddressInput(postcode=str(postcode), huisnummer=huisnummer)
+    except Exception:
+        return None
+
+
+def report_needs_v7_backfill(report_data: dict) -> bool:
+    """Detect old reports that miss newer v7 sections."""
+    required_keys = (
+        "energy_label",
+        "woz_data",
+        "market_signals",
+        "buildability_delta",
+        "wkb_precheck",
+        "permit_precedents",
+        "map_data",
+        "monuments",
+        "section_sources",
+    )
+    return any(key not in report_data for key in required_keys)
+
+
+def parse_parcel_address(address: str) -> tuple[str, int] | None:
+    """
+    Parse PDOK weergavenaam to (postcode, huisnummer).
+
+    Format: "{straat} {huisnummer}, {postcode} {woonplaats}"
+    """
+    upper = address.upper()
+    postcode_match = re.search(r"(\d{4})\s*([A-Z]{2})\b", upper)
+    if not postcode_match:
+        return None
+    postcode = f"{postcode_match.group(1)} {postcode_match.group(2)}"
+
+    pre_comma = address.split(",")[0] if "," in address else address
+    hn_match = re.search(r"(\d+)", pre_comma)
+    if not hn_match:
+        return None
+
+    huisnummer = int(hn_match.group(1))
+    if huisnummer <= 0:
+        return None
+
+    return postcode, huisnummer
+
+
+def parse_rd_point_wkt(wkt: str | None) -> tuple[float, float] | None:
+    """Parse WKT POINT string to RD tuple."""
+    if not isinstance(wkt, str) or not wkt:
+        return None
+    m = re.match(r"POINT\(([^ ]+) ([^ ]+)\)", wkt)
+    if not m:
+        return None
+    try:
+        return float(m.group(1)), float(m.group(2))
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Business logic extracted from router endpoint handlers
+# ---------------------------------------------------------------------------
+
+
+async def generate_report_from_address(
+    *,
+    address_input: AddressInput,
+    notes: str | None,
+    project_id: uuid.UUID | None,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    http_client,
+    arq_pool,
+) -> tuple["SavedReport", bool]:
+    """Aggregate property data for an address and save as report.
+
+    Returns (report, created) tuple.
+    """
+    property_data = await aggregate_property_data(
+        input_data=address_input,
+        client=http_client,
+        session=session,
+        force_refresh=False,
+        arq_pool=arq_pool,
+    )
+
+    report, created = await save_report(
+        report_data=property_data.model_dump(mode="json"),
+        notes=notes,
+        project_id=project_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        session=session,
+        parcel_id=None,
+        return_status=True,
+    )
+    return report, created
+
+
+async def generate_report_from_parcel(
+    *,
+    parcel_id: uuid.UUID,
+    notes: str | None,
+    project_id: uuid.UUID | None,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    http_client,
+    arq_pool,
+    locatieserver,
+) -> tuple["SavedReport", bool]:
+    """Full property intelligence report from a cached parcel.
+
+    Handles idempotency, address parsing with reverse-geocode fallback,
+    aggregation, scan-flag overlay, saving, and checklist auto-generation.
+
+    Returns (report, created) tuple.
+    """
+    from app.reports.flags_assembler import assemble_enrichment_from_flags, build_flags_section_sources
+
+    # 1. Fetch parcel
+    result = await session.execute(
+        select(ParcelCache).where(ParcelCache.id == parcel_id)
+    )
+    parcel = result.scalar_one_or_none()
+    if parcel is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Perceel niet gevonden",
+        )
+
+    # Idempotency: return existing report for this parcel if present
+    existing_report = await get_report_by_source_parcel(
+        parcel_id=parcel_id, user_id=user_id, session=session,
+    )
+    if existing_report is not None:
+        if project_id is not None and existing_report.project_id != project_id:
+            existing_report = await assign_report_to_project(
+                report_id=existing_report.id,
+                user_id=user_id,
+                organization_id=organization_id,
+                project_id=project_id,
+                session=session,
+            )
+        if notes is not None and existing_report.notes != notes:
+            existing_report = await update_report_notes(
+                report_id=existing_report.id,
+                user_id=user_id,
+                organization_id=organization_id,
+                notes=notes,
+                session=session,
+            )
+        return existing_report, False
+
+    # 2. Parse address with reverse-geocode fallback
+    source_address = parcel.address
+    parsed = parse_parcel_address(source_address) if source_address else None
+    if parsed is None:
+        from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+        centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
+            ParcelCache.id == parcel_id,
+        )
+        centroid_row = (await session.execute(centroid_query)).one_or_none()
+        rd_point = parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
+        if rd_point is not None:
+            reverse_address = await locatieserver.reverse(
+                rd_x=rd_point[0], rd_y=rd_point[1], client=http_client,
+            )
+            if reverse_address:
+                source_address = reverse_address
+                parsed = parse_parcel_address(reverse_address)
+                if parsed is not None and not parcel.address:
+                    parcel.address = reverse_address
+                    session.add(parcel)
+
+    if parsed is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Adres kan niet worden verwerkt: {source_address}"
+                if source_address
+                else "Geen geldig adres beschikbaar voor dit perceel"
+            ),
+        )
+    postcode, huisnummer = parsed
+
+    # 3. Build AddressInput and aggregate
+    address_input = AddressInput(postcode=postcode, huisnummer=huisnummer)
+    property_data = await aggregate_property_data(
+        input_data=address_input,
+        client=http_client,
+        session=session,
+        force_refresh=False,
+        arq_pool=arq_pool,
+    )
+
+    # 4. Overlay scan enrichment from scan_results.flags
+    flags_query = (
+        select(ScanResult.flags, ScanResult.created_at)
+        .join(AreaScan, ScanResult.scan_id == AreaScan.id)
+        .where(
+            ScanResult.parcel_id == parcel_id,
+            AreaScan.status == "completed",
+        )
+        .order_by(ScanResult.created_at.desc())
+        .limit(1)
+    )
+    flags_row = (await session.execute(flags_query)).one_or_none()
+    if flags_row is not None:
+        scan_flags, scan_created_at = flags_row
+        if scan_flags and isinstance(scan_flags, dict):
+            enrichment = assemble_enrichment_from_flags(scan_flags)
+            report_dict = property_data.model_dump(mode="json")
+            report_dict.update({k: v for k, v in enrichment.items() if v is not None})
+            flag_sources = build_flags_section_sources(scan_flags, scan_created_at)
+            report_dict.setdefault("section_sources", []).extend(
+                [s.model_dump(mode="json") for s in flag_sources]
+            )
+            property_data = PropertyReportResponse.model_validate(report_dict)
+    else:
+        logger.info("No scan flags for parcel %s, using aggregator fallback", parcel_id)
+
+    # 5. Save report
+    report, created = await save_report(
+        report_data=property_data.model_dump(mode="json"),
+        notes=notes,
+        project_id=project_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        session=session,
+        parcel_id=parcel_id,
+        return_status=True,
+    )
+
+    # 5b. Auto-generate checklist PDFs for newly created reports
+    if created:
+        try:
+            from app.reports.checklist_orchestrator import generate_checklist_documents
+
+            checklist_result = await generate_checklist_documents(
+                report_data=report.report_data,
+                report_name=report.report_name,
+                parcel_id=parcel_id,
+                user_id=user_id,
+                db=session,
+            )
+            logger.info(
+                "Checklist docs for parcel=%s: generated=%d failed=%d skipped=%d",
+                parcel_id,
+                len(checklist_result.generated),
+                len(checklist_result.failed),
+                len(checklist_result.skipped),
+            )
+        except Exception:
+            logger.warning(
+                "Checklist doc generation failed for parcel=%s — report saved successfully",
+                parcel_id,
+                exc_info=True,
+            )
+
+    return report, created
+
+
+async def enrich_report_for_view(
+    *,
+    report: "SavedReport",
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    http_client,
+    arq_pool,
+) -> dict:
+    """Enrich stored report data for viewing: v7 backfill + live BRK.
+
+    Returns enriched report_data dict (never mutates the report ORM object's report_data).
+    """
+    report_data = dict(report.report_data)
+
+    # Auto-upgrade older reports with missing v7 sections
+    if report_needs_v7_backfill(report_data):
+        address_input = extract_report_address_input(report_data, report.postcode)
+        if address_input is not None:
+            try:
+                fresh = await aggregate_property_data(
+                    input_data=address_input,
+                    client=http_client,
+                    session=session,
+                    force_refresh=False,
+                    arq_pool=arq_pool,
+                )
+                fresh_data = fresh.model_dump(mode="json")
+                report = await update_report_data(
+                    report_id=report.id,
+                    user_id=report.user_id,
+                    organization_id=organization_id,
+                    fresh_data=fresh_data,
+                    session=session,
+                )
+                report_data = dict(report.report_data)
+                report_data["brk_ownership"] = fresh_data.get("brk_ownership")
+            except Exception as e:
+                logger.warning("Report v7 auto-backfill skipped for %s: %s", report.id, str(e))
+
+    # BRK re-fetch: Kadaster Tier 3 requires live data per view
+    if report_data.get("brk_ownership") is None:
+        try:
+            stored_parcels = [
+                CadastralParcel.model_validate(p)
+                for p in report_data.get("cadastral_parcels", [])
+            ]
+            brk_section = await fetch_brk_ownership(stored_parcels)
+            report_data["brk_ownership"] = brk_section.model_dump(mode="json")
+        except Exception as e:
+            logger.warning("BRK re-fetch on view failed: %s", str(e))
+
+    return report_data
+
+
+async def export_report_pdf_bytes(
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+) -> tuple[bytes, str]:
+    """Generate PDF bytes for a report. Returns (pdf_bytes, filename)."""
+    from app.reports.pdf_export import generate_report_pdf
+
+    report = await get_report(
+        report_id=report_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        session=session,
+    )
+
+    pdf_bytes = await asyncio.to_thread(
+        generate_report_pdf, report.report_data, report.report_name,
+    )
+
+    postcode_clean = report.postcode.replace(" ", "")
+    filename = f"rapport-{postcode_clean}.pdf"
+    return pdf_bytes, filename
+
+
+async def generate_startdossier_bytes(
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    generated_by: str,
+    session: AsyncSession,
+) -> tuple[bytes, str]:
+    """Generate Risicobeoordeling Startdossier PDF. Returns (pdf_bytes, filename)."""
+    from app.reports.dossier_export import generate_dossier_pdf
+
+    report = await get_report(
+        report_id=report_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        session=session,
+    )
+
+    pdf_bytes = await asyncio.to_thread(
+        generate_dossier_pdf, report.report_data, report.report_name, generated_by,
+    )
+
+    await save_generated_dossier(
+        report_id=report.id,
+        user_id=user_id,
+        file_size=len(pdf_bytes),
+        session=session,
+    )
+
+    postcode_clean = report.postcode.replace(" ", "")
+    filename = f"risicobeoordeling-{postcode_clean}.pdf"
+    return pdf_bytes, filename

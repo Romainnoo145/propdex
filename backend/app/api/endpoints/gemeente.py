@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.schemas.gemeente import (
     BeschermdGezichtResponse,
+    ChecklistResponse,
     ErfgoedResponse,
     GemeenteProfile,
     HuisvestingsverordeningResponse,
@@ -25,7 +26,7 @@ from app.services.rvo_client import fetch_development_subsidies
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/api/gemeente", tags=["Gemeente"])
 
 
 # ── Static routes MUST come before /{gemeente_naam} wildcard ──
@@ -60,7 +61,7 @@ async def get_development_subsidies(
     )
 
 
-@router.get("/checklists/{use_case}")
+@router.get("/checklists/{use_case}", response_model=ChecklistResponse)
 @limiter.limit("60/minute")
 async def get_checklist_for_use_case(
     request: Request,

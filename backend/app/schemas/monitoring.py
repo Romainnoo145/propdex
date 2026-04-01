@@ -124,3 +124,11 @@ class FundaSnapshotStatsResponse(BaseModel):
     unique_listings: int
     matched_parcels: int
     latest_snapshot_date: str | None = None
+
+
+class RefreshMonitoringResponse(BaseModel):
+    """Response from on-demand monitoring refresh."""
+
+    status: str
+    new_changes: int
+    total_detected: int

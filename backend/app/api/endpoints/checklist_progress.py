@@ -16,7 +16,7 @@ from app.services.checklists import CHECKLISTS
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/checklist-progress", tags=["Checklist Progress"])
+router = APIRouter(prefix="/api/checklist-progress", tags=["ChecklistProgress"])
 
 VALID_USE_CASES = set(CHECKLISTS.keys())
 

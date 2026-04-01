@@ -484,3 +484,12 @@ class ParcelRiskProfileResponse(BaseModel):
     is_cached: bool = Field(
         default=False, description="True when all sub-components came from cache"
     )
+
+
+class ParcelResolveResponse(BaseModel):
+    """Response for resolving a parcel by address."""
+
+    parcel_id: str
+    address: str | None = None
+    lng: float
+    lat: float

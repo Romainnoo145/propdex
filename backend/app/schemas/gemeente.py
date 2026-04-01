@@ -104,3 +104,30 @@ class ErfgoedResponse(BaseModel):
     gemeente_naam: str = Field(description="Municipality name")
     beschermde_gezichten: list[BeschermdGezichtResponse] = Field(default_factory=list)
     total: int = Field(default=0)
+
+
+class ChecklistItemResponse(BaseModel):
+    """A single checklist item in the response."""
+
+    id: str
+    category: str
+    phase: str
+    title: str
+    description: str
+    required: bool = True
+    estimated_cost: str | None = None
+    cta_text: str | None = None
+    cta_type: str | None = None
+    detail: str | None = None
+    why_needed: str | None = None
+    provider_type: str | None = None
+
+
+class ChecklistResponse(BaseModel):
+    """Vergunning preparation checklist for a use case."""
+
+    use_case: str
+    items: list[ChecklistItemResponse]
+    total: int
+    phases: list[str]
+    error: str | None = None

@@ -33,7 +33,7 @@ class TestChecklistProgressSchemas:
     def test_response_serializes_to_dict(self) -> None:
         resp = ChecklistProgressResponse(checked_items=["spl-03"])
         d = resp.model_dump()
-        assert d == {"checked_items": ["spl-03"]}
+        assert d == {"checked_items": ["spl-03"], "uploaded_documents": {}}
 
 
 class TestValidUseCases:

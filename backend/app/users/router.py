@@ -33,7 +33,7 @@ from app.users.schemas import (
     UserProfileUpdate,
 )
 
-router = APIRouter(prefix="/api/users", tags=["users"])
+router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
 @router.patch("/me", response_model=UserResponse)
