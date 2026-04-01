@@ -7,7 +7,7 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Lightbulb, Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFavoriteNotes, useCreateNote, useUpdateNote, useDeleteNote } from '@/hooks/useFavorites'
 
@@ -87,12 +87,6 @@ export function MultiNoteBlock({ parcelId }: MultiNoteBlockProps) {
 
   return (
     <div className="space-y-2">
-      {notes.length === 0 && !addingNew && (
-        <div className="rounded-[20px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-6 text-center">
-          <p className="text-[13px] text-slate-400 italic">Nog geen notities</p>
-        </div>
-      )}
-
       {notes.map((note) => {
         const isExpanded = expandedId === note.id
         const preview = note.content.length > 80 ? `${note.content.slice(0, 80)}…` : note.content
@@ -207,16 +201,16 @@ export function MultiNoteBlock({ parcelId }: MultiNoteBlockProps) {
         )}
       </AnimatePresence>
 
-      {/* Add note button */}
+      {/* Add note — minimal amber plus */}
       {!addingNew && (
         <motion.button
           type="button"
           onClick={() => { setAddingNew(true); setExpandedId(null) }}
-          whileTap={{ scale: 0.97 }}
-          className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-[12px] font-semibold text-slate-500 transition-colors hover:border-[#F9A826]/40 hover:bg-[#FFFDF8] hover:text-[#0E1111]"
+          whileTap={{ scale: 0.9 }}
+          className="flex items-center gap-1.5 text-[12px] font-semibold text-[#F9A826] transition-colors hover:text-[#0E1111]"
         >
-          <Lightbulb size={14} />
-          Notitie toevoegen
+          <Plus size={16} strokeWidth={2.5} />
+          {notes.length === 0 ? 'Notitie toevoegen' : 'Toevoegen'}
         </motion.button>
       )}
     </div>
