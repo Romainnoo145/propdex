@@ -8,11 +8,11 @@
  * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { TrendingUp, ShieldAlert } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { RingProgress, SectionNotes } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -76,33 +76,23 @@ function parseFactors(
 
 /* ─── Sub-components ─────────────────────────────────────────── */
 
-function HeroScoreCell({
-  label,
-  value,
-}: {
-  label: string
-  value: number | null | undefined
-}) {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{label}</p>
-      <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">
-        {value != null ? Math.round(value) : '–'}
-      </p>
-    </div>
-  )
-}
+
 
 /* ─── Expandable factor row ──────────────────────────────────── */
 
-function FactorRow({ factor }: { factor: FactorResult }) {
+function FactorRow({ factor, totalWeight }: { factor: FactorResult; totalWeight: number }) {
   const [expanded, setExpanded] = useState(false)
 
   const formatWaarde = (v: unknown): string => {
     if (v == null) return '–'
     if (typeof v === 'number') return v.toLocaleString('nl-NL', { maximumFractionDigits: 2 })
     if (typeof v === 'boolean') return v ? 'Ja' : 'Nee'
-    return String(v)
+    if (typeof v === 'object' && v !== null) {
+      return Object.entries(v as Record<string, unknown>)
+        .map(([k, val]) => `${k}: ${val}`)
+        .join(', ')
+    }
+    return `${v}`
   }
 
   return (
@@ -129,7 +119,9 @@ function FactorRow({ factor }: { factor: FactorResult }) {
           {factor.genormaliseerde_score != null ? Math.round(factor.genormaliseerde_score) : '–'}
         </td>
         <td className="py-2.5 text-center text-[12px] text-slate-400">
-          {factor.gewicht != null ? `${(factor.gewicht * 100).toFixed(0)}%` : '–'}
+          {factor.gewicht != null && totalWeight > 0
+            ? `${((factor.gewicht / totalWeight) * 100).toFixed(0)}%`
+            : '–'}
         </td>
         <td className="py-2.5 text-right text-[13px] font-semibold text-[#0E1111] tabular-nums">
           {factor.bijdrage != null
@@ -163,6 +155,8 @@ function FactorRow({ factor }: { factor: FactorResult }) {
 /* ─── Factors table ─────────────────────────────────────────── */
 
 function FactorsTable({ factors, title }: { factors: FactorResult[]; title: string }) {
+  const totalWeight = factors.reduce((s, f) => s + (f.gewicht ?? 0), 0)
+
   return (
     <div>
       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">
@@ -191,59 +185,10 @@ function FactorsTable({ factors, title }: { factors: FactorResult[]; title: stri
         </thead>
         <tbody>
           {factors.map((f, i) => (
-            <FactorRow key={i} factor={f} />
+            <FactorRow key={i} factor={f} totalWeight={totalWeight} />
           ))}
         </tbody>
       </table>
-    </div>
-  )
-}
-
-/* ─── Upload Zone ────────────────────────────────────────────── */
-
-function UploadZone({ parcelId }: { parcelId: string }) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-  const existing = docs?.documents?.filter((d) => d.document_type === 'quickscan') ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType: 'quickscan', file })
-    e.target.value = ''
-  }
-
-  return (
-    <div
-      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
-      onClick={() => fileRef.current?.click()}
-    >
-      <div>
-        <p className="font-semibold text-slate-600">Quickscan documenten</p>
-        {existing.length > 0 && (
-          <p className="mt-0.5 text-slate-500">
-            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-          </p>
-        )}
-      </div>
-      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-        disabled={upload.isPending}
-        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
-      >
-        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
-      </button>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
-      Koppel een perceel om documenten te uploaden
     </div>
   )
 }
@@ -264,7 +209,7 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
           </p>
           <p className="mt-1 text-[12px] text-slate-400">Model: {data.score_model_version ?? 'onbekend'}</p>
         </div>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
+        <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} label="Quickscan documenten" />
       </div>
     )
   }
@@ -279,11 +224,11 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
 
   return (
     <div className="space-y-6">
-      {/* ── Hero Stat Row ─────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <HeroScoreCell label="Potentiescore" value={scores?.potentie} />
-        <HeroScoreCell label="Overall score" value={scores?.overall} />
-        <HeroScoreCell label="Risicoscore" value={scores?.risico} />
+      {/* ── Score circles ────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3 justify-items-center">
+        <RingProgress value={scores?.potentie ?? 0} max={100} label="Potentiescore" />
+        <RingProgress value={scores?.overall ?? 0} max={100} label="Overall score" />
+        <RingProgress value={scores?.risico ?? 0} max={100} label="Risicoscore" />
       </div>
 
       {data.score_model_version && (
@@ -306,11 +251,8 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
         </SectionInsightCard>
       )}
 
-      {/* ── Upload zone ───────────────────────────────────────── */}
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
-      </div>
+      {/* ── Notes / uploads ───────────────────────────────────── */}
+      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} label="Quickscan documenten" />
     </div>
   )
 }

@@ -6,11 +6,10 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { useRef } from 'react'
 import { MapPin, Building2, Zap, TrendingUp, Landmark } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { KVRow, SubCard, AmberCircleBadge, SectionNotes, formatArea, formatCurrency } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -26,16 +25,6 @@ const dateFmt = new Intl.DateTimeFormat('nl-NL', {
   month: 'long',
   year: 'numeric',
 })
-
-function formatArea(value: number | null | undefined): string {
-  if (value == null) return '–'
-  return `${Math.round(value).toLocaleString('nl-NL')} m²`
-}
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value == null) return '–'
-  return `EUR ${Math.round(value).toLocaleString('nl-NL')}`
-}
 
 /** Map BAG statuses to developer-oriented Dutch explanations */
 export const STATUS_EXPLANATIONS: Record<
@@ -59,15 +48,15 @@ export const STATUS_EXPLANATIONS: Record<
 /* ─── Badge helpers ──────────────────────────────────────────── */
 
 const ENERGY_BADGE_COLORS: Record<string, string> = {
-  'A++': 'bg-emerald-100 text-emerald-700',
-  'A+': 'bg-emerald-100 text-emerald-700',
-  A: 'bg-emerald-100 text-emerald-700',
+  'A++': 'bg-amber-100 text-amber-700',
+  'A+': 'bg-amber-100 text-amber-700',
+  A: 'bg-amber-100 text-amber-700',
   B: 'bg-amber-100 text-amber-700',
   C: 'bg-amber-100 text-amber-700',
-  D: 'bg-orange-100 text-orange-700',
-  E: 'bg-orange-100 text-orange-700',
-  F: 'bg-red-100 text-red-700',
-  G: 'bg-red-100 text-red-700',
+  D: 'bg-slate-100 text-slate-600',
+  E: 'bg-slate-100 text-slate-600',
+  F: 'bg-slate-100 text-slate-600',
+  G: 'bg-slate-100 text-slate-600',
 }
 
 function EnergyBadge({ label }: { label: string }) {
@@ -80,9 +69,9 @@ function EnergyBadge({ label }: { label: string }) {
 }
 
 const SEVERITY_BADGE_COLORS: Record<string, string> = {
-  high: 'bg-red-100 text-red-700',
+  high: 'bg-amber-200 text-amber-800',
   medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-emerald-100 text-emerald-700',
+  low: 'bg-slate-100 text-slate-600',
 }
 
 function SeverityBadge({ label, severity }: { label: string; severity: string }) {
@@ -100,90 +89,6 @@ function MonumentBadge({ isMonument }: { isMonument: boolean }) {
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
       {isMonument ? 'Beschermd' : 'Vrij'}
     </span>
-  )
-}
-
-/* ─── Sub-components ─────────────────────────────────────────── */
-
-function KVRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string
-  value: string | null | undefined
-  mono?: boolean
-}) {
-  if (!value) return null
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
-      <span className="text-[12px] text-slate-400">
-        {label}
-      </span>
-      <span
-        className={`text-[13px] font-semibold text-[#0E1111] text-right ${mono ? 'font-mono text-[11px]' : ''}`}
-      >
-        {value}
-      </span>
-    </div>
-  )
-}
-
-/* ─── Upload Zone ────────────────────────────────────────────── */
-
-function UploadZone({
-  parcelId,
-  documentType,
-  label,
-}: {
-  parcelId: string
-  documentType: string
-  label: string
-}) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-
-  const existing = docs?.documents?.filter((d) => d.document_type === documentType) ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType, file })
-    e.target.value = ''
-  }
-
-  return (
-    <div
-      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
-      onClick={() => fileRef.current?.click()}
-    >
-      <div>
-        <p className="font-semibold text-slate-600">{label}</p>
-        {existing.length > 0 && (
-          <p className="mt-0.5 text-slate-500">
-            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-          </p>
-        )}
-      </div>
-      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-        disabled={upload.isPending}
-        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
-      >
-        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
-      </button>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
-      Koppel een perceel om documenten te uploaden
-    </div>
   )
 }
 
@@ -205,45 +110,21 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
     <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       {/* ── 1. Hero Stats Row ──────────────────────────────────── */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bouwjaar</p>
-          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
-            {building?.bouwjaar ?? '–'}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Oppervlakte</p>
-          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
-            {formatArea(building?.oppervlakte)}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Gebruiksdoel</p>
-          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
-            {building?.gebruiksdoel?.[0] ?? '–'}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Energielabel</p>
-          <p className="mt-1 flex justify-center">
-            {energy?.energieklasse
-              ? <EnergyBadge label={energy.energieklasse} />
-              : <span className="text-[18px] font-bold text-[#0E1111] tracking-tight">N/A</span>}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">WOZ Waarde</p>
-          <p className="text-[15px] font-bold text-[#0E1111] tracking-tight mt-1">
-            {formatCurrency(woz?.meest_recente_waarde)}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Monument</p>
-          <p className="mt-1 flex justify-center">
-            <MonumentBadge isMonument={isMonument} />
-          </p>
-        </div>
+      <div className="flex flex-wrap gap-4 justify-start">
+        <AmberCircleBadge label="Bouwjaar" value={building?.bouwjaar ?? '–'} />
+        <AmberCircleBadge label="Oppervlakte" value={formatArea(building?.oppervlakte)} size="sm" />
+        <AmberCircleBadge label="Gebruiksdoel" value={building?.gebruiksdoel?.[0] ?? '–'} size="sm" />
+        <AmberCircleBadge
+          label="Energielabel"
+          value={energy?.energieklasse
+            ? <EnergyBadge label={energy.energieklasse} />
+            : 'N/A'}
+        />
+        <AmberCircleBadge label="WOZ Waarde" value={formatCurrency(woz?.meest_recente_waarde)} size="sm" />
+        <AmberCircleBadge
+          label="Monument"
+          value={<MonumentBadge isMonument={isMonument} />}
+        />
       </div>
 
       {/* ── 2. Adres & Gebouw Details (side by side on lg) ───── */}
@@ -302,29 +183,23 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
       {/* ── 3. Energielabel Detail ────────────────────────────── */}
       <SectionInsightCard kicker="Energie" title="Energielabel" Icon={Zap}>
         {energy && energy.energieklasse ? (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Klasse</p>
-              <p className="mt-1 flex justify-center">
-                <EnergyBadge label={energy.energieklasse} />
-              </p>
+          <div>
+            <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+              <span className="text-[12px] text-slate-400">Klasse</span>
+              <EnergyBadge label={energy.energieklasse} />
             </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Registratie</p>
-              <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
-                {energy.registratie_datum
-                  ? dateFmt.format(new Date(energy.registratie_datum))
-                  : '–'}
-              </p>
-            </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Geldig tot</p>
-              <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
-                {energy.geldig_tot
-                  ? dateFmt.format(new Date(energy.geldig_tot))
-                  : '–'}
-              </p>
-            </div>
+            <KVRow
+              label="Registratie"
+              value={energy.registratie_datum
+                ? dateFmt.format(new Date(energy.registratie_datum))
+                : '–'}
+            />
+            <KVRow
+              label="Geldig tot"
+              value={energy.geldig_tot
+                ? dateFmt.format(new Date(energy.geldig_tot))
+                : '–'}
+            />
           </div>
         ) : (
           <p className="text-[13px] text-slate-500">
@@ -338,20 +213,20 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         {woz ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              <SubCard>
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Meest recente waarde</p>
                 <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
                   {formatCurrency(woz.meest_recente_waarde)}
                 </p>
-              </div>
-              <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+              </SubCard>
+              <SubCard>
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Peildatum</p>
                 <p className="mt-1 text-[13px] font-semibold text-[#0E1111]">
                   {woz.meest_recente_peildatum
                     ? new Date(woz.meest_recente_peildatum).toLocaleDateString('nl-NL')
                     : '–'}
                 </p>
-              </div>
+              </SubCard>
             </div>
             {woz.low_confidence && (
               <div className="rounded-[16px] border border-[#F9A826]/15 bg-[#F9A826]/[0.04] px-4 py-3">
@@ -401,14 +276,10 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         )}
 
         {/* Upload zone inside Monumentstatus card flow */}
-        <div className="mt-4">
-          {sourceParcelId ? (
-            <UploadZone parcelId={sourceParcelId} documentType="perceeldata" label="Document toevoegen" />
-          ) : (
-            <DisabledUploadZone />
-          )}
-        </div>
       </SectionInsightCard>
+
+      {/* ── 6. Section Notes ──────────────────────────────────── */}
+      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['locatie']} />
     </div>
   )
 }

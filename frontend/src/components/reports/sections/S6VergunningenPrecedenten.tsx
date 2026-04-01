@@ -7,11 +7,10 @@
  * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
-import { useRef } from 'react'
 import { FileText, Scale } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { SectionNotes, SubCard } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -31,59 +30,10 @@ const OUTCOME_LABELS: Record<string, string> = {
 }
 
 function outcomeClass(outcome: string): string {
-  if (outcome === 'granted') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (outcome === 'granted') return 'border-amber-200 bg-amber-50 text-amber-700'
   if (outcome === 'requested') return 'border-[#F9A826]/25 bg-[#F9A826]/10 text-[#F9A826]'
-  if (outcome === 'rejected' || outcome === 'withdrawn') return 'border-red-200 bg-red-50 text-red-700'
+  if (outcome === 'rejected' || outcome === 'withdrawn') return 'border-slate-200 bg-slate-50 text-slate-600'
   return 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600'
-}
-
-/* ─── Upload Zone ────────────────────────────────────────────── */
-
-function UploadZone({ parcelId }: { parcelId: string }) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-  const existing = docs?.documents?.filter((d) => d.document_type === 'vergunninghistorie') ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType: 'vergunninghistorie', file })
-    e.target.value = ''
-  }
-
-  return (
-    <div
-      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
-      onClick={() => fileRef.current?.click()}
-    >
-      <div>
-        <p className="font-semibold text-slate-600">Vergunninghistorie documenten</p>
-        {existing.length > 0 && (
-          <p className="mt-0.5 text-slate-500">
-            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-          </p>
-        )}
-      </div>
-      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-        disabled={upload.isPending}
-        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
-      >
-        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
-      </button>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
-      Koppel een perceel om documenten te uploaden
-    </div>
-  )
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -105,7 +55,7 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
         </div>
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-          {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
+          {sourceParcelId ? <SectionNotes parcelId={sourceParcelId} documentTypes={['vergunninghistorie']} label="Vergunninghistorie documenten" /> : <SectionNotes parcelId={null} />}
         </div>
       </div>
     )
@@ -254,7 +204,7 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
       {/* ── Upload zone ───────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Documenten</p>
-        {sourceParcelId ? <UploadZone parcelId={sourceParcelId} /> : <DisabledUploadZone />}
+        <SectionNotes parcelId={sourceParcelId} documentTypes={['vergunninghistorie']} label="Vergunninghistorie documenten" />
       </div>
     </div>
   )

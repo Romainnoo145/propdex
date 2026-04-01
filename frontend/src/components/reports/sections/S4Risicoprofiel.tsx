@@ -7,11 +7,11 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { useRef } from 'react'
 import { ShieldAlert, Droplets, Construction, AlertTriangle, TreePine } from 'lucide-react'
 import type { PropertyReportResponse, WBBDossierRef } from '@/lib/types/property'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { KVRow, SubCard, formatCurrency, PillBadgeRow, SectionNotes } from '../components'
+import type { PillBadgeItem } from '../components/PillBadgeRow'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -23,11 +23,11 @@ export interface S4RisicoprofielProps {
 /* ─── Risk styling helpers ───────────────────────────────────── */
 
 const RISK_BADGE_STYLE: Record<string, string> = {
-  hoog: 'border-red-200 bg-red-50 text-red-700',
+  hoog: 'border-amber-200 bg-amber-50 text-amber-700',
   middel: 'border-amber-200 bg-amber-50 text-amber-700',
-  laag: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  geen: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  onbekend: 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600',
+  laag: 'border-slate-200 bg-slate-50 text-slate-600',
+  geen: 'border-slate-200 bg-slate-50 text-slate-600',
+  onbekend: 'border-slate-200 bg-slate-50 text-slate-600',
 }
 
 const RISK_LABEL: Record<string, string> = {
@@ -48,104 +48,20 @@ function riskBadge(risk: string) {
   )
 }
 
-/* ─── KVRow ──────────────────────────────────────────────────── */
-
-function KVRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string
-  value: string | null | undefined
-  mono?: boolean
-}) {
-  if (!value) return null
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
-      <span className="text-[12px] text-slate-400">{label}</span>
-      <span
-        className={`text-[13px] font-semibold text-[#0E1111] text-right ${mono ? 'font-mono text-[11px]' : ''}`}
-      >
-        {value}
-      </span>
-    </div>
-  )
-}
-
 /* ─── WBB Row ────────────────────────────────────────────────── */
 
 function WBBRow({ dossier }: { dossier: WBBDossierRef }) {
   return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 space-y-1">
+    <SubCard className="space-y-1">
       {dossier.status_oord && <p className="text-[13px] font-semibold text-[#0E1111]">{dossier.status_oord}</p>}
       {dossier.vervolg_wbb && <p className="text-[11px] text-slate-600">Vervolg: {dossier.vervolg_wbb}</p>}
       {dossier.administrator_nm && <p className="text-[11px] text-slate-400">Bevoegd gezag: {dossier.administrator_nm}</p>}
-    </div>
+    </SubCard>
   )
 }
 
-/* ─── Upload Zone (dashed-border pattern matching S1) ────────── */
-
-function UploadZone({
-  parcelId,
-  documentTypes,
-  label,
-}: {
-  parcelId: string
-  documentTypes: string[]
-  label: string
-}) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-  const existing = docs?.documents?.filter((d) => documentTypes.includes(d.document_type)) ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType: documentTypes[0] ?? 'overig', file })
-    e.target.value = ''
-  }
-
-  return (
-    <div
-      className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400 flex items-center justify-between gap-3 cursor-pointer"
-      onClick={() => fileRef.current?.click()}
-    >
-      <div>
-        <p className="font-semibold text-slate-600">{label}</p>
-        {existing.length > 0 && (
-          <p className="mt-0.5 text-slate-500">
-            {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-          </p>
-        )}
-      </div>
-      <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
-        disabled={upload.isPending}
-        className="text-[12px] font-semibold text-slate-500 hover:text-[#0E1111] transition-colors disabled:opacity-50"
-      >
-        {upload.isPending ? 'Uploaden...' : '+ Toevoegen'}
-      </button>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3 text-[12px] text-slate-400">
-      Koppel een perceel om documenten te uploaden
-    </div>
-  )
-}
-
-/* ─── Currency formatting ────────────────────────────────────── */
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value == null) return '–'
-  return `€ ${Math.round(value).toLocaleString('nl-NL')}`
+function riskVariant(risk: string): 'amber' | 'slate' {
+  return risk === 'hoog' || risk === 'middel' ? 'amber' : 'slate'
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -166,36 +82,35 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
 
   const dossierCount = bodem?.dossiers?.length ?? 0
 
+  // Build pill badge items for hero row
+  const pillItems: PillBadgeItem[] = [
+    {
+      label: 'Totaal risico',
+      value: frp ? (RISK_LABEL[frp.overall_risk] ?? frp.overall_risk) : '–',
+      variant: frp ? riskVariant(frp.overall_risk) : 'slate',
+    },
+    {
+      label: 'Fundering',
+      value: fundRisk ? (RISK_LABEL[fundRisk.risk] ?? fundRisk.risk) : '–',
+      variant: fundRisk ? riskVariant(fundRisk.risk) : 'slate',
+    },
+    {
+      label: 'Asbest',
+      value: asbest ? (RISK_LABEL[asbest.risk] ?? asbest.risk) : '–',
+      variant: asbest ? riskVariant(asbest.risk) : 'slate',
+    },
+    {
+      label: 'Bodem',
+      value: dossierCount > 0 ? `${dossierCount} dossier${dossierCount !== 1 ? 's' : ''}` : 'Geen verontreiniging',
+      variant: dossierCount > 0 ? 'amber' : 'slate',
+    },
+  ]
+
   return (
     <div className="space-y-6">
 
-      {/* ── Hero Stat Row ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Totaal risico</p>
-          <p className="mt-1 flex justify-center">
-            {frp ? riskBadge(frp.overall_risk) : <span className="text-[18px] font-bold text-[#0E1111] tracking-tight">–</span>}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Fundering</p>
-          <p className="mt-1 flex justify-center">
-            {fundRisk ? riskBadge(fundRisk.risk) : <span className="text-[18px] font-bold text-[#0E1111] tracking-tight">–</span>}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Asbest</p>
-          <p className="mt-1 flex justify-center">
-            {asbest ? riskBadge(asbest.risk) : <span className="text-[18px] font-bold text-[#0E1111] tracking-tight">–</span>}
-          </p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bodem</p>
-          <p className="text-[18px] font-bold text-[#0E1111] tracking-tight mt-1">
-            {dossierCount > 0 ? `${dossierCount} dossier${dossierCount !== 1 ? 's' : ''}` : 'Geen verontreiniging'}
-          </p>
-        </div>
-      </div>
+      {/* ── Hero Pill Badge Row ────────────────────────────────── */}
+      <PillBadgeRow items={pillItems} />
 
       {/* ── 1. Fysiek Risicoprofiel ───────────────────────────── */}
       {frp && (
@@ -225,13 +140,6 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
           </div>
         )}
-        <div className="mt-4">
-          {sourceParcelId ? (
-            <UploadZone parcelId={sourceParcelId} documentTypes={['bodem', 'fundering']} label="Bodem / Fundering rapporten" />
-          ) : (
-            <DisabledUploadZone />
-          )}
-        </div>
       </SectionInsightCard>
 
       {/* ── 3. Funderingsrisico ───────────────────────────────── */}
@@ -287,20 +195,13 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         ) : (
           <p className="text-[13px] text-slate-600 leading-relaxed">Geen asbestrisicodata beschikbaar</p>
         )}
-        <div className="mt-4">
-          {sourceParcelId ? (
-            <UploadZone parcelId={sourceParcelId} documentTypes={['asbest']} label="Asbestinventarisatierapport" />
-          ) : (
-            <DisabledUploadZone />
-          )}
-        </div>
       </SectionInsightCard>
 
       {/* ── 5. Omgevingsrisico's ──────────────────────────────── */}
       {(natura ?? overstroom ?? geluid ?? lucht) && (
         <SectionInsightCard kicker="Omgeving" title="Omgevingsrisico's" Icon={TreePine}>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            <SubCard>
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Natura 2000</p>
               <p className="mt-1 text-[13px] font-semibold text-slate-600">
                 {natura ? `${(natura.distance_m as number | undefined) != null ? `${Math.round(natura.distance_m as number)}m` : 'In zone'}` : 'Onbekend'}
@@ -308,8 +209,8 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               {(natura?.zone_name as string | undefined) && (
                 <p className="mt-0.5 text-[11px] text-slate-400">{natura!.zone_name as string}</p>
               )}
-            </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            </SubCard>
+            <SubCard>
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Overstromingsrisico</p>
               <p className="mt-1 text-[13px] font-semibold text-slate-600">
                 {(overstroom?.risk_category as string | undefined) ?? 'Onbekend'}
@@ -317,8 +218,8 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               {(overstroom?.risk_label as string | undefined) && (
                 <p className="mt-0.5 text-[11px] text-slate-400">{overstroom!.risk_label as string}</p>
               )}
-            </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            </SubCard>
+            <SubCard>
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Geluidbelasting</p>
               <p className="mt-1 text-[13px] font-semibold text-slate-600">
                 {(geluid?.lden_category as string | undefined) ?? 'Onbekend'}
@@ -326,8 +227,8 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               {(geluid?.lden_db as number | undefined) != null && (
                 <p className="mt-0.5 text-[11px] text-slate-400">{(geluid!.lden_db as number).toFixed(0)} dB Lden</p>
               )}
-            </div>
-            <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+            </SubCard>
+            <SubCard>
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Luchtkwaliteit</p>
               <p className="mt-1 text-[13px] font-semibold text-slate-600">
                 {(lucht?.no2_category as string | undefined) ?? 'Onbekend'}
@@ -335,17 +236,17 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               {(lucht?.no2_ug_m3 as number | undefined) != null && (
                 <p className="mt-0.5 text-[11px] text-slate-400">NO₂ {(lucht!.no2_ug_m3 as number).toFixed(0)} μg/m³</p>
               )}
-            </div>
-          </div>
-          <div className="mt-4">
-            {sourceParcelId ? (
-              <UploadZone parcelId={sourceParcelId} documentTypes={['geluid', 'stikstof']} label="Geluid / Stikstof rapporten" />
-            ) : (
-              <DisabledUploadZone />
-            )}
+            </SubCard>
           </div>
         </SectionInsightCard>
       )}
+
+      {/* ── Section Notes ─────────────────────────────────────── */}
+      <SectionNotes
+        parcelId={sourceParcelId ?? null}
+        documentTypes={['bodem', 'fundering', 'asbest', 'geluid', 'stikstof']}
+        label="Risicoprofiel documenten"
+      />
     </div>
   )
 }

@@ -6,11 +6,10 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { useRef } from 'react'
 import { Landmark, Users, TrendingUp } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { SubCard, SectionNotes, formatArea } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -19,18 +18,11 @@ export interface S2KadasterEigendomProps {
   sourceParcelId?: string | null
 }
 
-/* ─── Helpers ────────────────────────────────────────────────── */
-
-function formatArea(value: number | null | undefined): string {
-  if (value == null) return '–'
-  return `${Math.round(value).toLocaleString('nl-NL')} m²`
-}
-
 /* ─── Badge helpers ──────────────────────────────────────────── */
 
 const OWNER_TYPE_COLORS: Record<string, string> = {
-  natuurlijk_persoon: 'bg-blue-100 text-blue-700',
-  rechtspersoon: 'bg-purple-100 text-purple-700',
+  natuurlijk_persoon: 'bg-amber-100 text-amber-700',
+  rechtspersoon: 'bg-slate-100 text-slate-600',
   overheid: 'bg-amber-100 text-amber-700',
   onbekend: 'bg-slate-100 text-slate-600',
 }
@@ -54,7 +46,7 @@ function OwnerTypeBadge({ type }: { type: string }) {
 
 function HypotheekBadge() {
   return (
-    <span className="inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-600">
+    <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
       Hypotheek geregistreerd
     </span>
   )
@@ -63,10 +55,10 @@ function HypotheekBadge() {
 function ListingDurationBadge({ days }: { days: number }) {
   const colors =
     days < 30
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'bg-amber-100 text-amber-700'
       : days <= 180
         ? 'bg-amber-100 text-amber-700'
-        : 'bg-red-100 text-red-700'
+        : 'bg-slate-100 text-slate-600'
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${colors}`}>
       {days} dagen
@@ -77,74 +69,14 @@ function ListingDurationBadge({ days }: { days: number }) {
 function MarketFreshnessBadge({ days }: { days: number }) {
   const colors =
     days < 30
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'bg-amber-100 text-amber-700'
       : days <= 90
         ? 'bg-amber-100 text-amber-700'
-        : 'bg-red-100 text-red-700'
+        : 'bg-slate-100 text-slate-600'
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${colors}`}>
       {days}d geleden
     </span>
-  )
-}
-
-/* ─── Upload Zone ────────────────────────────────────────────── */
-
-function UploadZone({
-  parcelId,
-  documentTypes,
-  label,
-}: {
-  parcelId: string
-  documentTypes: string[]
-  label: string
-}) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-
-  const existing =
-    docs?.documents?.filter((d) => documentTypes.includes(d.document_type)) ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType: documentTypes[0] ?? 'overig', file })
-    e.target.value = ''
-  }
-
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold text-slate-600">{label}</p>
-          {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-            </p>
-          )}
-        </div>
-        <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
-        >
-          {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="rounded-[16px] border border-dashed border-[#EAEFEF] px-4 py-3">
-      <p className="text-[11px] text-slate-400">
-        Koppel een perceel om documenten te uploaden
-      </p>
-    </div>
   )
 }
 
@@ -165,10 +97,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
         ) : (
           <div className="space-y-3">
             {parcels.map((parcel, idx) => (
-              <div
-                key={idx}
-                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
-              >
+              <SubCard key={idx}>
                 {parcel.kadastrale_aanduiding && (
                   <p className="mb-2 text-[13px] font-semibold text-[#0E1111]">
                     <a
@@ -201,7 +130,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                     </span>
                   </div>
                 </div>
-              </div>
+              </SubCard>
             ))}
             {parcels.length > 1 && totalOpp > 0 && (
               <div className="flex justify-end">
@@ -213,30 +142,19 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
           </div>
         )}
 
-        <div className="mt-4">
-          {sourceParcelId ? (
-            <UploadZone
-              parcelId={sourceParcelId}
-              documentTypes={['kadaster', 'eigendom', 'erfpacht']}
-              label="Kadaster / Eigendom / Erfpacht"
-            />
-          ) : (
-            <DisabledUploadZone />
-          )}
-        </div>
       </SectionInsightCard>
 
       {/* ── BRK Eigendom ── */}
       <SectionInsightCard kicker="Eigendom" title="BRK Eigendom" Icon={Users}>
         {!ownership ? (
-          <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+          <SubCard>
             <p className="text-[13px] text-slate-600">
               Eigendomsgegevens niet opgeslagen (Kadaster Tier 3 voorwaarden)
             </p>
             <p className="mt-1 text-[11px] text-slate-500">
               Open de eigendomsmodal vanuit de kaartweergave om actuele BRK-data op te halen.
             </p>
-          </div>
+          </SubCard>
         ) : ownership.status !== 'available' || !ownership.data || ownership.data.length === 0 ? (
           <p className="text-[13px] text-slate-500">
             {ownership.reason ?? 'Geen eigendomsdata beschikbaar'}
@@ -244,10 +162,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
         ) : (
           <div className="space-y-3">
             {ownership.data.map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3"
-              >
+              <SubCard key={idx}>
                 <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
                   <span className="text-[12px] text-slate-400">Perceel</span>
                   <span className="text-[13px] font-semibold text-[#0E1111] text-right">
@@ -279,7 +194,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
                     ))}
                   </div>
                 )}
-              </div>
+              </SubCard>
             ))}
           </div>
         )}
@@ -292,7 +207,7 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
             Nog geen Funda-signalen beschikbaar voor dit adres
           </p>
         ) : (
-          <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+          <SubCard>
             <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
               <span className="text-[12px] text-slate-400">Te koop sinds</span>
               <ListingDurationBadge days={signals.listing_duration_days} />
@@ -313,9 +228,12 @@ export function S2KadasterEigendom({ data, sourceParcelId }: S2KadasterEigendomP
               <span className="text-[12px] text-slate-400">Laatste waarneming</span>
               <MarketFreshnessBadge days={signals.days_since_last_seen} />
             </div>
-          </div>
+          </SubCard>
         )}
       </SectionInsightCard>
+
+      {/* ── Section Notes ─────────────────────────────────────── */}
+      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['kadaster']} />
     </div>
   )
 }

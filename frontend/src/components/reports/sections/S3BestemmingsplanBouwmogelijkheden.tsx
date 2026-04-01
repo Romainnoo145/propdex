@@ -6,12 +6,11 @@
  * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { useRef } from 'react'
 import { FileText, Ruler, Brain, ShieldCheck } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { splitZoningPlans } from '@/lib/zoningPlans'
-import { useParcelDocuments, useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { SectionNotes, SubCard, formatArea } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -20,19 +19,12 @@ export interface S3BestemmingsplanBouwmogelijkhedenProps {
   sourceParcelId?: string | null
 }
 
-/* ─── Helpers ────────────────────────────────────────────────── */
-
-function formatArea(value: number | null | undefined): string {
-  if (value == null) return '–'
-  return `${Math.round(value).toLocaleString('nl-NL')} m²`
-}
-
 /* ─── Badge helpers ──────────────────────────────────────────── */
 
 function PlanStatusBadge({ status }: { status: string }) {
   const colors =
     status === 'Vastgesteld'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
       : status === 'Ontwerp'
         ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
         : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
@@ -46,13 +38,13 @@ function PlanStatusBadge({ status }: { status: string }) {
 function AIStatusBadge({ status }: { status: string }) {
   const colors =
     status === 'complete'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
       : status === 'in_progress'
         ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
         : status === 'failed'
-          ? 'border-red-200 bg-red-50 text-red-700'
+          ? 'border-slate-200 bg-slate-50 text-slate-600'
           : status === 'opt_in_required'
-            ? 'border-blue-200 bg-blue-50 text-blue-700'
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
             : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
   const labels: Record<string, string> = {
     complete: 'Voltooid',
@@ -73,7 +65,7 @@ function WkbStatusBadge({ status }: { status: string }) {
     status === 'likely_required'
       ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
       : status === 'likely_not_required'
-        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
         : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
   const labels: Record<string, string> = {
     likely_required: 'Waarschijnlijk vereist',
@@ -84,54 +76,6 @@ function WkbStatusBadge({ status }: { status: string }) {
     <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
       {labels[status] ?? 'Onzeker'}
     </span>
-  )
-}
-
-/* ─── Upload Zone ────────────────────────────────────────────── */
-
-function UploadZone({ parcelId, documentTypes, label }: { parcelId: string; documentTypes: string[]; label: string }) {
-  const fileRef = useRef<HTMLInputElement>(null)
-  const { data: docs } = useParcelDocuments(parcelId)
-  const upload = useUploadDocument()
-  const existing = docs?.documents?.filter((d) => documentTypes.includes(d.document_type)) ?? []
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    upload.mutate({ parcelId, documentType: documentTypes[0] ?? 'overig', file })
-    e.target.value = ''
-  }
-
-  return (
-    <div className="mt-4 rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold text-slate-600">{label}</p>
-          {existing.length > 0 && (
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              {existing.length} document{existing.length !== 1 ? 'en' : ''} geupload
-            </p>
-          )}
-        </div>
-        <input ref={fileRef} type="file" onChange={handleChange} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={upload.isPending}
-          className="flex items-center gap-1.5 rounded-full border border-[#EAEFEF] px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-[#0E1111] disabled:opacity-50"
-        >
-          {upload.isPending ? 'Uploaden...' : '+ Document toevoegen'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function DisabledUploadZone() {
-  return (
-    <div className="mt-4 rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
-      <p className="text-[11px] text-slate-400">Koppel een perceel om documenten te uploaden</p>
-    </div>
   )
 }
 
@@ -151,10 +95,10 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
           return (
             <div className="space-y-3">
               {zoning.primary_bestemming && (
-                <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+                <SubCard>
                   <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Hoofdbestemming</p>
                   <p className="mt-0.5 text-[13px] font-semibold text-[#0E1111]">{zoning.primary_bestemming}</p>
-                </div>
+                </SubCard>
               )}
               {zoning.building_dimensions && (
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -164,17 +108,17 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                     ['Bebouwings%', zoning.building_dimensions.max_bebouwingspercentage, '%'],
                     ['Max. FSI', zoning.building_dimensions.max_floor_area_ratio, undefined],
                   ] as const).map(([label, value, unit]) => (
-                    <div key={label} className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+                    <SubCard key={label} className="text-center">
                       <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{label}</p>
                       <p className="mt-0.5 text-[13px] font-semibold text-[#0E1111]">
                         {value != null ? `${value}${unit ?? ''}` : '–'}
                       </p>
-                    </div>
+                    </SubCard>
                   ))}
                 </div>
               )}
               {actionablePlans.slice(0, 3).map((plan, idx) => (
-                <div key={idx} className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+                <SubCard key={idx}>
                   <p className="text-[13px] font-semibold text-[#0E1111]">{plan.plan_naam}</p>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
                     {plan.plan_status && <PlanStatusBadge status={plan.plan_status} />}
@@ -190,7 +134,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                       ))}
                     </div>
                   )}
-                </div>
+                </SubCard>
               ))}
               {policyPlans.length > 0 && actionablePlans.length === 0 && (
                 <p className="text-[11px] text-slate-500">Geen perceelsspecifieke plannen — alleen bovenlokale beleidskaders beschikbaar ({policyPlans.length})</p>
@@ -205,11 +149,7 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
           )
         })()}
         <div className="mt-4">
-          {sourceParcelId ? (
-            <UploadZone parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} label="Bestemmingsplan / Bestemmingscheck" />
-          ) : (
-            <DisabledUploadZone />
-          )}
+          <SectionNotes parcelId={sourceParcelId} documentTypes={['bestemmingsplan', 'bestemmingscheck', 'milieuzones']} label="Bestemmingsplan documenten" />
         </div>
       </SectionInsightCard>
 
@@ -225,10 +165,10 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
                 ['Gebouwd', formatArea(buildability_delta.current_built_area_m2)],
                 ['Resterend bebouwbaar', buildability_delta.remaining_buildable_area_m2 != null ? formatArea(buildability_delta.remaining_buildable_area_m2) : 'Niet berekend'],
               ] as const).map(([label, display]) => (
-                <div key={label} className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3">
+                <SubCard key={label}>
                   <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{label}</p>
                   <p className="mt-0.5 text-[13px] font-semibold text-[#0E1111]">{display}</p>
-                </div>
+                </SubCard>
               ))}
             </div>
             {buildability_delta.notes.slice(0, 2).map((note, i) => (

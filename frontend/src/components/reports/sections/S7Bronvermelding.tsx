@@ -10,6 +10,7 @@
 import { Database, Info } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { PillBadgeRow } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -68,10 +69,10 @@ const STATUS_LABEL: Record<SourceStatus, string> = {
 }
 
 const STATUS_CLS: Record<SourceStatus, string> = {
-  ok: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  ok: 'border-amber-200 bg-amber-50 text-amber-700',
   unlinked: 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600',
   blocked: 'border-amber-200 bg-amber-50 text-amber-700',
-  error: 'border-red-200 bg-red-50 text-red-700',
+  error: 'border-slate-200 bg-slate-50 text-slate-600',
 }
 
 const CONFIDENCE_LABEL: Record<string, string> = {
@@ -81,9 +82,9 @@ const CONFIDENCE_LABEL: Record<string, string> = {
 }
 
 const CONFIDENCE_CLS: Record<string, string> = {
-  HIGH: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  HIGH: 'border-amber-200 bg-amber-50 text-amber-700',
   MEDIUM: 'border-amber-200 bg-amber-50 text-amber-700',
-  LOW: 'border-red-200 bg-red-50 text-red-700',
+  LOW: 'border-slate-200 bg-slate-50 text-slate-600',
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -169,20 +170,11 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
   return (
     <div className="space-y-6">
       {/* ── Hero stat row ─────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bronnen OK</p>
-          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{okCount}</p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Niet gekoppeld</p>
-          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{unlinkedCount}</p>
-        </div>
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Fouten</p>
-          <p className="mt-1 text-[48px] font-black text-[#0E1111] tabular-nums leading-none">{errorCount}</p>
-        </div>
-      </div>
+      <PillBadgeRow items={[
+        { label: 'Bronnen OK', value: String(okCount), variant: 'amber' },
+        { label: 'Niet gekoppeld', value: String(unlinkedCount), variant: 'slate' },
+        { label: 'Fouten', value: String(errorCount), variant: errorCount > 0 ? 'slate' : 'amber' },
+      ]} />
 
       {/* ── Source table ──────────────────────────────────────── */}
       <SectionInsightCard kicker="Databronnen" title="Bronvermelding" Icon={Database}>
