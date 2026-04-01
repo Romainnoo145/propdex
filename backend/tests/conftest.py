@@ -211,6 +211,7 @@ async def create_test_user(test_db: AsyncSession):
             email_verified=kwargs.get("email_verified", True),
             auth_provider=kwargs.get("auth_provider", "email"),
             is_active=kwargs.get("is_active", True),
+            is_superuser=kwargs.get("is_superuser", False),
         )
         test_db.add(user)
         await test_db.commit()

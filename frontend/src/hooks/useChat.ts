@@ -83,6 +83,7 @@ export interface ReportSummary {
 /** API response from POST /api/agents/chat */
 export interface ChatApiResponse {
   intent: string
+  conversation_id?: string | null
   context_intent?: string | null
   params: Record<string, unknown>
   data: unknown
@@ -116,6 +117,7 @@ export function useChat() {
   const lastIntentRef = useRef<string | null>(null)
   const lastParamsRef = useRef<Record<string, unknown> | null>(null)
   const lastCountRef = useRef<number | null>(null)
+  const conversationIdRef = useRef<string | null>(null)
 
   const mutation = useMutation<ChatApiResponse, Error, { message: string; forceResults?: boolean }>({
     mutationFn: ({ message, forceResults }) =>
@@ -123,6 +125,7 @@ export function useChat() {
         method: 'POST',
         body: JSON.stringify({
           message,
+          conversation_id: conversationIdRef.current,
           previous_intent: lastIntentRef.current,
           previous_params: lastParamsRef.current,
           previous_count: lastCountRef.current,
@@ -150,6 +153,9 @@ export function useChat() {
       { message: trimmed, forceResults: opts?.forceResults },
       {
         onSuccess: (resp) => {
+          // Track conversation thread
+          conversationIdRef.current = resp.conversation_id ?? null
+
           // Track context for refinement — use context_intent to avoid
           // storing COUNT_PREVIEW as the previous intent
           lastIntentRef.current = resp.context_intent ?? resp.intent
@@ -190,6 +196,7 @@ export function useChat() {
     lastIntentRef.current = null
     lastParamsRef.current = null
     lastCountRef.current = null
+    conversationIdRef.current = null
   }, [])
 
   return {

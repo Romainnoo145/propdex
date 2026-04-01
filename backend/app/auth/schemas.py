@@ -28,6 +28,7 @@ class UserResponse(BaseModel):
     organization_id: uuid.UUID
     email_verified: bool
     auth_provider: str
+    is_superuser: bool
     created_at: datetime
 
 

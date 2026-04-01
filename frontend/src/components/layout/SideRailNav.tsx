@@ -2,7 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { Map, Bookmark, Scale, PiggyBank, FileText, Settings, LogOut, Search } from 'lucide-react'
+import { Map, Bookmark, Scale, PiggyBank, FileText, Settings, LogOut, Search, Shield } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -14,7 +14,7 @@ interface NavItem {
 
 export default function SideRailNav() {
   const matchRoute = useMatchRoute()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -104,6 +104,27 @@ export default function SideRailNav() {
             </span>
           </Link>
         </div>
+        {user?.is_superuser && (
+          <div className="w-full flex justify-center">
+            <Link to="/admin" aria-label="Admin" className="group relative flex justify-center">
+              <div className="relative flex h-12 w-12 items-center justify-center">
+                {matchRoute({ to: '/admin' }) && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute inset-0 rounded-full bg-aura-obsidian shadow-[0_0_20px_rgba(14,17,17,0.3)]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors duration-300 ${matchRoute({ to: '/admin' }) ? 'text-aura-amber drop-shadow-sm' : 'text-slate-500 group-hover:text-aura-ink'}`}>
+                  <Shield size={22} strokeWidth={1.5} />
+                </span>
+              </div>
+              <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-aura-obsidian/90 backdrop-blur-md px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                Admin
+              </span>
+            </Link>
+          </div>
+        )}
         <div className="w-full flex justify-center">
           <Link to="/instellingen" aria-label="Instellingen" className="group relative flex justify-center">
             <div className="relative flex h-12 w-12 items-center justify-center">

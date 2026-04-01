@@ -1,6 +1,9 @@
 """SQLAlchemy models for Propdex API."""
 
+from app.models.ai_usage_log import AIUsageLog  # noqa: F401
 from app.models.area_scan import AreaScan  # noqa: F401
+from app.models.chat_conversation import ChatConversation  # noqa: F401
+from app.models.chat_message import ChatMessage  # noqa: F401
 from app.models.base import Base
 from app.models.bulk_query import BulkQuery  # noqa: F401
 from app.models.bulk_request import BulkRequest  # noqa: F401
@@ -28,7 +31,10 @@ from app.models.user import User
 from app.models.user_notification_state import UserNotificationState  # noqa: F401
 
 __all__ = [
+    "AIUsageLog",
     "Base",
+    "ChatConversation",
+    "ChatMessage",
     "Organization",
     "User",
     "RefreshToken",

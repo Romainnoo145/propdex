@@ -261,6 +261,8 @@ async def rechtsgrond_backfill_job(ctx: dict) -> dict:
                 user_message = json.dumps(batch_input, ensure_ascii=False)
 
                 try:
+                    import time as _time
+                    _t0 = _time.monotonic()
                     response = await claude_client.client.messages.create(
                         model=claude_client.model,
                         max_tokens=1000,
@@ -268,6 +270,17 @@ async def rechtsgrond_backfill_job(ctx: dict) -> dict:
                         messages=[
                             {"role": "user", "content": user_message},
                         ],
+                    )
+                    _duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+                    # Fire-and-forget usage logging
+                    from app.ai.usage_logger import log_ai_usage
+                    await log_ai_usage(
+                        call_site="rechtsgrond_classification",
+                        model=claude_client.model,
+                        usage=response.usage,
+                        duration_ms=_duration_ms,
+                        db=session,
                     )
 
                     # Extract text
@@ -396,6 +409,8 @@ async def tegenstander_backfill_job(ctx: dict) -> dict:
                 user_message = json.dumps(batch_input, ensure_ascii=False)
 
                 try:
+                    import time as _time
+                    _t0 = _time.monotonic()
                     response = await claude_client.client.messages.create(
                         model=claude_client.model,
                         max_tokens=1000,
@@ -403,6 +418,17 @@ async def tegenstander_backfill_job(ctx: dict) -> dict:
                         messages=[
                             {"role": "user", "content": user_message},
                         ],
+                    )
+                    _duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+                    # Fire-and-forget usage logging
+                    from app.ai.usage_logger import log_ai_usage
+                    await log_ai_usage(
+                        call_site="tegenstander_extraction",
+                        model=claude_client.model,
+                        usage=response.usage,
+                        duration_ms=_duration_ms,
+                        db=session,
                     )
 
                     text_content = None

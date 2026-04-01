@@ -5,6 +5,7 @@ export interface User {
   organization_id: string
   email_verified: boolean
   auth_provider: string
+  is_superuser: boolean
   created_at: string
 }
 

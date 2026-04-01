@@ -59,7 +59,7 @@ from app.services.foundation_risk_engine import (
 from app.services.funderingsrisico_aggregator import fetch_funderingsrisico_data
 from app.services.monument_aggregator import fetch_monument_status
 from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
-from app.services.plan_aggregator import get_or_parse_plan, get_primary_plan_idn
+from app.services.plan_aggregator import get_cached_plan_only, get_primary_plan_idn
 from app.services.soil_aggregator import fetch_soil_profile
 from app.services.wkb_classifier import classify_wkb
 from app.services.wkb_precheck import evaluate_wkb_precheck
@@ -1118,33 +1118,25 @@ async def aggregate_property_data(
     # never raises, and never logs BRK response payloads.
     brk_ownership = await fetch_brk_ownership(cadastral_parcels)
 
-    # STEP 3: Trigger AI bestemmingsplan parsing (always)
+    # STEP 3: Cache-only AI bestemmingsplan lookup (no auto-trigger)
     ai_parsing_section: AIParsingSection | None = None
-    if arq_pool is not None:
-        plan_idn = get_primary_plan_idn(zoning_data)
-        if plan_idn:
-            try:
-                ai_parsing_section = await get_or_parse_plan(
-                    plan_idn=plan_idn,
-                    session=session,
-                    arq_pool=arq_pool,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to trigger AI parsing: {e}")
-                ai_parsing_section = AIParsingSection(
-                    status="not_available",
-                    error_message=f"Bestemmingsplan niet digitaal beschikbaar: {str(e)}",
-                )
-        else:
+    plan_idn = get_primary_plan_idn(zoning_data)
+    if plan_idn:
+        try:
+            ai_parsing_section = await get_cached_plan_only(
+                plan_idn=plan_idn,
+                session=session,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to check AI parsing cache: {e}")
             ai_parsing_section = AIParsingSection(
                 status="not_available",
-                error_message="Geen bestemmingsplan gevonden voor deze locatie",
+                error_message=f"Bestemmingsplan niet digitaal beschikbaar: {str(e)}",
             )
     else:
-        logger.warning("ARQ pool not provided, skipping AI parsing trigger")
         ai_parsing_section = AIParsingSection(
             status="not_available",
-            error_message="AI parsing niet beschikbaar",
+            error_message="Geen bestemmingsplan gevonden voor deze locatie",
         )
 
     buildability_delta = _derive_buildability_delta(

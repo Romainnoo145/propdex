@@ -63,6 +63,84 @@ async def enqueue_parsing_job(
     return job
 
 
+async def get_cached_plan_only(
+    plan_idn: str,
+    session: AsyncSession,
+) -> AIParsingSection:
+    """
+    Cache-only lookup for AI-parsed plan data — never enqueues new jobs.
+
+    Used by property lookup to return cached/in-progress data without
+    auto-triggering AI parsing. Returns opt_in_required when no cached
+    data and no active job exist, signalling the frontend to offer an
+    explicit "parse now" button.
+
+    Steps mirror get_or_parse_plan 1-3 but skip step 4 (enqueue).
+    """
+    # 1. Cache check
+    cache_key = f"ai_parsed:{plan_idn}"
+    stmt = select(CachedAPIResponse).where(
+        CachedAPIResponse.cache_key == cache_key,
+    )
+    result = await session.execute(stmt)
+    cached = result.scalar_one_or_none()
+
+    if cached:
+        age = (datetime.utcnow() - cached.fetched_at).total_seconds()
+        if age < cached.ttl_seconds:
+            logger.info(f"Cache hit for {plan_idn} (age: {age:.0f}s)")
+            parsed_plan = BestemmingsplanParsed(**cached.response_data)
+            return AIParsingSection(
+                status="complete",
+                parsed_plan=parsed_plan,
+            )
+        else:
+            logger.info(f"Cache expired for {plan_idn} (age: {age:.0f}s)")
+
+    # 2. Active job check
+    stmt = select(ParsingJob).where(
+        ParsingJob.plan_idn == plan_idn,
+        ParsingJob.status.in_(["queued", "in_progress"]),
+    )
+    result = await session.execute(stmt)
+    active_job = result.scalar_one_or_none()
+
+    if active_job:
+        logger.info(
+            f"Active job {active_job.job_id} found for {plan_idn} (status: {active_job.status})"
+        )
+        return AIParsingSection(
+            status=active_job.status,
+            job_id=active_job.job_id,
+        )
+
+    # 3. Prior download failure check
+    stmt = select(ParsingJob).where(
+        ParsingJob.plan_idn == plan_idn,
+        ParsingJob.status == "failed",
+    )
+    result = await session.execute(stmt)
+    failed_jobs = result.scalars().all()
+
+    for failed_job in failed_jobs:
+        if failed_job.error_message and (
+            "PDFDownloadError" in failed_job.error_message
+            or "download" in failed_job.error_message.lower()
+        ):
+            logger.info(
+                f"Prior download failure detected for {plan_idn}: {failed_job.error_message}"
+            )
+            return AIParsingSection(
+                status="pdf_not_found",
+                upload_required=True,
+                error_message="Bestemmingsplan PDF niet automatisch beschikbaar. Upload het document handmatig.",
+            )
+
+    # No cache, no active job, no download failure → opt-in required
+    logger.info(f"No cache or active job for {plan_idn}, returning opt_in_required")
+    return AIParsingSection(status="opt_in_required")
+
+
 async def get_or_parse_plan(
     plan_idn: str,
     session: AsyncSession,

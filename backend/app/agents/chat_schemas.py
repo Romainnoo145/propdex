@@ -36,6 +36,10 @@ class ChatRequest(BaseModel):
         max_length=2000,
         description="Natural language query in Dutch",
     )
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation thread ID — omit for first message, send back for follow-ups",
+    )
     previous_intent: str | None = Field(
         default=None,
         description="Intent from the previous turn (for refinement context)",
@@ -58,6 +62,10 @@ class ChatResponse(BaseModel):
     """Response from the Verkenner chat endpoint."""
 
     intent: ResponseIntent = Field(description="Classified or synthetic intent")
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation thread ID — send back in next request",
+    )
     context_intent: str | None = Field(
         default=None,
         description="Real intent for refinement context — use instead of intent for tracking (never COUNT_PREVIEW)",

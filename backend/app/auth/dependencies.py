@@ -100,6 +100,29 @@ async def get_current_active_user(
     return current_user
 
 
+async def get_current_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    Verify that current user has superuser privileges.
+
+    Args:
+        current_user: Active user from get_current_active_user dependency
+
+    Returns:
+        Superuser User object
+
+    Raises:
+        HTTPException 403: User is not a superuser
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superuser access required",
+        )
+    return current_user
+
+
 async def get_current_organization_id(request: Request) -> uuid.UUID:
     """
     Extract organization_id from request state (set by TenantContextMiddleware).

@@ -66,6 +66,11 @@ class User(Base, TenantMixin, TimestampMixin):
         default=True,
         nullable=False,
     )
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
     preferences: Mapped[dict] = mapped_column(
         JSON,
         nullable=False,

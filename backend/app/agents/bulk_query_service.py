@@ -109,11 +109,22 @@ async def parse_nl_query(query_text: str) -> tuple[ParsedQuery | None, str | Non
 
     try:
         client = create_chat_claude_client()
+        _t0 = time.monotonic()
         response = await client.client.messages.create(
             model=client.model,
             max_tokens=500,
             system=BULK_QUERY_PARSING_PROMPT,
             messages=[{"role": "user", "content": query_text}],
+        )
+        _duration_ms = int((time.monotonic() - _t0) * 1000)
+
+        # Fire-and-forget usage logging
+        from app.ai.usage_logger import log_ai_usage
+        await log_ai_usage(
+            call_site="bulk_query_parsing",
+            model=client.model,
+            usage=response.usage,
+            duration_ms=_duration_ms,
         )
 
         if not response.content:

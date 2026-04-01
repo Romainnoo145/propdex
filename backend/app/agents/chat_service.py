@@ -8,6 +8,8 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import uuid as _uuid
+
 from app.agents.bulk_query_service import execute_bulk_query, resolve_gemeente_code
 from app.agents.chat_schemas import (
     ChatRequest,
@@ -30,6 +32,104 @@ COUNT_THRESHOLD = 2000
 
 # Valid intents from the classifier
 VALID_INTENTS = {"PARCEL_SEARCH", "PARCEL_DETAIL", "MY_FAVORITES", "MY_REPORTS", "UNSUPPORTED"}
+
+
+# ── Chat persistence (fire-and-forget) ───────────────────────────────────
+
+async def _persist_chat_turn(
+    db: AsyncSession,
+    user_id: str,
+    conversation_id: str | None,
+    request: "ChatRequest",
+    response: "ChatResponse",
+    duration_ms: int,
+) -> str | None:
+    """Persist a chat turn to chat_conversations/chat_messages.
+
+    Fire-and-forget: never raises. Returns conversation_id on success, None on failure.
+    """
+    try:
+        from datetime import datetime, timezone
+
+        from sqlalchemy import select as sa_select
+
+        from app.models.chat_conversation import ChatConversation
+        from app.models.chat_message import ChatMessage
+
+        uid = _uuid.UUID(user_id)
+        now = datetime.now(timezone.utc)
+
+        # ── Resolve or create conversation ───────────────────────────
+        if conversation_id is not None:
+            # Validate UUID format
+            try:
+                cid = _uuid.UUID(conversation_id)
+            except (ValueError, AttributeError):
+                logger.warning("Invalid conversation_id format '%s', creating new", conversation_id)
+                cid = None
+
+            if cid is not None:
+                # Security: verify conversation belongs to this user
+                result = await db.execute(
+                    sa_select(ChatConversation).where(
+                        ChatConversation.id == cid,
+                        ChatConversation.user_id == uid,
+                    )
+                )
+                convo = result.scalar_one_or_none()
+                if convo is None:
+                    logger.warning(
+                        "conversation_id %s not found or not owned by user %s, creating new",
+                        conversation_id, user_id,
+                    )
+                    cid = None
+                else:
+                    # Update existing conversation
+                    convo.last_message_at = now
+                    convo.message_count = (convo.message_count or 0) + 2  # user + assistant
+        else:
+            cid = None
+
+        if cid is None:
+            # Create new conversation
+            convo = ChatConversation(
+                user_id=uid,
+                started_at=now,
+                last_message_at=now,
+                message_count=2,
+            )
+            db.add(convo)
+            await db.flush()  # populate id
+            cid = convo.id
+
+        # ── Insert user message ──────────────────────────────────────
+        user_msg = ChatMessage(
+            conversation_id=cid,
+            role="user",
+            content=request.message,
+        )
+        db.add(user_msg)
+
+        # ── Insert assistant message ─────────────────────────────────
+        assistant_msg = ChatMessage(
+            conversation_id=cid,
+            role="assistant",
+            content=response.message or "",
+            intent=str(response.intent) if response.intent else None,
+            params=response.params if response.params else None,
+            response_data=response.model_dump(mode="json"),
+            duration_ms=duration_ms,
+        )
+        db.add(assistant_msg)
+
+        await db.flush()
+
+        logger.debug("Persisted chat turn to conversation %s", cid)
+        return str(cid)
+
+    except Exception:
+        logger.warning("Failed to persist chat turn", exc_info=True)
+        return None
 
 
 # ── JSON extraction helper ───────────────────────────────────────────────
@@ -72,11 +172,22 @@ async def classify_intent(
         )
 
     client = create_chat_claude_client()
+    _t0 = time.monotonic()
     response = await client.client.messages.create(
         model=client.model,
         max_tokens=300,
         system=CHAT_INTENT_CLASSIFIER_PROMPT,
         messages=[{"role": "user", "content": user_content}],
+    )
+    _duration_ms = int((time.monotonic() - _t0) * 1000)
+
+    # Fire-and-forget usage logging
+    from app.ai.usage_logger import log_ai_usage
+    await log_ai_usage(
+        call_site="chat_intent_classification",
+        model=client.model,
+        usage=response.usage,
+        duration_ms=_duration_ms,
     )
 
     if not response.content:
@@ -596,6 +707,12 @@ async def dispatch_chat(
                 suggestions=_RECOVERY_SUGGESTIONS,
             )
         response.context_intent = "PARCEL_SEARCH"
+
+        # Persist chat turn (fire-and-forget) for forceResults bypass too
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
+        conv_id = await _persist_chat_turn(db, user_id, request.conversation_id, request, response, elapsed_ms)
+        response.conversation_id = conv_id
+
         elapsed = time.monotonic() - t0
         logger.info("Chat dispatch (%.2fs): forceResults bypass → %s (count=%s)", elapsed, response.intent, response.count)
         return response
@@ -659,6 +776,11 @@ async def dispatch_chat(
 
     # ── Normalize context_intent (never expose COUNT_PREVIEW) ────────
     response.context_intent = response.intent if response.intent != "COUNT_PREVIEW" else "PARCEL_SEARCH"
+
+    # ── Persist chat turn (fire-and-forget) ──────────────────────────
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    conv_id = await _persist_chat_turn(db, user_id, request.conversation_id, request, response, elapsed_ms)
+    response.conversation_id = conv_id
 
     elapsed = time.monotonic() - t0
     logger.info(

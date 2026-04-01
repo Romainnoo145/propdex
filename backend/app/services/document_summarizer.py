@@ -39,8 +39,10 @@ async def summarize_document(
         client = create_claude_client()
 
         import base64
+        import time as _time
         pdf_b64 = base64.standard_b64encode(file_data).decode("utf-8")
 
+        _t0 = _time.monotonic()
         response = await client.client.messages.create(
             model=client.model,
             max_tokens=1000,
@@ -64,6 +66,16 @@ async def summarize_document(
                     ],
                 }
             ],
+        )
+        _duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        # Fire-and-forget usage logging
+        from app.ai.usage_logger import log_ai_usage
+        await log_ai_usage(
+            call_site="document_summarization",
+            model=client.model,
+            usage=response.usage,
+            duration_ms=_duration_ms,
         )
 
         if response.content:

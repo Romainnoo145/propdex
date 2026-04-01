@@ -115,8 +115,8 @@ class AIParsingSection(BaseModel):
         default=None,
         description="ARQ job ID if parsing is in progress",
     )
-    status: Literal["complete", "in_progress", "queued", "failed", "not_available", "pdf_not_found"] = Field(
-        description="Current parsing status. 'pdf_not_found' signals frontend to show upload option."
+    status: Literal["complete", "in_progress", "queued", "failed", "not_available", "pdf_not_found", "opt_in_required"] = Field(
+        description="Current parsing status. 'pdf_not_found' signals frontend to show upload option. 'opt_in_required' signals that AI parsing has not been triggered yet."
     )
     upload_required: bool = Field(
         default=False,

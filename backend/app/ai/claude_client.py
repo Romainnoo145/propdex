@@ -3,6 +3,7 @@
 import base64
 import json
 import logging
+import time
 from datetime import datetime
 
 import anthropic
@@ -86,6 +87,7 @@ class ClaudeClient:
             )
 
             # Call Claude API with PDF document
+            _t0 = time.monotonic()
             response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=self.MAX_TOKENS,
@@ -116,6 +118,16 @@ class ClaudeClient:
                         ],
                     }
                 ],
+            )
+            _duration_ms = int((time.monotonic() - _t0) * 1000)
+
+            # Fire-and-forget usage logging
+            from app.ai.usage_logger import log_ai_usage
+            await log_ai_usage(
+                call_site="bestemmingsplan_parsing",
+                model=self.model,
+                usage=response.usage,
+                duration_ms=_duration_ms,
             )
 
             # Extract text from response
@@ -236,6 +248,7 @@ class ClaudeClient:
                 gemeente_naam,
             )
 
+            _t0 = time.monotonic()
             response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=self.MAX_TOKENS_JURISPRUDENCE,
@@ -243,6 +256,16 @@ class ClaudeClient:
                 messages=[
                     {"role": "user", "content": user_message},
                 ],
+            )
+            _duration_ms = int((time.monotonic() - _t0) * 1000)
+
+            # Fire-and-forget usage logging
+            from app.ai.usage_logger import log_ai_usage
+            await log_ai_usage(
+                call_site="jurisprudence_analysis",
+                model=self.model,
+                usage=response.usage,
+                duration_ms=_duration_ms,
             )
 
             # Extract text from response

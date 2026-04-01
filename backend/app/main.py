@@ -35,6 +35,7 @@ from app.projects.router import router as projects_router
 from app.properties.router import router as properties_router
 from app.reports.router import router as reports_router
 from app.scans.router import router as scans_router
+from app.admin.router import router as admin_router
 from app.users.router import router as users_router
 
 
@@ -137,6 +138,7 @@ app.include_router(gemeente_router)
 app.include_router(checklist_progress_router)
 app.include_router(agents_router)
 app.include_router(chat_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

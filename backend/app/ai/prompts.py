@@ -308,3 +308,40 @@ Bericht: "Alleen bouwjaar voor 1980" (vorige: PARCEL_SEARCH, params: {"municipal
 
 Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
 """
+
+PROMPT_IMPROVEMENT_ANALYSIS_PROMPT = """
+Je bent een expert prompt-engineer die Nederlandse vastgoed-chatbot prompts optimaliseert.
+
+Je ontvangt:
+1. De huidige CHAT_INTENT_CLASSIFIER_PROMPT die de chatbot gebruikt
+2. Een lijst van gefaalde conversaties (eval_pass=false) met hun berichten en evaluatiescores
+
+Analyseer de gefaalde conversaties en identificeer patronen in de fouten.
+Geef concrete, actionable suggesties om de prompt te verbeteren.
+
+**Per suggestie geef je:**
+- category: een van ["intent_classification", "parameter_extraction", "edge_case", "language_handling", "context_refinement", "example_coverage"]
+- description: korte beschrijving van het probleem (1-2 zinnen, Nederlands)
+- current_weakness: wat er nu misgaat in de huidige prompt (1-2 zinnen, Nederlands)
+- suggested_improvement: concrete tekstwijziging of toevoeging voor de prompt (Nederlands)
+
+**Regels:**
+- Focus op de meest impactvolle verbeteringen (max 10 suggesties)
+- Baseer suggesties op bewijs uit de gefaalde conversaties
+- Wees specifiek — geen vage suggesties als "maak de prompt beter"
+- Schrijf alle tekst in het Nederlands
+
+**Retourneer het resultaat als JSON:**
+{
+  "suggestions": [
+    {
+      "category": "<category>",
+      "description": "<beschrijving>",
+      "current_weakness": "<huidige zwakte>",
+      "suggested_improvement": "<concrete verbetering>"
+    }
+  ]
+}
+
+Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
+"""

@@ -51,12 +51,15 @@ function AIStatusBadge({ status }: { status: string }) {
         ? 'border-[#F9A826]/30 bg-[#F9A826]/10 text-[#F9A826]'
         : status === 'failed'
           ? 'border-red-200 bg-red-50 text-red-700'
-          : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
+          : status === 'opt_in_required'
+            ? 'border-blue-200 bg-blue-50 text-blue-700'
+            : 'border-[#EAEFEF] bg-[#F8FAFA] text-[#0E1111]'
   const labels: Record<string, string> = {
     complete: 'Voltooid',
     in_progress: 'Bezig...',
     failed: 'Mislukt',
     pending: 'Wachtend',
+    opt_in_required: 'Beschikbaar',
   }
   return (
     <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
@@ -244,6 +247,14 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
             <AIStatusBadge status={ai_parsing.status} />
             <p className="text-[13px] font-semibold text-[#0E1111] leading-relaxed">{ai_parsing.parsed_plan.samenvatting}</p>
             <p className="text-[11px] text-slate-500">{ai_parsing.disclaimer_banner}</p>
+          </div>
+        ) : ai_parsing.status === 'opt_in_required' ? (
+          <div className="space-y-2">
+            <AIStatusBadge status={ai_parsing.status} />
+            <div className="rounded-[16px] border border-dashed border-[#EAEFEF] bg-[#F8FAFA] px-4 py-3 text-center">
+              <p className="text-[13px] font-semibold text-[#0E1111]">AI-analyse beschikbaar</p>
+              <p className="text-[11px] text-slate-500 mt-1">Klik op 'Analyseer' in het bestemmingsplan om de AI-analyse te starten</p>
+            </div>
           </div>
         ) : ai_parsing.upload_required ? (
           <div className="space-y-2">
