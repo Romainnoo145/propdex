@@ -58,9 +58,27 @@ function AmberBadge({ children, variant = 'amber' }: { children: React.ReactNode
   )
 }
 
-const ENERGY_VARIANT: Record<string, 'amber' | 'slate'> = {
-  'A++': 'amber', 'A+': 'amber', A: 'amber', B: 'amber', C: 'amber',
-  D: 'slate', E: 'slate', F: 'slate', G: 'slate',
+/** Semantic pill — green (positive), amber (warning), red (negative) */
+function SemanticPill({ children, tone }: { children: React.ReactNode; tone: 'green' | 'amber' | 'red' | 'slate' }) {
+  const cls = {
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700',
+    red: 'border-red-200 bg-red-50 text-red-700',
+    slate: 'border-slate-200 bg-slate-50 text-slate-600',
+  }[tone]
+  return (
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cls}`}>
+      {children}
+    </span>
+  )
+}
+
+/** Energy label tone: A-B green, C-D amber, E-G red */
+function energyTone(label: string): 'green' | 'amber' | 'red' | 'slate' {
+  if (['A++', 'A+', 'A', 'B'].includes(label)) return 'green'
+  if (['C', 'D'].includes(label)) return 'amber'
+  if (['E', 'F', 'G'].includes(label)) return 'red'
+  return 'slate'
 }
 
 function severityVariant(severity: string): 'amber' | 'slate' {
@@ -134,9 +152,9 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
           <div>
             <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
               <span className="text-[12px] text-slate-400">Klasse</span>
-              <AmberBadge variant={ENERGY_VARIANT[energy.energieklasse] ?? 'slate'}>
+              <SemanticPill tone={energyTone(energy.energieklasse)}>
                 {energy.energieklasse}
-              </AmberBadge>
+              </SemanticPill>
             </div>
             <KVRow
               label="Registratie"
@@ -185,9 +203,9 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
 
       {/* ── 5. Monumentstatus ─────────────────────────────────── */}
       <SectionInsightCard kicker="Monument" title="Monumentstatus" Icon={Landmark}>
-        <p className="text-[13px] text-slate-600">
+        <SemanticPill tone={isMonument ? 'red' : 'green'}>
           {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
-        </p>
+        </SemanticPill>
         {monuments?.consensus_status && (
           <KVRow label="Bron" value={monuments.consensus_status} />
         )}
