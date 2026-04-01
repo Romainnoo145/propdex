@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { TrendingUp, ShieldAlert } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { RingProgress, SectionNotes } from '../components'
+import { SubCard, SectionNotes } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -224,12 +224,29 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
 
   return (
     <div className="space-y-6">
-      {/* ── Score circles ────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3 justify-items-center">
-        <RingProgress value={scores?.potentie ?? 0} max={100} label="Potentiescore" />
-        <RingProgress value={scores?.overall ?? 0} max={100} label="Overall score" />
-        <RingProgress value={scores?.risico ?? 0} max={100} label="Risicoscore" />
-      </div>
+      {/* ── Score summary ───────────────────────────────────── */}
+      <SectionInsightCard kicker="Scores" title="Score overzicht" Icon={TrendingUp}>
+        <div className="grid grid-cols-3 gap-3">
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Potentie</p>
+            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
+              {scores?.potentie != null ? Math.round(scores.potentie) : '–'}
+            </p>
+          </SubCard>
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Overall</p>
+            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
+              {scores?.overall != null ? Math.round(scores.overall) : '–'}
+            </p>
+          </SubCard>
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Risico</p>
+            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
+              {scores?.risico != null ? Math.round(scores.risico) : '–'}
+            </p>
+          </SubCard>
+        </div>
+      </SectionInsightCard>
 
       {data.score_model_version && (
         <p className="text-center text-[12px] text-slate-400">

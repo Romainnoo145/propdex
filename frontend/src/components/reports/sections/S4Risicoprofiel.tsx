@@ -10,8 +10,7 @@
 import { ShieldAlert, Droplets, Construction, AlertTriangle, TreePine } from 'lucide-react'
 import type { PropertyReportResponse, WBBDossierRef } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { KVRow, SubCard, formatCurrency, PillBadgeRow, SectionNotes } from '../components'
-import type { PillBadgeItem } from '../components/PillBadgeRow'
+import { KVRow, SubCard, formatCurrency, SectionNotes } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -60,10 +59,6 @@ function WBBRow({ dossier }: { dossier: WBBDossierRef }) {
   )
 }
 
-function riskVariant(risk: string): 'amber' | 'slate' {
-  return risk === 'hoog' || risk === 'middel' ? 'amber' : 'slate'
-}
-
 /* ─── Section ────────────────────────────────────────────────── */
 
 export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) {
@@ -82,35 +77,8 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
 
   const dossierCount = bodem?.dossiers?.length ?? 0
 
-  // Build pill badge items for hero row
-  const pillItems: PillBadgeItem[] = [
-    {
-      label: 'Totaal risico',
-      value: frp ? (RISK_LABEL[frp.overall_risk] ?? frp.overall_risk) : '–',
-      variant: frp ? riskVariant(frp.overall_risk) : 'slate',
-    },
-    {
-      label: 'Fundering',
-      value: fundRisk ? (RISK_LABEL[fundRisk.risk] ?? fundRisk.risk) : '–',
-      variant: fundRisk ? riskVariant(fundRisk.risk) : 'slate',
-    },
-    {
-      label: 'Asbest',
-      value: asbest ? (RISK_LABEL[asbest.risk] ?? asbest.risk) : '–',
-      variant: asbest ? riskVariant(asbest.risk) : 'slate',
-    },
-    {
-      label: 'Bodem',
-      value: dossierCount > 0 ? `${dossierCount} dossier${dossierCount !== 1 ? 's' : ''}` : 'Geen verontreiniging',
-      variant: dossierCount > 0 ? 'amber' : 'slate',
-    },
-  ]
-
   return (
     <div className="space-y-6">
-
-      {/* ── Hero Pill Badge Row ────────────────────────────────── */}
-      <PillBadgeRow items={pillItems} />
 
       {/* ── 1. Fysiek Risicoprofiel ───────────────────────────── */}
       {frp && (

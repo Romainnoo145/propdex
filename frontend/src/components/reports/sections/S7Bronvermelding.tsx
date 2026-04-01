@@ -10,7 +10,6 @@
 import { Database, Info } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { PillBadgeRow } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -169,13 +168,6 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero stat row ─────────────────────────────────────── */}
-      <PillBadgeRow items={[
-        { label: 'Bronnen OK', value: String(okCount), variant: 'amber' },
-        { label: 'Niet gekoppeld', value: String(unlinkedCount), variant: 'slate' },
-        { label: 'Fouten', value: String(errorCount), variant: errorCount > 0 ? 'slate' : 'amber' },
-      ]} />
-
       {/* ── Source table ──────────────────────────────────────── */}
       <SectionInsightCard kicker="Databronnen" title="Bronvermelding" Icon={Database}>
         {sources.length === 0 ? (

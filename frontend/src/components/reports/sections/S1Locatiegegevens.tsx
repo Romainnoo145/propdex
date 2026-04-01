@@ -9,7 +9,7 @@
 import { MapPin, Building2, Zap, TrendingUp, Landmark } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { KVRow, SubCard, AmberCircleBadge, SectionNotes, formatArea, formatCurrency } from '../components'
+import { KVRow, SubCard, SectionNotes, formatArea, formatCurrency } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -109,25 +109,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
   return (
     <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* ── 1. Hero Stats Row ──────────────────────────────────── */}
-      <div className="flex flex-wrap gap-4 justify-start">
-        <AmberCircleBadge label="Bouwjaar" value={building?.bouwjaar ?? '–'} />
-        <AmberCircleBadge label="Oppervlakte" value={formatArea(building?.oppervlakte)} size="sm" />
-        <AmberCircleBadge label="Gebruiksdoel" value={building?.gebruiksdoel?.[0] ?? '–'} size="sm" />
-        <AmberCircleBadge
-          label="Energielabel"
-          value={energy?.energieklasse
-            ? <EnergyBadge label={energy.energieklasse} />
-            : 'N/A'}
-        />
-        <AmberCircleBadge label="WOZ Waarde" value={formatCurrency(woz?.meest_recente_waarde)} size="sm" />
-        <AmberCircleBadge
-          label="Monument"
-          value={<MonumentBadge isMonument={isMonument} />}
-        />
-      </div>
-
-      {/* ── 2. Adres & Gebouw Details (side by side on lg) ───── */}
+      {/* ── 1. Adres & Gebouw Details (side by side on lg) ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Card A: Adresgegevens */}
         <SectionInsightCard kicker="Locatie" title="Adresgegevens" Icon={MapPin}>
