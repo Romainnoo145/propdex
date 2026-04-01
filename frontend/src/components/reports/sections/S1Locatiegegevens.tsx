@@ -3,10 +3,9 @@
  *
  * Displays: address, building/BAG, energy label, WOZ, monument status
  * Each sub-section is wrapped in a SectionInsightCard (kicker + icon header).
- * Includes per-section document upload zone when sourceParcelId is available.
  */
 
-import { MapPin, Building2, Zap, TrendingUp, Landmark } from 'lucide-react'
+import { MapPin, Building2, Zap, TrendingUp, Landmark, Lightbulb } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { KVRow, SubCard, SectionNotes, formatArea, formatCurrency } from '../components'
@@ -45,51 +44,27 @@ export const STATUS_EXPLANATIONS: Record<
   'Verbouwing pand': { label: 'Verbouwing gaande', severity: 'low' },
 }
 
-/* ─── Badge helpers ──────────────────────────────────────────── */
+/* ─── Badge helper ───────────────────────────────────────────── */
 
-const ENERGY_BADGE_COLORS: Record<string, string> = {
-  'A++': 'bg-amber-100 text-amber-700',
-  'A+': 'bg-amber-100 text-amber-700',
-  A: 'bg-amber-100 text-amber-700',
-  B: 'bg-amber-100 text-amber-700',
-  C: 'bg-amber-100 text-amber-700',
-  D: 'bg-slate-100 text-slate-600',
-  E: 'bg-slate-100 text-slate-600',
-  F: 'bg-slate-100 text-slate-600',
-  G: 'bg-slate-100 text-slate-600',
-}
-
-function EnergyBadge({ label }: { label: string }) {
-  const colors = ENERGY_BADGE_COLORS[label] ?? 'bg-slate-100 text-slate-600'
+/** Uniform amber/slate pill badge used for all inline values */
+function AmberBadge({ children, variant = 'amber' }: { children: React.ReactNode; variant?: 'amber' | 'slate' }) {
+  const cls = variant === 'amber'
+    ? 'border-amber-200 bg-amber-50 text-amber-700'
+    : 'border-slate-200 bg-slate-50 text-slate-600'
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
-      {label}
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cls}`}>
+      {children}
     </span>
   )
 }
 
-const SEVERITY_BADGE_COLORS: Record<string, string> = {
-  high: 'bg-amber-200 text-amber-800',
-  medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-slate-100 text-slate-600',
+const ENERGY_VARIANT: Record<string, 'amber' | 'slate'> = {
+  'A++': 'amber', 'A+': 'amber', A: 'amber', B: 'amber', C: 'amber',
+  D: 'slate', E: 'slate', F: 'slate', G: 'slate',
 }
 
-function SeverityBadge({ label, severity }: { label: string; severity: string }) {
-  const colors = SEVERITY_BADGE_COLORS[severity] ?? 'bg-slate-100 text-slate-600'
-  return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
-      {label}
-    </span>
-  )
-}
-
-function MonumentBadge({ isMonument }: { isMonument: boolean }) {
-  const colors = isMonument ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-  return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${colors}`}>
-      {isMonument ? 'Beschermd' : 'Vrij'}
-    </span>
-  )
+function severityVariant(severity: string): 'amber' | 'slate' {
+  return severity === 'high' || severity === 'medium' ? 'amber' : 'slate'
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -100,18 +75,45 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
     ? (STATUS_EXPLANATIONS[building.status] ?? { label: building.status, severity: 'low' as const })
     : null
 
-  // Energy label: prefer flags over report field
   const energy = data.energy_label
   const woz = data.woz_data
-
   const isMonument = monuments?.is_monument ?? false
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* ── 1. Adres & Gebouw Details (side by side on lg) ───── */}
+      {/* ── 1. Key facts ──────────────────────────────────────── */}
+      <SectionInsightCard kicker="Overzicht" title="Kerngegevens" Icon={Building2}>
+        <div className="grid grid-cols-3 gap-3">
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Bouwjaar</p>
+            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
+              {building?.bouwjaar ?? '–'}
+            </p>
+          </SubCard>
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Oppervlakte</p>
+            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
+              {formatArea(building?.oppervlakte)}
+            </p>
+          </SubCard>
+          <SubCard>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Gebruiksdoel</p>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {building?.gebruiksdoel?.length ? (
+                building.gebruiksdoel.map((doel) => (
+                  <AmberBadge key={doel}>{doel}</AmberBadge>
+                ))
+              ) : (
+                <span className="text-[13px] text-slate-400">–</span>
+              )}
+            </div>
+          </SubCard>
+        </div>
+      </SectionInsightCard>
+
+      {/* ── 2. Adres & Gebouw Details (side by side on lg) ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Card A: Adresgegevens */}
         <SectionInsightCard kicker="Locatie" title="Adresgegevens" Icon={MapPin}>
           <div>
             <KVRow
@@ -127,7 +129,6 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
           </div>
         </SectionInsightCard>
 
-        {/* Card B: Gebouwgegevens */}
         <SectionInsightCard kicker="Gebouw" title="Gebouwgegevens" Icon={Building2}>
           {building ? (
             <div>
@@ -135,7 +136,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
               {building.status && statusInfo && (
                 <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF] last:border-b-0">
                   <span className="text-[12px] text-slate-400">Status</span>
-                  <SeverityBadge label={statusInfo.label} severity={statusInfo.severity} />
+                  <AmberBadge variant={severityVariant(statusInfo.severity)}>{statusInfo.label}</AmberBadge>
                 </div>
               )}
               <KVRow label="Oppervlakte" value={formatArea(building.oppervlakte)} />
@@ -144,12 +145,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
                   <span className="text-[12px] text-slate-400">Gebruiksdoel</span>
                   <div className="flex flex-wrap justify-end gap-1">
                     {building.gebruiksdoel.map((doel) => (
-                      <span
-                        key={doel}
-                        className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]"
-                      >
-                        {doel}
-                      </span>
+                      <AmberBadge key={doel}>{doel}</AmberBadge>
                     ))}
                   </div>
                 </div>
@@ -162,13 +158,15 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
         </SectionInsightCard>
       </div>
 
-      {/* ── 3. Energielabel Detail ────────────────────────────── */}
+      {/* ── 3. Energielabel ───────────────────────────────────── */}
       <SectionInsightCard kicker="Energie" title="Energielabel" Icon={Zap}>
         {energy && energy.energieklasse ? (
           <div>
             <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
               <span className="text-[12px] text-slate-400">Klasse</span>
-              <EnergyBadge label={energy.energieklasse} />
+              <AmberBadge variant={ENERGY_VARIANT[energy.energieklasse] ?? 'slate'}>
+                {energy.energieklasse}
+              </AmberBadge>
             </div>
             <KVRow
               label="Registratie"
@@ -185,12 +183,12 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
           </div>
         ) : (
           <p className="text-[13px] text-slate-500">
-            {energy?.niet_geregistreerd_reden ?? 'Geen geregistreerd energielabel gevonden'}
+            {energy?.niet_geregistreerd_reden ?? 'Niet geregistreerd'}
           </p>
         )}
       </SectionInsightCard>
 
-      {/* ── 4. WOZ Detail ─────────────────────────────────────── */}
+      {/* ── 4. WOZ Waarde ─────────────────────────────────────── */}
       <SectionInsightCard kicker="Waarde" title="WOZ Waarde" Icon={TrendingUp}>
         {woz ? (
           <div className="space-y-3">
@@ -220,48 +218,40 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             )}
           </div>
         ) : (
-          <p className="text-[13px] text-slate-500">Geen WOZ-gegevens beschikbaar</p>
+          <p className="text-[13px] text-slate-500">Niet beschikbaar</p>
         )}
       </SectionInsightCard>
 
       {/* ── 5. Monumentstatus ─────────────────────────────────── */}
       <SectionInsightCard kicker="Monument" title="Monumentstatus" Icon={Landmark}>
-        {monuments ? (
-          <div className="space-y-3">
-            <div
-              className={`rounded-[16px] px-4 py-3 ${isMonument ? 'border border-[#F9A826]/20 bg-[#F9A826]/[0.06]' : 'border border-[#EAEFEF] bg-[#F8FAFA]'}`}
-            >
-              <p
-                className={`font-semibold ${isMonument ? 'text-[#F9A826]' : 'text-[#0E1111]'}`}
-              >
-                {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
-              </p>
-              {monuments.consensus_status && (
-                <p className="mt-0.5 text-[13px] text-slate-600">
-                  {monuments.consensus_status}
-                </p>
-              )}
-            </div>
-            {monuments.restrictions_summary.length > 0 && (
-              <ul className="space-y-1">
-                {monuments.restrictions_summary.map((r, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[13px] text-slate-600">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F9A826]/50" />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          <p className="text-[13px] text-slate-500">Geen monumentgegevens beschikbaar</p>
+        <div className="flex items-center justify-between py-2">
+          <span className="text-[12px] text-slate-400">Status</span>
+          <AmberBadge variant={isMonument ? 'amber' : 'slate'}>
+            {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
+          </AmberBadge>
+        </div>
+        {monuments?.consensus_status && (
+          <KVRow label="Bron" value={monuments.consensus_status} />
         )}
-
-        {/* Upload zone inside Monumentstatus card flow */}
+        {monuments?.restrictions_summary && monuments.restrictions_summary.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Restricties</p>
+            <ul className="space-y-1">
+              {monuments.restrictions_summary.map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] text-slate-600">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </SectionInsightCard>
 
-      {/* ── 6. Section Notes ──────────────────────────────────── */}
-      <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['locatie']} />
+      {/* ── 6. Notities ───────────────────────────────────────── */}
+      <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
+        <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['locatie']} />
+      </SectionInsightCard>
     </div>
   )
 }
