@@ -1600,27 +1600,6 @@ export function FavoriteParcelWorkspaceView({
           </div>
 
           <div className="flex items-center gap-2 lg:shrink-0">
-            {/* Bekijk rapport */}
-            <motion.button
-              type="button"
-              onClick={() => {
-                if (favorite.has_report && favorite.report_id) {
-                  navigate({ to: '/rapport/$id', params: { id: favorite.report_id } })
-                }
-              }}
-              disabled={!favorite.has_report}
-              whileHover={favorite.has_report ? { scale: 1.04 } : undefined}
-              whileTap={favorite.has_report ? { scale: 0.96 } : undefined}
-              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-[13px] font-semibold transition-colors ${
-                favorite.has_report
-                  ? 'border-2 border-[#0E1111] bg-amber-500 text-[#0E1111] hover:bg-amber-400'
-                  : 'border border-[#EAEFEF] bg-[#F2F6F3] text-slate-400 cursor-default'
-              }`}
-              title={favorite.has_report ? 'Bekijk rapport' : 'Rapport wordt gegenereerd…'}
-            >
-              <FileText size={15} />
-              Bekijk rapport
-            </motion.button>
             {/* Checklist */}
             <button
               type="button"
@@ -1649,6 +1628,27 @@ export function FavoriteParcelWorkspaceView({
             >
               <MapPin size={16} />
             </button>
+            {/* Bekijk rapport — rightmost */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                if (favorite.has_report && favorite.report_id) {
+                  navigate({ to: '/rapport/$id', params: { id: favorite.report_id } })
+                }
+              }}
+              disabled={!favorite.has_report}
+              whileHover={favorite.has_report ? { scale: 1.04 } : undefined}
+              whileTap={favorite.has_report ? { scale: 0.96 } : undefined}
+              className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-[13px] font-semibold transition-colors ${
+                favorite.has_report
+                  ? 'border-2 border-[#0E1111] bg-amber-500 text-[#0E1111] hover:bg-amber-400'
+                  : 'border border-[#EAEFEF] bg-[#F2F6F3] text-slate-400 cursor-default'
+              }`}
+              title={favorite.has_report ? 'Bekijk rapport' : 'Rapport wordt gegenereerd…'}
+            >
+              <FileText size={15} />
+              Bekijk rapport
+            </motion.button>
           </div>
         </div>
       </div>
