@@ -20,7 +20,7 @@ import { uploadBestemmingsplanPDF, fetchAIParsingJobStatus } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { SectionNotes, formatArea } from '../components'
+import { SectionNotes, formatArea, SubCard, KVRow } from '../components'
 import { AIAnalysisModal } from '../components/AIAnalysisModal'
 
 export interface S3BestemmingsplanBouwmogelijkhedenProps {
@@ -301,10 +301,41 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
           const parcel = buildability_delta.parcel_area_m2 ?? 0
           const built = buildability_delta.current_built_area_m2 ?? 0
           const remaining = buildability_delta.remaining_buildable_area_m2 ?? Math.max(parcel - built, 0)
+          const currentFar = (buildability_delta as Record<string, unknown>).current_far as number | null | undefined
+          const maxFar = (buildability_delta as Record<string, unknown>).max_far as number | null | undefined
+          const currentRatio = (buildability_delta as Record<string, unknown>).current_built_ratio_pct as number | null | undefined
+          const maxBebPct = (buildability_delta as Record<string, unknown>).max_bebouwingspercentage_pct as number | null | undefined
+          const confidence = (buildability_delta as Record<string, unknown>).confidence as string | null | undefined
+          const missingFields = (buildability_delta as Record<string, unknown>).missing_fields as string[] | null | undefined
           return (
             <div className="space-y-3">
               <BuildabilityBar parcelArea={parcel} builtArea={built} remainingArea={remaining} />
-              {buildability_delta.notes.slice(0, 2).map((note, i) => (
+
+              {/* KV details */}
+              <SubCard className="space-y-0">
+                <KVRow label="Perceeloppervlakte" value={formatArea(parcel)} />
+                <KVRow label="Bebouwd oppervlak" value={formatArea(built)} />
+                {currentRatio != null && <KVRow label="Bebouwingsgraad" value={`${currentRatio.toFixed(1)}%`} />}
+                {currentFar != null && <KVRow label="Huidige FAR" value={currentFar.toFixed(3)} />}
+                {maxBebPct != null && <KVRow label="Max. bebouwing" value={`${maxBebPct}%`} />}
+                {maxFar != null && <KVRow label="Max. FAR" value={`${maxFar}`} />}
+                {remaining > 0 && <KVRow label="Resterende bouwruimte" value={formatArea(remaining)} />}
+              </SubCard>
+
+              {/* Confidence + missing data warning */}
+              {confidence === 'low' && missingFields && missingFields.length > 0 && (
+                <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle size={12} className="text-aura-amber-dark" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Lage betrouwbaarheid</p>
+                  </div>
+                  <p className="text-[13px] text-[#0E1111]">
+                    Ontbrekende gegevens: {missingFields.map(f => f.replace(/_/g, ' ')).join(', ')}
+                  </p>
+                </div>
+              )}
+
+              {buildability_delta.notes.slice(0, 3).map((note, i) => (
                 <p key={i} className="text-[11px] text-slate-400 italic">{note}</p>
               ))}
             </div>
@@ -499,27 +530,54 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
       {/* ── Wkb Precheck ──────────────────────────────────────── */}
       {wkb_precheck && (
         <SectionInsightCard kicker="Wkb" title="Kwaliteitsborging" Icon={ShieldCheck}>
-          <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
-            <span className="text-[12px] text-slate-400">Status</span>
-            <SemanticPill tone={wkb_precheck.status === 'likely_required' ? 'amber' : 'green'}>
-              {wkb_precheck.status === 'likely_required'
-                ? 'Waarschijnlijk vereist'
-                : wkb_precheck.status === 'likely_not_required'
-                  ? 'Niet vereist'
-                  : 'Onzeker'}
-            </SemanticPill>
+          <div className="space-y-3">
+            <SubCard className="space-y-0">
+              <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+                <span className="text-[12px] text-slate-400">Status</span>
+                <SemanticPill tone={wkb_precheck.status === 'likely_required' ? 'amber' : 'green'}>
+                  {wkb_precheck.status === 'likely_required'
+                    ? 'Waarschijnlijk vereist'
+                    : wkb_precheck.status === 'likely_not_required'
+                      ? 'Niet vereist'
+                      : 'Onzeker'}
+                </SemanticPill>
+              </div>
+              {(data.wkb_classification as Record<string, unknown> | null | undefined)?.gevolgklasse && (
+                <KVRow label="Gevolgklasse" value={(data.wkb_classification as Record<string, unknown>).gevolgklasse as string} />
+              )}
+              <KVRow label="Betrouwbaarheid" value={wkb_precheck.confidence === 'low' ? 'Laag' : wkb_precheck.confidence === 'high' ? 'Hoog' : 'Gemiddeld'} />
+            </SubCard>
+
+            {wkb_precheck.triggered_rules.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1.5">Getriggerde regels</p>
+                <ul className="space-y-1">
+                  {wkb_precheck.triggered_rules.map((rule, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[11px] text-slate-500">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-aura-amber" />
+                      <span><strong className="text-slate-600">{rule.title}</strong>{rule.reason ? ` — ${rule.reason}` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {wkb_precheck.required_documents && wkb_precheck.required_documents.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1.5">Vereiste documenten</p>
+                <ul className="space-y-1">
+                  {wkb_precheck.required_documents.map((doc: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-[11px] text-slate-600">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
+                      {doc}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <p className="text-[11px] text-slate-400 italic">{wkb_precheck.disclaimer}</p>
           </div>
-          {wkb_precheck.triggered_rules.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {wkb_precheck.triggered_rules.slice(0, 3).map((rule, i) => (
-                <li key={i} className="flex items-start gap-2 text-[11px] text-slate-500">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
-                  {rule.title}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-2 text-[11px] text-slate-400 italic">{wkb_precheck.disclaimer}</p>
         </SectionInsightCard>
       )}
 
