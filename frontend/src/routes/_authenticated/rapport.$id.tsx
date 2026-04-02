@@ -99,13 +99,29 @@ function RapportPage() {
   }
 
   const handleViewOnMap = () => {
-    navigate({
-      to: '/map',
-      search: {
-        reportId: id,
-        _t: Date.now(),
-      },
-    })
+    const parcelId = savedReport.data?.source_parcel_id
+    const addr = propertyData?.address
+    if (parcelId) {
+      // Use the same navigation as the portfolio workspace — reliable parcel focus
+      navigate({
+        to: '/map',
+        search: {
+          parcel_id: parcelId,
+          fallback_address: addr ? `${addr.straat} ${addr.huisnummer}, ${addr.postcode} ${addr.woonplaats}` : undefined,
+          _t: Date.now(),
+        },
+      })
+    } else if (addr?.postcode && addr?.huisnummer) {
+      // Fallback: address-based lookup
+      navigate({
+        to: '/map',
+        search: {
+          postcode: addr.postcode,
+          huisnummer: addr.huisnummer,
+          _t: Date.now(),
+        },
+      })
+    }
   }
 
   return (
