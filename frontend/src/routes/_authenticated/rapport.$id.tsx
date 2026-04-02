@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import { useReport } from '@/hooks/useReports'
+import { useAuth } from '@/lib/auth/useAuth'
 import ResultsShell from '@/components/layout/ResultsShell'
 import DueDiligenceDashboard from '@/components/reports/DueDiligenceDashboard'
 import type { PropertyReportResponse } from '@/lib/types/property'
@@ -57,6 +60,24 @@ function RapportPage() {
             ? 'Terug naar resultaten'
             : 'Terug'
 
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = useCallback(async () => {
+    if (!id || isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      const { regenerateReport } = await import('@/lib/api')
+      await regenerateReport(id, accessToken)
+      await queryClient.invalidateQueries({ queryKey: ['report', id] })
+    } catch {
+      // Fail silently — data stays as-is
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [id, accessToken, isRefreshing, queryClient])
+
   const handleBack = () => {
     if (search.from === 'rapporten') {
       navigate({ to: '/opgeslagen' })
@@ -105,6 +126,8 @@ function RapportPage() {
         activeSection={search.section}
         onBack={handleBack}
         onViewOnMap={handleViewOnMap}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
       />
         </motion.div>
       </motion.div>

@@ -32,6 +32,8 @@ export interface DueDiligenceDashboardProps {
   activeSection?: string
   onBack: () => void
   onViewOnMap: () => void
+  onRefresh?: () => Promise<void>
+  isRefreshing?: boolean
 }
 
 /* ─── Section config ────────────────────────────────────────── */
@@ -59,6 +61,8 @@ function renderSectionContent(
   data: PropertyReportResponse,
   sourceParcelId: string | null | undefined,
   reportId?: string | null,
+  onRefresh?: () => Promise<void>,
+  isRefreshing?: boolean,
 ): React.ReactNode {
   switch (section) {
     case 'locatiegegevens':
@@ -74,7 +78,7 @@ function renderSectionContent(
     case 'vergunningen':
       return <S6VergunningenPrecedenten data={data} sourceParcelId={sourceParcelId} />
     case 'bronnen':
-      return <S7Bronvermelding data={data} />
+      return <S7Bronvermelding data={data} reportId={reportId} onRefresh={onRefresh} isRefreshing={isRefreshing} />
   }
 }
 
@@ -89,6 +93,8 @@ export default function DueDiligenceDashboard({
   notes: _rawNotes,
   onBack,
   onViewOnMap,
+  onRefresh,
+  isRefreshing,
 }: DueDiligenceDashboardProps) {
   const exportPDF = useExportPDF()
 
@@ -197,7 +203,7 @@ export default function DueDiligenceDashboard({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {renderSectionContent(activeSection, data, sourceParcelId, reportId)}
+              {renderSectionContent(activeSection, data, sourceParcelId, reportId, onRefresh, isRefreshing)}
 
             </motion.div>
           </AnimatePresence>

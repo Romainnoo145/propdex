@@ -7,7 +7,7 @@
  * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
  */
 
-import { Database, Info } from 'lucide-react'
+import { Database, Info, RefreshCw } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 
@@ -15,6 +15,9 @@ import { SectionInsightCard } from '../components/SectionInsightCard'
 
 export interface S7BronvermeldingProps {
   data: PropertyReportResponse
+  reportId?: string | null
+  onRefresh?: () => Promise<void>
+  isRefreshing?: boolean
 }
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -88,7 +91,7 @@ const CONFIDENCE_CLS: Record<string, string> = {
 
 /* ─── Section ────────────────────────────────────────────────── */
 
-export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
+export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7BronvermeldingProps) {
   // Build deduplicated source rows
   const byKey = new Map<string, SourceRow>()
   const statusPriority: Record<SourceStatus, number> = { ok: 0, unlinked: 1, blocked: 2, error: 3 }
@@ -193,6 +196,17 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
                 </span>
               )}
               <span className="text-slate-400 ml-auto">{sources.length} bronnen</span>
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#0E1111] bg-[#0E1111] px-3 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+                  {isRefreshing ? 'Bezig...' : 'Ververs alle bronnen'}
+                </button>
+              )}
             </div>
 
             {/* Source rows */}
