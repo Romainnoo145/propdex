@@ -323,24 +323,22 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             <EnvCell
               label="Natura 2000"
               value={natura
-                ? `${(natura.distance_m as number | undefined) != null ? `${Math.round(natura.distance_m as number)}m` : 'In zone'}`
+                ? ((natura.binnen_5km as boolean) ? `${(natura.naam as string) || 'In zone'}` : 'Buiten zone')
                 : 'Onbekend'}
-              detail={(natura?.zone_name as string | undefined) ?? undefined}
-              risk={(natura?.distance_m as number | undefined) != null && (natura.distance_m as number) < 500 ? 'hoog' : 'laag'}
+              detail={(natura?.naam as string | undefined) && (natura?.binnen_5km as boolean) ? `Gebied: ${natura.naam as string}` : undefined}
+              risk={(natura?.binnen_5km as boolean) ? 'middel' : 'laag'}
             />
             <EnvCell
               label="Overstromingsrisico"
-              value={(overstroom?.risk_category as string | undefined) ?? 'Onbekend'}
-              detail={(overstroom?.risk_label as string | undefined) ?? undefined}
-              risk={
-                (overstroom?.risk_category as string | undefined)?.toLowerCase().includes('hoog') ? 'hoog'
-                  : (overstroom?.risk_category as string | undefined)?.toLowerCase().includes('middel') ? 'middel'
-                    : 'laag'
-              }
+              value={overstroom
+                ? ((overstroom.in_risk_zone as boolean) ? (overstroom.qualitative_value as string) ?? 'In risicozone' : 'Buiten risicozone')
+                : 'Onbekend'}
+              detail={(overstroom?.description as string | undefined) ?? undefined}
+              risk={(overstroom?.in_risk_zone as boolean) ? 'middel' : 'laag'}
             />
             <EnvCell
               label="Geluidbelasting"
-              value={(geluid?.lden_category as string | undefined) ?? 'Onbekend'}
+              value={(geluid?.classification as string | undefined) ?? 'Onbekend'}
               detail={(geluid?.lden_db as number | undefined) != null ? `${(geluid!.lden_db as number).toFixed(0)} dB Lden` : undefined}
               risk={
                 (geluid?.lden_db as number | undefined) != null && (geluid!.lden_db as number) > 65 ? 'hoog'
@@ -350,13 +348,12 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             />
             <EnvCell
               label="Luchtkwaliteit"
-              value={(lucht?.no2_category as string | undefined) ?? 'Onbekend'}
-              detail={(lucht?.no2_ug_m3 as number | undefined) != null ? `NO₂ ${(lucht!.no2_ug_m3 as number).toFixed(0)} μg/m³` : undefined}
-              risk={
-                (lucht?.no2_ug_m3 as number | undefined) != null && (lucht!.no2_ug_m3 as number) > 32 ? 'hoog'
-                  : (lucht?.no2_ug_m3 as number | undefined) != null && (lucht!.no2_ug_m3 as number) > 20 ? 'middel'
-                    : 'laag'
-              }
+              value={(lucht?.boven_grenswaarde as boolean) ? 'Boven grenswaarde' : 'Binnen grenswaarde'}
+              detail={[
+                (lucht?.no2_ugm3 as number | undefined) != null ? `NO₂ ${(lucht!.no2_ugm3 as number).toFixed(1)} μg/m³` : null,
+                (lucht?.pm10_ugm3 as number | undefined) != null ? `PM10 ${(lucht!.pm10_ugm3 as number).toFixed(1)} μg/m³` : null,
+              ].filter(Boolean).join(' · ') || undefined}
+              risk={(lucht?.boven_grenswaarde as boolean) ? 'hoog' : 'laag'}
             />
           </div>
         </SectionInsightCard>
