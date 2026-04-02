@@ -58,3 +58,4 @@ tmp/
 .gsd
 .vite/
 backups/
+backend/.venv
