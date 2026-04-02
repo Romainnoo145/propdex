@@ -894,23 +894,27 @@ async def regenerate_report_data(
         }
         logger.info(f"Refreshed vergunningen for {report_id}: {len(filtered)} records")
     except Exception as e:
-        logger.warning(f"Failed to refresh vergunningen for {report_id}: {e}")
+        logger.exception(f"Failed to refresh vergunningen for {report_id}: {e}")
 
     # 2. Fresh permit benchmark
     try:
         from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
 
         postcode = address.get("postcode", "")
+        huisnummer = address.get("huisnummer")
+        city = address.get("woonplaats")
         if postcode:
             benchmark = await build_permit_precedent_benchmark(
                 postcode=postcode,
+                huisnummer=int(huisnummer) if huisnummer else None,
+                city=city,
                 session=session,
             )
             if benchmark:
                 report_data_dict["permit_precedents"] = benchmark.model_dump(mode="json")
                 logger.info(f"Refreshed permit benchmark for {report_id}")
     except Exception as e:
-        logger.warning(f"Failed to refresh permit benchmark for {report_id}: {e}")
+        logger.exception(f"Failed to refresh permit benchmark for {report_id}: {e}")
 
     # 3. Update timestamp
     report_data_dict["resolved_at"] = datetime.utcnow().isoformat()
