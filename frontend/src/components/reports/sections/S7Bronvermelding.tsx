@@ -235,9 +235,13 @@ export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7Bronvermel
         )}
       </SectionInsightCard>
 
-      {/* ── Disclaimer ────────────────────────────────────────── */}
-      <SectionInsightCard kicker="Juridisch" title="Disclaimer" Icon={Info}>
-        <p className="text-[12px] text-slate-500 leading-relaxed">
+      {/* ── Disclaimer — amber warning card ───────────────────── */}
+      <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Info size={14} className="text-aura-amber-dark" />
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Disclaimer</p>
+        </div>
+        <p className="text-[12px] text-[#0E1111] leading-relaxed">
           De data in dit rapport is afkomstig van openbare bronnen (BAG, Kadaster, DSO, etc.) en wordt uitsluitend ter
           informatie aangeboden. Propdex garandeert niet de volledigheid, juistheid of actualiteit van de gegevens.
           Raadpleeg voor juridisch bindende informatie altijd de officiële bronnen en bevoegde instanties.
@@ -245,7 +249,7 @@ export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7Bronvermel
         <p className="mt-2 text-[11px] text-slate-400">
           Rapport gegenereerd op {new Date(data.resolved_at).toLocaleString('nl-NL')}
         </p>
-      </SectionInsightCard>
+      </div>
     </div>
   )
 }
