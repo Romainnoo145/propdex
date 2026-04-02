@@ -103,23 +103,20 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   const benchmark = data.permit_precedents
   const hasData = (vergunningen && vergunningen.length > 0) || !!benchmark
 
-  // Split bekendmakingen into parcel-specific vs neighborhood
+  // Split bekendmakingen: straat-level (relevant) vs rest of postcode (broader context)
   const address = data.address
-  const huisnummer = address?.huisnummer?.toString() ?? ''
   const straat = (address?.straat ?? '').toLowerCase()
 
-  const parcelRecords: Record<string, unknown>[] = []
-  const neighborRecords: Record<string, unknown>[] = []
+  const streetRecords: Record<string, unknown>[] = []
+  const otherRecords: Record<string, unknown>[] = []
 
   if (vergunningen && vergunningen.length > 0) {
     for (const v of vergunningen as Record<string, unknown>[]) {
       const title = ((v.title as string) ?? '').toLowerCase()
-      const hasStreet = straat.length > 2 && title.includes(straat)
-      const hasNumber = huisnummer && new RegExp(`\\b${huisnummer}\\b`).test(title)
-      if (hasStreet && hasNumber) {
-        parcelRecords.push(v)
+      if (straat.length > 2 && title.includes(straat)) {
+        streetRecords.push(v)
       } else {
-        neighborRecords.push(v)
+        otherRecords.push(v)
       }
     }
   }
@@ -144,18 +141,18 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
     <div className="space-y-6">
 
       {/* ── Parcel-specific bekendmakingen ─────────────────────── */}
-      <SectionInsightCard kicker="Dit perceel" title={`Vergunningen (${parcelRecords.length})`} Icon={FileText}>
-        {parcelRecords.length === 0 ? (
+      <SectionInsightCard kicker="Deze straat" title={`${address?.straat ?? 'Vergunningen'} (${streetRecords.length})`} Icon={FileText}>
+        {streetRecords.length === 0 ? (
           <p className="text-[13px] text-slate-500">
-            Geen vergunningen gevonden specifiek voor dit adres.
+            Geen bekendmakingen gevonden in deze straat.
           </p>
         ) : (
           <div className="space-y-0">
-            {parcelRecords.slice(0, 10).map((vg, idx) => (
-              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(parcelRecords.length, 10)} dotColor="bg-aura-amber" bold />
+            {streetRecords.slice(0, 10).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(streetRecords.length, 10)} dotColor="bg-aura-amber" bold />
             ))}
-            {parcelRecords.length > 10 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">+{parcelRecords.length - 10} meer</p>
+            {streetRecords.length > 10 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{streetRecords.length - 10} meer</p>
             )}
           </div>
         )}
@@ -228,14 +225,14 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
       )}
 
       {/* ── Neighborhood bekendmakingen ───────────────────────── */}
-      {neighborRecords.length > 0 && (
-        <SectionInsightCard kicker="Omgeving" title={`Buurt (${neighborRecords.length})`} Icon={FileText}>
+      {otherRecords.length > 0 && (
+        <SectionInsightCard kicker="Omgeving" title={`Overig postcodegebied (${otherRecords.length})`} Icon={FileText}>
           <div className="space-y-0">
-            {neighborRecords.slice(0, 5).map((vg, idx) => (
-              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(neighborRecords.length, 5)} />
+            {otherRecords.slice(0, 5).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(otherRecords.length, 5)} />
             ))}
-            {neighborRecords.length > 5 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">+{neighborRecords.length - 5} meer in de omgeving</p>
+            {otherRecords.length > 5 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{otherRecords.length - 5} meer in de omgeving</p>
             )}
           </div>
         </SectionInsightCard>
