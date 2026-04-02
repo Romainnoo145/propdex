@@ -242,7 +242,6 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
                   <p className="text-[13px] text-[#0E1111]">Geen BRO bodemclassificatie beschikbaar. Bodemonderzoek aanbevolen bij bouwactiviteiten.</p>
                 </div>
               )}
-              )}
 
               <p className="text-[11px] text-slate-400 italic">
                 {bodem?.disclaimer ?? 'Bron: Bodemloket / BRO Bodemkaart. Afwezigheid van dossiers is geen bodemkwaliteitsverklaring.'}
