@@ -69,15 +69,14 @@ function RapportPage() {
     setIsRefreshing(true)
     try {
       const { regenerateReport } = await import('@/lib/api')
-      const result = await regenerateReport(id, accessToken)
-      // Update the query cache directly with the fresh data
-      queryClient.setQueryData(['report', id], result)
+      await regenerateReport(id, accessToken)
+      // Hard reload to pick up fresh data
+      window.location.reload()
     } catch (err) {
       console.error('Refresh failed:', err)
-    } finally {
       setIsRefreshing(false)
     }
-  }, [id, accessToken, isRefreshing, queryClient])
+  }, [id, accessToken, isRefreshing])
 
   const handleBack = () => {
     if (search.from === 'rapporten') {
