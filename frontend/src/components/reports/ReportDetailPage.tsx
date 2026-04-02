@@ -3,6 +3,7 @@
  * Retained temporarily for reference. Safe to delete after Phase 107 verification.
  */
 import { useCallback, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/useAuth'
 import { uploadBestemmingsplanPDF } from '@/lib/api'
 import { splitZoningPlans } from '@/lib/zoningPlans'
@@ -111,11 +112,27 @@ export default function ReportDetailPage({
   onBack,
   onViewOnMap,
 }: ReportDetailPageProps) {
-  const { user } = useAuth()
+  const { user, accessToken } = useAuth()
+  const queryClient = useQueryClient()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handlePrint = useCallback(() => {
     window.print()
   }, [])
+
+  const handleRefresh = useCallback(async () => {
+    if (!reportId || isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      const { regenerateReport } = await import('@/lib/api')
+      await regenerateReport(reportId, accessToken)
+      queryClient.invalidateQueries({ queryKey: ['report', reportId] })
+    } catch {
+      // Silent fail — data stays as-is
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [reportId, accessToken, isRefreshing, queryClient])
 
   if (isLoading) {
     return (
@@ -185,7 +202,9 @@ export default function ReportDetailPage({
           reportId={reportId}
           onBack={onBack}
           onViewOnMap={onViewOnMap}
-          onPrint={handlePrint}
+          onExportPDF={handlePrint}
+          onRefresh={reportId ? handleRefresh : undefined}
+          isRefreshing={isRefreshing}
         />
 
         {/* Replaced by ActieVereistSection — Plan 65-03 */}

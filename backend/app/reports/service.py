@@ -853,6 +853,46 @@ async def update_report_data(
     return report
 
 
+async def regenerate_report_data(
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    client,
+    session: AsyncSession,
+) -> SavedReport:
+    """
+    Re-aggregate all property data from APIs and update the saved report.
+
+    Fetches fresh data using the same pipeline as initial report creation,
+    then replaces the stored snapshot. Used for the "Ververs rapport" button.
+    """
+    report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
+
+    source_parcel_id = report.source_parcel_id
+    if not source_parcel_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kan rapport niet vernieuwen: geen perceel gekoppeld.",
+        )
+
+    fresh_data = await aggregate_property_data(
+        parcel_id=source_parcel_id,
+        x=None,
+        y=None,
+        client=client,
+        session=session,
+        force_refresh=True,
+    )
+
+    report_data_dict = fresh_data.model_dump(mode="json")
+    report_data_dict.pop("brk_ownership", None)
+    report.report_data = report_data_dict
+    report.updated_at = datetime.utcnow()
+
+    await session.commit()
+    return report
+
+
 async def get_distinct_cities(
     user_id: uuid.UUID,
     session: AsyncSession,

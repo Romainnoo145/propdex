@@ -384,6 +384,21 @@ export async function refreshReport(
 }
 
 /**
+ * Regenerate report with fresh data from all API sources
+ *
+ * POST /api/reports/{reportId}/regenerate
+ */
+export async function regenerateReport(
+  reportId: string,
+  accessToken: string | null
+): Promise<ReportDetailResponse> {
+  return apiFetch<ReportDetailResponse>(`${REPORTS_BASE}/${reportId}/regenerate`, {
+    method: 'POST',
+    accessToken,
+  })
+}
+
+/**
  * Update report notes (per-section JSON string)
  *
  * PATCH /api/reports/{reportId}/notes
