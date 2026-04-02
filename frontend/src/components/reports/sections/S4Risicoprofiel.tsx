@@ -198,13 +198,12 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
       <SectionInsightCard kicker="Bodem" title="Bodemkwaliteit" Icon={Droplets}>
         {(() => {
           const hasDossiers = bodem && bodem.dossiers.length > 0
-          const bodemRisk = hasDossiers ? 'middel' : bodem ? 'geen' : 'onbekend'
+          const hasSoilData = !!(soilLabel || soilCode)
+          // No dossiers ≠ no risk. It means Bodemloket has no records.
+          const bodemRisk = hasDossiers ? 'middel' : 'laag'
           const explanation = hasDossiers
             ? 'Geregistreerde bodemverontreiniging gevonden in het Bodemloket.'
-            : bodem
-              ? 'Geen geregistreerde verontreiniging gevonden in het Bodemloket.'
-              : 'Geen bodemdata beschikbaar'
-          const hasSoilData = !!(soilLabel || soilCode)
+            : 'Geen geregistreerde meldingen in het Bodemloket.'
 
           return (
             <div className="space-y-3">
@@ -275,15 +274,9 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
 
               {/* Details */}
-              {(fundRisk?.bouwjaar || fundFlags) && (
+              {fundRisk?.bouwjaar && (
                 <SubCard className="space-y-0">
-                  {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
-                  {(fundFlags?.percvoor1970 as number | undefined) != null && (
-                    <KVRow label="% panden vóór 1970" value={`${(fundFlags!.percvoor1970 as number).toFixed(0)}%`} />
-                  )}
-                  {(fundFlags?.n_bag as number | undefined) != null && (
-                    <KVRow label="BAG panden" value={`${fundFlags!.n_bag as number}`} />
-                  )}
+                  <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />
                 </SubCard>
               )}
 
