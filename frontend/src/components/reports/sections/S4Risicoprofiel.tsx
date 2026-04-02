@@ -278,8 +278,6 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
                 {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
                 {(frgData?.fgr as string | undefined) && <KVRow label="Gebiedstype" value={frgData!.fgr as string} />}
                 {(frgData?.legenda as string | undefined) && <KVRow label="Risicogebied" value={frgData!.legenda as string} />}
-                {(frgData?.gemeente as string | undefined) && <KVRow label="Gemeente" value={frgData!.gemeente as string} />}
-                {(frgData?.pc6 as string | undefined) && <KVRow label="Postcode" value={frgData!.pc6 as string} />}
               </SubCard>
 
               {/* Aanbevolen actie — amber warning card */}
