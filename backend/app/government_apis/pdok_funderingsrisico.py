@@ -63,13 +63,21 @@ class PDOKFunderingsrisicoClient:
         if not _PC6_RE.match(pc6_clean):
             raise ValueError(f"Invalid postcode format: '{pc6}' (expected 4 digits + 2 uppercase letters)")
 
+        # OGC XML Filter — CQL_FILTER is silently ignored by this WFS endpoint.
+        ogc_filter = (
+            f'<Filter xmlns="http://www.opengis.net/ogc">'
+            f'<PropertyIsEqualTo><PropertyName>pc6</PropertyName>'
+            f'<Literal>{pc6_clean}</Literal>'
+            f'</PropertyIsEqualTo></Filter>'
+        )
+
         params: dict[str, str] = {
             "request": "GetFeature",
             "service": "WFS",
             "version": "2.0.0",
             "typenames": "indgebfunderingsproblematiek:indgebfunderingsproblematiek",
             "outputFormat": "application/json",
-            "CQL_FILTER": f"pc6='{pc6_clean}'",
+            "Filter": ogc_filter,
         }
 
         logger.debug("PDOK Funderingsrisico query: pc6=%s", pc6_clean)
