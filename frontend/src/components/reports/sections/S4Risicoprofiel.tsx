@@ -262,13 +262,10 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               <RiskBar risk={risk} />
               <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
 
-              {/* Details — same SubCard as bodem */}
-              {(fundRisk?.bodemtype || fundRisk?.bouwjaar || fundFlags) && (
+              {/* Details */}
+              {(fundRisk?.bouwjaar || fundFlags) && (
                 <SubCard className="space-y-0">
                   {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
-                  {(fundRisk?.bodemtype ?? soilLabel) && (
-                    <KVRow label="Bodemtype" value={fundRisk?.bodemtype === 'onbekend' ? (soilLabel ?? 'Onbekend') : (fundRisk?.bodemtype ?? soilLabel ?? null)} />
-                  )}
                   {(fundFlags?.percvoor1970 as number | undefined) != null && (
                     <KVRow label="% panden vóór 1970" value={`${(fundFlags!.percvoor1970 as number).toFixed(0)}%`} />
                   )}
