@@ -68,10 +68,10 @@ const STATUS_LABEL: Record<SourceStatus, string> = {
 }
 
 const STATUS_CLS: Record<SourceStatus, string> = {
-  ok: 'border-amber-200 bg-amber-50 text-amber-700',
-  unlinked: 'border-[#EAEFEF] bg-[#F8FAFA] text-slate-600',
+  ok: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  unlinked: 'border-slate-200 bg-slate-50 text-slate-500',
   blocked: 'border-amber-200 bg-amber-50 text-amber-700',
-  error: 'border-slate-200 bg-slate-50 text-slate-600',
+  error: 'border-red-200 bg-red-50 text-red-700',
 }
 
 const CONFIDENCE_LABEL: Record<string, string> = {
@@ -81,9 +81,9 @@ const CONFIDENCE_LABEL: Record<string, string> = {
 }
 
 const CONFIDENCE_CLS: Record<string, string> = {
-  HIGH: 'border-amber-200 bg-amber-50 text-amber-700',
+  HIGH: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   MEDIUM: 'border-amber-200 bg-amber-50 text-amber-700',
-  LOW: 'border-slate-200 bg-slate-50 text-slate-600',
+  LOW: 'border-red-200 bg-red-50 text-red-700',
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -173,7 +173,30 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
         {sources.length === 0 ? (
           <p className="text-[12px] text-slate-400">Geen broninformatie beschikbaar</p>
         ) : (
-          <div>
+          <div className="space-y-3">
+            {/* Completeness summary */}
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="font-semibold text-emerald-700">{okCount} OK</span>
+              </span>
+              {unlinkedCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  <span className="font-semibold text-slate-500">{unlinkedCount} niet gekoppeld</span>
+                </span>
+              )}
+              {errorCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="font-semibold text-red-700">{errorCount} fout</span>
+                </span>
+              )}
+              <span className="text-slate-400 ml-auto">{sources.length} bronnen</span>
+            </div>
+
+            {/* Source rows */}
+            <div>
             {sources.map((src, idx) => (
               <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#EAEFEF] last:border-b-0">
                 <div className="min-w-0 flex-1">
@@ -195,6 +218,7 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )}
       </SectionInsightCard>
