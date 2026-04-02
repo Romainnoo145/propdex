@@ -576,6 +576,18 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
               </div>
             )}
 
+            {wkb_precheck.missing_inputs && wkb_precheck.missing_inputs.length > 0 && (
+              <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle size={12} className="text-aura-amber-dark" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Aanvullende gegevens nodig</p>
+                </div>
+                <p className="text-[11px] text-[#0E1111]">
+                  Vul aan voor nauwkeuriger resultaat: {wkb_precheck.missing_inputs.map((m: string) => m.replace(/_/g, ' ')).join(', ')}
+                </p>
+              </div>
+            )}
+
             <p className="text-[11px] text-slate-400 italic">{wkb_precheck.disclaimer}</p>
           </div>
         </SectionInsightCard>
