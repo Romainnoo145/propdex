@@ -260,6 +260,7 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             ?? 'Geen funderingsrisicodata beschikbaar'
           const contextLabel = fundRisk?.bouwjaar ? `Bouwjaar ${fundRisk.bouwjaar}` : null
           const disclaimer = fundRisk?.disclaimer ?? null
+          const frgData = frp?.funderingsrisicogebied ?? (data.funderingsrisicogebied as Record<string, unknown> | null | undefined)
 
           return (
             <div className="space-y-3">
@@ -273,11 +274,13 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
 
               {/* Details */}
-              {fundRisk?.bouwjaar && (
-                <SubCard className="space-y-0">
-                  <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />
-                </SubCard>
-              )}
+              <SubCard className="space-y-0">
+                {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
+                {(frgData?.fgr as string | undefined) && <KVRow label="Gebiedstype" value={frgData!.fgr as string} />}
+                {(frgData?.legenda as string | undefined) && <KVRow label="Risicogebied" value={frgData!.legenda as string} />}
+                {(frgData?.gemeente as string | undefined) && <KVRow label="Gemeente" value={frgData!.gemeente as string} />}
+                {(frgData?.pc6 as string | undefined) && <KVRow label="Postcode" value={frgData!.pc6 as string} />}
+              </SubCard>
 
               {/* Aanbevolen actie — amber warning card */}
               {fundRisk?.recommended_action && (
