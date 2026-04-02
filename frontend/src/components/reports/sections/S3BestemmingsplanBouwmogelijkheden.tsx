@@ -229,12 +229,20 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
           <p className="text-[13px] text-slate-500">Geen bestemmingsplangegevens beschikbaar</p>
         ) : (() => {
           const { actionablePlans, policyPlans } = splitZoningPlans(zoning.plans)
+          // Extract bestemming: primary_bestemming, or first rule bestemming from first plan
+          const bestemming = zoning.primary_bestemming
+            ?? actionablePlans?.[0]?.rules?.[0]?.bestemming
+            ?? null
           return (
             <div className="space-y-3">
-              {zoning.primary_bestemming && (
-                <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
-                  <span className="text-[12px] text-slate-400">Hoofdbestemming</span>
-                  <span className="text-[13px] font-semibold text-[#0E1111]">{zoning.primary_bestemming}</span>
+              {/* Prominent bestemming label */}
+              {bestemming ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-[20px] font-bold text-aura-amber">{bestemming}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] font-semibold text-slate-400">Bestemming niet vastgesteld</span>
                 </div>
               )}
 
