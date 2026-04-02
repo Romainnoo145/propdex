@@ -1,8 +1,5 @@
 /**
  * S6 Vergunningen & Precedenten — Due Diligence Dashboard section 6
- *
- * Split bekendmakingen into parcel-specific vs neighborhood.
- * Visual outcome bar, structured benchmark, linked references.
  */
 
 import { motion } from 'framer-motion'
@@ -16,8 +13,6 @@ export interface S6VergunningenPrecedentenProps {
   sourceParcelId?: string | null
 }
 
-/* ─── Outcome colors ─────────────────────────────────────────── */
-
 const OUTCOME_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   granted:   { label: 'Verleend',    color: 'text-emerald-700', bg: 'bg-emerald-500', border: 'border-emerald-200 bg-emerald-50' },
   requested: { label: 'Aangevraagd', color: 'text-aura-amber-dark', bg: 'bg-aura-amber', border: 'border-aura-amber/30 bg-aura-amber/10' },
@@ -26,14 +21,11 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string; bg: string;
   other:     { label: 'Overig',      color: 'text-slate-500',   bg: 'bg-slate-300',   border: 'border-slate-200 bg-slate-50' },
 }
 
-/* ─── Outcome distribution bar ───────────────────────────────── */
-
 function OutcomeBar({ distribution }: { distribution: Record<string, number> }) {
   const total = Object.values(distribution).reduce((s, n) => s + n, 0)
   if (total === 0) return null
   const ordered = ['granted', 'requested', 'rejected', 'withdrawn', 'other']
   const segments = ordered.filter(k => distribution[k] > 0).map(k => ({ key: k, count: distribution[k], pct: (distribution[k] / total) * 100 }))
-
   return (
     <div className="space-y-2">
       <div className="flex h-6 w-full overflow-hidden rounded-full bg-slate-100">
@@ -61,21 +53,18 @@ function OutcomeBar({ distribution }: { distribution: Record<string, number> }) 
   )
 }
 
-/* ─── Helpers ────────────────────────────────────────────────── */
-
 function bekendmakingUrl(identifier: string | undefined): string | null {
   if (!identifier) return null
   return `https://zoek.officielebekendmakingen.nl/${identifier}.html`
 }
 
-function TimelineRow({ vg, idx, total, dotColor = 'bg-slate-300', bold = false }: {
-  vg: Record<string, unknown>; idx: number; total: number; dotColor?: string; bold?: boolean
+function TimelineRow({ vg, idx, total, dotColor = 'bg-aura-amber' }: {
+  vg: Record<string, unknown>; idx: number; total: number; dotColor?: string
 }) {
   const title = (vg.title as string) ?? (vg.onderwerp as string) ?? 'Onbekend'
   const date = vg.date as string | undefined
   const type = vg.type as string | undefined
   const url = bekendmakingUrl(vg.identifier as string | undefined)
-
   return (
     <div className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
       <div className="flex flex-col items-center pt-1.5">
@@ -83,7 +72,7 @@ function TimelineRow({ vg, idx, total, dotColor = 'bg-slate-300', bold = false }
         {idx < total - 1 && <span className="w-px flex-1 bg-[#EAEFEF] mt-1" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`text-[12px] leading-snug line-clamp-2 ${bold ? 'font-semibold text-[#0E1111]' : 'text-slate-600'}`}>
+        <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
           {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-aura-amber transition-colors">{title}</a> : title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
@@ -96,30 +85,13 @@ function TimelineRow({ vg, idx, total, dotColor = 'bg-slate-300', bold = false }
   )
 }
 
-/* ─── Section ────────────────────────────────────────────────── */
-
 export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6VergunningenPrecedentenProps) {
   const vergunningen = data.vergunningen_data
   const benchmark = data.permit_precedents
-  const hasData = (vergunningen && vergunningen.length > 0) || !!benchmark
-
-  // Split bekendmakingen: straat-level (relevant) vs rest of postcode (broader context)
-  const address = data.address
-  const straat = (address?.straat ?? '').toLowerCase()
-
-  const streetRecords: Record<string, unknown>[] = []
-  const otherRecords: Record<string, unknown>[] = []
-
-  if (vergunningen && vergunningen.length > 0) {
-    for (const v of vergunningen as Record<string, unknown>[]) {
-      const title = ((v.title as string) ?? '').toLowerCase()
-      if (straat.length > 2 && title.includes(straat)) {
-        streetRecords.push(v)
-      } else {
-        otherRecords.push(v)
-      }
-    }
-  }
+  const allRecords: Record<string, unknown>[] = vergunningen
+    ? (Array.isArray(vergunningen) ? vergunningen : (vergunningen as Record<string, unknown>).records as Record<string, unknown>[] ?? [])
+    : []
+  const hasData = allRecords.length > 0 || !!benchmark
 
   if (!hasData) {
     return (
@@ -140,25 +112,21 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   return (
     <div className="space-y-6">
 
-      {/* ── Parcel-specific bekendmakingen ─────────────────────── */}
-      <SectionInsightCard kicker="Deze straat" title={`${address?.straat ?? 'Vergunningen'} (${streetRecords.length})`} Icon={FileText}>
-        {streetRecords.length === 0 ? (
-          <p className="text-[13px] text-slate-500">
-            Geen bekendmakingen gevonden in deze straat.
-          </p>
-        ) : (
+      {/* ── Bekendmakingen ────────────────────────────────────── */}
+      {allRecords.length > 0 && (
+        <SectionInsightCard kicker="Bekendmakingen" title={`Vergunningen (${allRecords.length})`} Icon={FileText}>
           <div className="space-y-0">
-            {streetRecords.slice(0, 10).map((vg, idx) => (
-              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(streetRecords.length, 10)} dotColor="bg-aura-amber" bold />
+            {allRecords.slice(0, 10).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(allRecords.length, 10)} />
             ))}
-            {streetRecords.length > 10 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">+{streetRecords.length - 10} meer</p>
+            {allRecords.length > 10 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{allRecords.length - 10} meer</p>
             )}
           </div>
-        )}
-      </SectionInsightCard>
+        </SectionInsightCard>
+      )}
 
-      {/* ── Benchmark hero ────────────────────────────────────── */}
+      {/* ── Benchmark ─────────────────────────────────────────── */}
       {benchmark && (
         <SectionInsightCard kicker="Precedenten" title="Vergunningsbenchmark" badge={benchmark.gemeente_scope} Icon={Scale}>
           <div className="space-y-4">
@@ -183,11 +151,9 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
                 <p className="text-[10px] text-slate-400">75e percentiel</p>
               </SubCard>
             </div>
-
             {Object.keys(benchmark.outcome_distribution).length > 0 && (
               <OutcomeBar distribution={benchmark.outcome_distribution} />
             )}
-
             {benchmark.low_sample_warning && (
               <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
                 <p className="text-[11px] text-aura-amber-dark">{benchmark.low_sample_warning}</p>
@@ -220,20 +186,6 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
                 </SubCard>
               )
             })}
-          </div>
-        </SectionInsightCard>
-      )}
-
-      {/* ── Neighborhood bekendmakingen ───────────────────────── */}
-      {otherRecords.length > 0 && (
-        <SectionInsightCard kicker="Omgeving" title={`Overig postcodegebied (${otherRecords.length})`} Icon={FileText}>
-          <div className="space-y-0">
-            {otherRecords.slice(0, 5).map((vg, idx) => (
-              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(otherRecords.length, 5)} />
-            ))}
-            {otherRecords.length > 5 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">+{otherRecords.length - 5} meer in de omgeving</p>
-            )}
           </div>
         </SectionInsightCard>
       )}
