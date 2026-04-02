@@ -191,6 +191,9 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
       {/* ── Bekendmakingen timeline ───────────────────────────── */}
       {vergunningen && vergunningen.length > 0 && (
         <SectionInsightCard kicker="Bekendmakingen" title={`Omgeving (${vergunningen.length})`} Icon={FileText}>
+          <p className="text-[11px] text-slate-400 mb-3">
+            Vergunningen en bekendmakingen in het postcodegebied. Perceelspecifieke vergunningen worden binnenkort toegevoegd.
+          </p>
           <div className="space-y-0">
             {vergunningen.slice(0, 8).map((v, idx) => {
               const vg = v as Record<string, unknown>
