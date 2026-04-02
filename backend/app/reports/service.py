@@ -879,6 +879,8 @@ async def regenerate_report_data(
         )
 
     from app.schemas.address import AddressInput
+    from app.core.database import async_session_factory
+
     input_data = AddressInput(
         postcode=address["postcode"],
         huisnummer=address["huisnummer"],
@@ -886,15 +888,32 @@ async def regenerate_report_data(
         toevoeging=address.get("toevoeging"),
     )
 
-    fresh_data = await aggregate_property_data(
-        input_data=input_data,
-        client=client,
-        session=session,
-        force_refresh=True,
-    )
+    # Use a separate session for aggregation to avoid "already flushing" conflicts
+    async with async_session_factory() as agg_session:
+        fresh_data = await aggregate_property_data(
+            input_data=input_data,
+            client=client,
+            session=agg_session,
+            force_refresh=True,
+        )
 
     report_data_dict = fresh_data.model_dump(mode="json")
     report_data_dict.pop("brk_ownership", None)
+
+    # Preserve scan-flags enrichment (vergunningen, scores, etc.) from old data
+    # that aggregate_property_data doesn't produce. These come from scan_results.
+    old_data = stored
+    flags_keys = [
+        "vergunningen_data", "energielabel_flags", "woz_flags", "bodem_flags",
+        "bodemtype_flags", "funderingsrisico_flags", "natura2000_flags",
+        "overstromingsrisico_flags", "geluid_flags", "luchtkwaliteit_flags",
+        "scores_v3", "score_breakdown_v3", "use_case_scores", "score_model_version",
+    ]
+    for key in flags_keys:
+        if key not in report_data_dict or report_data_dict[key] is None:
+            if key in old_data and old_data[key] is not None:
+                report_data_dict[key] = old_data[key]
+
     report.report_data = report_data_dict
     report.updated_at = datetime.utcnow()
 
