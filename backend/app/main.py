@@ -86,7 +86,19 @@ app.add_middleware(
 app.add_middleware(TenantContextMiddleware)
 
 # Add GZip compression (after tenant context — runs outermost, compresses all responses)
-app.add_middleware(GZipMiddleware, minimum_size=500)
+# Skip SSE endpoints: GZip buffering prevents chunked streaming delivery
+class _SSEAwareGZipMiddleware(GZipMiddleware):
+    """GZip middleware that skips Server-Sent Events endpoints."""
+
+    async def __call__(self, scope, receive, send):  # type: ignore[override]
+        if scope["type"] == "http" and scope.get("path", "").endswith("/stream"):
+            # Bypass GZip entirely for SSE endpoints
+            await self.app(scope, receive, send)
+        else:
+            await super().__call__(scope, receive, send)
+
+
+app.add_middleware(_SSEAwareGZipMiddleware, minimum_size=500)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

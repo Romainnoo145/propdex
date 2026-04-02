@@ -476,10 +476,10 @@ async def agent_chat_stream(
                 "of stel een andere vraag."
             )
 
-        # Stream text as word-level deltas
-        words = reply_text.split()
-        for word in words:
-            yield {"type": "text_delta", "data": {"text": word}}
+        # Stream text as a single delta (preserves markdown structure).
+        # Note: Gemini responses arrive complete after the tool-calling loop —
+        # word-level splitting is unnecessary and destroys markdown tables/lists.
+        yield {"type": "text_delta", "data": {"text": reply_text}}
 
         # Sources
         yield {"type": "sources", "data": {"sources": sources}}

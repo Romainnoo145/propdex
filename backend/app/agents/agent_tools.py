@@ -47,7 +47,11 @@ _LIST_REPORTS = types.FunctionDeclaration(
     name="list_reports",
     description=(
         "Haal de opgeslagen vastgoedrapporten op van de gebruiker. "
-        "Optioneel te filteren op stad/gemeente."
+        "Bevat al de belangrijkste scores en kenmerken per rapport: "
+        "potentie, risico, bouwjaar, oppervlakte, gebruiksdoel, bestemming, "
+        "energielabel, asbestrisico, fysiek risico en monumentstatus. "
+        "Gebruik dit voor vergelijkingen en overzichten — get_report is "
+        "alleen nodig voor diepere details van één specifiek perceel."
     ),
     parameters=types.Schema(
         type="OBJECT",
@@ -64,8 +68,11 @@ _LIST_REPORTS = types.FunctionDeclaration(
 _GET_REPORT = types.FunctionDeclaration(
     name="get_report",
     description=(
-        "Haal het volledige vastgoedrapport op inclusief alle scores, "
-        "gebouwgegevens, bestemmingsplan, energie, asbest en risicoprofiel."
+        "Haal het volledige vastgoedrapport op voor één specifiek perceel. "
+        "Bevat gedetailleerde data over bestemmingsplan, energie, bodem, "
+        "eigendom en risicoprofiel. Gebruik alleen wanneer de gebruiker "
+        "diepere details over één perceel wil — voor vergelijkingen en "
+        "overzichten is list_reports voldoende."
     ),
     parameters=types.Schema(
         type="OBJECT",
@@ -81,10 +88,15 @@ _GET_REPORT = types.FunctionDeclaration(
 
 
 def get_agent_tools() -> list[types.Tool]:
-    """Return Gemini Tool objects: user-data functions + Google Search grounding."""
+    """Return Gemini Tool objects: user-data functions.
+
+    Note: GoogleSearch grounding cannot be combined with FunctionDeclarations
+    in the same request on Gemini 2.5 Pro (only supported on Gemini 3+).
+    Google Search is omitted here; the agent relies on training data for
+    external advisory questions.
+    """
     return [
         types.Tool(function_declarations=[_LIST_FAVORITES, _LIST_REPORTS, _GET_REPORT]),
-        types.Tool(google_search=types.GoogleSearch()),
     ]
 
 

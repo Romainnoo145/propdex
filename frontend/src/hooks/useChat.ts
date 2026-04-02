@@ -96,7 +96,8 @@ interface SSEEvent {
  * Handles partial lines across chunks via a buffer.
  */
 function parseSSE(raw: string, buffer: string): { events: SSEEvent[]; remaining: string } {
-  const text = buffer + raw
+  // Normalize CRLF → LF before parsing (sse-starlette sends \r\n)
+  const text = (buffer + raw).replace(/\r\n/g, '\n')
   const events: SSEEvent[] = []
   // Split on double newlines (SSE event boundary)
   const blocks = text.split('\n\n')
@@ -251,7 +252,7 @@ export function useChat() {
             case 'text_delta': {
               const delta = payload.text as string
               if (!delta) break
-              accumulatedText += (accumulatedText && !textStarted ? '' : '') + delta
+              accumulatedText += delta
               textStarted = true
               setMessages(prev =>
                 prev.map(m => m.id === placeholderId

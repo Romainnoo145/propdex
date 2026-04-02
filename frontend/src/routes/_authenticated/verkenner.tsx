@@ -315,16 +315,3 @@ function VerkennerPage() {
     </div>
   )
 }
-      </div>
-    </div>
-  )
-}
-{16} strokeWidth={2.5} />
-            </button>
-          </div>
-        </div>
-        )}
-      </div>
-    </div>
-  )
-}
