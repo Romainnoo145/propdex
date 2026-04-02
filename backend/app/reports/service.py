@@ -898,6 +898,8 @@ async def regenerate_report_data(
 
     # 2. Fresh permit benchmark
     try:
+        from app.services.permit_precedent_benchmark import build_permit_precedent_benchmark
+
         postcode = address.get("postcode", "")
         if postcode:
             benchmark = await build_permit_precedent_benchmark(
