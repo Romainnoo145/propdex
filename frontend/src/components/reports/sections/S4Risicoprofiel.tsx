@@ -202,8 +202,9 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
           const explanation = hasDossiers
             ? 'Geregistreerde bodemverontreiniging gevonden in het Bodemloket.'
             : bodem
-              ? 'Geen geregistreerde verontreiniging gevonden'
+              ? 'Geen geregistreerde verontreiniging gevonden in het Bodemloket.'
               : 'Geen bodemdata beschikbaar'
+          const hasSoilData = !!(soilLabel || soilCode)
 
           return (
             <div className="space-y-3">
@@ -218,19 +219,30 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
               <RiskBar risk={bodemRisk} />
               <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
 
-              {/* Details — same SubCard as fundering */}
-              {(soilLabel || soilCode || hasDossiers) && (
-                <SubCard className="space-y-0">
-                  {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
-                  {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
-                  {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
-                  {hasDossiers && <KVRow label="WBB dossiers" value={`${bodem!.dossiers.length}`} />}
-                </SubCard>
-              )}
+              {/* Details SubCard — always show something */}
+              <SubCard className="space-y-0">
+                {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
+                {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
+                {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
+                <KVRow label="WBB dossiers" value={hasDossiers ? `${bodem!.dossiers.length}` : '0 (schoon)'} />
+                {!hasSoilData && <KVRow label="BRO bodemkaart" value="Geen dekking op deze locatie" />}
+              </SubCard>
 
               {hasDossiers && bodem!.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} idx={i} />)}
               {hasDossiers && bodem!.dossiers.length > 3 && (
                 <p className="text-[11px] text-slate-400 italic">+{bodem!.dossiers.length - 3} overige dossiers</p>
+              )}
+
+              {/* No BRO data warning */}
+              {!hasSoilData && (
+                <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle size={12} className="text-aura-amber-dark" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Onvolledige gegevens</p>
+                  </div>
+                  <p className="text-[13px] text-[#0E1111]">Geen BRO bodemclassificatie beschikbaar. Bodemonderzoek aanbevolen bij bouwactiviteiten.</p>
+                </div>
+              )}
               )}
 
               <p className="text-[11px] text-slate-400 italic">
