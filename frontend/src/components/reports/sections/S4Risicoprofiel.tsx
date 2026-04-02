@@ -126,13 +126,15 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
   const soilProfile = frp?.soil_profile
 
   // Bodemtype fallback: soil_profile in frp, or bodemtype_flags at root level
+  // Filter out "Onbekend" variants so we fall through to the flags data
   const bodemtypeFlags = data.bodemtype_flags as Record<string, unknown> | null | undefined
-  const soilLabel = soilProfile?.dominant_type_label
-    ?? (bodemtypeFlags?.dominant_type_label as string | undefined)
-    ?? null
-  const soilCode = soilProfile?.soilcode
-    ?? (bodemtypeFlags?.soilcode as string | undefined)
-    ?? null
+  const _spLabel = soilProfile?.dominant_type_label
+  const _spLabelUsable = _spLabel && !_spLabel.toLowerCase().startsWith('onbekend') ? _spLabel : null
+  const _btLabel = bodemtypeFlags?.dominant_type_label as string | undefined
+  const _btLabelUsable = _btLabel && _btLabel !== 'None' && !_btLabel.toLowerCase().startsWith('onbekend') ? _btLabel : null
+  const soilLabel = _spLabelUsable ?? _btLabelUsable ?? null
+  const soilCode = (soilProfile?.soilcode && soilProfile.soilcode !== 'onbekend' ? soilProfile.soilcode : null)
+    ?? (bodemtypeFlags?.soilcode as string | undefined) ?? null
   const soilName = soilProfile?.soilname ?? null
 
   // Environmental flags
