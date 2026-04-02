@@ -39,6 +39,9 @@ export default function ReportHeader({
   const potentieScore = scores && typeof scores.potentie === 'number' ? scores.potentie : null
   const risicoScore = scores && typeof scores.risico === 'number' ? scores.risico : null
 
+  // Completeness
+  const completeness = typeof data.completeness_score === 'number' ? Math.round(data.completeness_score * 100) : null
+
   // Kadaster info
   const primaryPerceelId = cadastral_parcels[0]?.kadastrale_aanduiding ?? null
   const gemeente = cadastral_parcels[0]?.kadastrale_gemeente ?? address.woonplaats ?? null
@@ -124,6 +127,27 @@ export default function ReportHeader({
                       />
                     </svg>
                     {Math.round(risicoScore)}
+                  </motion.span>
+                )}
+
+                {/* Completeness ring — amber */}
+                {completeness != null && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.35 }}
+                    className="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-aura-amber/30 bg-aura-amber/10 px-3 text-[12px] font-semibold text-aura-amber-dark"
+                  >
+                    <svg viewBox="0 0 12 12" className="size-3">
+                      <circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.2" />
+                      <circle
+                        cx="6" cy="6" r="5" fill="none" stroke="currentColor" strokeWidth="2"
+                        strokeDasharray={`${(completeness / 100) * 31.4} 31.4`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 6 6)"
+                      />
+                    </svg>
+                    {completeness}% compleet
                   </motion.span>
                 )}
               </div>
