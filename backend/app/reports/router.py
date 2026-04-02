@@ -209,7 +209,7 @@ async def refresh_report(request: Request, report_id: uuid.UUID, refresh_request
     except Exception as e: _err(500, "Failed to refresh report", e)
 
 @router.post("/{report_id}/regenerate", response_model=ReportDetailResponse)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def regenerate_report(request: Request, report_id: uuid.UUID,
                             current_user: User = Depends(get_current_active_user),
                             db: AsyncSession = Depends(get_db)) -> ReportDetailResponse:
