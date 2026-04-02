@@ -1,7 +1,7 @@
 /**
  * Verkenner — Conversational AI interface to all Propdex data.
  *
- * Chat-first: user asks questions, system classifies intent and responds.
+ * Chat-first: user asks questions, agent responds with rich markdown.
  * History panel slides in as a sibling rounded shell (same pattern as
  * parcel detail panel pushing the map).
  */
@@ -13,12 +13,7 @@ import { ArrowUp, Compass, Clock, X, Loader2 } from 'lucide-react'
 import { useChat, type ChatMessage } from '@/hooks/useChat'
 import { useBulkQueryHistory } from '@/hooks/useBulkQuery'
 import { ChatLoading } from '@/components/chat/ChatLoading'
-import { ChatSearchResults } from '@/components/chat/ChatSearchResults'
-import { ChatCountPreview } from '@/components/chat/ChatCountPreview'
-import { ChatParcelDetail } from '@/components/chat/ChatParcelDetail'
-import { ChatFavoritesList } from '@/components/chat/ChatFavoritesList'
-import { ChatReportsList } from '@/components/chat/ChatReportsList'
-import { ChatUnsupported } from '@/components/chat/ChatUnsupported'
+import { ChatAgentMessage } from '@/components/chat/ChatAgentMessage'
 
 export const Route = createFileRoute('/_authenticated/verkenner')({
   component: VerkennerPage,
@@ -34,10 +29,10 @@ const fadeIn = {
 /* ─── Examples ──────────────────────────────────────────────── */
 
 const EXAMPLES = [
-  'Alle woningen in Venlo met bouwjaar voor 1970',
-  'Bedrijfspanden groter dan 500m² in Amsterdam',
-  'Welke percelen heb ik opgeslagen?',
-  'Laat mijn rapporten zien',
+  'Vergelijk mijn opgeslagen percelen op risicoscore',
+  'Welke documenten ontbreken voor mijn rapport in Venlo?',
+  'Wat zijn de risico\'s van mijn favoriete percelen?',
+  'Waar kan ik een bodemonderzoek laten doen?',
 ]
 
 /* ─── History Shell ─────────────────────────────────────────── */
@@ -103,9 +98,8 @@ function HistoryShell({
 
 /* ─── Message Bubble ────────────────────────────────────────── */
 
-function MessageBubble({ message, chat }: {
+function MessageBubble({ message }: {
   message: ChatMessage
-  chat: ReturnType<typeof useChat>
 }) {
   if (message.role === 'user') {
     return (
@@ -123,35 +117,15 @@ function MessageBubble({ message, chat }: {
         <Compass size={14} className="text-amber-500" />
       </div>
       <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-neutral-200 px-4 py-3 shadow-sm">
-        <SystemContent message={message} chat={chat} />
+        {message.role === 'loading'
+          ? <ChatLoading />
+          : <ChatAgentMessage text={message.text} sources={message.sources} />
+        }
       </div>
     </motion.div>
   )
 }
 
-function SystemContent({ message, chat }: {
-  message: Extract<ChatMessage, { role: 'system' }>
-  chat: ReturnType<typeof useChat>
-}) {
-  switch (message.intent) {
-    case 'LOADING':
-      return <ChatLoading />
-    case 'PARCEL_SEARCH':
-      return <ChatSearchResults total={message.total} parsed={message.parsed} queryId={message.queryId} />
-    case 'COUNT_PREVIEW':
-      return <ChatCountPreview count={message.count} message={message.message} suggestions={message.suggestions} onSuggestion={chat.sendSuggestion} onForceResults={chat.forceResults} />
-    case 'PARCEL_DETAIL':
-      return <ChatParcelDetail data={message.data} />
-    case 'MY_FAVORITES':
-      return <ChatFavoritesList favorites={message.data} count={message.count} message={message.message} />
-    case 'MY_REPORTS':
-      return <ChatReportsList reports={message.data} count={message.count} message={message.message} />
-    case 'UNSUPPORTED':
-      return <ChatUnsupported reason={message.reason} />
-    default:
-      return <p className="text-[13px] text-slate-600">{'message' in message ? String((message as Record<string, unknown>).message) : 'Bericht ontvangen.'}</p>
-  }
-}
 
 /* ─── Page ──────────────────────────────────────────────────── */
 
@@ -283,7 +257,7 @@ function VerkennerPage() {
             {!isEmpty && (
               <div className="space-y-4 py-6">
                 {chat.messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg} chat={chat} />
+                  <MessageBubble key={msg.id} message={msg} />
                 ))}
               </div>
             )}
