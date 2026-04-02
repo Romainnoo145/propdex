@@ -198,22 +198,24 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
             {/* Source rows */}
             <div>
             {sources.map((src, idx) => (
-              <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#EAEFEF] last:border-b-0">
+              <div key={idx} className="flex items-start justify-between gap-3 py-2.5 border-b border-[#EAEFEF] last:border-b-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-semibold text-[#0E1111]">{src.source}</p>
-                  <p className="text-[12px] text-slate-400">{formatAge(src.age_seconds)}</p>
-                  {src.note && (
-                    <p className="mt-0.5 text-[12px] text-slate-400 break-words">{src.note}</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_CLS[src.status]}`}>
-                    {STATUS_LABEL[src.status]}
-                  </span>
-                  {src.confidence && (
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${CONFIDENCE_CLS[src.confidence]}`}>
-                      {CONFIDENCE_LABEL[src.confidence]}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${
+                      src.status === 'ok' ? 'bg-emerald-500'
+                        : src.status === 'error' ? 'bg-red-500'
+                          : src.status === 'blocked' ? 'bg-amber-500'
+                            : 'bg-slate-400'
+                    }`} />
+                    <p className="text-[12px] font-semibold text-[#0E1111]">{src.source}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 pl-4 text-[11px] text-slate-400">
+                    <span>{formatAge(src.age_seconds)}</span>
+                    {src.confidence && <span>· {CONFIDENCE_LABEL[src.confidence]}</span>}
+                    {src.status !== 'ok' && <span>· {STATUS_LABEL[src.status]}</span>}
+                  </div>
+                  {src.note && src.status !== 'ok' && (
+                    <p className="mt-0.5 pl-4 text-[11px] text-slate-400 break-words">{src.note}</p>
                   )}
                 </div>
               </div>
