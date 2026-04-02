@@ -6,8 +6,9 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from google.genai import types
 
-from app.agents.agent_tools import AGENT_TOOLS, execute_tool
+from app.agents.agent_tools import execute_tool, get_agent_tools
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -77,32 +78,63 @@ def _mock_db_scalar_one_or_none(value):
     return db
 
 
-# ── Tool schema validation ──────────────────────────────────────────────
+# ── Tool schema validation (Gemini FunctionDeclaration format) ──────────
 
 
 class TestToolSchemas:
-    """Verify AGENT_TOOLS conform to Anthropic ToolParam format."""
+    """Verify get_agent_tools() returns Gemini Tool objects."""
 
     def test_tool_count(self):
-        # 3 user-defined tools + 1 server-side web_search tool
-        assert len(AGENT_TOOLS) == 4
+        """get_agent_tools() returns 2 Tool objects: functions + GoogleSearch."""
+        tools = get_agent_tools()
+        assert len(tools) == 2
 
-    def test_tool_names(self):
-        names = {t["name"] for t in AGENT_TOOLS}
-        assert names == {"list_favorites", "list_reports", "get_report", "web_search"}
+    def test_tools_are_gemini_type(self):
+        tools = get_agent_tools()
+        for t in tools:
+            assert isinstance(t, types.Tool)
 
-    @pytest.mark.parametrize("tool", AGENT_TOOLS, ids=[t["name"] for t in AGENT_TOOLS])
-    def test_tool_has_required_keys(self, tool):
-        assert "name" in tool
-        if tool.get("type") == "web_search_20250305":
-            # Server-side tool — Anthropic schema, not user-defined
-            assert "user_location" in tool
-            return
-        assert "description" in tool
-        assert isinstance(tool["description"], str) and len(tool["description"]) > 10
-        assert "input_schema" in tool
-        assert tool["input_schema"]["type"] == "object"
-        assert "properties" in tool["input_schema"]
+    def test_function_declarations_tool(self):
+        """First Tool has 3 FunctionDeclarations."""
+        tools = get_agent_tools()
+        func_tool = tools[0]
+        assert func_tool.function_declarations is not None
+        assert len(func_tool.function_declarations) == 3
+
+    def test_function_declaration_names(self):
+        tools = get_agent_tools()
+        names = {fd.name for fd in tools[0].function_declarations}
+        assert names == {"list_favorites", "list_reports", "get_report"}
+
+    @pytest.mark.parametrize(
+        "name",
+        ["list_favorites", "list_reports", "get_report"],
+    )
+    def test_function_declaration_has_description_and_params(self, name):
+        tools = get_agent_tools()
+        fd = next(fd for fd in tools[0].function_declarations if fd.name == name)
+        assert fd.description and len(fd.description) > 10
+        assert fd.parameters is not None
+        assert fd.parameters.type == "OBJECT"
+
+    def test_google_search_tool(self):
+        """Second Tool has GoogleSearch grounding."""
+        tools = get_agent_tools()
+        search_tool = tools[1]
+        assert search_tool.google_search is not None
+        assert isinstance(search_tool.google_search, types.GoogleSearch)
+
+    def test_list_favorites_params(self):
+        tools = get_agent_tools()
+        fd = next(fd for fd in tools[0].function_declarations if fd.name == "list_favorites")
+        props = fd.parameters.properties
+        assert "gemeente" in props
+        assert "stage" in props
+
+    def test_get_report_requires_report_id(self):
+        tools = get_agent_tools()
+        fd = next(fd for fd in tools[0].function_declarations if fd.name == "get_report")
+        assert "report_id" in (fd.parameters.required or [])
 
 
 # ── execute_tool dispatcher ─────────────────────────────────────────────
@@ -296,37 +328,6 @@ class TestGetReport:
 # ── Read-only constraint (R010) ─────────────────────────────────────────
 
 
-# ── Web search tool specifics ────────────────────────────────────────────
-
-
-class TestWebSearchTool:
-    """Test web_search server-side tool configuration."""
-
-    def test_web_search_tool_in_agent_tools(self):
-        """web_search_20250305 tool present in AGENT_TOOLS."""
-        assert any(
-            t.get("type") == "web_search_20250305" for t in AGENT_TOOLS
-        ), "web_search tool not found in AGENT_TOOLS"
-
-    def test_web_search_has_nl_location(self):
-        """web_search tool has user_location with country=NL."""
-        ws = next(t for t in AGENT_TOOLS if t.get("type") == "web_search_20250305")
-        loc = ws.get("user_location", {})
-        assert loc.get("country") == "NL", f"Expected country=NL, got {loc}"
-
-    @pytest.mark.asyncio
-    async def test_web_search_not_in_executors(self):
-        """web_search is server-side; execute_tool returns 'Onbekende tool' error."""
-        db = AsyncMock()
-        result = await execute_tool("web_search", {}, db, USER_ID)
-        data = json.loads(result)
-        assert "error" in data
-        assert "Onbekende tool" in data["error"]
-
-
-# ── Read-only constraint (R010) ─────────────────────────────────────────
-
-
 class TestReadOnlyConstraint:
     """Verify tools never call write operations on the DB session."""
 
@@ -354,3 +355,28 @@ class TestReadOnlyConstraint:
         db.add.assert_not_called()
         db.delete.assert_not_called()
         db.commit.assert_not_called()
+
+
+# ── Google Search grounding tool ─────────────────────────────────────────
+
+
+class TestGoogleSearchTool:
+    """Test Google Search grounding is present in tool definitions."""
+
+    def test_google_search_tool_in_agent_tools(self):
+        """GoogleSearch grounding tool present in get_agent_tools()."""
+        tools = get_agent_tools()
+        has_search = any(t.google_search is not None for t in tools)
+        assert has_search, "GoogleSearch grounding tool not found in get_agent_tools()"
+
+    def test_google_search_not_in_executors(self):
+        """google_search is server-side grounding; execute_tool returns 'Onbekende tool' error."""
+        import asyncio
+        db = AsyncMock()
+        result = asyncio.get_event_loop().run_until_complete(
+            execute_tool("google_search", {}, db, USER_ID)
+        )
+        import json
+        data = json.loads(result)
+        assert "error" in data
+        assert "Onbekende tool" in data["error"]

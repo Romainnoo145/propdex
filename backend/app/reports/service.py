@@ -1192,7 +1192,7 @@ async def generate_report_from_parcel(
                 notes=notes,
                 session=session,
             )
-        return existing_report, False
+        # Continue to re-aggregate and update instead of early-returning stale data
 
     # 2. Parse address with reverse-geocode fallback
     source_address = parcel.address
@@ -1263,43 +1263,55 @@ async def generate_report_from_parcel(
     else:
         logger.info("No scan flags for parcel %s, using aggregator fallback", parcel_id)
 
-    # 5. Save report
-    report, created = await save_report(
-        report_data=property_data.model_dump(mode="json"),
-        notes=notes,
-        project_id=project_id,
-        user_id=user_id,
-        organization_id=organization_id,
-        session=session,
-        parcel_id=parcel_id,
-        return_status=True,
-    )
+    # 5. Save (new) or update (existing) report
+    if existing_report is not None:
+        report = await update_report_data(
+            report_id=existing_report.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            fresh_data=property_data.model_dump(mode="json"),
+            session=session,
+        )
+        created = False
+        logger.info("Re-aggregated and updated existing report %s for parcel %s", report.id, parcel_id)
+    else:
+        report, created = await save_report(
+            report_data=property_data.model_dump(mode="json"),
+            notes=notes,
+            project_id=project_id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session=session,
+            parcel_id=parcel_id,
+            return_status=True,
+        )
 
-    # 5b. Auto-generate checklist PDFs for newly created reports
-    if created:
-        try:
-            from app.reports.checklist_orchestrator import generate_checklist_documents
+    # 5b. Auto-generate checklist PDFs for both new and updated reports
+    try:
+        from app.reports.checklist_orchestrator import generate_checklist_documents
 
-            checklist_result = await generate_checklist_documents(
-                report_data=report.report_data,
-                report_name=report.report_name,
-                parcel_id=parcel_id,
-                user_id=user_id,
-                db=session,
-            )
-            logger.info(
-                "Checklist docs for parcel=%s: generated=%d failed=%d skipped=%d",
-                parcel_id,
-                len(checklist_result.generated),
-                len(checklist_result.failed),
-                len(checklist_result.skipped),
-            )
-        except Exception:
-            logger.warning(
-                "Checklist doc generation failed for parcel=%s — report saved successfully",
-                parcel_id,
-                exc_info=True,
-            )
+        checklist_result = await generate_checklist_documents(
+            report_data=report.report_data,
+            report_name=report.report_name,
+            parcel_id=parcel_id,
+            user_id=user_id,
+            db=session,
+        )
+        logger.info(
+            "Checklist docs for parcel=%s (%s): generated=%d failed=%d skipped=%d",
+            parcel_id,
+            "created" if created else "updated",
+            len(checklist_result.generated),
+            len(checklist_result.failed),
+            len(checklist_result.skipped),
+        )
+    except Exception:
+        logger.warning(
+            "Checklist doc generation failed for parcel=%s — report %s successfully",
+            parcel_id,
+            "saved" if created else "updated",
+            exc_info=True,
+        )
 
     return report, created
 

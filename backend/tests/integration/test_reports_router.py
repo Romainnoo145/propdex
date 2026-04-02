@@ -144,7 +144,7 @@ class TestGenerateFromParcel:
         create_test_user,
         test_db,
     ):
-        """Second generate call for the same parcel returns existing report (no duplicate row)."""
+        """Second generate call re-aggregates and updates existing report (no duplicate row)."""
         user, org = await create_test_user()
         token = await _get_auth_token(async_client, user.email)
 
@@ -163,18 +163,28 @@ class TestGenerateFromParcel:
         await test_db.commit()
         await test_db.refresh(parcel)
 
-        mocked_report = PropertyReportResponse.model_validate(_make_report_data())
+        first_report_data = _make_report_data()
+        second_report_data = _make_report_data()
+        second_report_data["completeness_score"] = 0.85
+        second_report_data["address"]["huisnummer"] = 123  # same address, different score
+
+        first_mock = PropertyReportResponse.model_validate(first_report_data)
+        second_mock = PropertyReportResponse.model_validate(second_report_data)
+
         app.state.http_client = AsyncMock()
         app.state.arq_pool = None
         with patch(
-            "app.reports.router.aggregate_property_data",
-            new=AsyncMock(return_value=mocked_report),
+            "app.reports.service.aggregate_property_data",
+            new=AsyncMock(side_effect=[first_mock, second_mock]),
         ) as mocked_aggregate:
             first = await async_client.post(
                 "/api/reports/from-parcel",
                 json={"parcel_id": str(parcel.id)},
                 headers={"Authorization": f"Bearer {token}"},
             )
+            first_data = first.json()
+            first_updated_at = first_data["report"]["updated_at"]
+
             second = await async_client.post(
                 "/api/reports/from-parcel",
                 json={"parcel_id": str(parcel.id)},
@@ -188,7 +198,12 @@ class TestGenerateFromParcel:
         assert first_data["created"] is True
         assert second_data["created"] is False
         assert first_data["report"]["id"] == second_data["report"]["id"]
-        assert mocked_aggregate.await_count == 1
+        # Aggregate called twice (once per request, no early-return skip)
+        assert mocked_aggregate.await_count == 2
+        # Second response reflects updated data
+        assert second_data["report"]["report_data"]["completeness_score"] == 0.85
+        # updated_at changed on re-generation
+        assert second_data["report"]["updated_at"] != first_updated_at
 
         count_query = select(func.count()).select_from(SavedReport).where(
             SavedReport.user_id == user.id,

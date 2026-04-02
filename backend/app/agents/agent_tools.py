@@ -1,87 +1,91 @@
 """Tool definitions and executors for the Propdex Verkenner agent.
 
-Each tool follows the Anthropic ToolParam format and is read-only — only
-SELECT queries, never INSERT/UPDATE/DELETE.
+Tools are defined as Gemini FunctionDeclarations (google-genai SDK).
+Google Search grounding is added as a separate Tool entry.
+All executor functions are read-only — only SELECT queries, never
+INSERT/UPDATE/DELETE.
 """
 
 import json
 import uuid as _uuid
 
+from google.genai import types
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.parcel_favorite import ParcelFavorite
 from app.models.report import SavedReport
 
-# ── Anthropic ToolParam definitions ──────────────────────────────────────
+# ── Gemini FunctionDeclaration definitions ───────────────────────────────
 
-AGENT_TOOLS: list[dict] = [
-    {
-        "name": "list_favorites",
-        "description": (
-            "Haal de opgeslagen favoriete percelen (pipeline) op van de gebruiker. "
-            "Optioneel te filteren op gemeente of pipeline-status."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "gemeente": {
-                    "type": "string",
-                    "description": "Filter op gemeentenaam (case-insensitive substring match).",
-                },
-                "stage": {
-                    "type": "string",
-                    "description": (
-                        "Filter op pipeline-status: Gesignaleerd, Onderzoek, "
-                        "Contact, Besluit, of Afgerond."
-                    ),
-                },
-            },
-            "required": [],
+_LIST_FAVORITES = types.FunctionDeclaration(
+    name="list_favorites",
+    description=(
+        "Haal de opgeslagen favoriete percelen (pipeline) op van de gebruiker. "
+        "Optioneel te filteren op gemeente of pipeline-status."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "gemeente": types.Schema(
+                type="STRING",
+                description="Filter op gemeentenaam (case-insensitive substring match).",
+            ),
+            "stage": types.Schema(
+                type="STRING",
+                description=(
+                    "Filter op pipeline-status: Gesignaleerd, Onderzoek, "
+                    "Contact, Besluit, of Afgerond."
+                ),
+            ),
         },
-    },
-    {
-        "name": "list_reports",
-        "description": (
-            "Haal de opgeslagen vastgoedrapporten op van de gebruiker. "
-            "Optioneel te filteren op stad/gemeente."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "city": {
-                    "type": "string",
-                    "description": "Filter op stad/gemeente (case-insensitive substring match).",
-                },
-            },
-            "required": [],
+        required=[],
+    ),
+)
+
+_LIST_REPORTS = types.FunctionDeclaration(
+    name="list_reports",
+    description=(
+        "Haal de opgeslagen vastgoedrapporten op van de gebruiker. "
+        "Optioneel te filteren op stad/gemeente."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "city": types.Schema(
+                type="STRING",
+                description="Filter op stad/gemeente (case-insensitive substring match).",
+            ),
         },
-    },
-    {
-        "name": "get_report",
-        "description": (
-            "Haal het volledige vastgoedrapport op inclusief alle scores, "
-            "gebouwgegevens, bestemmingsplan, energie, asbest en risicoprofiel."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "report_id": {
-                    "type": "string",
-                    "description": "UUID van het rapport.",
-                },
-            },
-            "required": ["report_id"],
+        required=[],
+    ),
+)
+
+_GET_REPORT = types.FunctionDeclaration(
+    name="get_report",
+    description=(
+        "Haal het volledige vastgoedrapport op inclusief alle scores, "
+        "gebouwgegevens, bestemmingsplan, energie, asbest en risicoprofiel."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "report_id": types.Schema(
+                type="STRING",
+                description="UUID van het rapport.",
+            ),
         },
-    },
-    # Server-side tool — Anthropic handles execution, no executor function needed.
-    {
-        "type": "web_search_20250305",
-        "name": "web_search",
-        "max_uses": 3,
-        "user_location": {"type": "approximate", "country": "NL"},
-    },
-]
+        required=["report_id"],
+    ),
+)
+
+
+def get_agent_tools() -> list[types.Tool]:
+    """Return Gemini Tool objects: user-data functions + Google Search grounding."""
+    return [
+        types.Tool(function_declarations=[_LIST_FAVORITES, _LIST_REPORTS, _GET_REPORT]),
+        types.Tool(google_search=types.GoogleSearch()),
+    ]
 
 
 # ── Internal executor helpers (read-only queries) ───────────────────────

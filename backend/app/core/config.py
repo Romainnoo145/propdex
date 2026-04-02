@@ -195,6 +195,14 @@ class Settings(BaseSettings):
         default=None,
         description="Model ID for chat classifier (falls back to AI_MODEL if not set)",
     )
+    GOOGLE_AI_API_KEY: str = Field(
+        default="",
+        description="Google AI API key for Gemini",
+    )
+    GEMINI_MODEL: str = Field(
+        default="gemini-2.5-pro",
+        description="Gemini model ID for agent chat",
+    )
     REDIS_URL: str = Field(
         default="redis://localhost:6379/0",
         description="Redis URL for ARQ task queue",

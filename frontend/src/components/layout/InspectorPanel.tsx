@@ -42,7 +42,7 @@ export function InspectorPanel({ isOpen, onClose, parcel }: InspectorPanelProps)
       toast.success(
         result.created
           ? 'Rapport opgeslagen in Rapporten'
-          : 'Bestaand rapport geopend in Rapporten',
+          : 'Rapport bijgewerkt',
         { id: toastId }
       )
     } catch (error) {

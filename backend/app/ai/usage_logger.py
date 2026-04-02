@@ -20,6 +20,12 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
         "cache_read": 0.30,
         "cache_creation": 3.75,
     },
+    "gemini-2.5-pro": {
+        "input": 0.0,
+        "output": 0.0,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+    },
 }
 
 # Fallback: zero cost for unknown models
@@ -70,9 +76,19 @@ async def log_ai_usage(
     try:
         from app.models.ai_usage_log import AIUsageLog
 
-        # Extract token counts safely — handle missing fields
-        input_tokens = getattr(usage, "input_tokens", 0) or 0
-        output_tokens = getattr(usage, "output_tokens", 0) or 0
+        # Extract token counts safely — handle both Anthropic and Gemini attribute names.
+        # Anthropic: input_tokens / output_tokens
+        # Gemini:    prompt_token_count / candidates_token_count
+        input_tokens = (
+            getattr(usage, "input_tokens", None)
+            or getattr(usage, "prompt_token_count", None)
+            or 0
+        )
+        output_tokens = (
+            getattr(usage, "output_tokens", None)
+            or getattr(usage, "candidates_token_count", None)
+            or 0
+        )
         cache_creation = getattr(usage, "cache_creation_input_tokens", 0) or 0
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         total_tokens = input_tokens + output_tokens

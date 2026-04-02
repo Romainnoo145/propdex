@@ -26,6 +26,11 @@ const fadeIn = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
 }
 
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+}
+
 /* ─── Examples ──────────────────────────────────────────────── */
 
 const EXAMPLES = [
@@ -103,7 +108,7 @@ function MessageBubble({ message }: {
 }) {
   if (message.role === 'user') {
     return (
-      <motion.div variants={fadeIn} initial="hidden" animate="show" className="flex justify-end">
+      <motion.div variants={fadeIn} className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl rounded-br-md bg-amber-500 px-4 py-2.5 text-[13px] text-white font-medium">
           {message.text}
         </div>
@@ -111,16 +116,23 @@ function MessageBubble({ message }: {
     )
   }
 
+  // Determine inner content based on message role
+  let content: React.ReactNode
+  if (message.role === 'tool_progress') {
+    content = <ChatLoading tools={message.tools} />
+  } else if (message.role === 'loading') {
+    content = <ChatLoading />
+  } else {
+    content = <ChatAgentMessage text={message.text} sources={message.sources} />
+  }
+
   return (
-    <motion.div variants={fadeIn} initial="hidden" animate="show" className="flex justify-start gap-2">
+    <motion.div variants={fadeIn} className="flex justify-start gap-2">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 mt-0.5">
         <Compass size={14} className="text-amber-500" />
       </div>
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-neutral-200 px-4 py-3 shadow-sm">
-        {message.role === 'loading'
-          ? <ChatLoading />
-          : <ChatAgentMessage text={message.text} sources={message.sources} />
-        }
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-amber-100 px-4 py-3 shadow-sm">
+        {content}
       </div>
     </motion.div>
   )
@@ -134,12 +146,11 @@ function VerkennerPage() {
   const [showHistory, setShowHistory] = useState(false)
   const chat = useChat()
   const threadRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (threadRef.current) {
-      threadRef.current.scrollTo({ top: threadRef.current.scrollHeight, behavior: 'smooth' })
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat.messages])
 
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -255,11 +266,12 @@ function VerkennerPage() {
             </AnimatePresence>
 
             {!isEmpty && (
-              <div className="space-y-4 py-6">
+              <motion.div initial="hidden" animate="show" variants={staggerContainer} className="space-y-4 py-6">
                 {chat.messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
-              </div>
+                <div ref={messagesEndRef} />
+              </motion.div>
             )}
           </div>
         </div>
@@ -295,6 +307,19 @@ function VerkennerPage() {
               className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-aura-amber text-aura-obsidian disabled:opacity-30 hover:bg-aura-amber-hover transition-colors"
             >
               <ArrowUp size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+        )}
+      </div>
+    </div>
+  )
+}
+      </div>
+    </div>
+  )
+}
+{16} strokeWidth={2.5} />
             </button>
           </div>
         </div>

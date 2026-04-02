@@ -1,12 +1,14 @@
 """FastAPI router for the Verkenner agent chat endpoint."""
 
+import json
 import logging
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import EventSourceResponse
 
 from app.agents.agent_schemas import AgentRequest, AgentResponse
-from app.agents.agent_service import agent_chat
+from app.agents.agent_service import agent_chat, agent_chat_stream
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
@@ -50,3 +52,32 @@ async def chat(
     )
 
     return response
+
+
+@router.post("/chat/stream")
+@limiter.limit("20/minute")
+async def chat_stream(
+    request: Request,
+    body: AgentRequest,
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> EventSourceResponse:
+    """Streaming agentic Verkenner endpoint (SSE).
+
+    Returns a Server-Sent Events stream with real-time tool-progress
+    indicators and word-by-word response text.
+    """
+    logger.info(
+        "Agent stream request from user=%s: %s",
+        user.id,
+        body.message[:80],
+    )
+
+    async def event_generator():
+        async for event in agent_chat_stream(body, db, str(user.id)):
+            yield {
+                "event": event["type"],
+                "data": json.dumps(event["data"]),
+            }
+
+    return EventSourceResponse(event_generator())
