@@ -299,6 +299,37 @@ def _extract_building_dimensions(
     return dimensions
 
 
+def _plan_type_rank(plan: dict) -> int:
+    """
+    Lower rank = more relevant for perceel-level bouwregels.
+
+    Prioritize binding local plans (bestemmingsplan/omgevingsplan) over
+    policy-level plans (structuurvisie/programmas/voorbereidingsbesluiten)
+    which often return no bouwvlakken or maatvoeringen for a parcel.
+    """
+    plan_type = (
+        str(plan.get("type") or plan.get("planType") or "")
+        .strip()
+        .lower()
+    )
+    if not plan_type:
+        return 5
+    if "bestemmingsplan" in plan_type or "omgevingsplan" in plan_type:
+        return 0
+    if (
+        "inpassingsplan" in plan_type
+        or "beheersverordening" in plan_type
+        or "wijzigingsplan" in plan_type
+        or "uitwerkingsplan" in plan_type
+    ):
+        return 1
+    if "voorbereidingsbesluit" in plan_type:
+        return 3
+    if "structuurvisie" in plan_type or "programma" in plan_type:
+        return 4
+    return 2
+
+
 def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
     """
     Filter plans to vastgesteld status and sort by relevance + date.
@@ -324,36 +355,6 @@ def _filter_and_sort_plans(plans: list[dict]) -> list[dict]:
         if isinstance(info, dict) and info.get("datum"):
             return info["datum"]
         return plan.get("datum") or ""
-
-    def _plan_type_rank(plan: dict) -> int:
-        """
-        Lower rank = more relevant for perceel-level bouwregels.
-
-        Prioritize binding local plans (bestemmingsplan/omgevingsplan) over
-        policy-level plans (structuurvisie/programmas/voorbereidingsbesluiten)
-        which often return no bouwvlakken or maatvoeringen for a parcel.
-        """
-        plan_type = (
-            str(plan.get("type") or plan.get("planType") or "")
-            .strip()
-            .lower()
-        )
-        if not plan_type:
-            return 5
-        if "bestemmingsplan" in plan_type or "omgevingsplan" in plan_type:
-            return 0
-        if (
-            "inpassingsplan" in plan_type
-            or "beheersverordening" in plan_type
-            or "wijzigingsplan" in plan_type
-            or "uitwerkingsplan" in plan_type
-        ):
-            return 1
-        if "voorbereidingsbesluit" in plan_type:
-            return 3
-        if "structuurvisie" in plan_type or "programma" in plan_type:
-            return 4
-        return 2
 
     # Filter to vastgesteld (finalized) plans
     vastgesteld = [p for p in plans if _get_status(p) == "vastgesteld"]
@@ -410,8 +411,8 @@ async def fetch_zoning_data(
     """
     # Versioned cache key so improved plan-prioritization logic is applied
     # immediately instead of reusing legacy cached selections.
-    # v4: bumped to force re-fetch and populate max_bouwlagen field
-    cache_key = f"dso:zoning:v4:{x}:{y}"
+    # v5: data_gaps now only reported for local binding plans (not thematic/policy)
+    cache_key = f"dso:zoning:v5:{x}:{y}"
     property_point = Point(x, y)
 
     async def _fetch() -> dict:
@@ -549,25 +550,31 @@ async def fetch_zoning_data(
                     if titel:
                         teksten.append(PlanTekst(titel=titel, inhoud=inhoud or None))
 
-                # Track data gaps
+                # Track data gaps — only for local binding plans (bestemmingsplan,
+                # omgevingsplan, inpassingsplan, etc.) where missing bestemmingsvlakken
+                # or maatvoeringen actually indicates incomplete data. Thematic/policy
+                # plans (datacenters, darkstores, voorbereidingsbesluiten) legitimately
+                # have no spatial features at most locations.
                 gaps = []
-                if not relevant_bestemmingen:
-                    gaps.append("Geen bestemmingsvlakken op deze locatie")
-                if not dso_dimensions.has_any_data:
-                    if text_dimensions.has_any_data:
-                        gaps.append("Maatvoeringen ontbreken; TAR/FAR afgeleid uit planregels")
-                    else:
-                        gaps.append("Geen maatvoeringen gevonden")
-                elif (
-                    text_dimensions.has_any_data
-                    and (
-                        dso_dimensions.max_bebouwingspercentage is None
-                        or dso_dimensions.max_floor_area_ratio is None
-                    )
-                ):
-                    gaps.append("TAR/FAR deels aangevuld uit planregels")
-                if not relevant_bouwvlakken:
-                    gaps.append("Geen bouwvlakken gevonden")
+                is_local_plan = _plan_type_rank(plan) <= 1
+                if is_local_plan:
+                    if not relevant_bestemmingen:
+                        gaps.append("Geen bestemmingsvlakken op deze locatie")
+                    if not dso_dimensions.has_any_data:
+                        if text_dimensions.has_any_data:
+                            gaps.append("Maatvoeringen ontbreken; TAR/FAR afgeleid uit planregels")
+                        else:
+                            gaps.append("Geen maatvoeringen gevonden")
+                    elif (
+                        text_dimensions.has_any_data
+                        and (
+                            dso_dimensions.max_bebouwingspercentage is None
+                            or dso_dimensions.max_floor_area_ratio is None
+                        )
+                    ):
+                        gaps.append("TAR/FAR deels aangevuld uit planregels")
+                    if not relevant_bouwvlakken:
+                        gaps.append("Geen bouwvlakken gevonden")
 
                 all_data_gaps.extend(gaps)
 

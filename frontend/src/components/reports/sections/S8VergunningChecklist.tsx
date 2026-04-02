@@ -202,7 +202,7 @@ function ItemDetailModal({ item, checked, onClose, onToggle, onUpload, isUploadi
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2.5">
                 {item.required ? (
-                  <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                  <span className="shrink-0 rounded-full border border-aura-amber/30 bg-aura-amber/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-aura-amber-dark">
                     Verplicht
                   </span>
                 ) : (
@@ -282,7 +282,7 @@ function ItemDetailModal({ item, checked, onClose, onToggle, onUpload, isUploadi
                 onClick={() => onToggle(item.id)}
                 className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${
                   checked
-                    ? 'border-amber-300 bg-amber-50'
+                    ? 'border-aura-amber/30 bg-aura-amber/10'
                     : 'border-[#EAEFEF] bg-[#F8FAFA] hover:bg-[#F2F6F3]'
                 }`}
               >
@@ -476,7 +476,7 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
         <div className="flex shrink-0 items-center gap-2">
           {!hasDocument && (
             item.required ? (
-              <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800">
+              <span className="rounded-full border border-aura-amber/30 bg-aura-amber/10 px-1.5 py-0 text-[10px] font-medium text-aura-amber-dark">
                 Verplicht
               </span>
             ) : (

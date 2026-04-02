@@ -59,8 +59,11 @@ async def pdf_parsing_job(
     try:
         async with session_factory() as session:
             # Update ParsingJob status to "in_progress"
-            stmt = select(ParsingJob).where(
-                ParsingJob.plan_idn == plan_idn,
+            stmt = (
+                select(ParsingJob)
+                .where(ParsingJob.plan_idn == plan_idn)
+                .order_by(ParsingJob.created_at.desc())
+                .limit(1)
             )
             result = await session.execute(stmt)
             job = result.scalar_one_or_none()
@@ -91,7 +94,7 @@ async def pdf_parsing_job(
                 except PDFDownloadError as e:
                     logger.error(f"PDF download failed for {plan_idn}: {e}")
                     job.status = "failed"
-                    job.error_message = f"PDFDownloadError: {str(e)}"
+                    job.error_message = (f"PDFDownloadError: {str(e)}")[:990]
                     job.updated_at = datetime.utcnow()
                     session.add(job)
                     await session.flush()
@@ -114,7 +117,7 @@ async def pdf_parsing_job(
             except AIParsingError as e:
                 logger.error(f"Claude parsing failed for {plan_idn}: {e.message}")
                 job.status = "failed"
-                job.error_message = f"AIParsingError: {e.message}"
+                job.error_message = (e.message)[:990]
                 job.updated_at = datetime.utcnow()
                 session.add(job)
                 await session.flush()
@@ -163,6 +166,46 @@ async def pdf_parsing_job(
             job.updated_at = datetime.utcnow()
             session.add(job)
             await session.flush()
+
+            # Patch all saved reports that reference this plan_idn
+            # so they immediately show the AI analysis without manual refresh.
+            try:
+                from app.models.report import SavedReport
+                from sqlalchemy import update
+                from sqlalchemy.dialects.postgresql import JSONB
+
+                ai_section = {
+                    "status": "complete",
+                    "parsed_plan": parsed_result.model_dump(),
+                    "upload_required": False,
+                    "error_message": None,
+                    "disclaimer_banner": "AI-geanalyseerd — Controleer bij notaris voor investeringsbeslissingen",
+                }
+
+                # Find reports whose zoning plans include this plan_idn.
+                # plan_id in reports may be truncated (missing version suffix),
+                # so use startswith matching in both directions.
+                plan_idn_base = plan_idn.rsplit("-", 1)[0]  # e.g. NL.IMRO.0983.BP201901CAPWONEN
+                report_stmt = select(SavedReport)
+                report_result = await session.execute(report_stmt)
+                for report in report_result.scalars().all():
+                    plans = (report.report_data or {}).get("zoning", {}).get("plans", [])
+                    matched = any(
+                        p.get("plan_id", "").startswith(plan_idn_base)
+                        or plan_idn.startswith(p.get("plan_id", "\x00"))
+                        for p in plans
+                    )
+                    if matched:
+                        report_data = dict(report.report_data)
+                        report_data["ai_parsing"] = ai_section
+                        report.report_data = report_data
+                        session.add(report)
+                        logger.info(f"Patched report {report.id} with AI parsing for {plan_idn}")
+
+                await session.flush()
+            except Exception as patch_err:
+                logger.warning(f"Failed to patch saved reports for {plan_idn}: {patch_err}")
+
             await session.commit()
 
             logger.info(f"Successfully completed parsing job for {plan_idn}")
@@ -174,14 +217,17 @@ async def pdf_parsing_job(
         # Try to update job status to failed
         try:
             async with session_factory() as session:
-                stmt = select(ParsingJob).where(
-                    ParsingJob.plan_idn == plan_idn,
+                stmt = (
+                    select(ParsingJob)
+                    .where(ParsingJob.plan_idn == plan_idn)
+                    .order_by(ParsingJob.created_at.desc())
+                    .limit(1)
                 )
                 result = await session.execute(stmt)
                 job = result.scalar_one_or_none()
                 if job:
                     job.status = "failed"
-                    job.error_message = f"Unexpected error: {str(e)}"
+                    job.error_message = (f"Er ging iets mis: {str(e)}")[:990]
                     job.updated_at = datetime.utcnow()
                     session.add(job)
                     await session.flush()

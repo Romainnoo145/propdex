@@ -1,19 +1,32 @@
 /**
  * S3 Bestemmingsplan & Bouwmogelijkheden — Due Diligence Dashboard section 3
+ *
+ * AI Interpretatie section flow:
+ *   1. No data → "niet beschikbaar"
+ *   2. complete → show samenvatting + regels
+ *   3. pdf_not_found / upload_required / opt_in_required → upload button
+ *   4. After upload → POST /api/properties/upload-pdf → polls job status
+ *   5. queued / in_progress → spinner + progress
+ *   6. complete → invalidates report, shows parsed result
  */
 
-import { useRef } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Ruler, Brain, ShieldCheck, Lightbulb, Upload } from 'lucide-react'
+import { FileText, Ruler, Brain, ShieldCheck, Lightbulb, Upload, Loader2, CheckCircle2, AlertTriangle, Eye } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { splitZoningPlans } from '@/lib/zoningPlans'
+import { uploadBestemmingsplanPDF, fetchAIParsingJobStatus } from '@/lib/api'
+import { useAuth } from '@/lib/auth/useAuth'
+import { useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
 import { SectionNotes, formatArea } from '../components'
-import { useUploadDocument } from '@/hooks/useDocuments'
+import { AIAnalysisModal } from '../components/AIAnalysisModal'
 
 export interface S3BestemmingsplanBouwmogelijkhedenProps {
   data: PropertyReportResponse
   sourceParcelId?: string | null
+  reportId?: string | null
 }
 
 /* ─── Semantic pill ──────────────────────────────────────────── */
@@ -49,7 +62,7 @@ function BuildabilityBar({ parcelArea, builtArea, remainingArea }: { parcelArea:
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
         />
         <motion.div
-          className="absolute inset-y-0 rounded-r-full border border-[#0E1111] bg-amber-300"
+          className="absolute inset-y-0 rounded-r-full border border-[#0E1111] bg-aura-amber"
           style={{ left: `${builtPct}%` }}
           initial={{ width: 0 }}
           animate={{ width: `${remainPct}%` }}
@@ -62,7 +75,7 @@ function BuildabilityBar({ parcelArea, builtArea, remainingArea }: { parcelArea:
           <span className="text-slate-500">Bebouwd {formatArea(builtArea)}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full border border-[#0E1111] bg-amber-300" />
+          <span className="h-2 w-2 rounded-full border border-[#0E1111] bg-aura-amber" />
           <span className="text-slate-500">Bebouwbaar {formatArea(remainingArea)}</span>
         </span>
         <span className="ml-auto text-[12px] font-semibold text-slate-600">
@@ -73,18 +86,139 @@ function BuildabilityBar({ parcelArea, builtArea, remainingArea }: { parcelArea:
   )
 }
 
+/* ─── AI Parsing upload + poll hook ──────────────────────────── */
+
+type AIUploadState =
+  | { phase: 'idle' }
+  | { phase: 'uploading' }
+  | { phase: 'polling'; jobId: string; progress: number; message: string }
+  | { phase: 'complete' }
+  | { phase: 'error'; message: string }
+
+function useAIParsing(planIdn: string | null, reportId: string | null) {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+  const [state, setState] = useState<AIUploadState>({ phase: 'idle' })
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => stopPolling, [stopPolling])
+
+  const startPolling = useCallback((jobId: string) => {
+    stopPolling()
+    setState({ phase: 'polling', jobId, progress: 10, message: 'Analyse wordt gestart...' })
+
+    let pollCount = 0
+    const MAX_POLLS = 60 // 60 × 3s = 3 minutes timeout
+
+    pollRef.current = setInterval(async () => {
+      pollCount++
+
+      // Timeout after 3 minutes of polling
+      if (pollCount > MAX_POLLS) {
+        stopPolling()
+        setState({ phase: 'error', message: 'Analyse duurt te lang — de achtergrondverwerking is mogelijk niet actief. Probeer het later opnieuw.' })
+        return
+      }
+
+      try {
+        const result = await fetchAIParsingJobStatus(jobId, accessToken)
+
+        if (result.status === 'complete') {
+          stopPolling()
+          // Invalidate report data to pick up the new AI parsing result
+          if (reportId) {
+            await queryClient.invalidateQueries({ queryKey: ['report', reportId] })
+          }
+          await queryClient.invalidateQueries({ queryKey: ['property'] })
+          // Reset to idle so server data (ai_parsing.status=complete) takes over rendering
+          setState({ phase: 'idle' })
+        } else if (result.status === 'failed') {
+          stopPolling()
+          setState({ phase: 'error', message: result.error ?? 'AI-analyse mislukt' })
+        } else {
+          // queued or in_progress
+          setState({
+            phase: 'polling',
+            jobId,
+            progress: result.progress_pct ?? 20,
+            message: result.message ?? 'Bestemmingsplan wordt geanalyseerd...',
+          })
+        }
+      } catch (err) {
+        stopPolling()
+        const msg = err instanceof Error ? err.message : 'Verbinding met server verloren'
+        setState({ phase: 'error', message: msg })
+      }
+    }, 3000) // Poll every 3 seconds
+  }, [accessToken, reportId, queryClient, stopPolling])
+
+  const upload = useCallback(async (file: File) => {
+    if (!planIdn) {
+      setState({ phase: 'error', message: 'Geen bestemmingsplan gevonden — kan AI-analyse niet starten.' })
+      return
+    }
+    setState({ phase: 'uploading' })
+    try {
+      const result = await uploadBestemmingsplanPDF(planIdn, file, accessToken)
+      if (result.job_id) {
+        startPolling(result.job_id)
+      } else {
+        setState({ phase: 'error', message: 'Geen job ID ontvangen' })
+      }
+    } catch (err) {
+      setState({ phase: 'error', message: err instanceof Error ? err.message : 'Upload mislukt' })
+    }
+  }, [planIdn, accessToken, startPolling])
+
+  return { state, upload }
+}
+
 /* ─── Section ────────────────────────────────────────────────── */
 
-export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3BestemmingsplanBouwmogelijkhedenProps) {
+export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, reportId }: S3BestemmingsplanBouwmogelijkhedenProps) {
   const { zoning, buildability_delta, ai_parsing, wkb_precheck } = data
   const uploadDocument = useUploadDocument()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const aiFileRef = useRef<HTMLInputElement>(null)
+  const [showAIModal, setShowAIModal] = useState(false)
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Get primary plan_idn for AI parsing upload
+  const planIdn = zoning?.plans?.[0]?.plan_id ?? null
+
+  const { state: aiState, upload: aiUpload } = useAIParsing(planIdn, reportId ?? null)
+
+  const handleAIFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !sourceParcelId) return
-    uploadDocument.mutate({ parcelId: sourceParcelId, documentType: 'bestemmingsplan', file })
+    if (!file) return
+    // Also store in document system for dossier
+    if (sourceParcelId) {
+      uploadDocument.mutate({ parcelId: sourceParcelId, documentType: 'bestemmingsplan', file })
+    }
+    // Trigger AI parsing
+    aiUpload(file)
+    e.target.value = ''
   }
+
+  // Should show upload: when backend says upload needed, or opt_in, AND we're not already processing
+  const showUpload = aiState.phase === 'idle' && (
+    ai_parsing?.upload_required ||
+    ai_parsing?.status === 'pdf_not_found' ||
+    ai_parsing?.status === 'opt_in_required'
+  )
+
+  // Backend already polling (e.g. from a previous session's upload)
+  const backendPolling = aiState.phase === 'idle' && (
+    ai_parsing?.status === 'queued' ||
+    ai_parsing?.status === 'in_progress'
+  )
 
   return (
     <div className="space-y-6">
@@ -177,37 +311,183 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId }: S3B
 
       {/* ── AI Interpretatie ───────────────────────────────────── */}
       <SectionInsightCard kicker="AI Analyse" title="AI Interpretatie" Icon={Brain}>
-        {!ai_parsing ? (
-          <p className="text-[13px] text-slate-500">AI-analyse niet beschikbaar</p>
-        ) : ai_parsing.status === 'complete' && ai_parsing.parsed_plan ? (
-          <div className="space-y-2">
-            <SemanticPill tone="green">Voltooid</SemanticPill>
-            <p className="text-[13px] text-slate-600 leading-relaxed">{ai_parsing.parsed_plan.samenvatting}</p>
-            <p className="text-[11px] text-slate-400 italic">{ai_parsing.disclaimer_banner}</p>
-          </div>
-        ) : ai_parsing.upload_required || ai_parsing.status === 'pdf_not_found' ? (
+        <input ref={aiFileRef} type="file" accept=".pdf" className="hidden" onChange={handleAIFileSelect} />
+
+        {/* ── State: complete (from server data) ── */}
+        {ai_parsing?.status === 'complete' && ai_parsing.parsed_plan && aiState.phase !== 'complete' ? (
           <div className="space-y-3">
-            <p className="text-[13px] text-slate-500">Upload een bestemmingsplan PDF om de AI-analyse te starten.</p>
-            {sourceParcelId && (
-              <>
-                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileSelect} />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadDocument.isPending}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-amber-300 px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-amber-400 disabled:opacity-50"
-                >
-                  <Upload size={14} />
-                  {uploadDocument.isPending ? 'Uploaden...' : 'Upload PDF'}
-                </button>
-              </>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              <SemanticPill tone="green">Voltooid</SemanticPill>
+              {ai_parsing.parsed_plan.overall_confidence && (
+                <SemanticPill tone={
+                  ai_parsing.parsed_plan.overall_confidence === 'HIGH' ? 'green'
+                    : ai_parsing.parsed_plan.overall_confidence === 'MEDIUM' ? 'amber'
+                      : 'red'
+                }>
+                  {ai_parsing.parsed_plan.overall_confidence === 'HIGH' ? 'Hoog vertrouwen'
+                    : ai_parsing.parsed_plan.overall_confidence === 'MEDIUM' ? 'Gemiddeld vertrouwen'
+                      : 'Laag vertrouwen'}
+                </SemanticPill>
+              )}
+            </div>
+
+            {/* Compact summary */}
+            <p className="text-[13px] text-slate-600 leading-relaxed line-clamp-3">
+              {ai_parsing.parsed_plan.samenvatting}
+            </p>
+
+            {/* Quick stats row */}
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+              <span>{ai_parsing.parsed_plan.regels.length} regels geëxtraheerd</span>
+              <span>·</span>
+              <span>{ai_parsing.parsed_plan.plan_naam}</span>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowAIModal(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-[#0E1111] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#0E1111]/80"
+              >
+                <Eye size={14} />
+                Bekijk analyse
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAIModal(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-[#EAEFEF] bg-white px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-[#F8FAFA]"
+              >
+                <FileText size={14} />
+                Bekijk PDF
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-400 italic">{ai_parsing.disclaimer_banner}</p>
+
+            {/* AI Analysis Modal */}
+            {showAIModal && ai_parsing.parsed_plan && (
+              <AIAnalysisModal
+                parsed={ai_parsing.parsed_plan}
+                disclaimerBanner={ai_parsing.disclaimer_banner}
+                sourceParcelId={sourceParcelId}
+                onClose={() => setShowAIModal(false)}
+              />
             )}
           </div>
-        ) : ai_parsing.status === 'opt_in_required' ? (
-          <div className="space-y-2">
-            <SemanticPill tone="amber">Beschikbaar</SemanticPill>
-            <p className="text-[13px] text-slate-500">Start de AI-analyse vanuit het bestemmingsplan.</p>
+
+        /* ── State: just completed (local, waiting for report refresh) ── */
+        ) : aiState.phase === 'complete' ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin text-aura-amber" />
+              <SemanticPill tone="green">Analyse voltooid</SemanticPill>
+            </div>
+            <p className="text-[13px] text-slate-500">Rapport wordt vernieuwd met AI resultaten...</p>
           </div>
+
+        /* ── State: uploading ── */
+        ) : aiState.phase === 'uploading' ? (
+          <div className="flex items-center gap-3 py-2">
+            <Loader2 size={16} className="animate-spin text-aura-amber" />
+            <p className="text-[13px] text-slate-500">PDF wordt geüpload...</p>
+          </div>
+
+        /* ── State: polling (AI analysis in progress) ── */
+        ) : aiState.phase === 'polling' || backendPolling ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Loader2 size={16} className="animate-spin text-aura-amber" />
+              <p className="text-[13px] text-slate-600 font-medium">AI-analyse bezig...</p>
+            </div>
+            <div className="space-y-1.5">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <motion.div
+                  className="absolute inset-y-0 left-0 rounded-full bg-aura-amber"
+                  initial={{ width: '5%' }}
+                  animate={{ width: `${aiState.phase === 'polling' ? aiState.progress : 30}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {aiState.phase === 'polling' ? aiState.message : 'Bestemmingsplan wordt geanalyseerd door Claude AI...'}
+              </p>
+            </div>
+            <p className="text-[11px] text-slate-400 italic">
+              Dit kan 30–60 seconden duren afhankelijk van de documentgrootte.
+            </p>
+          </div>
+
+        /* ── State: error ── */
+        ) : aiState.phase === 'error' ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} className="text-red-500" />
+              <p className="text-[13px] text-red-600 font-medium">Analyse mislukt</p>
+            </div>
+            <p className="text-[11px] text-slate-500">{aiState.message}</p>
+            {planIdn && (
+              <button
+                type="button"
+                onClick={() => aiFileRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-aura-amber px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-aura-amber-hover"
+              >
+                <Upload size={14} />
+                Opnieuw proberen
+              </button>
+            )}
+          </div>
+
+        /* ── State: no AI data at all ── */
+        ) : !ai_parsing ? (
+          <p className="text-[13px] text-slate-500">AI-analyse niet beschikbaar</p>
+
+        /* ── State: upload required / opt-in ── */
+        ) : showUpload ? (
+          <div className="space-y-3">
+            <p className="text-[13px] text-slate-500">
+              {ai_parsing.status === 'opt_in_required'
+                ? 'Upload een bestemmingsplan PDF om de AI-analyse te starten.'
+                : 'Bestemmingsplan PDF niet automatisch beschikbaar. Upload het document handmatig.'}
+            </p>
+            {planIdn ? (
+              <button
+                type="button"
+                onClick={() => aiFileRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-aura-amber px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-aura-amber-hover"
+              >
+                <Upload size={14} />
+                Upload PDF
+              </button>
+            ) : (
+              <p className="text-[11px] text-slate-400 italic">
+                Geen bestemmingsplan gevonden — upload niet mogelijk.
+              </p>
+            )}
+          </div>
+
+        /* ── State: failed (from server) ── */
+        ) : ai_parsing.status === 'failed' ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} className="text-red-500" />
+              <SemanticPill tone="red">Mislukt</SemanticPill>
+            </div>
+            <p className="text-[11px] text-slate-500">{ai_parsing.error_message ?? 'AI-analyse is mislukt.'}</p>
+            {planIdn && (
+              <button
+                type="button"
+                onClick={() => aiFileRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full border border-[#0E1111] bg-aura-amber px-4 py-2 text-[12px] font-semibold text-[#0E1111] transition-colors hover:bg-aura-amber-hover"
+              >
+                <Upload size={14} />
+                Opnieuw uploaden
+              </button>
+            )}
+          </div>
+
+        /* ── Fallback ── */
         ) : (
           <SemanticPill tone="slate">{ai_parsing.status === 'in_progress' ? 'Bezig...' : ai_parsing.status}</SemanticPill>
         )}

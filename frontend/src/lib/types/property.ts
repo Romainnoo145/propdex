@@ -257,7 +257,7 @@ export interface BestemmingsplanParsed {
 export interface AIParsingSection {
   parsed_plan: BestemmingsplanParsed | null
   job_id: string | null
-  status: 'complete' | 'in_progress' | 'queued' | 'failed' | 'not_available' | 'pdf_not_found'
+  status: 'complete' | 'in_progress' | 'queued' | 'failed' | 'not_available' | 'pdf_not_found' | 'opt_in_required'
   upload_required: boolean
   error_message: string | null
   disclaimer_banner: string

@@ -73,8 +73,11 @@ async def get_stored_pdf(
     Returns:
         PDFDocument if found, None otherwise
     """
-    stmt = select(PDFDocument).where(
-        PDFDocument.plan_idn == plan_idn,
+    stmt = (
+        select(PDFDocument)
+        .where(PDFDocument.plan_idn == plan_idn)
+        .order_by(PDFDocument.created_at.desc())
+        .limit(1)
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()

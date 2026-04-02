@@ -28,7 +28,7 @@ export function AmberCircleBadge({
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`${cfg.box} rounded-full border-2 border-amber-300 bg-amber-50 flex items-center justify-center`}
+        className={`${cfg.box} rounded-full border-2 border-aura-amber bg-aura-amber/10 flex items-center justify-center`}
       >
         <span className={`${cfg.text} font-bold text-slate-800`}>{value}</span>
       </div>

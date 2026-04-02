@@ -156,9 +156,51 @@ class ClaudeClient:
                 json_text = json_text[:-3]
             json_text = json_text.strip()
 
-            # Validate with Pydantic schema
+            # Detect non-JSON responses (Claude returns markdown when the PDF
+            # is not a bestemmingsplan or is unreadable)
+            if not json_text.startswith("{"):
+                snippet = json_text[:120].replace("\n", " ")
+                logger.warning(
+                    f"Claude returned non-JSON for {plan_idn}: {snippet}..."
+                )
+                raise AIParsingError(
+                    "Het geüploade document is geen bestemmingsplan of kon niet worden geanalyseerd.",
+                    retriable=False,
+                )
+
+            # Extract the first complete JSON object — Claude sometimes appends
+            # explanatory text after the closing brace.
+            brace_depth = 0
+            json_end = -1
+            in_string = False
+            escape_next = False
+            for i, ch in enumerate(json_text):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if ch == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if ch == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if ch == '{':
+                    brace_depth += 1
+                elif ch == '}':
+                    brace_depth -= 1
+                    if brace_depth == 0:
+                        json_end = i + 1
+                        break
+            if json_end > 0:
+                json_text = json_text[:json_end]
+
+            # Validate with Pydantic schema (use model_validate with dict
+            # so populate_by_name aliases work for Claude's variable field names)
             try:
-                parsed = BestemmingsplanParsed.model_validate_json(json_text)
+                data = json.loads(json_text)
+                parsed = BestemmingsplanParsed.model_validate(data)
                 logger.info(
                     f"Successfully parsed {plan_idn}: {len(parsed.regels)} rules, "
                     f"confidence={parsed.overall_confidence}"

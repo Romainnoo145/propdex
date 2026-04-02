@@ -31,4 +31,7 @@ export type { RingProgressProps } from './RingProgress'
 export { PillBadgeRow } from './PillBadgeRow'
 export type { PillBadgeRowProps } from './PillBadgeRow'
 
+export { AIAnalysisModal } from './AIAnalysisModal'
+export type { AIAnalysisModalProps } from './AIAnalysisModal'
+
 export { formatArea, formatCurrency } from './formatters'

@@ -1,7 +1,7 @@
 /**
  * RingProgress — SVG circle progress ring for score display.
  *
- * Renders a circular progress arc (amber-300 stroke on a slate-100 track)
+ * Renders a circular progress arc (aura-amber stroke on a slate-100 track)
  * with the numeric score centered inside. Arc starts at 12 o'clock.
  */
 
@@ -60,7 +60,7 @@ export function RingProgress({
           r={RADIUS}
           fill="none"
           stroke="currentColor"
-          className="text-amber-300"
+          className="text-aura-amber"
           strokeWidth={8}
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}

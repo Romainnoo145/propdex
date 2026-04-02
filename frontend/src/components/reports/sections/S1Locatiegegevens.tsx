@@ -215,7 +215,7 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
             <ul className="space-y-1">
               {monuments.restrictions_summary.map((r, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-slate-600">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-aura-amber" />
                   {r}
                 </li>
               ))}

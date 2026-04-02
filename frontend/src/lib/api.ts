@@ -519,6 +519,40 @@ export async function uploadBestemmingsplanPDF(
 }
 
 /**
+ * Poll AI parsing job status
+ *
+ * GET /api/properties/jobs/{jobId}/status
+ *
+ * Returns current status with parsed data when complete.
+ */
+export async function fetchAIParsingJobStatus(
+  jobId: string,
+  accessToken: string | null
+): Promise<{ job_id: string; status: string; progress_pct: number; message: string | null; data: unknown | null; error: string | null }> {
+  const headers = new Headers()
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(
+    `${API_BASE}/jobs/${encodeURIComponent(jobId)}/status`,
+    {
+      headers,
+      credentials: 'include',
+    }
+  )
+
+  if (!response.ok) {
+    const err = await response
+      .json()
+      .catch(() => ({ detail: `Status check failed with ${response.status}` }))
+    throw new Error(extractErrorMessage(err, `Status check failed with ${response.status}`))
+  }
+
+  return response.json()
+}
+
+/**
  * Fetch all unique cities from saved reports
  *
  * GET /api/reports/cities

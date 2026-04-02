@@ -58,6 +58,7 @@ function renderSectionContent(
   section: SectionKey,
   data: PropertyReportResponse,
   sourceParcelId: string | null | undefined,
+  reportId?: string | null,
 ): React.ReactNode {
   switch (section) {
     case 'locatiegegevens':
@@ -65,7 +66,7 @@ function renderSectionContent(
     case 'kadaster':
       return <S2KadasterEigendom data={data} sourceParcelId={sourceParcelId} />
     case 'bestemmingsplan':
-      return <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} />
+      return <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} reportId={reportId} />
     case 'risicoprofiel':
       return <S4Risicoprofiel data={data} sourceParcelId={sourceParcelId} />
     case 'analyse':
@@ -196,7 +197,7 @@ export default function DueDiligenceDashboard({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {renderSectionContent(activeSection, data, sourceParcelId)}
+              {renderSectionContent(activeSection, data, sourceParcelId, reportId)}
 
             </motion.div>
           </AnimatePresence>

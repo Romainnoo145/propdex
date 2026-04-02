@@ -97,10 +97,15 @@ async def get_cached_plan_only(
         else:
             logger.info(f"Cache expired for {plan_idn} (age: {age:.0f}s)")
 
-    # 2. Active job check
-    stmt = select(ParsingJob).where(
-        ParsingJob.plan_idn == plan_idn,
-        ParsingJob.status.in_(["queued", "in_progress"]),
+    # 2. Active job check (limit 1 — duplicates possible from retries)
+    stmt = (
+        select(ParsingJob)
+        .where(
+            ParsingJob.plan_idn == plan_idn,
+            ParsingJob.status.in_(["queued", "in_progress"]),
+        )
+        .order_by(ParsingJob.created_at.desc())
+        .limit(1)
     )
     result = await session.execute(stmt)
     active_job = result.scalar_one_or_none()
@@ -184,10 +189,15 @@ async def get_or_parse_plan(
         else:
             logger.info(f"Cache expired for {plan_idn} (age: {age:.0f}s)")
 
-    # 2. Active job check
-    stmt = select(ParsingJob).where(
-        ParsingJob.plan_idn == plan_idn,
-        ParsingJob.status.in_(["queued", "in_progress"]),
+    # 2. Active job check (limit 1 — duplicates possible from retries)
+    stmt = (
+        select(ParsingJob)
+        .where(
+            ParsingJob.plan_idn == plan_idn,
+            ParsingJob.status.in_(["queued", "in_progress"]),
+        )
+        .order_by(ParsingJob.created_at.desc())
+        .limit(1)
     )
     result = await session.execute(stmt)
     active_job = result.scalar_one_or_none()

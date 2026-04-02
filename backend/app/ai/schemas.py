@@ -1,247 +1,208 @@
-"""Pydantic schemas for AI document parsing with Claude."""
+"""Pydantic schemas for AI document parsing with Claude.
 
-from typing import Literal
+Design principle: Claude's JSON output is unpredictable — field names vary
+between Dutch and English, lists may arrive as strings, fields may be missing.
+Every field has a default, every list field coerces strings, every model accepts
+both Dutch and English field names via aliases + populate_by_name.
+"""
 
-from pydantic import BaseModel, Field
+from typing import Any, Literal
 
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _coerce_to_list(v: Any) -> list[str]:
+    """Accept a string, list, or None and always return list[str]."""
+    if v is None:
+        return []
+    if isinstance(v, str):
+        if "; " in v:
+            return [s.strip() for s in v.split("; ") if s.strip()]
+        if "\n" in v:
+            return [s.strip() for s in v.split("\n") if s.strip()]
+        return [v]
+    if isinstance(v, list):
+        return [str(item) for item in v if item]
+    return []
+
+
+# ── Building dimensions (AI-extracted) ───────────────────────────
 
 class BuildingDimensionsAI(BaseModel):
     """Building dimension constraints extracted by AI from bestemmingsplan text."""
 
-    max_bouwhoogte: float | None = Field(
-        default=None,
-        description="Maximum building height in meters",
-    )
-    max_goothoogte: float | None = Field(
-        default=None,
-        description="Maximum gutter height in meters",
-    )
-    max_bebouwingspercentage: float | None = Field(
-        default=None,
-        description="Maximum coverage percentage (0-100)",
-    )
-    max_floor_area_ratio: float | None = Field(
-        default=None,
-        description="Maximum floor area ratio / FSI (FAR)",
-    )
-    max_oppervlakte: float | None = Field(
-        default=None,
-        description="Maximum floor area in m2",
-    )
-    max_inhoud: float | None = Field(
-        default=None,
-        description="Maximum volume in m3",
-    )
-    overige: dict[str, str] = Field(
-        default_factory=dict,
-        description="Other dimension rules as key-value pairs",
-    )
+    max_bouwhoogte: float | None = None
+    max_goothoogte: float | None = None
+    max_bebouwingspercentage: float | None = None
+    max_floor_area_ratio: float | None = None
+    max_oppervlakte: float | None = None
+    max_inhoud: float | None = None
+    overige: dict[str, str] = Field(default_factory=dict)
 
+
+# ── Single zoning rule ───────────────────────────────────────────
 
 class BestemmingsregelExtract(BaseModel):
     """Single zoning rule extracted from bestemmingsplan PDF by AI."""
 
-    artikel: str = Field(
-        description="Article reference (e.g., 'Artikel 3.1.2 Wonen')"
-    )
-    bestemming: str = Field(
-        description="Zoning designation (e.g., 'Wonen', 'Gemengd')"
-    )
-    toegestane_gebruiken: list[str] = Field(
-        default_factory=list,
-        description="Permitted uses",
-    )
-    verboden_gebruiken: list[str] = Field(
-        default_factory=list,
-        description="Forbidden uses",
-    )
-    bouwregels: BuildingDimensionsAI | None = Field(
-        default=None,
-        description="Building dimension rules",
-    )
-    parkeereis: str | None = Field(
-        default=None,
-        description="Parking requirement text",
-    )
-    milieu_restricties: list[str] = Field(
-        default_factory=list,
-        description="Environmental restrictions",
-    )
-    bijzondere_voorwaarden: list[str] = Field(
-        default_factory=list,
-        description="Special conditions, exceptions",
-    )
-    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
-        description="Confidence for this specific rule"
-    )
-    disclaimer: str | None = Field(
-        default=None,
-        description="Dutch warning for LOW-confidence items only",
-    )
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
+    artikel: str = Field(default="", alias="article")
+    bestemming: str = Field(default="Onbekend", alias="designation")
+    toegestane_gebruiken: list[str] = Field(default_factory=list, alias="permitted_uses")
+    verboden_gebruiken: list[str] = Field(default_factory=list, alias="forbidden_uses")
+    bouwregels: BuildingDimensionsAI | None = Field(default=None, alias="building_rules")
+    parkeereis: str | None = Field(default=None, alias="parking_requirement")
+    milieu_restricties: list[str] = Field(default_factory=list, alias="environmental_restrictions")
+    bijzondere_voorwaarden: list[str] = Field(default_factory=list, alias="special_conditions")
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = "MEDIUM"
+    disclaimer: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_all_fields(cls, data: Any) -> Any:
+        """Coerce every field to the expected type — Claude is wildly inconsistent."""
+        if not isinstance(data, dict):
+            return data
+        # list[str] fields: accept string → wrap in list
+        for key in (
+            "toegestane_gebruiken", "permitted_uses",
+            "verboden_gebruiken", "forbidden_uses",
+            "milieu_restricties", "environmental_restrictions",
+            "bijzondere_voorwaarden", "special_conditions",
+        ):
+            if key in data:
+                data[key] = _coerce_to_list(data[key])
+        # str fields: accept list/dict → flatten into string
+        for key in ("parkeereis", "parking_requirement", "artikel", "article", "bestemming", "designation", "disclaimer"):
+            val = data.get(key)
+            if val is not None and not isinstance(val, str):
+                if isinstance(val, dict):
+                    data[key] = "; ".join(f"{k}: {v}" for k, v in val.items()) if val else None
+                elif isinstance(val, list):
+                    data[key] = "; ".join(str(x) for x in val) if val else None
+                else:
+                    data[key] = str(val)
+        return data
+
+
+# ── Complete parsed bestemmingsplan ──────────────────────────────
 
 class BestemmingsplanParsed(BaseModel):
     """Complete AI-parsed bestemmingsplan output from Claude."""
 
-    plan_naam: str = Field(
-        description="Plan name as stated in document"
-    )
-    plan_idn: str = Field(
-        description="IMRO plan identifier (NL.IMRO.{gemeente}.{plan}-{version})"
-    )
-    regels: list[BestemmingsregelExtract] = Field(
-        description="All extracted zoning rules"
-    )
-    overall_confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
-        description="Overall parsing confidence"
-    )
-    disclaimers: list[str] = Field(
-        default_factory=list,
-        description="Dutch disclaimers for ambiguous items",
-    )
-    samenvatting: str = Field(
-        description="Brief Dutch summary of key findings for developers"
-    )
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
+    plan_naam: str = Field(default="Onbekend", alias="plan_name")
+    plan_idn: str = Field(default="", alias="plan_id")
+    regels: list[BestemmingsregelExtract] = Field(default_factory=list, alias="rules")
+    overall_confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(default="MEDIUM", alias="confidence")
+    disclaimers: list[str] = Field(default_factory=list)
+    samenvatting: str = Field(default="Geen samenvatting beschikbaar.", alias="summary")
+
+    @field_validator("disclaimers", mode="before")
+    @classmethod
+    def _coerce_disclaimers(cls, v: Any) -> list[str]:
+        return _coerce_to_list(v)
+
+    @field_validator("regels", mode="before")
+    @classmethod
+    def _coerce_regels(cls, v: Any) -> list:
+        """Accept None or non-list gracefully."""
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return v
+        return []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_keys(cls, data: Any) -> Any:
+        """Map common Claude key variants to our field names."""
+        if not isinstance(data, dict):
+            return data
+        # Claude sometimes uses these alternative keys
+        mappings = {
+            "plan_name": "plan_naam",
+            "plan_id": "plan_idn",
+            "rules": "regels",
+            "confidence": "overall_confidence",
+            "summary": "samenvatting",
+        }
+        for alt, canonical in mappings.items():
+            if alt in data and canonical not in data:
+                data[canonical] = data.pop(alt)
+        return data
+
+
+# ── AI parsing section (property report inclusion) ───────────────
 
 class AIParsingSection(BaseModel):
     """AI-parsed data section for inclusion in property report."""
 
-    parsed_plan: BestemmingsplanParsed | None = Field(
-        default=None,
-        description="Parsed bestemmingsplan data",
-    )
-    job_id: str | None = Field(
-        default=None,
-        description="ARQ job ID if parsing is in progress",
-    )
-    status: Literal["complete", "in_progress", "queued", "failed", "not_available", "pdf_not_found", "opt_in_required"] = Field(
-        description="Current parsing status. 'pdf_not_found' signals frontend to show upload option. 'opt_in_required' signals that AI parsing has not been triggered yet."
-    )
-    upload_required: bool = Field(
-        default=False,
-        description="True when PDF auto-download failed — frontend shows upload UI per user decision",
-    )
-    error_message: str | None = Field(
-        default=None,
-        description="Error description if failed",
-    )
-    disclaimer_banner: str = Field(
-        default="AI-geanalyseerd — Controleer bij notaris voor investeringsbeslissingen",
-        description="Section-level Dutch disclaimer banner",
-    )
+    parsed_plan: BestemmingsplanParsed | None = None
+    job_id: str | None = None
+    status: Literal[
+        "complete", "in_progress", "queued", "failed",
+        "not_available", "pdf_not_found", "opt_in_required",
+    ] = "not_available"
+    upload_required: bool = False
+    error_message: str | None = None
+    disclaimer_banner: str = "AI-geanalyseerd — Controleer bij notaris voor investeringsbeslissingen"
 
 
 class JobStatusResponse(BaseModel):
     """Response schema for job status polling endpoint."""
 
-    job_id: str = Field(
-        description="ARQ job identifier"
-    )
-    status: Literal["queued", "in_progress", "complete", "failed", "not_found"] = Field(
-        description="Current job status"
-    )
-    progress_pct: int = Field(
-        default=0,
-        description="Estimated progress percentage (0-100)",
-    )
-    message: str | None = Field(
-        default=None,
-        description="Human-readable status message",
-    )
-    data: BestemmingsplanParsed | None = Field(
-        default=None,
-        description="Parsed data when complete",
-    )
-    error: str | None = Field(
-        default=None,
-        description="Error message when failed",
-    )
+    job_id: str
+    status: Literal["queued", "in_progress", "complete", "failed", "not_found"] = "queued"
+    progress_pct: int = 0
+    message: str | None = None
+    data: BestemmingsplanParsed | None = None
+    error: str | None = None
 
+
+# ── Jurisprudence analysis schemas (unchanged) ───────────────────
 
 class RulingAnalysis(BaseModel):
     """AI analysis of a single court ruling for property development risk."""
 
-    ecli: str = Field(description="ECLI identifier of the analyzed ruling")
-    bezwaargrond: str = Field(
-        description="1-sentence description of the objection ground"
-    )
-    uitkomst: Literal["toegewezen", "afgewezen", "gedeeltelijk", "onbekend"] = Field(
-        description="Ruling outcome"
-    )
-    relevantie: str = Field(
-        description="1-2 sentence explanation of relevance for property development"
-    )
-    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
-        description="Confidence in this analysis"
-    )
-    vergunningstype: str = Field(
-        default="overig",
-        description="Permit type classification from 9-category taxonomy",
-    )
+    ecli: str
+    bezwaargrond: str = ""
+    uitkomst: Literal["toegewezen", "afgewezen", "gedeeltelijk", "onbekend"] = "onbekend"
+    relevantie: str = ""
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = "MEDIUM"
+    vergunningstype: str = "overig"
     rechtsgronden: list[Literal[
         "procedurefout",
         "motiveringsgebrek",
         "gelijkheidsbeginsel",
         "disproportioneel",
         "etfal_ruimtelijke_ordening",
-    ]] = Field(
-        default_factory=list,
-        description="Applicable legal grounds (1+ per ruling)",
-    )
-    tegenstanders: list[str] = Field(
-        default_factory=list,
-        description="Organizations acting as objectors/appellants (no natural persons)",
-    )
+    ]] = Field(default_factory=list)
+    tegenstanders: list[str] = Field(default_factory=list)
 
 
 class DoorlooptijdStats(BaseModel):
     """Per-vergunningstype procedure duration statistics."""
 
-    vergunningstype: str = Field(description="Permit type category")
-    count: int = Field(description="Number of rulings with duration data")
-    avg_dagen: int | None = Field(
-        default=None, description="Average duration in days"
-    )
-    min_dagen: int | None = Field(
-        default=None, description="Minimum duration in days"
-    )
-    max_dagen: int | None = Field(
-        default=None, description="Maximum duration in days"
-    )
-    insufficient_data: bool = Field(
-        default=False,
-        description="True when sample size < 3",
-    )
+    vergunningstype: str
+    count: int = 0
+    avg_dagen: int | None = None
+    min_dagen: int | None = None
+    max_dagen: int | None = None
+    insufficient_data: bool = False
 
 
 class JuridischAnalysisResult(BaseModel):
     """Aggregated AI analysis of court rulings for a municipality."""
 
-    gemeente_naam: str = Field(description="Municipality name")
-    juridisch_klimaat_score: int = Field(
-        ge=0, le=100, description="Legal climate score (0=hostile, 100=favorable)"
-    )
-    vergunnings_succeskans: int = Field(
-        ge=0, le=100, description="Permit success probability percentage"
-    )
-    risico_samenvatting: str = Field(
-        description="3-5 sentence Dutch summary of legal risks"
-    )
-    top_risico_factoren: list[str] = Field(
-        description="Top 3-5 risk factors for property development"
-    )
-    ruling_analyses: list[RulingAnalysis] = Field(
-        description="Per-ruling analysis results"
-    )
-    doorlooptijd: dict[str, DoorlooptijdStats] | None = Field(
-        default=None,
-        description="Per-vergunningstype procedure duration stats",
-    )
-    disclaimer: str = Field(
-        default="Indicatief \u2014 gebaseerd op historische uitspraken, geen juridisch advies",
-        description="Legal disclaimer",
-    )
-    analyzed_at: str = Field(
-        default="", description="ISO datetime of analysis completion"
-    )
+    gemeente_naam: str
+    juridisch_klimaat_score: int = Field(ge=0, le=100, default=50)
+    vergunnings_succeskans: int = Field(ge=0, le=100, default=50)
+    risico_samenvatting: str = ""
+    top_risico_factoren: list[str] = Field(default_factory=list)
+    ruling_analyses: list[RulingAnalysis] = Field(default_factory=list)
+    doorlooptijd: dict[str, DoorlooptijdStats] | None = None
+    disclaimer: str = "Indicatief — gebaseerd op historische uitspraken, geen juridisch advies"
+    analyzed_at: str = ""
