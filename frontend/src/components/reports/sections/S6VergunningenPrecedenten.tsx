@@ -1,15 +1,15 @@
 /**
  * S6 Vergunningen & Precedenten — Due Diligence Dashboard section 6
  *
- * Redesign: visual outcome bar, clean bekendmakingen timeline,
- * structured benchmark stats, and linked references.
+ * Split bekendmakingen into parcel-specific vs neighborhood.
+ * Visual outcome bar, structured benchmark, linked references.
  */
 
 import { motion } from 'framer-motion'
 import { FileText, Scale, Lightbulb, ExternalLink } from 'lucide-react'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { SectionNotes, SubCard, KVRow } from '../components'
+import { SectionNotes, SubCard } from '../components'
 
 export interface S6VergunningenPrecedentenProps {
   data: PropertyReportResponse
@@ -31,37 +31,27 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string; bg: string;
 function OutcomeBar({ distribution }: { distribution: Record<string, number> }) {
   const total = Object.values(distribution).reduce((s, n) => s + n, 0)
   if (total === 0) return null
-
   const ordered = ['granted', 'requested', 'rejected', 'withdrawn', 'other']
-  const segments = ordered
-    .filter(k => distribution[k] > 0)
-    .map(k => ({ key: k, count: distribution[k], pct: (distribution[k] / total) * 100 }))
+  const segments = ordered.filter(k => distribution[k] > 0).map(k => ({ key: k, count: distribution[k], pct: (distribution[k] / total) * 100 }))
 
   return (
     <div className="space-y-2">
-      {/* Stacked bar */}
       <div className="flex h-6 w-full overflow-hidden rounded-full bg-slate-100">
         {segments.map((seg, i) => (
-          <motion.div
-            key={seg.key}
+          <motion.div key={seg.key}
             className={`h-full ${OUTCOME_CONFIG[seg.key]?.bg ?? 'bg-slate-300'} ${i === 0 ? 'rounded-l-full' : ''} ${i === segments.length - 1 ? 'rounded-r-full' : ''}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${seg.pct}%` }}
+            initial={{ width: 0 }} animate={{ width: `${seg.pct}%` }}
             transition={{ duration: 0.6, delay: i * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
           />
         ))}
       </div>
-
-      {/* Legend */}
       <div className="flex flex-wrap gap-3">
         {segments.map(seg => {
           const cfg = OUTCOME_CONFIG[seg.key]
           return (
             <span key={seg.key} className="flex items-center gap-1.5 text-[11px]">
               <span className={`h-2 w-2 rounded-full ${cfg?.bg ?? 'bg-slate-300'}`} />
-              <span className={`font-semibold ${cfg?.color ?? 'text-slate-500'}`}>
-                {cfg?.label ?? seg.key}
-              </span>
+              <span className={`font-semibold ${cfg?.color ?? 'text-slate-500'}`}>{cfg?.label ?? seg.key}</span>
               <span className="text-slate-400 tabular-nums">{seg.count}</span>
             </span>
           )
@@ -71,11 +61,39 @@ function OutcomeBar({ distribution }: { distribution: Record<string, number> }) 
   )
 }
 
-/* ─── Bekendmaking link helper ───────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────── */
 
 function bekendmakingUrl(identifier: string | undefined): string | null {
   if (!identifier) return null
   return `https://zoek.officielebekendmakingen.nl/${identifier}.html`
+}
+
+function TimelineRow({ vg, idx, total, dotColor = 'bg-slate-300', bold = false }: {
+  vg: Record<string, unknown>; idx: number; total: number; dotColor?: string; bold?: boolean
+}) {
+  const title = (vg.title as string) ?? (vg.onderwerp as string) ?? 'Onbekend'
+  const date = vg.date as string | undefined
+  const type = vg.type as string | undefined
+  const url = bekendmakingUrl(vg.identifier as string | undefined)
+
+  return (
+    <div className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
+      <div className="flex flex-col items-center pt-1.5">
+        <span className={`h-2 w-2 rounded-full ${dotColor} shrink-0`} />
+        {idx < total - 1 && <span className="w-px flex-1 bg-[#EAEFEF] mt-1" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={`text-[12px] leading-snug line-clamp-2 ${bold ? 'font-semibold text-[#0E1111]' : 'text-slate-600'}`}>
+          {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-aura-amber transition-colors">{title}</a> : title}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+          {date && <span>{new Date(date).toLocaleDateString('nl-NL')}</span>}
+          {type && <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px]">{type}</span>}
+          {url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-[#0E1111]"><ExternalLink size={9} /></a>}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /* ─── Section ────────────────────────────────────────────────── */
@@ -84,6 +102,27 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   const vergunningen = data.vergunningen_data
   const benchmark = data.permit_precedents
   const hasData = (vergunningen && vergunningen.length > 0) || !!benchmark
+
+  // Split bekendmakingen into parcel-specific vs neighborhood
+  const address = data.address
+  const huisnummer = address?.huisnummer?.toString() ?? ''
+  const straat = (address?.straat ?? '').toLowerCase()
+
+  const parcelRecords: Record<string, unknown>[] = []
+  const neighborRecords: Record<string, unknown>[] = []
+
+  if (vergunningen && vergunningen.length > 0) {
+    for (const v of vergunningen as Record<string, unknown>[]) {
+      const title = ((v.title as string) ?? '').toLowerCase()
+      const hasStreet = straat.length > 2 && title.includes(straat)
+      const hasNumber = huisnummer && new RegExp(`\\b${huisnummer}\\b`).test(title)
+      if (hasStreet && hasNumber) {
+        parcelRecords.push(v)
+      } else {
+        neighborRecords.push(v)
+      }
+    }
+  }
 
   if (!hasData) {
     return (
@@ -104,16 +143,28 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   return (
     <div className="space-y-6">
 
+      {/* ── Parcel-specific bekendmakingen ─────────────────────── */}
+      <SectionInsightCard kicker="Dit perceel" title={`Vergunningen (${parcelRecords.length})`} Icon={FileText}>
+        {parcelRecords.length === 0 ? (
+          <p className="text-[13px] text-slate-500">
+            Geen vergunningen gevonden specifiek voor dit adres.
+          </p>
+        ) : (
+          <div className="space-y-0">
+            {parcelRecords.slice(0, 10).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(parcelRecords.length, 10)} dotColor="bg-aura-amber" bold />
+            ))}
+            {parcelRecords.length > 10 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{parcelRecords.length - 10} meer</p>
+            )}
+          </div>
+        )}
+      </SectionInsightCard>
+
       {/* ── Benchmark hero ────────────────────────────────────── */}
       {benchmark && (
-        <SectionInsightCard
-          kicker="Precedenten"
-          title="Vergunningsbenchmark"
-          badge={benchmark.gemeente_scope}
-          Icon={Scale}
-        >
+        <SectionInsightCard kicker="Precedenten" title="Vergunningsbenchmark" badge={benchmark.gemeente_scope} Icon={Scale}>
           <div className="space-y-4">
-            {/* Key stats row */}
             <div className="grid grid-cols-3 gap-3">
               <SubCard>
                 <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Steekproef</p>
@@ -136,12 +187,10 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
               </SubCard>
             </div>
 
-            {/* Outcome distribution bar */}
             {Object.keys(benchmark.outcome_distribution).length > 0 && (
               <OutcomeBar distribution={benchmark.outcome_distribution} />
             )}
 
-            {/* Low sample warning */}
             {benchmark.low_sample_warning && (
               <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
                 <p className="text-[11px] text-aura-amber-dark">{benchmark.low_sample_warning}</p>
@@ -160,24 +209,14 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
               return (
                 <SubCard key={ref.change_record_id} className="space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2">{ref.title}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cfg.border} ${cfg.color}`}>
-                      {cfg.label}
-                    </span>
+                    <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2 min-w-0 flex-1">{ref.title}</p>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cfg.border} ${cfg.color}`}>{cfg.label}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-slate-400">
                     <span>{new Date(ref.change_date).toLocaleDateString('nl-NL')}</span>
                     {ref.source_url && (
-                      <a
-                        href={ref.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-slate-500 transition-colors hover:text-[#0E1111]"
-                      >
-                        <ExternalLink size={10} />
-                        Publicatie
+                      <a href={ref.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-slate-500 hover:text-[#0E1111]">
+                        <ExternalLink size={10} /> Publicatie
                       </a>
                     )}
                   </div>
@@ -188,63 +227,17 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
         </SectionInsightCard>
       )}
 
-      {/* ── Bekendmakingen timeline ───────────────────────────── */}
-      {vergunningen && vergunningen.length > 0 && (
-        <SectionInsightCard kicker="Bekendmakingen" title={`Omgeving (${vergunningen.length})`} Icon={FileText}>
-          <p className="text-[11px] text-slate-400 mb-3">
-            Vergunningen en bekendmakingen in het postcodegebied. Perceelspecifieke vergunningen worden binnenkort toegevoegd.
-          </p>
+      {/* ── Neighborhood bekendmakingen ───────────────────────── */}
+      {neighborRecords.length > 0 && (
+        <SectionInsightCard kicker="Omgeving" title={`Buurt (${neighborRecords.length})`} Icon={FileText}>
           <div className="space-y-0">
-            {vergunningen.slice(0, 8).map((v, idx) => {
-              const vg = v as Record<string, unknown>
-              const title = (vg.title as string | undefined) ?? (vg.onderwerp as string | undefined) ?? 'Onbekend'
-              const date = vg.date as string | undefined
-              const type = vg.type as string | undefined
-              const identifier = vg.identifier as string | undefined
-              const url = bekendmakingUrl(identifier)
-
-              return (
-                <div key={idx} className="flex gap-3 py-3 border-b border-[#EAEFEF] last:border-b-0">
-                  {/* Timeline dot + line */}
-                  <div className="flex flex-col items-center pt-1.5">
-                    <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
-                    {idx < Math.min(vergunningen.length, 8) - 1 && (
-                      <span className="w-px flex-1 bg-[#EAEFEF] mt-1" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
-                      {url ? (
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-aura-amber transition-colors">
-                          {title}
-                        </a>
-                      ) : title}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                      {date && <span>{new Date(date).toLocaleDateString('nl-NL')}</span>}
-                      {type && (
-                        <span className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px]">
-                          {type}
-                        </span>
-                      )}
-                      {url && (
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-[#0E1111]">
-                          <ExternalLink size={9} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            {neighborRecords.slice(0, 5).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(neighborRecords.length, 5)} />
+            ))}
+            {neighborRecords.length > 5 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{neighborRecords.length - 5} meer in de omgeving</p>
+            )}
           </div>
-          {vergunningen.length > 8 && (
-            <p className="mt-2 text-center text-[11px] text-slate-400">
-              +{vergunningen.length - 8} meer bekendmakingen in de omgeving
-            </p>
-          )}
         </SectionInsightCard>
       )}
 
