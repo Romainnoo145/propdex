@@ -69,10 +69,11 @@ function RapportPage() {
     setIsRefreshing(true)
     try {
       const { regenerateReport } = await import('@/lib/api')
-      await regenerateReport(id, accessToken)
-      await queryClient.invalidateQueries({ queryKey: ['report', id] })
-    } catch {
-      // Fail silently — data stays as-is
+      const result = await regenerateReport(id, accessToken)
+      // Update the query cache directly with the fresh data
+      queryClient.setQueryData(['report', id], result)
+    } catch (err) {
+      console.error('Refresh failed:', err)
     } finally {
       setIsRefreshing(false)
     }
