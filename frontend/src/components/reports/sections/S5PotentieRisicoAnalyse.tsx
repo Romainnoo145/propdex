@@ -122,12 +122,12 @@ function FactorRow({ factor, totalWeight }: { factor: FactorResult; totalWeight:
             : '–'}
         </td>
         <td className={`py-2.5 text-right text-[13px] font-semibold tabular-nums ${
-          factor.bijdrage != null && factor.bijdrage > 0 ? 'text-emerald-600'
-            : factor.bijdrage != null && factor.bijdrage < 0 ? 'text-red-500'
-              : 'text-[#0E1111]'
+          factor.categorie === 'potentie' && factor.bijdrage != null && factor.bijdrage > 0 ? 'text-emerald-600'
+            : factor.categorie === 'risico' && factor.bijdrage != null && factor.bijdrage > 0 ? 'text-red-500'
+              : 'text-slate-400'
         }`}>
           {factor.bijdrage != null
-            ? `${factor.bijdrage > 0 ? '+' : ''}${factor.bijdrage.toFixed(1)}`
+            ? factor.bijdrage > 0 ? factor.bijdrage.toFixed(1) : '–'
             : '–'}
         </td>
       </tr>
