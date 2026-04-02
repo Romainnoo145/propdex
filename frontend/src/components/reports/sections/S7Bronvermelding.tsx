@@ -198,26 +198,22 @@ export function S7Bronvermelding({ data }: S7BronvermeldingProps) {
             {/* Source rows */}
             <div>
             {sources.map((src, idx) => (
-              <div key={idx} className="flex items-start justify-between gap-3 py-2.5 border-b border-[#EAEFEF] last:border-b-0">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${
-                      src.status === 'ok' ? 'bg-emerald-500'
-                        : src.status === 'error' ? 'bg-red-500'
-                          : src.status === 'blocked' ? 'bg-amber-500'
-                            : 'bg-slate-400'
-                    }`} />
-                    <p className="text-[12px] font-semibold text-[#0E1111]">{src.source}</p>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 pl-4 text-[11px] text-slate-400">
-                    <span>{formatAge(src.age_seconds)}</span>
-                    {src.confidence && <span>· {CONFIDENCE_LABEL[src.confidence]}</span>}
-                    {src.status !== 'ok' && <span>· {STATUS_LABEL[src.status]}</span>}
-                  </div>
-                  {src.note && src.status !== 'ok' && (
-                    <p className="mt-0.5 pl-4 text-[11px] text-slate-400 break-words">{src.note}</p>
+              <div key={idx} className="flex items-center justify-between gap-3 py-2.5 border-b border-[#EAEFEF] last:border-b-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${
+                    src.status === 'ok' ? 'bg-emerald-500'
+                      : src.status === 'error' ? 'bg-red-500'
+                        : src.status === 'blocked' ? 'bg-amber-500'
+                          : 'bg-slate-400'
+                  }`} />
+                  <span className="text-[12px] font-semibold text-[#0E1111] truncate">{src.source}</span>
+                  {src.status !== 'ok' && (
+                    <span className="text-[10px] text-slate-400">{STATUS_LABEL[src.status]}</span>
                   )}
                 </div>
+                <span className="shrink-0 rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[10px] font-medium text-slate-500 tabular-nums">
+                  {formatAge(src.age_seconds)}
+                </span>
               </div>
             ))}
             </div>
