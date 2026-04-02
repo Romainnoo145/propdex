@@ -125,6 +125,16 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
   const kcaf = frp?.kcaf_cost
   const soilProfile = frp?.soil_profile
 
+  // Bodemtype fallback: soil_profile in frp, or bodemtype_flags at root level
+  const bodemtypeFlags = data.bodemtype_flags as Record<string, unknown> | null | undefined
+  const soilLabel = soilProfile?.dominant_type_label
+    ?? (bodemtypeFlags?.dominant_type_label as string | undefined)
+    ?? null
+  const soilCode = soilProfile?.soilcode
+    ?? (bodemtypeFlags?.soilcode as string | undefined)
+    ?? null
+  const soilName = soilProfile?.soilname ?? null
+
   // Environmental flags
   const natura = data.natura2000_flags as Record<string, unknown> | null | undefined
   const overstroom = data.overstromingsrisico_flags as Record<string, unknown> | null | undefined
@@ -185,20 +195,31 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
       {/* ── 2. Bodemkwaliteit ─────────────────────────────────── */}
       <SectionInsightCard kicker="Bodem" title="Bodemkwaliteit" Icon={Droplets}>
         {!bodem ? (
-          <p className="text-[13px] text-slate-500">
-            {data.bodem_flags ? `Type: ${data.bodemtype_flags ?? data.bodem_flags}` : 'Bodemdata niet beschikbaar'}
-          </p>
+          <div className="space-y-2">
+            {(soilLabel || soilCode) ? (
+              <>
+                <RiskBadge risk="onbekend" />
+                <SubCard className="space-y-0">
+                  {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
+                  {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
+                </SubCard>
+                <p className="text-[11px] text-slate-400 italic">Geen WBB-dossiers gevonden. Bodemonderzoek aanbevolen bij bouwactiviteiten.</p>
+              </>
+            ) : (
+              <p className="text-[13px] text-slate-500">Bodemdata niet beschikbaar</p>
+            )}
+          </div>
         ) : bodem.dossiers.length === 0 ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <RiskBadge risk="geen" />
             </div>
             <p className="text-[13px] text-slate-600">Geen geregistreerde verontreiniging gevonden</p>
-            {soilProfile && (
+            {(soilLabel || soilCode) && (
               <SubCard className="space-y-0">
-                <KVRow label="Bodemtype" value={soilProfile.dominant_type_label} />
-                <KVRow label="Bodemcode" value={soilProfile.soilcode} />
-                {soilProfile.soilname && <KVRow label="Naam" value={soilProfile.soilname} />}
+                {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
+                {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
+                {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
               </SubCard>
             )}
             <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
@@ -233,10 +254,10 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             <RiskBar risk={fundRisk.risk} />
             <p className="text-[13px] text-slate-600 leading-relaxed">{fundRisk.reden}</p>
             {fundRisk.recommended_action && (
-              <SubCard>
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Aanbevolen actie</p>
-                <p className="text-[13px] text-slate-700">{fundRisk.recommended_action}</p>
-              </SubCard>
+              <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark mb-1">Aanbevolen actie</p>
+                <p className="text-[13px] text-[#0E1111]">{fundRisk.recommended_action}</p>
+              </div>
             )}
             {fundRisk.bodemtype && (
               <KVRow label="Bodemtype" value={fundRisk.bodemtype} />
