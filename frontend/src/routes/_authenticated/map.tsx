@@ -1186,12 +1186,11 @@ function MapPage() {
           openInspectorOnSuccess: true,
         })
       }
+      // Clear reportId from URL after triggering lookup (not before it resolves)
+      navigate({ to: '/map', search: {}, replace: true })
     }
 
-    void resolveFocus().finally(() => {
-      // Clear reportId from URL so it doesn't re-trigger
-      navigate({ to: '/map', search: {}, replace: true })
-    })
+    void resolveFocus()
   }, [reportId, savedReport.data, navigate, navTs, focusAddressWithLookup])
 
   // Restore scan context when returning from /resultaten with ?scan_id=...
