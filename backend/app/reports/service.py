@@ -900,11 +900,30 @@ async def regenerate_report_data(
     report_data_dict = fresh_data.model_dump(mode="json")
     report_data_dict.pop("brk_ownership", None)
 
-    # Preserve scan-flags enrichment (vergunningen, scores, etc.) from old data
-    # that aggregate_property_data doesn't produce. These come from scan_results.
+    # Fetch fresh vergunningen from SRU (separate from aggregate_property_data)
+    try:
+        from app.government_apis.sru_bekendmakingen import sru_client
+        from app.scans.helpers import _filter_vergunningen_for_parcel
+
+        postcode = address.get("postcode", "")
+        addr_str = f"{address.get('straat', '')} {address.get('huisnummer', '')}"
+        sru_records = await sru_client.query_by_postcode(
+            postcode=postcode, client=client, max_records=25,
+        )
+        filtered = _filter_vergunningen_for_parcel(
+            [dict(r) for r in sru_records], addr_str, postcode,
+        )
+        report_data_dict["vergunningen_data"] = {
+            "records": filtered,
+            "total_postcode_count": len(sru_records),
+        }
+    except Exception as e:
+        logger.warning(f"Failed to refresh vergunningen for report {report_id}: {e}")
+
+    # Preserve remaining scan-flags enrichment from old data
     old_data = stored
     flags_keys = [
-        "vergunningen_data", "energielabel_flags", "woz_flags", "bodem_flags",
+        "energielabel_flags", "woz_flags", "bodem_flags",
         "bodemtype_flags", "funderingsrisico_flags", "natura2000_flags",
         "overstromingsrisico_flags", "geluid_flags", "luchtkwaliteit_flags",
         "scores_v3", "score_breakdown_v3", "use_case_scores", "score_model_version",
