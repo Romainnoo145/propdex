@@ -1,19 +1,5 @@
 [
   {
-    "id": "ae37e99d",
-    "label": "backend",
-    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/uvicorn app.main:app --port 8000 --reload",
-    "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
-    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-04-02T08-17-08-091Z_3728cce0-5431-4867-80e9-93981824e466.jsonl",
-    "persistAcrossSessions": false,
-    "startedAt": 1775118293064,
-    "processType": "server",
-    "group": "propdex",
-    "readyPattern": null,
-    "readyPort": 8000,
-    "pid": 12702
-  },
-  {
     "id": "1b93ab92",
     "label": "arq-worker",
     "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/python -m app.jobs.worker",
@@ -28,17 +14,31 @@
     "pid": 68656
   },
   {
-    "id": "be7315d5",
+    "id": "2ce3b6d3",
+    "label": "backend",
+    "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/backend && .venv/bin/uvicorn app.main:app --port 8000 --reload",
+    "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
+    "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-04-02T08-17-08-091Z_3728cce0-5431-4867-80e9-93981824e466.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1775136493923,
+    "processType": "server",
+    "group": "propdex",
+    "readyPattern": null,
+    "readyPort": 8000,
+    "pid": 104759
+  },
+  {
+    "id": "47fc9f13",
     "label": "frontend",
     "command": "cd /home/klarifai/Documents/klarifai/clientprojects/propdex/frontend && npx vite --port 9300",
     "cwd": "/home/klarifai/Documents/klarifai/clientprojects/propdex",
     "ownerSessionFile": "/home/klarifai/.gsd/sessions/--home-klarifai-Documents-klarifai-clientprojects-propdex--/2026-04-02T08-17-08-091Z_3728cce0-5431-4867-80e9-93981824e466.jsonl",
     "persistAcrossSessions": false,
-    "startedAt": 1775135620307,
+    "startedAt": 1775136493928,
     "processType": "server",
     "group": "propdex",
     "readyPattern": null,
     "readyPort": 9300,
-    "pid": 100988
+    "pid": 104760
   }
 ]

@@ -55,12 +55,21 @@ function sanitizeNote(note?: string | null): string | undefined {
   return cleaned.length > 120 ? `${cleaned.slice(0, 117)}...` : cleaned
 }
 
-function formatAge(s: number | null): string {
-  if (s == null) return 'Onbekend'
-  if (s < 60) return 'Zojuist'
-  if (s < 3600) return `${Math.floor(s / 60)} min geleden`
-  if (s < 86400) return `${Math.floor(s / 3600)} uur geleden`
-  return `${Math.floor(s / 86400)} dagen geleden`
+function formatAge(s: number | null, resolvedAt?: string): string {
+  if (s != null) {
+    if (s < 60) return 'Zojuist'
+    if (s < 3600) return `${Math.floor(s / 60)} min geleden`
+    if (s < 86400) return `${Math.floor(s / 3600)} uur geleden`
+    return `${Math.floor(s / 86400)} dagen geleden`
+  }
+  // Fallback: use report resolved_at
+  if (resolvedAt) {
+    const age = (Date.now() - new Date(resolvedAt).getTime()) / 1000
+    if (age < 3600) return `${Math.floor(age / 60)} min geleden`
+    if (age < 86400) return `${Math.floor(age / 3600)} uur geleden`
+    return `${Math.floor(age / 86400)} dagen geleden`
+  }
+  return 'Onbekend'
 }
 
 const STATUS_LABEL: Record<SourceStatus, string> = {
@@ -226,7 +235,7 @@ export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7Bronvermel
                   )}
                 </div>
                 <span className="shrink-0 rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2.5 py-0.5 text-[10px] font-medium text-slate-500 tabular-nums">
-                  {formatAge(src.age_seconds)}
+                  {formatAge(src.age_seconds, data.resolved_at)}
                 </span>
               </div>
             ))}
