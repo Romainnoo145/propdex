@@ -201,7 +201,7 @@ export function S7Bronvermelding({ data, onRefresh, isRefreshing }: S7Bronvermel
                   type="button"
                   onClick={onRefresh}
                   disabled={isRefreshing}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#0E1111] bg-[#0E1111] px-3 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#0E1111] bg-aura-amber px-3 py-1 text-[10px] font-semibold text-[#0E1111] transition-colors hover:bg-aura-amber-hover disabled:opacity-50"
                 >
                   <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
                   {isRefreshing ? 'Bezig...' : 'Ververs alle bronnen'}

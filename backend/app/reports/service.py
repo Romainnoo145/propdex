@@ -869,16 +869,25 @@ async def regenerate_report_data(
     report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
 
     source_parcel_id = report.source_parcel_id
-    if not source_parcel_id:
+    stored = report.report_data or {}
+    address = stored.get("address", {})
+
+    if not address.get("postcode") or not address.get("huisnummer"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kan rapport niet vernieuwen: geen perceel gekoppeld.",
+            detail="Kan rapport niet vernieuwen: adresgegevens ontbreken.",
         )
 
+    from app.schemas.address import AddressInput
+    input_data = AddressInput(
+        postcode=address["postcode"],
+        huisnummer=address["huisnummer"],
+        huisletter=address.get("huisletter"),
+        toevoeging=address.get("toevoeging"),
+    )
+
     fresh_data = await aggregate_property_data(
-        parcel_id=source_parcel_id,
-        x=None,
-        y=None,
+        input_data=input_data,
         client=client,
         session=session,
         force_refresh=True,

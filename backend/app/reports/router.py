@@ -223,6 +223,7 @@ async def regenerate_report(request: Request, report_id: uuid.UUID,
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Failed to regenerate report {report_id}: {e}")
         _err(500, "Failed to regenerate report", e)
 
 

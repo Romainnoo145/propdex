@@ -154,6 +154,8 @@ export default function DueDiligenceDashboard({
         onBack={onBack}
         onViewOnMap={onViewOnMap}
         onExportPDF={handleExportPDF}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
       />
 
       {/* Section tabs — workspace pattern */}
