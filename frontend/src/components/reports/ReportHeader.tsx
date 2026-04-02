@@ -161,20 +161,6 @@ export default function ReportHeader({
 
         {/* Right: action icons */}
         <div className="flex items-center gap-2 lg:shrink-0">
-          {/* Refresh button */}
-          {onRefresh && (
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0E1111] text-[#F9A826] transition-colors hover:bg-slate-800 disabled:opacity-50"
-              aria-label="Ververs rapport"
-              title="Ververs rapport met actuele data"
-            >
-              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-            </button>
-          )}
-
           {/* Checklist icon button */}
           {reportId && (
             <button
