@@ -880,7 +880,7 @@ async def regenerate_report_data(
         from app.government_apis.sru_bekendmakingen import sru_client
         from app.scans.helpers import _filter_vergunningen_for_parcel
 
-        postcode = address.get("postcode", "")
+        postcode = address.get("postcode", "").replace(" ", "")
         addr_str = f"{address.get('straat', '')} {address.get('huisnummer', '')}"
         sru_records = await sru_client.query_by_postcode(
             postcode=postcode, client=client, max_records=25,
