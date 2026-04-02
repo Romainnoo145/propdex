@@ -1155,9 +1155,10 @@ function MapPage() {
   useEffect(() => {
     if (!reportId || !savedReport.data) return
 
-    // Prevent re-triggering for the same report
-    if (handledReportRef.current === reportId) return
-    handledReportRef.current = reportId
+    // Prevent re-triggering for the same report+timestamp
+    const reportKey = `${reportId}:${navTs ?? 0}`
+    if (handledReportRef.current === reportKey) return
+    handledReportRef.current = reportKey
 
     // Extract PropertyReportResponse from saved report's report_data
     const propertyData = savedReport.data.report_data as unknown as PropertyReportResponse
