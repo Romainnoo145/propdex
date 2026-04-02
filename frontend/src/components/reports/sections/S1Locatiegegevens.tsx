@@ -203,9 +203,12 @@ export function S1Locatiegegevens({ data, sourceParcelId }: S1LocatiegegevensPro
 
       {/* ── 5. Monumentstatus ─────────────────────────────────── */}
       <SectionInsightCard kicker="Monument" title="Monumentstatus" Icon={Landmark}>
-        <SemanticPill tone={isMonument ? 'red' : 'green'}>
-          {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
-        </SemanticPill>
+        <div className="flex items-center justify-between py-2 border-b border-[#EAEFEF]">
+          <span className="text-[12px] text-slate-400">Status</span>
+          <SemanticPill tone={isMonument ? 'red' : 'green'}>
+            {isMonument ? 'Rijksmonument' : 'Niet beschermd'}
+          </SemanticPill>
+        </div>
         {monuments?.consensus_status && (
           <KVRow label="Bron" value={monuments.consensus_status} />
         )}
