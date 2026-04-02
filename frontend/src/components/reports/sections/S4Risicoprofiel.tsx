@@ -197,51 +197,40 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
         {(() => {
           const hasDossiers = bodem && bodem.dossiers.length > 0
           const bodemRisk = hasDossiers ? 'middel' : bodem ? 'geen' : 'onbekend'
+          const explanation = hasDossiers
+            ? 'Geregistreerde bodemverontreiniging gevonden in het Bodemloket.'
+            : bodem
+              ? 'Geen geregistreerde verontreiniging gevonden'
+              : 'Geen bodemdata beschikbaar'
 
           return (
             <div className="space-y-3">
-              {/* Badge + context — same pattern as fundering */}
               <div className="flex items-center gap-2">
                 <RiskBadge risk={bodemRisk} />
                 {hasDossiers && (
                   <span className="text-[11px] text-slate-400">
-                    {bodem!.dossiers.length} verontreinigingsdossier{bodem!.dossiers.length !== 1 ? 's' : ''}
+                    {bodem!.dossiers.length} dossier{bodem!.dossiers.length !== 1 ? 's' : ''}
                   </span>
                 )}
               </div>
-
-              {/* Risk bar — same as fundering */}
               <RiskBar risk={bodemRisk} />
+              <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
 
-              {/* Status text */}
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                {hasDossiers
-                  ? 'Geregistreerde bodemverontreiniging gevonden in het Bodemloket.'
-                  : bodem
-                    ? 'Geen geregistreerde verontreiniging gevonden'
-                    : 'Geen bodemdata beschikbaar'}
-              </p>
-
-              {/* Bodemtype details — like bouwjaar/bodemtype in fundering */}
-              {(soilLabel || soilCode) && (
+              {/* Details — same SubCard as fundering */}
+              {(soilLabel || soilCode || hasDossiers) && (
                 <SubCard className="space-y-0">
                   {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
                   {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
                   {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
+                  {hasDossiers && <KVRow label="WBB dossiers" value={`${bodem!.dossiers.length}`} />}
                 </SubCard>
               )}
 
-              {/* WBB dossiers — structured KV rows */}
-              {hasDossiers && (
-                <>
-                  {bodem!.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} idx={i} />)}
-                  {bodem!.dossiers.length > 3 && (
-                    <p className="text-[11px] text-slate-400 italic">+{bodem!.dossiers.length - 3} overige dossiers</p>
-                  )}
-                </>
+              {hasDossiers && bodem!.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} idx={i} />)}
+              {hasDossiers && bodem!.dossiers.length > 3 && (
+                <p className="text-[11px] text-slate-400 italic">+{bodem!.dossiers.length - 3} overige dossiers</p>
               )}
 
-              {/* Disclaimer */}
               <p className="text-[11px] text-slate-400 italic">
                 {bodem?.disclaimer ?? 'Bron: Bodemloket / BRO Bodemkaart. Afwezigheid van dossiers is geen bodemkwaliteitsverklaring.'}
               </p>
@@ -252,50 +241,58 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
 
       {/* ── 3. Funderingsrisico ───────────────────────────────── */}
       <SectionInsightCard kicker="Fundering" title="Funderingsrisico" Icon={Construction}>
-        {fundRisk ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <RiskBadge risk={fundRisk.risk} />
-              {fundRisk.bouwjaar && (
-                <span className="text-[11px] text-slate-400">Bouwjaar {fundRisk.bouwjaar}</span>
+        {(() => {
+          const risk = fundRisk?.risk ?? 'onbekend'
+          const explanation = fundRisk?.reden
+            ?? (fundFlags?.legenda as string | undefined)
+            ?? 'Geen funderingsrisicodata beschikbaar'
+          const contextLabel = fundRisk?.bouwjaar ? `Bouwjaar ${fundRisk.bouwjaar}` : null
+          const disclaimer = fundRisk?.disclaimer ?? null
+
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <RiskBadge risk={risk} />
+                {contextLabel && (
+                  <span className="text-[11px] text-slate-400">{contextLabel}</span>
+                )}
+              </div>
+              <RiskBar risk={risk} />
+              <p className="text-[13px] text-slate-600 leading-relaxed">{explanation}</p>
+
+              {/* Details — same SubCard as bodem */}
+              {(fundRisk?.bodemtype || fundRisk?.bouwjaar || fundFlags) && (
+                <SubCard className="space-y-0">
+                  {fundRisk?.bouwjaar && <KVRow label="Bouwjaar" value={`${fundRisk.bouwjaar}`} />}
+                  {(fundRisk?.bodemtype ?? soilLabel) && (
+                    <KVRow label="Bodemtype" value={fundRisk?.bodemtype === 'onbekend' ? (soilLabel ?? 'Onbekend') : (fundRisk?.bodemtype ?? soilLabel ?? null)} />
+                  )}
+                  {(fundFlags?.percvoor1970 as number | undefined) != null && (
+                    <KVRow label="% panden vóór 1970" value={`${(fundFlags!.percvoor1970 as number).toFixed(0)}%`} />
+                  )}
+                  {(fundFlags?.n_bag as number | undefined) != null && (
+                    <KVRow label="BAG panden" value={`${fundFlags!.n_bag as number}`} />
+                  )}
+                </SubCard>
+              )}
+
+              {/* Aanbevolen actie — amber warning card */}
+              {fundRisk?.recommended_action && (
+                <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle size={12} className="text-aura-amber-dark" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Aanbevolen actie</p>
+                  </div>
+                  <p className="text-[13px] text-[#0E1111]">{fundRisk.recommended_action}</p>
+                </div>
+              )}
+
+              {disclaimer && (
+                <p className="text-[11px] text-slate-400 italic">{disclaimer}</p>
               )}
             </div>
-            <RiskBar risk={fundRisk.risk} />
-            <p className="text-[13px] text-slate-600 leading-relaxed">{fundRisk.reden}</p>
-            {fundRisk.recommended_action && (
-              <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertTriangle size={12} className="text-aura-amber-dark" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Aanbevolen actie</p>
-                </div>
-                <p className="text-[13px] text-[#0E1111]">{fundRisk.recommended_action}</p>
-              </div>
-            )}
-            {fundRisk.bodemtype && (
-              <KVRow label="Bodemtype" value={fundRisk.bodemtype} />
-            )}
-            <p className="text-[11px] text-slate-400 italic">{fundRisk.disclaimer}</p>
-          </div>
-        ) : fundFlags ? (
-          <div className="space-y-2">
-            <p className="text-[13px] text-slate-600 leading-relaxed">
-              {(fundFlags.legenda as string | undefined) ?? 'Funderingsrisicogebied gedetecteerd'}
-            </p>
-            <SubCard className="space-y-0">
-              {(fundFlags.percvoor1970 as number | undefined) != null && (
-                <KVRow label="% panden vóór 1970" value={`${(fundFlags.percvoor1970 as number).toFixed(0)}%`} />
-              )}
-              {(fundFlags.n_bag as number | undefined) != null && (
-                <KVRow label="BAG panden" value={`${fundFlags.n_bag as number}`} />
-              )}
-              {(fundFlags.gemeente as string | undefined) && (
-                <KVRow label="Gemeente" value={fundFlags.gemeente as string} />
-              )}
-            </SubCard>
-          </div>
-        ) : (
-          <p className="text-[13px] text-slate-500">Geen funderingsrisicodata beschikbaar</p>
-        )}
+          )
+        })()}
       </SectionInsightCard>
 
       {/* ── 3b. Funderingsherstel kosten — prominent ──────────── */}
