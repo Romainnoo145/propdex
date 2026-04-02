@@ -213,7 +213,7 @@ async def refresh_report(request: Request, report_id: uuid.UUID, refresh_request
 async def regenerate_report(request: Request, report_id: uuid.UUID,
                             current_user: User = Depends(get_current_active_user),
                             db: AsyncSession = Depends(get_db)) -> ReportDetailResponse:
-    """Re-aggregate property data from all sources and update the saved report."""
+    """Refresh vergunningen + permit benchmark with fresh API data."""
     try:
         report = await service.regenerate_report_data(
             report_id=report_id, user_id=current_user.id,

@@ -861,46 +861,21 @@ async def regenerate_report_data(
     session: AsyncSession,
 ) -> SavedReport:
     """
-    Re-aggregate all property data from APIs and update the saved report.
+    Refresh report data: fetch fresh vergunningen + update permit benchmark.
 
-    Fetches fresh data using the same pipeline as initial report creation,
-    then replaces the stored snapshot. Used for the "Ververs rapport" button.
+    Lightweight refresh — doesn't re-aggregate all property data (too slow/fragile
+    for a synchronous request). Updates:
+    - vergunningen_data (fresh SRU query)
+    - permit_precedents (fresh benchmark)
+    - resolved_at timestamp
     """
     report = await get_report(report_id, user_id=user_id, organization_id=organization_id, session=session)
 
-    source_parcel_id = report.source_parcel_id
     stored = report.report_data or {}
     address = stored.get("address", {})
+    report_data_dict = dict(stored)
 
-    if not address.get("postcode") or not address.get("huisnummer"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kan rapport niet vernieuwen: adresgegevens ontbreken.",
-        )
-
-    from app.schemas.address import AddressInput
-    from app.core.database import async_session_factory
-
-    input_data = AddressInput(
-        postcode=address["postcode"],
-        huisnummer=address["huisnummer"],
-        huisletter=address.get("huisletter"),
-        toevoeging=address.get("toevoeging"),
-    )
-
-    # Use a separate session for aggregation to avoid "already flushing" conflicts
-    async with async_session_factory() as agg_session:
-        fresh_data = await aggregate_property_data(
-            input_data=input_data,
-            client=client,
-            session=agg_session,
-            force_refresh=True,
-        )
-
-    report_data_dict = fresh_data.model_dump(mode="json")
-    report_data_dict.pop("brk_ownership", None)
-
-    # Fetch fresh vergunningen from SRU (separate from aggregate_property_data)
+    # 1. Fresh vergunningen from SRU
     try:
         from app.government_apis.sru_bekendmakingen import sru_client
         from app.scans.helpers import _filter_vergunningen_for_parcel
@@ -917,22 +892,26 @@ async def regenerate_report_data(
             "records": filtered,
             "total_postcode_count": len(sru_records),
         }
+        logger.info(f"Refreshed vergunningen for {report_id}: {len(filtered)} records")
     except Exception as e:
-        logger.warning(f"Failed to refresh vergunningen for report {report_id}: {e}")
+        logger.warning(f"Failed to refresh vergunningen for {report_id}: {e}")
 
-    # Preserve remaining scan-flags enrichment from old data
-    old_data = stored
-    flags_keys = [
-        "energielabel_flags", "woz_flags", "bodem_flags",
-        "bodemtype_flags", "funderingsrisico_flags", "natura2000_flags",
-        "overstromingsrisico_flags", "geluid_flags", "luchtkwaliteit_flags",
-        "scores_v3", "score_breakdown_v3", "use_case_scores", "score_model_version",
-    ]
-    for key in flags_keys:
-        if key not in report_data_dict or report_data_dict[key] is None:
-            if key in old_data and old_data[key] is not None:
-                report_data_dict[key] = old_data[key]
+    # 2. Fresh permit benchmark
+    try:
+        postcode = address.get("postcode", "")
+        if postcode:
+            benchmark = await build_permit_precedent_benchmark(
+                postcode=postcode,
+                session=session,
+            )
+            if benchmark:
+                report_data_dict["permit_precedents"] = benchmark.model_dump(mode="json")
+                logger.info(f"Refreshed permit benchmark for {report_id}")
+    except Exception as e:
+        logger.warning(f"Failed to refresh permit benchmark for {report_id}: {e}")
 
+    # 3. Update timestamp
+    report_data_dict["resolved_at"] = datetime.utcnow().isoformat()
     report.report_data = report_data_dict
     report.updated_at = datetime.utcnow()
 
