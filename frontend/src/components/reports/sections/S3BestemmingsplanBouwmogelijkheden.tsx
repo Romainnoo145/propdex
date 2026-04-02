@@ -193,6 +193,11 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
   // Get primary plan_idn for AI parsing upload
   const planIdn = zoning?.plans?.[0]?.plan_id ?? null
 
+  // Extract bestemming for header badge
+  const bestemming = zoning?.primary_bestemming
+    ?? zoning?.plans?.[0]?.rules?.[0]?.bestemming
+    ?? null
+
   const { state: aiState, upload: aiUpload } = useAIParsing(planIdn, reportId ?? null)
 
   const handleAIFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,27 +229,13 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
     <div className="space-y-6">
 
       {/* ── Bestemmingsplan ────────────────────────────────────── */}
-      <SectionInsightCard kicker="Bestemmingsplan" title="Bestemmingsplan" Icon={FileText}>
+      <SectionInsightCard kicker="Bestemmingsplan" title="Bestemmingsplan" Icon={FileText} badge={bestemming}>
         {!zoning ? (
           <p className="text-[13px] text-slate-500">Geen bestemmingsplangegevens beschikbaar</p>
         ) : (() => {
           const { actionablePlans, policyPlans } = splitZoningPlans(zoning.plans)
-          // Extract bestemming: primary_bestemming, or first rule bestemming from first plan
-          const bestemming = zoning.primary_bestemming
-            ?? actionablePlans?.[0]?.rules?.[0]?.bestemming
-            ?? null
           return (
             <div className="space-y-3">
-              {/* Prominent bestemming label */}
-              {bestemming ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-[20px] font-bold text-aura-amber">{bestemming}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-[14px] font-semibold text-slate-400">Bestemming niet vastgesteld</span>
-                </div>
-              )}
 
               {zoning.building_dimensions && (
                 <div className="grid grid-cols-2 gap-x-6 gap-y-0 sm:grid-cols-4">

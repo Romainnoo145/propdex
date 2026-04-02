@@ -16,6 +16,8 @@ export interface SectionInsightCardProps {
   title: string
   /** Lucide icon component rendered inside the dark circle */
   Icon: LucideIcon
+  /** Optional bold accent text displayed next to the title (e.g. bestemming) */
+  badge?: string | null
   /** Card body content */
   children: ReactNode
   /** Additional CSS classes on the outer wrapper */
@@ -26,6 +28,7 @@ export function SectionInsightCard({
   kicker,
   title,
   Icon,
+  badge,
   children,
   className = '',
 }: SectionInsightCardProps) {
@@ -38,9 +41,16 @@ export function SectionInsightCard({
           <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
             {kicker}
           </p>
-          <h3 className="mt-2 text-[18px] font-bold tracking-tight text-[#0E1111]">
-            {title}
-          </h3>
+          <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+            <h3 className="text-[18px] font-bold tracking-tight text-[#0E1111]">
+              {title}
+            </h3>
+            {badge && (
+              <span className="text-[18px] font-extrabold tracking-tight text-aura-amber">
+                {badge}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#0E1111]">
           <Icon className="size-5 text-[#F9A826]" strokeWidth={2.2} />
