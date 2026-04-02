@@ -1,15 +1,14 @@
 """PDOK Funderingsrisicogebieden WFS client for foundation risk area context. Phase 87.
 
 Queries the Indicatieve Gebieden Funderingsproblematiek WFS at PDOK
-using CQL_FILTER by 6-digit postcode. Returns postcode-level area context
+using OGC XML Filter by 6-digit postcode. Returns postcode-level area context
 including percentage of pre-1970 buildings, soil region, and risk label.
 
 CRITICAL: This data is postcode-level (PC6), NOT per parcel. Always present
 with appropriate disclaimer.
 
-Verified live (87-RESEARCH.md, 2026-03-09):
-- CQL_FILTER by pc6 confirmed working
-- All property values are STRINGS (percvoor1970, n_bag) -- must parse
+NOTE: CQL_FILTER is silently ignored by this WFS endpoint — always use
+OGC XML Filter encoding. Bug discovered 2026-04-02.
 """
 
 from __future__ import annotations
