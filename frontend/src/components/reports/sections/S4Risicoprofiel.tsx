@@ -255,7 +255,10 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
             <p className="text-[13px] text-slate-600 leading-relaxed">{fundRisk.reden}</p>
             {fundRisk.recommended_action && (
               <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark mb-1">Aanbevolen actie</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle size={12} className="text-aura-amber-dark" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Aanbevolen actie</p>
+                </div>
                 <p className="text-[13px] text-[#0E1111]">{fundRisk.recommended_action}</p>
               </div>
             )}

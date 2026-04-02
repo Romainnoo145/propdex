@@ -280,9 +280,12 @@ export function S3BestemmingsplanBouwmogelijkheden({ data, sourceParcelId, repor
               )}
 
               {zoning.data_gaps.length > 0 && (
-                <div className="rounded-[16px] border border-amber-200/50 bg-amber-50/30 px-4 py-3">
-                  <p className="text-[11px] font-semibold text-amber-600">Onvolledige gegevens</p>
-                  <p className="text-[11px] text-slate-500">{zoning.data_gaps.join(', ')}</p>
+                <div className="rounded-[16px] border border-aura-amber/30 bg-aura-amber/[0.08] px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <AlertTriangle size={12} className="text-aura-amber-dark" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-aura-amber-dark">Onvolledige gegevens</p>
+                  </div>
+                  <p className="text-[11px] text-[#0E1111]">{zoning.data_gaps.join(', ')}</p>
                 </div>
               )}
             </div>
