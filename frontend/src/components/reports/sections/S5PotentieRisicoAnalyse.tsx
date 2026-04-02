@@ -1,18 +1,16 @@
 /**
  * S5 Potentie & Risico Analyse — Due Diligence Dashboard section 5
  *
- * Displays: v3.0 score circles in a hero stat row, per-factor breakdown
- * tables wrapped in SectionInsightCards, expandable narratives per factor,
- * and a dashed-border upload zone for quickscan documents.
- *
- * Visual system: SectionInsightCard (S01–S04 pattern). Animation-free.
+ * Score hero with three RingProgress circles, per-factor breakdown tables
+ * with expandable narratives, and section notes.
  */
 
 import { useState } from 'react'
 import { TrendingUp, ShieldAlert, Lightbulb } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { PropertyReportResponse } from '@/lib/types/property'
 import { SectionInsightCard } from '../components/SectionInsightCard'
-import { SubCard, SectionNotes } from '../components'
+import { SectionNotes } from '../components'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -205,9 +203,8 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
         <div className="text-center">
           <p className="text-[13px] font-semibold text-[#0E1111]">Score analyse niet beschikbaar</p>
           <p className="mt-2 text-[12px] text-slate-400 max-w-sm mx-auto">
-            Genereer een nieuw rapport vanuit een perceelscan voor v3.0 scores met per-factor breakdown.
+            Genereer een nieuw rapport vanuit een perceelscan voor scores met per-factor breakdown.
           </p>
-          <p className="mt-1 text-[12px] text-slate-400">Model: {data.score_model_version ?? 'onbekend'}</p>
         </div>
         <SectionInsightCard kicker="Notities" title="Sectienotities" Icon={Lightbulb}>
           <SectionNotes parcelId={sourceParcelId ?? null} documentTypes={['quickscan']} />
@@ -226,35 +223,79 @@ export function S5PotentieRisicoAnalyse({ data, sourceParcelId }: S5PotentieRisi
 
   return (
     <div className="space-y-6">
-      {/* ── Score summary ───────────────────────────────────── */}
+      {/* ── Score hero — three rings ─────────────────────────── */}
       <SectionInsightCard kicker="Scores" title="Score overzicht" Icon={TrendingUp}>
-        <div className="grid grid-cols-3 gap-3">
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Potentie</p>
-            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-              {scores?.potentie != null ? Math.round(scores.potentie) : '–'}
-            </p>
-          </SubCard>
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Overall</p>
-            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-              {scores?.overall != null ? Math.round(scores.overall) : '–'}
-            </p>
-          </SubCard>
-          <SubCard>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Risico</p>
-            <p className="mt-1 text-lg font-black tracking-tighter text-[#0E1111]">
-              {scores?.risico != null ? Math.round(scores.risico) : '–'}
-            </p>
-          </SubCard>
+        <div className="flex items-center justify-center gap-8 py-2">
+          {/* Potentie ring — emerald */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <svg width={80} height={80} viewBox="0 0 100 100">
+                <circle cx={50} cy={50} r={40} fill="none" stroke="#f1f5f9" strokeWidth={7} />
+                <motion.circle
+                  cx={50} cy={50} r={40} fill="none" stroke="#22c55e" strokeWidth={7}
+                  strokeLinecap="round"
+                  strokeDasharray={251.3}
+                  initial={{ strokeDashoffset: 251.3 }}
+                  animate={{ strokeDashoffset: 251.3 * (1 - (scores?.potentie ?? 0) / 100) }}
+                  transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  transform="rotate(-90 50 50)"
+                />
+                <text x={50} y={50} textAnchor="middle" dominantBaseline="central"
+                  className="fill-[#0E1111] font-bold" fontSize={24}>
+                  {scores?.potentie != null ? Math.round(scores.potentie) : '–'}
+                </text>
+              </svg>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500">Potentie</span>
+          </div>
+
+          {/* Overall ring — amber */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <svg width={96} height={96} viewBox="0 0 100 100">
+                <circle cx={50} cy={50} r={40} fill="none" stroke="#f1f5f9" strokeWidth={7} />
+                <motion.circle
+                  cx={50} cy={50} r={40} fill="none" stroke="#F9A826" strokeWidth={7}
+                  strokeLinecap="round"
+                  strokeDasharray={251.3}
+                  initial={{ strokeDashoffset: 251.3 }}
+                  animate={{ strokeDashoffset: 251.3 * (1 - (scores?.overall ?? 0) / 100) }}
+                  transition={{ duration: 1, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  transform="rotate(-90 50 50)"
+                />
+                <text x={50} y={50} textAnchor="middle" dominantBaseline="central"
+                  className="fill-[#0E1111] font-bold" fontSize={28}>
+                  {scores?.overall != null ? Math.round(scores.overall) : '–'}
+                </text>
+              </svg>
+            </div>
+            <span className="text-[12px] font-bold text-aura-amber-dark">Overall</span>
+          </div>
+
+          {/* Risico ring — red */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <svg width={80} height={80} viewBox="0 0 100 100">
+                <circle cx={50} cy={50} r={40} fill="none" stroke="#f1f5f9" strokeWidth={7} />
+                <motion.circle
+                  cx={50} cy={50} r={40} fill="none" stroke="#ef4444" strokeWidth={7}
+                  strokeLinecap="round"
+                  strokeDasharray={251.3}
+                  initial={{ strokeDashoffset: 251.3 }}
+                  animate={{ strokeDashoffset: 251.3 * (1 - (scores?.risico ?? 0) / 100) }}
+                  transition={{ duration: 1, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  transform="rotate(-90 50 50)"
+                />
+                <text x={50} y={50} textAnchor="middle" dominantBaseline="central"
+                  className="fill-[#0E1111] font-bold" fontSize={24}>
+                  {scores?.risico != null ? Math.round(scores.risico) : '–'}
+                </text>
+              </svg>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500">Risico</span>
+          </div>
         </div>
       </SectionInsightCard>
-
-      {data.score_model_version && (
-        <p className="text-center text-[12px] text-slate-400">
-          Model: {data.score_model_version}
-        </p>
-      )}
 
       {/* ── Potentie factors ──────────────────────────────────── */}
       {potentieFactors.length > 0 && (
