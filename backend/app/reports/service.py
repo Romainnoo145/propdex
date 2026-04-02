@@ -875,24 +875,28 @@ async def regenerate_report_data(
     address = stored.get("address", {})
     report_data_dict = dict(stored)
 
-    # 1. Fresh vergunningen from SRU
+    # 1. Fresh vergunningen: same enrichment pipeline as parcel detail card
     try:
-        from app.government_apis.sru_bekendmakingen import sru_client
-        from app.scans.helpers import _filter_vergunningen_for_parcel
+        import uuid as _uuid
+        from app.scans.parcels_service import enrich_parcel
+        from app.core.database import async_session_factory
 
-        postcode = address.get("postcode", "").replace(" ", "")
-        addr_str = f"{address.get('straat', '')} {address.get('huisnummer', '')}"
-        sru_records = await sru_client.query_by_postcode(
-            postcode=postcode, client=client, max_records=25,
-        )
-        filtered = _filter_vergunningen_for_parcel(
-            [dict(r) for r in sru_records], addr_str, postcode,
-        )
-        report_data_dict["vergunningen_data"] = {
-            "records": filtered,
-            "total_postcode_count": len(sru_records),
-        }
-        logger.info(f"Refreshed vergunningen for {report_id}: {len(filtered)} records")
+        source_pid = report.source_parcel_id
+        if source_pid:
+            async with async_session_factory() as enrich_session:
+                enrichment = await enrich_parcel(
+                    db=enrich_session,
+                    parcel_id=_uuid.UUID(source_pid) if isinstance(source_pid, str) else source_pid,
+                    http_client=client,
+                )
+                verg = enrichment.enrichment_data.get("vergunningen", []) if enrichment.enrichment_data else []
+                report_data_dict["vergunningen_data"] = {
+                    "records": verg,
+                    "total_postcode_count": len(verg),
+                }
+                logger.info(f"Refreshed vergunningen via enrich_parcel for {report_id}: {len(verg)} records")
+        else:
+            logger.info(f"No source_parcel_id for {report_id}, skipping vergunningen refresh")
     except Exception as e:
         logger.exception(f"Failed to refresh vergunningen for {report_id}: {e}")
 
