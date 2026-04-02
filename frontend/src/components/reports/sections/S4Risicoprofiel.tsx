@@ -194,51 +194,60 @@ export function S4Risicoprofiel({ data, sourceParcelId }: S4RisicoprofielProps) 
 
       {/* ── 2. Bodemkwaliteit ─────────────────────────────────── */}
       <SectionInsightCard kicker="Bodem" title="Bodemkwaliteit" Icon={Droplets}>
-        {!bodem ? (
-          <div className="space-y-2">
-            {(soilLabel || soilCode) ? (
-              <>
-                <RiskBadge risk="onbekend" />
+        {(() => {
+          const hasDossiers = bodem && bodem.dossiers.length > 0
+          const bodemRisk = hasDossiers ? 'middel' : bodem ? 'geen' : 'onbekend'
+
+          return (
+            <div className="space-y-3">
+              {/* Badge + context — same pattern as fundering */}
+              <div className="flex items-center gap-2">
+                <RiskBadge risk={bodemRisk} />
+                {hasDossiers && (
+                  <span className="text-[11px] text-slate-400">
+                    {bodem!.dossiers.length} verontreinigingsdossier{bodem!.dossiers.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Risk bar — same as fundering */}
+              <RiskBar risk={bodemRisk} />
+
+              {/* Status text */}
+              <p className="text-[13px] text-slate-600 leading-relaxed">
+                {hasDossiers
+                  ? 'Geregistreerde bodemverontreiniging gevonden in het Bodemloket.'
+                  : bodem
+                    ? 'Geen geregistreerde verontreiniging gevonden'
+                    : 'Geen bodemdata beschikbaar'}
+              </p>
+
+              {/* Bodemtype details — like bouwjaar/bodemtype in fundering */}
+              {(soilLabel || soilCode) && (
                 <SubCard className="space-y-0">
                   {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
                   {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
+                  {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
                 </SubCard>
-                <p className="text-[11px] text-slate-400 italic">Geen WBB-dossiers gevonden. Bodemonderzoek aanbevolen bij bouwactiviteiten.</p>
-              </>
-            ) : (
-              <p className="text-[13px] text-slate-500">Bodemdata niet beschikbaar</p>
-            )}
-          </div>
-        ) : bodem.dossiers.length === 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <RiskBadge risk="geen" />
+              )}
+
+              {/* WBB dossiers — structured KV rows */}
+              {hasDossiers && (
+                <>
+                  {bodem!.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} idx={i} />)}
+                  {bodem!.dossiers.length > 3 && (
+                    <p className="text-[11px] text-slate-400 italic">+{bodem!.dossiers.length - 3} overige dossiers</p>
+                  )}
+                </>
+              )}
+
+              {/* Disclaimer */}
+              <p className="text-[11px] text-slate-400 italic">
+                {bodem?.disclaimer ?? 'Bron: Bodemloket / BRO Bodemkaart. Afwezigheid van dossiers is geen bodemkwaliteitsverklaring.'}
+              </p>
             </div>
-            <p className="text-[13px] text-slate-600">Geen geregistreerde verontreiniging gevonden</p>
-            {(soilLabel || soilCode) && (
-              <SubCard className="space-y-0">
-                {soilLabel && <KVRow label="Bodemtype" value={soilLabel} />}
-                {soilCode && <KVRow label="Bodemcode" value={soilCode} />}
-                {soilName && soilName !== soilLabel && <KVRow label="Classificatie" value={soilName} />}
-              </SubCard>
-            )}
-            <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <RiskBadge risk="middel" />
-              <span className="text-[11px] text-slate-400">
-                {bodem.dossiers.length} verontreinigingsdossier{bodem.dossiers.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            {bodem.dossiers.slice(0, 3).map((d, i) => <WBBRow key={i} dossier={d} idx={i} />)}
-            {bodem.dossiers.length > 3 && (
-              <p className="text-[11px] text-slate-400 italic">+{bodem.dossiers.length - 3} overige dossiers</p>
-            )}
-            <p className="text-[11px] text-slate-400 italic">{bodem.disclaimer}</p>
-          </div>
-        )}
+          )
+        })()}
       </SectionInsightCard>
 
       {/* ── 3. Funderingsrisico ───────────────────────────────── */}
