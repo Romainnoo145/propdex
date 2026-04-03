@@ -208,6 +208,18 @@ class Settings(BaseSettings):
         description="Redis URL for ARQ task queue",
     )
 
+    # Sentry / Observability
+    SENTRY_DSN: str = Field(
+        default="",
+        description="Sentry DSN for error and performance monitoring (leave empty to disable)",
+    )
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Sentry traces sample rate (0.0–1.0)",
+    )
+
     # CBS Configuration
     cbs_dataset_id: str = Field(
         default="86165NED",

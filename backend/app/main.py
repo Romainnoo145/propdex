@@ -24,6 +24,7 @@ from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.http_client import create_government_api_client
+from app.core.sentry import init_sentry
 from app.documents.router import router as documents_router
 from app.favorites.router import portfolio_router
 from app.favorites.router import router as favorites_router
@@ -37,6 +38,9 @@ from app.reports.router import router as reports_router
 from app.scans.router import router as scans_router
 from app.admin.router import router as admin_router
 from app.users.router import router as users_router
+
+# Initialise Sentry before app creation so the FastAPI integration hooks in
+init_sentry()
 
 
 @asynccontextmanager

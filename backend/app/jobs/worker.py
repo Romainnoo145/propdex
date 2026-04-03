@@ -72,6 +72,11 @@ class WorkerSettings:
 
 
 if __name__ == "__main__":
+    # Initialise Sentry early so worker errors are captured
+    from app.core.sentry import init_sentry
+
+    init_sentry()
+
     # Python 3.14 removed asyncio.get_event_loop() outside async context.
     # arq 0.27.0 calls it in Worker.__init__, so we create the worker inside
     # an async function where a loop exists, then run it.

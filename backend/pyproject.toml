@@ -31,6 +31,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "redis>=5.0.0",
     "scrapling[fetchers]>=0.4.1",
+    "sentry-sdk[fastapi,google-genai]>=2.0.0",
     "shapely>=2.0.0",
     "slowapi>=0.1.9",
     "sqlalchemy[asyncio]>=2.0.25",

@@ -1,5 +1,6 @@
 import React, { Suspense, useRef } from 'react';
 import type maplibregl from 'maplibre-gl';
+import * as Sentry from '@sentry/react';
 import { Toaster } from 'sonner';
 import MapShell from '@/components/layout/MapShell';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -22,7 +23,7 @@ function App() {
   return (
     <>
       <MapShell>
-        <ErrorBoundary>
+        <ErrorBoundary onError={(error) => Sentry.captureException(error)}>
           <Suspense fallback={<MapSkeleton />}>
             <MapView mapRef={mapRef} />
           </Suspense>

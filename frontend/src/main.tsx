@@ -3,12 +3,29 @@ import { createRoot } from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
+import * as Sentry from '@sentry/react'
 import { routeTree } from './routeTree.gen'
 import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './lib/auth/AuthContext'
 import { useAuth } from './lib/auth/useAuth'
 import { AuthLoadingScreen } from './components/AuthLoadingScreen'
 import './styles/index.css'
+
+// Initialize Sentry before any rendering
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: import.meta.env.PROD ? 1.0 : 0,
+  })
+}
 
 // Create router instance
 const router = createRouter({
