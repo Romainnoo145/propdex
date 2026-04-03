@@ -182,6 +182,7 @@ async def _persist_agent_turn(
         ))
 
         await db.flush()
+        await db.commit()
         logger.debug("Persisted agent turn to conversation %s", cid)
         return str(cid)
 
