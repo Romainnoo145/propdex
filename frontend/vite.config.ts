@@ -8,42 +8,18 @@ import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [
-    TanStackRouterVite({ autoCodeSplitting: true }),
+    TanStackRouterVite({ autoCodeSplitting: false }),
     react(),
     tailwindcss(),
     ...(process.env.ANALYZE ? [visualizer({ open: false, filename: 'dist/stats.html' })] : []),
-    ...(process.env.SENTRY_AUTH_TOKEN
-      ? [sentryVitePlugin({
-          org: process.env.SENTRY_ORG,
-          project: process.env.SENTRY_PROJECT,
-          authToken: process.env.SENTRY_AUTH_TOKEN,
-          sourcemaps: {
-            filesToDeleteAfterUpload: ['./dist/**/*.map'],
-          },
-        })]
-      : []),
   ],
   build: {
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') && !id.includes('react-hook-form')) return 'vendor-react';
-            if (id.includes('maplibre-gl')) return 'vendor-maplibre';
-            if (id.includes('@tanstack')) return 'vendor-tanstack';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            return 'vendor';
-          }
-        },
-      },
-    },
   },
   server: {
     port: 9300,
