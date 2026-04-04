@@ -753,13 +753,18 @@ function MapPage() {
     } else {
       currentCenteredWijkNameRef.current = null
       layerActions.setActiveParcelOverlay(null)
-      // Hide all overlay fill layers when parcels are turned off
-      for (const layerId of [
-        'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
-        'parcel-built-status-fill', 'parcel-report-status-fill',
-        'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
-      ]) {
-        lifecycle.setVisibility(layerId, false)
+      // Hide all overlay fill layers when parcels are turned off — direct API
+      const map2 = mapRef.current
+      if (map2) {
+        for (const layerId of [
+          'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
+          'parcel-built-status-fill', 'parcel-report-status-fill',
+          'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
+        ]) {
+          if (map2.getLayer(layerId)) {
+            map2.setLayoutProperty(layerId, 'visibility', 'none')
+          }
+        }
       }
       // Also turn off bestemmingsplan if it was active
       if (layerState.showBestemmingsplan) {
@@ -2306,13 +2311,15 @@ function MapPage() {
       }
 
       if (overlayId === 'bestemmingsplan') {
-        // Hide all score overlays via lifecycle
+        // Hide all score overlays — direct map API for immediate effect
         for (const layerId of [
           'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
           'parcel-built-status-fill', 'parcel-report-status-fill',
           'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
         ]) {
-          lifecycle.setVisibility(layerId, false)
+          if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', 'none')
+          }
         }
         // Activate bestemmingsplan layer via lifecycle
         addBestemmingsplanLayerManaged()
@@ -2334,14 +2341,19 @@ function MapPage() {
           foundation_risk: 'parcel-foundation-risk-fill',
         }
 
-        // Hide all fill layers, then show only the selected one
+        // Hide all fill layers, then show only the selected one.
+        // Use direct map API (not lifecycle queue) for immediate visual feedback.
         for (const [id, layerId] of Object.entries(OVERLAY_FILL_LAYERS)) {
-          lifecycle.setVisibility(layerId, id === overlayId)
+          if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', id === overlayId ? 'visible' : 'none')
+          }
         }
 
         // Show/hide score outline layers (only for potential)
         for (const outlineId of ['parcel-score-outline', 'parcel-score-selected-outline']) {
-          lifecycle.setVisibility(outlineId, overlayId === 'potential')
+          if (map.getLayer(outlineId)) {
+            map.setLayoutProperty(outlineId, 'visibility', overlayId === 'potential' ? 'visible' : 'none')
+          }
         }
 
         layerActions.setActiveParcelOverlay(overlayId)
