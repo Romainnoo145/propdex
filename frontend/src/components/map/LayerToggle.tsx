@@ -228,9 +228,23 @@ function LayerToggle({
     [showParcels, hasActiveOverlay]
   )
 
+  // Set default overlay only when parcels become visible with no overlay.
+  // Guard: skip if an overlay was already active to avoid overriding
+  // handleOverlaySelect during its async React state update cycle.
+  const hadOverlayRef = useRef(hasActiveOverlay)
+  useEffect(() => {
+    if (hasActiveOverlay) hadOverlayRef.current = true
+  }, [hasActiveOverlay])
   useEffect(() => {
     if (!needsDefaultOverlay || !isStyleReady()) return
-    queueMicrotask(() => setParcelOverlayMode('score'))
+    // Only apply default if we never had an overlay yet (initial mount) or
+    // parcels were just re-enabled. Don't apply if handleOverlaySelect just
+    // set a non-potential overlay and React state hasn't caught up yet.
+    if (hadOverlayRef.current) {
+      hadOverlayRef.current = false
+      return
+    }
+    setParcelOverlayMode('score')
   }, [needsDefaultOverlay, isStyleReady, setParcelOverlayMode])
 
   const handleParcelsToggle = () => {
