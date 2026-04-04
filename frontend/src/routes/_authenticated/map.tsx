@@ -2118,6 +2118,7 @@ function MapPage() {
         clearGemeenteSelection(map)
         if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
           removeWijkBoundariesLayerManaged()
+          try { removeWijkBoundariesLayer(map) } catch { /* swallow */ }
           setWijkGeojson(null)
         }
         removeScanAreaHighlightManaged()
@@ -2126,6 +2127,11 @@ function MapPage() {
         setActivePanel(null)
         setParcelGeometryHighlight(null)
         setPropertyLngLat(null)
+
+        // Re-show gemeente boundaries — lifecycle queue may not flush during flyTo
+        setGemeenteBoundariesVisibilityManaged(true)
+        setGemeenteBoundariesVisibility(map, true)
+
         map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
         return
       }
