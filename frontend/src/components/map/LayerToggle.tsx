@@ -147,7 +147,8 @@ function LayerToggle({
   const setParcelOverlayMode = useCallback(
     (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | 'none') => {
       if (mode === 'none') return
-      onOverlaySelect?.(TOGGLE_MODE_TO_OVERLAY[mode])
+      const overlayId = TOGGLE_MODE_TO_OVERLAY[mode]
+      if (overlayId) onOverlaySelect?.(overlayId)
       ensureParcelInteractionZoom()
     },
     [
