@@ -239,7 +239,7 @@ export function ParcelBentoOverview({
       </motion.div>
 
       {/* ── Kenmerken (flex filler) ────────────────── */}
-      <div className="mt-6 flex-1 grid grid-cols-3 gap-1.5">
+      <div className="mt-3 flex-1 grid grid-cols-3 gap-1.5">
         <ScoreCircleCard
           icon={<TrendingUp size={16} strokeWidth={1.5} />}
           label="Potentie"
