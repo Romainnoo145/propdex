@@ -177,6 +177,16 @@ def _make_report_data(**overrides):
             "potentie": 74.5,
             "risico": 32.1,
         },
+        # --- Flags fields used by section 9 (Risicovlaggen) ---
+        "bodem_flags": {"bodemkwaliteit": "Licht verontreinigd", "bron": "Bodemloket"},
+        "bodemtype_flags": {"bodemtype": "Klei", "grondwaterstand": "Hoog"},
+        "funderingsrisico_flags": {"risico": "Hoog", "bouwjaar_range": "< 1970"},
+        "natura2000_flags": {"in_natura2000": False, "afstand_m": 2500},
+        "overstromingsrisico_flags": {"risico_klasse": "Midden", "dijkring": "14"},
+        "geluid_flags": {"geluidbelasting_dB": 58, "bron": "Rijkswaterstaat"},
+        "luchtkwaliteit_flags": {"no2_ug_m3": 28.5, "pm10_ug_m3": 22.0},
+        "energielabel_flags": {"energieklasse": "C", "registratie_datum": "2020-01-01"},
+        "woz_flags": {"waarde": 450000, "peiljaar": 2023},
         "score_breakdown_v3": {
             "bouwjaar": {
                 "waarde": 1890,
@@ -250,6 +260,25 @@ class TestTemplateRendering:
         """Test template renders when monuments is None."""
         html = _render_html(_make_report_data(monuments=None))
         assert html is not None
+
+    def test_template_has_clickable_toc(self):
+        """Verify v2 template contains clickable TOC anchor links and matching section IDs."""
+        html = _render_html(_make_report_data())
+        assert 'href="#section-1"' in html, "TOC link to section-1 missing"
+        assert 'id="section-1"' in html, "Section-1 id attribute missing"
+        # Spot-check a middle section too
+        assert 'href="#section-5"' in html, "TOC link to section-5 missing"
+        assert 'id="section-5"' in html, "Section-5 id attribute missing"
+
+    def test_template_has_all_sections(self):
+        """Verify v2 template contains sections 8 and 9 with real content."""
+        html = _render_html(_make_report_data())
+        assert 'id="section-8"' in html, "Section-8 missing"
+        assert 'id="section-9"' in html, "Section-9 missing"
+        assert "Vergunning-Checklists" in html, "Section 8 title missing"
+        assert "Ruwe Data Appendix" in html, "Section 9 title missing"
+        # Verify no stub text remains anywhere
+        assert "Inhoud wordt toegevoegd" not in html, "Stub placeholder text still present"
 
 
 class TestNewFieldRendering:
@@ -490,6 +519,120 @@ class TestPDFGeneration:
         result = generate_report_pdf(_make_report_data(), "Test Report")
         assert result is not None
         assert isinstance(result, bytes)
+
+
+class TestSection8Checklists:
+    """Test section 8 vergunning-checklist rendering and edge cases."""
+
+    def test_section8_renders_checklist_items(self):
+        """Positive case: checklist items render with phase grouping for top use case."""
+        html = _render_html(_make_report_data(
+            use_case_scores={
+                "optoppen": {"score": 75, "category": "Hoog"},
+                "splitsen": {"score": 50, "category": "Gemiddeld"},
+            },
+        ))
+        assert "Vergunning-Checklists" in html, "Section 8 header missing"
+        # Top use case selected (optoppen has highest score)
+        assert "Optoppen" in html, "Top use case name not rendered"
+        # Phase headers should appear (voorbereiding is first phase)
+        assert "Voorbereiding" in html, "First phase header missing"
+        # Data table present in the checklist section
+        assert "data-table" in html, "Checklist data-table missing"
+        # No-data fallback should NOT appear
+        assert "Geen vergunning-checklists beschikbaar" not in html
+
+    def test_section8_no_data_when_no_scores(self):
+        """No-data fallback renders when use_case_scores is None."""
+        html = _render_html(_make_report_data(use_case_scores=None))
+        assert "Geen vergunning-checklists beschikbaar" in html
+        # Phase headers should not appear
+        assert "Voorbereiding" not in html
+
+    def test_section8_no_data_when_empty_scores(self):
+        """No-data fallback renders when use_case_scores is empty dict."""
+        html = _render_html(_make_report_data(use_case_scores={}))
+        assert "Geen vergunning-checklists beschikbaar" in html
+        assert "Voorbereiding" not in html
+
+    def test_section8_handles_plain_number_scores(self):
+        """Checklist renders when scores are plain numbers (not dicts)."""
+        html = _render_html(_make_report_data(
+            use_case_scores={"optoppen": 80, "splitsen": 60},
+        ))
+        assert "Optoppen" in html, "Top use case not selected from plain numbers"
+        assert "Voorbereiding" in html, "Phase headers missing with plain number scores"
+        assert "Geen vergunning-checklists beschikbaar" not in html
+
+    def test_section8_non_checklist_use_case_falls_back(self):
+        """Graceful fallback when only non-checklist use cases present."""
+        html = _render_html(_make_report_data(
+            use_case_scores={"woningbouw": {"score": 90, "category": "Hoog"}},
+        ))
+        # woningbouw is not in CHECKLISTS keys, so fallback should render
+        assert "Geen vergunning-checklists beschikbaar" in html
+
+
+class TestSection9RawDataAppendix:
+    """Test section 9 raw data appendix rendering."""
+
+    def test_section9_renders_score_breakdown(self):
+        """Score breakdown table renders factor names and values from score_breakdown_v3."""
+        html = _render_html(_make_report_data())
+        assert "9.1 Score Breakdown" in html
+        assert "bouwjaar" in html  # factor name
+        assert "bodemrisico" in html  # factor name
+        assert "0.65" in html  # genormaliseerde_score for bouwjaar
+        assert "9.75" in html  # bijdrage for bouwjaar
+        assert "Historisch pand" in html  # toelichting_kort
+
+    def test_section9_renders_flags(self):
+        """Flags field values appear in section 9.3 Risicovlaggen."""
+        html = _render_html(_make_report_data())
+        assert "9.3 Risicovlaggen" in html
+        assert "Licht verontreinigd" in html  # bodem_flags.bodemkwaliteit
+        assert "Hoog" in html  # funderingsrisico_flags.risico
+        assert "Bodemloket" in html  # bodem_flags.bron
+        assert "2500" in html  # natura2000_flags.afstand_m
+        assert "28.5" in html  # luchtkwaliteit_flags.no2_ug_m3
+
+    def test_section9_renders_completeness(self):
+        """Completeness score value appears in section 9.4 Datakwaliteit."""
+        html = _render_html(_make_report_data(completeness_score=0.85))
+        assert "9.4 Datakwaliteit" in html
+        assert "85.0%" in html  # 0.85 * 100 rounded to 1 decimal
+
+    def test_section9_renders_errors(self):
+        """Error messages appear when errors list is populated."""
+        html = _render_html(_make_report_data(
+            errors=["API timeout", "Kadaster onbereikbaar"],
+        ))
+        assert "API timeout" in html
+        assert "Kadaster onbereikbaar" in html
+        assert "Fouten" in html
+
+    def test_section9_no_data_fallback(self):
+        """No-data fallbacks render when all section-9 specific fields are None/empty."""
+        html = _render_html(_make_report_data(
+            score_breakdown_v3=None,
+            scores_v3=None,
+            use_case_scores=None,
+            bodem_flags=None,
+            bodemtype_flags=None,
+            funderingsrisico_flags=None,
+            natura2000_flags=None,
+            overstromingsrisico_flags=None,
+            geluid_flags=None,
+            luchtkwaliteit_flags=None,
+            energielabel_flags=None,
+            woz_flags=None,
+            completeness_score=None,
+            errors=[],
+        ))
+        assert "Geen data beschikbaar" in html
+        # Flag-specific values should NOT appear
+        assert "Licht verontreinigd" not in html
+        assert "9.75" not in html
 
 
 class TestFunctionSignature:

@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Locatie Due Diligence Dossier — {{ report_name }}</title>
+  <style>
+    :root {
+      --brand-primary: #0E1111;
+      --brand-accent: #F9A826;
+      --brand-green: #22C55E;
+      --brand-red: #EF4444;
+      --brand-muted: #6B7280;
+      --brand-bg: #F9FAFB;
+      --brand-border: #E5E7EB;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 2cm 2cm 3cm 2cm;
+      @bottom-center {
+        content: element(footer);
+      }
+    }
+
+    @page cover {
+      margin: 0;
+    }
+
+    .page-footer {
+      position: running(footer);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 7.5pt;
+      color: var(--brand-muted);
+      text-align: center;
+      border-top: 1px solid var(--brand-border);
+      padding-top: 0.4em;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #1F2937;
+    }
+
+    /* ===== COVER PAGE ===== */
+    .cover {
+      page: cover;
+      width: 21cm;
+      height: 29.7cm;
+      background: var(--brand-primary);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 3cm 2.5cm;
+    }
+
+    .cover-label {
+      font-size: 8pt;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--brand-accent);
+      font-weight: 700;
+      margin-bottom: 1cm;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 800;
+      line-height: 1.15;
+      color: white;
+      margin-bottom: 0.5cm;
+    }
+
+    .cover-address {
+      font-size: 14pt;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 0.4cm;
+    }
+
+    .cover-address-sub {
+      font-size: 11pt;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 1.5cm;
+    }
+
+    .cover-scores {
+      display: flex;
+      gap: 1.2cm;
+      margin-bottom: auto;
+    }
+
+    .score-circle {
+      width: 4cm;
+      height: 4cm;
+      border-radius: 50%;
+      border: 6px solid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-circle.potentie {
+      border-color: var(--brand-green);
+    }
+
+    .score-circle.risico {
+      border-color: var(--brand-red);
+    }
+
+    .score-number {
+      font-size: 22pt;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-circle.potentie .score-number {
+      color: var(--brand-green);
+    }
+
+    .score-circle.risico .score-number {
+      color: var(--brand-red);
+    }
+
+    .score-label {
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      margin-top: 0.2em;
+    }
+
+    .cover-footer {
+      margin-top: 1cm;
+      padding-top: 0.5cm;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .cover-brand {
+      font-size: 10pt;
+      font-weight: 700;
+      color: var(--brand-accent);
+      letter-spacing: 0.05em;
+    }
+
+    .cover-date {
+      font-size: 8pt;
+      color: rgba(255,255,255,0.45);
+      margin-top: 0.2em;
+    }
+
+    .cover-disclaimer {
+      font-size: 7pt;
+      color: rgba(255,255,255,0.3);
+      margin-top: 0.4cm;
+      max-width: 14cm;
+      line-height: 1.4;
+    }
+
+    /* ===== SECTION STARTS ===== */
+    .section-start {
+      page-break-before: always;
+    }
+
+    /* ===== SECTION HEADER ===== */
+    .section-header {
+      border-left: 4px solid var(--brand-accent);
+      padding: 0.3em 0 0.3em 0.6em;
+      margin-bottom: 0.8em;
+    }
+
+    .section-number {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--brand-accent);
+    }
+
+    .section-title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: var(--brand-primary);
+      line-height: 1.2;
+    }
+
+    /* ===== TOC ===== */
+    .toc-list {
+      list-style: none;
+      margin-top: 0.8em;
+    }
+
+    .toc-list li {
+      padding: 0.5em 0;
+      border-bottom: 1px solid var(--brand-border);
+      display: flex;
+      align-items: baseline;
+      gap: 0.5em;
+    }
+
+    .toc-list li:last-child {
+      border-bottom: none;
+    }
+
+    .toc-list a {
+      color: inherit;
+      text-decoration: none;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5em;
+      width: 100%;
+    }
+    .toc-list a:hover {
+      color: var(--brand-accent);
+    }
+
+    .toc-num {
+      font-size: 9pt;
+      font-weight: 700;
+      color: var(--brand-accent);
+      min-width: 1.5em;
+    }
+
+    .toc-name {
+      font-size: 10pt;
+      color: var(--brand-primary);
+      font-weight: 500;
+    }
+
+    /* ===== DATA TABLE ===== */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.6em 0;
+      font-size: 9.5pt;
+    }
+
+    .data-table th {
+      background: var(--brand-bg);
+      font-weight: 700;
+      color: #374151;
+      text-align: left;
+      padding: 0.5em 0.7em;
+      border-bottom: 2px solid var(--brand-border);
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .data-table td {
+      padding: 0.45em 0.7em;
+      border-bottom: 1px solid var(--brand-border);
+      vertical-align: top;
+      page-break-inside: avoid;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:nth-child(even) td {
+      background: var(--brand-bg);
+    }
+
+    /* ===== KEY-VALUE ROWS ===== */
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.4em 0;
+    }
+
+    .kv-table td {
+      padding: 0.35em 0;
+      border-bottom: 1px solid #F3F4F6;
+      vertical-align: top;
+    }
+
+    .kv-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .kv-label {
+      width: 38%;
+      font-weight: 600;
+      color: #6B7280;
+      font-size: 9pt;
+      padding-right: 0.6em;
+    }
+
+    .kv-value {
+      width: 62%;
+      color: #1F2937;
+      font-size: 9.5pt;
+    }
+
+    /* ===== RISK INDICATORS ===== */
+    .risk-block {
+      margin: 0.6em 0;
+      padding: 0.5em 0.7em;
+      border-radius: 3px;
+      border-left: 4px solid var(--brand-border);
+      background: var(--brand-bg);
+    }
+
+    .risk-block h4 {
+      font-size: 10pt;
+      font-weight: 700;
+      margin-bottom: 0.3em;
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 0.6em;
+      height: 0.6em;
+      border-radius: 50%;
+    }
+
+    .dot-green { background: var(--brand-green); }
+    .dot-amber { background: var(--brand-accent); }
+    .dot-red { background: var(--brand-red); }
+    .dot-grey { background: #D1D5DB; }
+
+    /* ===== SCORE SECTION ===== */
+    .score-gauges {
+      display: flex;
+      gap: 1.5em;
+      margin: 0.8em 0 1em 0;
+    }
+
+    .gauge-box {
+      border-radius: 4px;
+      padding: 0.8em 1.2em;
+      min-width: 5cm;
+      text-align: center;
+    }
+
+    .gauge-box.potentie {
+      border: 2px solid var(--brand-green);
+      background: #F0FDF4;
+    }
+
+    .gauge-box.risico {
+      border: 2px solid var(--brand-red);
+      background: #FEF2F2;
+    }
+
+    .gauge-num {
+      font-size: 20pt;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .gauge-box.potentie .gauge-num { color: var(--brand-green); }
+    .gauge-box.risico .gauge-num { color: var(--brand-red); }
+
+    .gauge-lbl {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--brand-muted);
+      margin-top: 0.2em;
+    }
+
+    /* ===== FACTORS TABLE ===== */
+    .factors-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.5em 0;
+      font-size: 9pt;
+    }
+
+    .factors-table th {
+      background: var(--brand-bg);
+      font-weight: 700;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #374151;
+      padding: 0.45em 0.5em;
+      border-bottom: 2px solid var(--brand-border);
+      text-align: left;
+    }
+
+    .factors-table td {
+      padding: 0.4em 0.5em;
+      border-bottom: 1px solid var(--brand-border);
+      vertical-align: top;
+      page-break-inside: avoid;
+    }
+
+    .factors-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .row-potentie td {
+      background: #F0FDF4;
+    }
+
+    .row-risico td {
+      background: #FEF2F2;
+    }
+
+    .toelichting-block {
+      margin: 0.3em 0 0.5em 0;
+      padding: 0.4em 0.6em;
+      background: #F9FAFB;
+      border-left: 3px solid var(--brand-border);
+      font-size: 8.5pt;
+      color: #4B5563;
+      page-break-inside: avoid;
+    }
+
+    /* ===== NOTES + SOURCES ===== */
+    .source-meta {
+      font-size: 7.5pt;
+      color: #9CA3AF;
+      font-style: italic;
+      margin-top: 0.4em;
+      padding-top: 0.3em;
+      border-top: 1px solid #F3F4F6;
+    }
+
+    .no-data {
+      color: #9CA3AF;
+      font-style: italic;
+      font-size: 9pt;
+      padding: 0.3em 0;
+    }
+
+    .note-box {
+      background: #EFF6FF;
+      border-left: 4px solid #3B82F6;
+      padding: 0.6em 0.8em;
+      font-size: 9pt;
+      margin: 0.6em 0;
+      color: #1E40AF;
+    }
+
+    .disclaimer-box {
+      background: #FFFBEB;
+      border-left: 4px solid var(--brand-accent);
+      padding: 0.7em 0.9em;
+      font-size: 9pt;
+      margin: 0.8em 0;
+      color: #92400E;
+    }
+
+    /* ===== SOURCES TABLE ===== */
+    .sources-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.6em 0;
+      font-size: 9pt;
+    }
+
+    .sources-table th {
+      background: var(--brand-bg);
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: #374151;
+      padding: 0.45em 0.6em;
+      border-bottom: 2px solid var(--brand-border);
+      text-align: left;
+    }
+
+    .sources-table td {
+      padding: 0.4em 0.6em;
+      border-bottom: 1px solid var(--brand-border);
+      vertical-align: top;
+    }
+
+    .sources-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.1em 0.4em;
+      border-radius: 3px;
+      font-size: 7.5pt;
+      font-weight: 700;
+    }
+
+    .badge-high {
+      background: #DCFCE7;
+      color: #166534;
+    }
+
+    .badge-medium {
+      background: #FEF9C3;
+      color: #854D0E;
+    }
+
+    .badge-low {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    /* sub-section headings */
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: var(--brand-primary);
+      margin: 0.8em 0 0.3em 0;
+      padding-bottom: 0.2em;
+      border-bottom: 1px solid var(--brand-border);
+      page-break-after: avoid;
+    }
+
+    h4 {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #374151;
+      margin: 0.5em 0 0.2em 0;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin: 0.3em 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Running page footer (appears after cover page) -->
+  <div class="page-footer">
+    Locatie Due Diligence Dossier | Propdex | {{ generated_at }} | Indicatief document — openbare databronnen
+  </div>
+
+  <!-- ===== COVER PAGE ===== -->
+  <div class="cover">
+    <div class="cover-label">Propdex — Property Intelligence</div>
+    <div class="cover-title">Locatie Due<br>Diligence Dossier</div>
+
+    {% if report_data.address %}
+      <div class="cover-address">
+        {{ report_data.address.get('straat', report_data.address.get('straatnaam', '')) }}
+        {{ report_data.address.get('huisnummer', '') }}{% if report_data.address.get('huisletter') %}{{ report_data.address.get('huisletter') }}{% endif %}{% if report_data.address.get('toevoeging') %} {{ report_data.address.get('toevoeging') }}{% endif %}
+      </div>
+      <div class="cover-address-sub">
+        {{ report_data.address.get('postcode', '') }}
+        {{ report_data.address.get('woonplaats', '') }}{% if report_data.address.get('gemeente') %} — {{ report_data.address.get('gemeente') }}{% endif %}
+      </div>
+    {% else %}
+      <div class="cover-address">{{ report_name }}</div>
+      <div class="cover-address-sub">&nbsp;</div>
+    {% endif %}
+
+    <div class="cover-scores">
+      {% if report_data.get('scores_v3') %}
+        <div class="score-circle potentie">
+          <div class="score-number">{{ report_data.scores_v3.get('potentie', '—') | int }}</div>
+          <div class="score-label">Potentie</div>
+        </div>
+        <div class="score-circle risico">
+          <div class="score-number">{{ report_data.scores_v3.get('risico', '—') | int }}</div>
+          <div class="score-label">Risico</div>
+        </div>
+      {% else %}
+        <div class="score-circle potentie">
+          <div class="score-number">—</div>
+          <div class="score-label">Potentie</div>
+        </div>
+        <div class="score-circle risico">
+          <div class="score-number">—</div>
+          <div class="score-label">Risico</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-brand">Propdex — Property Intelligence Platform</div>
+      <div class="cover-date">Gegenereerd: {{ generated_at }}</div>
+      <div class="cover-disclaimer">
+        Dit dossier is samengesteld op basis van openbare databronnen (BAG, Kadaster, DSO, Bodemloket en overige PDOK-diensten) en is indicatief van aard.
+        Het document vervangt niet het oordeel van een erkend adviseur, notaris of bevoegde instantie.
+        Verifieer alle gegevens bij de betreffende bronhouder.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INHOUDSOPGAVE ===== -->
+  <div class="section-start">
+    <div class="section-header">
+      <div class="section-number">Inhoudsopgave</div>
+      <div class="section-title">Inhoud van dit dossier</div>
+    </div>
+    <ul class="toc-list">
+      <li><a href="#section-1"><span class="toc-num">1</span><span class="toc-name">Locatiegegevens</span></a></li>
+      <li><a href="#section-2"><span class="toc-num">2</span><span class="toc-name">Kadaster &amp; Eigendom</span></a></li>
+      <li><a href="#section-3"><span class="toc-num">3</span><span class="toc-name">Bestemmingsplan &amp; Bouwmogelijkheden</span></a></li>
+      <li><a href="#section-4"><span class="toc-num">4</span><span class="toc-name">Risicoprofiel</span></a></li>
+      <li><a href="#section-5"><span class="toc-num">5</span><span class="toc-name">Potentie &amp; Risico Analyse</span></a></li>
+      <li><a href="#section-6"><span class="toc-num">6</span><span class="toc-name">Vergunningen &amp; Precedenten</span></a></li>
+      <li><a href="#section-7"><span class="toc-num">7</span><span class="toc-name">Bronvermelding</span></a></li>
+      <li><a href="#section-8"><span class="toc-num">8</span><span class="toc-name">Vergunning-Checklists</span></a></li>
+      <li><a href="#section-9"><span class="toc-num">9</span><span class="toc-name">Ruwe Data Appendix</span></a></li>
+    </ul>
+  </div>
+
+  <!-- ===== SECTIE 1: LOCATIEGEGEVENS ===== -->
+  <div id="section-1" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 1</div>
+      <div class="section-title">Locatiegegevens</div>
+    </div>
+
+    {% if report_data.address %}
+    <h3>Adres</h3>
+    <table class="kv-table">
+      <tr>
+        <td class="kv-label">Straat</td>
+        <td class="kv-value">{{ report_data.address.get('straat', report_data.address.get('straatnaam', 'Niet beschikbaar')) }}</td>
+      </tr>
+      <tr>
+        <td class="kv-label">Huisnummer</td>
+        <td class="kv-value">
+          {{ report_data.address.get('huisnummer', '') }}{% if report_data.address.get('huisletter') %}{{ report_data.address.get('huisletter') }}{% endif %}{% if report_data.address.get('toevoeging') %} {{ report_data.address.get('toevoeging') }}{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="kv-label">Postcode</td>
+        <td class="kv-value">{{ report_data.address.get('postcode', 'Niet beschikbaar') }}</td>
+      </tr>
+      <tr>
+        <td class="kv-label">Woonplaats</td>
+        <td class="kv-value">{{ report_data.address.get('woonplaats', 'Niet beschikbaar') }}</td>
+      </tr>
+      {% if report_data.address.get('gemeente') %}
+      <tr>
+        <td class="kv-label">Gemeente</td>
+        <td class="kv-value">{{ report_data.address.get('gemeente') }}</td>
+      </tr>
+      {% endif %}
+      {% if report_data.address.get('nummeraanduiding_id') %}
+      <tr>
+        <td class="kv-label">BAG Nummeraanduiding ID</td>
+        <td class="kv-value" style="font-size:8pt;color:#6B7280;">{{ report_data.address.get('nummeraanduiding_id') }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% else %}
+    <p class="no-data">Geen adresgegevens beschikbaar.</p>
+    {% endif %}
+
+    {% if report_data.building %}
+    <h3>Gebouwgegevens (BAG)</h3>
+    <table class="kv-table">
+      {% if report_data.building.get('bouwjaar') %}
+      <tr>
+        <td class="kv-label">Bouwjaar</td>
+        <td class="kv-value">{{ report_data.building.get('bouwjaar') }}</td>
+      </tr>
+      {% endif %}
+      {% if report_data.building.get('oppervlakte') %}
+      <tr>
+        <td class="kv-label">Gebruiksoppervlakte</td>
+        <td class="kv-value">{{ report_data.building.get('oppervlakte') }} m²</td>
+      </tr>
+      {% endif %}
+      {% if report_data.building.get('status') %}
+      <tr>
+        <td class="kv-label">Status</td>
+        <td class="kv-value">{{ report_data.building.get('status') }}</td>
+      </tr>
+      {% endif %}
+      {% if report_data.building.get('gebruiksdoel') %}
+      <tr>
+        <td class="kv-label">Gebruiksdoel</td>
+        <td class="kv-value">
+          {% if report_data.building.get('gebruiksdoel') is iterable and report_data.building.get('gebruiksdoel') is not string %}
+            {{ report_data.building.get('gebruiksdoel') | join(', ') }}
+          {% else %}
+            {{ report_data.building.get('gebruiksdoel') }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if report_data.building.get('pand_id') %}
+      <tr>
+        <td class="kv-label">Pand ID (BAG)</td>
+        <td class="kv-value" style="font-size:8pt;color:#6B7280;">{{ report_data.building.get('pand_id') }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% else %}
+    <p class="no-data">Geen gebouwgegevens beschikbaar.</p>
+    {% endif %}
+
+    {% if report_data.get('map_data') and (report_data.map_data.get('latitude') or report_data.map_data.get('lat')) %}
+    <h3>Coördinaten</h3>
+    <table class="kv-table">
+      <tr>
+        <td class="kv-label">Breedtegraad (lat)</td>
+        <td class="kv-value">{{ report_data.map_data.get('latitude', report_data.map_data.get('lat', 'Niet beschikbaar')) }}</td>
+      </tr>
+      <tr>
+        <td class="kv-label">Lengtegraad (lon)</td>
+        <td class="kv-value">{{ report_data.map_data.get('longitude', report_data.map_data.get('lon', 'Niet beschikbaar')) }}</td>
+      </tr>
+    </table>
+    {% endif %}
+
+    <!-- Energielabel -->
+    {% if report_data.get('energy_label') %}
+      {% set elabel = report_data.get('energy_label') %}
+    <h3>Energielabel</h3>
+    <table class="kv-table">
+      {% if elabel.get('is_geregistreerd') %}
+        {% if elabel.get('energieklasse') %}
+        <tr>
+          <td class="kv-label">Energieklasse</td>
+          <td class="kv-value"><strong>{{ elabel.get('energieklasse') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('registratie_datum') %}
+        <tr>
+          <td class="kv-label">Registratiedatum</td>
+          <td class="kv-value">{{ elabel.get('registratie_datum') }}</td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('geldig_tot') %}
+        <tr>
+          <td class="kv-label">Geldig tot</td>
+          <td class="kv-value">{{ elabel.get('geldig_tot') }}{% if elabel.get('is_geldig') == false %} <span style="color:var(--brand-red);">(verlopen)</span>{% endif %}</td>
+        </tr>
+        {% endif %}
+        {% if elabel.get('berekenings_type') %}
+        <tr>
+          <td class="kv-label">Berekeningsmethode</td>
+          <td class="kv-value">{{ elabel.get('berekenings_type') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">Status</td>
+          <td class="kv-value no-data">{{ elabel.get('niet_geregistreerd_reden', 'Niet geregistreerd bij EP-Online') }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: EP-Online V5 (RVO) | Betrouwbaarheid: HOOG</div>
+    {% elif report_data.get('energielabel_flags') %}
+      {% set eflags = report_data.get('energielabel_flags') %}
+    <h3>Energielabel</h3>
+    <table class="kv-table">
+      {% if eflags is mapping %}
+        {% if eflags.get('energieklasse') or eflags.get('label') %}
+        <tr>
+          <td class="kv-label">Energieklasse</td>
+          <td class="kv-value"><strong>{{ eflags.get('energieklasse', eflags.get('label', '—')) }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if eflags.get('registratie_datum') %}
+        <tr>
+          <td class="kv-label">Registratiedatum</td>
+          <td class="kv-value">{{ eflags.get('registratie_datum') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">Energielabel</td>
+          <td class="kv-value">{{ eflags }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: EP-Online | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- WOZ waarde -->
+    {% if report_data.get('woz_data') %}
+      {% set woz = report_data.get('woz_data') %}
+    <h3>WOZ-waarde</h3>
+    <table class="kv-table">
+      {% if woz.get('meest_recente_waarde') is not none %}
+      <tr>
+        <td class="kv-label">Meest recente WOZ-waarde</td>
+        <td class="kv-value"><strong>€ {{ "{:,.0f}".format(woz.get('meest_recente_waarde')).replace(",", ".") }}</strong></td>
+      </tr>
+      {% endif %}
+      {% if woz.get('meest_recente_peildatum') %}
+      <tr>
+        <td class="kv-label">Peildatum</td>
+        <td class="kv-value">{{ woz.get('meest_recente_peildatum') }}</td>
+      </tr>
+      {% endif %}
+      {% if woz.get('grondoppervlakte') is not none %}
+      <tr>
+        <td class="kv-label">Grondoppervlakte</td>
+        <td class="kv-value">{{ woz.get('grondoppervlakte') }} m²</td>
+      </tr>
+      {% endif %}
+      {% if woz.get('low_confidence') %}
+      <tr>
+        <td class="kv-label">Betrouwbaarheid</td>
+        <td class="kv-value" style="color:var(--brand-accent);">{{ woz.get('low_confidence_reden', 'Data afkomstig uit onofficiële bron') }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% if woz.get('waarden') and woz.get('waarden') | length > 1 %}
+    <h4>WOZ-waardenhistorie</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Peildatum</th>
+          <th>Vastgestelde waarde</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in woz.get('waarden', [])[:5] %}
+        <tr>
+          <td>{{ w.get('peildatum', '—') }}</td>
+          <td>{% if w.get('vastgestelde_waarde') is not none %}€ {{ "{:,.0f}".format(w.get('vastgestelde_waarde')).replace(",", ".") }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <div class="source-meta">Bron: {{ woz.get('bron', 'WOZ Waardeloket') }} | Betrouwbaarheid: {% if woz.get('low_confidence') %}GEMIDDELD{% else %}HOOG{% endif %}</div>
+    {% elif report_data.get('woz_flags') %}
+      {% set wflags = report_data.get('woz_flags') %}
+    <h3>WOZ-waarde</h3>
+    <table class="kv-table">
+      {% if wflags is mapping %}
+        {% if wflags.get('waarde') or wflags.get('woz_waarde') %}
+        <tr>
+          <td class="kv-label">WOZ-waarde</td>
+          <td class="kv-value"><strong>€ {{ wflags.get('waarde', wflags.get('woz_waarde', '—')) }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if wflags.get('peildatum') %}
+        <tr>
+          <td class="kv-label">Peildatum</td>
+          <td class="kv-value">{{ wflags.get('peildatum') }}</td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr>
+          <td class="kv-label">WOZ-waarde</td>
+          <td class="kv-value">{{ wflags }}</td>
+        </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: WOZ Waardeloket | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <div class="source-meta">Bron: BAG — Basisregistratie Adressen en Gebouwen (PDOK) | Betrouwbaarheid: HOOG</div>
+  </div>
+
+  <!-- ===== SECTIE 2: KADASTER & EIGENDOM ===== -->
+  <div id="section-2" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 2</div>
+      <div class="section-title">Kadaster &amp; Eigendom</div>
+    </div>
+
+    {% if report_data.cadastral_parcels %}
+    <h3>Kadastrale percelen</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Kadastrale aanduiding</th>
+          <th>Sectie</th>
+          <th>Perceelnummer</th>
+          <th>Oppervlakte (m²)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for parcel in report_data.cadastral_parcels %}
+        <tr>
+          <td>{{ parcel.get('kadastrale_aanduiding', 'Niet beschikbaar') }}</td>
+          <td>{{ parcel.get('sectie', '—') }}</td>
+          <td>{{ parcel.get('perceelnummer', '—') }}</td>
+          <td>{{ parcel.get('oppervlakte', '—') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="no-data">Geen kadastrale gegevens beschikbaar.</p>
+    {% endif %}
+
+    <!-- BRK Ownership -->
+    {% if report_data.get('brk_ownership') %}
+      {% set brk = report_data.get('brk_ownership') %}
+      {% if brk.get('status') == 'available' and brk.get('data') %}
+    <h3>Eigendomsgegevens (BRK)</h3>
+        {% for po in brk.get('data', []) %}
+    <h4>{{ po.get('perceel_identificatie', 'Perceel') }}</h4>
+          {% if po.get('gerechtigden') and po.get('gerechtigden') | length > 0 %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Naam / Entiteit</th>
+          <th>Zakelijk recht</th>
+          <th>Aandeel</th>
+          <th>Koopsom</th>
+          <th>Koopjaar</th>
+        </tr>
+      </thead>
+      <tbody>
+            {% for g in po.get('gerechtigden', []) %}
+        <tr>
+          <td>
+                {% if g.get('eigenaar_type') == 'natuurlijk_persoon' %}Natuurlijk persoon
+                {% elif g.get('eigenaar_type') == 'rechtspersoon' %}Rechtspersoon
+                {% elif g.get('eigenaar_type') == 'overheid' %}Overheid
+                {% else %}Onbekend{% endif %}
+          </td>
+          <td>
+                {# AVG: NEVER render naam for natuurlijk_persoon #}
+                {% if g.get('eigenaar_type') == 'natuurlijk_persoon' %}
+                  <span class="no-data">Niet getoond (AVG)</span>
+                {% elif g.get('naam') %}
+                  {{ g.get('naam') }}{% if g.get('kvk_nummer') %} <span style="font-size:8pt;color:var(--brand-muted);">(KvK: {{ g.get('kvk_nummer') }})</span>{% endif %}
+                {% else %}
+                  —
+                {% endif %}
+          </td>
+          <td>{{ g.get('zakelijk_recht_type', '—') }}</td>
+          <td>{{ g.get('aandeel', '—') }}</td>
+          <td>{% if g.get('koopsom') is not none %}€ {{ "{:,.0f}".format(g.get('koopsom')).replace(",", ".") }}{% else %}—{% endif %}</td>
+          <td>{{ g.get('koopjaar', '—') }}</td>
+        </tr>
+            {% endfor %}
+      </tbody>
+    </table>
+          {% else %}
+    <p class="no-data">Geen gerechtigden gevonden voor dit perceel.</p>
+          {% endif %}
+          {% if po.get('heeft_hypotheek') and po.get('hypotheken') | length > 0 %}
+    <h4 style="margin-top:0.5em;">Hypotheken</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Hypotheekhouder</th>
+          <th>Bedrag</th>
+          <th>Aard</th>
+        </tr>
+      </thead>
+      <tbody>
+            {% for h in po.get('hypotheken', []) %}
+        <tr>
+          <td>{{ h.get('hypotheekhouder_naam', '—') }}</td>
+          <td>{% if h.get('bedrag') is not none %}€ {{ "{:,.0f}".format(h.get('bedrag')).replace(",", ".") }}{% else %}—{% endif %}</td>
+          <td>{{ h.get('aard', '—') }}</td>
+        </tr>
+            {% endfor %}
+      </tbody>
+    </table>
+          {% endif %}
+          {% if po.get('beslagen') and po.get('beslagen') | length > 0 %}
+    <div class="disclaimer-box" style="margin-top:0.4em;">
+      <strong>⚠ Beslag geregistreerd:</strong>
+      <ul style="margin-left:1em;margin-top:0.2em;">
+            {% for b in po.get('beslagen', []) %}
+        <li>{{ b.get('aard', 'Onbekend type beslag') }}</li>
+            {% endfor %}
+      </ul>
+    </div>
+          {% endif %}
+        {% endfor %}
+    <div class="source-meta">Bron: Kadaster BRK Bevragen V2 (live) | Opgehaald: {{ brk.get('fetched_at', '—')[:10] if brk.get('fetched_at') else '—' }} | Betrouwbaarheid: HOOG</div>
+      {% elif brk.get('status') == 'unavailable' %}
+    <div class="note-box">
+      <strong>Eigendomsinformatie:</strong> {{ brk.get('reason', 'BRK eigendomsdata is momenteel niet beschikbaar.') }}
+      {% if brk.get('admin_hint') %}<br><span style="font-size:8pt;color:var(--brand-muted);">{{ brk.get('admin_hint') }}</span>{% endif %}
+    </div>
+      {% elif brk.get('status') == 'error' %}
+    <div class="disclaimer-box">
+      <strong>Fout bij ophalen eigendomsdata:</strong> {{ brk.get('reason', 'Onbekende fout bij BRK API.') }}
+    </div>
+      {% endif %}
+    {% else %}
+    <div class="note-box">
+      <strong>Eigendomsinformatie:</strong> Gedetailleerde eigendomsgegevens (eigenaar, zakelijk recht, koopsom) zijn beschikbaar via on-demand BRK opvraging binnen Propdex. Raadpleeg de "Eigendom" functie in het perceeldossier voor actuele BRK-data (Kadaster Tier 3).
+    </div>
+    {% endif %}
+
+    <div class="source-meta">Bron: PDOK Kadaster OGC API (BRK Percelen) | Betrouwbaarheid: HOOG</div>
+  </div>
+
+  <!-- ===== SECTIE 3: BESTEMMINGSPLAN & BOUWMOGELIJKHEDEN ===== -->
+  <div id="section-3" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 3</div>
+      <div class="section-title">Bestemmingsplan &amp; Bouwmogelijkheden</div>
+    </div>
+
+    {% if report_data.zoning %}
+      {% set zoning = report_data.zoning %}
+      {% if zoning.get('primary_bestemming') %}
+      <h3>Bestemming</h3>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Primaire bestemming</td>
+          <td class="kv-value"><strong>{{ zoning.get('primary_bestemming') }}</strong></td>
+        </tr>
+        {% if zoning.get('plans') and zoning.get('plans') | length > 0 %}
+          {% set plan0 = zoning.get('plans')[0] %}
+          {% if plan0.get('plan_naam') %}
+          <tr>
+            <td class="kv-label">Plannaam</td>
+            <td class="kv-value">{{ plan0.get('plan_naam') }}</td>
+          </tr>
+          {% endif %}
+          {% if plan0.get('plan_status') %}
+          <tr>
+            <td class="kv-label">Planstatus</td>
+            <td class="kv-value">{{ plan0.get('plan_status') }}</td>
+          </tr>
+          {% endif %}
+          {% if plan0.get('plan_datum') %}
+          <tr>
+            <td class="kv-label">Plandatum</td>
+            <td class="kv-value">{{ plan0.get('plan_datum') }}</td>
+          </tr>
+          {% endif %}
+        {% endif %}
+      </table>
+      {% endif %}
+
+      {% if zoning.get('building_dimensions') %}
+        {% set dims = zoning.get('building_dimensions') %}
+      <h3>Bouwdimensies</h3>
+      <table class="kv-table">
+        {% if dims.get('max_hoogte') %}
+        <tr>
+          <td class="kv-label">Max. bouwhoogte</td>
+          <td class="kv-value">{{ dims.get('max_hoogte') }} m</td>
+        </tr>
+        {% endif %}
+        {% if dims.get('max_bouwlagen') %}
+        <tr>
+          <td class="kv-label">Max. bouwlagen</td>
+          <td class="kv-value">{{ dims.get('max_bouwlagen') }} lagen</td>
+        </tr>
+        {% endif %}
+        {% if dims.get('max_bebouwingspercentage') %}
+        <tr>
+          <td class="kv-label">Max. bebouwings%</td>
+          <td class="kv-value">{{ dims.get('max_bebouwingspercentage') }}%</td>
+        </tr>
+        {% endif %}
+        {% if dims.get('max_goothoogte') %}
+        <tr>
+          <td class="kv-label">Max. goothoogte</td>
+          <td class="kv-value">{{ dims.get('max_goothoogte') }} m</td>
+        </tr>
+        {% endif %}
+        {% if not dims.get('max_hoogte') and not dims.get('max_bouwlagen') and not dims.get('max_bebouwingspercentage') %}
+        <tr>
+          <td class="kv-label">Bouwdimensies</td>
+          <td class="kv-value no-data">Geen maatvoeringen beschikbaar in DSO Ruimtelijke Plannen</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      {% if report_data.get('ai_parsing') and report_data.ai_parsing.get('status') == 'complete' %}
+      <h3>AI Planregels analyse</h3>
+      {% if report_data.ai_parsing.get('parsed_rules') %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Categorie</th>
+            <th>Regel</th>
+            <th>Waarde</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in report_data.ai_parsing.get('parsed_rules', []) %}
+          <tr>
+            <td>{{ rule.get('category', 'Overig') }}</td>
+            <td>{{ rule.get('rule_name', '—') }}</td>
+            <td>{{ rule.get('value', 'Niet beschikbaar') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% endif %}
+
+    {% else %}
+    <p class="no-data">Geen bestemmingsplangegevens beschikbaar.</p>
+    {% endif %}
+
+    <!-- Buildability Delta -->
+    {% if report_data.get('buildability_delta') %}
+      {% set bd = report_data.get('buildability_delta') %}
+    <h3>Bouwenvelop-analyse (huidige vs. toegestane bebouwing)</h3>
+    <table class="kv-table">
+      {% if bd.get('parcel_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Perceeloppervlakte</td>
+        <td class="kv-value">{{ bd.get('parcel_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_built_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Huidig bebouwd oppervlak</td>
+        <td class="kv-value">{{ bd.get('current_built_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_built_ratio_pct') is not none %}
+      <tr>
+        <td class="kv-label">Huidige bebouwingsgraad</td>
+        <td class="kv-value">{{ bd.get('current_built_ratio_pct') | round(1) }}%</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('max_bebouwingspercentage_pct') is not none %}
+      <tr>
+        <td class="kv-label">Max. bebouwingspercentage (bestemmingsplan)</td>
+        <td class="kv-value">{{ bd.get('max_bebouwingspercentage_pct') | round(1) }}%</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('max_buildable_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Max. bebouwbaar oppervlak</td>
+        <td class="kv-value">{{ bd.get('max_buildable_area_m2') | round(0) | int }} m²</td>
+      </tr>
+      {% endif %}
+      {% if bd.get('remaining_buildable_area_m2') is not none %}
+      <tr>
+        <td class="kv-label">Resterende bouwruimte</td>
+        <td class="kv-value">
+          <strong>{{ bd.get('remaining_buildable_area_m2') | round(0) | int }} m²</strong>
+          {% if bd.get('remaining_buildable_area_m2') > 0 %}
+            <span style="color:var(--brand-green);font-size:8.5pt;"> (uitbreidingsruimte)</span>
+          {% elif bd.get('remaining_buildable_area_m2') == 0 %}
+            <span style="color:var(--brand-muted);font-size:8.5pt;"> (volledig benut)</span>
+          {% else %}
+            <span style="color:var(--brand-red);font-size:8.5pt;"> (overschreden)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if bd.get('current_far') is not none %}
+      <tr>
+        <td class="kv-label">Huidige FAR (Floor Area Ratio)</td>
+        <td class="kv-value">{{ bd.get('current_far') | round(2) }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: BAG + DSO (berekend) | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- Wkb Classification -->
+    {% if report_data.get('wkb_classification') %}
+      {% set wkbc = report_data.get('wkb_classification') %}
+    <h3>Wkb Gevolgklasse</h3>
+    <table class="kv-table">
+      <tr>
+        <td class="kv-label">Wkb van toepassing</td>
+        <td class="kv-value">
+          {% if wkbc.get('wkb_applicable') %}
+            <strong style="color:var(--brand-green);">Ja</strong>
+          {% else %}
+            <strong>Nee</strong>{% if wkbc.get('exclusion_reason') %} — {{ wkbc.get('exclusion_reason') }}{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="kv-label">Gevolgklasse</td>
+        <td class="kv-value">
+          {% if wkbc.get('gevolgklasse') == 'GK1' %}
+            <strong>GK1</strong> (grondgebonden woning)
+          {% elif wkbc.get('gevolgklasse') == 'niet_van_toepassing' %}
+            Niet van toepassing
+          {% else %}
+            Onbekend
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:8pt;color:var(--brand-muted);margin-top:0.2em;">{{ wkbc.get('disclaimer', '') }}</p>
+    {% endif %}
+
+    <!-- Wkb Precheck -->
+    {% if report_data.get('wkb_precheck') %}
+      {% set wkbp = report_data.get('wkb_precheck') %}
+    <h3>Wkb Startdossier Precheck</h3>
+    <div class="risk-block">
+      <h4>
+        {% if wkbp.get('status') == 'likely_required' %}
+          <span class="dot dot-amber"></span>
+        {% elif wkbp.get('status') == 'likely_not_required' or wkbp.get('status') == 'not_applicable' %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        Status: {{ wkbp.get('status', 'onbekend') | replace('_', ' ') | title }}
+        <span style="font-size:8pt;color:var(--brand-muted);margin-left:0.5em;">(zekerheid: {{ wkbp.get('confidence', 'low') }})</span>
+      </h4>
+      {% if wkbp.get('triggered_rules') and wkbp.get('triggered_rules') | length > 0 %}
+      <table class="data-table" style="margin-top:0.4em;">
+        <thead>
+          <tr>
+            <th>Regel</th>
+            <th>Effect</th>
+            <th>Toelichting</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in wkbp.get('triggered_rules', []) %}
+          <tr>
+            <td style="font-size:8.5pt;">{{ rule.get('title', rule.get('code', '—')) }}</td>
+            <td style="font-size:8.5pt;">
+              {% if rule.get('impact') == 'increase' %}↑ waarschijnlijker
+              {% elif rule.get('impact') == 'decrease' %}↓ minder waarschijnlijk
+              {% else %}? onzeker{% endif %}
+            </td>
+            <td style="font-size:8.5pt;">{{ rule.get('reason', '—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if wkbp.get('missing_inputs') and wkbp.get('missing_inputs') | length > 0 %}
+      <p style="font-size:8.5pt;color:var(--brand-muted);margin-top:0.3em;">
+        <strong>Ontbrekende gegevens:</strong> {{ wkbp.get('missing_inputs') | join(', ') }}
+      </p>
+      {% endif %}
+      {% if wkbp.get('required_documents') and wkbp.get('required_documents') | length > 0 %}
+      <p style="font-size:8.5pt;margin-top:0.2em;">
+        <strong>Aanbevolen documenten:</strong> {{ wkbp.get('required_documents') | join(', ') }}
+      </p>
+      {% endif %}
+    </div>
+    <p style="font-size:8pt;color:var(--brand-muted);margin-top:0.2em;">{{ wkbp.get('disclaimer', '') }}</p>
+    {% endif %}
+
+    <div class="source-meta">Bron: DSO Ruimtelijke Plannen (PDOK) | Betrouwbaarheid: HOOG</div>
+  </div>
+
+  <!-- ===== SECTIE 4: RISICOPROFIEL ===== -->
+  <div id="section-4" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 4</div>
+      <div class="section-title">Risicoprofiel</div>
+    </div>
+
+    <!-- 4.1 Bodemkwaliteit -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('bodem_flags') %}
+          <span class="dot dot-amber"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.1 Bodemkwaliteit
+      </h4>
+      {% if report_data.get('bodem_flags') %}
+        {% set bf = report_data.get('bodem_flags') %}
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Kwaliteitsklasse</td>
+            <td class="kv-value">{% if bf is mapping %}{{ bf.get('kwaliteitsklasse', bf.get('bodemkwaliteit', bf)) }}{% else %}{{ bf }}{% endif %}</td>
+          </tr>
+          {% if report_data.get('bodemtype_flags') %}
+          {% set bt = report_data.get('bodemtype_flags') %}
+          <tr>
+            <td class="kv-label">Bodemtype</td>
+            <td class="kv-value">{% if bt is mapping %}{{ bt.get('dominant_soiltype', bt.get('description', bt)) }}{% else %}{{ bt }}{% endif %}</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: Bodemloket / BRO Bodemkaart | Betrouwbaarheid: GEMIDDELD</div>
+      {% elif report_data.get('bodem_data') %}
+        {% set bodem = report_data.get('bodem_data') %}
+        {% if bodem.get('dossiers') and bodem.get('dossiers') | length > 0 %}
+          <p style="color:var(--brand-red);">Verontreinigingsdossiers aangetroffen — raadpleeg bevoegd gezag.</p>
+        {% else %}
+          <p class="no-data">Geen verontreiniging gevonden in Bodemloket (binnen zoekradius).</p>
+        {% endif %}
+        <div class="source-meta">Bron: Bodemloket | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — bodemdata niet opgehaald voor deze locatie.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.1b Bodemtype (BRO Bodemkaart) — standalone soil_profile -->
+    {% if report_data.get('soil_profile') and not report_data.get('fysiek_risico_profiel') %}
+      {% set sp = report_data.get('soil_profile') %}
+    <div class="risk-block">
+      <h4><span class="dot dot-amber"></span> 4.1b Bodemtype (BRO)</h4>
+      <table class="kv-table">
+        {% if sp.get('dominant_type_label') %}
+        <tr>
+          <td class="kv-label">Grondsoort</td>
+          <td class="kv-value"><strong>{{ sp.get('dominant_type_label') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilname') %}
+        <tr>
+          <td class="kv-label">Bodemprofielnaam</td>
+          <td class="kv-value">{{ sp.get('soilname') }}</td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilcode') %}
+        <tr>
+          <td class="kv-label">Bodemcode</td>
+          <td class="kv-value" style="font-size:8pt;color:var(--brand-muted);">{{ sp.get('soilcode') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      <div class="source-meta">{{ sp.get('disclaimer', 'Bron: BRO Bodemkaart 1:50.000 (PDOK)') }}</div>
+    </div>
+    {% endif %}
+
+    <!-- 4.2 Funderingsrisico -->
+    {% if not report_data.get('fysiek_risico_profiel') %}
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('funderingsrisico_flags') %}
+          {% set fgr = report_data.get('funderingsrisico_flags') %}
+          {% if fgr.get('legenda') and 'hoog' in fgr.get('legenda', '').lower() %}
+            <span class="dot dot-red"></span>
+          {% elif fgr.get('legenda') %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.2 Funderingsrisico
+      </h4>
+      {% if report_data.get('funderingsrisico_flags') %}
+        {% set fgr = report_data.get('funderingsrisico_flags') %}
+        <table class="kv-table">
+          {% if fgr.get('legenda') %}
+          <tr>
+            <td class="kv-label">Risicoclassificatie</td>
+            <td class="kv-value">{{ fgr.get('legenda') }}</td>
+          </tr>
+          {% endif %}
+          {% if fgr.get('percvoor1970') is not none %}
+          <tr>
+            <td class="kv-label">% bebouwing voor 1970</td>
+            <td class="kv-value">{{ fgr.get('percvoor1970') }}%</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: PDOK Funderingsrisicogebieden WFS | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — funderingsrisico niet opgehaald.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 4.2b Funderingsrisicogebied (PDOK postcode-level) — standalone -->
+    {% if report_data.get('funderingsrisicogebied') and not report_data.get('fysiek_risico_profiel') %}
+      {% set frg = report_data.get('funderingsrisicogebied') %}
+    <div class="risk-block">
+      <h4><span class="dot dot-amber"></span> 4.2b Funderingsrisicogebied (postcodeniveau)</h4>
+      <table class="kv-table">
+        {% if frg.get('legenda') %}
+        <tr>
+          <td class="kv-label">Gebiedsclassificatie</td>
+          <td class="kv-value">{{ frg.get('legenda') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('fgr') %}
+        <tr>
+          <td class="kv-label">Funderingsgebied</td>
+          <td class="kv-value">{{ frg.get('fgr') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('pc6') %}
+        <tr>
+          <td class="kv-label">Postcode</td>
+          <td class="kv-value">{{ frg.get('pc6') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('percvoor1970') is not none %}
+        <tr>
+          <td class="kv-label">% bebouwing voor 1970</td>
+          <td class="kv-value">{{ frg.get('percvoor1970') }}%</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('gemeente') %}
+        <tr>
+          <td class="kv-label">Gemeente</td>
+          <td class="kv-value">{{ frg.get('gemeente') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      <div class="source-meta">{{ frg.get('disclaimer', 'Bron: PDOK Indicatieve Gebieden Funderingsproblematiek') }}</div>
+    </div>
+    {% endif %}
+
+    <!-- 4.3 Asbest -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('asbest_indicator') %}
+          {% set asbest = report_data.get('asbest_indicator') %}
+          {% if asbest.get('risk') == 'hoog' %}
+            <span class="dot dot-red"></span>
+          {% elif asbest.get('risk') == 'middel' %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.3 Asbest
+      </h4>
+      {% if report_data.get('asbest_indicator') %}
+        {% set asbest = report_data.get('asbest_indicator') %}
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Risiconiveau</td>
+            <td class="kv-value">
+              {% if asbest.get('risk') == 'hoog' %}
+                <strong style="color:var(--brand-red);">Hoog</strong>
+              {% elif asbest.get('risk') == 'middel' %}
+                <strong style="color:var(--brand-accent);">Middel</strong>
+              {% elif asbest.get('risk') == 'geen' %}
+                Geen (bouwjaar na 1993)
+              {% else %}
+                Onbekend
+              {% endif %}
+            </td>
+          </tr>
+          {% if asbest.get('reden') %}
+          <tr>
+            <td class="kv-label">Toelichting</td>
+            <td class="kv-value">{{ asbest.get('reden') }}</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: BAG bouwjaar + gebruiksdoel (heuristiek) | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — asbest indicatie niet bepaald.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.4 Monument -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('monuments') and report_data.monuments.get('is_monument') %}
+          <span class="dot dot-amber"></span>
+        {% elif report_data.get('monuments') %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.4 Monumentstatus
+      </h4>
+      {% if report_data.get('monuments') %}
+        {% set mon = report_data.get('monuments') %}
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Is monument</td>
+            <td class="kv-value">
+              {% if mon.get('is_monument') %}
+                <strong style="color:var(--brand-accent);">Ja</strong>{% if mon.get('consensus_status') %} — {{ mon.get('consensus_status') }}{% endif %}
+              {% else %}
+                Nee
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+        {% if mon.get('is_monument') and mon.get('restrictions_summary') %}
+        <div class="disclaimer-box" style="margin-top:0.4em;">
+          <strong>Beperkingen:</strong>
+          <ul style="margin-left:1em;margin-top:0.2em;">
+            {% for r in mon.get('restrictions_summary', []) %}
+            <li>{{ r }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        <div class="source-meta">Bron: Rijksdienst voor het Cultureel Erfgoed (RCE) | Betrouwbaarheid: HOOG</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — monumentenregister niet geraadpleegd.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.5 Geluidbelasting -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('geluid_flags') %}
+          {% set geluid = report_data.get('geluid_flags') %}
+          {% if geluid.get('lden_db') and geluid.get('lden_db') | float > 65 %}
+            <span class="dot dot-red"></span>
+          {% elif geluid.get('lden_db') %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.5 Geluidbelasting
+      </h4>
+      {% if report_data.get('geluid_flags') %}
+        {% set geluid = report_data.get('geluid_flags') %}
+        <table class="kv-table">
+          {% if geluid.get('lden_db') %}
+          <tr>
+            <td class="kv-label">Lden (dB)</td>
+            <td class="kv-value">{{ geluid.get('lden_db') }} dB</td>
+          </tr>
+          {% endif %}
+          {% if geluid.get('categorie') %}
+          <tr>
+            <td class="kv-label">Categorie</td>
+            <td class="kv-value">{{ geluid.get('categorie') }}</td>
+          </tr>
+          {% endif %}
+          {% if not geluid.get('lden_db') and not geluid.get('categorie') %}
+          <tr>
+            <td class="kv-label">Status</td>
+            <td class="kv-value no-data">Geen geluidbelasting data beschikbaar</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: RIVM Geluidregister WMS (Lden) | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — geluidbelasting niet opgehaald.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.6 Luchtkwaliteit -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('luchtkwaliteit_flags') %}
+          {% set lucht = report_data.get('luchtkwaliteit_flags') %}
+          {% if lucht.get('no2_klasse') == 'hoog' or lucht.get('pm10_klasse') == 'hoog' %}
+            <span class="dot dot-red"></span>
+          {% elif lucht.get('no2_klasse') or lucht.get('pm10_klasse') %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.6 Luchtkwaliteit
+      </h4>
+      {% if report_data.get('luchtkwaliteit_flags') %}
+        {% set lucht = report_data.get('luchtkwaliteit_flags') %}
+        <table class="kv-table">
+          {% if lucht.get('no2_klasse') %}
+          <tr>
+            <td class="kv-label">NO₂ klasse</td>
+            <td class="kv-value">{{ lucht.get('no2_klasse') }}</td>
+          </tr>
+          {% endif %}
+          {% if lucht.get('pm10_klasse') %}
+          <tr>
+            <td class="kv-label">PM10 klasse</td>
+            <td class="kv-value">{{ lucht.get('pm10_klasse') }}</td>
+          </tr>
+          {% endif %}
+          {% if not lucht.get('no2_klasse') and not lucht.get('pm10_klasse') %}
+          <tr>
+            <td class="kv-label">Status</td>
+            <td class="kv-value no-data">Geen luchtkwaliteitsdata beschikbaar</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: RIVM NSL Monitoring WMS (NO₂/PM10) | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — luchtkwaliteit niet opgehaald.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.7 Natura 2000 -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('natura2000_flags') %}
+          {% set n2k = report_data.get('natura2000_flags') %}
+          {% set dist = n2k.get('distance_m', 99999) %}
+          {% if dist is not none and dist | float < 500 %}
+            <span class="dot dot-red"></span>
+          {% elif dist is not none and dist | float < 3000 %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.7 Natura 2000
+      </h4>
+      {% if report_data.get('natura2000_flags') %}
+        {% set n2k = report_data.get('natura2000_flags') %}
+        <table class="kv-table">
+          {% if n2k.get('distance_m') is not none %}
+          <tr>
+            <td class="kv-label">Afstand tot gebied</td>
+            <td class="kv-value">{{ n2k.get('distance_m') | round(0) | int }} m</td>
+          </tr>
+          {% endif %}
+          {% if n2k.get('zone') %}
+          <tr>
+            <td class="kv-label">Gebiedsnaam</td>
+            <td class="kv-value">{{ n2k.get('zone') }}</td>
+          </tr>
+          {% endif %}
+          {% if not n2k.get('distance_m') and not n2k.get('zone') %}
+          <tr>
+            <td class="kv-label">Status</td>
+            <td class="kv-value">Buiten Natura 2000 zoekradius</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: PDOK Natura2000 WFS | Betrouwbaarheid: HOOG</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — Natura 2000 niet opgehaald.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.8 Overstromingsrisico -->
+    <div class="risk-block">
+      <h4>
+        {% if report_data.get('overstromingsrisico_flags') %}
+          {% set ovstr = report_data.get('overstromingsrisico_flags') %}
+          {% if ovstr.get('klasse') and 'hoog' in ovstr.get('klasse', '').lower() %}
+            <span class="dot dot-red"></span>
+          {% elif ovstr.get('klasse') %}
+            <span class="dot dot-amber"></span>
+          {% else %}
+            <span class="dot dot-green"></span>
+          {% endif %}
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.8 Overstromingsrisico
+      </h4>
+      {% if report_data.get('overstromingsrisico_flags') %}
+        {% set ovstr = report_data.get('overstromingsrisico_flags') %}
+        <table class="kv-table">
+          {% if ovstr.get('klasse') %}
+          <tr>
+            <td class="kv-label">Risicoklasse</td>
+            <td class="kv-value">{{ ovstr.get('klasse') }}</td>
+          </tr>
+          {% endif %}
+          {% if ovstr.get('kans') %}
+          <tr>
+            <td class="kv-label">Overstromingskans</td>
+            <td class="kv-value">{{ ovstr.get('kans') }}</td>
+          </tr>
+          {% endif %}
+          {% if not ovstr.get('klasse') %}
+          <tr>
+            <td class="kv-label">Status</td>
+            <td class="kv-value">Geen overstromingsdata beschikbaar</td>
+          </tr>
+          {% endif %}
+        </table>
+        <div class="source-meta">Bron: Risicokaart WMS (Rijksoverheid) | Betrouwbaarheid: GEMIDDELD</div>
+      {% else %}
+        <p class="no-data">Niet beschikbaar — overstromingsrisico niet opgehaald.</p>
+      {% endif %}
+    </div>
+
+    <!-- 4.9 Fysiek Risicoprofiel (composiet) -->
+    {% if report_data.get('fysiek_risico_profiel') %}
+      {% set frp = report_data.get('fysiek_risico_profiel') %}
+    <div class="risk-block" style="border-left-color:{% if frp.get('overall_risk') == 'hoog' %}var(--brand-red){% elif frp.get('overall_risk') == 'middel' %}var(--brand-accent){% elif frp.get('overall_risk') == 'laag' %}var(--brand-green){% else %}var(--brand-border){% endif %};">
+      <h4>
+        {% if frp.get('overall_risk') == 'hoog' %}
+          <span class="dot dot-red"></span>
+        {% elif frp.get('overall_risk') == 'middel' %}
+          <span class="dot dot-amber"></span>
+        {% elif frp.get('overall_risk') == 'laag' %}
+          <span class="dot dot-green"></span>
+        {% else %}
+          <span class="dot dot-grey"></span>
+        {% endif %}
+        4.9 Fysiek Risicoprofiel (gecombineerd)
+      </h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Totaal risiconiveau</td>
+          <td class="kv-value">
+            <strong>{{ frp.get('overall_risk', 'onbekend') | title }}</strong>
+          </td>
+        </tr>
+        {% if frp.get('overall_explanation') %}
+        <tr>
+          <td class="kv-label">Toelichting</td>
+          <td class="kv-value">{{ frp.get('overall_explanation') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+
+      <!-- Foundation risk sub-block -->
+      {% if frp.get('foundation_risk') %}
+        {% set fr = frp.get('foundation_risk') %}
+      <h4 style="margin-top:0.6em;">Funderingsrisico</h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Risiconiveau</td>
+          <td class="kv-value">
+            {% if fr.get('risk') == 'hoog' %}
+              <strong style="color:var(--brand-red);">Hoog</strong>
+            {% elif fr.get('risk') == 'middel' %}
+              <strong style="color:var(--brand-accent);">Middel</strong>
+            {% elif fr.get('risk') == 'laag' %}
+              <strong style="color:var(--brand-green);">Laag</strong>
+            {% else %}
+              Onbekend
+            {% endif %}
+          </td>
+        </tr>
+        {% if fr.get('bouwjaar') is not none %}
+        <tr>
+          <td class="kv-label">Bouwjaar (gebruikt)</td>
+          <td class="kv-value">{{ fr.get('bouwjaar') }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('bodemtype') %}
+        <tr>
+          <td class="kv-label">Bodemtype (gebruikt)</td>
+          <td class="kv-value">{{ fr.get('bodemtype') | title }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('reden') %}
+        <tr>
+          <td class="kv-label">Toelichting</td>
+          <td class="kv-value">{{ fr.get('reden') }}</td>
+        </tr>
+        {% endif %}
+        {% if fr.get('recommended_action') %}
+        <tr>
+          <td class="kv-label">Aanbevolen actie</td>
+          <td class="kv-value">{{ fr.get('recommended_action') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- Soil profile sub-block -->
+      {% if frp.get('soil_profile') %}
+        {% set sp = frp.get('soil_profile') %}
+      <h4 style="margin-top:0.6em;">Bodemtype (BRO)</h4>
+      <table class="kv-table">
+        {% if sp.get('dominant_type_label') %}
+        <tr>
+          <td class="kv-label">Grondsoort</td>
+          <td class="kv-value"><strong>{{ sp.get('dominant_type_label') }}</strong></td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilname') %}
+        <tr>
+          <td class="kv-label">Bodemprofielnaam</td>
+          <td class="kv-value">{{ sp.get('soilname') }}</td>
+        </tr>
+        {% endif %}
+        {% if sp.get('soilcode') %}
+        <tr>
+          <td class="kv-label">Bodemcode</td>
+          <td class="kv-value" style="font-size:8pt;color:var(--brand-muted);">{{ sp.get('soilcode') }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- Funderingsrisicogebied sub-block -->
+      {% if frp.get('funderingsrisicogebied') %}
+        {% set frg = frp.get('funderingsrisicogebied') %}
+      <h4 style="margin-top:0.6em;">Funderingsrisicogebied (postcodeniveau)</h4>
+      <table class="kv-table">
+        {% if frg.get('legenda') %}
+        <tr>
+          <td class="kv-label">Gebiedsclassificatie</td>
+          <td class="kv-value">{{ frg.get('legenda') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('fgr') %}
+        <tr>
+          <td class="kv-label">Funderingsgebied</td>
+          <td class="kv-value">{{ frg.get('fgr') }}</td>
+        </tr>
+        {% endif %}
+        {% if frg.get('percvoor1970') is not none %}
+        <tr>
+          <td class="kv-label">% bebouwing voor 1970</td>
+          <td class="kv-value">{{ frg.get('percvoor1970') }}%</td>
+        </tr>
+        {% endif %}
+      </table>
+      {% endif %}
+
+      <!-- KCAF cost indication -->
+      {% if frp.get('kcaf_cost') %}
+        {% set kcaf = frp.get('kcaf_cost') %}
+      <h4 style="margin-top:0.6em;">Funderingsherstel kostenbenchmark (KCAF)</h4>
+      <table class="kv-table">
+        <tr>
+          <td class="kv-label">Geschatte kosten (totaal)</td>
+          <td class="kv-value">€ {{ "{:,.0f}".format(kcaf.get('low_eur', 0)).replace(",", ".") }} — € {{ "{:,.0f}".format(kcaf.get('high_eur', 0)).replace(",", ".") }}</td>
+        </tr>
+        <tr>
+          <td class="kv-label">Per m²</td>
+          <td class="kv-value">€ {{ kcaf.get('low_per_m2', 0) }} — € {{ kcaf.get('high_per_m2', 0) }} /m²</td>
+        </tr>
+        <tr>
+          <td class="kv-label">Gebruiksoppervlakte</td>
+          <td class="kv-value">{{ kcaf.get('oppervlakte_m2', '—') }} m²</td>
+        </tr>
+      </table>
+      <p style="font-size:7.5pt;color:var(--brand-muted);margin-top:0.2em;">{{ kcaf.get('disclaimer', '') }}</p>
+      {% endif %}
+
+      <p style="font-size:7.5pt;color:var(--brand-muted);margin-top:0.4em;">{{ frp.get('disclaimer', '') }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ===== SECTIE 5: POTENTIE & RISICO ANALYSE ===== -->
+  <div id="section-5" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 5</div>
+      <div class="section-title">Potentie &amp; Risico Analyse</div>
+    </div>
+
+    <!-- Score gauges -->
+    {% if report_data.get('scores_v3') %}
+    <div class="score-gauges">
+      <div class="gauge-box potentie">
+        <div class="gauge-num">{{ report_data.scores_v3.get('potentie', 0) | round(0) | int }}</div>
+        <div class="gauge-lbl">Potentiescore</div>
+      </div>
+      <div class="gauge-box risico">
+        <div class="gauge-num">{{ report_data.scores_v3.get('risico', 0) | round(0) | int }}</div>
+        <div class="gauge-lbl">Risicoscore</div>
+      </div>
+    </div>
+    {% else %}
+    <p class="no-data">Scoregegevens niet beschikbaar — perceel is mogelijk nog niet gescand.</p>
+    {% endif %}
+
+    <!-- Potentie factors -->
+    {% if potentie_factors %}
+    <h3>Potentiefactoren</h3>
+    <table class="factors-table">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th>Waarde</th>
+          <th>Score</th>
+          <th>Gewicht</th>
+          <th>Bijdrage</th>
+          <th>Toelichting</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in potentie_factors %}
+        <tr class="row-potentie">
+          <td>{{ f.naam | replace('_', ' ') | title }}</td>
+          <td>{% if f.waarde is not none %}{{ f.waarde }}{% else %}—{% endif %}</td>
+          <td>{% if f.genormaliseerde_score is not none %}{{ (f.genormaliseerde_score * 100) | round(0) | int }}{% else %}—{% endif %}</td>
+          <td>{% if f.gewicht is not none %}{{ f.gewicht }}%{% else %}—{% endif %}</td>
+          <td><strong>{% if f.bijdrage is not none %}{{ f.bijdrage | round(1) }}{% else %}—{% endif %}</strong></td>
+          <td style="font-size:8.5pt;">{{ f.toelichting_kort or '—' }}</td>
+        </tr>
+        {% if f.toelichting_lang %}
+        <tr class="row-potentie">
+          <td colspan="6">
+            <div class="toelichting-block">{{ f.toelichting_lang }}</div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Risico factors -->
+    {% if risico_factors %}
+    <h3>Risicofactoren</h3>
+    <table class="factors-table">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th>Waarde</th>
+          <th>Score</th>
+          <th>Gewicht</th>
+          <th>Bijdrage</th>
+          <th>Toelichting</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in risico_factors %}
+        <tr class="row-risico">
+          <td>{{ f.naam | replace('_', ' ') | title }}</td>
+          <td>{% if f.waarde is not none %}{{ f.waarde }}{% else %}—{% endif %}</td>
+          <td>{% if f.genormaliseerde_score is not none %}{{ (f.genormaliseerde_score * 100) | round(0) | int }}{% else %}—{% endif %}</td>
+          <td>{% if f.gewicht is not none %}{{ f.gewicht }}%{% else %}—{% endif %}</td>
+          <td><strong>{% if f.bijdrage is not none %}{{ f.bijdrage | round(1) }}{% else %}—{% endif %}</strong></td>
+          <td style="font-size:8.5pt;">{{ f.toelichting_kort or '—' }}</td>
+        </tr>
+        {% if f.toelichting_lang %}
+        <tr class="row-risico">
+          <td colspan="6">
+            <div class="toelichting-block">{{ f.toelichting_lang }}</div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if not potentie_factors and not risico_factors %}
+    <p class="no-data">Geen scorefactoren beschikbaar — Score v3.0 engine nog niet uitgevoerd voor dit perceel.</p>
+    {% endif %}
+
+    <!-- Use-case scores -->
+    {% if report_data.get('use_case_scores') %}
+      {% set ucs = report_data.get('use_case_scores') %}
+    <h3>Use-case scores</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Use case</th>
+          <th>Score</th>
+          <th>Geschiktheid</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for uc_name, uc_val in ucs.items() %}
+        <tr>
+          <td><strong>{{ uc_name | replace('_', ' ') | title }}</strong></td>
+          <td>
+            {% if uc_val is mapping %}
+              {{ uc_val.get('score', uc_val.get('total', '—')) }}
+            {% elif uc_val is number %}
+              {{ uc_val | round(0) | int }}
+            {% else %}
+              {{ uc_val }}
+            {% endif %}
+          </td>
+          <td>
+            {% if uc_val is mapping %}
+              {% set sc = uc_val.get('score', uc_val.get('total', 0)) %}
+            {% elif uc_val is number %}
+              {% set sc = uc_val %}
+            {% else %}
+              {% set sc = 0 %}
+            {% endif %}
+            {% if sc is number and sc >= 70 %}
+              <span style="color:var(--brand-green);">Hoog potentieel</span>
+            {% elif sc is number and sc >= 40 %}
+              <span style="color:var(--brand-accent);">Matig potentieel</span>
+            {% elif sc is number %}
+              <span style="color:var(--brand-muted);">Beperkt potentieel</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="source-meta">Bron: Propdex Use-Case Scoring Engine | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <!-- Market signals (Funda) -->
+    {% if report_data.get('market_signals') %}
+      {% set ms = report_data.get('market_signals') %}
+    <h3>Marktsignalen</h3>
+    <table class="kv-table">
+      {% if ms.get('listing_duration_days') is not none %}
+      <tr>
+        <td class="kv-label">Aanbodperiode</td>
+        <td class="kv-value">{{ ms.get('listing_duration_days') }} dagen</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('price_change_count') is not none and ms.get('price_change_count') > 0 %}
+      <tr>
+        <td class="kv-label">Prijswijzigingen</td>
+        <td class="kv-value">{{ ms.get('price_change_count') }}×</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('listing_snapshots_count') is not none and ms.get('listing_snapshots_count') > 0 %}
+      <tr>
+        <td class="kv-label">Snapshots waargenomen</td>
+        <td class="kv-value">{{ ms.get('listing_snapshots_count') }}</td>
+      </tr>
+      {% endif %}
+      {% if ms.get('days_since_last_seen') is not none %}
+      <tr>
+        <td class="kv-label">Dagen sinds laatst gezien</td>
+        <td class="kv-value">{{ ms.get('days_since_last_seen') }} dagen</td>
+      </tr>
+      {% endif %}
+    </table>
+    <div class="source-meta">Bron: {{ ms.get('source', 'Funda') | title }} marktsignalen | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+
+    <div class="source-meta">Bron: Propdex Score v3.0 Engine (17 factoren) | Betrouwbaarheid: HOOG</div>
+  </div>
+
+  <!-- ===== SECTIE 6: VERGUNNINGEN & PRECEDENTEN ===== -->
+  <div id="section-6" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 6</div>
+      <div class="section-title">Vergunningen &amp; Precedenten</div>
+    </div>
+
+    {% if report_data.get('vergunningen_data') %}
+      {% set vergunningen = report_data.get('vergunningen_data') %}
+      {% if vergunningen is mapping %}
+        {% set bekendmakingen = vergunningen.get('records', vergunningen.get('bekendmakingen', vergunningen.get('items', []))) %}
+      {% else %}
+        {% set bekendmakingen = vergunningen %}
+      {% endif %}
+
+      {% if bekendmakingen and bekendmakingen | length > 0 %}
+      <h3>Recente bekendmakingen</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Type</th>
+            <th>Onderwerp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bk in bekendmakingen[:10] %}
+          <tr>
+            <td style="white-space:nowrap;font-size:8.5pt;">{{ bk.get('datum', bk.get('date', '—')) }}</td>
+            <td style="font-size:8.5pt;">{{ bk.get('type', bk.get('categorie', '—')) }}</td>
+            <td style="font-size:8.5pt;">{{ bk.get('titel', bk.get('title', bk.get('onderwerp', '—'))) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if bekendmakingen | length > 10 %}
+      <p style="font-size:8pt;color:var(--brand-muted);margin-top:0.3em;">{{ bekendmakingen | length - 10 }} meer bekendmakingen niet weergegeven.</p>
+      {% endif %}
+      {% else %}
+      <p class="no-data">Geen bekendmakingen gevonden voor dit adres.</p>
+      {% endif %}
+    {% else %}
+    <p class="no-data">Vergunningendata niet beschikbaar — SRU bekendmakingen niet opgehaald.</p>
+    {% endif %}
+
+    {% if report_data.get('permit_precedents') %}
+      {% set prec = report_data.get('permit_precedents') %}
+    <h3>Vergunningsprecedenten (benchmark)</h3>
+    <table class="kv-table">
+      {% if prec.get('mediaan_doorlooptijd_dagen') is not none %}
+      <tr>
+        <td class="kv-label">Mediaan doorlooptijd</td>
+        <td class="kv-value">{{ prec.get('mediaan_doorlooptijd_dagen') }} dagen</td>
+      </tr>
+      {% endif %}
+      {% if prec.get('goedgekeurd_pct') is not none %}
+      <tr>
+        <td class="kv-label">Goedgekeurd (%)</td>
+        <td class="kv-value">{{ prec.get('goedgekeurd_pct') }}%</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% endif %}
+
+    <div class="source-meta">Bron: SRU Bekendmakingen API (officielebekendmakingen.nl) | Betrouwbaarheid: HOOG</div>
+  </div>
+
+  <!-- ===== SECTIE 7: BRONVERMELDING ===== -->
+  <div id="section-7" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 7</div>
+      <div class="section-title">Bronvermelding</div>
+    </div>
+
+    {% if report_data.get('section_sources') %}
+    <table class="sources-table">
+      <thead>
+        <tr>
+          <th>Sectie</th>
+          <th>Bron</th>
+          <th>Datum opgehaald</th>
+          <th>Betrouwbaarheid</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sec_src in report_data.get('section_sources', []) %}
+          {% if sec_src is mapping %}
+            {% set section_name = sec_src.get('section', '—') %}
+            {% set sources_list = sec_src.get('sources', []) %}
+            {% set cached_at = sec_src.get('cached_at', '') %}
+          {% else %}
+            {% set section_name = sec_src.section or '—' %}
+            {% set sources_list = sec_src.sources or [] %}
+            {% set cached_at = sec_src.cached_at or '' %}
+          {% endif %}
+          {% for src in sources_list %}
+            {% if src is mapping %}
+              {% set src_name = src.get('source', '—') %}
+              {% set confidence = src.get('confidence', '—') %}
+              {% set src_cached = src.get('cached_at', cached_at) %}
+            {% else %}
+              {% set src_name = src.source or '—' %}
+              {% set confidence = src.confidence or '—' %}
+              {% set src_cached = src.cached_at or cached_at %}
+            {% endif %}
+        <tr>
+          <td>{{ section_name }}</td>
+          <td>{{ src_name }}</td>
+          <td style="font-size:8.5pt;">{{ src_cached[:10] if src_cached else '—' }}</td>
+          <td>
+            {% if confidence == 'HIGH' or confidence == 'HOOG' %}
+              <span class="badge badge-high">HOOG</span>
+            {% elif confidence == 'MEDIUM' or confidence == 'GEMIDDELD' %}
+              <span class="badge badge-medium">GEMIDDELD</span>
+            {% elif confidence == 'LOW' or confidence == 'LAAG' %}
+              <span class="badge badge-low">LAAG</span>
+            {% else %}
+              {{ confidence }}
+            {% endif %}
+          </td>
+        </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="no-data">Geen bronvermeldingen beschikbaar.</p>
+    {% endif %}
+
+    <div class="disclaimer-box" style="margin-top:1em;">
+      <strong>Disclaimer:</strong>
+      Dit dossier is samengesteld op basis van openbare databronnen en is indicatief van aard.
+      De gegevens zijn afkomstig van BAG (adressen/gebouwen), Kadaster (percelen), DSO Ruimtelijke Plannen (bestemmingsplan),
+      Bodemloket, EP-Online, PDOK en RIVM diensten. Propdex garandeert niet de volledigheid, juistheid of actualiteit van de gegevens.
+      Verifieer alle gegevens bij de betreffende bronhouder alvorens besluiten te nemen.
+      Dit document vervangt niet het oordeel van een erkend adviseur, notaris of bevoegde instantie.
+    </div>
+
+    <div style="margin-top:0.8em;text-align:center;font-size:8pt;color:var(--brand-muted);">
+      <strong>Propdex — Property Intelligence Platform</strong> | {{ generated_at }}
+    </div>
+  </div>
+
+  <!-- ===== SECTIE 8: VERGUNNING-CHECKLISTS ===== -->
+  <div id="section-8" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 8</div>
+      <div class="section-title">Vergunning-Checklists</div>
+    </div>
+
+    {% if checklist_items %}
+    <h3>Voorbereidingschecklist: {{ checklist_use_case | title }}</h3>
+    <p style="font-size:9pt;color:var(--brand-muted);margin-bottom:0.6em;">
+      Op basis van de hoogst scorende use case uit de potentie-analyse.
+      Onderstaande items zijn gegroepeerd per fase van het vergunningstraject.
+    </p>
+
+    {% for phase in phase_order %}
+      {% set phase_items = checklist_items | selectattr('phase', 'equalto', phase) | list %}
+      {% if phase_items %}
+    <h3>{{ phase | title }}</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:45%;">Item</th>
+          <th style="width:18%;">Type</th>
+          <th style="width:17%;">Verplicht</th>
+          <th style="width:20%;">Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in phase_items %}
+        <tr>
+          <td>
+            <strong>{{ item.title }}</strong>
+            {% if item.description %}<br><span style="font-size:8pt;color:var(--brand-muted);">{{ item.description }}</span>{% endif %}
+          </td>
+          <td><span class="badge badge-medium">{{ item.category | title }}</span></td>
+          <td>{% if item.required %}<strong style="color:var(--brand-green);">Ja</strong>{% else %}Aanbevolen{% endif %}</td>
+          <td>{{ item.estimated_cost if item.estimated_cost else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      {% endif %}
+    {% endfor %}
+
+    <div class="source-meta">Bron: Propdex Vergunning-Checklist Engine | Betrouwbaarheid: GEMIDDELD</div>
+    {% else %}
+    <p class="no-data">Geen vergunning-checklists beschikbaar — use case scores niet berekend.</p>
+    <div class="source-meta">Bron: Propdex Vergunning-Checklist Engine | Betrouwbaarheid: GEMIDDELD</div>
+    {% endif %}
+  </div>
+
+  <!-- ===== SECTIE 9: RUWE DATA APPENDIX ===== -->
+  <div id="section-9" class="section-start">
+    <div class="section-header">
+      <div class="section-number">Sectie 9</div>
+      <div class="section-title">Ruwe Data Appendix</div>
+    </div>
+    <!-- 9.1 Score Breakdown -->
+    <h3>9.1 Score Breakdown</h3>
+    {% if report_data.get('score_breakdown_v3') %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th>Waarde</th>
+          <th>Score</th>
+          <th>Gewicht</th>
+          <th>Bijdrage</th>
+          <th>Categorie</th>
+          <th>Toelichting</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for factor_name, factor in report_data.get('score_breakdown_v3', {}).items() %}
+        <tr>
+          <td>{{ factor_name }}</td>
+          <td>{{ factor.get('waarde', '—') if factor.get('waarde') is not none else '—' }}</td>
+          <td>{{ factor.get('genormaliseerde_score', '—') }}</td>
+          <td>{{ factor.get('gewicht', '—') }}</td>
+          <td>{{ factor.get('bijdrage', '—') }}</td>
+          <td>{{ factor.get('categorie', '—') }}</td>
+          <td>{{ factor.get('toelichting_kort', '—') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="no-data">Geen data beschikbaar</p>
+    {% endif %}
+
+    <!-- 9.2 Ruwe Scores -->
+    <h3>9.2 Ruwe Scores</h3>
+    {% if report_data.get('scores_v3') %}
+    <table class="data-table">
+      <tr><th>Potentie</th><td>{{ report_data.scores_v3.get('potentie', '—') }}</td></tr>
+      <tr><th>Risico</th><td>{{ report_data.scores_v3.get('risico', '—') }}</td></tr>
+    </table>
+    {% else %}
+    <p class="no-data">Geen data beschikbaar</p>
+    {% endif %}
+
+    {% if report_data.get('score_model_version') %}
+    <table class="data-table">
+      <tr><th>Score Model Versie</th><td>{{ report_data.get('score_model_version') }}</td></tr>
+    </table>
+    {% endif %}
+
+    {% if report_data.get('use_case_scores') %}
+    <h4>Use Case Scores</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Use Case</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for uc_name, uc_val in report_data.get('use_case_scores', {}).items() %}
+        <tr>
+          <td>{{ uc_name }}</td>
+          <td>{% if uc_val is mapping %}{{ uc_val.get('score', '—') }}{% else %}{{ uc_val }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- 9.3 Risicovlaggen -->
+    <h3>9.3 Risicovlaggen</h3>
+
+    {% if report_data.get('bodem_flags') %}
+    <h4>Bodem Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('bodem_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('bodemtype_flags') %}
+    <h4>Bodemtype Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('bodemtype_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('funderingsrisico_flags') %}
+    <h4>Funderingsrisico Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('funderingsrisico_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('natura2000_flags') %}
+    <h4>Natura2000 Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('natura2000_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('overstromingsrisico_flags') %}
+    <h4>Overstromingsrisico Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('overstromingsrisico_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('geluid_flags') %}
+    <h4>Geluid Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('geluid_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('luchtkwaliteit_flags') %}
+    <h4>Luchtkwaliteit Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('luchtkwaliteit_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('energielabel_flags') %}
+    <h4>Energielabel Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('energielabel_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if report_data.get('woz_flags') %}
+    <h4>WOZ Flags</h4>
+    <table class="data-table">
+      {% for k, v in report_data.get('woz_flags', {}).items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if not report_data.get('bodem_flags') and not report_data.get('bodemtype_flags') and not report_data.get('funderingsrisico_flags') and not report_data.get('natura2000_flags') and not report_data.get('overstromingsrisico_flags') and not report_data.get('geluid_flags') and not report_data.get('luchtkwaliteit_flags') and not report_data.get('energielabel_flags') and not report_data.get('woz_flags') %}
+    <p class="no-data">Geen data beschikbaar</p>
+    {% endif %}
+
+    <!-- 9.4 Datakwaliteit -->
+    <h3>9.4 Datakwaliteit</h3>
+    {% if report_data.get('completeness_score') is not none %}
+    <table class="data-table">
+      <tr><th>Compleetheid</th><td>{{ (report_data.get('completeness_score', 0) * 100) | round(1) }}%</td></tr>
+      <tr><th>Aantal databronnen</th><td>{{ report_data.get('data_sources', []) | length }}</td></tr>
+    </table>
+    {% else %}
+    <p class="no-data">Geen data beschikbaar</p>
+    {% endif %}
+
+    {% if report_data.get('errors') %}
+    <h4>Fouten</h4>
+    <ul>
+      {% for err in report_data.get('errors', []) %}
+      <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+  </div>
+
+</body>
+</html>

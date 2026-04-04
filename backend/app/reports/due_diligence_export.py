@@ -1,10 +1,13 @@
 """PDF export for Locatie Due Diligence Dossier using WeasyPrint."""
 
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
+
+from app.services.checklists import PHASE_ORDER, get_checklist
 
 _DUTCH_MONTHS = [
     "",  # index 0 unused
@@ -93,7 +96,7 @@ def generate_due_diligence_pdf(report_data: dict, report_name: str) -> bytes:
     """
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
-    template = env.get_template("due_diligence.html")
+    template = env.get_template("due_diligence_v2.html")
 
     now = datetime.utcnow()
     generated_at = _format_dutch_datetime(now)
@@ -105,6 +108,27 @@ def generate_due_diligence_pdf(report_data: dict, report_name: str) -> bytes:
     # Pre-process section sources
     section_sources_dict = _build_section_sources_dict(report_data.get("section_sources"))
 
+    # Pre-process checklist for top use case
+    checklist_items: list[dict] = []
+    checklist_use_case: str | None = None
+    uc_scores = report_data.get("use_case_scores")
+    if uc_scores and isinstance(uc_scores, dict):
+        try:
+            best_uc, _ = max(
+                uc_scores.items(),
+                key=lambda x: (
+                    x[1].get("score", 0)
+                    if isinstance(x[1], dict)
+                    else (x[1] if isinstance(x[1], (int, float)) else 0)
+                ),
+            )
+            items = get_checklist(best_uc)
+            if items:
+                checklist_items = [asdict(item) for item in items]
+                checklist_use_case = best_uc
+        except (ValueError, TypeError):
+            pass
+
     context = {
         "report_data": report_data,
         "report_name": report_name,
@@ -112,6 +136,9 @@ def generate_due_diligence_pdf(report_data: dict, report_name: str) -> bytes:
         "potentie_factors": potentie_factors,
         "risico_factors": risico_factors,
         "section_sources_dict": section_sources_dict,
+        "checklist_items": checklist_items,
+        "checklist_use_case": checklist_use_case,
+        "phase_order": PHASE_ORDER,
     }
 
     html_string = template.render(context)
