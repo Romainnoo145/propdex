@@ -70,19 +70,18 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   }, [])
 
   const handleGenerateReport = useCallback(() => {
-    if (parcel.has_report) {
-      navigate({ to: '/rapporten', search: { project_id: undefined, q: undefined } })
-      return
-    }
     generateReport.mutate(parcel.parcel_id, {
-      onSuccess: () => {
-        toast.success('Rapport wordt gegenereerd')
+      onSuccess: (data) => {
+        if (data.created) {
+          toast.success('Rapport wordt gegenereerd')
+        }
+        navigate({ to: '/rapport/$id', params: { id: data.report.id } })
       },
       onError: () => {
         toast.error('Rapport genereren mislukt')
       },
     })
-  }, [parcel, generateReport, navigate])
+  }, [parcel.parcel_id, generateReport, navigate])
 
   const footer = (
     <button
