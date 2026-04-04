@@ -26,13 +26,10 @@ interface LayerToggleProps {
   onGemeentenToggle: () => void
   onBestemmingsplanToggle: () => void
 
-  // Score overlay handlers (still called internally via setParcelOverlayMode)
-  onScoreToggle?: (visible: boolean) => void
-  onBuiltStatusToggle?: (visible: boolean) => void
-  onReportStatusToggle?: (visible: boolean) => void
-  onVacancySignalToggle?: (visible: boolean) => void
-  onBuildCapacityToggle?: (visible: boolean) => void
-  onFoundationRiskToggle?: (visible: boolean) => void
+  // Unified overlay select handler (exclusive-hide pattern from map.tsx)
+  onOverlaySelect?: (overlayId: ParcelOverlayLayerId) => void
+
+  // Non-overlay layer handlers
   onBAGPandenToggle?: (visible: boolean) => void
   onScannedScopeToggle?: (visible: boolean) => void
 
@@ -91,12 +88,7 @@ function LayerToggle({
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
-  onScoreToggle,
-  onBuiltStatusToggle,
-  onReportStatusToggle,
-  onVacancySignalToggle,
-  onBuildCapacityToggle,
-  onFoundationRiskToggle,
+  onOverlaySelect,
   onBAGPandenToggle,
   onScannedScopeToggle,
   autoEnableParcelsKey,
@@ -143,32 +135,24 @@ function LayerToggle({
     map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
   }, [mapRef])
 
+  const TOGGLE_MODE_TO_OVERLAY: Record<string, ParcelOverlayLayerId> = {
+    score: 'potential',
+    built: 'built_status',
+    report: 'report_coverage',
+    vacancy: 'vacancy_signal',
+    capacity: 'build_capacity',
+    foundation: 'foundation_risk',
+  }
+
   const setParcelOverlayMode = useCallback(
     (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | 'none') => {
-      const isScore = mode === 'score'
-      const isBuilt = mode === 'built'
-      const isReport = mode === 'report'
-      const isVacancy = mode === 'vacancy'
-      const isCapacity = mode === 'capacity'
-      const isFoundation = mode === 'foundation'
-      onScoreToggle?.(isScore)
-      onBuiltStatusToggle?.(isBuilt)
-      onReportStatusToggle?.(isReport)
-      onVacancySignalToggle?.(isVacancy)
-      onBuildCapacityToggle?.(isCapacity)
-      onFoundationRiskToggle?.(isFoundation)
-      if (mode !== 'none') {
-        ensureParcelInteractionZoom()
-      }
+      if (mode === 'none') return
+      onOverlaySelect?.(TOGGLE_MODE_TO_OVERLAY[mode])
+      ensureParcelInteractionZoom()
     },
     [
       ensureParcelInteractionZoom,
-      onBuildCapacityToggle,
-      onBuiltStatusToggle,
-      onFoundationRiskToggle,
-      onReportStatusToggle,
-      onScoreToggle,
-      onVacancySignalToggle,
+      onOverlaySelect,
     ]
   )
 
@@ -262,13 +246,7 @@ function LayerToggle({
       setParcelOverlayMode('score')
     }
     if (!nextShowParcels) {
-      onScoreToggle?.(false)
-      onBuiltStatusToggle?.(false)
-      onReportStatusToggle?.(false)
-      onVacancySignalToggle?.(false)
-      onBuildCapacityToggle?.(false)
-      onFoundationRiskToggle?.(false)
-      // Turn off bestemmingsplan when parcels go off
+      // Let parent handle cleanup — just turn off bestemmingsplan if active
       if (showBestemmingsplan) onBestemmingsplanToggle()
     }
   }

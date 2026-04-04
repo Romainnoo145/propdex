@@ -2262,6 +2262,14 @@ function MapPage() {
       const next = !layerState.showBestemmingsplan
 
       if (next) {
+        // Hide all score/overlay fill layers before showing WMS
+        for (const layerId of [
+          'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
+          'parcel-built-status-fill', 'parcel-report-status-fill',
+          'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
+        ]) {
+          lifecycle.setVisibility(layerId, false)
+        }
         // Add source/layer via lifecycle if it doesn't exist
         addBestemmingsplanLayerManaged()
         // Show layer
@@ -2277,13 +2285,16 @@ function MapPage() {
         setBestemmingsplanVisibilityManaged(false)
         layerActions.setBestemmingsplan(false)
         setZoneInfo(null)
-        // Revert to default overlay if bestemmingsplan was active
+        // Revert to default overlay — show score fill layers
         if (layerState.activeParcelOverlay === 'bestemmingsplan') {
           layerActions.setActiveParcelOverlay('potential')
+          setParcelScoreVisibilityManaged(true)
+          lifecycle.setVisibility('parcel-score-outline', true)
+          lifecycle.setVisibility('parcel-score-selected-outline', true)
         }
       }
     },
-    [layerState.showBestemmingsplan, layerState.activeParcelOverlay, layerActions, mapRef, addBestemmingsplanLayerManaged, setBestemmingsplanVisibilityManaged]
+    [layerState.showBestemmingsplan, layerState.activeParcelOverlay, layerActions, mapRef, addBestemmingsplanLayerManaged, setBestemmingsplanVisibilityManaged, lifecycle, setParcelScoreVisibilityManaged]
   )
 
   // BAG Panden layer toggle handler
@@ -2297,56 +2308,6 @@ function MapPage() {
       }
     },
     [addBAGPandLayerManaged, setBAGPandVisibilityManaged]
-  )
-
-  // Score layer visibility toggle handler
-  const handleScoreToggle = useCallback(
-    (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelScoreVisibilityManaged(visible)
-      if (visible) layerActions.setActiveParcelOverlay('potential')
-    },
-    [layerActions, setParcelScoreVisibilityManaged]
-  )
-
-  const handleBuiltStatusToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_BUILT_STATUS_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('built_status')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleReportStatusToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_REPORT_STATUS_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('report_coverage')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleVacancySignalToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('vacancy_signal')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleBuildCapacityToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('build_capacity')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleFoundationRiskToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('foundation_risk')
-    },
-    [layerActions, setOverlayVisibilityManaged]
   )
 
   const handleScannedScopeToggle = useCallback((visible: boolean) => {
@@ -2547,14 +2508,9 @@ function MapPage() {
           onParcelsToggle={handleParcelsToggle}
           onGemeentenToggle={handleGemeentenToggle}
           onBestemmingsplanToggle={handleBestemmingsplanToggle}
+          onOverlaySelect={handleOverlaySelect}
           onBAGPandenToggle={handleBAGPandenToggle}
           onScannedScopeToggle={handleScannedScopeToggle}
-          onScoreToggle={handleScoreToggle}
-          onBuiltStatusToggle={handleBuiltStatusToggle}
-          onReportStatusToggle={handleReportStatusToggle}
-          onVacancySignalToggle={handleVacancySignalToggle}
-          onBuildCapacityToggle={handleBuildCapacityToggle}
-          onFoundationRiskToggle={handleFoundationRiskToggle}
           hasScoreData={!!activeScanId}
         />
       </motion.div>
