@@ -22,6 +22,7 @@ import { updatePropertyGeometry, clearPropertyGeometry } from '@/components/map/
 import {
   addGemeenteBoundariesLayer,
   clearGemeenteSelection,
+  setGemeenteBoundariesVisibility,
 } from '@/components/map/GemeenteBoundariesLayer'
 import {
   addWijkBoundariesLayer,
@@ -732,10 +733,14 @@ function MapPage() {
   // Uses refs so it can be called from any callback without stale closure issues.
   const exitGemeenteMode = useCallback(() => {
     layerActions.setGemeenten(false)
+    setPropertyLngLat(null)
     const map = mapRef.current
     if (map) {
       // Hide gemeente boundaries via lifecycle (style-readiness queued)
       setGemeenteBoundariesVisibilityManaged(false)
+      // Imperative fallback: directly hide layers in case lifecycle queue
+      // fails when isStyleLoaded() returns false momentarily during transitions
+      setGemeenteBoundariesVisibility(map, false)
       clearGemeenteSelection(map)
       // Remove wijk boundaries if source exists (don't rely on ref alone)
       if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
@@ -2117,6 +2122,7 @@ function MapPage() {
         setActiveGemeente(null)
         setActivePanel(null)
         setParcelGeometryHighlight(null)
+        setPropertyLngLat(null)
         map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
         return
       }
@@ -2664,7 +2670,7 @@ function MapPage() {
             parcel={inspectorParcel}
             gemeenteNaam={activePanel?.kind === 'parcel' && activePanel.gemeenteNaam ? activePanel.gemeenteNaam : activeGemeente?.naam}
             wijkNaam={activePanel?.kind === 'parcel' && activePanel.wijkNaam ? activePanel.wijkNaam : urlWijkNaam}
-            onClose={handleCloseParcelPanel}
+            onClose={() => { handleCloseParcelPanel(); setPropertyLngLat(null) }}
           />
         )}
       </AnimatePresence>

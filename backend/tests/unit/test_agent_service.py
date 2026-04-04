@@ -345,35 +345,46 @@ class TestPersistAgentTurn:
     """Test _persist_agent_turn fire-and-forget behavior."""
 
     @pytest.mark.asyncio
-    async def test_invalid_conversation_id_creates_new(self):
-        db = AsyncMock()
-        db.flush = AsyncMock()
-        db.add = MagicMock()
+    @patch("app.agents.agent_service.async_session_factory")
+    async def test_invalid_conversation_id_creates_new(self, mock_factory):
+        session = AsyncMock()
+        session.flush = AsyncMock()
+        session.commit = AsyncMock()
+        session.add = MagicMock()
+        mock_factory.return_value.__aenter__ = AsyncMock(return_value=session)
+        mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
         result = await _persist_agent_turn(
-            db, USER_ID, "bad-uuid", "hello", "hoi", [], 100
+            USER_ID, "bad-uuid", "hello", "hoi", [], 100
         )
         assert result is not None or result is None  # doesn't raise
 
     @pytest.mark.asyncio
-    async def test_none_conversation_id_creates_new(self):
-        db = AsyncMock()
-        db.flush = AsyncMock()
-        db.add = MagicMock()
+    @patch("app.agents.agent_service.async_session_factory")
+    async def test_none_conversation_id_creates_new(self, mock_factory):
+        session = AsyncMock()
+        session.flush = AsyncMock()
+        session.commit = AsyncMock()
+        session.add = MagicMock()
+        mock_factory.return_value.__aenter__ = AsyncMock(return_value=session)
+        mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
         result = await _persist_agent_turn(
-            db, USER_ID, None, "hello", "hoi", ["list_favorites"], 200
+            USER_ID, None, "hello", "hoi", ["list_favorites"], 200
         )
         assert True
 
     @pytest.mark.asyncio
-    async def test_db_failure_returns_none(self):
-        db = AsyncMock()
-        db.flush = AsyncMock(side_effect=RuntimeError("DB error"))
-        db.add = MagicMock()
+    @patch("app.agents.agent_service.async_session_factory")
+    async def test_db_failure_returns_none(self, mock_factory):
+        session = AsyncMock()
+        session.flush = AsyncMock(side_effect=RuntimeError("DB error"))
+        session.add = MagicMock()
+        mock_factory.return_value.__aenter__ = AsyncMock(return_value=session)
+        mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
         result = await _persist_agent_turn(
-            db, USER_ID, None, "hello", "hoi", [], 100
+            USER_ID, None, "hello", "hoi", [], 100
         )
         assert result is None
 

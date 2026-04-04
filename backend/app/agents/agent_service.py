@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.agent_prompts import AGENT_SYSTEM_PROMPT
+from app.core.database import async_session_factory
 from app.agents.agent_schemas import AgentRequest, AgentResponse
 from app.agents.agent_tools import execute_tool, get_agent_tools
 from app.ai.gemini_client import create_gemini_client, get_gemini_model
@@ -111,7 +112,6 @@ def _history_to_contents(history: list[dict], user_message: str) -> list[types.C
 
 
 async def _persist_agent_turn(
-    db: AsyncSession,
     user_id: str,
     conversation_id: str | None,
     user_message: str,
@@ -121,6 +121,10 @@ async def _persist_agent_turn(
 ) -> str | None:
     """Persist user + assistant messages to chat_conversations/chat_messages.
 
+    Creates its own database session via async_session_factory() so persistence
+    is independent of the request lifecycle (important for SSE streaming where
+    the request-scoped session may be closed before the generator finishes).
+
     Fire-and-forget: never raises. Returns conversation_id on success, None on failure.
     """
     try:
@@ -128,66 +132,72 @@ async def _persist_agent_turn(
         now = datetime.now(timezone.utc)
         cid = None
 
-        # Resolve or create conversation
-        if conversation_id is not None:
-            try:
-                cid = _uuid.UUID(conversation_id)
-            except (ValueError, AttributeError):
-                logger.warning("Invalid conversation_id format '%s', creating new", conversation_id)
-                cid = None
-
-            if cid is not None:
-                result = await db.execute(
-                    select(ChatConversation).where(
-                        ChatConversation.id == cid,
-                        ChatConversation.user_id == uid,
-                    )
-                )
-                convo = result.scalar_one_or_none()
-                if convo is None:
-                    logger.warning(
-                        "conversation_id %s not found or not owned by user %s, creating new",
-                        conversation_id, user_id,
-                    )
+        async with async_session_factory() as session:
+            # Resolve or create conversation
+            if conversation_id is not None:
+                try:
+                    cid = _uuid.UUID(conversation_id)
+                except (ValueError, AttributeError):
+                    logger.warning("Invalid conversation_id format '%s', creating new", conversation_id)
                     cid = None
-                else:
-                    convo.last_message_at = now
-                    convo.message_count = (convo.message_count or 0) + 2
 
-        if cid is None:
-            convo = ChatConversation(
-                user_id=uid,
-                started_at=now,
-                last_message_at=now,
-                message_count=2,
-            )
-            db.add(convo)
-            await db.flush()
-            cid = convo.id
+                if cid is not None:
+                    result = await session.execute(
+                        select(ChatConversation).where(
+                            ChatConversation.id == cid,
+                            ChatConversation.user_id == uid,
+                        )
+                    )
+                    convo = result.scalar_one_or_none()
+                    if convo is None:
+                        logger.warning(
+                            "conversation_id %s not found or not owned by user %s, creating new",
+                            conversation_id, user_id,
+                        )
+                        cid = None
+                    else:
+                        convo.last_message_at = now
+                        convo.message_count = (convo.message_count or 0) + 2
 
-        # Insert user message
-        db.add(ChatMessage(
-            conversation_id=cid,
-            role="user",
-            content=user_message,
-        ))
+            if cid is None:
+                convo = ChatConversation(
+                    user_id=uid,
+                    started_at=now,
+                    last_message_at=now,
+                    message_count=2,
+                )
+                session.add(convo)
+                await session.flush()
+                cid = convo.id
 
-        # Insert assistant message
-        db.add(ChatMessage(
-            conversation_id=cid,
-            role="assistant",
-            content=assistant_message,
-            params={"tool_calls": tool_calls_made} if tool_calls_made else None,
-            duration_ms=duration_ms,
-        ))
+            # Insert user message
+            session.add(ChatMessage(
+                conversation_id=cid,
+                role="user",
+                content=user_message,
+            ))
 
-        await db.flush()
-        await db.commit()
-        logger.debug("Persisted agent turn to conversation %s", cid)
-        return str(cid)
+            # Insert assistant message
+            session.add(ChatMessage(
+                conversation_id=cid,
+                role="assistant",
+                content=assistant_message,
+                params={"tool_calls": tool_calls_made} if tool_calls_made else None,
+                duration_ms=duration_ms,
+            ))
+
+            await session.flush()
+            await session.commit()
+            logger.debug("Persisted agent turn to conversation %s", cid)
+            return str(cid)
 
     except Exception:
-        logger.warning("Failed to persist agent turn", exc_info=True)
+        logger.warning(
+            "Failed to persist agent turn user_id=%s conversation_id=%s",
+            user_id,
+            conversation_id,
+            exc_info=True,
+        )
         return None
 
 
@@ -341,7 +351,7 @@ async def agent_chat(
         # Persist turn (fire-and-forget) and get conversation_id
         total_duration_ms = int((time.monotonic() - t0_total) * 1000)
         conv_id = await _persist_agent_turn(
-            db, user_id, request.conversation_id,
+            user_id, request.conversation_id,
             request.message, reply_text, tool_calls_made, total_duration_ms,
         )
 
@@ -490,7 +500,7 @@ async def agent_chat_stream(
 
         # Persist turn (fire-and-forget) and get resolved conversation_id
         conv_id = await _persist_agent_turn(
-            db, user_id, request.conversation_id,
+            user_id, request.conversation_id,
             request.message, reply_text, tool_calls_made, total_duration_ms,
         )
 
