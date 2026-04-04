@@ -1212,6 +1212,9 @@ function MapPage() {
     handledScanFocusRef.current = focusKey
 
     if (urlParcelId && accessToken) {
+      // Exit gemeente mode immediately — before any async work.
+      exitGemeenteMode()
+
       // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
       setTier('none')
       setParcelGeometryHighlight(null)
@@ -1231,7 +1234,6 @@ function MapPage() {
             accessToken,
             { scanId: urlScanId },
           )
-          exitGemeenteMode()
           setAutoEnableParcelsKey(`${urlParcelId}:${urlScanId}:${navTs ?? 0}`)
           setPropertyLngLat([full.lng ?? centroid.lng, full.lat ?? centroid.lat])
           setTier('none')
@@ -1292,6 +1294,10 @@ function MapPage() {
     if (handledParcelRef.current === key) return
     handledParcelRef.current = key
 
+    // Exit gemeente mode immediately — before any async work.
+    // If this lives inside .then(), a failed fetch leaves gemeente layers visible.
+    exitGemeenteMode()
+
     // Clear stale focus immediately so old parcel/marker never lingers while loading a new one.
     setTier('none')
     setParcelGeometryHighlight(null)
@@ -1303,8 +1309,6 @@ function MapPage() {
 
     fetchParcelCentroid(urlParcelId, accessToken)
       .then(async (centroid) => {
-        // Fly to parcel immediately — don't wait for enrichment
-        exitGemeenteMode()
         setAutoEnableParcelsKey(key)
         setTier('none')
 
