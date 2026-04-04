@@ -54,10 +54,11 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
   const favoritesQuery = useParcelFavorites()
   const toggleFavorite = useToggleFavorite()
-  const isFavorited = useMemo(
-    () => (favoritesQuery.data ?? []).some((f) => f.parcel_id === parcel.parcel_code),
+  const matchedFavorite = useMemo(
+    () => (favoritesQuery.data ?? []).find((f) => f.parcel_id === parcel.parcel_code),
     [favoritesQuery.data, parcel.parcel_code],
   )
+  const isFavorited = !!matchedFavorite
 
   // Reset to overview when parcel changes (derived state pattern)
   if (trackedParcelId !== parcel.parcel_id) {
@@ -75,11 +76,16 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
 
   const handleCta = useCallback(() => {
     if (isFavorited || parcel.has_report) {
-      navigate({ to: '/rapporten', search: { project_id: undefined, q: undefined } })
+      const reportId = matchedFavorite?.report_id
+      if (reportId) {
+        navigate({ to: "/rapport/$id", params: { id: reportId } })
+      } else {
+        navigate({ to: "/rapporten", search: { project_id: undefined, q: undefined } })
+      }
       return
     }
     toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })
-  }, [isFavorited, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
+  }, [isFavorited, matchedFavorite, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
 
   const footer = (
     <button
