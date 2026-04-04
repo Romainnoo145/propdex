@@ -124,7 +124,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className="flex flex-col h-full overflow-y-auto"
+        className="flex flex-col h-full"
       >
         {/* Address header */}
         <div className="px-8 pt-8">
