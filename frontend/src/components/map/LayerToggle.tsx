@@ -26,13 +26,8 @@ interface LayerToggleProps {
   onGemeentenToggle: () => void
   onBestemmingsplanToggle: () => void
 
-  // Score overlay handlers (still called internally via setParcelOverlayMode)
-  onScoreToggle?: (visible: boolean) => void
-  onBuiltStatusToggle?: (visible: boolean) => void
-  onReportStatusToggle?: (visible: boolean) => void
-  onVacancySignalToggle?: (visible: boolean) => void
-  onBuildCapacityToggle?: (visible: boolean) => void
-  onFoundationRiskToggle?: (visible: boolean) => void
+  // Unified overlay select — delegates to handleOverlaySelect in map.tsx
+  onOverlaySelect: (id: ParcelOverlayLayerId) => void
   onBAGPandenToggle?: (visible: boolean) => void
   onScannedScopeToggle?: (visible: boolean) => void
 
@@ -91,12 +86,7 @@ function LayerToggle({
   onParcelsToggle,
   onGemeentenToggle,
   onBestemmingsplanToggle,
-  onScoreToggle,
-  onBuiltStatusToggle,
-  onReportStatusToggle,
-  onVacancySignalToggle,
-  onBuildCapacityToggle,
-  onFoundationRiskToggle,
+  onOverlaySelect,
   onBAGPandenToggle,
   onScannedScopeToggle,
   autoEnableParcelsKey,
@@ -143,35 +133,6 @@ function LayerToggle({
     map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
   }, [mapRef])
 
-  const setParcelOverlayMode = useCallback(
-    (mode: 'score' | 'built' | 'report' | 'vacancy' | 'capacity' | 'foundation' | 'none') => {
-      const isScore = mode === 'score'
-      const isBuilt = mode === 'built'
-      const isReport = mode === 'report'
-      const isVacancy = mode === 'vacancy'
-      const isCapacity = mode === 'capacity'
-      const isFoundation = mode === 'foundation'
-      onScoreToggle?.(isScore)
-      onBuiltStatusToggle?.(isBuilt)
-      onReportStatusToggle?.(isReport)
-      onVacancySignalToggle?.(isVacancy)
-      onBuildCapacityToggle?.(isCapacity)
-      onFoundationRiskToggle?.(isFoundation)
-      if (mode !== 'none') {
-        ensureParcelInteractionZoom()
-      }
-    },
-    [
-      ensureParcelInteractionZoom,
-      onBuildCapacityToggle,
-      onBuiltStatusToggle,
-      onFoundationRiskToggle,
-      onReportStatusToggle,
-      onScoreToggle,
-      onVacancySignalToggle,
-    ]
-  )
-
   // Apply basemap when prop changes
   useEffect(() => {
     applyBaseLayer(basemap)
@@ -192,7 +153,7 @@ function LayerToggle({
     onBAGPandenToggle?.(false)
     onScannedScopeToggle?.(false)
     if (showParcels) {
-      queueMicrotask(() => setParcelOverlayMode('score'))
+      queueMicrotask(() => onOverlaySelect('potential'))
     }
   }, [mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
   // ^ Intentionally only [mapReady] — this is a one-time init effect guarded by didInitSyncRef
@@ -214,14 +175,14 @@ function LayerToggle({
       onParcelsToggle()
     }
     ensureParcelInteractionZoom()
-    queueMicrotask(() => setParcelOverlayMode('score'))
+    queueMicrotask(() => onOverlaySelect('potential'))
   }, [
     autoEnableParcelsKey,
     ensureParcelInteractionZoom,
     isStyleReady,
     mapRef,
     onParcelsToggle,
-    setParcelOverlayMode,
+    onOverlaySelect,
     showParcels,
   ])
 
@@ -245,8 +206,8 @@ function LayerToggle({
 
   useEffect(() => {
     if (!needsDefaultOverlay || !isStyleReady()) return
-    queueMicrotask(() => setParcelOverlayMode('score'))
-  }, [needsDefaultOverlay, isStyleReady, setParcelOverlayMode])
+    queueMicrotask(() => onOverlaySelect('potential'))
+  }, [needsDefaultOverlay, isStyleReady, onOverlaySelect])
 
   const handleParcelsToggle = () => {
     if (!mapRef.current || !mapReady) return
@@ -259,15 +220,10 @@ function LayerToggle({
     onParcelsToggle()
     if (nextShowParcels) {
       ensureParcelInteractionZoom()
-      setParcelOverlayMode('score')
+      onOverlaySelect('potential')
     }
     if (!nextShowParcels) {
-      onScoreToggle?.(false)
-      onBuiltStatusToggle?.(false)
-      onReportStatusToggle?.(false)
-      onVacancySignalToggle?.(false)
-      onBuildCapacityToggle?.(false)
-      onFoundationRiskToggle?.(false)
+      // Overlay cleanup is handled by handleParcelsLayerToggle in map.tsx
       // Turn off bestemmingsplan when parcels go off
       if (showBestemmingsplan) onBestemmingsplanToggle()
     }

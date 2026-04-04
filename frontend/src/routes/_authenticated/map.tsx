@@ -438,24 +438,6 @@ function MapPage() {
     lifecycle.trackLayer('parcel-foundation-risk-fill')
   }, [lifecycle])
 
-  /** Set parcel score fill layer visibility via lifecycle. */
-  const setParcelScoreVisibilityManaged = useCallback(
-    (visible: boolean) => {
-      lifecycle.setVisibility('parcel-score-fill', visible)
-      lifecycle.setVisibility('parcel-score-outline', visible)
-      lifecycle.setVisibility('parcel-score-selected-outline', visible)
-    },
-    [lifecycle],
-  )
-
-  /** Set individual overlay layer visibility via lifecycle. */
-  const setOverlayVisibilityManaged = useCallback(
-    (layerId: string, visible: boolean) => {
-      lifecycle.setVisibility(layerId, visible)
-    },
-    [lifecycle],
-  )
-
   const [tier, setTier] = useState<ViewTier>('none')
   // demo data removed — all property data comes from lookup API
   const [propertyLngLat, setPropertyLngLat] = useState<[number, number] | null>(null)
@@ -771,6 +753,14 @@ function MapPage() {
     } else {
       currentCenteredWijkNameRef.current = null
       layerActions.setActiveParcelOverlay(null)
+      // Hide all overlay fill layers when parcels are turned off
+      for (const layerId of [
+        'parcel-score-fill', 'parcel-score-outline', 'parcel-score-selected-outline',
+        'parcel-built-status-fill', 'parcel-report-status-fill',
+        'parcel-vacancy-signal-fill', 'parcel-build-capacity-fill', 'parcel-foundation-risk-fill',
+      ]) {
+        lifecycle.setVisibility(layerId, false)
+      }
       // Also turn off bestemmingsplan if it was active
       if (layerState.showBestemmingsplan) {
         layerActions.setBestemmingsplan(false)
@@ -782,7 +772,7 @@ function MapPage() {
     if (!activeScanId) {
       activatePreferredScan()
     }
-  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName, layerState.showBestemmingsplan, setBestemmingsplanVisibilityManaged])
+  }, [activeScanId, activatePreferredScan, layerActions, exitGemeenteMode, readCenteredWijkName, layerState.showBestemmingsplan, setBestemmingsplanVisibilityManaged, lifecycle])
 
   // Auto-activate preferred scan on map load so parcel score colors
   // show immediately when zooming into scanned areas — no manual scan
@@ -2299,56 +2289,6 @@ function MapPage() {
     [addBAGPandLayerManaged, setBAGPandVisibilityManaged]
   )
 
-  // Score layer visibility toggle handler
-  const handleScoreToggle = useCallback(
-    (visible: boolean) => {
-      if (!mapRef.current) return
-      setParcelScoreVisibilityManaged(visible)
-      if (visible) layerActions.setActiveParcelOverlay('potential')
-    },
-    [layerActions, setParcelScoreVisibilityManaged]
-  )
-
-  const handleBuiltStatusToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_BUILT_STATUS_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('built_status')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleReportStatusToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_REPORT_STATUS_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('report_coverage')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleVacancySignalToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_VACANCY_SIGNAL_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('vacancy_signal')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleBuildCapacityToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_BUILD_CAPACITY_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('build_capacity')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
-  const handleFoundationRiskToggle = useCallback(
-    (visible: boolean) => {
-      setOverlayVisibilityManaged(PARCEL_FOUNDATION_RISK_FILL_LAYER_ID, visible)
-      if (visible) layerActions.setActiveParcelOverlay('foundation_risk')
-    },
-    [layerActions, setOverlayVisibilityManaged]
-  )
-
   const handleScannedScopeToggle = useCallback((visible: boolean) => {
     setShowScannedWijkBoundaries(visible)
   }, [])
@@ -2549,12 +2489,7 @@ function MapPage() {
           onBestemmingsplanToggle={handleBestemmingsplanToggle}
           onBAGPandenToggle={handleBAGPandenToggle}
           onScannedScopeToggle={handleScannedScopeToggle}
-          onScoreToggle={handleScoreToggle}
-          onBuiltStatusToggle={handleBuiltStatusToggle}
-          onReportStatusToggle={handleReportStatusToggle}
-          onVacancySignalToggle={handleVacancySignalToggle}
-          onBuildCapacityToggle={handleBuildCapacityToggle}
-          onFoundationRiskToggle={handleFoundationRiskToggle}
+          onOverlaySelect={handleOverlaySelect}
           hasScoreData={!!activeScanId}
         />
       </motion.div>
