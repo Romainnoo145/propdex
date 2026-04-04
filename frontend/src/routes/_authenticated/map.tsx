@@ -26,6 +26,7 @@ import {
 } from '@/components/map/GemeenteBoundariesLayer'
 import {
   addWijkBoundariesLayer,
+  removeWijkBoundariesLayer,
 } from '@/components/map/WijkBoundariesLayer'
 import {
   setupBestemmingsplanClickHandler,
@@ -738,13 +739,15 @@ function MapPage() {
     if (map) {
       // Hide gemeente boundaries via lifecycle (style-readiness queued)
       setGemeenteBoundariesVisibilityManaged(false)
-      // Imperative fallback: directly hide layers in case lifecycle queue
-      // fails when isStyleLoaded() returns false momentarily during transitions
+      // Imperative fallback: directly hide layers — lifecycle queue may not
+      // flush in time during mode transitions with concurrent state updates
       setGemeenteBoundariesVisibility(map, false)
       clearGemeenteSelection(map)
       // Remove wijk boundaries if source exists (don't rely on ref alone)
       if (wijkGeojsonRef.current || map.getSource('cbs-wijken')) {
         removeWijkBoundariesLayerManaged()
+        // Imperative fallback for wijk layers too — same race condition
+        try { removeWijkBoundariesLayer(map) } catch { /* swallow if style mid-reload */ }
         setWijkGeojson(null)
       }
       removeScanAreaHighlightManaged()

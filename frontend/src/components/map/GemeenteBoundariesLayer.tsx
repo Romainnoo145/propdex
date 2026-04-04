@@ -288,15 +288,22 @@ export function setGemeenteBoundariesVisibility(
   map: maplibregl.Map,
   visible: boolean
 ): void {
-  if (!map.isStyleLoaded()) return;
+  // NOTE: No isStyleLoaded() guard here — when hiding layers that are already
+  // rendered, the layers exist in the style even if a style reload is in progress.
+  // The isStyleLoaded() guard was causing the imperative fallback to silently
+  // no-op during mode transitions, leaving gemeente boundaries visible.
   const visibility = visible ? 'visible' : 'none';
 
-  if (map.getLayer(GEMEENTE_FILL_LAYER)) {
-    map.setLayoutProperty(GEMEENTE_FILL_LAYER, 'visibility', visibility);
-  }
+  try {
+    if (map.getLayer(GEMEENTE_FILL_LAYER)) {
+      map.setLayoutProperty(GEMEENTE_FILL_LAYER, 'visibility', visibility);
+    }
 
-  if (map.getLayer(GEMEENTE_LINE_LAYER)) {
-    map.setLayoutProperty(GEMEENTE_LINE_LAYER, 'visibility', visibility);
+    if (map.getLayer(GEMEENTE_LINE_LAYER)) {
+      map.setLayoutProperty(GEMEENTE_LINE_LAYER, 'visibility', visibility);
+    }
+  } catch {
+    // Swallow errors if style is mid-reload — the lifecycle queue will catch up
   }
 }
 
