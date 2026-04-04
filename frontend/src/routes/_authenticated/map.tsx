@@ -2132,7 +2132,10 @@ function MapPage() {
         setGemeenteBoundariesVisibilityManaged(true)
         setGemeenteBoundariesVisibility(map, true)
 
-        map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+        // Delay flyTo slightly so the map canvas has time to resize after panel close
+        requestAnimationFrame(() => {
+          map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+        })
         return
       }
 
@@ -2146,7 +2149,9 @@ function MapPage() {
       setSelectedArea(null)
       setActiveGemeente(null)
       setActivePanel(null)
-      map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+      requestAnimationFrame(() => {
+        map.flyTo({ center: NL_CENTER, zoom: NL_ZOOM, duration: 1000 })
+      })
     },
     [layerState.showGemeenten, layerState.showParcels, layerActions, mapRef, handleParcelsLayerToggle, setActivePanel, setParcelGeometryHighlight, removeWijkBoundariesLayerManaged, removeScanAreaHighlightManaged, setGemeenteBoundariesVisibilityManaged]
   )

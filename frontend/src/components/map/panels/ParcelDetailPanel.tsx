@@ -153,7 +153,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
           </div>
 
           {/* Category tabs */}
-          <div className="mt-8">
+          <div className="mt-5">
             <CategoryTabs
               activeCategory={view.kind !== 'overview' ? view.kind : null}
               onSelect={handleSelectCategory}
@@ -168,7 +168,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
               initial={prefersReducedMotion ? false : { opacity: 1 }}
               exit={prefersReducedMotion ? { opacity: 0 } : { y: -20, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mt-6 flex-1 flex flex-col min-h-0"
+              className="mt-4 flex-1 flex flex-col min-h-0"
             >
               <ParcelBentoOverview
                 parcel={parcel}

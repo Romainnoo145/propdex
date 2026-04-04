@@ -153,7 +153,7 @@ export function ParcelBentoOverview({
       animate="show"
     >
       {/* ── Bento Image Grid (3 cards) ───────────────── */}
-      <div className="grid grid-cols-3 gap-1.5 mt-6">
+      <div className="grid grid-cols-3 gap-1.5 mt-4">
         {/* Card 1: Aerial View */}
         <motion.button
           variants={fadeUp}
