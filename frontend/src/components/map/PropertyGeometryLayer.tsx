@@ -7,9 +7,7 @@ const PROPERTY_LINE_LAYER = 'selected-property-line';
 const PARCEL_SOURCE = 'selected-parcels';
 const PARCEL_FILL_LAYER = 'selected-parcels-fill';
 const PARCEL_LINE_LAYER = 'selected-parcels-line';
-const CENTER_MARKER_SOURCE = 'property-center-marker';
-const CENTER_MARKER_LAYER = 'property-center-marker-circle';
-const CENTER_MARKER_PULSE_LAYER = 'property-center-marker-pulse';
+
 
 /**
  * Update property geometry on the map
@@ -114,7 +112,7 @@ export function updatePropertyGeometry(
     });
   }
 
-  // Add amber center marker
+  // Fly to property center (no center marker — green parcel outline is sufficient)
   if (
     data.map_data?.center_wgs84 &&
     data.map_data.center_wgs84.length >= 2
@@ -124,46 +122,6 @@ export function updatePropertyGeometry(
       data.map_data.center_wgs84[1] as number,
     ];
 
-    map.addSource(CENTER_MARKER_SOURCE, {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: center },
-        properties: {},
-      },
-    });
-
-    // Outer pulse ring
-    map.addLayer({
-      id: CENTER_MARKER_PULSE_LAYER,
-      type: 'circle',
-      source: CENTER_MARKER_SOURCE,
-      paint: {
-        'circle-radius': 14,
-        'circle-color': '#f59e0b',
-        'circle-opacity': 0.15,
-        'circle-stroke-width': 1,
-        'circle-stroke-color': '#f59e0b',
-        'circle-stroke-opacity': 0.3,
-      },
-    });
-
-    // Inner solid marker
-    map.addLayer({
-      id: CENTER_MARKER_LAYER,
-      type: 'circle',
-      source: CENTER_MARKER_SOURCE,
-      paint: {
-        'circle-radius': 6,
-        'circle-color': '#f59e0b',
-        'circle-opacity': 0.9,
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-opacity': 0.8,
-      },
-    });
-
-    // Fly to property center
     map.flyTo({
       center,
       zoom: 17,
@@ -178,8 +136,6 @@ export function updatePropertyGeometry(
 export function clearPropertyGeometry(map: maplibregl.Map): void {
   // Remove layers (must be removed before sources)
   const layers = [
-    CENTER_MARKER_LAYER,
-    CENTER_MARKER_PULSE_LAYER,
     PROPERTY_LINE_LAYER,
     PROPERTY_FILL_LAYER,
     PARCEL_LINE_LAYER,
@@ -193,7 +149,7 @@ export function clearPropertyGeometry(map: maplibregl.Map): void {
   }
 
   // Remove sources
-  const sources = [CENTER_MARKER_SOURCE, PROPERTY_SOURCE, PARCEL_SOURCE];
+  const sources = [PROPERTY_SOURCE, PARCEL_SOURCE];
 
   for (const sourceId of sources) {
     if (map.getSource(sourceId)) {

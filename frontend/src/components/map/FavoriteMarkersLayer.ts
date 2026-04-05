@@ -1,9 +1,8 @@
 /**
  * FavoriteMarkersLayer
  *
- * Renders favorited parcels as red circle markers on the MapLibre map.
- * Markers are added as a GeoJSON source + circle layer so they update
- * reactively without reloading tiles.
+ * Renders favorited parcels as red heart markers on the MapLibre map.
+ * Uses a pre-loaded heart SVG image for reliable symbol rendering.
  *
  * Layer is added AFTER the parcel score layer so it renders on top.
  * Visibility is NOT tied to the Percelen toggle — favorites markers
@@ -14,15 +13,45 @@
 import type maplibregl from 'maplibre-gl'
 
 export const FAVORITE_MARKERS_SOURCE = 'favorite-markers'
-export const FAVORITE_MARKERS_LAYER = 'favorite-markers-circle'
+export const FAVORITE_MARKERS_LAYER = 'favorite-markers-heart'
+const HEART_IMAGE_ID = 'heart-icon'
+
+// Filled red heart with white outline, 40x40 for crisp rendering at 20px symbol size
+const HEART_SVG = `<svg width="40" height="40" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+  <path d="M25 39.7l-.6-.5C11.5 28.7 8 25 8 19c0-5 4-9 9-9 4.1 0 6.4 2.3 8 4.1 1.6-1.8 3.9-4.1 8-4.1 5 0 9 4 9 9 0 6-3.5 9.7-16.4 20.2l-.6.5z"
+    fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+</svg>`
 
 /**
- * Add the GeoJSON source and circle layer for favorite markers.
+ * Load the heart icon into the map's sprite if not already present.
+ */
+function ensureHeartImage(map: maplibregl.Map): Promise<void> {
+  if (map.hasImage(HEART_IMAGE_ID)) return Promise.resolve()
+
+  return new Promise((resolve, reject) => {
+    const img = new Image(40, 40)
+    img.onload = () => {
+      if (!map.hasImage(HEART_IMAGE_ID)) {
+        map.addImage(HEART_IMAGE_ID, img)
+      }
+      resolve()
+    }
+    img.onerror = reject
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(HEART_SVG)}`
+  })
+}
+
+/**
+ * Add the GeoJSON source and symbol layer for favorite markers.
  * Initializes with an empty FeatureCollection.
  *
  * Call this after addParcelScoreLayer so markers render on top.
  */
-export function addFavoriteMarkersLayer(map: maplibregl.Map): void {
+export async function addFavoriteMarkersLayer(map: maplibregl.Map): Promise<void> {
+  await ensureHeartImage(map)
+
+  if (map.getSource(FAVORITE_MARKERS_SOURCE)) return
+
   map.addSource(FAVORITE_MARKERS_SOURCE, {
     type: 'geojson',
     data: {
@@ -33,14 +62,13 @@ export function addFavoriteMarkersLayer(map: maplibregl.Map): void {
 
   map.addLayer({
     id: FAVORITE_MARKERS_LAYER,
-    type: 'circle',
+    type: 'symbol',
     source: FAVORITE_MARKERS_SOURCE,
-    paint: {
-      'circle-radius': 7,
-      'circle-color': '#ef4444',
-      'circle-stroke-width': 2.5,
-      'circle-stroke-color': '#ffffff',
-      'circle-opacity': 0.9,
+    layout: {
+      'icon-image': HEART_IMAGE_ID,
+      'icon-size': 0.55,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
     minzoom: 12,
   })

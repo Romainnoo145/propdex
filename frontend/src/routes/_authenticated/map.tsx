@@ -415,26 +415,50 @@ function MapPage() {
     [lifecycle],
   )
 
-  /** Ensure favorite markers source/layer via lifecycle. */
+  /** Ensure favorite markers source/layer via lifecycle (heart icon). */
   const ensureFavoriteMarkersManaged = useCallback(() => {
     lifecycle.ensureSource(FAVORITE_MARKERS_SOURCE, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
     })
+    // Load heart icon into map sprite before adding symbol layer
+    const map = mapRef.current
+    if (map && !map.hasImage('heart-icon')) {
+      const heartSvg = `<svg width="40" height="40" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><path d="M25 39.7l-.6-.5C11.5 28.7 8 25 8 19c0-5 4-9 9-9 4.1 0 6.4 2.3 8 4.1 1.6-1.8 3.9-4.1 8-4.1 5 0 9 4 9 9 0 6-3.5 9.7-16.4 20.2l-.6.5z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/></svg>`
+      const img = new Image(40, 40)
+      img.onload = () => {
+        if (map.hasImage('heart-icon')) return
+        map.addImage('heart-icon', img)
+        // Now add the symbol layer
+        lifecycle.ensureLayer({
+          id: FAVORITE_MARKERS_LAYER,
+          type: 'symbol',
+          source: FAVORITE_MARKERS_SOURCE,
+          layout: {
+            'icon-image': 'heart-icon',
+            'icon-size': 0.55,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+          minzoom: 12,
+        })
+      }
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(heartSvg)}`
+      return
+    }
     lifecycle.ensureLayer({
       id: FAVORITE_MARKERS_LAYER,
-      type: 'circle',
+      type: 'symbol',
       source: FAVORITE_MARKERS_SOURCE,
-      paint: {
-        'circle-radius': 7,
-        'circle-color': '#ef4444',
-        'circle-stroke-width': 2.5,
-        'circle-stroke-color': '#ffffff',
-        'circle-opacity': 0.9,
+      layout: {
+        'icon-image': 'heart-icon',
+        'icon-size': 0.55,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
       },
       minzoom: 12,
     })
-  }, [lifecycle])
+  }, [lifecycle, mapRef])
 
   /** Update favorite markers GeoJSON data via lifecycle. */
   const updateFavoriteMarkersManaged = useCallback(
