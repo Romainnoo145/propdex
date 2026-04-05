@@ -133,10 +133,11 @@ function LayerToggle({
     map.easeTo({ zoom: PARCEL_INTERACTION_MIN_ZOOM, duration: 550 })
   }, [mapRef])
 
-  // Apply basemap when prop changes
+  // Apply basemap whenever prop changes OR map becomes ready.
   useEffect(() => {
+    if (!isStyleReady()) return
     applyBaseLayer(basemap)
-  }, [basemap, applyBaseLayer])
+  }, [basemap, applyBaseLayer, mapReady, isStyleReady])
 
   // One-time init: add parcel source + set initial layer visibility when map is ready
   const didInitSyncRef = useRef(false)

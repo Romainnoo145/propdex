@@ -65,6 +65,7 @@ import {
 import { scanControlsEnabled } from '@/lib/features'
 import { useMapContext } from '@/lib/MapContext'
 import { useMapLayerState } from '@/lib/map/useMapLayerState'
+import { useUserPreferences } from '@/hooks/useSettings'
 import { useMapLayerLifecycle } from '@/lib/map/useMapLayerLifecycle'
 import { PARCEL_INTERACTION_MIN_ZOOM } from '@/lib/map/constants'
 import type { SuggestResult, PropertyReportResponse } from '@/lib/types/property'
@@ -178,6 +179,26 @@ function MapPage() {
   // Single source of truth for all layer toggle state
   const { state: layerState, actions: layerActions } = useMapLayerState()
   const lifecycle = useMapLayerLifecycle(mapRef, mapReady)
+
+  // Sync user's saved map_style preference to the basemap layer state.
+  // Also directly applies the satellite raster opacity when the map is ready,
+  // because the LayerToggle effect may miss the initial state if preferences
+  // load before or simultaneously with map readiness.
+  const { data: userPrefs } = useUserPreferences()
+  useEffect(() => {
+    if (!userPrefs?.map_style) return
+    const preferred: import('@/lib/map/layers').BaseMapLayerId =
+      userPrefs.map_style === 'satellite' ? 'aerial' : 'kaart'
+    if (layerState.basemap !== preferred) {
+      layerActions.setBasemap(preferred)
+    }
+    // Directly apply raster opacity when map is ready — belt-and-suspenders
+    if (mapReady && mapRef.current?.isStyleLoaded?.() && mapRef.current.getLayer('esri-satellite-layer')) {
+      try {
+        mapRef.current.setPaintProperty('esri-satellite-layer', 'raster-opacity', preferred === 'aerial' ? 1 : 0)
+      } catch { /* style not loaded yet — LayerToggle will handle it */ }
+    }
+  }, [userPrefs?.map_style, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Lifecycle-managed layer helpers
@@ -1854,6 +1875,9 @@ function MapPage() {
           setPropertyLngLat([parseFloat(match[1]!), parseFloat(match[2]!)])
         }
       }
+
+      // Auto-enable parcel view when searching by address
+      setAutoEnableParcelsKey(`address:${pc}:${hn}:${Date.now()}`)
 
       // Set pending ref so the useEffect auto-opens ParcelDetailModal on lookup success
       pendingLookupInspectorRef.current = { postcode: pc, huisnummer: hn }

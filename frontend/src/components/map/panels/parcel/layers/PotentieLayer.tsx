@@ -140,7 +140,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       if (ah != null && mh != null && mh > ah) {
         return { value: `+${Math.round(mh - ah)}M`, sub: `Max ${mh}m vs huidig ${ah}m` }
       }
-      return { value: '\u2014', sub: factor.missing ? 'Geen DSO data' : 'Max bereikt' }
+      return { value: '\u2014', sub: factor.missing ? 'Geen DSO hoogtedata' : 'Max bereikt' }
     }
     case 'bestemming': {
       const best = parcel.bestemmingen
@@ -155,7 +155,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
           sub: isWonen ? 'Compatibel' : 'Wijziging nodig',
         }
       }
-      return { value: '\u2014', sub: 'Geen data' }
+      return { value: '\u2014', sub: 'Geen bestemmingsdata' }
     }
     case 'leegstand': {
       const signal = parcel.vacancy_signal
@@ -163,7 +163,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       if (signal === 'leeg_perceel') return { value: 'LEEG', sub: `${conf != null ? Math.round(conf * 100) : '?'}% zekerheidsscore` }
       if (signal === 'leegstaand_pand') return { value: 'LEEGSTAND', sub: `${conf != null ? Math.round(conf * 100) : '?'}% zekerheidsscore` }
       if (signal === 'in_gebruik') return { value: 'IN GEBRUIK', sub: 'Geen leegstandsignaal' }
-      return { value: 'ONBEKEND', sub: 'Geen data beschikbaar' }
+      return { value: 'ONBEKEND', sub: 'Geen leegstanddata' }
     }
     case 'funda_frictie': {
       const ms = parcel.market_signals
@@ -180,7 +180,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
           sub: area >= 1000 ? 'Groot perceeloppervlak' : area >= 300 ? 'Gemiddeld oppervlak' : 'Klein perceel',
         }
       }
-      return { value: '\u2014', sub: 'Geen data' }
+      return { value: '\u2014', sub: 'Geen oppervlaktedata' }
     }
     case 'demografie': {
       const score = factor.genormaliseerde_score
@@ -189,7 +189,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3, parcel: ScanResu
       return { value: label, sub: `Score ${Math.round(score * 100)}% (CBS)` }
     }
     case 'vergunning_succeskans': {
-      if (factor.missing) return { value: '\u2014', sub: 'Geen data' }
+      if (factor.missing) return { value: '\u2014', sub: 'Geen vergunningdata' }
       const pct = Math.round(factor.genormaliseerde_score * 100)
       return { value: `${pct}% SUCCES`, sub: 'Vergunningsklimaat' }
     }
@@ -253,7 +253,7 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
   const signal = parcel.vacancy_signal
   const conf = parcel.vacancy_confidence
   let leegVal = 'ONBEKEND'
-  let leegSub = 'Geen data'
+  let leegSub = 'Geen leegstanddata'
   if (signal === 'leeg_perceel') { leegVal = 'LEEG'; leegSub = `${conf != null ? Math.round(conf * 100) : '?'}% zekerheid` }
   else if (signal === 'leegstaand_pand') { leegVal = 'LEEGSTAND'; leegSub = `${conf != null ? Math.round(conf * 100) : '?'}% zekerheid` }
   else if (signal === 'in_gebruik') { leegVal = 'IN GEBRUIK'; leegSub = 'Geen leegstandsignaal' }
@@ -269,8 +269,8 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
     { label: 'ACQUISITIE', value: leegVal, sub: leegSub, pts: 0 },
     { label: 'MARKT', value: fundaVal, sub: fundaSub, pts: 0 },
     { label: 'SCHAAL', value: area > 0 ? `${area.toLocaleString('nl-NL')} M\u00b2` : '\u2014', sub: area >= 1000 ? 'Groot perceeloppervlak' : area >= 300 ? 'Gemiddeld oppervlak' : 'Klein perceel', pts: 0 },
-    { label: 'DEMOGRAFIE', value: '\u2014', sub: 'Geen CBS data (v2.1)', pts: 0 },
-    { label: 'LEGAL', value: '\u2014', sub: 'Geen data (v2.1)', pts: 0 },
+    { label: 'DEMOGRAFIE', value: '\u2014', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
+    { label: 'LEGAL', value: '\u2014', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
     { label: 'CAPACITEIT', value: capacityValue(parcel), sub: capacitySub(parcel), pts: 0 },
   ]
 }
@@ -319,7 +319,7 @@ export function PotentieLayer({ parcel }: PotentieLayerProps) {
         return {
           label: FACTOR_LABELS[key] ?? key.toUpperCase(),
           value: '\u2014',
-          sub: 'Geen data',
+          sub: 'Data niet beschikbaar',
           pts: 0,
         }
       })

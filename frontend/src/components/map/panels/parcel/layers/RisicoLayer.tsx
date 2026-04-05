@@ -122,7 +122,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string
           ? { value: 'BESCHERMD', sub: 'Erfgoedstatus' }
           : { value: 'VRIJ', sub: 'Geen monument' }
       }
-      return { value: '—', sub: 'Geen data' }
+      return { value: '—', sub: 'Geen monumentdata' }
     }
     case 'bestemmingswijziging': {
       const btype = typeof w === 'string' ? w : ''
@@ -141,7 +141,7 @@ function formatFactorValue(name: string, factor: ScoreFactorV3): { value: string
       return { value: riskLevel(s), sub: parts.length > 0 ? parts.join(' · ') : 'Onbekend' }
     }
     case 'juridisch_klimaat': {
-      if (factor.missing) return { value: '—', sub: 'Geen data' }
+      if (factor.missing) return { value: '—', sub: 'Geen vergunningdata' }
       const d = typeof w === 'object' && w !== null ? (w as Record<string, unknown>) : {}
       const rate = Number(d.approval_rate ?? 0)
       const pct = Math.round(rate * 100)
@@ -194,14 +194,14 @@ function deriveV21Cards(parcel: ScanResultItem): CardDisplay[] {
   const atMax = lagenHead && bm!.actual_bouwlagen! >= bm!.max_bouwlagen!
 
   return [
-    { label: 'FUNDERING', value: '—', sub: 'Geen data (v2.1)', pts: 0 },
-    { label: 'ASBEST', value: bj == null ? '—' : pre1994 ? 'RISICO' : 'VEILIG', sub: bj != null ? `Bouwjaar ${bj}` : 'Geen data', pts: 0 },
-    { label: 'BODEM', value: '—', sub: 'Geen data (v2.1)', pts: 0 },
+    { label: 'FUNDERING', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
+    { label: 'ASBEST', value: bj == null ? '—' : pre1994 ? 'RISICO' : 'VEILIG', sub: bj != null ? `Bouwjaar ${bj}` : 'Geen bouwjaardata', pts: 0 },
+    { label: 'BODEM', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
     { label: 'MONUMENT', value: isMonument ? 'BESCHERMD' : 'VRIJ', sub: isMonument ? 'Erfgoedstatus' : 'Geen monument', pts: 0 },
     { label: 'HERBESTEMMING', value: isWonen ? 'NEE' : 'NODIG', sub: isWonen ? 'Woonbestemming' : 'Wijziging vereist', pts: 0 },
-    { label: 'CONSTRUCTIE', value: constLabel, sub: bj != null ? `Bouwjaar ${bj}` : 'Geen data', pts: 0 },
-    { label: 'JURIDISCH', value: '—', sub: 'Geen data (v2.1)', pts: 0 },
-    { label: 'CRIMINALITEIT', value: '—', sub: 'Geen data (v2.1)', pts: 0 },
+    { label: 'CONSTRUCTIE', value: constLabel, sub: bj != null ? `Bouwjaar ${bj}` : 'Geen bouwjaardata', pts: 0 },
+    { label: 'JURIDISCH', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
+    { label: 'CRIMINALITEIT', value: '—', sub: 'Niet beschikbaar (v2.1 scan)', pts: 0 },
     { label: 'HOOGTE', value: lagenHead ? (atMax ? 'BEREIKT' : 'RUIMTE') : '—', sub: lagenHead ? `${bm!.actual_bouwlagen}/${bm!.max_bouwlagen} lagen` : 'Geen DSO data', pts: 0 },
   ]
 }
@@ -221,7 +221,7 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
       pts: 0,
     })
   } else {
-    cards.push({ label: 'NATURA 2000', value: '—', sub: 'Geen data', pts: 0 })
+    cards.push({ label: 'NATURA 2000', value: '—', sub: 'Natura 2000 niet beschikbaar', pts: 0 })
   }
 
   // Overstromingsrisico
@@ -234,7 +234,7 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
       pts: 0,
     })
   } else {
-    cards.push({ label: 'OVERSTROMING', value: '—', sub: 'Geen data', pts: 0 })
+    cards.push({ label: 'OVERSTROMING', value: '—', sub: 'Geen overstromingsdata', pts: 0 })
   }
 
   // Geluid
@@ -247,7 +247,7 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
       pts: 0,
     })
   } else {
-    cards.push({ label: 'GELUID', value: '—', sub: 'Geen data', pts: 0 })
+    cards.push({ label: 'GELUID', value: '—', sub: 'Geen RIVM geluiddata', pts: 0 })
   }
 
   // Luchtkwaliteit
@@ -260,7 +260,7 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
       pts: 0,
     })
   } else {
-    cards.push({ label: 'LUCHTKWALITEIT', value: '—', sub: 'Geen data', pts: 0 })
+    cards.push({ label: 'LUCHTKWALITEIT', value: '—', sub: 'Geen RIVM luchtkwaliteitdata', pts: 0 })
   }
 
   // Bodemtype (from funderingsrisico enrichment)
@@ -273,7 +273,7 @@ function deriveEnvCards(enrichment: ReturnType<typeof useParcelEnrichment>['data
       pts: 0,
     })
   } else {
-    cards.push({ label: 'BODEMTYPE', value: '—', sub: 'Geen data', pts: 0 })
+    cards.push({ label: 'BODEMTYPE', value: '—', sub: 'Geen funderingsgebieddata', pts: 0 })
   }
 
   return cards
@@ -344,7 +344,7 @@ export function RisicoLayer({ parcel }: RisicoLayerProps) {
         return {
           label: FACTOR_LABELS[key] ?? key.toUpperCase(),
           value: '—',
-          sub: 'Geen data',
+          sub: 'Data niet beschikbaar',
           pts: 0,
         }
       })

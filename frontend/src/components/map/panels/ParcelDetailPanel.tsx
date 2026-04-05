@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
-import { toast } from 'sonner'
 import { ParcelPanelShell } from './parcel/ParcelPanelShell'
 import { HeartButton } from './parcel/HeartButton'
 import {
@@ -15,7 +14,7 @@ import { RisicoLayer } from './parcel/layers/RisicoLayer'
 
 import { BronnenLayer } from './parcel/layers/BronnenLayer'
 import { useParcelEnrichment } from '@/hooks/useScans'
-import { useGenerateReportFromParcel } from '@/hooks/useReports'
+import { useParcelFavorites, useToggleFavorite } from '@/hooks/useFavorites'
 import type { ScanResultItem } from '@/lib/types/scan'
 
 /** Split "Straat 1, 1234AB Venlo" → ["Straat 1", ", 1234AB Venlo"] for clean truncation */
@@ -53,7 +52,13 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
   const [view, setView] = useState<PanelView>({ kind: 'overview' })
   const [trackedParcelId, setTrackedParcelId] = useState(parcel.parcel_id)
   const enrichmentQuery = useParcelEnrichment(parcel.parcel_id)
-  const generateReport = useGenerateReportFromParcel()
+  const favoritesQuery = useParcelFavorites()
+  const toggleFavorite = useToggleFavorite()
+  const matchedFavorite = useMemo(
+    () => (favoritesQuery.data ?? []).find((f) => f.parcel_id === parcel.parcel_code),
+    [favoritesQuery.data, parcel.parcel_code],
+  )
+  const isFavorited = !!matchedFavorite
 
   // Reset to overview when parcel changes (derived state pattern)
   if (trackedParcelId !== parcel.parcel_id) {
@@ -69,36 +74,35 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
     setView({ kind: 'overview' })
   }, [])
 
-  const handleGenerateReport = useCallback(() => {
-    generateReport.mutate(parcel.parcel_id, {
-      onSuccess: (data) => {
-        if (data.created) {
-          toast.success('Rapport wordt gegenereerd')
-        }
-        navigate({ to: '/rapport/$id', params: { id: data.report.id } })
-      },
-      onError: () => {
-        toast.error('Rapport genereren mislukt')
-      },
-    })
-  }, [parcel.parcel_id, generateReport, navigate])
+  const handleCta = useCallback(() => {
+    if (isFavorited || parcel.has_report) {
+      const reportId = matchedFavorite?.report_id
+      if (reportId) {
+        navigate({ to: "/rapport/$id", params: { id: reportId } })
+      } else {
+        navigate({ to: "/rapporten", search: { project_id: undefined, q: undefined } })
+      }
+      return
+    }
+    toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })
+  }, [isFavorited, matchedFavorite, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
 
   const footer = (
     <button
       type="button"
-      onClick={handleGenerateReport}
-      disabled={generateReport.isPending}
+      onClick={handleCta}
+      disabled={toggleFavorite.isPending}
       className={`w-full h-[60px] rounded-full text-[15px] font-bold tracking-tight transition-all active:scale-[0.98] disabled:opacity-60 ${
-        parcel.has_report
+        isFavorited || parcel.has_report
           ? 'bg-aura-green text-white hover:bg-aura-green/90'
           : 'bg-[#0E1111] text-white hover:bg-slate-800'
       }`}
     >
-      {generateReport.isPending
+      {toggleFavorite.isPending
         ? 'Bezig...'
-        : parcel.has_report
+        : (isFavorited || parcel.has_report)
           ? 'Bekijk Rapport'
-          : 'Genereer Rapport'}
+          : 'Bewaar perceel'}
     </button>
   )
 

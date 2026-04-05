@@ -57,14 +57,14 @@ export function updatePropertyGeometry(
       },
     });
 
-    // Primary parcel fill + border (amber).
+    // Primary parcel fill + border (green — distinct from amber overlays).
     map.addLayer({
       id: PARCEL_FILL_LAYER,
       type: 'fill',
       source: PARCEL_SOURCE,
       paint: {
-        'fill-color': '#f59e0b',
-        'fill-opacity': 0.14,
+        'fill-color': '#22c55e',
+        'fill-opacity': 0.18,
       },
     });
 
@@ -73,8 +73,8 @@ export function updatePropertyGeometry(
       type: 'line',
       source: PARCEL_SOURCE,
       paint: {
-        'line-color': '#f59e0b',
-        'line-width': 2.2,
+        'line-color': '#16a34a',
+        'line-width': 2.5,
         'line-opacity': 0.95,
       },
     });
