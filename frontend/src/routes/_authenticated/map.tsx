@@ -1062,7 +1062,7 @@ function MapPage() {
           setActivePanel({ kind: 'parcel', parcel:
             makeInspectorParcel({
               parcelId: full.parcel_id,
-              address: full.address ?? resolved.address ?? `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
+              address: `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ? ` ${data.address.toevoeging}` : ''}, ${data.address.postcode} ${data.address.woonplaats}`,
               parcelCode: full.parcel_code ?? null,
               gemeenteCode: full.gemeente_code ?? null,
               areaM2: full.area_m2 ?? null,

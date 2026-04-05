@@ -1010,11 +1010,18 @@ async def resolve_parcel_by_address(
     rows = (await db.execute(base_query.limit(40))).all()
 
     chosen = None
+    exact_address_match = False
     if rows:
         exact_matches = [r for r in rows if _extract_huisnummer(r[1] or "") == huisnummer]
-        chosen = exact_matches[0] if exact_matches else rows[0]
+        if exact_matches:
+            chosen = exact_matches[0]
+            exact_address_match = True
 
     if chosen is None:
+        # No exact huisnummer in our cache → geocode the address and do a
+        # spatial lookup, same as Kadastrale Kaart does.  This handles the
+        # common case where a parcel has multiple BAG addresses but we only
+        # stored one (the reverse-geocode of the pand centroid).
         locatieserver = PDOKLocatieserver()
         async with httpx.AsyncClient(timeout=20.0) as client:
             coords = await locatieserver.geocode_address(
@@ -1035,6 +1042,10 @@ async def resolve_parcel_by_address(
                 if centroid_row is not None:
                     chosen = centroid_row
 
+    # Last resort: if geocode failed but DB had rows, pick the first one
+    if chosen is None and rows:
+        chosen = rows[0]
+
     if chosen is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1049,9 +1060,16 @@ async def resolve_parcel_by_address(
             detail="Failed to parse centroid",
         )
 
+    # When we found the parcel via geocode (not exact address match), the
+    # DB address may differ from what the user searched (e.g. "Houtstraat
+    # 15A" stored vs user searched "Houtstraat 13" — same parcel, different
+    # BAG address on the building).  Return None so the frontend uses the
+    # searched address from the PDOK autocomplete suggestion instead.
+    display_address = chosen[1] if exact_address_match else None
+
     return {
         "parcel_id": str(chosen[0]),
-        "address": chosen[1],
+        "address": display_address,
         "lng": float(wkt_match.group(1)),
         "lat": float(wkt_match.group(2)),
     }
