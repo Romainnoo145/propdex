@@ -62,3 +62,4 @@ backend/.venv
 
 # ── GSD baseline (auto-generated) ──
 .gsd-id
+.vercel

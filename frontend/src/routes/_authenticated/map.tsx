@@ -181,22 +181,27 @@ function MapPage() {
   const lifecycle = useMapLayerLifecycle(mapRef, mapReady)
 
   // Sync user's saved map_style preference to the basemap layer state.
-  // Also directly applies the satellite raster opacity when the map is ready,
-  // because the LayerToggle effect may miss the initial state if preferences
-  // load before or simultaneously with map readiness.
+  // The satellite raster layer starts with opacity 0 in MapView. This effect
+  // reads the persisted preference and applies the correct opacity once both
+  // the preference and the map are ready. Uses a retry to handle the brief
+  // gap between mapReady=true and the satellite layer being queryable.
   const { data: userPrefs } = useUserPreferences()
   useEffect(() => {
-    if (!userPrefs?.map_style) return
+    if (!userPrefs?.map_style || !mapReady) return
     const preferred: import('@/lib/map/layers').BaseMapLayerId =
       userPrefs.map_style === 'satellite' ? 'aerial' : 'kaart'
-    if (layerState.basemap !== preferred) {
-      layerActions.setBasemap(preferred)
+    layerActions.setBasemap(preferred)
+    // Directly apply raster opacity — retry briefly in case layer isn't registered yet
+    const apply = () => {
+      const map = mapRef.current
+      if (!map?.isStyleLoaded?.() || !map.getLayer('esri-satellite-layer')) return false
+      map.setPaintProperty('esri-satellite-layer', 'raster-opacity', preferred === 'aerial' ? 1 : 0)
+      return true
     }
-    // Directly apply raster opacity when map is ready — belt-and-suspenders
-    if (mapReady && mapRef.current?.isStyleLoaded?.() && mapRef.current.getLayer('esri-satellite-layer')) {
-      try {
-        mapRef.current.setPaintProperty('esri-satellite-layer', 'raster-opacity', preferred === 'aerial' ? 1 : 0)
-      } catch { /* style not loaded yet — LayerToggle will handle it */ }
+    if (!apply()) {
+      // Layer not ready yet — retry after a short delay
+      const t = setTimeout(apply, 500)
+      return () => clearTimeout(t)
     }
   }, [userPrefs?.map_style, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
