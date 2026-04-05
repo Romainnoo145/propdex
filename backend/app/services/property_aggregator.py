@@ -8,7 +8,7 @@ from datetime import date, datetime
 import httpx
 from arq import ArqRedis
 from fastapi import HTTPException, status
-from shapely.geometry import shape
+from shapely.geometry import Point, shape
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,6 +71,24 @@ logger = logging.getLogger(__name__)
 _cadastral_client = PDOKCadastralClient()
 _HOUSE_NUMBER_RE = re.compile(r"(\d+)")
 _NUMERIC_VALUE_RE = re.compile(r"-?\d+(?:[.,]\d+)?")
+
+
+def _nearest_parcel(parcels: list, point: "Point") -> object | None:
+    """Return the parcel whose geometry centroid is nearest to *point*.
+
+    Skips parcels with invalid or missing geometry.  Returns ``None`` when
+    no valid candidate exists.
+    """
+    best, best_dist = None, float("inf")
+    for parcel in parcels:
+        try:
+            geom = shape(parcel.geometry)
+            dist = geom.centroid.distance(point)
+            if dist < best_dist:
+                best, best_dist = parcel, dist
+        except Exception:
+            continue
+    return best
 
 
 def _extract_rd_coordinates(geometry: dict | None) -> tuple[float, float] | None:
@@ -858,8 +876,31 @@ async def aggregate_property_data(
                 )
                 parcels.append(parcel)
 
-            logger.info(f"Fetched {len(parcels)} cadastral parcels")
-            return parcels
+            # --- Point-in-polygon filter: keep only the parcel(s) that
+            # actually contain the building centroid.  This prevents
+            # returning adjacent parcels that merely overlap the bbox.
+            query_point = Point(x, y)
+            filtered: list[CadastralParcel] = []
+            for p in parcels:
+                try:
+                    if shape(p.geometry).contains(query_point):
+                        filtered.append(p)
+                except Exception:
+                    # Skip parcels with invalid/missing geometry
+                    continue
+
+            if not filtered:
+                # Boundary edge-case: point sits exactly on an edge.
+                # Fall back to the parcel whose centroid is closest.
+                nearest = _nearest_parcel(parcels, query_point)
+                if nearest is not None:
+                    filtered = [nearest]
+
+            logger.info(
+                f"Fetched {len(parcels)} cadastral parcels, "
+                f"{len(filtered)} contain building centroid"
+            )
+            return filtered if filtered else parcels
 
         except Exception as e:
             logger.warning(f"Failed to fetch cadastral parcels: {str(e)}")

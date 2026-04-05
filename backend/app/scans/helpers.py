@@ -170,9 +170,7 @@ async def _resolve_pdok_cadastral_parcel_at_rd(
     selected_feature: dict | None = None
     selected_shape = None
     selected_is_wgs84: bool | None = None
-    fallback_feature: dict | None = None
-    fallback_shape = None
-    fallback_is_wgs84: bool | None = None
+    candidates: list[tuple[dict, object, bool]] = []
 
     for feature in pdok_features:
         if not isinstance(feature, dict):
@@ -188,20 +186,30 @@ async def _resolve_pdok_cadastral_parcel_at_rd(
             continue
         geometry_is_wgs84 = _geometry_looks_wgs84(geometry_candidate)
         test_point = click_point_wgs84 if geometry_is_wgs84 else click_point_rd
-        if fallback_feature is None:
-            fallback_feature = feature
-            fallback_shape = geom_shape
-            fallback_is_wgs84 = geometry_is_wgs84
+        candidates.append((feature, geom_shape, geometry_is_wgs84))
         if geom_shape.contains(test_point) or geom_shape.touches(test_point):
             selected_feature = feature
             selected_shape = geom_shape
             selected_is_wgs84 = geometry_is_wgs84
             break
 
-    if selected_feature is None and fallback_feature is not None:
-        selected_feature = fallback_feature
-        selected_shape = fallback_shape
-        selected_is_wgs84 = fallback_is_wgs84
+    if selected_feature is None and candidates:
+        best_feature, best_shape, best_is_wgs84 = None, None, None
+        best_dist = float('inf')
+        for feat, geom, is_wgs84 in candidates:
+            tp = click_point_wgs84 if is_wgs84 else click_point_rd
+            dist = geom.centroid.distance(tp)
+            if dist < best_dist:
+                best_feature, best_shape, best_is_wgs84 = feat, geom, is_wgs84
+                best_dist = dist
+        if best_feature is not None:
+            selected_feature = best_feature
+            selected_shape = best_shape
+            selected_is_wgs84 = best_is_wgs84
+            logger.debug(
+                'PDOK parcel fallback: nearest-centroid selected from %d candidates',
+                len(candidates),
+            )
 
     if selected_feature is None or selected_shape is None:
         return None
