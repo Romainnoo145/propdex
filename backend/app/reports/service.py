@@ -1253,8 +1253,15 @@ async def _lookup_addresses_on_parcel(
         if not docs:
             return []
 
-        # Sort by huisnummer
-        docs.sort(key=lambda d: d.get("huisnummer", 0))
+        # Prefer addresses without huisletter (main house number) for
+        # consistent BAG resolution. Sort: no-letter first, then by huisnummer.
+        def _sort_key(d: dict) -> tuple:
+            wn = d.get("weergavenaam", "")
+            # Check if address has a letter suffix (e.g. "11A") — deprioritize
+            has_letter = bool(re.search(r"\d+[A-Za-z]", wn.split(",")[0]))
+            return (has_letter, d.get("huisnummer", 0))
+
+        docs.sort(key=_sort_key)
         return [d["weergavenaam"] for d in docs if d.get("weergavenaam")]
     except Exception as e:
         logger.debug("_lookup_addresses_on_parcel failed for %s: %s", parcel_code, e)
