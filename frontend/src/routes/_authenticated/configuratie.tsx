@@ -7,7 +7,7 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import {
@@ -47,7 +47,7 @@ import { useRaadsinformatie, type RaadsinformatieResponse } from '@/hooks/useRaa
 import { useHuisvestingsverordening, type HuisvestingsverordeningResponse } from '@/hooks/useHuisvestingsverordening'
 import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
-import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary } from '@/hooks/usePolicyDocuments'
+import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type PolicyDocument, type DocumentSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 
 import type { LucideIcon } from 'lucide-react'
@@ -1517,6 +1517,286 @@ function BeschermdErfgoedDetail({ data, isLoading, error }: { data?: ErfgoedResp
   )
 }
 
+/* ─── Document source detail (roadmap sources with upload + AI) ─ */
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function DocumentStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'parsing':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+          <Loader2 size={10} className="animate-spin" /> Analyseren…
+        </span>
+      )
+    case 'parsed':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+          <Check size={10} /> Geanalyseerd
+        </span>
+      )
+    case 'error':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+          <AlertCircle size={10} /> Fout
+        </span>
+      )
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+          <Upload size={10} /> Geüpload
+        </span>
+      )
+  }
+}
+
+function DocumentSourceDetail({
+  sourceKey,
+  sourceDescription,
+  gemeenteCode,
+}: {
+  sourceKey: string
+  sourceDescription: string
+  gemeenteCode: string
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [polling, setPolling] = useState(false)
+
+  const uploadMutation = useUploadPolicyDocument()
+
+  const { data: docsData, isLoading } = usePolicyDocuments(
+    'gemeente',
+    gemeenteCode,
+    sourceKey,
+    true,
+    polling ? 3000 : false,
+  )
+
+  const documents = docsData?.documents ?? []
+  const isAnyParsing = documents.some((d) => d.status === 'parsing')
+
+  // Toggle polling when parsing status changes
+  useEffect(() => {
+    setPolling(isAnyParsing)
+  }, [isAnyParsing])
+
+  // Find first parsed summary
+  const firstSummary = useMemo(() => {
+    for (const doc of documents) {
+      const parsed = parseAiSummary(doc.ai_summary)
+      if (parsed) return { summary: parsed, document: doc }
+    }
+    return null
+  }, [documents])
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      uploadMutation.mutate({ entityType: 'gemeente', entityCode: gemeenteCode, sourceKey, file })
+      // Reset so re-selecting same file triggers change
+      e.target.value = ''
+    },
+    [gemeenteCode, sourceKey, uploadMutation],
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      const file = e.dataTransfer.files[0]
+      if (!file) return
+      uploadMutation.mutate({ entityType: 'gemeente', entityCode: gemeenteCode, sourceKey, file })
+    },
+    [gemeenteCode, sourceKey, uploadMutation],
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  if (isLoading) return <SourceDetailLoading />
+
+  // Hidden file input
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+      className="hidden"
+      onChange={handleFileChange}
+    />
+  )
+
+  // ── Empty state (no documents) ───────────────────────────────
+  if (documents.length === 0) {
+    return (
+      <div className="space-y-5">
+        {fileInput}
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6">
+          <p className="text-[13px] leading-relaxed text-slate-500">{sourceDescription}</p>
+        </div>
+
+        {/* Upload CTA zone */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`flex flex-col items-center gap-3 rounded-[16px] border-2 border-dashed p-10 text-center transition-colors ${
+            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/50'
+          }`}
+        >
+          <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
+            <Upload size={22} className="text-slate-400" />
+          </div>
+          <p className="text-[14px] font-bold text-[#0E1111]">Upload een document om AI-analyse te starten</p>
+          <p className="text-[12px] text-slate-400">Sleep een bestand hierheen of klik op de knop</p>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploadMutation.isPending}
+            className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {uploadMutation.isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Uploaden…
+              </>
+            ) : (
+              <>
+                <Upload size={14} /> Kies bestand
+              </>
+            )}
+          </button>
+          <p className="text-[10px] text-slate-300">PDF, DOCX, XLSX, JPG, PNG</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Populated state ──────────────────────────────────────────
+  return (
+    <div className="space-y-5">
+      {fileInput}
+
+      {/* AI Summary (first parsed document) */}
+      {firstSummary && (
+        <div className="rounded-[16px] border border-violet-200 bg-violet-50 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-violet-500" />
+            <h3 className="text-[13px] font-black uppercase tracking-[0.15em] text-violet-600">AI-samenvatting</h3>
+          </div>
+          <p className="text-[13px] leading-relaxed text-slate-700">{firstSummary.summary.summary}</p>
+
+          {firstSummary.summary.key_facts.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-[11px] font-black uppercase tracking-wider text-violet-500">Kernpunten</h4>
+              <ul className="space-y-1">
+                {firstSummary.summary.key_facts.map((fact, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600">
+                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-violet-400" />
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {Object.keys(firstSummary.summary.extracted_values).length > 0 && (
+            <div>
+              <h4 className="mb-2 text-[11px] font-black uppercase tracking-wider text-violet-500">Geëxtraheerde waarden</h4>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                {Object.entries(firstSummary.summary.extracted_values).map(([key, val]) => (
+                  <div key={key} className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-slate-400">{key}</span>
+                    <span className="text-[12px] font-semibold text-[#0E1111]">{val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-violet-400">
+            Bron: {firstSummary.document.filename}
+          </p>
+        </div>
+      )}
+
+      {/* Document list */}
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white overflow-hidden">
+        <div className="flex items-center justify-between border-b border-[#EAEFEF] px-5 py-3">
+          <h3 className="text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">
+            Documenten ({documents.length})
+          </h3>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploadMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-200 disabled:opacity-50"
+          >
+            {uploadMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            Upload
+          </button>
+        </div>
+        <div className="divide-y divide-[#EAEFEF]">
+          {documents.map((doc) => (
+            <div key={doc.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <FileText size={14} className="shrink-0 text-slate-400" />
+                  <p className="truncate text-[13px] font-semibold text-[#0E1111]">{doc.filename}</p>
+                </div>
+                <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-400">
+                  <span>{formatFileSize(doc.file_size)}</span>
+                  <span>{new Date(doc.created_at).toLocaleDateString('nl-NL')}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <DocumentStatusBadge status={doc.status} />
+                {doc.status === 'parsed' && (
+                  <a
+                    href={`/api/policy-documents/gemeente/${gemeenteCode}/${doc.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline"
+                  >
+                    Bekijk PDF <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Drop zone for additional uploads */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`flex items-center justify-center gap-3 rounded-[16px] border-2 border-dashed px-5 py-6 text-center transition-colors ${
+          isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/30'
+        }`}
+      >
+        <Upload size={16} className="text-slate-300" />
+        <p className="text-[12px] text-slate-400">Sleep een extra document hierheen om toe te voegen</p>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Source detail workspace ───────────────────────────────── */
 
 function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey: string; gemeenteCode: string; onBack: () => void }) {
@@ -1580,11 +1860,11 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
         return <BeschermdErfgoedDetail data={erfgoedData} isLoading={erfgoedLoading} error={erfgoedError} />
       default:
         return (
-          <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-            <p className="text-[13px] text-slate-400">
-              Detail view voor deze databron is nog niet beschikbaar.
-            </p>
-          </div>
+          <DocumentSourceDetail
+            sourceKey={sourceKey}
+            sourceDescription={source?.description ?? ''}
+            gemeenteCode={gemeenteCode}
+          />
         )
     }
   }
