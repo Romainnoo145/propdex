@@ -1200,6 +1200,55 @@ async def generate_report_from_address(
     return report, created
 
 
+async def _lookup_addresses_on_parcel(
+    *,
+    parcel_code: str,
+    locatieserver,
+    http_client,
+) -> list[str]:
+    """Look up all BAG addresses registered on a kadastrale perceel.
+
+    Uses PDOK Cadastral OGC API to resolve the parcel code (e.g. '37530587070000')
+    to kadastrale gemeente/sectie/perceelnummer, then queries PDOK Locatieserver
+    for all addresses with fq=gekoppeld_perceel.
+
+    Returns list of display addresses sorted by huisnummer, or empty list on failure.
+    """
+    from app.government_apis.pdok_cadastral import PDOKCadastralClient
+
+    try:
+        cadastral = PDOKCadastralClient()
+        url = f"{cadastral.BASE_URL}/collections/perceel/items"
+        params = {
+            "identificatie_lokaal_id": parcel_code,
+            "f": "json",
+            "limit": 1,
+        }
+        response = await http_client.get(url, params=params, timeout=10.0)
+        data = response.json()
+        features = data.get("features", [])
+        if not features:
+            return []
+
+        props = features[0].get("properties", {})
+        akr = props.get("akr_kadastrale_gemeente_code_waarde", "")
+        sectie = props.get("sectie", "")
+        perceelnummer = props.get("perceelnummer")
+        if not akr or not sectie or perceelnummer is None:
+            return []
+
+        addresses = await locatieserver.addresses_for_parcel(
+            kadastrale_gemeente=akr,
+            sectie=sectie,
+            perceelnummer=str(perceelnummer),
+            client=http_client,
+        )
+        return addresses
+    except Exception as e:
+        logger.debug("_lookup_addresses_on_parcel failed for %s: %s", parcel_code, e)
+        return []
+
+
 async def generate_report_from_parcel(
     *,
     parcel_id: uuid.UUID,
@@ -1270,7 +1319,32 @@ async def generate_report_from_parcel(
         if parsed:
             logger.info("Using address_override: %s", address_override)
 
-    # Priority 2: live reverse geocode on parcel centroid
+    # Priority 2: PDOK gekoppeld_perceel lookup — find a BAG address that is
+    # actually registered on this kadastrale perceel. This is authoritative:
+    # unlike centroid reverse geocoding, it cannot return an address from a
+    # neighboring parcel.
+    if parsed is None and parcel.parcel_id:
+        try:
+            # parcel_id is the kadastrale code e.g. "37530587070000"
+            # PDOK gekoppeld_perceel needs "{gemeente}-{sectie}-{nr}" format
+            # We can get this from the PDOK locatieserver free endpoint
+            perceel_addrs = await _lookup_addresses_on_parcel(
+                parcel_code=parcel.parcel_id,
+                locatieserver=locatieserver,
+                http_client=http_client,
+            )
+            if perceel_addrs:
+                source_address = perceel_addrs[0]  # First address on parcel
+                parsed = parse_parcel_address(source_address)
+                if parsed:
+                    logger.info(
+                        "Resolved address via gekoppeld_perceel for %s: %s",
+                        parcel.parcel_id, source_address,
+                    )
+        except Exception as e:
+            logger.debug("gekoppeld_perceel lookup failed for %s: %s", parcel.parcel_id, e)
+
+    # Priority 3: live reverse geocode on parcel centroid (fallback)
     if parsed is None:
         from geoalchemy2.functions import ST_AsText, ST_Centroid
 
@@ -1287,7 +1361,7 @@ async def generate_report_from_parcel(
                 source_address = reverse_address
                 parsed = parse_parcel_address(reverse_address)
 
-    # Priority 3: cached parcel address
+    # Priority 4: cached parcel address
     if parsed is None and parcel.address:
         source_address = parcel.address
         parsed = parse_parcel_address(source_address)
