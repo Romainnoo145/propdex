@@ -33,6 +33,8 @@ import {
   FileCheck,
   Loader2,
   Check,
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
@@ -43,7 +45,7 @@ import { useRaadsinformatie, type RaadsinformatieResponse } from '@/hooks/useRaa
 import { useHuisvestingsverordening, type HuisvestingsverordeningResponse } from '@/hooks/useHuisvestingsverordening'
 import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
-import { usePolicyDocuments, useUploadPolicyDocument } from '@/hooks/usePolicyDocuments'
+import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 
 import type { LucideIcon } from 'lucide-react'
@@ -377,6 +379,7 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
+  const [polling, setPolling] = useState(false)
   const Icon = source.icon
   const isLive = source.status === 'live'
   const uploadMutation = useUploadPolicyDocument()
@@ -386,9 +389,21 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
     entityCode ?? '',
     source.key,
     !!entityType && !!entityCode,
+    polling ? 3000 : false,
   )
   const docCount = docsData?.total ?? 0
   const isComplete = isLive || docCount > 0
+
+  // AI summary state derived from documents
+  const firstDoc = docsData?.documents?.[0]
+  const isAnyParsing = docsData?.documents?.some(d => d.status === 'parsing') ?? false
+  const isAnyError = docsData?.documents?.some(d => d.status === 'error') ?? false
+  const aiSummary = firstDoc ? parseAiSummary(firstDoc.ai_summary) : null
+
+  // Toggle polling when parsing status changes
+  useEffect(() => {
+    setPolling(isAnyParsing)
+  }, [isAnyParsing])
 
   const handleUpload = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -470,11 +485,26 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
             {source.description}
           </p>
         </div>
-        {/* Icon in dark circle */}
-        <div className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
-          isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
-        }`}>
-          <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
+        {/* Icon in dark circle with status overlay */}
+        <div className="relative shrink-0">
+          <div className={`flex size-11 items-center justify-center rounded-full ${
+            isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
+          }`}>
+            <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
+          </div>
+          {isAnyParsing && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-amber-400 ring-2 ring-white">
+              <Loader2 className="animate-spin text-white" size={10} />
+            </span>
+          )}
+          {!isAnyParsing && aiSummary && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2 ring-white">
+              <Sparkles className="text-white" size={9} />
+            </span>
+          )}
+          {!isAnyParsing && !aiSummary && isAnyError && (
+            <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-red-500 ring-2 ring-white" />
+          )}
         </div>
       </div>
 
@@ -489,6 +519,32 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
                   <FileCheck size={11} />
                   {docCount} doc{docCount !== 1 ? 's' : ''}
                 </span>
+              )}
+              {/* AI parsing status indicators */}
+              {isAnyParsing && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-600 shrink-0">
+                  <Loader2 className="animate-spin" size={11} />
+                  AI analyseert...
+                </span>
+              )}
+              {!isAnyParsing && isAnyError && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 shrink-0">
+                  <AlertCircle size={11} />
+                  Fout bij analyse
+                </span>
+              )}
+              {!isAnyParsing && !isAnyError && aiSummary && (
+                <>
+                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[200px]">
+                    {aiSummary.summary}
+                  </span>
+                  {aiSummary.key_facts.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-600 shrink-0">
+                      <Sparkles size={11} />
+                      {aiSummary.key_facts.length} feit{aiSummary.key_facts.length !== 1 ? 'en' : ''}
+                    </span>
+                  )}
+                </>
               )}
               {/* Live source metrics */}
               {isLive && liveMetrics?.isLoading && (
@@ -536,6 +592,72 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
             className="overflow-hidden"
           >
             <div className="border-t border-[#EAEFEF] px-5 py-4 space-y-3">
+              {/* AI Summary section */}
+              {isAnyParsing && (
+                <div className="rounded-[14px] bg-amber-50/60 px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin text-amber-500" size={14} />
+                    <p className="text-[11px] font-bold text-amber-700">AI analyse bezig...</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-3/4 rounded bg-amber-200/60 animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-amber-200/60 animate-pulse" />
+                  </div>
+                </div>
+              )}
+              {!isAnyParsing && isAnyError && firstDoc?.ai_summary && (
+                <div className="rounded-[14px] bg-red-50 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="text-red-500 shrink-0" size={14} />
+                    <p className="text-[11px] font-bold text-red-700">Analyse mislukt</p>
+                  </div>
+                  <p className="mt-1 text-[11px] text-red-600">
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(firstDoc.ai_summary!)
+                        return parsed.error ?? 'Onbekende fout bij AI-analyse'
+                      } catch {
+                        return 'Onbekende fout bij AI-analyse'
+                      }
+                    })()}
+                  </p>
+                </div>
+              )}
+              {!isAnyParsing && aiSummary && (
+                <div className="rounded-[14px] bg-violet-50/60 px-4 py-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-violet-500" size={14} />
+                    <p className="text-[11px] font-bold text-violet-700">AI Samenvatting</p>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">{aiSummary.summary}</p>
+                  {aiSummary.key_facts.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Kernfeiten</p>
+                      <ul className="space-y-0.5">
+                        {aiSummary.key_facts.map((fact, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                            <span className="mt-1 size-1 rounded-full bg-violet-400 shrink-0" />
+                            {fact}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {Object.keys(aiSummary.extracted_values).length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Waarden</p>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        {Object.entries(aiSummary.extracted_values).map(([key, value]) => (
+                          <div key={key} className="flex items-baseline gap-1 text-[11px]">
+                            <span className="text-slate-400 truncate">{key}:</span>
+                            <span className="font-semibold text-[#0E1111] truncate">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Documents list with view buttons */}
               {docCount > 0 && docsData?.documents && (
                 <div className="space-y-2">
