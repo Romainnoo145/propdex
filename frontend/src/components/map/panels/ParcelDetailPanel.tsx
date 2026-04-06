@@ -74,35 +74,47 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
     setView({ kind: 'overview' })
   }, [])
 
+  const hasReport = !!(matchedFavorite?.has_report && matchedFavorite?.report_id)
+  const isGeneratingReport = isFavorited && !hasReport
+
   const handleCta = useCallback(() => {
-    if (isFavorited || parcel.has_report) {
-      const reportId = matchedFavorite?.report_id
-      if (reportId) {
-        navigate({ to: "/rapport/$id", params: { id: reportId } })
-      } else {
-        navigate({ to: "/rapporten", search: { project_id: undefined, q: undefined } })
-      }
+    if (hasReport) {
+      navigate({ to: "/rapport/$id", params: { id: matchedFavorite!.report_id! } })
       return
     }
-    toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })
-  }, [isFavorited, matchedFavorite, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
+    if (!isFavorited) {
+      toggleFavorite.mutate({ parcel, isFavorited, gemeenteNaam, wijkNaam })
+    }
+  }, [isFavorited, hasReport, matchedFavorite, parcel, toggleFavorite, navigate, gemeenteNaam, wijkNaam])
 
   const footer = (
     <button
       type="button"
       onClick={handleCta}
-      disabled={toggleFavorite.isPending}
+      disabled={toggleFavorite.isPending || isGeneratingReport}
       className={`w-full h-[60px] rounded-full text-[15px] font-bold tracking-tight transition-all active:scale-[0.98] disabled:opacity-60 ${
-        isFavorited || parcel.has_report
+        hasReport
           ? 'bg-aura-green text-white hover:bg-aura-green/90'
-          : 'bg-[#0E1111] text-white hover:bg-slate-800'
+          : isGeneratingReport
+            ? 'bg-amber-500 text-white'
+            : 'bg-[#0E1111] text-white hover:bg-slate-800'
       }`}
     >
       {toggleFavorite.isPending
         ? 'Bezig...'
-        : (isFavorited || parcel.has_report)
-          ? 'Bekijk Rapport'
-          : 'Bewaar perceel'}
+        : isGeneratingReport
+          ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Rapport genereren...
+            </span>
+          )
+          : hasReport
+            ? 'Bekijk Rapport'
+            : 'Bewaar perceel'}
     </button>
   )
 
@@ -113,7 +125,7 @@ export function ParcelDetailPanel({ parcel, onClose, gemeenteNaam, wijkNaam }: P
       case 'risico':
         return <RisicoLayer parcel={parcel} />
       case 'dossiers':
-        return <BronnenLayer parcel={parcel} hasReport={parcel.has_report} />
+        return <BronnenLayer parcel={parcel} hasReport={hasReport} />
       default:
         return null
     }

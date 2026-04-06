@@ -373,8 +373,26 @@ async def delete_favorite(
     user_id: uuid.UUID,
     db: AsyncSession,
 ) -> None:
-    """Remove a parcel from favorites."""
+    """Remove a parcel from favorites and soft-delete associated report."""
     fav = await _get_favorite_or_404(db, user_id, parcel_id)
+
+    # Soft-delete any report linked to this parcel via parcel_cache
+    if fav.parcel_cache_id:
+        report_result = await db.execute(
+            select(SavedReport).where(
+                SavedReport.source_parcel_id == fav.parcel_cache_id,
+                SavedReport.user_id == user_id,
+                SavedReport.deleted_at.is_(None),
+            )
+        )
+        report = report_result.scalar_one_or_none()
+        if report:
+            report.deleted_at = datetime.utcnow()
+            logger.info(
+                "Soft-deleted report %s for parcel=%s user=%s",
+                report.id, parcel_id, user_id,
+            )
+
     await db.delete(fav)
     await db.commit()
     logger.info("Favorite deleted: parcel=%s user=%s", parcel_id, user_id)
