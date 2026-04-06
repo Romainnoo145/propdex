@@ -152,11 +152,15 @@ export function useToggleFavorite() {
       return { previousFavorites }
     },
 
-    onSuccess: (data, { isFavorited }) => {
+    onSuccess: (data, { isFavorited, parcel }) => {
       // Auto-generate report when a new favorite is created
       if (!isFavorited && data && data.parcel_cache_id && !data.has_report) {
         // Fire-and-forget: don't block the UI
-        generateReportFromParcel(data.parcel_cache_id, accessToken)
+        // Pass the parcel's display address so from-parcel uses it instead of
+        // the potentially stale parcel_cache.address
+        generateReportFromParcel(data.parcel_cache_id, accessToken, {
+          address_override: parcel.address ?? undefined,
+        })
           .then(() => {
             // Refresh favorites to pick up has_report=true
             queryClient.invalidateQueries({ queryKey: ['favorites'] })

@@ -17,6 +17,10 @@ class ReportFromParcelRequest(BaseModel):
     parcel_id: uuid.UUID = Field(description="ParcelCache UUID")
     notes: str | None = Field(default=None, description="Optional notes for the report")
     project_id: uuid.UUID | None = Field(default=None, description="Optional project folder ID")
+    address_override: str | None = Field(
+        default=None,
+        description="Display address to use instead of parcel_cache.address (e.g. 'Houtstraat 13, 5911JB Venlo')",
+    )
 
 
 class ReportFromAddressRequest(BaseModel):

@@ -113,6 +113,7 @@ async def generate_report_from_parcel(request: Request, response: Response,
     try:
         report, created = await service.generate_report_from_parcel(
             parcel_id=body.parcel_id, notes=body.notes, project_id=body.project_id,
+            address_override=body.address_override,
             user_id=current_user.id, organization_id=current_user.organization_id,
             session=db, http_client=request.app.state.http_client,
             arq_pool=request.app.state.arq_pool, locatieserver=locatieserver)

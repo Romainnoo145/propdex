@@ -1205,6 +1205,7 @@ async def generate_report_from_parcel(
     parcel_id: uuid.UUID,
     notes: str | None,
     project_id: uuid.UUID | None,
+    address_override: str | None = None,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     session: AsyncSession,
@@ -1255,29 +1256,38 @@ async def generate_report_from_parcel(
             )
         # Continue to re-aggregate and update instead of early-returning stale data
 
-    # 2. Resolve address via live reverse geocode on parcel centroid (preferred),
-    #    falling back to cached parcel.address.
-    #    The cached address can be stale or wrong (assigned by centroid backfill
-    #    to a neighboring building). Live reverse geocode is authoritative.
+    # 2. Resolve address — priority: address_override > live reverse geocode > cached
+    #    address_override comes from the frontend when the user searched for a
+    #    specific address. Without it, the centroid geocode may return a different
+    #    address on the same parcel (e.g. Ariënsplaats 10 instead of Houtstraat 13).
     source_address = None
     parsed = None
 
-    from geoalchemy2.functions import ST_AsText, ST_Centroid
+    # Priority 1: frontend-provided address override
+    if address_override:
+        source_address = address_override
+        parsed = parse_parcel_address(address_override)
+        if parsed:
+            logger.info("Using address_override: %s", address_override)
 
-    centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
-        ParcelCache.id == parcel_id,
-    )
-    centroid_row = (await session.execute(centroid_query)).one_or_none()
-    rd_point = parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
-    if rd_point is not None:
-        reverse_address = await locatieserver.reverse(
-            rd_x=rd_point[0], rd_y=rd_point[1], client=http_client,
+    # Priority 2: live reverse geocode on parcel centroid
+    if parsed is None:
+        from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+        centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
+            ParcelCache.id == parcel_id,
         )
-        if reverse_address:
-            source_address = reverse_address
-            parsed = parse_parcel_address(reverse_address)
+        centroid_row = (await session.execute(centroid_query)).one_or_none()
+        rd_point = parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
+        if rd_point is not None:
+            reverse_address = await locatieserver.reverse(
+                rd_x=rd_point[0], rd_y=rd_point[1], client=http_client,
+            )
+            if reverse_address:
+                source_address = reverse_address
+                parsed = parse_parcel_address(reverse_address)
 
-    # Fallback to cached parcel address if live geocode failed
+    # Priority 3: cached parcel address
     if parsed is None and parcel.address:
         source_address = parcel.address
         parsed = parse_parcel_address(source_address)

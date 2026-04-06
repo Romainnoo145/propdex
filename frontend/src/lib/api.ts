@@ -716,7 +716,7 @@ export async function assignReportToProject(
 export async function generateReportFromParcel(
   parcelId: string,
   accessToken: string | null,
-  options?: { notes?: string; project_id?: string }
+  options?: { notes?: string; project_id?: string; address_override?: string }
 ): Promise<GenerateReportFromParcelResponse> {
   const headers = new Headers()
   if (accessToken) {
@@ -732,6 +732,7 @@ export async function generateReportFromParcel(
       parcel_id: parcelId,
       ...(options?.notes && { notes: options.notes }),
       ...(options?.project_id && { project_id: options.project_id }),
+      ...(options?.address_override && { address_override: options.address_override }),
     }),
   })
 
