@@ -778,6 +778,68 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
           <p className="mt-1 text-[12px] text-slate-500">
             {entityCode} · {liveCount} actief · {roadmapCount} te configureren
           </p>
+          {entityType === 'Gemeente' && gemeenteData && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {/* Approval rate */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.approval_rate_pct != null
+                    ? `${gemeenteData.profile.data.approval_rate_pct}% goedgekeurd`
+                    : '—'
+                )}
+              </span>
+              {/* Bekendmakingen 30d */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.bekendmakingen_30d != null
+                    ? `${gemeenteData.profile.data.bekendmakingen_30d} bekendmakingen (30d)`
+                    : '—'
+                )}
+              </span>
+              {/* Severity badge */}
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                style={{
+                  backgroundColor: gemeenteData.profile.isLoading
+                    ? undefined
+                    : `${SEVERITY_COLORS[gemeenteData.profile.data?.severity_label ?? 'Onbekend'] ?? SEVERITY_COLORS['Onbekend']}18`,
+                  color: gemeenteData.profile.isLoading
+                    ? undefined
+                    : SEVERITY_COLORS[gemeenteData.profile.data?.severity_label ?? 'Onbekend'] ?? SEVERITY_COLORS['Onbekend'],
+                }}
+              >
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.severity_label ?? '—'
+                )}
+              </span>
+              {/* Raadsstukken */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.raadsinformatie.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.raadsinformatie.data?.total_found != null
+                    ? `${gemeenteData.raadsinformatie.data.total_found} raadsstukken`
+                    : '—'
+                )}
+              </span>
+              {/* Erfgoed */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.erfgoed.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.erfgoed.data?.total != null
+                    ? `${gemeenteData.erfgoed.data.total} beschermde gezichten`
+                    : '—'
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </motion.div>
 
