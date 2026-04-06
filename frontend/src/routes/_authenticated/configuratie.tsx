@@ -16,6 +16,7 @@ import {
   Building2,
   MapPin,
   ArrowLeft,
+  ArrowRight,
   Shield,
   Scale,
   Home,
@@ -69,6 +70,7 @@ export const Route = createFileRoute('/_authenticated/configuratie')({
     provincie: typeof search.provincie === 'string' && /^PV\d{2}$/.test(search.provincie)
       ? (search.provincie as string)
       : undefined,
+    source: typeof search.source === 'string' ? (search.source as string) : undefined,
   }),
   component: ConfiguratiePage,
 })
@@ -264,6 +266,7 @@ interface DataSourceCardProps {
   entityType?: string
   entityCode?: string
   gemeenteData?: GemeenteIntelligenceData
+  gemeenteCode?: string
 }
 
 /** Returns { isLoading, error, metrics } for a live source based on its key and gemeente data. */
@@ -375,7 +378,8 @@ function getLiveMetrics(
   }
 }
 
-function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSourceCardProps) {
+function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeenteCode }: DataSourceCardProps) {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
@@ -485,13 +489,27 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
             {source.description}
           </p>
         </div>
-        {/* Icon in dark circle with status overlay */}
-        <div className="relative shrink-0">
-          <div className={`flex size-11 items-center justify-center rounded-full ${
-            isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
-          }`}>
-            <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
-          </div>
+        {/* Icon + details button */}
+        <div className="flex items-center gap-2 shrink-0">
+          {gemeenteCode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+              }}
+              className="flex items-center gap-1 rounded-full border border-[#EAEFEF] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
+              title="Bekijk details"
+            >
+              Bekijk details
+              <ArrowRight size={11} />
+            </button>
+          )}
+          <div className="relative">
+            <div className={`flex size-11 items-center justify-center rounded-full ${
+              isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
+            }`}>
+              <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
+            </div>
           {isAnyParsing && (
             <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-amber-400 ring-2 ring-white">
               <Loader2 className="animate-spin text-white" size={10} />
@@ -505,6 +523,7 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
           {!isAnyParsing && !aiSummary && isAnyError && (
             <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-red-500 ring-2 ring-white" />
           )}
+          </div>
         </div>
       </div>
 
@@ -764,9 +783,10 @@ interface CategoryTabbedSourcesProps {
   entityType?: string
   entityCode?: string
   gemeenteData?: GemeenteIntelligenceData
+  gemeenteCode?: string
 }
 
-function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData }: CategoryTabbedSourcesProps) {
+function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, gemeenteCode }: CategoryTabbedSourcesProps) {
   // Only show categories that have sources
   const availableCategories = useMemo(() => {
     const categoriesWithSources = new Set(sources.map((s) => s.category))
@@ -844,7 +864,7 @@ function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData }
         >
           {filtered.map((source) => (
             <motion.div key={source.key} variants={fadeUp}>
-              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} gemeenteData={gemeenteData} />
+              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={gemeenteCode} />
             </motion.div>
           ))}
         </motion.div>
@@ -967,7 +987,7 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
 
       {/* Category pill tabs + source rows */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
-        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} />
+        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={entityType === 'Gemeente' ? entityCode : undefined} />
       </motion.div>
     </div>
   )
@@ -1224,11 +1244,81 @@ function LandelijkContent() {
   return <CategoryTabbedSources sources={LANDELIJK_DATA_SOURCES} />
 }
 
+/* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
+
+function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey: string; gemeenteCode: string; onBack: () => void }) {
+  const source = GEMEENTE_DATA_SOURCES.find((s) => s.key === sourceKey)
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar gemeente
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">Databron &ldquo;{sourceKey}&rdquo; niet gevonden.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const Icon = source.icon
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar {gemeenteCode}
+      </motion.button>
+
+      {/* Source heading */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex items-center gap-4">
+        <div className={`flex size-14 items-center justify-center rounded-full ${source.status === 'live' ? 'bg-emerald-600' : 'bg-[#0E1111]'}`}>
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Databron · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">{source.label}</h1>
+          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+        </div>
+      </motion.div>
+
+      {/* Placeholder for detail content — T02/T03 will replace this */}
+      <motion.div
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="rounded-[20px] border border-[#EAEFEF] bg-white p-8"
+      >
+        <p className="text-[13px] text-slate-400 text-center">
+          Detail content wordt geladen...
+        </p>
+      </motion.div>
+    </div>
+  )
+}
+
 /* ─── Main page ─────────────────────────────────────────────── */
 
 function ConfiguratiePage() {
   const navigate = useNavigate()
-  const { gemeente: activeGemeente, provincie: activeProvincie } = Route.useSearch()
+  const { gemeente: activeGemeente, provincie: activeProvincie, source: activeSource } = Route.useSearch()
   const [openNiveau, setOpenNiveau] = useState<SubsidieNiveau | null>(null)
   const { data: gemeenteGeoJSON } = useGemeenteGeoJSON(openNiveau === 'gemeentelijk' || !!activeGemeente)
   const { data: provincieGeoJSON } = useProvincieGeoJSON(openNiveau === 'provinciaal' || !!activeProvincie)
@@ -1258,6 +1348,21 @@ function ConfiguratiePage() {
   const handleBackToMain = useCallback(() => {
     navigate({ to: '/configuratie', search: {} })
   }, [navigate])
+
+  // If source workspace is selected, show full-page source detail
+  if (activeGemeente && activeSource) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <SourceDetailWorkspace
+            sourceKey={activeSource}
+            gemeenteCode={activeGemeente}
+            onBack={() => navigate({ to: '/configuratie', search: { gemeente: activeGemeente } })}
+          />
+        </div>
+      </ResultsShell>
+    )
+  }
 
   // If gemeente is selected, show detail view
   if (activeGemeente) {
