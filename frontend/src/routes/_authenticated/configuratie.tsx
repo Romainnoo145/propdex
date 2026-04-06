@@ -35,6 +35,7 @@ import {
   Check,
 } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
+import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 import { type SubsidieNiveau } from '@/lib/subsidies/curatedSubsidies'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
@@ -252,6 +253,7 @@ interface DataSourceCardProps {
 function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
   const Icon = source.icon
   const isLive = source.status === 'live'
   const uploadMutation = useUploadPolicyDocument()
@@ -300,10 +302,13 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
     setIsDragging(false)
   }, [])
 
-  const handleView = useCallback((e: React.MouseEvent, docId: string) => {
+  const handleView = useCallback((e: React.MouseEvent, docId: string, filename?: string) => {
     e.stopPropagation()
     if (!entityType || !entityCode) return
-    window.open(`/api/policy-documents/${entityType}/${entityCode}/${docId}`, '_blank')
+    setPdfViewer({
+      url: `/api/policy-documents/${entityType}/${entityCode}/${docId}`,
+      title: filename || 'Beleidsdocument',
+    })
   }, [entityType, entityCode])
 
   return (
@@ -406,7 +411,7 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
                       </span>
                       {/* View button */}
                       <button
-                        onClick={(e) => handleView(e, doc.id)}
+                        onClick={(e) => handleView(e, doc.id, doc.filename)}
                         className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white border border-[#EAEFEF] text-slate-400 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
                         title="Bekijken"
                       >
@@ -453,6 +458,13 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
           </motion.div>
         )}
       </AnimatePresence>
+      {pdfViewer && (
+        <PDFViewerModal
+          url={pdfViewer.url}
+          title={pdfViewer.title}
+          onClose={() => setPdfViewer(null)}
+        />
+      )}
     </motion.div>
   )
 }

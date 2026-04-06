@@ -65,6 +65,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import type { ParcelDocumentMeta } from '@/lib/types/document'
 import type { FavoriteResponse } from '@/lib/types/portfolio'
 import { PotentieModal, RisicoModal } from './ScoreDetailModal'
+import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 
 const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx'
 const MAX_VISIBLE_DOCS = 2
@@ -926,7 +927,7 @@ function DropzoneCard({
   onFileDrop: (cardKey: string, file: File) => void
   onDelete: (documentId: string) => void
   onDownload: (documentId: string, filename: string) => void
-  onView: (documentId: string) => void
+  onView: (documentId: string, filename?: string) => void
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const isUploading = uploadingKey === card.key
@@ -994,7 +995,7 @@ function DropzoneCard({
               type="button"
               onClick={(event) => {
                 event.stopPropagation()
-                onView(document.id)
+                onView(document.id, document.filename)
               }}
               className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-400'}`}
               title="Bekijken"
@@ -1367,6 +1368,7 @@ export function FavoriteParcelWorkspaceView({
   const [page, setPage] = useState(0)
   const [uploadingKey, setUploadingKey] = useState<string | null>(null)
   const [, setDeletingId] = useState<string | null>(null)
+  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const activeCardKeyRef = useRef<string | null>(null)
 
@@ -1516,27 +1518,13 @@ export function FavoriteParcelWorkspaceView({
   )
 
   const handleView = useCallback(
-    async (documentId: string) => {
-      try {
-        const headers: HeadersInit = {}
-        if (accessToken) headers.Authorization = `Bearer ${accessToken}`
-
-        const response = await fetch(getDocumentDownloadUrl(favorite.parcel_id, documentId), {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        })
-
-        if (!response.ok) throw new Error('Bekijken mislukt')
-
-        const blob = await response.blob()
-        const blobUrl = URL.createObjectURL(blob)
-        window.open(blobUrl, '_blank')
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Bekijken mislukt')
-      }
+    (documentId: string, filename?: string) => {
+      setPdfViewer({
+        url: getDocumentDownloadUrl(favorite.parcel_id, documentId),
+        title: filename || 'Document',
+      })
     },
-    [accessToken, favorite.parcel_id],
+    [favorite.parcel_id],
   )
 
   return (
@@ -1908,6 +1896,13 @@ export function FavoriteParcelWorkspaceView({
         onClose={() => setScoreModal(null)}
         parcelCacheId={favorite.parcel_cache_id}
       />
+      {pdfViewer && (
+        <PDFViewerModal
+          url={pdfViewer.url}
+          title={pdfViewer.title}
+          onClose={() => setPdfViewer(null)}
+        />
+      )}
     </div>
   )
 }
