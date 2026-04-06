@@ -1255,27 +1255,32 @@ async def generate_report_from_parcel(
             )
         # Continue to re-aggregate and update instead of early-returning stale data
 
-    # 2. Parse address with reverse-geocode fallback
-    source_address = parcel.address
-    parsed = parse_parcel_address(source_address) if source_address else None
-    if parsed is None:
-        from geoalchemy2.functions import ST_AsText, ST_Centroid
+    # 2. Resolve address via live reverse geocode on parcel centroid (preferred),
+    #    falling back to cached parcel.address.
+    #    The cached address can be stale or wrong (assigned by centroid backfill
+    #    to a neighboring building). Live reverse geocode is authoritative.
+    source_address = None
+    parsed = None
 
-        centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
-            ParcelCache.id == parcel_id,
+    from geoalchemy2.functions import ST_AsText, ST_Centroid
+
+    centroid_query = select(ST_AsText(ST_Centroid(ParcelCache.geometry))).where(
+        ParcelCache.id == parcel_id,
+    )
+    centroid_row = (await session.execute(centroid_query)).one_or_none()
+    rd_point = parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
+    if rd_point is not None:
+        reverse_address = await locatieserver.reverse(
+            rd_x=rd_point[0], rd_y=rd_point[1], client=http_client,
         )
-        centroid_row = (await session.execute(centroid_query)).one_or_none()
-        rd_point = parse_rd_point_wkt(centroid_row[0] if centroid_row else None)
-        if rd_point is not None:
-            reverse_address = await locatieserver.reverse(
-                rd_x=rd_point[0], rd_y=rd_point[1], client=http_client,
-            )
-            if reverse_address:
-                source_address = reverse_address
-                parsed = parse_parcel_address(reverse_address)
-                if parsed is not None and not parcel.address:
-                    parcel.address = reverse_address
-                    session.add(parcel)
+        if reverse_address:
+            source_address = reverse_address
+            parsed = parse_parcel_address(reverse_address)
+
+    # Fallback to cached parcel address if live geocode failed
+    if parsed is None and parcel.address:
+        source_address = parcel.address
+        parsed = parse_parcel_address(source_address)
 
     if parsed is None:
         raise HTTPException(
