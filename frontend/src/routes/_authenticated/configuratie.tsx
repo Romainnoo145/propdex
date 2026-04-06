@@ -36,6 +36,7 @@ import {
   Check,
   Sparkles,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
 import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
@@ -1246,8 +1247,299 @@ function LandelijkContent() {
 
 /* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
 
+/* ─── Metric card helper ────────────────────────────────────── */
+
+function MetricCard({ label, value, unit, muted }: { label: string; value: string | number | null | undefined; unit?: string; muted?: boolean }) {
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+      <p className="text-[28px] font-black leading-none text-[#0E1111]">
+        {value != null ? value : '—'}{unit && <span className="ml-1 text-[14px] font-semibold text-slate-400">{unit}</span>}
+      </p>
+      <p className={`mt-1.5 text-[12px] font-semibold ${muted ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+    </div>
+  )
+}
+
+/* ─── Source detail loading / empty helpers ──────────────────── */
+
+function SourceDetailLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
+      <Loader2 className="size-5 animate-spin text-slate-400" />
+      <span className="text-[13px] text-slate-400">Data laden…</span>
+    </div>
+  )
+}
+
+function SourceDetailEmpty({ message }: { message?: string }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
+    </div>
+  )
+}
+
+function SourceDetailError({ error }: { error: Error | null }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
+    </div>
+  )
+}
+
+/* ─── Per-source detail renderers ───────────────────────────── */
+
+function VergunningKlimaatDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  const sevColor = SEVERITY_COLORS[profile.severity_label] ?? SEVERITY_COLORS['Onbekend']
+  const permitEntries = Object.entries(profile.permit_type_distribution ?? {})
+
+  return (
+    <div className="space-y-5">
+      {/* Severity badge */}
+      <div className="flex items-center gap-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold text-white" style={{ backgroundColor: sevColor }}>
+          {profile.severity_label}
+        </span>
+        <span className="text-[12px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
+      </div>
+
+      {/* Core metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        <MetricCard label="Goedkeuringspercentage" value={profile.approval_rate_pct != null ? `${profile.approval_rate_pct.toFixed(1)}` : null} unit="%" />
+        <MetricCard label="Afwijzingspercentage" value={profile.rejection_rate_pct != null ? `${profile.rejection_rate_pct.toFixed(1)}` : null} unit="%" />
+        <MetricCard label="Gem. doorlooptijd" value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}` : null} unit="dagen" />
+      </div>
+
+      {/* Bekendmakingen trend */}
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+        <h3 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">Bekendmakingen trend</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_30d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 30 dagen</p>
+          </div>
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_90d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 90 dagen</p>
+          </div>
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_365d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 365 dagen</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Permit type distribution */}
+      {permitEntries.length > 0 && (
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+          <h3 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">Vergunningtype verdeling</h3>
+          <div className="space-y-2">
+            {permitEntries.map(([type, count]) => (
+              <div key={type} className="flex items-center justify-between">
+                <span className="text-[13px] text-[#0E1111]">{type}</span>
+                <span className="text-[13px] font-bold text-[#0E1111]">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function JurisprudentieDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <MetricCard label="Gem. doorlooptijd" value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}` : null} unit="dagen" />
+        <MetricCard label="Steekproefomvang" value={profile.sample_size} />
+      </div>
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+        <a href="/jurisprudentie" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+          Bekijk volledige jurisprudentie-analyse
+          <ArrowRight size={14} />
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function BekendmakingenDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      <MetricCard label="Afgelopen 30 dagen" value={profile.bekendmakingen_30d} />
+      <MetricCard label="Afgelopen 90 dagen" value={profile.bekendmakingen_90d} />
+      <MetricCard label="Afgelopen 365 dagen" value={profile.bekendmakingen_365d} />
+    </div>
+  )
+}
+
+function RaadsinformatieDetail({ data, isLoading, error }: { data?: RaadsinformatieResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  return (
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="flex items-center gap-4">
+        <MetricCard label="Gevonden stukken" value={data.total_found} />
+        <div className="flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
+          <span className={`size-2 rounded-full ${data.dekking ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className="text-[12px] font-semibold text-slate-500">{data.dekking ? 'Goede dekking' : 'Beperkte dekking'}</span>
+        </div>
+      </div>
+
+      {/* Stukken list */}
+      {data.stukken.length > 0 ? (
+        <div className="max-h-[480px] space-y-0 overflow-y-auto rounded-[16px] border border-[#EAEFEF] bg-white divide-y divide-[#EAEFEF]">
+          {data.stukken.map((stuk) => (
+            <div key={stuk.doc_id} className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-bold text-[#0E1111] leading-snug">{stuk.titel}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {stuk.datum && <span className="text-[11px] text-slate-400">{stuk.datum}</span>}
+                    {stuk.type && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        {stuk.type}
+                      </span>
+                    )}
+                  </div>
+                  {stuk.samenvatting && (
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500 line-clamp-2">{stuk.samenvatting}</p>
+                  )}
+                </div>
+                {stuk.bron_url && (
+                  <a href={stuk.bron_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex-shrink-0 text-slate-400 hover:text-emerald-600 transition-colors">
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <SourceDetailEmpty message="Geen raadsstukken gevonden." />
+      )}
+    </div>
+  )
+}
+
+function HuisvestingsverordeningDetail({ data, isLoading, error }: { data?: HuisvestingsverordeningResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  if (!data.heeft_verordening) {
+    return <SourceDetailEmpty message="Geen huisvestingsverordening gevonden voor deze gemeente." />
+  }
+
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+      {data.title && <h3 className="text-[16px] font-black text-[#0E1111]">{data.title}</h3>}
+      {data.identifier && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Kenmerk</span>
+          <span className="text-[13px] text-[#0E1111]">{data.identifier}</span>
+        </div>
+      )}
+      {data.modified && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Laatst gewijzigd</span>
+          <span className="text-[13px] text-[#0E1111]">{data.modified}</span>
+        </div>
+      )}
+      {data.subject && (
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Onderwerp</span>
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{data.subject}</p>
+        </div>
+      )}
+      {data.url && (
+        <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+          Bekijk bron
+          <ExternalLink size={14} />
+        </a>
+      )}
+    </div>
+  )
+}
+
+function BeschermdErfgoedDetail({ data, isLoading, error }: { data?: ErfgoedResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  if (data.beschermde_gezichten.length === 0) {
+    return <SourceDetailEmpty message="Geen beschermde gezichten gevonden." />
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[13px] text-slate-500"><span className="font-bold text-[#0E1111]">{data.total}</span> beschermde gezichten</p>
+
+      <div className="overflow-hidden rounded-[16px] border border-[#EAEFEF] bg-white">
+        <table className="w-full text-left text-[13px]">
+          <thead>
+            <tr className="border-b border-[#EAEFEF] bg-slate-50/50">
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Naam</th>
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Type</th>
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Aangewezen</th>
+              <th className="px-5 py-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-400">Oppervlakte (ha)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EAEFEF]">
+            {data.beschermde_gezichten.map((item, i) => (
+              <tr key={`${item.naam}-${i}`}>
+                <td className="px-5 py-3 font-semibold text-[#0E1111]">{item.naam}</td>
+                <td className="px-5 py-3 text-slate-500">{item.type}</td>
+                <td className="px-5 py-3 text-slate-500">{item.aangewezen ?? '—'}</td>
+                <td className="px-5 py-3 text-right text-slate-500">{item.oppervlakte_ha != null ? item.oppervlakte_ha.toFixed(1) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Source detail workspace ───────────────────────────────── */
+
 function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey: string; gemeenteCode: string; onBack: () => void }) {
   const source = GEMEENTE_DATA_SOURCES.find((s) => s.key === sourceKey)
+
+  // Resolve gemeenteNaam from geojson (hooks need display name, not code)
+  const { data: geojson } = useGemeenteGeoJSON()
+  const gemeenteNaam = useMemo(() => {
+    if (!geojson) return null
+    const feature = geojson.features.find(f => String((f.properties as Record<string, unknown>)?.statcode ?? '') === gemeenteCode)
+    return feature ? String((feature.properties as Record<string, unknown>)?.statnaam ?? gemeenteCode) : gemeenteCode
+  }, [geojson, gemeenteCode])
+
+  // Only call hooks with resolved name (not the code fallback)
+  const resolvedNaam = gemeenteNaam && gemeenteNaam !== gemeenteCode ? gemeenteNaam : null
+
+  const { data: profile, isLoading: profileLoading, error: profileError } = useGemeenteProfile(resolvedNaam)
+  const { data: raadsData, isLoading: raadsLoading, error: raadsError } = useRaadsinformatie(resolvedNaam)
+  const { data: huisvData, isLoading: huisvLoading, error: huisvError } = useHuisvestingsverordening(resolvedNaam)
+  const { data: erfgoedData, isLoading: erfgoedLoading, error: erfgoedError } = useErfgoed(resolvedNaam)
+
+  // Breadcrumb label
+  const breadcrumbLabel = gemeenteNaam ?? gemeenteCode
 
   if (!source) {
     return (
@@ -1271,6 +1563,32 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
 
   const Icon = source.icon
 
+  // Render the source-specific detail content
+  const renderDetail = () => {
+    switch (sourceKey) {
+      case 'vergunning-klimaat':
+        return <VergunningKlimaatDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'jurisprudentie':
+        return <JurisprudentieDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'bekendmakingen':
+        return <BekendmakingenDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'raadsinformatie':
+        return <RaadsinformatieDetail data={raadsData} isLoading={raadsLoading} error={raadsError} />
+      case 'huisvestingsverordening':
+        return <HuisvestingsverordeningDetail data={huisvData} isLoading={huisvLoading} error={huisvError} />
+      case 'beschermd-erfgoed':
+        return <BeschermdErfgoedDetail data={erfgoedData} isLoading={erfgoedLoading} error={erfgoedError} />
+      default:
+        return (
+          <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+            <p className="text-[13px] text-slate-400">
+              Detail view voor deze databron is nog niet beschikbaar.
+            </p>
+          </div>
+        )
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -1282,7 +1600,7 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
         className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
       >
         <ArrowLeft size={14} />
-        Terug naar {gemeenteCode}
+        Terug naar {breadcrumbLabel}
       </motion.button>
 
       {/* Source heading */}
@@ -1299,16 +1617,9 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
         </div>
       </motion.div>
 
-      {/* Placeholder for detail content — T02/T03 will replace this */}
-      <motion.div
-        variants={fadeUp}
-        initial="hidden"
-        animate="show"
-        className="rounded-[20px] border border-[#EAEFEF] bg-white p-8"
-      >
-        <p className="text-[13px] text-slate-400 text-center">
-          Detail content wordt geladen...
-        </p>
+      {/* Source-specific detail content */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        {renderDetail()}
       </motion.div>
     </div>
   )
