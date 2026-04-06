@@ -376,6 +376,7 @@ async def improve_prompts(
 
 @router.delete("/cache/kadaster")
 async def clear_kadaster_cache(
+    current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ):
     """Clear all cached kadaster parcel responses. Forces fresh PDOK lookups."""
@@ -386,5 +387,5 @@ async def clear_kadaster_cache(
     )
     await db.commit()
     count = result.rowcount
-    logger.info("Admin cleared %d kadaster cache entries", count)
+    logger.info("Admin %s cleared %d kadaster cache entries", current_user.email, count)
     return {"deleted": count}
