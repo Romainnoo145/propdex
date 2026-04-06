@@ -87,6 +87,98 @@ class TestParseRdPoint:
         assert result is None
 
 
+class TestAddressesForParcel:
+    """Tests for addresses_for_parcel method."""
+
+    @pytest.fixture(autouse=True)
+    def _patch_infra(self, monkeypatch):
+        """Bypass rate limiter and retry wrapper so plain mock clients work."""
+        import contextlib
+
+        class _NoopLimiter:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                pass
+
+        monkeypatch.setattr(
+            "app.government_apis.pdok_locatieserver.pdok_locatieserver_limiter",
+            _NoopLimiter(),
+        )
+
+        async def _passthrough(fn, **_kw):
+            return await fn()
+
+        monkeypatch.setattr(
+            "app.government_apis.pdok_locatieserver.retry_with_backoff",
+            _passthrough,
+        )
+
+    async def test_success_returns_sorted_addresses(self, pdok_client):
+        docs = [
+            {"straatnaam": "Houtstraat", "huisnummer": 13, "huisletter": None, "toevoeging": None},
+            {"straatnaam": "Houtstraat", "huisnummer": 11, "huisletter": "A", "toevoeging": None},
+            {"straatnaam": "Houtstraat", "huisnummer": 11, "huisletter": None, "toevoeging": None},
+        ]
+        response = make_mock_response(200, {"response": {"docs": docs}})
+        client = make_mock_client(get=response)
+
+        result = await pdok_client.addresses_for_parcel("VLO00", "I", "5870", client)
+        assert result == ["Houtstraat 11", "Houtstraat 11A", "Houtstraat 13"]
+
+    async def test_empty_results(self, pdok_client):
+        response = make_mock_response(200, {"response": {"docs": []}})
+        client = make_mock_client(get=response)
+
+        result = await pdok_client.addresses_for_parcel("VLO00", "I", "9999", client)
+        assert result == []
+
+    async def test_missing_straatnaam_skipped(self, pdok_client):
+        docs = [
+            {"straatnaam": "", "huisnummer": 1},
+            {"straatnaam": "Kerkstraat", "huisnummer": 5},
+        ]
+        response = make_mock_response(200, {"response": {"docs": docs}})
+        client = make_mock_client(get=response)
+
+        result = await pdok_client.addresses_for_parcel("VLO00", "A", "100", client)
+        assert result == ["Kerkstraat 5"]
+
+    async def test_missing_huisnummer_skipped(self, pdok_client):
+        docs = [
+            {"straatnaam": "Kerkstraat", "huisnummer": None},
+            {"straatnaam": "Kerkstraat", "huisnummer": 3},
+        ]
+        response = make_mock_response(200, {"response": {"docs": docs}})
+        client = make_mock_client(get=response)
+
+        result = await pdok_client.addresses_for_parcel("VLO00", "A", "100", client)
+        assert result == ["Kerkstraat 3"]
+
+    async def test_api_error_returns_empty(self, pdok_client):
+        """Network / 5xx errors return [] gracefully."""
+        from unittest.mock import AsyncMock
+
+        client = AsyncMock()
+        client.get.side_effect = Exception("Connection refused")
+
+        result = await pdok_client.addresses_for_parcel("VLO00", "I", "5870", client)
+        assert result == []
+
+    async def test_constructs_correct_perceel_key(self, pdok_client):
+        """Verify the fq parameter uses the correct perceel key format."""
+        response = make_mock_response(200, {"response": {"docs": []}})
+        client = make_mock_client(get=response)
+
+        await pdok_client.addresses_for_parcel("ASD04", "S", "12345", client)
+
+        call_kwargs = client.get.call_args
+        params = call_kwargs[1].get("params") or call_kwargs[0][1]
+        fq = params["fq"]
+        assert "gekoppeld_perceel:ASD04-S-12345" in fq
+
+
 class TestGeocodeAddress:
     async def test_geocode_address_success(self, pdok_client):
         """Mock PDOK /free response, assert returns RD coordinates."""
