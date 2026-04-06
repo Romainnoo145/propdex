@@ -38,11 +38,24 @@ import ResultsShell from '@/components/layout/ResultsShell'
 import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 import { type SubsidieNiveau } from '@/lib/subsidies/curatedSubsidies'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import { useGemeenteProfile, type GemeenteProfile } from '@/hooks/useGemeenteProfile'
+import { useRaadsinformatie, type RaadsinformatieResponse } from '@/hooks/useRaadsinformatie'
+import { useHuisvestingsverordening, type HuisvestingsverordeningResponse } from '@/hooks/useHuisvestingsverordening'
+import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
 import { usePolicyDocuments, useUploadPolicyDocument } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 
 import type { LucideIcon } from 'lucide-react'
+
+/* ─── Gemeente intelligence data shape ──────────────────────── */
+
+interface GemeenteIntelligenceData {
+  profile: { data?: GemeenteProfile; isLoading: boolean; error: Error | null }
+  raadsinformatie: { data?: RaadsinformatieResponse; isLoading: boolean; error: Error | null }
+  huisvestingsverordening: { data?: HuisvestingsverordeningResponse; isLoading: boolean; error: Error | null }
+  erfgoed: { data?: ErfgoedResponse; isLoading: boolean; error: Error | null }
+}
 
 /* ─── Route ─────────────────────────────────────────────────── */
 
@@ -248,9 +261,10 @@ interface DataSourceCardProps {
   source: DataSource
   entityType?: string
   entityCode?: string
+  gemeenteData?: GemeenteIntelligenceData
 }
 
-function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps) {
+function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSourceCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
@@ -496,9 +510,10 @@ interface CategoryTabbedSourcesProps {
   sources: DataSource[]
   entityType?: string
   entityCode?: string
+  gemeenteData?: GemeenteIntelligenceData
 }
 
-function CategoryTabbedSources({ sources, entityType, entityCode }: CategoryTabbedSourcesProps) {
+function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData }: CategoryTabbedSourcesProps) {
   // Only show categories that have sources
   const availableCategories = useMemo(() => {
     const categoriesWithSources = new Set(sources.map((s) => s.category))
@@ -570,7 +585,7 @@ function CategoryTabbedSources({ sources, entityType, entityCode }: CategoryTabb
         >
           {filtered.map((source) => (
             <motion.div key={source.key} variants={fadeUp}>
-              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} />
+              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} gemeenteData={gemeenteData} />
             </motion.div>
           ))}
         </motion.div>
@@ -588,9 +603,10 @@ interface EntityDetailProps {
   svgData: { d: string; viewBox: string } | null
   sources: DataSource[]
   onBack: () => void
+  gemeenteData?: GemeenteIntelligenceData
 }
 
-function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack }: EntityDetailProps) {
+function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack, gemeenteData }: EntityDetailProps) {
   const liveCount = sources.filter((s) => s.status === 'live').length
   const roadmapCount = sources.filter((s) => s.status === 'roadmap').length
 
@@ -630,7 +646,7 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
 
       {/* Category pill tabs + source rows */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
-        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} />
+        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} />
       </motion.div>
     </div>
   )
@@ -660,6 +676,20 @@ function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack
     return geoJsonToSvgPath(geom)
   }, [gemeente])
 
+  // Gemeente intelligence hooks — disabled when name hasn't resolved
+  const resolvedNaam = gemeenteNaam !== gemeenteCode ? gemeenteNaam : null
+  const profileQuery = useGemeenteProfile(resolvedNaam)
+  const raadsinformatieQuery = useRaadsinformatie(resolvedNaam)
+  const huisvestingsverordeningQuery = useHuisvestingsverordening(resolvedNaam)
+  const erfgoedQuery = useErfgoed(resolvedNaam)
+
+  const gemeenteData: GemeenteIntelligenceData = useMemo(() => ({
+    profile: { data: profileQuery.data, isLoading: profileQuery.isLoading, error: profileQuery.error },
+    raadsinformatie: { data: raadsinformatieQuery.data, isLoading: raadsinformatieQuery.isLoading, error: raadsinformatieQuery.error },
+    huisvestingsverordening: { data: huisvestingsverordeningQuery.data, isLoading: huisvestingsverordeningQuery.isLoading, error: huisvestingsverordeningQuery.error },
+    erfgoed: { data: erfgoedQuery.data, isLoading: erfgoedQuery.isLoading, error: erfgoedQuery.error },
+  }), [profileQuery, raadsinformatieQuery, huisvestingsverordeningQuery, erfgoedQuery])
+
   return (
     <EntityDetail
       entityType="Gemeente"
@@ -668,6 +698,7 @@ function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack
       svgData={svgData}
       sources={GEMEENTE_DATA_SOURCES}
       onBack={onBack}
+      gemeenteData={gemeenteData}
     />
   )
 }
