@@ -19,6 +19,7 @@ from app.jobs.jurisprudence_analysis import (
     ruling_analysis_job,
     tegenstander_backfill_job,
 )
+from app.jobs.document_summary import document_summary_job
 from app.jobs.pdf_parsing import pdf_parsing_job
 from app.jobs.rescore_weights import rescore_weights_job
 from app.jobs.ruling_ingestion import ruling_ingestion_job
@@ -51,6 +52,7 @@ class WorkerSettings:
 
     functions = [
         pdf_parsing_job,
+        document_summary_job,
         area_scan_job,
         daily_change_monitor_job,
         funda_snapshot_job,

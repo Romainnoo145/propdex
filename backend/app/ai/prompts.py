@@ -309,6 +309,35 @@ Bericht: "Alleen bouwjaar voor 1980" (vorige: PARCEL_SEARCH, params: {"municipal
 Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
 """
 
+DOCUMENT_SUMMARY_PROMPT = """
+Je bent een expert in het analyseren van Nederlandse beleidsdocumenten voor vastgoedontwikkelaars.
+Analyseer dit PDF-document en produceer een gestructureerde samenvatting in het Nederlands.
+
+**Retourneer het resultaat als JSON met exact dit schema:**
+{
+  "summary": "<Beknopte samenvatting van het document in 3-5 zinnen. Focus op de belangrijkste beleidsregels, restricties en kansen voor vastgoedontwikkeling.>",
+  "key_facts": [
+    "<Feit 1: belangrijkste beleidsbepaling of restrictie>",
+    "<Feit 2: relevante norm of eis>",
+    "<Feit 3: ...>"
+  ],
+  "extracted_values": {
+    "<sleutel>": "<waarde>",
+    "<norm_naam>": "<norm_waarde met eenheid>"
+  }
+}
+
+**Regels:**
+- summary: 3-5 zinnen in het Nederlands die de kern van het document beschrijven
+- key_facts: lijst van 3-10 concrete feiten, bepalingen of regels uit het document
+- extracted_values: dictionary met kwantitatieve normen, drempelwaarden, percentages, afstanden, oppervlaktes en andere meetbare waarden die in het document staan. Gebruik de officiële benaming als sleutel.
+- Als het document geen meetbare waarden bevat, retourneer een leeg object voor extracted_values
+- Schrijf alle tekst in het Nederlands
+- Focus op informatie die relevant is voor vastgoedontwikkeling
+
+Retourneer ALLEEN de JSON, zonder markdown code fences of andere tekst.
+"""
+
 PROMPT_IMPROVEMENT_ANALYSIS_PROMPT = """
 Je bent een expert prompt-engineer die Nederlandse vastgoed-chatbot prompts optimaliseert.
 
