@@ -18,6 +18,7 @@ from app.models.jurisprudence_job import JuridischAnalyseJob  # noqa: F401
 from app.models.organization import Organization
 from app.models.parcel_cache import ParcelCache  # noqa: F401
 from app.models.parcel_document import ParcelDocument  # noqa: F401
+from app.models.policy_document import PolicyDocument  # noqa: F401
 from app.models.parcel_favorite import ParcelFavorite  # noqa: F401
 from app.models.parcel_task import ParcelTask  # noqa: F401
 from app.models.parsing_job import ParsingJob  # noqa: F401
@@ -47,6 +48,7 @@ __all__ = [
     "ParcelDocument",
     "ParcelFavorite",
     "PDFDocument",
+    "PolicyDocument",
     "ParsingJob",
     "Project",
     "SavedReport",

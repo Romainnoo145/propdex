@@ -2,7 +2,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useNavigate } from '@tanstack/react-router'
-import { Map, Bookmark, Scale, PiggyBank, FileText, Settings, LogOut, Search, Shield } from 'lucide-react'
+import { Map, Bookmark, Scale, SlidersHorizontal, FileText, Settings, LogOut, Search, Shield } from 'lucide-react'
 
 interface NavItem {
   icon: React.ReactNode
@@ -32,10 +32,9 @@ export default function SideRailNav() {
       search: { gemeente: undefined, vergunningstype: undefined, uitkomst: undefined, rechtsgrond: undefined, rechtbank_niveau: undefined, periode: undefined, view: undefined } as unknown as Record<string, string>,
     },
     {
-      icon: <PiggyBank size={22} strokeWidth={1.5} />,
-      label: 'Subsidies',
-      to: '/subsidies',
-      search: { sector: undefined, target: undefined } as unknown as Record<string, string>,
+      icon: <SlidersHorizontal size={22} strokeWidth={1.5} />,
+      label: 'Configuratie',
+      to: '/configuratie',
     },
     { icon: <Search size={22} strokeWidth={1.5} />, label: 'Verkenner', to: '/verkenner' },
   ]

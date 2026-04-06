@@ -18,6 +18,7 @@ from starlette.responses import Response as StarletteResponse
 from app.agents.chat_router import router as chat_router
 from app.agents.router import router as agents_router
 from app.api.endpoints.checklist_progress import router as checklist_progress_router
+from app.policy_documents.router import router as policy_documents_router
 from app.api.endpoints.gemeente import router as gemeente_router
 from app.api.endpoints.jurisprudence import router as jurisprudence_router
 from app.auth.router import router as auth_router
@@ -152,6 +153,7 @@ app.include_router(users_router)
 app.include_router(jurisprudence_router)
 app.include_router(gemeente_router)
 app.include_router(checklist_progress_router)
+app.include_router(policy_documents_router)
 app.include_router(agents_router)
 app.include_router(chat_router)
 app.include_router(admin_router)

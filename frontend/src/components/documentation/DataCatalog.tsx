@@ -414,58 +414,63 @@ const VIEWS: ViewTab[] = [
       {
         naam: 'VON-prijs voorspelling',
         beschrijving: 'Wat brengt een woning hier op als je het verkoopt?',
-        uitleg: 'Op basis van historische transactiedata (Kadaster/NVM) een model bouwen dat de verwachte vrij-op-naam prijs per woningtype voorspelt. OPENRED biedt dit al — het helpt om de financiële haalbaarheid van een project te bepalen voordat u koopt.',
+        uitleg: 'Op basis van historische transactiedata (Kadaster/NVM) een model bouwen dat de verwachte vrij-op-naam prijs per woningtype voorspelt. OPENRED biedt dit al — het helpt om de financiële haalbaarheid van een project te bepalen voordat u koopt. Implementatie: backend API-integratie met Kadaster/NVM + predictive model, nieuwe kaartcomponent in WijkDetailView + tile in WijkMapPanel. Automatisch berekend — geen handmatige configuratie nodig.',
         bron: 'Kadaster / NVM (betaald)',
         status: 'roadmap',
         velden: [
           { naam: 'VON-prijs', beschrijving: 'Verwachte verkoopprijs per woningtype en oppervlakte' },
+          { naam: 'Prijsontwikkeling', beschrijving: 'Trend over afgelopen jaren (stijgend/dalend/stabiel)' },
         ],
       },
       {
         naam: 'Latente marktvraag',
         beschrijving: 'Is er vraag naar nieuwe woningen in dit gebied?',
-        uitleg: 'Door CBS-demografie, migratiedata en woningvoorraad te combineren kunnen we berekenen hoeveel woningen er per type (gezinswoning, appartement, seniorenwoning) tekort zijn. Dat voorspelt of uw project goed verkoopbaar is.',
+        uitleg: 'Door CBS-demografie, migratiedata en woningvoorraad te combineren kunnen we berekenen hoeveel woningen er per type (gezinswoning, appartement, seniorenwoning) tekort zijn. Dat voorspelt of uw project goed verkoopbaar is. Implementatie: backend berekening op basis van bestaande CBS data + woningvoorraadcijfers, nieuwe kaartcomponent in WijkDetailView. Automatisch berekend — geen handmatige configuratie nodig.',
         bron: 'CBS + Kadaster',
         status: 'roadmap',
         velden: [
           { naam: 'Vraagmodel', beschrijving: 'Woningbehoefte per type op basis van demografie en migratie' },
+          { naam: 'Tekort per segment', beschrijving: 'Aantal woningen tekort: sociaal, midden, vrije sector' },
         ],
       },
       {
         naam: 'Leefbaarheidsindex',
         beschrijving: 'Hoe prettig is het om hier te wonen?',
-        uitleg: 'Een integrale score die criminaliteit, luchtkwaliteit, geluidsoverlast, groen en sociale cohesie combineert. De Atlas Leefomgeving biedt hiervoor openbare data. Een hoge leefbaarheidsscore = hogere verkoopprijzen.',
+        uitleg: 'Een integrale score die criminaliteit, luchtkwaliteit, geluidsoverlast, groen en sociale cohesie combineert. De Atlas Leefomgeving biedt hiervoor openbare data. Een hoge leefbaarheidsscore = hogere verkoopprijzen. Implementatie: gewogen berekening over bestaande CBS-velden (criminaliteit, voorzieningen) + Atlas Leefomgeving API, getoond als score-kaart in WijkDetailView. Automatisch berekend — geen handmatige configuratie nodig.',
         bron: 'Atlas Leefomgeving + CBS',
         status: 'roadmap',
         velden: [
           { naam: 'Leefbaarheid', beschrijving: 'Gewogen score over veiligheid, milieu en voorzieningen' },
+          { naam: 'Deelscores', beschrijving: 'Score per categorie: veiligheid, voorzieningen, groen, milieu' },
         ],
       },
       {
         naam: 'Transactiecijfers',
         beschrijving: 'Hoeveel woningen worden hier verkocht en tegen welke prijs?',
-        uitleg: 'NVM en Kadaster bieden transactiedata (verkoopprijzen, aantallen, verkooptijden) maar dit zijn betaalde API\'s. Met deze data kunt u de marktdynamiek per wijk analyseren: stijgende of dalende prijzen, verkoopsnelheid, prijsverschillen per woningtype.',
+        uitleg: 'NVM en Kadaster bieden transactiedata (verkoopprijzen, aantallen, verkooptijden) maar dit zijn betaalde API\'s. Met deze data kunt u de marktdynamiek per wijk analyseren: stijgende of dalende prijzen, verkoopsnelheid, prijsverschillen per woningtype. Implementatie: backend API-integratie met NVM/Kadaster, nieuwe kaartcomponent in WijkDetailView + tile in WijkMapPanel. Automatisch opgehaald — geen handmatige configuratie nodig.',
         bron: 'NVM / Kadaster (betaald)',
         status: 'roadmap',
         velden: [
           { naam: 'Transacties', beschrijving: 'Verkoopprijzen, aantallen, verkooptijden per wijk' },
+          { naam: 'Marktdynamiek', beschrijving: 'Stijgend/dalend/stabiel met percentage per kwartaal' },
         ],
       },
       {
         naam: 'Leegstandsmonitor',
         beschrijving: 'Hoeveel panden staan hier leeg?',
-        uitleg: 'Leegstand is een sterke indicator voor transformatiekansen — leegstaande kantoren of winkels zijn potentiële woningbouwlocaties. Er is geen landelijke API; sommige gemeenten publiceren eigen leegstandsmonitoren.',
-        bron: 'Gemeente / CLO',
+        uitleg: 'Leegstand is een sterke indicator voor transformatiekansen — leegstaande kantoren of winkels zijn potentiële woningbouwlocaties. Er is geen landelijke API; sommige gemeenten publiceren eigen leegstandsmonitoren. Implementatie: BAG-statusveld analyse (panden met status "niet in gebruik") + eventueel gemeentelijke open data. Automatisch berekend — geen handmatige configuratie nodig.',
+        bron: 'BAG / Gemeente',
         status: 'roadmap',
         velden: [
           { naam: 'Leegstand', beschrijving: 'Vacaturecijfers per type vastgoed' },
+          { naam: 'Transformatiekansen', beschrijving: 'Leegstaande kantoren/winkels met oppervlakte en bestemming' },
         ],
       },
       // ── Innovatie ──
       {
         naam: 'Klimaatadaptatie',
         beschrijving: 'Hoe kwetsbaar is dit gebied voor hitte en wateroverlast?',
-        uitleg: 'Hittestress, waterbergingsopgave en overstromingsrisico worden steeds relevanter voor vastgoedontwikkeling. De Klimaateffectatlas biedt deze data openbaar. Geen concurrent integreert dit structureel, maar het wordt steeds vaker gevraagd bij vergunningaanvragen en ESG-rapportages.',
+        uitleg: 'Hittestress, waterbergingsopgave en overstromingsrisico worden steeds relevanter voor vastgoedontwikkeling. De Klimaateffectatlas biedt deze data openbaar. Geen concurrent integreert dit structureel, maar het wordt steeds vaker gevraagd bij vergunningaanvragen en ESG-rapportages. Implementatie: Klimaateffectatlas API-integratie, kaartcomponent in WijkDetailView. Automatisch — geen configuratie.',
         bron: 'Klimaateffectatlas',
         bronUrl: 'https://www.klimaateffectatlas.nl',
         status: 'innovatie',
@@ -476,7 +481,7 @@ const VIEWS: ViewTab[] = [
       {
         naam: 'Bereikbaarheid & netcapaciteit',
         beschrijving: 'Is er genoeg stroom en OV voor een nieuw project?',
-        uitleg: 'Netcongestie (vol elektriciteitsnet) blokkeert steeds vaker nieuwbouwprojecten. Door data van netbeheerders (Liander, Enexis) te combineren met OV-bereikbaarheid krijgt u inzicht in de infrastructurele haalbaarheid. Geen concurrent biedt dit.',
+        uitleg: 'Netcongestie (vol elektriciteitsnet) blokkeert steeds vaker nieuwbouwprojecten. Door data van netbeheerders (Liander, Enexis) te combineren met OV-bereikbaarheid krijgt u inzicht in de infrastructurele haalbaarheid. Geen concurrent biedt dit. Implementatie: Liander/Enexis capaciteitskaart API + CROW OV-data, kaartcomponent in WijkDetailView. Automatisch — geen configuratie.',
         bron: 'CROW + Liander/Enexis',
         status: 'innovatie',
         velden: [
@@ -486,7 +491,7 @@ const VIEWS: ViewTab[] = [
       {
         naam: 'Verkeers- & parkeerdruk',
         beschrijving: 'Is er ruimte voor extra auto\'s en verkeer?',
-        uitleg: 'Extra woningen = extra auto\'s en verkeer. Door CROW-normen en CBS autobezitdata te combineren berekenen we de parkeerdruk per wijk. Dit is relevant voor parkeernormen bij vergunningaanvragen.',
+        uitleg: 'Extra woningen = extra auto\'s en verkeer. Door CROW-normen en CBS autobezitdata te combineren berekenen we de parkeerdruk per wijk. Dit is relevant voor parkeernormen bij vergunningaanvragen. Implementatie: berekening op CBS autobezit + CROW-normen, kaartcomponent in WijkDetailView. Automatisch — geen configuratie.',
         bron: 'CROW + CBS',
         status: 'innovatie',
         velden: [
@@ -658,83 +663,91 @@ const VIEWS: ViewTab[] = [
       {
         naam: 'Programmamix-tool',
         beschrijving: 'Welke mix van woningen levert het meeste op?',
-        uitleg: 'Per perceel meerdere scenario\'s doorrekenen: hoeveel appartementen, hoeveel rijwoningen, hoeveel zorgwoningen? Wat zijn de bouwkosten per variant en wat is de verwachte opbrengst? OPENRED biedt dit al. Vereist VON-prijsdata en bouwkostendata.',
+        uitleg: 'Per perceel meerdere scenario\'s doorrekenen: hoeveel appartementen, hoeveel rijwoningen, hoeveel zorgwoningen? Wat zijn de bouwkosten per variant en wat is de verwachte opbrengst? OPENRED biedt dit al. Vereist VON-prijsdata en bouwkostendata. Implementatie: backend rekentool die bestemmingsplan-capaciteit combineert met marktdata (VON-prijzen, bouwkosten), interactieve frontend tool in het perceelrapport waar de gebruiker scenario\'s kan vergelijken. Automatisch berekend op basis van perceeldata — geen handmatige configuratie.',
         bron: 'Propdex + marktdata',
         status: 'roadmap',
         velden: [
           { naam: 'Scenario\'s', beschrijving: 'Woningtypen, aantallen, kosten en opbrengsten per variant' },
+          { naam: 'Optimale mix', beschrijving: 'Aanbevolen programmering op basis van markt en bestemmingsplan' },
         ],
       },
       {
         naam: 'WWS Huurpunten',
         beschrijving: 'Hoeveel huur mag u vragen volgens het puntensysteem?',
-        uitleg: 'Het Woningwaarderingstelsel (WWS) bepaalt de maximale huurprijs voor sociale en middenhuur. Door automatisch de punten te berekenen op basis van oppervlakte, energielabel, WOZ-waarde en voorzieningen weet u direct of een woning in het vrije of gereguleerde segment valt.',
+        uitleg: 'Het Woningwaarderingstelsel (WWS) bepaalt de maximale huurprijs voor sociale en middenhuur. Door automatisch de punten te berekenen op basis van oppervlakte, energielabel, WOZ-waarde en voorzieningen weet u direct of een woning in het vrije of gereguleerde segment valt. Implementatie: deterministische berekening in backend op basis van al beschikbare perceeldata (oppervlakte uit BAG, energielabel uit EP-Online, WOZ uit waardeloket), nieuwe sectie in het perceelrapport. Volledig automatisch — geen configuratie nodig.',
         bron: 'WWS puntentabel',
         status: 'roadmap',
         velden: [
           { naam: 'WWS-punten', beschrijving: 'Puntentotaal en maximale huurprijs' },
+          { naam: 'Segment', beschrijving: 'Sociaal, middenhuur of vrije sector op basis van puntentotaal' },
         ],
       },
       {
         naam: 'Rendementscalculator',
         beschrijving: 'Wat levert deze investering netto op?',
-        uitleg: 'Bruto- en netto-rendement berekenen op basis van aankoopprijs, verwachte huur, financieringsvorm (Box 1/Box 3/BV), belastingen en kosten. Inclusief terugverdientijd. Vergelijkbare tools bestaan al voor particuliere beleggers (bijv. RendementTool), maar geïntegreerd met onze data wordt het veel krachtiger.',
+        uitleg: 'Bruto- en netto-rendement berekenen op basis van aankoopprijs, verwachte huur, financieringsvorm (Box 1/Box 3/BV), belastingen en kosten. Inclusief terugverdientijd. Vergelijkbare tools bestaan al voor particuliere beleggers (bijv. RendementTool), maar geïntegreerd met onze data wordt het veel krachtiger. Implementatie: backend berekening met deels automatische input (WOZ, WWS-punten, energielabel) en deels gebruikersinvoer (aankoopprijs, financiering), interactieve calculator in het perceelrapport. Semi-automatisch — basisberekening automatisch, fine-tuning door gebruiker.',
         bron: 'Eigen berekening',
         status: 'roadmap',
         velden: [
           { naam: 'Rendement', beschrijving: 'Bruto/netto rendement, belasting, terugverdientijd' },
+          { naam: 'Scenario vergelijking', beschrijving: 'Koop+verhuur vs koop+verkoop vs transformatie' },
         ],
       },
       {
         naam: 'Kostencalculator',
         beschrijving: 'Wat kost het om dit project te realiseren?',
-        uitleg: 'Alle kosten op een rij: aankoopprijs, overdrachtsbelasting (10,4% / 2%), notariskosten, bouwkosten (regionaal), financieringskosten, onderhoud, verzekering. Vergelijkbaar met wat u in de meegeleverde voorbeeldanalyse ziet maar dan automatisch ingevuld met actuele data.',
+        uitleg: 'Alle kosten op een rij: aankoopprijs, overdrachtsbelasting (10,4% / 2%), notariskosten, bouwkosten (regionaal), financieringskosten, onderhoud, verzekering. Vergelijkbaar met wat u in de meegeleverde voorbeeldanalyse ziet maar dan automatisch ingevuld met actuele data. Implementatie: backend berekening met regionale bouwkostendata (BDB) + perceelspecifieke inputs (oppervlakte, bouwlagen, bestemming), nieuwe sectie in perceelrapport. Automatisch voorgevuld — gebruiker kan parameters aanpassen.',
         bron: 'Regionale bouwkostendata',
         status: 'roadmap',
         velden: [
           { naam: 'Kostenposten', beschrijving: 'Alle kosten van aankoop tot oplevering' },
+          { naam: 'Regionale bouwkosten', beschrijving: 'Bouwkosten per m² op basis van regio en woningtype' },
         ],
       },
       // ── Innovatie ──
       {
         naam: 'Energienet-capaciteit',
         beschrijving: 'Kan dit project worden aangesloten op het stroomnet?',
-        uitleg: 'Netcongestie blokkeert steeds vaker nieuwbouwprojecten — het stroomnet zit vol. Door data van Liander/Enexis te integreren kunt u vóór aankoop checken of er capaciteit is. Geen concurrent biedt dit.',
+        uitleg: 'Netcongestie blokkeert steeds vaker nieuwbouwprojecten — het stroomnet zit vol. Door data van Liander/Enexis te integreren kunt u vóór aankoop checken of er capaciteit is. Geen concurrent biedt dit. Implementatie: backend API-integratie met netbeheerder capaciteitskaarten (Liander, Enexis, Stedin publiceren open data), nieuwe sectie in perceelrapport met kaartvisualisatie. Automatisch op basis van locatie — geen configuratie.',
         bron: 'Liander / Enexis',
         status: 'innovatie',
         velden: [
           { naam: 'Netcapaciteit', beschrijving: 'Beschikbare capaciteit en wachtlijst' },
+          { naam: 'Netbeheerder', beschrijving: 'Welke netbeheerder en welk station' },
         ],
       },
       {
         naam: 'CO₂-footprint',
         beschrijving: 'Wat is de milieu-impact van dit gebouw?',
-        uitleg: 'Embodied carbon (CO₂ in bouwmaterialen) en operationele CO₂-uitstoot berekenen. Steeds relevanter voor ESG-rapportages en duurzame financiering. De Nationale Milieudatabase (NMD) biedt referentiedata.',
+        uitleg: 'Embodied carbon (CO₂ in bouwmaterialen) en operationele CO₂-uitstoot berekenen. Steeds relevanter voor ESG-rapportages en duurzame financiering. De Nationale Milieudatabase (NMD) biedt referentiedata. Implementatie: backend berekening op basis van bouwjaar, oppervlakte, energielabel + NMD referentiewaarden, nieuwe sectie in perceelrapport. Automatisch berekend — geen configuratie.',
         bron: 'NMD + eigen berekening',
         status: 'innovatie',
         velden: [
           { naam: 'Carbon footprint', beschrijving: 'CO₂-emissie bestaand vs na renovatie/nieuwbouw' },
+          { naam: 'MPG-score', beschrijving: 'Milieuprestatie Gebouwen indicatie' },
         ],
       },
       {
         naam: 'Stikstofdepositie (AERIUS)',
         beschrijving: 'Veroorzaakt dit project stikstofdepositie op Natura2000?',
-        uitleg: 'Bouw- en gebruiksactiviteiten veroorzaken stikstofuitstoot. Als er een Natura2000-gebied in de buurt is, kan dit uw vergunning blokkeren. AERIUS is de officiële rekentool van de overheid. Integratie voorkomt verrassingen laat in het vergunningstraject.',
+        uitleg: 'Bouw- en gebruiksactiviteiten veroorzaken stikstofuitstoot. Als er een Natura2000-gebied in de buurt is, kan dit uw vergunning blokkeren. AERIUS is de officiële rekentool van de overheid. Integratie voorkomt verrassingen laat in het vergunningstraject. Implementatie: AERIUS Connect API-integratie op basis van perceellocatie + bouwomvang, nieuwe sectie in perceelrapport + waarschuwing in checklist. Automatisch berekend — geen configuratie.',
         bron: 'AERIUS',
         bronUrl: 'https://www.aerius.nl',
         status: 'innovatie',
         velden: [
           { naam: 'Depositie', beschrijving: 'Stikstofberekening voor bouw- en gebruiksfase' },
+          { naam: 'Natura2000 impact', beschrijving: 'Welke gebieden geraakt en overschrijding ja/nee' },
         ],
       },
       {
         naam: 'Verduurzaming modellering',
         beschrijving: 'Wat kost verduurzaming en wat levert het op?',
-        uitleg: 'Per gebouw berekenen welke verduurzamingsmaatregelen (isolatie, zonnepanelen, warmtepomp) zinvol zijn, wat ze kosten, hoeveel energie ze besparen, en welke subsidies beschikbaar zijn. Milieu Centraal en RVO bieden referentiedata.',
+        uitleg: 'Per gebouw berekenen welke verduurzamingsmaatregelen (isolatie, zonnepanelen, warmtepomp) zinvol zijn, wat ze kosten, hoeveel energie ze besparen, en welke subsidies beschikbaar zijn. Milieu Centraal en RVO bieden referentiedata. Implementatie: backend berekening op basis van bouwjaar, energielabel, oppervlakte + Milieu Centraal referentiewaarden + RVO subsidie-API, interactieve tool in perceelrapport. Automatisch voorgevuld — gebruiker kan maatregelen aan/uitzetten.',
         bron: 'Milieu Centraal + RVO',
         status: 'innovatie',
         velden: [
           { naam: 'Maatregelen', beschrijving: 'Kosten, besparing, terugverdientijd per maatregel + subsidies' },
+          { naam: 'Labelsprong', beschrijving: 'Verwacht energielabel na maatregelen' },
         ],
       },
     ],

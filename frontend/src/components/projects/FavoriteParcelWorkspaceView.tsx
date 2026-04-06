@@ -51,6 +51,7 @@ import {
   Phone,
   Copy,
   ExternalLink,
+  Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
@@ -917,6 +918,7 @@ function DropzoneCard({
   onFileDrop,
   onDelete,
   onDownload,
+  onView,
 }: {
   card: DossierCard
   uploadingKey: string | null
@@ -924,6 +926,7 @@ function DropzoneCard({
   onFileDrop: (cardKey: string, file: File) => void
   onDelete: (documentId: string) => void
   onDownload: (documentId: string, filename: string) => void
+  onView: (documentId: string) => void
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const isUploading = uploadingKey === card.key
@@ -986,6 +989,17 @@ function DropzoneCard({
               title={document.filename}
             >
               {document.filename}
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onView(document.id)
+              }}
+              className={`shrink-0 transition-colors hover:text-amber-400 ${isDark ? 'text-white/30' : 'text-slate-400'}`}
+              title="Bekijken"
+            >
+              <Eye className="size-3" />
             </button>
             <button
               type="button"
@@ -1501,6 +1515,30 @@ export function FavoriteParcelWorkspaceView({
     [accessToken, favorite.parcel_id],
   )
 
+  const handleView = useCallback(
+    async (documentId: string) => {
+      try {
+        const headers: HeadersInit = {}
+        if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+
+        const response = await fetch(getDocumentDownloadUrl(favorite.parcel_id, documentId), {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        })
+
+        if (!response.ok) throw new Error('Bekijken mislukt')
+
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        window.open(blobUrl, '_blank')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Bekijken mislukt')
+      }
+    },
+    [accessToken, favorite.parcel_id],
+  )
+
   return (
     <div className="pb-8">
       <input
@@ -1795,6 +1833,7 @@ export function FavoriteParcelWorkspaceView({
                     onFileDrop={handleFileDrop}
                     onDelete={(documentId) => void handleDelete(documentId)}
                     onDownload={handleDownload}
+                    onView={handleView}
                   />
                 ))}
               </motion.div>

@@ -14,7 +14,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google-callback'
 import { Route as AuthenticatedVerkennerRouteImport } from './routes/_authenticated/verkenner'
-import { Route as AuthenticatedSubsidiesRouteImport } from './routes/_authenticated/subsidies'
 import { Route as AuthenticatedResultatenRouteImport } from './routes/_authenticated/resultaten'
 import { Route as AuthenticatedRapportenRouteImport } from './routes/_authenticated/rapporten'
 import { Route as AuthenticatedProjectenRouteImport } from './routes/_authenticated/projecten'
@@ -25,6 +24,7 @@ import { Route as AuthenticatedJurisprudentieRouteImport } from './routes/_authe
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedDocumentatieRouteImport } from './routes/_authenticated/documentatie'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedConfiguratieRouteImport } from './routes/_authenticated/configuratie'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
@@ -53,11 +53,6 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 const AuthenticatedVerkennerRoute = AuthenticatedVerkennerRouteImport.update({
   id: '/verkenner',
   path: '/verkenner',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedSubsidiesRoute = AuthenticatedSubsidiesRouteImport.update({
-  id: '/subsidies',
-  path: '/subsidies',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedResultatenRoute = AuthenticatedResultatenRouteImport.update({
@@ -113,6 +108,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedConfiguratieRoute =
+  AuthenticatedConfiguratieRouteImport.update({
+    id: '/configuratie',
+    path: '/configuratie',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -145,6 +146,7 @@ const AuthenticatedChecklistIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/configuratie': typeof AuthenticatedConfiguratieRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
@@ -155,7 +157,6 @@ export interface FileRoutesByFullPath {
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
-  '/subsidies': typeof AuthenticatedSubsidiesRoute
   '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
@@ -167,6 +168,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/configuratie': typeof AuthenticatedConfiguratieRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentatie': typeof AuthenticatedDocumentatieRoute
   '/jurisprudentie': typeof AuthenticatedJurisprudentieRoute
@@ -176,7 +178,6 @@ export interface FileRoutesByTo {
   '/projecten': typeof AuthenticatedProjectenRoute
   '/rapporten': typeof AuthenticatedRapportenRoute
   '/resultaten': typeof AuthenticatedResultatenRoute
-  '/subsidies': typeof AuthenticatedSubsidiesRoute
   '/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
@@ -190,6 +191,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/configuratie': typeof AuthenticatedConfiguratieRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/documentatie': typeof AuthenticatedDocumentatieRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRouteWithChildren
@@ -200,7 +202,6 @@ export interface FileRoutesById {
   '/_authenticated/projecten': typeof AuthenticatedProjectenRoute
   '/_authenticated/rapporten': typeof AuthenticatedRapportenRoute
   '/_authenticated/resultaten': typeof AuthenticatedResultatenRoute
-  '/_authenticated/subsidies': typeof AuthenticatedSubsidiesRoute
   '/_authenticated/verkenner': typeof AuthenticatedVerkennerRoute
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
@@ -214,6 +215,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/configuratie'
     | '/dashboard'
     | '/documentatie'
     | '/instellingen'
@@ -224,7 +226,6 @@ export interface FileRouteTypes {
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
-    | '/subsidies'
     | '/verkenner'
     | '/auth/google-callback'
     | '/auth/'
@@ -236,6 +237,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/configuratie'
     | '/dashboard'
     | '/documentatie'
     | '/jurisprudentie'
@@ -245,7 +247,6 @@ export interface FileRouteTypes {
     | '/projecten'
     | '/rapporten'
     | '/resultaten'
-    | '/subsidies'
     | '/verkenner'
     | '/auth/google-callback'
     | '/auth'
@@ -258,6 +259,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/admin'
+    | '/_authenticated/configuratie'
     | '/_authenticated/dashboard'
     | '/_authenticated/documentatie'
     | '/_authenticated/instellingen'
@@ -268,7 +270,6 @@ export interface FileRouteTypes {
     | '/_authenticated/projecten'
     | '/_authenticated/rapporten'
     | '/_authenticated/resultaten'
-    | '/_authenticated/subsidies'
     | '/_authenticated/verkenner'
     | '/auth/google-callback'
     | '/auth/'
@@ -320,13 +321,6 @@ declare module '@tanstack/react-router' {
       path: '/verkenner'
       fullPath: '/verkenner'
       preLoaderRoute: typeof AuthenticatedVerkennerRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/subsidies': {
-      id: '/_authenticated/subsidies'
-      path: '/subsidies'
-      fullPath: '/subsidies'
-      preLoaderRoute: typeof AuthenticatedSubsidiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/resultaten': {
@@ -399,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/configuratie': {
+      id: '/_authenticated/configuratie'
+      path: '/configuratie'
+      fullPath: '/configuratie'
+      preLoaderRoute: typeof AuthenticatedConfiguratieRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -455,6 +456,7 @@ const AuthenticatedInstellingenRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedConfiguratieRoute: typeof AuthenticatedConfiguratieRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDocumentatieRoute: typeof AuthenticatedDocumentatieRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRouteWithChildren
@@ -465,7 +467,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProjectenRoute: typeof AuthenticatedProjectenRoute
   AuthenticatedRapportenRoute: typeof AuthenticatedRapportenRoute
   AuthenticatedResultatenRoute: typeof AuthenticatedResultatenRoute
-  AuthenticatedSubsidiesRoute: typeof AuthenticatedSubsidiesRoute
   AuthenticatedVerkennerRoute: typeof AuthenticatedVerkennerRoute
   AuthenticatedChecklistIdRoute: typeof AuthenticatedChecklistIdRoute
   AuthenticatedRapportIdRoute: typeof AuthenticatedRapportIdRoute
@@ -473,6 +474,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedConfiguratieRoute: AuthenticatedConfiguratieRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDocumentatieRoute: AuthenticatedDocumentatieRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRouteWithChildren,
@@ -483,7 +485,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProjectenRoute: AuthenticatedProjectenRoute,
   AuthenticatedRapportenRoute: AuthenticatedRapportenRoute,
   AuthenticatedResultatenRoute: AuthenticatedResultatenRoute,
-  AuthenticatedSubsidiesRoute: AuthenticatedSubsidiesRoute,
   AuthenticatedVerkennerRoute: AuthenticatedVerkennerRoute,
   AuthenticatedChecklistIdRoute: AuthenticatedChecklistIdRoute,
   AuthenticatedRapportIdRoute: AuthenticatedRapportIdRoute,
