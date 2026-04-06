@@ -55,7 +55,8 @@ export function useParcelFavorites() {
         method: 'GET',
         accessToken,
       }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
     enabled: !!accessToken,
   })
 }
