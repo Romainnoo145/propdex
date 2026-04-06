@@ -866,9 +866,13 @@ async def aggregate_property_data(
                 if gemeente and sectie and perceelnummer is not None:
                     kadastrale_aanduiding = f"{gemeente} {sectie} {perceelnummer}"
 
+                # AKR gemeente code (e.g. "VLO00") used for PDOK gekoppeld_perceel lookup
+                akr_gemeente = props.get("akr_kadastrale_gemeente_code_waarde", "")
+
                 parcel = CadastralParcel(
                     identificatie=props.get("identificatie"),
                     kadastrale_aanduiding=kadastrale_aanduiding,
+                    kadastrale_gemeente=akr_gemeente or gemeente or None,
                     perceelnummer=perceelnr_str,
                     sectie=sectie,
                     oppervlakte=props.get("kadastrale_grootte_waarde"),
@@ -1158,6 +1162,24 @@ async def aggregate_property_data(
     # NOTE: Never cache BRK data (Kadaster Tier 3). fetch_brk_ownership() always returns,
     # never raises, and never logs BRK response payloads.
     brk_ownership = await fetch_brk_ownership(cadastral_parcels)
+
+    # STEP 2c: Fetch all BAG addresses on the primary parcel
+    all_addresses: list[str] = []
+    if cadastral_parcels:
+        primary = cadastral_parcels[0]
+        if primary.kadastrale_gemeente and primary.sectie and primary.perceelnummer:
+            try:
+                from app.government_apis.pdok_locatieserver import PDOKLocatieserver
+
+                _locatieserver = PDOKLocatieserver()
+                all_addresses = await _locatieserver.addresses_for_parcel(
+                    kadastrale_gemeente=primary.kadastrale_gemeente,
+                    sectie=primary.sectie,
+                    perceelnummer=primary.perceelnummer,
+                    client=client,
+                )
+            except Exception as e:
+                logger.debug("Failed to fetch parcel addresses: %s", e)
 
     # STEP 3: Cache-only AI bestemmingsplan lookup (no auto-trigger)
     ai_parsing_section: AIParsingSection | None = None
@@ -1503,4 +1525,5 @@ async def aggregate_property_data(
         soil_profile=soil_profile,
         funderingsrisicogebied=funderingsrisicogebied,
         fysiek_risico_profiel=fysiek_risico_profiel,
+        all_addresses=all_addresses,
     )

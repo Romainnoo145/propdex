@@ -28,6 +28,10 @@ class CadastralParcel(BaseModel):
         default=None,
         description="Full cadastral designation (e.g., 'ASD04 S 12345')",
     )
+    kadastrale_gemeente: str | None = Field(
+        default=None,
+        description="Kadastrale gemeente code (e.g., 'VLO00') — used to construct PDOK gekoppeld_perceel key",
+    )
     perceelnummer: str | None = Field(
         default=None,
         description="Parcel number within section",
@@ -612,6 +616,10 @@ class PropertyReportResponse(BaseModel):
     luchtkwaliteit_flags: dict | None = Field(
         default=None,
         description="NO2/PM10 indicators from scan flags",
+    )
+    all_addresses: list[str] = Field(
+        default_factory=list,
+        description="All BAG addresses on the same parcel, sorted by huisnummer (e.g., ['Houtstraat 11A', 'Houtstraat 13']). Empty if lookup failed.",
     )
     scores_v3: dict | None = Field(
         default=None,

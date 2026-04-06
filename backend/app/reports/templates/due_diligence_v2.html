@@ -546,7 +546,20 @@
     <div class="cover-label">Propdex — Property Intelligence</div>
     <div class="cover-title">Locatie Due<br>Diligence Dossier</div>
 
-    {% if report_data.address %}
+    {% if report_data.get('all_addresses') and report_data.all_addresses|length > 1 %}
+      <div class="cover-address">
+        {% set addrs = report_data.all_addresses %}
+        {% if addrs|length <= 5 %}
+          {{ addrs | join(', ') }}
+        {% else %}
+          {{ addrs[:5] | join(', ') }} +{{ addrs|length - 5 }} meer
+        {% endif %}
+      </div>
+      <div class="cover-address-sub">
+        {{ report_data.address.get('postcode', '') }}
+        {{ report_data.address.get('woonplaats', '') }}{% if report_data.address.get('gemeente') %} — {{ report_data.address.get('gemeente') }}{% endif %}
+      </div>
+    {% elif report_data.address %}
       <div class="cover-address">
         {{ report_data.address.get('straat', report_data.address.get('straatnaam', '')) }}
         {{ report_data.address.get('huisnummer', '') }}{% if report_data.address.get('huisletter') %}{{ report_data.address.get('huisletter') }}{% endif %}{% if report_data.address.get('toevoeging') %} {{ report_data.address.get('toevoeging') }}{% endif %}

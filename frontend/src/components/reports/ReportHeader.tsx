@@ -8,6 +8,65 @@ import { motion } from 'framer-motion'
 import { useNavigate } from '@tanstack/react-router'
 import type { PropertyReportResponse } from '@/lib/types/property'
 
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+/**
+ * Format multiple addresses into a compact title.
+ * Same street: "Houtstraat 11A, 13, 15"
+ * Mixed streets: "Houtstraat 11A, 13 · Kerkstraat 1"
+ * Truncates at 5 addresses with "+N meer" suffix.
+ */
+function formatMultiAddressTitle(addresses: string[]): string {
+  if (addresses.length === 0) return ''
+  if (addresses.length === 1) return addresses[0]
+
+  // Group by street name
+  const groups = new Map<string, string[]>()
+  for (const addr of addresses) {
+    const spaceIdx = addr.lastIndexOf(' ')
+    if (spaceIdx === -1) {
+      groups.set(addr, [...(groups.get(addr) ?? []), ''])
+      continue
+    }
+    // Find the split between street name and number
+    // Match from the end: last space before a digit
+    const match = addr.match(/^(.+?)\s+(\d+.*)$/)
+    if (match) {
+      const [, street, nr] = match
+      const existing = groups.get(street) ?? []
+      existing.push(nr)
+      groups.set(street, existing)
+    } else {
+      groups.set(addr, [...(groups.get(addr) ?? []), ''])
+    }
+  }
+
+  const parts: string[] = []
+  let count = 0
+  const MAX_DISPLAY = 5
+
+  for (const [street, numbers] of groups) {
+    const remaining = MAX_DISPLAY - count
+    if (remaining <= 0) break
+
+    if (numbers.length === 0 || (numbers.length === 1 && numbers[0] === '')) {
+      parts.push(street)
+      count++
+    } else {
+      const displayNrs = numbers.slice(0, remaining)
+      count += displayNrs.length
+      parts.push(`${street} ${displayNrs.join(', ')}`)
+    }
+  }
+
+  const totalCount = addresses.length
+  const result = parts.join(' · ')
+  if (count < totalCount) {
+    return `${result} +${totalCount - count} meer`
+  }
+  return result
+}
+
 /* ─── Props ─────────────────────────────────────────────────── */
 
 interface ReportHeaderProps {
@@ -36,7 +95,7 @@ export default function ReportHeader({
   isRefreshing,
 }: ReportHeaderProps) {
   const navigate = useNavigate()
-  const { address, cadastral_parcels } = data
+  const { address, cadastral_parcels, all_addresses } = data
 
   // Scores
   const scores = data.scores_v3 as Record<string, unknown> | null | undefined
@@ -48,7 +107,7 @@ export default function ReportHeader({
 
   // Kadaster info
   const primaryPerceelId = cadastral_parcels[0]?.kadastrale_aanduiding ?? null
-  const gemeente = cadastral_parcels[0]?.kadastrale_gemeente ?? address.woonplaats ?? null
+  const gemeente = address.woonplaats ?? null
   const postcode = address.postcode ?? null
 
   return (
@@ -80,8 +139,9 @@ export default function ReportHeader({
 
             <div className="min-w-0 max-w-full">
               <h1 className="text-[28px] font-bold leading-tight tracking-tighter text-slate-900">
-                {address.straat} {address.huisnummer}
-                {address.huisletter ?? ''}{address.toevoeging ?? ''}
+                {all_addresses && all_addresses.length > 1
+                  ? formatMultiAddressTitle(all_addresses)
+                  : `${address.straat} ${address.huisnummer}${address.huisletter ?? ''}${address.toevoeging ?? ''}`}
               </h1>
 
               {/* Subtitle + score badges */}

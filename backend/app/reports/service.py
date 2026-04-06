@@ -25,6 +25,59 @@ from app.services.property_aggregator import aggregate_property_data, fetch_brk_
 logger = logging.getLogger(__name__)
 
 
+def _format_multi_address_title(addresses: list[str], city: str) -> str:
+    """Format multiple parcel addresses into a compact report title.
+
+    Same street: "Houtstraat 11A, 13, 15, Venlo"
+    Mixed streets: "Houtstraat 11A, 13 · Kerkstraat 1, Venlo"
+    Truncates at 5 addresses with "+N meer" suffix.
+    """
+    if not addresses:
+        return ""
+    if len(addresses) == 1:
+        return f"{addresses[0]}, {city}" if city else addresses[0]
+
+    import re as _re
+
+    groups: dict[str, list[str]] = {}
+    group_order: list[str] = []
+    for addr in addresses:
+        m = _re.match(r"^(.+?)\s+(\d+.*)$", addr)
+        if m:
+            street, nr = m.group(1), m.group(2)
+            if street not in groups:
+                groups[street] = []
+                group_order.append(street)
+            groups[street].append(nr)
+        else:
+            if addr not in groups:
+                groups[addr] = []
+                group_order.append(addr)
+
+    max_display = 5
+    count = 0
+    parts: list[str] = []
+    for street in group_order:
+        remaining = max_display - count
+        if remaining <= 0:
+            break
+        numbers = groups[street]
+        if not numbers:
+            parts.append(street)
+            count += 1
+        else:
+            display_nrs = numbers[:remaining]
+            count += len(display_nrs)
+            parts.append(f"{street} {', '.join(display_nrs)}")
+
+    result = " · ".join(parts)
+    if count < len(addresses):
+        result = f"{result} +{len(addresses) - count} meer"
+    if city:
+        result = f"{result}, {city}"
+    return result
+
+
 def active_reports_query(user_id: uuid.UUID):
     """
     Base query for active (non-deleted) reports filtered by user_id.
@@ -386,9 +439,13 @@ async def save_report(
     except Exception as e:
         raise ValueError(f"Invalid report_data: {e}") from e
 
-    # Generate report_name from address
+    # Generate report_name from address (use all_addresses if available)
     address_data = report_data["address"]
-    report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
+    all_addrs = report_data.get("all_addresses") or []
+    if len(all_addrs) > 1:
+        report_name = _format_multi_address_title(all_addrs, address_data.get("woonplaats", ""))
+    else:
+        report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
 
     # Extract denormalized fields
     postcode = address_data["postcode"]
@@ -843,8 +900,12 @@ async def update_report_data(
     report.postcode = address_data["postcode"]
     report.city = address_data["woonplaats"]
 
-    # Update report_name
-    report.report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
+    # Update report_name (use all_addresses if available)
+    refresh_all_addrs = fresh_data.get("all_addresses") or []
+    if len(refresh_all_addrs) > 1:
+        report.report_name = _format_multi_address_title(refresh_all_addrs, address_data.get("woonplaats", ""))
+    else:
+        report.report_name = f"{address_data.get('straat', address_data.get('straatnaam', 'Onbekend'))} {address_data['huisnummer']}, {address_data['woonplaats']}"
 
     # Update timestamp
     report.updated_at = datetime.utcnow()

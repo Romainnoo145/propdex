@@ -64,6 +64,7 @@ export interface BuildingData {
  */
 export interface CadastralParcel {
   kadastrale_aanduiding: string | null
+  kadastrale_gemeente: string | null
   perceelnummer: string | null
   sectie: string | null
   oppervlakte: number | null
@@ -555,4 +556,7 @@ export interface PropertyReportResponse {
   scores_v3?: Record<string, unknown> | null
   score_breakdown_v3?: Record<string, unknown> | null
   score_model_version?: string | null
+
+  // M036: All BAG addresses on the same parcel
+  all_addresses?: string[]
 }

@@ -201,6 +201,82 @@ class PDOKLocatieserver:
 
         return None
 
+    async def addresses_for_parcel(
+        self,
+        kadastrale_gemeente: str,
+        sectie: str,
+        perceelnummer: str,
+        client: httpx.AsyncClient,
+    ) -> list[str]:
+        """Fetch all BAG addresses on a cadastral parcel via PDOK Locatieserver.
+
+        Uses the /free endpoint with fq=gekoppeld_perceel filter.
+        The gekoppeld_perceel key format is "{gemeente}-{sectie}-{perceelnummer}",
+        e.g. "VLO00-I-5870".
+
+        Args:
+            kadastrale_gemeente: Kadastrale gemeente code (e.g. "VLO00")
+            sectie: Cadastral section code (e.g. "I")
+            perceelnummer: Parcel number within section (e.g. "5870")
+            client: Shared httpx AsyncClient
+
+        Returns:
+            Sorted list of display addresses (e.g. ["Houtstraat 11A", "Houtstraat 13"]).
+            Returns empty list on failure.
+        """
+        perceel_key = f"{kadastrale_gemeente}-{sectie}-{perceelnummer}"
+        url = f"{self.BASE_URL}/free"
+        params = {
+            "q": "*",
+            "fq": [f"gekoppeld_perceel:{perceel_key}", "type:adres"],
+            "fl": "weergavenaam,huisnummer,huisletter,toevoeging,straatnaam",
+            "rows": 50,
+        }
+
+        try:
+            async with pdok_locatieserver_limiter:
+                response = await retry_with_backoff(
+                    lambda p=params: client.get(url, params=p),
+                    source="pdok",
+                )
+            data = handle_api_response(response, source="pdok")
+            docs = data.get("response", {}).get("docs", [])
+
+            if not docs:
+                logger.debug("No addresses found for parcel %s", perceel_key)
+                return []
+
+            # Build short display labels: "Straat Nr[Letter][Toevoeging]"
+            addresses: list[tuple[int, str, str]] = []
+            for doc in docs:
+                straat = doc.get("straatnaam", "")
+                nr = doc.get("huisnummer")
+                if not straat or nr is None:
+                    continue
+                letter = doc.get("huisletter", "") or ""
+                toev = doc.get("toevoeging", "") or ""
+                suffix = f"{letter}{toev}"
+                label = f"{straat} {nr}{suffix}"
+                addresses.append((nr, suffix, label))
+
+            # Sort by huisnummer, then suffix
+            addresses.sort(key=lambda t: (t[0], t[1]))
+            result = [a[2] for a in addresses]
+
+            logger.debug(
+                "Found %d addresses on parcel %s: %s",
+                len(result),
+                perceel_key,
+                result,
+            )
+            return result
+
+        except Exception as e:
+            logger.debug(
+                "Failed to fetch addresses for parcel %s: %s", perceel_key, e
+            )
+            return []
+
     async def geocode_address(
         self,
         street: str,
