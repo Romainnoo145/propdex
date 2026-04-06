@@ -1237,13 +1237,25 @@ async def _lookup_addresses_on_parcel(
         if not akr or not sectie or perceelnummer is None:
             return []
 
-        addresses = await locatieserver.addresses_for_parcel(
-            kadastrale_gemeente=akr,
-            sectie=sectie,
-            perceelnummer=str(perceelnummer),
-            client=http_client,
-        )
-        return addresses
+        # Use the raw PDOK response to get weergavenaam (includes postcode),
+        # not the short labels from addresses_for_parcel which omit it.
+        perceel_key = f"{akr}-{sectie}-{perceelnummer}"
+        ls_url = f"{locatieserver.BASE_URL}/free"
+        ls_params = {
+            "q": "*",
+            "fq": [f"gekoppeld_perceel:{perceel_key}", "type:adres"],
+            "fl": "weergavenaam,huisnummer",
+            "rows": 50,
+        }
+        ls_response = await http_client.get(ls_url, params=ls_params, timeout=10.0)
+        ls_data = ls_response.json()
+        docs = ls_data.get("response", {}).get("docs", [])
+        if not docs:
+            return []
+
+        # Sort by huisnummer
+        docs.sort(key=lambda d: d.get("huisnummer", 0))
+        return [d["weergavenaam"] for d in docs if d.get("weergavenaam")]
     except Exception as e:
         logger.debug("_lookup_addresses_on_parcel failed for %s: %s", parcel_code, e)
         return []
