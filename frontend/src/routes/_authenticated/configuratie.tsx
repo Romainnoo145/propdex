@@ -712,7 +712,13 @@ function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData }
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className={
+            filtered.length === 1
+              ? "grid gap-4 grid-cols-1"
+              : filtered.length === 2
+                ? "grid gap-4 grid-cols-1 sm:grid-cols-2"
+                : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          }
         >
           {filtered.map((source) => (
             <motion.div key={source.key} variants={fadeUp}>
