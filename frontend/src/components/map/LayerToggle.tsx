@@ -187,6 +187,18 @@ function LayerToggle({
     showParcels,
   ])
 
+  // Continuous sync: keep MapLibre WMS layer visibility in sync with showParcels state
+  // Safety net so the layer is never out of sync after address search or parcel clicks
+  useEffect(() => {
+    if (!isStyleReady()) return
+    if (!mapRef.current) return
+    const map = mapRef.current
+    if (showParcels && !map.getSource('pdok-parcels')) {
+      addParcelBoundariesLayer(map)
+    }
+    setParcelBoundariesVisibility(map, showParcels)
+  }, [showParcels, isStyleReady, mapRef])
+
   // Ensure score overlay is active when parcels are on but no overlay is selected
   const showScore = activeParcelOverlay === 'potential'
   const showBuiltStatus = activeParcelOverlay === 'built_status'

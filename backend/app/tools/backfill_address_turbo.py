@@ -92,6 +92,8 @@ async def _resolve_addresses(
     for _sr, pc in rows:
         if pc.geometry is None:
             continue
+        if not pc.has_pand:
+            continue
         try:
             geom_shape = to_shape(pc.geometry)
             centroid = geom_shape.centroid

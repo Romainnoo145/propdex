@@ -43,6 +43,7 @@ from app.scans.schemas import (
     ScanResultItem,
 )
 from app.services.bekendmaking_matcher import find_parcel_at_point
+from app.services.parcel_addressing import reverse_geocode_rd_point
 from app.services.parcel_scoring import (
     compute_vacancy_confidence,
     extract_building_metrics,
@@ -667,6 +668,8 @@ async def get_parcel_at_point(
     pdok_area_m2: float | None = None
     pdok_centroid_wgs84: tuple[float, float] | None = None
     pdok_geom_rd_expr = None
+    x_rd: float | None = None
+    y_rd: float | None = None
 
     try:
         rd_coords = (
@@ -841,13 +844,33 @@ async def get_parcel_at_point(
                     row["parcel_id"],
                 )
 
-    resolved_address = await _resolve_parcel_address_from_centroid(
-        request=request,
-        db=db,
-        parcel_id=row["parcel_id"],
-        current_address=row["address"],
-        centroid_rd_wkt=row.get("centroid_rd_wkt"),
-    )
+    # Live reverse geocode on click RD coords (D046: closest BAG address)
+    resolved_address: str | None = None
+    if (
+        isinstance(x_rd, (int, float))
+        and isinstance(y_rd, (int, float))
+        and request is not None
+        and isinstance(getattr(getattr(request, "app", None), "state", None), object)
+    ):
+        http_client = getattr(getattr(request, "app", None).state, "http_client", None)
+        if isinstance(http_client, httpx.AsyncClient):
+            resolved_address = await reverse_geocode_rd_point(
+                (float(x_rd), float(y_rd)), http_client,
+            )
+            logger.debug(
+                "Live reverse geocode for click (%s, %s): %s",
+                x_rd, y_rd, resolved_address,
+            )
+
+    # Fallback: resolve from cached parcel centroid
+    if resolved_address is None:
+        resolved_address = await _resolve_parcel_address_from_centroid(
+            request=request,
+            db=db,
+            parcel_id=row["parcel_id"],
+            current_address=row["address"],
+            centroid_rd_wkt=row.get("centroid_rd_wkt"),
+        )
 
     resolved_area_m2 = row.get("area_m2")
     if isinstance(pdok_area_m2, float) and pdok_area_m2 > 0:

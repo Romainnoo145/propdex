@@ -2556,6 +2556,7 @@ function MapPage() {
           onScannedScopeToggle={handleScannedScopeToggle}
           onOverlaySelect={handleOverlaySelect}
           hasScoreData={!!activeScanId}
+          autoEnableParcelsKey={autoEnableParcelsKey}
         />
       </motion.div>
 

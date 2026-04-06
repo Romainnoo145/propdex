@@ -4,14 +4,20 @@ Tests cover the `_resolve_pdok_cadastral_parcel_at_rd()` function in
 `app.scans.helpers`, verifying point-in-polygon containment and the
 nearest-centroid fallback introduced in M034-S02-T01.
 
+Also covers `get_parcel_at_point()` live reverse geocode integration
+(M035-S01): live geocode overriding cached address, fallback to centroid
+resolution, and coordinate correctness.
+
 All tests use synthetic GeoJSON features with RD coordinates so that
 `_geometry_looks_wgs84()` returns False and the function uses the
 RD click point for containment / centroid comparisons.
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
+import httpx
 import pytest
 from shapely.geometry import box, mapping
 
@@ -241,3 +247,175 @@ class TestMapClickParcelResolution:
         assert result is not None
         code = result.get("parcel_code", "")
         assert code.endswith("A") or code.endswith("B"), f"Expected A or B, got '{code}'"
+
+
+# ---------------------------------------------------------------------------
+# Tests for live reverse geocode in get_parcel_at_point (M035-S01)
+# ---------------------------------------------------------------------------
+
+_FAKE_PARCEL_ID = uuid.uuid4()
+
+
+def _mock_at_point_db_session(
+    x_rd: float = 155005.0,
+    y_rd: float = 463005.0,
+    address: str = "Houtstraat 15A",
+) -> AsyncMock:
+    """Build an AsyncSession mock that satisfies get_parcel_at_point's DB queries.
+
+    Returns three sequential execute results:
+      1. ST_X / ST_Y → RD coordinates
+      2. _build_lookup_query → parcel row
+      3. Organization score_weights → None
+    """
+    db = AsyncMock()
+
+    # --- 1st call: ST_X / ST_Y ---
+    rd_result = MagicMock()
+    rd_result.mappings.return_value.one_or_none.return_value = {
+        "x_rd": x_rd,
+        "y_rd": y_rd,
+    }
+
+    # --- 2nd call: _build_lookup_query result (parcel row) ---
+    parcel_row = {
+        "parcel_id": _FAKE_PARCEL_ID,
+        "centroid_wkt": "POINT(5.5 51.5)",
+        "centroid_rd_wkt": f"POINT({x_rd} {y_rd})",
+        "address": address,
+        "parcel_code": "VNL00T-A-1234",
+        "gemeente_code": "0983",
+        "area_m2": 250.0,
+        "has_pand": True,
+        "bouwjaar": 1920,
+        "pand_status": "Pand in gebruik",
+        "bestemmingen": None,
+        "has_report": False,
+        "geometry_raw": None,
+        "scan_score": None,
+        "scan_flags": None,
+    }
+    lookup_result = MagicMock()
+    lookup_result.mappings.return_value.one_or_none.return_value = parcel_row
+
+    # --- 3rd call: Organization.score_weights ---
+    org_result = MagicMock()
+    org_result.scalar_one_or_none.return_value = None
+
+    db.execute = AsyncMock(side_effect=[rd_result, lookup_result, org_result])
+    return db
+
+
+def _mock_request_with_http_client() -> MagicMock:
+    """Build a mock request object with app.state.http_client as httpx.AsyncClient."""
+    mock_client = MagicMock(spec=httpx.AsyncClient)
+    mock_request = MagicMock()
+    mock_request.app.state.http_client = mock_client
+    return mock_request
+
+
+@pytest.mark.asyncio
+class TestGetParcelAtPointLiveGeocode:
+    """Tests for live reverse geocode integration in get_parcel_at_point (M035-S01)."""
+
+    @patch("app.scans.parcels_service._resolve_parcel_address_from_centroid", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service.reverse_geocode_rd_point", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service._resolve_pdok_cadastral_parcel_at_rd", new_callable=AsyncMock)
+    async def test_at_point_uses_live_reverse_geocode_address(
+        self, mock_pdok_resolve, mock_geocode, mock_centroid_resolve,
+    ):
+        """Live geocode result overrides cached ParcelCache address."""
+        from app.scans.parcels_service import get_parcel_at_point
+
+        mock_pdok_resolve.return_value = None  # skip PDOK parcel geometry path
+        mock_geocode.return_value = "Houtstraat 13"
+        mock_centroid_resolve.return_value = "Houtstraat 15A"
+
+        db = _mock_at_point_db_session(address="Houtstraat 15A")
+        request = _mock_request_with_http_client()
+
+        result = await get_parcel_at_point(
+            db=db, lng=5.5, lat=51.5,
+            organization_id=uuid.uuid4(), request=request,
+        )
+
+        assert result.address == "Houtstraat 13"
+        mock_geocode.assert_called_once()
+        # Centroid fallback should NOT have been called
+        mock_centroid_resolve.assert_not_called()
+
+    @patch("app.scans.parcels_service._resolve_parcel_address_from_centroid", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service.reverse_geocode_rd_point", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service._resolve_pdok_cadastral_parcel_at_rd", new_callable=AsyncMock)
+    async def test_at_point_falls_back_to_centroid_when_geocode_returns_none(
+        self, mock_pdok_resolve, mock_geocode, mock_centroid_resolve,
+    ):
+        """When live geocode returns None, falls back to centroid address resolution."""
+        from app.scans.parcels_service import get_parcel_at_point
+
+        mock_pdok_resolve.return_value = None
+        mock_geocode.return_value = None
+        mock_centroid_resolve.return_value = "Houtstraat 15A"
+
+        db = _mock_at_point_db_session(address="Houtstraat 15A")
+        request = _mock_request_with_http_client()
+
+        result = await get_parcel_at_point(
+            db=db, lng=5.5, lat=51.5,
+            organization_id=uuid.uuid4(), request=request,
+        )
+
+        assert result.address == "Houtstraat 15A"
+        mock_geocode.assert_called_once()
+        mock_centroid_resolve.assert_called_once()
+
+    @patch("app.scans.parcels_service._resolve_parcel_address_from_centroid", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service.reverse_geocode_rd_point", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service._resolve_pdok_cadastral_parcel_at_rd", new_callable=AsyncMock)
+    async def test_at_point_calls_geocode_with_click_rd_coords(
+        self, mock_pdok_resolve, mock_geocode, mock_centroid_resolve,
+    ):
+        """Live geocode receives the click RD coordinates, not centroid."""
+        from app.scans.parcels_service import get_parcel_at_point
+
+        mock_pdok_resolve.return_value = None
+        mock_geocode.return_value = "Kerkstraat 1"
+
+        db = _mock_at_point_db_session(x_rd=160000.0, y_rd=470000.0)
+        request = _mock_request_with_http_client()
+
+        await get_parcel_at_point(
+            db=db, lng=5.5, lat=51.5,
+            organization_id=uuid.uuid4(), request=request,
+        )
+
+        # Assert called with the click RD coords as a tuple, and the http_client
+        mock_geocode.assert_called_once()
+        call_args = mock_geocode.call_args
+        rd_point_arg = call_args[0][0] if call_args[0] else call_args[1].get("point_rd") or call_args[1].get(0)
+        assert rd_point_arg == (160000.0, 470000.0), (
+            f"Expected geocode called with (160000.0, 470000.0), got {rd_point_arg}"
+        )
+
+    @patch("app.scans.parcels_service._resolve_parcel_address_from_centroid", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service.reverse_geocode_rd_point", new_callable=AsyncMock)
+    @patch("app.scans.parcels_service._resolve_pdok_cadastral_parcel_at_rd", new_callable=AsyncMock)
+    async def test_at_point_no_request_falls_back_to_centroid(
+        self, mock_pdok_resolve, mock_geocode, mock_centroid_resolve,
+    ):
+        """When request is None, live geocode is skipped; falls back to centroid."""
+        from app.scans.parcels_service import get_parcel_at_point
+
+        mock_pdok_resolve.return_value = None
+        mock_centroid_resolve.return_value = "Fallback Addr"
+
+        db = _mock_at_point_db_session()
+
+        result = await get_parcel_at_point(
+            db=db, lng=5.5, lat=51.5,
+            organization_id=uuid.uuid4(), request=None,
+        )
+
+        assert result.address == "Fallback Addr"
+        mock_geocode.assert_not_called()
+        mock_centroid_resolve.assert_called_once()
