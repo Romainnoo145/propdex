@@ -372,3 +372,20 @@ async def improve_prompts(
         logger.exception("improve-prompts failed")
         raise HTTPException(status_code=500, detail="Prompt improvement analysis failed") from None
     return results
+
+
+@router.delete("/cache/kadaster")
+async def clear_kadaster_cache(
+    current_user: User = Depends(get_current_superuser),
+    db: AsyncSession = Depends(get_db),
+):
+    """Clear all cached kadaster parcel responses. Forces fresh PDOK lookups."""
+    from sqlalchemy import text as sql_text
+
+    result = await db.execute(
+        sql_text("DELETE FROM cached_api_responses WHERE cache_key LIKE 'kadaster:parcel:%'")
+    )
+    await db.commit()
+    count = result.rowcount
+    logger.info("Admin %s cleared %d kadaster cache entries", current_user.email, count)
+    return {"deleted": count}
