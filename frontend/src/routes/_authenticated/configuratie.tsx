@@ -38,7 +38,7 @@ import ResultsShell from '@/components/layout/ResultsShell'
 import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 import { type SubsidieNiveau } from '@/lib/subsidies/curatedSubsidies'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
-import { useGemeenteProfile, type GemeenteProfile } from '@/hooks/useGemeenteProfile'
+import { useGemeenteProfile, SEVERITY_COLORS, type GemeenteProfile } from '@/hooks/useGemeenteProfile'
 import { useRaadsinformatie, type RaadsinformatieResponse } from '@/hooks/useRaadsinformatie'
 import { useHuisvestingsverordening, type HuisvestingsverordeningResponse } from '@/hooks/useHuisvestingsverordening'
 import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
@@ -264,6 +264,115 @@ interface DataSourceCardProps {
   gemeenteData?: GemeenteIntelligenceData
 }
 
+/** Returns { isLoading, error, metrics } for a live source based on its key and gemeente data. */
+function getLiveMetrics(
+  sourceKey: string,
+  gemeenteData?: GemeenteIntelligenceData,
+): { isLoading: boolean; error: boolean; metrics: React.ReactNode | null } {
+  if (!gemeenteData) return { isLoading: false, error: false, metrics: null }
+
+  switch (sourceKey) {
+    case 'vergunning-klimaat': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      const rate = data.approval_rate_pct != null ? `${data.approval_rate_pct}%` : '—'
+      const severityColor = SEVERITY_COLORS[data.severity_label] ?? SEVERITY_COLORS['Onbekend']
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{rate}</span>{' goedgekeurd · '}
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_30d}</span>{' recent · '}
+            <span style={{ color: severityColor }} className="font-bold">{data.severity_label}</span>
+          </>
+        ),
+      }
+    }
+    case 'jurisprudentie': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      const doorlooptijd = data.avg_doorlooptijd_days != null ? `${data.avg_doorlooptijd_days}d` : '—'
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            {'Doorlooptijd: '}<span className="font-bold text-[#0E1111]">{doorlooptijd}</span>
+            {' · '}<span className="font-bold text-[#0E1111]">{data.sample_size}</span>{' zaken'}
+          </>
+        ),
+      }
+    }
+    case 'bekendmakingen': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_30d}</span>{' (30d) · '}
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_90d}</span>{' (90d)'}
+          </>
+        ),
+      }
+    }
+    case 'raadsinformatie': {
+      const { data, isLoading, error } = gemeenteData.raadsinformatie
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.total_found}</span>{' stukken · '}
+            {data.dekking ? (
+              <span className="font-bold text-emerald-600">Gedekt</span>
+            ) : (
+              <span className="font-bold text-slate-400">Geen dekking</span>
+            )}
+          </>
+        ),
+      }
+    }
+    case 'huisvestingsverordening': {
+      const { data, isLoading, error } = gemeenteData.huisvestingsverordening
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: data.heeft_verordening ? (
+          <span className="font-bold text-[#0E1111]">{data.title ?? 'Verordening gevonden'}</span>
+        ) : (
+          <span className="text-slate-400">Geen verordening gevonden</span>
+        ),
+      }
+    }
+    case 'beschermd-erfgoed': {
+      const { data, isLoading, error } = gemeenteData.erfgoed
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.total}</span>{' beschermde gezichten'}
+          </>
+        ),
+      }
+    }
+    default:
+      return { isLoading: false, error: false, metrics: null }
+  }
+}
+
 function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSourceCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -369,23 +478,45 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData }: DataSo
         </div>
       </div>
 
-      {/* Collapsed footer: doc badges */}
-      {!isOpen && (docCount > 0 || isLive) && (
-        <div className="px-5 pb-4 flex items-center gap-2">
-          {docCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
-              <FileCheck size={11} />
-              {docCount} doc{docCount !== 1 ? 's' : ''}
-            </span>
-          )}
-          {isLive && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
-              <Check size={11} strokeWidth={3} />
-              Auto-sync
-            </span>
-          )}
-        </div>
-      )}
+      {/* Collapsed footer: doc badges + live metrics */}
+      {!isOpen && (docCount > 0 || isLive) && (() => {
+        const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null
+        return (
+          <div className="px-5 pb-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {docCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
+                  <FileCheck size={11} />
+                  {docCount} doc{docCount !== 1 ? 's' : ''}
+                </span>
+              )}
+              {/* Live source metrics */}
+              {isLive && liveMetrics?.isLoading && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                  <Loader2 className="animate-spin" size={12} />
+                  Laden...
+                </span>
+              )}
+              {isLive && liveMetrics?.error && (
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Data niet beschikbaar
+                </span>
+              )}
+              {isLive && liveMetrics?.metrics && (
+                <span className="text-[11px] text-slate-500 font-medium truncate">
+                  {liveMetrics.metrics}
+                </span>
+              )}
+            </div>
+            {isLive && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
+                <Check size={11} strokeWidth={3} />
+                Auto-sync
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Drag hint when no docs yet and not expanded */}
       {!isOpen && !isLive && docCount === 0 && entityType && (
