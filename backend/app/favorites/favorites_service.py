@@ -376,11 +376,23 @@ async def delete_favorite(
     """Remove a parcel from favorites and soft-delete associated report."""
     fav = await _get_favorite_or_404(db, user_id, parcel_id)
 
-    # Soft-delete any report linked to this parcel via parcel_cache
-    if fav.parcel_cache_id:
+    # Soft-delete any report linked to this parcel.
+    # Try parcel_cache_id first (direct FK), fall back to looking up the
+    # ParcelCache UUID by parcel_code (kadastrale code string).
+    source_parcel_uuid = fav.parcel_cache_id
+    if source_parcel_uuid is None:
+        # Look up the ParcelCache row by parcel_code
+        pc_result = await db.execute(
+            select(ParcelCache.id).where(ParcelCache.parcel_id == parcel_id).limit(1)
+        )
+        pc_row = pc_result.scalar_one_or_none()
+        if pc_row is not None:
+            source_parcel_uuid = pc_row
+
+    if source_parcel_uuid is not None:
         report_result = await db.execute(
             select(SavedReport).where(
-                SavedReport.source_parcel_id == fav.parcel_cache_id,
+                SavedReport.source_parcel_id == source_parcel_uuid,
                 SavedReport.user_id == user_id,
                 SavedReport.deleted_at.is_(None),
             )
