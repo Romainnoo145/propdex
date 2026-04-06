@@ -85,12 +85,42 @@ function TimelineRow({ vg, idx, total, dotColor = 'bg-aura-amber' }: {
   )
 }
 
+/** Extract "Straatnaam Nr" from a display address for title matching */
+function extractStreetAndNumber(address: string | null | undefined): string | null {
+  if (!address) return null
+  const beforeComma = address.split(',')[0].trim()
+  if (!/\d/.test(beforeComma)) return null
+  return beforeComma.toLowerCase()
+}
+
+function splitByAddress(
+  records: Record<string, unknown>[],
+  address: string | null | undefined,
+): { direct: Record<string, unknown>[]; nearby: Record<string, unknown>[] } {
+  const streetNum = extractStreetAndNumber(address)
+  if (!streetNum) return { direct: records, nearby: [] }
+
+  const direct: Record<string, unknown>[] = []
+  const nearby: Record<string, unknown>[] = []
+  for (const r of records) {
+    const title = ((r.title as string) ?? '').toLowerCase()
+    if (title.includes(streetNum)) {
+      direct.push(r)
+    } else {
+      nearby.push(r)
+    }
+  }
+  return { direct, nearby }
+}
+
 export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6VergunningenPrecedentenProps) {
   const vergunningen = data.vergunningen_data
   const benchmark = data.permit_precedents
   const allRecords: Record<string, unknown>[] = vergunningen
     ? (Array.isArray(vergunningen) ? vergunningen : (vergunningen as Record<string, unknown>).records as Record<string, unknown>[] ?? [])
     : []
+  const displayAddress = `${data.address.straat} ${data.address.huisnummer}${data.address.huisletter ?? ''}${data.address.toevoeging ?? ''}`
+  const { direct, nearby } = splitByAddress(allRecords, displayAddress)
   const hasData = allRecords.length > 0 || !!benchmark
 
   if (!hasData) {
@@ -112,16 +142,41 @@ export function S6VergunningenPrecedenten({ data, sourceParcelId }: S6Vergunning
   return (
     <div className="space-y-6">
 
-      {/* ── Bekendmakingen ────────────────────────────────────── */}
-      {allRecords.length > 0 && (
+      {/* ── Bekendmakingen — dit adres ──────────────────────── */}
+      {direct.length > 0 && (
+        <SectionInsightCard kicker="Dit adres" title={`Vergunningen (${direct.length})`} Icon={FileText}>
+          <div className="space-y-0">
+            {direct.slice(0, 10).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(direct.length, 10)} />
+            ))}
+            {direct.length > 10 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{direct.length - 10} meer</p>
+            )}
+          </div>
+        </SectionInsightCard>
+      )}
+
+      {/* ── Bekendmakingen — omgeving ────────────────────────── */}
+      {nearby.length > 0 && (
+        <SectionInsightCard kicker="Omgeving" title={`Vergunningen in de buurt (${nearby.length})`} Icon={FileText}>
+          <div className="space-y-0">
+            {nearby.slice(0, 10).map((vg, idx) => (
+              <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(nearby.length, 10)} dotColor="bg-slate-300" />
+            ))}
+            {nearby.length > 10 && (
+              <p className="mt-2 text-center text-[11px] text-slate-400">+{nearby.length - 10} meer</p>
+            )}
+          </div>
+        </SectionInsightCard>
+      )}
+
+      {/* ── Geen vergunningen gevonden ────────────────────────── */}
+      {allRecords.length > 0 && direct.length === 0 && nearby.length === 0 && (
         <SectionInsightCard kicker="Bekendmakingen" title={`Vergunningen (${allRecords.length})`} Icon={FileText}>
           <div className="space-y-0">
             {allRecords.slice(0, 10).map((vg, idx) => (
               <TimelineRow key={idx} vg={vg} idx={idx} total={Math.min(allRecords.length, 10)} />
             ))}
-            {allRecords.length > 10 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">+{allRecords.length - 10} meer</p>
-            )}
           </div>
         </SectionInsightCard>
       )}
