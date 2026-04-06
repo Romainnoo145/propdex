@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import { ClipboardCheck, ChevronDown, ChevronRight, Search, X, Check, Heart, MapPin, Bookmark } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
-import { useParcelFavorites, useUpdatePipelineStage } from '@/hooks/useFavorites'
+import { useParcelFavorites, useToggleFavorite, useUpdatePipelineStage } from '@/hooks/useFavorites'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
 import { FavoriteParcelWorkspaceView } from '@/components/projects/FavoriteParcelWorkspaceView'
@@ -414,23 +414,47 @@ function ParcelCard({
     : null
   const [scoreModal, setScoreModal] = useState<'potentie' | 'risico' | null>(null)
   const navigate = useNavigate()
+  const toggleFavorite = useToggleFavorite()
+
+  const handleUnfavorite = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleFavorite.mutate({
+      parcel: {
+        parcel_id: parcel.parcel_cache_id ?? parcel.id,
+        parcel_code: parcel.parcel_id,
+        gemeente_code: parcel.gemeente_code ?? '',
+        address: parcel.address,
+      } as import('@/lib/types/scan').ScanResultItem,
+      isFavorited: true,
+    })
+  }
 
   return (
     <div
       onClick={() => onOpenWorkspace()}
       className="cursor-pointer rounded-[20px] border border-[#EAEFEF] bg-white px-5 py-4 transition-shadow hover:shadow-md"
     >
-      {/* Top: address + pipeline stage */}
+      {/* Top: address + unfavorite + pipeline stage */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-bold text-[#0E1111] leading-snug">
-            {address}
-          </p>
-          {subtitle && (
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              {subtitle}
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <button
+            onClick={handleUnfavorite}
+            disabled={toggleFavorite.isPending}
+            title="Verwijder uit opgeslagen"
+            className="mt-0.5 shrink-0 text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+          >
+            <Heart size={16} fill="currentColor" />
+          </button>
+          <div className="min-w-0">
+            <p className="text-[14px] font-bold text-[#0E1111] leading-snug">
+              {address}
             </p>
-          )}
+            {subtitle && (
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
         <PipelineStagePill parcel={parcel} />
       </div>
