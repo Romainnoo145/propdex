@@ -78,6 +78,7 @@ export const Route = createFileRoute('/_authenticated/configuratie')({
       ? (search.provincie as string)
       : undefined,
     source: typeof search.source === 'string' ? (search.source as string) : undefined,
+    category: typeof search.category === 'string' ? (search.category as string) : undefined,
   }),
   component: ConfiguratiePage,
 })
@@ -439,12 +440,12 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
 
   const handleCardClick = useCallback(() => {
     if (gemeenteCode) {
-      navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+      navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key, category: source.category } })
     } else if (!gemeenteCode && source.status === 'live') {
       // Landelijk sources: navigate without gemeente param
-      navigate({ to: '/configuratie', search: { source: source.key } })
+      navigate({ to: '/configuratie', search: { source: source.key, category: source.category } })
     }
-  }, [gemeenteCode, navigate, source.key])
+  }, [gemeenteCode, navigate, source.key, source.category])
 
   const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null
 
@@ -598,9 +599,13 @@ function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, 
     return CATEGORY_CONFIG.filter((c) => categoriesWithSources.has(c.key))
   }, [sources])
 
-  const [activeCategory, setActiveCategory] = useState<DataSourceCategory>(
-    availableCategories[0]?.key ?? 'ruimtelijk',
-  )
+  const [activeCategory, setActiveCategory] = useState<DataSourceCategory>(() => {
+    // Restore category from URL param (e.g. after back navigation from source detail)
+    if (initialCategory && availableCategories.some((c) => c.key === initialCategory)) {
+      return initialCategory as DataSourceCategory
+    }
+    return availableCategories[0]?.key ?? 'ruimtelijk'
+  })
 
   const filtered = useMemo(
     () => sources.filter((s) => s.category === activeCategory),
@@ -679,9 +684,10 @@ interface EntityDetailProps {
   sources: DataSource[]
   onBack: () => void
   gemeenteData?: GemeenteIntelligenceData
+  initialCategory?: string
 }
 
-function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack, gemeenteData }: EntityDetailProps) {
+function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack, gemeenteData, initialCategory }: EntityDetailProps) {
   const liveCount = sources.filter((s) => s.status === 'live').length
   const roadmapCount = sources.filter((s) => s.status === 'roadmap').length
   const totalCount = sources.length
@@ -797,7 +803,7 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
 
 /* ─── Gemeente detail wrapper ───────────────────────────────── */
 
-function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack: () => void }) {
+function GemeenteDetail({ gemeenteCode, onBack, initialCategory }: { gemeenteCode: string; onBack: () => void; initialCategory?: string }) {
   const { data: geojson } = useGemeenteGeoJSON()
 
   const gemeente = useMemo(() => {
@@ -842,6 +848,7 @@ function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack
       sources={GEMEENTE_DATA_SOURCES}
       onBack={onBack}
       gemeenteData={gemeenteData}
+      initialCategory={initialCategory}
     />
   )
 }
@@ -1930,7 +1937,7 @@ function LandelijkSourceDetail({ sourceKey, onBack }: { sourceKey: string; onBac
 
 function ConfiguratiePage() {
   const navigate = useNavigate()
-  const { gemeente: activeGemeente, provincie: activeProvincie, source: activeSource } = Route.useSearch()
+  const { gemeente: activeGemeente, provincie: activeProvincie, source: activeSource, category: activeCategory } = Route.useSearch()
   const [openNiveau, setOpenNiveau] = useState<SubsidieNiveau | null>(null)
   const { data: gemeenteGeoJSON } = useGemeenteGeoJSON(openNiveau === 'gemeentelijk' || !!activeGemeente)
   const { data: provincieGeoJSON } = useProvincieGeoJSON(openNiveau === 'provinciaal' || !!activeProvincie)
@@ -1969,7 +1976,7 @@ function ConfiguratiePage() {
           <SourceDetailWorkspace
             sourceKey={activeSource}
             gemeenteCode={activeGemeente}
-            onBack={() => navigate({ to: '/configuratie', search: { gemeente: activeGemeente } })}
+            onBack={() => navigate({ to: '/configuratie', search: { gemeente: activeGemeente, category: activeCategory } })}
           />
         </div>
       </ResultsShell>
@@ -1981,7 +1988,7 @@ function ConfiguratiePage() {
     return (
       <ResultsShell>
         <div className="mx-auto max-w-4xl">
-          <GemeenteDetail gemeenteCode={activeGemeente} onBack={handleBackToMain} />
+          <GemeenteDetail gemeenteCode={activeGemeente} onBack={handleBackToMain} initialCategory={activeCategory} />
         </div>
       </ResultsShell>
     )
