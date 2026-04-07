@@ -50,6 +50,7 @@ import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
 import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type PolicyDocument, type DocumentSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { useAuth } from '@/lib/auth/useAuth'
+import JurisprudentieDetailEnriched from '@/components/configuratie/JurisprudentieDetailEnriched'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -1648,7 +1649,7 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
       case 'vergunning-klimaat':
         return <VergunningKlimaatDetail profile={profile} isLoading={profileLoading} error={profileError} />
       case 'jurisprudentie':
-        return <JurisprudentieDetail profile={profile} isLoading={profileLoading} error={profileError} />
+        return <JurisprudentieDetailEnriched gemeenteNaam={resolvedNaam} />
       case 'bekendmakingen':
         return <BekendmakingenDetail profile={profile} isLoading={profileLoading} error={profileError} />
       case 'raadsinformatie':
