@@ -1,11 +1,365 @@
 /**
- * RVO Subsidies enriched detail view — placeholder.
- * Will be replaced with full implementation in T02.
+ * RVO Subsidies enriched detail view for the configuratie source-detail page.
+ *
+ * Shows:
+ *  - Summary bar with open/gesloten/doorlopend breakdown of curated landelijk subsidies
+ *  - Curated landelijk subsidies with rich cards (status pills, budget, doelgroep)
+ *  - Live RVO subsidies via useSubsidieExplorer with sector/target facet filters
+ *  - External link to RVO.nl
  */
+
+import { useMemo, useState } from 'react'
+import { Banknote, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
+import {
+  useSubsidieExplorer,
+  type SubsidieExplorerItem,
+} from '@/hooks/useSubsidieExplorer'
+import {
+  CURATED_SUBSIDIES,
+  type CuratedSubsidie,
+  type SubsidieStatus,
+} from '@/lib/subsidies/curatedSubsidies'
+
+/* ─── Curated landelijk subsidies ────────────────────────────── */
+
+const LANDELIJK_SUBSIDIES = CURATED_SUBSIDIES.filter(
+  (s) => s.niveau === 'landelijk',
+)
+
+/* ─── Status helpers ─────────────────────────────────────────── */
+
+const STATUS_CONFIG: Record<SubsidieStatus, { label: string; bg: string; text: string; dot: string }> = {
+  open: { label: 'Open', bg: 'bg-emerald-500/15', text: 'text-emerald-600', dot: 'bg-emerald-500' },
+  gesloten: { label: 'Gesloten', bg: 'bg-red-500/15', text: 'text-red-600', dot: 'bg-red-500' },
+  doorlopend: { label: 'Doorlopend', bg: 'bg-blue-500/15', text: 'text-blue-600', dot: 'bg-blue-500' },
+}
+
+/* ─── Inline loading/error/empty state helpers ───────────────── */
+
+function DetailLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
+      <Loader2 className="size-5 animate-spin text-slate-400" />
+      <span className="text-[13px] text-slate-400">Data laden…</span>
+    </div>
+  )
+}
+
+function DetailError({ error }: { error: Error | null }) {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-8">
+      <AlertCircle className="size-5 text-red-400" />
+      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
+    </div>
+  )
+}
+
+/* ─── Summary stats bar ──────────────────────────────────────── */
+
+function StatusSummaryBar({ subsidies }: { subsidies: CuratedSubsidie[] }) {
+  const counts = useMemo(() => {
+    const c = { open: 0, gesloten: 0, doorlopend: 0 }
+    for (const s of subsidies) c[s.status]++
+    return c
+  }, [subsidies])
+
+  return (
+    <div className="space-y-3 rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">
+          Landelijke subsidies
+        </p>
+        <span className="text-[13px] font-medium text-[#0E1111]">
+          {subsidies.length} regelingen
+        </span>
+      </div>
+
+      {/* Stacked bar */}
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+          const pct = subsidies.length > 0 ? (counts[status] / subsidies.length) * 100 : 0
+          if (pct === 0) return null
+          return (
+            <div
+              key={status}
+              className={`${STATUS_CONFIG[status].dot} transition-all`}
+              style={{ width: `${pct}%` }}
+            />
+          )
+        })}
+      </div>
+
+      {/* Legend pills */}
+      <div className="flex flex-wrap gap-3">
+        {(['open', 'gesloten', 'doorlopend'] as const).map((status) => {
+          const cfg = STATUS_CONFIG[status]
+          return (
+            <div key={status} className="flex items-center gap-1.5">
+              <span className={`size-2 rounded-full ${cfg.dot}`} />
+              <span className={`text-[12px] font-medium ${cfg.text}`}>
+                {counts[status]} {cfg.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Curated subsidie card ──────────────────────────────────── */
+
+function CuratedSubsidieCard({ subsidie }: { subsidie: CuratedSubsidie }) {
+  const cfg = STATUS_CONFIG[subsidie.status]
+
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5 space-y-3">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <h4 className="text-[14px] font-semibold text-[#0E1111] leading-snug">
+          {subsidie.title}
+        </h4>
+        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cfg.bg} ${cfg.text}`}>
+          {cfg.label}
+        </span>
+      </div>
+
+      {/* Beschrijving */}
+      <p className="text-[13px] leading-relaxed text-slate-500 line-clamp-3">
+        {subsidie.beschrijving}
+      </p>
+
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-[#F2F6F3] px-2.5 py-0.5 text-[11px] font-medium text-[#0E1111]">
+          {subsidie.doelgroep}
+        </span>
+        {subsidie.budget && (
+          <span className="flex items-center gap-1 text-[11px] text-slate-400">
+            <Banknote className="size-3.5" />
+            {subsidie.budget}
+          </span>
+        )}
+        {subsidie.maxBedrag && (
+          <span className="text-[11px] text-slate-400">
+            Max: {subsidie.maxBedrag}
+          </span>
+        )}
+        {subsidie.deadline && (
+          <span className="text-[11px] text-slate-400">
+            Deadline: {subsidie.deadline}
+          </span>
+        )}
+      </div>
+
+      {/* Voorwaarden */}
+      <p className="text-[12px] leading-relaxed text-slate-400 line-clamp-2">
+        <span className="font-medium text-slate-500">Voorwaarden: </span>
+        {subsidie.voorwaarden}
+      </p>
+
+      {/* External link */}
+      {subsidie.url && (
+        <a
+          href={subsidie.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          Bekijk op RVO.nl
+          <ExternalLink className="size-3" />
+        </a>
+      )}
+    </div>
+  )
+}
+
+/* ─── Live RVO subsidie card (inline, no coupling to SubsidieCard) ── */
+
+function RvoSubsidieItem({ item }: { item: SubsidieExplorerItem }) {
+  return (
+    <div className="rounded-[12px] border border-[#EAEFEF] bg-white p-4 space-y-2">
+      <h5 className="text-[13px] font-semibold text-[#0E1111] leading-snug line-clamp-2">
+        {item.title}
+      </h5>
+      {item.intro && (
+        <p className="text-[12px] leading-relaxed text-slate-500 line-clamp-2">
+          {item.intro}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {item.sectors.map((s) => (
+          <span key={s} className="rounded-full bg-[#F2F6F3] px-2 py-0.5 text-[10px] font-medium text-[#0E1111]">
+            {s}
+          </span>
+        ))}
+        {item.targets.map((t) => (
+          <span key={t} className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+            {t}
+          </span>
+        ))}
+      </div>
+      {item.url && (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          Meer info
+          <ExternalLink className="size-3" />
+        </a>
+      )}
+    </div>
+  )
+}
+
+/* ─── Facet pill toggle ──────────────────────────────────────── */
+
+function FacetPill({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string
+  count: number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+        active
+          ? 'bg-[#0E1111] text-white'
+          : 'bg-[#F2F6F3] text-[#0E1111] hover:bg-[#E5ECEA]'
+      }`}
+    >
+      {label} ({count})
+    </button>
+  )
+}
+
+/* ─── Live RVO Subsidies section ─────────────────────────────── */
+
+function LiveRvoSection() {
+  const [sectorFilter, setSectorFilter] = useState<string | undefined>()
+  const [targetFilter, setTargetFilter] = useState<string | undefined>()
+
+  const { data, allCount, isLoading, error } = useSubsidieExplorer({
+    sector: sectorFilter,
+    target: targetFilter,
+  })
+
+  if (isLoading) return <DetailLoading />
+  if (error) return <DetailError error={error} />
+  if (!data || data.results.length === 0) {
+    return (
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6 text-center">
+        <p className="text-[13px] text-slate-400">Geen live RVO subsidies gevonden.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[14px] font-semibold text-[#0E1111]">
+          Live RVO subsidies
+        </h3>
+        <span className="text-[12px] text-slate-400">
+          {data.total_count} van {allCount} resultaten
+        </span>
+      </div>
+
+      {/* Sector facets */}
+      {data.facets.sectors.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Sector</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.facets.sectors.map((f) => (
+              <FacetPill
+                key={f.value}
+                label={f.value}
+                count={f.count}
+                active={sectorFilter === f.value}
+                onClick={() => setSectorFilter(sectorFilter === f.value ? undefined : f.value)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Target facets */}
+      {data.facets.targets.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Doelgroep</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.facets.targets.map((f) => (
+              <FacetPill
+                key={f.value}
+                label={f.value}
+                count={f.count}
+                active={targetFilter === f.value}
+                onClick={() => setTargetFilter(targetFilter === f.value ? undefined : f.value)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Results grid */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {data.results.map((item) => (
+          <RvoSubsidieItem key={item.id} item={item} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main component ─────────────────────────────────────────── */
+
 export default function RvoSubsidiesDetailEnriched() {
   return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">RVO Subsidies detail — coming soon</p>
+    <div className="space-y-6">
+      {/* Summary stats bar */}
+      <StatusSummaryBar subsidies={LANDELIJK_SUBSIDIES} />
+
+      {/* Curated landelijk subsidies */}
+      <div className="space-y-3">
+        <h3 className="text-[14px] font-semibold text-[#0E1111]">
+          Landelijke woningbouwsubsidies
+        </h3>
+        <div className="grid gap-3">
+          {LANDELIJK_SUBSIDIES.map((s) => (
+            <CuratedSubsidieCard key={s.id} subsidie={s} />
+          ))}
+        </div>
+      </div>
+
+      {/* Live RVO subsidies section */}
+      <LiveRvoSection />
+
+      {/* Footer link to RVO.nl */}
+      <a
+        href="https://www.rvo.nl/subsidies-financiering"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-between rounded-[16px] border border-[#EAEFEF] bg-white p-5 transition-colors hover:border-blue-200 hover:bg-blue-50/30"
+      >
+        <div className="space-y-0.5">
+          <p className="text-[13px] font-medium text-[#0E1111]">
+            Alle subsidies & financiering op RVO.nl
+          </p>
+          <p className="text-[12px] text-slate-400">
+            Bekijk het volledige overzicht van rijkssubsidies
+          </p>
+        </div>
+        <ExternalLink className="size-4 shrink-0 text-blue-500" />
+      </a>
     </div>
   )
 }
