@@ -197,6 +197,15 @@ function buildPages(favorite: FavoriteResponse): DossierPage[] {
           filled: false,
           documents: [],
         },
+        {
+          key: 'checklist',
+          label: 'CHECKLISTS',
+          Icon: ClipboardCheck,
+          value: 'LEEG',
+          sub: 'Vergunning checklists',
+          filled: false,
+          documents: [],
+        },
       ],
     },
     {
@@ -384,11 +393,16 @@ function buildPages(favorite: FavoriteResponse): DossierPage[] {
 }
 
 function mergeDocuments(pages: DossierPage[], documents: ParcelDocumentMeta[]): DossierPage[] {
+  // Collect all known card keys to detect unmapped document types
+  const knownKeys = new Set(pages.flatMap((p) => p.cards.map((c) => c.key)))
+
   const byType: Record<string, ParcelDocumentMeta[]> = {}
   for (const document of documents) {
-    const existing = byType[document.document_type] ?? []
+    // Unmapped document types fall back to 'documenten' (Notities catch-all)
+    const key = knownKeys.has(document.document_type) ? document.document_type : 'documenten'
+    const existing = byType[key] ?? []
     existing.push(document)
-    byType[document.document_type] = existing
+    byType[key] = existing
   }
 
   return pages.map((page) => ({
