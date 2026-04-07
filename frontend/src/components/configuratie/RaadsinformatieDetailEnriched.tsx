@@ -1,33 +1,112 @@
 /**
- * RaadsinformatieDetailEnriched — enriched detail view for raadsinformatie source.
- * Shows stukken count, dekking indicator, and scrollable feed with type pills.
+ * Enriched Raadsinformatie detail for the configuratie source-detail view.
+ *
+ * Fetches raadsinformatie and renders:
+ *  - metric card with total count + dekking indicator
+ *  - type summary pills (neutral bg-slate-100)
+ *  - search filter when > 5 stukken
+ *  - scrollable list of stukken with type pills and external links
+ *
+ * Design contract follows JurisprudentieDetailEnriched / BekendmakingenDetailEnriched.
  */
 import { useState, useMemo } from 'react'
-import { useRaadsinformatie, type RaadsinformatieResponse, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
-import { FileText, ExternalLink, Search, Loader2, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
+import { ExternalLink, Search, Loader2 } from 'lucide-react'
 
 interface Props {
   gemeenteNaam: string | null
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  Agendapunt: 'bg-blue-100 text-blue-700',
-  MediaObject: 'bg-slate-100 text-slate-600',
-  Vergadering: 'bg-violet-100 text-violet-700',
-  Motie: 'bg-amber-100 text-amber-700',
-  Amendement: 'bg-orange-100 text-orange-700',
-  Besluit: 'bg-emerald-100 text-emerald-700',
-}
+const dateFmt = new Intl.DateTimeFormat('nl-NL', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
   try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+    return dateFmt.format(new Date(dateStr))
   } catch {
     return dateStr
   }
 }
+
+/* ─── Lightweight state helpers ──────────────────────────────── */
+
+function DetailLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
+      <Loader2 className="size-5 animate-spin text-slate-400" />
+      <span className="text-[13px] text-slate-400">Data laden…</span>
+    </div>
+  )
+}
+
+function DetailEmpty({ message }: { message?: string }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
+    </div>
+  )
+}
+
+function DetailError({ error }: { error: Error | null }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
+    </div>
+  )
+}
+
+/* ─── Metric card ────────────────────────────────────────────── */
+
+function MetricCard({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-4 text-center">
+      <p className="text-[24px] font-bold text-[#0E1111]">{value ?? '—'}</p>
+      <p className="mt-1 text-[11px] text-slate-400">{label}</p>
+    </div>
+  )
+}
+
+/* ─── Stuk list item ─────────────────────────────────────────── */
+
+function StukItem({ stuk }: { stuk: RaadsstukResponse }) {
+  return (
+    <div className="flex items-start gap-3 border-b border-[#EAEFEF] py-3 last:border-0">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-[#0E1111]">{stuk.titel}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+          {stuk.datum && <span>{formatDate(stuk.datum)}</span>}
+          {stuk.type && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                {stuk.type}
+              </span>
+            </>
+          )}
+        </div>
+        {stuk.samenvatting && (
+          <p className="mt-1.5 text-[12px] leading-relaxed text-slate-400 line-clamp-2">{stuk.samenvatting}</p>
+        )}
+      </div>
+      {stuk.bron_url && (
+        <a
+          href={stuk.bron_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 flex-shrink-0 text-slate-400 hover:text-[#B07D18] transition-colors"
+        >
+          <ExternalLink size={14} />
+        </a>
+      )}
+    </div>
+  )
+}
+
+/* ─── Main component ─────────────────────────────────────────── */
 
 export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
   const { data, isLoading, error } = useRaadsinformatie(gemeenteNaam)
@@ -45,24 +124,12 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
     )
   }, [data?.stukken, searchQuery])
 
-  if (isLoading || !gemeenteNaam) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-      </div>
-    )
-  }
+  if (!gemeenteNaam) return <DetailEmpty message="Selecteer een gemeente." />
+  if (isLoading) return <DetailLoading />
+  if (error) return <DetailError error={error as Error} />
+  if (!data || data.stukken.length === 0) return <DetailEmpty message="Geen raadsstukken gevonden." />
 
-  if (error || !data) {
-    return (
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <AlertCircle className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-        <p className="text-[13px] text-slate-400">Raadsinformatie kon niet worden geladen.</p>
-      </div>
-    )
-  }
-
-  // Group by type for summary
+  // Type counts for summary pills
   const typeCounts: Record<string, number> = {}
   for (const stuk of data.stukken) {
     const t = stuk.type || 'Overig'
@@ -71,42 +138,31 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
   const sortedTypes = Object.entries(typeCounts).sort(([, a], [, b]) => b - a)
 
   return (
-    <div className="space-y-4">
-      {/* Summary header */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50">
-            <FileText size={20} className="text-indigo-600" />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-[#0E1111]">{data.total_found} <span className="text-[14px] font-bold text-slate-400">gevonden stukken</span></p>
-          </div>
-          <div className="ml-auto flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
-            {data.dekking ? (
-              <CheckCircle2 size={14} className="text-emerald-500" />
-            ) : (
-              <XCircle size={14} className="text-slate-400" />
-            )}
-            <span className="text-[12px] font-semibold text-slate-500">
-              {data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
-            </span>
-          </div>
+    <div className="space-y-5">
+      {/* Summary: count + dekking */}
+      <div className="flex items-center gap-4">
+        <MetricCard label="Gevonden stukken" value={data.total_found} />
+        <div className="flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
+          <span className={`size-2 rounded-full ${data.dekking ? 'bg-[#F9A826]' : 'bg-slate-300'}`} />
+          <span className="text-[12px] font-semibold text-slate-500">
+            {data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
+          </span>
         </div>
-
-        {/* Type pills */}
-        {sortedTypes.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {sortedTypes.map(([type, count]) => (
-              <span
-                key={type}
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TYPE_COLORS[type] ?? 'bg-slate-100 text-slate-500'}`}
-              >
-                {type} ({count})
-              </span>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Type pills — neutral, same pattern as category_label in BekendmakingenDetailEnriched */}
+      {sortedTypes.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {sortedTypes.map(([type, count]) => (
+            <span
+              key={type}
+              className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500"
+            >
+              {type} ({count})
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Search */}
       {data.stukken.length > 5 && (
@@ -122,56 +178,19 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
         </div>
       )}
 
-      {/* Stukken feed */}
-      {filteredStukken.length > 0 ? (
-        <div className="max-h-[520px] overflow-y-auto rounded-[16px] border border-[#EAEFEF] bg-white divide-y divide-[#EAEFEF]">
-          {filteredStukken.map((stuk) => (
-            <StukItem key={stuk.doc_id} stuk={stuk} />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-8 text-center">
-          <p className="text-[13px] text-slate-400">
-            {searchQuery ? 'Geen resultaten voor deze zoekopdracht.' : 'Geen raadsstukken gevonden.'}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function StukItem({ stuk }: { stuk: RaadsstukResponse }) {
-  const typeClass = TYPE_COLORS[stuk.type || ''] ?? 'bg-slate-100 text-slate-500'
-
-  return (
-    <div className="px-5 py-4 hover:bg-slate-50/50 transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold text-[#0E1111] leading-snug">{stuk.titel}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {stuk.datum && (
-              <span className="text-[11px] text-slate-400 tabular-nums">{formatDate(stuk.datum)}</span>
-            )}
-            {stuk.type && (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeClass}`}>
-                {stuk.type}
-              </span>
-            )}
+      {/* Stukken feed — same list pattern as JurisprudentieDetailEnriched */}
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
+          {searchQuery ? `Resultaten (${filteredStukken.length})` : 'Raadsstukken'}
+        </p>
+        {filteredStukken.length > 0 ? (
+          <div className="max-h-[400px] overflow-y-auto">
+            {filteredStukken.map((stuk) => (
+              <StukItem key={stuk.doc_id} stuk={stuk} />
+            ))}
           </div>
-          {stuk.samenvatting && (
-            <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500 line-clamp-2">{stuk.samenvatting}</p>
-          )}
-        </div>
-        {stuk.bron_url && (
-          <a
-            href={stuk.bron_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 flex-shrink-0 rounded-full p-1.5 text-slate-400 hover:text-[#0E1111] hover:bg-slate-100 transition-colors"
-            title="Bekijk bron"
-          >
-            <ExternalLink size={14} />
-          </a>
+        ) : (
+          <p className="text-[13px] text-slate-400">Geen resultaten voor deze zoekopdracht.</p>
         )}
       </div>
     </div>
