@@ -9,11 +9,11 @@ export const Route = createFileRoute('/_authenticated/instellingen/admin')({
 
 function AdminDashboardPage() {
   return (
-    <>
-      <h1 className="text-2xl font-semibold text-aura-ink mb-8">AI Kosten Dashboard</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-semibold text-aura-ink">AI Kosten Dashboard</h1>
       <AiKostenDashboard />
       <ChatEvaluatieDashboard />
       <PromptVerbeteringDashboard />
-    </>
+    </div>
   )
 }
