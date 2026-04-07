@@ -1651,7 +1651,7 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
       case 'jurisprudentie':
         return <JurisprudentieDetailEnriched gemeenteNaam={resolvedNaam} />
       case 'bekendmakingen':
-        return <BekendmakingenDetail profile={profile} isLoading={profileLoading} error={profileError} />
+        return <BekendmakingenDetailEnriched gemeenteNaam={resolvedNaam} profile={profile} profileLoading={profileLoading} profileError={profileError} />
       case 'raadsinformatie':
         return <RaadsinformatieDetail data={raadsData} isLoading={raadsLoading} error={raadsError} />
       case 'huisvestingsverordening':
@@ -1837,4 +1837,3 @@ function ConfiguratiePage() {
     </ResultsShell>
   )
 }
-
