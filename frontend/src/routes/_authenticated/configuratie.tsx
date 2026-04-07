@@ -339,7 +339,7 @@ function getLiveMetrics(
           <>
             <span className="font-bold text-[#0E1111]">{data.total_found}</span>{' stukken · '}
             {data.dekking ? (
-              <span className="font-bold text-emerald-600">Gedekt</span>
+              <span className="font-bold text-[#B07D18]">Gedekt</span>
             ) : (
               <span className="font-bold text-slate-400">Geen dekking</span>
             )}
@@ -1156,7 +1156,7 @@ function JurisprudentieDetail({ profile, isLoading, error }: { profile?: Gemeent
         <MetricCard label="Steekproefomvang" value={profile.sample_size} />
       </div>
       <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <a href="/jurisprudentie" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+        <a href="/jurisprudentie" className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline">
           Bekijk volledige jurisprudentie-analyse
           <ArrowRight size={14} />
         </a>
@@ -1190,7 +1190,7 @@ function RaadsinformatieDetail({ data, isLoading, error }: { data?: Raadsinforma
       <div className="flex items-center gap-4">
         <MetricCard label="Gevonden stukken" value={data.total_found} />
         <div className="flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
-          <span className={`size-2 rounded-full ${data.dekking ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className={`size-2 rounded-full ${data.dekking ? 'bg-[#B07D18]' : 'bg-slate-300'}`} />
           <span className="text-[12px] font-semibold text-slate-500">{data.dekking ? 'Goede dekking' : 'Beperkte dekking'}</span>
         </div>
       </div>
@@ -1216,7 +1216,7 @@ function RaadsinformatieDetail({ data, isLoading, error }: { data?: Raadsinforma
                   )}
                 </div>
                 {stuk.bron_url && (
-                  <a href={stuk.bron_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex-shrink-0 text-slate-400 hover:text-emerald-600 transition-colors">
+                  <a href={stuk.bron_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex-shrink-0 text-slate-400 hover:text-[#B07D18] transition-colors">
                     <ExternalLink size={14} />
                   </a>
                 )}
@@ -1262,7 +1262,7 @@ function HuisvestingsverordeningDetail({ data, isLoading, error }: { data?: Huis
         </div>
       )}
       {data.url && (
-        <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+        <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline">
           Bekijk bron
           <ExternalLink size={14} />
         </a>
@@ -1328,7 +1328,7 @@ function DocumentStatusBadge({ status }: { status: string }) {
       )
     case 'parsed':
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
           <Check size={10} /> Geanalyseerd
         </span>
       )
@@ -1443,10 +1443,6 @@ function DocumentSourceDetail({
     return (
       <div className="space-y-5">
         {fileInput}
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6">
-          <p className="text-[13px] leading-relaxed text-slate-500">{sourceDescription}</p>
-        </div>
-
         {/* Upload CTA zone — superuser only */}
         {isSuperuser ? (
           <div
@@ -1454,11 +1450,11 @@ function DocumentSourceDetail({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             className={`flex flex-col items-center gap-3 rounded-[16px] border-2 border-dashed p-10 text-center transition-colors ${
-              isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/50'
+              isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-[#B07D18]/20 bg-amber-50/30'
             }`}
           >
-            <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
-              <Upload size={22} className="text-slate-400" />
+            <div className="flex size-12 items-center justify-center rounded-full bg-amber-50">
+              <Upload size={22} className="text-amber-600" />
             </div>
             <p className="text-[14px] font-bold text-[#0E1111]">Upload een document om AI-analyse te starten</p>
             <p className="text-[12px] text-slate-400">Sleep een bestand hierheen of klik op de knop</p>
@@ -1480,7 +1476,7 @@ function DocumentSourceDetail({
             <p className="text-[10px] text-slate-300">PDF, DOCX, XLSX, JPG, PNG</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 rounded-[16px] border border-slate-200 bg-slate-50/50 p-8 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-[16px] border border-[#B07D18]/20 bg-amber-50/30 p-8 text-center">
             <p className="text-[13px] text-slate-400">Nog geen document toegevoegd voor deze bron.</p>
           </div>
         )}
@@ -1571,7 +1567,7 @@ function DocumentSourceDetail({
                     href={`/api/policy-documents/gemeente/${gemeenteCode}/${doc.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B07D18] hover:underline"
                   >
                     Bekijk PDF <ExternalLink size={11} />
                   </a>
@@ -1589,7 +1585,7 @@ function DocumentSourceDetail({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={`flex items-center justify-center gap-3 rounded-[16px] border-2 border-dashed px-5 py-6 text-center transition-colors ${
-            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/30'
+            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-[#B07D18]/20 bg-amber-50/20'
           }`}
         >
           <Upload size={16} className="text-slate-300" />
@@ -1688,7 +1684,7 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
 
       {/* Source heading */}
       <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex items-center gap-4">
-        <div className={`flex size-14 items-center justify-center rounded-full ${source.status === 'live' ? 'bg-emerald-600' : 'bg-[#0E1111]'}`}>
+        <div className={`flex size-14 items-center justify-center rounded-full ${'bg-[#0E1111]'}`}>
           <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
         </div>
         <div>
@@ -1840,3 +1836,4 @@ function ConfiguratiePage() {
     </ResultsShell>
   )
 }
+
