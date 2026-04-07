@@ -15,6 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.parcel_favorite import ParcelFavorite
 from app.models.report import SavedReport
+from app.models.policy_document import PolicyDocument
+from app.models.checklist_progress import ChecklistProgress
+from app.services.checklists import CHECKLISTS
 
 # ── Gemini FunctionDeclaration definitions ───────────────────────────────
 
@@ -87,6 +90,67 @@ _GET_REPORT = types.FunctionDeclaration(
 )
 
 
+_QUERY_POLICY_DOCUMENTS = types.FunctionDeclaration(
+    name="query_policy_documents",
+    description=(
+        "Zoek beleidsdocumenten (welstandsnota, omgevingsvisie, woonvisie, etc.) "
+        "die zijn geüpload in de gemeenteconfiguratie. Geeft de AI-samenvatting "
+        "per document terug. Gebruik dit wanneer de gebruiker vraagt over "
+        "gemeentelijk beleid, bestemmingsregels, welstandseisen, of andere "
+        "beleidsdocumenten voor een specifieke gemeente."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "gemeente": types.Schema(
+                type="STRING",
+                description=(
+                    "Gemeentenaam om te zoeken (bijv. 'Amsterdam', 'Venlo'). "
+                    "Zoekt op alle gemeentecodes die voor deze organisatie zijn geconfigureerd."
+                ),
+            ),
+            "source_key": types.Schema(
+                type="STRING",
+                description=(
+                    "Filter op specifiek documenttype: welstandsnota, omgevingsvisie, "
+                    "woonvisie, parkeerbeleid, leegstandsverordening, duurzaamheidsbeleid, "
+                    "erfgoedverordening, grondprijsbeleid, gemeentelijke-subsidies, "
+                    "nieuws-monitoring."
+                ),
+            ),
+        },
+        required=[],
+    ),
+)
+
+_GET_CHECKLIST_STATUS = types.FunctionDeclaration(
+    name="get_checklist_status",
+    description=(
+        "Haal de checkliststatus op voor een specifiek perceel. Toont welke "
+        "checklist-items zijn afgevinkt per use case (optoppen, splitsen, "
+        "transformatie, nieuwbouw). Gebruik dit wanneer de gebruiker vraagt "
+        "over de voortgang van een vergunningchecklist."
+    ),
+    parameters=types.Schema(
+        type="OBJECT",
+        properties={
+            "parcel_id": types.Schema(
+                type="STRING",
+                description="Kadaster perceel-ID (bijv. 'HTT02-A-1234').",
+            ),
+            "use_case": types.Schema(
+                type="STRING",
+                description=(
+                    "Filter op use case: optoppen, splitsen, transformatie, "
+                    "of nieuwbouw. Laat leeg voor alle use cases."
+                ),
+            ),
+        },
+        required=["parcel_id"],
+    ),
+)
+
+
 def get_agent_tools() -> list[types.Tool]:
     """Return Gemini Tool objects: user-data functions.
 
@@ -96,7 +160,10 @@ def get_agent_tools() -> list[types.Tool]:
     external advisory questions.
     """
     return [
-        types.Tool(function_declarations=[_LIST_FAVORITES, _LIST_REPORTS, _GET_REPORT]),
+        types.Tool(function_declarations=[
+            _LIST_FAVORITES, _LIST_REPORTS, _GET_REPORT,
+            _QUERY_POLICY_DOCUMENTS, _GET_CHECKLIST_STATUS,
+        ]),
     ]
 
 
@@ -234,13 +301,93 @@ async def _get_report(
     )
 
 
-# ── Public dispatcher ────────────────────────────────────────────────────
+async def _query_policy_documents(
+    db: AsyncSession,
+    user_id: str,
+    organization_id: str,
+    gemeente: str | None = None,
+    source_key: str | None = None,
+) -> str:
+    """List policy documents with AI summaries for the user's organization."""
+    query = (
+        select(
+            PolicyDocument.entity_type,
+            PolicyDocument.entity_code,
+            PolicyDocument.source_key,
+            PolicyDocument.filename,
+            PolicyDocument.ai_summary,
+            PolicyDocument.created_at,
+        )
+        .where(
+            PolicyDocument.organization_id == _uuid.UUID(organization_id),
+            PolicyDocument.ai_summary.isnot(None),
+            PolicyDocument.ai_summary != "",
+        )
+        .order_by(PolicyDocument.created_at.desc())
+        .limit(20)
+    )
 
-_EXECUTORS = {
-    "list_favorites": _list_favorites,
-    "list_reports": _list_reports,
-    "get_report": _get_report,
-}
+    if source_key:
+        query = query.where(PolicyDocument.source_key == source_key)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    docs = [
+        {
+            "entity_type": r.entity_type,
+            "entity_code": r.entity_code,
+            "source_key": r.source_key,
+            "filename": r.filename,
+            "ai_summary": r.ai_summary[:1500] if r.ai_summary else None,  # truncate for context
+            "uploaded_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+    if not docs:
+        return _serialize({"message": "Geen beleidsdocumenten gevonden met AI-samenvattingen."})
+    return _serialize(docs)
+
+
+async def _get_checklist_status(
+    db: AsyncSession,
+    user_id: str,
+    parcel_id: str,
+    use_case: str | None = None,
+) -> str:
+    """Get checklist progress for a parcel across all (or one) use cases."""
+    query = select(ChecklistProgress).where(
+        ChecklistProgress.user_id == _uuid.UUID(user_id),
+        ChecklistProgress.parcel_id == parcel_id,
+    )
+    if use_case:
+        query = query.where(ChecklistProgress.use_case == use_case)
+
+    result = await db.execute(query)
+    rows = result.scalars().all()
+
+    if not rows:
+        return _serialize({
+            "message": f"Geen checklistvoortgang gevonden voor perceel {parcel_id}.",
+            "available_use_cases": list(CHECKLISTS.keys()),
+        })
+
+    statuses = []
+    for row in rows:
+        total_items = len(CHECKLISTS.get(row.use_case, []))
+        checked_count = len(row.checked_items) if row.checked_items else 0
+        statuses.append({
+            "use_case": row.use_case,
+            "checked_items": checked_count,
+            "total_items": total_items,
+            "completion_pct": round(checked_count / total_items * 100) if total_items else 0,
+            "checked_item_ids": row.checked_items or [],
+        })
+
+    return _serialize(statuses)
+
+
+# ── Public dispatcher ────────────────────────────────────────────────────
 
 
 async def execute_tool(
@@ -248,6 +395,7 @@ async def execute_tool(
     tool_input: dict,
     db: AsyncSession,
     user_id: str,
+    organization_id: str | None = None,
 ) -> str:
     """Dispatch a tool call by name. Returns a JSON string."""
     if name == "list_favorites":
@@ -265,6 +413,19 @@ async def execute_tool(
         return await _get_report(
             db, user_id,
             report_id=tool_input.get("report_id", ""),
+        )
+    if name == "query_policy_documents":
+        return await _query_policy_documents(
+            db, user_id,
+            organization_id=organization_id or "",
+            gemeente=tool_input.get("gemeente"),
+            source_key=tool_input.get("source_key"),
+        )
+    if name == "get_checklist_status":
+        return await _get_checklist_status(
+            db, user_id,
+            parcel_id=tool_input.get("parcel_id", ""),
+            use_case=tool_input.get("use_case"),
         )
 
     return _serialize({"error": f"Onbekende tool: {name}"})

@@ -245,6 +245,7 @@ async def agent_chat(
     request: AgentRequest,
     db: AsyncSession,
     user_id: str,
+    organization_id: str | None = None,
 ) -> AgentResponse:
     """Run the agentic tool-calling loop for a single user turn.
 
@@ -312,7 +313,7 @@ async def agent_chat(
                 tool_calls_made.append(fc.name)
                 try:
                     result_str = await execute_tool(
-                        fc.name, fc.args or {}, db, user_id
+                        fc.name, fc.args or {}, db, user_id, organization_id
                     )
                     tool_response_parts.append(
                         types.Part.from_function_response(
@@ -386,6 +387,7 @@ async def agent_chat_stream(
     request: AgentRequest,
     db: AsyncSession,
     user_id: str,
+    organization_id: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Streaming variant of agent_chat that yields SSE events.
 
@@ -453,7 +455,7 @@ async def agent_chat_stream(
 
                 try:
                     result_str = await execute_tool(
-                        fc.name, fc.args or {}, db, user_id
+                        fc.name, fc.args or {}, db, user_id, organization_id
                     )
                     tool_response_parts.append(
                         types.Part.from_function_response(

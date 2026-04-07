@@ -43,7 +43,7 @@ async def chat(
         body.message[:80],
     )
 
-    response = await agent_chat(body, db, str(user.id))
+    response = await agent_chat(body, db, str(user.id), str(user.organization_id))
 
     logger.info(
         "Agent chat response: tools_used=%s message_len=%d",
@@ -74,7 +74,7 @@ async def chat_stream(
     )
 
     async def event_generator():
-        async for event in agent_chat_stream(body, db, str(user.id)):
+        async for event in agent_chat_stream(body, db, str(user.id), str(user.organization_id)):
             yield {
                 "event": event["type"],
                 "data": json.dumps(event["data"]),
