@@ -11,6 +11,7 @@ import { BestemmingModal } from './BestemmingModal'
 import { OnbebouwdModal } from './OnbebouwdModal'
 import { ScoreBreakdownModal } from './ScoreBreakdownModal'
 import { UseCaseScoreCards } from './UseCaseScoreCards'
+import { BeleidscontextCard } from './BeleidscontextCard'
 import { useOrgScoreWeights } from '@/hooks/useScoreWeights'
 
 export type CategoryKey = 'potentie' | 'risico' | 'dossiers'
@@ -266,6 +267,13 @@ export function ParcelBentoOverview({
 
       {/* ── Use-case scores ───────────────────────────── */}
       <UseCaseScoreCards scores={parcel.use_case_scores} />
+
+      {/* ── Gemeente beleidscontext ───────────────────── */}
+      {parcel.gemeente_code && (
+        <motion.div variants={fadeUp} className="mt-3">
+          <BeleidscontextCard gemeenteCode={parcel.gemeente_code} />
+        </motion.div>
+      )}
 
       {/* ── Secondary Fields ──────────────────────────── */}
       <motion.div variants={fadeUp} className="mt-4 grid grid-cols-2 gap-1.5">
