@@ -29,6 +29,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedInstellingenIndexRouteImport } from './routes/_authenticated/instellingen.index'
 import { Route as AuthenticatedRapportIdRouteImport } from './routes/_authenticated/rapport.$id'
 import { Route as AuthenticatedInstellingenScoreRouteImport } from './routes/_authenticated/instellingen.score'
+import { Route as AuthenticatedInstellingenAdminRouteImport } from './routes/_authenticated/instellingen.admin'
 import { Route as AuthenticatedChecklistIdRouteImport } from './routes/_authenticated/checklist.$id'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -136,6 +137,12 @@ const AuthenticatedInstellingenScoreRoute =
     path: '/score',
     getParentRoute: () => AuthenticatedInstellingenRoute,
   } as any)
+const AuthenticatedInstellingenAdminRoute =
+  AuthenticatedInstellingenAdminRouteImport.update({
+    id: '/admin',
+    path: '/admin',
+    getParentRoute: () => AuthenticatedInstellingenRoute,
+  } as any)
 const AuthenticatedChecklistIdRoute =
   AuthenticatedChecklistIdRouteImport.update({
     id: '/checklist/$id',
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen/': typeof AuthenticatedInstellingenIndexRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByTo {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth': typeof AuthIndexRoute
   '/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/instellingen': typeof AuthenticatedInstellingenIndexRoute
@@ -206,6 +215,7 @@ export interface FileRoutesById {
   '/auth/google-callback': typeof AuthGoogleCallbackRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/checklist/$id': typeof AuthenticatedChecklistIdRoute
+  '/_authenticated/instellingen/admin': typeof AuthenticatedInstellingenAdminRoute
   '/_authenticated/instellingen/score': typeof AuthenticatedInstellingenScoreRoute
   '/_authenticated/rapport/$id': typeof AuthenticatedRapportIdRoute
   '/_authenticated/instellingen/': typeof AuthenticatedInstellingenIndexRoute
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth/'
     | '/checklist/$id'
+    | '/instellingen/admin'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen/'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth'
     | '/checklist/$id'
+    | '/instellingen/admin'
     | '/instellingen/score'
     | '/rapport/$id'
     | '/instellingen'
@@ -274,6 +286,7 @@ export interface FileRouteTypes {
     | '/auth/google-callback'
     | '/auth/'
     | '/_authenticated/checklist/$id'
+    | '/_authenticated/instellingen/admin'
     | '/_authenticated/instellingen/score'
     | '/_authenticated/rapport/$id'
     | '/_authenticated/instellingen/'
@@ -428,6 +441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstellingenScoreRouteImport
       parentRoute: typeof AuthenticatedInstellingenRoute
     }
+    '/_authenticated/instellingen/admin': {
+      id: '/_authenticated/instellingen/admin'
+      path: '/admin'
+      fullPath: '/instellingen/admin'
+      preLoaderRoute: typeof AuthenticatedInstellingenAdminRouteImport
+      parentRoute: typeof AuthenticatedInstellingenRoute
+    }
     '/_authenticated/checklist/$id': {
       id: '/_authenticated/checklist/$id'
       path: '/checklist/$id'
@@ -439,12 +459,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedInstellingenRouteChildren {
+  AuthenticatedInstellingenAdminRoute: typeof AuthenticatedInstellingenAdminRoute
   AuthenticatedInstellingenScoreRoute: typeof AuthenticatedInstellingenScoreRoute
   AuthenticatedInstellingenIndexRoute: typeof AuthenticatedInstellingenIndexRoute
 }
 
 const AuthenticatedInstellingenRouteChildren: AuthenticatedInstellingenRouteChildren =
   {
+    AuthenticatedInstellingenAdminRoute: AuthenticatedInstellingenAdminRoute,
     AuthenticatedInstellingenScoreRoute: AuthenticatedInstellingenScoreRoute,
     AuthenticatedInstellingenIndexRoute: AuthenticatedInstellingenIndexRoute,
   }
