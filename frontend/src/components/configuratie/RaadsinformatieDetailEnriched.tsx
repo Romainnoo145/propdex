@@ -6,7 +6,7 @@
 import { useState, useMemo } from 'react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
 import { FileText, ExternalLink, Search, Loader2 } from 'lucide-react'
-import { SectionInsightCard, SubCard, StatCell } from '@/components/reports/components'
+import { SectionInsightCard } from '@/components/reports/components'
 
 interface Props {
   gemeenteNaam: string | null
@@ -124,19 +124,10 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
         Icon={FileText}
         badge={data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
       >
-        {/* Type summary — StatCells in a grid */}
+        {/* Type summary — pill row, same as category_label pills in Bekendmakingen */}
         {sortedTypes.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {sortedTypes.slice(0, 3).map(([type, count]) => (
-              <StatCell key={type} label={type} value={count} />
-            ))}
-          </div>
-        )}
-
-        {/* Remaining types as pills */}
-        {sortedTypes.length > 3 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {sortedTypes.slice(3).map(([type, count]) => (
+            {sortedTypes.map(([type, count]) => (
               <span
                 key={type}
                 className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500"
