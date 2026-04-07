@@ -51,6 +51,8 @@ import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type Polic
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { useAuth } from '@/lib/auth/useAuth'
 import JurisprudentieDetailEnriched from '@/components/configuratie/JurisprudentieDetailEnriched'
+import RvoSubsidiesDetailEnriched from '@/components/configuratie/RvoSubsidiesDetailEnriched'
+import OmgevingswetDetailEnriched from '@/components/configuratie/OmgevingswetDetailEnriched'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -436,6 +438,9 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
   const handleCardClick = useCallback(() => {
     if (gemeenteCode) {
       navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+    } else if (!gemeenteCode && source.status === 'live') {
+      // Landelijk sources: navigate without gemeente param
+      navigate({ to: '/configuratie', search: { source: source.key } })
     }
   }, [gemeenteCode, navigate, source.key])
 
@@ -1705,6 +1710,84 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
   )
 }
 
+/* ─── Landelijk source detail view ──────────────────────────── */
+
+function LandelijkSourceDetail({ sourceKey, onBack }: { sourceKey: string; onBack: () => void }) {
+  const source = LANDELIJK_DATA_SOURCES.find((s) => s.key === sourceKey)
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar overzicht
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">Databron &ldquo;{sourceKey}&rdquo; niet gevonden.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const Icon = source.icon
+
+  const renderLandelijkDetail = () => {
+    switch (sourceKey) {
+      case 'rvo-subsidies':
+        return <RvoSubsidiesDetailEnriched />
+      case 'omgevingswet':
+        return <OmgevingswetDetailEnriched />
+      default:
+        return (
+          <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-8 text-center">
+            <p className="text-[13px] text-slate-400">Detail view voor deze bron is nog in ontwikkeling.</p>
+          </div>
+        )
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar overzicht
+      </motion.button>
+
+      {/* Source heading */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex items-center gap-4">
+        <div className="flex size-14 items-center justify-center rounded-full bg-[#0E1111]">
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Landelijk · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">{source.label}</h1>
+          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+        </div>
+      </motion.div>
+
+      {/* Source-specific detail content */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        {renderLandelijkDetail()}
+      </motion.div>
+    </div>
+  )
+}
+
 /* ─── Main page ─────────────────────────────────────────────── */
 
 function ConfiguratiePage() {
@@ -1772,6 +1855,17 @@ function ConfiguratiePage() {
       <ResultsShell>
         <div className="mx-auto max-w-4xl">
           <ProvincieDetail provincieCode={activeProvincie} onBack={handleBackToMain} />
+        </div>
+      </ResultsShell>
+    )
+  }
+
+  // If landelijk source is selected (no gemeente), show landelijk detail view
+  if (activeSource && !activeGemeente) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <LandelijkSourceDetail sourceKey={activeSource} onBack={handleBackToMain} />
         </div>
       </ResultsShell>
     )
