@@ -49,6 +49,7 @@ import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
 import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type PolicyDocument, type DocumentSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
+import { useAuth } from '@/lib/auth/useAuth'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -381,6 +382,8 @@ function getLiveMetrics(
 
 function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeenteCode }: DataSourceCardProps) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isSuperuser = user?.is_superuser ?? false
   const [isDragging, setIsDragging] = useState(false)
   const [polling, setPolling] = useState(false)
   const Icon = source.icon
@@ -440,9 +443,9 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
   return (
     <motion.div
       layout
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      onDrop={isSuperuser ? handleDrop : undefined}
+      onDragOver={isSuperuser ? handleDragOver : undefined}
+      onDragLeave={isSuperuser ? handleDragLeave : undefined}
       onClick={handleCardClick}
       className={`group relative rounded-2xl border-2 transition-all cursor-pointer h-full flex flex-col ${
         isDragging
@@ -517,9 +520,14 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
               )}
             </div>
           )}
-          {!isLive && docCount === 0 && entityType && (
+          {!isLive && docCount === 0 && entityType && isSuperuser && (
             <p className="text-[11px] text-slate-300 italic">
               Sleep een document hierheen of klik om te uploaden
+            </p>
+          )}
+          {!isLive && docCount === 0 && entityType && !isSuperuser && (
+            <p className="text-[11px] text-slate-300 italic">
+              Nog geen document toegevoegd
             </p>
           )}
         </div>
@@ -1348,6 +1356,8 @@ function DocumentSourceDetail({
   sourceDescription: string
   gemeenteCode: string
 }) {
+  const { user } = useAuth()
+  const isSuperuser = user?.is_superuser ?? false
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [polling, setPolling] = useState(false)
@@ -1437,37 +1447,43 @@ function DocumentSourceDetail({
           <p className="text-[13px] leading-relaxed text-slate-500">{sourceDescription}</p>
         </div>
 
-        {/* Upload CTA zone */}
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`flex flex-col items-center gap-3 rounded-[16px] border-2 border-dashed p-10 text-center transition-colors ${
-            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/50'
-          }`}
-        >
-          <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
-            <Upload size={22} className="text-slate-400" />
-          </div>
-          <p className="text-[14px] font-bold text-[#0E1111]">Upload een document om AI-analyse te starten</p>
-          <p className="text-[12px] text-slate-400">Sleep een bestand hierheen of klik op de knop</p>
-          <button
-            onClick={handleUploadClick}
-            disabled={uploadMutation.isPending}
-            className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        {/* Upload CTA zone — superuser only */}
+        {isSuperuser ? (
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`flex flex-col items-center gap-3 rounded-[16px] border-2 border-dashed p-10 text-center transition-colors ${
+              isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/50'
+            }`}
           >
-            {uploadMutation.isPending ? (
-              <>
-                <Loader2 size={14} className="animate-spin" /> Uploaden…
-              </>
-            ) : (
-              <>
-                <Upload size={14} /> Kies bestand
-              </>
-            )}
-          </button>
-          <p className="text-[10px] text-slate-300">PDF, DOCX, XLSX, JPG, PNG</p>
-        </div>
+            <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
+              <Upload size={22} className="text-slate-400" />
+            </div>
+            <p className="text-[14px] font-bold text-[#0E1111]">Upload een document om AI-analyse te starten</p>
+            <p className="text-[12px] text-slate-400">Sleep een bestand hierheen of klik op de knop</p>
+            <button
+              onClick={handleUploadClick}
+              disabled={uploadMutation.isPending}
+              className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {uploadMutation.isPending ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Uploaden…
+                </>
+              ) : (
+                <>
+                  <Upload size={14} /> Kies bestand
+                </>
+              )}
+            </button>
+            <p className="text-[10px] text-slate-300">PDF, DOCX, XLSX, JPG, PNG</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-[16px] border border-slate-200 bg-slate-50/50 p-8 text-center">
+            <p className="text-[13px] text-slate-400">Nog geen document toegevoegd voor deze bron.</p>
+          </div>
+        )}
       </div>
     )
   }
@@ -1566,18 +1582,20 @@ function DocumentSourceDetail({
         </div>
       </div>
 
-      {/* Drop zone for additional uploads */}
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`flex items-center justify-center gap-3 rounded-[16px] border-2 border-dashed px-5 py-6 text-center transition-colors ${
-          isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/30'
-        }`}
-      >
-        <Upload size={16} className="text-slate-300" />
-        <p className="text-[12px] text-slate-400">Sleep een extra document hierheen om toe te voegen</p>
-      </div>
+      {/* Drop zone for additional uploads — superuser only */}
+      {isSuperuser && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`flex items-center justify-center gap-3 rounded-[16px] border-2 border-dashed px-5 py-6 text-center transition-colors ${
+            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/30'
+          }`}
+        >
+          <Upload size={16} className="text-slate-300" />
+          <p className="text-[12px] text-slate-400">Sleep een extra document hierheen om toe te voegen</p>
+        </div>
+      )}
     </div>
   )
 }

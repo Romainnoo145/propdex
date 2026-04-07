@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFil
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_active_user
+from app.auth.dependencies import get_current_active_user, get_current_superuser
 from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.user import User
@@ -31,10 +31,10 @@ async def upload_policy_document(
     entity_code: str,
     source_key: str = Query(..., description="Data source key (e.g. welstandsnota, omgevingsvisie)"),
     file: UploadFile = ...,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> PolicyDocumentResponse:
-    """Upload a policy document for an entity + data source."""
+    """Upload a policy document for an entity + data source. Superuser only."""
     file_bytes = await file.read()
 
     error = svc.validate_upload(entity_type, source_key, file.content_type, len(file_bytes))
@@ -126,9 +126,9 @@ async def delete_policy_document(
     entity_type: str,
     entity_code: str,
     document_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete a policy document."""
+    """Delete a policy document. Superuser only."""
     if not await svc.delete_document(document_id, current_user.organization_id, db):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
