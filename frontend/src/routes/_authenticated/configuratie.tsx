@@ -589,6 +589,7 @@ function ProgressBar({ completed, total, label }: { completed: number; total: nu
 /* ─── Category pill tab bar + content ───────────────────────── */
 
 interface CategoryTabbedSourcesProps {
+  initialCategory?: string
   sources: DataSource[]
   entityType?: string
   entityCode?: string
@@ -596,7 +597,7 @@ interface CategoryTabbedSourcesProps {
   gemeenteCode?: string
 }
 
-function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, gemeenteCode }: CategoryTabbedSourcesProps) {
+function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, gemeenteCode, initialCategory }: CategoryTabbedSourcesProps) {
   // Only show categories that have sources
   const availableCategories = useMemo(() => {
     const categoriesWithSources = new Set(sources.map((s) => s.category))
@@ -798,7 +799,7 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
 
       {/* Category pill tabs + source rows */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
-        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={entityType === 'Gemeente' ? entityCode : undefined} />
+        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={entityType === 'Gemeente' ? entityCode : undefined} initialCategory={initialCategory} />
       </motion.div>
     </div>
   )
