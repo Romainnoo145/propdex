@@ -45,7 +45,7 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
     )
   }, [data?.stukken, searchQuery])
 
-  if (isLoading) {
+  if (isLoading || !gemeenteNaam) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
