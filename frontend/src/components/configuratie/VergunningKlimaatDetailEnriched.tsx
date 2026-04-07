@@ -1,27 +1,15 @@
 /**
  * Enriched Vergunning-klimaat detail for the configuratie source-detail view.
  *
- * Fetches the gemeente profile and renders:
- *  - severity badge with sample size
- *  - metric cards for goedkeuring/afwijzing/doorlooptijd
- *  - bekendmakingen trend counters (30d/90d/365d)
- *  - permit type distribution bar chart
- *
- * Design contract follows JurisprudentieDetailEnriched / BekendmakingenDetailEnriched:
- *  - space-y-5 between sections, no wrapping container
- *  - Cards: rounded-[16px] border border-[#EAEFEF] bg-white p-5
- *  - Headers: text-[12px] font-semibold uppercase tracking-wide text-slate-400
- *  - MetricCard: text-[24px] font-bold, text-[11px] label
- *  - Colors: #0E1111, #F9A826, #EAEFEF, #B07D18, slate. No blue/indigo/violet.
+ * Reuses shared report components: SectionInsightCard, SubCard, KVRow, StatCell.
  */
 import { useGemeenteProfile, SEVERITY_COLORS } from '@/hooks/useGemeenteProfile'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Shield, Loader2, ArrowRight } from 'lucide-react'
+import { SectionInsightCard, SubCard, KVRow, StatCell } from '@/components/reports/components'
 
 interface Props {
   gemeenteNaam: string | null
 }
-
-/* ─── Lightweight state helpers (same as JurisprudentieDetailEnriched) ── */
 
 function DetailLoading() {
   return (
@@ -32,42 +20,17 @@ function DetailLoading() {
   )
 }
 
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
-    </div>
-  )
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
-    </div>
-  )
-}
-
-/* ─── Metric card (same as BekendmakingenDetailEnriched) ──────── */
-
-function MetricCard({ label, value }: { label: string; value: string | number | null | undefined }) {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-4 text-center">
-      <p className="text-[24px] font-bold text-[#0E1111]">{value ?? '—'}</p>
-      <p className="mt-1 text-[11px] text-slate-400">{label}</p>
-    </div>
-  )
-}
-
-/* ─── Main component ─────────────────────────────────────────── */
-
 export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
   const { data: profile, isLoading, error } = useGemeenteProfile(gemeenteNaam)
 
-  if (!gemeenteNaam) return <DetailEmpty message="Selecteer een gemeente." />
-  if (isLoading) return <DetailLoading />
-  if (error) return <DetailError error={error as Error} />
-  if (!profile) return <DetailEmpty />
+  if (!gemeenteNaam || isLoading) return <DetailLoading />
+  if (error || !profile) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] text-slate-400">{error ? 'Fout bij laden.' : 'Geen data beschikbaar.'}</p>
+      </div>
+    )
+  }
 
   const sevColor = SEVERITY_COLORS[profile.severity_label] ?? SEVERITY_COLORS['Onbekend']
   const permitEntries = Object.entries(profile.permit_type_distribution ?? {})
@@ -77,49 +40,50 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Severity + sample size */}
-      <div className="flex items-center gap-3">
-        <span
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold text-white"
-          style={{ backgroundColor: sevColor }}
-        >
-          {profile.severity_label}
-        </span>
-        <span className="text-[12px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
-      </div>
-
-      {/* Core metrics */}
-      <div className="grid grid-cols-3 gap-4">
-        <MetricCard
-          label="Goedkeuring"
-          value={profile.approval_rate_pct != null ? `${profile.approval_rate_pct.toFixed(1)}%` : null}
-        />
-        <MetricCard
-          label="Afwijzing"
-          value={profile.rejection_rate_pct != null ? `${profile.rejection_rate_pct.toFixed(1)}%` : null}
-        />
-        <MetricCard
-          label="Gem. doorlooptijd"
-          value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)} d` : null}
-        />
-      </div>
-
-      {/* Bekendmakingen trend */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Bekendmakingen trend
-        </p>
-        <div className="grid grid-cols-3 gap-4">
-          <MetricCard label="Afgelopen 30 dagen" value={profile.bekendmakingen_30d} />
-          <MetricCard label="Afgelopen 90 dagen" value={profile.bekendmakingen_90d} />
-          <MetricCard label="Afgelopen 365 dagen" value={profile.bekendmakingen_365d} />
+      {/* Main card — reuses SectionInsightCard from rapport sections */}
+      <SectionInsightCard
+        kicker="Vergunningklimaat"
+        title={profile.severity_label}
+        Icon={Shield}
+        badge={`${profile.sample_size} zaken`}
+      >
+        {/* Severity bar */}
+        <div className="mb-4 flex items-center gap-3">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold text-white"
+            style={{ backgroundColor: sevColor }}
+          >
+            {profile.severity_label}
+          </span>
+          <span className="text-[12px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
         </div>
-      </div>
 
-      {/* Permit type distribution */}
+        {/* Core metrics — reuses StatCell from rapport */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <StatCell
+            label="Goedkeuring"
+            value={profile.approval_rate_pct != null ? `${profile.approval_rate_pct.toFixed(1)}%` : '—'}
+          />
+          <StatCell
+            label="Afwijzing"
+            value={profile.rejection_rate_pct != null ? `${profile.rejection_rate_pct.toFixed(1)}%` : '—'}
+          />
+          <StatCell
+            label="Doorlooptijd"
+            value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}d` : '—'}
+          />
+        </div>
+
+        {/* Key-value details — reuses KVRow */}
+        <KVRow label="Bekendmakingen 30d" value={String(profile.bekendmakingen_30d)} />
+        <KVRow label="Bekendmakingen 90d" value={String(profile.bekendmakingen_90d)} />
+        <KVRow label="Bekendmakingen 365d" value={String(profile.bekendmakingen_365d)} />
+      </SectionInsightCard>
+
+      {/* Permit type distribution — uses SubCard */}
       {permitEntries.length > 0 && (
-        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
+        <SubCard>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">
             Vergunningtype verdeling
           </p>
           <div className="space-y-2.5">
@@ -136,11 +100,11 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
               </div>
             ))}
           </div>
-        </div>
+        </SubCard>
       )}
 
-      {/* Link to bekendmakingen */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+      {/* Link */}
+      <SubCard>
         <a
           href="/meldingen"
           className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline"
@@ -148,7 +112,7 @@ export function VergunningKlimaatDetailEnriched({ gemeenteNaam }: Props) {
           Bekijk alle bekendmakingen
           <ArrowRight size={14} />
         </a>
-      </div>
+      </SubCard>
     </div>
   )
 }

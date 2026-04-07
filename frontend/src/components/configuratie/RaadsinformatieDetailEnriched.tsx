@@ -1,17 +1,12 @@
 /**
  * Enriched Raadsinformatie detail for the configuratie source-detail view.
  *
- * Fetches raadsinformatie and renders:
- *  - metric card with total count + dekking indicator
- *  - type summary pills (neutral bg-slate-100)
- *  - search filter when > 5 stukken
- *  - scrollable list of stukken with type pills and external links
- *
- * Design contract follows JurisprudentieDetailEnriched / BekendmakingenDetailEnriched.
+ * Reuses shared report components: SectionInsightCard, SubCard, StatCell.
  */
 import { useState, useMemo } from 'react'
 import { useRaadsinformatie, type RaadsstukResponse } from '@/hooks/useRaadsinformatie'
-import { ExternalLink, Search, Loader2 } from 'lucide-react'
+import { FileText, ExternalLink, Search, Loader2 } from 'lucide-react'
+import { SectionInsightCard, SubCard, StatCell } from '@/components/reports/components'
 
 interface Props {
   gemeenteNaam: string | null
@@ -32,8 +27,6 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-/* ─── Lightweight state helpers ──────────────────────────────── */
-
 function DetailLoading() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
@@ -43,34 +36,7 @@ function DetailLoading() {
   )
 }
 
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
-    </div>
-  )
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
-    </div>
-  )
-}
-
-/* ─── Metric card ────────────────────────────────────────────── */
-
-function MetricCard({ label, value }: { label: string; value: string | number | null | undefined }) {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-4 text-center">
-      <p className="text-[24px] font-bold text-[#0E1111]">{value ?? '—'}</p>
-      <p className="mt-1 text-[11px] text-slate-400">{label}</p>
-    </div>
-  )
-}
-
-/* ─── Stuk list item ─────────────────────────────────────────── */
+/* ─── Stuk list item — same structure as RulingListItem ──────── */
 
 function StukItem({ stuk }: { stuk: RaadsstukResponse }) {
   return (
@@ -124,12 +90,24 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
     )
   }, [data?.stukken, searchQuery])
 
-  if (!gemeenteNaam) return <DetailEmpty message="Selecteer een gemeente." />
-  if (isLoading) return <DetailLoading />
-  if (error) return <DetailError error={error as Error} />
-  if (!data || data.stukken.length === 0) return <DetailEmpty message="Geen raadsstukken gevonden." />
+  if (!gemeenteNaam || isLoading) return <DetailLoading />
+  if (error || !data) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] text-slate-400">{error ? 'Fout bij laden.' : 'Geen data beschikbaar.'}</p>
+      </div>
+    )
+  }
 
-  // Type counts for summary pills
+  if (data.stukken.length === 0) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] text-slate-400">Geen raadsstukken gevonden.</p>
+      </div>
+    )
+  }
+
+  // Type counts
   const typeCounts: Record<string, number> = {}
   for (const stuk of data.stukken) {
     const t = stuk.type || 'Overig'
@@ -139,50 +117,51 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Summary: count + dekking */}
-      <div className="flex items-center gap-4">
-        <MetricCard label="Gevonden stukken" value={data.total_found} />
-        <div className="flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
-          <span className={`size-2 rounded-full ${data.dekking ? 'bg-[#F9A826]' : 'bg-slate-300'}`} />
-          <span className="text-[12px] font-semibold text-slate-500">
-            {data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
-          </span>
-        </div>
-      </div>
+      {/* Main card — reuses SectionInsightCard */}
+      <SectionInsightCard
+        kicker="Raadsinformatie"
+        title={`${data.total_found} stukken`}
+        Icon={FileText}
+        badge={data.dekking ? 'Goede dekking' : 'Beperkte dekking'}
+      >
+        {/* Type summary — StatCells in a grid */}
+        {sortedTypes.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {sortedTypes.slice(0, 3).map(([type, count]) => (
+              <StatCell key={type} label={type} value={count} />
+            ))}
+          </div>
+        )}
 
-      {/* Type pills — neutral, same pattern as category_label in BekendmakingenDetailEnriched */}
-      {sortedTypes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {sortedTypes.map(([type, count]) => (
-            <span
-              key={type}
-              className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500"
-            >
-              {type} ({count})
-            </span>
-          ))}
-        </div>
-      )}
+        {/* Remaining types as pills */}
+        {sortedTypes.length > 3 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {sortedTypes.slice(3).map(([type, count]) => (
+              <span
+                key={type}
+                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500"
+              >
+                {type} ({count})
+              </span>
+            ))}
+          </div>
+        )}
 
-      {/* Search */}
-      {data.stukken.length > 5 && (
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Zoek in raadsstukken..."
-            className="w-full rounded-[12px] border border-[#EAEFEF] bg-white py-2.5 pl-9 pr-4 text-[13px] text-[#0E1111] placeholder:text-slate-300 outline-none focus:border-slate-300 transition-colors"
-          />
-        </div>
-      )}
+        {/* Search */}
+        {data.stukken.length > 5 && (
+          <div className="relative mb-4">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Zoek in raadsstukken..."
+              className="w-full rounded-[12px] border border-[#EAEFEF] bg-white py-2.5 pl-9 pr-4 text-[13px] text-[#0E1111] placeholder:text-slate-300 outline-none focus:border-slate-300 transition-colors"
+            />
+          </div>
+        )}
 
-      {/* Stukken feed — same list pattern as JurisprudentieDetailEnriched */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          {searchQuery ? `Resultaten (${filteredStukken.length})` : 'Raadsstukken'}
-        </p>
+        {/* Stukken feed */}
         {filteredStukken.length > 0 ? (
           <div className="max-h-[400px] overflow-y-auto">
             {filteredStukken.map((stuk) => (
@@ -192,7 +171,7 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
         ) : (
           <p className="text-[13px] text-slate-400">Geen resultaten voor deze zoekopdracht.</p>
         )}
-      </div>
+      </SectionInsightCard>
     </div>
   )
 }

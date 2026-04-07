@@ -1,25 +1,15 @@
 /**
  * Enriched Beschermd erfgoed detail for the configuratie source-detail view.
  *
- * Fetches erfgoed data and renders:
- *  - metric card with total beschermde gezichten
- *  - list of gezichten with type pills and metadata
- *
- * Design contract follows JurisprudentieDetailEnriched / BekendmakingenDetailEnriched:
- *  - space-y-5, no wrapping container
- *  - Cards: rounded-[16px] border border-[#EAEFEF] bg-white p-5
- *  - List items: border-b border-[#EAEFEF] py-3 last:border-0
- *  - Pills: bg-slate-100 text-slate-500 (neutral)
- *  - Colors: #0E1111, slate, #EAEFEF. No blue/indigo/violet.
+ * Reuses shared report components: SectionInsightCard, SubCard.
  */
 import { useErfgoed, type BeschermdGezichtResponse } from '@/hooks/useErfgoed'
-import { Loader2 } from 'lucide-react'
+import { Landmark, Loader2 } from 'lucide-react'
+import { SectionInsightCard } from '@/components/reports/components'
 
 interface Props {
   gemeenteNaam: string | null
 }
-
-/* ─── Lightweight state helpers ──────────────────────────────── */
 
 function DetailLoading() {
   return (
@@ -30,34 +20,7 @@ function DetailLoading() {
   )
 }
 
-function DetailEmpty({ message }: { message?: string }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
-    </div>
-  )
-}
-
-function DetailError({ error }: { error: Error | null }) {
-  return (
-    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
-    </div>
-  )
-}
-
-/* ─── Metric card ────────────────────────────────────────────── */
-
-function MetricCard({ label, value }: { label: string; value: string | number | null | undefined }) {
-  return (
-    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-4 text-center">
-      <p className="text-[24px] font-bold text-[#0E1111]">{value ?? '—'}</p>
-      <p className="mt-1 text-[11px] text-slate-400">{label}</p>
-    </div>
-  )
-}
-
-/* ─── Gezicht list item — same pattern as RulingListItem ──────── */
+/* ─── Gezicht list item — same structure as RulingListItem ────── */
 
 function GezichtItem({ gezicht }: { gezicht: BeschermdGezichtResponse }) {
   return (
@@ -93,31 +56,41 @@ function GezichtItem({ gezicht }: { gezicht: BeschermdGezichtResponse }) {
 export function BeschermdErfgoedDetailEnriched({ gemeenteNaam }: Props) {
   const { data, isLoading, error } = useErfgoed(gemeenteNaam)
 
-  if (!gemeenteNaam) return <DetailEmpty message="Selecteer een gemeente." />
-  if (isLoading) return <DetailLoading />
-  if (error) return <DetailError error={error as Error} />
+  if (!gemeenteNaam || isLoading) return <DetailLoading />
+  if (error) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] text-slate-400">Fout bij laden van erfgoeddata.</p>
+      </div>
+    )
+  }
 
   const gezichten = data?.beschermde_gezichten ?? []
   const total = data?.total ?? 0
 
-  if (total === 0) return <DetailEmpty message="Geen beschermde gezichten gevonden." />
+  if (total === 0) {
+    return (
+      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+        <p className="text-[13px] text-slate-400">Geen beschermde gezichten gevonden.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
-      {/* Summary metric */}
-      <MetricCard label={total === 1 ? 'Beschermd gezicht' : 'Beschermde gezichten'} value={total} />
-
-      {/* Gezichten list — same pattern as recent rulings in JurisprudentieDetailEnriched */}
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-slate-400">
-          Beschermde stads- en dorpsgezichten
-        </p>
+      {/* Main card — reuses SectionInsightCard */}
+      <SectionInsightCard
+        kicker="Beschermd erfgoed"
+        title={`${total} ${total === 1 ? 'beschermd gezicht' : 'beschermde gezichten'}`}
+        Icon={Landmark}
+      >
+        {/* Gezichten list — same pattern as rulings list */}
         <div className="max-h-[400px] overflow-y-auto">
           {gezichten.map((gezicht, i) => (
             <GezichtItem key={`${gezicht.naam}-${i}`} gezicht={gezicht} />
           ))}
         </div>
-      </div>
+      </SectionInsightCard>
     </div>
   )
 }
