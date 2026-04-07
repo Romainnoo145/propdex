@@ -138,24 +138,27 @@ async def get_gemeente_rulings(
 
     # Enqueue background ingestion if stale or empty
     if ingestion_status in ("pending", "refreshing"):
-        try:
-            arq_pool = request.app.state.arq_pool
-            await arq_pool.enqueue_job(
-                "ruling_ingestion_job",
-                gemeente_naam,
-                _job_id=f"ruling_ingest:{gemeente_naam}",
-            )
-            logger.info(
-                "Enqueued ruling ingestion job for %s (status: %s)",
-                gemeente_naam,
-                ingestion_status,
-            )
-        except Exception as exc:
-            logger.warning(
-                "Failed to enqueue ruling ingestion for %s: %s",
-                gemeente_naam,
-                exc,
-            )
+        arq_pool = getattr(request.app.state, "arq_pool", None)
+        if arq_pool is not None:
+            try:
+                await arq_pool.enqueue_job(
+                    "ruling_ingestion_job",
+                    gemeente_naam,
+                    _job_id=f"ruling_ingest:{gemeente_naam}",
+                )
+                logger.info(
+                    "Enqueued ruling ingestion job for %s (status: %s)",
+                    gemeente_naam,
+                    ingestion_status,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to enqueue ruling ingestion for %s: %s",
+                    gemeente_naam,
+                    exc,
+                )
+        else:
+            logger.warning("ARQ pool not available — skipping ruling ingestion for %s", gemeente_naam)
 
     # Win/loss ratio aggregation from uitkomst column
     win_loss: dict[str, int] = {
@@ -292,26 +295,29 @@ async def trigger_ruling_analysis(
     if needs_analysis:
         # Enqueue ARQ job for un-analyzed rulings
         ecli_list = [r.ecli for r in needs_analysis]
-        try:
-            arq_pool = request.app.state.arq_pool
-            arq_job = await arq_pool.enqueue_job(
-                "ruling_analysis_job",
-                gemeente_naam,
-                ecli_list,
-                _job_id=f"ruling_analyze:{gemeente_naam}",
-            )
-            job_id = arq_job.job_id if arq_job else None
-            logger.info(
-                "Enqueued ruling analysis job for %s (%d un-analyzed)",
-                gemeente_naam,
-                len(ecli_list),
-            )
-        except Exception as exc:
-            logger.warning(
-                "Failed to enqueue ruling analysis for %s: %s",
-                gemeente_naam,
-                exc,
-            )
+        arq_pool = getattr(request.app.state, "arq_pool", None)
+        if arq_pool is not None:
+            try:
+                arq_job = await arq_pool.enqueue_job(
+                    "ruling_analysis_job",
+                    gemeente_naam,
+                    ecli_list,
+                    _job_id=f"ruling_analyze:{gemeente_naam}",
+                )
+                job_id = arq_job.job_id if arq_job else None
+                logger.info(
+                    "Enqueued ruling analysis job for %s (%d un-analyzed)",
+                    gemeente_naam,
+                    len(ecli_list),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to enqueue ruling analysis for %s: %s",
+                    gemeente_naam,
+                    exc,
+                )
+        else:
+            logger.warning("ARQ pool not available — skipping ruling analysis for %s", gemeente_naam)
 
     return {
         "status": "complete" if not needs_analysis else "partial",

@@ -53,6 +53,7 @@ import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type Polic
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { useAuth } from '@/lib/auth/useAuth'
 import JurisprudentieDetailEnriched from '@/components/configuratie/JurisprudentieDetailEnriched'
+import BekendmakingenDetailEnriched from '@/components/configuratie/BekendmakingenDetailEnriched'
 import RvoSubsidiesDetailEnriched from '@/components/configuratie/RvoSubsidiesDetailEnriched'
 import OmgevingswetDetailEnriched from '@/components/configuratie/OmgevingswetDetailEnriched'
 import { VergunningKlimaatDetailEnriched } from '@/components/configuratie/VergunningKlimaatDetailEnriched'
