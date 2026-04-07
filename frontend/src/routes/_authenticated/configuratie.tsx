@@ -460,23 +460,12 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
           }`}>
             <Icon className={`size-5 ${isComplete ? 'text-[#F9A826]' : 'text-slate-400'}`} strokeWidth={1.8} />
           </div>
-          <div className="flex items-center gap-1.5">
-            {isAnyParsing && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                <Loader2 className="animate-spin" size={10} />
-                Analyseert
-              </span>
-            )}
-            {isComplete ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#F9A826]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#B07D18] uppercase tracking-wider">
-                {isLive ? 'Actief' : 'Geconfigureerd'}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Te configureren
-              </span>
-            )}
-          </div>
+          {isAnyParsing && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <Loader2 className="animate-spin" size={10} />
+              Analyseert
+            </span>
+          )}
         </div>
 
         {/* Title + description */}
