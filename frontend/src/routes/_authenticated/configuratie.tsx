@@ -381,9 +381,7 @@ function getLiveMetrics(
 
 function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeenteCode }: DataSourceCardProps) {
   const navigate = useNavigate()
-  const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
   const [polling, setPolling] = useState(false)
   const Icon = source.icon
   const isLive = source.status === 'live'
@@ -410,20 +408,6 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
     setPolling(isAnyParsing)
   }, [isAnyParsing])
 
-  const handleUpload = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!entityType || !entityCode) return
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      uploadMutation.mutate({ entityType, entityCode, sourceKey: source.key, file })
-    }
-    input.click()
-  }, [entityType, entityCode, source.key, uploadMutation])
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -445,14 +429,13 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
     setIsDragging(false)
   }, [])
 
-  const handleView = useCallback((e: React.MouseEvent, docId: string, filename?: string) => {
-    e.stopPropagation()
-    if (!entityType || !entityCode) return
-    setPdfViewer({
-      url: `/api/policy-documents/${entityType}/${entityCode}/${docId}`,
-      title: filename || 'Beleidsdocument',
-    })
-  }, [entityType, entityCode])
+  const handleCardClick = useCallback(() => {
+    if (gemeenteCode) {
+      navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+    }
+  }, [gemeenteCode, navigate, source.key])
+
+  const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null
 
   return (
     <motion.div
@@ -460,297 +443,103 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      className={`rounded-[24px] border bg-white transition-all cursor-pointer ${
+      onClick={handleCardClick}
+      className={`group relative rounded-2xl border-2 transition-all cursor-pointer ${
         isDragging
           ? 'border-[#F9A826] border-dashed bg-[#FFF8EC] shadow-md scale-[1.02]'
           : isComplete
-            ? 'border-emerald-200 hover:shadow-md'
-            : 'border-[#EAEFEF] hover:shadow-md'
+            ? 'border-[#F9A826]/30 bg-amber-50/40 hover:border-[#F9A826]/60 hover:shadow-md'
+            : 'border-dashed border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
       }`}
-      onClick={() => setIsOpen((v) => !v)}
     >
-      {/* Card header — taller with more breathing room */}
-      <div className="flex items-start justify-between gap-3 p-5">
-        <div className="min-w-0 flex-1">
-          {/* Kicker with status */}
-          <div className="flex items-center gap-2">
-            <div className={`size-1.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-            <p className={`text-[10px] font-extrabold uppercase tracking-[0.18em] ${
-              isComplete ? 'text-emerald-600' : 'text-slate-400'
-            }`}>
-              {isLive ? 'Actief' : docCount > 0 ? 'Geconfigureerd' : 'Te configureren'}
-            </p>
+      <div className="p-5 space-y-3">
+        {/* Top row: icon + status */}
+        <div className="flex items-start justify-between">
+          <div className={`flex size-10 items-center justify-center rounded-xl ${
+            isComplete ? 'bg-[#0E1111]' : 'bg-slate-100'
+          }`}>
+            <Icon className={`size-5 ${isComplete ? 'text-[#F9A826]' : 'text-slate-400'}`} strokeWidth={1.8} />
           </div>
-          {/* Title */}
-          <h3 className="mt-2 text-[16px] font-bold tracking-tight text-[#0E1111] leading-snug">
-            {source.label}
-          </h3>
-          {/* Short description always visible */}
-          <p className="mt-1 text-[11px] text-slate-400 leading-snug line-clamp-2">
-            {source.description}
-          </p>
-        </div>
-        {/* Icon + details button */}
-        <div className="flex items-center gap-2 shrink-0">
-          {gemeenteCode && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
-              }}
-              className="flex items-center gap-1 rounded-full border border-[#EAEFEF] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
-              title="Bekijk details"
-            >
-              Bekijk details
-              <ArrowRight size={11} />
-            </button>
-          )}
-          <div className="relative">
-            <div className={`flex size-11 items-center justify-center rounded-full ${
-              isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
-            }`}>
-              <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
-            </div>
-          {isAnyParsing && (
-            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-amber-400 ring-2 ring-white">
-              <Loader2 className="animate-spin text-white" size={10} />
-            </span>
-          )}
-          {!isAnyParsing && aiSummary && (
-            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2 ring-white">
-              <Sparkles className="text-white" size={9} />
-            </span>
-          )}
-          {!isAnyParsing && !aiSummary && isAnyError && (
-            <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-red-500 ring-2 ring-white" />
-          )}
-          </div>
-        </div>
-      </div>
-
-      {/* Collapsed footer: doc badges + live metrics */}
-      {!isOpen && (docCount > 0 || isLive) && (() => {
-        const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null
-        return (
-          <div className="px-5 pb-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              {docCount > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
-                  <FileCheck size={11} />
-                  {docCount} doc{docCount !== 1 ? 's' : ''}
-                </span>
-              )}
-              {/* AI parsing status indicators */}
-              {isAnyParsing && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-600 shrink-0">
-                  <Loader2 className="animate-spin" size={11} />
-                  AI analyseert...
-                </span>
-              )}
-              {!isAnyParsing && isAnyError && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 shrink-0">
-                  <AlertCircle size={11} />
-                  Fout bij analyse
-                </span>
-              )}
-              {!isAnyParsing && !isAnyError && aiSummary && (
-                <>
-                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[200px]">
-                    {aiSummary.summary}
-                  </span>
-                  {aiSummary.key_facts.length > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-600 shrink-0">
-                      <Sparkles size={11} />
-                      {aiSummary.key_facts.length} feit{aiSummary.key_facts.length !== 1 ? 'en' : ''}
-                    </span>
-                  )}
-                </>
-              )}
-              {/* Live source metrics */}
-              {isLive && liveMetrics?.isLoading && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
-                  <Loader2 className="animate-spin" size={12} />
-                  Laden...
-                </span>
-              )}
-              {isLive && liveMetrics?.error && (
-                <span className="text-[11px] text-slate-400 font-medium">
-                  Data niet beschikbaar
-                </span>
-              )}
-              {isLive && liveMetrics?.metrics && (
-                <span className="text-[11px] text-slate-500 font-medium truncate">
-                  {liveMetrics.metrics}
-                </span>
-              )}
-            </div>
-            {isLive && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
-                <Check size={11} strokeWidth={3} />
-                Auto-sync
+          <div className="flex items-center gap-1.5">
+            {isAnyParsing && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                <Loader2 className="animate-spin" size={10} />
+                Analyseert
+              </span>
+            )}
+            {isComplete ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#F9A826]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#B07D18] uppercase tracking-wider">
+                {isLive ? 'Actief' : 'Geconfigureerd'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Te configureren
               </span>
             )}
           </div>
-        )
-      })()}
-
-      {/* Drag hint when no docs yet and not expanded */}
-      {!isOpen && !isLive && docCount === 0 && entityType && (
-        <div className="px-5 pb-4">
-          <p className="text-[10px] text-slate-300 italic">Sleep een document hierheen</p>
         </div>
-      )}
 
-      {/* Expanded content */}
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="border-t border-[#EAEFEF] px-5 py-4 space-y-3">
-              {/* AI Summary section */}
-              {isAnyParsing && (
-                <div className="rounded-[14px] bg-amber-50/60 px-4 py-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="animate-spin text-amber-500" size={14} />
-                    <p className="text-[11px] font-bold text-amber-700">AI analyse bezig...</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="h-3 w-3/4 rounded bg-amber-200/60 animate-pulse" />
-                    <div className="h-3 w-1/2 rounded bg-amber-200/60 animate-pulse" />
-                  </div>
-                </div>
-              )}
-              {!isAnyParsing && isAnyError && firstDoc?.ai_summary && (
-                <div className="rounded-[14px] bg-red-50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="text-red-500 shrink-0" size={14} />
-                    <p className="text-[11px] font-bold text-red-700">Analyse mislukt</p>
-                  </div>
-                  <p className="mt-1 text-[11px] text-red-600">
-                    {(() => {
-                      try {
-                        const parsed = JSON.parse(firstDoc.ai_summary!)
-                        return parsed.error ?? 'Onbekende fout bij AI-analyse'
-                      } catch {
-                        return 'Onbekende fout bij AI-analyse'
-                      }
-                    })()}
-                  </p>
-                </div>
-              )}
-              {!isAnyParsing && aiSummary && (
-                <div className="rounded-[14px] bg-violet-50/60 px-4 py-3 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="text-violet-500" size={14} />
-                    <p className="text-[11px] font-bold text-violet-700">AI Samenvatting</p>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">{aiSummary.summary}</p>
-                  {aiSummary.key_facts.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Kernfeiten</p>
-                      <ul className="space-y-0.5">
-                        {aiSummary.key_facts.map((fact, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
-                            <span className="mt-1 size-1 rounded-full bg-violet-400 shrink-0" />
-                            {fact}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {Object.keys(aiSummary.extracted_values).length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Waarden</p>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                        {Object.entries(aiSummary.extracted_values).map(([key, value]) => (
-                          <div key={key} className="flex items-baseline gap-1 text-[11px]">
-                            <span className="text-slate-400 truncate">{key}:</span>
-                            <span className="font-semibold text-[#0E1111] truncate">{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* Documents list with view buttons */}
-              {docCount > 0 && docsData?.documents && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Documenten</p>
-                  {docsData.documents.map((doc) => (
-                    <motion.div
-                      key={doc.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-2 rounded-[12px] bg-[#F2F6F3] px-3 py-2"
-                    >
-                      <FileCheck size={13} className="text-emerald-500 shrink-0" />
-                      <span className="text-[11px] font-medium text-[#0E1111] truncate flex-1">{doc.filename}</span>
-                      <span className="text-[10px] text-slate-400 tabular-nums shrink-0">
-                        {doc.file_size >= 1024 * 1024
-                          ? `${(doc.file_size / 1024 / 1024).toFixed(1)} MB`
-                          : `${(doc.file_size / 1024).toFixed(0)} KB`}
-                      </span>
-                      {/* View button */}
-                      <button
-                        onClick={(e) => handleView(e, doc.id, doc.filename)}
-                        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white border border-[#EAEFEF] text-slate-400 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
-                        title="Bekijken"
-                      >
-                        <Eye size={13} />
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+        {/* Title + description */}
+        <div>
+          <h3 className="text-[15px] font-bold tracking-tight text-[#0E1111] leading-snug">
+            {source.label}
+          </h3>
+          <p className="mt-1 text-[12px] text-slate-500 leading-relaxed">
+            {source.description}
+          </p>
+        </div>
 
-              {/* Drop zone / upload area */}
-              {entityType && entityCode && !isLive && (
-                <div
-                  className={`rounded-[14px] border-2 border-dashed p-4 text-center transition-colors ${
-                    isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-[#EAEFEF] hover:border-slate-300'
-                  }`}
-                  onClick={handleUpload}
-                >
-                  {uploadMutation.isPending ? (
-                    <Loader2 size={20} className="mx-auto animate-spin text-[#F9A826]" />
-                  ) : (
-                    <>
-                      <Upload size={20} className="mx-auto text-slate-300" />
-                      <p className="mt-1.5 text-[11px] font-semibold text-slate-500">
-                        {docCount > 0 ? 'Nog een document toevoegen' : 'Document uploaden'}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        Klik of sleep een bestand hierheen
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {isLive && (
-                <div className="flex items-center gap-2 rounded-[12px] bg-emerald-50 px-3 py-2">
-                  <Check size={14} strokeWidth={3} className="text-emerald-500" />
-                  <p className="text-[11px] text-emerald-700 font-medium">
-                    Deze bron wordt automatisch bijgewerkt vanuit onze datapipeline
-                  </p>
-                </div>
+        {/* Footer: metrics / doc info / upload hint */}
+        <div className="pt-1 border-t border-slate-100">
+          {isLive && liveMetrics?.metrics && (
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 leading-snug">
+                {liveMetrics.metrics}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B07D18]">
+                <Check size={10} strokeWidth={3} />
+                Auto-sync
+              </span>
+            </div>
+          )}
+          {isLive && liveMetrics?.isLoading && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+              <Loader2 className="animate-spin" size={11} />
+              Laden...
+            </span>
+          )}
+          {isLive && !liveMetrics?.isLoading && !liveMetrics?.metrics && !liveMetrics?.error && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B07D18]">
+              <Check size={10} strokeWidth={3} />
+              Auto-sync actief
+            </span>
+          )}
+          {!isLive && docCount > 0 && (
+            <div className="flex items-center gap-2">
+              <FileCheck size={12} className="text-[#F9A826] shrink-0" />
+              <span className="text-[11px] font-medium text-[#0E1111] truncate">
+                {firstDoc?.filename ?? `${docCount} document${docCount !== 1 ? 'en' : ''}`}
+              </span>
+              {aiSummary && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600 shrink-0">
+                  <Sparkles size={9} />
+                  AI
+                </span>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {pdfViewer && (
-        <PDFViewerModal
-          url={pdfViewer.url}
-          title={pdfViewer.title}
-          onClose={() => setPdfViewer(null)}
-        />
+          )}
+          {!isLive && docCount === 0 && entityType && (
+            <p className="text-[11px] text-slate-300 italic">
+              Sleep een document hierheen of klik om te uploaden
+            </p>
+          )}
+        </div>
+      </div>
+
+      {gemeenteCode && (
+        <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowRight size={14} className="text-slate-400" />
+        </div>
       )}
     </motion.div>
   )
@@ -758,21 +547,31 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
 
 /* ─── Progress bar ──────────────────────────────────────────── */
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
+function ProgressBar({ completed, total, label }: { completed: number; total: number; label?: string }) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
   return (
-    <div className="flex items-center gap-3">
-      <div className="h-1.5 flex-1 rounded-full bg-[#F2F6F3] overflow-hidden">
-        <motion.div
-          className="h-full rounded-full bg-emerald-500"
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        />
+    <div className="space-y-1.5">
+      {label && (
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-semibold text-slate-500">{label}</span>
+          <span className="text-[12px] font-bold text-[#0E1111] tabular-nums">{completed} van {total}</span>
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <div className="h-2 flex-1 rounded-full bg-[#F2F6F3] overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-[#F9A826]"
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        </div>
+        {!label && (
+          <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">
+            {completed}/{total}
+          </span>
+        )}
       </div>
-      <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">
-        {completed}/{total}
-      </span>
     </div>
   )
 }
@@ -802,8 +601,6 @@ function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, 
     () => sources.filter((s) => s.category === activeCategory),
     [sources, activeCategory],
   )
-
-  const liveSources = filtered.filter((s) => s.status === 'live')
 
   return (
     <div className="space-y-5">
@@ -850,18 +647,11 @@ function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, 
         transition={{ duration: 0.15 }}
         className="space-y-4"
       >
-        <ProgressBar completed={liveSources.length} total={filtered.length} />
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className={
-            filtered.length === 1
-              ? "grid gap-4 grid-cols-1"
-              : filtered.length === 2
-                ? "grid gap-4 grid-cols-1 sm:grid-cols-2"
-                : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          }
+          className="grid gap-5 grid-cols-1 sm:grid-cols-2"
         >
           {filtered.map((source) => (
             <motion.div key={source.key} variants={fadeUp}>
@@ -889,6 +679,7 @@ interface EntityDetailProps {
 function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack, gemeenteData }: EntityDetailProps) {
   const liveCount = sources.filter((s) => s.status === 'live').length
   const roadmapCount = sources.filter((s) => s.status === 'roadmap').length
+  const totalCount = sources.length
 
   return (
     <div className="space-y-6">
@@ -984,6 +775,11 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
             </div>
           )}
         </div>
+      </motion.div>
+
+      {/* Overall progress bar */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        <ProgressBar completed={liveCount} total={totalCount} label="Geconfigureerde bronnen" />
       </motion.div>
 
       {/* Category pill tabs + source rows */}
