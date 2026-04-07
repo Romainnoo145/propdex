@@ -444,7 +444,7 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={handleCardClick}
-      className={`group relative rounded-2xl border-2 transition-all cursor-pointer ${
+      className={`group relative rounded-2xl border-2 transition-all cursor-pointer h-full flex flex-col ${
         isDragging
           ? 'border-[#F9A826] border-dashed bg-[#FFF8EC] shadow-md scale-[1.02]'
           : isComplete
@@ -452,7 +452,7 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
             : 'border-dashed border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
       }`}
     >
-      <div className="p-5 space-y-3">
+      <div className="p-5 space-y-3 flex flex-col flex-1">
         {/* Top row: icon + status */}
         <div className="flex items-start justify-between">
           <div className={`flex size-10 items-center justify-center rounded-xl ${
@@ -480,7 +480,7 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
         </div>
 
         {/* Title + description */}
-        <div>
+        <div className="flex-1">
           <h3 className="text-[15px] font-bold tracking-tight text-[#0E1111] leading-snug">
             {source.label}
           </h3>

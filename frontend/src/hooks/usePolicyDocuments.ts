@@ -4,6 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
+import { useAuth } from '@/lib/auth/useAuth'
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
@@ -59,6 +60,7 @@ export function usePolicyDocuments(
   enabled = true,
   refetchInterval?: number | false,
 ) {
+  const { accessToken } = useAuth()
   return useQuery<PolicyDocumentListResponse>({
     queryKey: policyDocsKey(entityType, entityCode, sourceKey),
     queryFn: async () => {
@@ -66,9 +68,9 @@ export function usePolicyDocuments(
       if (sourceKey) params.set('source_key', sourceKey)
       const qs = params.toString()
       const url = `/api/policy-documents/${entityType}/${entityCode}${qs ? `?${qs}` : ''}`
-      return apiFetch<PolicyDocumentListResponse>(url)
+      return apiFetch<PolicyDocumentListResponse>(url, { method: 'GET', accessToken })
     },
-    enabled,
+    enabled: enabled && !!accessToken,
     staleTime: 30_000,
     refetchInterval,
   })
