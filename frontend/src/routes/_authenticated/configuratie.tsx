@@ -30,6 +30,8 @@ import {
   DoorOpen,
   Church,
   Newspaper,
+  BookOpen,
+  CheckCircle2,
   Upload,
   FileCheck,
   Loader2,
@@ -50,6 +52,9 @@ import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
 import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type PolicyDocument, type DocumentSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 import { useAuth } from '@/lib/auth/useAuth'
+import JurisprudentieDetailEnriched from '@/components/configuratie/JurisprudentieDetailEnriched'
+import RvoSubsidiesDetailEnriched from '@/components/configuratie/RvoSubsidiesDetailEnriched'
+import OmgevingswetDetailEnriched from '@/components/configuratie/OmgevingswetDetailEnriched'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -435,6 +440,9 @@ function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeente
   const handleCardClick = useCallback(() => {
     if (gemeenteCode) {
       navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+    } else if (!gemeenteCode && source.status === 'live') {
+      // Landelijk sources: navigate without gemeente param
+      navigate({ to: '/configuratie', search: { source: source.key } })
     }
   }, [gemeenteCode, navigate, source.key])
 
@@ -1144,41 +1152,6 @@ function VergunningKlimaatDetail({ profile, isLoading, error }: { profile?: Geme
   )
 }
 
-function JurisprudentieDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
-  if (isLoading) return <SourceDetailLoading />
-  if (error) return <SourceDetailError error={error} />
-  if (!profile) return <SourceDetailEmpty />
-
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <MetricCard label="Gem. doorlooptijd" value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}` : null} unit="dagen" />
-        <MetricCard label="Steekproefomvang" value={profile.sample_size} />
-      </div>
-      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
-        <a href="/jurisprudentie" className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#B07D18] hover:underline">
-          Bekijk volledige jurisprudentie-analyse
-          <ArrowRight size={14} />
-        </a>
-      </div>
-    </div>
-  )
-}
-
-function BekendmakingenDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
-  if (isLoading) return <SourceDetailLoading />
-  if (error) return <SourceDetailError error={error} />
-  if (!profile) return <SourceDetailEmpty />
-
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      <MetricCard label="Afgelopen 30 dagen" value={profile.bekendmakingen_30d} />
-      <MetricCard label="Afgelopen 90 dagen" value={profile.bekendmakingen_90d} />
-      <MetricCard label="Afgelopen 365 dagen" value={profile.bekendmakingen_365d} />
-    </div>
-  )
-}
-
 function RaadsinformatieDetail({ data, isLoading, error }: { data?: RaadsinformatieResponse; isLoading: boolean; error: Error | null }) {
   if (isLoading) return <SourceDetailLoading />
   if (error) return <SourceDetailError error={error} />
@@ -1347,6 +1320,175 @@ function DocumentStatusBadge({ status }: { status: string }) {
   }
 }
 
+// ── Source guidance data ────────────────────────────────────────
+interface SourceGuidance {
+  explainer: string
+  relevance: string
+  checklist: string[]
+}
+
+const SOURCE_GUIDANCE: Record<string, SourceGuidance> = {
+  omgevingsvisie: {
+    explainer:
+      'De omgevingsvisie beschrijft de langetermijnvisie van de gemeente op de fysieke leefomgeving. Het document schetst gewenste ontwikkelrichtingen voor wonen, werken, natuur en mobiliteit tot minimaal 2040.',
+    relevance:
+      'Bepaalt welke gebieden de gemeente aanwijst voor transformatie, verdichting of juist behoud — essentieel voor haalbaarheidsanalyses van herontwikkeling.',
+    checklist: [
+      'Welke gebieden zijn aangewezen als transformatie- of ontwikkellocatie?',
+      'Wat is de gewenste woningdichtheid per deelgebied?',
+      'Zijn er restricties op bouwhoogtes of stedenbouwkundige eisen?',
+      'Welke functiemenging wordt nagestreefd (wonen, werken, voorzieningen)?',
+      'Zijn er specifieke duurzaamheidseisen per ontwikkelgebied?',
+    ],
+  },
+  welstandsnota: {
+    explainer:
+      'De welstandsnota bevat criteria waaraan het uiterlijk van bouwwerken moet voldoen. Per gebied gelden specifieke eisen voor materiaalgebruik, kleurstelling, dakvormen en gevelindeling.',
+    relevance:
+      'Beïnvloedt direct het ontwerp en de kosten van nieuwbouw- en renovatieprojecten. Vroegtijdig inzicht voorkomt afwijzingen bij de welstandscommissie.',
+    checklist: [
+      'In welk welstandsgebied valt de locatie (bijv. beschermd, regulier, vrij)?',
+      'Welke materiaal- en kleureisen gelden voor gevels en daken?',
+      'Zijn er specifieke eisen voor reclame-uitingen of luifels?',
+      'Gelden er aanvullende criteria voor hoekpanden of zichtlocaties?',
+      'Is er een sneltoetskader beschikbaar voor kleine ingrepen?',
+    ],
+  },
+  woonvisie: {
+    explainer:
+      'De woonvisie beschrijft het gemeentelijk woonbeleid: woningbouwambities, doelgroepen, betaalbaarheid en prestatieafspraken met corporaties. Het document geeft richting aan de programmering van nieuwbouw.',
+    relevance:
+      'Bepaalt de gewenste woningtypemix en prijssegmenten. Projecten die aansluiten bij de woonvisie krijgen vaak voorrang in planprocedures.',
+    checklist: [
+      'Hoeveel woningen wil de gemeente bouwen en in welke segmenten?',
+      'Welk percentage sociale huur, middenhuur en koop wordt verlangd?',
+      'Zijn er specifieke doelgroepen benoemd (starters, senioren, arbeidsmigranten)?',
+      'Welke prestatieafspraken zijn gemaakt met woningcorporaties?',
+      'Is er een zelfbewoningsplicht of anti-speculatiebeding?',
+    ],
+  },
+  parkeerbeleid: {
+    explainer:
+      'Het parkeerbeleid legt de parkeernormen vast voor nieuwbouw en functiewijzigingen. Per functie en locatie bepaalt het hoeveel parkeerplaatsen gerealiseerd moeten worden.',
+    relevance:
+      'Parkeernormen hebben directe impact op de financiële haalbaarheid: elke parkeerplaats kost €25.000–€50.000. Lage normen in binnenstedelijk gebied verbeteren de business case.',
+    checklist: [
+      'Welke parkeernorm geldt per woningtype en zone?',
+      'Is er een mogelijkheid tot dubbelgebruik of deelmobiliteit?',
+      'Welke afkoopregeling geldt als parkeren op eigen terrein niet lukt?',
+      'Zijn er fietsparkeernormen voor de ontwikkeling?',
+      'Gelden er afwijkende normen bij OV-knooppunten?',
+    ],
+  },
+  leegstandsverordening: {
+    explainer:
+      'De leegstandsverordening regelt de meldplicht en aanpak van leegstaande panden. Eigenaren zijn verplicht leegstand te melden en mee te werken aan herbestemming of tijdelijk gebruik.',
+    relevance:
+      'Relevant bij aankoop van leegstaande panden voor herontwikkeling. De verordening kan tijdelijk gebruik faciliteren tijdens de planfase maar ook verplichtingen opleggen.',
+    checklist: [
+      'Geldt er een meldplicht voor leegstand en na hoeveel maanden?',
+      'Welke sancties staan op langdurige leegstand?',
+      'Zijn er mogelijkheden voor tijdelijke verhuur via een leegstandsvergunning?',
+      'Faciliteert de gemeente actief herbestemming van leegstaande panden?',
+    ],
+  },
+  'gemeentelijke-subsidies': {
+    explainer:
+      'Dit overzicht bundelt gemeentelijke subsidie- en stimuleringsregelingen voor vastgoedontwikkeling, verduurzaming en gebiedsontwikkeling. Regelingen variëren van directe subsidies tot leningen en fiscale voordelen.',
+    relevance:
+      'Subsidies kunnen de onrendabele top van projecten verkleinen. Vroegtijdig aanvragen — vaak vóór bouwstart — is cruciaal voor toekenning.',
+    checklist: [
+      'Welke subsidies zijn beschikbaar voor nieuwbouw of transformatie?',
+      'Zijn er verduurzamingssubsidies voor bestaande bouw?',
+      'Wat zijn de aanvraagdeadlines en -voorwaarden?',
+      'Is er een plafond per project of per woning?',
+      'Zijn subsidies stapelbaar met rijks- of provinciale regelingen?',
+    ],
+  },
+  grondprijsbeleid: {
+    explainer:
+      'De grondprijzenbrief of het grondprijsbeleid beschrijft hoe de gemeente grondprijzen vaststelt bij uitgifte van gemeentelijke grond. Prijzen variëren per functie, locatie en marktsituatie.',
+    relevance:
+      'Bepaalt de verwervingskosten bij gemeentelijke gronduitgifte. Residuele grondwaardeberekeningen bepalen of een project financieel haalbaar is.',
+    checklist: [
+      'Hanteert de gemeente vaste grondprijzen of residuele grondwaarde?',
+      'Welke grondprijs geldt per functie (wonen, kantoor, commercieel)?',
+      'Zijn er kortingen voor sociale woningbouw of maatschappelijke functies?',
+      'Hoe vaak worden grondprijzen herzien?',
+      'Welke anti-speculatiebepalingen gelden bij gronduitgifte?',
+    ],
+  },
+  duurzaamheidsbeleid: {
+    explainer:
+      'Het duurzaamheidsbeleid beschrijft gemeentelijke ambities voor energietransitie, klimaatadaptatie en circulair bouwen. Het kan bovenwettelijke eisen bevatten die verder gaan dan het Bouwbesluit.',
+    relevance:
+      'Bovenwettelijke duurzaamheidseisen beïnvloeden bouwkosten en ontwerp. Tegelijkertijd kunnen duurzaamheidsmaatregelen subsidies en versnelde vergunningverlening opleveren.',
+    checklist: [
+      'Welke energieprestatie-eisen gelden bovenop het Bouwbesluit (bijv. BENG+)?',
+      'Zijn er eisen voor klimaatadaptatie (waterberging, hittestress)?',
+      'Gelden er circulaire bouw- of sloopverplichtingen?',
+      'Is aansluiting op een warmtenet verplicht of gewenst?',
+      'Welke duurzaamheidscertificering wordt verlangd (GPR, BREEAM)?',
+    ],
+  },
+  erfgoedverordening: {
+    explainer:
+      'De erfgoedverordening regelt de bescherming van gemeentelijke monumenten en beschermde stadsgezichten. Het beschrijft procedures voor wijzigingen aan beschermde objecten en gebieden.',
+    relevance:
+      'Ontwikkeling in of nabij beschermd erfgoed vereist extra vergunningen en kan het ontwerp sterk beïnvloeden. Vroegtijdig overleg met de erfgoedcommissie voorkomt vertraging.',
+    checklist: [
+      'Valt het pand of de locatie binnen een beschermd stadsgezicht?',
+      'Is het pand aangewezen als gemeentelijk monument?',
+      'Welke instandhoudingsverplichtingen gelden voor monumenten?',
+      'Is er een vereenvoudigd regime voor inpandige wijzigingen?',
+      'Welke subsidies zijn beschikbaar voor monumentenonderhoud?',
+    ],
+  },
+  'nieuws-monitoring': {
+    explainer:
+      'Nieuws-monitoring bundelt recente nieuwsberichten, raadsbesluiten en beleidsontwikkelingen die relevant zijn voor de gemeente. Dit geeft actueel inzicht in politieke verschuivingen en nieuwe regelgeving.',
+    relevance:
+      'Actuele ontwikkelingen kunnen lopende projecten beïnvloeden: nieuwe bestemmingsplannen, gewijzigde parkeernormen of politieke koerswijzigingen.',
+    checklist: [
+      'Zijn er recente raadsbesluiten die het bestemmingsplan wijzigen?',
+      'Zijn er nieuwe bouwprojecten aangekondigd in het gebied?',
+      'Zijn er politieke discussies over woningbouw of verdichting?',
+      'Zijn er wijzigingen in gemeentelijke verordeningen op komst?',
+    ],
+  },
+}
+
+function SourceGuidanceCard({ sourceKey }: { sourceKey: string }) {
+  const guidance = SOURCE_GUIDANCE[sourceKey]
+  if (!guidance) return null
+
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-[#F2F6F3]/50 p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="rounded-full bg-[#F2F6F3] p-2">
+          <BookOpen size={14} className="text-slate-500" />
+        </div>
+        <h3 className="text-[13px] font-black uppercase tracking-[0.15em] text-slate-500">
+          Wat is dit document?
+        </h3>
+      </div>
+      <p className="text-[13px] leading-relaxed text-slate-600">{guidance.explainer}</p>
+      <p className="text-[12px] text-slate-500">
+        <span className="font-bold">Relevant voor vastgoedontwikkeling:</span>{' '}
+        {guidance.relevance}
+      </p>
+      <ul className="space-y-1.5">
+        {guidance.checklist.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-[12px] text-slate-600">
+            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-500" />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function DocumentSourceDetail({
   sourceKey,
   sourceDescription,
@@ -1443,6 +1585,7 @@ function DocumentSourceDetail({
     return (
       <div className="space-y-5">
         {fileInput}
+        <SourceGuidanceCard sourceKey={sourceKey} />
         {/* Upload CTA zone — superuser only */}
         {isSuperuser ? (
           <div
@@ -1488,6 +1631,7 @@ function DocumentSourceDetail({
   return (
     <div className="space-y-5">
       {fileInput}
+      <SourceGuidanceCard sourceKey={sourceKey} />
 
       {/* AI Summary (first parsed document) */}
       {firstSummary && (
@@ -1648,9 +1792,9 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
       case 'vergunning-klimaat':
         return <VergunningKlimaatDetail profile={profile} isLoading={profileLoading} error={profileError} />
       case 'jurisprudentie':
-        return <JurisprudentieDetail profile={profile} isLoading={profileLoading} error={profileError} />
+        return <JurisprudentieDetailEnriched gemeenteNaam={resolvedNaam} />
       case 'bekendmakingen':
-        return <BekendmakingenDetail profile={profile} isLoading={profileLoading} error={profileError} />
+        return <BekendmakingenDetailEnriched gemeenteNaam={resolvedNaam} profile={profile} profileLoading={profileLoading} profileError={profileError} />
       case 'raadsinformatie':
         return <RaadsinformatieDetail data={raadsData} isLoading={raadsLoading} error={raadsError} />
       case 'huisvestingsverordening':
@@ -1699,6 +1843,84 @@ function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey:
       {/* Source-specific detail content */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
         {renderDetail()}
+      </motion.div>
+    </div>
+  )
+}
+
+/* ─── Landelijk source detail view ──────────────────────────── */
+
+function LandelijkSourceDetail({ sourceKey, onBack }: { sourceKey: string; onBack: () => void }) {
+  const source = LANDELIJK_DATA_SOURCES.find((s) => s.key === sourceKey)
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar overzicht
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">Databron &ldquo;{sourceKey}&rdquo; niet gevonden.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const Icon = source.icon
+
+  const renderLandelijkDetail = () => {
+    switch (sourceKey) {
+      case 'rvo-subsidies':
+        return <RvoSubsidiesDetailEnriched />
+      case 'omgevingswet':
+        return <OmgevingswetDetailEnriched />
+      default:
+        return (
+          <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-8 text-center">
+            <p className="text-[13px] text-slate-400">Detail view voor deze bron is nog in ontwikkeling.</p>
+          </div>
+        )
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar overzicht
+      </motion.button>
+
+      {/* Source heading */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex items-center gap-4">
+        <div className="flex size-14 items-center justify-center rounded-full bg-[#0E1111]">
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Landelijk · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">{source.label}</h1>
+          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+        </div>
+      </motion.div>
+
+      {/* Source-specific detail content */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        {renderLandelijkDetail()}
       </motion.div>
     </div>
   )
@@ -1776,6 +1998,17 @@ function ConfiguratiePage() {
     )
   }
 
+  // If landelijk source is selected (no gemeente), show landelijk detail view
+  if (activeSource && !activeGemeente) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <LandelijkSourceDetail sourceKey={activeSource} onBack={handleBackToMain} />
+        </div>
+      </ResultsShell>
+    )
+  }
+
   return (
     <ResultsShell>
       <div className="mx-auto max-w-4xl">
@@ -1836,4 +2069,3 @@ function ConfiguratiePage() {
     </ResultsShell>
   )
 }
-
