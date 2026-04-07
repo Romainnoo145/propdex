@@ -108,6 +108,36 @@ async def list_documents(
     return docs, total
 
 
+async def get_summaries(
+    entity_type: str,
+    entity_code: str,
+    organization_id: uuid.UUID,
+    db: AsyncSession,
+) -> dict[str, str]:
+    """Return {source_key: ai_summary} for all docs with non-null summaries."""
+    stmt = (
+        select(PolicyDocument.source_key, PolicyDocument.ai_summary)
+        .where(
+            PolicyDocument.organization_id == organization_id,
+            PolicyDocument.entity_type == entity_type,
+            PolicyDocument.entity_code == entity_code,
+            PolicyDocument.ai_summary.isnot(None),
+            PolicyDocument.ai_summary != "",
+        )
+        .order_by(PolicyDocument.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    # Latest document per source_key wins (ordered desc, first seen kept)
+    summaries: dict[str, str] = {}
+    for source_key, ai_summary in result.all():
+        if source_key not in summaries:
+            summaries[source_key] = ai_summary
+    return summaries
+
+
+
+
+
 async def get_document_for_download(
     document_id: uuid.UUID,
     organization_id: uuid.UUID,

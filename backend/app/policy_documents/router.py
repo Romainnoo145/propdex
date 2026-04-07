@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.policy_documents import service as svc
-from app.policy_documents.schemas import PolicyDocumentListResponse, PolicyDocumentResponse
+from app.policy_documents.schemas import PolicyDocumentListResponse, PolicyDocumentResponse, PolicySummariesResponse
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,26 @@ async def upload_policy_document(
             logger.warning("ARQ pool not available — skipping AI summary for document %s", doc.id)
 
     return PolicyDocumentResponse.model_validate(doc)
+
+
+@router.get(
+    "/summaries/{entity_type}/{entity_code}",
+    response_model=PolicySummariesResponse,
+)
+async def get_policy_summaries(
+    entity_type: str,
+    entity_code: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> PolicySummariesResponse:
+    """Get AI summaries for all policy documents of an entity. Returns {source_key: ai_summary}."""
+    summaries = await svc.get_summaries(
+        entity_type=entity_type,
+        entity_code=entity_code,
+        organization_id=current_user.organization_id,
+        db=db,
+    )
+    return PolicySummariesResponse(summaries=summaries)
 
 
 @router.get(

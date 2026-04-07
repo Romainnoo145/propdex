@@ -29,3 +29,9 @@ class PolicyDocumentListResponse(BaseModel):
 
     documents: list[PolicyDocumentResponse]
     total: int
+
+
+class PolicySummariesResponse(BaseModel):
+    """Map of source_key → ai_summary for an entity's policy documents."""
+
+    summaries: dict[str, str]

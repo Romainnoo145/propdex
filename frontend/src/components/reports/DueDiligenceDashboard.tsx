@@ -19,6 +19,8 @@ import { S4Risicoprofiel } from './sections/S4Risicoprofiel'
 import { S5PotentieRisicoAnalyse } from './sections/S5PotentieRisicoAnalyse'
 import { S6VergunningenPrecedenten } from './sections/S6VergunningenPrecedenten'
 import { S7Bronvermelding } from './sections/S7Bronvermelding'
+import { PolicyInsightCard } from './components/PolicyInsightCard'
+import { usePolicySummariesByWoonplaats, getSummariesForSection } from '@/hooks/usePolicySummaries'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -60,26 +62,45 @@ function renderSectionContent(
   section: SectionKey,
   data: PropertyReportResponse,
   sourceParcelId: string | null | undefined,
+  policySummaries: Record<string, string> | undefined,
   reportId?: string | null,
   onRefresh?: () => Promise<void>,
   isRefreshing?: boolean,
 ): React.ReactNode {
+  // Policy insights relevant to this section
+  const insights = getSummariesForSection(policySummaries, section)
+
+  let sectionContent: React.ReactNode
   switch (section) {
     case 'locatiegegevens':
-      return <S1Locatiegegevens data={data} sourceParcelId={sourceParcelId} />
+      sectionContent = <S1Locatiegegevens data={data} sourceParcelId={sourceParcelId} />
+      break
     case 'kadaster':
-      return <S2KadasterEigendom data={data} sourceParcelId={sourceParcelId} />
+      sectionContent = <S2KadasterEigendom data={data} sourceParcelId={sourceParcelId} />
+      break
     case 'bestemmingsplan':
-      return <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} reportId={reportId} />
+      sectionContent = <S3BestemmingsplanBouwmogelijkheden data={data} sourceParcelId={sourceParcelId} reportId={reportId} />
+      break
     case 'risicoprofiel':
-      return <S4Risicoprofiel data={data} sourceParcelId={sourceParcelId} />
+      sectionContent = <S4Risicoprofiel data={data} sourceParcelId={sourceParcelId} />
+      break
     case 'analyse':
-      return <S5PotentieRisicoAnalyse data={data} sourceParcelId={sourceParcelId} />
+      sectionContent = <S5PotentieRisicoAnalyse data={data} sourceParcelId={sourceParcelId} />
+      break
     case 'vergunningen':
-      return <S6VergunningenPrecedenten data={data} sourceParcelId={sourceParcelId} />
+      sectionContent = <S6VergunningenPrecedenten data={data} sourceParcelId={sourceParcelId} />
+      break
     case 'bronnen':
-      return <S7Bronvermelding data={data} reportId={reportId} onRefresh={onRefresh} isRefreshing={isRefreshing} />
+      sectionContent = <S7Bronvermelding data={data} reportId={reportId} onRefresh={onRefresh} isRefreshing={isRefreshing} />
+      break
   }
+
+  return (
+    <>
+      {sectionContent}
+      <PolicyInsightCard insights={insights} />
+    </>
+  )
 }
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -101,6 +122,11 @@ export default function DueDiligenceDashboard({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- will be used for section status indicators
   const _sectionStatuses = data ? computeSectionStatuses(data) : EMPTY_STATUSES
   const [activeSection, setActiveSection] = useState<SectionKey>('locatiegegevens')
+
+  // Fetch policy document AI summaries for the parcel's gemeente
+  const woonplaats = data?.address?.woonplaats
+  const { data: policySummariesData } = usePolicySummariesByWoonplaats(woonplaats)
+  const policySummaries = policySummariesData?.summaries
 
   const handleExportPDF = useCallback(() => {
     if (!reportId) return
@@ -205,7 +231,7 @@ export default function DueDiligenceDashboard({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {renderSectionContent(activeSection, data, sourceParcelId, reportId, onRefresh, isRefreshing)}
+              {renderSectionContent(activeSection, data, sourceParcelId, policySummaries, reportId, onRefresh, isRefreshing)}
 
             </motion.div>
           </AnimatePresence>
