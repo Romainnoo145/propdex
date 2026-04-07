@@ -7,7 +7,7 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUp } from '@/lib/animations'
 import {
@@ -16,6 +16,7 @@ import {
   Building2,
   MapPin,
   ArrowLeft,
+  ArrowRight,
   Shield,
   Scale,
   Home,
@@ -33,15 +34,32 @@ import {
   FileCheck,
   Loader2,
   Check,
+  Sparkles,
+  AlertCircle,
+  ExternalLink,
 } from 'lucide-react'
 import ResultsShell from '@/components/layout/ResultsShell'
+import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 import { type SubsidieNiveau } from '@/lib/subsidies/curatedSubsidies'
 import { useGemeenteGeoJSON } from '@/hooks/useGemeenteGeoJSON'
+import { useGemeenteProfile, SEVERITY_COLORS, type GemeenteProfile } from '@/hooks/useGemeenteProfile'
+import { useRaadsinformatie, type RaadsinformatieResponse } from '@/hooks/useRaadsinformatie'
+import { useHuisvestingsverordening, type HuisvestingsverordeningResponse } from '@/hooks/useHuisvestingsverordening'
+import { useErfgoed, type ErfgoedResponse } from '@/hooks/useErfgoed'
 import { useProvincieGeoJSON } from '@/hooks/useProvincieGeoJSON'
-import { usePolicyDocuments, useUploadPolicyDocument } from '@/hooks/usePolicyDocuments'
+import { usePolicyDocuments, useUploadPolicyDocument, parseAiSummary, type PolicyDocument, type DocumentSummary } from '@/hooks/usePolicyDocuments'
 import { geoJsonToSvgPath } from '@/lib/geo-utils'
 
 import type { LucideIcon } from 'lucide-react'
+
+/* ─── Gemeente intelligence data shape ──────────────────────── */
+
+interface GemeenteIntelligenceData {
+  profile: { data?: GemeenteProfile; isLoading: boolean; error: Error | null }
+  raadsinformatie: { data?: RaadsinformatieResponse; isLoading: boolean; error: Error | null }
+  huisvestingsverordening: { data?: HuisvestingsverordeningResponse; isLoading: boolean; error: Error | null }
+  erfgoed: { data?: ErfgoedResponse; isLoading: boolean; error: Error | null }
+}
 
 /* ─── Route ─────────────────────────────────────────────────── */
 
@@ -53,6 +71,7 @@ export const Route = createFileRoute('/_authenticated/configuratie')({
     provincie: typeof search.provincie === 'string' && /^PV\d{2}$/.test(search.provincie)
       ? (search.provincie as string)
       : undefined,
+    source: typeof search.source === 'string' ? (search.source as string) : undefined,
   }),
   component: ConfiguratiePage,
 })
@@ -247,11 +266,125 @@ interface DataSourceCardProps {
   source: DataSource
   entityType?: string
   entityCode?: string
+  gemeenteData?: GemeenteIntelligenceData
+  gemeenteCode?: string
 }
 
-function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps) {
+/** Returns { isLoading, error, metrics } for a live source based on its key and gemeente data. */
+function getLiveMetrics(
+  sourceKey: string,
+  gemeenteData?: GemeenteIntelligenceData,
+): { isLoading: boolean; error: boolean; metrics: React.ReactNode | null } {
+  if (!gemeenteData) return { isLoading: false, error: false, metrics: null }
+
+  switch (sourceKey) {
+    case 'vergunning-klimaat': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      const rate = data.approval_rate_pct != null ? `${data.approval_rate_pct}%` : '—'
+      const severityColor = SEVERITY_COLORS[data.severity_label] ?? SEVERITY_COLORS['Onbekend']
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{rate}</span>{' goedgekeurd · '}
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_30d}</span>{' recent · '}
+            <span style={{ color: severityColor }} className="font-bold">{data.severity_label}</span>
+          </>
+        ),
+      }
+    }
+    case 'jurisprudentie': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      const doorlooptijd = data.avg_doorlooptijd_days != null ? `${data.avg_doorlooptijd_days}d` : '—'
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            {'Doorlooptijd: '}<span className="font-bold text-[#0E1111]">{doorlooptijd}</span>
+            {' · '}<span className="font-bold text-[#0E1111]">{data.sample_size}</span>{' zaken'}
+          </>
+        ),
+      }
+    }
+    case 'bekendmakingen': {
+      const { data, isLoading, error } = gemeenteData.profile
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_30d}</span>{' (30d) · '}
+            <span className="font-bold text-[#0E1111]">{data.bekendmakingen_90d}</span>{' (90d)'}
+          </>
+        ),
+      }
+    }
+    case 'raadsinformatie': {
+      const { data, isLoading, error } = gemeenteData.raadsinformatie
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.total_found}</span>{' stukken · '}
+            {data.dekking ? (
+              <span className="font-bold text-emerald-600">Gedekt</span>
+            ) : (
+              <span className="font-bold text-slate-400">Geen dekking</span>
+            )}
+          </>
+        ),
+      }
+    }
+    case 'huisvestingsverordening': {
+      const { data, isLoading, error } = gemeenteData.huisvestingsverordening
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: data.heeft_verordening ? (
+          <span className="font-bold text-[#0E1111]">{data.title ?? 'Verordening gevonden'}</span>
+        ) : (
+          <span className="text-slate-400">Geen verordening gevonden</span>
+        ),
+      }
+    }
+    case 'beschermd-erfgoed': {
+      const { data, isLoading, error } = gemeenteData.erfgoed
+      if (isLoading) return { isLoading: true, error: false, metrics: null }
+      if (error || !data) return { isLoading: false, error: true, metrics: null }
+      return {
+        isLoading: false,
+        error: false,
+        metrics: (
+          <>
+            <span className="font-bold text-[#0E1111]">{data.total}</span>{' beschermde gezichten'}
+          </>
+        ),
+      }
+    }
+    default:
+      return { isLoading: false, error: false, metrics: null }
+  }
+}
+
+function DataSourceCard({ source, entityType, entityCode, gemeenteData, gemeenteCode }: DataSourceCardProps) {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
+  const [polling, setPolling] = useState(false)
   const Icon = source.icon
   const isLive = source.status === 'live'
   const uploadMutation = useUploadPolicyDocument()
@@ -261,9 +394,21 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
     entityCode ?? '',
     source.key,
     !!entityType && !!entityCode,
+    polling ? 3000 : false,
   )
   const docCount = docsData?.total ?? 0
   const isComplete = isLive || docCount > 0
+
+  // AI summary state derived from documents
+  const firstDoc = docsData?.documents?.[0]
+  const isAnyParsing = docsData?.documents?.some(d => d.status === 'parsing') ?? false
+  const isAnyError = docsData?.documents?.some(d => d.status === 'error') ?? false
+  const aiSummary = firstDoc ? parseAiSummary(firstDoc.ai_summary) : null
+
+  // Toggle polling when parsing status changes
+  useEffect(() => {
+    setPolling(isAnyParsing)
+  }, [isAnyParsing])
 
   const handleUpload = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -300,10 +445,13 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
     setIsDragging(false)
   }, [])
 
-  const handleView = useCallback((e: React.MouseEvent, docId: string) => {
+  const handleView = useCallback((e: React.MouseEvent, docId: string, filename?: string) => {
     e.stopPropagation()
     if (!entityType || !entityCode) return
-    window.open(`/api/policy-documents/${entityType}/${entityCode}/${docId}`, '_blank')
+    setPdfViewer({
+      url: `/api/policy-documents/${entityType}/${entityCode}/${docId}`,
+      title: filename || 'Beleidsdocument',
+    })
   }, [entityType, entityCode])
 
   return (
@@ -342,31 +490,109 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
             {source.description}
           </p>
         </div>
-        {/* Icon in dark circle */}
-        <div className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
-          isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
-        }`}>
-          <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
+        {/* Icon + details button */}
+        <div className="flex items-center gap-2 shrink-0">
+          {gemeenteCode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate({ to: '/configuratie', search: { gemeente: gemeenteCode, source: source.key } })
+              }}
+              className="flex items-center gap-1 rounded-full border border-[#EAEFEF] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
+              title="Bekijk details"
+            >
+              Bekijk details
+              <ArrowRight size={11} />
+            </button>
+          )}
+          <div className="relative">
+            <div className={`flex size-11 items-center justify-center rounded-full ${
+              isComplete ? 'bg-emerald-600' : 'bg-[#0E1111]'
+            }`}>
+              <Icon className="size-5 text-[#F9A826]" strokeWidth={2} />
+            </div>
+          {isAnyParsing && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-amber-400 ring-2 ring-white">
+              <Loader2 className="animate-spin text-white" size={10} />
+            </span>
+          )}
+          {!isAnyParsing && aiSummary && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2 ring-white">
+              <Sparkles className="text-white" size={9} />
+            </span>
+          )}
+          {!isAnyParsing && !aiSummary && isAnyError && (
+            <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-red-500 ring-2 ring-white" />
+          )}
+          </div>
         </div>
       </div>
 
-      {/* Collapsed footer: doc badges */}
-      {!isOpen && (docCount > 0 || isLive) && (
-        <div className="px-5 pb-4 flex items-center gap-2">
-          {docCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
-              <FileCheck size={11} />
-              {docCount} doc{docCount !== 1 ? 's' : ''}
-            </span>
-          )}
-          {isLive && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
-              <Check size={11} strokeWidth={3} />
-              Auto-sync
-            </span>
-          )}
-        </div>
-      )}
+      {/* Collapsed footer: doc badges + live metrics */}
+      {!isOpen && (docCount > 0 || isLive) && (() => {
+        const liveMetrics = isLive ? getLiveMetrics(source.key, gemeenteData) : null
+        return (
+          <div className="px-5 pb-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {docCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
+                  <FileCheck size={11} />
+                  {docCount} doc{docCount !== 1 ? 's' : ''}
+                </span>
+              )}
+              {/* AI parsing status indicators */}
+              {isAnyParsing && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-600 shrink-0">
+                  <Loader2 className="animate-spin" size={11} />
+                  AI analyseert...
+                </span>
+              )}
+              {!isAnyParsing && isAnyError && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 shrink-0">
+                  <AlertCircle size={11} />
+                  Fout bij analyse
+                </span>
+              )}
+              {!isAnyParsing && !isAnyError && aiSummary && (
+                <>
+                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[200px]">
+                    {aiSummary.summary}
+                  </span>
+                  {aiSummary.key_facts.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-600 shrink-0">
+                      <Sparkles size={11} />
+                      {aiSummary.key_facts.length} feit{aiSummary.key_facts.length !== 1 ? 'en' : ''}
+                    </span>
+                  )}
+                </>
+              )}
+              {/* Live source metrics */}
+              {isLive && liveMetrics?.isLoading && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                  <Loader2 className="animate-spin" size={12} />
+                  Laden...
+                </span>
+              )}
+              {isLive && liveMetrics?.error && (
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Data niet beschikbaar
+                </span>
+              )}
+              {isLive && liveMetrics?.metrics && (
+                <span className="text-[11px] text-slate-500 font-medium truncate">
+                  {liveMetrics.metrics}
+                </span>
+              )}
+            </div>
+            {isLive && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 shrink-0">
+                <Check size={11} strokeWidth={3} />
+                Auto-sync
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Drag hint when no docs yet and not expanded */}
       {!isOpen && !isLive && docCount === 0 && entityType && (
@@ -386,6 +612,72 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
             className="overflow-hidden"
           >
             <div className="border-t border-[#EAEFEF] px-5 py-4 space-y-3">
+              {/* AI Summary section */}
+              {isAnyParsing && (
+                <div className="rounded-[14px] bg-amber-50/60 px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin text-amber-500" size={14} />
+                    <p className="text-[11px] font-bold text-amber-700">AI analyse bezig...</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-3/4 rounded bg-amber-200/60 animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-amber-200/60 animate-pulse" />
+                  </div>
+                </div>
+              )}
+              {!isAnyParsing && isAnyError && firstDoc?.ai_summary && (
+                <div className="rounded-[14px] bg-red-50 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="text-red-500 shrink-0" size={14} />
+                    <p className="text-[11px] font-bold text-red-700">Analyse mislukt</p>
+                  </div>
+                  <p className="mt-1 text-[11px] text-red-600">
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(firstDoc.ai_summary!)
+                        return parsed.error ?? 'Onbekende fout bij AI-analyse'
+                      } catch {
+                        return 'Onbekende fout bij AI-analyse'
+                      }
+                    })()}
+                  </p>
+                </div>
+              )}
+              {!isAnyParsing && aiSummary && (
+                <div className="rounded-[14px] bg-violet-50/60 px-4 py-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-violet-500" size={14} />
+                    <p className="text-[11px] font-bold text-violet-700">AI Samenvatting</p>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">{aiSummary.summary}</p>
+                  {aiSummary.key_facts.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Kernfeiten</p>
+                      <ul className="space-y-0.5">
+                        {aiSummary.key_facts.map((fact, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                            <span className="mt-1 size-1 rounded-full bg-violet-400 shrink-0" />
+                            {fact}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {Object.keys(aiSummary.extracted_values).length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Waarden</p>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        {Object.entries(aiSummary.extracted_values).map(([key, value]) => (
+                          <div key={key} className="flex items-baseline gap-1 text-[11px]">
+                            <span className="text-slate-400 truncate">{key}:</span>
+                            <span className="font-semibold text-[#0E1111] truncate">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Documents list with view buttons */}
               {docCount > 0 && docsData?.documents && (
                 <div className="space-y-2">
@@ -406,7 +698,7 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
                       </span>
                       {/* View button */}
                       <button
-                        onClick={(e) => handleView(e, doc.id)}
+                        onClick={(e) => handleView(e, doc.id, doc.filename)}
                         className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white border border-[#EAEFEF] text-slate-400 transition-colors hover:border-[#0E1111] hover:text-[#0E1111]"
                         title="Bekijken"
                       >
@@ -453,6 +745,13 @@ function DataSourceCard({ source, entityType, entityCode }: DataSourceCardProps)
           </motion.div>
         )}
       </AnimatePresence>
+      {pdfViewer && (
+        <PDFViewerModal
+          url={pdfViewer.url}
+          title={pdfViewer.title}
+          onClose={() => setPdfViewer(null)}
+        />
+      )}
     </motion.div>
   )
 }
@@ -484,9 +783,11 @@ interface CategoryTabbedSourcesProps {
   sources: DataSource[]
   entityType?: string
   entityCode?: string
+  gemeenteData?: GemeenteIntelligenceData
+  gemeenteCode?: string
 }
 
-function CategoryTabbedSources({ sources, entityType, entityCode }: CategoryTabbedSourcesProps) {
+function CategoryTabbedSources({ sources, entityType, entityCode, gemeenteData, gemeenteCode }: CategoryTabbedSourcesProps) {
   // Only show categories that have sources
   const availableCategories = useMemo(() => {
     const categoriesWithSources = new Set(sources.map((s) => s.category))
@@ -554,11 +855,17 @@ function CategoryTabbedSources({ sources, entityType, entityCode }: CategoryTabb
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className={
+            filtered.length === 1
+              ? "grid gap-4 grid-cols-1"
+              : filtered.length === 2
+                ? "grid gap-4 grid-cols-1 sm:grid-cols-2"
+                : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          }
         >
           {filtered.map((source) => (
             <motion.div key={source.key} variants={fadeUp}>
-              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} />
+              <DataSourceCard source={source} entityType={entityType} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={gemeenteCode} />
             </motion.div>
           ))}
         </motion.div>
@@ -576,9 +883,10 @@ interface EntityDetailProps {
   svgData: { d: string; viewBox: string } | null
   sources: DataSource[]
   onBack: () => void
+  gemeenteData?: GemeenteIntelligenceData
 }
 
-function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack }: EntityDetailProps) {
+function EntityDetail({ entityType, entityCode, entityName, svgData, sources, onBack, gemeenteData }: EntityDetailProps) {
   const liveCount = sources.filter((s) => s.status === 'live').length
   const roadmapCount = sources.filter((s) => s.status === 'roadmap').length
 
@@ -613,12 +921,74 @@ function EntityDetail({ entityType, entityCode, entityName, svgData, sources, on
           <p className="mt-1 text-[12px] text-slate-500">
             {entityCode} · {liveCount} actief · {roadmapCount} te configureren
           </p>
+          {entityType === 'Gemeente' && gemeenteData && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {/* Approval rate */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.approval_rate_pct != null
+                    ? `${gemeenteData.profile.data.approval_rate_pct}% goedgekeurd`
+                    : '—'
+                )}
+              </span>
+              {/* Bekendmakingen 30d */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.bekendmakingen_30d != null
+                    ? `${gemeenteData.profile.data.bekendmakingen_30d} bekendmakingen (30d)`
+                    : '—'
+                )}
+              </span>
+              {/* Severity badge */}
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                style={{
+                  backgroundColor: gemeenteData.profile.isLoading
+                    ? undefined
+                    : `${SEVERITY_COLORS[gemeenteData.profile.data?.severity_label ?? 'Onbekend'] ?? SEVERITY_COLORS['Onbekend']}18`,
+                  color: gemeenteData.profile.isLoading
+                    ? undefined
+                    : SEVERITY_COLORS[gemeenteData.profile.data?.severity_label ?? 'Onbekend'] ?? SEVERITY_COLORS['Onbekend'],
+                }}
+              >
+                {gemeenteData.profile.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.profile.data?.severity_label ?? '—'
+                )}
+              </span>
+              {/* Raadsstukken */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.raadsinformatie.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.raadsinformatie.data?.total_found != null
+                    ? `${gemeenteData.raadsinformatie.data.total_found} raadsstukken`
+                    : '—'
+                )}
+              </span>
+              {/* Erfgoed */}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {gemeenteData.erfgoed.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  gemeenteData.erfgoed.data?.total != null
+                    ? `${gemeenteData.erfgoed.data.total} beschermde gezichten`
+                    : '—'
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </motion.div>
 
       {/* Category pill tabs + source rows */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
-        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} />
+        <CategoryTabbedSources sources={sources} entityType={entityType === 'Gemeente' ? 'gemeente' : entityType === 'Provincie' ? 'provincie' : 'landelijk'} entityCode={entityCode} gemeenteData={gemeenteData} gemeenteCode={entityType === 'Gemeente' ? entityCode : undefined} />
       </motion.div>
     </div>
   )
@@ -648,6 +1018,20 @@ function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack
     return geoJsonToSvgPath(geom)
   }, [gemeente])
 
+  // Gemeente intelligence hooks — disabled when name hasn't resolved
+  const resolvedNaam = gemeenteNaam !== gemeenteCode ? gemeenteNaam : null
+  const profileQuery = useGemeenteProfile(resolvedNaam)
+  const raadsinformatieQuery = useRaadsinformatie(resolvedNaam)
+  const huisvestingsverordeningQuery = useHuisvestingsverordening(resolvedNaam)
+  const erfgoedQuery = useErfgoed(resolvedNaam)
+
+  const gemeenteData: GemeenteIntelligenceData = useMemo(() => ({
+    profile: { data: profileQuery.data, isLoading: profileQuery.isLoading, error: profileQuery.error },
+    raadsinformatie: { data: raadsinformatieQuery.data, isLoading: raadsinformatieQuery.isLoading, error: raadsinformatieQuery.error },
+    huisvestingsverordening: { data: huisvestingsverordeningQuery.data, isLoading: huisvestingsverordeningQuery.isLoading, error: huisvestingsverordeningQuery.error },
+    erfgoed: { data: erfgoedQuery.data, isLoading: erfgoedQuery.isLoading, error: erfgoedQuery.error },
+  }), [profileQuery, raadsinformatieQuery, huisvestingsverordeningQuery, erfgoedQuery])
+
   return (
     <EntityDetail
       entityType="Gemeente"
@@ -656,6 +1040,7 @@ function GemeenteDetail({ gemeenteCode, onBack }: { gemeenteCode: string; onBack
       svgData={svgData}
       sources={GEMEENTE_DATA_SOURCES}
       onBack={onBack}
+      gemeenteData={gemeenteData}
     />
   )
 }
@@ -860,11 +1245,671 @@ function LandelijkContent() {
   return <CategoryTabbedSources sources={LANDELIJK_DATA_SOURCES} />
 }
 
+/* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
+
+/* ─── Metric card helper ────────────────────────────────────── */
+
+function MetricCard({ label, value, unit, muted }: { label: string; value: string | number | null | undefined; unit?: string; muted?: boolean }) {
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+      <p className="text-[28px] font-black leading-none text-[#0E1111]">
+        {value != null ? value : '—'}{unit && <span className="ml-1 text-[14px] font-semibold text-slate-400">{unit}</span>}
+      </p>
+      <p className={`mt-1.5 text-[12px] font-semibold ${muted ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+    </div>
+  )
+}
+
+/* ─── Source detail loading / empty helpers ──────────────────── */
+
+function SourceDetailLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
+      <Loader2 className="size-5 animate-spin text-slate-400" />
+      <span className="text-[13px] text-slate-400">Data laden…</span>
+    </div>
+  )
+}
+
+function SourceDetailEmpty({ message }: { message?: string }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-slate-400">{message ?? 'Geen data beschikbaar.'}</p>
+    </div>
+  )
+}
+
+function SourceDetailError({ error }: { error: Error | null }) {
+  return (
+    <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+      <p className="text-[13px] text-red-400">{error?.message ?? 'Er is een fout opgetreden.'}</p>
+    </div>
+  )
+}
+
+/* ─── Per-source detail renderers ───────────────────────────── */
+
+function VergunningKlimaatDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  const sevColor = SEVERITY_COLORS[profile.severity_label] ?? SEVERITY_COLORS['Onbekend']
+  const permitEntries = Object.entries(profile.permit_type_distribution ?? {})
+
+  return (
+    <div className="space-y-5">
+      {/* Severity badge */}
+      <div className="flex items-center gap-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold text-white" style={{ backgroundColor: sevColor }}>
+          {profile.severity_label}
+        </span>
+        <span className="text-[12px] text-slate-400">op basis van {profile.sample_size} vergunningen</span>
+      </div>
+
+      {/* Core metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        <MetricCard label="Goedkeuringspercentage" value={profile.approval_rate_pct != null ? `${profile.approval_rate_pct.toFixed(1)}` : null} unit="%" />
+        <MetricCard label="Afwijzingspercentage" value={profile.rejection_rate_pct != null ? `${profile.rejection_rate_pct.toFixed(1)}` : null} unit="%" />
+        <MetricCard label="Gem. doorlooptijd" value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}` : null} unit="dagen" />
+      </div>
+
+      {/* Bekendmakingen trend */}
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+        <h3 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">Bekendmakingen trend</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_30d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 30 dagen</p>
+          </div>
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_90d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 90 dagen</p>
+          </div>
+          <div>
+            <p className="text-[22px] font-black text-[#0E1111]">{profile.bekendmakingen_365d}</p>
+            <p className="text-[11px] text-slate-400">afgelopen 365 dagen</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Permit type distribution */}
+      {permitEntries.length > 0 && (
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+          <h3 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">Vergunningtype verdeling</h3>
+          <div className="space-y-2">
+            {permitEntries.map(([type, count]) => (
+              <div key={type} className="flex items-center justify-between">
+                <span className="text-[13px] text-[#0E1111]">{type}</span>
+                <span className="text-[13px] font-bold text-[#0E1111]">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function JurisprudentieDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <MetricCard label="Gem. doorlooptijd" value={profile.avg_doorlooptijd_days != null ? `${Math.round(profile.avg_doorlooptijd_days)}` : null} unit="dagen" />
+        <MetricCard label="Steekproefomvang" value={profile.sample_size} />
+      </div>
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-5">
+        <a href="/jurisprudentie" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+          Bekijk volledige jurisprudentie-analyse
+          <ArrowRight size={14} />
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function BekendmakingenDetail({ profile, isLoading, error }: { profile?: GemeenteProfile; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!profile) return <SourceDetailEmpty />
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      <MetricCard label="Afgelopen 30 dagen" value={profile.bekendmakingen_30d} />
+      <MetricCard label="Afgelopen 90 dagen" value={profile.bekendmakingen_90d} />
+      <MetricCard label="Afgelopen 365 dagen" value={profile.bekendmakingen_365d} />
+    </div>
+  )
+}
+
+function RaadsinformatieDetail({ data, isLoading, error }: { data?: RaadsinformatieResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  return (
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="flex items-center gap-4">
+        <MetricCard label="Gevonden stukken" value={data.total_found} />
+        <div className="flex items-center gap-2 rounded-full border border-[#EAEFEF] px-3 py-1.5">
+          <span className={`size-2 rounded-full ${data.dekking ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className="text-[12px] font-semibold text-slate-500">{data.dekking ? 'Goede dekking' : 'Beperkte dekking'}</span>
+        </div>
+      </div>
+
+      {/* Stukken list */}
+      {data.stukken.length > 0 ? (
+        <div className="max-h-[480px] space-y-0 overflow-y-auto rounded-[16px] border border-[#EAEFEF] bg-white divide-y divide-[#EAEFEF]">
+          {data.stukken.map((stuk) => (
+            <div key={stuk.doc_id} className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-bold text-[#0E1111] leading-snug">{stuk.titel}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {stuk.datum && <span className="text-[11px] text-slate-400">{stuk.datum}</span>}
+                    {stuk.type && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                        {stuk.type}
+                      </span>
+                    )}
+                  </div>
+                  {stuk.samenvatting && (
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500 line-clamp-2">{stuk.samenvatting}</p>
+                  )}
+                </div>
+                {stuk.bron_url && (
+                  <a href={stuk.bron_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex-shrink-0 text-slate-400 hover:text-emerald-600 transition-colors">
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <SourceDetailEmpty message="Geen raadsstukken gevonden." />
+      )}
+    </div>
+  )
+}
+
+function HuisvestingsverordeningDetail({ data, isLoading, error }: { data?: HuisvestingsverordeningResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  if (!data.heeft_verordening) {
+    return <SourceDetailEmpty message="Geen huisvestingsverordening gevonden voor deze gemeente." />
+  }
+
+  return (
+    <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6 space-y-4">
+      {data.title && <h3 className="text-[16px] font-black text-[#0E1111]">{data.title}</h3>}
+      {data.identifier && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Kenmerk</span>
+          <span className="text-[13px] text-[#0E1111]">{data.identifier}</span>
+        </div>
+      )}
+      {data.modified && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Laatst gewijzigd</span>
+          <span className="text-[13px] text-[#0E1111]">{data.modified}</span>
+        </div>
+      )}
+      {data.subject && (
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Onderwerp</span>
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{data.subject}</p>
+        </div>
+      )}
+      {data.url && (
+        <a href={data.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:underline">
+          Bekijk bron
+          <ExternalLink size={14} />
+        </a>
+      )}
+    </div>
+  )
+}
+
+function BeschermdErfgoedDetail({ data, isLoading, error }: { data?: ErfgoedResponse; isLoading: boolean; error: Error | null }) {
+  if (isLoading) return <SourceDetailLoading />
+  if (error) return <SourceDetailError error={error} />
+  if (!data) return <SourceDetailEmpty />
+
+  if (data.beschermde_gezichten.length === 0) {
+    return <SourceDetailEmpty message="Geen beschermde gezichten gevonden." />
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[13px] text-slate-500"><span className="font-bold text-[#0E1111]">{data.total}</span> beschermde gezichten</p>
+
+      <div className="overflow-hidden rounded-[16px] border border-[#EAEFEF] bg-white">
+        <table className="w-full text-left text-[13px]">
+          <thead>
+            <tr className="border-b border-[#EAEFEF] bg-slate-50/50">
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Naam</th>
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Type</th>
+              <th className="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Aangewezen</th>
+              <th className="px-5 py-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-400">Oppervlakte (ha)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EAEFEF]">
+            {data.beschermde_gezichten.map((item, i) => (
+              <tr key={`${item.naam}-${i}`}>
+                <td className="px-5 py-3 font-semibold text-[#0E1111]">{item.naam}</td>
+                <td className="px-5 py-3 text-slate-500">{item.type}</td>
+                <td className="px-5 py-3 text-slate-500">{item.aangewezen ?? '—'}</td>
+                <td className="px-5 py-3 text-right text-slate-500">{item.oppervlakte_ha != null ? item.oppervlakte_ha.toFixed(1) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Document source detail (roadmap sources with upload + AI) ─ */
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function DocumentStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'parsing':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+          <Loader2 size={10} className="animate-spin" /> Analyseren…
+        </span>
+      )
+    case 'parsed':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+          <Check size={10} /> Geanalyseerd
+        </span>
+      )
+    case 'error':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+          <AlertCircle size={10} /> Fout
+        </span>
+      )
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+          <Upload size={10} /> Geüpload
+        </span>
+      )
+  }
+}
+
+function DocumentSourceDetail({
+  sourceKey,
+  sourceDescription,
+  gemeenteCode,
+}: {
+  sourceKey: string
+  sourceDescription: string
+  gemeenteCode: string
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [polling, setPolling] = useState(false)
+
+  const uploadMutation = useUploadPolicyDocument()
+
+  const { data: docsData, isLoading } = usePolicyDocuments(
+    'gemeente',
+    gemeenteCode,
+    sourceKey,
+    true,
+    polling ? 3000 : false,
+  )
+
+  const documents = docsData?.documents ?? []
+  const isAnyParsing = documents.some((d) => d.status === 'parsing')
+
+  // Toggle polling when parsing status changes
+  useEffect(() => {
+    setPolling(isAnyParsing)
+  }, [isAnyParsing])
+
+  // Find first parsed summary
+  const firstSummary = useMemo(() => {
+    for (const doc of documents) {
+      const parsed = parseAiSummary(doc.ai_summary)
+      if (parsed) return { summary: parsed, document: doc }
+    }
+    return null
+  }, [documents])
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      uploadMutation.mutate({ entityType: 'gemeente', entityCode: gemeenteCode, sourceKey, file })
+      // Reset so re-selecting same file triggers change
+      e.target.value = ''
+    },
+    [gemeenteCode, sourceKey, uploadMutation],
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      const file = e.dataTransfer.files[0]
+      if (!file) return
+      uploadMutation.mutate({ entityType: 'gemeente', entityCode: gemeenteCode, sourceKey, file })
+    },
+    [gemeenteCode, sourceKey, uploadMutation],
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  if (isLoading) return <SourceDetailLoading />
+
+  // Hidden file input
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+      className="hidden"
+      onChange={handleFileChange}
+    />
+  )
+
+  // ── Empty state (no documents) ───────────────────────────────
+  if (documents.length === 0) {
+    return (
+      <div className="space-y-5">
+        {fileInput}
+        <div className="rounded-[16px] border border-[#EAEFEF] bg-white p-6">
+          <p className="text-[13px] leading-relaxed text-slate-500">{sourceDescription}</p>
+        </div>
+
+        {/* Upload CTA zone */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`flex flex-col items-center gap-3 rounded-[16px] border-2 border-dashed p-10 text-center transition-colors ${
+            isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/50'
+          }`}
+        >
+          <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
+            <Upload size={22} className="text-slate-400" />
+          </div>
+          <p className="text-[14px] font-bold text-[#0E1111]">Upload een document om AI-analyse te starten</p>
+          <p className="text-[12px] text-slate-400">Sleep een bestand hierheen of klik op de knop</p>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploadMutation.isPending}
+            className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#0E1111] px-5 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {uploadMutation.isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Uploaden…
+              </>
+            ) : (
+              <>
+                <Upload size={14} /> Kies bestand
+              </>
+            )}
+          </button>
+          <p className="text-[10px] text-slate-300">PDF, DOCX, XLSX, JPG, PNG</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Populated state ──────────────────────────────────────────
+  return (
+    <div className="space-y-5">
+      {fileInput}
+
+      {/* AI Summary (first parsed document) */}
+      {firstSummary && (
+        <div className="rounded-[16px] border border-violet-200 bg-violet-50 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-violet-500" />
+            <h3 className="text-[13px] font-black uppercase tracking-[0.15em] text-violet-600">AI-samenvatting</h3>
+          </div>
+          <p className="text-[13px] leading-relaxed text-slate-700">{firstSummary.summary.summary}</p>
+
+          {firstSummary.summary.key_facts.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-[11px] font-black uppercase tracking-wider text-violet-500">Kernpunten</h4>
+              <ul className="space-y-1">
+                {firstSummary.summary.key_facts.map((fact, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600">
+                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-violet-400" />
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {Object.keys(firstSummary.summary.extracted_values).length > 0 && (
+            <div>
+              <h4 className="mb-2 text-[11px] font-black uppercase tracking-wider text-violet-500">Geëxtraheerde waarden</h4>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                {Object.entries(firstSummary.summary.extracted_values).map(([key, val]) => (
+                  <div key={key} className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-slate-400">{key}</span>
+                    <span className="text-[12px] font-semibold text-[#0E1111]">{val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-violet-400">
+            Bron: {firstSummary.document.filename}
+          </p>
+        </div>
+      )}
+
+      {/* Document list */}
+      <div className="rounded-[16px] border border-[#EAEFEF] bg-white overflow-hidden">
+        <div className="flex items-center justify-between border-b border-[#EAEFEF] px-5 py-3">
+          <h3 className="text-[13px] font-black uppercase tracking-[0.15em] text-slate-400">
+            Documenten ({documents.length})
+          </h3>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploadMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-200 disabled:opacity-50"
+          >
+            {uploadMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            Upload
+          </button>
+        </div>
+        <div className="divide-y divide-[#EAEFEF]">
+          {documents.map((doc) => (
+            <div key={doc.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <FileText size={14} className="shrink-0 text-slate-400" />
+                  <p className="truncate text-[13px] font-semibold text-[#0E1111]">{doc.filename}</p>
+                </div>
+                <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-400">
+                  <span>{formatFileSize(doc.file_size)}</span>
+                  <span>{new Date(doc.created_at).toLocaleDateString('nl-NL')}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <DocumentStatusBadge status={doc.status} />
+                {doc.status === 'parsed' && (
+                  <a
+                    href={`/api/policy-documents/gemeente/${gemeenteCode}/${doc.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline"
+                  >
+                    Bekijk PDF <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Drop zone for additional uploads */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`flex items-center justify-center gap-3 rounded-[16px] border-2 border-dashed px-5 py-6 text-center transition-colors ${
+          isDragging ? 'border-[#F9A826] bg-[#FFF8EC]' : 'border-slate-200 bg-slate-50/30'
+        }`}
+      >
+        <Upload size={16} className="text-slate-300" />
+        <p className="text-[12px] text-slate-400">Sleep een extra document hierheen om toe te voegen</p>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Source detail workspace ───────────────────────────────── */
+
+function SourceDetailWorkspace({ sourceKey, gemeenteCode, onBack }: { sourceKey: string; gemeenteCode: string; onBack: () => void }) {
+  const source = GEMEENTE_DATA_SOURCES.find((s) => s.key === sourceKey)
+
+  // Resolve gemeenteNaam from geojson (hooks need display name, not code)
+  const { data: geojson } = useGemeenteGeoJSON()
+  const gemeenteNaam = useMemo(() => {
+    if (!geojson) return null
+    const feature = geojson.features.find(f => String((f.properties as Record<string, unknown>)?.statcode ?? '') === gemeenteCode)
+    return feature ? String((feature.properties as Record<string, unknown>)?.statnaam ?? gemeenteCode) : gemeenteCode
+  }, [geojson, gemeenteCode])
+
+  // Only call hooks with resolved name (not the code fallback)
+  const resolvedNaam = gemeenteNaam && gemeenteNaam !== gemeenteCode ? gemeenteNaam : null
+
+  const { data: profile, isLoading: profileLoading, error: profileError } = useGemeenteProfile(resolvedNaam)
+  const { data: raadsData, isLoading: raadsLoading, error: raadsError } = useRaadsinformatie(resolvedNaam)
+  const { data: huisvData, isLoading: huisvLoading, error: huisvError } = useHuisvestingsverordening(resolvedNaam)
+  const { data: erfgoedData, isLoading: erfgoedLoading, error: erfgoedError } = useErfgoed(resolvedNaam)
+
+  // Breadcrumb label
+  const breadcrumbLabel = gemeenteNaam ?? gemeenteCode
+
+  if (!source) {
+    return (
+      <div className="space-y-6">
+        <motion.button
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          onClick={onBack}
+          className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+        >
+          <ArrowLeft size={14} />
+          Terug naar gemeente
+        </motion.button>
+        <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
+          <p className="text-[13px] text-slate-400">Databron &ldquo;{sourceKey}&rdquo; niet gevonden.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const Icon = source.icon
+
+  // Render the source-specific detail content
+  const renderDetail = () => {
+    switch (sourceKey) {
+      case 'vergunning-klimaat':
+        return <VergunningKlimaatDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'jurisprudentie':
+        return <JurisprudentieDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'bekendmakingen':
+        return <BekendmakingenDetail profile={profile} isLoading={profileLoading} error={profileError} />
+      case 'raadsinformatie':
+        return <RaadsinformatieDetail data={raadsData} isLoading={raadsLoading} error={raadsError} />
+      case 'huisvestingsverordening':
+        return <HuisvestingsverordeningDetail data={huisvData} isLoading={huisvLoading} error={huisvError} />
+      case 'beschermd-erfgoed':
+        return <BeschermdErfgoedDetail data={erfgoedData} isLoading={erfgoedLoading} error={erfgoedError} />
+      default:
+        return (
+          <DocumentSourceDetail
+            sourceKey={sourceKey}
+            sourceDescription={source?.description ?? ''}
+            gemeenteCode={gemeenteCode}
+          />
+        )
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <motion.button
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        onClick={onBack}
+        className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#0E1111]"
+      >
+        <ArrowLeft size={14} />
+        Terug naar {breadcrumbLabel}
+      </motion.button>
+
+      {/* Source heading */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex items-center gap-4">
+        <div className={`flex size-14 items-center justify-center rounded-full ${source.status === 'live' ? 'bg-emerald-600' : 'bg-[#0E1111]'}`}>
+          <Icon className="size-7 text-[#F9A826]" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Databron · {source.category}
+          </p>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#0E1111]">{source.label}</h1>
+          <p className="mt-1 text-[12px] text-slate-500">{source.description}</p>
+        </div>
+      </motion.div>
+
+      {/* Source-specific detail content */}
+      <motion.div variants={fadeUp} initial="hidden" animate="show">
+        {renderDetail()}
+      </motion.div>
+    </div>
+  )
+}
+
 /* ─── Main page ─────────────────────────────────────────────── */
 
 function ConfiguratiePage() {
   const navigate = useNavigate()
-  const { gemeente: activeGemeente, provincie: activeProvincie } = Route.useSearch()
+  const { gemeente: activeGemeente, provincie: activeProvincie, source: activeSource } = Route.useSearch()
   const [openNiveau, setOpenNiveau] = useState<SubsidieNiveau | null>(null)
   const { data: gemeenteGeoJSON } = useGemeenteGeoJSON(openNiveau === 'gemeentelijk' || !!activeGemeente)
   const { data: provincieGeoJSON } = useProvincieGeoJSON(openNiveau === 'provinciaal' || !!activeProvincie)
@@ -894,6 +1939,21 @@ function ConfiguratiePage() {
   const handleBackToMain = useCallback(() => {
     navigate({ to: '/configuratie', search: {} })
   }, [navigate])
+
+  // If source workspace is selected, show full-page source detail
+  if (activeGemeente && activeSource) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <SourceDetailWorkspace
+            sourceKey={activeSource}
+            gemeenteCode={activeGemeente}
+            onBack={() => navigate({ to: '/configuratie', search: { gemeente: activeGemeente } })}
+          />
+        </div>
+      </ResultsShell>
+    )
+  }
 
   // If gemeente is selected, show detail view
   if (activeGemeente) {

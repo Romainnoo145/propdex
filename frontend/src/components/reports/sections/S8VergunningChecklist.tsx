@@ -35,6 +35,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { useChecklistProgress, useUpdateChecklistProgress } from '@/hooks/useChecklistProgress'
 import { useUploadDocument } from '@/hooks/useDocuments'
 import { SectionInsightCard } from '../components/SectionInsightCard'
+import { PDFViewerModal } from '@/components/ui/PDFViewerModal'
 
 /* ─── Props ─────────────────────────────────────────────────── */
 
@@ -417,6 +418,7 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
   const hasDocument = isGenerated || !!uploadedDocId
   const documentId = docStatus?.document_id ?? uploadedDocId
   const { accessToken } = useAuth()
+  const [pdfViewer, setPdfViewer] = useState<{ url: string; title: string } | null>(null)
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -438,12 +440,7 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
     e.stopPropagation()
     if (!parcelId || !documentId) return
     const url = `${import.meta.env.VITE_API_URL ?? ''}/api/documents/${parcelId}/documents/${documentId}`
-    fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((res) => res.blob())
-      .then((blob) => {
-        const blobUrl = URL.createObjectURL(blob)
-        window.open(blobUrl, '_blank')
-      })
+    setPdfViewer({ url, title: docStatus?.filename ?? 'Checklist document' })
   }
 
   return (
@@ -507,6 +504,13 @@ function CompactItemRow({ item, checked, docStatus, uploadedDocId, parcelId, onT
           )}
         </div>
       </button>
+      {pdfViewer && (
+        <PDFViewerModal
+          url={pdfViewer.url}
+          title={pdfViewer.title}
+          onClose={() => setPdfViewer(null)}
+        />
+      )}
     </div>
   )
 }

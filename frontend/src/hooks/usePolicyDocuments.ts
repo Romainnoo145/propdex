@@ -21,6 +21,23 @@ export interface PolicyDocument {
   updated_at: string
 }
 
+export interface DocumentSummary {
+  summary: string
+  key_facts: string[]
+  extracted_values: Record<string, string>
+}
+
+export function parseAiSummary(raw: string | null): DocumentSummary | null {
+  if (!raw) return null
+  try {
+    const data = JSON.parse(raw)
+    if (data.error) return null
+    return data as DocumentSummary
+  } catch {
+    return null
+  }
+}
+
 interface PolicyDocumentListResponse {
   documents: PolicyDocument[]
   total: number
@@ -40,6 +57,7 @@ export function usePolicyDocuments(
   entityCode: string,
   sourceKey?: string,
   enabled = true,
+  refetchInterval?: number | false,
 ) {
   return useQuery<PolicyDocumentListResponse>({
     queryKey: policyDocsKey(entityType, entityCode, sourceKey),
@@ -52,6 +70,7 @@ export function usePolicyDocuments(
     },
     enabled,
     staleTime: 30_000,
+    refetchInterval,
   })
 }
 

@@ -58,6 +58,19 @@ async def upload_policy_document(
         "Policy document uploaded: entity=%s/%s source=%s file=%s size=%d user=%s",
         entity_type, entity_code, source_key, doc.filename, doc.file_size, current_user.id,
     )
+
+    # Enqueue AI summarization for PDF uploads
+    if doc.content_type == "application/pdf":
+        arq_pool = getattr(request.app.state, "arq_pool", None)
+        if arq_pool is not None:
+            try:
+                await arq_pool.enqueue_job("document_summary_job", str(doc.id))
+                logger.info("Enqueued document_summary_job for document %s", doc.id)
+            except Exception as enqueue_err:
+                logger.warning("Failed to enqueue document_summary_job for %s: %s", doc.id, enqueue_err)
+        else:
+            logger.warning("ARQ pool not available — skipping AI summary for document %s", doc.id)
+
     return PolicyDocumentResponse.model_validate(doc)
 
 
