@@ -220,22 +220,19 @@ export default function DueDiligenceDashboard({
         </div>
       </div>
 
-      {/* Active section content — workspace pattern: card wrapper */}
+      {/* Active section content — single card wrapper (no nested sub-card) */}
       <div className="mt-4 rounded-[32px] border border-neutral-200 bg-white p-4 sm:p-6">
-        <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 px-6 py-5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              {renderSectionContent(activeSection, data, sourceParcelId, policySummaries, reportId, onRefresh, isRefreshing)}
-
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {renderSectionContent(activeSection, data, sourceParcelId, policySummaries, reportId, onRefresh, isRefreshing)}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )
