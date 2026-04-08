@@ -4,43 +4,22 @@
  * Reuses shared report components: SectionInsightCard, KVRow.
  */
 import { useHuisvestingsverordening } from "@/hooks/useHuisvestingsverordening";
-import { Home, ExternalLink, ArrowRight, Loader2 } from "lucide-react";
+import { Home, ExternalLink, ArrowRight } from "lucide-react";
+import { DetailLoading, DetailEmpty, DetailError } from "./DetailStates";
 import { SectionInsightCard, KVRow } from "@/components/reports/components";
 
 interface Props {
   gemeenteNaam: string | null;
 }
 
-function DetailLoading() {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-[20px] border border-[#EAEFEF] bg-white p-12">
-      <Loader2 className="size-5 animate-spin text-slate-400" />
-      <span className="text-[13px] text-slate-400">Data laden…</span>
-    </div>
-  );
-}
-
 export function HuisvestingsverordeningDetailEnriched({ gemeenteNaam }: Props) {
   const { data, isLoading, error } = useHuisvestingsverordening(gemeenteNaam);
 
   if (!gemeenteNaam || isLoading) return <DetailLoading />;
-  if (error) {
-    return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">
-          Fout bij laden van huisvestingsverordening.
-        </p>
-      </div>
-    );
-  }
-
+  if (error) return <DetailError error={error as Error} />;
   if (!data || !data.heeft_verordening) {
     return (
-      <div className="rounded-[20px] border border-[#EAEFEF] bg-white p-8 text-center">
-        <p className="text-[13px] text-slate-400">
-          Geen huisvestingsverordening gevonden voor deze gemeente.
-        </p>
-      </div>
+      <DetailEmpty message="Geen huisvestingsverordening gevonden voor deze gemeente." />
     );
   }
 
