@@ -1585,7 +1585,13 @@ function CompactProvincieGrid({
 /* ─── Landelijk content (curated subsidies, compact) ────────── */
 
 function LandelijkContent() {
-  return <CategoryTabbedSources sources={LANDELIJK_DATA_SOURCES} />;
+  return (
+    <CategoryTabbedSources
+      sources={LANDELIJK_DATA_SOURCES}
+      entityType="landelijk"
+      entityCode="NL"
+    />
+  );
 }
 
 /* ─── Source detail workspace (skeleton — T02/T03 add content) ── */
