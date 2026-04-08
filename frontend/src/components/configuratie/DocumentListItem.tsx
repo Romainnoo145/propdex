@@ -63,9 +63,13 @@ export function DocumentListItem({ document: doc, onView }: Props) {
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!accessToken) return;
     const url = `${import.meta.env.VITE_API_URL ?? ""}/api/policy-documents/${doc.entity_type}/${doc.entity_code}/${doc.id}`;
     fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((res) => res.blob())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download mislukt (${res.status})`);
+        return res.blob();
+      })
       .then((blob) => {
         const blobUrl = URL.createObjectURL(blob);
         const a = window.document.createElement("a");
@@ -73,6 +77,9 @@ export function DocumentListItem({ document: doc, onView }: Props) {
         a.download = doc.filename;
         a.click();
         URL.revokeObjectURL(blobUrl);
+      })
+      .catch((err) => {
+        console.error("[DocumentListItem] download failed:", err);
       });
   };
 

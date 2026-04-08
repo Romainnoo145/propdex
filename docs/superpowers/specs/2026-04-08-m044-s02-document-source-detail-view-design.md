@@ -109,11 +109,10 @@ Owns local drag state (`isDragging`). Calls `useUploadPolicyDocument` mutation. 
 interface Props {
   document: PolicyDocument   // existing type from usePolicyDocuments
   onView: () => void         // shell sets viewingDocId
-  onDownload: () => void     // shell triggers authenticated blob download
 }
 ```
 
-Renders a row with filename, upload timestamp, status pill (§5 semantic pill — green for ready, amber for parsing, red for error), view button (`<Eye size={14}>`), download button (`<Download size={14}>`).
+Renders a row with filename, upload timestamp, status pill (§5 semantic pill — green for ready, amber for parsing, red for error), view button (`<Eye size={14}>`), download button (`<Download size={14}>`). Download is handled inline inside the component via an authenticated blob fetch helper (see section 8 below); the component owns this side-effect directly rather than receiving an `onDownload` callback, matching the pattern established in `S8VergunningChecklist.tsx`. This is a deliberate exception to the "pure presentational sub-components" principle in section 5, justified by the local scope of the fetch and the fact that no other component needs to trigger the download.
 
 ### AiSummaryCard
 
