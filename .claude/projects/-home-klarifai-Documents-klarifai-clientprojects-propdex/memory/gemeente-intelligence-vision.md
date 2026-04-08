@@ -35,7 +35,7 @@ The gemeente context panel is the centerpiece of v18.0. It shows ALL municipalit
 ## Key files
 
 - **TypeScript datamodel**: `frontend/src/lib/types/gemeente-intelligence.ts` — 12 secties met `_integration` flag (live/stub/placeholder)
-- **Research document**: `.planning/research/gemeente-intelligence-sources.md` — API endpoints, auth, dekking, velden per bron
+- **Research document**: `docs/research/gemeente-intelligence-sources.md` — API endpoints, auth, dekking, velden per bron
 - **Roadmap context**: v18.0 Phase 115 (GemeenteContextPanel) + Phase 116 (Gemeente Modals) consume this datamodel
 
 ## Subsidie-programma's voor vastgoedontwikkeling
