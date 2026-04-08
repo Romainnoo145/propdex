@@ -2071,6 +2071,26 @@ function ConfiguratiePage() {
     );
   }
 
+  // Provincie source workspace — must be checked BEFORE activeProvincie alone
+  if (activeProvincie && activeSource) {
+    return (
+      <ResultsShell>
+        <div className="mx-auto max-w-4xl">
+          <ProvincieSourceDetailWorkspace
+            sourceKey={activeSource}
+            provincieCode={activeProvincie}
+            onBack={() =>
+              navigate({
+                to: "/beleid",
+                search: { provincie: activeProvincie },
+              })
+            }
+          />
+        </div>
+      </ResultsShell>
+    );
+  }
+
   // If gemeente is selected, show detail view
   if (activeGemeente) {
     return (
@@ -2100,8 +2120,8 @@ function ConfiguratiePage() {
     );
   }
 
-  // If landelijk source is selected (no gemeente), show landelijk detail view
-  if (activeSource && !activeGemeente) {
+  // If landelijk source is selected (no gemeente, no provincie), show landelijk detail view
+  if (activeSource && !activeGemeente && !activeProvincie) {
     return (
       <ResultsShell>
         <div className="mx-auto max-w-4xl">
