@@ -155,7 +155,7 @@ export function RaadsinformatieDetailEnriched({ gemeenteNaam }: Props) {
             {sortedTypes.map(([type, count]) => (
               <span
                 key={type}
-                className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-2 py-0.5 text-[10px] font-medium text-slate-500"
+                className="rounded-full border border-[#EAEFEF] bg-[#F8FAFA] px-1.5 py-0.5 text-[10px] text-slate-500"
               >
                 {type} ({count})
               </span>
