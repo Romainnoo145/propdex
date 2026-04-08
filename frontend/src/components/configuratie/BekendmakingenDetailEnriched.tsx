@@ -110,7 +110,7 @@ function BekendmakingListItem({ record, idx, total }: { record: ChangeRecord; id
               href={record.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 hover:text-[#0E1111]"
+              className="inline-flex items-center gap-0.5 text-slate-400 hover:text-[#0E1111]"
             >
               <ExternalLink size={9} />
             </a>
