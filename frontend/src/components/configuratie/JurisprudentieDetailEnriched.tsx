@@ -9,6 +9,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
 import { ArrowRight, Scale, ExternalLink, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import {
@@ -100,10 +101,22 @@ function WinLossSummary({ data }: { data: WinLossRatio }) {
     <div className="space-y-3">
       {/* Stacked bar */}
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-        {WIN_LOSS_SEGMENTS.map(({ key, bg }) => {
+        {WIN_LOSS_SEGMENTS.map(({ key, bg }, i) => {
           const pct = (data[key] / total) * 100
           if (pct === 0) return null
-          return <div key={key} className={`${bg} transition-all`} style={{ width: `${pct}%` }} />
+          return (
+            <motion.div
+              key={key}
+              className={bg}
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{
+                duration: 0.6,
+                delay: i * 0.1,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+            />
+          )
         })}
       </div>
 
@@ -145,7 +158,7 @@ function RulingListItem({ ruling, idx, total }: { ruling: GemeenteRulingsFeedIte
             </span>
           )}
           <span
-            className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${uitkomstStyle(ruling.uitkomst)}`}
+            className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${uitkomstStyle(ruling.uitkomst)}`}
           >
             {uitkomstLabel(ruling.uitkomst)}
           </span>
